@@ -104,7 +104,7 @@ private:
     ancillaryfunctiontypes type; ///< The type of ancillary curve being used
 public:
 
-    SaturationAncillaryFunction(){type = TYPE_NOT_SET;};
+    SaturationAncillaryFunction(){type = TYPE_NOT_SET; Tmin = _HUGE; Tmax = _HUGE;};
     SaturationAncillaryFunction(rapidjson::Value &json_code);
     
     /// Return true if the ancillary is enabled (type is not TYPE_NOT_SET)

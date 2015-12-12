@@ -104,7 +104,9 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
     std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
     if (!alt_rp_path.empty()){
         char name[255];
-        strcpy(name, alt_rp_path.c_str());
+        const char * _alt_rp_path = alt_rp_path.c_str();
+        if (strlen(_alt_rp_path) > 255){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", alt_rp_path.c_str())); }
+        strcpy(name, _alt_rp_path);
         SETPATHdll(name, 255);
     }
     
@@ -233,7 +235,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             ierr = 0;
             std::vector<double> x(ncmax);
             char mix[255];
-            strcpy(mix, components_joined_raw.c_str());
+            const char * _components_joined_raw  = components_joined_raw.c_str();
+            if (strlen(_components_joined_raw) > 255){ throw ValueError(format("components (%s) is too long", components_joined_raw.c_str()));
+            strcpy(mix, _components_joined_raw);
             char hmx_bnc[255] = "HMX.BNC", reference_state[4] = "DEF";
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
             if (alt_hmx_bnc_path.length() > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", alt_hmx_bnc_path.c_str()));
@@ -297,7 +301,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
 
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
             char path_HMX_BNC[refpropcharlength+1];
-            strcpy(path_HMX_BNC, fdPath.c_str());
+            const char * _fdPath = fdPath.c_str();
+            if (strlen(_fdPath) > refpropcharlength) { throw ValueError(format("path (%s) is too long", fdPath.c_str())); }
+            strcpy(path_HMX_BNC, _fdPath);
+            if (strlen(rel_path_HMX_BNC) + strlen(_fdPath) > refpropcharlength) { throw ValueError(format("combined path is too long")); }
             strcat(path_HMX_BNC, rel_path_HMX_BNC);
             std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
             if (!alt_hmx_bnc_path.empty()){
@@ -305,6 +312,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 if (strlen(HMX_path) > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", HMX_path)); }
                 strcpy(path_HMX_BNC, HMX_path);
             }
+            if (components_joined.size()) { throw ValueError(format("components_joined (%s) is too long", components_joined.c_str())); }
             strcpy(component_string, components_joined.c_str());
 
             ierr = 0;

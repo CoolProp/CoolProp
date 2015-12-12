@@ -469,7 +469,8 @@ public:
     bool enabled;
     CoolPropDbl Tc, pc, rhomolarc, acentric, R, a, b, kappa;
     /// Default Constructor
-    ResidualHelmholtzSRK(){ enabled = false; };
+    ResidualHelmholtzSRK() : Tc(_HUGE), pc(_HUGE), rhomolarc(_HUGE), acentric(_HUGE), R(_HUGE), a(_HUGE), b(_HUGE), kappa(_HUGE) 
+    { enabled = false; };
     /// Constructor
     ResidualHelmholtzSRK(
         const CoolPropDbl Tc,
@@ -546,7 +547,9 @@ protected:
 
 public:
     /// Default constructor
-    ResidualHelmholtzSAFTAssociating(){ disabled = true; };
+    ResidualHelmholtzSAFTAssociating() : a(_HUGE), m(_HUGE), epsilonbar(_HUGE), vbarn(_HUGE), kappabar(_HUGE)
+    { disabled = true; };
+    
     // Constructor
     ResidualHelmholtzSAFTAssociating(double a, double m, double epsilonbar, double vbarn, double kappabar)
         : a(a), m(m), epsilonbar(epsilonbar), vbarn(vbarn), kappabar(kappabar)
@@ -1076,7 +1079,8 @@ private:
     bool enabled;
 public:
     /// Default constructor
-    IdealHelmholtzCP0Constant(){enabled = false;};
+    IdealHelmholtzCP0Constant() : cp_over_R(_HUGE), Tc(_HUGE), T0(_HUGE), tau0(_HUGE)
+    {enabled = false;};
 
     /// Constructor with just a single double value
     IdealHelmholtzCP0Constant(CoolPropDbl cp_over_R, CoolPropDbl Tc, CoolPropDbl T0) 

@@ -690,7 +690,9 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         }
         else{
             using_single_phase_table = true; // Use the table !
-            std::size_t iL, iV, iclosest = 0;
+            std::size_t iL = std::numeric_limits<std::size_t>::max(), 
+                        iV = std::numeric_limits<std::size_t>::max(), 
+                        iclosest = 0;
             CoolPropDbl hL = 0, hV = 0;
             SimpleState closest_state;
             bool is_two_phase = false;

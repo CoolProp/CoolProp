@@ -1632,7 +1632,7 @@ void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend &HEOS, CoolProp
     public:
         HelmholtzEOSMixtureBackend &HEOS;
         CoolPropDbl hmolar, smolar, Qs;
-        Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec) : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
+        Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec) : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec), Qs(_HUGE) {};
         double call(double T){
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(),

@@ -2971,7 +2971,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     public:
         double L1, M1;
         HelmholtzEOSMixtureBackend &HEOS;
-        Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS){};
+        Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
         std::vector<double> call(const std::vector<double> &tau_delta){
             double rhomolar = tau_delta[1]*HEOS.rhomolar_reducing();
             double T = HEOS.T_reducing()/tau_delta[0];
@@ -3059,7 +3059,7 @@ public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
     const double delta;
     double _call, _deriv, _second_deriv;
-    OneDimObjective(HelmholtzEOSMixtureBackend &HEOS, double delta0) : HEOS(HEOS), delta(delta0) {};
+    OneDimObjective(HelmholtzEOSMixtureBackend &HEOS, double delta0) : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE) {};
     double call(double tau){
         double rhomolar = HEOS.rhomolar_reducing()*delta, T = HEOS.T_reducing()/tau;
         HEOS.update_DmolarT_direct(rhomolar, T);
@@ -3097,7 +3097,7 @@ public:
     std::vector<CoolProp::CriticalState> critical_points;
     int N_critical_points;
     Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
-    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0)
+    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0), M1_last(_HUGE)
     {
         R_delta_tracer = 0.1;
         R_delta = R_delta_tracer;

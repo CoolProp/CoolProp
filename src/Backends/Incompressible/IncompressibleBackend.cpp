@@ -20,8 +20,8 @@
 namespace CoolProp {
 
 IncompressibleBackend::IncompressibleBackend() {
-	throw NotImplementedError("Empty constructor is not implemented for incompressible fluids");
-	this->fluid = NULL;
+    throw NotImplementedError("Empty constructor is not implemented for incompressible fluids");
+    //this->fluid = NULL;
 }
 
 IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {

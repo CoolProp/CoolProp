@@ -309,6 +309,7 @@ double IncompressibleFluid::inputFromMole (double T,     double x){
         return x;
     } else {
         throw NotImplementedError("Mole composition conversion has not been implemented.");
+        /*
         switch (mole2input.type) {
             case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
                 return poly.evaluate(mole2input.coeffs, T, x, 0, 0, 0.0, 0.0); // TODO: make sure Tbase and xbase are defined in the correct way
@@ -333,6 +334,7 @@ double IncompressibleFluid::inputFromMole (double T,     double x){
                 break;
         }
         return _HUGE;
+        */
     }
 }
 

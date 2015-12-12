@@ -201,7 +201,8 @@ namespace SaturationSolvers
         CoolPropDbl beta, omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap;
         imposed_variable_options imposed_variable;
         std::vector<CoolPropDbl> x, y, z;
-        newton_raphson_twophase_options(){ Nstep_max = 30; Nsteps = 0; beta = -1; omega =1;} // Defaults
+        newton_raphson_twophase_options() : Nstep_max(30), Nsteps(0), beta(-1), omega(1), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE), hmolar_liq(_HUGE), hmolar_vap(_HUGE), smolar_liq(_HUGE), smolar_vap(_HUGE), imposed_variable(NO_VARIABLE_IMPOSED)
+        {} // Defaults
     };
 
     /** \brief A class to do newton raphson solver for mixture VLE for p,Q or T,Q
@@ -243,7 +244,6 @@ namespace SaturationSolvers
         bool logging;
         int Nsteps;
         STLMatrix J;
-        HelmholtzEOSMixtureBackend *HEOS;
         std::vector<CoolPropDbl> K, x, y, z, r, negative_r, err_rel;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 

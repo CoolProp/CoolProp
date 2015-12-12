@@ -748,7 +748,8 @@ class TabularBackend : public AbstractState
             cached_single_phase_j = std::numeric_limits<std::size_t>::max();
             cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
             cached_saturation_iV = std::numeric_limits<std::size_t>::max();
-            z = NULL; dzdx = NULL; dzdy = NULL; d2zdx2 = NULL; d2zdxdy = NULL; d2zdy2 = NULL;
+            z = NULL; dzdx = NULL; dzdy = NULL; d2zdx2 = NULL; d2zdxdy = NULL; d2zdy2 = NULL; dataset = NULL;
+            imposed_phase_index = iphase_not_imposed;
         };
 
         // None of the tabular methods are available from the high-level interface

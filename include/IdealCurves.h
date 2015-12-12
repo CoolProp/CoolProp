@@ -12,9 +12,9 @@ namespace CoolProp{
 		AbstractState *AS;
         double p0, T0, lnT, lnp, rho_guess;
 		std::vector<double> T, p;
-		enum OBJECTIVE_TYPE { OBJECTIVE_CIRCLE, OBJECTIVE_T };
+		enum OBJECTIVE_TYPE {OBJECTIVE_INVALID = 0, OBJECTIVE_CIRCLE, OBJECTIVE_T };
 		OBJECTIVE_TYPE obj;
-		CurveTracer(AbstractState *AS, double p0, double T0) : AS(AS), p0(p0), T0(T0)
+		CurveTracer(AbstractState *AS, double p0, double T0) : AS(AS), p0(p0), T0(T0), lnT(_HUGE), lnp(_HUGE), rho_guess(_HUGE), obj(OBJECTIVE_INVALID)
 		{
 			this->p.push_back(p0);			
 		};

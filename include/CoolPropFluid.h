@@ -44,7 +44,8 @@ struct CriticalRegionSplines{
     double T_min, T_max, rhomolar_min, rhomolar_max;
     std::vector<double> cL, cV;
     bool enabled;
-    CriticalRegionSplines(){enabled = false;};
+    CriticalRegionSplines() : T_min(_HUGE), T_max(_HUGE), rhomolar_min(_HUGE), rhomolar_max(_HUGE), enabled(false) {};
+    
     const void get_densities(double T, double rho_min, double rho_crit, double rho_max, double &rhoL, double &rhoV)  const
 	{
         int Nsoln = -1, Ngood = 0;
@@ -362,90 +363,90 @@ public:
         assert(R_u < 9 && R_u > 8);
         assert(molar_mass > 0.001 && molar_mass < 1);
     };
-    CoolPropDbl baser(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl baser(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.base(tau, delta);
     };
     // First partials
-    CoolPropDbl dalphar_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl dalphar_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dDelta(tau, delta);
     };
-    CoolPropDbl dalphar_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl dalphar_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dTau(tau, delta);
     };
     // Second partials
-    CoolPropDbl d2alphar_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d2alphar_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dDelta2(tau, delta);
     };
-    CoolPropDbl d2alphar_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d2alphar_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dDelta_dTau(tau, delta);
     };
-    CoolPropDbl d2alphar_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d2alphar_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dTau2(tau, delta);
     };
     // Third partials
-    CoolPropDbl d3alphar_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alphar_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dDelta3(tau, delta);
     };
-    CoolPropDbl d3alphar_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alphar_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dDelta2_dTau(tau, delta);
     };
-    CoolPropDbl d3alphar_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alphar_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dDelta_dTau2(tau, delta);
     };
-    CoolPropDbl d3alphar_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alphar_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alphar.dTau3(tau, delta);
     };
 
-    CoolPropDbl base0(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl base0(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.base(tau, delta);
     };
     // First partials
-    CoolPropDbl dalpha0_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl dalpha0_dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dDelta(tau, delta);
     };
-    CoolPropDbl dalpha0_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl dalpha0_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dTau(tau, delta);
     };
     // Second partials
-    CoolPropDbl d2alpha0_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d2alpha0_dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dDelta2(tau, delta);
     };
-    CoolPropDbl d2alpha0_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d2alpha0_dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dDelta_dTau(tau, delta);
     };
-    CoolPropDbl d2alpha0_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d2alpha0_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dTau2(tau, delta);
     };
     // Third partials
-    CoolPropDbl d3alpha0_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alpha0_dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dDelta3(tau, delta);
     };
-    CoolPropDbl d3alpha0_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alpha0_dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dDelta2_dTau(tau, delta);
     };
-    CoolPropDbl d3alpha0_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alpha0_dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dDelta_dTau2(tau, delta);
     };
-    CoolPropDbl d3alpha0_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
+    CoolPropDbl d3alpha0_dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta)
     {
         return alpha0.dTau3(tau, delta);
     };
