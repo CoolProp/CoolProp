@@ -1,4 +1,6 @@
-CoolProp Delphi Wrapper Demo.
+CoolProp Delphi Wrapper Demo
+============================
+
 Bruce Wernick
 info@coolit.co.za
 Created: 13 December 2015
