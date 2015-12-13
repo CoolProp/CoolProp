@@ -1,3 +1,8 @@
+{
+  Project 4: CoolProp Graphic Demo
+  Bruce Wernick, 13 December 2015
+}
+
 program Project4;
 
 uses
