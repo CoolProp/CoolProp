@@ -20,25 +20,24 @@ object MainForm: TMainForm
   TextHeight = 13
   object PaintBox1: TPaintBox
     Left = 175
-    Top = 8
+    Top = 40
     Width = 412
-    Height = 333
+    Height = 301
     Anchors = [akLeft, akTop, akRight, akBottom]
+    OnMouseDown = PaintBox1MouseDown
+    OnMouseLeave = PaintBox1MouseLeave
     OnMouseMove = PaintBox1MouseMove
     OnPaint = PaintBox1Paint
-    ExplicitWidth = 361
-    ExplicitHeight = 321
   end
   object ListBox1: TListBox
     Left = 8
-    Top = 8
+    Top = 40
     Width = 161
-    Height = 356
+    Height = 324
     Anchors = [akLeft, akTop, akBottom]
     ItemHeight = 13
     TabOrder = 0
     OnClick = ListBox1Click
-    ExplicitHeight = 344
   end
   object StaticText1: TStaticText
     Left = 175
@@ -46,7 +45,18 @@ object MainForm: TMainForm
     Width = 412
     Height = 17
     Anchors = [akLeft, akRight, akBottom]
+    AutoSize = False
+    BorderStyle = sbsSunken
     Caption = 'Chart position...'
     TabOrder = 1
+  end
+  object Button1: TButton
+    Left = 8
+    Top = 8
+    Width = 49
+    Height = 25
+    Caption = 'Copy'
+    TabOrder = 2
+    OnClick = Button1Click
   end
 end
