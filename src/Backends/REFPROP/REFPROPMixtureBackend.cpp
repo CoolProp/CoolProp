@@ -381,7 +381,7 @@ std::string REFPROPMixtureBackend::fluid_param_string(const std::string &ParamNa
 //                c     hn80--component name--long form [character*80]
 //                c    hcasn--CAS (Chemical Abstracts Service) number [character*12]
         std::vector<std::string> CASvec;
-        for (long icomp = 1L; icomp <= fluid_names.size(); ++icomp){
+        for (long icomp = 1L; icomp <= static_cast<long>(fluid_names.size()); ++icomp){
             char hnam[13], hn80[81], hcasn[13];
             NAMEdll(&icomp, hnam, hn80, hcasn, 12, 80, 12);
             hcasn[12]='\0';
