@@ -511,24 +511,38 @@ CoolPropDbl CoolProp::TabularBackend::calc_umolar(void){
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_cpmolar(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         return calc_first_partial_deriv(iHmolar, iT, iP);
     }
     else{
-        throw ValueError("Two-phase not possible for cpmolar currently");
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iCpmolar, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iCpmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_cvmolar(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         return calc_first_partial_deriv(iUmolar, iT, iDmolar);
     }
     else{
-        throw ValueError("Two-phase not possible for cvmolar currently");
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iCvmolar, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iCvmolar, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
     }
 }
 
 CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
-    //PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         switch (selected_table){
@@ -539,11 +553,16 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
         return _HUGE; // not needed, will never be hit, just to make compiler happy
     }
     else{
-        return pure_saturation.evaluate(iviscosity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iviscosity, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iviscosity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
-    //PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         switch (selected_table){
@@ -554,7 +573,12 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
         return _HUGE; // not needed, will never be hit, just to make compiler happy
     }
     else{
-        return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, iconductivity, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){

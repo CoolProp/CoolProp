@@ -920,6 +920,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         PhaseEnvelope.lnrhomolar_vap.push_back(log(rho_molL*1000));
         isp = nc + 1;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        double T = y;
         PhaseEnvelope.T.push_back(y);
         PhaseEnvelope.lnT.push_back(log(y));
         isp = nc + 2;
@@ -928,6 +929,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         PhaseEnvelope.lnp.push_back(log(y*1000));
         isp = nc + 3;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        double rhoV_molL = y;
         PhaseEnvelope.rhomolar_liq.push_back(y*1000);
         PhaseEnvelope.lnrhomolar_liq.push_back(log(y*1000));
         PhaseEnvelope.Q.push_back(static_cast<double>(y > rho_molL));
@@ -937,6 +939,20 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         isp = nc + 5;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
         PhaseEnvelope.smolar_vap.push_back(y);
+
+        // Other outputs that could be useful
+        long ierr = 0;
+        char herr[255];
+        double p_kPa, emol, hmol, smol, cvmol, cpmol, w, hjt, eta, tcx;
+        // "Vapor"
+        THERMdll(&T, &rho_molL, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+        PhaseEnvelope.cpmolar_vap.push_back(cpmol);
+        PhaseEnvelope.cvmolar_vap.push_back(cvmol);
+        TRNPRPdll(&T, &rho_molL, &(mole_fractions[0]),  // Inputs
+            &eta, &tcx,                                  // Outputs
+            &ierr, herr, errormessagelength);            // Error message
+        PhaseEnvelope.viscosity_vap.push_back(eta/1e6);
+        PhaseEnvelope.conductivity_vap.push_back(tcx);
     }
 }
 CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void)

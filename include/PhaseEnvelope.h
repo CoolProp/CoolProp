@@ -5,7 +5,7 @@
 #include "CPmsgpack.h"
 
 #define PHASE_ENVELOPE_MATRICES X(K) X(lnK) X(x) X(y)
-#define PHASE_ENVELOPE_VECTORS X(T) X(p) X(lnT) X(lnp) X(rhomolar_liq) X(rhomolar_vap) X(lnrhomolar_liq) X(lnrhomolar_vap) X(hmolar_liq) X(hmolar_vap) X(smolar_liq) X(smolar_vap) X(Q)
+#define PHASE_ENVELOPE_VECTORS X(T) X(p) X(lnT) X(lnp) X(rhomolar_liq) X(rhomolar_vap) X(lnrhomolar_liq) X(lnrhomolar_vap) X(hmolar_liq) X(hmolar_vap) X(smolar_liq) X(smolar_vap) X(Q) X(cpmolar_liq) X(cpmolar_vap) X(cvmolar_liq) X(cvmolar_vap) X(viscosity_liq) X(viscosity_vap) X(conductivity_liq) X(conductivity_vap)
 
 namespace CoolProp{
     
@@ -47,9 +47,13 @@ public:
         y.resize(N);
     }
     void clear(){
-        T.clear(); p.clear(); lnT.clear(); lnp.clear(); rhomolar_liq.clear(); rhomolar_vap.clear(); 
-        lnrhomolar_liq.clear(); lnrhomolar_vap.clear(); hmolar_liq.clear(); hmolar_vap.clear(); smolar_liq.clear(); smolar_vap.clear();
-        K.clear(); lnK.clear(); x.clear(); y.clear(); Q.clear();
+        /* Use X macros to auto-generate the clearing code; each will look something like: T.clear(); */
+        #define X(name) name.clear();
+        PHASE_ENVELOPE_VECTORS
+        #undef X
+        #define X(name) name.clear();
+        PHASE_ENVELOPE_MATRICES
+        #undef X
     }
     /// Take all the vectors that are in the class and pack them into the vectors map for easy unpacking using msgpack
     void pack(){

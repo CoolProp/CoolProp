@@ -365,6 +365,10 @@ double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData &env, parameters 
         case iDmolar: y = &(env.rhomolar_vap); break;
         case iHmolar: y = &(env.hmolar_vap); break;
         case iSmolar: y = &(env.smolar_vap); break;
+        case iCpmolar: y = &(env.cpmolar_vap); break;
+        case iCvmolar: y = &(env.cvmolar_vap); break;
+        case iviscosity: y = &(env.viscosity_vap); break;
+        case iconductivity: y = &(env.conductivity_vap); break;
         default: throw ValueError("Pointer to vector y is unset in is_inside");
     }
 
