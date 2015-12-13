@@ -1,5 +1,7 @@
 {
-  "ALIASES": [], 
+  "ALIASES": [
+    "CF3I"
+  ], 
   "ANCILLARIES": {
     "pS": {
       "T_r": 396.44, 
