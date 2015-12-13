@@ -1,6 +1,7 @@
 CoolProp Delphi Wrapper Demo.
-Bruce Wernick, info@coolit.co.za
-13 December 2015
+Bruce Wernick
+info@coolit.co.za
+Created: 13 December 2015
 
 This demo is based on the win32 shared DLL downloaded from the CoolProp site.
 
