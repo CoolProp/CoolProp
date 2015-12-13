@@ -519,3 +519,73 @@ EXPORT_CODE double CONVENTION AbstractState_first_saturation_deriv(const long ha
     }
     return _HUGE;
 }
+
+EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, double* T, double* p, double* rhomolar, double* hmolar, double* smolar, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try{
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+
+        for (int i = 0; i<length; i++){
+            try{
+                AS->update(static_cast<CoolProp::input_pairs>(input_pair), *(value1+i), *(value2+i));
+                *(T+i) = AS->T();
+                *(p+i) = AS->p();
+                *(rhomolar+i) = AS->rhomolar();
+                *(hmolar+i) = AS->hmolar();
+                *(smolar+i) = AS->smolar();
+            }
+            catch (...){
+                
+            }
+        };
+    }
+    catch (CoolProp::HandleError &e){
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch (...){
+        *errcode = 3;
+    }
+}
+
+EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long* outputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try{
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+
+        for (int i = 0; i<length; i++){
+            try{
+                AS->update(static_cast<CoolProp::input_pairs>(input_pair), *(value1+i), *(value2+i));
+                *(out1+i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[0]));
+                *(out2+i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[1]));
+                *(out3+i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[2]));
+                *(out4+i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[3]));
+                *(out5+i) = AS->keyed_output(static_cast<CoolProp::parameters>(outputs[4]));
+            }
+            catch (...){
+
+            }
+        };
+    }
+    catch (CoolProp::HandleError &e){
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else{
+            *errcode = 2;
+        }
+    }
+    catch (...){
+        *errcode = 3;
+    }
+}

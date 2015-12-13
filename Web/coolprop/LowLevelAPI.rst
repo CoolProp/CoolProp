@@ -335,3 +335,12 @@ Here is a further example in C++:
 which yields the output:
 
 .. literalinclude:: snippets/HighLevelLowLevel.cxx.output
+
+Here is a further example in C++ that shows how to obtain many output variables at the same time, either 5 common outputs, or up to 5 user-selected vectors:
+
+.. literalinclude:: snippets/HighLevelLowLevelMulti.cxx
+   :language: c++
+
+which yields the output:
+
+.. literalinclude:: snippets/HighLevelLowLevelMulti.cxx.output
