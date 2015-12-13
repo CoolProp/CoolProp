@@ -6,6 +6,9 @@ EXPORTS
   AbstractState_keyed_output = _AbstractState_keyed_output@20
   AbstractState_set_fractions = _AbstractState_set_fractions@24
   AbstractState_update = _AbstractState_update@36
+  AbstractState_first_saturation_deriv = _AbstractState_first_saturation_deriv@24
+  AbstractState_update_and_5_out = _AbstractState_update_and_5_out@56
+  AbstractState_update_and_common_out = _AbstractState_update_and_common_out@52
   F2K = _F2K@8
   HAProps = _HAProps@40
   HAPropsSI = _HAPropsSI@40
