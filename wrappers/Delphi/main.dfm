@@ -5,6 +5,7 @@ object MainForm: TMainForm
   ClientHeight = 372
   ClientWidth = 595
   Color = clBtnFace
+  DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -55,7 +56,7 @@ object MainForm: TMainForm
     Top = 8
     Width = 49
     Height = 25
-    Caption = 'Copy'
+    Caption = '&Copy'
     TabOrder = 2
     OnClick = Button1Click
   end

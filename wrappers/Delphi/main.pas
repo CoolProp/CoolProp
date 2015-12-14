@@ -71,7 +71,7 @@ begin
   SetLength(res, n);
   get_global_param_string('FluidsList', PAnsiChar(res), n);
   ListBox1.Items.CommaText := string(res);
-  ListBox1.ItemIndex := ListBox1.Items.IndexOf(ref)
+  ListBox1.ItemIndex := ListBox1.Items.IndexOf(string(ref))
 end;
 
 procedure TMainForm.ListBox1Click(Sender: TObject);
@@ -91,7 +91,7 @@ end;
 
 procedure TMainForm.PaintBox1MouseLeave(Sender: TObject);
 begin
-  StaticText1.Caption := fluid
+  StaticText1.Caption := string(fluid)
 end;
 
 procedure TMainForm.PaintBox1MouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -109,7 +109,7 @@ end;
 
 procedure TMainForm.PaintBox1Paint(Sender: TObject);
 begin
-  StaticText1.Caption := fluid;
+  StaticText1.Caption := string(fluid);
   MolChart.DrawChart(ref, PaintBox1.Width, PaintBox1.Height)
 end;
 
