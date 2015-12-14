@@ -32,7 +32,8 @@ the available fluids.  The PaintBox is a very basic components that is basically
 just a canvas.  The main program creates a TMolChart class that does all the 
 work on a canvas.  When the OnPaint fires in the main form, the chart is re-drawn.
 
-The image [project4.png] shows the output.
+See the projet4 output here...
+image::project4.png
 
 The chart is auto scaled around the critical point and atmospheric pressure 
 (where possible).  This makes it quite convenient for comparing the shape of 
@@ -55,6 +56,9 @@ Floating Point Exceptions
 A note about some specific problems that I found with Delphi.  
 Apparently, most compiers automatically disable floating point exceptions.  The 
 Delphi compiler does not do this.  Actually, this does not fix the problem, it
-simply hides it.  See the image [coolprop_error01.png] for places where errors 
-occur.
+simply hides it.  
+
+You can see the errors on this image
+image::coolprop_error01.png
+
 
