@@ -33,7 +33,9 @@ just a canvas.  The main program creates a TMolChart class that does all the
 work on a canvas.  When the OnPaint fires in the main form, the chart is re-drawn.
 
 See the projet4 output here...
-project4.png
+.. image:: project4.png
+   :width: 40pt
+
 
 The chart is auto scaled around the critical point and atmospheric pressure 
 (where possible).  This makes it quite convenient for comparing the shape of 
