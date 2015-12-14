@@ -33,7 +33,7 @@ just a canvas.  The main program creates a TMolChart class that does all the
 work on a canvas.  When the OnPaint fires in the main form, the chart is re-drawn.
 
 See the projet4 output here...
-image::project4.png
+project4.png
 
 The chart is auto scaled around the critical point and atmospheric pressure 
 (where possible).  This makes it quite convenient for comparing the shape of 
@@ -59,6 +59,6 @@ Delphi compiler does not do this.  Actually, this does not fix the problem, it
 simply hides it.  
 
 You can see the errors on this image
-image::coolprop_error01.png
+coolprop_error01.png
 
 
