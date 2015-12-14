@@ -531,6 +531,13 @@ vel("HeavyWater", "T", 0.5000*643.847, "Dmass", 3.07*358, "V", 835.786416818*0.7
 vel("HeavyWater", "T", 0.9000*643.847, "Dmass", 2.16*358, "V", 627.777590127*0.742128e-3, 1e-5),
 vel("HeavyWater", "T", 1.2000*643.847, "Dmass", 0.8*358, "V", 259.605241187*0.742128e-3, 1e-5),
 
+// Vassiliou, JPCRD, 2015
+vel("Cyclopentane", "T", 512, "Dmass", 1e-12, "L", 37.042e-3, 1e-5),
+vel("Cyclopentane", "T", 512, "Dmass", 400, "L", 69.698e-3, 1e-1),
+vel("Isopentane", "T", 460, "Dmass", 1e-12, "L", 35.883e-3, 1e-4),
+vel("Isopentane", "T", 460, "Dmass", 329.914, "L", 59.649e-3, 1e-1),
+vel("n-Pentane", "T", 460, "Dmass", 1e-12, "L", 34.048e-3, 1e-5),
+vel("n-Pentane", "T", 460, "Dmass", 377.687, "L", 71.300e-3, 1e-1),
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity],[transport]")

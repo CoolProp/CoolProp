@@ -154,6 +154,14 @@ public:
     static CoolPropDbl viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS);
 
     /**
+     * Implement the method of:
+     *
+     * Chung, Ting Horng, et al. "Generalized multiparameter correlation for nonpolar and polar fluid transport properties." 
+     * Industrial & engineering chemistry research 27(4) (1988): 671-679.
+     */
+    static CoolPropDbl viscosity_Chung(HelmholtzEOSMixtureBackend &HEOS);
+
+    /**
     \brief The general dilute gas conductivity term formed of a ratio of polynomial like terms
 
     \f[

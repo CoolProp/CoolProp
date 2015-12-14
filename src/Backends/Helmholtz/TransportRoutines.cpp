@@ -581,6 +581,54 @@ CoolPropDbl TransportRoutines::viscosity_ethane_higher_order_hardcoded(Helmholtz
     }
     return 15.977*sum1/(1+sum2)/1e6;
 }
+CoolPropDbl TransportRoutines::viscosity_Chung(HelmholtzEOSMixtureBackend &HEOS)
+{
+    // Retrieve values from the state class
+    CoolProp::ViscosityChungData &data = HEOS.components[0].transport.viscosity_Chung;
+
+    double a0[] = { 0, 6.32402, 0.12102e-2, 5.28346, 6.62263, 19.74540, -1.89992, 24.27450, 0.79716, -0.23816, 0.68629e-1 };
+    double a1[] = { 0, 50.41190, -0.11536e-2, 254.20900, 38.09570, 7.63034, -12.53670, 3.44945, 1.11764, 0.67695e-1, 0.34793 };
+    double a2[] = { 0, -51.68010, -0.62571e-2, -168.48100, -8.46414, -14.35440, 4.98529, -11.29130, 0.12348e-1, -0.81630, 0.59256 };
+    double a3[] = { 0, 1189.02000, 0.37283e-1, 3898.27000, 31.41780, 31.52670, -18.15070, 69.34660, -4.11661, 4.02528, -0.72663 };
+    double A[11];
+
+    if (HEOS.is_pure_or_pseudopure)
+    {
+        double Vc_cm3mol = 1/(data.rhomolar_critical/1e6); // [cm^3/mol]
+        double acentric = data.acentric; // [-]
+        double M_gmol = data.molar_mass*1000.0; // [g/mol]
+        double Tc = data.T_critical; // [K]
+        double mu_D = data.dipole_moment_D; // [D]
+        double kappa = 0;
+
+        double mu_r = 131.3*mu_D/sqrt(Vc_cm3mol*Tc); // [-]
+
+        for (int i = 1; i <= 10; ++i){
+            A[i] = a0[i] + a1[i]*acentric + a2[i]*pow(mu_r, 4) + a3[i]*kappa;
+        }
+        double F_c = 1 - 0.2756*acentric + 0.059035*pow(mu_r, 4) + kappa; // [-]
+        double sigma_A = 0.809*pow(Vc_cm3mol, 1.0/3.0); // [A]
+        double epsilon_over_k = Tc/1.2593; // [K]
+
+        double rho_molcm3 = HEOS.rhomolar()/1e6;
+        double T = HEOS.T();
+        double Tstar = T/epsilon_over_k;
+        double Omega_2_2 = 1.16145*pow(Tstar, -0.14874) + 0.52487*exp(-0.77320*Tstar) + 2.16178*exp(-2.43787*Tstar)-6.435e-4*pow(Tstar, 0.14874)*sin(18.0323*pow(Tstar, -0.76830) - 7.27371); // [-]
+        double eta0_P = 4.0785e-5*sqrt(M_gmol*T)/(pow(Vc_cm3mol, 2.0/3.0)*Omega_2_2)*F_c; // [P]
+
+        double Y = rho_molcm3*Vc_cm3mol/6.0;
+        double G_1 = (1.0-0.5*Y)/pow(1-Y, 3);
+        double G_2 = (A[1]*(1-exp(-A[4]*Y))/Y + A[2]*G_1*exp(A[5]*Y) + A[3]*G_1)/(A[1]*A[4]+A[2]+A[3]);
+        double eta_k_P = eta0_P*(1/G_2 + A[6]*Y); // [P]
+
+        double eta_p_P = (36.344e-6*sqrt(M_gmol*Tc)/pow(Vc_cm3mol, 2.0/3.0))*A[7]*pow(Y, 2)*G_2*exp(A[8] + A[9]/Tstar + A[10]/pow(Tstar, 2)); // [P]
+
+        return (eta_k_P + eta_p_P)/10.0; // [P] -> [Pa*s]
+    }
+    else{
+        throw NotImplementedError("TransportRoutines::viscosity_Chung is only for pure and pseudo-pure");
+    }
+}
 
 CoolPropDbl TransportRoutines::conductivity_dilute_ratio_polynomials(HelmholtzEOSMixtureBackend &HEOS){
     if (HEOS.is_pure_or_pseudopure)

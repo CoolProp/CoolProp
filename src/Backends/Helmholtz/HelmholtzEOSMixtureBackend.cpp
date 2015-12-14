@@ -535,6 +535,14 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl &dilut
             critical = TransportRoutines::viscosity_ECS(*this, *ref_fluid);
             return;
         }
+
+        // Check if using Chung model
+        if (component.transport.viscosity_using_Chung)
+        {
+            // Get the viscosity using ECS and stick in the critical value
+            critical = TransportRoutines::viscosity_Chung(*this);
+            return;
+        }
         
         if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
         {

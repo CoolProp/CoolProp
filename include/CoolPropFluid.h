@@ -272,6 +272,9 @@ struct ViscosityECSVariables{
     CoolPropDbl psi_rhomolar_reducing;
     std::vector<CoolPropDbl> psi_a, psi_t;
 };
+struct ViscosityChungData{
+    CoolPropDbl rhomolar_critical, acentric, T_critical, molar_mass, dipole_moment_D;
+};
 
 class TransportPropertyData
 {
@@ -295,6 +298,8 @@ public:
     ViscosityInitialDensityVariables viscosity_initial;
     ViscosityHigherOrderVariables viscosity_higher_order;
     ViscosityECSVariables viscosity_ecs;
+    ViscosityChungData viscosity_Chung;
+
     ConductivityDiluteVariables conductivity_dilute;
     ConductivityResidualVariables conductivity_residual;
     ConductivityCriticalVariables conductivity_critical;
@@ -304,6 +309,7 @@ public:
                 BibTeX_conductivity;  ///< The BibTeX key for the conductivity model
     bool viscosity_using_ECS; ///< A flag for whether to use extended corresponding states for viscosity.  False for no
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
+    bool viscosity_using_Chung; ///< A flag for whether to use Chung model. False for no
 	bool viscosity_model_provided; ///< A flag for whether viscosity model is provided.  False for no
     bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
     CoolPropDbl sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
@@ -312,6 +318,7 @@ public:
     ConductivityHardcodedEnum hardcoded_conductivity; ///< Hardcoded flags for the conductivity
     TransportPropertyData():viscosity_using_ECS(false),
                             conductivity_using_ECS(false),
+                            viscosity_using_Chung(false),
                             viscosity_model_provided(false),
                             conductivity_model_provided(false),
                             sigma_eta(_HUGE),epsilon_over_k(_HUGE),

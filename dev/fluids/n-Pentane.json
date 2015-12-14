@@ -449,6 +449,95 @@
     }
   }, 
   "TRANSPORT": {
+    "conductivity": {
+      "BibTeX": "Vassiliou-JPCRD-2015-pentanes", 
+      "critical": {
+        "GAMMA": 0.058, 
+        "R0": 1.02, 
+        "gamma": 1.239, 
+        "qD": 1497005988.0239522, 
+        "type": "simplified_Olchowy_Sengers", 
+        "zeta0": 2.27e-10
+      }, 
+      "dilute": {
+        "A": [
+          -0.00396685, 
+          0.0353805, 
+          0.00511554, 
+          -0.108585, 
+          0.179573, 
+          0.0392128
+        ], 
+        "B": [
+          2.71636, 
+          -5.76265, 
+          6.77885, 
+          -0.59135, 
+          1
+        ], 
+        "T_reducing": 469.7, 
+        "T_reducing_units": "K", 
+        "m": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "n": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4, 
+          5
+        ], 
+        "type": "ratio_of_polynomials"
+      }, 
+      "residual": {
+        "B": [
+          0.000776054, 
+          0.00797696, 
+          0.117655, 
+          -0.0785888, 
+          -0.133101, 
+          0.0916089, 
+          0.0534026, 
+          -0.0370431, 
+          -0.0068793, 
+          0.0050962
+        ], 
+        "T_reducing": 469.7, 
+        "T_reducing_units": "K", 
+        "d": [
+          1, 
+          1, 
+          2, 
+          2, 
+          3, 
+          3, 
+          4, 
+          4, 
+          5, 
+          5
+        ], 
+        "rhomass_reducing": 232.0, 
+        "rhomass_reducing_units": "kg/m^3", 
+        "t": [
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1, 
+          0, 
+          -1
+        ], 
+        "type": "polynomial"
+      }
+    }, 
     "viscosity": {
       "BibTeX": "QuinonesCisneros-JPCB-2006", 
       "dilute": {

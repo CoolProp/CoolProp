@@ -635,6 +635,17 @@ protected:
         fluid.transport.viscosity_using_ECS = true;
     }
 
+    void parse_Chung_viscosity(rapidjson::Value &viscosity, CoolPropFluid &fluid)
+    {   
+        // These in base SI units
+        fluid.transport.viscosity_Chung.rhomolar_critical = cpjson::get_double(viscosity, "rhomolar_critical");
+        fluid.transport.viscosity_Chung.T_critical = cpjson::get_double(viscosity, "T_critical");
+        fluid.transport.viscosity_Chung.molar_mass = cpjson::get_double(viscosity, "molar_mass");
+        fluid.transport.viscosity_Chung.dipole_moment_D = cpjson::get_double(viscosity, "dipole_moment_D");
+        fluid.transport.viscosity_Chung.acentric = cpjson::get_double(viscosity, "acentric");
+        fluid.transport.viscosity_using_Chung = true;
+    }
+
     /// Parse the transport properties
     void parse_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
     {
@@ -655,6 +666,14 @@ protected:
             parse_ECS_viscosity(viscosity, fluid);
             return;
         }
+
+        // Use the method of Chung 
+        // If it is using ECS, set ECS parameters and quit
+        if (viscosity.HasMember("type") && !cpjson::get_string(viscosity, "type").compare("Chung")){
+            parse_Chung_viscosity(viscosity, fluid);
+            return;
+        }
+
 
         if (viscosity.HasMember("hardcoded")){
             std::string target = cpjson::get_string(viscosity,"hardcoded");
