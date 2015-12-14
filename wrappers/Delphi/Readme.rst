@@ -59,6 +59,7 @@ Delphi compiler does not do this.  Actually, this does not fix the problem, it
 simply hides it.  
 
 You can see the errors on this image
-coolprop_error01.png
 
+.. image:: coolprop_error01.png
+   :width: 40pt
 
