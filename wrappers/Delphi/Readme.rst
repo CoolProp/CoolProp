@@ -32,7 +32,7 @@ the available fluids.  The PaintBox is a very basic components that is really
 just a canvas.  The main program creates a TMolChart class that does all the 
 work on a canvas.  When the OnPaint fires in the main form, the chart is re-drawn.
 
-See the projet4 output here
+See the project4 output here
 
 .. image:: project4.png
    :width: 40pt
