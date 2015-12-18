@@ -5,7 +5,7 @@
 #include "CPmsgpack.h"
 
 #define PHASE_ENVELOPE_MATRICES X(K) X(lnK) X(x) X(y)
-#define PHASE_ENVELOPE_VECTORS X(T) X(p) X(lnT) X(lnp) X(rhomolar_liq) X(rhomolar_vap) X(lnrhomolar_liq) X(lnrhomolar_vap) X(hmolar_liq) X(hmolar_vap) X(smolar_liq) X(smolar_vap) X(Q) X(cpmolar_liq) X(cpmolar_vap) X(cvmolar_liq) X(cvmolar_vap) X(viscosity_liq) X(viscosity_vap) X(conductivity_liq) X(conductivity_vap)
+#define PHASE_ENVELOPE_VECTORS X(T) X(p) X(lnT) X(lnp) X(rhomolar_liq) X(rhomolar_vap) X(lnrhomolar_liq) X(lnrhomolar_vap) X(hmolar_liq) X(hmolar_vap) X(smolar_liq) X(smolar_vap) X(Q) X(cpmolar_liq) X(cpmolar_vap) X(cvmolar_liq) X(cvmolar_vap) X(viscosity_liq) X(viscosity_vap) X(conductivity_liq) X(conductivity_vap) X(speed_sound_vap)
 
 namespace CoolProp{
     

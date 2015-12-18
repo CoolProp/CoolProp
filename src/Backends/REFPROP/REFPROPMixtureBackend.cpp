@@ -948,7 +948,8 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         THERMdll(&T, &rho_molL, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
         PhaseEnvelope.cpmolar_vap.push_back(cpmol);
         PhaseEnvelope.cvmolar_vap.push_back(cvmol);
-        TRNPRPdll(&T, &rho_molL, &(mole_fractions[0]),  // Inputs
+        PhaseEnvelope.speed_sound_vap.push_back(w);
+        TRNPRPdll(&T, &rho_molL, &(mole_fractions[0]),   // Inputs
             &eta, &tcx,                                  // Outputs
             &ierr, herr, errormessagelength);            // Error message
         PhaseEnvelope.viscosity_vap.push_back(eta/1e6);
