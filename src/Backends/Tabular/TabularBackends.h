@@ -55,7 +55,7 @@ class PureFluidSaturationTableData{
 		std::size_t N;
 		shared_ptr<CoolProp::AbstractState> AS;
     
-		PureFluidSaturationTableData(){N = 1000; revision = 0;}
+		PureFluidSaturationTableData(){N = 1000; revision = 1;}
         
         /// Build this table
         void build(shared_ptr<CoolProp::AbstractState> &AS);
