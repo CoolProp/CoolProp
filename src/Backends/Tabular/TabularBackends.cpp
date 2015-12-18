@@ -138,6 +138,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             pL[i] = p; TL[i] = AS->T();  rhomolarL[i] = AS->rhomolar(); 
             hmolarL[i] = AS->hmolar(); smolarL[i] = AS->smolar(); umolarL[i] = AS->umolar();
             logpL[i] = log(p); logrhomolarL[i] = log(rhomolarL[i]);
+            cpmolarL[i] = AS->cpmolar(); cvmolarL[i] = AS->cvmolar(); speed_soundL[i] = AS->speed_sound();
         }
         catch(std::exception &e){
             // That failed for some reason, go to the next pair
@@ -158,6 +159,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
             pV[i] = p; TV[i] = AS->T(); rhomolarV[i] = AS->rhomolar();
             hmolarV[i] = AS->hmolar(); smolarV[i] = AS->smolar(); umolarV[i] = AS->umolar();
             logpV[i] = log(p); logrhomolarV[i] = log(rhomolarV[i]);
+            cpmolarV[i] = AS->cpmolar(); cvmolarV[i] = AS->cvmolar(); speed_soundV[i] = AS->speed_sound();
         }
         catch(std::exception &e){
             // That failed for some reason, go to the next pair
@@ -578,6 +580,21 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
         }
         else{
             return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        }
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::calc_speed_sound(void){
+    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+    if (using_single_phase_table){
+        return sqrt(1/molar_mass()*cpmolar()/cvmolar()*first_partial_deriv(iP, iDmolar, iT));
+    }
+    else{
+        if (is_mixture){
+            return phase_envelope_sat(phase_envelope, ispeed_sound, iP, _p);
+        }
+        else{
+            return pure_saturation.evaluate(ispeed_sound, _p, _Q, cached_saturation_iL, cached_saturation_iV);
         }
     }
 }

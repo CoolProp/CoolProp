@@ -23,7 +23,7 @@
  * See http://stackoverflow.com/a/148610
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
  */
-#define LIST_OF_SATURATION_VECTORS X(TL) X(pL) X(logpL) X(hmolarL) X(smolarL) X(umolarL) X(rhomolarL) X(logrhomolarL) X(viscL) X(condL) X(logviscL) X(TV) X(pV) X(logpV) X(hmolarV) X(smolarV) X(umolarV) X(rhomolarV) X(logrhomolarV) X(viscV) X(condV) X(logviscV)
+#define LIST_OF_SATURATION_VECTORS X(TL) X(pL) X(logpL) X(hmolarL) X(smolarL) X(umolarL) X(rhomolarL) X(logrhomolarL) X(viscL) X(condL) X(logviscL) X(TV) X(pV) X(logpV) X(hmolarV) X(smolarV) X(umolarV) X(rhomolarV) X(logrhomolarV) X(viscV) X(condV) X(logviscV) X(cpmolarV) X(cpmolarL) X(cvmolarV) X(cvmolarL) X(speed_soundL) X(speed_soundV)
 
 namespace CoolProp{
 
@@ -278,8 +278,32 @@ class PureFluidSaturationTableData{
                     if (!ValidNumber(muL)){throw ValueError("muL is invalid");}
                     return 1/(Q/muV + (1-Q)/muL);
                 }
+                case iCpmolar:
+                {
+                    double cpV = CubicInterp(logpV, cpmolarV, iV-2, iV-1, iV, iV+1, logp);
+                    double cpL = CubicInterp(logpL, cpmolarL, iL-2, iL-1, iL, iL+1, logp);
+                    if (!ValidNumber(cpV)){ throw ValueError("cpV is invalid"); }
+                    if (!ValidNumber(cpL)){ throw ValueError("cpL is invalid"); }
+                    return Q*cpV + (1-Q)*cpL;
+                }
+                case iCvmolar:
+                {
+                    double cvV = CubicInterp(logpV, cvmolarV, iV-2, iV-1, iV, iV+1, logp);
+                    double cvL = CubicInterp(logpL, cvmolarL, iL-2, iL-1, iL, iL+1, logp);
+                    if (!ValidNumber(cvV)){ throw ValueError("cvV is invalid"); }
+                    if (!ValidNumber(cvL)){ throw ValueError("cvL is invalid"); }
+                    return Q*cvV + (1-Q)*cvL;
+                }
+                case ispeed_sound:
+                {
+                    double wV = CubicInterp(logpV, speed_soundV, iV-2, iV-1, iV, iV+1, logp);
+                    double wL = CubicInterp(logpL, speed_soundL, iL-2, iL-1, iL, iL+1, logp);
+                    if (!ValidNumber(wV)){ throw ValueError("wV is invalid"); }
+                    if (!ValidNumber(wL)){ throw ValueError("wL is invalid"); }
+                    return Q*wV + (1-Q)*wL;
+                }
                 default:
-                    throw ValueError("Output variable for evaluatre is invalid");
+                    throw ValueError("Output variable for evaluate is invalid");
             }
         };
         /**
@@ -915,9 +939,7 @@ class TabularBackend : public AbstractState
         CoolPropDbl calc_viscosity(void);
         CoolPropDbl calc_conductivity(void);
         /// Calculate the speed of sound using a tabular backend [m/s]
-        CoolPropDbl calc_speed_sound(void){
-            return sqrt(1/molar_mass()*cpmolar()/cvmolar()*first_partial_deriv(iP, iDmolar, iT));
-        };
+        CoolPropDbl calc_speed_sound(void);
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
         /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */
