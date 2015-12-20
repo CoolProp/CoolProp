@@ -40,7 +40,11 @@ Usage
 To calculate the normal boiling temperature of water at one atmosphere::
 
     >> CoolProp.PropsSI('T','P',101325,'Q',0,'Water')
-
+    
+Faster Properties
+=================
+    
+The interface for CoolProp for MATLAB is quite slow due to the internal structure of MATLAB that is not amenable for easy wrapping of C++ code.  For that reason it can be advantageous to call the low-level interface through the DLL (shared library on linux and OSX) and obtain a few properties at a time.  There is an example :ref:` below <low_level_high_level_matlab>` that demonstrates how to do this.  It mirrors the code that is used to call these functions from C++ as seen in the :ref:` low-level interface <low_level_high_level>`.  This method of retrieving properties is almost as fast as C++, and much faster than using the SWIG-based wrappers.
     
 User-Compiled Binaries
 ======================
@@ -162,3 +166,12 @@ Example Code Output
 ===================
 
 .. literalinclude:: Example.out
+
+.. _low_level_high_level: 
+
+Calling Low-Level interface through DLL
+=======================================
+
+.. literalinclude:: HighLevelLowLevelMATLAB.m
+   :language: matlab
+   
