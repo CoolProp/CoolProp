@@ -109,3 +109,9 @@ Supporters
    :height: 50px
    :alt: IPU Refrigeration and Energy Technology
    :target: http://www.ipu.dk
+   
+
+License Information
+-------------------
+
+CoolProp has flexible licensing terms and you can use it for commercial projects and academic work free of charge. Have a look at the actual `license <https://github.com/CoolProp/CoolProp/blob/master/LICENSE>`_, if you are in doubt. 
