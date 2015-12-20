@@ -13,7 +13,7 @@ class SecCoolSolutionData(DigitalData):
     to read data files sitting in data/SecCool/xMass and
     data/SecCool/xVolume.
     """
-    def __init__(self,sFile=None,sFolder=None,name=None,desc=None,ref='SecCool software'):
+    def __init__(self,sFile=None,sFolder=None,name=None,desc=None,ref='SecCool software',densityFactor=None,heatFactor=None,conductivityFactor=None,viscosityFactor=None):
         DigitalData.__init__(self)
         self.allowNegativeData = False
 
@@ -48,11 +48,11 @@ class SecCoolSolutionData(DigitalData):
             raise ValueError("Unknown folder type specified.")
         self.TminPsat = self.Tmax
 
-
         try:
             self.density.xData,self.density.yData,self.density.data = self.getArray(dataID="Rho")
-            while np.max(self.density.data[np.isfinite(self.density.data)])<500: # Expect values around 1e3
-                self.density.data *= 10.0
+            #while np.max(self.density.data[np.isfinite(self.density.data)])<500: # Expect values around 1e3
+            #    self.density.data *= 10.0
+            if densityFactor is not None: self.density.data *= densityFactor
             self.density.source = self.density.SOURCE_DATA
         except:
             if self.density.DEBUG: print("Could not load {}".format(self.getFile("Rho")))
@@ -60,8 +60,9 @@ class SecCoolSolutionData(DigitalData):
 
         try:
             self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID='Cp')
-            while np.max(self.specific_heat.data[np.isfinite(self.specific_heat.data)])<1000: # Expect values around 2e3
-                self.specific_heat.data *= 10.0
+            #while np.max(self.specific_heat.data[np.isfinite(self.specific_heat.data)])<1000: # Expect values around 2e3
+            #    self.specific_heat.data *= 10.0
+            if heatFactor is not None: self.specific_heat.data *= heatFactor
             self.specific_heat.source = self.specific_heat.SOURCE_DATA
         except:
             if self.specific_heat.DEBUG: print("Could not load {}".format(self.getFile("Cp")))
@@ -69,8 +70,9 @@ class SecCoolSolutionData(DigitalData):
 
         try:
             self.conductivity.xData,self.conductivity.yData,self.conductivity.data   = self.getArray(dataID='Cond')
-            while np.max(self.conductivity.data[np.isfinite(self.conductivity.data)])>2: # Expect value below 1
-                self.conductivity.data *=  0.1
+            #while np.max(self.conductivity.data[np.isfinite(self.conductivity.data)])>2: # Expect value below 1
+            #    self.conductivity.data *=  0.1
+            if conductivityFactor is not None: self.conductivity.data *= conductivityFactor
             self.conductivity.source = self.conductivity.SOURCE_DATA
         except:
             if self.conductivity.DEBUG: print("Could not load {}".format(self.getFile("Cond")))
@@ -78,8 +80,9 @@ class SecCoolSolutionData(DigitalData):
 
         try:
             self.viscosity.xData,self.viscosity.yData,self.viscosity.data   = self.getArray(dataID='Mu')
-            while np.max(self.viscosity.data[np.isfinite(self.viscosity.data)])>0.2: # Expect value below 0.1
-                self.viscosity.data *=  0.1
+            #while np.max(self.viscosity.data[np.isfinite(self.viscosity.data)])>0.2: # Expect value below 0.1
+            #    self.viscosity.data *=  0.1
+            if viscosityFactor is not None: self.viscosity.data *= viscosityFactor
             self.viscosity.source = self.viscosity.SOURCE_DATA
         except:
             if self.viscosity.DEBUG: print("Could not load {}".format(self.getFile("Mu")))
