@@ -67,11 +67,11 @@
     "type": "polynomial"
   }, 
   "viscosity": {
-    "NRMS": 1.931401e-03, 
+    "NRMS": 1.931212e-03, 
     "coeffs": [
-      4.845547e+02, 
+      4.845557e+02, 
       -1.520740e+02, 
-      2.471436e+00
+      9.379202e+00
     ], 
     "type": "exponential"
   }, 

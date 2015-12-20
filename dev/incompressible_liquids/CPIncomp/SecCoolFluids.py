@@ -395,11 +395,11 @@ class SecCoolSolutionData(DigitalData):
         sec += [SecCoolSolutionData(sFile='Dowtherm Q'   ,sFolder='xPure',name='DowQ2',desc='Dowtherm Q, Diphenylethane/alkylated aromatics' ,ref='Dow1997,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
 
-        sec += [SecCoolIceData(sFile='IceEA'   ,sFolder='xMass',name='IceEA',desc='Ice slurry with Ethanol' ,ref='Kauffeld2001,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        sec += [SecCoolIceData(sFile='IceEA'   ,sFolder='xMass',name='IceEA',desc='Ice slurry with Ethanol' ,ref='Kauffeld2001,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Kauffeld2001,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        sec += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Kauffeld2001,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolIceData(sFile='IcePG'   ,sFolder='xMass',name='IcePG',desc='Ice slurry with Propylene Glycol' ,ref='Kauffeld2001,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        sec += [SecCoolIceData(sFile='IcePG'   ,sFolder='xMass',name='IcePG',desc='Ice slurry with Propylene Glycol' ,ref='Kauffeld2001,Skovrup2013')]
         print(", {0}".format(sec[-1].name), end="")
 
         sec += [ThermogenVP1869()]
@@ -624,7 +624,7 @@ class Freezium(DigitalData):
         def funcMu(T,x):
             Tr = (T-self.Tbase)/100.0
             result = 0.32+x*(-0.70+x*2.26)+Tr*(-1.26+Tr*(1.12-Tr*0.894))
-            return self.rho(T, 1e6, x)*np.power(10,result)*1E-3;
+            return self.rho(T, 1e6, x)*np.power(10,result)*1E-6;
 
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
 
@@ -698,6 +698,7 @@ class AS10(PureData,DigitalData):
         self.viscosity.source = self.viscosity.SOURCE_COEFFS
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
         self.viscosity.coeffs = np.array([[-2.11481e-5],[+ 0.00235381],[- 0.10631376],[+ 2.80154921]])[::-1]
+        self.viscosity.coeffs *= 1e-3
 
     def fitFluid(self):
         pass
@@ -736,7 +737,8 @@ class AS20(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            return 2.43708721027941*np.exp(-0.0537593944541809*T) + 0.97244
+            mPas = 2.43708721027941*np.exp(-0.0537593944541809*T) + 0.97244
+            return mPas / 1e3
 
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
 
@@ -784,7 +786,8 @@ class AS30(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            return 2.65653950695888*np.exp(-0.0598806339442954*T) + 1.30143
+            mPas = 2.65653950695888*np.exp(-0.0598806339442954*T) + 1.30143
+            return mPas / 1e3
 
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
 
@@ -831,7 +834,8 @@ class AS40(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            return 0.714976365635003*np.exp(-0.100050525515385*T) + 4.38768154440393*np.exp(-0.0260039000649317*T)
+            mPas = 0.714976365635003*np.exp(-0.100050525515385*T) + 4.38768154440393*np.exp(-0.0260039000649317*T)
+            return mPas / 1e3
 
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
 
@@ -879,7 +883,8 @@ class AS55(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            return 0.159583223482554*np.exp(-0.138097704125669*T) + 6.3176967296442*np.exp(-0.0380509974688477*T)
+            mPas = 0.159583223482554*np.exp(-0.138097704125669*T) + 6.3176967296442*np.exp(-0.0380509974688477*T)
+            return mPas / 1e3
 
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
 
