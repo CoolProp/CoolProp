@@ -302,104 +302,104 @@ class SecCoolSolutionData(DigitalData):
         """
         print("Loading SecCool fluids: ", end="")
         sec = []
-        sec += [SecCoolSolutionData(sFile='Antifrogen KF'           ,sFolder='xVolume',name='AKF',desc='Antifrogen KF, Potassium Formate'       ,ref='Clariant2000,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Antifrogen KF'           ,sFolder='xVolume',name='AKF',desc='Antifrogen KF, Potassium Formate'       ,ref='Clariant2000,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print("{0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Antifrogen L'            ,sFolder='xVolume',name='AL' ,desc='Antifrogen L, Propylene Glycol'         ,ref='Clariant2000,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Antifrogen L'            ,sFolder='xVolume',name='AL' ,desc='Antifrogen L, Propylene Glycol'         ,ref='Clariant2000,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Antifrogen N'            ,sFolder='xVolume',name='AN' ,desc='Antifrogen N, Ethylene Glycol'          ,ref='Clariant2000,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Antifrogen N'            ,sFolder='xVolume',name='AN' ,desc='Antifrogen N, Ethylene Glycol'          ,ref='Clariant2000,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='ASHRAE, Ethylene Glycol' ,sFolder='xVolume',name='AEG',desc='ASHRAE, Ethylene Glycol'                ,ref='ASHRAE2001,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='ASHRAE, Ethylene Glycol' ,sFolder='xVolume',name='AEG',desc='ASHRAE, Ethylene Glycol'                ,ref='ASHRAE2001,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='ASHRAE, Propylene Glycol',sFolder='xVolume',name='APG',desc='ASHRAE, Propylene Glycol'               ,ref='ASHRAE2001,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='ASHRAE, Propylene Glycol',sFolder='xVolume',name='APG',desc='ASHRAE, Propylene Glycol'               ,ref='ASHRAE2001,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Glykosol N'              ,sFolder='xVolume',name='GKN',desc='Glykosol N, Ethylene Glycol'            ,ref='PKS2005,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Glykosol N'              ,sFolder='xVolume',name='GKN',desc='Glykosol N, Ethylene Glycol'            ,ref='PKS2005,Skovrup2013', densityFactor=1e3, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Pekasol 2000'            ,sFolder='xVolume',name='PK2',desc='Pekasol 2000, K acetate/formate'        ,ref='PKS2005,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Pekasol 2000'            ,sFolder='xVolume',name='PK2',desc='Pekasol 2000, K acetate/formate'        ,ref='PKS2005,Skovrup2013', densityFactor=1e3, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Pekasol L'               ,sFolder='xVolume',name='PKL',desc='Pekasol L, Propylene Glycol'            ,ref='PKS2005,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Pekasol L'               ,sFolder='xVolume',name='PKL',desc='Pekasol L, Propylene Glycol'            ,ref='PKS2005,Skovrup2013', densityFactor=1e3, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec AC'               ,sFolder='xVolume',name='ZAC',desc='Zitrec AC, Corrosion Inhibitor'         ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Zitrec AC'               ,sFolder='xVolume',name='ZAC',desc='Zitrec AC, Corrosion Inhibitor'         ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec FC'               ,sFolder='xVolume',name='ZFC',desc='Zitrec FC, Propylene Glycol'            ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Zitrec FC'               ,sFolder='xVolume',name='ZFC',desc='Zitrec FC, Propylene Glycol'            ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec LC'               ,sFolder='xVolume',name='ZLC',desc='Zitrec LC, Propylene Glycol'            ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Zitrec LC'               ,sFolder='xVolume',name='ZLC',desc='Zitrec LC, Propylene Glycol'            ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec MC'               ,sFolder='xVolume',name='ZMC',desc='Zitrec MC, Ethylene Glycol'             ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Zitrec MC'               ,sFolder='xVolume',name='ZMC',desc='Zitrec MC, Ethylene Glycol'             ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec M'                ,sFolder='xVolume',name='ZM' ,desc='Zitrec M, Ethylene Glycol'              ,ref='Arteco2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-
-        sec += [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Calcium Cloride'    ,sFolder='xMass',name='MCA2',desc='Melinder, Calcium Chloride'   ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Ethanol'            ,sFolder='xMass',name='MEA2',desc='Melinder, Ethanol'            ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Ethylene glycol'    ,sFolder='xMass',name='MEG2',desc='Melinder, Ethylene Glycol'    ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Glycerol'           ,sFolder='xMass',name='MGL2',desc='Melinder, Glycerol'           ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Magnesium Chloride' ,sFolder='xMass',name='MMG2',desc='Melinder, Magnesium Chloride' ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Methanol'           ,sFolder='xMass',name='MMA2',desc='Melinder, Methanol'           ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Acetate'  ,sFolder='xMass',name='MKA2',desc='Melinder, Potassium Acetate'  ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Carbonate',sFolder='xMass',name='MKC2',desc='Melinder, Potassium Carbonate',ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Propylene Glycol'   ,sFolder='xMass',name='MPG2',desc='Melinder, Propylene Glycol'   ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Melinder, Sodium Chloride'    ,sFolder='xMass',name='MNA2',desc='Melinder, Sodium Chloride'    ,ref='Melinder2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Calcium Cloride'         ,sFolder='xMass',name='VCA' ,desc='VDI, Calcium Cloride'         ,ref='Preisegger2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Magnesium Chloride'      ,sFolder='xMass',name='VMG' ,desc='VDI, Magnesium Chloride'      ,ref='Preisegger2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Methanol'                ,sFolder='xMass',name='VMA' ,desc='VDI, Methanol'                ,ref='Preisegger2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Potassium Carbonate'     ,sFolder='xMass',name='VKC' ,desc='VDI, Potassium Carbonate'     ,ref='Preisegger2010,Skovrup2013')]
-        print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='VDI, Sodium Chloride'         ,sFolder='xMass',name='VNA' ,desc='VDI, Sodium Chloride'         ,ref='Preisegger2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Zitrec M'                ,sFolder='xVolume',name='ZM' ,desc='Zitrec M, Ethylene Glycol'              ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
         print(", {0}".format(sec[-1].name), end="")
 
-        sec += [SecCoolSolutionData(sFile='HFE-7100'     ,sFolder='xPure',name='HFE2' ,desc='HFE-7100, Hydrofluoroether'                      ,ref='3M2007,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Ammonia'            ,sFolder='xMass',name='MAM2',desc='Melinder, Ammonia'            ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='NBS, Water'   ,sFolder='xPure',name='NBS' ,desc='NBS, Water'                                      ,ref='Schmidt1979,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Calcium Cloride'    ,sFolder='xMass',name='MCA2',desc='Melinder, Calcium Chloride'   ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Paracryol'    ,sFolder='xPure',name='PCL' ,desc='Paracryol, Aliphatic Hydrocarbon'                ,ref='Sulzer1999,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Ethanol'            ,sFolder='xMass',name='MEA2',desc='Melinder, Ethanol'            ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Paratherm NF' ,sFolder='xPure',name='PNF2' ,desc='Paratherm NF, Hydrotreated mineral oil'          ,ref='Paratherm2013,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Ethylene glycol'    ,sFolder='xMass',name='MEG2',desc='Melinder, Ethylene Glycol'    ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.10' ,sFolder='xPure',name='TY10',desc='Tyfoxit 1.10, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Glycerol'           ,sFolder='xMass',name='MGL2',desc='Melinder, Glycerol'           ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.15' ,sFolder='xPure',name='TY15',desc='Tyfoxit 1.15, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Magnesium Chloride' ,sFolder='xMass',name='MMG2',desc='Melinder, Magnesium Chloride' ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.20' ,sFolder='xPure',name='TY20',desc='Tyfoxit 1.20, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Methanol'           ,sFolder='xMass',name='MMA2',desc='Melinder, Methanol'           ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.24' ,sFolder='xPure',name='TY24',desc='Tyfoxit 1.24, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Acetate'  ,sFolder='xMass',name='MKA2',desc='Melinder, Potassium Acetate'  ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S10'   ,sFolder='xPure',name='ZS10',desc='Zitrec S10, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Potassium Carbonate',sFolder='xMass',name='MKC2',desc='Melinder, Potassium Carbonate',ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S25'   ,sFolder='xPure',name='ZS25',desc='Zitrec S25, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Propylene Glycol'   ,sFolder='xMass',name='MPG2',desc='Melinder, Propylene Glycol'   ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S40'   ,sFolder='xPure',name='ZS40',desc='Zitrec S40, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Melinder, Sodium Chloride'    ,sFolder='xMass',name='MNA2',desc='Melinder, Sodium Chloride'    ,ref='Melinder2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S45'   ,sFolder='xPure',name='ZS45',desc='Zitrec S45, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='VDI, Calcium Cloride'         ,sFolder='xMass',name='VCA' ,desc='VDI, Calcium Cloride'         ,ref='Preisegger2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Zitrec S55'   ,sFolder='xPure',name='ZS55',desc='Zitrec S55, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='VDI, Magnesium Chloride'      ,sFolder='xMass',name='VMG' ,desc='VDI, Magnesium Chloride'      ,ref='Preisegger2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Syltherm XLT'   ,sFolder='xPure',name='XLT2',desc='Syltherm XLT, Polydimethylsiloxan' ,ref='Dow1997,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='VDI, Methanol'                ,sFolder='xMass',name='VMA' ,desc='VDI, Methanol'                ,ref='Preisegger2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Dowtherm J'   ,sFolder='xPure',name='DowJ2',desc='Dowtherm J, Diethylbenzene mixture' ,ref='Dow1997,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='VDI, Potassium Carbonate'     ,sFolder='xMass',name='VKC' ,desc='VDI, Potassium Carbonate'     ,ref='Preisegger2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Dowtherm Q'   ,sFolder='xPure',name='DowQ2',desc='Dowtherm Q, Diphenylethane/alkylated aromatics' ,ref='Dow1997,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='VDI, Sodium Chloride'         ,sFolder='xMass',name='VNA' ,desc='VDI, Sodium Chloride'         ,ref='Preisegger2010,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
 
-        sec += [SecCoolIceData(sFile='IceEA'   ,sFolder='xMass',name='IceEA',desc='Ice slurry with Ethanol' ,ref='Kauffeld2001,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='HFE-7100'     ,sFolder='xPure',name='HFE2' ,desc='HFE-7100, Hydrofluoroether'                      ,ref='3M2007,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Kauffeld2001,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='NBS, Water'   ,sFolder='xPure',name='NBS' ,desc='NBS, Water'                                      ,ref='Schmidt1979,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-6)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolIceData(sFile='IcePG'   ,sFolder='xMass',name='IcePG',desc='Ice slurry with Propylene Glycol' ,ref='Kauffeld2001,Skovrup2013')]
+        sec += [SecCoolSolutionData(sFile='Paracryol'    ,sFolder='xPure',name='PCL' ,desc='Paracryol, Aliphatic Hydrocarbon'                ,ref='Sulzer1999,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Paratherm NF' ,sFolder='xPure',name='PNF2' ,desc='Paratherm NF, Hydrotreated mineral oil'          ,ref='Paratherm2013,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.10' ,sFolder='xPure',name='TY10',desc='Tyfoxit 1.10, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-5)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.15' ,sFolder='xPure',name='TY15',desc='Tyfoxit 1.15, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.20' ,sFolder='xPure',name='TY20',desc='Tyfoxit 1.20, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Tyfoxit 1.24' ,sFolder='xPure',name='TY24',desc='Tyfoxit 1.24, Potassium Acetate'                 ,ref='Tyfoprop1999,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=1e-3, viscosityFactor=1e-5)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S10'   ,sFolder='xPure',name='ZS10',desc='Zitrec S10, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S25'   ,sFolder='xPure',name='ZS25',desc='Zitrec S25, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S40'   ,sFolder='xPure',name='ZS40',desc='Zitrec S40, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S45'   ,sFolder='xPure',name='ZS45',desc='Zitrec S45, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Zitrec S55'   ,sFolder='xPure',name='ZS55',desc='Zitrec S55, Potassium formate/Sodium propionate' ,ref='Arteco2010,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=None)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Syltherm XLT' ,sFolder='xPure',name='XLT2',desc='Syltherm XLT, Polydimethylsiloxan' ,ref='Dow1997,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Dowtherm J'   ,sFolder='xPure',name='DowJ2',desc='Dowtherm J, Diethylbenzene mixture' ,ref='Dow1997,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolSolutionData(sFile='Dowtherm Q'   ,sFolder='xPure',name='DowQ2',desc='Dowtherm Q, Diphenylethane/alkylated aromatics' ,ref='Dow1997,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-5)]
+        print(", {0}".format(sec[-1].name), end="")
+
+        sec += [SecCoolIceData(sFile='IceEA'   ,sFolder='xMass',name='IceEA',desc='Ice slurry with Ethanol' ,ref='Kauffeld2001,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolIceData(sFile='IceNA'   ,sFolder='xMass',name='IceNA',desc='Ice slurry with NaCl' ,ref='Kauffeld2001,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        print(", {0}".format(sec[-1].name), end="")
+        sec += [SecCoolIceData(sFile='IcePG'   ,sFolder='xMass',name='IcePG',desc='Ice slurry with Propylene Glycol' ,ref='Kauffeld2001,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")
 
         sec += [ThermogenVP1869()]
