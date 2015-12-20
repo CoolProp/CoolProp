@@ -167,11 +167,11 @@ Example Code Output
 
 .. literalinclude:: Example.out
 
-.. _low_level_high_level: 
+.. _low_level_high_level_matlab: 
 
 Calling Low-Level interface through DLL
 =======================================
 
-.. literalinclude:: HighLevelLowLevelMATLAB.m
+.. literalinclude:: LowLevelHighLevelMATLAB.m
    :language: matlab
    
