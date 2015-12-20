@@ -589,3 +589,22 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, co
         *errcode = 3;
     }
 }
+
+
+/// *********************************************************************************
+/// *********************************************************************************
+///                     EMSCRIPTEN (for javascript)
+/// *********************************************************************************
+/// *********************************************************************************
+
+#ifdef EMSCRIPTEN
+
+#include <emscripten/bind.h>
+using namespace emscripten;
+
+// Binding code
+EMSCRIPTEN_BINDINGS(coolprop_lib_bindings) {
+    function("F2K", &F2K);
+}
+
+#endif

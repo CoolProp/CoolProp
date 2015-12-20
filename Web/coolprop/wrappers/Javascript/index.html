@@ -14,10 +14,6 @@
 
 <script src="http://www.coolprop.sourceforge.net/jscript/coolprop-latest.js"></script>
 <!-- <script src="coolprop.js"></script> -->
-<script>  
-    PropsSI = Module.cwrap('PropsSI','number',['string','string','number','string','number','string'])
-    Props1 = Module.cwrap('Props1SI','number',['string','string'])
-</script>
 </head>
 
 <body>
@@ -75,12 +71,12 @@
         var val1 = parseFloat($('#Value1').val())
         var val2 = parseFloat($('#Value2').val())
         
-        var T = PropsSI('T', key1, val1, key2, val2, name)
-        var rho = PropsSI('D', key1, val1, key2, val2, name)
-        var p = PropsSI('P', key1, val1, key2, val2, name)
-        var s = PropsSI('S', key1, val1, key2, val2, name)
-        var h = PropsSI('H', key1, val1, key2, val2, name)
-        var cp = PropsSI('C', key1, val1, key2, val2, name)
+        var T = Module.PropsSI('T', key1, val1, key2, val2, name)
+        var rho = Module.PropsSI('D', key1, val1, key2, val2, name)
+        var p = Module.PropsSI('P', key1, val1, key2, val2, name)
+        var s = Module.PropsSI('S', key1, val1, key2, val2, name)
+        var h = Module.PropsSI('H', key1, val1, key2, val2, name)
+        var cp = Module.PropsSI('C', key1, val1, key2, val2, name)
         
         text = ''
         text += 'T = ' + T + ' K\n' + '<br>'

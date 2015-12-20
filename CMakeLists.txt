@@ -1149,11 +1149,15 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   #       ../..
 
   # Toolchain MUST be defined in the call to CMake
+  
+  if(MSVC)
+    message(FATAL_ERROR "Cannot use visual studio, use MinGW Makefiles generator on windows")
+  endif()
 
   add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
   add_definitions(-s ASSERTIONS=1)
-  add_definitions(-DEXTERNC)
-  set(CMAKE_EXE_LINKER_FLAGS "-DEXTERNC --memory-init-file 0 -s ASSERTIONS=1 -s EXPORTED_FUNCTIONS=\"['_main','_F2K','_Props1SI','_PropsSI','_get_global_param_string','_HAProps']\"")
+  add_definitions(--bind)
+  set(CMAKE_EXE_LINKER_FLAGS "--bind --memory-init-file 1 -s ASSERTIONS=1 ")
   set(CMAKE_BUILD_TYPE Release)
   
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
