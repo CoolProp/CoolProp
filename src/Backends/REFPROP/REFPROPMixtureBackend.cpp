@@ -105,7 +105,7 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
     if (!alt_rp_path.empty()){
         char name[255];
         const char * _alt_rp_path = alt_rp_path.c_str();
-        if (strlen(_alt_rp_path) > 255){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", alt_rp_path.c_str())); }
+        if (strlen(_alt_rp_path) > 255){ throw ValueError(format("ALTERNATIVE_REFPROP_PATH (%s) is too long", alt_rp_path.c_str())); }
         strcpy(name, _alt_rp_path);
         SETPATHdll(name, 255);
     }
@@ -289,39 +289,58 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 throw ValueError(format("Unable to load mixture: %s",components_joined_raw.c_str()));
             }
         }
+
+        // Construct the path to the HMX.BNC file
+        char path_HMX_BNC[refpropcharlength+1];
+        // First part is path to the FLUIDS directory
+        const char * _fdPath = fdPath.c_str(); // Path to fluids directory
+        if (strlen(_fdPath) > refpropcharlength) { throw ValueError(format("path (%s) is too long", fdPath.c_str())); }
+        strcpy(path_HMX_BNC, _fdPath);
+        // Second part is name of HMX.BNC file
+        if (strlen(rel_path_HMX_BNC) + strlen(_fdPath) > refpropcharlength) { 
+            throw ValueError(format("combined path is too long")); 
+        }
+        strcat(path_HMX_BNC, rel_path_HMX_BNC);
+
+        // If ALTERNATIVE_REFPROP_PATH is provided, clear HMX.BNC path so that REFPROP will 
+        // look in fluids directory relative to directory set by SETPATHdll
+        std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
+        if (!alt_rp_path.empty()){
+            strcpy("HMX.BNC");
+        }
+            
+        // Use the alternative HMX.BNC path if provided - replace all the path to HMX.BNC with provided path
+        std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
+        const char * _alt_hmx_bnc_path = alt_hmx_bnc_path.c_str();
+        if (strlen(_alt_hmx_bnc_path) > 0){
+            if (strlen(_alt_hmx_bnc_path) > refpropcharlength){ 
+                throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", _alt_hmx_bnc_path)); 
+            }
+            strcpy(path_HMX_BNC, _alt_hmx_bnc_path);
+        }
+
         // Loop over the file names - first we try with nothing, then .fld, then .FLD, then .ppf - means you can't mix and match
         for (unsigned int k = 0; k < number_of_endings; k++)
         {
+            // If ALTERNATIVE_REFPROP_PATH is provided, clear fdPath so that REFPROP will 
+            // look in fluids directory relative to directory set by SETPATHdll
+            std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
+            if (!alt_rp_path.empty()){
+                fdPath = "";
+            }
+
             // Build the mixture string
             for (unsigned int j = 0; j < (unsigned int)N; j++)
             {
                 if (j == 0){
-                    components_joined = fdPath + upper(fluid_names[j])+endings[k];
+                    components_joined = fdPath + upper(fluid_names[j]) + endings[k];
                 }
                 else{
-                    components_joined += "|" + fdPath + upper(fluid_names[j])+endings[k];
+                    components_joined += "|" + fdPath + upper(fluid_names[j]) + endings[k];
                 }
             }
 
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
-            
-            // Construct the path to the HMX.BNC file
-            char path_HMX_BNC[refpropcharlength+1];
-                // First part is path to the FLUIDS directory
-                const char * _fdPath = fdPath.c_str(); // Path to fluids directory
-                if (strlen(_fdPath) > refpropcharlength) { throw ValueError(format("path (%s) is too long", fdPath.c_str())); }
-                strcpy(path_HMX_BNC, _fdPath);
-                // Second part is name of HMX.BNC file
-                if (strlen(rel_path_HMX_BNC) + strlen(_fdPath) > refpropcharlength) { throw ValueError(format("combined path is too long")); }
-                strcat(path_HMX_BNC, rel_path_HMX_BNC);
-            
-            // Use the alternative HMX.BNC path if provided
-            std::string alt_hmx_bnc_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_HMX_BNC_PATH);
-            const char * _alt_hmx_bnc_path = alt_hmx_bnc_path.c_str();
-            if (strlen(_alt_hmx_bnc_path) > 0){
-                if (strlen(_alt_hmx_bnc_path) > refpropcharlength){ throw ValueError(format("ALTERNATIVE_REFPROP_HMX_BNC_PATH (%s) is too long", _alt_hmx_bnc_path)); }
-                strcpy(path_HMX_BNC, _alt_hmx_bnc_path);
-            }
 
             // Copy over the list of components
             const char * _components_joined = components_joined.c_str();
@@ -337,6 +356,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                      lengthofreference, // Length of reference
                      errormessagelength // Length of error message
                      );
+            if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
+                throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
+            }
 
             if (static_cast<int>(ierr) <= 0) // Success (or a warning, which is silently squelched for now)
             {
@@ -348,16 +370,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 cached_component_string = component_string;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
-                if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
-                    throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
-                }
                 return;
             }
             else if (k < number_of_endings-1){ // Keep going
                 if (CoolProp::get_debug_level() > 5){std::cout << format("REFPROP error/warning [ierr: %d]: %s",ierr, herr) << std::endl;}
-                if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
-                    throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
-                }
                 continue;
             }
             else
