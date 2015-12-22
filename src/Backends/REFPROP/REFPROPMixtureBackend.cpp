@@ -306,7 +306,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         // look in fluids directory relative to directory set by SETPATHdll
         std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
         if (!alt_rp_path.empty()){
-            strcpy("HMX.BNC");
+            strcpy(path_HMX_BNC, "HMX.BNC");
         }
             
         // Use the alternative HMX.BNC path if provided - replace all the path to HMX.BNC with provided path
