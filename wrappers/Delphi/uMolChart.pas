@@ -130,6 +130,7 @@ const
   n = 23;
 var
   i, Count: Integer;
+  x, y: Double;
   pc, tc, dc, hc: Double;
   p, hf, hg: fvec;
   dx, dy: Double;
@@ -138,10 +139,13 @@ begin
   R := Rect(0, 0, Width, Height);
   FCanvas.Brush.Color := $00f8fcfa;
   FCanvas.FillRect(R);
+
+  // chart boundary
   InflateRect(R, -FMargin, -FMargin);
   FCanvas.Pen.Color := clGray;
   FCanvas.Pen.Width := 1;
-  FCanvas.Rectangle(R);
+  //FCanvas.Rectangle(R);
+
   pc := 1e-6*Props1SI('PCRIT', ref);
   tc := Props1SI('TCRIT', ref);
   dc := Props1SI('RHOCRIT', ref);
@@ -182,6 +186,24 @@ begin
   x1 := x1+0.4*dx;
   y1 := y1+0.1*dy;
   CalcScaleFactor;
+
+  // Axes
+  DrawLine(x0, y0, x1, y0, clBlack, 1); // X-Axis
+  DrawLine(x0, y0, x0, y1, clBlack, 1); // Y-Axis
+
+  // X-Ticks (every 50 kJ/kg)
+  x := 100*trunc(x0/100) + 50;
+  while x <= x1 do begin
+    DrawLine(x, y0, x, y1, $00e4ece1, 1);
+    x := x + 50;
+  end;
+
+  // Y-Ticks (every 500 kPa)
+  y := trunc(y0) + 0.5;
+  while y <= y1 do begin
+    DrawLine(x0, y, x1, y, $00e4ece1, 1);
+    y := y + 0.5;
+  end;
 
   DrawVec(hf, p, clGreen, 2); // liquid line
   DrawVec(hg, p, clRed, 2); // vapor line
