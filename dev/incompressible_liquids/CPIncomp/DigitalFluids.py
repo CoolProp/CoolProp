@@ -48,8 +48,9 @@ class HyCool20(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            if T <= 20: return 0.07190*np.exp(524.75/(T+142.05))
-            else:       return T*(0.0005524*T - 0.06281)+2.8536
+            if T <= 20: mPas = 0.07190*np.exp(524.75/(T+142.05))
+            else:       mPas = T*(0.0005524*T - 0.06281)+2.8536
+            return mPas / 1e3
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
@@ -90,8 +91,9 @@ class HyCool30(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            if T <= 20: return 0.11100*np.exp(408.17/(T+123.15))
-            else:       return T*(0.000295*T - 0.0441)+2.6836
+            if T <= 20: mPas = 0.11100*np.exp(408.17/(T+123.15))
+            else:       mPas = T*(0.000295*T - 0.0441)+2.6836
+            return mPas / 1e3
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
@@ -127,7 +129,8 @@ class HyCool40(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            return 0.07830*np.exp(498.13/(T+130.25))
+            mPas = 0.07830*np.exp(498.13/(T+130.25))
+            return mPas / 1e3
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
@@ -163,7 +166,8 @@ class HyCool45(PureData,DigitalData):
         key = 'Mu'
         def funcMu(T,x):
             T = (T-self.Tbase)
-            return 0.08990*np.exp(479.09/(T+126.55))
+            mPas = 0.08990*np.exp(479.09/(T+126.55))
+            return mPas / 1e3
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
@@ -200,8 +204,9 @@ class HyCool50(PureData,DigitalData):
         def funcMu(T,x):
             T = (T-self.Tbase)
             res = 0.0491*np.exp(581.12/(T+129.05))
-            if T > -10: return res + 0.2
-            else:       return res
+            if T > -10: mPas = res + 0.2
+            else:       mPas = res
+            return mPas / 1e3
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
