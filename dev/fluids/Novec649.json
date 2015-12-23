@@ -1,6 +1,6 @@
 {
   "ALIASES": [
-    "Novec1230",
+    "Novec1230", 
     "NOVEC649"
   ], 
   "ANCILLARIES": {
@@ -88,7 +88,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "", 
-      "BibTeX_EOS": "McLinden-JCED-2015-PREPRINT", 
+      "BibTeX_EOS": "McLinden-JCED-2015-Novec649", 
       "STATES": {
         "hs_anchor": {
           "T": 485.99100000000004, 
