@@ -35,6 +35,7 @@ cdef class AbstractState:
     
     cpdef name(self)
     cpdef fluid_param_string(self, string key)
+    cpdef change_EOS(self, size_t, string)
     
     cpdef constants_header.phases phase(self) except *  
     cpdef specify_phase(self, constants_header.phases phase)

@@ -49,6 +49,10 @@ cdef class AbstractState:
     cpdef unspecify_phase(self):
         """ Unspecify the phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::unspecify_phase` """
         self.thisptr.unspecify_phase()
+        
+    cpdef change_EOS(self, size_t i, string EOS_name):
+        """ Change the EOS for one component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::change_EOS` """
+        self.thisptr.change_EOS(i, EOS_name)
 
     cpdef set_binary_interaction_double(self, string CAS1, string CAS2, string parameter, double val):
         """ Set a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_double` """

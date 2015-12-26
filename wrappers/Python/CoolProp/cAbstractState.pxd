@@ -43,6 +43,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         constants_header.phases phase() except +ValueError
         void specify_phase(constants_header.phases phase) except +ValueError
         void unspecify_phase() except +ValueError
+        
+        void change_EOS(const size_t, const string &) except +ValueError
 
         void set_binary_interaction_double(const string, const string &, const string &, const double s) except +ValueError
         void set_binary_interaction_string(const string &, const string &, const string &, const string &) except +ValueError
