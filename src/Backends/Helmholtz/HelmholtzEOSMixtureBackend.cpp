@@ -252,7 +252,7 @@ void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std:
         throw ValueError(format("Index [%d] is invalid", i));
     }
     // Now do the same thing to the saturated liquid and vapor instances if possible
-    if (SatL != NULL && SatV != NULL){
+    if (SatL.get() != NULL && SatV.get() != NULL){
         SatL->change_EOS(i, EOS_name);
         SatV->change_EOS(i, EOS_name);
     }
