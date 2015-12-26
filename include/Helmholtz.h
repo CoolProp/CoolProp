@@ -634,12 +634,14 @@ public:
     ResidualHelmholtzSAFTAssociating SAFT;
     ResidualHelmholtzGeneralizedExponential GenExp;
     ResidualHelmholtzSRK SRK;
+    ResidualHelmholtzXiangDeiters XiangDeiters;
 
     void empty_the_EOS(){
         NonAnalytic = ResidualHelmholtzNonAnalytic();
         SAFT = ResidualHelmholtzSAFTAssociating();
         GenExp = ResidualHelmholtzGeneralizedExponential();
         SRK = ResidualHelmholtzSRK();
+        XiangDeiters = ResidualHelmholtzXiangDeiters();
     }
     void clear(){
         _base.clear();
@@ -655,6 +657,7 @@ public:
         NonAnalytic.all(tau, delta, derivs);
         SAFT.all(tau, delta, derivs);
         SRK.all(tau, delta, derivs);
+        XiangDeiters.all(tau, delta, derivs);
         if (cache_values){
             _base = derivs.alphar;
             _dDelta = derivs.dalphar_ddelta;

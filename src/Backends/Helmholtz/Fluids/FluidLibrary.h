@@ -1267,6 +1267,7 @@ public:
             throw ValueError(format("key [%s] was not found in string_to_index_map in JSONFluidLibrary", key.c_str()));
         }
     };
+
     /// Get a CoolPropFluid instance stored in this library
     /**
     @param key The index of the fluid in the map

@@ -102,7 +102,8 @@ public:
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();
 
-
+    /// Change the equation of state for one component
+    void calc_change_EOS(const std::size_t i, const std::string &EOS_name);
 
     const CoolProp::SimpleState &calc_state(const std::string &state);
 

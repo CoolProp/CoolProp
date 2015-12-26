@@ -352,6 +352,9 @@ protected:
     
     /// Convert mass-based input pair to molar-based input pair;  If molar-based, do nothing
     virtual void mass_to_molar_inputs(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2);
+
+    /// Change the equation of state for a given component to a specified EOS
+    virtual void calc_change_EOS(const std::size_t i, const std::string &EOS_name){ throw NotImplementedError("calc_change_EOS is not implemented for this backend"); };
 public:
 
     AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown), _rhospline(-_HUGE), _dsplinedp(-_HUGE), _dsplinedh(-_HUGE){ clear(); }
@@ -823,7 +826,12 @@ public:
     void conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){
         return calc_conformal_state(reference_fluid, T, rhomolar);
     };
-    
+
+    /// \brief Change the equation of state for a given component to a specified EOS
+    /// @param i Index of the component to change (if a pure fluid, i=0)
+    /// @param EOS_name Name of the EOS to use (something like "SRK", "PR", "XiangDeiters", but backend-specific)
+    /// \note Calls the calc_change_EOS function of the implementation
+    void change_EOS(const std::size_t i, const std::string &EOS_name){ calc_change_EOS(i, EOS_name); }
 
     // ----------------------------------------
     // Helmholtz energy and derivatives

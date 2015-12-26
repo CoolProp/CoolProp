@@ -213,6 +213,50 @@ std::string HelmholtzEOSMixtureBackend::get_binary_interaction_string(const std:
     return CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter);
 }
     
+void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string &EOS_name){
+
+    if (i < components.size()){
+        CoolPropFluid &fluid = components[i];
+        EquationOfState &EOS = fluid.EOSVector[0];
+
+        if (EOS_name == "SRK"){
+
+            // Get the parameters for the cubic EOS
+            CoolPropDbl Tc = EOS.reduce.T;
+            CoolPropDbl pc = EOS.reduce.p;
+            CoolPropDbl rhomolarc = EOS.reduce.rhomolar;
+            CoolPropDbl acentric = EOS.acentric;
+            CoolPropDbl R = 8.3144598;
+
+            // Remove the residual part
+            EOS.alphar.empty_the_EOS();
+            // Set the SRK contribution
+            EOS.alphar.SRK = ResidualHelmholtzSRK(Tc, pc, rhomolarc, acentric, R);
+        }
+        else if (EOS_name == "XiangDeiters"){
+
+            // Get the parameters for the EOS
+            CoolPropDbl Tc = EOS.reduce.T;
+            CoolPropDbl pc = EOS.reduce.p;
+            CoolPropDbl rhomolarc = EOS.reduce.rhomolar;
+            CoolPropDbl acentric = EOS.acentric;
+            CoolPropDbl R = 8.3144598;
+
+            // Remove the residual part
+            EOS.alphar.empty_the_EOS();
+            // Set the Xiang & Deiters contribution
+            EOS.alphar.XiangDeiters = ResidualHelmholtzXiangDeiters(Tc, pc, rhomolarc, acentric, R);
+        }
+    }
+    else{
+        throw ValueError(format("Index [%d] is invalid", i));
+    }
+    // Now do the same thing to the saturated liquid and vapor instances if possible
+    if (SatL != NULL && SatV != NULL){
+        SatL->change_EOS(i, EOS_name);
+        SatV->change_EOS(i, EOS_name);
+    }
+}
 void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     // Clear the phase envelope data
