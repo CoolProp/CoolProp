@@ -509,6 +509,57 @@ void ResidualHelmholtzSRK::all(const CoolPropDbl &tau, const CoolPropDbl &delta,
     derivs.d4alphar_dtau4 += -log(b*delta*rhor+1)/(R*Treducing*b)*(tau*d4amix_dTau4 + 4*d3amix_dTau3);
 }
 
+
+ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(
+    const CoolPropDbl Tc,
+    const CoolPropDbl pc,
+    const CoolPropDbl rhomolarc,
+    const CoolPropDbl acentric,
+    const CoolPropDbl R
+    )
+    : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R)
+{
+    double Zc = pc/(R*Tc*rhomolarc);
+    theta = POW2(Zc - 0.29);
+
+    // From Xiang & Deiters, doi:10.1016/j.ces.2007.11.029
+    double _d[] = { 1, 1, 1, 2, 3, 7, 1, 1, 2, 5, 1, 1, 4, 2 };
+    std::vector<CoolPropDbl> d(_d, _d+sizeof(_d)/sizeof(double));
+    double _t[] = { 0.25, 1.25, 1.5, 1.375, 0.25, 0.875, 0, 2.375, 2, 2.125, 3.5, 6.5, 4.75, 12.5 };
+    std::vector<CoolPropDbl> t(_t, _t+sizeof(_t)/sizeof(double));
+    double _l[] = { 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3 };
+    std::vector<CoolPropDbl> l(_l, _l+sizeof(_l)/sizeof(double));
+    double _g[] = { 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 };
+    std::vector<CoolPropDbl> g(_g, _g+sizeof(_g)/sizeof(double));
+    double _a0[] = { 8.5740489E-01, -3.2863233E+00, 1.6480939E+00, -5.4524817E-02, 6.1623592E-02, 2.7389266E-04, -6.0655087E-02, -3.1811852E-02, -1.1550422E-01, -1.8610466E-02, -1.8348671E-01, 5.5071325E-03, -1.2268039E-02, -5.0433436E-03 };
+    std::vector<CoolPropDbl> a0(_a0, _a0+sizeof(_a0)/sizeof(double));
+    double _a1[] = { 5.6200117E-01, 3.2439544E+00, -4.9628768E+00, -2.2132851E-01, 9.3388356E-02, 2.4940171E-05, -1.7519204E-01, 8.9325660E-01, 2.9886613E+00, 1.0881387E-01, -6.7166746E-01, 1.4477326E-01, -2.8716809E-01, -1.1478402E-01 };
+    std::vector<CoolPropDbl> a1(_a1, _a1+sizeof(_a1)/sizeof(double));
+    double _a2[] = { -8.1680511E+01, 4.6384732E+02, -2.7970850E+02, 2.9317364E+01, -2.2324825E+01, -5.0932691E-02, -7.2836590E+00, -2.2063100E+02, -3.0435126E+02, 5.8514719E+00, 1.7995451E+02, -1.0178400E+02, 4.0848053E+01, 1.2411984E+01 };
+    std::vector<CoolPropDbl> a2(_a2, _a2+sizeof(_a2)/sizeof(double));
+
+    phi0.add_Exponential(a0, d, t, g, l);
+    phi1.add_Exponential(a1, d, t, g, l);
+    phi2.add_Exponential(a2, d, t, g, l);
+
+    enabled = true;
+};
+
+void ResidualHelmholtzXiangDeiters::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+{
+    if (!enabled){ return; }
+
+    HelmholtzDerivatives derivs0, derivs1, derivs2;
+
+    // Calculate each of the derivative terms
+    phi0.all(tau, delta, derivs0);
+    phi1.all(tau, delta, derivs1);
+    phi2.all(tau, delta, derivs2);
+
+    // Add up the contributions
+    derivs = derivs + derivs0 + derivs1*acentric + derivs2*theta;
+}
+
 void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {
     el.AddMember("type","ResidualHelmholtzSAFTAssociating",doc.GetAllocator());
@@ -922,11 +973,12 @@ class HelmholtzConsistencyFixture
 public:
     CoolPropDbl numerical, analytic;
 
-    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic, SRK;
+    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic, SRK, XiangDeiters;
     shared_ptr<CoolProp::ResidualHelmholtzGeneralizedExponential> Gaussian, Lemmon2005, Exponential, GERG2008, Power;
 
     HelmholtzConsistencyFixture(){
         SRK.reset(new CoolProp::ResidualHelmholtzSRK(300, 4e6, 4000, 0.3, 8.3144621));
+        XiangDeiters.reset(new CoolProp::ResidualHelmholtzSRK(300, 4e6, 4000, 0.3, 8.3144621));
         Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
         LogTau.reset(new CoolProp::IdealHelmholtzLogTau(1.5));
         {
@@ -1069,6 +1121,7 @@ public:
         else if (!t.compare("CP0Constant")){return CP0Constant;}
         else if (!t.compare("CP0PolyT")){return CP0PolyT;}
         else if (!t.compare("SRK")){ return SRK; }
+        else if (!t.compare("XiangDeiters")){ return XiangDeiters; }
 
         else if (!t.compare("Gaussian")){return Gaussian;}
         else if (!t.compare("Lemmon2005")){return Lemmon2005;}
@@ -1178,7 +1231,7 @@ public:
 
 std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","CP0Constant","CP0PolyT",
                        "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
-                       "GERG2008","SRK"};
+                       "GERG2008","SRK","XiangDeiters"};
 std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau","dTau4","dDelta_dTau3","dDelta2_dTau2","dDelta3_dTau","dDelta4"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")
