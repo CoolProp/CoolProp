@@ -18,21 +18,25 @@ Compilers
 
 On linux, you need gcc and gfortran, which are easy to install using your package manager.
 
-On windows, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  These are the versions used as of June 20, 2014::
+On windows, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from `TDM-GCC <http://tdm-gcc.tdragon.net/download>`_ (use the 64-bit installation, and make sure you install gfortran, gcc and g++ at the minimum).  These are the versions used as of January 3, 2016::
 
-    >gfortran --version
-    GNU Fortran (GCC) 4.8.1
-    Copyright (C) 2013 Free Software Foundation, Inc.
+    >c:\TDM-GCC-64\bin\gfortran --version
+    GNU Fortran (tdm64-1) 5.1.0
+    Copyright (C) 2015 Free Software Foundation, Inc.
 
-    >gcc --version
-    gcc (GCC) 4.8.1
-    Copyright (C) 2013 Free Software Foundation, Inc.
+    GNU Fortran comes with NO WARRANTY, to the extent permitted by law.
+    You may redistribute copies of GNU Fortran
+    under the terms of the GNU General Public License.
+    For more information about these matters, see the file named COPYING
+
+    >c:\TDM-GCC-64\bin\g++ --version
+    g++ (tdm64-1) 5.1.0
+    Copyright (C) 2015 Free Software Foundation, Inc.
+    This is free software; see the source for copying conditions.  There is NO
+    warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     
 .. warning::
-    MinGW has problems with the latest version of CoolProp.  This seems to be a GCC-related 
-    issue and using a more up-to-date version of GCC helps.  Unfortunately, MinGW is stuck 
-    at GCC 4.8.  You could try the `TDM-GCC distribution <http://tdm-gcc.tdragon.net>`_ 
-    that comes with the latest GCC. This version seems to work fine.
+    MinGW has problems with the latest version of CoolProp.  Using TDM-GCC seems to resolve all these issues
 
 On OSX, the default compiler that comes with XCode is clang, gcc and g++ at the command prompt are just aliases to clang.  See for instance::
 
