@@ -3,6 +3,7 @@
 #include "VLERoutines.h"
 #include "MatrixMath.h"
 #include "MixtureDerivatives.h"
+#include "Configuration.h"
 
 namespace CoolProp {
     
@@ -948,8 +949,12 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                 CoolProp::SimpleState &tripleV = HEOS.get_components()[0].triple_vapor;
                 
                 // If the guesses are terrible, apply a simple correction
-                if (rhoL < crit.rhomolar*0.8 || rhoL > tripleL.rhomolar*1.2 || 
-                    rhoV > crit.rhomolar*1.2 || rhoV < tripleV.rhomolar*0.8)
+				// but only if the limits are being checked
+                if ((rhoL < crit.rhomolar*0.8 || rhoL > tripleL.rhomolar*1.2 || 
+					rhoV > crit.rhomolar*1.2 || rhoV < tripleV.rhomolar*0.8) 
+					&& 
+					!get_config_bool(DONT_CHECK_PROPERTY_LIMITS)
+					)
                 {
                     // Lets assume that liquid density is more or less linear with T
                     rhoL = (crit.rhomolar - tripleL.rhomolar)/(crit.T - tripleL.T)*(T-tripleL.T)+tripleL.rhomolar;
