@@ -214,7 +214,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "", 
-      "BibTeX_EOS": "Stewart-JPCRD-1991", 
+      "BibTeX_EOS": "Schmidt-FPE-1985,Stewart-JPCRD-1991", 
       "STATES": {
         "hs_anchor": {
           "T": 170.0391, 
