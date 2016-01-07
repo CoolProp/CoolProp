@@ -100,15 +100,6 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
     // Force loading of REFPROP
     REFPROP_supported();
     
-    // Call SETPATH if the ALTERNATIVE_REFPROP_PATH configuration variable has been set
-    std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
-    if (!alt_rp_path.empty()){
-        char name[255];
-        const char * _alt_rp_path = alt_rp_path.c_str();
-        if (strlen(_alt_rp_path) > 255){ throw ValueError(format("ALTERNATIVE_REFPROP_PATH (%s) is too long", alt_rp_path.c_str())); }
-        strcpy(name, _alt_rp_path);
-        SETPATHdll(name, 255);
-    }
     
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
@@ -290,23 +281,32 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
         }
 
-        // Construct the path to the HMX.BNC file
+		// ----------------------------------------------
+        // Construct the default path to the HMX.BNC file
+		// ----------------------------------------------
         char path_HMX_BNC[refpropcharlength+1];
-        // First part is path to the FLUIDS directory
-        const char * _fdPath = fdPath.c_str(); // Path to fluids directory
-        if (strlen(_fdPath) > refpropcharlength) { throw ValueError(format("path (%s) is too long", fdPath.c_str())); }
-        strcpy(path_HMX_BNC, _fdPath);
-        // Second part is name of HMX.BNC file
-        if (strlen(rel_path_HMX_BNC) + strlen(_fdPath) > refpropcharlength) { 
-            throw ValueError(format("combined path is too long")); 
-        }
-        strcat(path_HMX_BNC, rel_path_HMX_BNC);
+		strcpy(path_HMX_BNC, "HMX.BNC");
 
         // If ALTERNATIVE_REFPROP_PATH is provided, clear HMX.BNC path so that REFPROP will 
         // look in fluids directory relative to directory set by SETPATHdll
         std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
         if (!alt_rp_path.empty()){
-            strcpy(path_HMX_BNC, "HMX.BNC");
+			if (!endswith(alt_rp_path, "/") && !endswith(alt_rp_path, "\\")){
+				throw ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_rp_path.c_str()));
+			}
+			// Build a full path to the HMX.BMC
+			#ifdef __ISWINDOWS__
+			const std::string full_HMX_path = alt_rp_path + "\\fluids\\HMX.BNC";
+			#else
+			const std::string full_HMX_path = alt_rp_path + "/fluids/HMX.BNC";
+			#endif
+			const char * _full_HMX_path = full_HMX_path.c_str();
+			if (strlen(_full_HMX_path) > 0){
+				if (strlen(_full_HMX_path) > refpropcharlength){
+					throw ValueError(format("Full HMX path (%s) is too long", _full_HMX_path));
+				}
+				strcpy(path_HMX_BNC, _full_HMX_path);
+			}
         }
             
         // Use the alternative HMX.BNC path if provided - replace all the path to HMX.BNC with provided path
@@ -319,16 +319,19 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             strcpy(path_HMX_BNC, _alt_hmx_bnc_path);
         }
 
+		// If ALTERNATIVE_REFPROP_PATH is provided, set fdPath so that REFPROP will 
+		// look in that directory
+		if (!alt_rp_path.empty()){
+			#ifdef __ISWINDOWS__
+			fdPath = alt_rp_path + "fluids\\";
+			#else
+			fdPath = alt_rp_path + "fluids/";
+			#endif
+		}
+
         // Loop over the file names - first we try with nothing, then .fld, then .FLD, then .ppf - means you can't mix and match
         for (unsigned int k = 0; k < number_of_endings; k++)
         {
-            // If ALTERNATIVE_REFPROP_PATH is provided, clear fdPath so that REFPROP will 
-            // look in fluids directory relative to directory set by SETPATHdll
-            std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
-            if (!alt_rp_path.empty()){
-                fdPath = "";
-            }
-
             // Build the mixture string
             for (unsigned int j = 0; j < (unsigned int)N; j++)
             {

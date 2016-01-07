@@ -250,7 +250,7 @@
     }
     /// Simple string function to check for end of string being equal to given string
     inline bool endswith(const std::string &s1, const std::string &s2){
-        long lhs = static_cast<long>(s1.find(s2));
+        long lhs = static_cast<long>(s1.rfind(s2));
         long rhs = static_cast<long>(s1.size()) - static_cast<long>(s2.size());
         return lhs == rhs;
     }
