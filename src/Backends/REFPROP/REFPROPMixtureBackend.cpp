@@ -166,7 +166,9 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
             std::string err;
-            bool loaded_REFPROP = ::load_REFPROP(err);
+			const std::string &alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
+			bool loaded_REFPROP = ::load_REFPROP(err, alt_rp_path);
+				
             if (loaded_REFPROP) {
                 return true;
             }
