@@ -1,6 +1,4 @@
 import sys, os
-print os.environ['PATH']
-print sys.argv, sys.executable
 import json, CoolProp, sys
 
 CP = CoolProp.CoolProp
@@ -131,4 +129,8 @@ def inject_states(fluid):
       fp.write(json.dumps(json_data, **json_options))
 
 if __name__=='__main__':
-  inject_states('Novec649')
+  #jj = json.loads(CP.get_config_as_json_string())
+  #jj['DONT_CHECK_PROPERTY_LIMITS'] = True
+  #CP.set_config_as_json_string(json.dumps(jj))  
+
+  inject_states('R40')
