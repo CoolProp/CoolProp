@@ -240,13 +240,13 @@ namespace SaturationSolvers
     class newton_raphson_twophase
     {
         public:
+        HelmholtzEOSMixtureBackend *HEOS;
         newton_raphson_twophase_options::imposed_variable_options imposed_variable;
         CoolPropDbl error_rms, rhomolar_liq, rhomolar_vap, T, p, min_rel_change, beta;
         std::size_t N;
         bool logging;
         int Nsteps;
         STLMatrix J;
-        HelmholtzEOSMixtureBackend *HEOS;
         std::vector<CoolPropDbl> K, x, y, z, r, negative_r, err_rel;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 

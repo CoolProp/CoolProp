@@ -3021,8 +3021,8 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
 {
     class Resid : public FuncWrapperND{
     public:
-        double L1, M1;
         HelmholtzEOSMixtureBackend &HEOS;
+        double L1, M1;
         Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
         std::vector<double> call(const std::vector<double> &tau_delta){
             double rhomolar = tau_delta[1]*HEOS.rhomolar_reducing();
@@ -3149,7 +3149,7 @@ public:
     std::vector<CoolProp::CriticalState> critical_points;
     int N_critical_points;
     Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
-    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), N_critical_points(0), M1_last(_HUGE)
+    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), M1_last(_HUGE), N_critical_points(0)
     {
         R_delta_tracer = 0.1;
         R_delta = R_delta_tracer;

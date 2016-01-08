@@ -58,7 +58,6 @@ static bool dbg_refprop = false;
 static const unsigned int number_of_endings = 5;
 std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 
-static char rel_path_HMX_BNC[] = "HMX.BNC";
 static char default_reference_state[] = "DEF";
 
 // Default location, can be over-ridden by configuration variable
@@ -961,7 +960,6 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         PhaseEnvelope.lnp.push_back(log(y*1000));
         isp = nc + 3;
         SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
-        double rhoV_molL = y;
         PhaseEnvelope.rhomolar_liq.push_back(y*1000);
         PhaseEnvelope.lnrhomolar_liq.push_back(log(y*1000));
         PhaseEnvelope.Q.push_back(static_cast<double>(y > rho_molL));

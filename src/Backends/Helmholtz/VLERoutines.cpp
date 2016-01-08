@@ -1138,7 +1138,6 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
         CoolPropDbl Tc = EOS.reduce.T;
         CoolPropDbl pc = EOS.reduce.p;
         CoolPropDbl rhomolarc = EOS.reduce.rhomolar;
-        CoolPropDbl acentric = EOS.acentric;
         CoolPropDbl R = 8.3144598;
 
         summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));

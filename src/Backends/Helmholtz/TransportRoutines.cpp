@@ -607,7 +607,6 @@ CoolPropDbl TransportRoutines::viscosity_Chung(HelmholtzEOSMixtureBackend &HEOS)
             A[i] = a0[i] + a1[i]*acentric + a2[i]*pow(mu_r, 4) + a3[i]*kappa;
         }
         double F_c = 1 - 0.2756*acentric + 0.059035*pow(mu_r, 4) + kappa; // [-]
-        double sigma_A = 0.809*pow(Vc_cm3mol, 1.0/3.0); // [A]
         double epsilon_over_k = Tc/1.2593; // [K]
 
         double rho_molcm3 = HEOS.rhomolar()/1e6;
