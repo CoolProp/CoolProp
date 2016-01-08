@@ -263,11 +263,11 @@ CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolProp
             dYr_dxi += c_Y_ij(i, k, beta, gamma, Y_c_ij)*dfYikdxi__constxk(x,i,k,beta);
         }
         double beta_Y_iN = beta[i][N-1], xN = x[N-1];
-        dYr_dxi += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(xN*(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2));
+        dYr_dxi += c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(xN*(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN/POW2(beta_Y_iN*beta_Y_iN*x[i]+xN));
         for (std::size_t k = 0; k < N-1; ++k)
         {
-            double beta_Y_kN = beta[k][N-1];
-            dYr_dxi += c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*(-x[k]*(x[k]+xN)/(pow(beta_Y_kN,2)*x[k]+xN)+(1-beta_Y_kN*beta_Y_kN)*xN*x[k]*x[k]/pow(beta_Y_kN*beta_Y_kN*x[k]+xN, 2));        
+            double beta_Y_kN = beta[k][N-1], xk = x[k], beta_Y_kN_squared = beta_Y_kN*beta_Y_kN;
+            dYr_dxi += c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*(-xk*(xk+xN)/(beta_Y_kN_squared*xk+xN)+(1-beta_Y_kN_squared)*xN*xk*xk/POW2(beta_Y_kN_squared*xk+xN));
         }
         return dYr_dxi;
     }
@@ -306,8 +306,8 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<CoolPr
         d2Yr_dxi2 += 2*c_Y_ij(i, N-1, beta, gamma, Y_c_ij)*(-(x[i]+xN)/(pow(beta_Y_iN,2)*x[i]+xN)+(1-beta_Y_iN*beta_Y_iN)*(xN*xN/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 2)+((1-beta_Y_iN*beta_Y_iN)*x[i]*xN*xN-beta_Y_iN*beta_Y_iN*x[i]*x[i]*xN)/pow(beta_Y_iN*beta_Y_iN*x[i]+xN, 3)));
         for (std::size_t k = 0; k < N-1; ++k)
         {
-            double beta_Y_kN = beta[k][N-1];
-            d2Yr_dxi2 += 2*c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*x[k]*x[k]*(1-beta_Y_kN*beta_Y_kN)/pow(pow(beta_Y_kN,2)*x[k]+xN, 2)*(xN/(beta_Y_kN*beta_Y_kN*x[k]+xN)-1);
+			double beta_Y_kN = beta[k][N - 1], xk = x[k], beta_Y_kN_squared = beta_Y_kN*beta_Y_kN;
+            d2Yr_dxi2 += 2*c_Y_ij(k, N-1, beta, gamma, Y_c_ij)*xk*xk*(1-beta_Y_kN_squared)/pow(beta_Y_kN_squared*xk+xN, 2)*(xN/(beta_Y_kN_squared*xk+xN)-1);
         }
         return d2Yr_dxi2;
     }
@@ -423,17 +423,17 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
 
 CoolPropDbl GERG2008ReducingFunction::dfYkidxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta)
 {
-    double xk = x[k], xi = x[i], beta_Y = beta[k][i];
+	double xk = x[k], xi = x[i], beta_Y = beta[k][i], beta_Y_squared = beta_Y*beta_Y;
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
-    return xk*(xk+xi)/(beta_Y*beta_Y*xk+xi)+xk*xi/(beta_Y*beta_Y*xk+xi)*(1-(xk+xi)/(beta_Y*beta_Y*xk+xi));
+    return xk*(xk+xi)/(beta_Y_squared*xk+xi)+xk*xi/(beta_Y_squared*xk+xi)*(1-(xk+xi)/(beta_Y_squared*xk+xi));
 }
 CoolPropDbl GERG2008ReducingFunction::dfYikdxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta)
 {
-    double xk = x[k], xi = x[i], beta_Y = beta[i][k];
+	double xk = x[k], xi = x[i], beta_Y = beta[i][k], beta_Y_squared = beta_Y*beta_Y;
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
-    return xk*(xi+xk)/(beta_Y*beta_Y*xi+xk)+xi*xk/(beta_Y*beta_Y*xi+xk)*(1-beta_Y*beta_Y*(xi+xk)/(beta_Y*beta_Y*xi+xk));
+    return xk*(xi+xk)/(beta_Y_squared*xi+xk)+xi*xk/(beta_Y_squared*xi+xk)*(1-beta_Y_squared*(xi+xk)/(beta_Y_squared*xi+xk));
 }
-CoolPropDbl GERG2008ReducingFunction::c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c)
+const CoolPropDbl GERG2008ReducingFunction::c_Y_ij(const std::size_t i, const std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c) const
 {
     return 2*beta[i][j]*gamma[i][j]*Y_c[i][j];
 }

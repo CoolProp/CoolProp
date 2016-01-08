@@ -300,7 +300,7 @@
     double interp1d(const std::vector<double> *x, const std::vector<double> *y, double x0);
     double powInt(double x, int y);
     
-    #define POW2(x) ((x)*(x))
+	template<class T> T POW2(T x) { return x*x; }
     #define POW3(x) ((x)*(x)*(x))
     #define POW4(x) ((x)*(x)*(x)*(x))
     #define POW5(x) ((x)*(x)*(x)*(x)*(x))

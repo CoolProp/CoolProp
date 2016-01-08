@@ -287,7 +287,7 @@ public:
      * c_{Y,ij} = 2\beta_{Y,ij}\gamma_{Y,ij}Y_{c,ij}
      * \f]
      */
-    CoolPropDbl c_Y_ij(std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c);
+    const CoolPropDbl c_Y_ij(const std::size_t i, const std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c) const;
     
     /** \brief The function \f$ f_{Y,ij}(x_i,x_j) \f$
      * 
