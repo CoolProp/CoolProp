@@ -287,7 +287,18 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         // Construct the default path to the HMX.BNC file
 		// ----------------------------------------------
         char path_HMX_BNC[refpropcharlength+1];
-		strcpy(path_HMX_BNC, "HMX.BNC");
+        #ifdef __ISWINDOWS__
+            const std::string full_HMX_path = "HMX.BNC";
+        #else
+            const std::string full_HMX_path = fdPath + "HMX.BNC";
+        #endif
+        const char * _full_HMX_path = full_HMX_path.c_str();
+        if (strlen(_full_HMX_path) > 0){
+            if (strlen(_full_HMX_path) > refpropcharlength){
+                throw ValueError(format("Full HMX path (%s) is too long", _full_HMX_path));
+            }
+            strcpy(path_HMX_BNC, _full_HMX_path);
+        }
 
         // If ALTERNATIVE_REFPROP_PATH is provided, clear HMX.BNC path so that REFPROP will 
         // look in fluids directory relative to directory set by SETPATHdll
