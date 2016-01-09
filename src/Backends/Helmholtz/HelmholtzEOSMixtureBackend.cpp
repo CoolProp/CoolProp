@@ -886,7 +886,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
     if (components.size() != 1){
         std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
-            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].T;
         }
         else{
