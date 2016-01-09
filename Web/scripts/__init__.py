@@ -102,7 +102,6 @@ def run_script(path):
 import CoolProp
 with open(os.path.join(root_dir,'Doxyfile'),'a+') as fp:
     fp.write('\n\n PROJECT_NUMBER         = ' + CoolProp.__version__ + '\n')
-sys.exit()
     
 # The normal tasks that are carried out each time the script runs
 normal_tasks = ["../../dev/scripts/examples/OSXRun.py","coolprop.tabular.speed.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py","coolprop.configuration.py"]
