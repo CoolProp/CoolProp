@@ -11,7 +11,7 @@ namespace CoolProp{
 
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 {
-    bool debug = get_debug_level() > 0 || true;
+    bool debug = get_debug_level() > 0 || false;
     if (HEOS.get_mole_fractions_ref().size() == 1){
         PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
         env.resize(HEOS.mole_fractions.size());
