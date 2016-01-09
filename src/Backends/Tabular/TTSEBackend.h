@@ -63,7 +63,6 @@ class TTSEBackend : public TabularBackend
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table
          * @param table A reference to the table to be used
-         * @param coeffs A reference to the matrix of the coefficients
          * @param output The output variable
          * @param x The 
          * @param y

@@ -132,13 +132,6 @@
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
     EXPORT_CODE void CONVENTION propssi_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char * Ref, double *output);
-    /** \brief An overload of \ref CoolProp::PropsSI with the mole fractions passed as an array of doubles and the number of 
-     * \overload
-     * \sa \ref CoolProp::PropsSIZ
-     * 
-     * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
-     */
-    //EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *FluidName, const double *z, int n);
 
     /// Convert from degrees Fahrenheit to Kelvin (useful primarily for testing)
     EXPORT_CODE double CONVENTION F2K(double T_F);
@@ -319,7 +312,7 @@
     * @param out2 The pointer to the array for the second output
     * @param out3 The pointer to the array for the third output
     * @param out4 The pointer to the array for the fourth output
-    * @param out4 The pointer to the array for the fifth output
+    * @param out5 The pointer to the array for the fifth output
     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
     * @param message_buffer A buffer for the error code
     * @param buffer_length The length of the buffer for the error code
@@ -327,7 +320,7 @@
     *
     * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
     */
-    EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long *inputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length);
+    EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long *outputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length);
 
 
     // *************************************************************************************

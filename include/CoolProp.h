@@ -155,15 +155,6 @@ You might want to start by looking at CoolProp.h
     /// @param FluidName The fluid name
     /// \note Returns empty string if there was an error; use get_global_param_string("errstring") to retrieve the error
     std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName);
-    /// Return a string representation of the phase
-    /// @param Name1 The first state variable name, one of "T","D","H",etc.
-    /// @param Prop1 The first state variable value
-    /// @param Name2 The second state variable name, one of "T","D","H",etc.
-    /// @param Prop2 The second state variable value
-    /// @param FluidName The fluid name
-    /// @param z The mole or mass fractions depending on the requirements of the backend
-    /// \note Returns empty string if there was an error; use get_global_param_string("errstring") to retrieve the error
-    //std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName, const std::vector<double> &z);
     
     /**
      * @brief Extract the backend from a string - something like "HEOS::Water" would split to "HEOS" and "Water".  If no backend is specified, the backend will be set to "?"
