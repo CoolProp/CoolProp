@@ -3270,5 +3270,30 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     return tracer.critical_points;
 }
 
-} /* namespace CoolProp */
+double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess){
+	
+	const std::vector<CoolPropDbl> &z = this->get_mole_fractions_ref();
+	if (w.size() != z.size()){ 
+		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size())); 
+	}
+	if (TPD_state.get() == NULL){
+		bool sat_states = false;
+		TPD_state.reset(new HelmholtzEOSMixtureBackend(components, sat_states));
+	}
+	TPD_state->set_mole_fractions(std::vector<CoolPropDbl>(w.begin(), w.end()));
+	if (rhomolar_guess < 0){
+		TPD_state->update(PT_INPUTS, p, T);
+	}
+	else{
+		TPD_state->specify_phase(iphase_gas); // Something homogeneous
+		TPD_state->update_TP_guessrho(T, p, rhomolar_guess);
+	}
+	double summer = 0;
+	for (std::size_t i = 0; i < w.size(); ++i){
+		summer += w[i] * (log(MixtureDerivatives::fugacity_i(*TPD_state, i, XN_DEPENDENT)) 
+			              - log(MixtureDerivatives::fugacity_i(*this, i, XN_DEPENDENT)));
+	}
+	return summer;
+}
 
+} /* namespace CoolProp */

@@ -53,10 +53,14 @@ cdef class AbstractState:
     cpdef double rhomolar_critical(self) except *
     cpdef double p_critical(self) except *
     cpdef list all_critical_points(self)
+    
     ## Reducing point
     cpdef double T_reducing(self) except *
     cpdef double rhomolar_reducing(self) except *
     cpdef double rhomass_reducing(self) except *
+    
+    ## Tangent plane distance
+    cpdef double tangent_plane_distance(self, double T, double p, vector[double] w, double rhomolar_guess=*) except *
         
     ## ---------------------------------------- 
     ##        Fluid property accessors

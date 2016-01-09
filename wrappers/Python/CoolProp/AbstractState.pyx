@@ -144,6 +144,7 @@ cdef class AbstractState:
             pypt.rhomolar = pt.rhomolar
             collection.append(pypt)
         return collection
+        
     ## Reducing point
     cpdef double T_reducing(self) except *:
         """ Gets the reducing temperature in K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::T_reducing` """
@@ -154,6 +155,11 @@ cdef class AbstractState:
     cpdef double rhomass_reducing(self) except *:
         """ Gets the reducing density in kg/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomass_reducing` """
         return self.thisptr.rhomass_reducing()
+        
+        
+    cpdef double tangent_plane_distance(self, double T, double p, vector[double] w, double rhomolar_guess = -1) except *:
+        """ Gets the tangent_plane_distance - wrapper of c++ function :cpapi:`CoolProp::AbstractState::tangent_plane_distance` """
+        return self.thisptr.tangent_plane_distance(T, p, w, rhomolar_guess)
 
     ## ----------------------------------------	
     ##        Fluid property accessors

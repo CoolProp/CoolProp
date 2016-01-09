@@ -341,6 +341,9 @@ protected:
     /// Using this backend, get the molar density in mol/m^3
     virtual long double calc_rhomolar(void){ return _rhomolar; }
 
+	/// Using this backend, calculate the tangent plane distance for a given trial composition
+	virtual double calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess){ throw NotImplementedError("calc_tangent_plane_distance is not implemented for this backend"); };
+
     /// Using this backend, return true critical point where dp/drho|T = 0 and d2p/drho^2|T = 0
     virtual void calc_true_critical_point(double &T, double &rho){ throw NotImplementedError("calc_true_critical_point is not implemented for this backend"); };
     
@@ -511,6 +514,31 @@ public:
     
     /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
     std::vector<CriticalState> all_critical_points(void){ return calc_all_critical_points(); };
+
+	/// Return the tangent plane distance for a given trial composition w
+	/// @param T Temperature (K)
+	/// @param p Pressure (Pa)
+	/// @param w The trial composition
+	/// @param rhomolar_guess (mol/m^3) The molar density guess value (if <0 (default), not used; if >0, guess value will be used in flash evaluation)
+	/// 
+	/// \f[
+	/// tpd(w) = \sum_i w_i(\ln w_i + \ln \phi_i(w) - d_i)
+	/// \f]
+	/// with
+	/// \f[ d_i = \ln z_i + \ln \phi_i(z) \f]
+	/// Or you can express the \f$ tpd \f$ in terms of fugacity (See Table 7.3 from GERG 2004 monograph) 
+	/// since \f$ \ln \phi_i = \ln f_i - \ln p -\ln x_i\f$
+	/// thus 
+	/// \f[ d_i = \ln p + \ln f_i \f]
+	/// and
+	/// \f[
+	/// tpd(w) = \sum_i w_i(\ln p + \ln f_i(w) - d_i)
+	/// \f]
+	/// and the \f$ p \f$ cancel, leaving
+	/// \f[
+	/// tpd(w) = \sum_i w_i(\ln f_i(w) - \ln f_i(z))
+	/// \f]
+	double tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess = -1){ return calc_tangent_plane_distance(T, p, w, rhomolar_guess); };
 
     /// Return the reducing point temperature in K
     double T_reducing(void);

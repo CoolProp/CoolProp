@@ -22,6 +22,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState {
 private:
     void pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 );
     void post_update();
+	shared_ptr<HelmholtzEOSMixtureBackend> TPD_state;
 protected:
     std::vector<CoolPropFluid> components; ///< The components that are in use
     phases imposed_phase_index;
@@ -98,6 +99,9 @@ public:
     
     CriticalState calc_critical_point(double rho0, double T0);
     std::vector<CoolProp::CriticalState> calc_all_critical_points();
+
+	/// Calculate tangent plane distance for given trial composition w
+	double calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess);
 
 	/// Calculate the phase once the state is fully calculated but you aren't sure if it is liquid or gas or ...
 	void recalculate_singlephase_phase();

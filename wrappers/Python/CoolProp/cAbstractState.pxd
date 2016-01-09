@@ -68,6 +68,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double rhomolar_critical() except +ValueError
         double p_critical() except +ValueError
         vector[CriticalState] all_critical_points() except +ValueError
+        
+        ## Tangent plane analysis
+        double tangent_plane_distance(const double, const double, const vector[double], const double) except +ValueError
+        
         ## Reducing point
         double T_reducing() except +ValueError
         double rhomolar_reducing() except +ValueError
