@@ -15,9 +15,9 @@ from PyQt4.QtGui import (QDialog, QGridLayout, QProgressBar, QLabel,
                          QDialogButtonBox, QPushButton, QFileDialog, QApplication)
 
 Preferences = ConfigParser()
-Preferences.read("psyrc")
+config_path = os.path.join(os.path.dirname(__file__), "psyrc")
+Preferences.read(config_path)
 P = Preferences.getfloat("General", "P")
-
 
 def _Pbar(Z):
     """
