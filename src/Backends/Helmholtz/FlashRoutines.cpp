@@ -1618,7 +1618,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
         HEOS.calc_pressure();
         HEOS._Q = -1;
     }
-    if (HEOS.is_pure_or_pseudopure)
+    if (HEOS.is_pure_or_pseudopure && HEOS._phase != iphase_twophase)
     {
         // Update the state for conditions where the state was guessed
         HEOS.recalculate_singlephase_phase();
