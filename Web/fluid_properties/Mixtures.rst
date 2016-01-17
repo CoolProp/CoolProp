@@ -40,9 +40,11 @@ Binary pairs
 Estimating binary interaction parameters
 ----------------------------------------
 
-If you have a mixture that you would like to include in your analysis, but for which no interaction parameters are currently available, there are two estimation schemes available.  These estimation schemes should be used with extreme caution.  If you use these schemes, you should definitely check that you are getting reasonable output values.  The two schemes available are
+If you have a mixture that you would like to include in your analysis, but for which no interaction parameters are currently available, there are two estimation schemes available.  These estimation schemes should be used with extreme caution.  If you use these schemes, you should definitely check that you are getting reasonable output values.  In general, these estimation schemes should be used for fluids with similar properties.
 
-* ``linear`` - Tr and vr are a linear function of molar composition between the two pure fluid values
+The two schemes available are
+
+* ``linear`` - :math:`T_r` and :math:`v_r` are a linear function of molar composition between the two pure fluid values
 * ``Lorentz-Berthelot`` - all interaction parameters are 1.0
 
 Here is a sample of using this in python::
