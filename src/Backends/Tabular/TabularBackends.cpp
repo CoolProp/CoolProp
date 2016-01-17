@@ -1017,6 +1017,8 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
                 if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                 iV = intersect[0].first; iL = intersect[1].first;
+				TL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iL);
+				TV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iV);
             }
             else{
                 bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
