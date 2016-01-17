@@ -54,10 +54,10 @@ Other flash routines (see :cpapi:`CoolProp::input_pairs`) proceed in exactly the
 
     In [0]: REFPROP = CoolProp.AbstractState('REFPROP','R32&R125'); REFPROP.set_mole_fractions([0.5,0.5])
     
-    # The default in REFPROP is to interpolate the phase envelope
+    # CoolProp calculates the thermodynamically correct temperature
     In [0]: HEOS.T_critical()
 
-    # CoolProp calculates the thermodynamically correct temperature
+    # The default in REFPROP is to interpolate the phase envelope
     In [0]: REFPROP.T_critical()
 
     # Here we calculate and obtain the phase envelope for the mixture using the routines in CoolProp
