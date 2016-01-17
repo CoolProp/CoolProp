@@ -373,16 +373,17 @@ double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData &env, parameters 
         default: throw ValueError("Pointer to vector y is unset in is_inside");
     }
 
+    double inval = value1;
     switch (iInput1){
         case iT: x = &(env.T); break;
-        case iP: x = &(env.p); break;
+        case iP: x = &(env.lnp); inval = log(value1);  break;
         case iDmolar: x = &(env.rhomolar_vap); break;
         case iHmolar: x = &(env.hmolar_vap); break;
         case iSmolar: x = &(env.smolar_vap); break;
         default: throw ValueError("Pointer to vector x is unset in is_inside");
     }
 
-    return CubicInterp(*x, *y, i - 1, i, i + 1, i + 2, value1);
+    return CubicInterp(*x, *y, i - 1, i, i + 1, i + 2, inval);
 }
 void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
 {
