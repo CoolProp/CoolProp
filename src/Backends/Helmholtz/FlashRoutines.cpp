@@ -474,6 +474,41 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         HEOS._T = HEOS.SatL->T();
     }
 }
+
+void get_Henrys_coeffs_FP(const std::string &CAS, double &A, double &B, double &C, double &Tmin, double &Tmax){
+	// Coeffs from Fernandez-Prini JPCRD 2003 DOI: 10.1063/1.1564818
+	if (CAS == "7440-59-7") //Helium
+		{ A = -3.52839; B = 7.12983; C = 4.47770; Tmin = 273.21; Tmax = 553.18; }
+	else if (CAS == "7440-01-9") // Ne 
+		{ A = -3.18301; B = 5.31448; C = 5.43774; Tmin = 273.20; Tmax = 543.36; }
+	else if (CAS == "7440-37-1") // Ar 
+		{ A = -8.40954; B = 4.29587; C = 10.52779; Tmin = 273.19; Tmax = 568.36; }
+	else if (CAS == "7439-90-9") // Kr 
+		{ A	= -8.97358; B = 3.61508; C = 11.29963; Tmin = 273.19; Tmax = 525.56; }
+	else if (CAS == "7440-63-3") // Xe 
+		{ A = -14.21635; B = 4.00041; C = 15.60999; Tmin = 273.22; Tmax = 574.85; }
+	else if (CAS == "1333-74-0") // H2 
+		{ A = -4.73284; B = 6.08954; C = 6.06066; Tmin = 273.15; Tmax = 636.09; }
+	else if (CAS == "7727-37-9") // N2 
+		{ A = -9.67578; B = 4.72162; C = 11.70585; Tmin = 278.12; Tmax = 636.46; }
+	else if (CAS == "7782-44-7") // O2 
+		{ A = -9.44833; B = 4.43822; C = 11.42005; Tmin = 274.15; Tmax = 616.52; }
+	else if (CAS == "630-08-0") // CO 
+		{ A = -10.52862; B = 5.13259; C = 12.01421; Tmin = 278.15; Tmax = 588.67; }
+	else if (CAS == "124-38-9") // CO2 
+		{ A = -8.55445; B = 4.01195; C = 9.52345; Tmin = 274.19; Tmax = 642.66; }
+	else if (CAS == "7783-06-4") // H2S 
+		{ A = -4.51499; B = 5.23538; C = 4.42126; Tmin = 273.15; Tmax = 533.09; }
+	else if (CAS == "74-82-8") // CH4 
+		{ A = -10.44708; B = 4.66491; C = 12.12986; Tmin = 275.46; Tmax = 633.11; }
+	else if (CAS == "74-84-0") // C2H6 
+		{ A = -19.67563; B = 4.51222; C = 20.62567; Tmin = 275.44; Tmax = 473.46; }
+	else if (CAS == "2551-62-4") // SF6
+		{ A = -16.56118; B = 2.15289; C = 20.35440; Tmin = 283.14; Tmax = 505.55; }
+	else{
+		throw ValueError("Bad component in Henry's law constants");
+	}
+}
 void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
     if (HEOS.is_pure_or_pseudopure)
@@ -571,19 +606,62 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             PT_Q_flash_mixtures(HEOS, iP, HEOS._p);
         }
         else{
-            // Set some imput options
-            SaturationSolvers::mixture_VLE_IO io;
-            io.sstype = SaturationSolvers::imposed_p;
-            io.Nstep_max = 10;
+			
+			// Set some imput options
+			SaturationSolvers::mixture_VLE_IO io;
+			io.sstype = SaturationSolvers::imposed_p;
+			io.Nstep_max = 10;
 
-            // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
-            CoolPropDbl Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
+			// Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
+			CoolPropDbl Tguess = SaturationSolvers::saturation_preconditioner(HEOS, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions);
 
-            // Use Wilson iteration to obtain updated guess for temperature
-            Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
+			// Use Wilson iteration to obtain updated guess for temperature
+			Tguess = SaturationSolvers::saturation_Wilson(HEOS, HEOS._Q, HEOS._p, SaturationSolvers::imposed_p, HEOS.mole_fractions, Tguess);
 
-            // Actually call the successive substitution solver
-            SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
+			std::vector<CoolPropDbl> K = HEOS.K;
+
+			if (get_config_bool(HENRYS_LAW_TO_GENERATE_VLE_GUESSES) && std::abs(HEOS._Q-1) < 1e-10){
+				const std::vector<CoolPropFluid> & components = HEOS.get_components();
+				std::size_t iWater = 0;
+				double p1star = PropsSI("P", "T", Tguess, "Q", 1, "Water");
+				const std::vector<CoolPropDbl> y = HEOS.mole_fractions;
+				std::vector<CoolPropDbl> x(y.size());
+				for (std::size_t i = 0; i < components.size(); ++i){
+
+					// Reference to EOS
+					const EquationOfState &EOS = components[i].EOSVector[0];
+
+					CoolPropDbl Tc = EOS.reduce.T;
+					CoolPropDbl pc = EOS.reduce.p;
+					CoolPropDbl acentric = EOS.acentric;
+
+					if (components[i].CAS == "7732-18-5"){
+						iWater = i; continue;
+					}
+					else{
+						double A, B, C, Tmin, Tmax;
+						get_Henrys_coeffs_FP(components[i].CAS, A, B, C, Tmin, Tmax);
+						double T_R = Tguess / 647.096, tau = 1-T_R;
+						double k_H = p1star*exp(A / T_R + B*pow(tau, 0.355) / T_R + C*pow(T_R, -0.41)*exp(tau));
+						x[i] = y[i]*HEOS._p/k_H;
+						// 
+						K[i] = y[i]/x[i];
+					}
+				}
+				// Update water K factor
+				double summer = 0;
+				for (std::size_t i = 0; i < y.size(); ++i){
+					if (i != iWater){
+						summer += x[i];
+					}
+				}
+				x[iWater] = summer;
+				K[iWater] = y[iWater]/x[iWater];
+			}
+
+			// Actually call the successive substitution solver
+			SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, K, io);
+			
         }
                     
         // Load the outputs
