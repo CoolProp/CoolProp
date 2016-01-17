@@ -902,7 +902,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
     if (components.size() != 1){
         std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
-            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].p;
         }
         else{
@@ -918,7 +918,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
     if (components.size() != 1){
         std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
-            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].rhomolar;
         }
         else{
@@ -2038,8 +2038,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
 
     try{
         
-        // First we try with Newton's method with analytic derivative
-        double rhomolar = Newton(resid, rhomolar_guess, 1e-8, 100, errstring);
+        // First we try with Halley's method with analytic derivative
+        double rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100, errstring);
         if (!ValidNumber(rhomolar)){
             throw ValueError();
         }
