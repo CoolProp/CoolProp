@@ -11,6 +11,9 @@ namespace CoolProp{
 
 void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 {
+	if (HEOS.get_mole_fractions_ref().empty()){
+		throw ValueError("Mole fractions have not been set yet.");
+	}
     bool debug = get_debug_level() > 0 || false;
     if (HEOS.get_mole_fractions_ref().size() == 1){
         PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
@@ -97,7 +100,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
         io.Nstep_max = 20;
         
         // Set the pressure to a low pressure 
-        HEOS._p = 100000;
+        HEOS._p = 100;
         HEOS._Q = 1;
         
         // Get an extremely rough guess by interpolation of ln(p) v. T curve where the limits are mole-fraction-weighted
@@ -286,7 +289,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
                 env.built = true; 
                 if (debug){
                     std::cout << format("envelope built.\n"); 
-                    std::cout << format("closest fraction to 1.0: distance %g", 1-max_fraction);
+                    std::cout << format("closest fraction to 1.0: distance %g\n", 1-max_fraction);
                 }
                 
                 // Now we refine the phase envelope to add some points in places that are still pretty rough
