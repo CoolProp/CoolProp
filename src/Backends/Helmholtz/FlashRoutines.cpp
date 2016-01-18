@@ -1286,9 +1286,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         CoolPropDbl p, value;
         parameters other;
         int iter;
-        CoolPropDbl eos0, eos1;
+        CoolPropDbl eos0, eos1, rhomolar;
+
         solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl p, CoolPropDbl value, parameters other) : 
-                HEOS(HEOS), p(p), value(value), other(other), iter(0), eos0(-_HUGE), eos1(-_HUGE)
+                HEOS(HEOS), p(p), value(value), other(other), iter(0), eos0(-_HUGE), eos1(-_HUGE), rhomolar(_HUGE)
                 {
                     // Specify the state to avoid saturation calls, but only if phase is subcritical
                     switch (CoolProp::phases phase = HEOS->phase()) {
@@ -1302,26 +1303,28 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
                 }
         double call(double T){
 
-            // Run the solver with T,P as inputs;
-            HEOS->update(PT_INPUTS, p, T);
+			if (iter < 3){
+				// Run the solver with T,P as inputs;
+				HEOS->update(PT_INPUTS, p, T);
+			}
+			else{
+				// Run the solver with T,P as inputs; but use the guess value for density from before
+				HEOS->update_TP_guessrho(T, p, rhomolar);
+			}
             
             // Get the value of the desired variable
             CoolPropDbl eos = HEOS->keyed_output(other);
+
+			// Store the value of density
+			rhomolar = HEOS->rhomolar();
 
             // Difference between the two is to be driven to zero
             CoolPropDbl r = eos - value;
 
             // Store values for later use if there are errors
-            if (iter == 0){ 
-                eos0 = eos;
-            }
-            else if (iter == 1){
-                eos1 = eos; 
-            }
-            else{
-                eos0 = eos1;
-                eos1 = eos;
-            }
+            if (iter == 0){ eos0 = eos; }
+            else if (iter == 1){ eos1 = eos; }
+            else{ eos0 = eos1; eos1 = eos; }
 
             iter++;
             return r;
@@ -1339,7 +1342,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
 
     try{
         // First try to use Halley's method (including two derivatives)
-        Halley(resid, (Tmin+Tmax)/2.0, 1e-12, 100, errstr);
+        Halley(resid, Tmin, 1e-12, 100, errstr);
         if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())))
         {
             throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
@@ -1349,6 +1352,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
     }
     catch(...){
         try{
+            resid.iter = 0;
             // Halley's method failed, so now we try Brent's method
             Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100, errstr);
             // Un-specify the phase of the fluid
