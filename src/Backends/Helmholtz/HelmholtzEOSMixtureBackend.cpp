@@ -1680,7 +1680,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                             // Next we check the vapor quality based on the ancillary values
                             double Qanc = (1/value - 1/static_cast<double>(_rhoLanc))/(1/static_cast<double>(_rhoVanc) - 1/static_cast<double>(_rhoLanc));
                             // If the vapor quality is significantly inside the two-phase zone, stop, we are definitely two-phase
-                            if (value > rho_liq || value < rho_vap){
+                            if (value > 0.95*rho_liq || value < 1.05*rho_vap){
                                 // Definitely single-phase
                                 _phase = iphase_liquid; // Needed for direct update call
                                 _Q = -1000; // Needed for direct update call
