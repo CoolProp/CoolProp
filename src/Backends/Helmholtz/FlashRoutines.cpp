@@ -55,7 +55,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
                 // Try using Newton's method
                 CoolPropDbl rhomolar = Newton(resid, rhomolar_guess, 1e-10, 100, errstr);
                 // Make sure the solution is within the bounds
-                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), 0.0L, rhomolar)){
+                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), static_cast<CoolPropDbl>(0.0), rhomolar)){
                     throw ValueError("out of range");
                 }
                 HEOS.update_DmolarT_direct(rhomolar, HEOS._T);
@@ -64,7 +64,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
                 // If that fails, try a bounded solver
                 CoolPropDbl rhomolar = Brent(resid, closest_state.rhomolar, 1e-10, DBL_EPSILON, 1e-10, 100, errstr);
                 // Make sure the solution is within the bounds
-                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), 0.0L, rhomolar)){
+                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), static_cast<CoolPropDbl>(0.0), rhomolar)){
                     throw ValueError("out of range");
                 }
             }
@@ -85,7 +85,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
         }
         
         // Use Rachford-Rice to check whether you are in a homogeneous phase
-        CoolPropDbl g_RR_0 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, 0.0L);
+        CoolPropDbl g_RR_0 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, static_cast<CoolPropDbl>(0.0));
         if (g_RR_0 < 0){
             // Subcooled liquid - done
             CoolPropDbl rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_liquid);
@@ -95,7 +95,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
             return;
         }
         else{
-            CoolPropDbl g_RR_1 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, 1.0L);
+            CoolPropDbl g_RR_1 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, static_cast<CoolPropDbl>(1.0));
             if (g_RR_1 > 0){
                 // Superheated vapor - done
                 CoolPropDbl rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);

@@ -122,9 +122,9 @@ namespace cpjson
     };    
 
     /// A convenience function to get a long double array compactly
-    inline std::vector<long double> get_long_double_array(rapidjson::Value &v)
+    inline std::vector<CoolPropDbl> get_long_double_array(rapidjson::Value &v)
     {
-        std::vector<long double> out;
+        std::vector<CoolPropDbl> out;
         if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
         for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
         {
@@ -159,10 +159,10 @@ namespace cpjson
     };
 
     /// A convenience function to get a 2D long double array compactly
-    inline std::vector< std::vector<long double> >  get_long_double_array2D(rapidjson::Value &v)
+    inline std::vector< std::vector<CoolPropDbl> >  get_long_double_array2D(rapidjson::Value &v)
     {
-        std::vector< std::vector<long double> > out;
-        std::vector<long double> tmp;
+        std::vector< std::vector<CoolPropDbl> > out;
+        std::vector<CoolPropDbl> tmp;
         if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
         for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
         {
@@ -179,9 +179,9 @@ namespace cpjson
     };
 
     /// A convenience function to get a long double array compactly
-    inline std::vector<long double> get_long_double_array(rapidjson::Value &v, std::string name)
+    inline std::vector<CoolPropDbl> get_long_double_array(rapidjson::Value &v, std::string name)
     {
-        std::vector<long double> out;
+        std::vector<CoolPropDbl> out;
         if (!v.HasMember(name.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",name.c_str())); }
         if (!v[name.c_str()].IsArray()) { throw CoolProp::ValueError("input is not an array"); }
         for (rapidjson::Value::ValueIterator itr = v[name.c_str()].Begin(); itr != v[name.c_str()].End(); ++itr)
@@ -262,7 +262,7 @@ namespace cpjson
     };
 
     /// A convenience function to set a double array compactly
-    inline void set_long_double_array(const char *key, const std::vector<long double> &vec, rapidjson::Value &value, rapidjson::Document &doc)
+    inline void set_long_double_array(const char *key, const std::vector<CoolPropDbl> &vec, rapidjson::Value &value, rapidjson::Document &doc)
     {
         rapidjson::Value _v(rapidjson::kArrayType);
         for (unsigned int i = 0; i < vec.size(); ++i)

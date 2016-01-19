@@ -62,12 +62,14 @@ public:
             throw std::exception();
         }
     }
+#ifndef COOLPROPDBL_MAPS_TO_DOUBLE
     operator CoolPropDbl() {
         if (is_cached) {return value; }
         else {
             throw std::exception();
         }
     }
+#endif
     /// Clear the flag and the value
     void clear() {
         is_cached = false;

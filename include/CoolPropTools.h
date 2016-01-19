@@ -66,7 +66,11 @@
         #endif
     #endif
 
-    typedef long double CoolPropDbl;
+	#ifdef COOLPROPDBL_MAPS_TO_DOUBLE
+		typedef double CoolPropDbl;
+	#else
+		typedef long double CoolPropDbl;
+	#endif
 
     #if defined(__ISWINDOWS__)
 		#include <sys/types.h>
@@ -301,8 +305,8 @@
     double powInt(double x, int y);
     
 	template<class T> T POW2(T x) { return x*x; }
-    #define POW3(x) ((x)*(x)*(x))
-    #define POW4(x) ((x)*(x)*(x)*(x))
+	template<class T> T POW3(T x) { return POW2(x)*x; }
+	template<class T> T POW4(T x) { return POW2(x)*POW2(x); }
     #define POW5(x) ((x)*(x)*(x)*(x)*(x))
     #define POW6(x) ((x)*(x)*(x)*(x)*(x)*(x))
     #define POW7(x) ((x)*(x)*(x)*(x)*(x)*(x)*(x))

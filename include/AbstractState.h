@@ -337,9 +337,9 @@ protected:
     virtual void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){ throw NotImplementedError("calc_ideal_curve is not implemented for this backend"); };
 
     /// Using this backend, get the temperature
-    virtual long double calc_T(void){ return _T; }
+    virtual CoolPropDbl calc_T(void){ return _T; }
     /// Using this backend, get the molar density in mol/m^3
-    virtual long double calc_rhomolar(void){ return _rhomolar; }
+    virtual CoolPropDbl calc_rhomolar(void){ return _rhomolar; }
 
 	/// Using this backend, calculate the tangent plane distance for a given trial composition
 	virtual double calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess){ throw NotImplementedError("calc_tangent_plane_distance is not implemented for this backend"); };
@@ -418,9 +418,11 @@ public:
     virtual void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<CoolPropDbl> &mass_fractions){ throw NotImplementedError("Volume composition has not been implemented."); }
 
+#ifndef COOLPROPDBL_MAPS_TO_DOUBLE
     void set_mole_fractions(const std::vector<double> &mole_fractions){ set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end())); };
     void set_mass_fractions(const std::vector<double> &mass_fractions){ set_mass_fractions(std::vector<CoolPropDbl>(mass_fractions.begin(), mass_fractions.end())); };
     void set_volu_fractions(const std::vector<double> &volu_fractions){ set_volu_fractions(std::vector<CoolPropDbl>(volu_fractions.begin(), volu_fractions.end())); };
+#endif
 
     #ifdef EMSCRIPTEN
     void set_mole_fractions_double(const std::vector<double> &mole_fractions){ set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end())); };
