@@ -105,6 +105,7 @@ List of Fluids
    :header-rows: 1
    :widths: 40, 15, 15, 15, 15, 15, 15
    :file: PurePseudoPure.csv
+   :delim: ;
    
 .. include:: fluidstoc.rst.in
 
