@@ -758,7 +758,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
             // Change the value in the library for the given fluid
             set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "IIR");
             if (get_debug_level() > 0){
-                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         }
         else if (!reference_state.compare("ASHRAE"))
@@ -776,7 +776,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
             // Change the value in the library for the given fluid
             set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "ASHRAE");
             if (get_debug_level() > 0){
-                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         }
         else if (!reference_state.compare("NBP"))
@@ -794,7 +794,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
             // Change the value in the library for the given fluid
             set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "NBP");
             if (get_debug_level() > 0){
-                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         }
         else if (!reference_state.compare("DEF"))
