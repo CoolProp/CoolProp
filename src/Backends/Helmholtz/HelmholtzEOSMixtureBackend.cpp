@@ -2075,7 +2075,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         }
     }
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, int phase)
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase)
 {
     CoolPropDbl rhomolar, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 
@@ -2134,6 +2134,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
             rhomolar = max3(rhomolar0, rhomolar1, rhomolar2); break;
         case iphase_gas:
         case iphase_supercritical_gas:
+		case iphase_supercritical:
             rhomolar = min3(rhomolar0, rhomolar1, rhomolar2); break;
         default:
             throw ValueError("Bad phase to solver_rho_Tp_SRK");

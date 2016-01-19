@@ -382,7 +382,7 @@ public:
     // ***************************************************************
 
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
-    CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, int phase);
+    CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase);
 
 };
 
