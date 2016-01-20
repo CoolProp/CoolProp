@@ -71,7 +71,7 @@ def fluid_reference(fluid):
 # Write the table
 with open(csvfile,'w') as fp:
     rowdata = ["Name"] + [bibtex_map[key] for key in bibtex_keys]
-    fp.write(','.join(rowdata)+'\n')
+    fp.write(';'.join(rowdata)+'\n')
     for index, row in df.iterrows():
         rowdata = [fluid_reference(row['name'])] + [build_citation(row[key]) for key in bibtex_keys]
         fp.write(';'.join(rowdata)+'\n')
