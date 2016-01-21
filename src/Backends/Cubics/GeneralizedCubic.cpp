@@ -1,4 +1,4 @@
-#include "generalizedcubic.h"
+#include "GeneralizedCubic.h"
 #include <cmath>
 
 const double AbstractCubic::T_r = 1.0;
