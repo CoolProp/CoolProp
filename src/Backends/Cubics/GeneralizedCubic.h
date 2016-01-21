@@ -2,6 +2,7 @@
 #define CUBIC_H
 
 #include <vector>
+#include <cmath>
 
 class AbstractCubic
 {
