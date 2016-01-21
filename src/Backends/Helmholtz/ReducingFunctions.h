@@ -354,6 +354,43 @@ public:
 	 CoolPropDbl d3fYikdxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
 };
 
+/** \brief A constant reducing function that does not vary with composition.  Think for instance the 
+ *  reducing function for the cubic EOS
+ * 
+ * Yields the reducing parameters \f$ \rho_r \f$ and \f$ T_r \f$
+ */
+class ConstantReducingFunction : public ReducingFunction
+{
+private:
+    ConstantReducingFunction(const ConstantReducingFunction& that); // No copying
+	double T_c, rhomolar_c;
+
+public:
+	ConstantReducingFunction(const double Tc, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c) {};
+
+    /// \brief The reducing temperature
+	CoolPropDbl Tr(const std::vector<CoolPropDbl> &x){ return T_c; };
+    /// \brief The derivative of reducing temperature with respect to component i mole fraction
+	CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    /// \brief The second derivative of reducing temperature with respect to component i mole fraction
+	CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    /// \brief The second derivative of reducing temperature with respect to component i and j mole fractions
+    CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+	/// \brief The third derivative of reducing temperature with respect to component i, j and k mole fractions
+	CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+    
+    /// \brief The molar reducing density
+    CoolPropDbl rhormolar(const std::vector<CoolPropDbl> &x){ return rhomolar_c; };
+    /// \brief Derivative of the molar reducing density with respect to component i mole fraction
+    CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };    
+    /// \brief Derivative of the molar reducing density with respect to component i mole fraction
+    CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    /// \brief Derivative of the molar reducing density with respect to component i  and j mole fractions
+    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+	/// \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions
+	CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+};
+
 /** \brief Reducing function converter for dry air and HFC blends
  * 
  * From Lemmon, JPCRD, 2000 for the properties of Dry Air, and also from Lemmon, JPCRD, 2004 for the properties of R404A, R410A, etc.
