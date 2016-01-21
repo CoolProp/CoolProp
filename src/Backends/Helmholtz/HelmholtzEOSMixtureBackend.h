@@ -354,8 +354,8 @@ public:
     */
     CoolPropDbl calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta, const CoolPropDbl &Tr, const CoolPropDbl &rhor);
 
-    void calc_reducing_state(void);
-    SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl> & mole_fractions);
+    virtual void calc_reducing_state(void);
+    virtual SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl> & mole_fractions);
 
     const CoolProp::SimpleState & get_reducing_state(){calc_reducing_state(); return _reducing;};
 
