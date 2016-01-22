@@ -205,7 +205,8 @@ std::string REFPROPMixtureBackend::version(){
                 lengthofreference, // Length of reference
                 errormessagelength // Length of error message
                 );
-	return strstrip(std::string(herr, herr+254));
+	std::string s(herr, herr+254);
+	return strstrip(s);
 }
 
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &fluid_names)

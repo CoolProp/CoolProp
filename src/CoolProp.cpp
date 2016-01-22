@@ -861,6 +861,9 @@ std::string get_global_param_string(const std::string &ParamName)
     else if (!ParamName.compare("HOME")){
         return get_home_dir();
     }
+	else if (ParamName == "REFPROP_version"){
+		return REFPROPMixtureBackend::version();
+	}
     else{
         throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));
     }
