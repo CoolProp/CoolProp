@@ -193,6 +193,20 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
     }
     return false;
 }
+std::string REFPROPMixtureBackend::version(){
+	long N = -1;
+	long ierr = 0;
+	char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
+	bool REFPROP_ok = REFPROPMixtureBackend::REFPROP_supported();
+    SETUPdll(&N, fluids, hmx, default_reference_state,
+                &ierr, herr,
+                10000, // Length of component_string (see PASS_FTN.for from REFPROP)
+                refpropcharlength, // Length of path_HMX_BNC
+                lengthofreference, // Length of reference
+                errormessagelength // Length of error message
+                );
+	return strstrip(std::string(herr, herr+254));
+}
 
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &fluid_names)
 {

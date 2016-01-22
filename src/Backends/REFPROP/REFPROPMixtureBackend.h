@@ -47,6 +47,8 @@ public:
     
     std::string backend_name(void){return "REFPROPMixtureBackend";}
     virtual ~REFPROPMixtureBackend();
+
+	static std::string version();
 	
 	std::vector<std::string> calc_fluid_names(){return fluid_names;};
     PhaseEnvelopeData PhaseEnvelope;
@@ -94,7 +96,7 @@ public:
     void check_loaded_fluid(void);
 
     /// Returns true if REFPROP is supported on this platform
-    bool REFPROP_supported(void);
+    static bool REFPROP_supported(void);
     
     std::string fluid_param_string(const std::string &ParamName);
 
