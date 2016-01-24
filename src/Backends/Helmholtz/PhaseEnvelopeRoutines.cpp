@@ -385,6 +385,9 @@ double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData &env, parameters 
         case iSmolar: x = &(env.smolar_vap); break;
         default: throw ValueError("Pointer to vector x is unset in is_inside");
     }
+	if ( i + 2 >= y->size() ){ i--; }
+	if ( i + 1 >= y->size() ){ i--; }
+	if ( i - 1 < 0 ){ i++; }
 
     return CubicInterp(*x, *y, i - 1, i, i + 1, i + 2, inval);
 }
