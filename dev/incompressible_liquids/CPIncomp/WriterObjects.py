@@ -7,11 +7,12 @@ import matplotlib
 import copy
 matplotlib.use("agg")
 
+from .DataObjects import SolutionData
+from .BaseObjects import IncompressibleData, IncompressibleFitter
+
 import hashlib, os, json, sys
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from CPIncomp.DataObjects import SolutionData
-from CPIncomp.BaseObjects import IncompressibleData, IncompressibleFitter
 from matplotlib.patches import Rectangle
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_pdf import PdfPages
@@ -97,18 +98,18 @@ class SolutionDataWriter(object):
         matplotlib.rcParams['axes.formatter.useoffset'] = False
 
         # For standard report generation
-        self.ext        = "pdf"
-        self.usebp      = False
-        self.ispage     = True # Do you want a page or a figure?
-        self.isportrait = True
-        self.resolveRef = True # Resolve references and print text
+        #self.ext        = "pdf"
+        #self.usejopy    = False
+        #self.ispage     = True # Do you want a page or a figure?
+        #self.isportrait = True
+        #self.resolveRef = True # Resolve references and print text
 
         # Latex document mode
-#         self.ext        = "pgf"
-#         self.usebp      = True
-#         self.ispage     = False # Do you want a page or a figure?
-#         self.isportrait = True
-#         self.resolveRef = False # Resolve references and print text
+        self.ext        = "pgf"
+        self.usejopy    = True
+        self.ispage     = False # Do you want a page or a figure?
+        self.isportrait = True
+        self.resolveRef = False # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
@@ -157,9 +158,9 @@ class SolutionDataWriter(object):
 #         self.TfreLabel = ur'Freezing Temperature (K)'
 
         if self.usebp:
-            from jopy.dataPlotters import BasePlotter
-            self.bp = BasePlotter()
-            ccycle = self.bp.getColourCycle(length=2)
+            from jopy.mplib import BaseStyle
+            self.bs = BaseStyle()
+            ccycle = self.bs.color_cycle(length=2)
             #ccycle.next() # skip the first one
             #ccycle.next() # skip the first one
             self.secondaryColour = ccycle.next()
