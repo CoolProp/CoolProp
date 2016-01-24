@@ -1,11 +1,8 @@
 from __future__ import division, print_function
 import numpy as np
-from BaseObjects import IncompressibleData
-from DataObjects import DigitalData, PureData
-import os, sys
-from scipy import interpolate
-from CPIncomp.BaseObjects import IncompressibleFitter
-from scipy.io.matlab.miobase import arr_dtype_number
+from .BaseObjects import IncompressibleData,IncompressibleFitter
+from .DataObjects import DigitalData, PureData
+import os
 
 class SecCoolSolutionData(DigitalData):
     """

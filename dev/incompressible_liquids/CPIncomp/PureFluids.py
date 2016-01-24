@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.DataObjects import PureData
+from .DataObjects import PureData
 
 class TherminolD12(PureData):
     """
