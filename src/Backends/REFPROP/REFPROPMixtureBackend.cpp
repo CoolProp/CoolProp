@@ -700,22 +700,18 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
 CoolPropDbl REFPROPMixtureBackend::calc_p_triple(){
     this->check_loaded_fluid();
     double p_kPa = _HUGE;
-    try{
-        double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
-        hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
-        w=_HUGE;
-        long ierr = 0;
-        char herr[errormessagelength+1];
-        long kq = 1;
-        double __T = Ttriple(), __Q = 0;
-        TQFLSHdll(&__T,&__Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
-                  &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-                  &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
-                  &ierr,herr,errormessagelength); // Error terms
-    }
-    catch(...){
-        throw ValueError(format("Unable to calculate triple point pressure"));
-    }
+    double rho_mol_L=_HUGE, rhoLmol_L=_HUGE, rhoVmol_L=_HUGE,
+    hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
+    w=_HUGE;
+    long ierr = 0;
+    char herr[errormessagelength+1];
+    long kq = 1;
+    double __T = Ttriple(), __Q = 0;
+    TQFLSHdll(&__T,&__Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
+                &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
+                &ierr,herr,errormessagelength); // Error terms
+	if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
     return p_kPa*1000;
 };
 CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
