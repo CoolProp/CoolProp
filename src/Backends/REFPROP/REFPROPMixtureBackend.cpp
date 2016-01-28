@@ -492,6 +492,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::string &CAS
         else if (parameter == "gammaV"){ fij[1] = value; }
         else if (parameter == "betaT"){ fij[2] = value; }
         else if (parameter == "betaV"){ fij[3] = value; }
+		else if (parameter == "Fij"){ fij[4] = value; }
         else{
             throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
         }
@@ -522,13 +523,14 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::string &C
         else if (parameter == "gammaV"){ val = fij[1]; }
         else if (parameter == "betaT"){ val = fij[2]; }
         else if (parameter == "betaV"){ val = fij[3]; }
+		else if (parameter == "Fij"){ val = fij[4]; }
         else{
             throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
         }
         return val;
     }
     else{
-        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+        //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     }
 }
 /// Get binary mixture string value
@@ -553,7 +555,7 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
         }
     }
     else{
-        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+        //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     }
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
