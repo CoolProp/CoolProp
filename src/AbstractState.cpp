@@ -312,6 +312,8 @@ double AbstractState::keyed_output(parameters key)
         return hmass();
     case iSmolar:
         return smolar();
+    case iSmolar_residual:
+        return tau()*dalphar_dTau() - alphar();
     case iSmass:
         return smass();
     case iUmolar:

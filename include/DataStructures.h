@@ -85,6 +85,7 @@ enum parameters{
     iCvmolar, ///< Mole-based constant-volume specific heat
     iUmolar, ///< Mole-based internal energy
     iGmolar, ///< Mole-based Gibbs energy
+    iSmolar_residual, ///< The residual molar entropy (s^r/R = tau*dar_dtau-ar)
 
     // Mass specific thermodynamic properties
     iDmass, ///< Mass-based density

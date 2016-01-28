@@ -38,6 +38,7 @@ const parameter_info parameter_info_list[] = {
     {iCvmass,            "Cvmass",            "O", "J/kg/K",  "Mass specific constant volume specific heat",     false},
     {iCp0molar,          "Cp0molar",          "O", "J/mol/K", "Ideal gas molar specific constant pressure specific heat",false},
     {iCp0mass,           "Cp0mass",           "O", "J/kg/K",  "Ideal gas mass specific constant pressure specific heat",false},
+    {iSmolar_residual,   "Smolar_residual",   "O", "J/mol/K", "Residual molar entropy (sr/R = tau*dar_dtau-ar)",false},
     {iGWP20,             "GWP20",             "O", "-",       "20-year global warming potential",                 true},
     {iGWP100,            "GWP100",            "O", "-",       "100-year global warming potential",                true},
     {iGWP500,            "GWP500",            "O", "-",       "500-year global warming potential",                true},
