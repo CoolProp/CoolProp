@@ -3222,7 +3222,7 @@ public:
             this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
             
             // Stop if bounds are exceeded
-            if (p_MPa > 500 || delta_new > 5){
+            if (p_MPa > 500){
                 break;
             }
             
@@ -3256,16 +3256,28 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     specify_phase(iphase_gas);
     
     std::string errstr;
-    OneDimObjective resid_L0(*this, 0.5);
-    double tau0 = 0.66;
+
+    double delta0 = _HUGE, tau0 = _HUGE;
+    get_critical_point_starting_values(delta0, tau0);
+    
+    OneDimObjective resid_L0(*this, delta0);
+    
     resid_L0.call(tau0);
     if (resid_L0.deriv(tau0) > 0){
-        tau0 += 0.1;
+        tau0 *= 1.1;
     }
     double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr); 
-    
-    L0CurveTracer tracer(*this, tau_L0, 0.5);
+    double T = T_reducing()/tau_L0;
+    double T0 = T_reducing()/tau0;
+    double rho = delta0*rhomolar_reducing();
+    L0CurveTracer tracer(*this, tau_L0, delta0);
+
+    double R_delta = 0, R_tau = 0;
+    get_critical_point_search_radii(R_delta, R_tau);
+    tracer.R_delta_tracer = R_delta;
+    tracer.R_tau_tracer = R_tau;
     tracer.trace();
+
     // Reset phase to previous value
     _phase = old_phase;
     return tracer.critical_points;

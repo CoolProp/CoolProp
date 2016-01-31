@@ -99,6 +99,11 @@ public:
 	double psi_plus(double delta, const std::vector<double> &x, std::size_t idelta);
 	double d_psi_plus_dxi(double delta, const std::vector<double> &x, std::size_t idelta, std::size_t i, bool xN_independent);
 	double d2_psi_plus_dxidxj(double delta, const std::vector<double> &x, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent);
+
+    /// Accessor to return vector of critical tempertures
+    const std::vector<double> & get_Tc(){return Tc;}
+    /// Accessor to return vector of critical pressures
+    const std::vector<double> & get_pc(){return pc;}
 };
 
 class PengRobinson : public AbstractCubic

@@ -99,6 +99,14 @@ public:
     
     CriticalState calc_critical_point(double rho0, double T0);
     std::vector<CoolProp::CriticalState> calc_all_critical_points();
+    virtual void get_critical_point_starting_values(double &delta0, double &tau0){
+        delta0 = 0.5; // The value of delta where we start searching for crossing with Lstar=0 contour
+        tau0 = 0.66; // The value of tau where we start searching at delta=delta0
+    } 
+    /// Get the search radius in delta and tau for the tracer
+    virtual void get_critical_point_search_radii(double &R_delta, double &R_tau){
+        R_delta = 0.1; R_tau = 0.1;
+    }
 
 	/// Calculate tangent plane distance for given trial composition w
 	double calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess);
@@ -326,7 +334,7 @@ public:
 	std::vector<std::string> calc_fluid_names(void);
 
     void calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl> &mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta);
-    CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta);
+    virtual CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta);
 
     /**
     \brief Take derivatives of the ideal-gas part of the Helmholtz energy, don't use any cached values, or store any cached values

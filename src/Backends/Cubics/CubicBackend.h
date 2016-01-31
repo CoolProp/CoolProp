@@ -42,10 +42,10 @@ public:
     bool using_mass_fractions(void){return false;}; 
     bool using_volu_fractions(void){return false;};
 
-    void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){throw NotImplementedError("Mole composition has not been implemented.");};
-    void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){}; // Not implemented, but don't throw any errors
+    void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){this->mole_fractions = mole_fractions;};
+    void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw NotImplementedError("Mass composition has not been implemented.");};
     void set_volu_fractions(const std::vector<CoolPropDbl> &volu_fractions){throw NotImplementedError("Volume composition has not been implemented.");};
-    const std::vector<CoolPropDbl> & get_mole_fractions(void){throw NotImplementedError("get_mole_fractions composition has not been implemented.");};
+    const std::vector<CoolPropDbl> & get_mole_fractions(void){ return this->mole_fractions; };
 
 	/// Calculate the gas constant in J/mol/K
 	CoolPropDbl calc_gas_constant(void){
@@ -59,6 +59,18 @@ public:
 		reducing.rhomolar = cubic->rho_r;
 		return reducing;
 	};
+
+    /// \brief Get linear mole fraction weighting of the critical molar volumes and temperatures
+    /// these are used in te
+    void get_linear_reducing_parameters(double &rhomolar, double &T);
+
+    /// Get the the starting values for the critical point evaluation routines
+    void get_critical_point_starting_values(double &delta0, double &tau0);
+
+    /// Get the search radius in delta and tau for the tracer, scaled appropriately for cubic
+    void get_critical_point_search_radii(double &R_delta, double &R_tau);
+
+    CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta);
 };
 
 class SRKBackend : public AbstractCubicBackend  {
@@ -125,58 +137,80 @@ public:
 		a.alphar = cubic->alphar(tau, delta, z, 0, 0);
 		a.dalphar_dtau = cubic->alphar(tau, delta, z, 1, 0);
 		a.dalphar_ddelta = cubic->alphar(tau, delta, z, 0, 1);
+        a.d2alphar_dtau2 = cubic->alphar(tau, delta, z, 2, 0);
+        a.d2alphar_ddelta_dtau = cubic->alphar(tau, delta, z, 1, 1);
+        a.d2alphar_ddelta2 = cubic->alphar(tau, delta, z, 0, 2);
+        a.d3alphar_dtau3 = cubic->alphar(tau, delta, z, 3, 0);
+        a.d3alphar_ddelta_dtau2 = cubic->alphar(tau, delta, z, 2, 1);
+        a.d3alphar_ddelta2_dtau = cubic->alphar(tau, delta, z, 1, 2);
+        a.d3alphar_ddelta3 = cubic->alphar(tau, delta, z, 0, 3);
         return a;
     }
     virtual CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 0, 0, i, xN_flag==XN_INDEPENDENT);
     }
 	virtual CoolPropDbl d2alphar_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 1, 0, i, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d2alphar_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 0, 1, i, xN_flag==XN_INDEPENDENT);
     }
 	virtual CoolPropDbl d3alphar_dxi_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 2, 0, i, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d3alphar_dxi_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 1, 1, i, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d3alphar_dxi_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 0, 2, i, xN_flag==XN_INDEPENDENT);
     }
 
     virtual CoolPropDbl d2alphardxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), z, 0, 0, i, j, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d3alphar_dxi_dxj_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag  xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), z, 1, 0, i, j, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d3alphar_dxi_dxj_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), z, 0, 1, i, j, xN_flag==XN_INDEPENDENT);
     }
-    
 
     virtual CoolPropDbl d4alphar_dxi_dTau3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 3, 0, i, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d4alphar_dxi_dDelta2_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 1, 2, i, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d4alphar_dxi_dDelta_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 2, 1, i, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d4alphar_dxi_dDelta3(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d_alphar_dxi(HEOS.tau(), HEOS.delta(), z, 0, 3, i, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d4alphar_dxi_dxj_dTau2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag  xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), z, 2, 0, i, j, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d4alphar_dxi_dxj_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag  xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), z, 1, 1, i, j, xN_flag==XN_INDEPENDENT);
     }
     virtual CoolPropDbl d4alphar_dxi_dxj_dDelta2(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){
-        return 0;
+        const std::vector<double> z = std::vector<double>(HEOS.get_mole_fractions().begin(), HEOS.get_mole_fractions().end());
+        return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), z, 0, 2, i, j, xN_flag==XN_INDEPENDENT);
     }
 	virtual CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
         return 0;
@@ -184,4 +218,4 @@ public:
 };
 
 } /* namespace CoolProp */
-#endif /* IF97BACKEND_H_ */
+#endif /* CUBICBACKEND_H_ */
