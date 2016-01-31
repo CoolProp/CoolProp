@@ -116,6 +116,8 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     if (this->SatV.get() != NULL){
         this->SatV->resize(N);
     }
+    // Also store the mole fractions as doubles
+    this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
 };
 void HelmholtzEOSMixtureBackend::resize(std::size_t N)
 {

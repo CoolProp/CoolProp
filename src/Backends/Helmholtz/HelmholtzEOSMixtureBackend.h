@@ -28,6 +28,7 @@ protected:
     phases imposed_phase_index;
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
     std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
+    std::vector<double> mole_fractions_double; ///< A copy of the bulk mole fractions of the mixture stored as doubles
     std::vector<CoolPropDbl> K, ///< The K factors for the components
                              lnK; ///< The natural logarithms of the K factors of the components
 
@@ -193,6 +194,8 @@ public:
 
     const std::vector<CoolPropDbl> &get_mole_fractions(){return mole_fractions;};
     std::vector<CoolPropDbl> &get_mole_fractions_ref(){return mole_fractions;};
+    std::vector<double> & get_mole_fractions_doubleref(void){ return mole_fractions_double; }
+    
 
     /** \brief Set the mass fractions
      * 
