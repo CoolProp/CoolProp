@@ -366,7 +366,7 @@ private:
 	double T_c, rhomolar_c;
 
 public:
-	ConstantReducingFunction(const double Tc, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c) {};
+	ConstantReducingFunction(const double T_c, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c) {};
 
     /// \brief The reducing temperature
 	CoolPropDbl Tr(const std::vector<CoolPropDbl> &x){ return T_c; };
