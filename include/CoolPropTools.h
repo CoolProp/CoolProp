@@ -66,6 +66,7 @@
         #endif
     #endif
 
+	//#define COOLPROPDBL_MAPS_TO_DOUBLE
 	#ifdef COOLPROPDBL_MAPS_TO_DOUBLE
 		typedef double CoolPropDbl;
 	#else
@@ -100,6 +101,20 @@
         #  define _HUGE HUGE
         #endif
     #endif
+
+    /**
+     * Due to the periodicity of angles, you need to handle the case where the
+     * angles wrap around - suppose theta_d is 6.28 and you are at an angles of 0.1 rad,
+     * the difference should be around 0.1, not -6.27
+     * 
+     * This brilliant method is from http://blog.lexique-du-net.com/index.php?post/Calculate-the-real-difference-between-two-angles-keeping-the-sign
+     * and the comment of user tk
+     * 
+     * Originally implemented in PDSim
+     */
+    template<class T> T angle_difference(T angle1, T angle2){
+        return fmod(angle1 - angle2 + M_PI, 2*M_PI) - M_PI;
+    }
 
     /// A simple function for use in wrappers where macros cause problems
     inline double get_HUGE(){ return _HUGE; }

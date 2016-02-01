@@ -3144,7 +3144,8 @@ public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
     double delta,
            tau,
-           M1_last,
+           M1_last, ///< The last value that the Mstar determinant had
+           theta_last, ///< The last value that the angle had
            R_tau, ///< The radius for tau currently being used
            R_delta, ///< The radius for delta currently being used
            R_tau_tracer, ///< The radius for tau that should be used in the L1*=0 tracer (user-modifiable after instantiation)
@@ -3212,7 +3213,13 @@ public:
                 // be searching in, use Newton's method to refine the solution since we also
                 // have an analytic solution for the derivative
                 R_tau = R_tau_tracer; R_delta = R_delta_tracer;
-                theta = Newton(this, theta, 1e-10, 100, errstr);
+                theta = Newton(this, theta_last, 1e-10, 100, errstr);
+                // If the solver takes a U-turn, going in the opposite direction of travel
+                // this is not a good thing, and force a Brent's method solver call to make sure we keep
+                // tracing in the same direction
+                if (std::abs(angle_difference(theta, theta_last)) > M_PI/2.0){
+                    theta = Brent(this, theta_last-M_PI/3.5, theta_last+M_PI/3.5, DBL_EPSILON, 1e-10, 100, errstr);
+                }
             }
             
             // Calculate the second criticality condition
@@ -3245,6 +3252,7 @@ public:
             this->tau = tau_new;
             this->delta = delta_new;
             this->M1_last = M1;
+            this->theta_last = theta;
         }
     };
 };
