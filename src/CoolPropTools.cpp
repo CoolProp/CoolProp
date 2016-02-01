@@ -47,22 +47,6 @@ double root_sum_square(const std::vector<double> &x)
     }
     return sqrt(sum);
 }
-std::string format(const char* fmt, ...)
-{
-    const int size = 512;
-    struct deleter{ static void delarray(char* p) { delete[] p; } }; // to use delete[]
-    shared_ptr<char> buffer(new char[size], deleter::delarray); // I'd prefer unique_ptr, but it's only available since c++11
-    va_list vl;
-    va_start(vl,fmt);
-    int nsize = vsnprintf(buffer.get(),size,fmt,vl);
-    if(size<=nsize){//fail delete buffer and try again
-        buffer.reset(new char[++nsize], deleter::delarray);//+1 for /0
-        nsize = vsnprintf(buffer.get(),nsize,fmt,vl);
-    }
-    va_end(vl);
-    return buffer.get();
-}
-
 std::vector<std::string> strsplit(const std::string &s, char del)
 {
     std::vector<std::string> v;
@@ -76,7 +60,6 @@ std::vector<std::string> strsplit(const std::string &s, char del)
     }
     return v;
 }
-    
 double interp1d(const std::vector<double> *x, const std::vector<double> *y, double x0)
 {
     std::size_t i,L,R,M;
