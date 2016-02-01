@@ -20,7 +20,10 @@
     #include <numeric>
     #include <set>
     #include <sys/types.h>
-    #include <sys/stat.h>   
+    #include <sys/stat.h>
+    #define FMT_HEADER_ONLY
+    #include "cppformat/format.h" // For addition of the string formatting functions and macros from cppformat
+    #undef FMT_HEADER_ONLY
 
     // This will kill the horrible min and max macros 
     #ifndef NOMINMAX
@@ -294,8 +297,12 @@
         throw(errno);
     }
 
-    // Missing string printf
-    std::string format(const char* fmt, ...);
+    // Missing std::string formatting function - provided by the cppformat library
+    inline std::string format(const char *format, fmt::ArgList args) {
+      return fmt::sprintf(format, args);
+    }
+    FMT_VARIADIC(std::string, format, const char *)
+
     // Missing string split - like in Python
     std::vector<std::string> strsplit(const std::string &s, char del);
 
