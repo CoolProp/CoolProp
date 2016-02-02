@@ -362,7 +362,7 @@ CoolPropDbl TransportRoutines::viscosity_heptane_higher_order_hardcoded(Helmholt
 
     // Output is in Pa-s
     double c[] = {0, 22.15000/1e6, -15.00870/1e6, 3.71791/1e6, 77.72818/1e6, 9.73449, 9.51900, -6.34076, -2.51909};
-    return pow(rhor,2.0L/3.0L)*sqrt(Tr)*(c[1]*rhor+c[2]*pow(rhor,2)+c[3]*pow(rhor,3)+c[4]*rhor/(c[5]+c[6]*Tr+c[7]*rhor+rhor*rhor+c[8]*rhor*Tr));
+    return pow(rhor,static_cast<CoolPropDbl>(2.0L/3.0L))*sqrt(Tr)*(c[1]*rhor+c[2]*pow(rhor,2)+c[3]*pow(rhor,3)+c[4]*rhor/(c[5]+c[6]*Tr+c[7]*rhor+rhor*rhor+c[8]*rhor*Tr));
 }
 
 CoolPropDbl TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS)
@@ -1230,7 +1230,7 @@ CoolPropDbl TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     CoolPropDbl eta_resid = HEOS_Reference.calc_viscosity_background();
 
     // The F factor
-    CoolPropDbl F_eta = sqrt(f)*pow(h, -2.0L/3.0L)*sqrt(M/M0);
+    CoolPropDbl F_eta = sqrt(f)*pow(h, -static_cast<CoolPropDbl>(2.0L/3.0L))*sqrt(M/M0);
 
     // The total viscosity considering the contributions of the fluid of interest and the reference fluid [Pa-s]
     CoolPropDbl eta = eta_dilute + eta_resid*F_eta;

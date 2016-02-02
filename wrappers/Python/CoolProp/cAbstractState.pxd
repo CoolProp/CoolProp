@@ -4,6 +4,8 @@ from libcpp.vector cimport vector
 
 cimport constants_header
 
+from typedefs cimport CoolPropDbl
+
 cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
     cdef cppclass PhaseEnvelopeData:
         bool TypeI
@@ -35,10 +37,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         void set_mass_fractions(vector[double]) except+ValueError
         void set_volu_fractions(vector[double]) except+ValueError
         
-        vector[long double] mole_fractions_liquid() except +ValueError
-        vector[long double] mole_fractions_vapor() except +ValueError
-        vector[long double] get_mole_fractions() except +ValueError
-        vector[long double] get_mass_fractions() except +ValueError
+        vector[CoolPropDbl] mole_fractions_liquid() except +ValueError
+        vector[CoolPropDbl] mole_fractions_vapor() except +ValueError
+        vector[CoolPropDbl] get_mole_fractions() except +ValueError
+        vector[CoolPropDbl] get_mass_fractions() except +ValueError
         
         constants_header.phases phase() except +ValueError
         void specify_phase(constants_header.phases phase) except +ValueError
@@ -110,9 +112,9 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double delta() except +ValueError
         double viscosity() except+ValueError
         double conductivity() except+ValueError
-        void conformal_state(const string &, long double &, long double &) except +ValueError
-        void conductivity_contributions(long double &dilute, long double &initial_density, long double &residual, long double &critical) except +ValueError
-        void viscosity_contributions(long double &dilute, long double &initial_density, long double &residual, long double &critical) except +ValueError
+        void conformal_state(const string &, CoolPropDbl &, CoolPropDbl &) except +ValueError
+        void conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical) except +ValueError
+        void viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical) except +ValueError
 
         double surface_tension() except+ValueError
         double Prandtl() except +ValueError
@@ -133,10 +135,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double acentric_factor() except+ValueError
         double gas_constant() except+ValueError
         
-        long double first_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
-        long double second_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
-        long double first_saturation_deriv(constants_header.parameters, constants_header.parameters) except+ValueError
-        long double second_saturation_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
+        CoolPropDbl first_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
+        CoolPropDbl second_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
+        CoolPropDbl first_saturation_deriv(constants_header.parameters, constants_header.parameters) except+ValueError
+        CoolPropDbl second_saturation_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         double first_two_phase_deriv(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except+ValueError
         double second_two_phase_deriv(constants_header.parameters Of, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except+ValueError
         double first_two_phase_deriv_splined(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except+ValueError
@@ -150,27 +152,27 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         void build_phase_envelope(string) except+ValueError
         PhaseEnvelopeData get_phase_envelope_data() except+ValueError
         
-        long double alpha0() except+ValueError
-        long double dalpha0_dDelta() except+ValueError
-        long double dalpha0_dTau() except+ValueError
-        long double d2alpha0_dDelta2() except+ValueError
-        long double d2alpha0_dDelta_dTau() except+ValueError
-        long double d2alpha0_dTau2() except+ValueError
-        long double d3alpha0_dTau3() except+ValueError
-        long double d3alpha0_dDelta_dTau2() except+ValueError
-        long double d3alpha0_dDelta2_dTau() except+ValueError
-        long double d3alpha0_dDelta3() except+ValueError
+        CoolPropDbl alpha0() except+ValueError
+        CoolPropDbl dalpha0_dDelta() except+ValueError
+        CoolPropDbl dalpha0_dTau() except+ValueError
+        CoolPropDbl d2alpha0_dDelta2() except+ValueError
+        CoolPropDbl d2alpha0_dDelta_dTau() except+ValueError
+        CoolPropDbl d2alpha0_dTau2() except+ValueError
+        CoolPropDbl d3alpha0_dTau3() except+ValueError
+        CoolPropDbl d3alpha0_dDelta_dTau2() except+ValueError
+        CoolPropDbl d3alpha0_dDelta2_dTau() except+ValueError
+        CoolPropDbl d3alpha0_dDelta3() except+ValueError
 
-        long double alphar() except+ValueError
-        long double dalphar_dDelta() except+ValueError
-        long double dalphar_dTau() except+ValueError
-        long double d2alphar_dDelta2() except+ValueError
-        long double d2alphar_dDelta_dTau() except+ValueError
-        long double d2alphar_dTau2() except+ValueError
-        long double d3alphar_dDelta3() except+ValueError
-        long double d3alphar_dDelta2_dTau() except+ValueError
-        long double d3alphar_dDelta_dTau2() except+ValueError
-        long double d3alphar_dTau3() except+ValueError
+        CoolPropDbl alphar() except+ValueError
+        CoolPropDbl dalphar_dDelta() except+ValueError
+        CoolPropDbl dalphar_dTau() except+ValueError
+        CoolPropDbl d2alphar_dDelta2() except+ValueError
+        CoolPropDbl d2alphar_dDelta_dTau() except+ValueError
+        CoolPropDbl d2alphar_dTau2() except+ValueError
+        CoolPropDbl d3alphar_dDelta3() except+ValueError
+        CoolPropDbl d3alphar_dDelta2_dTau() except+ValueError
+        CoolPropDbl d3alphar_dDelta_dTau2() except+ValueError
+        CoolPropDbl d3alphar_dTau3() except+ValueError
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":

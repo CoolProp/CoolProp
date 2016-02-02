@@ -4,6 +4,8 @@ cimport cython
 
 from libcpp.vector cimport vector
 
+from typedefs cimport *
+
 include "AbstractState.pxd"
        
 cdef class State:
