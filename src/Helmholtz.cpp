@@ -483,10 +483,10 @@ void ResidualHelmholtzSRK::all(const CoolPropDbl &tau, const CoolPropDbl &delta,
     CoolPropDbl amix = a*pow(kappa_times_Trbracket, 2);
 
     // Derivatives of amix with respect to tau
-    CoolPropDbl damix_dTau = a*kappa/pow(tau, 3.0L/2.0)*kappa_times_Trbracket;
-    CoolPropDbl d2amix_dTau2 = a*kappa/2.0*(kappa/pow(tau,3)-3/pow(tau, 5.0L/2.0)*kappa_times_Trbracket);
-    CoolPropDbl d3amix_dTau3 = 3.0*a*kappa/4.0*(-3.0*kappa/pow(tau, 4)+5/pow(tau, 7.0L/2.0)*kappa_times_Trbracket);
-    CoolPropDbl d4amix_dTau4 = 3.0*a*kappa/8.0*(29.0*kappa/pow(tau, 5)-35/pow(tau, 9.0L/2.0)*kappa_times_Trbracket);
+    CoolPropDbl damix_dTau = a*kappa/pow(tau, static_cast<CoolPropDbl>(3.0L/2.0))*kappa_times_Trbracket;
+    CoolPropDbl d2amix_dTau2 = a*kappa/2.0*(kappa/pow(tau,3)-3/pow(tau, static_cast<CoolPropDbl>(5.0L/2.0))*kappa_times_Trbracket);
+    CoolPropDbl d3amix_dTau3 = 3.0*a*kappa/4.0*(-3.0*kappa/pow(tau, 4)+5/pow(tau, static_cast<CoolPropDbl>(7.0L/2.0))*kappa_times_Trbracket);
+    CoolPropDbl d4amix_dTau4 = 3.0*a*kappa/8.0*(29.0*kappa/pow(tau, 5)-35/pow(tau, static_cast<CoolPropDbl>(9.0L/2.0))*kappa_times_Trbracket);
 
     derivs.alphar += -log(1-b*delta*rhor)-tau*amix/(R*Treducing*b)*log(b*delta*rhor + 1);
 

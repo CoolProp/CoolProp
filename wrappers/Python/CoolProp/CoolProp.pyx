@@ -12,6 +12,8 @@ cimport cython
 import math
 import warnings
 
+from typedefs cimport CoolPropDbl
+
 try:
     import numpy as np
     _numpy_supported = True

@@ -69,7 +69,7 @@
         #endif
     #endif
 
-	//#define COOLPROPDBL_MAPS_TO_DOUBLE
+	#define COOLPROPDBL_MAPS_TO_DOUBLE
 	#ifdef COOLPROPDBL_MAPS_TO_DOUBLE
 		typedef double CoolPropDbl;
 	#else
