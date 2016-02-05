@@ -53,7 +53,7 @@
       "T_r": 447.57, 
       "Tmax": 447.57, 
       "Tmin": 196.0, 
-      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))", 
+      "description": "rho'' = rhoc*exp(sum(n_i*theta^t_i))", 
       "max_abserror_percentage": 0.1, 
       "n": [
         -4.8138, 
@@ -71,7 +71,7 @@
         12
       ], 
       "type": "rhoV", 
-      "using_tau_r": true
+      "using_tau_r": false
     }, 
     "surface_tension": {
       "BibTeX": "Mulero-JPCRD-2012", 
