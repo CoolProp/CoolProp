@@ -20,7 +20,7 @@ Download a precompiled shared library appropriate to the computer you are using 
     
 Download the sample file: 
 
-* :download:`sample.spe`
+* :download:`sample.sce`
 
 Place both files in the same folder.
 
