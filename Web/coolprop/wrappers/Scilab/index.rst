@@ -48,7 +48,7 @@ For Windows:
 
 .. note:: 
 
-    It is possible that on linux, you might need to add the path to the directory containing ``libCoolProp.so`` to the ``LD_LIBRARY_PATH`` environmental variable.  At the terminal, or in your ~/.bash_profile file, add: ``export LD_LIBRARY_PATH=/path/to/directory``
+    It is possible that on linux, you might need to add the path to the directory containing ``libCoolProp.so`` to the ``LD_LIBRARY_PATH`` environmental variable.  At the terminal, or in your ~/.bash_profile file, add: ``export LD_LIBRARY_PATH=/path/to/directory``. It is also possible to put the ``libCoolProp.so`` in '/usr/lib/scilab' folder, so you don't need to specify the path in the 'scilab.ini' file.
 
 Calling through PIMS
 ====================
