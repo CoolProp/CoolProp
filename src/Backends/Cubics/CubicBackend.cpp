@@ -17,10 +17,11 @@ void CoolProp::AbstractCubicBackend::get_linear_reducing_parameters(double &rhom
     T_r = 0; 
     double v_r = 0;
     const std::vector<double> Tc = cubic->get_Tc(), pc = cubic->get_pc();
-    std::vector<double> rhoc(2,10139.128); rhoc[1] = 6856.886685;
     for (std::size_t i = 0; i < mole_fractions.size(); ++i){   
         T_r += mole_fractions[i]*Tc[i];
-        v_r += mole_fractions[i]/rhoc[i];
+        // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
+        double v_c_Lmol = 2.14107171795*(Tc[i]/pc[i]*1000)+0.00773144012514; // [L/mol]
+        v_r += mole_fractions[i]*v_c_Lmol/1000.0;
     }
     rhomolar_r = 1/v_r;
 }
