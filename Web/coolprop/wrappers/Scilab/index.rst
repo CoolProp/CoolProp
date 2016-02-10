@@ -44,11 +44,13 @@ For Windows:
 -->SCIHOME
  SCIHOME  =
  
- C:\Users\username\AppData\Roaming\Scilab\scilab-5.5.2
+ C:\\Users\\username\\AppData\\Roaming\\Scilab\\scilab-5.5.2
 
 .. note:: 
 
     It is possible that on linux, you might need to add the path to the directory containing ``libCoolProp.so`` to the ``LD_LIBRARY_PATH`` environmental variable.  At the terminal, or in your ~/.bash_profile file, add: ``export LD_LIBRARY_PATH=/path/to/directory``
+    
+    It is also possible to put the CoolProp shared library in '/usr/lib/scilab' for linux or in 'C:\\windows' for Windows, so you don't need to specify the path in the 'scilab.ini' file.
 
 Calling through PIMS
 ====================
