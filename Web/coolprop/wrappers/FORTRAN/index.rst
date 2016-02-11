@@ -20,24 +20,24 @@ On linux, you need gcc and gfortran, which are easy to install using your packag
 
 On windows, the most reliable mixed compilation seems to be using the gfortran/gcc combination from `MinGW-w64 <http://sourceforge.net/projects/mingw-w64/files>`_, whose installer allows you to install different versions of GCC, typically up to the last one. Version 5.3.0 is the one used as of February 10, 2016::
 
->C:\>gfortran --version
-GNU Fortran (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 5.3.0
-Copyright (C) 2015 Free Software Foundation, Inc.
+    >C:\>gfortran --version
+    GNU Fortran (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 5.3.0
+    Copyright (C) 2015 Free Software Foundation, Inc.
 
-GNU Fortran comes with NO WARRANTY, to the extent permitted by law.
-You may redistribute copies of GNU Fortran
-under the terms of the GNU General Public License.
-For more information about these matters, see the file named COPYING
+    GNU Fortran comes with NO WARRANTY, to the extent permitted by law.
+    You may redistribute copies of GNU Fortran
+    under the terms of the GNU General Public License.
+    For more information about these matters, see the file named COPYING
 
 
->C:\>g++ --version
-g++ (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 5.3.0
-Copyright (C) 2015 Free Software Foundation, Inc.
-This is free software; see the source for copying conditions.  There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    >C:\>g++ --version
+    g++ (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 5.3.0
+    Copyright (C) 2015 Free Software Foundation, Inc.
+    This is free software; see the source for copying conditions.  There is NO
+    warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 .. warning::
-gfortran in GCC version 5.1 has a bug preventing to open external files (a segmentation error is prompted), which makes this version almost useless for fortran users.  
+    gfortran in GCC version 5.1 has a bug preventing to open external files (a segmentation error is prompted), which makes this   version almost useless for fortran users.  
 
 
 On OSX, the default compiler that comes with XCode is clang, gcc and g++ at the command prompt are just aliases to clang.  See for instance::
