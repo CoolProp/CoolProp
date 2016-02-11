@@ -201,7 +201,7 @@ public:
         return ACB->get_cubic()->d2_alphar_dxidxj(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 2, i, j, xN_flag==XN_INDEPENDENT);
     }
 	virtual CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
-        return 0;
+        return ACB->get_cubic()->d3_alphar_dxidxjdxk(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 0, i, j, k, xN_flag==XN_INDEPENDENT);
     }
 };
 
