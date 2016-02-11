@@ -436,12 +436,12 @@ public:
                  std::vector<double> pc, 
                  std::vector<double> acentric,
                  double R_u) 
-        : AbstractCubic(Tc, pc, acentric, R_u, 1+sqrt(2), 1-sqrt(2)) {};
+        : AbstractCubic(Tc, pc, acentric, R_u, 1+sqrt(2.0), 1-sqrt(2.0)) {};
     PengRobinson(double Tc, 
         double pc, 
         double acentric,
         double R_u) 
-        : AbstractCubic(std::vector<double>(1,Tc), std::vector<double>(1,pc), std::vector<double>(1,acentric), R_u, 1+sqrt(2), 1-sqrt(2)) {};
+        : AbstractCubic(std::vector<double>(1,Tc), std::vector<double>(1,pc), std::vector<double>(1,acentric), R_u, 1+sqrt(2.0), 1-sqrt(2.0)) {};
 
     virtual double a0_ii(std::size_t i);
     virtual double b0_ii(std::size_t i);
