@@ -360,6 +360,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
 }
 double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData &env, parameters output, parameters iInput1, double value1, std::size_t &i)
 {
+    int _i = i;
     std::vector<double> const *x, *y;
 
     switch (output){
@@ -385,11 +386,11 @@ double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData &env, parameters 
         case iSmolar: x = &(env.smolar_vap); break;
         default: throw ValueError("Pointer to vector x is unset in is_inside");
     }
-	if ( i + 2 >= y->size() ){ i--; }
-	if ( i + 1 >= y->size() ){ i--; }
-	if ( i - 1 < 0 ){ i++; }
+	if ( _i + 2 >= y->size() ){ _i--; }
+	if ( _i + 1 >= y->size() ){ _i--; }
+	if ( _i - 1 < 0 ){ i++; }
 
-    return CubicInterp(*x, *y, i - 1, i, i + 1, i + 2, inval);
+    return CubicInterp(*x, *y, _i - 1, _i, _i + 1, _i + 2, inval);
 }
 void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
 {
