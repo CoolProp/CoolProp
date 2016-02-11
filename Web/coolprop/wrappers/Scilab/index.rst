@@ -44,7 +44,7 @@ For Windows:
 -->SCIHOME
  SCIHOME  =
  
- C:\Users\username\AppData\Roaming\Scilab\scilab-5.5.2
+ C:\\Users\\username\\AppData\\Roaming\\Scilab\\scilab-5.5.2
 
 .. note:: 
 
