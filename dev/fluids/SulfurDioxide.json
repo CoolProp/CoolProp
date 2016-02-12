@@ -120,7 +120,7 @@
         10.0
       ], 
       "type": "rhoV", 
-      "using_tau_r": true
+      "using_tau_r": false
     }, 
     "sL": {
       "A": [
