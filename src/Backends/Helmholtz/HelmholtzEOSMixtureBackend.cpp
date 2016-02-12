@@ -3198,9 +3198,11 @@ public:
     };
     
     void trace(){
+        bool debug = (get_debug_level() > 0) | false;
         double theta;
         static std::string errstr;
         for (int i = 0; i < 100; ++i){
+
             if (i == 0){
                 // In the first iteration, search all angles in the positive delta direction using a
                 // bounded solver with a very small radius in order to not hit other L1*=0 contours
@@ -3229,9 +3231,9 @@ public:
             // Calculate the new tau and delta at the new point
             double tau_new, delta_new;
             this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
-            
+
             // Stop if bounds are exceeded
-            if (p_MPa > 500){
+            if (p_MPa > 500 || HEOS.get_critical_is_terminated(delta_new, tau_new)){
                 break;
             }
             
@@ -3243,7 +3245,7 @@ public:
                 CoolProp::CriticalState crit = HEOS.calc_critical_point(rhomolar, T);
                 critical_points.push_back(crit);
                 N_critical_points++;
-                if (get_debug_level() > 0){
+                if (debug){
                     std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
                 }
             }
@@ -3276,10 +3278,10 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     if (resid_L0.deriv(tau0) > 0){
         tau0 *= 1.1;
     }
-    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr); 
-    double T = T_reducing()/tau_L0;
-    double T0 = T_reducing()/tau0;
-    double rho = delta0*rhomolar_reducing();
+    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr);
+    double T0 = T_reducing()/tau_L0;
+    double rho0 = delta0*rhomolar_reducing();
+
     L0CurveTracer tracer(*this, tau_L0, delta0);
 
     double R_delta = 0, R_tau = 0;
