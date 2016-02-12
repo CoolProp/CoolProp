@@ -148,6 +148,11 @@ public:
         a.d3alphar_ddelta_dtau2 = cubic->alphar(tau, delta, z, 2, 1);
         a.d3alphar_ddelta2_dtau = cubic->alphar(tau, delta, z, 1, 2);
         a.d3alphar_ddelta3 = cubic->alphar(tau, delta, z, 0, 3);
+        a.d4alphar_dtau4 = cubic->alphar(tau, delta, z, 4, 0);
+        a.d4alphar_ddelta_dtau3 = cubic->alphar(tau, delta, z, 3, 1);
+        a.d4alphar_ddelta2_dtau2 = cubic->alphar(tau, delta, z, 2, 2);
+        a.d4alphar_ddelta3_dtau = cubic->alphar(tau, delta, z, 1, 3);
+        a.d4alphar_ddelta4 = cubic->alphar(tau, delta, z, 0, 4);
         return a;
     }
     virtual CoolPropDbl dalphar_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
@@ -202,6 +207,12 @@ public:
     }
 	virtual CoolPropDbl d3alphardxidxjdxk(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
         return ACB->get_cubic()->d3_alphar_dxidxjdxk(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 0, i, j, k, xN_flag==XN_INDEPENDENT);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dxj_dxk_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
+        return ACB->get_cubic()->d3_alphar_dxidxjdxk(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 1, 0, i, j, k, xN_flag==XN_INDEPENDENT);
+    }
+    virtual CoolPropDbl d4alphar_dxi_dxj_dxk_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){
+        return ACB->get_cubic()->d3_alphar_dxidxjdxk(HEOS.tau(), HEOS.delta(), HEOS.get_mole_fractions_doubleref(), 0, 1, i, j, k, xN_flag==XN_INDEPENDENT);
     }
 };
 

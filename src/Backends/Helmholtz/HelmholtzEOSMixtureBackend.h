@@ -682,6 +682,14 @@ public:
         std::vector<CoolPropDbl> &mole_fractions = HEOS.get_mole_fractions_ref();
         return CS.d4alphar_dxi_dxj_dDelta2(HEOS, mole_fractions, i, j, xN_flag) + Excess.d4alphar_dxi_dxj_dDelta2(mole_fractions, i, j, xN_flag);
     }
+     virtual CoolPropDbl d4alphar_dxi_dxj_dxk_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
+    virtual CoolPropDbl d4alphar_dxi_dxj_dxk_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+    {
+        return 0;
+    }
 };
 
 } /* namespace CoolProp */

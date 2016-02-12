@@ -1,4 +1,5 @@
 #include "MixtureDerivatives.h"
+#include "Backends\Cubics\CubicBackend.h"
 
 namespace CoolProp{
 
@@ -667,8 +668,12 @@ CoolPropDbl MixtureDerivatives::d2_ndalphardni_dxj_dxk__constdelta_tau_xi(Helmho
     double term5 = HEOS.tau()*HEOS.residual_helmholtz->d3alphar_dxi_dxj_dTau(HEOS, j, k, xN_flag)*HEOS.Reducing->PSI_T(HEOS.mole_fractions, i, xN_flag);
     double term6 = HEOS.tau()*HEOS.dalphar_dTau()*HEOS.Reducing->d2_PSI_T_dxj_dxk(HEOS.mole_fractions, i, j, k, xN_flag);
 
-    /// All derivatives with dalphar/(dxi,dxj,dxk) are zero
-    double term7 = -2*HEOS.residual_helmholtz->d2alphardxidxj(HEOS, j, k, xN_flag);
+    double term7 = HEOS.residual_helmholtz->d3alphardxidxjdxk(HEOS, i,j,k,xN_flag) - 2*HEOS.residual_helmholtz->d2alphardxidxj(HEOS, j, k, xN_flag);
+    std::size_t mmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ mmax--; }
+    for (unsigned int m = 0; m < mmax; m++){
+        term7 -= HEOS.mole_fractions[m]*HEOS.residual_helmholtz->d3alphardxidxjdxk(HEOS, j, k, m, xN_flag);
+    }
 
     return term1 + term2 + term3 + term4 + term5 + term6 + term7;
 }
@@ -687,8 +692,13 @@ CoolPropDbl MixtureDerivatives::d3_ndalphardni_dxj_dxk_dTau__constdelta_xi(Helmh
     double term2d = (HEOS.tau()*HEOS.residual_helmholtz->d3alphar_dxi_dTau2(HEOS, k, xN_flag) + HEOS.residual_helmholtz->d2alphar_dxi_dTau(HEOS, k, xN_flag))*HEOS.Reducing->d_PSI_T_dxj(HEOS.mole_fractions, i, j, xN_flag);
     double term2 = term2a + term2b + term2c + term2d;
 
-    /// All derivatives of dalphar/(dxi,dxj,dxk) are zero
-    double term3 = -2*HEOS.residual_helmholtz->d3alphar_dxi_dxj_dTau(HEOS, j, k, xN_flag);
+    double term3 = HEOS.residual_helmholtz->d4alphar_dxi_dxj_dxk_dTau(HEOS, i,j,k,xN_flag) - 2*HEOS.residual_helmholtz->d3alphar_dxi_dxj_dTau(HEOS, j, k, xN_flag);
+    std::size_t mmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ mmax--; }
+    for (unsigned int m = 0; m < mmax; m++){
+        term3 -= HEOS.mole_fractions[m]*HEOS.residual_helmholtz->d4alphar_dxi_dxj_dxk_dTau(HEOS, j,k,m,xN_flag);
+    }
+
     return term1 + term2 + term3;
 }
 
@@ -706,8 +716,12 @@ CoolPropDbl MixtureDerivatives::d3_ndalphardni_dxj_dxk_dDelta__consttau_xi(Helmh
     double term2d = HEOS.tau()*HEOS.residual_helmholtz->d3alphar_dxi_dDelta_dTau(HEOS, k, xN_flag)*HEOS.Reducing->d_PSI_T_dxj(HEOS.mole_fractions, i, j, xN_flag);
     double term2 = term2a + term2b + term2c + term2d;
 
-    /// All derivatives of dalphar)/(dxi,dxj,dxk) are zero
-    double term3 = -2*HEOS.residual_helmholtz->d3alphar_dxi_dxj_dDelta(HEOS, j, k, xN_flag);
+    double term3 = HEOS.residual_helmholtz->d4alphar_dxi_dxj_dxk_dDelta(HEOS, i,j,k,xN_flag) - 2*HEOS.residual_helmholtz->d3alphar_dxi_dxj_dDelta(HEOS, j, k, xN_flag);
+    std::size_t mmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ mmax--; }
+    for (unsigned int m = 0; m < mmax; m++){
+        term3 -= HEOS.mole_fractions[m]*HEOS.residual_helmholtz->d4alphar_dxi_dxj_dxk_dDelta(HEOS, j,k,m,xN_flag);
+    }
     return term1 + term2 + term3;
 }
 
@@ -766,7 +780,16 @@ void setup_state(std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > & HEOS, st
         std::vector<CoolPropDbl> zn = z;
         zn[i] += increment;
         if (xN_flag == XN_DEPENDENT){ zn[zn.size()-1] -= increment; }
-        HEOS[i].reset(new HelmholtzEOSMixtureBackend(names));
+
+        std::vector<double> Tc(zn.size()), pc(zn.size()), acentric(zn.size());
+        for (int j = 0; j < zn.size(); ++j){
+            Tc[j] = Props1SI(names[j], "Tcrit");
+            pc[j] = Props1SI(names[j], "pcrit");
+            acentric[j] = Props1SI(names[j], "acentric");
+        }
+        HEOS[i].reset(new SRKBackend(Tc,pc,acentric,8.314498));
+
+//        HEOS[i].reset(new HelmholtzEOSMixtureBackend(names));
         HEOS[i]->specify_phase(iphase_gas);
         HEOS[i]->set_mole_fractions(zn);
     }
@@ -1130,7 +1153,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double v2 = MixtureDerivatives::ndalphar_dni__constT_V_nj(rHEOS_minusrho_constT, i, xN_flag), delta2 = rHEOS_minusrho_constT.delta();
                             double numeric = (v1 - v2)/(delta1 - delta2);
                             double err = mix_deriv_err_func(numeric, analytic);
-                            CHECK(err < 1e-8);
+                            CHECK(err < 1e-5);
                         }
                         std::ostringstream ss3a;
                         ss3a << "d2alphar_dxi_dDelta, i=" << i;
@@ -1616,7 +1639,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                 double err = mix_deriv_err_func(numeric, analytic);
                                 CAPTURE(numeric);
                                 CAPTURE(analytic);
-                                CHECK(err < 1e-7);
+                                CHECK(err < 1e-5);
                             }
                             std::ostringstream ss3mm; ss3mm << "d4alphar_dxi_dxj_dDelta2, i=" << i << ", j=" << j;
                             SECTION(ss3mm.str(), "")
@@ -1965,7 +1988,7 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                                     double err = mix_deriv_err_func(numeric, analytic);
                                     CAPTURE(numeric);
                                     CAPTURE(analytic);
-                                    CHECK(err < 1e-8);
+                                    CHECK(err < 1e-5);
                                 }
 								std::ostringstream ss3o4; ss3o4 << "d2_ndln_fugacity_i_dnj_dxk_dTau__constdelta, i=" << i << ", j=" << j << ", k=" << k;
 								SECTION(ss3o4.str(), "")
