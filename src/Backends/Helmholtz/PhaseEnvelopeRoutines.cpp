@@ -360,7 +360,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
 }
 double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData &env, parameters output, parameters iInput1, double value1, std::size_t &i)
 {
-    int _i = i;
+    int _i = static_cast<int>(i);
     std::vector<double> const *x, *y;
 
     switch (output){
@@ -388,9 +388,11 @@ double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData &env, parameters 
     }
 	if ( _i + 2 >= y->size() ){ _i--; }
 	if ( _i + 1 >= y->size() ){ _i--; }
-	if ( _i - 1 < 0 ){ i++; }
+	if ( _i - 1 < 0 ){ _i++; }
 
-    return CubicInterp(*x, *y, _i - 1, _i, _i + 1, _i + 2, inval);
+    double outval = CubicInterp(*x, *y, _i - 1, _i, _i + 1, _i + 2, inval);
+    i = static_cast<std::size_t>(_i);
+    return outval;
 }
 void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
 {
