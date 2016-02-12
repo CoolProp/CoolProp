@@ -1,5 +1,5 @@
 #include "MixtureDerivatives.h"
-#include "Backends\Cubics\CubicBackend.h"
+#include "Backends/Cubics/CubicBackend.h"
 
 namespace CoolProp{
 
@@ -789,7 +789,7 @@ void setup_state(std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > & HEOS, st
         }
         HEOS[i].reset(new SRKBackend(Tc,pc,acentric,8.314498));
 
-//        HEOS[i].reset(new HelmholtzEOSMixtureBackend(names));
+        HEOS[i].reset(new HelmholtzEOSMixtureBackend(names));
         HEOS[i]->specify_phase(iphase_gas);
         HEOS[i]->set_mole_fractions(zn);
     }
