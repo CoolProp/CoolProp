@@ -220,6 +220,7 @@ if __name__=='__main__':
         os.path.join(CProot, 'externals', 'Eigen'), 
         os.path.join(CProot, 'externals', 'REFPROP-headers'), 
         os.path.join(CProot, 'externals', 'msgpack-c', 'include'), 
+        os.path.join(CProot, 'externals', 'rapidjson', 'include'), 
         os.path.join(CProot, 'externals', 'IF97')]
 
     ## If the file is run directly without any parameters, clean, build and install
@@ -255,7 +256,7 @@ if __name__=='__main__':
     ext_modules = [CoolProp_module, constants_module]
 
     if USE_CYTHON:
-        ext_modules = cythonize(ext_modules)
+        ext_modules = cythonize(ext_modules, compiler_directives = cython_directives)
 
     # Trying to change the standard library for C++
     try:
@@ -283,6 +284,8 @@ if __name__=='__main__':
                                            'include/rapidjson/*.h',
                                            'include/rapidjson/rapidjson/*.h',
                                            'include/rapidjson/rapidjson/internal/*.h',
+                                           'include/cppformat/*.h',
+                                           'include/cppformat/*.cc',
                                            'Plots/psyrc']},
                classifiers = [
                 "Programming Language :: Python",
