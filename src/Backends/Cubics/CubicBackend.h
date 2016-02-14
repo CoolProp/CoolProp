@@ -53,9 +53,7 @@ public:
     const std::vector<CoolPropDbl> & get_mole_fractions(void){ return this->mole_fractions; };
 
 	/// Calculate the gas constant in J/mol/K
-	CoolPropDbl calc_gas_constant(void){
-		return 8.314498; //TODO: get from class
-	};
+	CoolPropDbl calc_gas_constant(void){ return cubic->get_R_u(); };
 	/// Get the reducing state to be used
 	SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl> & mole_fractions)
 	{
@@ -79,6 +77,39 @@ public:
     bool get_critical_is_terminated(double &delta, double &tau);
 
     CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta);
+    
+    virtual void update(CoolProp::input_pairs input_pair, double value1, double value2);
+    
+    /** Use the cubic EOS to solve for density
+     *
+     * \f[
+     * \left[
+     * \begin{array}{l}
+     * Z^3 \\
+     * +Z^2[B(\Delta_1+\Delta_2-1)-1]
+     * +Z[A-B(\Delta_1+\Delta_2)-B^2(\Delta_1+\Delta_2-\Delta_1\Delta_2)]
+     * +[-AB-\Delta_1\Delta2(-B^2-B^3)]
+     * \right]
+     * \f]
+     * with
+     * \f[ A = \frac{ap}{R^2T^2} \f]
+     * \f[ B = \frac{bp}{RT} \f]
+     *
+     * Sympy code:
+     * R,T,v,b,a,Delta_1,Delta_2,p,Z = symbols('R,T,v,b,a,Delta_1,Delta_2,p,Z')
+     * eqn = (R*T/(v-b)-a/(v+Delta_1*b)/(v+Delta_2*b)-p).subs(v,Z*R*T/p)
+     * eqn2 = eqn*(R*T*Z/p-b)*(R*T*Z/p+Delta_2*b)*(R*T*Z/p+Delta_1*b)/(R**3*T**3/p**2)
+     * collect(expand(factor(-eqn2)),Z).subs(b*p/(R*T),B).subs(a*p/(R**2*T**2),A)
+     *
+     */
+    void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int &Nsolns, double &rho0, double &rho1, double &rho2);
+    
+    /**
+     * /brief Solve for rho = f(T,p)
+     * 
+     * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
+     */
+    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
 };
 
 class SRKBackend : public AbstractCubicBackend  {

@@ -19,11 +19,10 @@ class ResidualHelmholtz;
 
 class HelmholtzEOSMixtureBackend : public AbstractState {
     
-private:
+protected:
     void pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 );
     void post_update();
-	shared_ptr<HelmholtzEOSMixtureBackend> TPD_state;
-protected:
+    shared_ptr<HelmholtzEOSMixtureBackend> TPD_state; ///< A temporary state used for calculations of the tangent-plane-distance
     std::vector<CoolPropFluid> components; ///< The components that are in use
     phases imposed_phase_index;
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
@@ -147,7 +146,7 @@ public:
      * @param value1 The first input value
      * @param value2 The second input value
      */
-    void update(CoolProp::input_pairs input_pair, double value1, double value2);
+    virtual void update(CoolProp::input_pairs input_pair, double value1, double value2);
 
 	/** \brief Update the state using guess values
 	 * 
@@ -394,8 +393,8 @@ public:
     // ***************************************************************
     // ***************************************************************
 
-    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
-    CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase);
+    virtual CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
+    virtual CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase);
 
 };
 

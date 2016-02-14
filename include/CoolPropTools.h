@@ -460,6 +460,20 @@
         }
     };
 
+    /// Sort three values in place; see http://codereview.stackexchange.com/a/64763
+    template<typename T>
+    void sort3(T &a, T &b, T &c){
+        if (a > b) {
+            std::swap(a, b);
+        }
+        if (a > c) {
+            std::swap(a, c);
+        }
+        if (b > c) {
+            std::swap(b, c);
+        }
+    }
+
     class Dictionary
     {
     private:

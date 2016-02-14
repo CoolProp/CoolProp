@@ -125,3 +125,96 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_alphar_deriv_nocache(const int 
         default: throw ValueError(format("nTau (%d) is invalid",nTau));
     }
 }
+
+void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, double value1, double value2){
+    if (get_debug_level() > 10){std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)",__FILE__,__LINE__, input_pair, get_input_pair_short_desc(input_pair).c_str(), value1, value2) << std::endl;}
+    
+    CoolPropDbl ld_value1 = value1, ld_value2 = value2;
+    pre_update(input_pair, ld_value1, ld_value2);
+    value1 = ld_value1; value2 = ld_value2;
+    
+    switch(input_pair)
+    {
+        case PT_INPUTS:
+            _p = value1; _T = value2; _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/); break;
+        case DmolarT_INPUTS:
+        case SmolarT_INPUTS:
+        case DmolarP_INPUTS:
+        case DmolarHmolar_INPUTS:
+        case DmolarSmolar_INPUTS:
+        case DmolarUmolar_INPUTS:
+        case HmolarP_INPUTS:
+        case PSmolar_INPUTS:
+        case PUmolar_INPUTS:
+        case HmolarSmolar_INPUTS:
+        case QT_INPUTS:
+        case PQ_INPUTS:
+        case QSmolar_INPUTS:
+        case HmolarQ_INPUTS:
+        case DmolarQ_INPUTS:
+            HelmholtzEOSMixtureBackend::update(input_pair, value1, value2); break;
+        default:
+            throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
+    }
+    
+    post_update();
+}
+
+void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int &Nsolns, double &rho0, double &rho1, double &rho2){
+    AbstractCubic *cubic = get_cubic().get();
+    double R = cubic->get_R_u();
+    double Delta_1 = cubic->get_Delta_1();
+    double Delta_2 = cubic->get_Delta_2();
+    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
+    double B = cubic->bm_term(mole_fractions)*p/(R*T);
+    double Z0=0, Z1=0, Z2=0;
+    solve_cubic(1,
+                B*(Delta_1+Delta_2-1)-1,
+                A + B*B*(Delta_1*Delta_2-Delta_1-Delta_2) - B*(Delta_1+Delta_2),
+                -A*B-Delta_1*Delta_2*(POW2(B)+POW3(B)),
+                Nsolns, Z0, Z1, Z2);
+    if (Nsolns == 0){ rho0 = p/(Z0*R*T); }
+    else if (Nsolns == 3){
+        rho0 = p/(Z0*R*T);
+        rho1 = p/(Z1*R*T);
+        rho2 = p/(Z2*R*T);
+        sort3(rho0, rho1, rho2);
+    }
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess){
+    int Nsoln = 0;
+    double rho0=0, rho1=0, rho2=0, rho = -1;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2); // Densities are sorted in increasing order
+    if (Nsoln == 1){
+        rho = rho0;
+    }
+    else if (Nsoln == 3){
+        if (rho_guess > 0 && imposed_phase_index == iphase_not_imposed){
+            // Use guessed density to select root
+            
+        }
+        else if (rho_guess < 0 && imposed_phase_index != iphase_not_imposed){
+            // Use imposed phase to select root
+            if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas){
+                rho = rho0;
+            }
+            else if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid){
+                rho = rho2;
+            }
+            else{
+                throw ValueError("Specified phase is invalid");
+            }
+        }
+        else{
+            throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
+        }
+    }
+    else{
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
+    // Set some variables at the end
+    this->recalculate_singlephase_phase();
+    _Q = -1;
+    return rho;
+}

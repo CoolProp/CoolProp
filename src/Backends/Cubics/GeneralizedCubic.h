@@ -51,6 +51,9 @@ public:
     std::vector<double> &get_Tc(){return Tc; }
     std::vector<double> &get_pc(){return pc; }
     std::vector<double> &get_acentric(){return acentric; }
+    double &get_R_u(){return R_u; }
+    double &get_Delta_1(){return Delta_1; }
+    double &get_Delta_2(){return Delta_2; }
 
     /// Get the leading constant in the expression for the pure fluid attractive energy term
     /// (must be implemented by derived classes)
