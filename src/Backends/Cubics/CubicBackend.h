@@ -17,6 +17,7 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #include "CoolPropTools.h"
 #include "DataStructures.h"
 #include "GeneralizedCubic.h"
+#include "CubicsLibrary.h"
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "Exceptions.h"
@@ -89,7 +90,6 @@ public:
                double R_u) {
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
 		setup();
-		
     };
 	SRKBackend(double Tc, 
 		       double pc, 
@@ -98,6 +98,18 @@ public:
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
 		is_pure_or_pseudopure = true;
 		setup();
+    }
+    SRKBackend(const std::vector<std::string> fluid_identifiers, const double R_u){
+        std::vector<double> Tc, pc, acentric;
+        for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
+            CubicsValues val = get_cubic_values(fluid_identifiers[i]);
+            Tc.push_back(val.Tc);
+            pc.push_back(val.pc);
+            acentric.push_back(val.acentric);
+        }
+        cubic.reset(new SRK(Tc, pc, acentric, R_u));
+	    is_pure_or_pseudopure = fluid_identifiers.size() == 1;
+	    setup();
     }
 };
 
@@ -118,7 +130,19 @@ public:
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
 		is_pure_or_pseudopure = true;
 		setup();
-    }
+    };
+    PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, const double R_u){
+        std::vector<double> Tc, pc, acentric;
+        for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
+            CubicsValues val = get_cubic_values(fluid_identifiers[i]);
+            Tc.push_back(val.Tc);
+            pc.push_back(val.pc);
+            acentric.push_back(val.acentric);
+        }
+        cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
+	    is_pure_or_pseudopure = fluid_identifiers.size() == 1;
+	    setup();
+    };
 };
 
 /**

@@ -15,6 +15,7 @@
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/IF97/IF97Backend.h"
+#include "Backends/Cubics/CubicBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -73,6 +74,12 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     else if (!backend.compare("TREND"))
     {
         throw ValueError("TREND backend not yet implemented");
+    }
+    else if (backend == "SRK"){
+        return new SRKBackend(fluid_names, R_u_CODATA);
+    }
+    else if (backend == "PR" || backend == "Peng-Robinson"){
+        return new PengRobinsonBackend(fluid_names, R_u_CODATA);
     }
     else if (!backend.compare("?") || backend.empty())
     {
