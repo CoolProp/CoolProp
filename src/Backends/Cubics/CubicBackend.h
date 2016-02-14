@@ -62,6 +62,33 @@ public:
 		reducing.rhomolar = cubic->rho_r;
 		return reducing;
 	};
+    
+    CoolPropDbl calc_T_critical(void){
+        if (is_pure_or_pseudopure){
+            return cubic->get_Tc()[0];
+        }
+        else{
+            return HelmholtzEOSMixtureBackend::calc_T_critical();
+        }
+    };
+    CoolPropDbl calc_p_critical(void){
+        if (is_pure_or_pseudopure){
+            return cubic->get_pc()[0];
+        }
+        else{
+            return HelmholtzEOSMixtureBackend::calc_p_critical();
+        }
+    };
+    CoolPropDbl calc_rhomolar_critical(void){
+        if (is_pure_or_pseudopure){
+            // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
+            double v_c_Lmol = 2.14107171795*(cubic->get_Tc()[0]/cubic->get_pc()[0]*1000)+0.00773144012514; // [L/mol]
+            return 1/(v_c_Lmol/1000.0);
+        }
+        else{
+            return HelmholtzEOSMixtureBackend::calc_rhomolar_critical();
+        }
+    };
 
     /// \brief Get linear mole fraction weighting of the critical molar volumes and temperatures
     /// these are used in te

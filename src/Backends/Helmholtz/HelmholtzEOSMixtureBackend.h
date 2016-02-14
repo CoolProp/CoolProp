@@ -323,9 +323,9 @@ public:
     void calc_Tmin_sat(CoolPropDbl &Tmin_satL, CoolPropDbl &Tmin_satV);
     void calc_pmin_sat(CoolPropDbl &pmin_satL, CoolPropDbl &pmin_satV);
 	
-    CoolPropDbl calc_T_critical(void);
-    CoolPropDbl calc_p_critical(void);
-    CoolPropDbl calc_rhomolar_critical(void);
+    virtual CoolPropDbl calc_T_critical(void);
+    virtual CoolPropDbl calc_p_critical(void);
+    virtual CoolPropDbl calc_rhomolar_critical(void);
 	
 	CoolPropDbl calc_T_reducing(void){return get_reducing_state().T;};
     CoolPropDbl calc_rhomolar_reducing(void){return get_reducing_state().rhomolar;};
