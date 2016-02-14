@@ -5,7 +5,7 @@
 #include "CoolPropTools.h"
 
 #if !defined(SWIG) // Hide this for swig - Swig gets confused
-#include "rapidjson/rapidjson_include.h"
+#include "rapidjson_include.h"
 #endif
 
 /* See http://stackoverflow.com/a/148610

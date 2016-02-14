@@ -13,7 +13,7 @@ typedef unsigned int UINT32;
 
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
-#include "rapidjson/filestream.h"    // wrapper of C stream for prettywriter as output
+#include "rapidjson/filewritestream.h"    // wrapper of C stream for prettywriter as output
 #include "rapidjson/prettywriter.h"    // for stringify JSON
 #include "rapidjson/stringbuffer.h" // for string buffer
 
@@ -258,18 +258,22 @@ namespace cpjson
         {
             _v.PushBack(vec[i],doc.GetAllocator());
         }
-        value.AddMember(key, _v, doc.GetAllocator());
+        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), 
+                        _v,
+                        doc.GetAllocator());
     };
 
     /// A convenience function to set a double array compactly
-    inline void set_long_double_array(const char *key, const std::vector<CoolPropDbl> &vec, rapidjson::Value &value, rapidjson::Document &doc)
+    inline void set_long_double_array(const char * const key, const std::vector<CoolPropDbl> &vec, rapidjson::Value &value, rapidjson::Document &doc)
     {
         rapidjson::Value _v(rapidjson::kArrayType);
         for (unsigned int i = 0; i < vec.size(); ++i)
         {
             _v.PushBack(static_cast<double>(vec[i]), doc.GetAllocator());
         }
-        value.AddMember(key, _v, doc.GetAllocator());
+        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), 
+                        _v,
+                        doc.GetAllocator());
     };
 
 }

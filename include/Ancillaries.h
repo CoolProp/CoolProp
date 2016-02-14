@@ -3,7 +3,7 @@
 
 #include "Exceptions.h"
 #include <vector>
-#include "rapidjson/rapidjson_include.h"
+#include "rapidjson_include.h"
 #include "Eigen/Core"
 #include "PolyMath.h"
 

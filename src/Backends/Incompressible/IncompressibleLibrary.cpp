@@ -2,7 +2,7 @@
 #include "MatrixMath.h"
 #include "DataStructures.h"
 //#include "crossplatform_shared_ptr.h"
-#include "rapidjson/rapidjson_include.h"
+#include "rapidjson_include.h"
 #include "all_incompressibles_JSON.h" // Makes a std::string variable called all_incompressibles_JSON
 
 namespace CoolProp{

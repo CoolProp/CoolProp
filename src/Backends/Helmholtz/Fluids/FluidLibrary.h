@@ -4,7 +4,7 @@
 
 #include "CoolPropFluid.h"
 
-#include "rapidjson/rapidjson_include.h"
+#include "rapidjson_include.h"
 #include "crossplatform_shared_ptr.h"
 
 #include <map>
