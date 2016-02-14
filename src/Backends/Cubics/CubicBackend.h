@@ -110,6 +110,9 @@ public:
      * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
      */
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
+    
+    /// Cubic backend flashes for PQ, and QT
+    void purefluid_saturation(CoolProp::input_pairs inputs);
 };
 
 class SRKBackend : public AbstractCubicBackend  {
@@ -127,7 +130,6 @@ public:
 		       double acentric,
                double R_u) {
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
-		is_pure_or_pseudopure = true;
 		setup();
     }
     SRKBackend(const std::vector<std::string> fluid_identifiers, const double R_u){
@@ -139,7 +141,6 @@ public:
             acentric.push_back(val.acentric);
         }
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
-	    is_pure_or_pseudopure = fluid_identifiers.size() == 1;
 	    setup();
     }
 };
@@ -159,7 +160,6 @@ public:
 		       double acentric,
                double R_u) {
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
-		is_pure_or_pseudopure = true;
 		setup();
     };
     PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, const double R_u){
@@ -171,7 +171,6 @@ public:
             acentric.push_back(val.acentric);
         }
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
-	    is_pure_or_pseudopure = fluid_identifiers.size() == 1;
 	    setup();
     };
 };

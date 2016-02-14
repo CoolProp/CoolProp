@@ -1,11 +1,15 @@
 #include "CubicBackend.h"
+#include "Solvers.h"
 
 void CoolProp::AbstractCubicBackend::setup(){
+    // Set the pure fluid flag
+    is_pure_or_pseudopure = cubic->get_Tc().size() == 1;
 	// Reset the residual Helmholtz energy class
 	residual_helmholtz.reset(new CubicResidualHelmholtz(this));
 	// If pure, set the mole fractions to be unity
 	if (is_pure_or_pseudopure){
 		mole_fractions = std::vector<CoolPropDbl>(1, 1.0);
+        mole_fractions_double = std::vector<double>(1, 1.0);
 	}
 	// Now set the reducing function for the mixture
     Reducing.reset(new ConstantReducingFunction(cubic->T_r, cubic->rho_r));
@@ -137,6 +141,10 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
     {
         case PT_INPUTS:
             _p = value1; _T = value2; _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/); break;
+        case QT_INPUTS:
+            _Q = value1; _T = value2; purefluid_saturation(input_pair); break;
+        case PQ_INPUTS:
+            _p = value1; _Q = value2; purefluid_saturation(input_pair); break;
         case DmolarT_INPUTS:
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
@@ -147,8 +155,7 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
         case PSmolar_INPUTS:
         case PUmolar_INPUTS:
         case HmolarSmolar_INPUTS:
-        case QT_INPUTS:
-        case PQ_INPUTS:
+
         case QSmolar_INPUTS:
         case HmolarQ_INPUTS:
         case DmolarQ_INPUTS:
@@ -180,6 +187,83 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
         rho2 = p/(Z2*R*T);
         sort3(rho0, rho1, rho2);
     }
+}
+
+class SaturationResidual : public CoolProp::FuncWrapper1D{
+public:
+    CoolProp::AbstractCubicBackend *ACB;
+    CoolProp::input_pairs inputs;
+    double imposed_variable;
+    double deltaL, deltaV;
+
+    SaturationResidual(){};
+    SaturationResidual(CoolProp::AbstractCubicBackend *ACB, CoolProp::input_pairs inputs, double imposed_variable) : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable) {};
+    
+    double call(double value){
+        int Nsolns = 0;
+        double rho0, rho1, rho2, T, p;
+        
+        if (inputs == CoolProp::PQ_INPUTS){
+            T = value; p = imposed_variable;
+        }
+        else if (inputs == CoolProp::QT_INPUTS){
+            p = value; T = imposed_variable;
+        }
+        else{
+            throw CoolProp::ValueError("Cannot have something other than PQ_INPUTS or QT_INPUTS here");
+        }
+        
+        // Calculate the liquid and vapor densities
+        ACB->rho_Tp_cubic(T, p, Nsolns, rho0, rho1, rho2);
+        
+        // -----------------------------------------------------
+        // Calculate the difference in Gibbs between the phases
+        // -----------------------------------------------------
+        AbstractCubic *cubic = ACB->get_cubic().get();
+        double rho_r = cubic->rho_r, T_r = cubic->T_r;
+        double tau = T_r/T;
+        // There are three density solutions, we know the highest is the liquid, the lowest is the vapor
+        deltaL = rho2/rho_r; deltaV = rho0/rho_r;
+        // From alpha0; all terms that are only a function of temperature drop out since TL=TV
+        double DELTAgibbs = log(deltaV) - log(deltaL);
+        // From alphar;
+        DELTAgibbs += (cubic->alphar(tau, deltaV, ACB->get_mole_fractions_doubleref(), 0, 0)
+                       -cubic->alphar(tau, deltaL, ACB->get_mole_fractions_doubleref(), 0, 0));
+        // From delta*dalphar_dDelta
+        DELTAgibbs += (deltaV*cubic->alphar(tau, deltaV, ACB->get_mole_fractions_doubleref(), 0, 1)
+                       -deltaL*cubic->alphar(tau, deltaL, ACB->get_mole_fractions_doubleref(), 0, 1));
+        return DELTAgibbs;
+    };
+};
+
+void CoolProp::AbstractCubicBackend::purefluid_saturation(CoolProp::input_pairs inputs){
+    AbstractCubic *cubic = get_cubic().get();
+    double Tc = cubic->get_Tc()[0], pc = cubic->get_pc()[0], acentric = cubic->get_acentric()[0];
+    double rhoL=-1, rhoV=-1;
+    if (inputs == PQ_INPUTS){
+        // Estimate temperature from the acentric factor relationship
+        double theta = -log10(_p/pc)*(1/0.7-1)/(acentric+1);
+        double Ts_est = Tc/(theta+1);
+        SaturationResidual resid(this, inputs, _p);
+        static std::string errstr;
+        double Ts = CoolProp::Secant(resid, Ts_est, -0.1, 1e-10, 100, errstr);
+        _T = Ts;
+        rhoL = resid.deltaL*cubic->T_r;
+        rhoV = resid.deltaV*cubic->T_r;
+    }
+    else if (inputs == QT_INPUTS){
+        // Estimate temperature from the acentric factor relationship
+        double neg_log10_pr = (acentric+1)/(1/0.7-1)*(Tc/_T-1);
+        double ps_est = pc*pow(10.0, -neg_log10_pr);
+        SaturationResidual resid(this, inputs, _T);
+        static std::string errstr;
+        double ps = CoolProp::Secant(resid, ps_est, -0.1, 1e-10, 100, errstr);
+        _p = ps;
+        rhoL = resid.deltaL*cubic->T_r;
+        rhoV = resid.deltaV*cubic->T_r;
+    }
+    _rhomolar = 1/(_Q/rhoV+(1-_Q)/rhoL);
+    _phase = iphase_twophase;
 }
 
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess){
