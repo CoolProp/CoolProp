@@ -31,11 +31,22 @@ void CoolProp::AbstractCubicBackend::get_critical_point_search_radii(double &R_d
     // Get the starting values from the base class
     CoolProp::HelmholtzEOSMixtureBackend::get_critical_point_search_radii(R_delta, R_tau);
 
-    // Now we scale them to get the appropriate
+    // Now we scale them to get the appropriate search radii
     double Tr_GERGlike, rhor_GERGlike;
     get_linear_reducing_parameters(rhor_GERGlike, Tr_GERGlike);
     R_delta *= rhor_GERGlike/rhomolar_reducing();
     R_tau *= T_reducing()/Tr_GERGlike;
+}
+
+bool CoolProp::AbstractCubicBackend::get_critical_is_terminated(double &delta, double &tau)
+{
+    // If the volume is less than the mixture covolume, stop.  The mixture covolume is the
+    // smallest volume that is physically allowed for a cubic EOS
+    double b = get_cubic()->bm_term(mole_fractions); // [m^3/mol]
+    double v = 1/(delta*rhomolar_reducing()); //[m^3/mol]
+    bool covolume_check = v < 1.2*b;
+    
+    return covolume_check;
 }
 
 void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double &delta0, double &tau0){

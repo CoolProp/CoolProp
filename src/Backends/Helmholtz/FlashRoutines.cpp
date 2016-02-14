@@ -631,10 +631,6 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 					// Reference to EOS
 					const EquationOfState &EOS = components[i].EOSVector[0];
 
-					CoolPropDbl Tc = EOS.reduce.T;
-					CoolPropDbl pc = EOS.reduce.p;
-					CoolPropDbl acentric = EOS.acentric;
-
 					if (components[i].CAS == "7732-18-5"){
 						iWater = i; continue;
 					}

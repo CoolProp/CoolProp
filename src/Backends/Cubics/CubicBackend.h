@@ -73,6 +73,9 @@ public:
 
     /// Get the search radius in delta and tau for the tracer, scaled appropriately for cubic
     void get_critical_point_search_radii(double &R_delta, double &R_tau);
+    
+    /// Checking function to see if we should stop the tracing of the critical contour
+    bool get_critical_is_terminated(double &delta, double &tau);
 
     CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta);
 };
