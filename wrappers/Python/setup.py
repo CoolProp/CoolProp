@@ -20,6 +20,17 @@ def touch(fname):
 
 if __name__=='__main__':
 
+    # Trying to change the standard library for C++
+    import platform
+    try:
+        macVersion = platform.mac_ver()[0].split('.')
+        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
+            os.environ["CC"] = "gcc"
+            os.environ["CXX"] = "g++"
+            print('switching compiler to g++ for OSX')
+    except:
+        pass
+
 
 
     import subprocess, shutil, os, sys, glob
@@ -102,7 +113,7 @@ if __name__=='__main__':
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
             
-        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON'] + cmake_config_args)
+        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCOOLPROP_OSX_105_COMPATIBILITY=ON'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         
@@ -257,16 +268,6 @@ if __name__=='__main__':
 
     if USE_CYTHON:
         ext_modules = cythonize(ext_modules, compiler_directives = cython_directives)
-
-    # Trying to change the standard library for C++
-    try:
-        macVersion = platform.mac_ver()[0].split('.')
-        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
-            os.environ["CC"] = "g++"
-            os.environ["CXX"] = "g++"
-            print('switching compiler to g++ for OSX')
-    except:
-        pass
 
     try:
         setup (name = 'CoolProp',
