@@ -180,7 +180,7 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
                 A + B*B*(Delta_1*Delta_2-Delta_1-Delta_2) - B*(Delta_1+Delta_2),
                 -A*B-Delta_1*Delta_2*(POW2(B)+POW3(B)),
                 Nsolns, Z0, Z1, Z2);
-    if (Nsolns == 0){ rho0 = p/(Z0*R*T); }
+    if (Nsolns == 1){ rho0 = p/(Z0*R*T); }
     else if (Nsolns == 3){
         rho0 = p/(Z0*R*T);
         rho1 = p/(Z1*R*T);
@@ -274,11 +274,7 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
         rho = rho0;
     }
     else if (Nsoln == 3){
-        if (rho_guess > 0 && imposed_phase_index == iphase_not_imposed){
-            // Use guessed density to select root
-            
-        }
-        else if (rho_guess < 0 && imposed_phase_index != iphase_not_imposed){
+        if (imposed_phase_index != iphase_not_imposed){
             // Use imposed phase to select root
             if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas){
                 rho = rho0;
@@ -297,8 +293,13 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
     else{
         throw ValueError("Obtained neither 1 nor three roots");
     }
-    // Set some variables at the end
-    this->recalculate_singlephase_phase();
+    if (is_pure_or_pseudopure){
+        // Set some variables at the end
+        this->recalculate_singlephase_phase();
+    }
+    else{
+        _phase = iphase_gas; // TODO: fix this
+    }
     _Q = -1;
     return rho;
 }

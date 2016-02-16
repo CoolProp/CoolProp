@@ -14,6 +14,7 @@ CoolPropDbl ReducingFunction::d_ndTrdni_dxj__constxi(const std::vector<CoolPropD
     }
     else if (xN_flag == XN_DEPENDENT){
         if (j == N-1){ return 0;}
+        if (N == 0){ return 0; }
         CoolPropDbl s = 0;
         for (std::size_t k = 0; k < N-1; k++)
         {
@@ -37,6 +38,7 @@ CoolPropDbl ReducingFunction::d2_ndTrdni_dxj_dxk__constxi(const std::vector<Cool
 		return d3Trdxidxjdxk(x, i, j, k, xN_flag) - 2*d2Trdxidxj(x, j, k, xN_flag)-s;
 	}
 	else if (xN_flag == XN_DEPENDENT){
+        if (N == 0){ return 0; }
 		if (j == N-1){ return 0; }
 		CoolPropDbl s = 0;
 		for (std::size_t m = 0; m < N-1; m++)
@@ -80,6 +82,7 @@ CoolPropDbl ReducingFunction::ndrhorbardni__constnj(const std::vector<CoolPropDb
     }
     else if (xN_flag == XN_DEPENDENT){
         CoolPropDbl summer_term1 = 0;
+        if (N == 0){ return 0; }
         for (std::size_t k = 0; k < N-1; ++k)
         {
             summer_term1 += x[k]*drhormolardxi__constxj(x, k, xN_flag);
@@ -103,6 +106,7 @@ CoolPropDbl ReducingFunction::ndTrdni__constnj(const std::vector<CoolPropDbl> &x
     }
     else if (xN_flag == XN_DEPENDENT){
         CoolPropDbl summer_term1 = 0;
+        if (N==0){ return 0; }
         for (std::size_t k = 0; k < N-1; ++k)
         {
             summer_term1 += x[k]*dTrdxi__constxj(x, k, xN_flag);

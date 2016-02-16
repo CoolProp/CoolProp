@@ -344,7 +344,7 @@ double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double>
 }
 double AbstractCubic::psi_plus(double delta, const std::vector<double> &x, std::size_t idelta)
 {
-    double b = bm_term(x);
+    //double b = bm_term(x);
     switch(idelta){
     case 0:
         return A_term(delta, x)*c_term(x)/(Delta_1-Delta_2);
@@ -468,7 +468,7 @@ double AbstractCubic::d2_psi_plus_dxidxj(double delta, const std::vector<double>
 }
 double AbstractCubic::d3_psi_plus_dxidxjdxk(double delta, const std::vector<double> &x, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
 {
-    double bracket = 0;
+    //double bracket = 0;
     double PI12 = PI_12(delta, x, 0);
     switch (idelta){
     case 0:

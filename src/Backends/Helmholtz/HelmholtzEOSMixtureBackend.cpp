@@ -3279,8 +3279,8 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
         tau0 *= 1.1;
     }
     double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr);
-    double T0 = T_reducing()/tau_L0;
-    double rho0 = delta0*rhomolar_reducing();
+    //double T0 = T_reducing()/tau_L0;
+    //double rho0 = delta0*rhomolar_reducing();
 
     L0CurveTracer tracer(*this, tau_L0, delta0);
 
@@ -3303,11 +3303,11 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 	}
     update_TPD_state();
 	TPD_state->set_mole_fractions(std::vector<CoolPropDbl>(w.begin(), w.end()));
+    TPD_state->specify_phase(iphase_liquid); // Something homogeneous
 	if (rhomolar_guess < 0){
 		TPD_state->update(PT_INPUTS, p, T);
 	}
 	else{
-		TPD_state->specify_phase(iphase_gas); // Something homogeneous
 		TPD_state->update_TP_guessrho(T, p, rhomolar_guess);
 	}
 	double summer = 0;
