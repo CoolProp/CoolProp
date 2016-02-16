@@ -1549,7 +1549,7 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend 
         CoolPropDbl rhomolar;
         if (is_in_closed_range(yc, ymin, y))
         {
-            rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-12, 100, errstring);
+            rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-9, 100, errstring);
         }
         else if (y < yc){
             // Increase rhomelt until it bounds the solution
@@ -1571,7 +1571,7 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend 
                 }
                 step_count++;
             }
-            rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-12, 100, errstring);
+            rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-9, 100, errstring);
         }
         else
         {
