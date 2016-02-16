@@ -19,3 +19,6 @@
 [submodule "externals/rapidjson"]
 	path = externals/rapidjson
 	url = https://github.com/miloyip/rapidjson.git
+[submodule "externals/cppformat"]
+	path = externals/cppformat
+	url = https://github.com/cppformat/cppformat.git

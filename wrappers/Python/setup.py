@@ -228,6 +228,7 @@ if __name__=='__main__':
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp')
     include_dirs  = [
         os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), 
+        os.path.join(CProot, 'externals', 'cppformat'), 
         os.path.join(CProot, 'externals', 'Eigen'), 
         os.path.join(CProot, 'externals', 'REFPROP-headers'), 
         os.path.join(CProot, 'externals', 'msgpack-c', 'include'), 
