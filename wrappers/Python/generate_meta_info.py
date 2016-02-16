@@ -5,7 +5,7 @@ import json
 from distutils.version import LooseVersion #, StrictVersion
 import codecs
 
-""" A simple script to create a conda recipe and the infrostructure files for PyPI"""
+""" A simple script to create a conda recipe and the infrastructure files for PyPI"""
 
 first_line = "# CAUTION: This file is generated automatically, any customisation will be lost.\n"
 
