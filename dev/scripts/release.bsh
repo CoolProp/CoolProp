@@ -164,8 +164,11 @@ fi
 #
 if [[ ("$BINFOLDER" == "release") && ("$DRYRUN" == "false") ]]; then
     printMessage "Removing release directory"
-    rm -rf "$BINFOLDER"
-    mkdir -p "$BINFOLDER"
+    rm -rf "release"
+    mkdir -p "release"
+    printMessage "Removing binaries directory to clean the nightly builds"
+    rm -rf "binaries"
+    mkdir -p "binaries"
 fi
 popd
 printMessage "All done, goodbye."
