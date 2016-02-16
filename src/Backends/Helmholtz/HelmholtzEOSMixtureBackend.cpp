@@ -3301,10 +3301,7 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 	if (w.size() != z.size()){ 
 		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size())); 
 	}
-	if (TPD_state.get() == NULL){
-		bool sat_states = false;
-		TPD_state.reset(new HelmholtzEOSMixtureBackend(components, sat_states));
-	}
+    update_TPD_state();
 	TPD_state->set_mole_fractions(std::vector<CoolPropDbl>(w.begin(), w.end()));
 	if (rhomolar_guess < 0){
 		TPD_state->update(PT_INPUTS, p, T);

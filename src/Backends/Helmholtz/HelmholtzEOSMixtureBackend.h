@@ -23,6 +23,13 @@ protected:
     void pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 );
     void post_update();
     shared_ptr<HelmholtzEOSMixtureBackend> TPD_state; ///< A temporary state used for calculations of the tangent-plane-distance
+    /// Update the state class used to calculate the tangent-plane-distance
+    virtual void update_TPD_state(){
+        if (TPD_state.get() == NULL){
+		    bool sat_states = false;
+		    TPD_state.reset(new HelmholtzEOSMixtureBackend(components, sat_states));
+	    }
+    };
     std::vector<CoolPropFluid> components; ///< The components that are in use
     phases imposed_phase_index;
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
@@ -33,7 +40,6 @@ protected:
 
     SimpleState _crit;
     std::size_t N; ///< Number of components
-    
 public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);

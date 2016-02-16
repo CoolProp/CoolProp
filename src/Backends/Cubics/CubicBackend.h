@@ -170,6 +170,11 @@ public:
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
 	    setup();
     }
+    /// Update the state used to calculate the tangent-plane-distance
+    void update_TPD_state(){
+        AbstractCubic *cubic = get_cubic().get();
+        TPD_state.reset(new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u()));
+    };
 };
 
 class PengRobinsonBackend : public AbstractCubicBackend  {
@@ -199,6 +204,11 @@ public:
         }
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
 	    setup();
+    };
+    /// Update the state used to calculate the tangent-plane-distance
+    void update_TPD_state(){
+        AbstractCubic *cubic = get_cubic().get();
+        TPD_state.reset(new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u()));
     };
 };
 
