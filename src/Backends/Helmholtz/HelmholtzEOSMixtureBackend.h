@@ -106,7 +106,7 @@ public:
     CriticalState calc_critical_point(double rho0, double T0);
     std::vector<CoolProp::CriticalState> calc_all_critical_points();
     virtual void get_critical_point_starting_values(double &delta0, double &tau0){
-        delta0 = 0.3; // The value of delta where we start searching for crossing with Lstar=0 contour
+        delta0 = 0.5; // The value of delta where we start searching for crossing with Lstar=0 contour
         tau0 = 0.66; // The value of tau where we start searching at delta=delta0
     } 
     /// Get the search radius in delta and tau for the tracer
