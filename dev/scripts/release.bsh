@@ -127,17 +127,15 @@ else
         echo -n " \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "$BINFOLDER/README.rst.txt"
         echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "$BINFOLDER/README.rst.txt"
         RSYNC_OPTS="-a --no-perms -z --stats --delete"
-        binstar upload --force -u coolprop -t pypi -c dev $BINFOLDER/Python/*.tar.gz
-        #conda index $BINFOLDER/Python_conda/* 
-        binstar upload --force -u coolprop -t conda -c dev $BINFOLDER/Python_conda/*/*.tar.bz2
+        for i in {1..2}; do for j in $BINFOLDER/Python/*.tar.gz; do binstar upload --force -u coolprop -t pypi -c dev $j; done; done
+        for i in {1..5}; do for j in $BINFOLDER/Python_conda/*/*.tar.bz2; do binstar upload --force -u coolprop -t conda -c dev $j && rm $j; done; done
     else
         RSYNC_OPTS="-a --no-perms -z --stats"
         printMessage "Detected full release, uploading the python binaries to pypi"
         twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
         printMessage "and uploading the python binaries to binstar"
-        binstar upload --force -u coolprop -t pypi -c main $BINFOLDER/Python/*.tar.gz
-        #conda index $BINFOLDER/Python_conda/* 
-        binstar upload --force -u coolprop -t conda -c main $BINFOLDER/Python_conda/*/*.tar.bz2
+        for i in {1..2}; do for j in $BINFOLDER/Python/*.tar.gz; do binstar upload --force -u coolprop -t pypi -c main $j; done; done
+        for i in {1..5}; do for j in $BINFOLDER/Python_conda/*/*.tar.bz2; do binstar upload --force -u coolprop -t conda -c main $j && rm $j; done; done
     fi
     popd
 fi
