@@ -29,7 +29,6 @@ namespace CoolProp {
 class CubicResidualHelmholtz;
 
 class AbstractCubicBackend : public HelmholtzEOSMixtureBackend  {
-
 protected:
     shared_ptr<AbstractCubic> cubic;
 public:
@@ -140,6 +139,12 @@ public:
     
     /// Cubic backend flashes for PQ, and QT
     void purefluid_saturation(CoolProp::input_pairs inputs);
+    
+    void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter, const double value);
+    double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter);
+    
+    void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){throw ValueError("set_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); }
+    double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){throw ValueError("get_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); };
 };
 
 class SRKBackend : public AbstractCubicBackend  {

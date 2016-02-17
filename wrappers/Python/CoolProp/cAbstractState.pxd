@@ -53,6 +53,9 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double get_binary_interaction_double(const string &, const string &, const string &) except +ValueError
         string get_binary_interaction_string(const string &, const string &, const string &) except +ValueError
         
+        double get_binary_interaction_double(const size_t, const size_t, const string &) except +ValueError
+        void set_binary_interaction_double(const size_t, const size_t, const string &, const double s) except +ValueError
+        
         string name() except +ValueError
         string fluid_param_string(const string &) except +ValueError
         

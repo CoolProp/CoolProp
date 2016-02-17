@@ -303,3 +303,21 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
     _Q = -1;
     return rho;
 }
+
+void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
+    if (parameter == "kij" || parameter == "k_ij"){
+        get_cubic()->set_kij(i,j,value);
+    }
+    else{
+        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+};
+double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
+    if (parameter == "kij" || parameter == "k_ij"){
+        return get_cubic()->get_kij(i,j);
+    }
+    else{
+        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+};
+

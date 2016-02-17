@@ -54,19 +54,20 @@ cdef class AbstractState:
         """ Change the EOS for one component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::change_EOS` """
         self.thisptr.change_EOS(i, EOS_name)
 
-    cpdef set_binary_interaction_double(self, string CAS1, string CAS2, string parameter, double val):
+    cpdef set_binary_interaction_double(self, string_or_size_t arg1, string_or_size_t arg2, string parameter, double val):
         """ Set a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_double` """
-        self.thisptr.set_binary_interaction_double(CAS1, CAS2, parameter, val)
+        self.thisptr.set_binary_interaction_double(arg1, arg2, parameter, val)
     cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val):
         """ Set a string interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_string` """
         self.thisptr.set_binary_interaction_string(CAS1, CAS2, parameter, val)
-    cpdef double get_binary_interaction_double(self, string CAS1, string CAS2, string parameter) except *:
+    cpdef double get_binary_interaction_double(self, string_or_size_t arg1, string_or_size_t arg2, string parameter) except *:
         """ Get a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_double` """
-        return self.thisptr.get_binary_interaction_double(CAS1, CAS2, parameter)
+        return self.thisptr.get_binary_interaction_double(arg1, arg2, parameter)
+        
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *:
         """ Get a string interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_string` """
         return self.thisptr.get_binary_interaction_string(CAS1, CAS2, parameter)
-    
+
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)

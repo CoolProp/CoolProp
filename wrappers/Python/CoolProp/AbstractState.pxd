@@ -7,6 +7,10 @@ cimport cAbstractState
 from typedefs cimport *
 cimport constants_header
 
+ctypedef fused string_or_size_t:
+    string
+    size_t
+
 cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI
     cpdef public size_t iTsat_max, ipsat_max, icrit
@@ -29,9 +33,9 @@ cdef class AbstractState:
     cpdef set_mass_fractions(self, vector[double] z)
     cpdef set_volu_fractions(self, vector[double] z)
 
-    cpdef set_binary_interaction_double(self, string CAS1, string CAS2, string parameter, double val)
+    cpdef set_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter, double val)
+    cpdef double get_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter) except *
     cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val)
-    cpdef double get_binary_interaction_double(self, string CAS1, string CAS2, string parameter) except *
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
     
     cpdef name(self)

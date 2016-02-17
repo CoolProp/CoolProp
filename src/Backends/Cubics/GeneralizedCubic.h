@@ -51,9 +51,11 @@ public:
     std::vector<double> &get_Tc(){return Tc; }
     std::vector<double> &get_pc(){return pc; }
     std::vector<double> &get_acentric(){return acentric; }
-    double &get_R_u(){return R_u; }
-    double &get_Delta_1(){return Delta_1; }
-    double &get_Delta_2(){return Delta_2; }
+    double get_R_u(){ return R_u; }
+    double get_Delta_1(){ return Delta_1; }
+    double get_Delta_2(){ return Delta_2; }
+    void set_kij(std::size_t i, std::size_t j, double kij){ k[i][j] = kij; k[j][i] = kij; }
+    double get_kij(std::size_t i, std::size_t j){ return k[i][j]; }
 
     /// Get the leading constant in the expression for the pure fluid attractive energy term
     /// (must be implemented by derived classes)
