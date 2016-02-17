@@ -8,6 +8,9 @@ def copy_files():
     shutil.copytree(os.path.join(CProot, 'externals/rapidjson/include/rapidjson'), os.path.join('CoolProp','include','rapidjson'))
     shutil.copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','cppformat'))
     shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
+    for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
+        print('removing', jsonfile)
+        os.remove(jsonfile)
     print('files copied.')
 
 def remove_files():
