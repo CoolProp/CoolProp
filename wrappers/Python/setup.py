@@ -5,6 +5,8 @@ def copy_files():
     import shutil
     shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
     shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
+    shutil.copytree(os.path.join(CProot, 'externals/rapidjson/include/rapidjson'), os.path.join('CoolProp','include','rapidjson'))
+    shutil.copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','cppformat'))
     shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 
