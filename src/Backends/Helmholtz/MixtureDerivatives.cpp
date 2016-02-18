@@ -911,7 +911,8 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     SECTION("adj(Mstar)", "")
                     {
                         if (Ncomp == 2){
-                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag);
+                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
+                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag, Lstar);
                         Eigen::MatrixXd analytic = adjugate(Mstar);
                         Eigen::MatrixXd numeric(2,2);
                         numeric << Mstar(1,1), -Mstar(0,1), -Mstar(1,0), Mstar(0,0);
@@ -939,13 +940,17 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     }
                     SECTION("d(M1)/dTau", "")
                     {
-                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd dMstar_dTau = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iTau);
+                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
+                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag, Lstar);
+                        Eigen::MatrixXd dLstardTau = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, iTau);
+                        Eigen::MatrixXd dMstar_dTau = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iTau, Lstar, dLstardTau);
                         Eigen::MatrixXd adjM = adjugate(Mstar);
                         double analytic = (adjM*dMstar_dTau).trace();
                         
-                        double detMstar_plus = MixtureDerivatives::Mstar(rHEOS_plusT_constrho, xN_flag).determinant(); double tau1 = rHEOS_plusT_constrho.tau();
-                        double detMstar_minus = MixtureDerivatives::Mstar(rHEOS_minusT_constrho, xN_flag).determinant(); double tau2 = rHEOS_minusT_constrho.tau();
+                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusT_constrho, xN_flag);
+                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusT_constrho, xN_flag);
+                        double detMstar_plus = MixtureDerivatives::Mstar(rHEOS_plusT_constrho, xN_flag, Lstar_plus).determinant(); double tau1 = rHEOS_plusT_constrho.tau();
+                        double detMstar_minus = MixtureDerivatives::Mstar(rHEOS_minusT_constrho, xN_flag, Lstar_minus).determinant(); double tau2 = rHEOS_minusT_constrho.tau();
 
                         double numeric = (detMstar_plus - detMstar_minus)/(tau1-tau2);
                         double err = mix_deriv_err_func(numeric, analytic);
@@ -957,12 +962,16 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     }
                     SECTION("d(M1)/dDelta", "")
                     {
-                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd dMstar_dDelta = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iDelta);
+                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
+                        Eigen::MatrixXd dLstardDelta = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, iDelta);
+                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag, Lstar);
+                        Eigen::MatrixXd dMstar_dDelta = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iDelta, Lstar, dLstardDelta);
                         double analytic = (adjugate(Mstar)*dMstar_dDelta).trace();
                         
-                        double detMstar_plus = MixtureDerivatives::Mstar(rHEOS_plusrho_constT, xN_flag).determinant(); double delta1 = rHEOS_plusrho_constT.delta();
-                        double detMstar_minus = MixtureDerivatives::Mstar(rHEOS_minusrho_constT, xN_flag).determinant(); double delta2 = rHEOS_minusrho_constT.delta();
+                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusrho_constT, xN_flag);
+                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusrho_constT, xN_flag);
+                        double detMstar_plus = MixtureDerivatives::Mstar(rHEOS_plusrho_constT, xN_flag, Lstar_plus).determinant(); double delta1 = rHEOS_plusrho_constT.delta();
+                        double detMstar_minus = MixtureDerivatives::Mstar(rHEOS_minusrho_constT, xN_flag, Lstar_minus).determinant(); double delta2 = rHEOS_minusrho_constT.delta();
                         
                         double numeric = (detMstar_plus - detMstar_minus)/(delta1-delta2);
                         double err = mix_deriv_err_func(numeric, analytic);
@@ -1024,9 +1033,13 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
 					}
 					SECTION("dMstar_dTau", "")
 					{
-						Eigen::MatrixXd analytic = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iTau);
-                        Eigen::MatrixXd m1 = MixtureDerivatives::Mstar(rHEOS_plusT_constrho, xN_flag); double tau1 = rHEOS_plusT_constrho.tau();
-                        Eigen::MatrixXd m2 = MixtureDerivatives::Mstar(rHEOS_minusT_constrho, xN_flag); double tau2 = rHEOS_minusT_constrho.tau();
+                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
+                        Eigen::MatrixXd dLstardTau = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iTau);
+						Eigen::MatrixXd analytic = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iTau, Lstar, dLstardTau);
+                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusT_constrho, xN_flag);
+                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusT_constrho, xN_flag);
+                        Eigen::MatrixXd m1 = MixtureDerivatives::Mstar(rHEOS_plusT_constrho, xN_flag, Lstar_plus); double tau1 = rHEOS_plusT_constrho.tau();
+                        Eigen::MatrixXd m2 = MixtureDerivatives::Mstar(rHEOS_minusT_constrho, xN_flag, Lstar_minus); double tau2 = rHEOS_minusT_constrho.tau();
 						Eigen::MatrixXd numeric = (m1 - m2)/(tau1 - tau2);
 						double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
 						CAPTURE(numeric);
@@ -1036,9 +1049,13 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
 					std::ostringstream ss3o7; ss3o7 << "dMstar_dDelta";
 					SECTION(ss3o7.str(), "")
 					{
-						Eigen::MatrixXd analytic = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iDelta);
-						Eigen::MatrixXd m1 = MixtureDerivatives::Mstar(rHEOS_plusrho_constT, xN_flag); double delta1 = rHEOS_plusrho_constT.delta();
-						Eigen::MatrixXd m2 = MixtureDerivatives::Mstar(rHEOS_minusrho_constT, xN_flag); double delta2 = rHEOS_minusrho_constT.delta();
+                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
+                        Eigen::MatrixXd dLstardDelta = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iDelta);
+						Eigen::MatrixXd analytic = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iDelta, Lstar, dLstardDelta);
+                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusrho_constT, xN_flag);
+                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusrho_constT, xN_flag);
+						Eigen::MatrixXd m1 = MixtureDerivatives::Mstar(rHEOS_plusrho_constT, xN_flag, Lstar_plus); double delta1 = rHEOS_plusrho_constT.delta();
+						Eigen::MatrixXd m2 = MixtureDerivatives::Mstar(rHEOS_minusrho_constT, xN_flag, Lstar_minus); double delta2 = rHEOS_minusrho_constT.delta();
 						Eigen::MatrixXd numeric = (m1 - m2)/(delta1 - delta2);
 						double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
 						CAPTURE(numeric);

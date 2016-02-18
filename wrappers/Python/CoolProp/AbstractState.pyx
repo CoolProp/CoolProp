@@ -145,6 +145,14 @@ cdef class AbstractState:
             pypt.rhomolar = pt.rhomolar
             collection.append(pypt)
         return collection
+    cpdef tuple criticality_contour_values(self):
+        """ 
+        Gets the crticality matrix values L1* and M1* - wrapper of c++ function :cpapi:`CoolProp::AbstractState::criticality_values` 
+        Returns a tuple of (L1*, M1*)
+        """
+        cdef CoolPropDbl L1star = 0, M1star = 0
+        self.thisptr.criticality_contour_values(L1star, M1star)
+        return L1star, M1star
         
     ## Reducing point
     cpdef double T_reducing(self) except *:

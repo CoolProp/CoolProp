@@ -3026,27 +3026,28 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     public:
         HelmholtzEOSMixtureBackend &HEOS;
         double L1, M1;
+        Eigen::MatrixXd Lstar,Mstar;
         Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
         std::vector<double> call(const std::vector<double> &tau_delta){
             double rhomolar = tau_delta[1]*HEOS.rhomolar_reducing();
             double T = HEOS.T_reducing()/tau_delta[0];
             HEOS.update(DmolarT_INPUTS, rhomolar, T);
-            L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant(),
-            M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
+            Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT);
+            Mstar = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT, Lstar);
             std::vector<double> o(2);
-            o[0] = L1; o[1] = M1;
+            o[0] = Lstar.determinant(); o[1] = Mstar.determinant();
             return o;
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
         {
             std::size_t N = x.size();
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
-            Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
-                adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
+            Eigen::MatrixXd adjL = adjugate(Lstar),
+                adjM = adjugate(Mstar),
                 dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
                 dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
-                dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau),
-                dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta);
+                dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau, Lstar, dLdTau),
+                dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta, Lstar, dLdDelta);
 
             J[0][0] = (adjL*dLdTau).trace();
             J[0][1] = (adjL*dLdDelta).trace();
@@ -3093,7 +3094,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     
     // First (necessary but not sufficient) check of stability
     // All eigenvalues of M* matrix must be positive
-    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT);
+    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT, resid.Lstar);
     Eigen::EigenSolver<Eigen::MatrixXd> es(Mstar);
     double min_eigenvalue = es.eigenvalues().real().minCoeff();
     
@@ -3225,7 +3226,7 @@ public:
             }
             
             // Calculate the second criticality condition
-            double M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
+            double M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT, Lstar).determinant();
             double p_MPa = HEOS.p()/1e6;
             
             // Calculate the new tau and delta at the new point
@@ -3259,6 +3260,13 @@ public:
     };
 };
 
+void HelmholtzEOSMixtureBackend::calc_criticality_contour_values(double &L1star, double &M1star)
+{
+    Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(*this, XN_INDEPENDENT);
+    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT, Lstar);
+    L1star = Lstar.determinant();
+    M1star = Mstar.determinant();
+};
     
 std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
 {
@@ -3274,9 +3282,14 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     
     OneDimObjective resid_L0(*this, delta0);
     
+    // If the derivative of L1star with respect to tau is positive, 
+    // tau needs to be increased such that we sit on the other 
+    // side of the d(L1star)/dtau = 0
     resid_L0.call(tau0);
-    if (resid_L0.deriv(tau0) > 0){
+    int bump_count = 0;
+    while (resid_L0.deriv(tau0) > 0 && bump_count < 3){
         tau0 *= 1.1;
+        bump_count++;
     }
     double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr);
     //double T0 = T_reducing()/tau_L0;

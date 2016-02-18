@@ -111,10 +111,13 @@ public:
     } 
     /// Get the search radius in delta and tau for the tracer
     virtual void get_critical_point_search_radii(double &R_delta, double &R_tau){
-        R_delta = 0.1; R_tau = 0.1;
+        R_delta = 0.01; R_tau = 0.1;
     }
     /// Checking function to see if we should stop the tracing of the critical contour
     virtual bool get_critical_is_terminated(double &delta, double &tau){ return delta > 5; }
+
+    /// Calculate the values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
+    void calc_criticality_contour_values(double &L1star, double &M1star);
 
 	/// Calculate tangent plane distance for given trial composition w
 	double calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess);

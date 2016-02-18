@@ -58,6 +58,7 @@ cdef class AbstractState:
     cpdef double rhomolar_critical(self) except *
     cpdef double p_critical(self) except *
     cpdef list all_critical_points(self)
+    cpdef tuple criticality_contour_values(self)
     
     ## Reducing point
     cpdef double T_reducing(self) except *

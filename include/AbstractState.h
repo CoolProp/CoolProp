@@ -352,6 +352,7 @@ protected:
     virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
     virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
     virtual std::vector<CriticalState> calc_all_critical_points(void){ throw NotImplementedError("calc_all_critical_points is not implemented for this backend"); };
+    virtual void calc_criticality_contour_values(double &L1star, double &M1star){ throw NotImplementedError("calc_criticality_contour_values is not implemented for this backend"); };
     
     /// Convert mass-based input pair to molar-based input pair;  If molar-based, do nothing
     virtual void mass_to_molar_inputs(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2);
@@ -520,6 +521,9 @@ public:
     
     /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
     std::vector<CriticalState> all_critical_points(void){ return calc_all_critical_points(); };
+
+    /// Calculate the criticality contour values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
+    void criticality_contour_values(double &L1star, double &M1star){ return calc_criticality_contour_values(L1star, M1star); }
 
 	/// Return the tangent plane distance for a given trial composition w
 	/// @param T Temperature (K)
