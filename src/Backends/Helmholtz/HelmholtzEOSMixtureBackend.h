@@ -110,9 +110,7 @@ public:
         tau0 = 0.66; // The value of tau where we start searching at delta=delta0
     } 
     /// Get the search radius in delta and tau for the tracer
-    virtual void get_critical_point_search_radii(double &R_delta, double &R_tau){
-        R_delta = 0.01; R_tau = 0.1;
-    }
+    virtual void get_critical_point_search_radii(double &R_delta, double &R_tau);
     /// Checking function to see if we should stop the tracing of the critical contour
     virtual bool get_critical_is_terminated(double &delta, double &tau){ return delta > 5; }
 

@@ -3084,10 +3084,11 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         };
     };
     Resid resid(*this);
-    std::vector<double> x, tau_delta(2); tau_delta[0] = T_reducing()/T0; tau_delta[1] = rho0/rhomolar_reducing(); 
-    std::vector<double> td2 = tau_delta;
+    std::vector<double> x, tau_delta(2); 
+    tau_delta[0] = T_reducing()/T0; 
+    tau_delta[1] = rho0/rhomolar_reducing(); 
     std::string errstr;
-    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-14, 100, &errstr);
+    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-11, 100, &errstr);
     _critical.T = T_reducing()/x[0];
     _critical.rhomolar = x[1]*rhomolar_reducing();
     _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
@@ -3268,6 +3269,9 @@ void HelmholtzEOSMixtureBackend::calc_criticality_contour_values(double &L1star,
     M1star = Mstar.determinant();
 };
     
+void HelmholtzEOSMixtureBackend::get_critical_point_search_radii(double &R_delta, double &R_tau){
+    R_delta = 0.025; R_tau = 0.1;
+}
 std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
 {
     // Store old phase
@@ -3284,7 +3288,7 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     
     // If the derivative of L1star with respect to tau is positive, 
     // tau needs to be increased such that we sit on the other 
-    // side of the d(L1star)/dtau = 0
+    // side of the d(L1star)/dtau = 0 contour
     resid_L0.call(tau0);
     int bump_count = 0;
     while (resid_L0.deriv(tau0) > 0 && bump_count < 3){
