@@ -526,8 +526,8 @@ build system:
 
     docker cp ${HOME}/.ssh ${SLAVENAME}:/home/buildbot/
     docker cp ${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/
-    docker exec --user root ${SLAVENAME} chown -R buildbot /home/buildbot/
-	docker exec --user root ${SLAVENAME} chgrp -R buildbot /home/buildbot/
+    docker exec --user root ${SLAVENAME} chown -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
+	docker exec --user root ${SLAVENAME} chgrp -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
 
 .. note::
   If you cannot copy the SSH keys, you can change the upload function in the 
