@@ -1,16 +1,27 @@
 from __future__ import print_function
 import platform
+import subprocess, shutil, os, sys, glob
 
 def copy_files():
+    def copytree(old,new):
+        print(old,'-->',new)
+        shutil.copytree(old, new)
+    def copy2(old, new):
+        print(old,'-->',new)
+        shutil.copy2(old, new)
+
     import shutil
     shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
-    shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
-    shutil.copytree(os.path.join(CProot, 'externals/rapidjson/include/rapidjson'), os.path.join('CoolProp','include','rapidjson'))
-    shutil.copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','cppformat'))
-    shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
+    copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
     for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
+    copytree(os.path.join(CProot, 'externals/rapidjson/include/rapidjson'), os.path.join('CoolProp','include','rapidjson'))
+    copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','cppformat'))
+    copytree(os.path.join(CProot, 'externals/msgpack-c/include/msgpack'), os.path.join('CoolProp','include','msgpack'))
+    for thefile in glob.glob(os.path.join(CProot, 'externals/msgpack-c/include/*.*')):
+        copy2(thefile, os.path.join('CoolProp','include'))
+    copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 
 def remove_files():
@@ -22,6 +33,13 @@ def remove_files():
 def touch(fname):
     open(fname, 'a').close()
     os.utime(fname, None)
+
+def recursive_collect_includes():
+    thefiles = []
+    include_path = os.path.join('CoolProp','include')
+    for root, dirs, files in os.walk(include_path):
+        thefiles += [os.path.relpath(os.path.join(root,_f), 'CoolProp') for _f in files]
+    return thefiles
 
 if __name__=='__main__':
 
@@ -36,9 +54,6 @@ if __name__=='__main__':
     except:
         pass
 
-
-
-    import subprocess, shutil, os, sys, glob
 
 
     # ******************************
@@ -287,13 +302,7 @@ if __name__=='__main__':
                package_dir = {'CoolProp':'CoolProp',},
                package_data = {'CoolProp':['*.pxd',
                                            'CoolPropBibTeXLibrary.bib',
-                                           'include/*.h',
-                                           'include/rapidjson/*.h',
-                                           'include/rapidjson/rapidjson/*.h',
-                                           'include/rapidjson/rapidjson/internal/*.h',
-                                           'include/cppformat/*.h',
-                                           'include/cppformat/*.cc',
-                                           'Plots/psyrc']},
+                                           'Plots/psyrc'] + recursive_collect_includes()},
                classifiers = [
                 "Programming Language :: Python",
                 "Development Status :: 4 - Beta",
