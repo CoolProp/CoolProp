@@ -1,6 +1,5 @@
 #include "CPnumerics.h"
 #include "MatrixMath.h"
-#include <float.h>
 
 double root_sum_square(const std::vector<double> &x)
 {

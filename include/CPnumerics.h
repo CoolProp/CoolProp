@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <set>
+#include <cfloat>
 #include "CPstrings.h"
 #include "Exceptions.h"
 
