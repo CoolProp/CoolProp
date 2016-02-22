@@ -173,6 +173,10 @@ bool AbstractState::clear() {
     this->_d2alphar_dDelta_dTau_lim.clear();
     this->_d3alphar_dDelta2_dTau_lim.clear();
 
+	/// Two-Phase variables
+	this->_rhoLmolar.clear();
+	this->_rhoVmolar.clear();
+
     /// Transport properties
     this->_viscosity.clear();
     this->_conductivity.clear();

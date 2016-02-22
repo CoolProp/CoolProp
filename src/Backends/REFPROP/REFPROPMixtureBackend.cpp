@@ -1044,12 +1044,9 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
-            _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhomolar = rho_mol_L*1000;  // 1000 for conversion from mol/L to mol/m3
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmolarT_INPUTS:
@@ -1066,11 +1063,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassT_INPUTS:
@@ -1096,11 +1090,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _rhomolar = value1;
             _p = value2;
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassP_INPUTS:
@@ -1125,11 +1116,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassHmass_INPUTS:
@@ -1155,11 +1143,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassSmass_INPUTS:
@@ -1186,10 +1171,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
             if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassUmass_INPUTS:
@@ -1215,11 +1198,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = value2;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case HmassP_INPUTS:
@@ -1245,11 +1225,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case PSmass_INPUTS:
@@ -1276,11 +1253,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case PUmass_INPUTS:
@@ -1305,11 +1279,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case HmassSmass_INPUTS:
@@ -1336,11 +1307,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case SmassUmass_INPUTS:
@@ -1375,11 +1343,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case SmassT_INPUTS:
@@ -1413,11 +1378,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case HmassT_INPUTS:
@@ -1452,10 +1414,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
             if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case TUmass_INPUTS:
@@ -1534,11 +1494,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case QT_INPUTS:
@@ -1588,11 +1545,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            if (0)
-            {
-                _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-                _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            }
+            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         default:
@@ -1774,6 +1728,15 @@ void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
     std::string errstr;
     std::vector<double> xfinal = NDNewtonRaphson_Jacobian(&resid, x, 1e-9, 30, &errstr);
     T = xfinal[0]; rho = xfinal[1]*1000.0;
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
+	if ((key == iDmolar) && _rhoLmolar) return _rhoLmolar;
+	throw ValueError("The saturated liquid state has not been set.");
+}
+CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) {
+	if ((key == iDmolar) && _rhoVmolar) return _rhoVmolar;
+	ValueError("The saturated vapor state has not been set.");
 }
 
 void REFPROPMixtureBackend::calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){

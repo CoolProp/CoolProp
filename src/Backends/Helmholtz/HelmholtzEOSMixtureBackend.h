@@ -317,8 +317,8 @@ public:
      */
     void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical);
 
-    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) { return SatL->keyed_output(key); }
-    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key) { return SatV->keyed_output(key); }
+	CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
+	CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 
     CoolPropDbl calc_Tmin(void);
     CoolPropDbl calc_Tmax(void);
