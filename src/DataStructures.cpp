@@ -122,6 +122,7 @@ public:
         index_map_insert("U", iUmass);
         index_map_insert("C", iCpmass);
         index_map_insert("O", iCvmass);
+        index_map_insert("G", iGmass);
         index_map_insert("V", iviscosity);
         index_map_insert("L", iconductivity);
         index_map_insert("pcrit", iP_critical);
