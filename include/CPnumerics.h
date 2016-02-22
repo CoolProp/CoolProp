@@ -4,8 +4,18 @@
 #include <vector>
 #include <set>
 #include <cfloat>
+#include <numeric>
 #include "CPstrings.h"
 #include "Exceptions.h"
+
+#if defined(HUGE_VAL) && !defined(_HUGE)
+    # define _HUGE HUGE_VAL
+#else
+    // GCC Version of huge value macro
+    #if defined(HUGE) && !defined(_HUGE)
+    #  define _HUGE HUGE
+    #endif
+#endif
 
 /// Make a linearly spaced vector of points
 template <typename T> std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
@@ -445,15 +455,6 @@ inline bool ValidNumber(double x)
 
 #ifndef COOLPROP_OK
 #define COOLPROP_OK 1
-#endif
-
-#if defined(HUGE_VAL) && !defined(_HUGE)
-    # define _HUGE HUGE_VAL
-#else
-    // GCC Version of huge value macro
-    #if defined(HUGE) && !defined(_HUGE)
-    #  define _HUGE HUGE
-    #endif
 #endif
 
 /**
