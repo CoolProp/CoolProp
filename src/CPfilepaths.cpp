@@ -2,6 +2,7 @@
 #include "Exceptions.h"
 #include "CPfilepaths.h"
 #include "CPstrings.h"
+#include "CoolPropTools.h"
 
 #include <fstream>
 #include <algorithm>
