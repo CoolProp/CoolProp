@@ -110,7 +110,7 @@ protected:
         _d2alphar_dDelta_dTau_lim, _d3alphar_dDelta2_dTau_lim;
 
     /// Two-Phase variables
-	CachedElement _rhoLmolar, _rhoVmolar;
+    CachedElement _rhoLmolar, _rhoVmolar;
 
     // ----------------------------------------
     // Property accessors to be optionally implemented by the backend
