@@ -17,6 +17,20 @@
     #endif
 #endif
 
+inline bool ValidNumber(double x)
+{
+    // Idea from http://www.johndcook.com/IEEE_exceptions_in_cpp.html
+    return (x <= DBL_MAX && x >= -DBL_MAX);
+};
+
+#ifndef M_PI
+#  define M_PI 3.14159265358979323846
+#endif
+
+#ifndef COOLPROP_OK
+#define COOLPROP_OK 1
+#endif
+
 /// Make a linearly spaced vector of points
 template <typename T> std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
@@ -443,19 +457,6 @@ void sort3(T &a, T &b, T &c){
     }
 }
 
-inline bool ValidNumber(double x)
-{
-    // Idea from http://www.johndcook.com/IEEE_exceptions_in_cpp.html
-    return (x <= DBL_MAX && x >= -DBL_MAX);
-};
-
-#ifndef M_PI
-#  define M_PI 3.14159265358979323846
-#endif
-
-#ifndef COOLPROP_OK
-#define COOLPROP_OK 1
-#endif
 
 /**
 * Due to the periodicity of angles, you need to handle the case where the
