@@ -71,7 +71,7 @@ unsigned long long CalculateDirSize(const std::wstring &path, std::vector<std::w
   unsigned long long CalculateDirSize(const std::string &path){
      return 0;
   }
-#elif !defined(__ISWINDOWS__) && !defined(__powerpc__) && !defined(__ANDROID__)
+#else
 #include <ftw.h>
 #include <stdint.h>
 #include <iostream>
