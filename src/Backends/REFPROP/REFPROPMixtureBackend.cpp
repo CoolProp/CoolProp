@@ -488,10 +488,10 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::string &CAS
     std::string shmodij(hmodij);
     if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
     {
-        if (parameter == "gammaT"){ fij[0] = value;}
-        else if (parameter == "betaT"){ fij[1] = value; }
-        else if (parameter == "gammaV"){ fij[2] = value; }
-        else if (parameter == "betaV"){ fij[3] = value; }
+        if (parameter == "betaT"){ fij[0] = value;}
+        else if (parameter == "gammaT"){ fij[1] = value; }
+        else if (parameter == "betaV"){ fij[2] = value; }
+        else if (parameter == "gammaV"){ fij[3] = value; }
 		else if (parameter == "Fij"){ fij[4] = value; }
         else{
             throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
@@ -519,10 +519,10 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::string &C
     if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
     {
         double val;
-        if (parameter == "gammaT"){ val = fij[0];}
-        else if (parameter == "betaT"){ val = fij[1]; }
-        else if (parameter == "gammaV"){ val = fij[2]; }
-        else if (parameter == "betaV"){ val = fij[3]; }
+        if (parameter == "betaT"){ val = fij[0];}
+        else if (parameter == "gammaT"){ val = fij[1]; }
+        else if (parameter == "betaV"){ val = fij[2]; }
+        else if (parameter == "gammaV"){ val = fij[3]; }
 		else if (parameter == "Fij"){ val = fij[4]; }
         else{
             throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
