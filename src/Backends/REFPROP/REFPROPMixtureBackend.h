@@ -168,6 +168,10 @@ public:
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double &T, double &rho);
 
+	/// Calculate the saturation properties
+	CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
+	CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+
     /// Calculate an ideal curve
     void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p);
 
