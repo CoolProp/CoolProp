@@ -474,66 +474,13 @@ long REFPROPMixtureBackend::match_CAS(const std::string &CAS){
 }
 /// Set binary mixture floating point parameter
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){
-    long icomp, jcomp, ierr = 0L;
-    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
-    double fij[6];
-    char herr[255];
-    
-    icomp = match_CAS(CAS1);
-    jcomp = match_CAS(CAS2);
-    
-    // Get the prior state
-    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
-    
-    std::string shmodij(hmodij);
-    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
-    {
-        if (parameter == "betaT"){ fij[0] = value;}
-        else if (parameter == "gammaT"){ fij[1] = value; }
-        else if (parameter == "betaV"){ fij[2] = value; }
-        else if (parameter == "gammaV"){ fij[3] = value; }
-		else if (parameter == "Fij"){ fij[4] = value; }
-        else{
-            throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
-        }
-        SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
-    }
-    else{
-        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
-    }
+    std::size_t i = match_CAS(CAS1)-1, j = match_CAS(CAS2)-1;
+    return set_binary_interaction_double(i, j, parameter, value);
 };
 /// Get binary mixture double value
 double REFPROPMixtureBackend::get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
-    
-    long icomp, jcomp;
-    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
-    double fij[6];
-    
-    icomp = match_CAS(CAS1);
-    jcomp = match_CAS(CAS2);
-    
-    // Get the current state
-    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
-    
-    std::string shmodij(hmodij);
-    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
-    {
-        double val;
-        if (parameter == "betaT"){ val = fij[0];}
-        else if (parameter == "gammaT"){ val = fij[1]; }
-        else if (parameter == "betaV"){ val = fij[2]; }
-        else if (parameter == "gammaV"){ val = fij[3]; }
-		else if (parameter == "Fij"){ val = fij[4]; }
-        else{
-            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-			return _HUGE;
-        }
-        return val;
-    }
-    else{
-        //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
-		return _HUGE;
-    }
+    std::size_t i = match_CAS(CAS1)-1, j = match_CAS(CAS2)-1;
+    return get_binary_interaction_double(i, j, parameter);
 }
 /// Get binary mixture string value
 std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
@@ -562,6 +509,62 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
     else {
         //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
 		return "";
+    }
+}
+/// Set binary mixture string parameter (EXPERT USE ONLY!!!)
+void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
+    long icomp = i+1, jcomp = j+1, ierr = 0L;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    char herr[255];
+    
+    // Get the prior state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        if (parameter == "betaT"){ fij[0] = value;}
+        else if (parameter == "gammaT"){ fij[1] = value; }
+        else if (parameter == "betaV"){ fij[2] = value; }
+        else if (parameter == "gammaV"){ fij[3] = value; }
+		else if (parameter == "Fij"){ fij[4] = value; }
+        else{
+            throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+        SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    }
+    else{
+        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    }
+}
+/// Get binary mixture double value (EXPERT USE ONLY!!!)
+double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
+    long icomp = i+1, jcomp = j+1;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    
+    // Get the current state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+    
+    std::string shmodij(hmodij);
+    if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
+    {
+        double val;
+        if (parameter == "betaT"){ val = fij[0];}
+        else if (parameter == "gammaT"){ val = fij[1]; }
+        else if (parameter == "betaV"){ val = fij[2]; }
+        else if (parameter == "gammaV"){ val = fij[3]; }
+		else if (parameter == "Fij"){ val = fij[4]; }
+        else{
+            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+			return _HUGE;
+        }
+        return val;
+    }
+    else{
+        //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+		return _HUGE;
     }
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
