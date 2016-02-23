@@ -489,8 +489,8 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::string &CAS
     if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
     {
         if (parameter == "gammaT"){ fij[0] = value;}
-        else if (parameter == "gammaV"){ fij[1] = value; }
-        else if (parameter == "betaT"){ fij[2] = value; }
+        else if (parameter == "betaT"){ fij[1] = value; }
+        else if (parameter == "gammaV"){ fij[2] = value; }
         else if (parameter == "betaV"){ fij[3] = value; }
 		else if (parameter == "Fij"){ fij[4] = value; }
         else{
@@ -520,8 +520,8 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::string &C
     {
         double val;
         if (parameter == "gammaT"){ val = fij[0];}
-        else if (parameter == "gammaV"){ val = fij[1]; }
-        else if (parameter == "betaT"){ val = fij[2]; }
+        else if (parameter == "betaT"){ val = fij[1]; }
+        else if (parameter == "gammaV"){ val = fij[2]; }
         else if (parameter == "betaV"){ val = fij[3]; }
 		else if (parameter == "Fij"){ val = fij[4]; }
         else{
