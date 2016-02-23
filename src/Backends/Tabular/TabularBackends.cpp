@@ -6,6 +6,7 @@
 #include <sstream>
 #include "time.h"
 #include "miniz.h"
+#include <fstream>
 
 /// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
 /// NOTE: The matrix is transposed below
