@@ -3117,7 +3117,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     tau_delta[0] = T_reducing()/T0; 
     tau_delta[1] = rho0/rhomolar_reducing(); 
     std::string errstr;
-    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-11, 100, &errstr);
+    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-10, 100, &errstr);
     _critical.T = T_reducing()/x[0];
     _critical.rhomolar = x[1]*rhomolar_reducing();
     _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
@@ -3247,11 +3247,21 @@ public:
                 // have an analytic solution for the derivative
                 R_tau = R_tau_tracer; R_delta = R_delta_tracer;
                 theta = Newton(this, theta_last, 1e-10, 100, errstr);
+                
                 // If the solver takes a U-turn, going in the opposite direction of travel
                 // this is not a good thing, and force a Brent's method solver call to make sure we keep
                 // tracing in the same direction
                 if (std::abs(angle_difference(theta, theta_last)) > M_PI/2.0){
-                    theta = Brent(this, theta_last-M_PI/3.5, theta_last+M_PI/3.5, DBL_EPSILON, 1e-10, 100, errstr);
+                    // We have found at least one critical point and we are now well above the density
+                    // associated with the first critical point
+                    if (N_critical_points > 0 && delta > 2.5*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
+                        // Stopping the search - probably we have a kink in the L1*=0 contour
+                        // caused by poor low-temperature behavior
+                        continue;
+                    }
+                    else{
+                        theta = Brent(this, theta_last-M_PI/3.5, theta_last+M_PI/3.5, DBL_EPSILON, 1e-10, 100, errstr);
+                    }
                 }
             }
             
@@ -3272,7 +3282,7 @@ public:
             // you have bracketed a critical point, run the full critical point solver to
             // find the critical point and store it
             if (i > 0 && M1*M1_last < 0){
-                double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
+                double rhomolar = HEOS.rhomolar_reducing()*(delta+delta_new)/2.0, T = HEOS.T_reducing()/((tau+tau_new)/2.0);
                 CoolProp::CriticalState crit = HEOS.calc_critical_point(rhomolar, T);
                 critical_points.push_back(crit);
                 N_critical_points++;

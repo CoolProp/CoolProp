@@ -75,6 +75,11 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
 
         // Update the guess
         for (std::size_t i = 0; i<x0.size(); i++){ x0[i] += v(i);}
+        
+        // Stop if the solution is not changing by more than numerical precision
+        if (v.cwiseAbs().maxCoeff() < DBL_EPSILON*100){
+            return x0;
+        }
         error = root_sum_square(f0);
         if (iter>maxiter){
             *errstring=std::string("reached maximum number of iterations");
@@ -112,8 +117,7 @@ double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter, st
 
         x += dx;
 
-        if (std::abs(dx/x) < 10*DBL_EPSILON)
-        {
+        if (std::abs(dx/x) < 1e-11){
             return x;
         }
 

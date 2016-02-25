@@ -38,8 +38,8 @@ void CoolProp::AbstractCubicBackend::get_critical_point_search_radii(double &R_d
     // Now we scale them to get the appropriate search radii
     double Tr_GERGlike, rhor_GERGlike;
     get_linear_reducing_parameters(rhor_GERGlike, Tr_GERGlike);
-    R_delta *= rhor_GERGlike/rhomolar_reducing();
-    R_tau *= T_reducing()/Tr_GERGlike;
+    R_delta *= rhor_GERGlike/rhomolar_reducing()*5;
+    R_tau *= T_reducing()/Tr_GERGlike*5;
 }
 
 bool CoolProp::AbstractCubicBackend::get_critical_is_terminated(double &delta, double &tau)
