@@ -104,11 +104,11 @@ class SolutionDataWriter(object):
         self.resolveRef = True # Resolve references and print text
 
         # Latex document mode
-#         self.ext        = "pgf"
-#         self.usebp      = True
-#         self.ispage     = False # Do you want a page or a figure?
-#         self.isportrait = True
-#         self.resolveRef = False # Resolve references and print text
+        #self.ext        = "pgf"
+        #self.usebp      = True
+        #self.ispage     = False # Do you want a page or a figure?
+        #self.isportrait = True
+        #self.resolveRef = False # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
@@ -1194,7 +1194,7 @@ class SolutionDataWriter(object):
 
         #TODO: Fix this problem: ValueError: Can only output finite numbers in PDF
         if self.ext=="pdf" and self.usetex:
-            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help manually change the number of columns.")
+            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help to manually change the number of columns.")
         else:
             table_axis.legend(
               legVal, legKey,
@@ -1218,7 +1218,7 @@ class SolutionDataWriter(object):
                 os.makedirs(os.path.dirname(report_path))
 
             if self.usebp and self.ext=="pgf":
-                self.bp.savepgf(report_path, fig=fig)
+                self.bp.savepgf(report_path, fig=fig, customReplace=["\\cite{","\\citet{"])
             else:
                 fig.savefig(report_path)
 

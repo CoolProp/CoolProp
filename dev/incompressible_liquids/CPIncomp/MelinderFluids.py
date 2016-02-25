@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.DataObjects import PureData,CoefficientData
-from CPIncomp.BaseObjects import IncompressibleFitter
+from .DataObjects import PureData,CoefficientData
+from .BaseObjects import IncompressibleFitter
 
 
 class DEBLiquidClass(CoefficientData,PureData):

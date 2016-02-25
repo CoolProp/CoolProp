@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.DataObjects import PureData, SolutionData, DigitalData,\
+from .DataObjects import PureData, SolutionData, DigitalData,\
     CoefficientData
 
 class PureExample(PureData):

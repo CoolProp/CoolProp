@@ -7,9 +7,8 @@ readme.md       - General instructions and copyright information / credits.
 """
 from __future__ import division, absolute_import, print_function
 import inspect
-from . import DataObjects,ExampleObjects,PureFluids,CoefficientFluids,DigitalFluids,MelinderFluids
-from CPIncomp.SecCoolFluids import SecCoolSolutionData
-from CPIncomp import SolutionFluids
+from . import DataObjects,ExampleObjects,PureFluids,CoefficientFluids,DigitalFluids,MelinderFluids,SolutionFluids
+from .SecCoolFluids import SecCoolSolutionData
 
 
 def getBaseClassNames():

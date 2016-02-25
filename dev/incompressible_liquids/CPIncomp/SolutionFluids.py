@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.DataObjects import SolutionData
+from .DataObjects import SolutionData
 
 
 class LiBrData(SolutionData):
