@@ -969,8 +969,13 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
         HelmholtzEOSMixtureBackend *HEOS;
         CoolPropDbl rhomolar, value;
         parameters other;
+        CoolPropDbl Tmin, Tmax;
 
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl rhomolar, CoolPropDbl value, parameters other) : HEOS(HEOS), rhomolar(rhomolar), value(value), other(other){};
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl rhomolar, CoolPropDbl value, parameters other, CoolPropDbl Tmin, CoolPropDbl Tmax) : HEOS(HEOS), rhomolar(rhomolar), value(value), other(other), Tmin(Tmin), Tmax(Tmax)
+        {
+            /// Something homogeneous to avoid flash calls
+            HEOS->specify_phase(iphase_gas);
+        };
         double call(double T){
             HEOS->update_DmolarT_direct(rhomolar, T);
             double eos = HEOS->keyed_output(other);
@@ -995,6 +1000,9 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
             }
             return HEOS->second_partial_deriv(other, iT, iDmolar, iT, iDmolar);
         };
+        bool input_not_in_range(double T){
+            return (T < Tmin || T > Tmax);
+        }
     };
 
     std::string errstring;
@@ -1053,7 +1061,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
             // If it is above, it is not two-phase and either liquid, vapor or supercritical
             if (value > Sat->keyed_output(other))
             {
-                solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other, Sat->keyed_output(iT), HEOS.Tmax()*1.5);
                 try{
                     HEOS._T = Halley(resid, 0.5*(Sat->keyed_output(iT) + HEOS.Tmax()*1.5), 1e-10, 100, errstring);
                 }
@@ -1061,7 +1069,8 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                     HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax()*1.5, DBL_EPSILON, 1e-12, 100, errstring);
                 }
                 HEOS._Q = 10000;
-                HEOS.calc_pressure();
+                HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                HEOS.unspecify_phase();
                 // Update the phase flag
                 HEOS.recalculate_singlephase_phase();
             }
@@ -1090,6 +1099,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                     // Residual is difference in quality calculated from density and quality calculated from the other parameter
                     // Iterate to find T
                     HSU_D_flash_twophase(HEOS, HEOS._rhomolar, other, value);
+                    HEOS._phase = iphase_twophase;
                 }
             }
         }
@@ -1115,7 +1125,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
             }
             if (value > y)
             {
-                solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other, TVtriple, HEOS.Tmax()*1.5);
                 HEOS._phase = iphase_gas;
                 try{
                     HEOS._T = Halley(resid, 0.5*(TVtriple+HEOS.Tmax()*1.5), DBL_EPSILON, 100, errstring);
@@ -1154,7 +1164,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
             }
             if (value > y)
             {
-                solver_resid resid(&HEOS, HEOS._rhomolar, value, other);
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other, TLtriple, HEOS.Tmax()*1.5);
                 HEOS._phase = iphase_liquid;
                 try{
                     HEOS._T = Halley(resid, 0.5*(TLtriple+HEOS.Tmax()*1.5), DBL_EPSILON, 100, errstring);
@@ -1171,7 +1181,9 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
             }
         }
         // Update the state for conditions where the state was guessed
-        HEOS.recalculate_singlephase_phase();
+        if (HEOS.phase() != iphase_twophase){
+            HEOS.recalculate_singlephase_phase();
+        }
     }
     else
         throw NotImplementedError("PHSU_D_flash not ready for mixtures");
@@ -1270,7 +1282,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Newton(HelmholtzEOSMixtureBackend &H
     
     HEOS.update(DmolarT_INPUTS, rhoc*delta, Tc/tau);
 }
-void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value, CoolPropDbl Tmin, CoolPropDbl Tmax)
+void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value, CoolPropDbl Tmin, CoolPropDbl Tmax, phases phase)
 {
     if (!ValidNumber(HEOS._p)){throw ValueError("value for p in HSU_P_flash_singlephase_Brent is invalid");};
     if (!ValidNumber(value)){throw ValueError("value for other in HSU_P_flash_singlephase_Brent is invalid");};
@@ -1282,10 +1294,11 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         CoolPropDbl p, value;
         parameters other;
         int iter;
-        CoolPropDbl eos0, eos1, rhomolar;
+        CoolPropDbl eos0, eos1, rhomolar, rhomolar0, rhomolar1;
+        CoolPropDbl Tmin, Tmax;
 
-        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl p, CoolPropDbl value, parameters other) : 
-                HEOS(HEOS), p(p), value(value), other(other), iter(0), eos0(-_HUGE), eos1(-_HUGE), rhomolar(_HUGE)
+        solver_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl p, CoolPropDbl value, parameters other, double Tmin, double Tmax) :
+            HEOS(HEOS), p(p), value(value), other(other), iter(0), eos0(-_HUGE), eos1(-_HUGE), rhomolar(_HUGE), rhomolar0(_HUGE), rhomolar1(_HUGE), Tmin(Tmin), Tmax(Tmax)
                 {
                     // Specify the state to avoid saturation calls, but only if phase is subcritical
                     switch (CoolProp::phases phase = HEOS->phase()) {
@@ -1299,8 +1312,8 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
                 }
         double call(double T){
 
-			if (iter < 3){
-				// Run the solver with T,P as inputs;
+            if (iter < 2 || std::abs(rhomolar1/rhomolar0-1) > 0.05 ){
+				// Run the solver with T,P as inputs; but only if the last change in density was greater than a few percent
 				HEOS->update(PT_INPUTS, p, T);
 			}
 			else{
@@ -1318,9 +1331,12 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
             CoolPropDbl r = eos - value;
 
             // Store values for later use if there are errors
-            if (iter == 0){ eos0 = eos; }
-            else if (iter == 1){ eos1 = eos; }
-            else{ eos0 = eos1; eos1 = eos; }
+            if (iter == 0){ eos0 = eos; rhomolar0 = rhomolar;}
+            else if (iter == 1){ eos1 = eos; rhomolar1 = rhomolar;}
+            else{
+                eos0 = eos1; eos1 = eos;
+                rhomolar0 = rhomolar1; rhomolar1 = rhomolar;
+            }
 
             iter++;
             return r;
@@ -1331,15 +1347,18 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HE
         double second_deriv(double T){
             return HEOS->second_partial_deriv(other, iT, iP, iT, iP);
         }
+        bool input_not_in_range(double x){
+            return (x < Tmin || x > Tmax );
+        }
     };
-    solver_resid resid(&HEOS, HEOS._p, value, other);
+    solver_resid resid(&HEOS, HEOS._p, value, other, Tmin, Tmax);
     
     std::string errstr;
 
     try{
         // First try to use Halley's method (including two derivatives)
         Halley(resid, Tmin, 1e-12, 100, errstr);
-        if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())))
+        if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase)
         {
             throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
         }
@@ -1412,7 +1431,11 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                         Tmin = std::max(HEOS.Tmin(), HEOS.Ttriple());
                     }
                     else{
-                        if (saturation_called){ Tmin = HEOS.SatV->T();}else{Tmin = HEOS._TVanc.pt();}
+                        if (saturation_called){
+                            Tmin = HEOS.SatV->T();
+                        }else{
+                            Tmin = HEOS._TVanc.pt()+0.01;
+                        }
                     }
                     break;
                 }
@@ -1447,7 +1470,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
                 { throw ValueError(format("Not a valid homogeneous state")); }
             }
             try{
-                HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax);
+                HSU_P_flash_singlephase_Brent(HEOS, other, value, Tmin, Tmax, HEOS._phase);
             }
             catch(std::exception &e){
                 throw ValueError(format("unable to solve 1phase PY flash with Tmin=%Lg, Tmax=%Lg due to error: %s",Tmin, Tmax, e.what()));

@@ -13,6 +13,12 @@ class FuncWrapper1D
 public:
     virtual ~FuncWrapper1D(){};
     virtual double call(double) = 0;
+    /**
+     * /brief A function for checking whether the input is in range;
+     *
+     * Meant to be implemented by derived classes; return true if input is out of range
+     */
+    virtual bool input_not_in_range(double x){ return false; };
 };
 
 class FuncWrapper1DWithDeriv : public FuncWrapper1D

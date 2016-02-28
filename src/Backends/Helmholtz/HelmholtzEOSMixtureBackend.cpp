@@ -1504,10 +1504,10 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 		_rhoVmolar = HEOS.SatV->rhomolar();
 
 		//
-        if (Q < -100*DBL_EPSILON){
+        if (Q < -1e-9){
             this->_phase = iphase_liquid; _Q = -1000;  return;
         }
-        else if (Q > 1+100*DBL_EPSILON){
+        else if (Q > 1+1e-9){
             this->_phase = iphase_gas; _Q = 1000; return;
         }
         else{

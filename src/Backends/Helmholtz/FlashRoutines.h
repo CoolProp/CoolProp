@@ -110,7 +110,8 @@ public:
     /// @param value The value of the other input
     /// @param Tmin The lower temperature limit [K]
     /// @param Tmax The higher temperature limit [K]
-    static void HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value, CoolPropDbl Tmin, CoolPropDbl Tmax);
+    /// @param phase The phase of the fluid that we should get back
+    static void HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend &HEOS, parameters other, CoolPropDbl value, CoolPropDbl Tmin, CoolPropDbl Tmax, phases phase);
     
 	/// A generic flash routine for the pairs (D,H), (D,S), and (D,U) for twophase state.  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used

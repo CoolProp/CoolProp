@@ -157,15 +157,20 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
         fval = f->call(x);
         dfdx = f->deriv(x);
         d2fdx2 = f->second_deriv(x);
-
-        dx = -(2*fval*dfdx)/(2*POW2(dfdx)-fval*d2fdx2);
-
+        
+        if (f->input_not_in_range(x)){
+            throw ValueError(format("Input [%g] is out of range",x));
+        }
         if (!ValidNumber(fval)){
             throw ValueError("Residual function in Halley returned invalid number");
         };
         if (!ValidNumber(dfdx)){
             throw ValueError("Derivative function in Halley returned invalid number");
         };
+        
+        dx = -(2*fval*dfdx)/(2*POW2(dfdx)-fval*d2fdx2);
+
+        
 
         x += dx;
 
