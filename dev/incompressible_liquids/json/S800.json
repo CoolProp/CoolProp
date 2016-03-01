@@ -1,0 +1,114 @@
+{
+  "T_freeze": {
+    "NRMS": null, 
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "Tbase": 4.521500e+02, 
+  "Tmax": 6.711500e+02, 
+  "Tmin": 2.331500e+02, 
+  "TminPsat": 3.071500e+02, 
+  "conductivity": {
+    "NRMS": 3.512507e-03, 
+    "coeffs": [
+      [
+        4.509024e-02
+      ], 
+      [
+        -1.879693e-04
+      ], 
+      [
+        4.139256e-11
+      ], 
+      [
+        -2.987631e-12
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "density": {
+    "NRMS": 6.451330e-05, 
+    "coeffs": [
+      [
+        7.938949e+02
+      ], 
+      [
+        -9.273680e-01
+      ], 
+      [
+        -4.763441e-04
+      ], 
+      [
+        -1.674039e-06
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "description": "Syltherm 800", 
+  "mass2input": {
+    "NRMS": null, 
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "mole2input": {
+    "NRMS": null, 
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "name": "S800", 
+  "reference": "Dow Chemical Company - FLUIDFILE Software accessed February 2016", 
+  "saturation_pressure": {
+    "NRMS": 7.477874e-03, 
+    "coeffs": [
+      -2.322952e+03, 
+      -1.469809e+02, 
+      -1.396011e+01
+    ], 
+    "type": "exponential"
+  }, 
+  "specific_heat": {
+    "NRMS": 1.321123e-03, 
+    "coeffs": [
+      [
+        7.050167e+02
+      ], 
+      [
+        1.707952e+00
+      ], 
+      [
+        -9.204780e-06
+      ], 
+      [
+        -5.660168e-08
+      ]
+    ], 
+    "type": "polynomial"
+  }, 
+  "viscosity": {
+    "NRMS": 8.195934e-03, 
+    "coeffs": [
+      [
+        -6.701381e+00
+      ], 
+      [
+        -9.157252e-03
+      ], 
+      [
+        1.925359e-05
+      ], 
+      [
+        -5.658791e-08
+      ]
+    ], 
+    "type": "exppolynomial"
+  }, 
+  "volume2input": {
+    "NRMS": null, 
+    "coeffs": "null", 
+    "type": "notdefined"
+  }, 
+  "xbase": 0.000000e+00, 
+  "xid": "pure", 
+  "xmax": 1.000000e+00, 
+  "xmin": 0.000000e+00
+}
