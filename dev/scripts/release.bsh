@@ -152,8 +152,8 @@ if [ ${CPVERSION:0:7} != "nightly" ]; then
     printMessage "Updating the default Javascript library on SourceForge"
     pushd "$BINFOLDER/Javascript/"
     cp "coolprop.js" "coolprop-${CPVERSION}.js"
-    ln -sf "coolprop-${CPVERSION}.js" "coolprop-latest.js"
-    rsync $RSYNC_DRY_RUN $RSYNC_OPTS "coolprop-${CPVERSION}.js" "coolprop-latest.js" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs/jscript/
+    cp "coolprop.js.mem" "coolprop-${CPVERSION}.js.mem"
+    rsync $RSYNC_DRY_RUN $RSYNC_OPTS "coolprop.js" "coolprop-${CPVERSION}.js" "coolprop.js.mem" "coolprop-${CPVERSION}.js.mem" "index.html" frs.sf.net-$SFUSER:/home/project-web/coolprop/htdocs/jscript/
     popd
 else
     printMessage "Publishing the development docs on SourceForge"
