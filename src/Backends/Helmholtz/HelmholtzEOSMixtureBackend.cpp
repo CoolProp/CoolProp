@@ -2151,6 +2151,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
         switch(phase)
         {
         case iphase_liquid:
+        case iphase_supercritical_liquid:
             rhomolar = max3(rhomolar0, rhomolar1, rhomolar2); break;
         case iphase_gas:
         case iphase_supercritical_gas:
