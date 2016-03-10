@@ -106,3 +106,14 @@ If you are playing around with mixture parameters, you might want to set a diffe
     In [3]: jj = CP.set_config_as_json_string(json.dumps(jj))
 
 If you have set both the ``ALTERNATIVE_REFPROP_PATH`` and ``ALTERNATIVE_REFPROP_HMX_BNC_PATH`` variables, ``ALTERNATIVE_REFPROP_PATH_HMX_BNC_PATH`` "wins", and this path will be used when loading mixture interaction parameters
+
+Other Features
+--------------
+
+If you want to determine the version of REFPROP that you are actually using, you can do:
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+    
+    In [1]: CP.get_global_param_string("REFPROP_version")
