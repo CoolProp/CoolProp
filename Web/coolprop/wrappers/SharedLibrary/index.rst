@@ -145,3 +145,47 @@ On Linux, installation could be done by::
     sudo ln -sf libCoolProp.so.32.:version: libCoolProp.so.5
     sudo ln -sf libCoolProp.so.5 libCoolProp.so
     popd
+
+
+Using
+=====
+
+Here is a small example for calling the shared library from C on windows, as contributed by Philipp Rollmann, Guentner::
+
+    #include "windows.h"
+    #include "stdio.h"
+    int main(){
+        // Define DLL functions
+        typedef double (WINAPI *Props1SI)(char Refrigerant[20], char PropertyToReturn[20]);
+        typedef double (WINAPI *PropsSI)(char PropertyToReturn[20], char InputProperty1[20], double InputValue1, char InputProperty2[20], double InputValue2, char Refrigerant[20]);
+
+        // addresses
+        Props1SI Props1SIAddress;
+        PropsSI PropsSIAddress;
+        double result1, result2;
+
+        // load DLL; change this path as needed
+        HINSTANCE CoolPropDll = LoadLibraryA("C:\\CoolProp\\CoolProp.dll");
+
+        if (CoolPropDll)
+        {
+             // addresses
+             Props1SIAddress = (Props1SI) GetProcAddress(CoolPropDll, "_Props1SI@8");
+             PropsSIAddress = (PropsSI) GetProcAddress(CoolPropDll, "_PropsSI@32");
+             // call function
+             if (Props1SIAddress && PropsSIAddress)
+             {
+                    result1 = (*Props1SIAddress) ("R410A", "Tcrit");
+                    printf("R410A Tcrit: %g\n", result1);
+                    result2 = (*PropsSIAddress) ("Dmass", "T", 298.15, "P", 101325, "R410A");
+                    printf("R410A density: %g\n", result2);
+             }
+
+             // unload DLL
+             FreeLibrary(CoolPropDll);
+        }
+        else{
+            printf("Could not load CoolProp DLL.");
+        }
+    }
+    
