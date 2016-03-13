@@ -4,6 +4,8 @@
 #include <vector>
 #include <set>
 #include <cfloat>
+#include <stdlib.h> // For abs
+#include <algorithm> // For max
 #include <numeric>
 #include "CPstrings.h"
 #include "Exceptions.h"
