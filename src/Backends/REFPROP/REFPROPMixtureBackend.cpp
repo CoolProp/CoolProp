@@ -961,6 +961,10 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     */
     long N = 500;
     long isp = 0, iderv = -1;
+    if (SPLNVALdll==NULL){
+        std::string rpv = get_global_param_string("REFPROP_version");
+        throw ValueError(format("Your version of REFFPROP(%s) does not have the SPLNVALdll function; cannot extract phase envelope values",rpv.c_str())); 
+    };
     SPLNVALdll(&isp, &iderv, &c, &rhoymin, &ierr, herr, errormessagelength);
     iderv = -2;
     SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr, errormessagelength);
