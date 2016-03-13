@@ -33,6 +33,10 @@ inline bool ValidNumber(double x)
 #define COOLPROP_OK 1
 #endif
 
+// Undefine these terrible macros defined in windows header
+#undef min
+#undef max
+
 /// Make a linearly spaced vector of points
 template <typename T> std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
