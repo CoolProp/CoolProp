@@ -14,6 +14,15 @@ Common Requirements
 -------------------
 Compilation of the Android wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
+Windows
+-------
+
+* Follow the instructions for Linux & OSX, but the first call to cmake should read:
+
+    cmake .. -DCOOLPROP_ANDROID_MODULE=ON -G "MinGW Makefiles" -DNDK_PATH=c:/Downloads/android-ndk-r10e (change path based on your installation)
+
+* This change (telling CMake to use the MinGW generator with ``-G "MinGW Makefiles"``) is needed because by default on windows it tries to use the most-recent installed version of Visual Studio, which conflicts with the Android SDK.
+
 Linux & OSX
 -----------
 
