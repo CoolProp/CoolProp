@@ -372,12 +372,15 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS, const std::
             && (std::abs(env.p[i]/env.p[i+1]-1) < acceptable_pdiff) 
             ){ i++; continue; }
         
+        // Ok, now we are going to do some more refining in this step
+
+        // Vapor densities for this step, vapor density monotonically increasing
         const double rhomolar_vap_start = env.rhomolar_vap[i],
                      rhomolar_vap_end = env.rhomolar_vap[i+1];
         
-        // Ok, now we are going to do some more refining in this step
-        
         double factor = pow(rhomolar_vap_end/rhomolar_vap_start,1.0/N);
+        
+        int failure_count = 0;
         for (double rhomolar_vap = rhomolar_vap_start*factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor)
         {
             IO.rhomolar_vap = rhomolar_vap;
@@ -399,6 +402,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS, const std::
             IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
             try{
                 NR.call(HEOS, IO.y, IO.x, IO);
+                if (!ValidNumber(IO.rhomolar_liq) || !ValidNumber(IO.p)){
+                    throw ValueError("invalid numbers");
+                }
                 env.insert_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, 
                                      IO.hmolar_vap, IO.smolar_liq, IO.smolar_vap, IO.x, IO.y, i+1);
                 if (debug){
@@ -406,8 +412,14 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS, const std::
                 }
             }
             catch(...){
+                failure_count++;
                 continue;
             }
+            i++;
+        }
+        // If we had a failure, we don't want to get stuck on this value of i, 
+        // so we bump up one and keep moving
+        if (failure_count > 0){
             i++;
         }
     }
@@ -625,7 +637,11 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData &env, parameters i
     if (iInput1 == iP && 0 < env.ipsat_max  && env.ipsat_max < env.p.size() && value1 > env.p[env.ipsat_max]){ return false; }
     
     // If number of intersections is 0, input is out of range, quit
-    if (intersections.size() == 0){ throw ValueError(format("Input is out of range for primary value [%Lg]; no intersections found", value1)); }
+    if (intersections.size() == 0){ 
+        throw ValueError(format("Input is out of range for primary value [%Lg], inputs were (%d,%Lg,%d,%Lg); no intersections found", 
+            value1, get_parameter_information(iInput1,"short"), value1, get_parameter_information(iInput2,"short"), value2
+            )); 
+    }
     
     // If number of intersections is 1, input will be determined based on the single intersection
     // Need to know if values increase or decrease to the right of the intersection point

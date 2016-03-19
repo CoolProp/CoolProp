@@ -100,10 +100,11 @@ Phase Envelope
         except ValueError as VE:
             print(VE)
         PE = HEOS.get_phase_envelope_data()
-        plt.plot(PE.T, PE.p, 'o-')
+        plt.plot(PE.T, PE.p, '-')
 
     plt.xlabel('Temperature [K]')
     plt.ylabel('Pressure [Pa]')
+    plt.yscale('log')
     plt.tight_layout()
 
 Reducing Parameters
