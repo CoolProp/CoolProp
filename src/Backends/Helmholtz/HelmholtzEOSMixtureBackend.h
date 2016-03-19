@@ -128,6 +128,17 @@ public:
 
     const CoolProp::SimpleState &calc_state(const std::string &state);
 
+    virtual const double get_fluid_constant(std::size_t i, parameters param){
+        const CoolPropFluid &fld = components[i];
+        switch(param){
+            case iP_critical: return fld.crit.p;
+            case iT_critical: return fld.crit.T;
+            case iacentric_factor: return fld.EOS().acentric;
+            default:
+                throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
+        }
+    }
+
     const std::vector<CoolPropFluid> &get_components() const {return components;}
     std::vector<CoolPropFluid> &get_components(){return components;}
     std::vector<CoolPropDbl> &get_K(){ return K; };
@@ -178,7 +189,7 @@ public:
      * @param components The components that are to be used in this mixture
      * @param generate_SatL_and_SatV true if SatL and SatV classes should be added, false otherwise.  Added so that saturation classes can be added without infinite recursion of adding saturation classes
      */
-    void set_components(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
+    virtual void set_components(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
 
     /** \brief Specify the phase - this phase will always be used in calculations
      * 

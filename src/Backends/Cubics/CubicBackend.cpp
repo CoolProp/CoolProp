@@ -1,9 +1,12 @@
 #include "CubicBackend.h"
 #include "Solvers.h"
+#include "Backends/Helmholtz/VLERoutines.h"
 
-void CoolProp::AbstractCubicBackend::setup(){
+void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
     // Set the pure fluid flag
     is_pure_or_pseudopure = cubic->get_Tc().size() == 1;
+    // Resize the vector
+    resize(cubic->get_Tc().size());
 	// Reset the residual Helmholtz energy class
 	residual_helmholtz.reset(new CubicResidualHelmholtz(this));
 	// If pure, set the mole fractions to be unity
@@ -13,6 +16,17 @@ void CoolProp::AbstractCubicBackend::setup(){
 	}
 	// Now set the reducing function for the mixture
     Reducing.reset(new ConstantReducingFunction(cubic->T_r, cubic->rho_r));
+
+    // Top-level class can hold copies of the base saturation classes,
+    // saturation classes cannot hold copies of the saturation classes
+    if (generate_SatL_and_SatV)
+    {
+        bool SatLSatV = false;
+        SatL.reset(this->get_copy(SatLSatV));
+        SatL->specify_phase(iphase_liquid);
+        SatV.reset(this->get_copy(SatLSatV));
+        SatV->specify_phase(iphase_gas);
+    }
 }
 
 void CoolProp::AbstractCubicBackend::get_linear_reducing_parameters(double &rhomolar_r, double &T_r){
@@ -142,9 +156,9 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
         case PT_INPUTS:
             _p = value1; _T = value2; _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/); break;
         case QT_INPUTS:
-            _Q = value1; _T = value2; purefluid_saturation(input_pair); break;
+            _Q = value1; _T = value2; saturation(input_pair); break;
         case PQ_INPUTS:
-            _p = value1; _Q = value2; purefluid_saturation(input_pair); break;
+            _p = value1; _Q = value2; saturation(input_pair); break;
         case DmolarT_INPUTS:
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
@@ -236,31 +250,43 @@ public:
     };
 };
 
-void CoolProp::AbstractCubicBackend::purefluid_saturation(CoolProp::input_pairs inputs){
+void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
     AbstractCubic *cubic = get_cubic().get();
     double Tc = cubic->get_Tc()[0], pc = cubic->get_pc()[0], acentric = cubic->get_acentric()[0];
     double rhoL=-1, rhoV=-1;
     if (inputs == PQ_INPUTS){
-        // Estimate temperature from the acentric factor relationship
-        double theta = -log10(_p/pc)*(1/0.7-1)/(acentric+1);
-        double Ts_est = Tc/(theta+1);
-        SaturationResidual resid(this, inputs, _p);
-        static std::string errstr;
-        double Ts = CoolProp::Secant(resid, Ts_est, -0.1, 1e-10, 100, errstr);
-        _T = Ts;
-        rhoL = resid.deltaL*cubic->T_r;
-        rhoV = resid.deltaV*cubic->T_r;
+        if (is_pure_or_pseudopure){
+            // Estimate temperature from the acentric factor relationship
+            double theta = -log10(_p/pc)*(1/0.7-1)/(acentric+1);
+            double Ts_est = Tc/(theta+1);
+            SaturationResidual resid(this, inputs, _p);
+            static std::string errstr;
+            double Ts = CoolProp::Secant(resid, Ts_est, -0.1, 1e-10, 100, errstr);
+            _T = Ts;
+            rhoL = resid.deltaL*cubic->T_r;
+            rhoV = resid.deltaV*cubic->T_r;
+        }
+        else{
+            HelmholtzEOSMixtureBackend::update(PQ_INPUTS, _p, _Q);
+            return;
+        }
     }
     else if (inputs == QT_INPUTS){
-        // Estimate temperature from the acentric factor relationship
-        double neg_log10_pr = (acentric+1)/(1/0.7-1)*(Tc/_T-1);
-        double ps_est = pc*pow(10.0, -neg_log10_pr);
-        SaturationResidual resid(this, inputs, _T);
-        static std::string errstr;
-        double ps = CoolProp::Secant(resid, ps_est, -0.1, 1e-10, 100, errstr);
-        _p = ps;
-        rhoL = resid.deltaL*cubic->T_r;
-        rhoV = resid.deltaV*cubic->T_r;
+        if (is_pure_or_pseudopure){
+            // Estimate temperature from the acentric factor relationship
+            double neg_log10_pr = (acentric+1)/(1/0.7-1)*(Tc/_T-1);
+            double ps_est = pc*pow(10.0, -neg_log10_pr);
+            SaturationResidual resid(this, inputs, _T);
+            static std::string errstr;
+            double ps = CoolProp::Secant(resid, ps_est, -0.1, 1e-10, 100, errstr);
+            _p = ps;
+            rhoL = resid.deltaL*cubic->T_r;
+            rhoV = resid.deltaV*cubic->T_r;
+        }
+        else{
+            HelmholtzEOSMixtureBackend::update(QT_INPUTS, _Q, _T);
+            return;
+        }
     }
     _rhomolar = 1/(_Q/rhoV+(1-_Q)/rhoL);
     _phase = iphase_twophase;

@@ -34,7 +34,7 @@ protected:
 public:
 	
 	/// Set the pointer to the residual helmholtz class, etc.
-	void setup();
+	void setup(bool generate_SatL_and_SatV = true);
 
 	/// Get a reference to the shared pointer managing the generalized cubic class
 	shared_ptr<AbstractCubic> &get_cubic(){ return cubic; };
@@ -44,12 +44,23 @@ public:
     bool using_volu_fractions(void){return false;};
 
     void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){
+        resize(mole_fractions.size());
         this->mole_fractions = mole_fractions; 
         this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
     };
     void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw NotImplementedError("Mass composition has not been implemented.");};
     void set_volu_fractions(const std::vector<CoolPropDbl> &volu_fractions){throw NotImplementedError("Volume composition has not been implemented.");};
     const std::vector<CoolPropDbl> & get_mole_fractions(void){ return this->mole_fractions; };
+
+    const double get_fluid_constant(std::size_t i, parameters param){
+        switch(param){
+            case iP_critical: return cubic->get_pc()[i];
+            case iT_critical: return cubic->get_Tc()[i];
+            case iacentric_factor: return cubic->get_acentric()[i];
+            default:
+                throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
+        }
+    }
 
 	/// Calculate the gas constant in J/mol/K
 	CoolPropDbl calc_gas_constant(void){ return cubic->get_R_u(); };
@@ -130,22 +141,35 @@ public:
      */
     void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int &Nsolns, double &rho0, double &rho1, double &rho2);
     
+    CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase){
+        return solver_rho_Tp(T, p);
+    };
     /**
      * /brief Solve for rho = f(T,p)
      * 
      * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
      */
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
+
+    /// Update the state used to calculate the tangent-plane-distance
+    void update_TPD_state(){
+        AbstractCubic *cubic = get_cubic().get();
+        TPD_state.reset(get_copy());
+    };
     
     /// Cubic backend flashes for PQ, and QT
-    void purefluid_saturation(CoolProp::input_pairs inputs);
+    void saturation(CoolProp::input_pairs inputs);
     
     void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter, const double value);
     double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter);
     
     void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){throw ValueError("set_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); }
     double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){throw ValueError("get_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); };
+
+    virtual AbstractCubicBackend *get_copy(bool generate_SatL_and_SatV = true) = 0;
 };
+
+
 
 class SRKBackend : public AbstractCubicBackend  {
 
@@ -153,18 +177,22 @@ public:
 	SRKBackend(const std::vector<double> &Tc, 
 		       const std::vector<double> &pc, 
 		       const std::vector<double> &acentric,
-               double R_u) {
+               double R_u, 
+               bool generate_SatL_and_SatV = true) {
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
-		setup();
+		setup(generate_SatL_and_SatV);
     };
 	SRKBackend(double Tc, 
 		       double pc, 
 		       double acentric,
-               double R_u) {
+               double R_u, 
+               bool generate_SatL_and_SatV = true) {
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
-		setup();
+		setup(generate_SatL_and_SatV);
     }
-    SRKBackend(const std::vector<std::string> fluid_identifiers, const double R_u){
+    SRKBackend(const std::vector<std::string> fluid_identifiers, 
+               const double R_u, 
+               bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
             CubicsValues val = get_cubic_values(fluid_identifiers[i]);
@@ -173,13 +201,11 @@ public:
             acentric.push_back(val.acentric);
         }
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
-	    setup();
+	    setup(generate_SatL_and_SatV);
     }
-    /// Update the state used to calculate the tangent-plane-distance
-    void update_TPD_state(){
-        AbstractCubic *cubic = get_cubic().get();
-        TPD_state.reset(new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u()));
-    };
+    AbstractCubicBackend *get_copy(bool generate_SatL_and_SatV = true){
+        return new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
+    }
 };
 
 class PengRobinsonBackend : public AbstractCubicBackend  {
@@ -188,18 +214,22 @@ public:
 	PengRobinsonBackend(const std::vector<double> &Tc, 
 		       const std::vector<double> &pc, 
 		       const std::vector<double> &acentric,
-               double R_u) {
+               double R_u, 
+               bool generate_SatL_and_SatV = true) {
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
-		setup();
+		setup(generate_SatL_and_SatV);
     };
 	PengRobinsonBackend(double Tc, 
 		       double pc, 
 		       double acentric,
-               double R_u) {
+               double R_u, 
+               bool generate_SatL_and_SatV = true) {
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
-		setup();
+		setup(generate_SatL_and_SatV);
     };
-    PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, const double R_u){
+    PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, 
+                        const double R_u, 
+                        bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
             CubicsValues val = get_cubic_values(fluid_identifiers[i]);
@@ -208,13 +238,11 @@ public:
             acentric.push_back(val.acentric);
         }
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
-	    setup();
+	    setup(generate_SatL_and_SatV);
     };
-    /// Update the state used to calculate the tangent-plane-distance
-    void update_TPD_state(){
-        AbstractCubic *cubic = get_cubic().get();
-        TPD_state.reset(new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u()));
-    };
+    AbstractCubicBackend * get_copy(bool generate_SatL_and_SatV = true){
+        return new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
+    }
 };
 
 /**
