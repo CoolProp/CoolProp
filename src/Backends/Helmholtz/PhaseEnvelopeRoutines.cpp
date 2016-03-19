@@ -10,7 +10,7 @@
 
 namespace CoolProp{
 
-void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
+void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS, const std::string &level)
 {
 	if (HEOS.get_mole_fractions_ref().empty()){
 		throw ValueError("Mole fractions have not been set yet.");
@@ -336,7 +336,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
                 }
                 
                 // Now we refine the phase envelope to add some points in places that are still pretty rough
-                refine(HEOS);
+                refine(HEOS, level);
                 
                 return; 
             }
@@ -347,7 +347,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
     }
 }
 
-void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
+void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS, const std::string &level)
 {
     bool debug = (get_debug_level() > 0 || false);
     PhaseEnvelopeData &env = HEOS.PhaseEnvelope;
@@ -357,18 +357,26 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
     IO.bubble_point = false;
     IO.y = HEOS.get_mole_fractions();
     
+    double acceptable_pdiff = 0.5;
+    double acceptable_rhodiff = 0.25;
+    int N = 5; // Number of steps of refining
+    if (level == "veryfine"){
+        acceptable_pdiff = 0.1;
+        acceptable_rhodiff = 0.1;
+    }
     std::size_t i = 0;
     do{
+        
         // Don't do anything if change in density and pressure is small enough
-        if ((std::abs(env.rhomolar_vap[i]/env.rhomolar_vap[i+1]-1) < 0.2)
-            && (std::abs(env.p[i]/env.p[i+1]-1) < 0.25) 
+        if ((std::abs(env.rhomolar_vap[i]/env.rhomolar_vap[i+1]-1) < acceptable_rhodiff)
+            && (std::abs(env.p[i]/env.p[i+1]-1) < acceptable_pdiff) 
             ){ i++; continue; }
         
         const double rhomolar_vap_start = env.rhomolar_vap[i],
                      rhomolar_vap_end = env.rhomolar_vap[i+1];
         
         // Ok, now we are going to do some more refining in this step
-        int N = 5; // Number of steps of refining
+        
         double factor = pow(rhomolar_vap_end/rhomolar_vap_start,1.0/N);
         for (double rhomolar_vap = rhomolar_vap_start*factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor)
         {

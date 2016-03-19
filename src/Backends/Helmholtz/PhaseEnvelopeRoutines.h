@@ -11,13 +11,13 @@ class PhaseEnvelopeRoutines{
      *
      * @param HEOS The HelmholtzEOSMixtureBackend instance to be used
      */
-    static void build(HelmholtzEOSMixtureBackend &HEOS);
+    static void build(HelmholtzEOSMixtureBackend &HEOS, const std::string &level = "");
     
     /** \brief Refine the phase envelope, adding points in places that are sparse
      *
      * @param HEOS The HelmholtzEOSMixtureBackend instance to be used
      */
-    static void refine(HelmholtzEOSMixtureBackend &HEOS);
+    static void refine(HelmholtzEOSMixtureBackend &HEOS, const std::string &level = "");
     
     /** \brief Finalize the phase envelope and calculate maxima values, critical point, etc.
      * 

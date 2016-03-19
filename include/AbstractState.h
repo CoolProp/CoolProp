@@ -816,7 +816,7 @@ public:
      *
      * @param type currently a dummy variable that is not used
      */
-    void build_phase_envelope(const std::string &type);
+    void build_phase_envelope(const std::string &type = "");
     /**
      * \brief After having calculated the phase envelope, return the phase envelope data
      */
