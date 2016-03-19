@@ -3,6 +3,7 @@
 #include "CubicsLibrary.h"
 #include "all_cubics_JSON.h" // Makes a std::string variable called all_cubics_JSON
 #include "rapidjson_include.h"
+#include "CPstrings.h"
 
 namespace CoolProp{
 
@@ -39,13 +40,14 @@ public:
         return counter;
     };
     CubicsValues get(const std::string & identifier){
+        std::string uppercase_identifier = upper(identifier);
         // Try to find it
-        std::map<std::string, CubicsValues>::iterator it = fluid_map.find(identifier);
+        std::map<std::string, CubicsValues>::iterator it = fluid_map.find(uppercase_identifier);
         // If it is found
         if (it != fluid_map.end()) {
             return it->second;
         } else {
-            std::map<std::string, std::string>::iterator italias = aliases_map.find(identifier);
+            std::map<std::string, std::string>::iterator italias = aliases_map.find(uppercase_identifier);
             if (italias != aliases_map.end()){
                 // Alias was found, use it to get the fluid name, and then the cubic values
                 return fluid_map.find(italias->second)->second;
