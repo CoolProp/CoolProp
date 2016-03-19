@@ -352,7 +352,7 @@ void CoolProp::TabularBackend::write_tables(){
     make_dirs(path_to_tables);
     bool loaded = false;
     dataset = library.get_set_of_tables(this->AS, loaded);
-    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PackablePhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
@@ -1096,7 +1096,9 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState> 
         // Call function to actually construct the phase envelope
         AS->build_phase_envelope("");
         // Copy constructed phase envelope into this class
-        phase_envelope = AS->get_phase_envelope_data();
+        PhaseEnvelopeData PED = AS->get_phase_envelope_data();
+        // Convert into packable form
+        phase_envelope.copy_from_nonpackable(PED);
         // Resize so that it will load properly
         pure_saturation.resize(pure_saturation.N);
     }

@@ -16,11 +16,7 @@ def copy_files():
     for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
-    copytree(os.path.join(CProot, 'externals/rapidjson/include/rapidjson'), os.path.join('CoolProp','include','rapidjson'))
     copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','cppformat'))
-    copytree(os.path.join(CProot, 'externals/msgpack-c/include/msgpack'), os.path.join('CoolProp','include','msgpack'))
-    for thefile in glob.glob(os.path.join(CProot, 'externals/msgpack-c/include/*.*')):
-        copy2(thefile, os.path.join('CoolProp','include'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 

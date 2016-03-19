@@ -9,9 +9,7 @@
 #include "CoolProp.h"
 #include <sstream>
 #include "Configuration.h"
-#include "../Helmholtz/PhaseEnvelopeRoutines.h"
-
-
+#include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 /** ***MAGIC WARNING***!! X Macros in use
  * See http://stackoverflow.com/a/148610
@@ -26,6 +24,85 @@
 #define LIST_OF_SATURATION_VECTORS X(TL) X(pL) X(logpL) X(hmolarL) X(smolarL) X(umolarL) X(rhomolarL) X(logrhomolarL) X(viscL) X(condL) X(logviscL) X(TV) X(pV) X(logpV) X(hmolarV) X(smolarV) X(umolarV) X(rhomolarV) X(logrhomolarV) X(viscV) X(condV) X(logviscV) X(cpmolarV) X(cpmolarL) X(cvmolarV) X(cvmolarL) X(speed_soundL) X(speed_soundV)
 
 namespace CoolProp{
+
+class PackablePhaseEnvelopeData : public PhaseEnvelopeData
+{
+   
+public:
+    int revision;
+    
+    PackablePhaseEnvelopeData() : revision(0) {} ;
+
+    void copy_from_nonpackable(const PhaseEnvelopeData &PED) {
+        /* Use X macros to auto-generate the copying */
+        #define X(name) name = PED.name;
+        PHASE_ENVELOPE_VECTORS
+        #undef X
+        /* Use X macros to auto-generate the copying */
+        #define X(name) name = PED.name;
+        PHASE_ENVELOPE_MATRICES
+        #undef X
+    };
+
+    std::map<std::string, std::vector<double> > vectors;
+    std::map<std::string, std::vector<std::vector<double> > > matrices;
+    
+    MSGPACK_DEFINE(revision, vectors, matrices); // write the member variables that you want to pack using msgpack
+
+    /// Take all the vectors that are in the class and pack them into the vectors map for easy unpacking using msgpack
+    void pack(){
+        /* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::string, std::vector<double> >("T", T)); */
+        #define X(name) vectors.insert(std::pair<std::string, std::vector<double> >(#name, name));
+        PHASE_ENVELOPE_VECTORS
+        #undef X
+        /* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::string, std::vector<std::vector<CoolPropDbl> > >("T", T)); */
+        #define X(name) matrices.insert(std::pair<std::string, std::vector<std::vector<double> > >(#name, name));
+        PHASE_ENVELOPE_MATRICES
+        #undef X
+    };
+    std::map<std::string, std::vector<double> >::iterator get_vector_iterator(const std::string &name){
+        std::map<std::string, std::vector<double> >::iterator it = vectors.find(name);
+        if (it == vectors.end()){
+            throw UnableToLoadError(format("could not find vector %s",name.c_str()));
+        }
+        return it;
+    }
+    std::map<std::string, std::vector<std::vector<double> > >::iterator get_matrix_iterator(const std::string &name){
+        std::map<std::string, std::vector<std::vector<double> > >::iterator it = matrices.find(name);
+        if (it == matrices.end()){
+            throw UnableToLoadError(format("could not find matrix %s", name.c_str()));
+        }
+        return it;
+    }
+    /// Take all the vectors that are in the class and unpack them from the vectors map
+    void unpack(){
+        /* Use X macros to auto-generate the unpacking code; 
+         * each will look something like: T = get_vector_iterator("T")->second 
+         */
+        #define X(name) name = get_vector_iterator(#name)->second;
+        PHASE_ENVELOPE_VECTORS
+        #undef X
+        /* Use X macros to auto-generate the unpacking code; 
+         * each will look something like: T = get_matrix_iterator("T")->second 
+         **/
+        #define X(name) name = get_matrix_iterator(#name)->second;
+        PHASE_ENVELOPE_MATRICES
+        #undef X
+        // Find the index of the point with the highest temperature
+        iTsat_max = std::distance(T.begin(), std::max_element(T.begin(), T.end()));
+        // Find the index of the point with the highest pressure
+        ipsat_max = std::distance(p.begin(), std::max_element(p.begin(), p.end()));
+    };
+    void deserialize(msgpack::object &deserialized){       
+        PackablePhaseEnvelopeData temp;
+        deserialized.convert(&temp);
+        temp.unpack();
+        if (revision > temp.revision){
+            throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
+        }
+        std::swap(*this, temp); // Swap if successful
+    };
+};
 
 /// Get a conversion factor from mass to molar if needed
 inline void mass_to_molar(parameters &param, double &conversion_factor, double molar_mass){
@@ -703,7 +780,7 @@ public:
     LogPHTable single_phase_logph;
     LogPTTable single_phase_logpT;
     PureFluidSaturationTableData pure_saturation;
-    PhaseEnvelopeData phase_envelope;
+    PackablePhaseEnvelopeData phase_envelope;
     std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;
 
     TabularDataSet(){ tables_loaded = false; }
@@ -900,7 +977,7 @@ class TabularBackend : public AbstractState
         /// Load the tables from file; throws UnableToLoadException if there is a problem
         void load_tables();
         void pack_matrices(){
-            PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+            PackablePhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
             PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;

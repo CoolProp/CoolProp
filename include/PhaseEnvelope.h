@@ -2,7 +2,6 @@
 #define PHASE_ENVELOPE_H
 
 #include "Exceptions.h"
-#include "CPmsgpack.h"
 
 #define PHASE_ENVELOPE_MATRICES X(K) X(lnK) X(x) X(y)
 #define PHASE_ENVELOPE_VECTORS X(T) X(p) X(lnT) X(lnp) X(rhomolar_liq) X(rhomolar_vap) X(lnrhomolar_liq) X(lnrhomolar_vap) X(hmolar_liq) X(hmolar_vap) X(smolar_liq) X(smolar_vap) X(Q) X(cpmolar_liq) X(cpmolar_vap) X(cvmolar_liq) X(cvmolar_vap) X(viscosity_liq) X(viscosity_vap) X(conductivity_liq) X(conductivity_vap) X(speed_sound_vap)
@@ -34,10 +33,6 @@ public:
     #undef X
     
     PhaseEnvelopeData() : TypeI(false), built(false), iTsat_max(-1), ipsat_max(-1), icrit(-1)  {}
-    
-    std::map<std::string, std::vector<double> > vectors;
-    std::map<std::string, std::vector<std::vector<double> > > matrices;
-    MSGPACK_DEFINE(vectors, matrices); // write the member variables that you want to pack using msgpack
         
     void resize(std::size_t N)
     {
@@ -55,56 +50,6 @@ public:
         PHASE_ENVELOPE_MATRICES
         #undef X
     }
-    /// Take all the vectors that are in the class and pack them into the vectors map for easy unpacking using msgpack
-    void pack(){
-        /* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::string, std::vector<double> >("T", T)); */
-        #define X(name) vectors.insert(std::pair<std::string, std::vector<double> >(#name, name));
-        PHASE_ENVELOPE_VECTORS
-        #undef X
-        /* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::string, std::vector<std::vector<CoolPropDbl> > >("T", T)); */
-        #define X(name) matrices.insert(std::pair<std::string, std::vector<std::vector<double> > >(#name, name));
-        PHASE_ENVELOPE_MATRICES
-        #undef X
-    };
-    std::map<std::string, std::vector<double> >::iterator get_vector_iterator(const std::string &name){
-        std::map<std::string, std::vector<double> >::iterator it = vectors.find(name);
-        if (it == vectors.end()){
-            throw UnableToLoadError(format("could not find vector %s",name.c_str()));
-        }
-        return it;
-    }
-    std::map<std::string, std::vector<std::vector<double> > >::iterator get_matrix_iterator(const std::string &name){
-        std::map<std::string, std::vector<std::vector<double> > >::iterator it = matrices.find(name);
-        if (it == matrices.end()){
-            throw UnableToLoadError(format("could not find matrix %s", name.c_str()));
-        }
-        return it;
-    }
-    /// Take all the vectors that are in the class and unpack them from the vectors map
-    void unpack(){
-        /* Use X macros to auto-generate the unpacking code; 
-         * each will look something like: T = get_vector_iterator("T")->second 
-         */
-        #define X(name) name = get_vector_iterator(#name)->second;
-        PHASE_ENVELOPE_VECTORS
-        #undef X
-        /* Use X macros to auto-generate the unpacking code; 
-         * each will look something like: T = get_matrix_iterator("T")->second 
-         **/
-        #define X(name) name = get_matrix_iterator(#name)->second;
-        PHASE_ENVELOPE_MATRICES
-        #undef X
-        // Find the index of the point with the highest temperature
-        iTsat_max = std::distance(T.begin(), std::max_element(T.begin(), T.end()));
-        // Find the index of the point with the highest pressure
-        ipsat_max = std::distance(p.begin(), std::max_element(p.begin(), p.end()));
-    };
-    void deserialize(msgpack::object &deserialized){       
-        PhaseEnvelopeData temp;
-        deserialized.convert(&temp);
-        temp.unpack();
-        std::swap(*this, temp); // Swap if successful
-    };
     void insert_variables(const CoolPropDbl T, 
                           const CoolPropDbl p, 
                           const CoolPropDbl rhomolar_liq, 
