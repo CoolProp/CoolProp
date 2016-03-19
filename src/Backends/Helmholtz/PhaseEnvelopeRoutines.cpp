@@ -99,7 +99,11 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
 
         // First we try to generate all the critical points.  This
         // is very useful
-        std::vector<CriticalState> critpts = HEOS.all_critical_points();
+        std::vector<CriticalState> critpts;
+        try{
+             critpts = HEOS.all_critical_points();
+        }
+        catch(...){};
     
         std::size_t failure_count = 0;
         // Set some imput options
@@ -294,7 +298,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS)
                 IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
                 factor = rho_vap_new/IO.rhomolar_vap;
                 dont_extrapolate = true; // So that we use the mole fractions we calculated here instead of the extrapolated values
-                std::cout << "dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
+                //std::cout << "dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
                 iter0 = iter - 1; // Back to linear interpolation again
                 continue;
             }
@@ -355,14 +359,18 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS)
     
     std::size_t i = 0;
     do{
-        // Don't do anything if change in density is small enough
-        if (std::abs(env.rhomolar_vap[i]/env.rhomolar_vap[i+1]-1) < 0.2){ i++; continue; }
+        // Don't do anything if change in density and pressure is small enough
+        if ((std::abs(env.rhomolar_vap[i]/env.rhomolar_vap[i+1]-1) < 0.2)
+            && (std::abs(env.p[i]/env.p[i+1]-1) < 0.25) 
+            ){ i++; continue; }
         
-        double rhomolar_vap_start = env.rhomolar_vap[i],
-               rhomolar_vap_end = env.rhomolar_vap[i+1];
+        const double rhomolar_vap_start = env.rhomolar_vap[i],
+                     rhomolar_vap_end = env.rhomolar_vap[i+1];
         
         // Ok, now we are going to do some more refining in this step
-        for (double rhomolar_vap = rhomolar_vap_start*1.1; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= 1.1)
+        int N = 5; // Number of steps of refining
+        double factor = pow(rhomolar_vap_end/rhomolar_vap_start,1.0/N);
+        for (double rhomolar_vap = rhomolar_vap_start*factor; rhomolar_vap < rhomolar_vap_end; rhomolar_vap *= factor)
         {
             IO.rhomolar_vap = rhomolar_vap;
             IO.x.resize(IO.y.size());
