@@ -56,14 +56,20 @@ cdef class AbstractState:
 
     cpdef set_binary_interaction_double(self, string_or_size_t arg1, string_or_size_t arg2, string parameter, double val):
         """ Set a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_double` """
-        self.thisptr.set_binary_interaction_double(arg1, arg2, parameter, val)
+        if string_or_size_t in cython.integral:
+            self.thisptr.set_binary_interaction_double(<size_t>arg1, <size_t>arg2, parameter, val)
+        else:  
+            self.thisptr.set_binary_interaction_double(<string>arg1, <string>arg2, parameter, val)
+    cpdef double get_binary_interaction_double(self, string_or_size_t arg1, string_or_size_t arg2, string parameter) except *:
+        """ Get a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_double` """
+        if string_or_size_t in cython.integral:
+            return self.thisptr.get_binary_interaction_double(<size_t>arg1, <size_t>arg2, parameter)
+        else:
+            return self.thisptr.get_binary_interaction_double(<string>arg1, <string>arg2, parameter)
+
     cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val):
         """ Set a string interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_string` """
         self.thisptr.set_binary_interaction_string(CAS1, CAS2, parameter, val)
-    cpdef double get_binary_interaction_double(self, string_or_size_t arg1, string_or_size_t arg2, string parameter) except *:
-        """ Get a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_double` """
-        return self.thisptr.get_binary_interaction_double(arg1, arg2, parameter)
-        
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *:
         """ Get a string interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_string` """
         return self.thisptr.get_binary_interaction_string(CAS1, CAS2, parameter)
@@ -147,7 +153,7 @@ cdef class AbstractState:
         return collection
     cpdef tuple criticality_contour_values(self):
         """ 
-        Gets the crticality matrix values L1* and M1* - wrapper of c++ function :cpapi:`CoolProp::AbstractState::criticality_values` 
+        Gets the criticality matrix values L1* and M1* - wrapper of c++ function :cpapi:`CoolProp::AbstractState::criticality_values` 
         Returns a tuple of (L1*, M1*)
         """
         cdef CoolPropDbl L1star = 0, M1star = 0
@@ -175,16 +181,16 @@ cdef class AbstractState:
     ## ----------------------------------------
     
     cpdef double keyed_output(self, parameters iOutput) except *: 
-        """ Update :cpapi:`CoolProp::AbstractState::keyed_output(parameters key)` """
+        """ Get a keyed output :cpapi:`CoolProp::AbstractState::keyed_output(parameters key)` """
         return self.thisptr.keyed_output(iOutput)
     cpdef double trivial_keyed_output(self, parameters iOutput) except *: 
-        """ Update :cpapi:`CoolProp::AbstractState::trivial_keyed_output(parameters key)` """
+        """ Get a trivial keyed output not requiring any iteration :cpapi:`CoolProp::AbstractState::trivial_keyed_output(parameters key)` """
         return self.thisptr.trivial_keyed_output(iOutput)
     cpdef double saturated_liquid_keyed_output(self, parameters iOutput) except *: 
-        """ Update :cpapi:`CoolProp::AbstractState::saturated_liquid_keyed_output(parameters key)` """
+        """ Get a trivial output for the saturated liquid :cpapi:`CoolProp::AbstractState::saturated_liquid_keyed_output(parameters key)` """
         return self.thisptr.saturated_liquid_keyed_output(iOutput)
     cpdef double saturated_vapor_keyed_output(self, parameters iOutput) except *: 
-        """ Update :cpapi:`CoolProp::AbstractState::saturated_vapor_keyed_output(parameters key)` """
+        """ Get a trivial output for the saturated vapor :cpapi:`CoolProp::AbstractState::saturated_vapor_keyed_output(parameters key)` """
         return self.thisptr.saturated_vapor_keyed_output(iOutput)
     
     cpdef double T(self) except *: 

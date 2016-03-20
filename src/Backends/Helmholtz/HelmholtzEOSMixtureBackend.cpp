@@ -192,24 +192,30 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
         throw ValueError(format("fluid parameter [%s] is invalid",ParamName.c_str()));
     }
 }
-/// Set binary mixture floating point parameter
-void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){
-    // Set the value in the library
-    CoolProp::set_mixture_binary_pair_data(CAS1, CAS2, parameter, value);
 
-    // Update the values in this instance and the saturation states too
-    this->set_mixture_parameters();
-    if (this->SatL) this->SatL->set_mixture_parameters(); 
-    if (this->SatV) this->SatV->set_mixture_parameters(); 
+/// Set binary mixture floating point parameter for this instance
+void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
+    if (parameter == "Fij"){
+        residual_helmholtz->Excess.F[i][j] = value;
+        residual_helmholtz->Excess.F[j][i] = value;
+    }
+    else{
+        Reducing->set_binary_interaction_double(i,j,parameter,value);
+    }
 };
-/// Get binary mixture double value
-double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
-    return atof(CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter).c_str());
-}
-/// Get binary mixture string value
-std::string HelmholtzEOSMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
-    return CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter);
-}
+/// Get binary mixture floating point parameter for this instance
+double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
+    if (parameter == "Fij"){
+        return residual_helmholtz->Excess.F[i][j];
+    }
+    else{
+        return Reducing->get_binary_interaction_double(i,j,parameter);
+    }
+};
+///// Get binary mixture string value
+//std::string HelmholtzEOSMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+//    return CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter);
+//}
     
 void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string &EOS_name){
 

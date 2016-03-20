@@ -34,6 +34,10 @@ public:
     ReducingFunction():N(0){};
     virtual ~ReducingFunction(){};
 
+    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value) = 0;
+    
+    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter) = 0;
+
     /// A factory function to generate the requiredreducing function
     static shared_ptr<ReducingFunction> factory(const std::vector<CoolPropFluid*> &components, STLMatrix &F);
 
@@ -143,6 +147,44 @@ public:
 
     /// Default destructor
     ~GERG2008ReducingFunction(){};
+
+    /// Set a parameter
+    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value){
+        if (parameter == "betaT"){
+            beta_T[i][j] = value; beta_T[j][i] = 1/value;
+        }
+        else if (parameter == "gammaT"){
+            gamma_T[i][j] = value; gamma_T[j][i] = value;
+        }
+        else if (parameter == "betaV"){
+            beta_v[i][j] = value; beta_v[j][i] = 1/value;
+        }
+        else if (parameter == "gammaV"){
+            gamma_v[i][j] = value; gamma_v[j][i] = value;
+        }
+        else{
+            throw KeyError(format("This key [%s] is invalid to set_binary_interaction_double",parameter.c_str()));
+        }
+    }
+    /// Get a parameter
+    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
+        if (parameter == "betaT"){
+            return beta_T[i][j];
+        }
+        else if (parameter == "gammaT"){
+            return gamma_T[i][j];
+        }
+        else if (parameter == "betaV"){
+            return beta_v[i][j];
+        }
+        else if (parameter == "gammaV"){
+            return gamma_v[i][j];
+        }
+        else{
+            throw KeyError(format("This key [%s] is invalid to get_binary_interaction_double",parameter.c_str()));
+        }
+    }
+
     /** \brief The reducing temperature
      * Calculated from \ref Yr with \f$T = Y\f$
      */
@@ -367,6 +409,9 @@ private:
 
 public:
 	ConstantReducingFunction(const double T_c, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c) {};
+
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value){return;}
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){return _HUGE; }
 
     /// \brief The reducing temperature
 	CoolPropDbl Tr(const std::vector<CoolPropDbl> &x){ return T_c; };

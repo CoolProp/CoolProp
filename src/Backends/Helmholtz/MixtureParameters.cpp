@@ -267,16 +267,12 @@ void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CA
 
     if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
         std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map[CAS];
-        try{
+        if (v[0].has_number(key)){
             v[0].add_number(key, value);
-            double got = v[0].get_double(key);
-            if (std::abs(got-value) > 1e-10){
-                throw ValueError("Did not set value properly");
-            }
         }
-        catch(std::exception &e){ 
-            throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error; error: %s", 
-                                    key.c_str(), CAS1.c_str(), CAS2.c_str(), e.what()));
+        else{
+            throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error", 
+                                key.c_str(), CAS1.c_str(), CAS2.c_str()));
         }
     }
     else{

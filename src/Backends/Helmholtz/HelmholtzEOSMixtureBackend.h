@@ -79,11 +79,11 @@ public:
     std::string fluid_param_string(const std::string &);
     
     /// Set binary mixture floating point parameter
-    virtual void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value);
+    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
     /// Get binary mixture double value
-    virtual double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
-    /// Get binary mixture string value
-    virtual std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
+    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
+    ///// Get binary mixture string value
+    //virtual std::string get_binary_interaction_string(const std::size_t &i, const std::size_t &j, const std::string &parameter);
 
     phases calc_phase(void){return _phase;};
     void calc_specify_phase(phases phase){ specify_phase(phase); }

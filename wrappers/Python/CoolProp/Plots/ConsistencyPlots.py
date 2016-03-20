@@ -63,7 +63,7 @@ def split_pair_xy(pair):
         raise ValueError(pair)
 
 class ConsistencyFigure(object):
-    def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = []):
+    def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = [], mole_fractions = None):
 
         self.fluid = fluid
         self.backend = backend
@@ -72,6 +72,9 @@ class ConsistencyFigure(object):
         pairs_generator = iter(self.pairs)
 
         states = [CP.AbstractState(backend, fluid) for _ in range(3)]
+        if mole_fractions is not None:
+            for state in states:
+                state.set_mole_fractions(mole_fractions)
         self.axes_list = []
         for row in self.axes:
             for ax in row:
@@ -435,13 +438,14 @@ class ConsistencyAxis(object):
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    for fluid in ['Helium']:#CP.__fluids__:
+    CP.CoolProp.set_debug_level(10)
+    for fluid in ['R410A.mix']:#CP.__fluids__:
         print('************************************************')
         print(fluid)
         print('************************************************')
         skips = ['DmolarHmolar','DmolarSmolar','DmolarUmolar','HmolarSmolar']
         skips = []
-        ff = ConsistencyFigure(fluid, backend = 'HEOS', additional_skips = skips)
+        ff = ConsistencyFigure(fluid, backend = 'BICUBIC&REFPROP', additional_skips = skips, mole_fractions = [0.7,0.3])
         ff.add_to_pdf(PVT)
         ff.savefig(fluid + '.png')
         ff.savefig(fluid + '.pdf')
