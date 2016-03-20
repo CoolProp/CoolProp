@@ -185,6 +185,28 @@ namespace SaturationSolvers
         }
         else{ throw ValueError();}
     }
+    /**
+     * From Rachford-Rice:
+     * \f[
+     * \sum_i \frac{x_i(K_i-1)}{1 - \beta + \beta K_i} = 0
+     * \f]
+     * When \f$T\f$ is known for \f$\beta=0$, \f$p\f$can be obtained from  
+     * \f[
+     * -1+\sum_i K_ix_i=0,
+     * \f]
+     * or 
+     * \f[
+     * p = \sum_i x_ip_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T).
+     * \f]
+     * Or when \f$T\f$ is known for \f$\beta=1$, \f$p\f$can be obtained from  
+     * \f[
+     * -1+\sum_ix_i=0,
+     * \f]
+     * or 
+     * \f[
+     * p = \left[ \sum_i \frac{y_i}{p_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T)} \right]^{-1}
+     * \f]
+     */
     inline double saturation_Wilson(HelmholtzEOSMixtureBackend &HEOS, double beta, double input_value, sstype_enum input_type, const std::vector<CoolPropDbl> &z, double guess)
     {
         double out = 0;
