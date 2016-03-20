@@ -49,11 +49,17 @@ The two schemes available are
 
 Here is a sample of using this in python::
 
-    import CoolProp.CoolProp as CP
-    CAS_He = CP.get_fluid_param_string('Helium','CAS')
-    CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
-    CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
-    CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    In [1]: CAS_He = CP.get_fluid_param_string('Helium','CAS')
+    
+    In [1]: CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
+    
+    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+
+    In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
     
 .. warning::
 
@@ -74,6 +80,9 @@ If you have your own interaction parameters that you would like to use, you can 
 
     # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
     In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    
+    # This is before setting the binary interaction parameters
+    In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
 
     In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'betaT', 1.0)
     
@@ -83,6 +92,25 @@ If you have your own interaction parameters that you would like to use, you can 
     
     In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'gammaV', 1.5)
 
+    # This is after setting the interaction parameters
+    In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
+    
+Once you have constructed an instance of an AbstractState using the low-level interface, you can set the interaction parameters for only that instance by calling the ``set_binary_interaction_double`` and ``get_binary_interaction_double`` functions.
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+
+    # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
+    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    
+    In [1]: AS = CP.AbstractState("HEOS","Helium&Xenon")
+    
+    In [1]: AS.set_binary_interaction_double(0, 1, 'betaT', 0.987)
+    
+    In [1]: AS.get_binary_interaction_double(0, 1, 'betaT')
+    
+    # Here you can see that this call to the high-level interface is untouched (is the same as above)
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
 
 Phase Envelope
