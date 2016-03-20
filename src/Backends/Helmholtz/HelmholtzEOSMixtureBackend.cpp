@@ -1573,8 +1573,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void)
         double v2 = resid.call(tripleV.T);
         // If there is a sign change, there is a maxima, otherwise there is no local maxima/minima
         if (v1*v2 < 0){
-            std::string errstr;
-            Brent(resid, hsat_max.T, tripleV.T, DBL_EPSILON, 1e-8, 30, errstr);
+            Brent(resid, hsat_max.T, tripleV.T, DBL_EPSILON, 1e-8, 30);
             ssat_max.T = resid.HEOS->T();
             ssat_max.p = resid.HEOS->p();
             ssat_max.rhomolar = resid.HEOS->rhomolar();
@@ -1606,8 +1605,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max(void)
     {
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(get_components()));
         Residualhmax residhmax(*HEOS_copy);
-        std::string errstrhmax;
-        Brent(residhmax, T_critical() - 0.1, HEOS_copy->Ttriple() + 1, DBL_EPSILON, 1e-8, 30, errstrhmax);
+        Brent(residhmax, T_critical() - 0.1, HEOS_copy->Ttriple() + 1, DBL_EPSILON, 1e-8, 30);
         hsat_max.T = residhmax.HEOS->T();
         hsat_max.p = residhmax.HEOS->p();
         hsat_max.rhomolar = residhmax.HEOS->rhomolar();
@@ -2012,7 +2010,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         };
     };
     solver_TP_resid resid(this,T,p);
-    std::string errstring;
 
     // Check if the phase is imposed
     if (imposed_phase_index != iphase_not_imposed)
@@ -2042,11 +2039,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
             try{
                 // First we try with Halley's method starting at saturated liquid
-                rhomolar = Halley(resid, _rhoLancval, 1e-16, 100, errstring);
+                rhomolar = Halley(resid, _rhoLancval, 1e-16, 100);
             }
             catch(std::exception &){
                 // Next we try with a Brent method bounded solver since the function is 1-1
-                rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100,errstring);
+                rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100);
                 if (!ValidNumber(rhomolar)){throw ValueError();}
             }
             return rhomolar;
@@ -2056,7 +2053,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             CoolPropDbl rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
             
             // Next we try with a Brent method bounded solver since the function is 1-1
-            double rhomolar = Brent(resid, rhoLancval*0.99, rhomolar_critical()*4, DBL_EPSILON,1e-8,100,errstring);
+            double rhomolar = Brent(resid, rhoLancval*0.99, rhomolar_critical()*4, DBL_EPSILON,1e-8,100);
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
         }
@@ -2065,14 +2062,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     try{
         
         // First we try with Halley's method with analytic derivative
-        double rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100, errstring);
+        double rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100);
         if (!ValidNumber(rhomolar)){
             throw ValueError();
         }
         if (phase == iphase_liquid && !is_pure_or_pseudopure && first_partial_deriv(iP, iDmolar, iT) < 0){
             
             // Try again with a larger density in order to end up at the right solution
-            rhomolar = Newton(resid, rhomolar_guess*1.5, 1e-8, 100, errstring);
+            rhomolar = Newton(resid, rhomolar_guess*1.5, 1e-8, 100);
             return rhomolar;
         }
         return rhomolar;
@@ -2081,7 +2078,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     {
         try{
             // Next we try with Secant method shooting off from the guess value
-            double rhomolar = Secant(resid, rhomolar_guess, 1.1*rhomolar_guess, 1e-8, 100, errstring);
+            double rhomolar = Secant(resid, rhomolar_guess, 1.1*rhomolar_guess, 1e-8, 100);
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
             
@@ -2090,7 +2087,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         {
             try{
                 // Next we try with a Brent method bounded solver since the function is 1-1
-                double rhomolar = Brent(resid, 0.1*rhomolar_guess, 2*rhomolar_guess,DBL_EPSILON,1e-8,100,errstring);
+                double rhomolar = Brent(resid, 0.1*rhomolar_guess, 2*rhomolar_guess,DBL_EPSILON,1e-8,100);
                 if (!ValidNumber(rhomolar)){throw ValueError();}
                 return rhomolar;
             }
@@ -3126,8 +3123,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     std::vector<double> x, tau_delta(2); 
     tau_delta[0] = T_reducing()/T0; 
     tau_delta[1] = rho0/rhomolar_reducing(); 
-    std::string errstr;
-    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-10, 100, &errstr);
+    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-10, 100);
     _critical.T = T_reducing()/x[0];
     _critical.rhomolar = x[1]*rhomolar_reducing();
     _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
@@ -3241,22 +3237,20 @@ public:
     void trace(){
         bool debug = (get_debug_level() > 0) | false;
         double theta;
-        static std::string errstr;
         for (int i = 0; i < 100; ++i){
-
             if (i == 0){
                 // In the first iteration, search all angles in the positive delta direction using a
                 // bounded solver with a very small radius in order to not hit other L1*=0 contours
                 // that are in the vicinity
                 R_tau = 0.001; R_delta = 0.001;
-                theta = Brent(this, 0, M_PI, DBL_EPSILON, 1e-10, 100, errstr);
+                theta = Brent(this, 0, M_PI, DBL_EPSILON, 1e-10, 100);
             }
             else{
                 // In subsequent iterations, you already have an excellent guess for the direction to
                 // be searching in, use Newton's method to refine the solution since we also
                 // have an analytic solution for the derivative
                 R_tau = R_tau_tracer; R_delta = R_delta_tracer;
-                theta = Newton(this, theta_last, 1e-10, 100, errstr);
+                theta = Newton(this, theta_last, 1e-10, 100);
                 
                 // If the solver takes a U-turn, going in the opposite direction of travel
                 // this is not a good thing, and force a Brent's method solver call to make sure we keep
@@ -3270,7 +3264,7 @@ public:
                         continue;
                     }
                     else{
-                        theta = Brent(this, theta_last-M_PI/3.5, theta_last+M_PI/3.5, DBL_EPSILON, 1e-10, 100, errstr);
+                        theta = Brent(this, theta_last-M_PI/3.5, theta_last+M_PI/3.5, DBL_EPSILON, 1e-10, 100);
                     }
                 }
             }
@@ -3327,8 +3321,6 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     phases old_phase = _phase;
     // Specify it to be something homogeneous to shortcut phase evaluation
     specify_phase(iphase_gas);
-    
-    std::string errstr;
 
     double delta0 = _HUGE, tau0 = _HUGE;
     get_critical_point_starting_values(delta0, tau0);
@@ -3344,7 +3336,7 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
         tau0 *= 1.1;
         bump_count++;
     }
-    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr);
+    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100);
     //double T0 = T_reducing()/tau_L0;
     //double rho0 = delta0*rhomolar_reducing();
 

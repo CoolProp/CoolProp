@@ -1738,8 +1738,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
     T = calc_T_critical();
     double rho_moldm3 = calc_rhomolar_critical()/1000.0;
     std::vector<double> x(2,T); x[1] = rho_moldm3;
-    std::string errstr;
-    std::vector<double> xfinal = NDNewtonRaphson_Jacobian(&resid, x, 1e-9, 30, &errstr);
+    std::vector<double> xfinal = NDNewtonRaphson_Jacobian(&resid, x, 1e-9, 30);
     T = xfinal[0]; rho = xfinal[1]*1000.0;
 }
 

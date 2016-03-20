@@ -49,10 +49,10 @@ functions, each of which take the vector x. The data is managed using std::vecto
 @param errstring  A string with the returned error.  If the length of errstring is zero, no errors were found
 @returns If no errors are found, the solution.  Otherwise, _HUGE, the value for infinity
 */
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter, std::string *errstring)
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter)
 {
     int iter=0;
-    *errstring=std::string("");
+    f->errstring.clear();
     std::vector<double> f0,v;
     std::vector<std::vector<double> > JJ;
     Eigen::VectorXd r(x0.size());
@@ -82,8 +82,8 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
         }
         error = root_sum_square(f0);
         if (iter>maxiter){
-            *errstring=std::string("reached maximum number of iterations");
-            x0[0]=_HUGE;
+            f->errstring = "reached maximum number of iterations";
+            x0[0] = _HUGE;
         }
         iter++;
     }
@@ -97,14 +97,13 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 @param x0 The inital guess for the solution
 @param ftol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
-@param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter, std::string &errstring)
+double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter)
 {
     double x, dx, fval=999;
     int iter=1;
-    errstring.clear();
+    f->errstring.clear();
     x = x0;
     while (iter < 2 || std::abs(fval) > ftol)
     {
@@ -123,7 +122,7 @@ double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter, st
 
         if (iter>maxiter)
         {
-            errstring= "reached maximum number of iterations";
+            f->errstring= "reached maximum number of iterations";
             throw SolutionError(format("Newton reached maximum number of iterations"));
         }
         iter=iter+1;
@@ -143,14 +142,13 @@ http://en.wikipedia.org/wiki/Halley%27s_method
 @param x0 The inital guess for the solution
 @param ftol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
-@param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, std::string &errstring)
+double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter)
 {
     double x, dx, fval=999, dfdx, d2fdx2;
     int iter=1;
-    errstring.clear();
+    f->errstring.clear();
     x = x0;
     while (iter < 2 || std::abs(fval) > ftol)
     {
@@ -179,7 +177,7 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
         }
 
         if (iter>maxiter){
-            errstring= "reached maximum number of iterations";
+            f->errstring= "reached maximum number of iterations";
             throw SolutionError(format("Halley reached maximum number of iterations"));
         }
         iter=iter+1;
@@ -195,10 +193,9 @@ In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial 
 @param dx The initial amount that is added to x in order to build the numerical derivative
 @param tol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
-@param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, std::string &errstring)
+double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
 {
     #if defined(COOLPROP_DEEP_DEBUG)
     static std::vector<double> xlog, flog;
@@ -207,9 +204,9 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
 
     double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
-    errstring = "";
+    f->errstring.clear();
 
-    if (std::abs(dx)==0){ errstring="dx cannot be zero"; return _HUGE;}
+    if (std::abs(dx)==0){ f->errstring="dx cannot be zero"; return _HUGE;}
     while (iter<=2 || std::abs(fval)>tol)
     {
         if (iter==1){x1=x0; x=x1;}
@@ -240,7 +237,7 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, s
         }
         if (iter>maxiter)
         {
-            errstring=std::string("reached maximum number of iterations");
+            f->errstring=std::string("reached maximum number of iterations");
             throw SolutionError(format("Secant reached maximum number of iterations"));
         }
         iter=iter+1;
@@ -258,16 +255,14 @@ In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial 
 @param dx The initial amount that is added to x in order to build the numerical derivative
 @param tol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
-@param errstring A pointer to the std::string that returns the error from Secant.  Length is zero if no errors are found
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double tol, int maxiter, std::string &errstring)
+double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double tol, int maxiter)
 {
     double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
     int iter=1;
-    errstring = "";
-
-    if (std::abs(dx)==0){ errstring = "dx cannot be zero"; return _HUGE;}
+    f->errstring.clear();
+    if (std::abs(dx)==0){ f->errstring = "dx cannot be zero"; return _HUGE;}
     while (iter<=3 || std::abs(fval)>tol)
     {
         if (iter==1){x1=x0; x=x1;}
@@ -291,13 +286,13 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
             y1=y2; x1=x2; x2=x3;
 
         }
-        if (iter>maxiter)
-        {
-            errstring = "reached maximum number of iterations";
+        if (iter>maxiter){
+            f->errstring = "reached maximum number of iterations";
             throw SolutionError(format("BoundedSecant reached maximum number of iterations"));
         }
         iter=iter+1;
     }
+    f->errcode = 0;
     return x3;
 }
 
@@ -315,12 +310,11 @@ at least one solution in the interval [a,b].
 @param macheps The machine precision
 @param t Tolerance (absolute)
 @param maxiter Maximum numer of steps allowed.  Will throw a SolutionError if the solution cannot be found
-@param errstr A pointer to the error string returned.  If length is zero, no errors found.
 */
-double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter, std::string &errstr)
+double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter)
 {
     int iter;
-    errstr.clear();
+    f->errstring.clear();
     double fa,fb,c,fc,m,tol,d,e,p,q,s,r;
     fa = f->call(a);
     fb = f->call(b);

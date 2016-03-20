@@ -577,9 +577,8 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend &HEOS)
             };
             
             solver_resid resid(HEOS, imax, maxima);
-            std::string errstr;
             try{
-                double rho = Brent(resid, IO.rhomolar_vap*0.95, IO.rhomolar_vap*1.05, DBL_EPSILON, 1e-12, 100, errstr);
+                double rho = Brent(resid, IO.rhomolar_vap*0.95, IO.rhomolar_vap*1.05, DBL_EPSILON, 1e-12, 100);
 
                 // If maxima point is greater than density at point from the phase envelope, increase index by 1 so that the 
                 // insertion will happen *after* the point in the envelope since density is monotonically increasing.

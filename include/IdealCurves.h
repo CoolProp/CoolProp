@@ -22,8 +22,7 @@ namespace CoolProp{
 			// Solve for Temperature for first point
 			this->obj = OBJECTIVE_T;
 			this->rho_guess = -1;
-			static std::string errstr;
-			this->T.push_back(Secant(this, T0, 0.001*T0, 1e-10, 100, errstr));
+			this->T.push_back(Secant(this, T0, 0.001*T0, 1e-10, 100));
 		}
 
 		virtual double objective(void) = 0;
@@ -64,9 +63,8 @@ namespace CoolProp{
 				try{
 					this->lnT = log(this->T[this->T.size() - 1]);
 					this->lnp = log(this->p[this->p.size() - 1]);
-					static std::string errstr;
 					this->obj = OBJECTIVE_CIRCLE;
-					t = Brent(this, t - M_PI / 2.0, t + M_PI / 2.0, DBL_EPSILON, 1e-10, 100, errstr);
+					t = Brent(this, t - M_PI / 2.0, t + M_PI / 2.0, DBL_EPSILON, 1e-10, 100);
 					double T2, P2;
 					this->TPcoords(t, this->lnT, this->lnp, T2, P2);
 					this->T.push_back(T2);

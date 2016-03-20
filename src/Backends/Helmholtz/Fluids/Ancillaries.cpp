@@ -109,10 +109,10 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
     try{
         // Safe to expand the domain a little bit to lower temperature, absolutely cannot exceed Tmax 
         // because then you get (negative number)^(double) which is undefined.
-        return Brent(resid,min_bound,max_bound,DBL_EPSILON,1e-10,100,errstring);
+        return Brent(resid,min_bound,max_bound,DBL_EPSILON,1e-10,100);
     }
     catch(...){
-        return Secant(resid,max_bound, -0.01, 1e-12, 100, errstring);
+        return Secant(resid,max_bound, -0.01, 1e-12, 100);
     }
 }
 
@@ -237,9 +237,8 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             for (std::size_t i = 0; i < polynomial_in_Tr.parts.size(); ++i){
                 MeltingLinePiecewisePolynomialInTrSegment &part = polynomial_in_Tr.parts[i];
                 if (is_in_closed_range(part.p_min, part.p_max, value)){
-                    std::string errstr;
                     solver_resid resid(&part, value);
-                    double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100, errstr);
+                    double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100);
                     return T;
                 }
             }
@@ -267,9 +266,8 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
             for (std::size_t i = 0; i < polynomial_in_Theta.parts.size(); ++i){
                 MeltingLinePiecewisePolynomialInThetaSegment &part = polynomial_in_Theta.parts[i];
                 if (is_in_closed_range(part.p_min, part.p_max, value)){
-                    std::string errstr;
                     solver_resid resid(&part, value);
-                    double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100, errstr);
+                    double T = Brent(resid, part.T_min, part.T_max, DBL_EPSILON, 1e-12, 100);
                     return T;
                 }
             }

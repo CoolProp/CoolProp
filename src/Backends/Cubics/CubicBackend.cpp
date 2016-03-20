@@ -261,7 +261,7 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
             double Ts_est = Tc/(theta+1);
             SaturationResidual resid(this, inputs, _p);
             static std::string errstr;
-            double Ts = CoolProp::Secant(resid, Ts_est, -0.1, 1e-10, 100, errstr);
+            double Ts = CoolProp::Secant(resid, Ts_est, -0.1, 1e-10, 100);
             _T = Ts;
             rhoL = resid.deltaL*cubic->T_r;
             rhoV = resid.deltaV*cubic->T_r;
@@ -278,7 +278,7 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
             double ps_est = pc*pow(10.0, -neg_log10_pr);
             SaturationResidual resid(this, inputs, _T);
             static std::string errstr;
-            double ps = CoolProp::Secant(resid, ps_est, -0.1, 1e-10, 100, errstr);
+            double ps = CoolProp::Secant(resid, ps_est, -0.1, 1e-10, 100);
             _p = ps;
             rhoL = resid.deltaL*cubic->T_r;
             rhoV = resid.deltaV*cubic->T_r;

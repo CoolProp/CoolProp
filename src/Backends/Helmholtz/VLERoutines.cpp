@@ -47,8 +47,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
                 p = HEOS->SatV->p();
                 std::cout << format("outer p: %0.16Lg", p) << std::endl;
                 inner_resid inner(HEOS, T, p);
-                std::string errstr2;
-                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1 + 1e-8), LDBL_EPSILON, 1e-10, 100, errstr2);
+                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1 + 1e-8), LDBL_EPSILON, 1e-10, 100);
                 break;
             }
             default:
@@ -71,8 +70,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
     
     double rhomolar_crit = HEOS.rhomolar_critical();
     
-    std::string errstr;
-    Brent(&resid, rhomolar_crit*(1-1e-8), rhomolar_crit*0.5, DBL_EPSILON, 1e-9, 20, errstr);
+    Brent(&resid, rhomolar_crit*(1-1e-8), rhomolar_crit*0.5, DBL_EPSILON, 1e-9, 20);
 }
 
 void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_options &options)
@@ -107,14 +105,13 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS,
     if (!ValidNumber(options.rhoL)){throw ValueError(format("options.rhoL is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
     if (!ValidNumber(options.rhoV)){throw ValueError(format("options.rhoV is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
     
-    std::string errstr;
     try{
-        Secant(resid, options.p, options.p*1.1, 1e-10, 100, errstr);
+        Secant(resid, options.p, options.p*1.1, 1e-10, 100);
     }
     catch(...){
         CoolPropDbl pmax = std::min(options.p*1.03, static_cast<CoolPropDbl>(HEOS.p_critical()+1e-6));
         CoolPropDbl pmin = std::max(options.p*0.97, static_cast<CoolPropDbl>(HEOS.p_triple()-1e-6));
-        Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100, errstr);
+        Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100);
     }
 }
 
@@ -149,10 +146,9 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS,
     if (!ValidNumber(options.rhoL)){throw ValueError("options.rhoL is not valid in saturation_P_pure_1D_T");};
     if (!ValidNumber(options.rhoV)){throw ValueError("options.rhoV is not valid in saturation_P_pure_1D_T");};
     
-    std::string errstr;
     CoolPropDbl Tmax = std::min(options.T + 2, static_cast<CoolPropDbl>(HEOS.T_critical()-1e-6));
     CoolPropDbl Tmin = std::max(options.T - 2, static_cast<CoolPropDbl>(HEOS.Ttriple()+1e-6));
-    Brent(resid, Tmin, Tmax, LDBL_EPSILON, 1e-11, 100, errstr);
+    Brent(resid, Tmin, Tmax, LDBL_EPSILON, 1e-11, 100);
 }
     
 void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl specified_value, saturation_PHSU_pure_options &options)
@@ -222,12 +218,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             Residual resid(HEOS.get_components()[0], HEOS.hmolar());
             
             // Ancillary is deltah = h - hs_anchor.h
-            std::string errstr;
             CoolPropDbl Tmin_satL, Tmin_satV;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
-            try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
+            try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50); }
             catch(...){
                 shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
                 HEOS_copy->update(QT_INPUTS, 1, Tmin); double hTmin = HEOS_copy->hmolar();
@@ -294,13 +289,12 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             Residual resid(component, HEOS.smolar());
             
             // Ancillary is deltas = s - hs_anchor.s
-            std::string errstr;
             CoolPropDbl Tmin_satL, Tmin_satV;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
             try{
-                T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50, errstr);
+                T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50);
             }
             catch(...){
                 CoolPropDbl vmax = resid.call(Tmax);
