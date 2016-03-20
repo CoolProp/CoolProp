@@ -47,8 +47,10 @@ namespace SaturationSolvers
     @param i Index of component [-]
     */
     static CoolPropDbl Wilson_lnK_factor(const HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p, std::size_t i){ 
-        const EquationOfState &EOS = HEOS.get_components()[i].EOS(); 
-        return log(EOS.reduce.p/p)+5.373*(1 + EOS.acentric)*(1-EOS.reduce.T/T);
+        const double pci = HEOS.get_fluid_constant(i,iP_critical);
+        const double Tci = HEOS.get_fluid_constant(i,iT_critical);
+        const double omegai = HEOS.get_fluid_constant(i, iacentric_factor);
+        return log(pci/p)+5.373*(1 + omegai)*(1-Tci/T);
     };
 
     void saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar, saturation_D_pure_options &options);
@@ -219,7 +221,10 @@ namespace SaturationSolvers
         else{
             // Find first guess for output variable using Wilson K-factors
             WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
-            out = Secant(Resid, guess, 0.001, 1e-10, 100, errstr);
+            if (guess < 0)
+                out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100, errstr);
+            else
+                out = Secant(Resid, guess, 0.001, 1e-10, 100, errstr);
             if (!ValidNumber(out)){throw ValueError("saturation_p_Wilson failed to get good output value");}
         }
         return out;
@@ -279,8 +284,9 @@ namespace SaturationSolvers
         std::size_t N;
         bool logging;
         int Nsteps;
-        STLMatrix J;
-        std::vector<CoolPropDbl> K, x, y, z, r, negative_r, err_rel;
+        Eigen::MatrixXd J;
+        Eigen::Vector2d r, err_rel;
+        std::vector<CoolPropDbl> K, x, y, z;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 
         newton_raphson_twophase() : HEOS(NULL), imposed_variable(newton_raphson_twophase_options::NO_VARIABLE_IMPOSED), error_rms(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), T(_HUGE), p(_HUGE), min_rel_change(_HUGE), beta(_HUGE), N(0), logging(false), Nsteps(0)
@@ -361,10 +367,11 @@ namespace SaturationSolvers
         bool logging;
         bool bubble_point;
         int Nsteps;
-        STLMatrix J;
+        Eigen::MatrixXd J;
         HelmholtzEOSMixtureBackend *HEOS;
         CoolPropDbl dTsat_dPsat, dPsat_dTsat;
-        std::vector<CoolPropDbl> K, x, y, r, negative_r, err_rel;
+        std::vector<CoolPropDbl> K, x, y;
+        Eigen::VectorXd r, err_rel;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 
         newton_raphson_saturation(){};
@@ -374,7 +381,6 @@ namespace SaturationSolvers
         // Reset the state of all the internal variables
         void pre_call()
         {
-            K.clear(); x.clear(); y.clear();  
             step_logger.clear(); error_rms = 1e99; Nsteps = 0;
             rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
         };

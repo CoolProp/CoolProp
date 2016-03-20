@@ -128,7 +128,7 @@ public:
 
     const CoolProp::SimpleState &calc_state(const std::string &state);
 
-    virtual const double get_fluid_constant(std::size_t i, parameters param){
+    virtual const double get_fluid_constant(std::size_t i, parameters param)  const{
         const CoolPropFluid &fld = components[i];
         switch(param){
             case iP_critical: return fld.crit.p;

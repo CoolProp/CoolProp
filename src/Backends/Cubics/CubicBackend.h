@@ -52,7 +52,7 @@ public:
     void set_volu_fractions(const std::vector<CoolPropDbl> &volu_fractions){throw NotImplementedError("Volume composition has not been implemented.");};
     const std::vector<CoolPropDbl> & get_mole_fractions(void){ return this->mole_fractions; };
 
-    const double get_fluid_constant(std::size_t i, parameters param){
+    const double get_fluid_constant(std::size_t i, parameters param) const{
         switch(param){
             case iP_critical: return cubic->get_pc()[i];
             case iT_critical: return cubic->get_Tc()[i];
@@ -141,6 +141,7 @@ public:
      */
     void rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int &Nsolns, double &rho0, double &rho1, double &rho2);
     
+    /// In this class, we are already doing cubic evaluation, just delegate to our function
     CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase){
         return solver_rho_Tp(T, p);
     };
