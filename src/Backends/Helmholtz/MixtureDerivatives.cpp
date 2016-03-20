@@ -752,6 +752,7 @@ static const std::size_t Ncomp_max = 6;
 // 1: component index
 static std::vector<std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > > HEOS, 
                                                                           HEOS_plusT_constrho, HEOS_minusT_constrho, 
+                                                                          HEOS_plusT_constp, HEOS_minusT_constp, 
                                                                           HEOS_plusrho_constT, HEOS_minusrho_constT,
                                                                           HEOS_plusz_xNindep, HEOS_minusz_xNindep,
                                                                           HEOS_plusz_xNdep, HEOS_minusz_xNdep,
@@ -781,13 +782,7 @@ void setup_state(std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > & HEOS, st
         zn[i] += increment;
         if (xN_flag == XN_DEPENDENT){ zn[zn.size()-1] -= increment; }
 
-        std::vector<double> Tc(zn.size()), pc(zn.size()), acentric(zn.size());
-        for (int j = 0; j < zn.size(); ++j){
-            Tc[j] = Props1SI(names[j], "Tcrit");
-            pc[j] = Props1SI(names[j], "pcrit");
-            acentric[j] = Props1SI(names[j], "acentric");
-        }
-        HEOS[i].reset(new SRKBackend(Tc,pc,acentric,8.314498));
+        HEOS[i].reset(new SRKBackend(names,8.314498));
 
         HEOS[i].reset(new HelmholtzEOSMixtureBackend(names));
         HEOS[i]->specify_phase(iphase_gas);
@@ -801,6 +796,8 @@ void connect_fluids(){
         HEOS.resize(Ncomp_max);
         HEOS_plusT_constrho.resize(Ncomp_max);
         HEOS_minusT_constrho.resize(Ncomp_max);
+        HEOS_plusT_constp.resize(Ncomp_max);
+        HEOS_minusT_constp.resize(Ncomp_max);
         HEOS_plusrho_constT.resize(Ncomp_max);
         HEOS_minusrho_constT.resize(Ncomp_max);
         HEOS_plusz_xNindep.resize(Ncomp_max);
@@ -816,6 +813,8 @@ void connect_fluids(){
             HEOS[Ncomp].resize(1);
             HEOS_plusT_constrho[Ncomp].resize(1);
             HEOS_minusT_constrho[Ncomp].resize(1);
+            HEOS_plusT_constp[Ncomp].resize(1);
+            HEOS_minusT_constp[Ncomp].resize(1);
             HEOS_plusrho_constT[Ncomp].resize(1);
             HEOS_minusrho_constT[Ncomp].resize(1);
             HEOS_plusz_xNindep[Ncomp].resize(Ncomp);
@@ -830,6 +829,8 @@ void connect_fluids(){
             setup_state(HEOS[Ncomp], Ncomp, 0);
             setup_state(HEOS_plusT_constrho[Ncomp], Ncomp, 0);
             setup_state(HEOS_minusT_constrho[Ncomp], Ncomp, 0);
+            setup_state(HEOS_plusT_constp[Ncomp], Ncomp, 0);
+            setup_state(HEOS_minusT_constp[Ncomp], Ncomp, 0);
             setup_state(HEOS_plusrho_constT[Ncomp], Ncomp, 0);
             setup_state(HEOS_minusrho_constT[Ncomp], Ncomp, 0);
             setup_state(HEOS_plusz_xNindep[Ncomp], Ncomp, dz);
@@ -844,6 +845,8 @@ void connect_fluids(){
             HEOS[Ncomp][0]->update(DmolarT_INPUTS, rho1, T1);
             HEOS_plusT_constrho[Ncomp][0]->update(DmolarT_INPUTS, rho1, T1 + dT);
             HEOS_minusT_constrho[Ncomp][0]->update(DmolarT_INPUTS, rho1, T1 - dT);
+            HEOS_plusT_constp[Ncomp][0]->update(PT_INPUTS, HEOS[Ncomp][0]->p(), T1 + dT);
+            HEOS_minusT_constp[Ncomp][0]->update(PT_INPUTS, HEOS[Ncomp][0]->p(), T1 - dT);
             HEOS_plusrho_constT[Ncomp][0]->update(DmolarT_INPUTS, rho1 + drho, T1);
             HEOS_minusrho_constT[Ncomp][0]->update(DmolarT_INPUTS, rho1 - drho, T1);
 
@@ -903,6 +906,8 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                     HelmholtzEOSMixtureBackend &rHEOS = *(HEOS[Ncomp][0].get());
                     HelmholtzEOSMixtureBackend &rHEOS_plusT_constrho = *(HEOS_plusT_constrho[Ncomp][0].get());
                     HelmholtzEOSMixtureBackend &rHEOS_minusT_constrho = *(HEOS_minusT_constrho[Ncomp][0].get());
+                    HelmholtzEOSMixtureBackend &rHEOS_plusT_constp = *(HEOS_plusT_constp[Ncomp][0].get());
+                    HelmholtzEOSMixtureBackend &rHEOS_minusT_constp = *(HEOS_minusT_constp[Ncomp][0].get());
                     HelmholtzEOSMixtureBackend &rHEOS_plusrho_constT = *(HEOS_plusrho_constT[Ncomp][0].get());
                     HelmholtzEOSMixtureBackend &rHEOS_minusrho_constT = *(HEOS_minusrho_constT[Ncomp][0].get());
 
@@ -1122,45 +1127,30 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double err = mix_deriv_err_func(numeric, analytic);
                             CHECK(err < 1e-6);
                         }
-                        /*std::ostringstream ss1;
-                        ss1 << "dln_fugacity_coefficient_dT__constp_n, i=" << i;
-                        SECTION(ss1.str(), "")
+                        std::ostringstream ss1a123;
+                        ss1a123 << "dln_fugacity_coefficient_dT__constp_n, i=" << i;
+                        SECTION(ss1a123.str(), "")
                         {
-                            double T1 = 300, dT = 1e-3;
-                            rHEOS.specify_phase(iphase_gas);
-                            
-                            rHEOS.update(PT_INPUTS, 101325, T1);
                             double analytic = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rHEOS, i, xN_flag);
-                            
-                            rHEOS.update(PT_INPUTS, 101325, T1 + dT);
-                            double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag);
-                            rHEOS.update(PT_INPUTS, 101325, T1 - dT);
-                            double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS, i, xN_flag);
+                            double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS_plusT_constp, i, xN_flag);
+                            double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS_minusT_constp, i, xN_flag);
                             
                             double numeric = (v1 - v2)/(2*dT);
                             double err = std::abs((numeric-analytic)/analytic);
                             CHECK(err < 1e-6);
                         }
-                        std::ostringstream ss1a;
-                        ss1a << "dln_fugacity_i_dT__constp_n, i=" << i;
-                        SECTION(ss1a.str(), "")
-                        {
-                            double T1 = 300, dT = 1e-3;
-                            rHEOS.specify_phase(iphase_gas);
-                            
-                            rHEOS.update(PT_INPUTS, 101325, T1);
+                        std::ostringstream ss1aa123;
+                        ss1aa123 << "dln_fugacity_i_dT__constp_n, i=" << i;
+                        SECTION(ss1aa123.str(), "")
+                        {   
                             double analytic = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rHEOS, i, xN_flag);
-                            
-                            rHEOS.update(PT_INPUTS, 101325, T1 + dT);
-                            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
-                            rHEOS.update(PT_INPUTS, 101325, T1 - dT);
-                            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS, i, xN_flag));
+                            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_plusT_constp, i, xN_flag));
+                            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minusT_constp, i, xN_flag));
                             
                             double numeric = (v1 - v2)/(2*dT);
                             double err = std::abs((numeric-analytic)/analytic);
                             CHECK(err < 1e-6);
                         }
-                        */
                         std::ostringstream ss3;
                         ss3 << "d_ndalphardni_dDelta, i=" << i;
                         SECTION(ss3.str(), "")
