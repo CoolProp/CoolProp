@@ -1406,10 +1406,12 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     IO.T = T;
     IO.rhomolar_liq = rhomolar_liq;
     IO.rhomolar_vap = rhomolar_vap;
-    IO.hmolar_liq = HEOS.SatL.get()->hmolar();
-    IO.hmolar_vap = HEOS.SatV.get()->hmolar();
-    IO.smolar_liq = HEOS.SatL.get()->smolar();
-    IO.smolar_vap = HEOS.SatV.get()->smolar();
+    if (!HEOS.get_components().empty()){
+        IO.hmolar_liq = HEOS.SatL.get()->hmolar();
+        IO.hmolar_vap = HEOS.SatV.get()->hmolar();
+        IO.smolar_liq = HEOS.SatL.get()->smolar();
+        IO.smolar_vap = HEOS.SatV.get()->smolar();
+    }
 }
 
 void SaturationSolvers::newton_raphson_saturation::build_arrays()
