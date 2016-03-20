@@ -7,7 +7,7 @@
     #include <functional>
 
     #define FMT_HEADER_ONLY
-    #include "cppformat/format.h" // For addition of the string formatting functions and macros from cppformat
+    #include "externals/cppformat/cppformat/format.h" // For addition of the string formatting functions and macros from cppformat
     #undef FMT_HEADER_ONLY
 
     #if !defined(__powerpc__)

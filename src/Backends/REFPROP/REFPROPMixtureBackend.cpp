@@ -23,7 +23,7 @@ surface tension                 N/m
 
 #define REFPROP_IMPLEMENTATION
 #define REFPROP_CSTYLE_REFERENCES
-#include "REFPROP_lib.h"
+#include "externals/REFPROP-headers/REFPROP_lib.h"
 #undef REFPROP_IMPLEMENTATION
 #undef REFPROP_CSTYLE_REFERENCES
 
@@ -513,7 +513,7 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
 }
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
-    long icomp = i+1, jcomp = j+1, ierr = 0L;
+    long icomp = static_cast<long>(i)+1, jcomp = static_cast<long>(j)+1, ierr = 0L;
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
     char herr[255];
@@ -540,7 +540,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
 }
 /// Get binary mixture double value (EXPERT USE ONLY!!!)
 double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
-    long icomp = i+1, jcomp = j+1;
+    long icomp = static_cast<long>(i)+1, jcomp = static_cast<long>(j)+1;
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
     

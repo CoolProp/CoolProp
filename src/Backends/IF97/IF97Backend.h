@@ -3,7 +3,7 @@
 #define IF97BACKEND_H_
 
 #include "DataStructures.h"
-#include "IF97.h"
+#include "externals/IF97/IF97.h"
 #include "AbstractState.h"
 #include "Exceptions.h"
 #include <vector>

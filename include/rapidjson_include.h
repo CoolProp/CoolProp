@@ -11,11 +11,11 @@ typedef unsigned int UINT32;
 #include "Exceptions.h"
 #include "CoolPropTools.h"
 
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
-#include "rapidjson/filewritestream.h"    // wrapper of C stream for prettywriter as output
-#include "rapidjson/prettywriter.h"    // for stringify JSON
-#include "rapidjson/stringbuffer.h" // for string buffer
+#include "externals/rapidjson/include/rapidjson/rapidjson.h"
+#include "externals/rapidjson/include/rapidjson/document.h"
+#include "externals/rapidjson/include/rapidjson/filewritestream.h"    // wrapper of C stream for prettywriter as output
+#include "externals/rapidjson/include/rapidjson/prettywriter.h"    // for stringify JSON
+#include "externals/rapidjson/include/rapidjson/stringbuffer.h" // for string buffer
 
 #include <cassert>
 
