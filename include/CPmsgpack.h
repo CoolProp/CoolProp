@@ -4,7 +4,7 @@
   #pragma warning(disable:4267)
 #endif
 
-#include "externals/msgpack-c/include/msgpack.hpp"
+#include "msgpack.hpp"
 
 #ifdef _MSC_VER
   #pragma warning(pop)
