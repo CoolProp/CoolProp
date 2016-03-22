@@ -84,12 +84,8 @@ The configuration key for setting the REFPROP path (see :ref:`configuration`) is
 .. ipython::
 
     In [0]: import json, CoolProp.CoolProp as CP
-
-    In [1]: jj = json.loads(CP.get_config_as_json_string())
     
-    In [2]: jj['ALTERNATIVE_REFPROP_PATH'] = 'c:\\Program Files\\REFPROP'
-    
-    In [3]: jj = CP.set_config_as_json_string(json.dumps(jj))
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, 'c:\\Program Files\\REFPROP')
 
 If you do this, internally CoolProp will call the ``SETPATH`` function in REFPROP to tell REFPROP that it should find the ``fluids`` and ``mixtures`` directories within this directory.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
 
@@ -98,12 +94,8 @@ If you are playing around with mixture parameters, you might want to set a diffe
 .. ipython::
 
     In [0]: import json, CoolProp.CoolProp as CP
-
-    In [1]: jj = json.loads(CP.get_config_as_json_string())
     
-    In [2]: jj['ALTERNATIVE_REFPROP_HMX_BNC_PATH'] = 'c:\\Program Files\\REFPROP\\fluids\\HMX.BNC'
-    
-    In [3]: jj = CP.set_config_as_json_string(json.dumps(jj))
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_HMX_BNC_PATH, 'c:\\Program Files\\REFPROP\\fluids\\HMX.BNC')
 
 If you have set both the ``ALTERNATIVE_REFPROP_PATH`` and ``ALTERNATIVE_REFPROP_HMX_BNC_PATH`` variables, ``ALTERNATIVE_REFPROP_PATH_HMX_BNC_PATH`` "wins", and this path will be used when loading mixture interaction parameters
 
