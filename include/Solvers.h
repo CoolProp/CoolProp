@@ -11,8 +11,8 @@ namespace CoolProp
 class FuncWrapper1D
 {
 public:
-    std::string errstring;
     int errcode;
+    std::string errstring;    
     FuncWrapper1D() : errcode(0), errstring("") {};
     virtual ~FuncWrapper1D(){};
     virtual double call(double) = 0;
@@ -39,8 +39,8 @@ public:
 class FuncWrapperND
 {
 public:
-    std::string errstring;
     int errcode;
+    std::string errstring;    
     FuncWrapperND() : errcode(0), errstring("") {};
     virtual ~FuncWrapperND(){};
     virtual std::vector<double> call(const std::vector<double>&) = 0;// must be provided
