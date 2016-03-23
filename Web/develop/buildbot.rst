@@ -82,40 +82,19 @@ Based on the miniconda Python ecosystem, you can create your own virtual
 environments for building the Python wheels. This requires the following
 steps on a Windows machine::
 
-    conda create -n CoolProp27 python=2.7
-    conda create -n CoolProp33 python=3.3
-    conda create -n CoolProp34 python=3.4
-    conda install -n CoolProp27 cython pip pywin32 unxutils jinja2 pyyaml pycrypto ndg-httpsclient
-    conda install -n CoolProp33 cython pip pywin32 unxutils jinja2 pyyaml pycrypto 
-    conda install -n CoolProp34 cython pip pywin32 unxutils jinja2 pyyaml pycrypto 
+    conda create -n CoolProp27 python=2.7 cython pip pywin32 unxutils jinja2 pyyaml pycrypto wheel ndg-httpsclient
+    conda create -n CoolProp33 python=3.3 cython pip pywin32 unxutils jinja2 pyyaml pycrypto wheel 
+    conda create -n CoolProp34 python=3.4 cython pip pywin32 unxutils jinja2 pyyaml pycrypto wheel 
+    conda create -n CoolProp35 python=3.5 cython pip pywin32 unxutils jinja2 pyyaml pycrypto wheel 
 
-    activate CoolProp27
-    pip install wheel
-    deactivate
-    activate CoolProp34
-    pip install wheel
-    deactivate
-
-Please repeat the steps above for both 32bit and 64bit Python environments.
+Please repeat the steps above for **both 32bit and 64bit** Python environments.
 
 On a Linux system, things only change a little bit::
 
-    conda create -n CoolProp27 python=2.7
-    conda create -n CoolProp33 python=3.3
-    conda create -n CoolProp34 python=3.4
-    conda install -n CoolProp27 cython pip jinja2 pyyaml pycrypto
-    conda install -n CoolProp33 cython pip jinja2 pyyaml pycrypto
-    conda install -n CoolProp34 cython pip jinja2 pyyaml pycrypto
-
-    source activate CoolProp27
-    pip install wheel
-    source deactivate
-    source activate CoolProp33
-    pip install wheel
-    source deactivate
-    source activate CoolProp34
-    pip install wheel
-    source deactivate
+    conda create -n CoolProp27 python=2.7 cython pip jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp33 python=3.3 cython pip jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp34 python=3.4 cython pip jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp35 python=3.5 cython pip jinja2 pyyaml pycrypto wheel
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
 bash or zsh. We make use of the ``source`` command, which is not part of the
