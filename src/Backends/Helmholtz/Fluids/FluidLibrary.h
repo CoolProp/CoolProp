@@ -922,7 +922,7 @@ protected:
         CoolPropDbl rho_crit_molar = fluid.EOS().reduce.rhomolar/1000.0;// [mol/m3 to mol/L]
         CoolPropDbl Tc = fluid.EOS().reduce.T;
         fluid.transport.sigma_eta = 0.809/pow(rho_crit_molar, static_cast<CoolPropDbl>(1.0/3.0))/1e9; // 1e9 is to convert from nm to m
-        fluid.transport.epsilon_over_k = Tc/1.3593; // [K]
+        fluid.transport.epsilon_over_k = Tc/1.2593; // [K]
     }
 
     void parse_melting_line(rapidjson::Value &melting_line, CoolPropFluid & fluid)
