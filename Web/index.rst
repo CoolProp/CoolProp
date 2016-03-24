@@ -17,6 +17,7 @@ CoolProp is a C++ library that implements:
 - :ref:`Correlations of properties of incompressible fluids and brines <Pure>`
 - :ref:`Highest accuracy psychrometric routines <Humid-Air>`
 - :ref:`User-friendly interface around the full capabilities of NIST REFPROP <REFPROP>`
+- :ref:`Cubic equations of state (SRK, PR) <cubic_backend>`
 
 Environments Supported
 ----------------------
