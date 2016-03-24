@@ -195,7 +195,7 @@ public:
                bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
-            CubicsValues val = get_cubic_values(fluid_identifiers[i]);
+            CubicLibrary::CubicsValues val = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
             Tc.push_back(val.Tc);
             pc.push_back(val.pc);
             acentric.push_back(val.acentric);
@@ -232,7 +232,7 @@ public:
                         bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
-            CubicsValues val = get_cubic_values(fluid_identifiers[i]);
+            CubicLibrary::CubicsValues val = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
             Tc.push_back(val.Tc);
             pc.push_back(val.pc);
             acentric.push_back(val.acentric);

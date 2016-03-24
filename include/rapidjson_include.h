@@ -16,6 +16,7 @@ typedef unsigned int UINT32;
 #include "externals/rapidjson/include/rapidjson/filewritestream.h"    // wrapper of C stream for prettywriter as output
 #include "externals/rapidjson/include/rapidjson/prettywriter.h"    // for stringify JSON
 #include "externals/rapidjson/include/rapidjson/stringbuffer.h" // for string buffer
+#include "externals/rapidjson/include/rapidjson/schema.h"
 
 #include <cassert>
 
@@ -275,6 +276,39 @@ namespace cpjson
                         _v,
                         doc.GetAllocator());
     };
+    
+    enum schema_validation_code{
+        SCHEMA_VALIDATION_OK = 0,
+        SCHEMA_INVALID_JSON,
+        INPUT_INVALID_JSON,
+        SCHEMA_NOT_VALIDATED
+    };
+    /**
+     * Validate a JSON-formatted string against a JSON-formatted schema string
+     */
+    inline schema_validation_code validate_schema(const std::string &schemaJson, const std::string &inputJson, std::string &errstr){
+        rapidjson::Document sd;
+        sd.Parse(schemaJson.c_str());
+        if (sd.HasParseError()) { errstr = fmt::sprintf("Invalid schema: %s\n", schemaJson.c_str()); return SCHEMA_INVALID_JSON; }
+        rapidjson::SchemaDocument schema(sd); // Compile a Document to SchemaDocument
+        
+        rapidjson::Document d;
+        d.Parse(inputJson.c_str());
+        if (d.HasParseError()) { errstr = fmt::sprintf("Invalid input json: %s\n", inputJson.c_str()); return INPUT_INVALID_JSON; }
+        
+        rapidjson::SchemaValidator validator(schema);
+        if (!d.Accept(validator)) {
+            // Input JSON is invalid according to the schema
+            // Output diagnostic information
+            rapidjson::StringBuffer sb;
+            validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
+            errstr = fmt::sprintf("Invalid schema: %s\n", sb.GetString());
+            errstr += fmt::sprintf("Invalid keyword: %s\n", validator.GetInvalidSchemaKeyword());
+            sb.Clear();
+            return SCHEMA_NOT_VALIDATED;
+        }
+        return SCHEMA_VALIDATION_OK;
+    }
 
 }
 #endif

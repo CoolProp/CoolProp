@@ -2,18 +2,24 @@
 #include <map>
 #include "CubicsLibrary.h"
 #include "all_cubics_JSON.h" // Makes a std::string variable called all_cubics_JSON
+#include "cubic_fluids_schema_JSON.h" // Makes a std::string variable called cubic_fluids_schema_JSON
 #include "rapidjson_include.h"
 #include "CPstrings.h"
+#include "CoolProp.h"
 
 namespace CoolProp{
+namespace CubicLibrary{
 
-class CubicsLibrary{
+class CubicsLibraryClass{
 private:
     std::map<std::string, CubicsValues> fluid_map;
     std::map<std::string, std::string> aliases_map;
     bool empty; // Is empty
 public:
-    CubicsLibrary() : empty(true) {};
+    CubicsLibraryClass() : empty(true) {
+        // This JSON formatted string comes from the all_cubics_JSON.h header which is a C++-escaped version of the JSON file
+        add_fluids_as_JSON(all_cubics_JSON);
+    };
     bool is_empty(){ return empty; };
     int add_many(rapidjson::Value &listing)
     {
@@ -58,24 +64,38 @@ public:
         }
     };
 };
-static CubicsLibrary library;
+static CubicsLibraryClass library;
 
-void load_cubics_library(){
-    rapidjson::Document dd;
-    // This json formatted string comes from the all_cubics_JSON.h header which is a C++-escaped version of the JSON file
-    dd.Parse<0>(all_cubics_JSON.c_str());
-    if (dd.HasParseError()){
-        throw ValueError("Unable to load all_cubics_JSON.json");
-    } else{
-        try{
-            library.add_many(dd);
-        }catch(std::exception &e){std::cout << e.what() << std::endl;}
+    
+void add_fluids_as_JSON(const std::string &JSON)
+{
+    // First we validate the json string against the schema;
+    std::string errstr;
+    cpjson::schema_validation_code val_code = cpjson::validate_schema(cubic_fluids_schema_JSON, JSON, errstr);
+    // Then we check the validation code
+    if (val_code == cpjson::SCHEMA_VALIDATION_OK){
+        rapidjson::Document dd;
+        
+        dd.Parse<0>(JSON.c_str());
+        if (dd.HasParseError()){
+            throw ValueError("Unable to load all_cubics_JSON.json");
+        } else{
+            try{
+                library.add_many(dd);
+            }catch(std::exception &e){std::cout << e.what() << std::endl;}
+        }
+    }
+    else{
+        if (get_debug_level() > 0){ throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str())); }
     }
 }
 
-CubicsValues get_cubic_values(const std::string &identifier){
-    if (library.is_empty()){ load_cubics_library(); }
+CubicLibrary::CubicsValues get_cubic_values(const std::string &identifier){
     return library.get(identifier);
 }
+std::string get_cubic_fluids_schema(){
+    return cubic_fluids_schema_JSON;
+}
 
+} /* namepace CriticalLibrary */
 } /* namepace CoolProp */
