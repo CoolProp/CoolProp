@@ -197,7 +197,7 @@ std::string REFPROPMixtureBackend::version(){
 	long N = -1;
 	long ierr = 0;
 	char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
-	bool REFPROP_ok = REFPROPMixtureBackend::REFPROP_supported();
+	REFPROPMixtureBackend::REFPROP_supported();
     SETUPdll(&N, fluids, hmx, default_reference_state,
                 &ierr, herr,
                 10000, // Length of component_string (see PASS_FTN.for from REFPROP)

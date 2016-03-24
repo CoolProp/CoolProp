@@ -154,7 +154,6 @@ public:
 
     /// Update the state used to calculate the tangent-plane-distance
     void update_TPD_state(){
-        AbstractCubic *cubic = get_cubic().get();
         TPD_state.reset(get_copy());
     };
     
