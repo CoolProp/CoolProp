@@ -14,7 +14,9 @@ From C++ and the SWIG wrappers, the values can be directly set/changed by using 
 
     In [0]: import CoolProp.CoolProp as CP
 
-    In [1]: CP.get_config_bool(CP.CRITICAL_WITHIN_1UK, True)
+    In [1]: current_val = CP.get_config_bool(CP.CRITICAL_WITHIN_1UK)
+
+    In [1]: CP.set_config_bool(CP.CRITICAL_WITHIN_1UK, current_val)
 
 From all languages, the configuration state can obtained by retrieving the configuration state in the form of a  `JSON <http://json.org/>`_ formatted string.  For instance, in python, you can get the default configuration state from 
 
