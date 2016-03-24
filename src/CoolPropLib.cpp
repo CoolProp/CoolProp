@@ -275,6 +275,12 @@ EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, d
     reset_fpu();
     return val;
 }
+EXPORT_CODE double CONVENTION cair_sat(double T)
+{
+    double val = HumidAir::cair_sat(T);
+    reset_fpu();
+    return val;
+}
 EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char * Name3, const double * Prop3, double *output)
 {
     *output = HAPropsSI(Output, Name1, *Prop1, Name2, *Prop2, Name3, *Prop3);
