@@ -600,16 +600,14 @@ CoolPropDbl CoolProp::TabularBackend::calc_speed_sound(void){
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
-    //PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
-    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
 
         // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
-        double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0;
-        mass_to_molar(Of, Of_conversion_factor, AS->molar_mass());
-        mass_to_molar(Wrt, Wrt_conversion_factor, AS->molar_mass());
-        mass_to_molar(Constant, Constant_conversion_factor, AS->molar_mass());
+        double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0, MM = AS->molar_mass();
+        mass_to_molar(Of, Of_conversion_factor, MM);
+        mass_to_molar(Wrt, Wrt_conversion_factor, MM);
+        mass_to_molar(Constant, Constant_conversion_factor, MM);
 
         switch (selected_table){
         case SELECTED_PH_TABLE: {
@@ -636,7 +634,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, pa
         return val*Of_conversion_factor/Wrt_conversion_factor;
     }
     else{
-        return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        throw ValueError(format("Inputs [rho: %g mol/m3, T: %g K, p: %g Pa] are two-phase; cannot use single-phase derivatives", _rhomolar, _T, _p));
     }
 };
 
