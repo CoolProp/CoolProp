@@ -1,0 +1,15 @@
+[
+  {
+    "CAS": "000-0-00", 
+    "Tc": 400.0, 
+    "Tc_units": "K", 
+    "acentric": 0.1, 
+    "aliases": [
+    ], 
+    "molemass": 0.04, 
+    "molemass_units": "kg/mol", 
+    "name": "FAKEFLUID", 
+    "pc": 4000000.0, 
+    "pc_units": "Pa"
+  }
+]

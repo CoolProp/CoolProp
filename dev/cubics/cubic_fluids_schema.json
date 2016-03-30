@@ -26,8 +26,8 @@
       "acentric": {
         "description": "Acentric factor",
         "type": "number",
-        "minimum": 0,
-        "maximum": 1
+        "minimum": -10,
+        "maximum": 10
       },
       "molemass": {
         "description": "Molar mass",

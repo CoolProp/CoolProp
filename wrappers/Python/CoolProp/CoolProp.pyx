@@ -72,6 +72,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     void _set_reference_stateS "CoolProp::set_reference_stateS"(string, string) except +
     void _set_reference_stateD "CoolProp::set_reference_stateD"(string, double, double, double, double) except +
     double _saturation_ancillary "CoolProp::saturation_ancillary"(string, string, int, string, double) except +
+    bint _add_fluids_as_JSON "CoolProp::add_fluids_as_JSON"(const string backend, const string JSON) except +
  
 cdef extern from "HumidAirProp.h" namespace "HumidAir":
     double _HAPropsSI "HumidAir::HAPropsSI"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
@@ -255,6 +256,12 @@ cpdef set_mixture_binary_pair_data(CAS1, CAS2, key, val):
     Set mixture interaction parameter.  Python wrapper of C++ function :cpapi:`CoolProp::set_mixture_binary_pair_data`
     """
     _set_mixture_binary_pair_data(CAS1, CAS2, key, val)
+
+cpdef add_fluids_as_JSON(backend, JSONstring):
+    """
+    Add fluids in a JSON-formatted string format. Python wrapper of C++ function :cpapi:`CoolProp::add_fluids_as_JSON`
+    """
+    _add_fluids_as_JSON(backend, JSONstring)
 
 cpdef get_global_param_string(string param):
     return _get_global_param_string(param)

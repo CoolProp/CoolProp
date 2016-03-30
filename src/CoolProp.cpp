@@ -40,6 +40,7 @@
 #include "Backends/Helmholtz/MixtureParameters.h"
 #include "DataStructures.h"
 #include "Backends/REFPROP/REFPROPMixtureBackend.h"
+#include "Backends/Cubics/CubicsLibrary.h"
 
 #if defined(ENABLE_CATCH)
     #include "catch.hpp"
@@ -512,6 +513,18 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
     }
     #endif
 }
+    
+bool add_fluids_as_JSON(const std::string &backend, const std::string &fluidstring)
+{
+    if (backend == "SRK" || backend == "PR")
+    {
+        CubicLibrary::add_fluids_as_JSON(fluidstring);
+    }
+    else{
+        throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON",backend.c_str()));
+    }
+    
+}
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to PropsSI","[PropsSI]")
 {
@@ -864,6 +877,9 @@ std::string get_global_param_string(const std::string &ParamName)
 	else if (ParamName == "REFPROP_version"){
 		return REFPROPMixtureBackend::version();
 	}
+    else if (ParamName == "cubic_fluids_schema"){
+        return CoolProp::CubicLibrary::get_cubic_fluids_schema();
+    }
     else{
         throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));
     }

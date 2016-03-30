@@ -183,6 +183,11 @@
      */
     EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Name3, double Prop3);
 
+    /** \brief DLL wrapper of the cair_sat function
+     * \sa \ref HumidAir::cair_sat(double);
+     */
+    EXPORT_CODE double CONVENTION cair_sat(double T);
+
     /** \brief FORTRAN 77 style wrapper of the HAPropsSI function
      * \sa \ref HumidAir::HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
      * 

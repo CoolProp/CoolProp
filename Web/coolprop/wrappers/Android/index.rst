@@ -17,7 +17,7 @@ Compilation of the Android wrapper requires a few :ref:`common wrapper pre-requi
 Windows
 -------
 
-* Follow the instructions for Linux & OSX, but the first call to cmake should read:
+* Follow the instructions for Linux & OSX, but the first call to cmake should read::
 
     cmake .. -DCOOLPROP_ANDROID_MODULE=ON -G "MinGW Makefiles" -DNDK_PATH=c:/Downloads/android-ndk-r10e (change path based on your installation)
 
