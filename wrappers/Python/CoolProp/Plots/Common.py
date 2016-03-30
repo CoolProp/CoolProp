@@ -198,33 +198,33 @@ class PropertyDict(with_metaclass(ABCMeta),object):
 
 class SIunits(PropertyDict):
     def __init__(self):
-        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=ur'ρ', unit=ur'kg/m³')
-        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=ur'h', unit=ur'J/kg')
-        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=ur'p', unit=ur'Pa')
-        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=ur's', unit=ur'J/kg/K')
-        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=ur'T', unit=ur'K')
-        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=ur'u', unit=ur'J/kg')
-        self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=ur'x', unit=ur'')
+        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=u'ρ', unit=u'kg/m³')
+        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=u'h', unit=u'J/kg')
+        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=u'p', unit=u'Pa')
+        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=u's', unit=u'J/kg/K')
+        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=u'T', unit=u'K')
+        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=u'u', unit=u'J/kg')
+        self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=u'x', unit=u'')
 
 class KSIunits(SIunits):
     def __init__(self):
         super(KSIunits, self).__init__()
         self.H.mul_SI=1e-3
-        self.H.unit=r'kJ/kg'
+        self.H.unit=u'kJ/kg'
         self.P.mul_SI=1e-3
-        self.P.unit=r'kPa'
+        self.P.unit=u'kPa'
         self.S.mul_SI=1e-3
-        self.S.unit=r'kJ/kg/K'
+        self.S.unit=u'kJ/kg/K'
         self.U.mul_SI=1e-3
-        self.U.unit=r'kJ/kg'
+        self.U.unit=u'kJ/kg'
 
 class EURunits(KSIunits):
     def __init__(self):
         super(EURunits, self).__init__()
         self.P.mul_SI=1e-5
-        self.P.unit=r'bar'
+        self.P.unit=u'bar'
         self.T.add_SI=-273.15
-        self.T.unit=ur'\u00B0C'
+        self.T.unit=u'\u00B0C'
 
 
 class Base2DObject(with_metaclass(ABCMeta),object):

@@ -133,16 +133,16 @@ class SolutionDataWriter(object):
         else:
             self.usetex    = False
             matplotlib.rcParams['text.usetex'] = False
-            self.percent   = ur'%'
-            self.celsius   = ur'\u00B0C'
-            self.errLabel  = ur'rel. Error ('+self.percent+ur')'
-            self.tempLabel = ur'Temperature ('+self.celsius+ur')'
-            self.densLabel = ur'Density ($\mathdefault{kg/m^3\!}$)'
-            self.heatLabel = ur'Heat Capacity ($\mathdefault{J/kg/K}$)'
-            self.condLabel = ur'Thermal Conductivity ($\mathdefault{W/m/K}$)'
-            self.viscLabel = ur'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
-            self.satPLabel = ur'Saturation Pressure ($\mathdefault{Pa}$)'
-            self.TfreLabel = ur'Freezing Temperature ($\mathdefault{K}$)'
+            self.percent   = r'%'
+            self.celsius   = u'\u00B0C'
+            self.errLabel  = r'rel. Error ('+self.percent+r')'
+            self.tempLabel = u'Temperature ('+self.celsius+u')'
+            self.densLabel = r'Density ($\mathdefault{kg/m^3\!}$)'
+            self.heatLabel = r'Heat Capacity ($\mathdefault{J/kg/K}$)'
+            self.condLabel = r'Thermal Conductivity ($\mathdefault{W/m/K}$)'
+            self.viscLabel = r'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
+            self.satPLabel = r'Saturation Pressure ($\mathdefault{Pa}$)'
+            self.TfreLabel = r'Freezing Temperature ($\mathdefault{K}$)'
             f = 1.00
 
 #         self.percent   = ur'pc'
@@ -1444,8 +1444,8 @@ class SolutionDataWriter(object):
 
 
 
-        header = [u'Name', u'Description', u'Reference', ur'{$T_\text{min}$ (\si{\celsius})}', ur'{$T_\text{max}$ (\si{\celsius})}', ur'{$T_\text{base}$ (\si{\kelvin})}']
-        if use_x: header.extend([ur'{$x_\text{min}$}', ur'{$x_\text{max}$}'])
+        header = [r'Name', r'Description', r'Reference', r'{$T_\text{min}$ (\si{\celsius})}', r'{$T_\text{max}$ (\si{\celsius})}', r'{$T_\text{base}$ (\si{\kelvin})}']
+        if use_x: header.extend([r'{$x_\text{min}$}', r'{$x_\text{max}$}'])
 
         testTable = []
         testTable.append(header) # Headline
