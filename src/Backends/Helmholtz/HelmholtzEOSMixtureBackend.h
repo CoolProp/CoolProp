@@ -133,6 +133,7 @@ public:
         switch(param){
             case iP_critical: return fld.crit.p;
             case iT_critical: return fld.crit.T;
+            case irhomolar_critical: return fld.crit.rhomolar;
             case iacentric_factor: return fld.EOS().acentric;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
@@ -256,7 +257,8 @@ public:
 
     CoolPropDbl calc_phase_identification_parameter(void);
     CoolPropDbl calc_fugacity(std::size_t i); 
-    CoolPropDbl calc_fugacity_coefficient(std::size_t i);
+    CoolPropDbl calc_fugacity_coefficient(std::size_t i); 
+    CoolPropDbl calc_chemical_potential(std::size_t i);
 
     /// Using this backend, calculate the flame hazard
     CoolPropDbl calc_flame_hazard(void){ return components[0].environment.FH;};

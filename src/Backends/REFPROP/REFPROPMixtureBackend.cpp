@@ -928,6 +928,20 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity(std::size_t i)
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(f[i]*1000);
 }
+CoolPropDbl REFPROPMixtureBackend::calc_chemical_potential(std::size_t i)
+{
+    this->check_loaded_fluid();
+    double rho_mol_L = 0.001*_rhomolar;
+    long ierr = 0;
+    std::vector<double> chem_pot(mole_fractions.size());
+    char herr[255];
+    CHEMPOTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
+        &(chem_pot[0]),                           // Outputs
+        &ierr, herr, errormessagelength);        // Error message
+    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s", herr).c_str()); }
+    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    return static_cast<CoolPropDbl>(chem_pot[i]);
+}
 
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
 {

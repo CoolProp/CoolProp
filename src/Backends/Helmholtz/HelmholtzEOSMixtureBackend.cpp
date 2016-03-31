@@ -2453,6 +2453,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity(std::size_t i)
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
     return MixtureDerivatives::fugacity_i(*this, i, xN_flag);
 }
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_chemical_potential(std::size_t i)
+{
+    x_N_dependency_flag xN_flag = XN_DEPENDENT;
+    double Tci = get_fluid_constant(i, iT_critical);
+    double rhoci = get_fluid_constant(i, irhomolar_critical);
+    double dnar_dni__const_T_V_nj = MixtureDerivatives::dnalphar_dni__constT_V_nj(*this, i, xN_flag);
+    double dna0_dni__const_T_V_nj = components[i].EOS().alpha0.base(tau()*(Tci / T_reducing()), delta()/(rhoci / rhomolar_reducing())) + 1 + log(mole_fractions[i]);
+    return gas_constant()*T()*(dna0_dni__const_T_V_nj + dnar_dni__const_T_V_nj);
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_phase_identification_parameter(void)
 {
     return 2 - rhomolar()*(second_partial_deriv(iP, iDmolar, iT, iT, iDmolar)/first_partial_deriv(iP, iT, iDmolar) -  second_partial_deriv(iP, iDmolar, iT, iDmolar, iT)/first_partial_deriv(iP, iDmolar, iT));

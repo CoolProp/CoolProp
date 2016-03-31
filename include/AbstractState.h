@@ -154,6 +154,8 @@ protected:
     virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i){ throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend"); };
     /// Using this backend, calculate the fugacity in Pa
     virtual CoolPropDbl calc_fugacity(std::size_t i){ throw NotImplementedError("calc_fugacity is not implemented for this backend"); };
+    /// Using this backend, calculate the chemical potential in J/mol
+    virtual CoolPropDbl calc_chemical_potential(std::size_t i) { throw NotImplementedError("calc_chemical_potential is not implemented for this backend"); };
     /// Using this backend, calculate the phase identification parameter (PIP)
     virtual CoolPropDbl calc_PIP(void){ throw NotImplementedError("calc_PIP is not implemented for this backend"); };
 
@@ -646,6 +648,8 @@ public:
     double fugacity_coefficient(std::size_t i);
     /// Return the fugacity of the i-th component of the mixture
     double fugacity(std::size_t i);
+    /// Return the chemical potential of the i-th component of the mixture
+    double chemical_potential(std::size_t i);
     /// Return the fundamental derivative of gas dynamics
     //double fundamental_derivative_of_gas_dynamics(void){return this->second_partial_deriv(iP, iDmolar, iSmolar, iDmolar, iSmolar)/pow(speed_sound(), 2)/2/pow(this->rhomolar(),3);};
     /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"

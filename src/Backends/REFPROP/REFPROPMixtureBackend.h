@@ -156,6 +156,7 @@ public:
 
     CoolPropDbl calc_fugacity_coefficient(std::size_t i);
     CoolPropDbl calc_fugacity(std::size_t i);
+    CoolPropDbl calc_chemical_potential(std::size_t i);
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
     bool has_melting_line(){return true;};
     double calc_melt_Tmax();
