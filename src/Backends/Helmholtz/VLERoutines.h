@@ -433,6 +433,45 @@ namespace SaturationSolvers
     };
 };
     
-} /* namespace CoolProp*/
+namespace StabilityRoutines{
+    
+    /** \brief Evaluate phase stability
+     * Based on the work of Gernert et al., J. Chem. Thermodyn., 2014 http://dx.doi.org/10.1016/j.fluid.2014.05.012
+     */
+    class StabilityEvaluationClass{
+    protected:
+        HelmholtzEOSMixtureBackend &HEOS;
+        std::vector<double> lnK, K, x, y;
+        const std::vector<double> &z;
+        double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
+    private:
+        bool _stable;
+    public:
+        StabilityEvaluationClass(HelmholtzEOSMixtureBackend &HEOS)
+           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), _stable(false) {};
+        /** \brief Calculate trial compositions
+         */
+        void trial_compositions();
+        /** \brief Successive substitution
+         */
+        void successive_substitution(int num_steps);
+        /** \brief Check stability
+         * 1. Check stability by looking at tpd', tpd'' and \f$ \Delta G/(nRT)\f$
+         * 2. Do a full TPD analysis
+         */
+        void check_stability();
+        /** \brief Return best estimate for the stability of the point
+         */
+        bool is_stable(){
+            trial_compositions();
+            successive_substitution(3);
+            check_stability();
+            return _stable;
+        }
+    };
+        
+}; /* namespace StabilityRoutines*/
+    
+}; /* namespace CoolProp*/
 
 #endif

@@ -3144,10 +3144,17 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     double min_eigenvalue = es.eigenvalues().real().minCoeff();
     
     CriticalState critical;
-    critical.stable = (min_eigenvalue > 0); // TODO: stability analysis
     critical.T = _critical.T;
     critical.p = _critical.p;
     critical.rhomolar = _critical.rhomolar;
+    if (_critical.p < 0){
+        critical.stable = false;
+    }
+    else{
+        // Otherwise we try to check stability with TPD-based analysis
+        StabilityRoutines::StabilityEvaluationClass stability_tester(*this);
+        critical.stable = stability_tester.is_stable();
+    }
     return critical;
 }
 
