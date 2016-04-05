@@ -377,9 +377,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 }
             }
             // Add some spaces to deal with string parsing bug in REFPROP in SETUPdll
-			if (N > 1) {
-				components_joined += "     ";
-			}
+            components_joined += "     ";
 
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
 
