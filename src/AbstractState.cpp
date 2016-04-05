@@ -355,6 +355,8 @@ double AbstractState::keyed_output(parameters key)
         return get_reducing_state().rhomolar;
     case ispeed_sound:
         return speed_sound();
+    case ialphar:
+        return alphar(); 
     case ialpha0:
         return alpha0();
     case idalpha0_ddelta_consttau:
