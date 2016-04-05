@@ -4,6 +4,7 @@
 #include "MatrixMath.h"
 #include "MixtureDerivatives.h"
 #include "Configuration.h"
+#include "FlashRoutines.h"
 
 namespace CoolProp {
     
@@ -1699,5 +1700,171 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays()
 
     error_rms = r.norm(); // Square-root (The R in RMS)
 }
+    
+class RachfordRiceResidual: public FuncWrapper1DWithDeriv{
+    private:
+        const std::vector<double> &z, &lnK;
+    public:
+        RachfordRiceResidual(const std::vector<double> &z, const std::vector<double> &lnK) : z(z), lnK(lnK) {};
+        double call(double beta){ return FlashRoutines::g_RachfordRice(z, lnK, beta); }
+        double deriv(double beta){ return FlashRoutines::dgdbeta_RachfordRice(z, lnK, beta); }
+};
+
+void StabilityRoutines::StabilityEvaluationClass::trial_compositions(){
+   
+    x.resize(z.size()); y.resize(z.size()); lnK.resize(z.size()); K.resize(z.size());
+    double g0 = 0, g1 = 0, beta = -1;
+    
+    for (int i = 0; i < static_cast<int>(z.size()); ++i){
+        // Calculate the K-factor
+        lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS.T(), HEOS.p(), i);
+        K[i] = exp(lnK[i]);
+        g0 += z[i]*(K[i]-1);   // The summation for beta = 0
+        g1 += z[i]*(1-1/K[i]); // The summation for beta = 1
+    }
+    // Now see what to do about the g(0) and g(1) values
+    // -----
+    //
+    if (g0 < 0){
+        beta = 0; // Assumed to be at bubble-point temperature
+    }
+    else if (g1 > 0){
+        beta = 1; // Assumed to be at the dew-point temperature
+    }
+    else{
+        // Need to iterate to find beta that makes g of Rachford-Rice zero
+        RachfordRiceResidual resid(z, lnK);
+        beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+    }
+    // Get the compositions from given value for beta, K, z
+    SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
+    normalize_vector(x);
+    normalize_vector(y);
+}
+void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int num_steps){
+    // ----
+    // Do a few steps of successive substitution
+    // ----
+    
+    HEOS.SatL->set_mole_fractions(x);
+    HEOS.SatV->set_mole_fractions(y);
+    HEOS.SatL->calc_reducing_state();
+    HEOS.SatV->calc_reducing_state();
+    
+    // First use cubic as a guess for the density of liquid and vapor phases
+    rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid); // [mol/m^3]
+    rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas); // [mol/m^3]
+    
+    // Use Peneloux volume translation to shift liquid volume
+    // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
+    double summer_c = 0, v_SRK = 1/rhomolar_liq;
+    for (std::size_t i = 0; i < z.size(); ++i){
+        // Get the parameters for the cubic EOS
+        CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical),
+                    pc = HEOS.get_fluid_constant(i, iP_critical),
+                    rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
+        CoolPropDbl R = 8.3144598;
+        summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));
+    }
+    rhomolar_liq = 1/(v_SRK - summer_c);
+    
+    for (int step_count = 0; step_count < num_steps; ++step_count){
+        // Set the composition
+        HEOS.SatL->set_mole_fractions(x); HEOS.SatV->set_mole_fractions(y);
+        HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
+        
+        // Re-calculate the density
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_vap = HEOS.SatV->rhomolar();
+
+        // Calculate the new K-factors from the fugacity coefficients
+        double g0 = 0, g1 = 0;
+        for (std::size_t i = 0; i < z.size(); ++i){
+            lnK[i] = log(HEOS.SatL->fugacity_coefficient(i)/HEOS.SatV->fugacity_coefficient(i));
+            K[i] = exp(lnK[i]);
+            g0 += z[i]*(K[i]-1);   // The summation for beta = 0
+            g1 += z[i]*(1-1/K[i]); // The summation for beta = 1
+        }
+        // TODO: this logic for g0 < 0 and g1 > 0 seems incorrect; beta then becomes by definition in 0 <= beta <= 1
+        if (g0 < 0){
+            beta = 0; // Assumed to be at bubble-point temperature
+        }
+        else if (g1 > 0){
+            beta = 1; // Assumed to be at the dew-point temperature
+        }
+        else{
+            // Need to iterate to find beta that makes g of Rachford-Rice zero
+            RachfordRiceResidual resid(z, lnK);
+            beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+        }
+        
+        // Get the compositions from given values for beta, K, z
+        SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
+        normalize_vector(x);
+        normalize_vector(y);
+    }
+}
+void StabilityRoutines::StabilityEvaluationClass::check_stability(){
+    std::vector<double> tpdL, tpdH;
+    _stable = true;
+    if (0 <= beta && beta <= 1){
+        // Calculate the tpd and the Gibbs energy difference (Gernert, 2014, Eqs. 20-22)
+        this->tpd_liq = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), x, rhomolar_liq);
+        this->tpd_vap = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), y, rhomolar_vap);
+        this->DELTAG_nRT = (1-beta)*tpd_liq + beta*(tpd_vap);
+        
+        // If any of these cases are met, conclusively unstable, stop!
+        if (this->tpd_liq < 0 || this->tpd_vap < 0 || this->DELTAG_nRT < 0){
+            _stable = false; return;
+        }
+    }
+    
+    // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
+    
+    // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
+    std::vector<double> xL(z.size()), xH(z.size());
+    for (std::size_t i = 0; i < z.size(); ++i){
+        xL[i] = z[i]*K[i];
+        xH[i] = z[i]/K[i];
+    }
+    normalize_vector(xL);
+    normalize_vector(xH);
+    
+    // For each composition, use successive substitution to try to evaluate stability
+    for (int step_count = 0; step_count < 100; ++step_count){
+        // Set the composition
+        HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
+        HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
+        
+        // Re-calculate the density
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_vap = HEOS.SatV->rhomolar();
+        
+        // Calculate and store TPD values
+        double tpd_L = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xL, rhomolar_vap);
+        double tpd_H = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xH, rhomolar_liq);
+        tpdL.push_back(tpd_L); tpdH.push_back(tpd_H);
+        if (tpd_L < 0 || tpd_H < 0){_stable = false; return;}
+        
+        // Calculate the new composition from the fugacity coefficients
+        for (std::size_t i = 0; i < z.size(); ++i){
+            // TODO: this seems weird; what fugacity coefficient is meant to be used in numerator of Gernert, 2014, Eq. 24 ?
+            xL[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatV->fugacity_coefficient(i);
+            xH[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatL->fugacity_coefficient(i);
+        }
+        normalize_vector(xL);
+        normalize_vector(xH);
+    }
+}
+
+
+    
+    
+    
+    
 
 } /* namespace CoolProp*/

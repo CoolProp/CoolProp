@@ -11,28 +11,7 @@
 
 namespace CoolProp{
 
-template<class T> T g_RachfordRice(const std::vector<T> &z, const std::vector<T> &lnK, T beta)
-{
-    // g function from Rachford-Rice
-    T summer = 0;
-    for (std::size_t i = 0; i < z.size(); i++)
-    {
-        T Ki = exp(lnK[i]);
-        summer += z[i]*(Ki-1)/(1-beta+beta*Ki);
-    }
-    return summer;
-}
-template<class T> T dgdbeta_RachfordRice(const std::vector<T> &z, const std::vector<T> &lnK, T beta)
-{
-    // derivative of g function from Rachford-Rice with respect to beta
-    T summer = 0;
-    for (std::size_t i = 0; i < z.size(); i++)
-    {
-        T Ki = exp(lnK[i]);
-        summer += -z[i]*pow((Ki-1)/(1-beta+beta*Ki),2);
-    }
-    return summer;
-}
+
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
 {

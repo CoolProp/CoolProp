@@ -27,6 +27,31 @@ and not pollute the HelmholtzEOSMixtureBackend namespace
 */
 class FlashRoutines{
 public:
+    
+    template<class T> T
+    static g_RachfordRice(const std::vector<T> &z, const std::vector<T> &lnK, T beta)
+    {
+        // g function from Rachford-Rice
+        T summer = 0;
+        for (std::size_t i = 0; i < z.size(); i++)
+        {
+            T Ki = exp(lnK[i]);
+            summer += z[i]*(Ki-1)/(1-beta+beta*Ki);
+        }
+        return summer;
+    }
+    template<class T> T
+    static dgdbeta_RachfordRice(const std::vector<T> &z, const std::vector<T> &lnK, T beta)
+    {
+        // derivative of g function from Rachford-Rice with respect to beta
+        T summer = 0;
+        for (std::size_t i = 0; i < z.size(); i++)
+        {
+            T Ki = exp(lnK[i]);
+            summer += -z[i]*pow((Ki-1)/(1-beta+beta*Ki),2);
+        }
+        return summer;
+    }
 
     /// Flash for given pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
