@@ -109,3 +109,14 @@ If you want to determine the version of REFPROP that you are actually using, you
     In [0]: import CoolProp.CoolProp as CP
     
     In [1]: CP.get_global_param_string("REFPROP_version")
+
+
+If you want to use the GERG-2008 model, you can do this at the beginning of your code:
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+    
+    In [1]: CP.get_global_param_string(CP.REFPROP_USE_GERG, True)
+
+Subsquently, all calculations will be done with the simplified EOS from the GERG-2008 model

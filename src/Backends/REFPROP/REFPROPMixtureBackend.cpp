@@ -165,9 +165,9 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
             std::string err;
-			const std::string &alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
-			bool loaded_REFPROP = ::load_REFPROP(err, alt_rp_path);
-				
+            const std::string &alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
+            bool loaded_REFPROP = ::load_REFPROP(err, alt_rp_path);
+                
             if (loaded_REFPROP) {
                 return true;
             }
@@ -194,10 +194,10 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
     return false;
 }
 std::string REFPROPMixtureBackend::version(){
-	long N = -1;
-	long ierr = 0;
-	char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
-	REFPROPMixtureBackend::REFPROP_supported();
+    long N = -1;
+    long ierr = 0;
+    char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
+    REFPROPMixtureBackend::REFPROP_supported();
     SETUPdll(&N, fluids, hmx, default_reference_state,
                 &ierr, herr,
                 10000, // Length of component_string (see PASS_FTN.for from REFPROP)
@@ -205,8 +205,8 @@ std::string REFPROPMixtureBackend::version(){
                 lengthofreference, // Length of reference
                 errormessagelength // Length of error message
                 );
-	std::string s(herr, herr+254);
-	return strstrip(s);
+    std::string s(herr, herr+254);
+    return strstrip(s);
 }
 
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &fluid_names)
@@ -233,6 +233,13 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         std::string components_joined_raw = strjoin(fluid_names,"|");
         std::string fdPath = get_REFPROP_fluid_path();
         long N = static_cast<long>(fluid_names.size());
+
+        if (get_config_bool(REFPROP_USE_GERG)) {
+            long iflag = 1, // Tell REFPROP to use GERG04; 0 unsets GERG usage
+                 ierr = 0;
+            char herr[255];
+            GERG04dll(&N, &iflag, &ierr, herr, 255);
+        }
 
         // Check platform support
         if(!REFPROP_supported()){ throw NotImplementedError("You cannot use the REFPROPMixtureBackend."); }
@@ -297,9 +304,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             }
         }
 
-		// ----------------------------------------------
+        // ----------------------------------------------
         // Construct the default path to the HMX.BNC file
-		// ----------------------------------------------
+        // ----------------------------------------------
         char path_HMX_BNC[refpropcharlength+1];
         #ifdef __ISWINDOWS__
             const std::string full_HMX_path = "HMX.BNC";
@@ -318,22 +325,22 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         // look in fluids directory relative to directory set by SETPATHdll
         std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
         if (!alt_rp_path.empty()){
-			if (!endswith(alt_rp_path, "/") && !endswith(alt_rp_path, "\\")){
-				throw ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_rp_path.c_str()));
-			}
-			// Build a full path to the HMX.BMC
-			#ifdef __ISWINDOWS__
-			const std::string full_HMX_path = alt_rp_path + "\\fluids\\HMX.BNC";
-			#else
-			const std::string full_HMX_path = alt_rp_path + "/fluids/HMX.BNC";
-			#endif
-			const char * _full_HMX_path = full_HMX_path.c_str();
-			if (strlen(_full_HMX_path) > 0){
-				if (strlen(_full_HMX_path) > refpropcharlength){
-					throw ValueError(format("Full HMX path (%s) is too long", _full_HMX_path));
-				}
-				strcpy(path_HMX_BNC, _full_HMX_path);
-			}
+            if (!endswith(alt_rp_path, "/") && !endswith(alt_rp_path, "\\")){
+                throw ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_rp_path.c_str()));
+            }
+            // Build a full path to the HMX.BMC
+            #ifdef __ISWINDOWS__
+            const std::string full_HMX_path = alt_rp_path + "\\fluids\\HMX.BNC";
+            #else
+            const std::string full_HMX_path = alt_rp_path + "/fluids/HMX.BNC";
+            #endif
+            const char * _full_HMX_path = full_HMX_path.c_str();
+            if (strlen(_full_HMX_path) > 0){
+                if (strlen(_full_HMX_path) > refpropcharlength){
+                    throw ValueError(format("Full HMX path (%s) is too long", _full_HMX_path));
+                }
+                strcpy(path_HMX_BNC, _full_HMX_path);
+            }
         }
             
         // Use the alternative HMX.BNC path if provided - replace all the path to HMX.BNC with provided path
@@ -346,15 +353,15 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             strcpy(path_HMX_BNC, _alt_hmx_bnc_path);
         }
 
-		// If ALTERNATIVE_REFPROP_PATH is provided, set fdPath so that REFPROP will 
-		// look in that directory
-		if (!alt_rp_path.empty()){
-			#ifdef __ISWINDOWS__
-			fdPath = alt_rp_path + "fluids\\";
-			#else
-			fdPath = alt_rp_path + "fluids/";
-			#endif
-		}
+        // If ALTERNATIVE_REFPROP_PATH is provided, set fdPath so that REFPROP will 
+        // look in that directory
+        if (!alt_rp_path.empty()){
+            #ifdef __ISWINDOWS__
+            fdPath = alt_rp_path + "fluids\\";
+            #else
+            fdPath = alt_rp_path + "fluids/";
+            #endif
+        }
 
         // Loop over the file names - first we try with nothing, then .fld, then .FLD, then .ppf - means you can't mix and match
         for (unsigned int k = 0; k < number_of_endings; k++)
@@ -369,6 +376,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                     components_joined += "|" + fdPath + upper(fluid_names[j]) + endings[k];
                 }
             }
+            // Add some spaces to deal with string parsing bug in REFPROP in SETUPdll
+            components_joined += "  ";
 
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
 
@@ -499,16 +508,16 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
     if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
     {
         if (parameter == "model"){ 
-			return shmodij;
-		}
-		else {
+            return shmodij;
+        }
+        else {
             throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-			return "";
+            return "";
         }
     }
     else {
         //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
-		return "";
+        return "";
     }
 }
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
@@ -528,7 +537,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
         else if (parameter == "gammaT"){ fij[1] = value; }
         else if (parameter == "betaV"){ fij[2] = value; }
         else if (parameter == "gammaV"){ fij[3] = value; }
-		else if (parameter == "Fij"){ fij[4] = value; }
+        else if (parameter == "Fij"){ fij[4] = value; }
         else{
             throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
         }
@@ -555,16 +564,16 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
         else if (parameter == "gammaT"){ val = fij[1]; }
         else if (parameter == "betaV"){ val = fij[2]; }
         else if (parameter == "gammaV"){ val = fij[3]; }
-		else if (parameter == "Fij"){ val = fij[4]; }
+        else if (parameter == "Fij"){ val = fij[4]; }
         else{
             throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-			return _HUGE;
+            return _HUGE;
         }
         return val;
     }
     else{
         //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
-		return _HUGE;
+        return _HUGE;
     }
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
@@ -722,7 +731,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_triple(){
                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
-	if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
     return p_kPa*1000;
 };
 CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
@@ -1452,7 +1461,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             update(TUmolar_INPUTS, value1, value2 * (double)_molar_mass);
             return;
         }
-		case PQ_INPUTS:
+        case PQ_INPUTS:
         {
             // From REFPROP:
             //additional input--only for TQFLSH and PQFLSH
@@ -1502,10 +1511,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
-				if (static_cast<int>(ierr) == 0){
-					// Calculate everything else
-					THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
-				}
+                if (static_cast<int>(ierr) == 0){
+                    // Calculate everything else
+                    THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+                }
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
@@ -1539,7 +1548,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             _Q = value1; _T = value2;
 
             // Use flash routine to find properties
-			long iFlsh = 0, iGuess = 0;
+            long iFlsh = 0, iGuess = 0;
             if (std::abs(value2) < 1e-10){
                 iFlsh = 1; // bubble point with T given
             }
@@ -1552,18 +1561,18 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
                       &ierr,herr,errormessagelength);
-				if (static_cast<int>(ierr) == 0){
-					// Calculate everything else
-					THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
-				}
+                if (static_cast<int>(ierr) == 0){
+                    // Calculate everything else
+                    THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+                }
             }
-			if (static_cast<int>(ierr) > 0 || iFlsh == 0){
-				ierr = 0;
-				TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
-					 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-					&emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
-					&ierr,herr,errormessagelength); // Error terms
-			}
+            if (static_cast<int>(ierr) > 0 || iFlsh == 0){
+                ierr = 0;
+                TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
+                     &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                    &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
+                    &ierr,herr,errormessagelength); // Error terms
+            }
 
             if (static_cast<int>(ierr) > 0) {
                 throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str());
@@ -1757,33 +1766,33 @@ void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
-	if ((key == iDmolar) && _rhoLmolar) return _rhoLmolar;
-	throw ValueError("The saturated liquid state has not been set.");
-	return _HUGE;
+    if ((key == iDmolar) && _rhoLmolar) return _rhoLmolar;
+    throw ValueError("The saturated liquid state has not been set.");
+    return _HUGE;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) {
-	if ((key == iDmolar) && _rhoVmolar) return _rhoVmolar;
-	ValueError("The saturated vapor state has not been set.");
-	return _HUGE;
+    if ((key == iDmolar) && _rhoVmolar) return _rhoVmolar;
+    ValueError("The saturated vapor state has not been set.");
+    return _HUGE;
 }
 
 void REFPROPMixtureBackend::calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){
-	if (type == "Joule-Thomson"){
-		JouleThomsonCurveTracer JTCT(this, 1e5, 800);
-		JTCT.trace(T, p);
-	}
+    if (type == "Joule-Thomson"){
+        JouleThomsonCurveTracer JTCT(this, 1e5, 800);
+        JTCT.trace(T, p);
+    }
     else if (type == "Joule-Inversion"){
         JouleInversionCurveTracer JICT(this, 1e5, 800);
-		JICT.trace(T, p);
-	}
+        JICT.trace(T, p);
+    }
     else if (type == "Ideal"){
         IdealCurveTracer ICT(this, 1e5, 800);
-		ICT.trace(T, p);
-	}
+        ICT.trace(T, p);
+    }
     else if (type == "Boyle"){
         BoyleCurveTracer BCT(this, 1e5, 800);
-		BCT.trace(T, p);
-	}
+        BCT.trace(T, p);
+    }
     else{
         throw ValueError(format("Invalid ideal curve type: %s", type.c_str()));
     }
