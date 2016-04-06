@@ -1787,16 +1787,15 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
             g0 += z[i]*(K[i]-1);   // The summation for beta = 0
             g1 += z[i]*(1-1/K[i]); // The summation for beta = 1
         }
-        // TODO: this logic for g0 < 0 and g1 > 0 seems incorrect; beta then becomes by definition in 0 <= beta <= 1
+		RachfordRiceResidual resid(z, lnK);
         if (g0 < 0){
-            beta = 0; // Assumed to be at bubble-point temperature
+			beta = Secant(resid, -0.1, 0.001, 1e-10, 100);
         }
         else if (g1 > 0){
-            beta = 1; // Assumed to be at the dew-point temperature
+			beta = Secant(resid, 1.1, 0.001, 1e-10, 100);
         }
         else{
             // Need to iterate to find beta that makes g of Rachford-Rice zero
-            RachfordRiceResidual resid(z, lnK);
             beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
         }
         
