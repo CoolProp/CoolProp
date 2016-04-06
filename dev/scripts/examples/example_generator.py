@@ -247,6 +247,20 @@ high_level_interface = [
     {
         "type": "print",
         "arguments": [
+            "'REFPROP version:'",
+            {
+                "type": "function",
+                "function": "get_global_param_string",
+                "arguments": [
+                    "'REFPROP_version'"
+                ]
+            }
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
             "'Critical temperature of water:'",
             {
                 "type": "function",
