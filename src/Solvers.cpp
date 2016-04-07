@@ -152,13 +152,14 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
     x = x0;
     while (iter < 2 || std::abs(fval) > ftol)
     {
+        if (f->input_not_in_range(x)){
+            throw ValueError(format("Input [%g] is out of range",x));
+        }
+        
         fval = f->call(x);
         dfdx = f->deriv(x);
         d2fdx2 = f->second_deriv(x);
         
-        if (f->input_not_in_range(x)){
-            throw ValueError(format("Input [%g] is out of range",x));
-        }
         if (!ValidNumber(fval)){
             throw ValueError("Residual function in Halley returned invalid number");
         };
@@ -167,8 +168,6 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
         };
         
         dx = -(2*fval*dfdx)/(2*POW2(dfdx)-fval*d2fdx2);
-
-        
 
         x += dx;
 
@@ -212,6 +211,10 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
         if (iter==1){x1=x0; x=x1;}
         if (iter==2){x2=x0+dx; x=x2;}
         if (iter>2) {x=x2;}
+        
+            if (f->input_not_in_range(x)){
+                throw ValueError(format("Input [%g] is out of range",x));
+            }
 
             fval = f->call(x);
 
@@ -231,6 +234,10 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
                 return x;
             }
             y2=fval;
+            double deltay = y2-y1;
+            if (iter > 2 && std::abs(deltay)<1e-14){
+                return x;
+            }
             x3=x2-y2/(y2-y1)*(x2-x1);
             y1=y2; x1=x2; x2=x3;
 
