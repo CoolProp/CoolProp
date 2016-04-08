@@ -1057,19 +1057,13 @@ void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, Coo
     // Set up the state
     pre_update(pair, rhomolar, T);
     
-    // Save the current value of vapor quality
-    CoolPropDbl Q_old = _Q;
-    
     _rhomolar = rhomolar;
     _T = T;
     _p = calc_pressure();
-    _Q = -1;
     
     // Cleanup
-    post_update();
-    
-    // Copy the value back
-    _Q = Q_old;
+    bool optional_checks = false;
+    post_update(optional_checks);
 }
 
 void HelmholtzEOSMixtureBackend::update_HmolarQ_with_guessT(CoolPropDbl hmolar, CoolPropDbl Q, CoolPropDbl Tguess)
@@ -1108,10 +1102,11 @@ void HelmholtzEOSMixtureBackend::update_TP_guessrho(CoolPropDbl T, CoolPropDbl p
     CoolPropDbl rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
     
     // Update the class with the new calculated density
-    update(DmolarT_INPUTS, rhomolar, T);
+    update_DmolarT_direct(rhomolar, T);
     
     // Cleanup
-    post_update();
+    bool optional_checks = false;
+    post_update(optional_checks);
 }
 
 void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 )
@@ -1219,7 +1214,7 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
     post_update();
 }
 
-void HelmholtzEOSMixtureBackend::post_update()
+void HelmholtzEOSMixtureBackend::post_update(bool optional_checks)
 {
     // Check the values that must always be set
     //if (_p < 0){ throw ValueError("p is less than zero");}
@@ -1229,9 +1224,12 @@ void HelmholtzEOSMixtureBackend::post_update()
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
     if (_rhomolar < 0){ throw ValueError("rhomolar is less than zero");}
     if (!ValidNumber(_rhomolar)){ throw ValueError("rhomolar is not a valid number");}
-    if (!ValidNumber(_Q)){ throw ValueError("Q is not a valid number");}
-    if (_phase == iphase_unknown){ 
-            throw ValueError("_phase is unknown");
+    
+    if (optional_checks){
+        if (!ValidNumber(_Q)){ throw ValueError("Q is not a valid number");}
+        if (_phase == iphase_unknown){ 
+                throw ValueError("_phase is unknown");
+        }
     }
 
     // Set the reduced variables

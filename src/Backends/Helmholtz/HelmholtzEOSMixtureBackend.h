@@ -21,7 +21,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState {
     
 protected:
     void pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 );
-    void post_update();
+    void post_update(bool optional_checks = true);
     shared_ptr<HelmholtzEOSMixtureBackend> TPD_state; ///< A temporary state used for calculations of the tangent-plane-distance
     /// Update the state class used to calculate the tangent-plane-distance
     virtual void update_TPD_state(){
