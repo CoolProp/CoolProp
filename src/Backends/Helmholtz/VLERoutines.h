@@ -441,14 +441,15 @@ namespace StabilityRoutines{
     class StabilityEvaluationClass{
     protected:
         HelmholtzEOSMixtureBackend &HEOS;
-        std::vector<double> lnK, K, x, y;
+        std::vector<double> lnK, K, K0, x, y;
         const std::vector<double> &z;
         double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
     private:
         bool _stable;
+        bool debug;
     public:
         StabilityEvaluationClass(HelmholtzEOSMixtureBackend &HEOS)
-           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), _stable(false) {};
+           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), _stable(false), debug(false) {};
         /** \brief Calculate trial compositions
          */
         void trial_compositions();

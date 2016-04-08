@@ -1722,6 +1722,8 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions(){
         g0 += z[i]*(K[i]-1);   // The summation for beta = 0
         g1 += z[i]*(1-1/K[i]); // The summation for beta = 1
     }
+    // Copy K-factors for later use
+    K0 = K;
     // Now see what to do about the g(0) and g(1) values
     // -----
     //
@@ -1740,16 +1742,15 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions(){
     SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
     normalize_vector(x);
     normalize_vector(y);
+    if (debug){ fmt::printf("1) T: %g p: %g beta: %g\n", HEOS.T(), HEOS.p(), beta); }
 }
 void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int num_steps){
     // ----
     // Do a few steps of successive substitution
     // ----
     
-    HEOS.SatL->set_mole_fractions(x);
-    HEOS.SatV->set_mole_fractions(y);
-    HEOS.SatL->calc_reducing_state();
-    HEOS.SatV->calc_reducing_state();
+    HEOS.SatL->set_mole_fractions(x); HEOS.SatL->calc_reducing_state();
+    HEOS.SatV->set_mole_fractions(y); HEOS.SatV->calc_reducing_state();
     
     // First use cubic as a guess for the density of liquid and vapor phases
     rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid); // [mol/m^3]
@@ -1770,6 +1771,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         rhomolar_liq = 1/(v_SRK - summer_c);
     }
     
+    if (debug){ fmt::printf("2) SS1: i beta K rho' rho''\n"); }
     for (int step_count = 0; step_count < num_steps; ++step_count){
         // Set the composition
         HEOS.SatL->set_mole_fractions(x); HEOS.SatV->set_mole_fractions(y);
@@ -1805,6 +1807,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
         normalize_vector(x);
         normalize_vector(y);
+        if (debug){ fmt::printf("2) %d %g %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f"), rhomolar_liq, rhomolar_vap); }
     }
 }
 void StabilityRoutines::StabilityEvaluationClass::check_stability(){
@@ -1815,6 +1818,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         this->tpd_liq = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), x, rhomolar_liq);
         this->tpd_vap = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), y, rhomolar_vap);
         this->DELTAG_nRT = (1-beta)*tpd_liq + beta*(tpd_vap);
+        if (debug){ fmt::printf("3) tpd': %g tpd'': %g DELTAG/nRT: %g\n", tpd_liq, tpd_vap, DELTAG_nRT); }
         
         // If any of these cases are met, conclusively unstable, stop!
         if (this->tpd_liq < 0 || this->tpd_vap < 0 || this->DELTAG_nRT < 0){
@@ -1827,13 +1831,14 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
     std::vector<double> xL(z.size()), xH(z.size());
     for (std::size_t i = 0; i < z.size(); ++i){
-        xL[i] = z[i]*K[i];
-        xH[i] = z[i]/K[i];
+        xL[i] = z[i]*K0[i];
+        xH[i] = z[i]/K0[i];
     }
     normalize_vector(xL);
     normalize_vector(xH);
     
     // For each composition, use successive substitution to try to evaluate stability
+    if (debug){ fmt::printf("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n"); }
     for (int step_count = 0; step_count < 100; ++step_count){
         // Set the composition
         HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
@@ -1849,16 +1854,18 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         double tpd_L = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xL, rhomolar_vap);
         double tpd_H = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xH, rhomolar_liq);
         tpdL.push_back(tpd_L); tpdH.push_back(tpd_H);
-        if (tpd_L < 0 || tpd_H < 0){_stable = false; return;}
         
         // Calculate the new composition from the fugacity coefficients
         for (std::size_t i = 0; i < z.size(); ++i){
-            // TODO: this seems weird; what fugacity coefficient is meant to be used in numerator of Gernert, 2014, Eq. 24 ?
             xL[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatV->fugacity_coefficient(i);
             xH[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatL->fugacity_coefficient(i);
         }
         normalize_vector(xL);
         normalize_vector(xH);
+        if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
+        
+        if (tpd_L < 0 || tpd_H < 0){_stable = false; return;}
+        
     }
 }
 
