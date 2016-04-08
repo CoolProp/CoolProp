@@ -28,7 +28,7 @@ There is example code :ref:`at the end of this page <r_example>`
     
 .. warning::
 
-    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  On OSX, the entire call command would read: ``DYLD_LIBRARY_PATH=/opt/refprop Rscript --default-packages=methods Example.R``
+    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  Or call ``library(methods)`` at the top of the file (before ``source("CoolProp.R")``).  See also http://stackoverflow.com/a/19468533\n
 
 User-Compiled Binaries
 ======================
