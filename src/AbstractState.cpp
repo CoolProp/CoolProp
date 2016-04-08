@@ -110,6 +110,8 @@ bool AbstractState::clear() {
     // Reset all instances of CachedElement and overwrite
     // the internal double values with -_HUGE
     this->_R = _HUGE;
+    this->_gas_constant.clear();
+    this->_molar_mass.clear();
 
     /// Ancillary curve values
     this->_rhoLanc.clear();
