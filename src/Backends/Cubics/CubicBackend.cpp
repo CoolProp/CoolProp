@@ -333,6 +333,8 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
 void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
     if (parameter == "kij" || parameter == "k_ij"){
         get_cubic()->set_kij(i,j,value);
+        if (this->SatL.get() != NULL){ this->SatL->set_binary_interaction_double(i,j,"kij",value); }
+        if (this->SatV.get() != NULL){ this->SatV->set_binary_interaction_double(i,j,"kij",value); }
     }
     else{
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
@@ -347,3 +349,12 @@ double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::
     }
 };
 
+void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend *donor){
+    std::size_t N = mole_fractions.size();
+    for (std::size_t i = 0; i < N; ++i){
+        for (std::size_t j = i+1; j < N; ++j){
+            double val = donor->get_binary_interaction_double(i, j, "kij");
+            this->set_binary_interaction_double(i, j, "kij", val);
+        }
+    }
+}

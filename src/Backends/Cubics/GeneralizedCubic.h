@@ -56,6 +56,8 @@ public:
     double get_Delta_2(){ return Delta_2; }
     void set_kij(std::size_t i, std::size_t j, double kij){ k[i][j] = kij; k[j][i] = kij; }
     double get_kij(std::size_t i, std::size_t j){ return k[i][j]; }
+    const std::vector<std::vector<double> > & get_k(){ return k; }
+    void set_k(const std::vector<std::vector<double> > &k){ this->k = k; }
 
     /// Get the leading constant in the expression for the pure fluid attractive energy term
     /// (must be implemented by derived classes)

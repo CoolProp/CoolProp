@@ -166,9 +166,12 @@ public:
     void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){throw ValueError("set_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); }
     double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){throw ValueError("get_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); };
 
+    // Return a 1-1 copy of this class
     virtual AbstractCubicBackend *get_copy(bool generate_SatL_and_SatV = true) = 0;
+    
+    // Copy the entire kij matrix from another instance in one shot
+    void copy_k(AbstractCubicBackend *donor);
 };
-
 
 
 class SRKBackend : public AbstractCubicBackend  {
@@ -204,7 +207,9 @@ public:
 	    setup(generate_SatL_and_SatV);
     }
     AbstractCubicBackend *get_copy(bool generate_SatL_and_SatV = true){
-        return new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
+        AbstractCubicBackend *ACB = new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
+        ACB->copy_k(this);
+        return ACB;
     }
     std::string backend_name(void){return "SRKBackend";}
 };
@@ -242,7 +247,9 @@ public:
 	    setup(generate_SatL_and_SatV);
     };
     AbstractCubicBackend * get_copy(bool generate_SatL_and_SatV = true){
-        return new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
+        AbstractCubicBackend * ACB = new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
+        ACB->copy_k(this);
+        return ACB;
     }
     std::string backend_name(void){return "PengRobinsonBackend";}
 };
