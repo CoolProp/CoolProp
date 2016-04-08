@@ -206,6 +206,7 @@ public:
     AbstractCubicBackend *get_copy(bool generate_SatL_and_SatV = true){
         return new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
     }
+    std::string backend_name(void){return "SRKBackend";}
 };
 
 class PengRobinsonBackend : public AbstractCubicBackend  {
@@ -243,6 +244,7 @@ public:
     AbstractCubicBackend * get_copy(bool generate_SatL_and_SatV = true){
         return new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
     }
+    std::string backend_name(void){return "PengRobinsonBackend";}
 };
 
 /**

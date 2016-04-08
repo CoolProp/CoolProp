@@ -1755,18 +1755,20 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
     rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid); // [mol/m^3]
     rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas); // [mol/m^3]
     
-    // Use Peneloux volume translation to shift liquid volume
-    // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
-    double summer_c = 0, v_SRK = 1/rhomolar_liq;
-    for (std::size_t i = 0; i < z.size(); ++i){
-        // Get the parameters for the cubic EOS
-        CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical),
-                    pc = HEOS.get_fluid_constant(i, iP_critical),
-                    rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
-        CoolPropDbl R = 8.3144598;
-        summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));
+    if (HEOS.backend_name().find("Helmholtz") == 0){
+        // Use Peneloux volume translation to shift liquid volume
+        // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
+        double summer_c = 0, v_SRK = 1/rhomolar_liq;
+        for (std::size_t i = 0; i < z.size(); ++i){
+            // Get the parameters for the cubic EOS
+            CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical),
+                        pc = HEOS.get_fluid_constant(i, iP_critical),
+                        rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
+            CoolPropDbl R = 8.3144598;
+            summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));
+        }
+        rhomolar_liq = 1/(v_SRK - summer_c);
     }
-    rhomolar_liq = 1/(v_SRK - summer_c);
     
     for (int step_count = 0; step_count < num_steps; ++step_count){
         // Set the composition
