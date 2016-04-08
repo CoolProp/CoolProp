@@ -73,7 +73,7 @@ if __name__=='__main__':
     subprocess.check_call('cmake ../../../.. -DCOOLPROP_R_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DR_BIN=/usr/bin', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
     with open('R/Example.out','w') as fp:
-        tee_call(r'DYLD_LIBRARY_PATH=/opt/refprop R -f Example.R', fp, shell = True, cwd = 'R')
+        tee_call(r'DYLD_LIBRARY_PATH=/opt/refprop Rscript Example.R', fp, shell = True, cwd = 'R')
     copyfiles('R','R')
     
     if not os.path.exists('MATLAB'): os.mkdir('MATLAB')
