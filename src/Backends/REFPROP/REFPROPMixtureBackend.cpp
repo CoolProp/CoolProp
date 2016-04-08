@@ -376,8 +376,6 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                     components_joined += "|" + fdPath + upper(fluid_names[j]) + endings[k];
                 }
             }
-            // Add some spaces to deal with string parsing bug in REFPROP in SETUPdll
-            components_joined += "     ";
 
             if (dbg_refprop) std::cout << format("%s:%d: The fluid %s has not been loaded before, current value is %s \n",__FILE__,__LINE__,components_joined_raw.c_str(),LoadedREFPROPRef.c_str());
 
@@ -385,6 +383,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             const char * _components_joined = components_joined.c_str();
             if (strlen(_components_joined) > 10000) { throw ValueError(format("components_joined (%s) is too long", _components_joined)); }
             strcpy(component_string, _components_joined);
+            // Pad the fluid string all the way to 10k characters with spaces to deal with string parsing bug in REFPROP in SETUPdll
+            for (int i = components_joined.size(); i < 10000; ++i){
+                component_string[i] = ' ';
+            }
 
             ierr = 0;
             //...Call SETUP to initialize the program
