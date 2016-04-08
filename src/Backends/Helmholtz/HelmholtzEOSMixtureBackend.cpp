@@ -3135,12 +3135,6 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     _critical.rhomolar = x[1]*rhomolar_reducing();
     _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
     
-    // First (necessary but not sufficient) check of stability
-    // All eigenvalues of M* matrix must be positive
-    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT, resid.Lstar);
-    Eigen::EigenSolver<Eigen::MatrixXd> es(Mstar);
-    double min_eigenvalue = es.eigenvalues().real().minCoeff();
-    
     CriticalState critical;
     critical.T = _critical.T;
     critical.p = _critical.p;
