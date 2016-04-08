@@ -79,7 +79,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
     }
     else if (backend == "PR" || backend == "Peng-Robinson"){
-        return new PengRobinsonBackend(fluid_names, get_config_double(R_u_CODATA));
+        return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
     }
     else if (!backend.compare("?") || backend.empty())
     {
