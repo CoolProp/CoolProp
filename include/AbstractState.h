@@ -541,7 +541,7 @@ public:
 	/// Or you can express the \f$ tpd \f$ in terms of fugacity (See Table 7.3 from GERG 2004 monograph) 
 	/// since \f$ \ln \phi_i = \ln f_i - \ln p -\ln z_i\f$
 	/// thus 
-	/// \f[ d_i = \ln f_i - \ln p\f]
+	/// \f[ d_i = \ln f_i(z) - \ln p\f]
 	/// and
 	/// \f[
 	/// tpd(w) = \sum_i w_i(\ln f_i(w) - \ln p - d_i)
