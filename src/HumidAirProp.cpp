@@ -1989,6 +1989,31 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
             v_bar=MolarVolume(T,p,psi_w);
             return IdealGasMolarEnthalpy_Air(T,v_bar);
         }
+        else if (!strcmp(Name,"h_Ice"))
+        {
+            strcpy(units, "J/kg");
+            return h_Ice(T, p);
+        }
+        else if (!strcmp(Name,"s_Ice"))
+        {
+            strcpy(units, "J/kg/K");
+            return s_Ice(T, p);
+        }
+        else if (!strcmp(Name,"psub_Ice"))
+        {
+            strcpy(units, "Pa");
+            return psub_Ice(T);
+        }
+        else if (!strcmp(Name,"g_Ice"))
+        {
+            strcpy(units, "J/kg");
+            return g_Ice(T, p);
+        }
+        else if (!strcmp(Name,"rho_Ice"))
+        {
+            strcpy(units, "kg/m^3");
+            return rho_Ice(T, p);
+        }
         else
         {
             printf("Sorry I didn't understand your input [%s] to HAProps_Aux\n",Name);
