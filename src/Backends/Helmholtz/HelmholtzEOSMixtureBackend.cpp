@@ -348,7 +348,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gas_constant(void)
     }
     else{
         if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
-            return R_u_CODATA;
+            return get_config_double(R_U_CODATA);
         }
         else{
             // mass fraction weighted average of the components

@@ -76,10 +76,10 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         throw ValueError("TREND backend not yet implemented");
     }
     else if (backend == "SRK"){
-        return new SRKBackend(fluid_names, R_u_CODATA);
+        return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
     }
     else if (backend == "PR" || backend == "Peng-Robinson"){
-        return new PengRobinsonBackend(fluid_names, R_u_CODATA);
+        return new PengRobinsonBackend(fluid_names, get_config_double(R_u_CODATA));
     }
     else if (!backend.compare("?") || backend.empty())
     {
