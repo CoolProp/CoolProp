@@ -25,6 +25,10 @@ There is example code :ref:`at the end of this page <r_example>`
 .. warning::
 
     For OSX users that wish to call REFPROP, you may be required to set the environmental variable ``DYLD_LIBRARY_PATH`` to the folder containing your REFPROP.dylib shared library, which is probably ``/opt/refprop``
+    
+.. warning::
+
+    If you want to use ``Rscript`` rather than ``R``, you need to pass the argument ``--default-packages=methods`` to get it to load the necessary packages for calling SWIGG-ed code.  On OSX, the entire call command would read: ``DYLD_LIBRARY_PATH=/opt/refprop Rscript --default-packages=methods Example.R``
 
 User-Compiled Binaries
 ======================
