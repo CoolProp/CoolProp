@@ -13,6 +13,32 @@ Static libraries can be used to compile all of CoolProp into one compilation uni
 
 When writing your own C++ code, it is advised to compile CoolProp to a static library and then link CoolProp and your own code.
 
+CMake Integration
+=================
+
+If you are using CMake, the process is quite trivial to integrate the CoolProp static library into your build system.  The only tricky thing here is that the CoolProp source directory MUST be a subdirectory of your main CMakeLists.txt.  For instance, if you have the folder layout:
+
+    main
+     |- CMakeLists.txt (For your project, see below)
+     |- mycode.cpp
+     |- externals
+        |- CoolProp
+            |- src
+            |- include
+            |- ...
+            |- CMakeLists.txt
+            |-
+
+Then CMakeLists.txt might have the contents::
+
+    # See also http://stackoverflow.com/a/18697099
+    cmake_minimum_required (VERSION 2.8.11)
+    project (main)
+    set(COOLPROP_STATIC_LIBRARY true)
+    add_subdirectory ("${CMAKE_SOURCE_DIR}/externals/CoolProp")
+    add_executable (main "${CMAKE_SOURCE_DIR}/mycode.cpp")
+    target_link_libraries (main CoolProp)
+
 Pre-compiled Binaries
 =====================
 Pre-compiled release binaries can be downloaded from :sfdownloads:`static_library`.  Development binaries coming from the buildbot server can be found at :sfnightly:`static_library`.  These static libraries are ONLY useful if the compiler used to build the static library agrees with the static library that will be used to build your other code.  This cannot be guaranteed, and no effort is made to that effect.  Build your own static libraries following the instructions below.
