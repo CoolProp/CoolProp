@@ -1070,7 +1070,11 @@ if (COOLPROP_R_MODULE)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
     
     enable_testing()
-    add_test(R_test "${R_HOME}/Rscript" Example.R)
+    if (WIN32)
+      add_test(R_test "${R_HOME}/Rscript" Example.R)
+    else()
+      add_test(R_test Rscript Example.R)
+    endif()
                
 endif()
 
