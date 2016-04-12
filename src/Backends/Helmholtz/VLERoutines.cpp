@@ -1862,7 +1862,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         }
         normalize_vector(xL);
         normalize_vector(xH);
-        if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
+        if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
         
         if (tpd_L < 0 || tpd_H < 0){_stable = false; return;}
         

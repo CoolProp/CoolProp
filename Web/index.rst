@@ -42,14 +42,15 @@ In most languages, the code to calculate density ``D`` of Nitrogen at a temperat
 
 See more examples of PropsSI usage at :ref:`High-Level interface <high_level_api>` or :ref:`Examples <examples>`
 
+.. _help:
 
 Help
 ----
 
-- File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
-- Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+- (**General Discussion**) Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+- (**Bugs, feature requests**) File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
 - `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
-
+- `Docs for development version of CoolProp <http://www.coolprop.org/dev/>`_
 
 Projects Using CoolProp
 -----------------------------------
@@ -63,6 +64,8 @@ Projects Using CoolProp
 
 Main Developers
 ---------------
+
+.. warning:: Please do not email the developers directly, see :ref:`Help` above for assistance (this way the correspondence is google-able)
 
 The primary developers are:
 
