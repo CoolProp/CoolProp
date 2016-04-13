@@ -24,19 +24,6 @@ The only types of inputs that are allowed for mixtures right now are
 .. role:: raw-html(raw)
    :format: html
 
-Binary pairs
-------------
-
-.. note::
-   Please hover the mouse pointer over the coefficients to get the full accuracy
-   for the listed coefficients. You can also get more information on references
-   that are not in bibliography.
-
-.. csv-table:: All binary pairs included in CoolProp
-   :header-rows: 1
-   :file: Mixtures.csv
-
-
 Estimating binary interaction parameters
 ----------------------------------------
 
@@ -47,7 +34,7 @@ The two schemes available are
 * ``linear`` - :math:`T_r` and :math:`v_r` are a linear function of molar composition between the two pure fluid values
 * ``Lorentz-Berthelot`` - all interaction parameters are 1.0
 
-Here is a sample of using this in python::
+Here is a sample of using this in python:
 
 .. ipython::
 
@@ -239,6 +226,15 @@ Same idea for the volume
 
     \boxed{\gamma_v = \dfrac{v_{c0}+v_{c1}+\zeta_{01}}{\frac{1}{4}\left(\frac{1}{\rho_{c,i}^{1/3}}+\frac{1}{\rho_{c,j}^{1/3}}\right)^{3}}}
 
-References
-----------
-:ref:`Go to the bibliography <bibliography>`
+
+Binary pairs
+------------
+
+.. note::
+   Please hover the mouse pointer over the coefficients to get the full accuracy
+   for the listed coefficients. You can also get more information on references
+   that are not in bibliography.
+
+.. csv-table:: All binary pairs included in CoolProp
+   :header-rows: 1
+   :file: Mixtures.csv

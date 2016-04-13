@@ -29,8 +29,8 @@ for line in lines:
             "F": 0.0, 
             "Name1": Name1, 
             "Name2": Name2, 
-            "betaT": betaT, 
-            "gammaT": gammaT, 
+            "betaT": float(betaT), 
+            "gammaT": float(gammaT), 
             "betaV": 1.0, 
             "gammaV": 1.0
             }
