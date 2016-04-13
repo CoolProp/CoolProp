@@ -2878,9 +2878,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "ACETONE", 
-    "betaT": "1.01475", 
+    "betaT": 1.01475, 
     "betaV": 1.0, 
-    "gammaT": "0.95623", 
+    "gammaT": 0.95623, 
     "gammaV": 1.0
   }, 
   {
@@ -2890,9 +2890,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "BUTANE", 
-    "betaT": "1.00154", 
+    "betaT": 1.00154, 
     "betaV": 1.0, 
-    "gammaT": "0.99777", 
+    "gammaT": 0.99777, 
     "gammaV": 1.0
   }, 
   {
@@ -2902,9 +2902,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "C4F10", 
-    "betaT": "1.06345", 
+    "betaT": 1.06345, 
     "betaV": 1.0, 
-    "gammaT": "0.86402", 
+    "gammaT": 0.86402, 
     "gammaV": 1.0
   }, 
   {
@@ -2914,9 +2914,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "CO2", 
-    "betaT": "0.98059", 
+    "betaT": 0.98059, 
     "betaV": 1.0, 
-    "gammaT": "0.96751", 
+    "gammaT": 0.96751, 
     "gammaV": 1.0
   }, 
   {
@@ -2926,9 +2926,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "DME", 
-    "betaT": "0.99767", 
+    "betaT": 0.99767, 
     "betaV": 1.0, 
-    "gammaT": "0.98081", 
+    "gammaT": 0.98081, 
     "gammaV": 1.0
   }, 
   {
@@ -2938,9 +2938,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.00327", 
+    "betaT": 1.00327, 
     "betaV": 1.0, 
-    "gammaT": "1.05570", 
+    "gammaT": 1.0557, 
     "gammaV": 1.0
   }, 
   {
@@ -2950,9 +2950,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.00018", 
+    "betaT": 1.00018, 
     "betaV": 1.0, 
-    "gammaT": "1.00725", 
+    "gammaT": 1.00725, 
     "gammaV": 1.0
   }, 
   {
@@ -2962,9 +2962,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "R1216", 
-    "betaT": "1.01733", 
+    "betaT": 1.01733, 
     "betaV": 1.0, 
-    "gammaT": "0.92312", 
+    "gammaT": 0.92312, 
     "gammaV": 1.0
   }, 
   {
@@ -2974,9 +2974,9 @@
     "F": 0.0, 
     "Name1": "1BUTENE", 
     "Name2": "R32", 
-    "betaT": "0.98014", 
+    "betaT": 0.98014, 
     "betaV": 1.0, 
-    "gammaT": "0.85398", 
+    "gammaT": 0.85398, 
     "gammaV": 1.0
   }, 
   {
@@ -2986,9 +2986,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "BENZENE", 
-    "betaT": "0.99820", 
+    "betaT": 0.9982, 
     "betaV": 1.0, 
-    "gammaT": "0.98198", 
+    "gammaT": 0.98198, 
     "gammaV": 1.0
   }, 
   {
@@ -2998,9 +2998,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "BUTANE", 
-    "betaT": "0.98364", 
+    "betaT": 0.98364, 
     "betaV": 1.0, 
-    "gammaT": "0.93303", 
+    "gammaT": 0.93303, 
     "gammaV": 1.0
   }, 
   {
@@ -3010,9 +3010,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "C12", 
-    "betaT": "1.03220", 
+    "betaT": 1.0322, 
     "betaV": 1.0, 
-    "gammaT": "0.99897", 
+    "gammaT": 0.99897, 
     "gammaV": 1.0
   }, 
   {
@@ -3022,9 +3022,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "C14", 
-    "betaT": "1.02803", 
+    "betaT": 1.02803, 
     "betaV": 1.0, 
-    "gammaT": "1.02375", 
+    "gammaT": 1.02375, 
     "gammaV": 1.0
   }, 
   {
@@ -3034,9 +3034,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "C2BUTENE", 
-    "betaT": "0.98583", 
+    "betaT": 0.98583, 
     "betaV": 1.0, 
-    "gammaT": "0.95209", 
+    "gammaT": 0.95209, 
     "gammaV": 1.0
   }, 
   {
@@ -3046,9 +3046,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "CO2", 
-    "betaT": "1.01322", 
+    "betaT": 1.01322, 
     "betaV": 1.0, 
-    "gammaT": "1.08050", 
+    "gammaT": 1.0805, 
     "gammaV": 1.0
   }, 
   {
@@ -3058,9 +3058,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "CYCLOHEX", 
-    "betaT": "0.99120", 
+    "betaT": 0.9912, 
     "betaV": 1.0, 
-    "gammaT": "0.92123", 
+    "gammaT": 0.92123, 
     "gammaV": 1.0
   }, 
   {
@@ -3070,9 +3070,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "DECANE", 
-    "betaT": "1.02395", 
+    "betaT": 1.02395, 
     "betaV": 1.0, 
-    "gammaT": "0.96708", 
+    "gammaT": 0.96708, 
     "gammaV": 1.0
   }, 
   {
@@ -3082,9 +3082,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "DEE", 
-    "betaT": "0.99001", 
+    "betaT": 0.99001, 
     "betaV": 1.0, 
-    "gammaT": "0.97127", 
+    "gammaT": 0.97127, 
     "gammaV": 1.0
   }, 
   {
@@ -3094,9 +3094,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "DMC", 
-    "betaT": "0.99700", 
+    "betaT": 0.997, 
     "betaV": 1.0, 
-    "gammaT": "0.99989", 
+    "gammaT": 0.99989, 
     "gammaV": 1.0
   }, 
   {
@@ -3106,9 +3106,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "ETHANE", 
-    "betaT": "0.96779", 
+    "betaT": 0.96779, 
     "betaV": 1.0, 
-    "gammaT": "1.01420", 
+    "gammaT": 1.0142, 
     "gammaV": 1.0
   }, 
   {
@@ -3118,9 +3118,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "ETHANOL", 
-    "betaT": "1.00350", 
+    "betaT": 1.0035, 
     "betaV": 1.0, 
-    "gammaT": "0.97390", 
+    "gammaT": 0.9739, 
     "gammaV": 1.0
   }, 
   {
@@ -3130,9 +3130,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "ETHYLENE", 
-    "betaT": "0.99223", 
+    "betaT": 0.99223, 
     "betaV": 1.0, 
-    "gammaT": "1.10077", 
+    "gammaT": 1.10077, 
     "gammaV": 1.0
   }, 
   {
@@ -3142,9 +3142,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "H2S", 
-    "betaT": "0.95958", 
+    "betaT": 0.95958, 
     "betaV": 1.0, 
-    "gammaT": "1.04871", 
+    "gammaT": 1.04871, 
     "gammaV": 1.0
   }, 
   {
@@ -3154,9 +3154,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "HEPTANE", 
-    "betaT": "1.01173", 
+    "betaT": 1.01173, 
     "betaV": 1.0, 
-    "gammaT": "0.92544", 
+    "gammaT": 0.92544, 
     "gammaV": 1.0
   }, 
   {
@@ -3166,9 +3166,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "HEXANE", 
-    "betaT": "1.00129", 
+    "betaT": 1.00129, 
     "betaV": 1.0, 
-    "gammaT": "0.91955", 
+    "gammaT": 0.91955, 
     "gammaV": 1.0
   }, 
   {
@@ -3178,9 +3178,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "IBUTENE", 
-    "betaT": "0.98616", 
+    "betaT": 0.98616, 
     "betaV": 1.0, 
-    "gammaT": "0.95994", 
+    "gammaT": 0.95994, 
     "gammaV": 1.0
   }, 
   {
@@ -3190,9 +3190,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "IOCTANE", 
-    "betaT": "1.00451", 
+    "betaT": 1.00451, 
     "betaV": 1.0, 
-    "gammaT": "0.93534", 
+    "gammaT": 0.93534, 
     "gammaV": 1.0
   }, 
   {
@@ -3202,9 +3202,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "ISOBUTAN", 
-    "betaT": "0.98302", 
+    "betaT": 0.98302, 
     "betaV": 1.0, 
-    "gammaT": "0.93551", 
+    "gammaT": 0.93551, 
     "gammaV": 1.0
   }, 
   {
@@ -3214,9 +3214,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "METHANOL", 
-    "betaT": "0.99906", 
+    "betaT": 0.99906, 
     "betaV": 1.0, 
-    "gammaT": "0.97135", 
+    "gammaT": 0.97135, 
     "gammaV": 1.0
   }, 
   {
@@ -3226,9 +3226,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "NONANE", 
-    "betaT": "1.01457", 
+    "betaT": 1.01457, 
     "betaV": 1.0, 
-    "gammaT": "0.94280", 
+    "gammaT": 0.9428, 
     "gammaV": 1.0
   }, 
   {
@@ -3238,9 +3238,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "PENTANE", 
-    "betaT": "0.99450", 
+    "betaT": 0.9945, 
     "betaV": 1.0, 
-    "gammaT": "0.92363", 
+    "gammaT": 0.92363, 
     "gammaV": 1.0
   }, 
   {
@@ -3250,9 +3250,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.98047", 
+    "betaT": 0.98047, 
     "betaV": 1.0, 
-    "gammaT": "0.99014", 
+    "gammaT": 0.99014, 
     "gammaV": 1.0
   }, 
   {
@@ -3262,9 +3262,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "PXYLENE", 
-    "betaT": "1.00070", 
+    "betaT": 1.0007, 
     "betaV": 1.0, 
-    "gammaT": "0.97520", 
+    "gammaT": 0.9752, 
     "gammaV": 1.0
   }, 
   {
@@ -3274,9 +3274,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "R113", 
-    "betaT": "0.99630", 
+    "betaT": 0.9963, 
     "betaV": 1.0, 
-    "gammaT": "0.95086", 
+    "gammaT": 0.95086, 
     "gammaV": 1.0
   }, 
   {
@@ -3286,9 +3286,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "R22", 
-    "betaT": "1.04656", 
+    "betaT": 1.04656, 
     "betaV": 1.0, 
-    "gammaT": "1.07981", 
+    "gammaT": 1.07981, 
     "gammaV": 1.0
   }, 
   {
@@ -3298,9 +3298,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "SO2", 
-    "betaT": "1.01070", 
+    "betaT": 1.0107, 
     "betaV": 1.0, 
-    "gammaT": "1.10455", 
+    "gammaT": 1.10455, 
     "gammaV": 1.0
   }, 
   {
@@ -3310,9 +3310,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "T2BUTENE", 
-    "betaT": "0.98504", 
+    "betaT": 0.98504, 
     "betaV": 1.0, 
-    "gammaT": "0.95011", 
+    "gammaT": 0.95011, 
     "gammaV": 1.0
   }, 
   {
@@ -3322,9 +3322,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99846", 
+    "betaT": 0.99846, 
     "betaV": 1.0, 
-    "gammaT": "0.97643", 
+    "gammaT": 0.97643, 
     "gammaV": 1.0
   }, 
   {
@@ -3334,9 +3334,9 @@
     "F": 0.0, 
     "Name1": "ACETONE", 
     "Name2": "WATER", 
-    "betaT": "0.98238", 
+    "betaT": 0.98238, 
     "betaV": 1.0, 
-    "gammaT": "0.91970", 
+    "gammaT": 0.9197, 
     "gammaV": 1.0
   }, 
   {
@@ -3346,9 +3346,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "ARGON", 
-    "betaT": "1.03498", 
+    "betaT": 1.03498, 
     "betaV": 1.0, 
-    "gammaT": "1.06504", 
+    "gammaT": 1.06504, 
     "gammaV": 1.0
   }, 
   {
@@ -3358,9 +3358,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "BENZENE", 
-    "betaT": "1.03065", 
+    "betaT": 1.03065, 
     "betaV": 1.0, 
-    "gammaT": "0.92822", 
+    "gammaT": 0.92822, 
     "gammaV": 1.0
   }, 
   {
@@ -3370,9 +3370,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "BUTANE", 
-    "betaT": "1.05871", 
+    "betaT": 1.05871, 
     "betaV": 1.0, 
-    "gammaT": "0.80552", 
+    "gammaT": 0.80552, 
     "gammaV": 1.0
   }, 
   {
@@ -3382,9 +3382,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "HEXANE", 
-    "betaT": "1.09995", 
+    "betaT": 1.09995, 
     "betaV": 1.0, 
-    "gammaT": "0.86636", 
+    "gammaT": 0.86636, 
     "gammaV": 1.0
   }, 
   {
@@ -3394,9 +3394,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "KRYPTON", 
-    "betaT": "0.98832", 
+    "betaT": 0.98832, 
     "betaV": 1.0, 
-    "gammaT": "0.92419", 
+    "gammaT": 0.92419, 
     "gammaV": 1.0
   }, 
   {
@@ -3406,9 +3406,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "MXYLENE", 
-    "betaT": "1.04250", 
+    "betaT": 1.0425, 
     "betaV": 1.0, 
-    "gammaT": "0.95719", 
+    "gammaT": 0.95719, 
     "gammaV": 1.0
   }, 
   {
@@ -3418,9 +3418,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "OCTANE", 
-    "betaT": "1.04331", 
+    "betaT": 1.04331, 
     "betaV": 1.0, 
-    "gammaT": "0.62644", 
+    "gammaT": 0.62644, 
     "gammaV": 1.0
   }, 
   {
@@ -3430,9 +3430,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "PENTANE", 
-    "betaT": "1.09752", 
+    "betaT": 1.09752, 
     "betaV": 1.0, 
-    "gammaT": "0.84450", 
+    "gammaT": 0.8445, 
     "gammaV": 1.0
   }, 
   {
@@ -3442,9 +3442,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "PROPANE", 
-    "betaT": "1.04145", 
+    "betaT": 1.04145, 
     "betaV": 1.0, 
-    "gammaT": "0.79017", 
+    "gammaT": 0.79017, 
     "gammaV": 1.0
   }, 
   {
@@ -3454,9 +3454,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.02533", 
+    "betaT": 1.02533, 
     "betaV": 1.0, 
-    "gammaT": "0.84826", 
+    "gammaT": 0.84826, 
     "gammaV": 1.0
   }, 
   {
@@ -3466,9 +3466,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "PROPYNE", 
-    "betaT": "1.00696", 
+    "betaT": 1.00696, 
     "betaV": 1.0, 
-    "gammaT": "0.94154", 
+    "gammaT": 0.94154, 
     "gammaV": 1.0
   }, 
   {
@@ -3478,9 +3478,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "R125", 
-    "betaT": "1.04548", 
+    "betaT": 1.04548, 
     "betaV": 1.0, 
-    "gammaT": "0.96866", 
+    "gammaT": 0.96866, 
     "gammaV": 1.0
   }, 
   {
@@ -3490,9 +3490,9 @@
     "F": 0.0, 
     "Name1": "AMMONIA", 
     "Name2": "R13", 
-    "betaT": "1.03859", 
+    "betaT": 1.03859, 
     "betaV": 1.0, 
-    "gammaT": "0.76464", 
+    "gammaT": 0.76464, 
     "gammaV": 1.0
   }, 
   {
@@ -3502,9 +3502,9 @@
     "F": 0.0, 
     "Name1": "ARGON", 
     "Name2": "BENZENE", 
-    "betaT": "1.00291", 
+    "betaT": 1.00291, 
     "betaV": 1.0, 
-    "gammaT": "1.40461", 
+    "gammaT": 1.40461, 
     "gammaV": 1.0
   }, 
   {
@@ -3514,9 +3514,9 @@
     "F": 0.0, 
     "Name1": "ARGON", 
     "Name2": "CYCLOPEN", 
-    "betaT": "0.97980", 
+    "betaT": 0.9798, 
     "betaV": 1.0, 
-    "gammaT": "1.36013", 
+    "gammaT": 1.36013, 
     "gammaV": 1.0
   }, 
   {
@@ -3526,9 +3526,9 @@
     "F": 0.0, 
     "Name1": "ARGON", 
     "Name2": "KRYPTON", 
-    "betaT": "1.00020", 
+    "betaT": 1.0002, 
     "betaV": 1.0, 
-    "gammaT": "1.00460", 
+    "gammaT": 1.0046, 
     "gammaV": 1.0
   }, 
   {
@@ -3538,9 +3538,9 @@
     "F": 0.0, 
     "Name1": "ARGON", 
     "Name2": "NEOPENTN", 
-    "betaT": "1.00019", 
+    "betaT": 1.00019, 
     "betaV": 1.0, 
-    "gammaT": "1.28707", 
+    "gammaT": 1.28707, 
     "gammaV": 1.0
   }, 
   {
@@ -3550,9 +3550,9 @@
     "F": 0.0, 
     "Name1": "ARGON", 
     "Name2": "R22", 
-    "betaT": "0.98668", 
+    "betaT": 0.98668, 
     "betaV": 1.0, 
-    "gammaT": "1.20531", 
+    "gammaT": 1.20531, 
     "gammaV": 1.0
   }, 
   {
@@ -3562,9 +3562,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "BUTANE", 
-    "betaT": "0.99022", 
+    "betaT": 0.99022, 
     "betaV": 1.0, 
-    "gammaT": "0.99834", 
+    "gammaT": 0.99834, 
     "gammaV": 1.0
   }, 
   {
@@ -3574,9 +3574,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "C12", 
-    "betaT": "1.00717", 
+    "betaT": 1.00717, 
     "betaV": 1.0, 
-    "gammaT": "1.02547", 
+    "gammaT": 1.02547, 
     "gammaV": 1.0
   }, 
   {
@@ -3586,9 +3586,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "C14", 
-    "betaT": "0.99866", 
+    "betaT": 0.99866, 
     "betaV": 1.0, 
-    "gammaT": "1.04969", 
+    "gammaT": 1.04969, 
     "gammaV": 1.0
   }, 
   {
@@ -3598,9 +3598,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "C1CC6", 
-    "betaT": "1.00452", 
+    "betaT": 1.00452, 
     "betaV": 1.0, 
-    "gammaT": "0.98159", 
+    "gammaT": 0.98159, 
     "gammaV": 1.0
   }, 
   {
@@ -3610,9 +3610,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "CO", 
-    "betaT": "1.02875", 
+    "betaT": 1.02875, 
     "betaV": 1.0, 
-    "gammaT": "1.47254", 
+    "gammaT": 1.47254, 
     "gammaV": 1.0
   }, 
   {
@@ -3622,9 +3622,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "CO2", 
-    "betaT": "0.99261", 
+    "betaT": 0.99261, 
     "betaV": 1.0, 
-    "gammaT": "1.03295", 
+    "gammaT": 1.03295, 
     "gammaV": 1.0
   }, 
   {
@@ -3634,9 +3634,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "CYCLOHEX", 
-    "betaT": "1.00212", 
+    "betaT": 1.00212, 
     "betaV": 1.0, 
-    "gammaT": "0.97982", 
+    "gammaT": 0.97982, 
     "gammaV": 1.0
   }, 
   {
@@ -3646,9 +3646,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "D4", 
-    "betaT": "1.01222", 
+    "betaT": 1.01222, 
     "betaV": 1.0, 
-    "gammaT": "0.98954", 
+    "gammaT": 0.98954, 
     "gammaV": 1.0
   }, 
   {
@@ -3658,9 +3658,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "DECANE", 
-    "betaT": "1.00678", 
+    "betaT": 1.00678, 
     "betaV": 1.0, 
-    "gammaT": "0.99831", 
+    "gammaT": 0.99831, 
     "gammaV": 1.0
   }, 
   {
@@ -3670,9 +3670,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "DEE", 
-    "betaT": "1.00092", 
+    "betaT": 1.00092, 
     "betaV": 1.0, 
-    "gammaT": "1.00226", 
+    "gammaT": 1.00226, 
     "gammaV": 1.0
   }, 
   {
@@ -3682,9 +3682,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "DMC", 
-    "betaT": "1.00156", 
+    "betaT": 1.00156, 
     "betaV": 1.0, 
-    "gammaT": "0.98361", 
+    "gammaT": 0.98361, 
     "gammaV": 1.0
   }, 
   {
@@ -3694,9 +3694,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "EBENZENE", 
-    "betaT": "0.99807", 
+    "betaT": 0.99807, 
     "betaV": 1.0, 
-    "gammaT": "1.01425", 
+    "gammaT": 1.01425, 
     "gammaV": 1.0
   }, 
   {
@@ -3706,9 +3706,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "ETHANE", 
-    "betaT": "0.99662", 
+    "betaT": 0.99662, 
     "betaV": 1.0, 
-    "gammaT": "1.08163", 
+    "gammaT": 1.08163, 
     "gammaV": 1.0
   }, 
   {
@@ -3718,9 +3718,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "ETHANOL", 
-    "betaT": "1.02907", 
+    "betaT": 1.02907, 
     "betaV": 1.0, 
-    "gammaT": "0.91640", 
+    "gammaT": 0.9164, 
     "gammaV": 1.0
   }, 
   {
@@ -3730,9 +3730,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "H2S", 
-    "betaT": "1.00564", 
+    "betaT": 1.00564, 
     "betaV": 1.0, 
-    "gammaT": "1.06015", 
+    "gammaT": 1.06015, 
     "gammaV": 1.0
   }, 
   {
@@ -3742,9 +3742,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "HEPTANE", 
-    "betaT": "1.00775", 
+    "betaT": 1.00775, 
     "betaV": 1.0, 
-    "gammaT": "0.97482", 
+    "gammaT": 0.97482, 
     "gammaV": 1.0
   }, 
   {
@@ -3754,9 +3754,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "HEXANE", 
-    "betaT": "1.00430", 
+    "betaT": 1.0043, 
     "betaV": 1.0, 
-    "gammaT": "0.97222", 
+    "gammaT": 0.97222, 
     "gammaV": 1.0
   }, 
   {
@@ -3766,9 +3766,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "IHEXANE", 
-    "betaT": "1.00643", 
+    "betaT": 1.00643, 
     "betaV": 1.0, 
-    "gammaT": "0.97119", 
+    "gammaT": 0.97119, 
     "gammaV": 1.0
   }, 
   {
@@ -3778,9 +3778,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "IOCTANE", 
-    "betaT": "1.00861", 
+    "betaT": 1.00861, 
     "betaV": 1.0, 
-    "gammaT": "0.96998", 
+    "gammaT": 0.96998, 
     "gammaV": 1.0
   }, 
   {
@@ -3790,9 +3790,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "METHANE", 
-    "betaT": "1.00180", 
+    "betaT": 1.0018, 
     "betaV": 1.0, 
-    "gammaT": "1.29314", 
+    "gammaT": 1.29314, 
     "gammaV": 1.0
   }, 
   {
@@ -3802,9 +3802,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "METHANOL", 
-    "betaT": "1.02351", 
+    "betaT": 1.02351, 
     "betaV": 1.0, 
-    "gammaT": "0.90254", 
+    "gammaT": 0.90254, 
     "gammaV": 1.0
   }, 
   {
@@ -3814,9 +3814,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "MXYLENE", 
-    "betaT": "0.99896", 
+    "betaT": 0.99896, 
     "betaV": 1.0, 
-    "gammaT": "1.00464", 
+    "gammaT": 1.00464, 
     "gammaV": 1.0
   }, 
   {
@@ -3826,9 +3826,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "NONANE", 
-    "betaT": "1.00489", 
+    "betaT": 1.00489, 
     "betaV": 1.0, 
-    "gammaT": "0.97411", 
+    "gammaT": 0.97411, 
     "gammaV": 1.0
   }, 
   {
@@ -3838,9 +3838,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "OCTANE", 
-    "betaT": "1.00796", 
+    "betaT": 1.00796, 
     "betaV": 1.0, 
-    "gammaT": "0.98037", 
+    "gammaT": 0.98037, 
     "gammaV": 1.0
   }, 
   {
@@ -3850,9 +3850,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "OXYLENE", 
-    "betaT": "1.01414", 
+    "betaT": 1.01414, 
     "betaV": 1.0, 
-    "gammaT": "1.00329", 
+    "gammaT": 1.00329, 
     "gammaV": 1.0
   }, 
   {
@@ -3862,9 +3862,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "PENTANE", 
-    "betaT": "1.00187", 
+    "betaT": 1.00187, 
     "betaV": 1.0, 
-    "gammaT": "0.97605", 
+    "gammaT": 0.97605, 
     "gammaV": 1.0
   }, 
   {
@@ -3874,9 +3874,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "PROPANE", 
-    "betaT": "1.00170", 
+    "betaT": 1.0017, 
     "betaV": 1.0, 
-    "gammaT": "1.01942", 
+    "gammaT": 1.01942, 
     "gammaV": 1.0
   }, 
   {
@@ -3886,9 +3886,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.99730", 
+    "betaT": 0.9973, 
     "betaV": 1.0, 
-    "gammaT": "1.02876", 
+    "gammaT": 1.02876, 
     "gammaV": 1.0
   }, 
   {
@@ -3898,9 +3898,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "PXYLENE", 
-    "betaT": "1.00112", 
+    "betaT": 1.00112, 
     "betaV": 1.0, 
-    "gammaT": "1.00639", 
+    "gammaT": 1.00639, 
     "gammaV": 1.0
   }, 
   {
@@ -3910,9 +3910,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "R113", 
-    "betaT": "1.00372", 
+    "betaT": 1.00372, 
     "betaV": 1.0, 
-    "gammaT": "0.97215", 
+    "gammaT": 0.97215, 
     "gammaV": 1.0
   }, 
   {
@@ -3922,9 +3922,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "R114", 
-    "betaT": "1.00118", 
+    "betaT": 1.00118, 
     "betaV": 1.0, 
-    "gammaT": "0.95788", 
+    "gammaT": 0.95788, 
     "gammaV": 1.0
   }, 
   {
@@ -3934,9 +3934,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "R22", 
-    "betaT": "1.01060", 
+    "betaT": 1.0106, 
     "betaV": 1.0, 
-    "gammaT": "1.03496", 
+    "gammaT": 1.03496, 
     "gammaV": 1.0
   }, 
   {
@@ -3946,9 +3946,9 @@
     "F": 0.0, 
     "Name1": "BENZENE", 
     "Name2": "TOLUENE", 
-    "betaT": "1.00015", 
+    "betaT": 1.00015, 
     "betaV": 1.0, 
-    "gammaT": "1.00176", 
+    "gammaT": 1.00176, 
     "gammaV": 1.0
   }, 
   {
@@ -3958,9 +3958,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "C14", 
-    "betaT": "0.97985", 
+    "betaT": 0.97985, 
     "betaV": 1.0, 
-    "gammaT": "1.15977", 
+    "gammaT": 1.15977, 
     "gammaV": 1.0
   }, 
   {
@@ -3970,9 +3970,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "C2BUTENE", 
-    "betaT": "0.99880", 
+    "betaT": 0.9988, 
     "betaV": 1.0, 
-    "gammaT": "0.99538", 
+    "gammaT": 0.99538, 
     "gammaV": 1.0
   }, 
   {
@@ -3982,9 +3982,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "CYCLOHEX", 
-    "betaT": "1.00719", 
+    "betaT": 1.00719, 
     "betaV": 1.0, 
-    "gammaT": "1.02834", 
+    "gammaT": 1.02834, 
     "gammaV": 1.0
   }, 
   {
@@ -3994,9 +3994,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "DME", 
-    "betaT": "0.99621", 
+    "betaT": 0.99621, 
     "betaV": 1.0, 
-    "gammaT": "0.96541", 
+    "gammaT": 0.96541, 
     "gammaV": 1.0
   }, 
   {
@@ -4006,9 +4006,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.02263", 
+    "betaT": 1.02263, 
     "betaV": 1.0, 
-    "gammaT": "1.05892", 
+    "gammaT": 1.05892, 
     "gammaV": 1.0
   }, 
   {
@@ -4018,9 +4018,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "HCL", 
-    "betaT": "0.97018", 
+    "betaT": 0.97018, 
     "betaV": 1.0, 
-    "gammaT": "0.94381", 
+    "gammaT": 0.94381, 
     "gammaV": 1.0
   }, 
   {
@@ -4030,9 +4030,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "IBUTENE", 
-    "betaT": "1.00062", 
+    "betaT": 1.00062, 
     "betaV": 1.0, 
-    "gammaT": "0.99703", 
+    "gammaT": 0.99703, 
     "gammaV": 1.0
   }, 
   {
@@ -4042,9 +4042,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "MPALMITA", 
-    "betaT": "0.93827", 
+    "betaT": 0.93827, 
     "betaV": 1.0, 
-    "gammaT": "1.21149", 
+    "gammaT": 1.21149, 
     "gammaV": 1.0
   }, 
   {
@@ -4054,9 +4054,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R113", 
-    "betaT": "1.00290", 
+    "betaT": 1.0029, 
     "betaV": 1.0, 
-    "gammaT": "0.99168", 
+    "gammaT": 0.99168, 
     "gammaV": 1.0
   }, 
   {
@@ -4066,9 +4066,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R125", 
-    "betaT": "0.99482", 
+    "betaT": 0.99482, 
     "betaV": 1.0, 
-    "gammaT": "0.90412", 
+    "gammaT": 0.90412, 
     "gammaV": 1.0
   }, 
   {
@@ -4078,9 +4078,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R13", 
-    "betaT": "0.99730", 
+    "betaT": 0.9973, 
     "betaV": 1.0, 
-    "gammaT": "0.98279", 
+    "gammaT": 0.98279, 
     "gammaV": 1.0
   }, 
   {
@@ -4090,9 +4090,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R134A", 
-    "betaT": "1.00409", 
+    "betaT": 1.00409, 
     "betaV": 1.0, 
-    "gammaT": "0.89057", 
+    "gammaT": 0.89057, 
     "gammaV": 1.0
   }, 
   {
@@ -4102,9 +4102,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R143A", 
-    "betaT": "1.00093", 
+    "betaT": 1.00093, 
     "betaV": 1.0, 
-    "gammaT": "0.91912", 
+    "gammaT": 0.91912, 
     "gammaV": 1.0
   }, 
   {
@@ -4114,9 +4114,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R152A", 
-    "betaT": "1.00243", 
+    "betaT": 1.00243, 
     "betaV": 1.0, 
-    "gammaT": "0.91179", 
+    "gammaT": 0.91179, 
     "gammaV": 1.0
   }, 
   {
@@ -4126,9 +4126,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R227EA", 
-    "betaT": "1.01441", 
+    "betaT": 1.01441, 
     "betaV": 1.0, 
-    "gammaT": "0.90171", 
+    "gammaT": 0.90171, 
     "gammaV": 1.0
   }, 
   {
@@ -4138,9 +4138,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R23", 
-    "betaT": "0.97624", 
+    "betaT": 0.97624, 
     "betaV": 1.0, 
-    "gammaT": "0.89836", 
+    "gammaT": 0.89836, 
     "gammaV": 1.0
   }, 
   {
@@ -4150,9 +4150,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R245FA", 
-    "betaT": "1.01634", 
+    "betaT": 1.01634, 
     "betaV": 1.0, 
-    "gammaT": "0.90319", 
+    "gammaT": 0.90319, 
     "gammaV": 1.0
   }, 
   {
@@ -4162,9 +4162,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "R32", 
-    "betaT": "0.98166", 
+    "betaT": 0.98166, 
     "betaV": 1.0, 
-    "gammaT": "0.86990", 
+    "gammaT": 0.8699, 
     "gammaV": 1.0
   }, 
   {
@@ -4174,9 +4174,9 @@
     "F": 0.0, 
     "Name1": "BUTANE", 
     "Name2": "T2BUTENE", 
-    "betaT": "0.99911", 
+    "betaT": 0.99911, 
     "betaV": 1.0, 
-    "gammaT": "0.99609", 
+    "gammaT": 0.99609, 
     "gammaV": 1.0
   }, 
   {
@@ -4186,9 +4186,9 @@
     "F": 0.0, 
     "Name1": "C11", 
     "Name2": "CO2", 
-    "betaT": "0.99389", 
+    "betaT": 0.99389, 
     "betaV": 1.0, 
-    "gammaT": "1.19119", 
+    "gammaT": 1.19119, 
     "gammaV": 1.0
   }, 
   {
@@ -4198,9 +4198,9 @@
     "F": 0.0, 
     "Name1": "C11", 
     "Name2": "ETHANE", 
-    "betaT": "1.06034", 
+    "betaT": 1.06034, 
     "betaV": 1.0, 
-    "gammaT": "1.27938", 
+    "gammaT": 1.27938, 
     "gammaV": 1.0
   }, 
   {
@@ -4210,9 +4210,9 @@
     "F": 0.0, 
     "Name1": "C11", 
     "Name2": "METHANOL", 
-    "betaT": "0.90438", 
+    "betaT": 0.90438, 
     "betaV": 1.0, 
-    "gammaT": "0.95529", 
+    "gammaT": 0.95529, 
     "gammaV": 1.0
   }, 
   {
@@ -4222,9 +4222,9 @@
     "F": 0.0, 
     "Name1": "C11", 
     "Name2": "MXYLENE", 
-    "betaT": "1.00090", 
+    "betaT": 1.0009, 
     "betaV": 1.0, 
-    "gammaT": "1.00198", 
+    "gammaT": 1.00198, 
     "gammaV": 1.0
   }, 
   {
@@ -4234,9 +4234,9 @@
     "F": 0.0, 
     "Name1": "C11", 
     "Name2": "OXYLENE", 
-    "betaT": "0.99810", 
+    "betaT": 0.9981, 
     "betaV": 1.0, 
-    "gammaT": "0.99825", 
+    "gammaT": 0.99825, 
     "gammaV": 1.0
   }, 
   {
@@ -4246,9 +4246,9 @@
     "F": 0.0, 
     "Name1": "C11", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99981", 
+    "betaT": 0.99981, 
     "betaV": 1.0, 
-    "gammaT": "1.00180", 
+    "gammaT": 1.0018, 
     "gammaV": 1.0
   }, 
   {
@@ -4258,9 +4258,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "CO", 
-    "betaT": "1.06881", 
+    "betaT": 1.06881, 
     "betaV": 1.0, 
-    "gammaT": "1.92729", 
+    "gammaT": 1.92729, 
     "gammaV": 1.0
   }, 
   {
@@ -4270,9 +4270,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "CYCLOHEX", 
-    "betaT": "1.00450", 
+    "betaT": 1.0045, 
     "betaV": 1.0, 
-    "gammaT": "1.04292", 
+    "gammaT": 1.04292, 
     "gammaV": 1.0
   }, 
   {
@@ -4282,9 +4282,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "DECANE", 
-    "betaT": "0.99870", 
+    "betaT": 0.9987, 
     "betaV": 1.0, 
-    "gammaT": "1.00382", 
+    "gammaT": 1.00382, 
     "gammaV": 1.0
   }, 
   {
@@ -4294,9 +4294,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "ETHANE", 
-    "betaT": "1.05041", 
+    "betaT": 1.05041, 
     "betaV": 1.0, 
-    "gammaT": "1.32514", 
+    "gammaT": 1.32514, 
     "gammaV": 1.0
   }, 
   {
@@ -4306,9 +4306,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "H2S", 
-    "betaT": "1.01731", 
+    "betaT": 1.01731, 
     "betaV": 1.0, 
-    "gammaT": "1.17814", 
+    "gammaT": 1.17814, 
     "gammaV": 1.0
   }, 
   {
@@ -4318,9 +4318,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "HEPTANE", 
-    "betaT": "0.99911", 
+    "betaT": 0.99911, 
     "betaV": 1.0, 
-    "gammaT": "1.03014", 
+    "gammaT": 1.03014, 
     "gammaV": 1.0
   }, 
   {
@@ -4330,9 +4330,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "METHANOL", 
-    "betaT": "0.90111", 
+    "betaT": 0.90111, 
     "betaV": 1.0, 
-    "gammaT": "0.79118", 
+    "gammaT": 0.79118, 
     "gammaV": 1.0
   }, 
   {
@@ -4342,9 +4342,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "N2O", 
-    "betaT": "1.03545", 
+    "betaT": 1.03545, 
     "betaV": 1.0, 
-    "gammaT": "1.27360", 
+    "gammaT": 1.2736, 
     "gammaV": 1.0
   }, 
   {
@@ -4354,9 +4354,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "OCTANE", 
-    "betaT": "1.00166", 
+    "betaT": 1.00166, 
     "betaV": 1.0, 
-    "gammaT": "1.02170", 
+    "gammaT": 1.0217, 
     "gammaV": 1.0
   }, 
   {
@@ -4366,9 +4366,9 @@
     "F": 0.0, 
     "Name1": "C12", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99508", 
+    "betaT": 0.99508, 
     "betaV": 1.0, 
-    "gammaT": "1.01727", 
+    "gammaT": 1.01727, 
     "gammaV": 1.0
   }, 
   {
@@ -4378,9 +4378,9 @@
     "F": 0.0, 
     "Name1": "C14", 
     "Name2": "METHANOL", 
-    "betaT": "0.90474", 
+    "betaT": 0.90474, 
     "betaV": 1.0, 
-    "gammaT": "1.82083", 
+    "gammaT": 1.82083, 
     "gammaV": 1.0
   }, 
   {
@@ -4390,9 +4390,9 @@
     "F": 0.0, 
     "Name1": "C14", 
     "Name2": "PROPANE", 
-    "betaT": "1.06681", 
+    "betaT": 1.06681, 
     "betaV": 1.0, 
-    "gammaT": "1.15580", 
+    "gammaT": 1.1558, 
     "gammaV": 1.0
   }, 
   {
@@ -4402,9 +4402,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "CYCLOHEX", 
-    "betaT": "0.99923", 
+    "betaT": 0.99923, 
     "betaV": 1.0, 
-    "gammaT": "0.99987", 
+    "gammaT": 0.99987, 
     "gammaV": 1.0
   }, 
   {
@@ -4414,9 +4414,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "EBENZENE", 
-    "betaT": "1.00104", 
+    "betaT": 1.00104, 
     "betaV": 1.0, 
-    "gammaT": "0.99289", 
+    "gammaT": 0.99289, 
     "gammaV": 1.0
   }, 
   {
@@ -4426,9 +4426,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "ETHANE", 
-    "betaT": "1.00973", 
+    "betaT": 1.00973, 
     "betaV": 1.0, 
-    "gammaT": "1.12773", 
+    "gammaT": 1.12773, 
     "gammaV": 1.0
   }, 
   {
@@ -4438,9 +4438,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "ETHANOL", 
-    "betaT": "1.02569", 
+    "betaT": 1.02569, 
     "betaV": 1.0, 
-    "gammaT": "0.90130", 
+    "gammaT": 0.9013, 
     "gammaV": 1.0
   }, 
   {
@@ -4450,9 +4450,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "HEPTANE", 
-    "betaT": "0.99972", 
+    "betaT": 0.99972, 
     "betaV": 1.0, 
-    "gammaT": "0.99780", 
+    "gammaT": 0.9978, 
     "gammaV": 1.0
   }, 
   {
@@ -4462,9 +4462,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "HEXANE", 
-    "betaT": "1.00014", 
+    "betaT": 1.00014, 
     "betaV": 1.0, 
-    "gammaT": "0.99759", 
+    "gammaT": 0.99759, 
     "gammaV": 1.0
   }, 
   {
@@ -4474,9 +4474,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "OXYLENE", 
-    "betaT": "1.00132", 
+    "betaT": 1.00132, 
     "betaV": 1.0, 
-    "gammaT": "0.99508", 
+    "gammaT": 0.99508, 
     "gammaV": 1.0
   }, 
   {
@@ -4486,9 +4486,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "PENTANE", 
-    "betaT": "1.00254", 
+    "betaT": 1.00254, 
     "betaV": 1.0, 
-    "gammaT": "1.00312", 
+    "gammaT": 1.00312, 
     "gammaV": 1.0
   }, 
   {
@@ -4498,9 +4498,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "PROPANE", 
-    "betaT": "0.99917", 
+    "betaT": 0.99917, 
     "betaV": 1.0, 
-    "gammaT": "1.05400", 
+    "gammaT": 1.054, 
     "gammaV": 1.0
   }, 
   {
@@ -4510,9 +4510,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "PXYLENE", 
-    "betaT": "1.00133", 
+    "betaT": 1.00133, 
     "betaV": 1.0, 
-    "gammaT": "0.99463", 
+    "gammaT": 0.99463, 
     "gammaV": 1.0
   }, 
   {
@@ -4522,9 +4522,9 @@
     "F": 0.0, 
     "Name1": "C1CC6", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99987", 
+    "betaT": 0.99987, 
     "betaV": 1.0, 
-    "gammaT": "0.98708", 
+    "gammaT": 0.98708, 
     "gammaV": 1.0
   }, 
   {
@@ -4534,9 +4534,9 @@
     "F": 0.0, 
     "Name1": "C2BUTENE", 
     "Name2": "ETHANOL", 
-    "betaT": "1.02589", 
+    "betaT": 1.02589, 
     "betaV": 1.0, 
-    "gammaT": "0.94964", 
+    "gammaT": 0.94964, 
     "gammaV": 1.0
   }, 
   {
@@ -4546,9 +4546,9 @@
     "F": 0.0, 
     "Name1": "C2BUTENE", 
     "Name2": "METHANOL", 
-    "betaT": "1.02664", 
+    "betaT": 1.02664, 
     "betaV": 1.0, 
-    "gammaT": "0.90617", 
+    "gammaT": 0.90617, 
     "gammaV": 1.0
   }, 
   {
@@ -4558,9 +4558,9 @@
     "F": 0.0, 
     "Name1": "C3CC6", 
     "Name2": "ETHANE", 
-    "betaT": "1.01912", 
+    "betaT": 1.01912, 
     "betaV": 1.0, 
-    "gammaT": "1.19500", 
+    "gammaT": 1.195, 
     "gammaV": 1.0
   }, 
   {
@@ -4570,9 +4570,9 @@
     "F": 0.0, 
     "Name1": "C3CC6", 
     "Name2": "H2S", 
-    "betaT": "1.00425", 
+    "betaT": 1.00425, 
     "betaV": 1.0, 
-    "gammaT": "1.10114", 
+    "gammaT": 1.10114, 
     "gammaV": 1.0
   }, 
   {
@@ -4582,9 +4582,9 @@
     "F": 0.0, 
     "Name1": "C3CC6", 
     "Name2": "NITROGEN", 
-    "betaT": "1.01206", 
+    "betaT": 1.01206, 
     "betaV": 1.0, 
-    "gammaT": "1.69332", 
+    "gammaT": 1.69332, 
     "gammaV": 1.0
   }, 
   {
@@ -4594,9 +4594,9 @@
     "F": 0.0, 
     "Name1": "C3CC6", 
     "Name2": "PROPANE", 
-    "betaT": "1.00516", 
+    "betaT": 1.00516, 
     "betaV": 1.0, 
-    "gammaT": "1.10943", 
+    "gammaT": 1.10943, 
     "gammaV": 1.0
   }, 
   {
@@ -4606,9 +4606,9 @@
     "F": 0.0, 
     "Name1": "C4F10", 
     "Name2": "CO2", 
-    "betaT": "0.96003", 
+    "betaT": 0.96003, 
     "betaV": 1.0, 
-    "gammaT": "0.95201", 
+    "gammaT": 0.95201, 
     "gammaV": 1.0
   }, 
   {
@@ -4618,9 +4618,9 @@
     "F": 0.0, 
     "Name1": "C4F10", 
     "Name2": "DME", 
-    "betaT": "0.95275", 
+    "betaT": 0.95275, 
     "betaV": 1.0, 
-    "gammaT": "0.86921", 
+    "gammaT": 0.86921, 
     "gammaV": 1.0
   }, 
   {
@@ -4630,9 +4630,9 @@
     "F": 0.0, 
     "Name1": "C4F10", 
     "Name2": "ETHANE", 
-    "betaT": "0.97199", 
+    "betaT": 0.97199, 
     "betaV": 1.0, 
-    "gammaT": "0.97003", 
+    "gammaT": 0.97003, 
     "gammaV": 1.0
   }, 
   {
@@ -4642,9 +4642,9 @@
     "F": 0.0, 
     "Name1": "C4F10", 
     "Name2": "ETHYLENE", 
-    "betaT": "0.96014", 
+    "betaT": 0.96014, 
     "betaV": 1.0, 
-    "gammaT": "0.97341", 
+    "gammaT": 0.97341, 
     "gammaV": 1.0
   }, 
   {
@@ -4654,9 +4654,9 @@
     "F": 0.0, 
     "Name1": "C4F10", 
     "Name2": "METHANE", 
-    "betaT": "0.98649", 
+    "betaT": 0.98649, 
     "betaV": 1.0, 
-    "gammaT": "1.12365", 
+    "gammaT": 1.12365, 
     "gammaV": 1.0
   }, 
   {
@@ -4666,9 +4666,9 @@
     "F": 0.0, 
     "Name1": "C4F10", 
     "Name2": "PROPANE", 
-    "betaT": "0.97499", 
+    "betaT": 0.97499, 
     "betaV": 1.0, 
-    "gammaT": "0.90987", 
+    "gammaT": 0.90987, 
     "gammaV": 1.0
   }, 
   {
@@ -4678,9 +4678,9 @@
     "F": 0.0, 
     "Name1": "C4F10", 
     "Name2": "R365MFC", 
-    "betaT": "0.99786", 
+    "betaT": 0.99786, 
     "betaV": 1.0, 
-    "gammaT": "0.93067", 
+    "gammaT": 0.93067, 
     "gammaV": 1.0
   }, 
   {
@@ -4690,9 +4690,9 @@
     "F": 0.0, 
     "Name1": "C5F12", 
     "Name2": "PENTANE", 
-    "betaT": "0.97304", 
+    "betaT": 0.97304, 
     "betaV": 1.0, 
-    "gammaT": "0.89140", 
+    "gammaT": 0.8914, 
     "gammaV": 1.0
   }, 
   {
@@ -4702,9 +4702,9 @@
     "F": 0.0, 
     "Name1": "CF3I", 
     "Name2": "ISOBUTAN", 
-    "betaT": "1.00200", 
+    "betaT": 1.002, 
     "betaV": 1.0, 
-    "gammaT": "0.98459", 
+    "gammaT": 0.98459, 
     "gammaV": 1.0
   }, 
   {
@@ -4714,9 +4714,9 @@
     "F": 0.0, 
     "Name1": "CF3I", 
     "Name2": "NITROGEN", 
-    "betaT": "1.00123", 
+    "betaT": 1.00123, 
     "betaV": 1.0, 
-    "gammaT": "1.30226", 
+    "gammaT": 1.30226, 
     "gammaV": 1.0
   }, 
   {
@@ -4726,9 +4726,9 @@
     "F": 0.0, 
     "Name1": "CF3I", 
     "Name2": "PROPANE", 
-    "betaT": "0.99452", 
+    "betaT": 0.99452, 
     "betaV": 1.0, 
-    "gammaT": "0.98807", 
+    "gammaT": 0.98807, 
     "gammaV": 1.0
   }, 
   {
@@ -4738,9 +4738,9 @@
     "F": 0.0, 
     "Name1": "CF3I", 
     "Name2": "R1234ZE", 
-    "betaT": "1.00346", 
+    "betaT": 1.00346, 
     "betaV": 1.0, 
-    "gammaT": "0.96604", 
+    "gammaT": 0.96604, 
     "gammaV": 1.0
   }, 
   {
@@ -4750,9 +4750,9 @@
     "F": 0.0, 
     "Name1": "CF3I", 
     "Name2": "R152A", 
-    "betaT": "0.99875", 
+    "betaT": 0.99875, 
     "betaV": 1.0, 
-    "gammaT": "0.96404", 
+    "gammaT": 0.96404, 
     "gammaV": 1.0
   }, 
   {
@@ -4762,9 +4762,9 @@
     "F": 0.0, 
     "Name1": "CHLORINE", 
     "Name2": "HCL", 
-    "betaT": "0.99601", 
+    "betaT": 0.99601, 
     "betaV": 1.0, 
-    "gammaT": "0.96115", 
+    "gammaT": 0.96115, 
     "gammaV": 1.0
   }, 
   {
@@ -4774,9 +4774,9 @@
     "F": 0.0, 
     "Name1": "CO", 
     "Name2": "CYCLOHEX", 
-    "betaT": "0.99244", 
+    "betaT": 0.99244, 
     "betaV": 1.0, 
-    "gammaT": "1.46342", 
+    "gammaT": 1.46342, 
     "gammaV": 1.0
   }, 
   {
@@ -4786,9 +4786,9 @@
     "F": 0.0, 
     "Name1": "CO", 
     "Name2": "ETHANOL", 
-    "betaT": "0.91325", 
+    "betaT": 0.91325, 
     "betaV": 1.0, 
-    "gammaT": "1.69985", 
+    "gammaT": 1.69985, 
     "gammaV": 1.0
   }, 
   {
@@ -4798,9 +4798,9 @@
     "F": 0.0, 
     "Name1": "CO", 
     "Name2": "ETHYLENE", 
-    "betaT": "0.96489", 
+    "betaT": 0.96489, 
     "betaV": 1.0, 
-    "gammaT": "1.09111", 
+    "gammaT": 1.09111, 
     "gammaV": 1.0
   }, 
   {
@@ -4810,9 +4810,9 @@
     "F": 0.0, 
     "Name1": "CO", 
     "Name2": "MXYLENE", 
-    "betaT": "0.98439", 
+    "betaT": 0.98439, 
     "betaV": 1.0, 
-    "gammaT": "1.59750", 
+    "gammaT": 1.5975, 
     "gammaV": 1.0
   }, 
   {
@@ -4822,9 +4822,9 @@
     "F": 0.0, 
     "Name1": "CO", 
     "Name2": "PXYLENE", 
-    "betaT": "0.98181", 
+    "betaT": 0.98181, 
     "betaV": 1.0, 
-    "gammaT": "1.62153", 
+    "gammaT": 1.62153, 
     "gammaV": 1.0
   }, 
   {
@@ -4834,9 +4834,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "COS", 
-    "betaT": "1.00023", 
+    "betaT": 1.00023, 
     "betaV": 1.0, 
-    "gammaT": "0.94450", 
+    "gammaT": 0.9445, 
     "gammaV": 1.0
   }, 
   {
@@ -4846,9 +4846,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "CYCLOPEN", 
-    "betaT": "1.01592", 
+    "betaT": 1.01592, 
     "betaV": 1.0, 
-    "gammaT": "0.98308", 
+    "gammaT": 0.98308, 
     "gammaV": 1.0
   }, 
   {
@@ -4858,9 +4858,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "DEE", 
-    "betaT": "1.01217", 
+    "betaT": 1.01217, 
     "betaV": 1.0, 
-    "gammaT": "1.03241", 
+    "gammaT": 1.03241, 
     "gammaV": 1.0
   }, 
   {
@@ -4870,9 +4870,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "DME", 
-    "betaT": "0.99723", 
+    "betaT": 0.99723, 
     "betaV": 1.0, 
-    "gammaT": "1.03116", 
+    "gammaT": 1.03116, 
     "gammaV": 1.0
   }, 
   {
@@ -4882,9 +4882,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "EBENZENE", 
-    "betaT": "1.00091", 
+    "betaT": 1.00091, 
     "betaV": 1.0, 
-    "gammaT": "1.09145", 
+    "gammaT": 1.09145, 
     "gammaV": 1.0
   }, 
   {
@@ -4894,9 +4894,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.00402", 
+    "betaT": 1.00402, 
     "betaV": 1.0, 
-    "gammaT": "0.95576", 
+    "gammaT": 0.95576, 
     "gammaV": 1.0
   }, 
   {
@@ -4906,9 +4906,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "MSTEARAT", 
-    "betaT": "0.90151", 
+    "betaT": 0.90151, 
     "betaV": 1.0, 
-    "gammaT": "1.45262", 
+    "gammaT": 1.45262, 
     "gammaV": 1.0
   }, 
   {
@@ -4918,9 +4918,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "NEOPENTN", 
-    "betaT": "1.02674", 
+    "betaT": 1.02674, 
     "betaV": 1.0, 
-    "gammaT": "0.95430", 
+    "gammaT": 0.9543, 
     "gammaV": 1.0
   }, 
   {
@@ -4930,9 +4930,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "NOVEC649", 
-    "betaT": "1.04359", 
+    "betaT": 1.04359, 
     "betaV": 1.0, 
-    "gammaT": "1.03509", 
+    "gammaT": 1.03509, 
     "gammaV": 1.0
   }, 
   {
@@ -4942,9 +4942,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "OXYLENE", 
-    "betaT": "1.00114", 
+    "betaT": 1.00114, 
     "betaV": 1.0, 
-    "gammaT": "1.10292", 
+    "gammaT": 1.10292, 
     "gammaV": 1.0
   }, 
   {
@@ -4954,9 +4954,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.01217", 
+    "betaT": 1.01217, 
     "betaV": 1.0, 
-    "gammaT": "0.93465", 
+    "gammaT": 0.93465, 
     "gammaV": 1.0
   }, 
   {
@@ -4966,9 +4966,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "PXYLENE", 
-    "betaT": "1.00340", 
+    "betaT": 1.0034, 
     "betaV": 1.0, 
-    "gammaT": "1.10430", 
+    "gammaT": 1.1043, 
     "gammaV": 1.0
   }, 
   {
@@ -4978,9 +4978,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R116", 
-    "betaT": "1.03808", 
+    "betaT": 1.03808, 
     "betaV": 1.0, 
-    "gammaT": "0.89857", 
+    "gammaT": 0.89857, 
     "gammaV": 1.0
   }, 
   {
@@ -4990,9 +4990,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R12", 
-    "betaT": "1.01811", 
+    "betaT": 1.01811, 
     "betaV": 1.0, 
-    "gammaT": "0.95760", 
+    "gammaT": 0.9576, 
     "gammaV": 1.0
   }, 
   {
@@ -5002,9 +5002,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R1216", 
-    "betaT": "1.01687", 
+    "betaT": 1.01687, 
     "betaV": 1.0, 
-    "gammaT": "0.98477", 
+    "gammaT": 0.98477, 
     "gammaV": 1.0
   }, 
   {
@@ -5014,9 +5014,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R123", 
-    "betaT": "0.98639", 
+    "betaT": 0.98639, 
     "betaV": 1.0, 
-    "gammaT": "1.05886", 
+    "gammaT": 1.05886, 
     "gammaV": 1.0
   }, 
   {
@@ -5026,9 +5026,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R1234YF", 
-    "betaT": "1.01128", 
+    "betaT": 1.01128, 
     "betaV": 1.0, 
-    "gammaT": "0.98477", 
+    "gammaT": 0.98477, 
     "gammaV": 1.0
   }, 
   {
@@ -5038,9 +5038,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R1234ZE", 
-    "betaT": "1.00219", 
+    "betaT": 1.00219, 
     "betaV": 1.0, 
-    "gammaT": "1.02234", 
+    "gammaT": 1.02234, 
     "gammaV": 1.0
   }, 
   {
@@ -5050,9 +5050,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R124", 
-    "betaT": "0.99517", 
+    "betaT": 0.99517, 
     "betaV": 1.0, 
-    "gammaT": "1.01028", 
+    "gammaT": 1.01028, 
     "gammaV": 1.0
   }, 
   {
@@ -5062,9 +5062,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R125", 
-    "betaT": "1.01150", 
+    "betaT": 1.0115, 
     "betaV": 1.0, 
-    "gammaT": "0.96741", 
+    "gammaT": 0.96741, 
     "gammaV": 1.0
   }, 
   {
@@ -5074,9 +5074,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R134A", 
-    "betaT": "1.01036", 
+    "betaT": 1.01036, 
     "betaV": 1.0, 
-    "gammaT": "1.01129", 
+    "gammaT": 1.01129, 
     "gammaV": 1.0
   }, 
   {
@@ -5086,9 +5086,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R142B", 
-    "betaT": "1.01196", 
+    "betaT": 1.01196, 
     "betaV": 1.0, 
-    "gammaT": "1.00776", 
+    "gammaT": 1.00776, 
     "gammaV": 1.0
   }, 
   {
@@ -5098,9 +5098,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R143A", 
-    "betaT": "1.02027", 
+    "betaT": 1.02027, 
     "betaV": 1.0, 
-    "gammaT": "0.98474", 
+    "gammaT": 0.98474, 
     "gammaV": 1.0
   }, 
   {
@@ -5110,9 +5110,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R152A", 
-    "betaT": "1.00224", 
+    "betaT": 1.00224, 
     "betaV": 1.0, 
-    "gammaT": "1.00646", 
+    "gammaT": 1.00646, 
     "gammaV": 1.0
   }, 
   {
@@ -5122,9 +5122,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R22", 
-    "betaT": "1.00394", 
+    "betaT": 1.00394, 
     "betaV": 1.0, 
-    "gammaT": "1.01254", 
+    "gammaT": 1.01254, 
     "gammaV": 1.0
   }, 
   {
@@ -5134,9 +5134,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R227EA", 
-    "betaT": "1.00608", 
+    "betaT": 1.00608, 
     "betaV": 1.0, 
-    "gammaT": "1.00235", 
+    "gammaT": 1.00235, 
     "gammaV": 1.0
   }, 
   {
@@ -5146,9 +5146,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R23", 
-    "betaT": "1.00402", 
+    "betaT": 1.00402, 
     "betaV": 1.0, 
-    "gammaT": "0.98470", 
+    "gammaT": 0.9847, 
     "gammaV": 1.0
   }, 
   {
@@ -5158,9 +5158,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R32", 
-    "betaT": "1.00312", 
+    "betaT": 1.00312, 
     "betaV": 1.0, 
-    "gammaT": "0.99971", 
+    "gammaT": 0.99971, 
     "gammaV": 1.0
   }, 
   {
@@ -5170,9 +5170,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "R41", 
-    "betaT": "0.99603", 
+    "betaT": 0.99603, 
     "betaV": 1.0, 
-    "gammaT": "1.00300", 
+    "gammaT": 1.003, 
     "gammaV": 1.0
   }, 
   {
@@ -5182,9 +5182,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "SO2", 
-    "betaT": "1.00511", 
+    "betaT": 1.00511, 
     "betaV": 1.0, 
-    "gammaT": "1.01070", 
+    "gammaT": 1.0107, 
     "gammaV": 1.0
   }, 
   {
@@ -5194,9 +5194,9 @@
     "F": 0.0, 
     "Name1": "CO2", 
     "Name2": "TOLUENE", 
-    "betaT": "1.00502", 
+    "betaT": 1.00502, 
     "betaV": 1.0, 
-    "gammaT": "1.06677", 
+    "gammaT": 1.06677, 
     "gammaV": 1.0
   }, 
   {
@@ -5206,9 +5206,9 @@
     "F": 0.0, 
     "Name1": "COS", 
     "Name2": "H2S", 
-    "betaT": "0.99425", 
+    "betaT": 0.99425, 
     "betaV": 1.0, 
-    "gammaT": "0.94407", 
+    "gammaT": 0.94407, 
     "gammaV": 1.0
   }, 
   {
@@ -5218,9 +5218,9 @@
     "F": 0.0, 
     "Name1": "COS", 
     "Name2": "METHANE", 
-    "betaT": "1.01619", 
+    "betaT": 1.01619, 
     "betaV": 1.0, 
-    "gammaT": "1.08482", 
+    "gammaT": 1.08482, 
     "gammaV": 1.0
   }, 
   {
@@ -5230,9 +5230,9 @@
     "F": 0.0, 
     "Name1": "COS", 
     "Name2": "PROPANE", 
-    "betaT": "0.99601", 
+    "betaT": 0.99601, 
     "betaV": 1.0, 
-    "gammaT": "0.99200", 
+    "gammaT": 0.992, 
     "gammaV": 1.0
   }, 
   {
@@ -5242,9 +5242,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "DMC", 
-    "betaT": "1.00826", 
+    "betaT": 1.00826, 
     "betaV": 1.0, 
-    "gammaT": "0.92848", 
+    "gammaT": 0.92848, 
     "gammaV": 1.0
   }, 
   {
@@ -5254,9 +5254,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "EBENZENE", 
-    "betaT": "1.00430", 
+    "betaT": 1.0043, 
     "betaV": 1.0, 
-    "gammaT": "0.99414", 
+    "gammaT": 0.99414, 
     "gammaV": 1.0
   }, 
   {
@@ -5266,9 +5266,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "ETHANE", 
-    "betaT": "1.00539", 
+    "betaT": 1.00539, 
     "betaV": 1.0, 
-    "gammaT": "1.09921", 
+    "gammaT": 1.09921, 
     "gammaV": 1.0
   }, 
   {
@@ -5278,9 +5278,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "ETHANOL", 
-    "betaT": "1.02513", 
+    "betaT": 1.02513, 
     "betaV": 1.0, 
-    "gammaT": "0.90252", 
+    "gammaT": 0.90252, 
     "gammaV": 1.0
   }, 
   {
@@ -5290,9 +5290,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.00126", 
+    "betaT": 1.00126, 
     "betaV": 1.0, 
-    "gammaT": "1.12037", 
+    "gammaT": 1.12037, 
     "gammaV": 1.0
   }, 
   {
@@ -5302,9 +5302,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "H2S", 
-    "betaT": "0.98291", 
+    "betaT": 0.98291, 
     "betaV": 1.0, 
-    "gammaT": "1.01006", 
+    "gammaT": 1.01006, 
     "gammaV": 1.0
   }, 
   {
@@ -5314,9 +5314,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "HEPTANE", 
-    "betaT": "1.00116", 
+    "betaT": 1.00116, 
     "betaV": 1.0, 
-    "gammaT": "0.99502", 
+    "gammaT": 0.99502, 
     "gammaV": 1.0
   }, 
   {
@@ -5326,9 +5326,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "HEXANE", 
-    "betaT": "1.00102", 
+    "betaT": 1.00102, 
     "betaV": 1.0, 
-    "gammaT": "0.99297", 
+    "gammaT": 0.99297, 
     "gammaV": 1.0
   }, 
   {
@@ -5338,9 +5338,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "IOCTANE", 
-    "betaT": "1.00190", 
+    "betaT": 1.0019, 
     "betaV": 1.0, 
-    "gammaT": "0.99375", 
+    "gammaT": 0.99375, 
     "gammaV": 1.0
   }, 
   {
@@ -5350,9 +5350,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "METHANE", 
-    "betaT": "1.01565", 
+    "betaT": 1.01565, 
     "betaV": 1.0, 
-    "gammaT": "1.32339", 
+    "gammaT": 1.32339, 
     "gammaV": 1.0
   }, 
   {
@@ -5362,9 +5362,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "MXYLENE", 
-    "betaT": "1.00315", 
+    "betaT": 1.00315, 
     "betaV": 1.0, 
-    "gammaT": "0.99328", 
+    "gammaT": 0.99328, 
     "gammaV": 1.0
   }, 
   {
@@ -5374,9 +5374,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "NITROGEN", 
-    "betaT": "0.99970", 
+    "betaT": 0.9997, 
     "betaV": 1.0, 
-    "gammaT": "1.47554", 
+    "gammaT": 1.47554, 
     "gammaV": 1.0
   }, 
   {
@@ -5386,9 +5386,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "NONANE", 
-    "betaT": "0.99583", 
+    "betaT": 0.99583, 
     "betaV": 1.0, 
-    "gammaT": "1.00655", 
+    "gammaT": 1.00655, 
     "gammaV": 1.0
   }, 
   {
@@ -5398,9 +5398,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "OCTANE", 
-    "betaT": "1.00125", 
+    "betaT": 1.00125, 
     "betaV": 1.0, 
-    "gammaT": "0.99972", 
+    "gammaT": 0.99972, 
     "gammaV": 1.0
   }, 
   {
@@ -5410,9 +5410,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "OXYLENE", 
-    "betaT": "1.00392", 
+    "betaT": 1.00392, 
     "betaV": 1.0, 
-    "gammaT": "0.99006", 
+    "gammaT": 0.99006, 
     "gammaV": 1.0
   }, 
   {
@@ -5422,9 +5422,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "PENTANE", 
-    "betaT": "1.00050", 
+    "betaT": 1.0005, 
     "betaV": 1.0, 
-    "gammaT": "0.99588", 
+    "gammaT": 0.99588, 
     "gammaV": 1.0
   }, 
   {
@@ -5434,9 +5434,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "PROPANE", 
-    "betaT": "0.99740", 
+    "betaT": 0.9974, 
     "betaV": 1.0, 
-    "gammaT": "1.03578", 
+    "gammaT": 1.03578, 
     "gammaV": 1.0
   }, 
   {
@@ -5446,9 +5446,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.00099", 
+    "betaT": 1.00099, 
     "betaV": 1.0, 
-    "gammaT": "1.04089", 
+    "gammaT": 1.04089, 
     "gammaV": 1.0
   }, 
   {
@@ -5458,9 +5458,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "PXYLENE", 
-    "betaT": "1.00184", 
+    "betaT": 1.00184, 
     "betaV": 1.0, 
-    "gammaT": "0.99198", 
+    "gammaT": 0.99198, 
     "gammaV": 1.0
   }, 
   {
@@ -5470,9 +5470,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "R12", 
-    "betaT": "0.96292", 
+    "betaT": 0.96292, 
     "betaV": 1.0, 
-    "gammaT": "0.98900", 
+    "gammaT": 0.989, 
     "gammaV": 1.0
   }, 
   {
@@ -5482,9 +5482,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "R22", 
-    "betaT": "0.99094", 
+    "betaT": 0.99094, 
     "betaV": 1.0, 
-    "gammaT": "0.97638", 
+    "gammaT": 0.97638, 
     "gammaV": 1.0
   }, 
   {
@@ -5494,9 +5494,9 @@
     "F": 0.0, 
     "Name1": "CYCLOHEX", 
     "Name2": "TOLUENE", 
-    "betaT": "1.00176", 
+    "betaT": 1.00176, 
     "betaV": 1.0, 
-    "gammaT": "0.98779", 
+    "gammaT": 0.98779, 
     "gammaV": 1.0
   }, 
   {
@@ -5506,9 +5506,9 @@
     "F": 0.0, 
     "Name1": "CYCLOPEN", 
     "Name2": "D4", 
-    "betaT": "0.99608", 
+    "betaT": 0.99608, 
     "betaV": 1.0, 
-    "gammaT": "1.03293", 
+    "gammaT": 1.03293, 
     "gammaV": 1.0
   }, 
   {
@@ -5518,9 +5518,9 @@
     "F": 0.0, 
     "Name1": "CYCLOPEN", 
     "Name2": "ETHANOL", 
-    "betaT": "1.06483", 
+    "betaT": 1.06483, 
     "betaV": 1.0, 
-    "gammaT": "0.89994", 
+    "gammaT": 0.89994, 
     "gammaV": 1.0
   }, 
   {
@@ -5530,9 +5530,9 @@
     "F": 0.0, 
     "Name1": "CYCLOPEN", 
     "Name2": "XENON", 
-    "betaT": "1.04856", 
+    "betaT": 1.04856, 
     "betaV": 1.0, 
-    "gammaT": "1.17726", 
+    "gammaT": 1.17726, 
     "gammaV": 1.0
   }, 
   {
@@ -5542,9 +5542,9 @@
     "F": 0.0, 
     "Name1": "CYCLOPRO", 
     "Name2": "PROPANE", 
-    "betaT": "0.99757", 
+    "betaT": 0.99757, 
     "betaV": 1.0, 
-    "gammaT": "0.98041", 
+    "gammaT": 0.98041, 
     "gammaV": 1.0
   }, 
   {
@@ -5554,9 +5554,9 @@
     "F": 0.0, 
     "Name1": "CYCLOPRO", 
     "Name2": "R125", 
-    "betaT": "1.01522", 
+    "betaT": 1.01522, 
     "betaV": 1.0, 
-    "gammaT": "0.91039", 
+    "gammaT": 0.91039, 
     "gammaV": 1.0
   }, 
   {
@@ -5566,9 +5566,9 @@
     "F": 0.0, 
     "Name1": "CYCLOPRO", 
     "Name2": "R134A", 
-    "betaT": "1.01623", 
+    "betaT": 1.01623, 
     "betaV": 1.0, 
-    "gammaT": "0.91325", 
+    "gammaT": 0.91325, 
     "gammaV": 1.0
   }, 
   {
@@ -5578,9 +5578,9 @@
     "F": 0.0, 
     "Name1": "CYCLOPRO", 
     "Name2": "XENON", 
-    "betaT": "1.07035", 
+    "betaT": 1.07035, 
     "betaV": 1.0, 
-    "gammaT": "0.94711", 
+    "gammaT": 0.94711, 
     "gammaV": 1.0
   }, 
   {
@@ -5590,9 +5590,9 @@
     "F": 0.0, 
     "Name1": "D2", 
     "Name2": "HYDROGEN", 
-    "betaT": "0.99136", 
+    "betaT": 0.99136, 
     "betaV": 1.0, 
-    "gammaT": "0.99511", 
+    "gammaT": 0.99511, 
     "gammaV": 1.0
   }, 
   {
@@ -5602,9 +5602,9 @@
     "F": 0.0, 
     "Name1": "D2", 
     "Name2": "NEON", 
-    "betaT": "0.98882", 
+    "betaT": 0.98882, 
     "betaV": 1.0, 
-    "gammaT": "0.83393", 
+    "gammaT": 0.83393, 
     "gammaV": 1.0
   }, 
   {
@@ -5614,9 +5614,9 @@
     "F": 0.0, 
     "Name1": "D2", 
     "Name2": "NITROGEN", 
-    "betaT": "1.01561", 
+    "betaT": 1.01561, 
     "betaV": 1.0, 
-    "gammaT": "1.22898", 
+    "gammaT": 1.22898, 
     "gammaV": 1.0
   }, 
   {
@@ -5626,9 +5626,9 @@
     "F": 0.0, 
     "Name1": "D2O", 
     "Name2": "WATER", 
-    "betaT": "0.99577", 
+    "betaT": 0.99577, 
     "betaV": 1.0, 
-    "gammaT": "1.00379", 
+    "gammaT": 1.00379, 
     "gammaV": 1.0
   }, 
   {
@@ -5638,9 +5638,9 @@
     "F": 0.0, 
     "Name1": "D4", 
     "Name2": "MDM", 
-    "betaT": "1.00174", 
+    "betaT": 1.00174, 
     "betaV": 1.0, 
-    "gammaT": "0.99969", 
+    "gammaT": 0.99969, 
     "gammaV": 1.0
   }, 
   {
@@ -5650,9 +5650,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "DMC", 
-    "betaT": "0.98375", 
+    "betaT": 0.98375, 
     "betaV": 1.0, 
-    "gammaT": "0.92470", 
+    "gammaT": 0.9247, 
     "gammaV": 1.0
   }, 
   {
@@ -5662,9 +5662,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "ETHANOL", 
-    "betaT": "0.99423", 
+    "betaT": 0.99423, 
     "betaV": 1.0, 
-    "gammaT": "0.89711", 
+    "gammaT": 0.89711, 
     "gammaV": 1.0
   }, 
   {
@@ -5674,9 +5674,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.05317", 
+    "betaT": 1.05317, 
     "betaV": 1.0, 
-    "gammaT": "1.28576", 
+    "gammaT": 1.28576, 
     "gammaV": 1.0
   }, 
   {
@@ -5686,9 +5686,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "MXYLENE", 
-    "betaT": "1.00035", 
+    "betaT": 1.00035, 
     "betaV": 1.0, 
-    "gammaT": "0.99369", 
+    "gammaT": 0.99369, 
     "gammaV": 1.0
   }, 
   {
@@ -5698,9 +5698,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "OXYLENE", 
-    "betaT": "0.99865", 
+    "betaT": 0.99865, 
     "betaV": 1.0, 
-    "gammaT": "0.99471", 
+    "gammaT": 0.99471, 
     "gammaV": 1.0
   }, 
   {
@@ -5710,9 +5710,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.04471", 
+    "betaT": 1.04471, 
     "betaV": 1.0, 
-    "gammaT": "1.19102", 
+    "gammaT": 1.19102, 
     "gammaV": 1.0
   }, 
   {
@@ -5722,9 +5722,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99899", 
+    "betaT": 0.99899, 
     "betaV": 1.0, 
-    "gammaT": "0.99262", 
+    "gammaT": 0.99262, 
     "gammaV": 1.0
   }, 
   {
@@ -5734,9 +5734,9 @@
     "F": 0.0, 
     "Name1": "DECANE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99290", 
+    "betaT": 0.9929, 
     "betaV": 1.0, 
-    "gammaT": "0.99245", 
+    "gammaT": 0.99245, 
     "gammaV": 1.0
   }, 
   {
@@ -5746,9 +5746,9 @@
     "F": 0.0, 
     "Name1": "DEE", 
     "Name2": "ETHANOL", 
-    "betaT": "1.00897", 
+    "betaT": 1.00897, 
     "betaV": 1.0, 
-    "gammaT": "0.97226", 
+    "gammaT": 0.97226, 
     "gammaV": 1.0
   }, 
   {
@@ -5758,9 +5758,9 @@
     "F": 0.0, 
     "Name1": "DEE", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.01111", 
+    "betaT": 1.01111, 
     "betaV": 1.0, 
-    "gammaT": "1.10874", 
+    "gammaT": 1.10874, 
     "gammaV": 1.0
   }, 
   {
@@ -5770,9 +5770,9 @@
     "F": 0.0, 
     "Name1": "DEE", 
     "Name2": "HEXANE", 
-    "betaT": "0.99773", 
+    "betaT": 0.99773, 
     "betaV": 1.0, 
-    "gammaT": "0.99035", 
+    "gammaT": 0.99035, 
     "gammaV": 1.0
   }, 
   {
@@ -5782,9 +5782,9 @@
     "F": 0.0, 
     "Name1": "DEE", 
     "Name2": "METHANOL", 
-    "betaT": "1.00417", 
+    "betaT": 1.00417, 
     "betaV": 1.0, 
-    "gammaT": "0.94684", 
+    "gammaT": 0.94684, 
     "gammaV": 1.0
   }, 
   {
@@ -5794,9 +5794,9 @@
     "F": 0.0, 
     "Name1": "DEE", 
     "Name2": "R12", 
-    "betaT": "0.99569", 
+    "betaT": 0.99569, 
     "betaV": 1.0, 
-    "gammaT": "1.02787", 
+    "gammaT": 1.02787, 
     "gammaV": 1.0
   }, 
   {
@@ -5806,9 +5806,9 @@
     "F": 0.0, 
     "Name1": "DEE", 
     "Name2": "SO2", 
-    "betaT": "0.98788", 
+    "betaT": 0.98788, 
     "betaV": 1.0, 
-    "gammaT": "1.04115", 
+    "gammaT": 1.04115, 
     "gammaV": 1.0
   }, 
   {
@@ -5818,9 +5818,9 @@
     "F": 0.0, 
     "Name1": "DEE", 
     "Name2": "WATER", 
-    "betaT": "0.96917", 
+    "betaT": 0.96917, 
     "betaV": 1.0, 
-    "gammaT": "0.84219", 
+    "gammaT": 0.84219, 
     "gammaV": 1.0
   }, 
   {
@@ -5830,9 +5830,9 @@
     "F": 0.0, 
     "Name1": "DMC", 
     "Name2": "ETHANOL", 
-    "betaT": "1.00298", 
+    "betaT": 1.00298, 
     "betaV": 1.0, 
-    "gammaT": "0.94120", 
+    "gammaT": 0.9412, 
     "gammaV": 1.0
   }, 
   {
@@ -5842,9 +5842,9 @@
     "F": 0.0, 
     "Name1": "DMC", 
     "Name2": "HEPTANE", 
-    "betaT": "1.00844", 
+    "betaT": 1.00844, 
     "betaV": 1.0, 
-    "gammaT": "0.92607", 
+    "gammaT": 0.92607, 
     "gammaV": 1.0
   }, 
   {
@@ -5854,9 +5854,9 @@
     "F": 0.0, 
     "Name1": "DMC", 
     "Name2": "HEXANE", 
-    "betaT": "1.00137", 
+    "betaT": 1.00137, 
     "betaV": 1.0, 
-    "gammaT": "0.92986", 
+    "gammaT": 0.92986, 
     "gammaV": 1.0
   }, 
   {
@@ -5866,9 +5866,9 @@
     "F": 0.0, 
     "Name1": "DMC", 
     "Name2": "METHANOL", 
-    "betaT": "0.99772", 
+    "betaT": 0.99772, 
     "betaV": 1.0, 
-    "gammaT": "0.93765", 
+    "gammaT": 0.93765, 
     "gammaV": 1.0
   }, 
   {
@@ -5878,9 +5878,9 @@
     "F": 0.0, 
     "Name1": "DMC", 
     "Name2": "NONANE", 
-    "betaT": "1.02118", 
+    "betaT": 1.02118, 
     "betaV": 1.0, 
-    "gammaT": "0.93384", 
+    "gammaT": 0.93384, 
     "gammaV": 1.0
   }, 
   {
@@ -5890,9 +5890,9 @@
     "F": 0.0, 
     "Name1": "DMC", 
     "Name2": "OCTANE", 
-    "betaT": "1.01339", 
+    "betaT": 1.01339, 
     "betaV": 1.0, 
-    "gammaT": "0.92726", 
+    "gammaT": 0.92726, 
     "gammaV": 1.0
   }, 
   {
@@ -5902,9 +5902,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "ETHANOL", 
-    "betaT": "0.99876", 
+    "betaT": 0.99876, 
     "betaV": 1.0, 
-    "gammaT": "1.03610", 
+    "gammaT": 1.0361, 
     "gammaV": 1.0
   }, 
   {
@@ -5914,9 +5914,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "HEXANE", 
-    "betaT": "1.00984", 
+    "betaT": 1.00984, 
     "betaV": 1.0, 
-    "gammaT": "0.99219", 
+    "gammaT": 0.99219, 
     "gammaV": 1.0
   }, 
   {
@@ -5926,9 +5926,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "ISOBUTAN", 
-    "betaT": "1.00227", 
+    "betaT": 1.00227, 
     "betaV": 1.0, 
-    "gammaT": "0.96302", 
+    "gammaT": 0.96302, 
     "gammaV": 1.0
   }, 
   {
@@ -5938,9 +5938,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "METHANE", 
-    "betaT": "1.00956", 
+    "betaT": 1.00956, 
     "betaV": 1.0, 
-    "gammaT": "1.14009", 
+    "gammaT": 1.14009, 
     "gammaV": 1.0
   }, 
   {
@@ -5950,9 +5950,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "METHANOL", 
-    "betaT": "1.00406", 
+    "betaT": 1.00406, 
     "betaV": 1.0, 
-    "gammaT": "1.00554", 
+    "gammaT": 1.00554, 
     "gammaV": 1.0
   }, 
   {
@@ -5962,9 +5962,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "PENTANE", 
-    "betaT": "1.03571", 
+    "betaT": 1.03571, 
     "betaV": 1.0, 
-    "gammaT": "0.99489", 
+    "gammaT": 0.99489, 
     "gammaV": 1.0
   }, 
   {
@@ -5974,9 +5974,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "PROPANE", 
-    "betaT": "0.99761", 
+    "betaT": 0.99761, 
     "betaV": 1.0, 
-    "gammaT": "0.96354", 
+    "gammaT": 0.96354, 
     "gammaV": 1.0
   }, 
   {
@@ -5986,9 +5986,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.99733", 
+    "betaT": 0.99733, 
     "betaV": 1.0, 
-    "gammaT": "0.98909", 
+    "gammaT": 0.98909, 
     "gammaV": 1.0
   }, 
   {
@@ -5998,9 +5998,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R125", 
-    "betaT": "1.00899", 
+    "betaT": 1.00899, 
     "betaV": 1.0, 
-    "gammaT": "1.03733", 
+    "gammaT": 1.03733, 
     "gammaV": 1.0
   }, 
   {
@@ -6010,9 +6010,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R134A", 
-    "betaT": "0.99604", 
+    "betaT": 0.99604, 
     "betaV": 1.0, 
-    "gammaT": "1.01372", 
+    "gammaT": 1.01372, 
     "gammaV": 1.0
   }, 
   {
@@ -6022,9 +6022,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R143A", 
-    "betaT": "1.00012", 
+    "betaT": 1.00012, 
     "betaV": 1.0, 
-    "gammaT": "0.99059", 
+    "gammaT": 0.99059, 
     "gammaV": 1.0
   }, 
   {
@@ -6034,9 +6034,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R22", 
-    "betaT": "1.01491", 
+    "betaT": 1.01491, 
     "betaV": 1.0, 
-    "gammaT": "1.07125", 
+    "gammaT": 1.07125, 
     "gammaV": 1.0
   }, 
   {
@@ -6046,9 +6046,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R227EA", 
-    "betaT": "1.01575", 
+    "betaT": 1.01575, 
     "betaV": 1.0, 
-    "gammaT": "1.05765", 
+    "gammaT": 1.05765, 
     "gammaV": 1.0
   }, 
   {
@@ -6058,9 +6058,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R236EA", 
-    "betaT": "0.98075", 
+    "betaT": 0.98075, 
     "betaV": 1.0, 
-    "gammaT": "1.06804", 
+    "gammaT": 1.06804, 
     "gammaV": 1.0
   }, 
   {
@@ -6070,9 +6070,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R236FA", 
-    "betaT": "0.98997", 
+    "betaT": 0.98997, 
     "betaV": 1.0, 
-    "gammaT": "1.04344", 
+    "gammaT": 1.04344, 
     "gammaV": 1.0
   }, 
   {
@@ -6082,9 +6082,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R32", 
-    "betaT": "0.99399", 
+    "betaT": 0.99399, 
     "betaV": 1.0, 
-    "gammaT": "0.99941", 
+    "gammaT": 0.99941, 
     "gammaV": 1.0
   }, 
   {
@@ -6094,9 +6094,9 @@
     "F": 0.0, 
     "Name1": "DME", 
     "Name2": "R40", 
-    "betaT": "0.99969", 
+    "betaT": 0.99969, 
     "betaV": 1.0, 
-    "gammaT": "1.01217", 
+    "gammaT": 1.01217, 
     "gammaV": 1.0
   }, 
   {
@@ -6106,9 +6106,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "ETHANOL", 
-    "betaT": "1.01024", 
+    "betaT": 1.01024, 
     "betaV": 1.0, 
-    "gammaT": "0.90463", 
+    "gammaT": 0.90463, 
     "gammaV": 1.0
   }, 
   {
@@ -6118,9 +6118,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "HEPTANE", 
-    "betaT": "1.00040", 
+    "betaT": 1.0004, 
     "betaV": 1.0, 
-    "gammaT": "0.98665", 
+    "gammaT": 0.98665, 
     "gammaV": 1.0
   }, 
   {
@@ -6130,9 +6130,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "HEXANE", 
-    "betaT": "0.99974", 
+    "betaT": 0.99974, 
     "betaV": 1.0, 
-    "gammaT": "0.99383", 
+    "gammaT": 0.99383, 
     "gammaV": 1.0
   }, 
   {
@@ -6142,9 +6142,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "IOCTANE", 
-    "betaT": "1.00096", 
+    "betaT": 1.00096, 
     "betaV": 1.0, 
-    "gammaT": "0.98599", 
+    "gammaT": 0.98599, 
     "gammaV": 1.0
   }, 
   {
@@ -6154,9 +6154,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "METHANOL", 
-    "betaT": "1.00109", 
+    "betaT": 1.00109, 
     "betaV": 1.0, 
-    "gammaT": "0.89432", 
+    "gammaT": 0.89432, 
     "gammaV": 1.0
   }, 
   {
@@ -6166,9 +6166,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "MXYLENE", 
-    "betaT": "1.00012", 
+    "betaT": 1.00012, 
     "betaV": 1.0, 
-    "gammaT": "0.99939", 
+    "gammaT": 0.99939, 
     "gammaV": 1.0
   }, 
   {
@@ -6178,9 +6178,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "NONANE", 
-    "betaT": "1.00375", 
+    "betaT": 1.00375, 
     "betaV": 1.0, 
-    "gammaT": "0.98564", 
+    "gammaT": 0.98564, 
     "gammaV": 1.0
   }, 
   {
@@ -6190,9 +6190,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "OCTANE", 
-    "betaT": "1.00078", 
+    "betaT": 1.00078, 
     "betaV": 1.0, 
-    "gammaT": "0.98584", 
+    "gammaT": 0.98584, 
     "gammaV": 1.0
   }, 
   {
@@ -6202,9 +6202,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "OXYLENE", 
-    "betaT": "1.00153", 
+    "betaT": 1.00153, 
     "betaV": 1.0, 
-    "gammaT": "0.99924", 
+    "gammaT": 0.99924, 
     "gammaV": 1.0
   }, 
   {
@@ -6214,9 +6214,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99948", 
+    "betaT": 0.99948, 
     "betaV": 1.0, 
-    "gammaT": "0.99905", 
+    "gammaT": 0.99905, 
     "gammaV": 1.0
   }, 
   {
@@ -6226,9 +6226,9 @@
     "F": 0.0, 
     "Name1": "EBENZENE", 
     "Name2": "TOLUENE", 
-    "betaT": "1.00288", 
+    "betaT": 1.00288, 
     "betaV": 1.0, 
-    "gammaT": "1.00252", 
+    "gammaT": 1.00252, 
     "gammaV": 1.0
   }, 
   {
@@ -6238,9 +6238,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.00375", 
+    "betaT": 1.00375, 
     "betaV": 1.0, 
-    "gammaT": "0.99401", 
+    "gammaT": 0.99401, 
     "gammaV": 1.0
   }, 
   {
@@ -6250,9 +6250,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "HCL", 
-    "betaT": "0.99182", 
+    "betaT": 0.99182, 
     "betaV": 1.0, 
-    "gammaT": "0.90586", 
+    "gammaT": 0.90586, 
     "gammaV": 1.0
   }, 
   {
@@ -6262,9 +6262,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "IOCTANE", 
-    "betaT": "0.90358", 
+    "betaT": 0.90358, 
     "betaV": 1.0, 
-    "gammaT": "1.22877", 
+    "gammaT": 1.22877, 
     "gammaV": 1.0
   }, 
   {
@@ -6274,9 +6274,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "KRYPTON", 
-    "betaT": "1.00338", 
+    "betaT": 1.00338, 
     "betaV": 1.0, 
-    "gammaT": "1.04799", 
+    "gammaT": 1.04799, 
     "gammaV": 1.0
   }, 
   {
@@ -6286,9 +6286,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "MXYLENE", 
-    "betaT": "0.98799", 
+    "betaT": 0.98799, 
     "betaV": 1.0, 
-    "gammaT": "1.17616", 
+    "gammaT": 1.17616, 
     "gammaV": 1.0
   }, 
   {
@@ -6298,9 +6298,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.99928", 
+    "betaT": 0.99928, 
     "betaV": 1.0, 
-    "gammaT": "1.00560", 
+    "gammaT": 1.0056, 
     "gammaV": 1.0
   }, 
   {
@@ -6310,9 +6310,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "R116", 
-    "betaT": "1.03539", 
+    "betaT": 1.03539, 
     "betaV": 1.0, 
-    "gammaT": "0.89844", 
+    "gammaT": 0.89844, 
     "gammaV": 1.0
   }, 
   {
@@ -6322,9 +6322,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "R1216", 
-    "betaT": "1.01157", 
+    "betaT": 1.01157, 
     "betaV": 1.0, 
-    "gammaT": "0.93961", 
+    "gammaT": 0.93961, 
     "gammaV": 1.0
   }, 
   {
@@ -6334,9 +6334,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "R14", 
-    "betaT": "1.01483", 
+    "betaT": 1.01483, 
     "betaV": 1.0, 
-    "gammaT": "0.89216", 
+    "gammaT": 0.89216, 
     "gammaV": 1.0
   }, 
   {
@@ -6346,9 +6346,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "R218", 
-    "betaT": "1.03147", 
+    "betaT": 1.03147, 
     "betaV": 1.0, 
-    "gammaT": "0.93581", 
+    "gammaT": 0.93581, 
     "gammaV": 1.0
   }, 
   {
@@ -6358,9 +6358,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "R23", 
-    "betaT": "1.00597", 
+    "betaT": 1.00597, 
     "betaV": 1.0, 
-    "gammaT": "0.87082", 
+    "gammaT": 0.87082, 
     "gammaV": 1.0
   }, 
   {
@@ -6370,9 +6370,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99540", 
+    "betaT": 0.9954, 
     "betaV": 1.0, 
-    "gammaT": "1.12756", 
+    "gammaT": 1.12756, 
     "gammaV": 1.0
   }, 
   {
@@ -6382,9 +6382,9 @@
     "F": 0.0, 
     "Name1": "ETHANE", 
     "Name2": "XENON", 
-    "betaT": "0.99857", 
+    "betaT": 0.99857, 
     "betaV": 1.0, 
-    "gammaT": "1.00960", 
+    "gammaT": 1.0096, 
     "gammaV": 1.0
   }, 
   {
@@ -6394,9 +6394,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "ETHYLENE", 
-    "betaT": "1.02189", 
+    "betaT": 1.02189, 
     "betaV": 1.0, 
-    "gammaT": "1.17065", 
+    "gammaT": 1.17065, 
     "gammaV": 1.0
   }, 
   {
@@ -6406,9 +6406,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "HEPTANE", 
-    "betaT": "0.98096", 
+    "betaT": 0.98096, 
     "betaV": 1.0, 
-    "gammaT": "0.89810", 
+    "gammaT": 0.8981, 
     "gammaV": 1.0
   }, 
   {
@@ -6418,9 +6418,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "HEXANE", 
-    "betaT": "0.97333", 
+    "betaT": 0.97333, 
     "betaV": 1.0, 
-    "gammaT": "0.90746", 
+    "gammaT": 0.90746, 
     "gammaV": 1.0
   }, 
   {
@@ -6430,9 +6430,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "IBUTENE", 
-    "betaT": "0.97566", 
+    "betaT": 0.97566, 
     "betaV": 1.0, 
-    "gammaT": "0.96241", 
+    "gammaT": 0.96241, 
     "gammaV": 1.0
   }, 
   {
@@ -6442,9 +6442,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "IHEXANE", 
-    "betaT": "0.98557", 
+    "betaT": 0.98557, 
     "betaV": 1.0, 
-    "gammaT": "0.90538", 
+    "gammaT": 0.90538, 
     "gammaV": 1.0
   }, 
   {
@@ -6454,9 +6454,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "IOCTANE", 
-    "betaT": "0.98077", 
+    "betaT": 0.98077, 
     "betaV": 1.0, 
-    "gammaT": "0.89163", 
+    "gammaT": 0.89163, 
     "gammaV": 1.0
   }, 
   {
@@ -6466,9 +6466,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "METHANOL", 
-    "betaT": "1.00177", 
+    "betaT": 1.00177, 
     "betaV": 1.0, 
-    "gammaT": "0.99902", 
+    "gammaT": 0.99902, 
     "gammaV": 1.0
   }, 
   {
@@ -6478,9 +6478,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "MM", 
-    "betaT": "0.99498", 
+    "betaT": 0.99498, 
     "betaV": 1.0, 
-    "gammaT": "0.91176", 
+    "gammaT": 0.91176, 
     "gammaV": 1.0
   }, 
   {
@@ -6490,9 +6490,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "NITROGEN", 
-    "betaT": "1.04316", 
+    "betaT": 1.04316, 
     "betaV": 1.0, 
-    "gammaT": "1.63914", 
+    "gammaT": 1.63914, 
     "gammaV": 1.0
   }, 
   {
@@ -6502,9 +6502,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "NONANE", 
-    "betaT": "1.00808", 
+    "betaT": 1.00808, 
     "betaV": 1.0, 
-    "gammaT": "0.89624", 
+    "gammaT": 0.89624, 
     "gammaV": 1.0
   }, 
   {
@@ -6514,9 +6514,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "OCTANE", 
-    "betaT": "0.99103", 
+    "betaT": 0.99103, 
     "betaV": 1.0, 
-    "gammaT": "0.89471", 
+    "gammaT": 0.89471, 
     "gammaV": 1.0
   }, 
   {
@@ -6526,9 +6526,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "OXYLENE", 
-    "betaT": "0.98697", 
+    "betaT": 0.98697, 
     "betaV": 1.0, 
-    "gammaT": "0.90681", 
+    "gammaT": 0.90681, 
     "gammaV": 1.0
   }, 
   {
@@ -6538,9 +6538,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "PXYLENE", 
-    "betaT": "0.97813", 
+    "betaT": 0.97813, 
     "betaV": 1.0, 
-    "gammaT": "0.90590", 
+    "gammaT": 0.9059, 
     "gammaV": 1.0
   }, 
   {
@@ -6550,9 +6550,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R113", 
-    "betaT": "0.98820", 
+    "betaT": 0.9882, 
     "betaV": 1.0, 
-    "gammaT": "0.90301", 
+    "gammaT": 0.90301, 
     "gammaV": 1.0
   }, 
   {
@@ -6562,9 +6562,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R114", 
-    "betaT": "0.95361", 
+    "betaT": 0.95361, 
     "betaV": 1.0, 
-    "gammaT": "0.93497", 
+    "gammaT": 0.93497, 
     "gammaV": 1.0
   }, 
   {
@@ -6574,9 +6574,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R125", 
-    "betaT": "1.00462", 
+    "betaT": 1.00462, 
     "betaV": 1.0, 
-    "gammaT": "1.05044", 
+    "gammaT": 1.05044, 
     "gammaV": 1.0
   }, 
   {
@@ -6586,9 +6586,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R134A", 
-    "betaT": "0.97178", 
+    "betaT": 0.97178, 
     "betaV": 1.0, 
-    "gammaT": "0.98183", 
+    "gammaT": 0.98183, 
     "gammaV": 1.0
   }, 
   {
@@ -6598,9 +6598,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R152A", 
-    "betaT": "0.96946", 
+    "betaT": 0.96946, 
     "betaV": 1.0, 
-    "gammaT": "0.97677", 
+    "gammaT": 0.97677, 
     "gammaV": 1.0
   }, 
   {
@@ -6610,9 +6610,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R21", 
-    "betaT": "0.97987", 
+    "betaT": 0.97987, 
     "betaV": 1.0, 
-    "gammaT": "0.90692", 
+    "gammaT": 0.90692, 
     "gammaV": 1.0
   }, 
   {
@@ -6622,9 +6622,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R22", 
-    "betaT": "0.99373", 
+    "betaT": 0.99373, 
     "betaV": 1.0, 
-    "gammaT": "1.05058", 
+    "gammaT": 1.05058, 
     "gammaV": 1.0
   }, 
   {
@@ -6634,9 +6634,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R23", 
-    "betaT": "0.90517", 
+    "betaT": 0.90517, 
     "betaV": 1.0, 
-    "gammaT": "1.05138", 
+    "gammaT": 1.05138, 
     "gammaV": 1.0
   }, 
   {
@@ -6646,9 +6646,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "R32", 
-    "betaT": "0.97558", 
+    "betaT": 0.97558, 
     "betaV": 1.0, 
-    "gammaT": "1.01657", 
+    "gammaT": 1.01657, 
     "gammaV": 1.0
   }, 
   {
@@ -6658,9 +6658,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "T2BUTENE", 
-    "betaT": "0.97419", 
+    "betaT": 0.97419, 
     "betaV": 1.0, 
-    "gammaT": "0.95288", 
+    "gammaT": 0.95288, 
     "gammaV": 1.0
   }, 
   {
@@ -6670,9 +6670,9 @@
     "F": 0.0, 
     "Name1": "ETHANOL", 
     "Name2": "TOLUENE", 
-    "betaT": "0.98100", 
+    "betaT": 0.981, 
     "betaV": 1.0, 
-    "gammaT": "0.90682", 
+    "gammaT": 0.90682, 
     "gammaV": 1.0
   }, 
   {
@@ -6682,9 +6682,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "HEPTANE", 
-    "betaT": "0.97975", 
+    "betaT": 0.97975, 
     "betaV": 1.0, 
-    "gammaT": "1.17970", 
+    "gammaT": 1.1797, 
     "gammaV": 1.0
   }, 
   {
@@ -6694,9 +6694,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "HEXANE", 
-    "betaT": "0.99131", 
+    "betaT": 0.99131, 
     "betaV": 1.0, 
-    "gammaT": "1.13008", 
+    "gammaT": 1.13008, 
     "gammaV": 1.0
   }, 
   {
@@ -6706,9 +6706,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "ISOBUTAN", 
-    "betaT": "0.99619", 
+    "betaT": 0.99619, 
     "betaV": 1.0, 
-    "gammaT": "1.05868", 
+    "gammaT": 1.05868, 
     "gammaV": 1.0
   }, 
   {
@@ -6718,9 +6718,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "METHANE", 
-    "betaT": "0.99352", 
+    "betaT": 0.99352, 
     "betaV": 1.0, 
-    "gammaT": "1.02333", 
+    "gammaT": 1.02333, 
     "gammaV": 1.0
   }, 
   {
@@ -6730,9 +6730,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "NITROGEN", 
-    "betaT": "0.99699", 
+    "betaT": 0.99699, 
     "betaV": 1.0, 
-    "gammaT": "1.05100", 
+    "gammaT": 1.051, 
     "gammaV": 1.0
   }, 
   {
@@ -6742,9 +6742,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "NONANE", 
-    "betaT": "0.96742", 
+    "betaT": 0.96742, 
     "betaV": 1.0, 
-    "gammaT": "1.26048", 
+    "gammaT": 1.26048, 
     "gammaV": 1.0
   }, 
   {
@@ -6754,9 +6754,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "OCTANE", 
-    "betaT": "0.96920", 
+    "betaT": 0.9692, 
     "betaV": 1.0, 
-    "gammaT": "1.21808", 
+    "gammaT": 1.21808, 
     "gammaV": 1.0
   }, 
   {
@@ -6766,9 +6766,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "PROPANE", 
-    "betaT": "1.00374", 
+    "betaT": 1.00374, 
     "betaV": 1.0, 
-    "gammaT": "1.01236", 
+    "gammaT": 1.01236, 
     "gammaV": 1.0
   }, 
   {
@@ -6778,9 +6778,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.00207", 
+    "betaT": 1.00207, 
     "betaV": 1.0, 
-    "gammaT": "1.01552", 
+    "gammaT": 1.01552, 
     "gammaV": 1.0
   }, 
   {
@@ -6790,9 +6790,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "R1216", 
-    "betaT": "1.01864", 
+    "betaT": 1.01864, 
     "betaV": 1.0, 
-    "gammaT": "0.99653", 
+    "gammaT": 0.99653, 
     "gammaV": 1.0
   }, 
   {
@@ -6802,9 +6802,9 @@
     "F": 0.0, 
     "Name1": "ETHYLENE", 
     "Name2": "XENON", 
-    "betaT": "0.99831", 
+    "betaT": 0.99831, 
     "betaV": 1.0, 
-    "gammaT": "0.98039", 
+    "gammaT": 0.98039, 
     "gammaV": 1.0
   }, 
   {
@@ -6814,9 +6814,9 @@
     "F": 0.0, 
     "Name1": "H2S", 
     "Name2": "IOCTANE", 
-    "betaT": "1.02296", 
+    "betaT": 1.02296, 
     "betaV": 1.0, 
-    "gammaT": "1.01015", 
+    "gammaT": 1.01015, 
     "gammaV": 1.0
   }, 
   {
@@ -6826,9 +6826,9 @@
     "F": 0.0, 
     "Name1": "H2S", 
     "Name2": "MXYLENE", 
-    "betaT": "0.97237", 
+    "betaT": 0.97237, 
     "betaV": 1.0, 
-    "gammaT": "1.10582", 
+    "gammaT": 1.10582, 
     "gammaV": 1.0
   }, 
   {
@@ -6838,9 +6838,9 @@
     "F": 0.0, 
     "Name1": "H2S", 
     "Name2": "NEOPENTN", 
-    "betaT": "1.02548", 
+    "betaT": 1.02548, 
     "betaV": 1.0, 
-    "gammaT": "0.93089", 
+    "gammaT": 0.93089, 
     "gammaV": 1.0
   }, 
   {
@@ -6850,9 +6850,9 @@
     "F": 0.0, 
     "Name1": "H2S", 
     "Name2": "TOLUENE", 
-    "betaT": "0.98283", 
+    "betaT": 0.98283, 
     "betaV": 1.0, 
-    "gammaT": "1.08325", 
+    "gammaT": 1.08325, 
     "gammaV": 1.0
   }, 
   {
@@ -6862,9 +6862,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "HEXANE", 
-    "betaT": "1.01481", 
+    "betaT": 1.01481, 
     "betaV": 1.0, 
-    "gammaT": "1.01449", 
+    "gammaT": 1.01449, 
     "gammaV": 1.0
   }, 
   {
@@ -6874,9 +6874,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "METHANOL", 
-    "betaT": "0.90069", 
+    "betaT": 0.90069, 
     "betaV": 1.0, 
-    "gammaT": "1.65053", 
+    "gammaT": 1.65053, 
     "gammaV": 1.0
   }, 
   {
@@ -6886,9 +6886,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "PROPANE", 
-    "betaT": "1.02143", 
+    "betaT": 1.02143, 
     "betaV": 1.0, 
-    "gammaT": "0.91760", 
+    "gammaT": 0.9176, 
     "gammaV": 1.0
   }, 
   {
@@ -6898,9 +6898,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "R142B", 
-    "betaT": "1.00828", 
+    "betaT": 1.00828, 
     "betaV": 1.0, 
-    "gammaT": "1.00217", 
+    "gammaT": 1.00217, 
     "gammaV": 1.0
   }, 
   {
@@ -6910,9 +6910,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "R32", 
-    "betaT": "1.00252", 
+    "betaT": 1.00252, 
     "betaV": 1.0, 
-    "gammaT": "0.99760", 
+    "gammaT": 0.9976, 
     "gammaV": 1.0
   }, 
   {
@@ -6922,9 +6922,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "R40", 
-    "betaT": "0.98451", 
+    "betaT": 0.98451, 
     "betaV": 1.0, 
-    "gammaT": "1.08265", 
+    "gammaT": 1.08265, 
     "gammaV": 1.0
   }, 
   {
@@ -6934,9 +6934,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "R41", 
-    "betaT": "0.98722", 
+    "betaT": 0.98722, 
     "betaV": 1.0, 
-    "gammaT": "1.10901", 
+    "gammaT": 1.10901, 
     "gammaV": 1.0
   }, 
   {
@@ -6946,9 +6946,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "SO2", 
-    "betaT": "0.99420", 
+    "betaT": 0.9942, 
     "betaV": 1.0, 
-    "gammaT": "1.05144", 
+    "gammaT": 1.05144, 
     "gammaV": 1.0
   }, 
   {
@@ -6958,9 +6958,9 @@
     "F": 0.0, 
     "Name1": "HCL", 
     "Name2": "XENON", 
-    "betaT": "0.98264", 
+    "betaT": 0.98264, 
     "betaV": 1.0, 
-    "gammaT": "0.90579", 
+    "gammaT": 0.90579, 
     "gammaV": 1.0
   }, 
   {
@@ -6970,9 +6970,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "IHEXANE", 
-    "betaT": "1.00097", 
+    "betaT": 1.00097, 
     "betaV": 1.0, 
-    "gammaT": "1.00472", 
+    "gammaT": 1.00472, 
     "gammaV": 1.0
   }, 
   {
@@ -6982,9 +6982,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "MXYLENE", 
-    "betaT": "0.99846", 
+    "betaT": 0.99846, 
     "betaV": 1.0, 
-    "gammaT": "0.98960", 
+    "gammaT": 0.9896, 
     "gammaV": 1.0
   }, 
   {
@@ -6994,9 +6994,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "OXYLENE", 
-    "betaT": "0.99904", 
+    "betaT": 0.99904, 
     "betaV": 1.0, 
-    "gammaT": "0.98672", 
+    "gammaT": 0.98672, 
     "gammaV": 1.0
   }, 
   {
@@ -7006,9 +7006,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.99114", 
+    "betaT": 0.99114, 
     "betaV": 1.0, 
-    "gammaT": "1.06264", 
+    "gammaT": 1.06264, 
     "gammaV": 1.0
   }, 
   {
@@ -7018,9 +7018,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99936", 
+    "betaT": 0.99936, 
     "betaV": 1.0, 
-    "gammaT": "0.98957", 
+    "gammaT": 0.98957, 
     "gammaV": 1.0
   }, 
   {
@@ -7030,9 +7030,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "R113", 
-    "betaT": "0.99577", 
+    "betaT": 0.99577, 
     "betaV": 1.0, 
-    "gammaT": "0.99057", 
+    "gammaT": 0.99057, 
     "gammaV": 1.0
   }, 
   {
@@ -7042,9 +7042,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "R114", 
-    "betaT": "0.99215", 
+    "betaT": 0.99215, 
     "betaV": 1.0, 
-    "gammaT": "0.99663", 
+    "gammaT": 0.99663, 
     "gammaV": 1.0
   }, 
   {
@@ -7054,9 +7054,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "R12", 
-    "betaT": "0.98822", 
+    "betaT": 0.98822, 
     "betaV": 1.0, 
-    "gammaT": "1.03388", 
+    "gammaT": 1.03388, 
     "gammaV": 1.0
   }, 
   {
@@ -7066,9 +7066,9 @@
     "F": 0.0, 
     "Name1": "HEPTANE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99684", 
+    "betaT": 0.99684, 
     "betaV": 1.0, 
-    "gammaT": "0.98136", 
+    "gammaT": 0.98136, 
     "gammaV": 1.0
   }, 
   {
@@ -7078,9 +7078,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "IHEXANE", 
-    "betaT": "0.99954", 
+    "betaT": 0.99954, 
     "betaV": 1.0, 
-    "gammaT": "0.99860", 
+    "gammaT": 0.9986, 
     "gammaV": 1.0
   }, 
   {
@@ -7090,9 +7090,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "IOCTANE", 
-    "betaT": "1.00668", 
+    "betaT": 1.00668, 
     "betaV": 1.0, 
-    "gammaT": "1.00427", 
+    "gammaT": 1.00427, 
     "gammaV": 1.0
   }, 
   {
@@ -7102,9 +7102,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "MM", 
-    "betaT": "0.99500", 
+    "betaT": 0.995, 
     "betaV": 1.0, 
-    "gammaT": "1.00697", 
+    "gammaT": 1.00697, 
     "gammaV": 1.0
   }, 
   {
@@ -7114,9 +7114,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "MXYLENE", 
-    "betaT": "1.01308", 
+    "betaT": 1.01308, 
     "betaV": 1.0, 
-    "gammaT": "0.99672", 
+    "gammaT": 0.99672, 
     "gammaV": 1.0
   }, 
   {
@@ -7126,9 +7126,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "OXYLENE", 
-    "betaT": "1.00096", 
+    "betaT": 1.00096, 
     "betaV": 1.0, 
-    "gammaT": "1.00154", 
+    "gammaT": 1.00154, 
     "gammaV": 1.0
   }, 
   {
@@ -7138,9 +7138,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.01641", 
+    "betaT": 1.01641, 
     "betaV": 1.0, 
-    "gammaT": "1.03815", 
+    "gammaT": 1.03815, 
     "gammaV": 1.0
   }, 
   {
@@ -7150,9 +7150,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "PXYLENE", 
-    "betaT": "1.00071", 
+    "betaT": 1.00071, 
     "betaV": 1.0, 
-    "gammaT": "0.99711", 
+    "gammaT": 0.99711, 
     "gammaV": 1.0
   }, 
   {
@@ -7162,9 +7162,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "R113", 
-    "betaT": "0.99940", 
+    "betaT": 0.9994, 
     "betaV": 1.0, 
-    "gammaT": "0.98509", 
+    "gammaT": 0.98509, 
     "gammaV": 1.0
   }, 
   {
@@ -7174,9 +7174,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "R114", 
-    "betaT": "0.99629", 
+    "betaT": 0.99629, 
     "betaV": 1.0, 
-    "gammaT": "0.98179", 
+    "gammaT": 0.98179, 
     "gammaV": 1.0
   }, 
   {
@@ -7186,9 +7186,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "R22", 
-    "betaT": "0.98925", 
+    "betaT": 0.98925, 
     "betaV": 1.0, 
-    "gammaT": "0.99579", 
+    "gammaT": 0.99579, 
     "gammaV": 1.0
   }, 
   {
@@ -7198,9 +7198,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99876", 
+    "betaT": 0.99876, 
     "betaV": 1.0, 
-    "gammaT": "0.98316", 
+    "gammaT": 0.98316, 
     "gammaV": 1.0
   }, 
   {
@@ -7210,9 +7210,9 @@
     "F": 0.0, 
     "Name1": "HEXANE", 
     "Name2": "XENON", 
-    "betaT": "1.01959", 
+    "betaT": 1.01959, 
     "betaV": 1.0, 
-    "gammaT": "1.16656", 
+    "gammaT": 1.16656, 
     "gammaV": 1.0
   }, 
   {
@@ -7222,9 +7222,9 @@
     "F": 0.0, 
     "Name1": "HYDROGEN", 
     "Name2": "NEON", 
-    "betaT": "1.00124", 
+    "betaT": 1.00124, 
     "betaV": 1.0, 
-    "gammaT": "0.83639", 
+    "gammaT": 0.83639, 
     "gammaV": 1.0
   }, 
   {
@@ -7234,9 +7234,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "ISOBUTAN", 
-    "betaT": "1.00019", 
+    "betaT": 1.00019, 
     "betaV": 1.0, 
-    "gammaT": "0.99644", 
+    "gammaT": 0.99644, 
     "gammaV": 1.0
   }, 
   {
@@ -7246,9 +7246,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "OCTANE", 
-    "betaT": "0.99296", 
+    "betaT": 0.99296, 
     "betaV": 1.0, 
-    "gammaT": "1.05350", 
+    "gammaT": 1.0535, 
     "gammaV": 1.0
   }, 
   {
@@ -7258,9 +7258,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "PROPANE", 
-    "betaT": "1.00734", 
+    "betaT": 1.00734, 
     "betaV": 1.0, 
-    "gammaT": "0.99305", 
+    "gammaT": 0.99305, 
     "gammaV": 1.0
   }, 
   {
@@ -7270,9 +7270,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "R143A", 
-    "betaT": "1.00220", 
+    "betaT": 1.0022, 
     "betaV": 1.0, 
-    "gammaT": "0.94375", 
+    "gammaT": 0.94375, 
     "gammaV": 1.0
   }, 
   {
@@ -7282,9 +7282,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "R152A", 
-    "betaT": "1.00080", 
+    "betaT": 1.0008, 
     "betaV": 1.0, 
-    "gammaT": "0.93949", 
+    "gammaT": 0.93949, 
     "gammaV": 1.0
   }, 
   {
@@ -7294,9 +7294,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "R227EA", 
-    "betaT": "1.01295", 
+    "betaT": 1.01295, 
     "betaV": 1.0, 
-    "gammaT": "0.92836", 
+    "gammaT": 0.92836, 
     "gammaV": 1.0
   }, 
   {
@@ -7306,9 +7306,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "R40", 
-    "betaT": "1.00052", 
+    "betaT": 1.00052, 
     "betaV": 1.0, 
-    "gammaT": "0.97922", 
+    "gammaT": 0.97922, 
     "gammaV": 1.0
   }, 
   {
@@ -7318,9 +7318,9 @@
     "F": 0.0, 
     "Name1": "IBUTENE", 
     "Name2": "SO2", 
-    "betaT": "0.98640", 
+    "betaT": 0.9864, 
     "betaV": 1.0, 
-    "gammaT": "0.94224", 
+    "gammaT": 0.94224, 
     "gammaV": 1.0
   }, 
   {
@@ -7330,9 +7330,9 @@
     "F": 0.0, 
     "Name1": "IHEXANE", 
     "Name2": "METHANOL", 
-    "betaT": "1.00691", 
+    "betaT": 1.00691, 
     "betaV": 1.0, 
-    "gammaT": "0.88008", 
+    "gammaT": 0.88008, 
     "gammaV": 1.0
   }, 
   {
@@ -7342,9 +7342,9 @@
     "F": 0.0, 
     "Name1": "IHEXANE", 
     "Name2": "PROPANE", 
-    "betaT": "1.00112", 
+    "betaT": 1.00112, 
     "betaV": 1.0, 
-    "gammaT": "1.03496", 
+    "gammaT": 1.03496, 
     "gammaV": 1.0
   }, 
   {
@@ -7354,9 +7354,9 @@
     "F": 0.0, 
     "Name1": "IOCTANE", 
     "Name2": "MXYLENE", 
-    "betaT": "0.99628", 
+    "betaT": 0.99628, 
     "betaV": 1.0, 
-    "gammaT": "1.00160", 
+    "gammaT": 1.0016, 
     "gammaV": 1.0
   }, 
   {
@@ -7366,9 +7366,9 @@
     "F": 0.0, 
     "Name1": "IOCTANE", 
     "Name2": "NITROGEN", 
-    "betaT": "1.00895", 
+    "betaT": 1.00895, 
     "betaV": 1.0, 
-    "gammaT": "1.55448", 
+    "gammaT": 1.55448, 
     "gammaV": 1.0
   }, 
   {
@@ -7378,9 +7378,9 @@
     "F": 0.0, 
     "Name1": "IOCTANE", 
     "Name2": "OCTANE", 
-    "betaT": "1.00129", 
+    "betaT": 1.00129, 
     "betaV": 1.0, 
-    "gammaT": "1.00412", 
+    "gammaT": 1.00412, 
     "gammaV": 1.0
   }, 
   {
@@ -7390,9 +7390,9 @@
     "F": 0.0, 
     "Name1": "IOCTANE", 
     "Name2": "OXYLENE", 
-    "betaT": "0.99859", 
+    "betaT": 0.99859, 
     "betaV": 1.0, 
-    "gammaT": "0.98905", 
+    "gammaT": 0.98905, 
     "gammaV": 1.0
   }, 
   {
@@ -7402,9 +7402,9 @@
     "F": 0.0, 
     "Name1": "IOCTANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.03677", 
+    "betaT": 1.03677, 
     "betaV": 1.0, 
-    "gammaT": "1.11387", 
+    "gammaT": 1.11387, 
     "gammaV": 1.0
   }, 
   {
@@ -7414,9 +7414,9 @@
     "F": 0.0, 
     "Name1": "IOCTANE", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99929", 
+    "betaT": 0.99929, 
     "betaV": 1.0, 
-    "gammaT": "0.99104", 
+    "gammaT": 0.99104, 
     "gammaV": 1.0
   }, 
   {
@@ -7426,9 +7426,9 @@
     "F": 0.0, 
     "Name1": "IOCTANE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99502", 
+    "betaT": 0.99502, 
     "betaV": 1.0, 
-    "gammaT": "0.97790", 
+    "gammaT": 0.9779, 
     "gammaV": 1.0
   }, 
   {
@@ -7438,9 +7438,9 @@
     "F": 0.0, 
     "Name1": "IPENTANE", 
     "Name2": "R23", 
-    "betaT": "0.97157", 
+    "betaT": 0.97157, 
     "betaV": 1.0, 
-    "gammaT": "0.93001", 
+    "gammaT": 0.93001, 
     "gammaV": 1.0
   }, 
   {
@@ -7450,9 +7450,9 @@
     "F": 0.0, 
     "Name1": "IPENTANE", 
     "Name2": "R245FA", 
-    "betaT": "0.98838", 
+    "betaT": 0.98838, 
     "betaV": 1.0, 
-    "gammaT": "0.90433", 
+    "gammaT": 0.90433, 
     "gammaV": 1.0
   }, 
   {
@@ -7462,9 +7462,9 @@
     "F": 0.0, 
     "Name1": "IPENTANE", 
     "Name2": "R365MFC", 
-    "betaT": "1.01335", 
+    "betaT": 1.01335, 
     "betaV": 1.0, 
-    "gammaT": "0.92380", 
+    "gammaT": 0.9238, 
     "gammaV": 1.0
   }, 
   {
@@ -7474,9 +7474,9 @@
     "F": 0.0, 
     "Name1": "IPENTANE", 
     "Name2": "TOLUENE", 
-    "betaT": "1.01022", 
+    "betaT": 1.01022, 
     "betaV": 1.0, 
-    "gammaT": "0.99749", 
+    "gammaT": 0.99749, 
     "gammaV": 1.0
   }, 
   {
@@ -7486,9 +7486,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.03014", 
+    "betaT": 1.03014, 
     "betaV": 1.0, 
-    "gammaT": "1.01260", 
+    "gammaT": 1.0126, 
     "gammaV": 1.0
   }, 
   {
@@ -7498,9 +7498,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R1234YF", 
-    "betaT": "1.00730", 
+    "betaT": 1.0073, 
     "betaV": 1.0, 
-    "gammaT": "0.93536", 
+    "gammaT": 0.93536, 
     "gammaV": 1.0
   }, 
   {
@@ -7510,9 +7510,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R1234ZE", 
-    "betaT": "1.00591", 
+    "betaT": 1.00591, 
     "betaV": 1.0, 
-    "gammaT": "0.92820", 
+    "gammaT": 0.9282, 
     "gammaV": 1.0
   }, 
   {
@@ -7522,9 +7522,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R125", 
-    "betaT": "0.98858", 
+    "betaT": 0.98858, 
     "betaV": 1.0, 
-    "gammaT": "0.90644", 
+    "gammaT": 0.90644, 
     "gammaV": 1.0
   }, 
   {
@@ -7534,9 +7534,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R13", 
-    "betaT": "0.99553", 
+    "betaT": 0.99553, 
     "betaV": 1.0, 
-    "gammaT": "0.98045", 
+    "gammaT": 0.98045, 
     "gammaV": 1.0
   }, 
   {
@@ -7546,9 +7546,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R134A", 
-    "betaT": "1.00145", 
+    "betaT": 1.00145, 
     "betaV": 1.0, 
-    "gammaT": "0.89668", 
+    "gammaT": 0.89668, 
     "gammaV": 1.0
   }, 
   {
@@ -7558,9 +7558,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R143A", 
-    "betaT": "1.00047", 
+    "betaT": 1.00047, 
     "betaV": 1.0, 
-    "gammaT": "0.91950", 
+    "gammaT": 0.9195, 
     "gammaV": 1.0
   }, 
   {
@@ -7570,9 +7570,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R152A", 
-    "betaT": "0.99318", 
+    "betaT": 0.99318, 
     "betaV": 1.0, 
-    "gammaT": "0.91845", 
+    "gammaT": 0.91845, 
     "gammaV": 1.0
   }, 
   {
@@ -7582,9 +7582,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R227EA", 
-    "betaT": "1.01326", 
+    "betaT": 1.01326, 
     "betaV": 1.0, 
-    "gammaT": "0.90916", 
+    "gammaT": 0.90916, 
     "gammaV": 1.0
   }, 
   {
@@ -7594,9 +7594,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R23", 
-    "betaT": "0.97853", 
+    "betaT": 0.97853, 
     "betaV": 1.0, 
-    "gammaT": "0.89794", 
+    "gammaT": 0.89794, 
     "gammaV": 1.0
   }, 
   {
@@ -7606,9 +7606,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R245FA", 
-    "betaT": "1.01357", 
+    "betaT": 1.01357, 
     "betaV": 1.0, 
-    "gammaT": "0.90803", 
+    "gammaT": 0.90803, 
     "gammaV": 1.0
   }, 
   {
@@ -7618,9 +7618,9 @@
     "F": 0.0, 
     "Name1": "ISOBUTAN", 
     "Name2": "R32", 
-    "betaT": "0.97650", 
+    "betaT": 0.9765, 
     "betaV": 1.0, 
-    "gammaT": "0.86238", 
+    "gammaT": 0.86238, 
     "gammaV": 1.0
   }, 
   {
@@ -7630,9 +7630,9 @@
     "F": 0.0, 
     "Name1": "KRYPTON", 
     "Name2": "METHANE", 
-    "betaT": "0.99962", 
+    "betaT": 0.99962, 
     "betaV": 1.0, 
-    "gammaT": "0.99368", 
+    "gammaT": 0.99368, 
     "gammaV": 1.0
   }, 
   {
@@ -7642,9 +7642,9 @@
     "F": 0.0, 
     "Name1": "KRYPTON", 
     "Name2": "OXYGEN", 
-    "betaT": "0.99555", 
+    "betaT": 0.99555, 
     "betaV": 1.0, 
-    "gammaT": "0.98848", 
+    "gammaT": 0.98848, 
     "gammaV": 1.0
   }, 
   {
@@ -7654,9 +7654,9 @@
     "F": 0.0, 
     "Name1": "KRYPTON", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.99711", 
+    "betaT": 0.99711, 
     "betaV": 1.0, 
-    "gammaT": "1.08746", 
+    "gammaT": 1.08746, 
     "gammaV": 1.0
   }, 
   {
@@ -7666,9 +7666,9 @@
     "F": 0.0, 
     "Name1": "METHANE", 
     "Name2": "N2O", 
-    "betaT": "0.98876", 
+    "betaT": 0.98876, 
     "betaV": 1.0, 
-    "gammaT": "1.02354", 
+    "gammaT": 1.02354, 
     "gammaV": 1.0
   }, 
   {
@@ -7678,9 +7678,9 @@
     "F": 0.0, 
     "Name1": "METHANE", 
     "Name2": "NEOPENTN", 
-    "betaT": "0.98554", 
+    "betaT": 0.98554, 
     "betaV": 1.0, 
-    "gammaT": "1.22513", 
+    "gammaT": 1.22513, 
     "gammaV": 1.0
   }, 
   {
@@ -7690,9 +7690,9 @@
     "F": 0.0, 
     "Name1": "METHANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.99563", 
+    "betaT": 0.99563, 
     "betaV": 1.0, 
-    "gammaT": "1.11748", 
+    "gammaT": 1.11748, 
     "gammaV": 1.0
   }, 
   {
@@ -7702,9 +7702,9 @@
     "F": 0.0, 
     "Name1": "METHANE", 
     "Name2": "SO2", 
-    "betaT": "1.03694", 
+    "betaT": 1.03694, 
     "betaV": 1.0, 
-    "gammaT": "1.07082", 
+    "gammaT": 1.07082, 
     "gammaV": 1.0
   }, 
   {
@@ -7714,9 +7714,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "MM", 
-    "betaT": "1.02619", 
+    "betaT": 1.02619, 
     "betaV": 1.0, 
-    "gammaT": "0.90636", 
+    "gammaT": 0.90636, 
     "gammaV": 1.0
   }, 
   {
@@ -7726,9 +7726,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "MXYLENE", 
-    "betaT": "0.99745", 
+    "betaT": 0.99745, 
     "betaV": 1.0, 
-    "gammaT": "0.88973", 
+    "gammaT": 0.88973, 
     "gammaV": 1.0
   }, 
   {
@@ -7738,9 +7738,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "OXYGEN", 
-    "betaT": "1.07547", 
+    "betaT": 1.07547, 
     "betaV": 1.0, 
-    "gammaT": "1.50180", 
+    "gammaT": 1.5018, 
     "gammaV": 1.0
   }, 
   {
@@ -7750,9 +7750,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "R134A", 
-    "betaT": "1.00779", 
+    "betaT": 1.00779, 
     "betaV": 1.0, 
-    "gammaT": "0.98889", 
+    "gammaT": 0.98889, 
     "gammaV": 1.0
   }, 
   {
@@ -7762,9 +7762,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "R152A", 
-    "betaT": "1.01147", 
+    "betaT": 1.01147, 
     "betaV": 1.0, 
-    "gammaT": "0.98828", 
+    "gammaT": 0.98828, 
     "gammaV": 1.0
   }, 
   {
@@ -7774,9 +7774,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "R21", 
-    "betaT": "1.03177", 
+    "betaT": 1.03177, 
     "betaV": 1.0, 
-    "gammaT": "0.91282", 
+    "gammaT": 0.91282, 
     "gammaV": 1.0
   }, 
   {
@@ -7786,9 +7786,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "R22", 
-    "betaT": "1.00262", 
+    "betaT": 1.00262, 
     "betaV": 1.0, 
-    "gammaT": "1.03751", 
+    "gammaT": 1.03751, 
     "gammaV": 1.0
   }, 
   {
@@ -7798,9 +7798,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "R32", 
-    "betaT": "0.99300", 
+    "betaT": 0.993, 
     "betaV": 1.0, 
-    "gammaT": "1.01175", 
+    "gammaT": 1.01175, 
     "gammaV": 1.0
   }, 
   {
@@ -7810,9 +7810,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "SO2", 
-    "betaT": "0.97373", 
+    "betaT": 0.97373, 
     "betaV": 1.0, 
-    "gammaT": "1.02388", 
+    "gammaT": 1.02388, 
     "gammaV": 1.0
   }, 
   {
@@ -7822,9 +7822,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "T2BUTENE", 
-    "betaT": "0.97890", 
+    "betaT": 0.9789, 
     "betaV": 1.0, 
-    "gammaT": "0.90748", 
+    "gammaT": 0.90748, 
     "gammaV": 1.0
   }, 
   {
@@ -7834,9 +7834,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "TOLUENE", 
-    "betaT": "0.98203", 
+    "betaT": 0.98203, 
     "betaV": 1.0, 
-    "gammaT": "0.89100", 
+    "gammaT": 0.891, 
     "gammaV": 1.0
   }, 
   {
@@ -7846,9 +7846,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "WATER", 
-    "betaT": "0.99676", 
+    "betaT": 0.99676, 
     "betaV": 1.0, 
-    "gammaT": "0.96774", 
+    "gammaT": 0.96774, 
     "gammaV": 1.0
   }, 
   {
@@ -7858,9 +7858,9 @@
     "F": 0.0, 
     "Name1": "METHANOL", 
     "Name2": "XENON", 
-    "betaT": "0.93558", 
+    "betaT": 0.93558, 
     "betaV": 1.0, 
-    "gammaT": "0.77335", 
+    "gammaT": 0.77335, 
     "gammaV": 1.0
   }, 
   {
@@ -7870,9 +7870,9 @@
     "F": 0.0, 
     "Name1": "MLINOLEA", 
     "Name2": "MPALMITA", 
-    "betaT": "0.99740", 
+    "betaT": 0.9974, 
     "betaV": 1.0, 
-    "gammaT": "0.99543", 
+    "gammaT": 0.99543, 
     "gammaV": 1.0
   }, 
   {
@@ -7882,9 +7882,9 @@
     "F": 0.0, 
     "Name1": "MM", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99910", 
+    "betaT": 0.9991, 
     "betaV": 1.0, 
-    "gammaT": "0.97446", 
+    "gammaT": 0.97446, 
     "gammaV": 1.0
   }, 
   {
@@ -7894,9 +7894,9 @@
     "F": 0.0, 
     "Name1": "MOLEATE", 
     "Name2": "MSTEARAT", 
-    "betaT": "0.99882", 
+    "betaT": 0.99882, 
     "betaV": 1.0, 
-    "gammaT": "0.99836", 
+    "gammaT": 0.99836, 
     "gammaV": 1.0
   }, 
   {
@@ -7906,9 +7906,9 @@
     "F": 0.0, 
     "Name1": "MPALMITA", 
     "Name2": "PROPANE", 
-    "betaT": "1.08514", 
+    "betaT": 1.08514, 
     "betaV": 1.0, 
-    "gammaT": "1.21332", 
+    "gammaT": 1.21332, 
     "gammaV": 1.0
   }, 
   {
@@ -7918,9 +7918,9 @@
     "F": 0.0, 
     "Name1": "MXYLENE", 
     "Name2": "NONANE", 
-    "betaT": "1.00227", 
+    "betaT": 1.00227, 
     "betaV": 1.0, 
-    "gammaT": "0.98031", 
+    "gammaT": 0.98031, 
     "gammaV": 1.0
   }, 
   {
@@ -7930,9 +7930,9 @@
     "F": 0.0, 
     "Name1": "MXYLENE", 
     "Name2": "OCTANE", 
-    "betaT": "1.00031", 
+    "betaT": 1.00031, 
     "betaV": 1.0, 
-    "gammaT": "0.99296", 
+    "gammaT": 0.99296, 
     "gammaV": 1.0
   }, 
   {
@@ -7942,9 +7942,9 @@
     "F": 0.0, 
     "Name1": "MXYLENE", 
     "Name2": "OXYLENE", 
-    "betaT": "1.00073", 
+    "betaT": 1.00073, 
     "betaV": 1.0, 
-    "gammaT": "0.99997", 
+    "gammaT": 0.99997, 
     "gammaV": 1.0
   }, 
   {
@@ -7954,9 +7954,9 @@
     "F": 0.0, 
     "Name1": "MXYLENE", 
     "Name2": "PROPANE", 
-    "betaT": "1.00346", 
+    "betaT": 1.00346, 
     "betaV": 1.0, 
-    "gammaT": "1.08363", 
+    "gammaT": 1.08363, 
     "gammaV": 1.0
   }, 
   {
@@ -7966,9 +7966,9 @@
     "F": 0.0, 
     "Name1": "MXYLENE", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.00655", 
+    "betaT": 1.00655, 
     "betaV": 1.0, 
-    "gammaT": "1.09811", 
+    "gammaT": 1.09811, 
     "gammaV": 1.0
   }, 
   {
@@ -7978,9 +7978,9 @@
     "F": 0.0, 
     "Name1": "MXYLENE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99650", 
+    "betaT": 0.9965, 
     "betaV": 1.0, 
-    "gammaT": "0.99601", 
+    "gammaT": 0.99601, 
     "gammaV": 1.0
   }, 
   {
@@ -7990,9 +7990,9 @@
     "F": 0.0, 
     "Name1": "N2O", 
     "Name2": "R125", 
-    "betaT": "0.97626", 
+    "betaT": 0.97626, 
     "betaV": 1.0, 
-    "gammaT": "0.77302", 
+    "gammaT": 0.77302, 
     "gammaV": 1.0
   }, 
   {
@@ -8002,9 +8002,9 @@
     "F": 0.0, 
     "Name1": "NEOPENTN", 
     "Name2": "PENTANE", 
-    "betaT": "1.00050", 
+    "betaT": 1.0005, 
     "betaV": 1.0, 
-    "gammaT": "1.00236", 
+    "gammaT": 1.00236, 
     "gammaV": 1.0
   }, 
   {
@@ -8014,9 +8014,9 @@
     "F": 0.0, 
     "Name1": "NEOPENTN", 
     "Name2": "PROPANE", 
-    "betaT": "1.02028", 
+    "betaT": 1.02028, 
     "betaV": 1.0, 
-    "gammaT": "1.05910", 
+    "gammaT": 1.0591, 
     "gammaV": 1.0
   }, 
   {
@@ -8026,9 +8026,9 @@
     "F": 0.0, 
     "Name1": "NITROGEN", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99471", 
+    "betaT": 0.99471, 
     "betaV": 1.0, 
-    "gammaT": "1.63462", 
+    "gammaT": 1.63462, 
     "gammaV": 1.0
   }, 
   {
@@ -8038,9 +8038,9 @@
     "F": 0.0, 
     "Name1": "NITROGEN", 
     "Name2": "R13", 
-    "betaT": "0.97523", 
+    "betaT": 0.97523, 
     "betaV": 1.0, 
-    "gammaT": "1.24069", 
+    "gammaT": 1.24069, 
     "gammaV": 1.0
   }, 
   {
@@ -8050,9 +8050,9 @@
     "F": 0.0, 
     "Name1": "NITROGEN", 
     "Name2": "R14", 
-    "betaT": "0.97005", 
+    "betaT": 0.97005, 
     "betaV": 1.0, 
-    "gammaT": "1.10991", 
+    "gammaT": 1.10991, 
     "gammaV": 1.0
   }, 
   {
@@ -8062,9 +8062,9 @@
     "F": 0.0, 
     "Name1": "NITROGEN", 
     "Name2": "R227EA", 
-    "betaT": "0.97134", 
+    "betaT": 0.97134, 
     "betaV": 1.0, 
-    "gammaT": "1.40945", 
+    "gammaT": 1.40945, 
     "gammaV": 1.0
   }, 
   {
@@ -8074,9 +8074,9 @@
     "F": 0.0, 
     "Name1": "NONANE", 
     "Name2": "OXYLENE", 
-    "betaT": "0.99710", 
+    "betaT": 0.9971, 
     "betaV": 1.0, 
-    "gammaT": "0.98501", 
+    "gammaT": 0.98501, 
     "gammaV": 1.0
   }, 
   {
@@ -8086,9 +8086,9 @@
     "F": 0.0, 
     "Name1": "NONANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "1.01604", 
+    "betaT": 1.01604, 
     "betaV": 1.0, 
-    "gammaT": "1.11698", 
+    "gammaT": 1.11698, 
     "gammaV": 1.0
   }, 
   {
@@ -8098,9 +8098,9 @@
     "F": 0.0, 
     "Name1": "NONANE", 
     "Name2": "PXYLENE", 
-    "betaT": "1.00061", 
+    "betaT": 1.00061, 
     "betaV": 1.0, 
-    "gammaT": "0.99387", 
+    "gammaT": 0.99387, 
     "gammaV": 1.0
   }, 
   {
@@ -8110,9 +8110,9 @@
     "F": 0.0, 
     "Name1": "NONANE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99448", 
+    "betaT": 0.99448, 
     "betaV": 1.0, 
-    "gammaT": "0.98072", 
+    "gammaT": 0.98072, 
     "gammaV": 1.0
   }, 
   {
@@ -8122,9 +8122,9 @@
     "F": 0.0, 
     "Name1": "NOVEC649", 
     "Name2": "PENTANE", 
-    "betaT": "0.96690", 
+    "betaT": 0.9669, 
     "betaV": 1.0, 
-    "gammaT": "0.90539", 
+    "gammaT": 0.90539, 
     "gammaV": 1.0
   }, 
   {
@@ -8134,9 +8134,9 @@
     "F": 0.0, 
     "Name1": "NOVEC649", 
     "Name2": "RE347MCC", 
-    "betaT": "0.98723", 
+    "betaT": 0.98723, 
     "betaV": 1.0, 
-    "gammaT": "0.97915", 
+    "gammaT": 0.97915, 
     "gammaV": 1.0
   }, 
   {
@@ -8146,9 +8146,9 @@
     "F": 0.0, 
     "Name1": "OCTANE", 
     "Name2": "OXYLENE", 
-    "betaT": "0.99933", 
+    "betaT": 0.99933, 
     "betaV": 1.0, 
-    "gammaT": "0.99245", 
+    "gammaT": 0.99245, 
     "gammaV": 1.0
   }, 
   {
@@ -8158,9 +8158,9 @@
     "F": 0.0, 
     "Name1": "OCTANE", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99788", 
+    "betaT": 0.99788, 
     "betaV": 1.0, 
-    "gammaT": "0.98651", 
+    "gammaT": 0.98651, 
     "gammaV": 1.0
   }, 
   {
@@ -8170,9 +8170,9 @@
     "F": 0.0, 
     "Name1": "OCTANE", 
     "Name2": "R12", 
-    "betaT": "0.99653", 
+    "betaT": 0.99653, 
     "betaV": 1.0, 
-    "gammaT": "1.06084", 
+    "gammaT": 1.06084, 
     "gammaV": 1.0
   }, 
   {
@@ -8182,9 +8182,9 @@
     "F": 0.0, 
     "Name1": "OCTANE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99664", 
+    "betaT": 0.99664, 
     "betaV": 1.0, 
-    "gammaT": "0.98036", 
+    "gammaT": 0.98036, 
     "gammaV": 1.0
   }, 
   {
@@ -8194,9 +8194,9 @@
     "F": 0.0, 
     "Name1": "OXYGEN", 
     "Name2": "SO2", 
-    "betaT": "0.98436", 
+    "betaT": 0.98436, 
     "betaV": 1.0, 
-    "gammaT": "1.18081", 
+    "gammaT": 1.18081, 
     "gammaV": 1.0
   }, 
   {
@@ -8206,9 +8206,9 @@
     "F": 0.0, 
     "Name1": "OXYLENE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99826", 
+    "betaT": 0.99826, 
     "betaV": 1.0, 
-    "gammaT": "1.00209", 
+    "gammaT": 1.00209, 
     "gammaV": 1.0
   }, 
   {
@@ -8218,9 +8218,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "R114", 
-    "betaT": "0.99646", 
+    "betaT": 0.99646, 
     "betaV": 1.0, 
-    "gammaT": "0.97011", 
+    "gammaT": 0.97011, 
     "gammaV": 1.0
   }, 
   {
@@ -8230,9 +8230,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "R1234ZE", 
-    "betaT": "0.98894", 
+    "betaT": 0.98894, 
     "betaV": 1.0, 
-    "gammaT": "0.93824", 
+    "gammaT": 0.93824, 
     "gammaV": 1.0
   }, 
   {
@@ -8242,9 +8242,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "R141B", 
-    "betaT": "1.00270", 
+    "betaT": 1.0027, 
     "betaV": 1.0, 
-    "gammaT": "0.97700", 
+    "gammaT": 0.977, 
     "gammaV": 1.0
   }, 
   {
@@ -8254,9 +8254,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "R152A", 
-    "betaT": "0.98932", 
+    "betaT": 0.98932, 
     "betaV": 1.0, 
-    "gammaT": "0.92023", 
+    "gammaT": 0.92023, 
     "gammaV": 1.0
   }, 
   {
@@ -8266,9 +8266,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "R22", 
-    "betaT": "0.98621", 
+    "betaT": 0.98621, 
     "betaV": 1.0, 
-    "gammaT": "0.96034", 
+    "gammaT": 0.96034, 
     "gammaV": 1.0
   }, 
   {
@@ -8278,9 +8278,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "R23", 
-    "betaT": "0.96622", 
+    "betaT": 0.96622, 
     "betaV": 1.0, 
-    "gammaT": "0.94007", 
+    "gammaT": 0.94007, 
     "gammaV": 1.0
   }, 
   {
@@ -8290,9 +8290,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "R245FA", 
-    "betaT": "1.00687", 
+    "betaT": 1.00687, 
     "betaV": 1.0, 
-    "gammaT": "0.89534", 
+    "gammaT": 0.89534, 
     "gammaV": 1.0
   }, 
   {
@@ -8302,9 +8302,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "RE347MCC", 
-    "betaT": "1.00983", 
+    "betaT": 1.00983, 
     "betaV": 1.0, 
-    "gammaT": "0.92810", 
+    "gammaT": 0.9281, 
     "gammaV": 1.0
   }, 
   {
@@ -8314,9 +8314,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "SF6", 
-    "betaT": "0.97466", 
+    "betaT": 0.97466, 
     "betaV": 1.0, 
-    "gammaT": "0.92912", 
+    "gammaT": 0.92912, 
     "gammaV": 1.0
   }, 
   {
@@ -8326,9 +8326,9 @@
     "F": 0.0, 
     "Name1": "PENTANE", 
     "Name2": "TOLUENE", 
-    "betaT": "1.00052", 
+    "betaT": 1.00052, 
     "betaV": 1.0, 
-    "gammaT": "0.99282", 
+    "gammaT": 0.99282, 
     "gammaV": 1.0
   }, 
   {
@@ -8338,9 +8338,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "PROPYLEN", 
-    "betaT": "0.99978", 
+    "betaT": 0.99978, 
     "betaV": 1.0, 
-    "gammaT": "0.99350", 
+    "gammaT": 0.9935, 
     "gammaV": 1.0
   }, 
   {
@@ -8350,9 +8350,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R113", 
-    "betaT": "1.00470", 
+    "betaT": 1.0047, 
     "betaV": 1.0, 
-    "gammaT": "1.01447", 
+    "gammaT": 1.01447, 
     "gammaV": 1.0
   }, 
   {
@@ -8362,9 +8362,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R114", 
-    "betaT": "1.00332", 
+    "betaT": 1.00332, 
     "betaV": 1.0, 
-    "gammaT": "0.98055", 
+    "gammaT": 0.98055, 
     "gammaV": 1.0
   }, 
   {
@@ -8374,9 +8374,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R116", 
-    "betaT": "1.01661", 
+    "betaT": 1.01661, 
     "betaV": 1.0, 
-    "gammaT": "0.89173", 
+    "gammaT": 0.89173, 
     "gammaV": 1.0
   }, 
   {
@@ -8386,9 +8386,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R1216", 
-    "betaT": "1.01214", 
+    "betaT": 1.01214, 
     "betaV": 1.0, 
-    "gammaT": "0.92233", 
+    "gammaT": 0.92233, 
     "gammaV": 1.0
   }, 
   {
@@ -8398,9 +8398,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R1234ZE", 
-    "betaT": "1.01336", 
+    "betaT": 1.01336, 
     "betaV": 1.0, 
-    "gammaT": "0.93387", 
+    "gammaT": 0.93387, 
     "gammaV": 1.0
   }, 
   {
@@ -8410,9 +8410,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R125", 
-    "betaT": "1.00883", 
+    "betaT": 1.00883, 
     "betaV": 1.0, 
-    "gammaT": "0.89892", 
+    "gammaT": 0.89892, 
     "gammaV": 1.0
   }, 
   {
@@ -8422,9 +8422,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R134A", 
-    "betaT": "1.01148", 
+    "betaT": 1.01148, 
     "betaV": 1.0, 
-    "gammaT": "0.89674", 
+    "gammaT": 0.89674, 
     "gammaV": 1.0
   }, 
   {
@@ -8434,9 +8434,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R143A", 
-    "betaT": "1.00987", 
+    "betaT": 1.00987, 
     "betaV": 1.0, 
-    "gammaT": "0.91581", 
+    "gammaT": 0.91581, 
     "gammaV": 1.0
   }, 
   {
@@ -8446,9 +8446,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R152A", 
-    "betaT": "1.01223", 
+    "betaT": 1.01223, 
     "betaV": 1.0, 
-    "gammaT": "0.92009", 
+    "gammaT": 0.92009, 
     "gammaV": 1.0
   }, 
   {
@@ -8458,9 +8458,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R227EA", 
-    "betaT": "1.02125", 
+    "betaT": 1.02125, 
     "betaV": 1.0, 
-    "gammaT": "0.91449", 
+    "gammaT": 0.91449, 
     "gammaV": 1.0
   }, 
   {
@@ -8470,9 +8470,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R23", 
-    "betaT": "0.98814", 
+    "betaT": 0.98814, 
     "betaV": 1.0, 
-    "gammaT": "0.87585", 
+    "gammaT": 0.87585, 
     "gammaV": 1.0
   }, 
   {
@@ -8482,9 +8482,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R236EA", 
-    "betaT": "1.02233", 
+    "betaT": 1.02233, 
     "betaV": 1.0, 
-    "gammaT": "0.92015", 
+    "gammaT": 0.92015, 
     "gammaV": 1.0
   }, 
   {
@@ -8494,9 +8494,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R236FA", 
-    "betaT": "1.02204", 
+    "betaT": 1.02204, 
     "betaV": 1.0, 
-    "gammaT": "0.91493", 
+    "gammaT": 0.91493, 
     "gammaV": 1.0
   }, 
   {
@@ -8506,9 +8506,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R245FA", 
-    "betaT": "1.02121", 
+    "betaT": 1.02121, 
     "betaV": 1.0, 
-    "gammaT": "0.92286", 
+    "gammaT": 0.92286, 
     "gammaV": 1.0
   }, 
   {
@@ -8518,9 +8518,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "R32", 
-    "betaT": "1.00067", 
+    "betaT": 1.00067, 
     "betaV": 1.0, 
-    "gammaT": "0.86421", 
+    "gammaT": 0.86421, 
     "gammaV": 1.0
   }, 
   {
@@ -8530,9 +8530,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "RC318", 
-    "betaT": "1.02377", 
+    "betaT": 1.02377, 
     "betaV": 1.0, 
-    "gammaT": "0.92320", 
+    "gammaT": 0.9232, 
     "gammaV": 1.0
   }, 
   {
@@ -8542,9 +8542,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "SO2", 
-    "betaT": "0.99024", 
+    "betaT": 0.99024, 
     "betaV": 1.0, 
-    "gammaT": "0.87281", 
+    "gammaT": 0.87281, 
     "gammaV": 1.0
   }, 
   {
@@ -8554,9 +8554,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "TOLUENE", 
-    "betaT": "1.00576", 
+    "betaT": 1.00576, 
     "betaV": 1.0, 
-    "gammaT": "1.04281", 
+    "gammaT": 1.04281, 
     "gammaV": 1.0
   }, 
   {
@@ -8566,9 +8566,9 @@
     "F": 0.0, 
     "Name1": "PROPANE", 
     "Name2": "XENON", 
-    "betaT": "1.00491", 
+    "betaT": 1.00491, 
     "betaV": 1.0, 
-    "gammaT": "1.04133", 
+    "gammaT": 1.04133, 
     "gammaV": 1.0
   }, 
   {
@@ -8578,9 +8578,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "PXYLENE", 
-    "betaT": "0.99082", 
+    "betaT": 0.99082, 
     "betaV": 1.0, 
-    "gammaT": "1.09426", 
+    "gammaT": 1.09426, 
     "gammaV": 1.0
   }, 
   {
@@ -8590,9 +8590,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R114", 
-    "betaT": "1.01235", 
+    "betaT": 1.01235, 
     "betaV": 1.0, 
-    "gammaT": "0.97683", 
+    "gammaT": 0.97683, 
     "gammaV": 1.0
   }, 
   {
@@ -8602,9 +8602,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R115", 
-    "betaT": "1.01487", 
+    "betaT": 1.01487, 
     "betaV": 1.0, 
-    "gammaT": "0.94167", 
+    "gammaT": 0.94167, 
     "gammaV": 1.0
   }, 
   {
@@ -8614,9 +8614,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R116", 
-    "betaT": "1.01401", 
+    "betaT": 1.01401, 
     "betaV": 1.0, 
-    "gammaT": "0.87937", 
+    "gammaT": 0.87937, 
     "gammaV": 1.0
   }, 
   {
@@ -8626,9 +8626,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R12", 
-    "betaT": "1.00271", 
+    "betaT": 1.00271, 
     "betaV": 1.0, 
-    "gammaT": "0.98830", 
+    "gammaT": 0.9883, 
     "gammaV": 1.0
   }, 
   {
@@ -8638,9 +8638,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R1216", 
-    "betaT": "1.01903", 
+    "betaT": 1.01903, 
     "betaV": 1.0, 
-    "gammaT": "0.93686", 
+    "gammaT": 0.93686, 
     "gammaV": 1.0
   }, 
   {
@@ -8650,9 +8650,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R125", 
-    "betaT": "1.00733", 
+    "betaT": 1.00733, 
     "betaV": 1.0, 
-    "gammaT": "0.92944", 
+    "gammaT": 0.92944, 
     "gammaV": 1.0
   }, 
   {
@@ -8662,9 +8662,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R13", 
-    "betaT": "0.99688", 
+    "betaT": 0.99688, 
     "betaV": 1.0, 
-    "gammaT": "0.95923", 
+    "gammaT": 0.95923, 
     "gammaV": 1.0
   }, 
   {
@@ -8674,9 +8674,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R134A", 
-    "betaT": "1.01360", 
+    "betaT": 1.0136, 
     "betaV": 1.0, 
-    "gammaT": "0.93494", 
+    "gammaT": 0.93494, 
     "gammaV": 1.0
   }, 
   {
@@ -8686,9 +8686,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R142B", 
-    "betaT": "1.00653", 
+    "betaT": 1.00653, 
     "betaV": 1.0, 
-    "gammaT": "0.99250", 
+    "gammaT": 0.9925, 
     "gammaV": 1.0
   }, 
   {
@@ -8698,9 +8698,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R152A", 
-    "betaT": "1.01177", 
+    "betaT": 1.01177, 
     "betaV": 1.0, 
-    "gammaT": "0.94791", 
+    "gammaT": 0.94791, 
     "gammaV": 1.0
   }, 
   {
@@ -8710,9 +8710,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R22", 
-    "betaT": "1.00095", 
+    "betaT": 1.00095, 
     "betaV": 1.0, 
-    "gammaT": "0.97836", 
+    "gammaT": 0.97836, 
     "gammaV": 1.0
   }, 
   {
@@ -8722,9 +8722,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R23", 
-    "betaT": "0.99184", 
+    "betaT": 0.99184, 
     "betaV": 1.0, 
-    "gammaT": "0.91810", 
+    "gammaT": 0.9181, 
     "gammaV": 1.0
   }, 
   {
@@ -8734,9 +8734,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "R32", 
-    "betaT": "0.99634", 
+    "betaT": 0.99634, 
     "betaV": 1.0, 
-    "gammaT": "0.90627", 
+    "gammaT": 0.90627, 
     "gammaV": 1.0
   }, 
   {
@@ -8746,9 +8746,9 @@
     "F": 0.0, 
     "Name1": "PROPYLEN", 
     "Name2": "XENON", 
-    "betaT": "0.99031", 
+    "betaT": 0.99031, 
     "betaV": 1.0, 
-    "gammaT": "1.01223", 
+    "gammaT": 1.01223, 
     "gammaV": 1.0
   }, 
   {
@@ -8758,9 +8758,9 @@
     "F": 0.0, 
     "Name1": "PXYLENE", 
     "Name2": "TOLUENE", 
-    "betaT": "0.99915", 
+    "betaT": 0.99915, 
     "betaV": 1.0, 
-    "gammaT": "0.99999", 
+    "gammaT": 0.99999, 
     "gammaV": 1.0
   }, 
   {
@@ -8770,9 +8770,9 @@
     "F": 0.0, 
     "Name1": "R11", 
     "Name2": "R12", 
-    "betaT": "1.00726", 
+    "betaT": 1.00726, 
     "betaV": 1.0, 
-    "gammaT": "1.00102", 
+    "gammaT": 1.00102, 
     "gammaV": 1.0
   }, 
   {
@@ -8782,9 +8782,9 @@
     "F": 0.0, 
     "Name1": "R11", 
     "Name2": "R13", 
-    "betaT": "0.99697", 
+    "betaT": 0.99697, 
     "betaV": 1.0, 
-    "gammaT": "1.01419", 
+    "gammaT": 1.01419, 
     "gammaV": 1.0
   }, 
   {
@@ -8794,9 +8794,9 @@
     "F": 0.0, 
     "Name1": "R11", 
     "Name2": "R22", 
-    "betaT": "0.99960", 
+    "betaT": 0.9996, 
     "betaV": 1.0, 
-    "gammaT": "0.97759", 
+    "gammaT": 0.97759, 
     "gammaV": 1.0
   }, 
   {
@@ -8806,9 +8806,9 @@
     "F": 0.0, 
     "Name1": "R11", 
     "Name2": "R23", 
-    "betaT": "0.97898", 
+    "betaT": 0.97898, 
     "betaV": 1.0, 
-    "gammaT": "0.94638", 
+    "gammaT": 0.94638, 
     "gammaV": 1.0
   }, 
   {
@@ -8818,9 +8818,9 @@
     "F": 0.0, 
     "Name1": "R113", 
     "Name2": "R114", 
-    "betaT": "0.99859", 
+    "betaT": 0.99859, 
     "betaV": 1.0, 
-    "gammaT": "1.00476", 
+    "gammaT": 1.00476, 
     "gammaV": 1.0
   }, 
   {
@@ -8830,9 +8830,9 @@
     "F": 0.0, 
     "Name1": "R113", 
     "Name2": "R13", 
-    "betaT": "0.99941", 
+    "betaT": 0.99941, 
     "betaV": 1.0, 
-    "gammaT": "1.05033", 
+    "gammaT": 1.05033, 
     "gammaV": 1.0
   }, 
   {
@@ -8842,9 +8842,9 @@
     "F": 0.0, 
     "Name1": "R113", 
     "Name2": "R142B", 
-    "betaT": "0.99666", 
+    "betaT": 0.99666, 
     "betaV": 1.0, 
-    "gammaT": "0.98837", 
+    "gammaT": 0.98837, 
     "gammaV": 1.0
   }, 
   {
@@ -8854,9 +8854,9 @@
     "F": 0.0, 
     "Name1": "R113", 
     "Name2": "R152A", 
-    "betaT": "0.98806", 
+    "betaT": 0.98806, 
     "betaV": 1.0, 
-    "gammaT": "0.95473", 
+    "gammaT": 0.95473, 
     "gammaV": 1.0
   }, 
   {
@@ -8866,9 +8866,9 @@
     "F": 0.0, 
     "Name1": "R113", 
     "Name2": "R22", 
-    "betaT": "0.98836", 
+    "betaT": 0.98836, 
     "betaV": 1.0, 
-    "gammaT": "0.99757", 
+    "gammaT": 0.99757, 
     "gammaV": 1.0
   }, 
   {
@@ -8878,9 +8878,9 @@
     "F": 0.0, 
     "Name1": "R113", 
     "Name2": "R23", 
-    "betaT": "0.97121", 
+    "betaT": 0.97121, 
     "betaV": 1.0, 
-    "gammaT": "0.98801", 
+    "gammaT": 0.98801, 
     "gammaV": 1.0
   }, 
   {
@@ -8890,9 +8890,9 @@
     "F": 0.0, 
     "Name1": "R113", 
     "Name2": "SF6", 
-    "betaT": "1.07569", 
+    "betaT": 1.07569, 
     "betaV": 1.0, 
-    "gammaT": "1.06961", 
+    "gammaT": 1.06961, 
     "gammaV": 1.0
   }, 
   {
@@ -8902,9 +8902,9 @@
     "F": 0.0, 
     "Name1": "R114", 
     "Name2": "R12", 
-    "betaT": "1.00164", 
+    "betaT": 1.00164, 
     "betaV": 1.0, 
-    "gammaT": "0.99126", 
+    "gammaT": 0.99126, 
     "gammaV": 1.0
   }, 
   {
@@ -8914,9 +8914,9 @@
     "F": 0.0, 
     "Name1": "R114", 
     "Name2": "R22", 
-    "betaT": "1.00300", 
+    "betaT": 1.003, 
     "betaV": 1.0, 
-    "gammaT": "0.96580", 
+    "gammaT": 0.9658, 
     "gammaV": 1.0
   }, 
   {
@@ -8926,9 +8926,9 @@
     "F": 0.0, 
     "Name1": "R114", 
     "Name2": "R23", 
-    "betaT": "0.97633", 
+    "betaT": 0.97633, 
     "betaV": 1.0, 
-    "gammaT": "0.96230", 
+    "gammaT": 0.9623, 
     "gammaV": 1.0
   }, 
   {
@@ -8938,9 +8938,9 @@
     "F": 0.0, 
     "Name1": "R115", 
     "Name2": "R125", 
-    "betaT": "0.99972", 
+    "betaT": 0.99972, 
     "betaV": 1.0, 
-    "gammaT": "0.96147", 
+    "gammaT": 0.96147, 
     "gammaV": 1.0
   }, 
   {
@@ -8950,9 +8950,9 @@
     "F": 0.0, 
     "Name1": "R115", 
     "Name2": "R22", 
-    "betaT": "1.01422", 
+    "betaT": 1.01422, 
     "betaV": 1.0, 
-    "gammaT": "0.94989", 
+    "gammaT": 0.94989, 
     "gammaV": 1.0
   }, 
   {
@@ -8962,9 +8962,9 @@
     "F": 0.0, 
     "Name1": "R116", 
     "Name2": "R134A", 
-    "betaT": "1.01284", 
+    "betaT": 1.01284, 
     "betaV": 1.0, 
-    "gammaT": "0.93618", 
+    "gammaT": 0.93618, 
     "gammaV": 1.0
   }, 
   {
@@ -8974,9 +8974,9 @@
     "F": 0.0, 
     "Name1": "R116", 
     "Name2": "R143A", 
-    "betaT": "1.01003", 
+    "betaT": 1.01003, 
     "betaV": 1.0, 
-    "gammaT": "0.93499", 
+    "gammaT": 0.93499, 
     "gammaV": 1.0
   }, 
   {
@@ -8986,9 +8986,9 @@
     "F": 0.0, 
     "Name1": "R116", 
     "Name2": "R22", 
-    "betaT": "0.99671", 
+    "betaT": 0.99671, 
     "betaV": 1.0, 
-    "gammaT": "0.91302", 
+    "gammaT": 0.91302, 
     "gammaV": 1.0
   }, 
   {
@@ -8998,9 +8998,9 @@
     "F": 0.0, 
     "Name1": "R116", 
     "Name2": "R23", 
-    "betaT": "0.99695", 
+    "betaT": 0.99695, 
     "betaV": 1.0, 
-    "gammaT": "0.91114", 
+    "gammaT": 0.91114, 
     "gammaV": 1.0
   }, 
   {
@@ -9010,9 +9010,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R1216", 
-    "betaT": "0.99964", 
+    "betaT": 0.99964, 
     "betaV": 1.0, 
-    "gammaT": "0.97942", 
+    "gammaT": 0.97942, 
     "gammaV": 1.0
   }, 
   {
@@ -9022,9 +9022,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R13", 
-    "betaT": "0.99071", 
+    "betaT": 0.99071, 
     "betaV": 1.0, 
-    "gammaT": "0.97345", 
+    "gammaT": 0.97345, 
     "gammaV": 1.0
   }, 
   {
@@ -9034,9 +9034,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R134A", 
-    "betaT": "1.00750", 
+    "betaT": 1.0075, 
     "betaV": 1.0, 
-    "gammaT": "0.94100", 
+    "gammaT": 0.941, 
     "gammaV": 1.0
   }, 
   {
@@ -9046,9 +9046,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R142B", 
-    "betaT": "1.01193", 
+    "betaT": 1.01193, 
     "betaV": 1.0, 
-    "gammaT": "0.97650", 
+    "gammaT": 0.9765, 
     "gammaV": 1.0
   }, 
   {
@@ -9058,9 +9058,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R143A", 
-    "betaT": "0.98590", 
+    "betaT": 0.9859, 
     "betaV": 1.0, 
-    "gammaT": "0.95199", 
+    "gammaT": 0.95199, 
     "gammaV": 1.0
   }, 
   {
@@ -9070,9 +9070,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R152A", 
-    "betaT": "1.01876", 
+    "betaT": 1.01876, 
     "betaV": 1.0, 
-    "gammaT": "0.94387", 
+    "gammaT": 0.94387, 
     "gammaV": 1.0
   }, 
   {
@@ -9082,9 +9082,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R22", 
-    "betaT": "0.99654", 
+    "betaT": 0.99654, 
     "betaV": 1.0, 
-    "gammaT": "0.96477", 
+    "gammaT": 0.96477, 
     "gammaV": 1.0
   }, 
   {
@@ -9094,9 +9094,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "R23", 
-    "betaT": "0.99206", 
+    "betaT": 0.99206, 
     "betaV": 1.0, 
-    "gammaT": "0.93086", 
+    "gammaT": 0.93086, 
     "gammaV": 1.0
   }, 
   {
@@ -9106,9 +9106,9 @@
     "F": 0.0, 
     "Name1": "R12", 
     "Name2": "RC318", 
-    "betaT": "1.00226", 
+    "betaT": 1.00226, 
     "betaV": 1.0, 
-    "gammaT": "0.96907", 
+    "gammaT": 0.96907, 
     "gammaV": 1.0
   }, 
   {
@@ -9118,9 +9118,9 @@
     "F": 0.0, 
     "Name1": "R1216", 
     "Name2": "R123", 
-    "betaT": "1.00494", 
+    "betaT": 1.00494, 
     "betaV": 1.0, 
-    "gammaT": "0.97467", 
+    "gammaT": 0.97467, 
     "gammaV": 1.0
   }, 
   {
@@ -9130,9 +9130,9 @@
     "F": 0.0, 
     "Name1": "R1216", 
     "Name2": "R22", 
-    "betaT": "0.99593", 
+    "betaT": 0.99593, 
     "betaV": 1.0, 
-    "gammaT": "0.96186", 
+    "gammaT": 0.96186, 
     "gammaV": 1.0
   }, 
   {
@@ -9142,9 +9142,9 @@
     "F": 0.0, 
     "Name1": "R1216", 
     "Name2": "RC318", 
-    "betaT": "1.00387", 
+    "betaT": 1.00387, 
     "betaV": 1.0, 
-    "gammaT": "1.00433", 
+    "gammaT": 1.00433, 
     "gammaV": 1.0
   }, 
   {
@@ -9154,9 +9154,9 @@
     "F": 0.0, 
     "Name1": "R123", 
     "Name2": "R134A", 
-    "betaT": "0.99393", 
+    "betaT": 0.99393, 
     "betaV": 1.0, 
-    "gammaT": "0.98277", 
+    "gammaT": 0.98277, 
     "gammaV": 1.0
   }, 
   {
@@ -9166,9 +9166,9 @@
     "F": 0.0, 
     "Name1": "R123", 
     "Name2": "R22", 
-    "betaT": "0.99482", 
+    "betaT": 0.99482, 
     "betaV": 1.0, 
-    "gammaT": "1.01277", 
+    "gammaT": 1.01277, 
     "gammaV": 1.0
   }, 
   {
@@ -9178,9 +9178,9 @@
     "F": 0.0, 
     "Name1": "R123", 
     "Name2": "R32", 
-    "betaT": "0.98824", 
+    "betaT": 0.98824, 
     "betaV": 1.0, 
-    "gammaT": "0.98194", 
+    "gammaT": 0.98194, 
     "gammaV": 1.0
   }, 
   {
@@ -9190,9 +9190,9 @@
     "F": 0.0, 
     "Name1": "R123", 
     "Name2": "WATER", 
-    "betaT": "1.09996", 
+    "betaT": 1.09996, 
     "betaV": 1.0, 
-    "gammaT": "0.95847", 
+    "gammaT": 0.95847, 
     "gammaV": 1.0
   }, 
   {
@@ -9202,9 +9202,9 @@
     "F": 0.0, 
     "Name1": "R1234YF", 
     "Name2": "R125", 
-    "betaT": "0.99915", 
+    "betaT": 0.99915, 
     "betaV": 1.0, 
-    "gammaT": "0.99876", 
+    "gammaT": 0.99876, 
     "gammaV": 1.0
   }, 
   {
@@ -9214,9 +9214,9 @@
     "F": 0.0, 
     "Name1": "R1234YF", 
     "Name2": "R134A", 
-    "betaT": "0.99972", 
+    "betaT": 0.99972, 
     "betaV": 1.0, 
-    "gammaT": "0.98643", 
+    "gammaT": 0.98643, 
     "gammaV": 1.0
   }, 
   {
@@ -9226,9 +9226,9 @@
     "F": 0.0, 
     "Name1": "R1234YF", 
     "Name2": "R143A", 
-    "betaT": "1.00024", 
+    "betaT": 1.00024, 
     "betaV": 1.0, 
-    "gammaT": "0.99523", 
+    "gammaT": 0.99523, 
     "gammaV": 1.0
   }, 
   {
@@ -9238,9 +9238,9 @@
     "F": 0.0, 
     "Name1": "R1234YF", 
     "Name2": "R152A", 
-    "betaT": "0.99630", 
+    "betaT": 0.9963, 
     "betaV": 1.0, 
-    "gammaT": "0.98112", 
+    "gammaT": 0.98112, 
     "gammaV": 1.0
   }, 
   {
@@ -9250,9 +9250,9 @@
     "F": 0.0, 
     "Name1": "R1234YF", 
     "Name2": "R161", 
-    "betaT": "0.99781", 
+    "betaT": 0.99781, 
     "betaV": 1.0, 
-    "gammaT": "0.98828", 
+    "gammaT": 0.98828, 
     "gammaV": 1.0
   }, 
   {
@@ -9262,9 +9262,9 @@
     "F": 0.0, 
     "Name1": "R1234YF", 
     "Name2": "R227EA", 
-    "betaT": "0.99938", 
+    "betaT": 0.99938, 
     "betaV": 1.0, 
-    "gammaT": "0.99916", 
+    "gammaT": 0.99916, 
     "gammaV": 1.0
   }, 
   {
@@ -9274,9 +9274,9 @@
     "F": 0.0, 
     "Name1": "R1234ZE", 
     "Name2": "R152A", 
-    "betaT": "0.99902", 
+    "betaT": 0.99902, 
     "betaV": 1.0, 
-    "gammaT": "0.99579", 
+    "gammaT": 0.99579, 
     "gammaV": 1.0
   }, 
   {
@@ -9286,9 +9286,9 @@
     "F": 0.0, 
     "Name1": "R124", 
     "Name2": "R134A", 
-    "betaT": "0.99881", 
+    "betaT": 0.99881, 
     "betaV": 1.0, 
-    "gammaT": "0.98961", 
+    "gammaT": 0.98961, 
     "gammaV": 1.0
   }, 
   {
@@ -9298,9 +9298,9 @@
     "F": 0.0, 
     "Name1": "R124", 
     "Name2": "R142B", 
-    "betaT": "0.99802", 
+    "betaT": 0.99802, 
     "betaV": 1.0, 
-    "gammaT": "1.00320", 
+    "gammaT": 1.0032, 
     "gammaV": 1.0
   }, 
   {
@@ -9310,9 +9310,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "R152A", 
-    "betaT": "0.99429", 
+    "betaT": 0.99429, 
     "betaV": 1.0, 
-    "gammaT": "1.00282", 
+    "gammaT": 1.00282, 
     "gammaV": 1.0
   }, 
   {
@@ -9322,9 +9322,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "R161", 
-    "betaT": "1.01043", 
+    "betaT": 1.01043, 
     "betaV": 1.0, 
-    "gammaT": "0.99311", 
+    "gammaT": 0.99311, 
     "gammaV": 1.0
   }, 
   {
@@ -9334,9 +9334,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "R227EA", 
-    "betaT": "1.00101", 
+    "betaT": 1.00101, 
     "betaV": 1.0, 
-    "gammaT": "1.00302", 
+    "gammaT": 1.00302, 
     "gammaV": 1.0
   }, 
   {
@@ -9346,9 +9346,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "R23", 
-    "betaT": "0.99685", 
+    "betaT": 0.99685, 
     "betaV": 1.0, 
-    "gammaT": "1.00309", 
+    "gammaT": 1.00309, 
     "gammaV": 1.0
   }, 
   {
@@ -9358,9 +9358,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "R236EA", 
-    "betaT": "0.99947", 
+    "betaT": 0.99947, 
     "betaV": 1.0, 
-    "gammaT": "1.01046", 
+    "gammaT": 1.01046, 
     "gammaV": 1.0
   }, 
   {
@@ -9370,9 +9370,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "R236FA", 
-    "betaT": "0.99960", 
+    "betaT": 0.9996, 
     "betaV": 1.0, 
-    "gammaT": "1.01028", 
+    "gammaT": 1.01028, 
     "gammaV": 1.0
   }, 
   {
@@ -9382,9 +9382,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "R245FA", 
-    "betaT": "0.99836", 
+    "betaT": 0.99836, 
     "betaV": 1.0, 
-    "gammaT": "1.01325", 
+    "gammaT": 1.01325, 
     "gammaV": 1.0
   }, 
   {
@@ -9394,9 +9394,9 @@
     "F": 0.0, 
     "Name1": "R125", 
     "Name2": "RE143A", 
-    "betaT": "1.00105", 
+    "betaT": 1.00105, 
     "betaV": 1.0, 
-    "gammaT": "1.00517", 
+    "gammaT": 1.00517, 
     "gammaV": 1.0
   }, 
   {
@@ -9406,9 +9406,9 @@
     "F": 0.0, 
     "Name1": "R13", 
     "Name2": "R14", 
-    "betaT": "0.99884", 
+    "betaT": 0.99884, 
     "betaV": 1.0, 
-    "gammaT": "0.99334", 
+    "gammaT": 0.99334, 
     "gammaV": 1.0
   }, 
   {
@@ -9418,9 +9418,9 @@
     "F": 0.0, 
     "Name1": "R13", 
     "Name2": "R23", 
-    "betaT": "1.00234", 
+    "betaT": 1.00234, 
     "betaV": 1.0, 
-    "gammaT": "0.93027", 
+    "gammaT": 0.93027, 
     "gammaV": 1.0
   }, 
   {
@@ -9430,9 +9430,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R141B", 
-    "betaT": "1.00716", 
+    "betaT": 1.00716, 
     "betaV": 1.0, 
-    "gammaT": "0.96823", 
+    "gammaT": 0.96823, 
     "gammaV": 1.0
   }, 
   {
@@ -9442,9 +9442,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R142B", 
-    "betaT": "1.00176", 
+    "betaT": 1.00176, 
     "betaV": 1.0, 
-    "gammaT": "0.98544", 
+    "gammaT": 0.98544, 
     "gammaV": 1.0
   }, 
   {
@@ -9454,9 +9454,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R161", 
-    "betaT": "1.00101", 
+    "betaT": 1.00101, 
     "betaV": 1.0, 
-    "gammaT": "1.00619", 
+    "gammaT": 1.00619, 
     "gammaV": 1.0
   }, 
   {
@@ -9466,9 +9466,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R218", 
-    "betaT": "0.99885", 
+    "betaT": 0.99885, 
     "betaV": 1.0, 
-    "gammaT": "0.92280", 
+    "gammaT": 0.9228, 
     "gammaV": 1.0
   }, 
   {
@@ -9478,9 +9478,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R22", 
-    "betaT": "0.99975", 
+    "betaT": 0.99975, 
     "betaV": 1.0, 
-    "gammaT": "0.99196", 
+    "gammaT": 0.99196, 
     "gammaV": 1.0
   }, 
   {
@@ -9490,9 +9490,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R227EA", 
-    "betaT": "1.00135", 
+    "betaT": 1.00135, 
     "betaV": 1.0, 
-    "gammaT": "0.98915", 
+    "gammaT": 0.98915, 
     "gammaV": 1.0
   }, 
   {
@@ -9502,9 +9502,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R23", 
-    "betaT": "1.00246", 
+    "betaT": 1.00246, 
     "betaV": 1.0, 
-    "gammaT": "1.02190", 
+    "gammaT": 1.0219, 
     "gammaV": 1.0
   }, 
   {
@@ -9514,9 +9514,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "R236FA", 
-    "betaT": "0.99958", 
+    "betaT": 0.99958, 
     "betaV": 1.0, 
-    "gammaT": "1.00198", 
+    "gammaT": 1.00198, 
     "gammaV": 1.0
   }, 
   {
@@ -9526,9 +9526,9 @@
     "F": 0.0, 
     "Name1": "R134A", 
     "Name2": "RE143A", 
-    "betaT": "0.99957", 
+    "betaT": 0.99957, 
     "betaV": 1.0, 
-    "gammaT": "0.99594", 
+    "gammaT": 0.99594, 
     "gammaV": 1.0
   }, 
   {
@@ -9538,9 +9538,9 @@
     "F": 0.0, 
     "Name1": "R14", 
     "Name2": "R23", 
-    "betaT": "1.01673", 
+    "betaT": 1.01673, 
     "betaV": 1.0, 
-    "gammaT": "0.94295", 
+    "gammaT": 0.94295, 
     "gammaV": 1.0
   }, 
   {
@@ -9550,9 +9550,9 @@
     "F": 0.0, 
     "Name1": "R14", 
     "Name2": "TOLUENE", 
-    "betaT": "0.92032", 
+    "betaT": 0.92032, 
     "betaV": 1.0, 
-    "gammaT": "1.18828", 
+    "gammaT": 1.18828, 
     "gammaV": 1.0
   }, 
   {
@@ -9562,9 +9562,9 @@
     "F": 0.0, 
     "Name1": "R142B", 
     "Name2": "R22", 
-    "betaT": "1.00430", 
+    "betaT": 1.0043, 
     "betaV": 1.0, 
-    "gammaT": "1.00646", 
+    "gammaT": 1.00646, 
     "gammaV": 1.0
   }, 
   {
@@ -9574,9 +9574,9 @@
     "F": 0.0, 
     "Name1": "R142B", 
     "Name2": "R32", 
-    "betaT": "0.98803", 
+    "betaT": 0.98803, 
     "betaV": 1.0, 
-    "gammaT": "0.97510", 
+    "gammaT": 0.9751, 
     "gammaV": 1.0
   }, 
   {
@@ -9586,9 +9586,9 @@
     "F": 0.0, 
     "Name1": "R143A", 
     "Name2": "R152A", 
-    "betaT": "0.99955", 
+    "betaT": 0.99955, 
     "betaV": 1.0, 
-    "gammaT": "0.99038", 
+    "gammaT": 0.99038, 
     "gammaV": 1.0
   }, 
   {
@@ -9598,9 +9598,9 @@
     "F": 0.0, 
     "Name1": "R143A", 
     "Name2": "R161", 
-    "betaT": "0.99931", 
+    "betaT": 0.99931, 
     "betaV": 1.0, 
-    "gammaT": "0.99556", 
+    "gammaT": 0.99556, 
     "gammaV": 1.0
   }, 
   {
@@ -9610,9 +9610,9 @@
     "F": 0.0, 
     "Name1": "R143A", 
     "Name2": "R23", 
-    "betaT": "0.99197", 
+    "betaT": 0.99197, 
     "betaV": 1.0, 
-    "gammaT": "1.00381", 
+    "gammaT": 1.00381, 
     "gammaV": 1.0
   }, 
   {
@@ -9622,9 +9622,9 @@
     "F": 0.0, 
     "Name1": "R143A", 
     "Name2": "R236FA", 
-    "betaT": "0.99911", 
+    "betaT": 0.99911, 
     "betaV": 1.0, 
-    "gammaT": "1.01834", 
+    "gammaT": 1.01834, 
     "gammaV": 1.0
   }, 
   {
@@ -9634,9 +9634,9 @@
     "F": 0.0, 
     "Name1": "R143A", 
     "Name2": "R32", 
-    "betaT": "0.99734", 
+    "betaT": 0.99734, 
     "betaV": 1.0, 
-    "gammaT": "0.97488", 
+    "gammaT": 0.97488, 
     "gammaV": 1.0
   }, 
   {
@@ -9646,9 +9646,9 @@
     "F": 0.0, 
     "Name1": "R152A", 
     "Name2": "R22", 
-    "betaT": "1.00239", 
+    "betaT": 1.00239, 
     "betaV": 1.0, 
-    "gammaT": "1.01169", 
+    "gammaT": 1.01169, 
     "gammaV": 1.0
   }, 
   {
@@ -9658,9 +9658,9 @@
     "F": 0.0, 
     "Name1": "R152A", 
     "Name2": "R227EA", 
-    "betaT": "1.00880", 
+    "betaT": 1.0088, 
     "betaV": 1.0, 
-    "gammaT": "0.99527", 
+    "gammaT": 0.99527, 
     "gammaV": 1.0
   }, 
   {
@@ -9670,9 +9670,9 @@
     "F": 0.0, 
     "Name1": "R152A", 
     "Name2": "R23", 
-    "betaT": "1.00035", 
+    "betaT": 1.00035, 
     "betaV": 1.0, 
-    "gammaT": "1.02378", 
+    "gammaT": 1.02378, 
     "gammaV": 1.0
   }, 
   {
@@ -9682,9 +9682,9 @@
     "F": 0.0, 
     "Name1": "R152A", 
     "Name2": "R32", 
-    "betaT": "0.99966", 
+    "betaT": 0.99966, 
     "betaV": 1.0, 
-    "gammaT": "0.99709", 
+    "gammaT": 0.99709, 
     "gammaV": 1.0
   }, 
   {
@@ -9694,9 +9694,9 @@
     "F": 0.0, 
     "Name1": "R161", 
     "Name2": "R227EA", 
-    "betaT": "1.00966", 
+    "betaT": 1.00966, 
     "betaV": 1.0, 
-    "gammaT": "1.02456", 
+    "gammaT": 1.02456, 
     "gammaV": 1.0
   }, 
   {
@@ -9706,9 +9706,9 @@
     "F": 0.0, 
     "Name1": "R161", 
     "Name2": "R32", 
-    "betaT": "1.00239", 
+    "betaT": 1.00239, 
     "betaV": 1.0, 
-    "gammaT": "0.98909", 
+    "gammaT": 0.98909, 
     "gammaV": 1.0
   }, 
   {
@@ -9718,9 +9718,9 @@
     "F": 0.0, 
     "Name1": "R218", 
     "Name2": "R22", 
-    "betaT": "0.98269", 
+    "betaT": 0.98269, 
     "betaV": 1.0, 
-    "gammaT": "0.91598", 
+    "gammaT": 0.91598, 
     "gammaV": 1.0
   }, 
   {
@@ -9730,9 +9730,9 @@
     "F": 0.0, 
     "Name1": "R218", 
     "Name2": "RC318", 
-    "betaT": "1.00386", 
+    "betaT": 1.00386, 
     "betaV": 1.0, 
-    "gammaT": "1.04248", 
+    "gammaT": 1.04248, 
     "gammaV": 1.0
   }, 
   {
@@ -9742,9 +9742,9 @@
     "F": 0.0, 
     "Name1": "R22", 
     "Name2": "R23", 
-    "betaT": "0.99569", 
+    "betaT": 0.99569, 
     "betaV": 1.0, 
-    "gammaT": "0.98752", 
+    "gammaT": 0.98752, 
     "gammaV": 1.0
   }, 
   {
@@ -9754,9 +9754,9 @@
     "F": 0.0, 
     "Name1": "R22", 
     "Name2": "RC318", 
-    "betaT": "1.05268", 
+    "betaT": 1.05268, 
     "betaV": 1.0, 
-    "gammaT": "0.96966", 
+    "gammaT": 0.96966, 
     "gammaV": 1.0
   }, 
   {
@@ -9766,9 +9766,9 @@
     "F": 0.0, 
     "Name1": "R227EA", 
     "Name2": "R23", 
-    "betaT": "0.98860", 
+    "betaT": 0.9886, 
     "betaV": 1.0, 
-    "gammaT": "1.00208", 
+    "gammaT": 1.00208, 
     "gammaV": 1.0
   }, 
   {
@@ -9778,9 +9778,9 @@
     "F": 0.0, 
     "Name1": "R227EA", 
     "Name2": "R32", 
-    "betaT": "0.98611", 
+    "betaT": 0.98611, 
     "betaV": 1.0, 
-    "gammaT": "0.97064", 
+    "gammaT": 0.97064, 
     "gammaV": 1.0
   }, 
   {
@@ -9790,9 +9790,9 @@
     "F": 0.0, 
     "Name1": "R23", 
     "Name2": "R32", 
-    "betaT": "1.00116", 
+    "betaT": 1.00116, 
     "betaV": 1.0, 
-    "gammaT": "1.00385", 
+    "gammaT": 1.00385, 
     "gammaV": 1.0
   }, 
   {
@@ -9802,9 +9802,9 @@
     "F": 0.0, 
     "Name1": "R23", 
     "Name2": "SF6", 
-    "betaT": "0.99445", 
+    "betaT": 0.99445, 
     "betaV": 1.0, 
-    "gammaT": "0.91843", 
+    "gammaT": 0.91843, 
     "gammaV": 1.0
   }, 
   {
@@ -9814,9 +9814,9 @@
     "F": 0.0, 
     "Name1": "R23", 
     "Name2": "TOLUENE", 
-    "betaT": "0.96909", 
+    "betaT": 0.96909, 
     "betaV": 1.0, 
-    "gammaT": "1.07054", 
+    "gammaT": 1.07054, 
     "gammaV": 1.0
   }, 
   {
@@ -9826,9 +9826,9 @@
     "F": 0.0, 
     "Name1": "R236EA", 
     "Name2": "R32", 
-    "betaT": "0.99812", 
+    "betaT": 0.99812, 
     "betaV": 1.0, 
-    "gammaT": "1.01165", 
+    "gammaT": 1.01165, 
     "gammaV": 1.0
   }, 
   {
@@ -9838,9 +9838,9 @@
     "F": 0.0, 
     "Name1": "R236FA", 
     "Name2": "R32", 
-    "betaT": "0.99365", 
+    "betaT": 0.99365, 
     "betaV": 1.0, 
-    "gammaT": "0.99661", 
+    "gammaT": 0.99661, 
     "gammaV": 1.0
   }, 
   {
@@ -9850,9 +9850,9 @@
     "F": 0.0, 
     "Name1": "R32", 
     "Name2": "SF6", 
-    "betaT": "0.99830", 
+    "betaT": 0.9983, 
     "betaV": 1.0, 
-    "gammaT": "0.86502", 
+    "gammaT": 0.86502, 
     "gammaV": 1.0
   }, 
   {
@@ -9862,9 +9862,9 @@
     "F": 0.0, 
     "Name1": "R32", 
     "Name2": "SO2", 
-    "betaT": "1.00238", 
+    "betaT": 1.00238, 
     "betaV": 1.0, 
-    "gammaT": "0.99968", 
+    "gammaT": 0.99968, 
     "gammaV": 1.0
   }, 
   {
@@ -9874,9 +9874,9 @@
     "F": 0.0, 
     "Name1": "R32", 
     "Name2": "TOLUENE", 
-    "betaT": "1.01598", 
+    "betaT": 1.01598, 
     "betaV": 1.0, 
-    "gammaT": "0.98173", 
+    "gammaT": 0.98173, 
     "gammaV": 1.0
   }, 
   {
@@ -9886,9 +9886,9 @@
     "F": 0.0, 
     "Name1": "R40", 
     "Name2": "R41", 
-    "betaT": "0.99518", 
+    "betaT": 0.99518, 
     "betaV": 1.0, 
-    "gammaT": "0.99810", 
+    "gammaT": 0.9981, 
     "gammaV": 1.0
   }, 
   {
@@ -9898,9 +9898,9 @@
     "F": 0.0, 
     "Name1": "R40", 
     "Name2": "XENON", 
-    "betaT": "0.96464", 
+    "betaT": 0.96464, 
     "betaV": 1.0, 
-    "gammaT": "1.03491", 
+    "gammaT": 1.03491, 
     "gammaV": 1.0
   }, 
   {
@@ -9910,9 +9910,9 @@
     "F": 0.0, 
     "Name1": "R41", 
     "Name2": "TOLUENE", 
-    "betaT": "0.97539", 
+    "betaT": 0.97539, 
     "betaV": 1.0, 
-    "gammaT": "1.09707", 
+    "gammaT": 1.09707, 
     "gammaV": 1.0
   }, 
   {
@@ -9922,9 +9922,9 @@
     "F": 0.0, 
     "Name1": "R41", 
     "Name2": "XENON", 
-    "betaT": "0.97753", 
+    "betaT": 0.97753, 
     "betaV": 1.0, 
-    "gammaT": "0.91395", 
+    "gammaT": 0.91395, 
     "gammaV": 1.0
   }, 
   {
@@ -9934,9 +9934,9 @@
     "F": 0.0, 
     "Name1": "SF6", 
     "Name2": "XENON", 
-    "betaT": "0.96469", 
+    "betaT": 0.96469, 
     "betaV": 1.0, 
-    "gammaT": "0.92846", 
+    "gammaT": 0.92846, 
     "gammaV": 1.0
   }, 
   {
@@ -9946,9 +9946,9 @@
     "F": 0.0, 
     "Name1": "SO2", 
     "Name2": "TOLUENE", 
-    "betaT": "1.01133", 
+    "betaT": 1.01133, 
     "betaV": 1.0, 
-    "gammaT": "1.02114", 
+    "gammaT": 1.02114, 
     "gammaV": 1.0
   }
 ]
