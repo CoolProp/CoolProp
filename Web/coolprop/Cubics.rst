@@ -7,9 +7,20 @@ Cubic Equations of State
 .. contents:: :depth: 2
 
 Introduction
-------------
+============
 
-CoolProp (as of version 6) comes with two standard cubic equations of state: Soave-Redlich-Kwong (SRK) and Peng-Robinson (PR).
+CoolProp (as of version 6) comes with two standard cubic equations of state: Soave-Redlich-Kwong (SRK) and Peng-Robinson (PR).  These two equations of state can be expressed in a common, generalized form:
+
+.. math::
+
+  p = \frac{RT}{v-b} + \frac{a}{(v+\Delta_1b)(v+\Delta_2b)}
+
+where for pure fluids, a and b are not composition dependent, whereas for mixtures, they have composition dependence.
+
+The motivations for the use of cubic EOS are twofold:
+
+* The only required information for the EOS are :math:`T_c`, :math:`p_c`, and the acentric factor of the pure fluids
+* They are much more computationally efficient (see below)
 
 Caveats
 -------
@@ -21,6 +32,9 @@ Only a limited subset of properties are available currently. You can do:
 * Flash calculations with TP, PQ, DT, QT inputs
 * Calculation of mixture critical point(s)
 * Calculation of some mixture flashes
+
+Pure Fluids
+===========
 
 Usage
 -----
@@ -52,8 +66,125 @@ The same holds for the :ref:`low-level interface <low_level_api>`:
 
 All the fluids available in CoolProp are also available through the cubic equations of state.  The fluids can be extended according to the analysis shown below
 
-Adding your own fluids
+Speed
+-----
+
+The increase in speed for evaluating properties from a cubic EOS is one of the primary motivations.  Here we show an example of the speedup to VLE calculations:
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    # The multi-parameter Helmholtz backend
+    In [0]: AS = CP.AbstractState("HEOS", "Propane")
+
+    In [0]: %timeit AS.update(CP.QT_INPUTS, 0, 300)
+
+    # The cubic SRK backend
+    In [0]: AS = CP.AbstractState("SRK", "Propane")
+
+    In [0]: %timeit AS.update(CP.QT_INPUTS, 0, 300)
+
+And here, we run the PT flash
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    # The multi-parameter Helmholtz backend
+    In [0]: AS = CP.AbstractState("HEOS", "Propane")
+
+    In [0]: AS.specify_phase(CP.iphase_gas)
+
+    In [0]: %timeit AS.update(CP.PT_INPUTS, 101325, 300)
+
+    # The cubic SRK backend
+    In [0]: AS = CP.AbstractState("SRK", "Propane")
+
+    In [0]: AS.specify_phase(CP.iphase_gas)
+
+    In [0]: %timeit AS.update(CP.PT_INPUTS, 101325, 300)
+
+As you can see, the speed difference is quite significant
+
+Mixtures
+========
+
+Interaction Parameters
 ----------------------
+
+For mixtures, cubic EOS (and their modifications) are heavily used.  Cubic EOS allow for reasonable prediction of VLE with only one adjustable parameter, at least for reasonable mixtures.  CoolProp does not come with any values for the :math:`k_{ij}` parameter, but it is straightforward to add it yourself.
+
+.. warning:: The ability to adjust interaction parameters is ONLY available in the :ref:`low-level interface <low_level_api>`
+
+.. warning:: When you call ``set_binary_interaction_double``, it only applies to the given instance of the AbstractState
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    In [0]: AS = CP.AbstractState("SRK", "Methane&Ethane")
+
+    In [0]: AS.set_mole_fractions([0.5, 0.5])
+
+    In [0]: AS.update(CP.QT_INPUTS, 0, 300); print(AS.p())
+
+    In [0]: AS.set_binary_interaction_double(0,1,"kij",-0.05)
+
+    In [0]: AS.update(CP.QT_INPUTS, 0, 300); print(AS.p())
+
+Critical Points
+---------------
+
+According to a forthcoming paper from Bell *et al.*, it is possible to calculate critical points of mixtures from cubic EOS.  For instance, here is how to calculate all the critical points (there can be more than one) that are found for an equimolar mixture of methane and ethane:
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    In [0]: AS = CP.AbstractState("SRK", "Methane&Ethane")
+
+    In [0]: AS.set_mole_fractions([0.5, 0.5])
+
+    In [0]: pts = AS.all_critical_points()
+
+    In [0]: [(pt.T, pt.p, pt.rhomolar, pt.stable) for pt in pts]
+
+
+Detailed Example
+----------------
+
+.. plot::
+
+    import CoolProp
+    import matplotlib.pyplot as plt
+
+    SRK = CoolProp.AbstractState('SRK','Methane&Ethane')
+    SRK.set_mole_fractions([0.5, 1 - 0.5])
+    for kij, c in zip([0.0, -0.1],['r','b']):
+        SRK.set_binary_interaction_double(0,1,"kij",kij)
+        ## Phase envelope
+        SRK.build_phase_envelope("")
+        PE = SRK.get_phase_envelope_data()
+        plt.plot(PE.T, PE.p, '-', label = '$k_{ij} = $' + str(kij), color = c)
+        
+        ## Critical point
+        pts = SRK.all_critical_points()
+        for pt in pts:
+          plt.plot(pt.T, pt.p, '*', color = c)
+
+        ## Some VLE calls
+
+    plt.xlabel('Temperature [K]')
+    plt.ylabel('Pressure [Pa]')
+    plt.yscale('log')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+Adding your own fluids
+======================
 
 The cubic fluids in CoolProp are defined based on a JSON format, which could yield something like this for a **FAKE** (illustrative) fluid.  For instance if we had the file ``fake_fluid.json`` (download it here: :download:`fake_fluid.json`):
 
