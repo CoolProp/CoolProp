@@ -198,6 +198,10 @@ std::string REFPROPMixtureBackend::version(){
     long ierr = 0;
     char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
     REFPROPMixtureBackend::REFPROP_supported();
+    // Pad the version string with NULL characters
+    for (int i = 0; i < 255; ++i){
+        herr[i] = '\0';
+    }
     SETUPdll(&N, fluids, hmx, default_reference_state,
                 &ierr, herr,
                 10000, // Length of component_string (see PASS_FTN.for from REFPROP)
@@ -205,8 +209,13 @@ std::string REFPROPMixtureBackend::version(){
                 lengthofreference, // Length of reference
                 errormessagelength // Length of error message
                 );
-    std::string s(herr, herr+254);
-    return strstrip(s);
+    if (strlen(herr) == 0){
+        return format("%g", ((double)ierr)/10000.0);
+    }
+    else{
+        std::string s(herr, herr+254);
+        return strstrip(s);
+    }
 }
 
 void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &fluid_names)
