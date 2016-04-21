@@ -518,7 +518,7 @@ bool add_fluids_as_JSON(const std::string &backend, const std::string &fluidstri
 {
     if (backend == "SRK" || backend == "PR")
     {
-        CubicLibrary::add_fluids_as_JSON(fluidstring);
+        CubicLibrary::add_fluids_as_JSON(fluidstring); return true;
     }
     else{
         throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON",backend.c_str()));

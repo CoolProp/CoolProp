@@ -605,10 +605,6 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 				const std::vector<CoolPropDbl> y = HEOS.mole_fractions;
 				std::vector<CoolPropDbl> x(y.size());
 				for (std::size_t i = 0; i < components.size(); ++i){
-
-					// Reference to EOS
-					const EquationOfState &EOS = components[i].EOSVector[0];
-
 					if (components[i].CAS == "7732-18-5"){
 						iWater = i; continue;
 					}
