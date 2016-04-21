@@ -1,6 +1,10 @@
 #if defined(_MSC_VER)
+#ifndef _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAP_ALLOC
+#endif
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <crtdbg.h>
 #endif
 
