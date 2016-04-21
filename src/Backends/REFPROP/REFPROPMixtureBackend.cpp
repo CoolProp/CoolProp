@@ -19,8 +19,6 @@ dipole moment                   debye
 surface tension                 N/m
 */
 
-#define _CRT_SECURE_NO_WARNINGS
-
 #define REFPROP_IMPLEMENTATION
 #define REFPROP_CSTYLE_REFERENCES
 #include "externals/REFPROP-headers/REFPROP_lib.h"
@@ -45,7 +43,9 @@ surface tension                 N/m
 
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <crtdbg.h>
 #include <sys/stat.h>
 #else
