@@ -62,7 +62,7 @@ bool CoolProp::AbstractCubicBackend::get_critical_is_terminated(double &delta, d
     // smallest volume that is physically allowed for a cubic EOS
     double b = get_cubic()->bm_term(mole_fractions); // [m^3/mol]
     double v = 1/(delta*rhomolar_reducing()); //[m^3/mol]
-    bool covolume_check = v < 1.2*b;
+    bool covolume_check = v < 1.1*b;
     
     return covolume_check;
 }
@@ -215,7 +215,7 @@ public:
     
     double call(double value){
         int Nsolns = 0;
-        double rho0, rho1, rho2, T, p;
+        double rho0 = -1, rho1 = -1, rho2 = -1, T, p;
         
         if (inputs == CoolProp::PQ_INPUTS){
             T = value; p = imposed_variable;

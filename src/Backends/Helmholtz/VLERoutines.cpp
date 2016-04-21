@@ -1793,10 +1793,10 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         }
 		RachfordRiceResidual resid(z, lnK);
         if (g0 < 0){
-			beta = Secant(resid, -0.1, 0.001, 1e-10, 100);
+			beta = 0;
         }
         else if (g1 > 0){
-			beta = Secant(resid, 1.1, 0.001, 1e-10, 100);
+			beta = 1;
         }
         else{
             // Need to iterate to find beta that makes g of Rachford-Rice zero
@@ -1813,7 +1813,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
 void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     std::vector<double> tpdL, tpdH;
     _stable = true;
-    if (0 <= beta && beta <= 1){
+    if (beta > DBL_EPSILON || beta < 1-DBL_EPSILON){
         // Calculate the tpd and the Gibbs energy difference (Gernert, 2014, Eqs. 20-22)
         this->tpd_liq = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), x, rhomolar_liq);
         this->tpd_vap = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), y, rhomolar_vap);
@@ -1821,7 +1821,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         if (debug){ fmt::printf("3) tpd': %g tpd'': %g DELTAG/nRT: %g\n", tpd_liq, tpd_vap, DELTAG_nRT); }
         
         // If any of these cases are met, conclusively unstable, stop!
-        if (this->tpd_liq < 0 || this->tpd_vap < 0 || this->DELTAG_nRT < 0){
+        if (this->tpd_liq < -DBL_EPSILON || this->tpd_vap < -DBL_EPSILON || this->DELTAG_nRT < -DBL_EPSILON){
             _stable = false; return;
         }
     }
@@ -1839,7 +1839,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     
     // For each composition, use successive substitution to try to evaluate stability
     if (debug){ fmt::printf("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n"); }
-    for (int step_count = 0; step_count < 100; ++step_count){
+    for (int step_count = 0; step_count < 20; ++step_count){
         // Set the composition
         HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
         HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
@@ -1864,8 +1864,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         normalize_vector(xH);
         if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
         
-        if (tpd_L < 0 || tpd_H < 0){_stable = false; return;}
-        
+        if (tpd_L < -DBL_EPSILON || tpd_H < -DBL_EPSILON){_stable = false; return;}
     }
 }
 

@@ -3245,7 +3245,7 @@ public:
     void trace(){
         bool debug = (get_debug_level() > 0) | false;
         double theta;
-        for (int i = 0; i < 100; ++i){
+        for (int i = 0; i < 300; ++i){
             if (i == 0){
                 // In the first iteration, search all angles in the positive delta direction using a
                 // bounded solver with a very small radius in order to not hit other L1*=0 contours
