@@ -1,7 +1,9 @@
 #ifndef COOLPROPTOOLS_H
 #define COOLPROPTOOLS_H
 
-	#define _CRT_SECURE_NO_WARNINGS
+	#ifndef _CRT_SECURE_NO_WARNINGS
+	    #define _CRT_SECURE_NO_WARNINGS
+	#endif
 
     #include "PlatformDetermination.h"
     #include "Exceptions.h"
