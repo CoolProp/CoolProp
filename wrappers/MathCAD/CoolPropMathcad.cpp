@@ -4,6 +4,8 @@
 #include <string>
 
 #include "mcadincl.h"
+enum { MC_STRING = STRING };  // substitute enumeration variable MC_STRING for STRING, use MC_STRING below
+#undef STRING                 // undefine STRING as it conflicts with STRING enum in cppformat/format.h
 // Why does MathCAD use min and max macros???
 #undef min
 #undef max
@@ -125,9 +127,9 @@
     "string, name of the parameter to retrieve", // Description of input parameters
     "returns the value of the requested CoolProps parameter", // description of the function for the Insert Function dialog box       
     (LPCFUNCTION)CoolProp_get_global_param_string, // Pointer to the function code. 
-    STRING, // Returns a MathCAD string
+    MC_STRING, // Returns a MathCAD string
     1, // Number of arguments
-    {STRING} // Argument types 
+    {MC_STRING} // Argument types 
     };	
 	
 	// fill out a FUNCTIONINFO structure with the information needed for registering
@@ -140,7 +142,7 @@
     (LPCFUNCTION)CoolProp_Props1SI, // Pointer to the function code.
     COMPLEX_SCALAR, // Returns a MathCAD complex scalar
     2,    // Number of arguments
-    {STRING, STRING}  // Argument types 
+    {MC_STRING, MC_STRING}  // Argument types 
     };
 
 	// fill out a FUNCTIONINFO structure with the information needed for registering
@@ -153,7 +155,7 @@
     (LPCFUNCTION)CoolProp_PropsSI,  // Pointer to the function code.  
     COMPLEX_SCALAR, // Returns a MathCAD complex scalar
     6, // Number of arguments
-    {STRING, STRING, COMPLEX_SCALAR, STRING, COMPLEX_SCALAR, STRING} // Argument types 
+    {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING} // Argument types 
     };
 
 	// fill out a FUNCTIONINFO structure with the information needed for registering
@@ -166,7 +168,7 @@
     (LPCFUNCTION)CoolProp_HAPropsSI,  // Pointer to the function code.
     COMPLEX_SCALAR, // Returns a MathCAD complex scalar
     7,  // Number of arguments
-    {STRING, STRING, COMPLEX_SCALAR, STRING, COMPLEX_SCALAR, STRING, COMPLEX_SCALAR} // Argument types 
+    {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR} // Argument types 
     };
 
     // DLL entry point code.  the _CRT_INIT function is needed
