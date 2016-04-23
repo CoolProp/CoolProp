@@ -79,7 +79,7 @@ std::string get_REFPROP_fluid_path_prefix()
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_refprop_path.c_str()));
         }
         // The alternative path has been set, so we give all fluid paths as relative to this directory
-        return alt_refprop_path + "/fluids/";
+        return alt_refprop_path + "fluids/";
     }
     #if defined(__ISWINDOWS__)
         return rpPath;
@@ -100,7 +100,7 @@ std::string get_REFPROP_mixtures_path_prefix()
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_refprop_path.c_str()));
         }
         // The alternative path has been set
-        rpPath = alt_refprop_path + "mixtures/";
+        return alt_refprop_path + "mixtures/";
     }
     #if defined(__ISWINDOWS__)
     return rpPath;
@@ -331,13 +331,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 LoadedREFPROPRef = mix;
                 cached_component_string = mix;
                 this->fluid_names.clear();
-                for (long i = 1; i < N+1; ++i){
-                    char hnam[12] = "           ", hn80[80], hcasn[12];
-                    NAMEdll(&i, hnam, hn80, hcasn, 12, 80, 12);
-                    std::string as_string = std::string(hnam, hnam + 12);
-                    std::string name = upper(strrstrip(as_string));
-                    this->fluid_names.push_back(name);
-                }
+                this->fluid_names.push_back(components_joined_raw);
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
