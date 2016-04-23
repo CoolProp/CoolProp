@@ -1392,7 +1392,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
             throw ValueError(format("newton_raphson_saturation::call reached max number of iterations [%d]",IO.Nstep_max));
         }
     }
-    while(this->error_rms > 1e-9 && min_rel_change > 1000*DBL_EPSILON && iter < IO.Nstep_max);
+    while(this->error_rms > 1e-7 && min_rel_change > 1000*DBL_EPSILON && iter < IO.Nstep_max);
 
     IO.Nsteps = iter;
     IO.p = p;
