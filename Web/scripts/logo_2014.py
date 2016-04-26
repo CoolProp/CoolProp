@@ -144,8 +144,9 @@ import Image
 size = 288, 288
 try:
 	im = Image.open(tar_fil_long_large)
-	#im.thumbnail(size, Image.ANTIALIAS)
-	im.resize(size, Image.ANTIALIAS).save(tar_fil_long)
+	im.thumbnail(size, Image.ANTIALIAS)
+	im.save(tar_fil_long)
+	#im.resize(size, Image.ANTIALIAS).save(tar_fil_long)
 except IOError:
 	print "Error resizing '%s'" % tar_fil_long_large
 
