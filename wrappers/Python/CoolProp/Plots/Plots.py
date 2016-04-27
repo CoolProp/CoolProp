@@ -3,12 +3,9 @@
 from __future__ import print_function, absolute_import
 
 import numpy, matplotlib, matplotlib.pyplot, math, re
-from scipy.interpolate import interp1d
 
 import CoolProp.CoolProp as CP
 
-from scipy import interpolate
-from scipy.spatial.kdtree import KDTree
 import warnings
 from CoolProp.Plots.Common import IsoLine,BasePlot
 import CoolProp
@@ -218,9 +215,8 @@ class PropertyPlot(BasePlot):
                     if (#(filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) > 0.010*filter_x(dx) and 
                         (filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) < 0.050*filter_x(dx) or
                         (filter_y(dew.y[dew_filter][-1])-filter_y(bub.y[bub_filter][-1])) < 0.010*filter_y(dy)):
-                        f = interp1d(numpy.append(bub.x[bub_filter],dew.x[dew_filter][::-1]),numpy.append(bub.y[bub_filter],dew.y[dew_filter][::-1]),kind='cubic')
                         x = numpy.linspace(bub.x[bub_filter][-1], dew.x[dew_filter][-1], 11)
-                        y = f(x)
+                        y = numpy.interp(x, numpy.append(bub.x[bub_filter],dew.x[dew_filter][::-1]),numpy.append(bub.y[bub_filter],dew.y[dew_filter][::-1]))
                         self.axis.plot(dimx.from_SI(x),dimy.from_SI(y),**sat_props)
                         warnings.warn("Detected an incomplete phase envelope, fixing it numerically.")
                         xcrit = x[5]; ycrit = y[5]

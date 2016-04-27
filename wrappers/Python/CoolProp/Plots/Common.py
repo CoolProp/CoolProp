@@ -11,7 +11,6 @@ from CoolProp import AbstractState
 from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
 import CoolProp
 import warnings
-from scipy.interpolate.interpolate import interp1d
 from six import with_metaclass
 
 
@@ -544,11 +543,11 @@ class IsoLine(Base2DObject):
         #filter = np.logical_and(np.isfinite(self.x),np.isfinite(self.y))
         if validy > validx:
             y = self.y[np.isfinite(self.y)]
-            self.x = interp1d(self.y, self.x, kind='linear')(y)
+            self.x = np.interp(y, self.y, self.x)
             self.y = y
         else:
             x = self.x[np.isfinite(self.x)] 
-            self.y = interp1d(self.x, self.y, kind='linear')(x)
+            self.y = np.interp(x, self.x, self.y)
             self.x = x
             
             
@@ -957,7 +956,7 @@ consider replacing it with \"_get_sat_bounds\".",
             _xv = xv[::-1]
             _yv = yv[::-1]
             #Find x by interpolation
-            x = interp1d(yv, xv)(y)
+            x = np.interp(y, yv, xv)
             trash=0
             (xv,yv)=self._to_pixel_coords(xv,yv)
             (x,trash)=self._to_pixel_coords(x,trash)
