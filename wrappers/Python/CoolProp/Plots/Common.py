@@ -13,7 +13,13 @@ import CoolProp
 import warnings
 from six import with_metaclass
 
-
+def is_string(in_obj):
+    try:
+        return isinstance(in_obj, basestring)
+    except NameError:
+        return isinstance(in_obj, str)
+    #except:
+    #    return False
 
 def process_fluid_state(fluid_ref):
     """Check input for state object or fluid string
@@ -27,7 +33,7 @@ def process_fluid_state(fluid_ref):
         CoolProp.AbstractState
     """
     # Process the fluid and set self._state
-    if isinstance(fluid_ref, basestring):
+    if is_string(fluid_ref):
         backend, fluids   = extract_backend(fluid_ref)
         fluids, fractions = extract_fractions(fluids)
         #if backend==u'?': backend = u'HEOS'
@@ -50,7 +56,7 @@ def process_fluid_state(fluid_ref):
 
 
 def _get_index(prop):
-    if isinstance(prop, basestring):
+    if is_string(prop):
         return CP.get_parameter_index(prop)
     elif isinstance(prop, int):
         return prop
@@ -223,7 +229,7 @@ class EURunits(KSIunits):
         self.P.mul_SI=1e-5
         self.P.unit=u'bar'
         self.T.add_SI=-273.15
-        self.T.unit=u'\u00B0C'
+        self.T.unit=u'°C'
 
 
 class Base2DObject(with_metaclass(ABCMeta),object):
