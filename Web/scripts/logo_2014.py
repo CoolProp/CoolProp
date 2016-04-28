@@ -99,7 +99,7 @@ sat_args  = melt_args.copy()
 nm = matplotlib.colors.Normalize(min(DD), max(DD))
 rho_args = dict(cmap=plt.cm.get_cmap('Blues'), norm = nm)
 
-fig = plt.figure(figsize = (3,3))
+fig = plt.figure(figsize = (1.5,1.5))
 ax = fig.add_axes((0.0,0.0,1.0,1.0))
 
 plt.plot(T_melt, p_melt, **melt_args)
