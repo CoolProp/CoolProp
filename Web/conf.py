@@ -90,7 +90,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
 
               # cloud's extensions
             #'cloud_sptheme.ext.autodoc_sections',
-            #'cloud_sptheme.ext.index_styling',
+            'cloud_sptheme.ext.index_styling',
             'cloud_sptheme.ext.relbar_toc',
             #'cloud_sptheme.ext.escaped_samp_literals',
             'cloud_sptheme.ext.issue_tracker',
@@ -104,7 +104,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
 # set path to issue tracker:
 issue_tracker_url = "gh:CoolProp/CoolProp"
 
-plot_formats = [('png',80)]
+plot_formats = [('png',80),('.pdf')]
 
 index_doc = "index"
 

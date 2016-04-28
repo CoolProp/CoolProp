@@ -11,10 +11,15 @@ from CoolProp import AbstractState
 from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
 import CoolProp
 import warnings
-from scipy.interpolate.interpolate import interp1d
 from six import with_metaclass
 
-
+def is_string(in_obj):
+    try:
+        return isinstance(in_obj, basestring)
+    except NameError:
+        return isinstance(in_obj, str)
+    #except:
+    #    return False
 
 def process_fluid_state(fluid_ref):
     """Check input for state object or fluid string
@@ -28,7 +33,7 @@ def process_fluid_state(fluid_ref):
         CoolProp.AbstractState
     """
     # Process the fluid and set self._state
-    if isinstance(fluid_ref, basestring):
+    if is_string(fluid_ref):
         backend, fluids   = extract_backend(fluid_ref)
         fluids, fractions = extract_fractions(fluids)
         #if backend==u'?': backend = u'HEOS'
@@ -51,7 +56,7 @@ def process_fluid_state(fluid_ref):
 
 
 def _get_index(prop):
-    if isinstance(prop, basestring):
+    if is_string(prop):
         return CP.get_parameter_index(prop)
     elif isinstance(prop, int):
         return prop
@@ -224,7 +229,7 @@ class EURunits(KSIunits):
         self.P.mul_SI=1e-5
         self.P.unit=u'bar'
         self.T.add_SI=-273.15
-        self.T.unit=u'\u00B0C'
+        self.T.unit=u'°C'
 
 
 class Base2DObject(with_metaclass(ABCMeta),object):
@@ -544,11 +549,11 @@ class IsoLine(Base2DObject):
         #filter = np.logical_and(np.isfinite(self.x),np.isfinite(self.y))
         if validy > validx:
             y = self.y[np.isfinite(self.y)]
-            self.x = interp1d(self.y, self.x, kind='linear')(y)
+            self.x = np.interp(y, self.y, self.x)
             self.y = y
         else:
             x = self.x[np.isfinite(self.x)] 
-            self.y = interp1d(self.x, self.y, kind='linear')(x)
+            self.y = np.interp(x, self.x, self.y)
             self.x = x
             
             
@@ -957,7 +962,7 @@ consider replacing it with \"_get_sat_bounds\".",
             _xv = xv[::-1]
             _yv = yv[::-1]
             #Find x by interpolation
-            x = interp1d(yv, xv)(y)
+            x = np.interp(y, yv, xv)
             trash=0
             (xv,yv)=self._to_pixel_coords(xv,yv)
             (x,trash)=self._to_pixel_coords(x,trash)

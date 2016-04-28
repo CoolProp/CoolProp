@@ -7,15 +7,24 @@ cimport cAbstractState
 from typedefs cimport *
 cimport constants_header
 
-ctypedef fused string_t:
+#ctypedef fused string_t:
+#    cython.p_char
+#    bytes
+#    unicode
+#    string
+#
+#ctypedef fused string_or_size_t:
+#    string_t
+#    cython.integral
+
+ctypedef fused string_or_size_t:
     cython.p_char
     bytes
     unicode
     string
-
-ctypedef fused string_or_size_t:
-    string_t
-    cython.integral
+    short
+    int
+    long
 
 cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI

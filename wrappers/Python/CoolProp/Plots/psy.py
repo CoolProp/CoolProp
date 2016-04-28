@@ -5,9 +5,10 @@ import os
 import cPickle
 from ConfigParser import ConfigParser
 
+import numpy as np
+
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from pylab import Figure
-from scipy import arange, arctan, pi
 
 from CoolProp.HumidAirProp import HAProps, HAProps_Aux
 
@@ -295,7 +296,7 @@ class PsyCoolprop(object):
         # v
         lines = cls.LineList("isochor", Preferences)
         V = {}
-        rh = arange(1, -0.05, -0.05)
+        rh = np.arange(1, -0.05, -0.05)
         for cont, v in enumerate(lines):
             w = []
             Td = []
@@ -320,7 +321,7 @@ class PsyCoolprop(object):
             start = Preferences.getfloat("Psychr", name+"Start")
             end = Preferences.getfloat("Psychr", name+"End")
             step = Preferences.getfloat("Psychr", name+"Step")
-            t = arange(start, end, step)
+            t = np.arange(start, end, step)
         return t
 
 
@@ -385,7 +386,7 @@ class UI_Psychrometry(QDialog):
                 label += unit
             pos = Preferences.getfloat("Psychr", name+"position")
             p = int(i*pos/100-1)
-            rot = arctan((W[p]-W[p-1])/y/(t[p]-t[p-1])*x)*360/2/pi
+            rot = np.arctan((W[p]-W[p-1])/y/(t[p]-t[p-1])*x)*360.0/2.0/np.pi
             self.diagrama2D.axes2D.annotate(label, (t[p], W[p]),
                 rotation=rot, size="small", ha="center", va="center")
 
