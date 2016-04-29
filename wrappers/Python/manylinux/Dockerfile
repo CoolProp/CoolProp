@@ -1,8 +1,8 @@
 
-FROM quay.io/pypa/manylinux1_i686
+FROM quay.io/pypa/manylinux1_x86_64
 
 # Install Cmake
-RUN yum install --skip-broken -y cmake28 && ln -s `which cmake28` /usr/local/bin/cmake
+RUN wget --no-check-certificate http://www.cmake.org/files/v2.8/cmake-2.8.10.2.tar.gz && tar -zxvf cmake-2.8.10.2.tar.gz && cd cmake-2.8.10.2 && ./bootstrap && make && make install
 
 RUN /opt/python/cp27-cp27m/bin/pip install virtualenv
 
@@ -14,7 +14,7 @@ RUN /opt/python/cp27-cp27m/bin/virtualenv /py34 --python=/opt/python/cp34-cp34m/
 RUN /opt/python/cp27-cp27m/bin/virtualenv /py35 --python=/opt/python/cp35-cp35m/bin/python
 
 # Install pip packages needed
-RUN /py27/bin/pip install cython virtualenv
+RUN /py27/bin/pip install cython virtualenv auditwheel
 RUN /py27mu/bin/pip install cython virtualenv
 RUN /py33/bin/pip install cython virtualenv
 RUN /py34/bin/pip install cython virtualenv

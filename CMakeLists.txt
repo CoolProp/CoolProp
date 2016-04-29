@@ -326,8 +326,10 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${LIB_NAME} generate_headers)
   #
-  # Add target include directories for easy linking with other applications
-  target_include_directories(${LIB_NAME} PUBLIC ${APP_INCLUDE_DIRS})  
+  if (CMAKE_VERSION VERSION_GREATER 3.0)
+    # Add target include directories for easy linking with other applications
+    target_include_directories(${LIB_NAME} PUBLIC ${APP_INCLUDE_DIRS})
+  endif()
   
   # Set the bitness
   IF (NOT MSVC)

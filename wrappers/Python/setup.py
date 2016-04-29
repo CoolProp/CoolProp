@@ -58,20 +58,30 @@ if __name__=='__main__':
 
     # Example using CMake to build static library:
     # python setup.py install --cmake-compiler vc9 --cmake-bitness 64
+    #
+    # or (because pip needs help)
+    #
+    # python setup.py install cmake=default,64
 
-    if '--cmake-compiler' in sys.argv:
-        i = sys.argv.index('--cmake-compiler')
+    cmake_args = [_ for _ in sys.argv if _.startswith('cmake=')]   
+    if cmake_args:
+        i = sys.argv.index(cmake_args[0])
         sys.argv.pop(i)
-        cmake_compiler = sys.argv.pop(i)
+        cmake_compiler, cmake_bitness = cmake_args[0].split('cmake=')[1].split(',')
     else:
-        cmake_compiler = ''
+        if '--cmake-compiler' in sys.argv:
+            i = sys.argv.index('--cmake-compiler')
+            sys.argv.pop(i)
+            cmake_compiler = sys.argv.pop(i)
+        else:
+            cmake_compiler = ''
 
-    if '--cmake-bitness' in sys.argv:
-        i = sys.argv.index('--cmake-bitness')
-        sys.argv.pop(i)
-        cmake_bitness = sys.argv.pop(i)
-    else:
-        cmake_bitness = ''
+        if '--cmake-bitness' in sys.argv:
+            i = sys.argv.index('--cmake-bitness')
+            sys.argv.pop(i)
+            cmake_bitness = sys.argv.pop(i)
+        else:
+            cmake_bitness = ''
 
     USING_CMAKE = cmake_compiler or cmake_bitness
 
