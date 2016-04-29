@@ -366,7 +366,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (strlen(_components_joined) > 10000) { throw ValueError(format("components_joined (%s) is too long", _components_joined)); }
             strcpy(component_string, _components_joined);
             // Pad the fluid string all the way to 10k characters with spaces to deal with string parsing bug in REFPROP in SETUPdll
-            for (int i = int(components_joined.size()); i < 10000; ++i){
+            for (int i = static_cast<int>(components_joined.size()); i < 10000; ++i){
                 component_string[i] = ' ';
             }
 
