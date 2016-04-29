@@ -134,12 +134,17 @@ if __name__=='__main__':
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
+
+        if 'Darwin' in sys.platform:
+            cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+        if 'linux' in sys.platform:
+            cmake_config_args += ['-DCOOLPROP_FPIC=ON']
         
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
             
-        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCOOLPROP_OSX_105_COMPATIBILITY=ON','-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
+        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         

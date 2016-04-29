@@ -15,17 +15,15 @@ cd ${DIR}/../pypi
 # deactivate
 
 cd ${DIR}/..
-rm -rf cmake_build
 for PYBIN in /py*; do
     source ${PYBIN}/bin/activate
     c++ --version
-    python setup.py bdist_wheel cmake=default,64 --install-dir
+    python setup.py bdist_wheel cmake=default,64
     deactivate
 done
 
 # Bundle external shared libraries into the wheels
-for whl in wheelhouse/*.whl; do
-    source /py27/bin/activate
-    auditwheel repair $whl -w /io/wheelhouse/
-    deactivate
+for whl in dist/*.whl; do
+    # auditwheel comes in base image
+    auditwheel repair $whl -w ../../install_root/Python
 done
