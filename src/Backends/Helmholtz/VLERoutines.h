@@ -216,7 +216,7 @@ namespace SaturationSolvers
         if (input_type == imposed_T && (std::abs(beta) < 1e-12 || std::abs(beta-1) < 1e-12)){
             const std::vector<double> z = HEOS.get_mole_fractions_ref();
             bool beta0 = std::abs(beta) < 1e-12; // True is beta is approx. zero
-            for (int i = 0; i < z.size(); ++i)
+            for (int i = 0; i < static_cast<int>(z.size()); ++i)
             {
                 double pci = HEOS.get_fluid_constant(i,iP_critical);
                 double Tci = HEOS.get_fluid_constant(i,iT_critical);
@@ -232,7 +232,7 @@ namespace SaturationSolvers
                 out = 1/out; // summation is for 1/p, take reciprocal to get p
             }
             std::vector<CoolPropDbl> &K = HEOS.get_K();
-            for (int i = 0; i < z.size(); ++i)
+            for (int i = 0; i < static_cast<int>(z.size()); ++i)
             {
                 double pci = HEOS.get_fluid_constant(i,iP_critical);
                 double Tci = HEOS.get_fluid_constant(i,iT_critical);
