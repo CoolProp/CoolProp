@@ -1636,6 +1636,18 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 else{
                     _phase = iphase_supercritical_gas; break;
                 }
+            case iP:
+            {
+                if (std::abs(_p - _crit.p) < 10*DBL_EPSILON){
+                    _phase = iphase_critical_point; break;
+                }
+                else if (_p > _crit.p){
+                    _phase = iphase_supercritical_liquid; break;
+                }
+                else{
+                    _phase = iphase_supercritical_gas; break;
+                }
+            }
             default:
                 throw ValueError(format("T=Tcrit; invalid input for other to T_phase_determination_pure_or_pseudopure"));
         }
