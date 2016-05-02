@@ -812,7 +812,7 @@ class MixtureDerivatives{
         return HEOS.dalphar_dDelta();
     }
     static CoolPropDbl ln_fugacity(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
-        return log(MixtureDerivatives::fugacity_i(HEOS, i, xN_flag))
+        return log(MixtureDerivatives::fugacity_i(HEOS, i, xN_flag));
     }
     
 }; /* class MixtureDerivatives */
