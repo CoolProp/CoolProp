@@ -957,6 +957,8 @@ public:
         //two_comp("d_ndalphardni_dxj__constT_V_xi", MD::d_ndalphardni_dxj__constT_V_xi, MD::ndalphar_dni__constT_V_nj);
 
         one_comp("dalphar_dxi",MD::dalphar_dxi, MD::alphar);
+        two_comp("d2alphardxidxj",MD::d2alphardxidxj, MD::dalphar_dxi);
+        three_comp("d3alphardxidxjdxk",MD::d3alphardxidxjdxk, MD::d2alphardxidxj);
         one("d2alphar_dxi_dTau", MD::d2alphar_dxi_dTau, MD::dalphar_dxi, TAU);
         one("d2alphar_dxi_dDelta", MD::d2alphar_dxi_dDelta, MD::dalphar_dxi, DELTA);
         one("d3alphar_dxi_dDelta2", MD::d3alphar_dxi_dDelta2, MD::d2alphar_dxi_dDelta, DELTA);
@@ -970,6 +972,7 @@ public:
         two("d4alphar_dxi_dxj_dDelta_dTau", MD::d4alphar_dxi_dxj_dDelta_dTau, MD::d3alphar_dxi_dxj_dDelta, TAU);
         two("d3alphar_dxi_dxj_dTau", MD::d3alphar_dxi_dxj_dTau, MD::d2alphardxidxj, TAU);
         two("d4alphar_dxi_dxj_dTau2", MD::d4alphar_dxi_dxj_dTau2, MD::d3alphar_dxi_dxj_dTau, TAU);
+        one_comp("d_dalpharddelta_dxj__constT_V_xi", MD::d_dalpharddelta_dxj__constT_V_xi, MD::dalphar_dDelta);
         
         two_comp("d_ndalphardni_dxj__constdelta_tau_xi", MD::d_ndalphardni_dxj__constdelta_tau_xi, MD::ndalphar_dni__constT_V_nj);
         two("d2_ndalphardni_dxj_dDelta__consttau_xi", MD::d2_ndalphardni_dxj_dDelta__consttau_xi, MD::d_ndalphardni_dxj__constdelta_tau_xi, DELTA);
@@ -977,7 +980,6 @@ public:
         two("d2_ndalphardni_dxj_dTau__constdelta_xi", MD::d2_ndalphardni_dxj_dTau__constdelta_xi, MD::d_ndalphardni_dxj__constdelta_tau_xi, TAU);
         two("d3_ndalphardni_dxj_dTau2__constdelta_xi", MD::d3_ndalphardni_dxj_dTau2__constdelta_xi, MD::d2_ndalphardni_dxj_dTau__constdelta_xi, TAU);
         two("d3_ndalphardni_dxj_dDelta_dTau__constxi", MD::d3_ndalphardni_dxj_dDelta_dTau__constxi, MD::d2_ndalphardni_dxj_dDelta__consttau_xi, TAU);
-
         three_comp("d2_ndalphardni_dxj_dxk__constdelta_tau_xi", MD::d2_ndalphardni_dxj_dxk__constdelta_tau_xi, MD::d_ndalphardni_dxj__constdelta_tau_xi);
         three("d3_ndalphardni_dxj_dxk_dTau__constdelta_xi", MD::d3_ndalphardni_dxj_dxk_dTau__constdelta_xi, MD::d2_ndalphardni_dxj_dxk__constdelta_tau_xi, TAU);
         three("d3_ndalphardni_dxj_dxk_dDelta__consttau_xi", MD::d3_ndalphardni_dxj_dxk_dDelta__consttau_xi, MD::d2_ndalphardni_dxj_dxk__constdelta_tau_xi, DELTA);
@@ -993,6 +995,7 @@ public:
         three("d2_nd_ndalphardni_dnj_dxk_dTau__constdelta", MD::d2_nd_ndalphardni_dnj_dxk_dTau__constdelta, MD::d_nd_ndalphardni_dnj_dxk__consttau_delta, TAU);
         three("d2_nd_ndalphardni_dnj_dxk_dDelta__consttau", MD::d2_nd_ndalphardni_dnj_dxk_dDelta__consttau, MD::d_nd_ndalphardni_dnj_dxk__consttau_delta, DELTA);
         
+        two_comp("dln_fugacity_dxj__constT_rho_xi", MD::dln_fugacity_dxj__constT_rho_xi, MD::ln_fugacity);
         three("d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau", MD::d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau, MD::d_ndln_fugacity_i_dnj_ddxk__consttau_delta, DELTA);
         three("d2_ndln_fugacity_i_dnj_dxk_dTau__constdelta", MD::d2_ndln_fugacity_i_dnj_dxk_dTau__constdelta, MD::d_ndln_fugacity_i_dnj_ddxk__consttau_delta, TAU);
         two("d2_ndln_fugacity_i_dnj_ddelta_dtau__constx", MD::d2_ndln_fugacity_i_dnj_ddelta_dtau__constx, MD::d_ndln_fugacity_i_dnj_ddelta__consttau_x, TAU);
@@ -1011,6 +1014,25 @@ public:
         two_comp("d_nddeltadni_dxj__constdelta_tau", MD::d_nddeltadni_dxj__constdelta_tau, MD::nddeltadni__constT_V_nj);
         two_comp("d_ndtaudni_dxj__constdelta_tau", MD::d_ndtaudni_dxj__constdelta_tau, MD::ndtaudni__constT_V_nj);
         two("d2_ndtaudni_dxj_dTau__constdelta", MD::d2_ndtaudni_dxj_dTau__constdelta, MD::d_ndtaudni_dxj__constdelta_tau, TAU);
+        
+        one_comp("dTrdxi__constxj", MD::dTrdxi__constxj, MD::Tr);
+        // (??)two_comp("d2Trdxi2__constxj", MD::d2Trdxi2__constxj, MD::dTrdxi__constxj);
+        two_comp("d2Trdxidxj", MD::d2Trdxidxj, MD::dTrdxi__constxj);
+        three_comp("d3Trdxidxjdxk", MD::d3Trdxidxjdxk, MD::d2Trdxidxj);
+        one_comp("dtaudxj__constT_V_xi", MD::dtau_dxj__constT_V_xi, MD::tau);
+        two_comp("d_ndTrdni_dxj__constxi", MD::d_ndTrdni_dxj__constxi, MD::ndTrdni__constnj);
+        three_comp("d2_ndTrdni_dxj_dxk__constxi", MD::d2_ndTrdni_dxj_dxk__constxi, MD::d_ndTrdni_dxj__constxi);
+        
+        one_comp("drhormolardxi__constxj", MD::drhormolardxi__constxj, MD::rhormolar);
+        // (??) two_comp("d2Trdxi2__constxj", MD::d2Trdxi2__constxj, MD::dTrdxi__constxj);
+        two_comp("d2rhormolardxidxj", MD::d2rhormolardxidxj, MD::drhormolardxi__constxj);
+        three_comp("d3rhormolardxidxjdxk", MD::d3rhormolardxidxjdxk, MD::d2rhormolardxidxj);
+        one_comp("ddelta_dxj__constT_V_xi", MD::ddelta_dxj__constT_V_xi, MD::delta);
+        two_comp("d_ndrhorbardni_dxj__constxi", MD::d_ndrhorbardni_dxj__constxi, MD::ndrhorbardni__constnj);
+        three_comp("d2_ndrhorbardni_dxj_dxk__constxi", MD::d2_ndrhorbardni_dxj_dxk__constxi, MD::d_ndrhorbardni_dxj__constxi);
+        
+        one_comp("dpdxj__constT_V_xi", MD::dpdxj__constT_V_xi, MD::p);
+        
     }
 };
 
@@ -1433,253 +1455,6 @@ TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
                             double numeric = (v1 - v2)/(2*dT);
                             double err = std::abs((numeric-analytic)/analytic);
                             CHECK(err < 1e-6);
-                        }
-                        std::ostringstream ss5;
-                        ss5 << "dpdxj__constT_V_xi, i=" << i;
-                        SECTION(ss5.str(), "")
-                        {
-                            double analytic = MixtureDerivatives::dpdxj__constT_V_xi(rHEOS, i, xN_flag);
-                            double v1 = rHEOS_pluszi.p();
-                            double v2 = rHEOS_minuszi.p();
-                            double numeric = (v1 - v2)/(2*dz);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-6);
-                        }       
-                        std::ostringstream ss5a;
-                        ss5a << "dtaudxj__constT_V_xi, i=" << i;
-                        SECTION(ss5a.str(), "")
-                        {
-                            double analytic = MixtureDerivatives::dtau_dxj__constT_V_xi(rHEOS, i, xN_flag);
-                            double v1 = rHEOS_pluszi.tau();
-                            double v2 = rHEOS_minuszi.tau();
-                            double numeric = (v1 - v2)/(2*dz);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-8);
-                        }       
-                        std::ostringstream ss5b;
-                        ss5b << "ddeltadxj__constT_V_xi, i=" << i;
-                        SECTION(ss5b.str(), "")
-                        {
-                            double analytic = MixtureDerivatives::ddelta_dxj__constT_V_xi(rHEOS, i, xN_flag);
-                            double v1 = rHEOS_pluszi.delta();
-                            double v2 = rHEOS_minuszi.delta();
-                            double numeric = (v1 - v2)/(2*dz);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-8);
-                        }       
-                        std::ostringstream ss6;
-                        ss6 << "d_dalpharddelta_dxj__constT_V_xi, i=" << i;
-                        SECTION(ss6.str(), "")
-                        {
-                            double analytic = MixtureDerivatives::d_dalpharddelta_dxj__constT_V_xi(rHEOS, i, xN_flag);
-                            double v1 = rHEOS_pluszi.dalphar_dDelta();
-                            double v2 = rHEOS_minuszi.dalphar_dDelta();
-                            double numeric = (v1 - v2)/(2*dz);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-8);
-                        }    
-                        std::ostringstream ss7;
-                        ss7 << "dTrdxi__constxj, i=" << i;
-                        SECTION(ss7.str(), "")
-                        {
-                            double analytic = rHEOS.Reducing->dTrdxi__constxj(rHEOS.get_mole_fractions(), i, xN_flag);
-                            double v1 = rHEOS_pluszi.Reducing->Tr(rHEOS_pluszi.get_mole_fractions());
-                            double v2 = rHEOS_minuszi.Reducing->Tr(rHEOS_minuszi.get_mole_fractions());
-                            double numeric = (v1 - v2)/(2*dz);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-8);
-                        }
-                        std::ostringstream ss8;
-                        ss8 << "drhormolardxi__constxj, i=" << i;
-                        SECTION(ss8.str(), "")
-                        {
-                            double analytic = rHEOS.Reducing->drhormolardxi__constxj(rHEOS.get_mole_fractions(), i, xN_flag);
-                            double v1 = rHEOS_pluszi.Reducing->rhormolar(rHEOS_pluszi.get_mole_fractions());
-                            double v2 = rHEOS_minuszi.Reducing->rhormolar(rHEOS_minuszi.get_mole_fractions());
-                            double numeric = (v1 - v2)/(2*dz);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-8);
-                        }
-                        std::ostringstream ss3c;
-                        ss3c << "d2Trdxi2__constxj, i=" << i;
-                        SECTION(ss3c.str(), "")
-                        {
-                            if (i == Ncomp-1){ break; }
-                            double analytic = rHEOS.Reducing->d2Trdxi2__constxj(z, i, xN_flag);
-                            double v1 = rHEOS_pluszi.Reducing->dTrdxi__constxj(rHEOS_pluszi.get_mole_fractions(), i, xN_flag);
-                            double v2 = rHEOS_minuszi.Reducing->dTrdxi__constxj(rHEOS_minuszi.get_mole_fractions(), i, xN_flag);
-                            double numeric = (v1 - v2)/(2*dz);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-8);
-                        }
-                        
-                        // These derivatives depend on both the i and j indices
-                        for (std::size_t j = 0; j < Ncomp; ++j){
-                            if (xN_flag == XN_DEPENDENT && j == Ncomp){ continue; }
-                            HelmholtzEOSMixtureBackend & rHEOS_pluszj = (xN_flag == XN_INDEPENDENT) ? *(HEOS_plusz_xNindep[Ncomp][j].get()) : *(HEOS_plusz_xNdep[Ncomp][j].get());
-                            HelmholtzEOSMixtureBackend & rHEOS_minuszj = (xN_flag == XN_INDEPENDENT) ? *(HEOS_minusz_xNindep[Ncomp][j].get()) : *(HEOS_minusz_xNdep[Ncomp][j].get());
-
-                            HelmholtzEOSMixtureBackend &rHEOS_pluszj_consttaudelta = (xN_flag == XN_INDEPENDENT) ? *(HEOS_plusz_consttaudelta_xNindep[Ncomp][j].get()) : *(HEOS_plusz_consttaudelta_xNdep[Ncomp][j].get());
-                            HelmholtzEOSMixtureBackend &rHEOS_minuszj_consttaudelta = (xN_flag == XN_INDEPENDENT) ? *(HEOS_minusz_consttaudelta_xNindep[Ncomp][j].get()) : *(HEOS_minusz_consttaudelta_xNdep[Ncomp][j].get());
-                        
-                            std::ostringstream ss1a;
-                            ss1a << "dln_fugacity_dxj__constT_rho_xi, i=" << i << ", j=" << j;
-                            SECTION(ss1a.str(), "")
-                            {
-                                if (xN_flag == XN_INDEPENDENT){continue;}
-                                double analytic = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rHEOS, i, j, xN_flag);
-                                double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_pluszj, i, xN_flag));
-                                double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minuszj, i, xN_flag));
-                                double numeric = (v1 - v2)/(2*dz);
-                                double err = mix_deriv_err_func(numeric, analytic);
-                                CAPTURE(numeric);
-                                CAPTURE(analytic);
-                                CHECK(err < 1e-7);
-                            }
-                            std::ostringstream ss2;
-                            ss2 << "d_ndTrdni_dxj, i=" << i << ", j=" << j;
-                            SECTION(ss2.str(), "")
-                            {
-                                double analytic = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS.get_mole_fractions(), i, j, xN_flag);
-                                double v1 = rHEOS_pluszj.Reducing->ndTrdni__constnj(rHEOS_pluszj.get_mole_fractions(), i, xN_flag);
-                                double v2 = rHEOS_minuszj.Reducing->ndTrdni__constnj(rHEOS_minuszj.get_mole_fractions(), i, xN_flag);
-                                double numeric = (v1 - v2)/(2*dz);
-                                double err = mix_deriv_err_func(numeric, analytic);
-                                CAPTURE(numeric);
-                                CAPTURE(analytic);
-                                CHECK(err < 1e-8);
-                            }
-                            std::ostringstream ss4;
-                            ss4 << "d_ndrhomolarrdni_dxj, i=" << i << ", j=" << j;
-                            SECTION(ss4.str(), "")
-                            {
-                                double analytic = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS.get_mole_fractions(), i, j, xN_flag);
-                                double v1 = rHEOS_pluszj.Reducing->ndrhorbardni__constnj(rHEOS_pluszj.get_mole_fractions(), i, xN_flag);
-                                double v2 = rHEOS_minuszj.Reducing->ndrhorbardni__constnj(rHEOS_minuszj.get_mole_fractions(), i, xN_flag);
-                                double numeric = (v1 - v2)/(2*dz);
-                                double err = mix_deriv_err_func(numeric, analytic);
-                                CAPTURE(numeric);
-                                CAPTURE(analytic);
-                                CHECK(err < 1e-8);
-                            }
-                            std::ostringstream ss3a;
-                            ss3a << "d2alphardxidxj, i=" << i << ", j=" << j;
-                            SECTION(ss3a.str(), "")
-                            {
-                                double analytic = rHEOS.residual_helmholtz->d2alphardxidxj(rHEOS, i, j, xN_flag);
-                                double v1 = rHEOS_pluszj_consttaudelta.residual_helmholtz->dalphar_dxi(rHEOS_pluszj_consttaudelta, i, xN_flag);
-                                double v2 = rHEOS_minuszj_consttaudelta.residual_helmholtz->dalphar_dxi(rHEOS_minuszj_consttaudelta, i, xN_flag);
-                                double numeric = (v1 - v2)/(2*dz);
-                                if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){break;}
-                                double err = mix_deriv_err_func(numeric, analytic);
-                                CAPTURE(numeric);
-                                CAPTURE(analytic);
-                                CHECK(err < 1e-6);
-                            }
-                            std::ostringstream ss3b;
-                            ss3b << "d2Trdxidxj, i=" << i << ", j=" << j;
-                            SECTION(ss3b.str(), "")
-                            {
-                                double analytic = rHEOS.Reducing->d2Trdxidxj(z, i, j, xN_flag);
-                                double v1 = rHEOS.Reducing->dTrdxi__constxj(rHEOS_pluszj.get_mole_fractions(), i, xN_flag);
-                                double v2 = rHEOS.Reducing->dTrdxi__constxj(rHEOS_minuszj.get_mole_fractions(), i, xN_flag);
-                                double numeric = (v1 - v2)/(2*dz);
-                                double err = mix_deriv_err_func(numeric, analytic);
-                                CAPTURE(numeric);
-                                CAPTURE(analytic);
-                                CHECK(err < 1e-8);
-                            }
-                            
-                            // These derivatives depend on i,j, and k indices
-                            for (std::size_t k = 0; k < Ncomp; ++k){
-                                HelmholtzEOSMixtureBackend & rHEOS_pluszk = (xN_flag == XN_INDEPENDENT) ? *(HEOS_plusz_xNindep[Ncomp][k].get()) : *(HEOS_plusz_xNdep[Ncomp][k].get());
-                                HelmholtzEOSMixtureBackend & rHEOS_minuszk = (xN_flag == XN_INDEPENDENT) ? *(HEOS_minusz_xNindep[Ncomp][k].get()) : *(HEOS_minusz_xNdep[Ncomp][k].get());
-
-                                HelmholtzEOSMixtureBackend &rHEOS_pluszk_consttaudelta = (xN_flag == XN_INDEPENDENT) ? *(HEOS_plusz_consttaudelta_xNindep[Ncomp][k].get()) : *(HEOS_plusz_consttaudelta_xNdep[Ncomp][k].get());
-                                HelmholtzEOSMixtureBackend &rHEOS_minuszk_consttaudelta = (xN_flag == XN_INDEPENDENT) ? *(HEOS_minusz_consttaudelta_xNindep[Ncomp][k].get()) : *(HEOS_minusz_consttaudelta_xNdep[Ncomp][k].get());
-
-                                std::ostringstream ss1;    ss1 << "d3Trdxidxjdxk, i=" << i << ", j=" << j << ", k=" << k;
-                                SECTION(ss1.str(), "")
-                                {
-                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
-                                    double analytic = rHEOS.Reducing->d3Trdxidxjdxk(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
-                                    double v1 = rHEOS.Reducing->d2Trdxidxj(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
-                                    double v2 = rHEOS.Reducing->d2Trdxidxj(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
-                                    double numeric = (v1 - v2)/(2*dz);
-                                    double err = mix_deriv_err_func(numeric, analytic);
-                                    CAPTURE(numeric);
-                                    CAPTURE(analytic);
-                                    CHECK(err < 1e-6);
-                                }
-                                std::ostringstream ss2;    ss2 << "d3rhormolardxidxjdxk, i=" << i << ", j=" << j << ", k=" << k;
-                                SECTION(ss2.str(), "")
-                                {
-                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
-                                    double analytic = rHEOS.Reducing->d3rhormolardxidxjdxk(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
-                                    double v1 = rHEOS.Reducing->d2rhormolardxidxj(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
-                                    double v2 = rHEOS.Reducing->d2rhormolardxidxj(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
-                                    double numeric = (v1 - v2)/(2*dz);
-                                    double err = mix_deriv_err_func(numeric, analytic);
-                                    CAPTURE(numeric);
-                                    CAPTURE(analytic);
-                                    CHECK(err < 1e-7);
-                                }
-                                std::ostringstream ss3; ss3 << "d2_ndTrdni_dxj_dxk__constxi, i=" << i << ", j=" << j << ", k=" << k;
-                                SECTION(ss3.str(), "")
-                                {
-                                    if ((xN_flag == XN_DEPENDENT) && (j == Ncomp-1 || k == Ncomp-1)){ break; }
-                                    double analytic = rHEOS.Reducing->d2_ndTrdni_dxj_dxk__constxi(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
-                                    double v1 = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
-                                    double v2 = rHEOS.Reducing->d_ndTrdni_dxj__constxi(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
-                                    double numeric = (v1 - v2)/(2*dz);
-                                    double err = mix_deriv_err_func(numeric, analytic);
-                                    CAPTURE(numeric);
-                                    CAPTURE(analytic);
-                                    CHECK(err < 1e-7);
-                                }
-                                std::ostringstream ss4; ss4 << "d2_ndrhorbardni_dxj_dxk__constxi, i=" << i << ", j=" << j << ", k=" << k;
-                                SECTION(ss4.str(), "")
-                                {
-                                    if ((xN_flag == XN_DEPENDENT) && (j == Ncomp-1 || k == Ncomp-1)){ break; }
-                                    double analytic = rHEOS.Reducing->d2_ndrhorbardni_dxj_dxk__constxi(rHEOS.get_mole_fractions(), i, j, k, xN_flag);
-                                    double v1 = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS_pluszk.get_mole_fractions(), i, j, xN_flag);
-                                    double v2 = rHEOS.Reducing->d_ndrhorbardni_dxj__constxi(rHEOS_minuszk.get_mole_fractions(), i, j, xN_flag);
-                                    double numeric = (v1 - v2)/(2*dz);
-                                    double err = mix_deriv_err_func(numeric, analytic);
-                                    CAPTURE(numeric);
-                                    CAPTURE(analytic);
-                                    CHECK(err < 1e-7);
-                                }
-                                std::ostringstream ss8; ss8 << "d3alphardxidxjdxk, i=" << i << ", j=" << j << ", k=" << k;
-                                SECTION(ss8.str(), "")
-                                {
-                                    if ((xN_flag == XN_DEPENDENT) && (i == Ncomp-1 || j == Ncomp-1 || k == Ncomp-1)){ break; }
-                                    double analytic = rHEOS.residual_helmholtz->d3alphardxidxjdxk(rHEOS, i, j, k, xN_flag);
-                                    double v1 = rHEOS_pluszk_consttaudelta.residual_helmholtz->d2alphardxidxj(rHEOS_pluszk_consttaudelta, i, j, xN_flag);
-                                    double v2 = rHEOS_minuszk_consttaudelta.residual_helmholtz->d2alphardxidxj(rHEOS_minuszk_consttaudelta, i, j, xN_flag);
-                                    double numeric = (v1 - v2)/(2*dz);
-                                    if (std::abs(numeric) < DBL_EPSILON && std::abs(analytic) < DBL_EPSILON){ break; }
-                                    double err = mix_deriv_err_func(numeric, analytic);
-                                    CAPTURE(numeric);
-                                    CAPTURE(analytic);
-                                    CHECK(err < 1e-8);
-                                }
-                                
-                            }
                         }
                     }
                 }
