@@ -1,8 +1,8 @@
-Wrapper of CoolProp for MathCAD 15
+CoolProp Wrapper for MathCAD 15
 ==================================
 
-copyright Scott Polak and Ian Bell, 2013;
-updated by Jeff Henning, 2016
+Copyright Scott Polak and Ian Bell, 2013 
+Updated by Jeff Henning, 2016
 
 Prerequisites
 ==============
@@ -17,19 +17,19 @@ Prerequisites
 To Build
 ========
 
-* Go to the top level CoolProp directory and make a build directory (something like \build15)::
+* **Go to the top level CoolProp directory and make a build directory** (something like \build15)::
 
 	mkdir build15 
 	cd build15
 
-* Build the makefile using CMake::
+* **Build the makefile using CMake**::
 
     cmake .. -DCOOLPROP_MATHCAD15_MODULE=ON 
              -DCOOLPROP_MATHCAD15_ROOT="C:/Program Files (x86)/Mathcad/Mathcad 15"  
              -G "Visual Studio 10 2010" 
              -DCMAKE_VERBOSE_MAKEFILE=ON 
 
-* Make the static library::
+* **Make the static library**::
 
 	cmake --build . --config Release
 
@@ -37,11 +37,11 @@ To Build
 To Use
 ======
 
-* Copy CoolProp\build15\Release\CoolPropMathcadWrapper.dll file to 
-	C:\Program Files (x86)\Mathcad\Mathcad 15\userefi
+* Copy CoolProp\\build15\\Release\\CoolPropMathcadWrapper.dll file to 
+	C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\userefi 
 	
-* Copy CoolProp\wrapper\Mathcad\CoolProp_EN.xml to 
-	C:\Program Files (x86)\Mathcad\Mathcad 15\doc\funcdoc
+* Copy CoolProp\\wrapper\\Mathcad\\CoolProp_EN.xml to 
+	C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\doc\\funcdoc 
 	
 * Open the CoolPropFluidProperties.xmcd file in MathCAD, all CoolProp functions should evaluate properly. If not, press <Ctrl>-F9 to force recalculation of the entire workbook.
 
