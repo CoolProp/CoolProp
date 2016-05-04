@@ -1,8 +1,8 @@
 CoolProp Wrapper for MathCAD 15
 ==================================
 
-Copyright Scott Polak and Ian Bell, 2013 
-Updated by Jeff Henning, 2016
+| Copyright Scott Polak and Ian Bell, 2013. 
+| Updated by Jeff Henning, 2016.
 
 Prerequisites
 ==============
@@ -12,6 +12,8 @@ Prerequisites
 * You will need CMake version 2.8.12 or later from https://cmake.org/download/
 
 * You will need to install Git-SCM for Windows.  You can install this from https://git-for-windows.github.io
+
+* You will need Anaconda/Miniconda Python, which you can get from https://store.continuum.io/cshop/anaconda
 
 
 To Build
@@ -37,11 +39,9 @@ To Build
 To Use
 ======
 
-* Copy CoolProp\\build15\\Release\\CoolPropMathcadWrapper.dll file to 
-	C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\userefi 
+* Copy CoolProp\\build15\\Release\\CoolPropMathcadWrapper.dll to C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\userefi 
 	
-* Copy CoolProp\\wrapper\\Mathcad\\CoolProp_EN.xml to 
-	C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\doc\\funcdoc 
+* Copy CoolProp\\wrapper\\Mathcad\\CoolProp_EN.xml to C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\doc\\funcdoc 
 	
 * Open the CoolPropFluidProperties.xmcd file in MathCAD, all CoolProp functions should evaluate properly. If not, press <Ctrl>-F9 to force recalculation of the entire workbook.
 
