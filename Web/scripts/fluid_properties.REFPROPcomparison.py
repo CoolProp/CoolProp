@@ -73,7 +73,7 @@ plt.xlabel(r'Reduced density [$\\rho/\\rho_c$]')
 plt.ylabel(r'Relative deviation $(y_{{CP}}/y_{{RP}}-1)\\times 100$ [%]')
 
 ax.set_yscale('log')
-plt.title('Comparison of results between CoolProp and REFPROP along T = 1.01*Tc')
+plt.title('Comparison of results between CoolProp and REFPROP {rpv:s} along T = 1.01*Tc')
 plt.savefig(fluid+'.png', dpi = 100)
 plt.savefig(fluid+'.pdf')
 plt.close('all')
@@ -88,7 +88,7 @@ with open(os.path.join(plots_path, 'matplotlibrc'), 'w') as fp:
 
 for fluid in CoolProp.__fluids__:
     print('fluid:', fluid)
-    file_string = template.format(fluid = fluid)
+    file_string = template.format(fluid = fluid, rpv = CP.get_global_param_string("REFPROP_version"))
     file_path = os.path.join(plots_path, fluid + '.py')
     print('Writing to', file_path)
     with open(file_path, 'w') as fp:

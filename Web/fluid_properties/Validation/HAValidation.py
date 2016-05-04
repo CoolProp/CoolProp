@@ -4,7 +4,7 @@ import numpy as np
 print ' Replicating the tables from ASHRAE RP-1485'
 print '  '
 print 'A.6.1 Psychrometric Properties of Moist Air at 0C and Below'
-print 'Saturated air at 101325 kPa'
+print 'Saturated air at 101.325 kPa'
 s5=' '*5
 print '===================================================='
 print "{T:8s}{W:10s}{v:10s}{h:10s}{s:10s}".format(W=s5+' Ws',v=s5+'  v',h=s5+'h',s=s5+' s',T='   T')
@@ -20,7 +20,7 @@ for T in np.linspace(-60,0,13)+273.15:
 print '===================================================='
 print ' '
 print 'A.6.2 Psychrometric Properties of Moist Air at 0C and Above'
-print 'Saturated air at 101325 kPa'
+print 'Saturated air at 101.325 kPa'
 s5=' '*5
 print '===================================================='
 print "{T:8s}{W:10s}{v:10s}{h:10s}{s:10s}".format(W=s5+' Ws',v=s5+'  v',h=s5+'h',s=s5+' s',T='   T')
@@ -43,7 +43,7 @@ def HotAir(num):
     elif num=='9':
         Temp=str(320)
         T=320+273.15
-    print 'A.'+num+'.1 Psychrometric Properties of Moist Air at 101325 kPa '
+    print 'A.'+num+'.1 Psychrometric Properties of Moist Air at 101.325 kPa '
     print 'Dry Bulb temperature of '+Temp+'C'
     s5=' '*5
     print '================================================================'

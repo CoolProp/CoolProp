@@ -99,7 +99,7 @@ sat_args  = melt_args.copy()
 nm = matplotlib.colors.Normalize(min(DD), max(DD))
 rho_args = dict(cmap=plt.cm.get_cmap('Blues'), norm = nm)
 
-fig = plt.figure(figsize = (3,3))
+fig = plt.figure(figsize = (1.0,1.0))
 ax = fig.add_axes((0.0,0.0,1.0,1.0))
 
 plt.plot(T_melt, p_melt, **melt_args)
@@ -118,7 +118,7 @@ ax.set_yscale('log')
 ax.axis('off')
 
 plt.savefig(os.path.basename(__file__)+'.pdf')
-plt.savefig(tar_fil, transparent = True)
+plt.savefig(tar_fil, transparent = True, dpi = 100)
 plt.close()
 
 fig = plt.figure(figsize = (9,3))
@@ -139,15 +139,15 @@ ax.axis('off')
 plt.savefig(tar_fil_long_large, transparent = True)
 plt.close()
 
-# Just a hack to resize the image
-import Image
-size = 288, 288
-try:
-	im = Image.open(tar_fil_long_large)
-	im.thumbnail(size, Image.ANTIALIAS)
-	im.save(tar_fil_long)
-	#im.resize(size, Image.ANTIALIAS).save(tar_fil_long)
-except IOError:
-	print "Error resizing '%s'" % tar_fil_long_large
+# # Just a hack to resize the image
+# import Image
+# size = 288, 288
+# try:
+# 	im = Image.open(tar_fil_long_large)
+# 	im.thumbnail(size, Image.ANTIALIAS)
+# 	im.save(tar_fil_long)
+# 	#im.resize(size, Image.ANTIALIAS).save(tar_fil_long)
+# except IOError:
+# 	print "Error resizing '%s'" % tar_fil_long_large
 
         

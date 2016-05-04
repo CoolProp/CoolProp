@@ -1,3 +1,11 @@
+#!/bin/bash
+
+# Stop on errors
+set -ex
+
+# Set up the docker environment
+eval "$(docker-machine env default)"
+
 # Build the docker image with the virtual environments, cython, etc.
 docker build -t coolprop/manylinux .
 # Go up three directories

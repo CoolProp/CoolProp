@@ -16,7 +16,7 @@ def copy_files():
     for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
-    copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','cppformat'))
+    copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','externals','cppformat','cppformat'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 
@@ -58,20 +58,30 @@ if __name__=='__main__':
 
     # Example using CMake to build static library:
     # python setup.py install --cmake-compiler vc9 --cmake-bitness 64
+    #
+    # or (because pip needs help)
+    #
+    # python setup.py install cmake=default,64
 
-    if '--cmake-compiler' in sys.argv:
-        i = sys.argv.index('--cmake-compiler')
+    cmake_args = [_ for _ in sys.argv if _.startswith('cmake=')]   
+    if cmake_args:
+        i = sys.argv.index(cmake_args[0])
         sys.argv.pop(i)
-        cmake_compiler = sys.argv.pop(i)
+        cmake_compiler, cmake_bitness = cmake_args[0].split('cmake=')[1].split(',')
     else:
-        cmake_compiler = ''
+        if '--cmake-compiler' in sys.argv:
+            i = sys.argv.index('--cmake-compiler')
+            sys.argv.pop(i)
+            cmake_compiler = sys.argv.pop(i)
+        else:
+            cmake_compiler = ''
 
-    if '--cmake-bitness' in sys.argv:
-        i = sys.argv.index('--cmake-bitness')
-        sys.argv.pop(i)
-        cmake_bitness = sys.argv.pop(i)
-    else:
-        cmake_bitness = ''
+        if '--cmake-bitness' in sys.argv:
+            i = sys.argv.index('--cmake-bitness')
+            sys.argv.pop(i)
+            cmake_bitness = sys.argv.pop(i)
+        else:
+            cmake_bitness = ''
 
     USING_CMAKE = cmake_compiler or cmake_bitness
 
@@ -124,12 +134,17 @@ if __name__=='__main__':
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
+
+        if 'darwin' in sys.platform:
+            cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+        if 'linux' in sys.platform:
+            cmake_config_args += ['-DCOOLPROP_FPIC=ON']
         
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
             
-        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCOOLPROP_OSX_105_COMPATIBILITY=ON','-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
+        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         

@@ -326,14 +326,22 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${LIB_NAME} generate_headers)
   #
-  # Add target include directories for easy linking with other applications
-  target_include_directories(${LIB_NAME} PUBLIC ${APP_INCLUDE_DIRS})  
+  if (CMAKE_VERSION VERSION_GREATER 3.0)
+    # Add target include directories for easy linking with other applications
+    target_include_directories(${LIB_NAME} PUBLIC ${APP_INCLUDE_DIRS})
+  endif()
   
   # Set the bitness
   IF (NOT MSVC)
     MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -m${BITNESS}")
+  ENDIF()
+
+  # ADD -fPIC flag if needed
+  IF (COOLPROP_FPIC)
+    MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
+    SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -fPIC")
   ENDIF()
   #
   # calling conventions
