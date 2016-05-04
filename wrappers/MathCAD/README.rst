@@ -2,19 +2,40 @@ Wrapper of CoolProp for MathCAD 15
 ==================================
 
 copyright Scott Polak and Ian Bell, 2013
+updated by Jeff Henning, 2016
 
-To Use
-======
+Prerequisites
+==============
 
-* Copy the CoolPropMathcadWrapper.dll file to C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\userefi or equivalent for your version
+* You will need to have Visual Studio 2008 installed (Express version is fine).  Alternatively newer versions of Microsoft Visual Studio C++ should be fine.
 
-* Open the CoolPropFluidProperties.xmcd file in MathCAD, fields should populate
+* You will need CMake version 2.8.12 or later from https://cmake.org/download/
+
+* You will need to install Git-SCM for Windows.  You can install this from https://git-for-windows.github.io
+
 
 To Build
 ========
 
-* You will need to have Visual Studio 2008 installed (Express version is fine).  Alternatively newer versions of Microsoft Visual Studio C++ should be fine, you'll just have to update the path to the vcvarsall.bat in the BuildDLL.bat file
+* Go to the top level CoolProp directory and make a build directory (something like \build15)
+	mkdir build15
+	cd build15
 
-* Run the BuildDLL.bat file, it will generate the CoolPropMathcadWrapper.dll
+* Build the makefile using CMake
+	cmake .. -DCOOLPROP_MATHCAD15_MODULE=ON 
+	         -DCOOLPROP_MATHCAD15_ROOT="C:/Program Files (x86)/Mathcad/Mathcad 15" 
+			 -G "Visual Studio 10 2010" 
+			 -DCMAKE_VERBOSE_MAKEFILE=ON
+	
+* Make the static library
+	cmake --build . --config Release
 
-* Follow the above instructions
+
+To Use
+======
+
+* Copy CoolProp\build15\Release\CoolPropMathcadWrapper.dll file to 
+	C:\\Program Files (x86)\\Mathcad\\Mathcad 15\\userefi
+
+* Open the CoolPropFluidProperties.xmcd file in MathCAD, all CoolProp functions should evaluate properly. If not, press <Ctrl>-F9 to force recalculation of the entire workbook.
+

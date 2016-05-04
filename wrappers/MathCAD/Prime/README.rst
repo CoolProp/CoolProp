@@ -1,19 +1,45 @@
-CoolProp for MathCAD Prime
-==========================
+Wrapper of CoolProp for MathCAD Prime 3.x or later
+==================================================
 
-Info
-----
+copyright Scott Polak and Ian Bell, 2013
+updated by Jeff Henning, 2016
 
-Wrapper built by Scott Polak (scott.polak@aei.com), December 2013
+Prerequisites
+==============
+
+* You will need to have Visual Studio 2008 installed.  Alternatively newer versions of Microsoft Visual Studio C++ should be fine.  Unfortunately, you will need the professional version of Visual Studio C++ as Mathcad Prime libraries are 64-bit and require the 64-bit compiler; the Express version of Visual Studio will not work.
+
+* You will need CMake version 2.8.12 or later from https://cmake.org/download/
+
+* You will need to install Git-SCM for Windows.  You can install this from 
+	https://git-for-windows.github.io
+
+* You will need Anaconda/Miniconda Python, which you can get from 
+	https://store.continuum.io/cshop/anaconda
+	
+
+To Build
+========
+
+* Go to the top level CoolProp directory and make a build directory (something like \build15)
+	mkdir buildprime
+	cd buildprime
+
+* Build the makefile using CMake (adjust root string for correct version of Prime)
+	cmake .. -DCOOLPROP_PRIME_MODULE=ON 
+	         -DCOOLPROP_PRIME_ROOT="C:/Program Files/PTC/Mathcad Prime 3.1" 
+			 -G "Visual Studio 10 2010 Win64" 
+			 -DCMAKE_VERBOSE_MAKEFILE=ON
+	
+* Make the static library
+	cmake --build . --config Release
 
 
-To Use/Build
-------------
+To Use
+======
 
-* Compiled for MathCAD Prime 3.0 64-bit version - the .lib file is for 64-bit, if you want a 32-bit version you need access to the 32-bit version of the mcaduser.lib file for Prime 3.0
+* Copy CoolProp\\buildprime\\Release\\CoolPropMathcadWrapper.dll file to 
+	C:\\Program Files\\PTC\\Mathcad Prime 3.1
 
-* The mcaduser.lib and mcadincl.h files from MathCAD need to be included and linked when building the “CoolProp 4.0 Beta Mathcad Prime 3.0 Wrapper.cpp” file. 
+* Open the CoolPropFluidProperties.xmcd file in MathCAD, all CoolProp functions should evaluate properly. If not, press <Ctrl>-F9 to force recalculation of the entire workbook.
 
-* If you have Mathcad Prime 3.0 installed, you need to put the DLL in the folder: C:\Program Files\PTC\Mathcad Prime 3.0\Custom Functions , or wherever your MathCAD is installed
-
-* There is a copy of the CoolProp wrapper Mathcad demonstration and documentation worksheet, converted to Prime 3.0 format (*.mcdx). 
