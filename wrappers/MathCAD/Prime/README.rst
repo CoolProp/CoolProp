@@ -27,9 +27,9 @@ To Build
 * **Build the makefile using CMake (adjust root string for correct version of Prime)**::
 
 	cmake .. -DCOOLPROP_PRIME_MODULE=ON 
-	         -DCOOLPROP_PRIME_ROOT="C:/Program Files/PTC/Mathcad Prime 3.1" 
-			 -G "Visual Studio 10 2010 Win64" 
-			 -DCMAKE_VERBOSE_MAKEFILE=ON
+             -DCOOLPROP_PRIME_ROOT="C:/Program Files/PTC/Mathcad Prime 3.1" 
+             -G "Visual Studio 10 2010 Win64" 
+             -DCMAKE_VERBOSE_MAKEFILE=ON
 	
 * **Make the static library**::
 
