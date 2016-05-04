@@ -163,7 +163,7 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
     // fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
     FUNCTIONINFO Props1SI = 
     {
-    "PropsSI1", // Name by which MathCAD will recognize the function   
+    "Props1SI", // Name by which MathCAD will recognize the function   
     "Fluid, Property Name", // Description of input parameters
     "Returns a fluid-specific parameter, where the parameter is not dependent on the fluid state", // Description of the function for the Insert Function dialog box          
     (LPCFUNCTION)CP_Props1SI, // Pointer to the function code.
