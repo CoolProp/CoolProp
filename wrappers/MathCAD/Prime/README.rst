@@ -36,10 +36,10 @@ To Build
 
     cmake .. -DCOOLPROP_PRIME_MODULE=ON 
              -DCOOLPROP_PRIME_ROOT="C:/Program Files/PTC/Mathcad Prime 3.1" 
-             -G "Visual Studio 10 2010 'Win64'" 
+             -G "Visual Studio 10 2010 Win64" 
              -DCMAKE_VERBOSE_MAKEFILE=ON
 
-	(*Note: Mathcad Prime is 64-bit, so the 'Win64' option is necessary in the Visual Studio string.*)		 
+	( *Note: Mathcad Prime is 64-bit, so the 'Win64' option is necessary in the Visual Studio string.* )		 
 			 
 * **Make the dynamic library (DLL)**::
 
