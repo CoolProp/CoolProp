@@ -745,7 +745,7 @@ double mix_deriv_err_func(double numeric, double analytic)
 
 typedef CoolProp::MixtureDerivatives MD;
 
-enum derivative {NO_DERIV = 0, TAU, DELTA, XI, XJ, XK};
+enum derivative {NO_DERIV = 0, TAU, DELTA, XI, XJ, XK, T_CONSTP, P_CONSTT, T_CONSTRHO, RHO_CONSTT, CONST_TAU_DELTA, CONST_TRHO};
 
 typedef double (*zero_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag);
 typedef double (*one_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag);
@@ -755,12 +755,15 @@ typedef double (*three_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBacke
 class DerivativeFixture
 {
 public:
-    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS, HEOS_plus_tau, HEOS_minus_tau, HEOS_plus_delta, HEOS_minus_delta;
-    std::vector<shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> > HEOS_plus_z, HEOS_minus_z, HEOS_plus_n, HEOS_minus_n;
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS,
+                                                     HEOS_plus_tau, HEOS_minus_tau, HEOS_plus_delta, HEOS_minus_delta,
+                                                     HEOS_plus_T__constp, HEOS_minus_T__constp, HEOS_plus_p__constT, HEOS_minus_p__constT,
+                                                     HEOS_plus_T__constrho,HEOS_minus_T__constrho, HEOS_plus_rho__constT, HEOS_minus_rho__constT;
+    std::vector<shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> > HEOS_plus_z, HEOS_minus_z, HEOS_plus_z__constTrho, HEOS_minus_z__constTrho, HEOS_plus_n, HEOS_minus_n;
     static CoolProp::x_N_dependency_flag xN;
-    double dtau, ddelta, dz, dn, tol;
+    double dtau, ddelta, dz, dn, tol, dT, drho, dp;
     DerivativeFixture() {
-        dtau = 1e-6; ddelta = 1e-6; dz = 1e-6; dn = 1e-6; tol = 1e-8;
+        dtau = 1e-6; ddelta = 1e-6; dz = 1e-6; dn = 1e-6; dT = 1e-3; drho = 1e-3; dp = 1; tol = 5e-6;
         std::vector<std::string> names; names.push_back("Methane"); names.push_back("Ethane"); names.push_back("Propane"); names.push_back("n-Butane");
         std::vector<CoolPropDbl> mole_fractions; mole_fractions.push_back(0.1); mole_fractions.push_back(0.2); mole_fractions.push_back(0.3); mole_fractions.push_back(0.4);
         HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(names));
@@ -769,29 +772,45 @@ public:
         HEOS->update_DmolarT_direct(300, 300);
         
         init_state(HEOS_plus_tau); init_state(HEOS_minus_tau); init_state(HEOS_plus_delta); init_state(HEOS_minus_delta);
+        init_state(HEOS_plus_T__constp); init_state(HEOS_minus_T__constp); init_state(HEOS_plus_p__constT); init_state(HEOS_minus_p__constT);
+        init_state(HEOS_plus_T__constrho); init_state(HEOS_minus_T__constrho); init_state(HEOS_plus_rho__constT); init_state(HEOS_minus_rho__constT);
         // Constant composition, varying state
         HEOS_plus_tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta()*HEOS->rhomolar_reducing(),  HEOS->T_reducing()/(HEOS->tau() + dtau));
         HEOS_minus_tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta()*HEOS->rhomolar_reducing(),  HEOS->T_reducing()/(HEOS->tau() - dtau));
         HEOS_plus_delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta()+ddelta)*HEOS->rhomolar_reducing(),  HEOS->T_reducing()/HEOS->tau());
         HEOS_minus_delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta()-ddelta)*HEOS->rhomolar_reducing(),  HEOS->T_reducing()/HEOS->tau());
+        HEOS_plus_T__constp->update(CoolProp::PT_INPUTS, HEOS->p(),  HEOS->T() + dT);
+        HEOS_minus_T__constp->update(CoolProp::PT_INPUTS, HEOS->p(),  HEOS->T() - dT);
+        HEOS_plus_p__constT->update(CoolProp::PT_INPUTS, HEOS->p() + dp,  HEOS->T());
+        HEOS_minus_p__constT->update(CoolProp::PT_INPUTS, HEOS->p() - dp,  HEOS->T());
+        HEOS_plus_T__constrho->update(CoolProp::DmolarT_INPUTS, HEOS->rhomolar(),  HEOS->T() + dT);
+        HEOS_minus_T__constrho->update(CoolProp::DmolarT_INPUTS, HEOS->rhomolar(),  HEOS->T() - dT);
+        HEOS_plus_rho__constT->update(CoolProp::DmolarT_INPUTS, HEOS->rhomolar() + drho,  HEOS->T());
+        HEOS_minus_rho__constT->update(CoolProp::DmolarT_INPUTS, HEOS->rhomolar() - drho,  HEOS->T());
         
         // Varying mole fractions
-        HEOS_plus_z.resize(4); HEOS_minus_z.resize(4);
+        HEOS_plus_z.resize(4); HEOS_minus_z.resize(4); HEOS_plus_z__constTrho.resize(4); HEOS_minus_z__constTrho.resize(4);
         for (int i = 0; i < HEOS_plus_z.size(); ++i){
             init_state(HEOS_plus_z[i]);
+            init_state(HEOS_plus_z__constTrho[i]);
             std::vector<double> zz = HEOS->get_mole_fractions();
             zz[i] += dz;
             if (xN == CoolProp::XN_DEPENDENT){ zz[zz.size()-1] -= dz; }
             HEOS_plus_z[i]->set_mole_fractions(zz);
             HEOS_plus_z[i]->update(CoolProp::DmolarT_INPUTS, HEOS->delta()*HEOS_plus_z[i]->rhomolar_reducing(),  HEOS_plus_z[i]->T_reducing()/HEOS->tau());
+            HEOS_plus_z__constTrho[i]->set_mole_fractions(zz);
+            HEOS_plus_z__constTrho[i]->update(CoolProp::DmolarT_INPUTS, HEOS->rhomolar(),  HEOS->T());
         }
         for (int i = 0; i < HEOS_minus_z.size(); ++i){
             init_state(HEOS_minus_z[i]);
+            init_state(HEOS_minus_z__constTrho[i]);
             std::vector<double> zz = HEOS->get_mole_fractions();
             zz[i] -= dz;
             if (xN == CoolProp::XN_DEPENDENT){ zz[zz.size()-1] += dz; }
             HEOS_minus_z[i]->set_mole_fractions(zz);
             HEOS_minus_z[i]->update(CoolProp::DmolarT_INPUTS, HEOS->delta()*HEOS_minus_z[i]->rhomolar_reducing(),  HEOS_minus_z[i]->T_reducing()/HEOS->tau());
+            HEOS_minus_z__constTrho[i]->set_mole_fractions(zz);
+            HEOS_minus_z__constTrho[i]->update(CoolProp::DmolarT_INPUTS, HEOS->rhomolar(),  HEOS->T());
         }
         
         // Varying mole numbers
@@ -820,13 +839,25 @@ public:
     }
     void one(const std::string &name, one_mole_fraction_pointer f, one_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV){
         for (int i = 0; i < 4; ++i){
-            double analytic = f(*HEOS, i, CoolProp::XN_INDEPENDENT);
+            double analytic = f(*HEOS, i, xN);
             double numeric = 0;
             if (wrt == TAU){
                 numeric = (g(*HEOS_plus_tau, i, xN) - g(*HEOS_minus_tau, i, xN))/(2*dtau);
             }
             else if (wrt == DELTA){
                 numeric = (g(*HEOS_plus_delta, i, xN) - g(*HEOS_minus_delta, i, xN))/(2*ddelta);
+            }
+            else if (wrt == T_CONSTP){
+                numeric = (g(*HEOS_plus_T__constp, i, xN) - g(*HEOS_minus_T__constp, i, xN))/(2*dT);
+            }
+            else if (wrt == P_CONSTT){
+                numeric = (g(*HEOS_plus_p__constT, i, xN) - g(*HEOS_minus_p__constT, i, xN))/(2*dp);
+            }
+            else if (wrt == T_CONSTRHO){
+                numeric = (g(*HEOS_plus_T__constrho, i, xN) - g(*HEOS_minus_T__constrho, i, xN))/(2*dT);
+            }
+            else if (wrt == RHO_CONSTT){
+                numeric = (g(*HEOS_plus_rho__constT, i, xN) - g(*HEOS_minus_rho__constT, i, xN))/(2*drho);
             }
             CAPTURE(name);
             CAPTURE(analytic)
@@ -837,10 +868,17 @@ public:
             CHECK(error < tol);
         }
     };
-    void one_comp(const std::string &name, one_mole_fraction_pointer f, zero_mole_fraction_pointer g, derivative wrt = NO_DERIV){
+    void one_comp(const std::string &name, one_mole_fraction_pointer f, zero_mole_fraction_pointer g, derivative wrt = CONST_TAU_DELTA){
         for (int i = 0; i < 4; ++i){
                 double analytic = f(*HEOS, i, xN);
-                double numeric = (g(*HEOS_plus_z[i], xN) - g(*HEOS_minus_z[i], xN))/(2*dz);
+                double numeric = -10000;
+                if (wrt == CONST_TAU_DELTA){
+                    numeric = (g(*HEOS_plus_z[i], xN) - g(*HEOS_minus_z[i], xN))/(2*dz);
+                }
+                else if (wrt == CONST_TRHO){
+                    numeric = (g(*HEOS_plus_z__constTrho[i], xN) - g(*HEOS_minus_z__constTrho[i], xN))/(2*dz);
+                }
+            
                 CAPTURE(name);
                 CAPTURE(i);
                 CAPTURE(analytic)
@@ -938,6 +976,54 @@ public:
             }
         }
     }
+    Eigen::MatrixXd get_matrix(CoolProp::HelmholtzEOSMixtureBackend &HEOS, const std::string name){
+        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(HEOS, xN);
+        if (name == "Lstar"){ return Lstar; }
+        else if (name == "Mstar"){
+            return MixtureDerivatives::Mstar(HEOS, xN, Lstar);
+        }
+        else{ throw ValueError("Must be one of Lstar or Mstar"); }
+    }
+    void matrix_derivative(const std::string name, const std::string &wrt)
+    {
+        CAPTURE(name);
+        CAPTURE(wrt);
+        double err = 10000;
+        Eigen::MatrixXd analytic, numeric, Lstar, dLstar_dTau, dLstar_dDelta;
+        if (name == "Mstar"){
+            Lstar = MixtureDerivatives::Lstar(*HEOS, xN);
+            dLstar_dDelta = MixtureDerivatives::dLstar_dX(*HEOS, xN, CoolProp::iDelta);
+            dLstar_dTau = MixtureDerivatives::dLstar_dX(*HEOS, xN, CoolProp::iTau);
+        }
+        if (wrt == "tau"){
+            if (name == "Lstar"){
+                analytic = MixtureDerivatives::dLstar_dX(*HEOS, xN, CoolProp::iTau);
+            }
+            else if (name == "Mstar"){
+                analytic = MixtureDerivatives::dMstar_dX(*HEOS, xN, CoolProp::iTau, Lstar, dLstar_dTau);
+            }
+            else{ throw ValueError("argument not understood"); }
+            numeric = (get_matrix(*HEOS_plus_tau, name) - get_matrix(*HEOS_minus_tau, name))/(2*dtau);
+        }
+        else if (wrt == "delta"){
+            if (name == "Lstar"){
+                analytic = MixtureDerivatives::dLstar_dX(*HEOS, xN, CoolProp::iDelta);
+            }
+            else if (name == "Mstar"){
+                analytic = MixtureDerivatives::dMstar_dX(*HEOS, xN, CoolProp::iDelta, Lstar, dLstar_dDelta);
+            }
+            else{ throw ValueError("argument not understood"); }
+            numeric = (get_matrix(*HEOS_plus_delta, name) - get_matrix(*HEOS_minus_delta, name))/(2*ddelta);
+        }
+        else{ throw ValueError("argument not understood"); }
+        CAPTURE(analytic);
+        CAPTURE(numeric);
+        Eigen::MatrixXd rel_error = ((analytic-numeric).cwiseQuotient(analytic));
+        CAPTURE(rel_error);
+        err = rel_error.squaredNorm();
+        CAPTURE(err);
+        CHECK(err < 1e-8);
+    }
     
     void run_checks(){
         
@@ -972,7 +1058,7 @@ public:
         two("d4alphar_dxi_dxj_dDelta_dTau", MD::d4alphar_dxi_dxj_dDelta_dTau, MD::d3alphar_dxi_dxj_dDelta, TAU);
         two("d3alphar_dxi_dxj_dTau", MD::d3alphar_dxi_dxj_dTau, MD::d2alphardxidxj, TAU);
         two("d4alphar_dxi_dxj_dTau2", MD::d4alphar_dxi_dxj_dTau2, MD::d3alphar_dxi_dxj_dTau, TAU);
-        one_comp("d_dalpharddelta_dxj__constT_V_xi", MD::d_dalpharddelta_dxj__constT_V_xi, MD::dalphar_dDelta);
+        one_comp("d_dalpharddelta_dxj__constT_V_xi", MD::d_dalpharddelta_dxj__constT_V_xi, MD::dalphar_dDelta, CONST_TRHO);
         
         two_comp("d_ndalphardni_dxj__constdelta_tau_xi", MD::d_ndalphardni_dxj__constdelta_tau_xi, MD::ndalphar_dni__constT_V_nj);
         two("d2_ndalphardni_dxj_dDelta__consttau_xi", MD::d2_ndalphardni_dxj_dDelta__consttau_xi, MD::d_ndalphardni_dxj__constdelta_tau_xi, DELTA);
@@ -990,18 +1076,23 @@ public:
         two("d_nd_ndalphardni_dnj_dDelta__consttau_x", MD::d_nd_ndalphardni_dnj_dDelta__consttau_x, MD::nd_ndalphardni_dnj__constT_V, DELTA);
         two("d2_nd_ndalphardni_dnj_dDelta_dTau__constx", MD::d2_nd_ndalphardni_dnj_dDelta_dTau__constx, MD::d_nd_ndalphardni_dnj_dDelta__consttau_x, TAU);
         two("d2_nd_ndalphardni_dnj_dDelta2__consttau_x", MD::d2_nd_ndalphardni_dnj_dDelta2__consttau_x, MD::d_nd_ndalphardni_dnj_dDelta__consttau_x, DELTA);
-
         three_comp("d_nd_ndalphardni_dnj_dxk__consttau_delta", MD::d_nd_ndalphardni_dnj_dxk__consttau_delta, MD::nd_ndalphardni_dnj__constT_V);
         three("d2_nd_ndalphardni_dnj_dxk_dTau__constdelta", MD::d2_nd_ndalphardni_dnj_dxk_dTau__constdelta, MD::d_nd_ndalphardni_dnj_dxk__consttau_delta, TAU);
         three("d2_nd_ndalphardni_dnj_dxk_dDelta__consttau", MD::d2_nd_ndalphardni_dnj_dxk_dDelta__consttau, MD::d_nd_ndalphardni_dnj_dxk__consttau_delta, DELTA);
         
-        two_comp("dln_fugacity_dxj__constT_rho_xi", MD::dln_fugacity_dxj__constT_rho_xi, MD::ln_fugacity);
+// Xn-dep only        two_comp("dln_fugacity_dxj__constT_rho_xi", MD::dln_fugacity_dxj__constT_rho_xi, MD::ln_fugacity);
         three("d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau", MD::d2_ndln_fugacity_i_dnj_dxk_dDelta__consttau, MD::d_ndln_fugacity_i_dnj_ddxk__consttau_delta, DELTA);
         three("d2_ndln_fugacity_i_dnj_dxk_dTau__constdelta", MD::d2_ndln_fugacity_i_dnj_dxk_dTau__constdelta, MD::d_ndln_fugacity_i_dnj_ddxk__consttau_delta, TAU);
         two("d2_ndln_fugacity_i_dnj_ddelta_dtau__constx", MD::d2_ndln_fugacity_i_dnj_ddelta_dtau__constx, MD::d_ndln_fugacity_i_dnj_ddelta__consttau_x, TAU);
         two("d_ndln_fugacity_i_dnj_ddelta__consttau_x",MD::d_ndln_fugacity_i_dnj_ddelta__consttau_x, MD::ndln_fugacity_i_dnj__constT_V_xi, DELTA);
         two("d_ndln_fugacity_i_dnj_dtau__constdelta_x",MD::d_ndln_fugacity_i_dnj_dtau__constdelta_x, MD::ndln_fugacity_i_dnj__constT_V_xi, TAU);
         three_comp("d_ndln_fugacity_i_dnj_ddxk__consttau_delta",MD::d_ndln_fugacity_i_dnj_ddxk__consttau_delta, MD::ndln_fugacity_i_dnj__constT_V_xi, TAU);
+        one("dln_fugacity_i_dT__constrho_n",MD::dln_fugacity_i_dT__constrho_n, MD::ln_fugacity, T_CONSTRHO);
+        one("dln_fugacity_i_drho__constT_n",MD::dln_fugacity_i_drho__constT_n, MD::ln_fugacity, RHO_CONSTT);
+        one("dln_fugacity_i_dT__constp_n",MD::dln_fugacity_i_dT__constp_n, MD::ln_fugacity, T_CONSTP);
+        one("dln_fugacity_i_dp__constT_n",MD::dln_fugacity_i_dp__constT_n, MD::ln_fugacity, P_CONSTT);
+        one("dln_fugacity_coefficient_dT__constp_n",MD::dln_fugacity_coefficient_dT__constp_n, MD::ln_fugacity_coefficient, T_CONSTP);
+        one("dln_fugacity_coefficient_dp__constT_n",MD::dln_fugacity_coefficient_dp__constT_n, MD::ln_fugacity_coefficient, P_CONSTT);
         
         three_comp("d2_PSI_T_dxj_dxk", MD::d2_PSI_T_dxj_dxk, MD::d_PSI_T_dxj);
         three_comp("d2_PSI_rho_dxj_dxk", MD::d2_PSI_rho_dxj_dxk, MD::d_PSI_rho_dxj);
@@ -1019,25 +1110,28 @@ public:
         // (??)two_comp("d2Trdxi2__constxj", MD::d2Trdxi2__constxj, MD::dTrdxi__constxj);
         two_comp("d2Trdxidxj", MD::d2Trdxidxj, MD::dTrdxi__constxj);
         three_comp("d3Trdxidxjdxk", MD::d3Trdxidxjdxk, MD::d2Trdxidxj);
-        one_comp("dtaudxj__constT_V_xi", MD::dtau_dxj__constT_V_xi, MD::tau);
+        one_comp("dtaudxj__constT_V_xi", MD::dtau_dxj__constT_V_xi, MD::tau, CONST_TRHO);
         two_comp("d_ndTrdni_dxj__constxi", MD::d_ndTrdni_dxj__constxi, MD::ndTrdni__constnj);
         three_comp("d2_ndTrdni_dxj_dxk__constxi", MD::d2_ndTrdni_dxj_dxk__constxi, MD::d_ndTrdni_dxj__constxi);
         
         one_comp("drhormolardxi__constxj", MD::drhormolardxi__constxj, MD::rhormolar);
-        // (??) two_comp("d2Trdxi2__constxj", MD::d2Trdxi2__constxj, MD::dTrdxi__constxj);
+        // (??) two_comp("d2rhormolardxi2__constxj", MD::d2rhormolardxi2__constxj, MD::drhormolardxi__constxj);
         two_comp("d2rhormolardxidxj", MD::d2rhormolardxidxj, MD::drhormolardxi__constxj);
         three_comp("d3rhormolardxidxjdxk", MD::d3rhormolardxidxjdxk, MD::d2rhormolardxidxj);
-        one_comp("ddelta_dxj__constT_V_xi", MD::ddelta_dxj__constT_V_xi, MD::delta);
+        one_comp("ddelta_dxj__constT_V_xi", MD::ddelta_dxj__constT_V_xi, MD::delta, CONST_TRHO);
         two_comp("d_ndrhorbardni_dxj__constxi", MD::d_ndrhorbardni_dxj__constxi, MD::ndrhorbardni__constnj);
         three_comp("d2_ndrhorbardni_dxj_dxk__constxi", MD::d2_ndrhorbardni_dxj_dxk__constxi, MD::d_ndrhorbardni_dxj__constxi);
         
-        one_comp("dpdxj__constT_V_xi", MD::dpdxj__constT_V_xi, MD::p);
+        one_comp("dpdxj__constT_V_xi", MD::dpdxj__constT_V_xi, MD::p, CONST_TRHO);
         
+        matrix_derivative("Lstar", "tau");
+        matrix_derivative("Lstar", "delta");
+        matrix_derivative("Mstar", "tau");
+        matrix_derivative("Mstar", "delta");
     }
 };
 
 CoolProp::x_N_dependency_flag DerivativeFixture::xN = XN_INDEPENDENT;
-
 
 TEST_CASE_METHOD(DerivativeFixture, "Check derivatives", "[mixture_derivs2]")
 {
@@ -1046,422 +1140,4 @@ TEST_CASE_METHOD(DerivativeFixture, "Check derivatives", "[mixture_derivs2]")
 //    run_checks();
 };
 
-
-
-static bool fluids_set = false;
-static const std::size_t Ncomp_max = 6;
-
-// These are composition invariant
-// ** Levels **
-// 0: number of components in the mixture
-// 1: component index
-static std::vector<std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > > HEOS,
-                                                                          HEOS_plusT_constrho, HEOS_minusT_constrho,
-                                                                          HEOS_plusT_constp, HEOS_minusT_constp,
-                                                                          HEOS_plusrho_constT, HEOS_minusrho_constT,
-                                                                          HEOS_plusz_xNindep, HEOS_minusz_xNindep,
-                                                                          HEOS_plusz_xNdep, HEOS_minusz_xNdep,
-                                                                          HEOS_plusz_consttaudelta_xNindep, HEOS_minusz_consttaudelta_xNindep,
-                                                                          HEOS_plusz_consttaudelta_xNdep, HEOS_minusz_consttaudelta_xNdep;
-
-static const double T1 = 319.325, rho1 = 13246.6, dT = 1e-3, drho = 1e-3, dz = 1e-6;
-
-void setup_state(std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > & HEOS, std::size_t Ncomp, double increment, x_N_dependency_flag xN_flag = XN_INDEPENDENT)
-{
-    std::vector<std::string> names(Ncomp);
-    std::vector<CoolPropDbl> z(Ncomp);
-    if (Ncomp == 2){
-        names[0] = "Methane"; names[1] = "H2S";
-        z[0] = 0.4; z[1] = 0.6;
-    }
-    else if (Ncomp == 3){
-        names[0] = "Ethane"; names[1] = "Propane"; names[2] = "Methane";
-        z[0] = 0.3; z[1] = 0.4; z[2] = 0.3;
-    }
-    else if (Ncomp == 4){
-        names[0] = "Ethane"; names[1] = "Propane"; names[2] = "Methane"; names[3] = "n-Butane";
-        z[0] = 0.3; z[1] = 0.4; z[2] = 0.2; z[3] = 0.1;
-    }
-    for (std::size_t i = 0; i < HEOS.size(); ++i){
-        std::vector<CoolPropDbl> zn = z;
-        zn[i] += increment;
-        if (xN_flag == XN_DEPENDENT){ zn[zn.size()-1] -= increment; }
-
-        HEOS[i].reset(new SRKBackend(names,8.314498));
-
-        HEOS[i].reset(new HelmholtzEOSMixtureBackend(names));
-        HEOS[i]->specify_phase(iphase_gas);
-        HEOS[i]->set_mole_fractions(zn);
-    }
-}
-
-// Set up all the fluids
-void connect_fluids(){
-    if (!fluids_set){
-        HEOS.resize(Ncomp_max);
-        HEOS_plusT_constrho.resize(Ncomp_max);
-        HEOS_minusT_constrho.resize(Ncomp_max);
-        HEOS_plusT_constp.resize(Ncomp_max);
-        HEOS_minusT_constp.resize(Ncomp_max);
-        HEOS_plusrho_constT.resize(Ncomp_max);
-        HEOS_minusrho_constT.resize(Ncomp_max);
-        HEOS_plusz_xNindep.resize(Ncomp_max);
-        HEOS_minusz_xNindep.resize(Ncomp_max);
-        HEOS_plusz_consttaudelta_xNindep.resize(Ncomp_max);
-        HEOS_minusz_consttaudelta_xNindep.resize(Ncomp_max);
-        HEOS_plusz_xNdep.resize(Ncomp_max);
-        HEOS_minusz_xNdep.resize(Ncomp_max);
-        HEOS_plusz_consttaudelta_xNdep.resize(Ncomp_max);
-        HEOS_minusz_consttaudelta_xNdep.resize(Ncomp_max);
-
-        for (std::size_t Ncomp = 2; Ncomp <= 4; ++Ncomp){    
-            HEOS[Ncomp].resize(1);
-            HEOS_plusT_constrho[Ncomp].resize(1);
-            HEOS_minusT_constrho[Ncomp].resize(1);
-            HEOS_plusT_constp[Ncomp].resize(1);
-            HEOS_minusT_constp[Ncomp].resize(1);
-            HEOS_plusrho_constT[Ncomp].resize(1);
-            HEOS_minusrho_constT[Ncomp].resize(1);
-            HEOS_plusz_xNindep[Ncomp].resize(Ncomp);
-            HEOS_minusz_xNindep[Ncomp].resize(Ncomp);
-            HEOS_plusz_consttaudelta_xNindep[Ncomp].resize(Ncomp);
-            HEOS_minusz_consttaudelta_xNindep[Ncomp].resize(Ncomp);
-            HEOS_plusz_xNdep[Ncomp].resize(Ncomp);
-            HEOS_minusz_xNdep[Ncomp].resize(Ncomp);
-            HEOS_plusz_consttaudelta_xNdep[Ncomp].resize(Ncomp);
-            HEOS_minusz_consttaudelta_xNdep[Ncomp].resize(Ncomp);
-
-            setup_state(HEOS[Ncomp], Ncomp, 0);
-            setup_state(HEOS_plusT_constrho[Ncomp], Ncomp, 0);
-            setup_state(HEOS_minusT_constrho[Ncomp], Ncomp, 0);
-            setup_state(HEOS_plusT_constp[Ncomp], Ncomp, 0);
-            setup_state(HEOS_minusT_constp[Ncomp], Ncomp, 0);
-            setup_state(HEOS_plusrho_constT[Ncomp], Ncomp, 0);
-            setup_state(HEOS_minusrho_constT[Ncomp], Ncomp, 0);
-            setup_state(HEOS_plusz_xNindep[Ncomp], Ncomp, dz);
-            setup_state(HEOS_minusz_xNindep[Ncomp], Ncomp, -dz);
-            setup_state(HEOS_plusz_consttaudelta_xNindep[Ncomp], Ncomp, dz);
-            setup_state(HEOS_minusz_consttaudelta_xNindep[Ncomp], Ncomp, -dz);
-            setup_state(HEOS_plusz_xNdep[Ncomp], Ncomp, dz, XN_DEPENDENT);
-            setup_state(HEOS_minusz_xNdep[Ncomp], Ncomp, -dz, XN_DEPENDENT);
-            setup_state(HEOS_plusz_consttaudelta_xNdep[Ncomp], Ncomp, dz, XN_DEPENDENT);
-            setup_state(HEOS_minusz_consttaudelta_xNdep[Ncomp], Ncomp, -dz, XN_DEPENDENT);
-
-            HEOS[Ncomp][0]->update(DmolarT_INPUTS, rho1, T1);
-            HEOS_plusT_constrho[Ncomp][0]->update(DmolarT_INPUTS, rho1, T1 + dT);
-            HEOS_minusT_constrho[Ncomp][0]->update(DmolarT_INPUTS, rho1, T1 - dT);
-            HEOS_plusT_constp[Ncomp][0]->update(PT_INPUTS, HEOS[Ncomp][0]->p(), T1 + dT);
-            HEOS_minusT_constp[Ncomp][0]->update(PT_INPUTS, HEOS[Ncomp][0]->p(), T1 - dT);
-            HEOS_plusrho_constT[Ncomp][0]->update(DmolarT_INPUTS, rho1 + drho, T1);
-            HEOS_minusrho_constT[Ncomp][0]->update(DmolarT_INPUTS, rho1 - drho, T1);
-
-            for (std::size_t i = 0; i < Ncomp; ++i){
-                
-                HEOS_plusz_xNindep[Ncomp][i]->update(DmolarT_INPUTS, rho1, T1);
-                HEOS_minusz_xNindep[Ncomp][i]->update(DmolarT_INPUTS, rho1, T1);
-                HEOS_plusz_xNdep[Ncomp][i]->update(DmolarT_INPUTS, rho1, T1);
-                HEOS_minusz_xNdep[Ncomp][i]->update(DmolarT_INPUTS, rho1, T1);
-
-                HEOS_plusz_consttaudelta_xNindep[Ncomp][i]->calc_reducing_state();
-                SimpleState red = HEOS_plusz_consttaudelta_xNindep[Ncomp][i]->get_reducing_state();
-                HEOS_plusz_consttaudelta_xNindep[Ncomp][i]->update(DmolarT_INPUTS, red.rhomolar*HEOS[Ncomp][0]->delta(), red.T/HEOS[Ncomp][0]->tau());
-                HEOS_plusz_consttaudelta_xNdep[Ncomp][i]->calc_reducing_state();
-                red = HEOS_plusz_consttaudelta_xNdep[Ncomp][i]->get_reducing_state();
-                HEOS_plusz_consttaudelta_xNdep[Ncomp][i]->update(DmolarT_INPUTS, red.rhomolar*HEOS[Ncomp][0]->delta(), red.T/HEOS[Ncomp][0]->tau());
-
-                HEOS_minusz_consttaudelta_xNindep[Ncomp][i]->calc_reducing_state();
-                red = HEOS_minusz_consttaudelta_xNindep[Ncomp][i]->get_reducing_state();
-                HEOS_minusz_consttaudelta_xNindep[Ncomp][i]->update(DmolarT_INPUTS, red.rhomolar*HEOS[Ncomp][0]->delta(), red.T/HEOS[Ncomp][0]->tau());
-                HEOS_minusz_consttaudelta_xNdep[Ncomp][i]->calc_reducing_state();
-                red = HEOS_minusz_consttaudelta_xNdep[Ncomp][i]->get_reducing_state();
-                HEOS_minusz_consttaudelta_xNdep[Ncomp][i]->update(DmolarT_INPUTS, red.rhomolar*HEOS[Ncomp][0]->delta(), red.T/HEOS[Ncomp][0]->tau());
-            }
-        }
-        fluids_set = true;
-    }
-}
-
-TEST_CASE("Mixture derivative checks", "[mixtures],[mixture_derivs]")
-{
-    connect_fluids();
-
-    for (std::size_t Ncomp = 2; Ncomp <= 4; Ncomp++)
-    {
-        std::ostringstream ss00;
-        ss00 << "Mixture with " << Ncomp << " components";
-        SECTION(ss00.str(),"")
-        {
-            x_N_dependency_flag xN_flag;
-            for (std::size_t xNxN = 1; xNxN > 0; xNxN--){
-                std::ostringstream ss000;
-                std::string xN_string;
-                if (xNxN == 0){
-                    xN_flag = XN_DEPENDENT;
-                    xN_string = "Mole fractions dependent";
-                }
-                else{
-                    xN_flag = XN_INDEPENDENT;
-                    xN_string = "Mole fractions independent";
-                }
-            
-                ss000 << xN_string;
-                SECTION(ss000.str(),"")
-                {                    
-                    
-                    HelmholtzEOSMixtureBackend &rHEOS = *(HEOS[Ncomp][0].get());
-                    HelmholtzEOSMixtureBackend &rHEOS_plusT_constrho = *(HEOS_plusT_constrho[Ncomp][0].get());
-                    HelmholtzEOSMixtureBackend &rHEOS_minusT_constrho = *(HEOS_minusT_constrho[Ncomp][0].get());
-                    HelmholtzEOSMixtureBackend &rHEOS_plusT_constp = *(HEOS_plusT_constp[Ncomp][0].get());
-                    HelmholtzEOSMixtureBackend &rHEOS_minusT_constp = *(HEOS_minusT_constp[Ncomp][0].get());
-                    HelmholtzEOSMixtureBackend &rHEOS_plusrho_constT = *(HEOS_plusrho_constT[Ncomp][0].get());
-                    HelmholtzEOSMixtureBackend &rHEOS_minusrho_constT = *(HEOS_minusrho_constT[Ncomp][0].get());
-
-                    const std::vector<CoolPropDbl> &z = rHEOS.get_mole_fractions();
-                    
-                    SECTION("adj(Mstar)", "")
-                    {
-                        if (Ncomp == 2){
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag, Lstar);
-                        Eigen::MatrixXd analytic = adjugate(Mstar);
-                        Eigen::MatrixXd numeric(2,2);
-                        numeric << Mstar(1,1), -Mstar(0,1), -Mstar(1,0), Mstar(0,0);
-                        double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
-                        CAPTURE(numeric);
-                        CAPTURE(analytic);
-                        CAPTURE(Mstar);
-                        CHECK(err < 1e-8);
-                        }
-                    }
-                    SECTION("d(adj(Lstar))/dDelta", "")
-                    {
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd dLstar_dDelta = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iDelta);
-                        Eigen::MatrixXd analytic = adjugate_derivative(Lstar, dLstar_dDelta);
-
-                        Eigen::MatrixXd adj_Lstar_plus = adjugate(MixtureDerivatives::Lstar(rHEOS_plusrho_constT, xN_flag)); double delta1 = rHEOS_plusrho_constT.delta();
-                        Eigen::MatrixXd adj_Lstar_minus = adjugate(MixtureDerivatives::Lstar(rHEOS_minusrho_constT, xN_flag)); double delta2 = rHEOS_minusrho_constT.delta();
-                        
-                        Eigen::MatrixXd numeric = (adj_Lstar_plus - adj_Lstar_minus)/(delta1-delta2);
-                        double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
-                        CAPTURE(numeric);
-                        CAPTURE(analytic);
-                        CHECK(err < 1e-8);
-                    }
-                    SECTION("d(M1)/dTau", "")
-                    {
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag, Lstar);
-                        Eigen::MatrixXd dLstardTau = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, iTau);
-                        Eigen::MatrixXd dMstar_dTau = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iTau, Lstar, dLstardTau);
-                        Eigen::MatrixXd adjM = adjugate(Mstar);
-                        double analytic = (adjM*dMstar_dTau).trace();
-                        
-                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusT_constrho, xN_flag);
-                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusT_constrho, xN_flag);
-                        double detMstar_plus = MixtureDerivatives::Mstar(rHEOS_plusT_constrho, xN_flag, Lstar_plus).determinant(); double tau1 = rHEOS_plusT_constrho.tau();
-                        double detMstar_minus = MixtureDerivatives::Mstar(rHEOS_minusT_constrho, xN_flag, Lstar_minus).determinant(); double tau2 = rHEOS_minusT_constrho.tau();
-
-                        double numeric = (detMstar_plus - detMstar_minus)/(tau1-tau2);
-                        double err = mix_deriv_err_func(numeric, analytic);
-                        CAPTURE(numeric);
-                        CAPTURE(analytic);
-                        CAPTURE(dMstar_dTau);
-                        CAPTURE(adjM);
-                        CHECK(err < 1e-8);
-                    }
-                    SECTION("d(M1)/dDelta", "")
-                    {
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd dLstardDelta = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, iDelta);
-                        Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(rHEOS, xN_flag, Lstar);
-                        Eigen::MatrixXd dMstar_dDelta = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iDelta, Lstar, dLstardDelta);
-                        double analytic = (adjugate(Mstar)*dMstar_dDelta).trace();
-                        
-                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusrho_constT, xN_flag);
-                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusrho_constT, xN_flag);
-                        double detMstar_plus = MixtureDerivatives::Mstar(rHEOS_plusrho_constT, xN_flag, Lstar_plus).determinant(); double delta1 = rHEOS_plusrho_constT.delta();
-                        double detMstar_minus = MixtureDerivatives::Mstar(rHEOS_minusrho_constT, xN_flag, Lstar_minus).determinant(); double delta2 = rHEOS_minusrho_constT.delta();
-                        
-                        double numeric = (detMstar_plus - detMstar_minus)/(delta1-delta2);
-                        double err = mix_deriv_err_func(numeric, analytic);
-                        CAPTURE(numeric);
-                        CAPTURE(analytic);
-                        CHECK(err < 1e-8);
-                    }
-                    SECTION("d(L1)/dDelta", "")
-                    {
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd dLstar_dDelta = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iDelta);
-                        double analytic = (adjugate(Lstar)*dLstar_dDelta).trace();
-                        
-                        double detLstar_plus = MixtureDerivatives::Lstar(rHEOS_plusrho_constT, xN_flag).determinant(); double delta1 = rHEOS_plusrho_constT.delta();
-                        double detLstar_minus = MixtureDerivatives::Lstar(rHEOS_minusrho_constT, xN_flag).determinant(); double delta2 = rHEOS_minusrho_constT.delta();
-                        
-                        double numeric = (detLstar_plus - detLstar_minus)/(delta1-delta2);
-                        double err = mix_deriv_err_func(numeric, analytic);
-                        CAPTURE(numeric);
-                        CAPTURE(analytic);
-                        CHECK(err < 1e-8);
-                    }
-
-                    SECTION("adj(Lstar)", "")
-                    {
-                        if (Ncomp == 2){
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd analytic = adjugate(Lstar);
-                        Eigen::MatrixXd numeric(2,2);
-                        numeric << Lstar(1,1), -Lstar(0,1), -Lstar(1,0), Lstar(0,0);
-                        double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
-                        CAPTURE(numeric);
-                        CAPTURE(analytic);
-                        CAPTURE(Lstar);
-                        CHECK(err < 1e-8);
-                        }
-                    }
-					SECTION("dLstar_Tau", "")
-					{
-						Eigen::MatrixXd analytic = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iTau);
-						Eigen::MatrixXd m1 = MixtureDerivatives::Lstar(rHEOS_plusT_constrho, xN_flag); double tau1 = rHEOS_plusT_constrho.tau();
-						Eigen::MatrixXd m2 = MixtureDerivatives::Lstar(rHEOS_minusT_constrho, xN_flag); double tau2 = rHEOS_minusT_constrho.tau();
-						Eigen::MatrixXd numeric = (m1 - m2)/(tau1 - tau2);
-						double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
-						CAPTURE(numeric);
-                        CAPTURE(analytic);
-						CHECK(err < 1e-8);
-					}
-					SECTION("dLstar_dDelta", "")
-                    {
-						Eigen::MatrixXd analytic = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iDelta);
-						Eigen::MatrixXd m1 = MixtureDerivatives::Lstar(rHEOS_plusrho_constT, xN_flag); double delta1 = rHEOS_plusrho_constT.delta();
-						Eigen::MatrixXd m2 = MixtureDerivatives::Lstar(rHEOS_minusrho_constT, xN_flag); double delta2 = rHEOS_minusrho_constT.delta();
-						Eigen::MatrixXd numeric = (m1 - m2)/(delta1 - delta2);
-						double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
-						CAPTURE(numeric);
-						CAPTURE(analytic);
-						CHECK(err < 1e-8);
-					}
-					SECTION("dMstar_dTau", "")
-					{
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd dLstardTau = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iTau);
-						Eigen::MatrixXd analytic = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iTau, Lstar, dLstardTau);
-                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusT_constrho, xN_flag);
-                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusT_constrho, xN_flag);
-                        Eigen::MatrixXd m1 = MixtureDerivatives::Mstar(rHEOS_plusT_constrho, xN_flag, Lstar_plus); double tau1 = rHEOS_plusT_constrho.tau();
-                        Eigen::MatrixXd m2 = MixtureDerivatives::Mstar(rHEOS_minusT_constrho, xN_flag, Lstar_minus); double tau2 = rHEOS_minusT_constrho.tau();
-						Eigen::MatrixXd numeric = (m1 - m2)/(tau1 - tau2);
-						double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
-						CAPTURE(numeric);
-						CAPTURE(analytic);
-						CHECK(err < 1e-8);
-					}
-					std::ostringstream ss3o7; ss3o7 << "dMstar_dDelta";
-					SECTION(ss3o7.str(), "")
-					{
-                        Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(rHEOS, xN_flag);
-                        Eigen::MatrixXd dLstardDelta = MixtureDerivatives::dLstar_dX(rHEOS, xN_flag, CoolProp::iDelta);
-						Eigen::MatrixXd analytic = MixtureDerivatives::dMstar_dX(rHEOS, xN_flag, CoolProp::iDelta, Lstar, dLstardDelta);
-                        Eigen::MatrixXd Lstar_plus = MixtureDerivatives::Lstar(rHEOS_plusrho_constT, xN_flag);
-                        Eigen::MatrixXd Lstar_minus = MixtureDerivatives::Lstar(rHEOS_minusrho_constT, xN_flag);
-						Eigen::MatrixXd m1 = MixtureDerivatives::Mstar(rHEOS_plusrho_constT, xN_flag, Lstar_plus); double delta1 = rHEOS_plusrho_constT.delta();
-						Eigen::MatrixXd m2 = MixtureDerivatives::Mstar(rHEOS_minusrho_constT, xN_flag, Lstar_minus); double delta2 = rHEOS_minusrho_constT.delta();
-						Eigen::MatrixXd numeric = (m1 - m2)/(delta1 - delta2);
-						double err = ((analytic-numeric).array()/analytic.array()).cwiseAbs().sum()/Ncomp/Ncomp;
-						CAPTURE(numeric);
-						CAPTURE(analytic);
-						CHECK(err < 1e-8);
-					}
-                
-                    // These ones only require the i index
-                    for (std::size_t i = 0; i< Ncomp; ++i)
-                    {
-                        HelmholtzEOSMixtureBackend & rHEOS_pluszi = (xN_flag == XN_INDEPENDENT) ? *(HEOS_plusz_xNindep[Ncomp][i].get()) : *(HEOS_plusz_xNdep[Ncomp][i].get());
-                        HelmholtzEOSMixtureBackend & rHEOS_minuszi = (xN_flag == XN_INDEPENDENT) ? *(HEOS_minusz_xNindep[Ncomp][i].get()) : *(HEOS_minusz_xNdep[Ncomp][i].get());
-
-                        HelmholtzEOSMixtureBackend &rHEOS_pluszi_consttaudelta = (xN_flag == XN_INDEPENDENT) ? *(HEOS_plusz_consttaudelta_xNindep[Ncomp][i].get()) : *(HEOS_plusz_consttaudelta_xNdep[Ncomp][i].get());
-                        HelmholtzEOSMixtureBackend &rHEOS_minuszi_consttaudelta = (xN_flag == XN_INDEPENDENT) ? *(HEOS_minusz_consttaudelta_xNindep[Ncomp][i].get()) : *(HEOS_minusz_consttaudelta_xNdep[Ncomp][i].get());
-                        
-                        std::ostringstream ss0;
-                        ss0 << "dln_fugacity_i_dT__constrho_n, i=" << i;
-                        SECTION(ss0.str(),"")
-                        {
-                            double analytic = MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rHEOS, i, xN_flag);
-                            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_plusT_constrho, i, xN_flag));
-                            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minusT_constrho, i, xN_flag));
-                            double numeric = (v1 - v2)/(2*dT);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-8);
-                        }
-                        std::ostringstream ss0a;
-                        ss0a << "dln_fugacity_i_dp__constT_n, i=" << i;
-                        SECTION(ss0a.str(),"")
-                        {
-                            double analytic = MixtureDerivatives::dln_fugacity_i_dp__constT_n(rHEOS, i, xN_flag);
-                            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_plusrho_constT, i, xN_flag)), p1 = rHEOS_plusrho_constT.p();
-                            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minusrho_constT, i, xN_flag)), p2 = rHEOS_minusrho_constT.p();
-                            double numeric = (v1 - v2)/(p1 - p2);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-6);
-                        }
-                        std::ostringstream ss0b;
-                        ss0b << "dln_fugacity_i_drho__constT_n, i=" << i;
-                        SECTION(ss0b.str(), "")
-                        {
-                            double analytic = MixtureDerivatives::dln_fugacity_i_drho__constT_n(rHEOS, i, xN_flag);
-                            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_plusrho_constT, i, xN_flag));
-                            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minusrho_constT, i, xN_flag));
-                            double numeric = (v1 - v2)/(2*dT);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CAPTURE(numeric);
-                            CAPTURE(analytic);
-                            CHECK(err < 1e-6);
-                        }
-                        std::ostringstream ss2;
-                        ss2 << "dln_fugacity_coefficient_dp__constT_n, i=" << i;
-                        SECTION(ss2.str(), "")
-                        {
-                            double analytic = MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(rHEOS, i, xN_flag);
-                            double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS_plusrho_constT, i, xN_flag), p1 = rHEOS_plusrho_constT.p();
-                            double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS_minusrho_constT, i, xN_flag), p2 = rHEOS_minusrho_constT.p();
-                            double numeric = (v1 - v2)/(p1 - p2);
-                            double err = mix_deriv_err_func(numeric, analytic);
-                            CHECK(err < 1e-6);
-                        }
-                        std::ostringstream ss1a123;
-                        ss1a123 << "dln_fugacity_coefficient_dT__constp_n, i=" << i;
-                        SECTION(ss1a123.str(), "")
-                        {
-                            double analytic = MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(rHEOS, i, xN_flag);
-                            double v1 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS_plusT_constp, i, xN_flag);
-                            double v2 = MixtureDerivatives::ln_fugacity_coefficient(rHEOS_minusT_constp, i, xN_flag);
-                            
-                            double numeric = (v1 - v2)/(2*dT);
-                            double err = std::abs((numeric-analytic)/analytic);
-                            CHECK(err < 1e-6);
-                        }
-                        std::ostringstream ss1aa123;
-                        ss1aa123 << "dln_fugacity_i_dT__constp_n, i=" << i;
-                        SECTION(ss1aa123.str(), "")
-                        {   
-                            double analytic = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rHEOS, i, xN_flag);
-                            double v1 = log(MixtureDerivatives::fugacity_i(rHEOS_plusT_constp, i, xN_flag));
-                            double v2 = log(MixtureDerivatives::fugacity_i(rHEOS_minusT_constp, i, xN_flag));
-                            
-                            double numeric = (v1 - v2)/(2*dT);
-                            double err = std::abs((numeric-analytic)/analytic);
-                            CHECK(err < 1e-6);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 #endif
-
-
