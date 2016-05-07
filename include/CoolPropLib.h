@@ -19,7 +19,21 @@
 #ifndef COOLPROPDLL_H
 #define COOLPROPDLL_H
 
-    #include "PlatformDetermination.h"
+    // See also http://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
+    // Copied verbatim from PlatformDetermination.h in order to have a single-include header
+    #if _WIN64
+    #  define __ISWINDOWS__
+    #elif _WIN32
+    #  define __ISWINDOWS__
+    #elif __APPLE__
+    #  define __ISAPPLE__
+    #elif __linux || __unix || __posix
+    #  define __ISLINUX__
+    #elif __powerpc__
+    #  define __ISPOWERPC__
+    #else
+    # pragma error
+    #endif
 
     #if defined(COOLPROP_LIB)
     #  ifndef EXPORT_CODE
