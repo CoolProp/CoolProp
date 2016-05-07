@@ -429,6 +429,8 @@ if (COOLPROP_PRIME_MODULE)
     SET_TARGET_PROPERTIES(CoolPropMathcadWrapper PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
     add_dependencies (CoolPropMathcadWrapper generate_headers)
     set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
+    install (TARGETS CoolPropMathcadWrapper DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCADPrime")
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/CoolPropFluidProperties.mcdx" DESTINATION MathCADPrime)    
 endif()
 
 if (COOLPROP_MATHCAD15_MODULE)
@@ -446,6 +448,9 @@ if (COOLPROP_MATHCAD15_MODULE)
     SET_TARGET_PROPERTIES(CoolPropMathcadWrapper PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
     add_dependencies (CoolPropMathcadWrapper generate_headers)
     set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
+    install (TARGETS CoolPropMathcadWrapper DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCAD15")
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropFluidProperties.xmcd" DESTINATION MathCAD15)
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolProp_EN.xml" DESTINATION MathCAD15)
 endif()
 
 # EES is only compiled for windows
