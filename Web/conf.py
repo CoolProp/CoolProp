@@ -198,7 +198,8 @@ html_theme_path = [csp.get_theme_dir()]
 html_theme_options = { "roottarget": "index",
                        "max_width" : "13in",
                        "logotarget": "index",
-                       "googleanalytics_id": "UA-53205480-2"
+                       "googleanalytics_id": "UA-53205480-2",
+                       "default_layout_text_size": "85%"
                        }
 
 edit_on_github_project = 'CoolProp/CoolProp'
