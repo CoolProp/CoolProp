@@ -38,5 +38,12 @@
         <category>CoolProp</category>
         <description>Returns the value of the requested fluid parameter.  Useful parameter strings are "aliases", to return a comma separated list of valid fluid name strings, and "CAS", which returns the fluids Chemical Abstract Service registration number.</description>
     </function>
+    <function>
+        <name>set_reference_state</name>
+        <local_name>set_reference_state</local_name>
+        <params>"Fluid Name", "Reference State String"</params>
+        <category>CoolProp</category>
+        <description>Sets the reference state for a specific fluid one of the standard reference states: "IIR", "ASHRAE", "NBP", or "DEF" (CoolProp default).</description>
+    </function>
 
 </FUNCTIONS>
