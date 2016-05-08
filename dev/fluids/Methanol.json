@@ -275,7 +275,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 580, 
+      "T_max": 620, 
       "T_max_units": "K", 
       "Ttriple": 175.61, 
       "Ttriple_units": "K", 
