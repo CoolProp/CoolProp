@@ -84,6 +84,8 @@ public:
     virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
     ///// Get binary mixture string value
     //virtual std::string get_binary_interaction_string(const std::size_t &i, const std::size_t &j, const std::string &parameter);
+    /// Apply a simple mixing rule
+    void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model);
 
     phases calc_phase(void){return _phase;};
     void calc_specify_phase(phases phase){ specify_phase(phase); }

@@ -54,6 +54,10 @@ cdef class AbstractState:
         """ Change the EOS for one component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::change_EOS` """
         self.thisptr.change_EOS(i, EOS_name)
 
+    cpdef apply_simple_mixing_rule(self, size_t i, size_t j, string model):
+        """ Apply a simple mixing rule - wrapper of c++ function :cpapi:`CoolProp::AbstractState::apply_simple_mixing_rule` """
+        self.thisptr.apply_simple_mixing_rule(i, j, model)
+
     cpdef set_binary_interaction_double(self, string_or_size_t arg1, string_or_size_t arg2, string parameter, double val):
         """ Set a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_double` """
         if string_or_size_t in cython.integral:
