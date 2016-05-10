@@ -1,6 +1,6 @@
 from __future__ import print_function
 import os.path
-import CoolProp
+import CoolProp, CoolProp.CoolProp as CP
 import subprocess
 import sys
 

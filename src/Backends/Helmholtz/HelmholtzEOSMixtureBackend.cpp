@@ -195,6 +195,27 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
     }
 }
 
+void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model){
+    if (model == "linear"){
+        double Tc1 = get_fluid_constant(i, iT_critical), Tc2 = get_fluid_constant(j, iT_critical);
+        double gammaT = 0.5*(Tc1 + Tc2) / sqrt(Tc1*Tc2);
+        double rhoc1 = get_fluid_constant(i, irhomolar_critical), rhoc2 = get_fluid_constant(j, irhomolar_critical);
+        double gammaV = 4.0 * (1/rhoc1 + 1/rhoc2) / pow(pow(rhoc1, -1.0 / 3.0) + pow(rhoc2, -1.0/3.0), 3);
+        set_binary_interaction_double(i, j, "betaT", 1.0);
+        set_binary_interaction_double(i, j, "gammaT", gammaT);
+        set_binary_interaction_double(i, j, "betaV", 1.0);
+        set_binary_interaction_double(i, j, "gammaV", gammaV);
+    }
+    else if (model == "Lorentz-Berthelot"){
+        set_binary_interaction_double(i, j, "betaT", 1.0);
+        set_binary_interaction_double(i, j, "gammaT", 1.0);
+        set_binary_interaction_double(i, j, "betaV", 1.0);
+        set_binary_interaction_double(i, j, "gammaV", 1.0);
+    }
+    else{ 
+        throw ValueError(format("mixing rule [%s] is not understood", model.c_str()));
+    }
+}
 /// Set binary mixture floating point parameter for this instance
 void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
     if (parameter == "Fij"){
@@ -204,6 +225,9 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t
     else{
         Reducing->set_binary_interaction_double(i,j,parameter,value);
     }
+    /// Also set the parameters in the managed pointers for saturated liquid and vapor states
+    if (this->SatL){ this->SatL->set_binary_interaction_double(i, j, parameter, value); }
+    if (this->SatV) { this->SatV->set_binary_interaction_double(i, j, parameter, value); }
 };
 /// Get binary mixture floating point parameter for this instance
 double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){

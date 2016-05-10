@@ -114,9 +114,9 @@ for script in normal_tasks:
 #
 if full_rebuild:
     print "Executing the computationally expensive scripts for generating the static files."
-    touch(touch_file)
     for script in expensive_tasks:
         print "Executing {0}".format(script)
         run_script(os.path.join(script_dir,script))
+    touch(touch_file)
 else:
     print "Skipping the computationally expensive scripts for generating the static files."
