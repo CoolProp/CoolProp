@@ -3,6 +3,9 @@
 # Stop on errors
 set -ex
 
+# Fire up docker
+docker-machine start default
+
 # Set up the docker environment
 eval "$(docker-machine env default)"
 
