@@ -102,25 +102,10 @@ Once you have constructed an instance of an AbstractState using the low-level in
 
 Phase Envelope
 --------------
-.. plot::
 
-    import CoolProp
-    import matplotlib.pyplot as plt
+You can download the script that generated the following figure here: :download:`(link to script)<methane-ethane.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<methane-ethane.pdf>`. 
 
-    HEOS = CoolProp.AbstractState('HEOS','Methane&Ethane')
-    for x0 in [0.02, 0.2, 0.4, 0.6, 0.8, 0.98]:
-        HEOS.set_mole_fractions([x0, 1 - x0])
-        try:
-            HEOS.build_phase_envelope("dummy")
-        except ValueError as VE:
-            print(VE)
-        PE = HEOS.get_phase_envelope_data()
-        plt.plot(PE.T, PE.p, '-')
-
-    plt.xlabel('Temperature [K]')
-    plt.ylabel('Pressure [Pa]')
-    plt.yscale('log')
-    plt.tight_layout()
+.. image:: methane-ethane.png
 
 Reducing Parameters
 -------------------
