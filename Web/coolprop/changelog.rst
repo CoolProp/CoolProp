@@ -6,9 +6,10 @@ Changelog for CoolProp
 
 New features:
 
+* MathCAD wrapper working again (thanks to Jeff Henning)
 * Added binary interaction parameters for more than 400 mixtures 
 * Added a cubic backend supporting PR and SRK for some calculations
-* Added new viscosity model for a few refrigerants
+* Added new non-iterative viscosity model for a few refrigerants (especially R32 and R245fa)
 * Implemented EOS for HCl, D4, ethylene oxide, and dichloroethane from M. Thol
 * ... and a lot of little bugfixes (see issues)
 
@@ -107,6 +108,7 @@ Issues Closed:
 
 Pull Requests merged:
 
+* `#1062 <http://github.com/CoolProp/CoolProp/pull/1062>`_ : Export first_partial_deriv, see #946 #1062
 * `#1056 <http://github.com/CoolProp/CoolProp/pull/1056>`_ : Added "set_reference_state" wrapper for Mathcad and Updated Example Worksheets
 * `#1053 <http://github.com/CoolProp/CoolProp/pull/1053>`_ : Align Tmax with REFPROP values
 * `#1047 <http://github.com/CoolProp/CoolProp/pull/1047>`_ : Mathcad Wrapper Updates for CoolProp 5.x and 6
