@@ -64,6 +64,23 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
         return 0;
     }
 
+    // this code executes the user function CP_set_reference_state, which is a wrapper for
+    // the CoolProp.set_reference_stateS() function, used to set the H/S reference states
+    // based on a standard state string of "IIR", "ASHRAE", "NBP", or "DEF".   
+    LRESULT  CP_set_reference_state(
+                            LPCOMPLEXSCALAR  Conf,     // output (dummy value)
+                            LPCMCSTRING FluidName,     // name of fluidr (string) to retrieve
+                            LPCMCSTRING StateStr )     // name of standard state (string) to set
+    {  
+        // Invoke the set_reference_stateS() function, no result from this void function.
+        CoolProp::set_reference_stateS(FluidName->str, StateStr->str);
+        // assign the dummy return value
+        Conf->real = 0;
+
+        // normal return
+        return 0;
+    }
+
     // this code executes the user function CP_Props1SI, which is a wrapper for
     // the CoolProp.PropsSI() function, used to simply extract a
     // fluid-specific parameter that is not dependent on the state
@@ -161,6 +178,18 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
     };
 
     // fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
+    FUNCTIONINFO RefState = 
+    {
+    "set_reference_state", // Name by which MathCAD will recognize the function   
+    "Fluid, Reference State String", // Description of input parameters
+    "Sets the reference state to either IIR, ASHRAE, NBP, or DEF.", // description of the function for the Insert Function dialog box       
+    (LPCFUNCTION)CP_set_reference_state, // Pointer to the function code. 
+    COMPLEX_SCALAR, // Returns a MathCAD complex scalar
+    2, // Number of arguments
+    {MC_STRING, MC_STRING} // Argument types 
+    };
+
+    // fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
     FUNCTIONINFO Props1SI = 
     {
     "Props1SI", // Name by which MathCAD will recognize the function   
@@ -227,6 +256,7 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
                     // register user function
                     CreateUserFunction( hDLL, &PropsParam);
                     CreateUserFunction( hDLL, &FluidParam);
+                    CreateUserFunction( hDLL, &RefState);
                     CreateUserFunction( hDLL, &Props1SI );
                     CreateUserFunction( hDLL, &PropsSI );
                     CreateUserFunction( hDLL, &HAPropsSI );
