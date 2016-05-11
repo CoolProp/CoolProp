@@ -295,7 +295,20 @@
     * @return
     */
     EXPORT_CODE double CONVENTION AbstractState_first_saturation_deriv(const long handle, const long Of, const long Wrt, long *errcode, char *message_buffer, const long buffer_length);
-            
+    
+    /**
+    * @brief Calculate the first partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of The parameter of which the derivative is being taken
+    * @param Wrt The derivative with with respect to this parameter
+    * @param Constant The parameter that is not affected by the derivative
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handle, const long Of, const long Wrt, const long Constant, long *errcode, char *message_buffer, const long buffer_length);
+    
     /**
     * @brief Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy)
     * @brief from the AbstractState using pointers as inputs and output to allow array computation.
