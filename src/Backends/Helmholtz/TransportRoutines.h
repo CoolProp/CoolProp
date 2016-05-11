@@ -266,6 +266,8 @@ public:
     */
     static CoolPropDbl viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
 
+    static CoolPropDbl viscosity_rhosr(HelmholtzEOSMixtureBackend &HEOS);
+    
     static CoolPropDbl conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference);
 
     /* \brief Solver for the conformal state for ECS model

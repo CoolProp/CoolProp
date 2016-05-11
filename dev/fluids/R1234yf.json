@@ -528,29 +528,50 @@
         "type": "polynomial"
       }
     }, 
-    "viscosity": {
-      "BibTeX": "BELL-PERSONAL-2015", 
-      "_note": "Fit based on the data of Zhao, JCED, 2014: doi: 10.1021/je5001457", 
-      "epsilon_over_k": 281.14, 
-      "epsilon_over_k_units": "K", 
-      "psi": {
-        "a": [
-          0.17682139, 
-          0.74500256, 
-          -0.16912621
+    "viscosity": [
+      {
+        "BibTeX": "Bell-PURDUE-2016-ETA", 
+        "C": 0.87302, 
+        "c_liq": [
+          0.6100913843, 
+          0.4508958312, 
+          -0.017063, 
+          0.000564
         ], 
-        "rhomolar_reducing": 4170.0, 
-        "rhomolar_reducing_units": "mol/m^3", 
-        "t": [
-          0, 
-          1, 
-          2
-        ]
+        "c_vap": [
+          0.0, 
+          1.2, 
+          -0.308598, 
+          0.035317
+        ], 
+        "rhosr_critical": -54468.47741433059, 
+        "type": "rhosr-CS", 
+        "x_crossover": 2
       }, 
-      "reference_fluid": "R134a", 
-      "sigma_eta": 5.328e-10, 
-      "sigma_eta_units": "m", 
-      "type": "ECS"
-    }
+      {
+        "BibTeX": "BELL-PERSONAL-2015", 
+        "_note": "Fit based on the data of Zhao, JCED, 2014: doi: 10.1021/je5001457", 
+        "epsilon_over_k": 281.14, 
+        "epsilon_over_k_units": "K", 
+        "psi": {
+          "a": [
+            0.17682139, 
+            0.74500256, 
+            -0.16912621
+          ], 
+          "rhomolar_reducing": 4170.0, 
+          "rhomolar_reducing_units": "mol/m^3", 
+          "t": [
+            0, 
+            1, 
+            2
+          ]
+        }, 
+        "reference_fluid": "R134a", 
+        "sigma_eta": 5.328e-10, 
+        "sigma_eta_units": "m", 
+        "type": "ECS"
+      }
+    ]
   }
 }

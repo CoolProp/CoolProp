@@ -520,7 +520,7 @@
           "rhomolar_units": "mol/m^3"
         }
       }, 
-      "T_max": 500,
+      "T_max": 500, 
       "T_max_units": "K", 
       "Ttriple": 154.56, 
       "Ttriple_units": "K", 
@@ -723,90 +723,111 @@
         "type": "polynomial"
       }
     }, 
-    "viscosity": {
-      "BibTeX": "Krauss-IJT-1996", 
-      "dilute": {
-        "C": 2.6695992007227643e-08, 
-        "a": [
-          0.4425728, 
-          -0.5138403, 
-          0.1547566, 
-          -0.02821844, 
-          0.001578286
+    "viscosity": [
+      {
+        "BibTeX": "Bell-PURDUE-2016-ETA", 
+        "C": 0.86166, 
+        "c_liq": [
+          0.6100913843, 
+          0.4508958312, 
+          -0.017063, 
+          0.000564
         ], 
-        "molar_mass": 0.06605, 
-        "molar_mass_units": "kg/mol", 
-        "t": [
-          0, 
-          1, 
-          2, 
-          3, 
-          4
+        "c_vap": [
+          0.0, 
+          1.2, 
+          -0.308598, 
+          0.035317
         ], 
-        "type": "collision_integral"
+        "rhosr_critical": -71960.49367077358, 
+        "type": "rhosr-CS", 
+        "x_crossover": 2
       }, 
-      "epsilon_over_k": 354.84, 
-      "epsilon_over_k_units": "K", 
-      "higher_order": {
-        "T_reduce": 386.411, 
-        "T_reduce_units": "K", 
-        "a": [
-          -3.772282824e-06, 
-          2.647627488e-05, 
-          -1.578969e-05, 
-          5.52346488e-06
-        ], 
-        "d1": [
-          1, 
-          2, 
-          3, 
-          4
-        ], 
-        "d2": [
-          0
-        ], 
-        "f": [
-          2.087674344e-05
-        ], 
-        "g": [
-          2.91733
-        ], 
-        "gamma": [
-          0, 
-          0, 
-          0, 
-          0
-        ], 
-        "h": [
-          0
-        ], 
-        "l": [
-          1, 
-          1, 
-          1, 
-          1
-        ], 
-        "p": [
-          1
-        ], 
-        "q": [
-          0
-        ], 
-        "rhomolar_reduce": 5571.536714610144, 
-        "rhomolar_reduce_units": "mol/m^3", 
-        "t1": [
-          0, 
-          0, 
-          0, 
-          0
-        ], 
-        "t2": [
-          0
-        ], 
-        "type": "modified_Batschinski_Hildebrand"
-      }, 
-      "sigma_eta": 4.6115e-10, 
-      "sigma_eta_units": "m"
-    }
+      {
+        "BibTeX": "Krauss-IJT-1996", 
+        "dilute": {
+          "C": 2.6695992007227643e-08, 
+          "a": [
+            0.4425728, 
+            -0.5138403, 
+            0.1547566, 
+            -0.02821844, 
+            0.001578286
+          ], 
+          "molar_mass": 0.06605, 
+          "molar_mass_units": "kg/mol", 
+          "t": [
+            0, 
+            1, 
+            2, 
+            3, 
+            4
+          ], 
+          "type": "collision_integral"
+        }, 
+        "epsilon_over_k": 354.84, 
+        "epsilon_over_k_units": "K", 
+        "higher_order": {
+          "T_reduce": 386.411, 
+          "T_reduce_units": "K", 
+          "a": [
+            -3.772282824e-06, 
+            2.647627488e-05, 
+            -1.578969e-05, 
+            5.52346488e-06
+          ], 
+          "d1": [
+            1, 
+            2, 
+            3, 
+            4
+          ], 
+          "d2": [
+            0
+          ], 
+          "f": [
+            2.087674344e-05
+          ], 
+          "g": [
+            2.91733
+          ], 
+          "gamma": [
+            0, 
+            0, 
+            0, 
+            0
+          ], 
+          "h": [
+            0
+          ], 
+          "l": [
+            1, 
+            1, 
+            1, 
+            1
+          ], 
+          "p": [
+            1
+          ], 
+          "q": [
+            0
+          ], 
+          "rhomolar_reduce": 5571.536714610144, 
+          "rhomolar_reduce_units": "mol/m^3", 
+          "t1": [
+            0, 
+            0, 
+            0, 
+            0
+          ], 
+          "t2": [
+            0
+          ], 
+          "type": "modified_Batschinski_Hildebrand"
+        }, 
+        "sigma_eta": 4.6115e-10, 
+        "sigma_eta_units": "m"
+      }
+    ]
   }
 }

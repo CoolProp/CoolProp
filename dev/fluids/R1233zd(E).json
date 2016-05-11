@@ -437,5 +437,26 @@
       "smolar": 253.50451670395148, 
       "smolar_units": "J/mol/K"
     }
+  }, 
+  "TRANSPORT": {
+    "viscosity": {
+      "BibTeX": "Bell-PURDUE-2016-ETA", 
+      "C": 1.2474, 
+      "c_liq": [
+        0.6100913843, 
+        0.4508958312, 
+        -0.017063, 
+        0.000564
+      ], 
+      "c_vap": [
+        0.0, 
+        1.2, 
+        -0.308598, 
+        0.035317
+      ], 
+      "rhosr_critical": -47978.147551213806, 
+      "type": "rhosr-CS", 
+      "x_crossover": 2
+    }
   }
 }

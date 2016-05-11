@@ -616,6 +616,13 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl &dilut
             return;
         }
         
+        // Check if using rho*sr model
+        if (component.transport.viscosity_using_rhosr){
+            // Get the viscosity using rho*sr model and stick in the critical value
+            critical = TransportRoutines::viscosity_rhosr(*this);
+            return;
+        }
+        
         if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
         {
             // Evaluate hardcoded model and stick in the critical value

@@ -1238,6 +1238,35 @@ CoolPropDbl TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     return eta;
 }
 
+CoolPropDbl TransportRoutines::viscosity_rhosr(HelmholtzEOSMixtureBackend &HEOS)
+{
+    
+    // Get a reference to the data
+    const CoolProp::ViscosityRhoSrVariables &data = HEOS.components[0].transport.viscosity_rhosr;
+    
+    // The dilute gas portion for the fluid of interest [Pa-s]
+    CoolPropDbl eta_dilute = viscosity_dilute_kinetic_theory(HEOS);
+    
+    // Calculate x
+    double x = HEOS.rhomolar()*HEOS.gas_constant()*(HEOS.tau()*HEOS.dalphar_dTau() - HEOS.alphar())/data.rhosr_critical;
+
+    // Crossover variable
+    double psi_liq = 1/(1 + exp(-100.0*(x-2)));
+    
+    // Evaluated using Horner's method
+    const std::vector<double> &cL = data.c_liq, cV = data.c_vap;
+    double f_liq = cL[0] + x*(cL[1] + x*(cL[2] + x*(cL[3])));
+    double f_vap = cV[0] + x*(cV[1] + x*(cV[2] + x*(cV[3])));
+    
+    // Evaluate the reference fluid
+    double etastar_ref = exp(psi_liq*f_liq + (1-psi_liq)*f_vap);
+    
+    // Get the non-dimensionalized viscosity
+    double etastar_fluid = 1+data.C*(etastar_ref-1);
+    
+    return etastar_fluid*eta_dilute;
+}
+
 CoolPropDbl TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference)
 {
     // Collect some parameters
