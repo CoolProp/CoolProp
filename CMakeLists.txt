@@ -453,7 +453,7 @@ if (COOLPROP_MATHCAD15_MODULE)
     add_dependencies (CoolPropMathcadWrapper generate_headers)
     set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
     install (TARGETS CoolPropMathcadWrapper DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCAD15")
-    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropFluidProperties.xmcd" DESTINATION MathCAD15)
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropFluidProperties.xmcdz" DESTINATION MathCAD15)
     install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolProp_EN.xml" DESTINATION MathCAD15)
 endif()
 
