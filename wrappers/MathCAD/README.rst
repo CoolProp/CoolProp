@@ -19,11 +19,11 @@ Prerequisites
 To Build
 ========
 
-* **Recursively clone the CoolProp library to a local repository.::
+* **Recursively clone the CoolProp library to a local repository.**::
 
 	git clone https://github.com/CoolProp/CoolProp --recursive
 
-* **Change directory (cd) to the CoolProp directory you just created::
+* **Change directory (cd) to the CoolProp directory you just created.**::
 
 	cd CoolProp
 
