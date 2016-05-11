@@ -4,7 +4,7 @@
 set -ex
 
 # Fire up docker
-docker-machine start default
+docker-machine restart default
 
 # Set up the docker environment
 eval "$(docker-machine env default)"
