@@ -12,6 +12,9 @@ New features:
 * Implemented EOS for HCl, D4, ethylene oxide, and dichloroethane from M. Thol
 * ... and a lot of little bugfixes (see issues)
 
+Contributors to this release:
+ibell, jowr, henningjp, bilderbuchi, dinojr, mapipolo, Mol3culo, stefann82, arashsk, pypamart, milesabarr, wahlenkus, saha84, EmiCas, Heathckliff, Tom0310, dizzux, davideziviani, paarfi
+
 Issues Closed:
 
 * `#1056 <http://github.com/CoolProp/CoolProp/issues/1056>`_ : Added "set_reference_state" wrapper for Mathcad and Updated Example Worksheets
