@@ -23,6 +23,7 @@ def get_ftime(fname):
 web_dir      = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 script_dir   = os.path.abspath(os.path.join(web_dir,'scripts'))
 touch_file   = os.path.abspath(os.path.join(script_dir,'last_run'))
+root_dir     = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 #
 cur_time = time.time()
 fil_time = get_ftime(touch_file)
@@ -96,6 +97,12 @@ def run_script(path):
     else:
         print "Could not find the file {0}".format(path)
 
+# Inject the version of CoolProp into the doxygen configuration files
+# Put it at the end, overwrites prior value
+import CoolProp
+with open(os.path.join(root_dir,'Doxyfile'),'a+') as fp:
+    fp.write('\n\n PROJECT_NUMBER         = ' + CoolProp.__version__ + '\n')
+    
 # The normal tasks that are carried out each time the script runs
 normal_tasks = ["../../dev/scripts/examples/OSXRun.py","coolprop.tabular.speed.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py","coolprop.configuration.py"]
 # The expensive tasks that are fired when full_rebuild is True
@@ -107,9 +114,9 @@ for script in normal_tasks:
 #
 if full_rebuild:
     print "Executing the computationally expensive scripts for generating the static files."
-    touch(touch_file)
     for script in expensive_tasks:
         print "Executing {0}".format(script)
         run_script(os.path.join(script_dir,script))
+    touch(touch_file)
 else:
     print "Skipping the computationally expensive scripts for generating the static files."

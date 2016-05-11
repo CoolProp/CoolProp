@@ -1,11 +1,23 @@
 from __future__ import print_function
 import platform
+import subprocess, shutil, os, sys, glob
 
 def copy_files():
+    def copytree(old,new):
+        print(old,'-->',new)
+        shutil.copytree(old, new)
+    def copy2(old, new):
+        print(old,'-->',new)
+        shutil.copy2(old, new)
+
     import shutil
     shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
-    shutil.copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
-    shutil.copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
+    copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
+    for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
+        print('removing', jsonfile)
+        os.remove(jsonfile)
+    copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','externals','cppformat','cppformat'))
+    copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 
 def remove_files():
@@ -18,11 +30,26 @@ def touch(fname):
     open(fname, 'a').close()
     os.utime(fname, None)
 
+def recursive_collect_includes():
+    thefiles = []
+    include_path = os.path.join('CoolProp','include')
+    for root, dirs, files in os.walk(include_path):
+        thefiles += [os.path.relpath(os.path.join(root,_f), 'CoolProp') for _f in files]
+    return thefiles
+
 if __name__=='__main__':
 
+    # Trying to change the standard library for C++
+    import platform
+    try:
+        macVersion = platform.mac_ver()[0].split('.')
+        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
+            os.environ["CC"] = "gcc"
+            os.environ["CXX"] = "g++"
+            print('switching compiler to g++ for OSX')
+    except:
+        pass
 
-
-    import subprocess, shutil, os, sys, glob
 
 
     # ******************************
@@ -31,20 +58,30 @@ if __name__=='__main__':
 
     # Example using CMake to build static library:
     # python setup.py install --cmake-compiler vc9 --cmake-bitness 64
+    #
+    # or (because pip needs help)
+    #
+    # python setup.py install cmake=default,64
 
-    if '--cmake-compiler' in sys.argv:
-        i = sys.argv.index('--cmake-compiler')
+    cmake_args = [_ for _ in sys.argv if _.startswith('cmake=')]   
+    if cmake_args:
+        i = sys.argv.index(cmake_args[0])
         sys.argv.pop(i)
-        cmake_compiler = sys.argv.pop(i)
+        cmake_compiler, cmake_bitness = cmake_args[0].split('cmake=')[1].split(',')
     else:
-        cmake_compiler = ''
+        if '--cmake-compiler' in sys.argv:
+            i = sys.argv.index('--cmake-compiler')
+            sys.argv.pop(i)
+            cmake_compiler = sys.argv.pop(i)
+        else:
+            cmake_compiler = ''
 
-    if '--cmake-bitness' in sys.argv:
-        i = sys.argv.index('--cmake-bitness')
-        sys.argv.pop(i)
-        cmake_bitness = sys.argv.pop(i)
-    else:
-        cmake_bitness = ''
+        if '--cmake-bitness' in sys.argv:
+            i = sys.argv.index('--cmake-bitness')
+            sys.argv.pop(i)
+            cmake_bitness = sys.argv.pop(i)
+        else:
+            cmake_bitness = ''
 
     USING_CMAKE = cmake_compiler or cmake_bitness
 
@@ -97,12 +134,17 @@ if __name__=='__main__':
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
+
+        if 'darwin' in sys.platform:
+            cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+        if 'linux' in sys.platform:
+            cmake_config_args += ['-DCOOLPROP_FPIC=ON']
         
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
             
-        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON'] + cmake_config_args)
+        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
         
@@ -216,11 +258,11 @@ if __name__=='__main__':
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp')
     include_dirs  = [
-        os.path.join(CProot, 'include'), os.path.join(CProot, 'src'), 
+        os.path.join(CProot), 
+        os.path.join(CProot, 'include'), 
+        os.path.join(CProot, 'src'), 
         os.path.join(CProot, 'externals', 'Eigen'), 
-        os.path.join(CProot, 'externals', 'REFPROP-headers'), 
-        os.path.join(CProot, 'externals', 'msgpack-c', 'include'), 
-        os.path.join(CProot, 'externals', 'IF97')]
+        os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     ## If the file is run directly without any parameters, clean, build and install
     if len(sys.argv)==1:
@@ -255,17 +297,7 @@ if __name__=='__main__':
     ext_modules = [CoolProp_module, constants_module]
 
     if USE_CYTHON:
-        ext_modules = cythonize(ext_modules)
-
-    # Trying to change the standard library for C++
-    try:
-        macVersion = platform.mac_ver()[0].split('.')
-        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
-            os.environ["CC"] = "g++"
-            os.environ["CXX"] = "g++"
-            print('switching compiler to g++ for OSX')
-    except:
-        pass
+        ext_modules = cythonize(ext_modules, compiler_directives = cython_directives)
 
     try:
         setup (name = 'CoolProp',
@@ -279,11 +311,7 @@ if __name__=='__main__':
                package_dir = {'CoolProp':'CoolProp',},
                package_data = {'CoolProp':['*.pxd',
                                            'CoolPropBibTeXLibrary.bib',
-                                           'include/*.h',
-                                           'include/rapidjson/*.h',
-                                           'include/rapidjson/rapidjson/*.h',
-                                           'include/rapidjson/rapidjson/internal/*.h',
-                                           'Plots/psyrc']},
+                                           'Plots/psyrc'] + recursive_collect_includes()},
                classifiers = [
                 "Programming Language :: Python",
                 "Development Status :: 4 - Beta",

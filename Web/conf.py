@@ -90,7 +90,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
 
               # cloud's extensions
             #'cloud_sptheme.ext.autodoc_sections',
-            #'cloud_sptheme.ext.index_styling',
+            'cloud_sptheme.ext.index_styling',
             'cloud_sptheme.ext.relbar_toc',
             #'cloud_sptheme.ext.escaped_samp_literals',
             'cloud_sptheme.ext.issue_tracker',
@@ -104,7 +104,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
 # set path to issue tracker:
 issue_tracker_url = "gh:CoolProp/CoolProp"
 
-plot_formats = [('png',80)]
+plot_formats = [('png',80),('.pdf')]
 
 index_doc = "index"
 
@@ -198,7 +198,8 @@ html_theme_path = [csp.get_theme_dir()]
 html_theme_options = { "roottarget": "index",
                        "max_width" : "13in",
                        "logotarget": "index",
-                       "googleanalytics_id": "UA-53205480-2"
+                       "googleanalytics_id": "UA-53205480-2",
+                       "default_layout_text_size": "85%"
                        }
 
 edit_on_github_project = 'CoolProp/CoolProp'
@@ -233,7 +234,7 @@ edit_on_github_path_prefix = 'Web'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "_static/CoolPropLogoLong.png"
+html_logo = "_static/CoolPropLogo.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32

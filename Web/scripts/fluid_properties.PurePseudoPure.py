@@ -46,7 +46,8 @@ for fluid in CoolProp.__fluids__:
         try:
             # get the item
             s = CoolProp.CoolProp.get_BibTeXKey(fluid,key)
-            if s.strip() and s.strip() not in bibdata.entries.keys():
+            s = s.strip()
+            if s and any([_s not in bibdata.entries.keys() for _s in s.split(',')]):
                 print 'problem', fluid, key, '\t\t\t\t', "|"+s+'|'
                 d.add(key, '')
             else:
@@ -70,10 +71,10 @@ def fluid_reference(fluid):
 # Write the table
 with open(csvfile,'w') as fp:
     rowdata = ["Name"] + [bibtex_map[key] for key in bibtex_keys]
-    fp.write(','.join(rowdata)+'\n')
+    fp.write(';'.join(rowdata)+'\n')
     for index, row in df.iterrows():
         rowdata = [fluid_reference(row['name'])] + [build_citation(row[key]) for key in bibtex_keys]
-        fp.write(','.join(rowdata)+'\n')
+        fp.write(';'.join(rowdata)+'\n')
         
 # Write the hidden table to make sphinx happy
 with open(indexfile,'w') as fp:

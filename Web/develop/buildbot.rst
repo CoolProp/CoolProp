@@ -66,7 +66,7 @@ To enable this on OSX I had to do the following:
 
 1. Shut your virtual machine down.
 2. Go to ``VirtualBox Preferences -> Network -> Host-only Networks ->`` click the "+" icon. Click OK.
-3.Select your box and click the "Settings" icon -> Network -> Adapter 2 -> On the "Attached to:" dropdown, select "Host-only Adapter" and your network (vboxnet0) should show up below by default. Click OK.
+3. Select your box and click the "Settings" icon -> Network -> Adapter 2 -> On the "Attached to:" dropdown, select "Host-only Adapter" and your network (vboxnet0) should show up below by default. Click OK.
 4. Once you start your box up again, you should be able to access localhost at http://10.0.2.2/
 
 You can refer to it by localhost and access other localhosted sites by adding their references to the hosts file (C:\windows\system32\drivers\etc\hosts) like the following::
@@ -82,40 +82,19 @@ Based on the miniconda Python ecosystem, you can create your own virtual
 environments for building the Python wheels. This requires the following
 steps on a Windows machine::
 
-    conda create -n CoolProp27 python=2.7
-    conda create -n CoolProp33 python=3.3
-    conda create -n CoolProp34 python=3.4
-    conda install -n CoolProp27 cython pip pywin32 unxutils jinja2 pyyaml pycrypto ndg-httpsclient
-    conda install -n CoolProp33 cython pip pywin32 unxutils jinja2 pyyaml pycrypto 
-    conda install -n CoolProp34 cython pip pywin32 unxutils jinja2 pyyaml pycrypto 
+    conda create -n CoolProp27 python=2.7 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel ndg-httpsclient
+    conda create -n CoolProp33 python=3.3 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
+    conda create -n CoolProp34 python=3.4 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
+    conda create -n CoolProp35 python=3.5 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
 
-    activate CoolProp27
-    pip install wheel
-    deactivate
-    activate CoolProp34
-    pip install wheel
-    deactivate
-
-Please repeat the steps above for both 32bit and 64bit Python environments.
+Please repeat the steps above for **both 32bit and 64bit** Python environments.
 
 On a Linux system, things only change a little bit::
 
-    conda create -n CoolProp27 python=2.7
-    conda create -n CoolProp33 python=3.3
-    conda create -n CoolProp34 python=3.4
-    conda install -n CoolProp27 cython pip jinja2 pyyaml pycrypto
-    conda install -n CoolProp33 cython pip jinja2 pyyaml pycrypto
-    conda install -n CoolProp34 cython pip jinja2 pyyaml pycrypto
-
-    source activate CoolProp27
-    pip install wheel
-    source deactivate
-    source activate CoolProp33
-    pip install wheel
-    source deactivate
-    source activate CoolProp34
-    pip install wheel
-    source deactivate
+    conda create -n CoolProp27 python=2.7 cython pip requests jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp33 python=3.3 cython pip requests jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp34 python=3.4 cython pip requests jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp35 python=3.5 cython pip requests jinja2 pyyaml pycrypto wheel
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
 bash or zsh. We make use of the ``source`` command, which is not part of the
@@ -526,7 +505,8 @@ build system:
 
     docker cp ${HOME}/.ssh ${SLAVENAME}:/home/buildbot/
     docker cp ${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/
-    docker exec ${SLAVENAME} --user root chown -R buildbot /home/buildbot/
+    docker exec --user root ${SLAVENAME} chown -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
+	docker exec --user root ${SLAVENAME} chgrp -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
 
 .. note::
   If you cannot copy the SSH keys, you can change the upload function in the 

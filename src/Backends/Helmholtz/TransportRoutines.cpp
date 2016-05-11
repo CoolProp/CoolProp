@@ -362,7 +362,7 @@ CoolPropDbl TransportRoutines::viscosity_heptane_higher_order_hardcoded(Helmholt
 
     // Output is in Pa-s
     double c[] = {0, 22.15000/1e6, -15.00870/1e6, 3.71791/1e6, 77.72818/1e6, 9.73449, 9.51900, -6.34076, -2.51909};
-    return pow(rhor,2.0L/3.0L)*sqrt(Tr)*(c[1]*rhor+c[2]*pow(rhor,2)+c[3]*pow(rhor,3)+c[4]*rhor/(c[5]+c[6]*Tr+c[7]*rhor+rhor*rhor+c[8]*rhor*Tr));
+    return pow(rhor,static_cast<CoolPropDbl>(2.0L/3.0L))*sqrt(Tr)*(c[1]*rhor+c[2]*pow(rhor,2)+c[3]*pow(rhor,3)+c[4]*rhor/(c[5]+c[6]*Tr+c[7]*rhor+rhor*rhor+c[8]*rhor*Tr));
 }
 
 CoolPropDbl TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend &HEOS)
@@ -1230,12 +1230,41 @@ CoolPropDbl TransportRoutines::viscosity_ECS(HelmholtzEOSMixtureBackend &HEOS, H
     CoolPropDbl eta_resid = HEOS_Reference.calc_viscosity_background();
 
     // The F factor
-    CoolPropDbl F_eta = sqrt(f)*pow(h, -2.0L/3.0L)*sqrt(M/M0);
+    CoolPropDbl F_eta = sqrt(f)*pow(h, -static_cast<CoolPropDbl>(2.0L/3.0L))*sqrt(M/M0);
 
     // The total viscosity considering the contributions of the fluid of interest and the reference fluid [Pa-s]
     CoolPropDbl eta = eta_dilute + eta_resid*F_eta;
 
     return eta;
+}
+
+CoolPropDbl TransportRoutines::viscosity_rhosr(HelmholtzEOSMixtureBackend &HEOS)
+{
+    
+    // Get a reference to the data
+    const CoolProp::ViscosityRhoSrVariables &data = HEOS.components[0].transport.viscosity_rhosr;
+    
+    // The dilute gas portion for the fluid of interest [Pa-s]
+    CoolPropDbl eta_dilute = viscosity_dilute_kinetic_theory(HEOS);
+    
+    // Calculate x
+    double x = HEOS.rhomolar()*HEOS.gas_constant()*(HEOS.tau()*HEOS.dalphar_dTau() - HEOS.alphar())/data.rhosr_critical;
+
+    // Crossover variable
+    double psi_liq = 1/(1 + exp(-100.0*(x-2)));
+    
+    // Evaluated using Horner's method
+    const std::vector<double> &cL = data.c_liq, cV = data.c_vap;
+    double f_liq = cL[0] + x*(cL[1] + x*(cL[2] + x*(cL[3])));
+    double f_vap = cV[0] + x*(cV[1] + x*(cV[2] + x*(cV[3])));
+    
+    // Evaluate the reference fluid
+    double etastar_ref = exp(psi_liq*f_liq + (1-psi_liq)*f_vap);
+    
+    // Get the non-dimensionalized viscosity
+    double etastar_fluid = 1+data.C*(etastar_ref-1);
+    
+    return etastar_fluid*eta_dilute;
 }
 
 CoolPropDbl TransportRoutines::conductivity_ECS(HelmholtzEOSMixtureBackend &HEOS, HelmholtzEOSMixtureBackend &HEOS_Reference)

@@ -4,7 +4,7 @@
 
 #include "CoolPropFluid.h"
 
-#include "rapidjson/rapidjson_include.h"
+#include "rapidjson_include.h"
 #include "crossplatform_shared_ptr.h"
 
 #include <map>
@@ -645,10 +645,28 @@ protected:
         fluid.transport.viscosity_Chung.acentric = cpjson::get_double(viscosity, "acentric");
         fluid.transport.viscosity_using_Chung = true;
     }
+    
+    void parse_rhosr_viscosity(rapidjson::Value &viscosity, CoolPropFluid &fluid)
+    {
+        fluid.transport.viscosity_rhosr.C = cpjson::get_double(viscosity, "C");
+        fluid.transport.viscosity_rhosr.c_liq = cpjson::get_double_array(viscosity, "c_liq");
+        fluid.transport.viscosity_rhosr.c_vap = cpjson::get_double_array(viscosity, "c_vap");
+        fluid.transport.viscosity_rhosr.rhosr_critical = cpjson::get_double(viscosity, "rhosr_critical");
+        fluid.transport.viscosity_rhosr.x_crossover = cpjson::get_double(viscosity, "x_crossover");
+        fluid.transport.viscosity_using_rhosr = true;
+    }
+    
 
     /// Parse the transport properties
     void parse_viscosity(rapidjson::Value &viscosity, CoolPropFluid & fluid)
     {
+        // If an array, use the first one, and then stop;
+        if (viscosity.IsArray()){
+            rapidjson::Value::ValueIterator itr = viscosity.Begin();
+            parse_viscosity(*itr, fluid);
+            return;
+        }
+        
         // Load the BibTeX key
         fluid.transport.BibTeX_viscosity = cpjson::get_string(viscosity,"BibTeX");
 
@@ -664,6 +682,12 @@ protected:
         // If it is using ECS, set ECS parameters and quit
         if (viscosity.HasMember("type") && !cpjson::get_string(viscosity, "type").compare("ECS")){
             parse_ECS_viscosity(viscosity, fluid);
+            return;
+        }
+        
+        // If it is using rho*sr CS, set parameters and quit
+        if (viscosity.HasMember("type") && !cpjson::get_string(viscosity, "type").compare("rhosr-CS")){
+            parse_rhosr_viscosity(viscosity, fluid);
             return;
         }
 
@@ -696,8 +720,6 @@ protected:
                 throw ValueError(format("hardcoded viscosity [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }
         }
-
-
 
         // Load dilute viscosity term
         if (viscosity.HasMember("dilute")){
@@ -922,7 +944,7 @@ protected:
         CoolPropDbl rho_crit_molar = fluid.EOS().reduce.rhomolar/1000.0;// [mol/m3 to mol/L]
         CoolPropDbl Tc = fluid.EOS().reduce.T;
         fluid.transport.sigma_eta = 0.809/pow(rho_crit_molar, static_cast<CoolPropDbl>(1.0/3.0))/1e9; // 1e9 is to convert from nm to m
-        fluid.transport.epsilon_over_k = Tc/1.3593; // [K]
+        fluid.transport.epsilon_over_k = Tc/1.2593; // [K]
     }
 
     void parse_melting_line(rapidjson::Value &melting_line, CoolPropFluid & fluid)

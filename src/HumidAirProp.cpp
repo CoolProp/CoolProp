@@ -1,5 +1,7 @@
 #if defined(_MSC_VER)
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #endif
 
 #include <memory>
@@ -21,7 +23,7 @@
 #include <string.h>
 #include <iostream>
 #include <list>
-#include "IF97.h"
+#include "externals/IF97/IF97.h"
 
 /// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
 std::size_t strcmp(const std::string &s, const std::string &e){
@@ -231,18 +233,17 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
             W_min_valid = ValidNumber(r_min);
         }
     }
-    std::string errstr;
     // We will do a secant call if the values at W_min and W_max have the same sign
     if (r_min*r_max > 0){
         if (std::abs(r_min) < std::abs(r_max)){
-            W = CoolProp::Secant(BSR, W_min, 0.01*W_min, 1e-7, 50, errstr);
+            W = CoolProp::Secant(BSR, W_min, 0.01*W_min, 1e-7, 50);
         }
         else{
-            W = CoolProp::Secant(BSR, W_max, -0.01*W_max, 1e-7, 50, errstr);
+            W = CoolProp::Secant(BSR, W_max, -0.01*W_max, 1e-7, 50);
         }
     }
     else{
-        W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-4, 50, errstr);
+        W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-4, 50);
     }
     return W;
 }
@@ -300,18 +301,17 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             T_min_valid = ValidNumber(r_min);
         }
     }
-    std::string errstr;
     // We will do a secant call if the values at T_min and T_max have the same sign
     if (r_min*r_max > 0){
         if (std::abs(r_min) < std::abs(r_max)){
-            T = CoolProp::Secant(BSR, T_min, 0.01*T_min, 1e-7, 50, errstr);
+            T = CoolProp::Secant(BSR, T_min, 0.01*T_min, 1e-7, 50);
         }
         else{
-            T = CoolProp::Secant(BSR, T_max, -0.01*T_max, 1e-7, 50, errstr);
+            T = CoolProp::Secant(BSR, T_max, -0.01*T_max, 1e-7, 50);
         }
     }
     else{
-        T = CoolProp::Brent(BSR, T_min, T_max, 1e-7, 1e-4, 50, errstr);
+        T = CoolProp::Brent(BSR, T_min, T_max, 1e-7, 1e-4, 50);
     }
     return T;
 }
@@ -345,8 +345,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
 
     BrentSolverResids Resids(psi_w, p);
 
-    std::string errstr; 
-    T = CoolProp::Brent(Resids, 150, 350, 1e-16, 1e-7, 100, errstr);
+    T = CoolProp::Brent(Resids, 150, 350, 1e-16, 1e-7, 100);
 
     return T;
 }
@@ -1216,11 +1215,9 @@ double WetbulbTemperature(double T, double p, double psi_w)
     // Instantiate the solver container class
     WetBulbSolver WBS(T, p, psi_w);
 
-    std::string errstr;
-
     double return_val;
     try{
-        return_val = Brent(WBS,Tmax+1,100, DBL_EPSILON, 1e-12, 50, errstr);
+        return_val = Brent(WBS,Tmax+1,100, DBL_EPSILON, 1e-12, 50);
 
         // Solution obtained is out of range (T>Tmax)
         if (return_val > Tmax + 1) {throw CoolProp::ValueError();}
@@ -1235,9 +1232,9 @@ double WetbulbTemperature(double T, double p, double psi_w)
 
             // Directly solve for the saturated temperature that yields the enthalpy desired
             WetBulbTminSolver WBTS(p,hair_dry);
-            double Tmin = Brent(WBTS,210,Tsat-1,1e-12,1e-12,50,errstr);
+            double Tmin = Brent(WBTS,210,Tsat-1,1e-12,1e-12,50);
 
-            return_val = Brent(WBS,Tmin-30,Tmax-1,1e-12,1e-12,50,errstr);
+            return_val = Brent(WBS,Tmin-30,Tmax-1,1e-12,1e-12,50);
         }
         catch(...)
         {
@@ -1993,6 +1990,31 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
         {
             v_bar=MolarVolume(T,p,psi_w);
             return IdealGasMolarEnthalpy_Air(T,v_bar);
+        }
+        else if (!strcmp(Name,"h_Ice"))
+        {
+            strcpy(units, "J/kg");
+            return h_Ice(T, p);
+        }
+        else if (!strcmp(Name,"s_Ice"))
+        {
+            strcpy(units, "J/kg/K");
+            return s_Ice(T, p);
+        }
+        else if (!strcmp(Name,"psub_Ice"))
+        {
+            strcpy(units, "Pa");
+            return psub_Ice(T);
+        }
+        else if (!strcmp(Name,"g_Ice"))
+        {
+            strcpy(units, "J/kg");
+            return g_Ice(T, p);
+        }
+        else if (!strcmp(Name,"rho_Ice"))
+        {
+            strcpy(units, "kg/m^3");
+            return rho_Ice(T, p);
         }
         else
         {

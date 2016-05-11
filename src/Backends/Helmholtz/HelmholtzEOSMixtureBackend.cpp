@@ -9,7 +9,9 @@
 
 #if defined(_MSC_VER)
 #define _CRTDBG_MAP_ALLOC
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <crtdbg.h>
 #include <sys/stat.h>
 #else
@@ -110,12 +112,10 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     this->mole_fractions = mole_fractions; // Most effective copy
     this->resize(N); // No reallocation of this->mole_fractions happens
     // Resize the vectors for the liquid and vapor,  but only if they are in use
-    if (this->SatL.get() != NULL){
-        this->SatL->resize(N);
-    }
-    if (this->SatV.get() != NULL){
-        this->SatV->resize(N);
-    }
+    if (this->SatL) this->SatL->resize(N);
+    if (this->SatV) this->SatV->resize(N);
+    // Also store the mole fractions as doubles
+    this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
 };
 void HelmholtzEOSMixtureBackend::resize(std::size_t N)
 {
@@ -194,24 +194,54 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
         throw ValueError(format("fluid parameter [%s] is invalid",ParamName.c_str()));
     }
 }
-/// Set binary mixture floating point parameter
-void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){
-    // Set the value in the library
-    CoolProp::set_mixture_binary_pair_data(CAS1, CAS2, parameter, value);
 
-    // Update the values in this instance and the saturation states too
-    this->set_mixture_parameters();
-    if (this->SatL){ this->SatL->set_mixture_parameters(); }
-    if (this->SatV){ this->SatV->set_mixture_parameters(); }
+void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model){
+    if (model == "linear"){
+        double Tc1 = get_fluid_constant(i, iT_critical), Tc2 = get_fluid_constant(j, iT_critical);
+        double gammaT = 0.5*(Tc1 + Tc2) / sqrt(Tc1*Tc2);
+        double rhoc1 = get_fluid_constant(i, irhomolar_critical), rhoc2 = get_fluid_constant(j, irhomolar_critical);
+        double gammaV = 4.0 * (1/rhoc1 + 1/rhoc2) / pow(pow(rhoc1, -1.0 / 3.0) + pow(rhoc2, -1.0/3.0), 3);
+        set_binary_interaction_double(i, j, "betaT", 1.0);
+        set_binary_interaction_double(i, j, "gammaT", gammaT);
+        set_binary_interaction_double(i, j, "betaV", 1.0);
+        set_binary_interaction_double(i, j, "gammaV", gammaV);
+    }
+    else if (model == "Lorentz-Berthelot"){
+        set_binary_interaction_double(i, j, "betaT", 1.0);
+        set_binary_interaction_double(i, j, "gammaT", 1.0);
+        set_binary_interaction_double(i, j, "betaV", 1.0);
+        set_binary_interaction_double(i, j, "gammaV", 1.0);
+    }
+    else{ 
+        throw ValueError(format("mixing rule [%s] is not understood", model.c_str()));
+    }
+}
+/// Set binary mixture floating point parameter for this instance
+void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
+    if (parameter == "Fij"){
+        residual_helmholtz->Excess.F[i][j] = value;
+        residual_helmholtz->Excess.F[j][i] = value;
+    }
+    else{
+        Reducing->set_binary_interaction_double(i,j,parameter,value);
+    }
+    /// Also set the parameters in the managed pointers for saturated liquid and vapor states
+    if (this->SatL){ this->SatL->set_binary_interaction_double(i, j, parameter, value); }
+    if (this->SatV) { this->SatV->set_binary_interaction_double(i, j, parameter, value); }
 };
-/// Get binary mixture double value
-double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
-    return atof(CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter).c_str());
-}
-/// Get binary mixture string value
-std::string HelmholtzEOSMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
-    return CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter);
-}
+/// Get binary mixture floating point parameter for this instance
+double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
+    if (parameter == "Fij"){
+        return residual_helmholtz->Excess.F[i][j];
+    }
+    else{
+        return Reducing->get_binary_interaction_double(i,j,parameter);
+    }
+};
+///// Get binary mixture string value
+//std::string HelmholtzEOSMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
+//    return CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter);
+//}
     
 void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string &EOS_name){
 
@@ -252,17 +282,15 @@ void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std:
         throw ValueError(format("Index [%d] is invalid", i));
     }
     // Now do the same thing to the saturated liquid and vapor instances if possible
-    if (SatL.get() != NULL && SatV.get() != NULL){
-        SatL->change_EOS(i, EOS_name);
-        SatV->change_EOS(i, EOS_name);
-    }
+    if (this->SatL) SatL->change_EOS(i, EOS_name);
+	if (this->SatV) SatV->change_EOS(i, EOS_name);
 }
 void HelmholtzEOSMixtureBackend::calc_phase_envelope(const std::string &type)
 {
     // Clear the phase envelope data
     PhaseEnvelope = PhaseEnvelopeData();
     // Build the phase envelope
-    PhaseEnvelopeRoutines::build(*this);
+    PhaseEnvelopeRoutines::build(*this, type);
     // Finalize the phase envelope
     PhaseEnvelopeRoutines::finalize(*this);
 };
@@ -346,7 +374,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gas_constant(void)
     }
     else{
         if (get_config_bool(NORMALIZE_GAS_CONSTANTS)){
-            return R_u_CODATA;
+            return get_config_double(R_U_CODATA);
         }
         else{
             // mass fraction weighted average of the components
@@ -588,6 +616,13 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl &dilut
             return;
         }
         
+        // Check if using rho*sr model
+        if (component.transport.viscosity_using_rhosr){
+            // Get the viscosity using rho*sr model and stick in the critical value
+            critical = TransportRoutines::viscosity_rhosr(*this);
+            return;
+        }
+        
         if (component.transport.hardcoded_viscosity != CoolProp::TransportPropertyData::VISCOSITY_NOT_HARDCODED)
         {
             // Evaluate hardcoded model and stick in the critical value
@@ -807,6 +842,18 @@ std::string HelmholtzEOSMixtureBackend::calc_name(void)
         return components[0].name; 
     }
 }
+
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
+	if ((key == iDmolar) && _rhoLmolar) return _rhoLmolar;
+	if (!SatL) throw ValueError("The saturated liquid state has not been set.");
+	return SatL->keyed_output(key); 
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) { 
+	if ((key == iDmolar) && _rhoVmolar) return _rhoVmolar;
+	if (!SatV) throw ValueError("The saturated vapor state has not been set.");
+	return SatV->keyed_output(key); 
+}
+
 void HelmholtzEOSMixtureBackend::calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){
 	if (type == "Joule-Thomson"){
 		JouleThomsonCurveTracer JTCT(this, 1e5, 800);
@@ -886,7 +933,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void)
     if (components.size() != 1){
         std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
-            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].T;
         }
         else{
@@ -902,7 +949,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void)
     if (components.size() != 1){
         std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
-            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].p;
         }
         else{
@@ -918,7 +965,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void)
     if (components.size() != 1){
         std::vector<CriticalState> critpts = calc_all_critical_points();
         if (critpts.size() == 1){
-            if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
+            //if (!critpts[0].stable){ throw ValueError(format("found one critical point but critical point is not stable")); }
             return critpts[0].rhomolar;
         }
         else{
@@ -1043,19 +1090,13 @@ void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, Coo
     // Set up the state
     pre_update(pair, rhomolar, T);
     
-    // Save the current value of vapor quality
-    CoolPropDbl Q_old = _Q;
-    
     _rhomolar = rhomolar;
     _T = T;
     _p = calc_pressure();
-    _Q = -1;
     
     // Cleanup
-    post_update();
-    
-    // Copy the value back
-    _Q = Q_old;
+    bool optional_checks = false;
+    post_update(optional_checks);
 }
 
 void HelmholtzEOSMixtureBackend::update_HmolarQ_with_guessT(CoolPropDbl hmolar, CoolPropDbl Q, CoolPropDbl Tguess)
@@ -1094,10 +1135,11 @@ void HelmholtzEOSMixtureBackend::update_TP_guessrho(CoolPropDbl T, CoolPropDbl p
     CoolPropDbl rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
     
     // Update the class with the new calculated density
-    update(DmolarT_INPUTS, rhomolar, T);
+    update_DmolarT_direct(rhomolar, T);
     
     // Cleanup
-    post_update();
+    bool optional_checks = false;
+    post_update(optional_checks);
 }
 
 void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 )
@@ -1205,7 +1247,7 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
     post_update();
 }
 
-void HelmholtzEOSMixtureBackend::post_update()
+void HelmholtzEOSMixtureBackend::post_update(bool optional_checks)
 {
     // Check the values that must always be set
     //if (_p < 0){ throw ValueError("p is less than zero");}
@@ -1215,9 +1257,12 @@ void HelmholtzEOSMixtureBackend::post_update()
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
     if (_rhomolar < 0){ throw ValueError("rhomolar is less than zero");}
     if (!ValidNumber(_rhomolar)){ throw ValueError("rhomolar is not a valid number");}
-    if (!ValidNumber(_Q)){ throw ValueError("Q is not a valid number");}
-    if (_phase == iphase_unknown){ 
-            throw ValueError("_phase is unknown");
+    
+    if (optional_checks){
+        if (!ValidNumber(_Q)){ throw ValueError("Q is not a valid number");}
+        if (_phase == iphase_unknown){ 
+                throw ValueError("_phase is unknown");
+        }
     }
 
     // Set the reduced variables
@@ -1487,13 +1532,19 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             default:
                 throw ValueError(format("bad input for other"));
         }
+		// TODO: Check the speed penalty of these calls
         // Update the states
-        this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T());
-        this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T());
-        if (Q < -100*DBL_EPSILON){
+		if (this->SatL) this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T()) ;
+		if (this->SatV) this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T()) ;
+		// Update the two-Phase variables
+		_rhoLmolar = HEOS.SatL->rhomolar();
+		_rhoVmolar = HEOS.SatV->rhomolar();
+
+		//
+        if (Q < -1e-9){
             this->_phase = iphase_liquid; _Q = -1000;  return;
         }
-        else if (Q > 1+100*DBL_EPSILON){
+        else if (Q > 1+1e-9){
             this->_phase = iphase_gas; _Q = 1000; return;
         }
         else{
@@ -1553,8 +1604,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void)
         double v2 = resid.call(tripleV.T);
         // If there is a sign change, there is a maxima, otherwise there is no local maxima/minima
         if (v1*v2 < 0){
-            std::string errstr;
-            Brent(resid, hsat_max.T, tripleV.T, DBL_EPSILON, 1e-8, 30, errstr);
+            Brent(resid, hsat_max.T, tripleV.T, DBL_EPSILON, 1e-8, 30);
             ssat_max.T = resid.HEOS->T();
             ssat_max.p = resid.HEOS->p();
             ssat_max.rhomolar = resid.HEOS->rhomolar();
@@ -1586,8 +1636,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max(void)
     {
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(get_components()));
         Residualhmax residhmax(*HEOS_copy);
-        std::string errstrhmax;
-        Brent(residhmax, T_critical() - 0.1, HEOS_copy->Ttriple() + 1, DBL_EPSILON, 1e-8, 30, errstrhmax);
+        Brent(residhmax, T_critical() - 0.1, HEOS_copy->Ttriple() + 1, DBL_EPSILON, 1e-8, 30);
         hsat_max.T = residhmax.HEOS->T();
         hsat_max.p = residhmax.HEOS->p();
         hsat_max.rhomolar = residhmax.HEOS->rhomolar();
@@ -1618,6 +1667,18 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 else{
                     _phase = iphase_supercritical_gas; break;
                 }
+            case iP:
+            {
+                if (std::abs(_p - _crit.p) < 10*DBL_EPSILON){
+                    _phase = iphase_critical_point; break;
+                }
+                else if (_p > _crit.p){
+                    _phase = iphase_supercritical_liquid; break;
+                }
+                else{
+                    _phase = iphase_supercritical_gas; break;
+                }
+            }
             default:
                 throw ValueError(format("T=Tcrit; invalid input for other to T_phase_determination_pure_or_pseudopure"));
         }
@@ -1680,7 +1741,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                             // Next we check the vapor quality based on the ancillary values
                             double Qanc = (1/value - 1/static_cast<double>(_rhoLanc))/(1/static_cast<double>(_rhoVanc) - 1/static_cast<double>(_rhoLanc));
                             // If the vapor quality is significantly inside the two-phase zone, stop, we are definitely two-phase
-                            if (value > rho_liq || value < rho_vap){
+                            if (value > 0.95*rho_liq || value < 1.05*rho_vap){
                                 // Definitely single-phase
                                 _phase = iphase_liquid; // Needed for direct update call
                                 _Q = -1000; // Needed for direct update call
@@ -1702,6 +1763,9 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                     }
                     default:
                     {
+						if (!this->SatL || !this->SatV) {
+							throw ValueError(format("The saturation properties are needed in T_phase_determination_pure_or_pseudopure"));
+						}
                         // If it is not density, update the states
                         SatV->update(DmolarT_INPUTS, rho_vap, _T);
                         SatL->update(DmolarT_INPUTS, rho_liq, _T);
@@ -1786,8 +1850,11 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         }
         
         // Update the states
-        this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T());
-        this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T());
+		if (this->SatL) this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T());
+		if (this->SatV) this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T());
+		// Update the two-Phase variables
+		_rhoLmolar = HEOS.SatL->rhomolar();
+		_rhoVmolar = HEOS.SatV->rhomolar();
 
         if (Q < 0){
             this->_phase = iphase_liquid; _Q = -1; return;
@@ -1986,7 +2053,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         };
     };
     solver_TP_resid resid(this,T,p);
-    std::string errstring;
 
     // Check if the phase is imposed
     if (imposed_phase_index != iphase_not_imposed)
@@ -2016,11 +2082,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
             try{
                 // First we try with Halley's method starting at saturated liquid
-                rhomolar = Halley(resid, _rhoLancval, 1e-16, 100, errstring);
+                rhomolar = Halley(resid, _rhoLancval, 1e-16, 100);
             }
             catch(std::exception &){
                 // Next we try with a Brent method bounded solver since the function is 1-1
-                rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100,errstring);
+                rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100);
                 if (!ValidNumber(rhomolar)){throw ValueError();}
             }
             return rhomolar;
@@ -2030,7 +2096,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             CoolPropDbl rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
             
             // Next we try with a Brent method bounded solver since the function is 1-1
-            double rhomolar = Brent(resid, rhoLancval*0.99, rhomolar_critical()*4, DBL_EPSILON,1e-8,100,errstring);
+            double rhomolar = Brent(resid, rhoLancval*0.99, rhomolar_critical()*4, DBL_EPSILON,1e-8,100);
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
         }
@@ -2038,15 +2104,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
 
     try{
         
-        // First we try with Newton's method with analytic derivative
-        double rhomolar = Newton(resid, rhomolar_guess, 1e-8, 100, errstring);
+        // First we try with Halley's method with analytic derivative
+        double rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100);
         if (!ValidNumber(rhomolar)){
             throw ValueError();
         }
         if (phase == iphase_liquid && !is_pure_or_pseudopure && first_partial_deriv(iP, iDmolar, iT) < 0){
             
             // Try again with a larger density in order to end up at the right solution
-            rhomolar = Newton(resid, rhomolar_guess*1.5, 1e-8, 100, errstring);
+            rhomolar = Newton(resid, rhomolar_guess*1.5, 1e-8, 100);
             return rhomolar;
         }
         return rhomolar;
@@ -2055,7 +2121,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     {
         try{
             // Next we try with Secant method shooting off from the guess value
-            double rhomolar = Secant(resid, rhomolar_guess, 1.1*rhomolar_guess, 1e-8, 100, errstring);
+            double rhomolar = Secant(resid, rhomolar_guess, 1.1*rhomolar_guess, 1e-8, 100);
             if (!ValidNumber(rhomolar)){throw ValueError();}
             return rhomolar;
             
@@ -2064,7 +2130,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         {
             try{
                 // Next we try with a Brent method bounded solver since the function is 1-1
-                double rhomolar = Brent(resid, 0.1*rhomolar_guess, 2*rhomolar_guess,DBL_EPSILON,1e-8,100,errstring);
+                double rhomolar = Brent(resid, 0.1*rhomolar_guess, 2*rhomolar_guess,DBL_EPSILON,1e-8,100);
                 if (!ValidNumber(rhomolar)){throw ValueError();}
                 return rhomolar;
             }
@@ -2075,7 +2141,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         }
     }
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, int phase)
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase)
 {
     CoolPropDbl rhomolar, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 
@@ -2131,9 +2197,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
         switch(phase)
         {
         case iphase_liquid:
+        case iphase_supercritical_liquid:
             rhomolar = max3(rhomolar0, rhomolar1, rhomolar2); break;
         case iphase_gas:
         case iphase_supercritical_gas:
+		case iphase_supercritical:
             rhomolar = min3(rhomolar0, rhomolar1, rhomolar2); break;
         default:
             throw ValueError("Bad phase to solver_rho_Tp_SRK");
@@ -2183,6 +2251,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_hmolar(void)
 	if (get_debug_level()>=50) std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << std::endl;
     if (isTwoPhase())
     {
+		if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
         if (std::abs(_Q) < DBL_EPSILON){
             _hmolar = SatL->hmolar();
         }
@@ -2236,6 +2305,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_smolar(void)
 {
     if (isTwoPhase())
     {
+		if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
         if (std::abs(_Q) < DBL_EPSILON){
             _smolar = SatL->smolar();
         }
@@ -2287,6 +2357,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_umolar(void)
 {
     if (isTwoPhase())
     {
+		if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
         if (std::abs(_Q) < DBL_EPSILON){
             _umolar = SatL->umolar();
         }
@@ -2390,6 +2461,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
 {
     if (isTwoPhase())
     {
+		if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
         _gibbsmolar = _Q*SatV->gibbsmolar() + (1 - _Q)*SatL->gibbsmolar();
         return static_cast<CoolPropDbl>(_gibbsmolar);
     }
@@ -2423,6 +2495,15 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity(std::size_t i)
 {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
     return MixtureDerivatives::fugacity_i(*this, i, xN_flag);
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_chemical_potential(std::size_t i)
+{
+    x_N_dependency_flag xN_flag = XN_DEPENDENT;
+    double Tci = get_fluid_constant(i, iT_critical);
+    double rhoci = get_fluid_constant(i, irhomolar_critical);
+    double dnar_dni__const_T_V_nj = MixtureDerivatives::dnalphar_dni__constT_V_nj(*this, i, xN_flag);
+    double dna0_dni__const_T_V_nj = components[i].EOS().alpha0.base(tau()*(Tci / T_reducing()), delta()/(rhoci / rhomolar_reducing())) + 1 + log(mole_fractions[i]);
+    return gas_constant()*T()*(dna0_dni__const_T_V_nj + dnar_dni__const_T_V_nj);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_phase_identification_parameter(void)
 {
@@ -2612,6 +2693,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer = 0;
         CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
+        if (components.size() == 0){
+            throw ValueError("Cannot evaluate alpha0 derivatives since components is empty");
+        }
         for (unsigned int i = 0; i < N; ++i){
             rho_ci = components[i].EOS().reduce.rhomolar;
             T_ci = components[i].EOS().reduce.T;
@@ -2793,6 +2877,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters O
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1)
 {
+	if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_first_saturation_deriv"));
+
 	// Derivative of temperature w.r.t. pressure ALONG the saturation curve
 	CoolPropDbl dTdP_sat = T()*(1/SatV->rhomolar()-1/SatL->rhomolar())/(SatV->hmolar()-SatL->hmolar());
 	
@@ -2813,6 +2899,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters O
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2)
 {
+	if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_second_saturation_deriv"));
 	if (Wrt1 == iP && Wrt2 == iP){
 		CoolPropDbl dydT_constp = this->first_partial_deriv(Of1, iT, iP);
 		CoolPropDbl d2ydTdp = this->second_partial_deriv(Of1, iT, iP, iP, iT);
@@ -2842,6 +2929,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters 
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2)
 {
+	if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_second_two_phase_deriv"));
+
     if (Of == iDmolar && ((Wrt1 == iHmolar && Constant1 == iP && Wrt2 == iP && Constant2 == iHmolar) || (Wrt2 == iHmolar && Constant2 == iP && Wrt1 == iP && Constant1 == iHmolar))){
         parameters h_key = iHmolar, rho_key = iDmolar, p_key = iP;
         // taking the derivative of (drho/dv)*(dv/dh|p) with respect to p with h constant
@@ -2885,6 +2974,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_second_two_phase_deriv(parameters O
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant)
 {
+	if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_first_two_phase_deriv"));
     if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
         return -POW2(rhomolar())*(1/SatV->rhomolar() - 1/SatL->rhomolar())/(SatV->hmolar() - SatL->hmolar());
     }
@@ -2921,6 +3011,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end)
 {
+	if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_first_two_phase_deriv_splined"));
     if (_Q > x_end){throw ValueError(format("Q [%g] is greater than x_end [%Lg]", _Q, x_end).c_str());}
     if (_phase != iphase_twophase){throw ValueError(format("state is not two-phase")); }
     shared_ptr<HelmholtzEOSMixtureBackend> Liq(new HelmholtzEOSMixtureBackend(this->get_components())), 
@@ -3023,27 +3114,28 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
     public:
         HelmholtzEOSMixtureBackend &HEOS;
         double L1, M1;
+        Eigen::MatrixXd Lstar,Mstar;
         Resid(HelmholtzEOSMixtureBackend &HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
         std::vector<double> call(const std::vector<double> &tau_delta){
             double rhomolar = tau_delta[1]*HEOS.rhomolar_reducing();
             double T = HEOS.T_reducing()/tau_delta[0];
             HEOS.update(DmolarT_INPUTS, rhomolar, T);
-            L1 = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT).determinant(),
-            M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
+            Lstar = MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT);
+            Mstar = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT, Lstar);
             std::vector<double> o(2);
-            o[0] = L1; o[1] = M1;
+            o[0] = Lstar.determinant(); o[1] = Mstar.determinant();
             return o;
         };
         std::vector<std::vector<double> > Jacobian(const std::vector<double> &x)
         {
             std::size_t N = x.size();
             std::vector<std::vector<double> > J(N, std::vector<double>(N, 0));
-            Eigen::MatrixXd adjL = adjugate(MixtureDerivatives::Lstar(HEOS, XN_INDEPENDENT)),
-                adjM = adjugate(MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT)),
+            Eigen::MatrixXd adjL = adjugate(Lstar),
+                adjM = adjugate(Mstar),
                 dLdTau = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iTau),
                 dLdDelta = MixtureDerivatives::dLstar_dX(HEOS, XN_INDEPENDENT, iDelta),
-                dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau),
-                dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta);
+                dMdTau = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iTau, Lstar, dLdTau),
+                dMdDelta = MixtureDerivatives::dMstar_dX(HEOS, XN_INDEPENDENT, iDelta, Lstar, dLdDelta);
 
             J[0][0] = (adjL*dLdTau).trace();
             J[0][1] = (adjL*dLdDelta).trace();
@@ -3080,25 +3172,26 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         };
     };
     Resid resid(*this);
-    std::vector<double> x, tau_delta(2); tau_delta[0] = T_reducing()/T0; tau_delta[1] = rho0/rhomolar_reducing(); 
-    std::vector<double> td2 = tau_delta;
-    std::string errstr;
-    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-14, 100, &errstr);
+    std::vector<double> x, tau_delta(2); 
+    tau_delta[0] = T_reducing()/T0; 
+    tau_delta[1] = rho0/rhomolar_reducing(); 
+    x = NDNewtonRaphson_Jacobian(&resid, tau_delta, 1e-10, 100);
     _critical.T = T_reducing()/x[0];
     _critical.rhomolar = x[1]*rhomolar_reducing();
     _critical.p = calc_pressure_nocache(_critical.T, _critical.rhomolar);
     
-    // First (necessary but not sufficient) check of stability
-    // All eigenvalues of M* matrix must be positive
-    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT);
-    Eigen::EigenSolver<Eigen::MatrixXd> es(Mstar);
-    double min_eigenvalue = es.eigenvalues().real().minCoeff();
-    
     CriticalState critical;
-    critical.stable = (min_eigenvalue > 0); // TODO: stability analysis
     critical.T = _critical.T;
     critical.p = _critical.p;
     critical.rhomolar = _critical.rhomolar;
+    if (_critical.p < 0){
+        critical.stable = false;
+    }
+    else{
+        // Otherwise we try to check stability with TPD-based analysis
+        StabilityRoutines::StabilityEvaluationClass stability_tester(*this);
+        critical.stable = stability_tester.is_stable();
+    }
     return critical;
 }
 
@@ -3141,7 +3234,8 @@ public:
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
     double delta,
            tau,
-           M1_last,
+           M1_last, ///< The last value that the Mstar determinant had
+           theta_last, ///< The last value that the angle had
            R_tau, ///< The radius for tau currently being used
            R_delta, ///< The radius for delta currently being used
            R_tau_tracer, ///< The radius for tau that should be used in the L1*=0 tracer (user-modifiable after instantiation)
@@ -3194,34 +3288,50 @@ public:
     };
     
     void trace(){
+        bool debug = (get_debug_level() > 0) | false;
         double theta;
-        static std::string errstr;
-        for (int i = 0; i < 100; ++i){
+        for (int i = 0; i < 300; ++i){
             if (i == 0){
                 // In the first iteration, search all angles in the positive delta direction using a
                 // bounded solver with a very small radius in order to not hit other L1*=0 contours
                 // that are in the vicinity
                 R_tau = 0.001; R_delta = 0.001;
-                theta = Brent(this, 0, M_PI, DBL_EPSILON, 1e-10, 100, errstr);
+                theta = Brent(this, 0, M_PI, DBL_EPSILON, 1e-10, 100);
             }
             else{
                 // In subsequent iterations, you already have an excellent guess for the direction to
                 // be searching in, use Newton's method to refine the solution since we also
                 // have an analytic solution for the derivative
                 R_tau = R_tau_tracer; R_delta = R_delta_tracer;
-                theta = Newton(this, theta, 1e-10, 100, errstr);
+                theta = Newton(this, theta_last, 1e-10, 100);
+                
+                // If the solver takes a U-turn, going in the opposite direction of travel
+                // this is not a good thing, and force a Brent's method solver call to make sure we keep
+                // tracing in the same direction
+                if (std::abs(angle_difference(theta, theta_last)) > M_PI/2.0){
+                    // We have found at least one critical point and we are now well above the density
+                    // associated with the first critical point
+                    if (N_critical_points > 0 && delta > 2.5*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
+                        // Stopping the search - probably we have a kink in the L1*=0 contour
+                        // caused by poor low-temperature behavior
+                        continue;
+                    }
+                    else{
+                        theta = Brent(this, theta_last-M_PI/3.5, theta_last+M_PI/3.5, DBL_EPSILON, 1e-10, 100);
+                    }
+                }
             }
             
             // Calculate the second criticality condition
-            double M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT).determinant();
+            double M1 = MixtureDerivatives::Mstar(HEOS, XN_INDEPENDENT, Lstar).determinant();
             double p_MPa = HEOS.p()/1e6;
             
             // Calculate the new tau and delta at the new point
             double tau_new, delta_new;
             this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
-            
+
             // Stop if bounds are exceeded
-            if (p_MPa > 500 || delta_new > 5){
+            if (p_MPa > 500 || HEOS.get_critical_is_terminated(delta_new, tau_new)){
                 break;
             }
             
@@ -3229,11 +3339,11 @@ public:
             // you have bracketed a critical point, run the full critical point solver to
             // find the critical point and store it
             if (i > 0 && M1*M1_last < 0){
-                double rhomolar = HEOS.rhomolar_reducing()*delta_new, T = HEOS.T_reducing()/tau_new;
+                double rhomolar = HEOS.rhomolar_reducing()*(delta+delta_new)/2.0, T = HEOS.T_reducing()/((tau+tau_new)/2.0);
                 CoolProp::CriticalState crit = HEOS.calc_critical_point(rhomolar, T);
                 critical_points.push_back(crit);
                 N_critical_points++;
-                if (get_debug_level() > 0){
+                if (debug){
                     std::cout << HEOS.get_mole_fractions()[0] << " " << crit.rhomolar << " " << crit.T << " " << p_MPa << std::endl;
                 }
             }
@@ -3242,33 +3352,80 @@ public:
             this->tau = tau_new;
             this->delta = delta_new;
             this->M1_last = M1;
+            this->theta_last = theta;
         }
     };
 };
 
+void HelmholtzEOSMixtureBackend::calc_criticality_contour_values(double &L1star, double &M1star)
+{
+    Eigen::MatrixXd Lstar = MixtureDerivatives::Lstar(*this, XN_INDEPENDENT);
+    Eigen::MatrixXd Mstar = MixtureDerivatives::Mstar(*this, XN_INDEPENDENT, Lstar);
+    L1star = Lstar.determinant();
+    M1star = Mstar.determinant();
+};
     
+void HelmholtzEOSMixtureBackend::get_critical_point_search_radii(double &R_delta, double &R_tau){
+    R_delta = 0.025; R_tau = 0.1;
+}
 std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
 {
     // Store old phase
     phases old_phase = _phase;
     // Specify it to be something homogeneous to shortcut phase evaluation
     specify_phase(iphase_gas);
+
+    double delta0 = _HUGE, tau0 = _HUGE;
+    get_critical_point_starting_values(delta0, tau0);
     
-    std::string errstr;
-    OneDimObjective resid_L0(*this, 0.5);
-    double tau0 = 0.66;
+    OneDimObjective resid_L0(*this, delta0);
+    
+    // If the derivative of L1star with respect to tau is positive, 
+    // tau needs to be increased such that we sit on the other 
+    // side of the d(L1star)/dtau = 0 contour
     resid_L0.call(tau0);
-    if (resid_L0.deriv(tau0) > 0){
-        tau0 += 0.1;
+    int bump_count = 0;
+    while (resid_L0.deriv(tau0) > 0 && bump_count < 3){
+        tau0 *= 1.1;
+        bump_count++;
     }
-    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100, errstr); 
-    
-    L0CurveTracer tracer(*this, tau_L0, 0.5);
+    double tau_L0 = Halley(resid_L0, tau0, 1e-10, 100);
+    //double T0 = T_reducing()/tau_L0;
+    //double rho0 = delta0*rhomolar_reducing();
+
+    L0CurveTracer tracer(*this, tau_L0, delta0);
+
+    double R_delta = 0, R_tau = 0;
+    get_critical_point_search_radii(R_delta, R_tau);
+    tracer.R_delta_tracer = R_delta;
+    tracer.R_tau_tracer = R_tau;
     tracer.trace();
+
     // Reset phase to previous value
     _phase = old_phase;
     return tracer.critical_points;
 }
 
-} /* namespace CoolProp */
+double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess){
+	
+	const std::vector<CoolPropDbl> &z = this->get_mole_fractions_ref();
+	if (w.size() != z.size()){ 
+		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size())); 
+	}
+    update_TPD_state();
+	TPD_state->set_mole_fractions(w);
+	if (rhomolar_guess < 0){
+		TPD_state->update(PT_INPUTS, p, T);
+	}
+	else{
+		TPD_state->update_TP_guessrho(T, p, rhomolar_guess);
+	}
+	double summer = 0;
+	for (std::size_t i = 0; i < w.size(); ++i){
+		summer += w[i] * (log(MixtureDerivatives::fugacity_i(*TPD_state, i, XN_DEPENDENT)) 
+			              - log(MixtureDerivatives::fugacity_i(*this, i, XN_DEPENDENT)));
+	}
+	return summer;
+}
 
+} /* namespace CoolProp */

@@ -4,7 +4,27 @@ from libcpp.string cimport string
 # A header defining the AbstractState class
 cimport cAbstractState
 
+from typedefs cimport *
 cimport constants_header
+
+#ctypedef fused string_t:
+#    cython.p_char
+#    bytes
+#    unicode
+#    string
+#
+#ctypedef fused string_or_size_t:
+#    string_t
+#    cython.integral
+
+ctypedef fused string_or_size_t:
+    cython.p_char
+    bytes
+    unicode
+    string
+    short
+    int
+    long
 
 cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI
@@ -28,10 +48,11 @@ cdef class AbstractState:
     cpdef set_mass_fractions(self, vector[double] z)
     cpdef set_volu_fractions(self, vector[double] z)
 
-    cpdef set_binary_interaction_double(self, string CAS1, string CAS2, string parameter, double val)
+    cpdef set_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter, double val)
+    cpdef double get_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter) except *
     cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val)
-    cpdef double get_binary_interaction_double(self, string CAS1, string CAS2, string parameter) except *
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
+    cpdef apply_simple_mixing_rule(self, size_t, size_t, string)
     
     cpdef name(self)
     cpdef fluid_param_string(self, string key)
@@ -53,10 +74,15 @@ cdef class AbstractState:
     cpdef double rhomolar_critical(self) except *
     cpdef double p_critical(self) except *
     cpdef list all_critical_points(self)
+    cpdef tuple criticality_contour_values(self)
+    
     ## Reducing point
     cpdef double T_reducing(self) except *
     cpdef double rhomolar_reducing(self) except *
     cpdef double rhomass_reducing(self) except *
+    
+    ## Tangent plane distance
+    cpdef double tangent_plane_distance(self, double T, double p, vector[double] w, double rhomolar_guess=*) except *
         
     ## ---------------------------------------- 
     ##        Fluid property accessors
@@ -85,7 +111,7 @@ cdef class AbstractState:
     cpdef double delta(self) except *
     cpdef double viscosity(self) except *
     cpdef double conductivity(self) except *
-    cpdef dict conformal_state(self, string, long double, long double)
+    cpdef dict conformal_state(self, string, CoolPropDbl, CoolPropDbl)
     cpdef dict conductivity_contributions(self)
     cpdef dict viscosity_contributions(self)
     cpdef double surface_tension(self) except *
@@ -112,10 +138,10 @@ cdef class AbstractState:
     ##        Derivatives
     ## ----------------------------------------
     
-    cpdef long double first_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
-    cpdef long double second_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
-    cpdef long double first_saturation_deriv(self, constants_header.parameters, constants_header.parameters) except *
-    cpdef long double second_saturation_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
+    cpdef CoolPropDbl first_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
+    cpdef CoolPropDbl second_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
+    cpdef CoolPropDbl first_saturation_deriv(self, constants_header.parameters, constants_header.parameters) except *
+    cpdef CoolPropDbl second_saturation_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
     
     cpdef double first_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except *
     cpdef double second_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except *
@@ -133,24 +159,24 @@ cdef class AbstractState:
     cpdef get_mass_fractions(self) 
     cpdef get_mole_fractions(self)
     
-    cpdef long double alpha0(self) except *
-    cpdef long double dalpha0_dDelta(self) except *
-    cpdef long double dalpha0_dTau(v) except *
-    cpdef long double d2alpha0_dDelta2(self) except *
-    cpdef long double d2alpha0_dDelta_dTau(self) except *
-    cpdef long double d2alpha0_dTau2(self) except *
-    cpdef long double d3alpha0_dTau3(self) except *
-    cpdef long double d3alpha0_dDelta_dTau2(self) except *
-    cpdef long double d3alpha0_dDelta2_dTau(self) except *
-    cpdef long double d3alpha0_dDelta3(self) except *
+    cpdef CoolPropDbl alpha0(self) except *
+    cpdef CoolPropDbl dalpha0_dDelta(self) except *
+    cpdef CoolPropDbl dalpha0_dTau(v) except *
+    cpdef CoolPropDbl d2alpha0_dDelta2(self) except *
+    cpdef CoolPropDbl d2alpha0_dDelta_dTau(self) except *
+    cpdef CoolPropDbl d2alpha0_dTau2(self) except *
+    cpdef CoolPropDbl d3alpha0_dTau3(self) except *
+    cpdef CoolPropDbl d3alpha0_dDelta_dTau2(self) except *
+    cpdef CoolPropDbl d3alpha0_dDelta2_dTau(self) except *
+    cpdef CoolPropDbl d3alpha0_dDelta3(self) except *
 
-    cpdef long double alphar(self) except *
-    cpdef long double dalphar_dDelta(self) except *
-    cpdef long double dalphar_dTau(self) except *
-    cpdef long double d2alphar_dDelta2(self) except *
-    cpdef long double d2alphar_dDelta_dTau(self) except *
-    cpdef long double d2alphar_dTau2(self) except *
-    cpdef long double d3alphar_dDelta3(self) except *
-    cpdef long double d3alphar_dDelta2_dTau(self) except *
-    cpdef long double d3alphar_dDelta_dTau2(self) except *
-    cpdef long double d3alphar_dTau3(self) except *
+    cpdef CoolPropDbl alphar(self) except *
+    cpdef CoolPropDbl dalphar_dDelta(self) except *
+    cpdef CoolPropDbl dalphar_dTau(self) except *
+    cpdef CoolPropDbl d2alphar_dDelta2(self) except *
+    cpdef CoolPropDbl d2alphar_dDelta_dTau(self) except *
+    cpdef CoolPropDbl d2alphar_dTau2(self) except *
+    cpdef CoolPropDbl d3alphar_dDelta3(self) except *
+    cpdef CoolPropDbl d3alphar_dDelta2_dTau(self) except *
+    cpdef CoolPropDbl d3alphar_dDelta_dTau2(self) except *
+    cpdef CoolPropDbl d3alphar_dTau3(self) except *

@@ -34,6 +34,10 @@ public:
     ReducingFunction():N(0){};
     virtual ~ReducingFunction(){};
 
+    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value) = 0;
+    
+    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter) = 0;
+
     /// A factory function to generate the requiredreducing function
     static shared_ptr<ReducingFunction> factory(const std::vector<CoolPropFluid*> &components, STLMatrix &F);
 
@@ -64,9 +68,9 @@ public:
      * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial T_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2T_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial T_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-1}x_k\left(\frac{\partial^2T_r}{\partial x_j \partial x_k}\right)
      * \f]
      */
-    CoolPropDbl d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    virtual CoolPropDbl d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
-	CoolPropDbl d2_ndTrdni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl d2_ndTrdni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 	
 
     /** \brief 
@@ -82,18 +86,18 @@ public:
      * \left(\frac{\partial}{\partial x_j}\left(n\left(\frac{\partial \rho_r}{\partial n_i} \right)_{n_j}\right)\right)_{x_i} = \left(\frac{\partial^2\rho_r}{\partial x_j \partial x_i}\right)-\left(\frac{\partial \rho_r}{\partial x_j}\right)_{x_i}-\sum_{k=0}^{N-2}x_k\left(\frac{\partial^2\rho_r}{\partial x_j \partial x_k}\right)
      * \f] 
      */
-    CoolPropDbl d_ndrhorbardni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    virtual CoolPropDbl d_ndrhorbardni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
 
-	CoolPropDbl d2_ndrhorbardni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl d2_ndrhorbardni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 
-    CoolPropDbl ndrhorbardni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
-    CoolPropDbl ndTrdni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
-	CoolPropDbl PSI_rho(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
-	CoolPropDbl d_PSI_rho_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-	CoolPropDbl d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
-	CoolPropDbl PSI_T(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
-	CoolPropDbl d_PSI_T_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
-	CoolPropDbl d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+    virtual CoolPropDbl ndrhorbardni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+    virtual CoolPropDbl ndTrdni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl PSI_rho(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl d_PSI_rho_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl PSI_T(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl d_PSI_T_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+	virtual CoolPropDbl d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
 };
 
 /** \brief The reducing function model of GERG-2008
@@ -143,6 +147,44 @@ public:
 
     /// Default destructor
     ~GERG2008ReducingFunction(){};
+
+    /// Set a parameter
+    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value){
+        if (parameter == "betaT"){
+            beta_T[i][j] = value; beta_T[j][i] = 1/value;
+        }
+        else if (parameter == "gammaT"){
+            gamma_T[i][j] = value; gamma_T[j][i] = value;
+        }
+        else if (parameter == "betaV"){
+            beta_v[i][j] = value; beta_v[j][i] = 1/value;
+        }
+        else if (parameter == "gammaV"){
+            gamma_v[i][j] = value; gamma_v[j][i] = value;
+        }
+        else{
+            throw KeyError(format("This key [%s] is invalid to set_binary_interaction_double",parameter.c_str()));
+        }
+    }
+    /// Get a parameter
+    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
+        if (parameter == "betaT"){
+            return beta_T[i][j];
+        }
+        else if (parameter == "gammaT"){
+            return gamma_T[i][j];
+        }
+        else if (parameter == "betaV"){
+            return beta_v[i][j];
+        }
+        else if (parameter == "gammaV"){
+            return gamma_v[i][j];
+        }
+        else{
+            throw KeyError(format("This key [%s] is invalid to get_binary_interaction_double",parameter.c_str()));
+        }
+    }
+
     /** \brief The reducing temperature
      * Calculated from \ref Yr with \f$T = Y\f$
      */
@@ -352,6 +394,62 @@ public:
 	 * \f]
 	 */
 	 CoolPropDbl d3fYikdxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta);
+};
+
+/** \brief A constant reducing function that does not vary with composition.  Think for instance the 
+ *  reducing function for the cubic EOS
+ * 
+ * Yields the reducing parameters \f$ \rho_r \f$ and \f$ T_r \f$
+ */
+class ConstantReducingFunction : public ReducingFunction
+{
+private:
+    ConstantReducingFunction(const ConstantReducingFunction& that); // No copying
+	double T_c, rhomolar_c;
+
+public:
+	ConstantReducingFunction(const double T_c, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c) {};
+
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value){return;}
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){return _HUGE; }
+
+    /// \brief The reducing temperature
+	CoolPropDbl Tr(const std::vector<CoolPropDbl> &x){ return T_c; };
+    /// \brief The derivative of reducing temperature with respect to component i mole fraction
+	CoolPropDbl dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    /// \brief The second derivative of reducing temperature with respect to component i mole fraction
+	CoolPropDbl d2Trdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    /// \brief The second derivative of reducing temperature with respect to component i and j mole fractions
+    CoolPropDbl d2Trdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+	/// \brief The third derivative of reducing temperature with respect to component i, j and k mole fractions
+	CoolPropDbl d3Trdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+    
+    /// \brief The molar reducing density
+    CoolPropDbl rhormolar(const std::vector<CoolPropDbl> &x){ return rhomolar_c; };
+    /// \brief Derivative of the molar reducing density with respect to component i mole fraction
+    CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };    
+    /// \brief Derivative of the molar reducing density with respect to component i mole fraction
+    CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    /// \brief Derivative of the molar reducing density with respect to component i  and j mole fractions
+    CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+	/// \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions
+	CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+    
+    //virtual CoolPropDbl d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+    //virtual CoolPropDbl d2_ndTrdni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+    //virtual CoolPropDbl d_ndrhorbardni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+    //virtual CoolPropDbl d2_ndrhorbardni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+    //virtual CoolPropDbl ndrhorbardni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    //virtual CoolPropDbl ndTrdni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    
+    /// Note: this one is one, not zero
+    virtual CoolPropDbl PSI_rho(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 1; };
+    virtual CoolPropDbl d_PSI_rho_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+    virtual CoolPropDbl d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+    virtual CoolPropDbl PSI_T(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag){ return 0; };
+    virtual CoolPropDbl d_PSI_T_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
+    virtual CoolPropDbl d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
+
 };
 
 /** \brief Reducing function converter for dry air and HFC blends

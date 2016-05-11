@@ -17,6 +17,14 @@ If you dare, you can also try the latest nightly release from :sfnightly:`Python
 or get it directly from the development server using::
 
     pip install -vvv --pre --trusted-host www.coolprop.dreamhosters.com --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --force-reinstall CoolProp
+    
+.. For those of you who prefer the Anaconda or Miniconda distributions, you can run::
+   
+       conda install -c https://conda.binstar.org/coolprop coolprop
+       
+   You can also find our nightly development snapshots on binstar::
+    
+       conda install -c https://conda.binstar.org/coolprop/label/dev coolprop 
 
 
 Manual installation

@@ -104,11 +104,11 @@ class SolutionDataWriter(object):
         self.resolveRef = True # Resolve references and print text
 
         # Latex document mode
-#         self.ext        = "pgf"
-#         self.usebp      = True
-#         self.ispage     = False # Do you want a page or a figure?
-#         self.isportrait = True
-#         self.resolveRef = False # Resolve references and print text
+        #self.ext        = "pgf"
+        #self.usebp      = True
+        #self.ispage     = False # Do you want a page or a figure?
+        #self.isportrait = True
+        #self.resolveRef = False # Resolve references and print text
 
         if self.ext=="pgf" or matplotlib.rcParams['text.usetex']:
             self.usetex = True
@@ -133,16 +133,16 @@ class SolutionDataWriter(object):
         else:
             self.usetex    = False
             matplotlib.rcParams['text.usetex'] = False
-            self.percent   = ur'%'
-            self.celsius   = ur'\u00B0C'
-            self.errLabel  = ur'rel. Error ('+self.percent+ur')'
-            self.tempLabel = ur'Temperature ('+self.celsius+ur')'
-            self.densLabel = ur'Density ($\mathdefault{kg/m^3\!}$)'
-            self.heatLabel = ur'Heat Capacity ($\mathdefault{J/kg/K}$)'
-            self.condLabel = ur'Thermal Conductivity ($\mathdefault{W/m/K}$)'
-            self.viscLabel = ur'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
-            self.satPLabel = ur'Saturation Pressure ($\mathdefault{Pa}$)'
-            self.TfreLabel = ur'Freezing Temperature ($\mathdefault{K}$)'
+            self.percent   = r'%'
+            self.celsius   = u'\u00B0C'
+            self.errLabel  = r'rel. Error ('+self.percent+r')'
+            self.tempLabel = u'Temperature ('+self.celsius+u')'
+            self.densLabel = r'Density ($\mathdefault{kg/m^3\!}$)'
+            self.heatLabel = r'Heat Capacity ($\mathdefault{J/kg/K}$)'
+            self.condLabel = r'Thermal Conductivity ($\mathdefault{W/m/K}$)'
+            self.viscLabel = r'Dynamic Viscosity ($\mathdefault{Pa\/s}$)'
+            self.satPLabel = r'Saturation Pressure ($\mathdefault{Pa}$)'
+            self.TfreLabel = r'Freezing Temperature ($\mathdefault{K}$)'
             f = 1.00
 
 #         self.percent   = ur'pc'
@@ -1194,7 +1194,7 @@ class SolutionDataWriter(object):
 
         #TODO: Fix this problem: ValueError: Can only output finite numbers in PDF
         if self.ext=="pdf" and self.usetex:
-            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help manually change the number of columns.")
+            warn("This is a dangerous combination, be prepared to experience problems with the PDF backend. It might help to manually change the number of columns.")
         else:
             table_axis.legend(
               legVal, legKey,
@@ -1218,7 +1218,7 @@ class SolutionDataWriter(object):
                 os.makedirs(os.path.dirname(report_path))
 
             if self.usebp and self.ext=="pgf":
-                self.bp.savepgf(report_path, fig=fig)
+                self.bp.savepgf(report_path, fig=fig, customReplace=["\\cite{","\\citet{"])
             else:
                 fig.savefig(report_path)
 
@@ -1444,8 +1444,8 @@ class SolutionDataWriter(object):
 
 
 
-        header = [u'Name', u'Description', u'Reference', ur'{$T_\text{min}$ (\si{\celsius})}', ur'{$T_\text{max}$ (\si{\celsius})}', ur'{$T_\text{base}$ (\si{\kelvin})}']
-        if use_x: header.extend([ur'{$x_\text{min}$}', ur'{$x_\text{max}$}'])
+        header = [r'Name', r'Description', r'Reference', r'{$T_\text{min}$ (\si{\celsius})}', r'{$T_\text{max}$ (\si{\celsius})}', r'{$T_\text{base}$ (\si{\kelvin})}']
+        if use_x: header.extend([r'{$x_\text{min}$}', r'{$x_\text{max}$}'])
 
         testTable = []
         testTable.append(header) # Headline

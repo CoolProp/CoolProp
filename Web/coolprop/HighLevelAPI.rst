@@ -29,6 +29,34 @@ All :ref:`the wrappers <wrappers>` wrap this function in exactly the same way.
 
 For pure and pseudo-pure fluids, two state points are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), and then comes inputs where neither :math:`T` nor :math:`\rho` are given, like :math:`p,h`.  They will be much slower.  If speed is an issue, you can look into table-based interpolation methods using TTSE or bicubic interpolation. 
 
+.. _trivial_inputs:
+
+Trivial inputs
+--------------
+
+
+In order to obtain trivial inputs that do not depend on the thermodynamic state, in wrappers that support the ``Props1SI`` function, you can obtain the trivial parameter (in this case the critical temperature of water) like:
+
+    Props1SI("Tcrit","Water")
+    
+In python, the ``PropsSI`` function is overloaded to also accept two inputs:
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    In [1]: CP.PropsSI("Tcrit","Water")
+    
+    In [1]: CP.PropsSI("Tcrit","REFPROP::Water")
+    
+Furthermore, you can in all languages call the ``PropsSI`` function directly using dummy arguments for the other unused parameters:
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    In [1]: CP.PropsSI("Tcrit","",0,"",0,"Water")
+    
 PhaseSI function
 ----------------
 
@@ -351,6 +379,6 @@ Table of string inputs to PropsSI function
 
 .. note::
    
-   Please note that any parameter that is indicated as a trivial parameter can be obtained from the ``Props1SI`` function
+   Please note that any parameter that is indicated as a trivial parameter can be obtained from the ``Props1SI`` function as shown above in :ref:`trivial_inputs`
    
 .. include:: parameter_table.rst.in

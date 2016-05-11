@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.DataObjects import CoefficientData,PureData
+from .DataObjects import CoefficientData,PureData
 
 
 class NitrateSalt(PureData,CoefficientData):

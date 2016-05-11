@@ -1,9 +1,8 @@
 from __future__ import division, print_function
 import numpy as np
 import os, math
-from BaseObjects import IncompressibleData
+from .BaseObjects import IncompressibleData,IncompressibleFitter
 from abc import ABCMeta
-from CPIncomp.BaseObjects import IncompressibleFitter
 
 class SolutionData(object):
     """

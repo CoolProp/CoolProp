@@ -1,7 +1,6 @@
 
 #include "PolyMath.h"
 
-#include "CoolPropTools.h"
 #include "Exceptions.h"
 #include "MatrixMath.h"
 
@@ -199,12 +198,11 @@ double Polynomial2D::integral(const Eigen::MatrixXd &coefficients, const double 
 /// @param max double value that represents the maximum value
 double Polynomial2D::solve_limits(Poly2DResidual* res, const double &min, const double &max){
     if (do_debug()) std::cout << format("Called solve_limits with: min=%f and max=%f", min, max) << std::endl;
-    std::string errstring;
     double macheps = DBL_EPSILON;
     double tol     = DBL_EPSILON*1e3;
     int    maxiter = 10;
-    double result = Brent(res, min, max, macheps, tol, maxiter, errstring);
-    if (this->do_debug()) std::cout << "Brent solver message: " << errstring << std::endl;
+    double result = Brent(res, min, max, macheps, tol, maxiter);
+    if (this->do_debug()) std::cout << "Brent solver message: " << res->errstring << std::endl;
     return result;
 }
 
@@ -213,12 +211,11 @@ double Polynomial2D::solve_limits(Poly2DResidual* res, const double &min, const 
 /// @param guess double value that represents the start value
 double Polynomial2D::solve_guess(Poly2DResidual* res, const double &guess){
     if (do_debug()) std::cout << format("Called solve_guess with: guess=%f ", guess) << std::endl;
-    std::string errstring;
     //set_debug_level(1000);
     double tol     = DBL_EPSILON*1e3;
     int    maxiter = 10;
-    double result = Newton(res, guess, tol, maxiter, errstring);
-    if (this->do_debug()) std::cout << "Newton solver message: " << errstring << std::endl;
+    double result = Newton(res, guess, tol, maxiter);
+    if (this->do_debug()) std::cout << "Newton solver message: " << res->errstring << std::endl;
     return result;
 }
 

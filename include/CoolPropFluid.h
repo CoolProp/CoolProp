@@ -267,6 +267,10 @@ struct ViscosityHigherOrderVariables
     ViscosityHigherOrderVariables(){type = VISCOSITY_HIGHER_ORDER_NOT_SET;};
 };
 
+struct ViscosityRhoSrVariables{
+    std::vector<double> c_liq, c_vap;
+    double C, x_crossover, rhosr_critical;
+};
 struct ViscosityECSVariables{
     std::string reference_fluid;
     CoolPropDbl psi_rhomolar_reducing;
@@ -298,6 +302,7 @@ public:
     ViscosityInitialDensityVariables viscosity_initial;
     ViscosityHigherOrderVariables viscosity_higher_order;
     ViscosityECSVariables viscosity_ecs;
+    ViscosityRhoSrVariables viscosity_rhosr;
     ViscosityChungData viscosity_Chung;
 
     ConductivityDiluteVariables conductivity_dilute;
@@ -310,6 +315,7 @@ public:
     bool viscosity_using_ECS; ///< A flag for whether to use extended corresponding states for viscosity.  False for no
     bool conductivity_using_ECS; ///< A flag for whether to use extended corresponding states for conductivity.  False for no
     bool viscosity_using_Chung; ///< A flag for whether to use Chung model. False for no
+    bool viscosity_using_rhosr; ///< A flag for whether to use rho*sr CS model of Bell. False for no
 	bool viscosity_model_provided; ///< A flag for whether viscosity model is provided.  False for no
     bool conductivity_model_provided; ///< A flag for whether thermal conductivity model is provided.  False for no
     CoolPropDbl sigma_eta, ///< The Lennard-Jones 12-6 \f$ \sigma \f$ parameter
@@ -319,6 +325,7 @@ public:
     TransportPropertyData():viscosity_using_ECS(false),
                             conductivity_using_ECS(false),
                             viscosity_using_Chung(false),
+                            viscosity_using_rhosr(false),
                             viscosity_model_provided(false),
                             conductivity_model_provided(false),
                             sigma_eta(_HUGE),epsilon_over_k(_HUGE),

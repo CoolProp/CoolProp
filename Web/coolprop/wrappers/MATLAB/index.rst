@@ -10,6 +10,10 @@ Pre-compiled Binaries
 =====================
 Release versions of the MATLAB wrapper can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB`.  Whichever one you pick, make sure all the files come from the same place.
 
+.. warning:: 
+
+    For users on Mac OSX 10.10+, you should use the release binaries from :sfdownloads:`MATLAB/10.10+/MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB/10.10+/MATLAB`.
+
 Download the +CoolProp.7z file and extract it using the `7-zip <http://www.7-zip.org/download.html>`_ program.  Make sure that when you expand it, there are no +CoolProp intermediate folders generated.  Place the mex file that is appropriate to the version of MATLAB in the directory that contains the directory +CoolProp.  You can determine what version of matlab you have by running the command ``computer('arch')`` at the MATLAB command prompt.  Depending on the output, you will need to download one of the following mex files:
 
 * ``computer('arch')`` yields ``win32``: CoolPropMATLAB_wrap.mexw32

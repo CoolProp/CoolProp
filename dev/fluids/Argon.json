@@ -2,7 +2,8 @@
   "ALIASES": [
     "argon", 
     "ARGON", 
-    "R740"
+    "R740", 
+    "Ar"
   ], 
   "ANCILLARIES": {
     "hL": {
@@ -250,7 +251,7 @@
           "T_units": "K", 
           "hmolar": -4851.143195734251, 
           "hmolar_units": "J/mol", 
-          "p": 68892.47707775104, 
+          "p": 68892.4770797671, 
           "p_units": "Pa", 
           "rhomolar": 35465.24383230989, 
           "rhomolar_units": "mol/m^3", 
@@ -262,7 +263,7 @@
           "T_units": "K", 
           "hmolar": 1689.054333680143, 
           "hmolar_units": "J/mol", 
-          "p": 68892.77036049489, 
+          "p": 68892.4770797671, 
           "p_units": "Pa", 
           "rhomolar": 101.4989524639359, 
           "rhomolar_units": "mol/m^3", 
@@ -270,7 +271,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 700, 
+      "T_max": 2000, 
       "T_max_units": "K", 
       "Ttriple": 83.806, 
       "Ttriple_units": "K", 
@@ -548,7 +549,7 @@
       "T_units": "K", 
       "hmolar": -4851.143195734251, 
       "hmolar_units": "J/mol", 
-      "p": 68892.47707775104, 
+      "p": 68892.4770797671, 
       "p_units": "Pa", 
       "rhomolar": 35465.24383230989, 
       "rhomolar_units": "mol/m^3", 
@@ -560,7 +561,7 @@
       "T_units": "K", 
       "hmolar": 1689.054333680143, 
       "hmolar_units": "J/mol", 
-      "p": 68892.77036049489, 
+      "p": 68892.4770797671, 
       "p_units": "Pa", 
       "rhomolar": 101.4989524639359, 
       "rhomolar_units": "mol/m^3", 

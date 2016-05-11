@@ -6,6 +6,7 @@
 #include <sstream>
 #include "time.h"
 #include "miniz.h"
+#include <fstream>
 
 /// The inverse of the A matrix for the bicubic interpolation (http://en.wikipedia.org/wiki/Bicubic_interpolation)
 /// NOTE: The matrix is transposed below
@@ -351,7 +352,7 @@ void CoolProp::TabularBackend::write_tables(){
     make_dirs(path_to_tables);
     bool loaded = false;
     dataset = library.get_set_of_tables(this->AS, loaded);
-    PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
+    PackablePhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
@@ -599,16 +600,14 @@ CoolPropDbl CoolProp::TabularBackend::calc_speed_sound(void){
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){
-    //PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
-    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table){
         CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
 
         // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
-        double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0;
-        mass_to_molar(Of, Of_conversion_factor, AS->molar_mass());
-        mass_to_molar(Wrt, Wrt_conversion_factor, AS->molar_mass());
-        mass_to_molar(Constant, Constant_conversion_factor, AS->molar_mass());
+        double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0, MM = AS->molar_mass();
+        mass_to_molar(Of, Of_conversion_factor, MM);
+        mass_to_molar(Wrt, Wrt_conversion_factor, MM);
+        mass_to_molar(Constant, Constant_conversion_factor, MM);
 
         switch (selected_table){
         case SELECTED_PH_TABLE: {
@@ -635,7 +634,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, pa
         return val*Of_conversion_factor/Wrt_conversion_factor;
     }
     else{
-        return pure_saturation.evaluate(iconductivity, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+        throw ValueError(format("Inputs [rho: %g mol/m3, T: %g K, p: %g Pa] are two-phase; cannot use single-phase derivatives", _rhomolar, _T, _p));
     }
 };
 
@@ -753,7 +752,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 using_single_phase_table = false;
                 _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
                 if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-                    throw ValueError("vapor quality is not in (0,1)");
+                    throw ValueError(format("vapor quality is not in (0,1) for hmolar: %g p: %g, hL: %g hV: %g ", static_cast<double>(_hmolar), _p, hL, hV));
                 }
                 else{
                     cached_saturation_iL = iL; cached_saturation_iV = iV;
@@ -909,6 +908,13 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         else{
             if (is_mixture){
                 is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state);
+                if (is_two_phase){
+                    std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
+                    if (intersect.size() < 2){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
+                    iV = intersect[0].first; iL = intersect[1].first;
+				    zL = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iP, _p, iL);
+				    zV = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iP, _p, iV);
+                }
             }
             else{
                 is_two_phase = pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV);
@@ -923,7 +929,8 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 _Q = (otherval - zL)/(zV - zL);
             }
             if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-                throw ValueError("vapor quality is not in (0,1)");
+
+                throw ValueError(format("vapor quality is not in (0,1) for %s: %g p: %g", get_parameter_information(otherkey,"short").c_str(), otherval, static_cast<double>(_p)));
             }
             else if (!is_mixture){
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
@@ -963,6 +970,13 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         else{
             if (is_mixture){
                 is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iT, _T, otherkey, otherval, iclosest, closest_state);
+                if (is_two_phase){
+                    std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
+                    if (intersect.size() < 2){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
+                    iV = intersect[0].first; iL = intersect[1].first;
+				    zL = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iT, _T, iL);
+				    zV = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iT, _T, iV);
+                }
             }
             else{
                 is_two_phase = pure_saturation.is_inside(iT, _T, otherkey, otherval, iL, iV, zL, zV);
@@ -977,7 +991,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 _Q = (otherval - zL)/(zV - zL);
             }
             if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-                throw ValueError("vapor quality is not in (0,1)");
+                throw ValueError(format("vapor quality is not in (0,1) for %s: %g T: %g", get_parameter_information(otherkey,"short").c_str(), otherval, static_cast<double>(_T)));
             }
             else if (!is_mixture){
                 cached_saturation_iL = iL; cached_saturation_iV = iV;
@@ -986,7 +1000,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             else {
                 // Mixture
                 std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
-                if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
+                if (intersect.size()<2){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
                 iV = intersect[0].first; iL = intersect[1].first;
                 CoolPropDbl pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
                 CoolPropDbl pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
@@ -1009,14 +1023,16 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         _p = val1; _Q = val2;
         using_single_phase_table = false;
         if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-            throw ValueError("vapor quality is not in (0,1)");
+            throw ValueError(format("vapor quality [%g] is not in (0,1)",static_cast<double>(val2)));
         }
         else{
             CoolPropDbl TL = _HUGE, TV = _HUGE;
             if (is_mixture){
                 std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
-                if (intersect.empty()){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
+                if (intersect.size()<2){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                 iV = intersect[0].first; iL = intersect[1].first;
+				TL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iL);
+				TV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iV);
             }
             else{
                 bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);
@@ -1035,13 +1051,13 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
 
         using_single_phase_table = false;
         if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
-            throw ValueError("vapor quality is not in (0,1)");
+            throw ValueError(format("vapor quality [%g] is not in (0,1)",static_cast<double>(val1)));
         }
         else{
             CoolPropDbl pL = _HUGE, pV = _HUGE;
             if (is_mixture){
                 std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
-                if (intersect.empty()){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
+                if (intersect.size()<2){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
                 iV = intersect[0].first; iL = intersect[1].first;
                 pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
                 pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
@@ -1093,7 +1109,9 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState> 
         // Call function to actually construct the phase envelope
         AS->build_phase_envelope("");
         // Copy constructed phase envelope into this class
-        phase_envelope = AS->get_phase_envelope_data();
+        PhaseEnvelopeData PED = AS->get_phase_envelope_data();
+        // Convert into packable form
+        phase_envelope.copy_from_nonpackable(PED);
         // Resize so that it will load properly
         pure_saturation.resize(pure_saturation.N);
     }

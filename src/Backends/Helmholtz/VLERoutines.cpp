@@ -4,6 +4,7 @@
 #include "MatrixMath.h"
 #include "MixtureDerivatives.h"
 #include "Configuration.h"
+#include "FlashRoutines.h"
 
 namespace CoolProp {
     
@@ -47,8 +48,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
                 p = HEOS->SatV->p();
                 std::cout << format("outer p: %0.16Lg", p) << std::endl;
                 inner_resid inner(HEOS, T, p);
-                std::string errstr2;
-                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1 + 1e-8), LDBL_EPSILON, 1e-10, 100, errstr2);
+                rhomolar_liq = Brent(inner, rhomolar_crit*1.5, rhomolar_crit*(1 + 1e-8), LDBL_EPSILON, 1e-10, 100);
                 break;
             }
             default:
@@ -71,8 +71,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, pa
     
     double rhomolar_crit = HEOS.rhomolar_critical();
     
-    std::string errstr;
-    Brent(&resid, rhomolar_crit*(1-1e-8), rhomolar_crit*0.5, DBL_EPSILON, 1e-9, 20, errstr);
+    Brent(&resid, rhomolar_crit*(1-1e-8), rhomolar_crit*0.5, DBL_EPSILON, 1e-9, 20);
 }
 
 void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_options &options)
@@ -107,14 +106,13 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend &HEOS,
     if (!ValidNumber(options.rhoL)){throw ValueError(format("options.rhoL is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
     if (!ValidNumber(options.rhoV)){throw ValueError(format("options.rhoV is not valid in saturation_T_pure_1D_P for T = %Lg",T));};
     
-    std::string errstr;
     try{
-        Secant(resid, options.p, options.p*1.1, 1e-10, 100, errstr);
+        Secant(resid, options.p, options.p*1.1, 1e-10, 100);
     }
     catch(...){
         CoolPropDbl pmax = std::min(options.p*1.03, static_cast<CoolPropDbl>(HEOS.p_critical()+1e-6));
         CoolPropDbl pmin = std::max(options.p*0.97, static_cast<CoolPropDbl>(HEOS.p_triple()-1e-6));
-        Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100, errstr);
+        Brent(resid, pmin, pmax, LDBL_EPSILON, 1e-8, 100);
     }
 }
 
@@ -149,10 +147,9 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend &HEOS,
     if (!ValidNumber(options.rhoL)){throw ValueError("options.rhoL is not valid in saturation_P_pure_1D_T");};
     if (!ValidNumber(options.rhoV)){throw ValueError("options.rhoV is not valid in saturation_P_pure_1D_T");};
     
-    std::string errstr;
     CoolPropDbl Tmax = std::min(options.T + 2, static_cast<CoolPropDbl>(HEOS.T_critical()-1e-6));
     CoolPropDbl Tmin = std::max(options.T - 2, static_cast<CoolPropDbl>(HEOS.Ttriple()+1e-6));
-    Brent(resid, Tmin, Tmax, LDBL_EPSILON, 1e-11, 100, errstr);
+    Brent(resid, Tmin, Tmax, LDBL_EPSILON, 1e-11, 100);
 }
     
 void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl specified_value, saturation_PHSU_pure_options &options)
@@ -222,12 +219,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             Residual resid(HEOS.get_components()[0], HEOS.hmolar());
             
             // Ancillary is deltah = h - hs_anchor.h
-            std::string errstr;
             CoolPropDbl Tmin_satL, Tmin_satV;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
-            try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50, errstr); }
+            try{ T = Brent(resid, Tmin-3, Tmax + 1, DBL_EPSILON, 1e-10, 50); }
             catch(...){
                 shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
                 HEOS_copy->update(QT_INPUTS, 1, Tmin); double hTmin = HEOS_copy->hmolar();
@@ -294,13 +290,12 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend &HEOS, C
             Residual resid(component, HEOS.smolar());
             
             // Ancillary is deltas = s - hs_anchor.s
-            std::string errstr;
             CoolPropDbl Tmin_satL, Tmin_satV;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
             try{
-                T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50, errstr);
+                T = Brent(resid, Tmin-3, Tmax, DBL_EPSILON, 1e-10, 50);
             }
             catch(...){
                 CoolPropDbl vmax = resid.call(Tmax);
@@ -1223,18 +1218,13 @@ void SaturationSolvers::newton_raphson_saturation::resize(std::size_t N)
 
     if (imposed_variable == newton_raphson_saturation_options::RHOV_IMPOSED){
         r.resize(N+1);
-        negative_r.resize(N+1);
-        J.resize(N+1);
-        for (std::size_t i = 0; i < N+1; ++i){
-            J[i].resize(N+1);
-        }
         err_rel.resize(N+1);
+        J.resize(N+1,N+1);
     }
     else if (imposed_variable == newton_raphson_saturation_options::P_IMPOSED || imposed_variable == newton_raphson_saturation_options::T_IMPOSED){
         r.resize(N);
-        negative_r.resize(N);
-        J.resize(N, std::vector<CoolPropDbl>(N, 0));
         err_rel.resize(N);
+        J.resize(N, N);
     }
     else{
         throw ValueError();
@@ -1250,8 +1240,9 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
 
     // Make copies of the base
     CoolPropDbl T0 = T;
-    std::vector<CoolPropDbl> r0 = r, x0 = x;
-    STLMatrix J0 = J;
+    std::vector<CoolPropDbl> x0 = x;
+    Eigen::VectorXd r0 = r;
+    Eigen::MatrixXd J0 = J;
     CoolPropDbl rhomolar_liq0 = rSatL.rhomolar();
     CoolPropDbl rhomolar_vap0 = rSatV.rhomolar();
     
@@ -1262,20 +1253,17 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<CoolPropDbl> r1 = r;
+        Eigen::VectorXd r1 = r;
         this->T = T2;
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<CoolPropDbl> r2 = r;
+        Eigen::VectorXd r2 = r;
         
-        std::vector<CoolPropDbl> diffn(N+1, _HUGE);
-        for (std::size_t i = 0; i < N+1; ++i){
-            diffn[i] = (r1[i]-r2[i])/(2*dT);
-        }
+        Eigen::VectorXd diffn = (r1-r2)/(2*dT);
         std::cout << format("For T\n");
         std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
-        std::cout << "analytic: " << vec_to_string(get_col(J0, N-1), "%0.11Lg") << std::endl;
+        std::cout << "analytic: " << vec_to_string(J0.col(N-1), "%0.11Lg") << std::endl;
     }
     {
         // Derivatives with respect to rho'
@@ -1284,20 +1272,17 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0+drho;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<CoolPropDbl> rr1 = r;
+        Eigen::VectorXd rr1 = r;
         this->T = T0;
         this->rhomolar_liq = rhomolar_liq0-drho;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays();
-        std::vector<CoolPropDbl> rr2 = r;
+        Eigen::VectorXd rr2 = r;
         
-        std::vector<CoolPropDbl> difffn(N+1, _HUGE);
-        for (std::size_t i = 0; i < N+1; ++i){
-            difffn[i] = (rr1[i]-rr2[i])/(2*drho);
-        }
+        Eigen::VectorXd diffn = (rr1-rr2)/(2*drho);
         std::cout << format("For rho\n");
-        std::cout << "numerical: " << vec_to_string(difffn, "%0.11Lg") << std::endl;
-        std::cout << "analytic: " << vec_to_string(get_col(J0, N), "%0.11Lg") << std::endl;
+        std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
+        std::cout << "analytic: " << vec_to_string(J0.col(N-1), "%0.11Lg") << std::endl;
     }
     for (std::size_t i = 0; i < x.size()-1;  ++i)
     {
@@ -1309,7 +1294,7 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays(); 
-        std::vector<CoolPropDbl> r1 = this->r;
+        Eigen::VectorXd r1 = this->r;
     
         this->x = x0; 
         this->x[i] -= dx; this->x[x.size()-1] += dx;
@@ -1317,15 +1302,12 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         this->rhomolar_liq = rhomolar_liq0;
         this->rhomolar_vap = rhomolar_vap0;
         build_arrays(); 
-        std::vector<CoolPropDbl> r2 = this->r;
+        Eigen::VectorXd r2 = this->r;
     
-        std::vector<CoolPropDbl> diffn(N+1, _HUGE);
-        for (std::size_t j = 0; j < N+1; ++j){
-            diffn[j] = (r1[j]-r2[j])/(2*dx);
-        }
+        Eigen::VectorXd diffn = (r1-r2)/(2*dx);
         std::cout << format("For x%d N %d\n", i, N);
         std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
-        std::cout << "analytic: " << vec_to_string(get_col(J0, i), "%0.11Lg") << std::endl;
+        std::cout << "analytic: " << vec_to_string(J0.col(i), "%0.11Lg") << std::endl;
     }
 }
 void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &z_incipient, newton_raphson_saturation_options &IO)
@@ -1370,7 +1352,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
 
         // Solve for the step; v is the step with the contents
         // [delta(x_0), delta(x_1), ..., delta(x_{N-2}), delta(spec)]
-        std::vector<CoolPropDbl> v = linsolve(J, negative_r);
+        Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
         
         if (bubble_point){
             for (unsigned int i = 0; i < N-1; ++i){
@@ -1403,14 +1385,14 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
 			std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
 		}
         
-        min_rel_change = min_abs_value(err_rel);
+        min_rel_change = err_rel.cwiseAbs().minCoeff();
         iter++;
         
         if (iter == IO.Nstep_max){
             throw ValueError(format("newton_raphson_saturation::call reached max number of iterations [%d]",IO.Nstep_max));
         }
     }
-    while(this->error_rms > 1e-9 && min_rel_change > 1000*DBL_EPSILON && iter < IO.Nstep_max);
+    while(this->error_rms > 1e-7 && min_rel_change > 1000*DBL_EPSILON && iter < IO.Nstep_max);
 
     IO.Nsteps = iter;
     IO.p = p;
@@ -1419,10 +1401,12 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     IO.T = T;
     IO.rhomolar_liq = rhomolar_liq;
     IO.rhomolar_vap = rhomolar_vap;
-    IO.hmolar_liq = HEOS.SatL.get()->hmolar();
-    IO.hmolar_vap = HEOS.SatV.get()->hmolar();
-    IO.smolar_liq = HEOS.SatL.get()->smolar();
-    IO.smolar_vap = HEOS.SatV.get()->smolar();
+    if (!HEOS.get_components().empty()){
+        IO.hmolar_liq = HEOS.SatL.get()->hmolar();
+        IO.hmolar_vap = HEOS.SatV.get()->hmolar();
+        IO.smolar_liq = HEOS.SatL.get()->smolar();
+        IO.smolar_vap = HEOS.SatV.get()->smolar();
+    }
 }
 
 void SaturationSolvers::newton_raphson_saturation::build_arrays()
@@ -1474,29 +1458,29 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
             // Equate the liquid and vapor fugacities
             CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
             CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
-            r[i] = ln_f_liq - ln_f_vap;
+            r(i) = ln_f_liq - ln_f_vap;
             
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
                 if (bubble_point){
-                    J[i][j] = -MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatV, i, j, xN_flag);
+                    J(i,j) = -MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatV, i, j, xN_flag);
                 }
                 else{ 
-                    J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatL, i, j, xN_flag);
+                    J(i,j) = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatL, i, j, xN_flag);
                 }
             }
-            J[i][N-1] = MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatV, i, xN_flag);
-            J[i][N] = MixtureDerivatives::dln_fugacity_i_drho__constT_n(rSatL, i, xN_flag);
+            J(i,N-1) = MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatV, i, xN_flag);
+            J(i,N) = MixtureDerivatives::dln_fugacity_i_drho__constT_n(rSatL, i, xN_flag);
         }
         // ---------------------------------------------------------------
         // Derivatives of pL(T,rho',x)-p(T,rho'',y) with respect to inputs
         // ---------------------------------------------------------------
-        r[N] = p_liq - p_vap;
+        r(N) = p_liq - p_vap;
         for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
-            J[N][j] = MixtureDerivatives::dpdxj__constT_V_xi(rSatL, j, xN_flag); // p'' not a function of x0
+            J(N,j) = MixtureDerivatives::dpdxj__constT_V_xi(rSatL, j, xN_flag); // p'' not a function of x0
         }
         // Fixed composition derivatives
-        J[N][N-1] = rSatL.first_partial_deriv(iP, iT, iDmolar)-rSatV.first_partial_deriv(iP, iT, iDmolar);
-        J[N][N] = rSatL.first_partial_deriv(iP, iDmolar, iT);
+        J(N,N-1) = rSatL.first_partial_deriv(iP, iT, iDmolar)-rSatV.first_partial_deriv(iP, iT, iDmolar);
+        J(N,N) = rSatL.first_partial_deriv(iP, iDmolar, iT);
     }
     else if (imposed_variable == newton_raphson_saturation_options::P_IMPOSED){
         // Independent variables are N-1 mole fractions of incipient phase and T
@@ -1507,17 +1491,17 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
             // Equate the liquid and vapor fugacities
             CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
             CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
-            r[i] = ln_f_liq - ln_f_vap;
+            r(i) = ln_f_liq - ln_f_vap;
             
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
                 if (bubble_point){
-                    J[i][j] = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
+                    J(i,j) = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
                 }
                 else{ 
-                    J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
+                    J(i,j) = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
                 }
             }
-            J[i][N-1] = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatV, i, xN_flag);
+            J(i,N-1) = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatV, i, xN_flag);
         }
     }
     else if (imposed_variable == newton_raphson_saturation_options::T_IMPOSED){
@@ -1529,32 +1513,24 @@ void SaturationSolvers::newton_raphson_saturation::build_arrays()
             // Equate the liquid and vapor fugacities
             CoolPropDbl ln_f_liq = log(MixtureDerivatives::fugacity_i(rSatL, i, xN_flag));
             CoolPropDbl ln_f_vap = log(MixtureDerivatives::fugacity_i(rSatV, i, xN_flag));
-            r[i] = ln_f_liq - ln_f_vap;
+            r(i) = ln_f_liq - ln_f_vap;
             
             for (std::size_t j = 0; j < N-1; ++j){ // j from 0 to N-2
                 if (bubble_point){
-                    J[i][j] = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
+                    J(i,j) = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
                 }
                 else{
-                    J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
+                    J(i,j) = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
                 }
             }
-            J[i][N-1] = MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatV, i, xN_flag);
+            J(i,N-1) = MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatV, i, xN_flag);
         }
     }
     else{
         throw ValueError();
     }
 
-    // Flip all the signs of the entries in the residual vector since we are solving Jv = -r, not Jv=r
-    // Also calculate the rms error of the residual vector at this step
-    error_rms = 0;
-    for (unsigned int i = 0; i < J.size(); ++i)
-    {
-        negative_r[i] = -r[i];
-        error_rms += r[i]*r[i]; // Sum the squares
-    }
-    error_rms = sqrt(error_rms); // Square-root (The R in RMS)
+    error_rms = r.norm();
     
     // Calculate derivatives along phase boundary;
     // Gernert thesis 3.96 and 3.97
@@ -1591,8 +1567,7 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
     x.resize(N);
     y.resize(N);
     r.resize(2*N-1);
-    negative_r.resize(2*N-1);
-    J.resize(2*N-1, std::vector<CoolPropDbl>(2*N-1, 0));
+    J.resize(2*N-1, 2*N-1);
     err_rel.resize(2*N-1);
     
     // Hold a pointer to the backend
@@ -1610,7 +1585,8 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         // std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
         // std::cout << vec_to_string(negative_r, "%0.12Lg") << std::endl;
         
-        std::vector<CoolPropDbl> v = linsolve(J, negative_r);
+        Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
+
         for (unsigned int i = 0; i < N-1; ++i){
             err_rel[i] = v[i]/x[i];
             x[i] += v[i];
@@ -1631,7 +1607,7 @@ void SaturationSolvers::newton_raphson_twophase::call(HelmholtzEOSMixtureBackend
         }
         //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
         
-        min_rel_change = min_abs_value(err_rel);
+        min_rel_change = err_rel.cwiseAbs().minCoeff();
         iter++;
         
         if (iter == IO.Nstep_max){
@@ -1699,16 +1675,16 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays()
     for (std::size_t i = 0; i < N; ++i)
     {
         for (std::size_t j = 0; j < N-1; ++j){
-            J[i][j] = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
-            J[i][j+N-1] = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
+            J(i,j) = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatL, i, j, xN_flag);
+            J(i,j+N-1) = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(rSatV, i, j, xN_flag);
         }
                 
         // Last derivative with respect to either T or p depending on what is imposed
         if (imposed_variable == newton_raphson_twophase_options::P_IMPOSED){
-            J[i][2*N-2] = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatV, i, xN_flag);
+            J(i,2*N-2) = MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dT__constp_n(rSatV, i, xN_flag);
         }
         else if (imposed_variable == newton_raphson_twophase_options::T_IMPOSED){
-            J[i][2*N-2] = MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatV, i, xN_flag);
+            J(i,2*N-2) = MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatL, i, xN_flag) - MixtureDerivatives::dln_fugacity_i_dp__constT_n(rSatV, i, xN_flag);
         }
         else{
             throw ValueError();
@@ -1718,19 +1694,184 @@ void SaturationSolvers::newton_raphson_twophase::build_arrays()
     for (std::size_t i = 0; i < N-1; ++i)
     {
         std::size_t k = i + N; // N ln f_i residuals
-        J[k][i] =  (z[i]-y[i])/pow(y[i]-x[i], 2);
-        J[k][i+(N-1)] = -(z[i]-x[i])/pow(y[i]-x[i], 2);
+        J(k,i) =  (z[i]-y[i])/pow(y[i]-x[i], 2);
+        J(k,i+(N-1)) = -(z[i]-x[i])/pow(y[i]-x[i], 2);
     }
 
-    // Flip all the signs of the entries in the residual vector since we are solving Jv = -r, not Jv=r
-    // Also calculate the rms error of the residual vector at this step
-    error_rms = 0;
-    for (unsigned int i = 0; i < J.size(); ++i)
-    {
-        negative_r[i] = -r[i];
-        error_rms += r[i]*r[i]; // Sum the squares
-    }
-    error_rms = sqrt(error_rms); // Square-root (The R in RMS)
+    error_rms = r.norm(); // Square-root (The R in RMS)
 }
+    
+class RachfordRiceResidual: public FuncWrapper1DWithDeriv{
+    private:
+        const std::vector<double> &z, &lnK;
+    public:
+        RachfordRiceResidual(const std::vector<double> &z, const std::vector<double> &lnK) : z(z), lnK(lnK) {};
+        double call(double beta){ return FlashRoutines::g_RachfordRice(z, lnK, beta); }
+        double deriv(double beta){ return FlashRoutines::dgdbeta_RachfordRice(z, lnK, beta); }
+};
+
+void StabilityRoutines::StabilityEvaluationClass::trial_compositions(){
+   
+    x.resize(z.size()); y.resize(z.size()); lnK.resize(z.size()); K.resize(z.size());
+    double g0 = 0, g1 = 0, beta = -1;
+    
+    for (int i = 0; i < static_cast<int>(z.size()); ++i){
+        // Calculate the K-factor
+        lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS.T(), HEOS.p(), i);
+        K[i] = exp(lnK[i]);
+        g0 += z[i]*(K[i]-1);   // The summation for beta = 0
+        g1 += z[i]*(1-1/K[i]); // The summation for beta = 1
+    }
+    // Copy K-factors for later use
+    K0 = K;
+    // Now see what to do about the g(0) and g(1) values
+    // -----
+    //
+    if (g0 < 0){
+        beta = 0; // Assumed to be at bubble-point temperature
+    }
+    else if (g1 > 0){
+        beta = 1; // Assumed to be at the dew-point temperature
+    }
+    else{
+        // Need to iterate to find beta that makes g of Rachford-Rice zero
+        RachfordRiceResidual resid(z, lnK);
+        beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+    }
+    // Get the compositions from given value for beta, K, z
+    SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
+    normalize_vector(x);
+    normalize_vector(y);
+    if (debug){ fmt::printf("1) T: %g p: %g beta: %g\n", HEOS.T(), HEOS.p(), beta); }
+}
+void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int num_steps){
+    // ----
+    // Do a few steps of successive substitution
+    // ----
+    
+    HEOS.SatL->set_mole_fractions(x); HEOS.SatL->calc_reducing_state();
+    HEOS.SatV->set_mole_fractions(y); HEOS.SatV->calc_reducing_state();
+    
+    // First use cubic as a guess for the density of liquid and vapor phases
+    rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid); // [mol/m^3]
+    rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas); // [mol/m^3]
+    
+    if (HEOS.backend_name().find("Helmholtz") == 0){
+        // Use Peneloux volume translation to shift liquid volume
+        // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
+        double summer_c = 0, v_SRK = 1/rhomolar_liq;
+        for (std::size_t i = 0; i < z.size(); ++i){
+            // Get the parameters for the cubic EOS
+            CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical),
+                        pc = HEOS.get_fluid_constant(i, iP_critical),
+                        rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
+            CoolPropDbl R = 8.3144598;
+            summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));
+        }
+        rhomolar_liq = 1/(v_SRK - summer_c);
+    }
+    
+    if (debug){ fmt::printf("2) SS1: i beta K rho' rho''\n"); }
+    for (int step_count = 0; step_count < num_steps; ++step_count){
+        // Set the composition
+        HEOS.SatL->set_mole_fractions(x); HEOS.SatV->set_mole_fractions(y);
+        HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
+        
+        // Re-calculate the density
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_vap = HEOS.SatV->rhomolar();
+
+        // Calculate the new K-factors from the fugacity coefficients
+        double g0 = 0, g1 = 0;
+        for (std::size_t i = 0; i < z.size(); ++i){
+            lnK[i] = log(HEOS.SatL->fugacity_coefficient(i)/HEOS.SatV->fugacity_coefficient(i));
+            K[i] = exp(lnK[i]);
+            g0 += z[i]*(K[i]-1);   // The summation for beta = 0
+            g1 += z[i]*(1-1/K[i]); // The summation for beta = 1
+        }
+		RachfordRiceResidual resid(z, lnK);
+        if (g0 < 0){
+			beta = 0;
+        }
+        else if (g1 > 0){
+			beta = 1;
+        }
+        else{
+            // Need to iterate to find beta that makes g of Rachford-Rice zero
+            beta = Brent(resid, 0, 1, DBL_EPSILON, 1e-10, 100);
+        }
+        
+        // Get the compositions from given values for beta, K, z
+        SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
+        normalize_vector(x);
+        normalize_vector(y);
+        if (debug){ fmt::printf("2) %d %g %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f"), rhomolar_liq, rhomolar_vap); }
+    }
+}
+void StabilityRoutines::StabilityEvaluationClass::check_stability(){
+    std::vector<double> tpdL, tpdH;
+    _stable = true;
+    if (beta > DBL_EPSILON || beta < 1-DBL_EPSILON){
+        // Calculate the tpd and the Gibbs energy difference (Gernert, 2014, Eqs. 20-22)
+        this->tpd_liq = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), x, rhomolar_liq);
+        this->tpd_vap = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), y, rhomolar_vap);
+        this->DELTAG_nRT = (1-beta)*tpd_liq + beta*(tpd_vap);
+        if (debug){ fmt::printf("3) tpd': %g tpd'': %g DELTAG/nRT: %g\n", tpd_liq, tpd_vap, DELTAG_nRT); }
+        
+        // If any of these cases are met, conclusively unstable, stop!
+        if (this->tpd_liq < -DBL_EPSILON || this->tpd_vap < -DBL_EPSILON || this->DELTAG_nRT < -DBL_EPSILON){
+            _stable = false; return;
+        }
+    }
+    
+    // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
+    
+    // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
+    std::vector<double> xL(z.size()), xH(z.size());
+    for (std::size_t i = 0; i < z.size(); ++i){
+        xL[i] = z[i]*K0[i];
+        xH[i] = z[i]/K0[i];
+    }
+    normalize_vector(xL);
+    normalize_vector(xH);
+    
+    // For each composition, use successive substitution to try to evaluate stability
+    if (debug){ fmt::printf("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n"); }
+    for (int step_count = 0; step_count < 20; ++step_count){
+        // Set the composition
+        HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
+        HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
+        
+        // Re-calculate the density
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        rhomolar_liq = HEOS.SatL->rhomolar();
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+        rhomolar_vap = HEOS.SatV->rhomolar();
+        
+        // Calculate and store TPD values
+        double tpd_L = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xL, rhomolar_vap);
+        double tpd_H = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xH, rhomolar_liq);
+        tpdL.push_back(tpd_L); tpdH.push_back(tpd_H);
+        
+        // Calculate the new composition from the fugacity coefficients
+        for (std::size_t i = 0; i < z.size(); ++i){
+            xL[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatV->fugacity_coefficient(i);
+            xH[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatL->fugacity_coefficient(i);
+        }
+        normalize_vector(xL);
+        normalize_vector(xH);
+        if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
+        
+        if (tpd_L < -DBL_EPSILON || tpd_H < -DBL_EPSILON){_stable = false; return;}
+    }
+}
+
+
+    
+    
+    
+    
 
 } /* namespace CoolProp*/

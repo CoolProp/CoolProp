@@ -197,7 +197,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "", 
-      "BibTeX_EOS": "Thol-FPE-2016-MM", 
+      "BibTeX_EOS": "Thol-FPE-2016-MM,Thol-THESIS-2015", 
       "STATES": {
         "hs_anchor": {
           "T": 570.57, 
@@ -248,7 +248,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 580, 
+      "T_max": 673,
       "T_max_units": "K", 
       "Ttriple": 204.93, 
       "Ttriple_units": "K", 

@@ -1,0 +1,1716 @@
+[
+  {
+    "CAS": "106-98-9", 
+    "Tc": 419.29, 
+    "Tc_units": "K", 
+    "acentric": 0.191860647355, 
+    "aliases": [
+      "BUTENE", 
+      "1BUTENE", 
+      "1-BUTENE"
+    ], 
+    "molemass": 0.0561063199999999, 
+    "molemass_units": "kg/mol", 
+    "name": "1-BUTENE", 
+    "pc": 4005100.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "67-64-1", 
+    "Tc": 508.1, 
+    "Tc_units": "K", 
+    "acentric": 0.30710000000000004, 
+    "aliases": [
+      "ACETONE"
+    ], 
+    "molemass": 0.05807914, 
+    "molemass_units": "kg/mol", 
+    "name": "ACETONE", 
+    "pc": 4700000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7664-41-7", 
+    "Tc": 405.4, 
+    "Tc_units": "K", 
+    "acentric": 0.25601, 
+    "aliases": [
+      "AMMONIA", 
+      "NH3", 
+      "R717"
+    ], 
+    "molemass": 0.017030260000000002, 
+    "molemass_units": "kg/mol", 
+    "name": "AMMONIA", 
+    "pc": 11333000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7440-37-1", 
+    "Tc": 150.687, 
+    "Tc_units": "K", 
+    "acentric": -0.00219, 
+    "aliases": [
+      "R740", 
+      "ARGON"
+    ], 
+    "molemass": 0.039948, 
+    "molemass_units": "kg/mol", 
+    "name": "ARGON", 
+    "pc": 4863000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "71-43-2", 
+    "Tc": 562.02, 
+    "Tc_units": "K", 
+    "acentric": 0.2108369732700151, 
+    "aliases": [
+      "BENZENE"
+    ], 
+    "molemass": 0.0781118, 
+    "molemass_units": "kg/mol", 
+    "name": "BENZENE", 
+    "pc": 4894000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "124-38-9", 
+    "Tc": 304.1282, 
+    "Tc_units": "K", 
+    "acentric": 0.22394000000000003, 
+    "aliases": [
+      "CO2", 
+      "CARBONDIOXIDE", 
+      "R744"
+    ], 
+    "molemass": 0.044009799999999995, 
+    "molemass_units": "kg/mol", 
+    "name": "CARBONDIOXIDE", 
+    "pc": 7377300.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "630-08-0", 
+    "Tc": 132.86, 
+    "Tc_units": "K", 
+    "acentric": 0.0497, 
+    "aliases": [
+      "CARBONMONOXIDE", 
+      "CO"
+    ], 
+    "molemass": 0.0280101, 
+    "molemass_units": "kg/mol", 
+    "name": "CARBONMONOXIDE", 
+    "pc": 3494000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "463-58-1", 
+    "Tc": 378.77, 
+    "Tc_units": "K", 
+    "acentric": 0.0978, 
+    "aliases": [
+      "COS", 
+      "CARBONYLSULFIDE"
+    ], 
+    "molemass": 0.0600751, 
+    "molemass_units": "kg/mol", 
+    "name": "CARBONYLSULFIDE", 
+    "pc": 6370000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "590-18-1", 
+    "Tc": 435.75, 
+    "Tc_units": "K", 
+    "acentric": 0.20235958587, 
+    "aliases": [
+      "C2BUTENE", 
+      "CIS-2-BUTENE"
+    ], 
+    "molemass": 0.0561063199999999, 
+    "molemass_units": "kg/mol", 
+    "name": "CIS-2-BUTENE", 
+    "pc": 4225500.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "110-82-7", 
+    "Tc": 553.6, 
+    "Tc_units": "K", 
+    "acentric": 0.20926000000000003, 
+    "aliases": [
+      "CYCLOHEXANE", 
+      "CYCLOHEX"
+    ], 
+    "molemass": 0.08415948, 
+    "molemass_units": "kg/mol", 
+    "name": "CYCLOHEXANE", 
+    "pc": 4082400.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "287-92-3", 
+    "Tc": 511.72, 
+    "Tc_units": "K", 
+    "acentric": 0.201112573380599, 
+    "aliases": [
+      "CYCLOPEN", 
+      "CYCLOPENTANE"
+    ], 
+    "molemass": 0.0701329, 
+    "molemass_units": "kg/mol", 
+    "name": "CYCLOPENTANE", 
+    "pc": 4571200.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-19-4", 
+    "Tc": 398.3, 
+    "Tc_units": "K", 
+    "acentric": 0.1305495663687517, 
+    "aliases": [
+      "CYCLOPRO", 
+      "CYCLOPROPANE"
+    ], 
+    "molemass": 0.042081, 
+    "molemass_units": "kg/mol", 
+    "name": "CYCLOPROPANE", 
+    "pc": 5579700.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "556-67-2", 
+    "Tc": 586.5, 
+    "Tc_units": "K", 
+    "acentric": 0.5981248267987835, 
+    "aliases": [
+      "OCTAMETHYLCYCLOTETRASILOXANE"
+    ], 
+    "molemass": 0.29661576, 
+    "molemass_units": "kg/mol", 
+    "name": "D4", 
+    "pc": 1347215.3560904593, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "541-02-6", 
+    "Tc": 619.15, 
+    "Tc_units": "K", 
+    "acentric": 0.658, 
+    "aliases": [
+      "DECAMETHYLCYCLOPENTASILOXANE"
+    ], 
+    "molemass": 0.3707697, 
+    "molemass_units": "kg/mol", 
+    "name": "D5", 
+    "pc": 1160000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "540-97-6", 
+    "Tc": 645.78, 
+    "Tc_units": "K", 
+    "acentric": 0.736, 
+    "aliases": [
+      "DODECAMETHYLCYCLOHEXASILOXANE"
+    ], 
+    "molemass": 0.444924, 
+    "molemass_units": "kg/mol", 
+    "name": "D6", 
+    "pc": 961000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7782-39-0", 
+    "Tc": 38.34, 
+    "Tc_units": "K", 
+    "acentric": -0.136290274128, 
+    "aliases": [
+      "D2", 
+      "DEUTERIUM"
+    ], 
+    "molemass": 0.0040282, 
+    "molemass_units": "kg/mol", 
+    "name": "DEUTERIUM", 
+    "pc": 1679600.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "1300-21-6", 
+    "Tc": 561.6, 
+    "Tc_units": "K", 
+    "acentric": 0.268578500873581, 
+    "aliases": [
+      "DICHLOROETHANE"
+    ], 
+    "molemass": 0.09895899999999999, 
+    "molemass_units": "kg/mol", 
+    "name": "DICHLOROETHANE", 
+    "pc": 5227585.103082351, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "60-29-7", 
+    "Tc": 466.70000000000005, 
+    "Tc_units": "K", 
+    "acentric": 0.2819293311752744, 
+    "aliases": [
+      "DIETHYLETHER", 
+      "DEE"
+    ], 
+    "molemass": 0.0741216, 
+    "molemass_units": "kg/mol", 
+    "name": "DIETHYLETHER", 
+    "pc": 3649016.8965285365, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "616-38-6", 
+    "Tc": 557.0, 
+    "Tc_units": "K", 
+    "acentric": 0.34600000000000003, 
+    "aliases": [
+      "DMC", 
+      "DIMETHYLCARBONATE"
+    ], 
+    "molemass": 0.0900779, 
+    "molemass_units": "kg/mol", 
+    "name": "DIMETHYLCARBONATE", 
+    "pc": 4908800.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "115-10-6", 
+    "Tc": 400.378, 
+    "Tc_units": "K", 
+    "acentric": 0.196, 
+    "aliases": [
+      "DIMETHYLETHER", 
+      "DME"
+    ], 
+    "molemass": 0.04606844, 
+    "molemass_units": "kg/mol", 
+    "name": "DIMETHYLETHER", 
+    "pc": 5336800.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "74-84-0", 
+    "Tc": 305.322, 
+    "Tc_units": "K", 
+    "acentric": 0.099, 
+    "aliases": [
+      "R170", 
+      "ETHANE"
+    ], 
+    "molemass": 0.030069040000000002, 
+    "molemass_units": "kg/mol", 
+    "name": "ETHANE", 
+    "pc": 4872200.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "64-17-5", 
+    "Tc": 514.71, 
+    "Tc_units": "K", 
+    "acentric": 0.644, 
+    "aliases": [
+      "C2H6O", 
+      "ETHANOL"
+    ], 
+    "molemass": 0.04606844, 
+    "molemass_units": "kg/mol", 
+    "name": "ETHANOL", 
+    "pc": 6268000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "100-41-4", 
+    "Tc": 617.12, 
+    "Tc_units": "K", 
+    "acentric": 0.304, 
+    "aliases": [
+      "EBENZENE", 
+      "ETHYLBENZENE"
+    ], 
+    "molemass": 0.106165, 
+    "molemass_units": "kg/mol", 
+    "name": "ETHYLBENZENE", 
+    "pc": 3622400.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "74-85-1", 
+    "Tc": 282.35, 
+    "Tc_units": "K", 
+    "acentric": 0.08660000000000001, 
+    "aliases": [
+      "ETHYLENE", 
+      "R1150"
+    ], 
+    "molemass": 0.02805376, 
+    "molemass_units": "kg/mol", 
+    "name": "ETHYLENE", 
+    "pc": 5041800.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-21-8", 
+    "Tc": 468.92, 
+    "Tc_units": "K", 
+    "acentric": 0.2101954890499582, 
+    "aliases": [
+      "ETHYLENEOXIDE"
+    ], 
+    "molemass": 0.04405256, 
+    "molemass_units": "kg/mol", 
+    "name": "ETHYLENEOXIDE", 
+    "pc": 7304686.159635853, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7782-41-4", 
+    "Tc": 144.41400000000002, 
+    "Tc_units": "K", 
+    "acentric": 0.0449, 
+    "aliases": [
+      "FLUORINE"
+    ], 
+    "molemass": 0.03799681, 
+    "molemass_units": "kg/mol", 
+    "name": "FLUORINE", 
+    "pc": 5172400.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7789-20-0", 
+    "Tc": 643.847, 
+    "Tc_units": "K", 
+    "acentric": 0.3643005688094967, 
+    "aliases": [
+      "HEAVYWATER", 
+      "D2O"
+    ], 
+    "molemass": 0.020027508000000003, 
+    "molemass_units": "kg/mol", 
+    "name": "HEAVYWATER", 
+    "pc": 21672051.479828164, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7440-59-7", 
+    "Tc": 5.1953000000000005, 
+    "Tc_units": "K", 
+    "acentric": -0.385, 
+    "aliases": [
+      "R704", 
+      "HELIUM", 
+      "HE"
+    ], 
+    "molemass": 0.004002602, 
+    "molemass_units": "kg/mol", 
+    "name": "HELIUM", 
+    "pc": 227600.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "421-14-7", 
+    "Tc": 377.921, 
+    "Tc_units": "K", 
+    "acentric": 0.2888713656700324, 
+    "aliases": [
+      "RE143A", 
+      "HFE143M", 
+      "HFE-143M"
+    ], 
+    "molemass": 0.10004, 
+    "molemass_units": "kg/mol", 
+    "name": "HFE143M", 
+    "pc": 3635000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "1333-74-0", 
+    "Tc": 33.145, 
+    "Tc_units": "K", 
+    "acentric": -0.219, 
+    "aliases": [
+      "H2", 
+      "HYDROGEN", 
+      "R702"
+    ], 
+    "molemass": 0.00201588, 
+    "molemass_units": "kg/mol", 
+    "name": "HYDROGEN", 
+    "pc": 1296400.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7647-01-0", 
+    "Tc": 324.55, 
+    "Tc_units": "K", 
+    "acentric": 0.1281892174308736, 
+    "aliases": [
+      "HYDROGENCHLORIDE", 
+      "HCL"
+    ], 
+    "molemass": 0.0364609, 
+    "molemass_units": "kg/mol", 
+    "name": "HYDROGENCHLORIDE", 
+    "pc": 8288160.904447134, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7783-06-4", 
+    "Tc": 373.1, 
+    "Tc_units": "K", 
+    "acentric": 0.1005, 
+    "aliases": [
+      "HYDROGENSULFIDE", 
+      "H2S"
+    ], 
+    "molemass": 0.03408088, 
+    "molemass_units": "kg/mol", 
+    "name": "HYDROGENSULFIDE", 
+    "pc": 9000000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-28-5", 
+    "Tc": 407.817, 
+    "Tc_units": "K", 
+    "acentric": 0.183531783208, 
+    "aliases": [
+      "ISOBUTAN", 
+      "R600A", 
+      "ISOBUTANE"
+    ], 
+    "molemass": 0.0581222, 
+    "molemass_units": "kg/mol", 
+    "name": "ISOBUTANE", 
+    "pc": 3629000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "115-11-7", 
+    "Tc": 418.09, 
+    "Tc_units": "K", 
+    "acentric": 0.1925934521621, 
+    "aliases": [
+      "IBUTENE", 
+      "ISOBUTENE"
+    ], 
+    "molemass": 0.0561063199999999, 
+    "molemass_units": "kg/mol", 
+    "name": "ISOBUTENE", 
+    "pc": 4009800.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "107-83-5", 
+    "Tc": 497.7000000000001, 
+    "Tc_units": "K", 
+    "acentric": 0.2797, 
+    "aliases": [
+      "IHEXANE", 
+      "ISOHEXANE"
+    ], 
+    "molemass": 0.0861753599999999, 
+    "molemass_units": "kg/mol", 
+    "name": "ISOHEXANE", 
+    "pc": 3040000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "78-78-4", 
+    "Tc": 460.35, 
+    "Tc_units": "K", 
+    "acentric": 0.22740000000000002, 
+    "aliases": [
+      "ISOPENTANE", 
+      "IPENTANE", 
+      "R601A"
+    ], 
+    "molemass": 0.07214878, 
+    "molemass_units": "kg/mol", 
+    "name": "ISOPENTANE", 
+    "pc": 3378000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7439-90-9", 
+    "Tc": 209.48, 
+    "Tc_units": "K", 
+    "acentric": -0.0008900000000000001, 
+    "aliases": [
+      "KRYPTON"
+    ], 
+    "molemass": 0.083798, 
+    "molemass_units": "kg/mol", 
+    "name": "KRYPTON", 
+    "pc": 5525000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "108-38-3", 
+    "Tc": 616.89, 
+    "Tc_units": "K", 
+    "acentric": 0.326, 
+    "aliases": [
+      "MXYLENE", 
+      "M-XYLENE"
+    ], 
+    "molemass": 0.106165, 
+    "molemass_units": "kg/mol", 
+    "name": "M-XYLENE", 
+    "pc": 3534600.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "141-62-8", 
+    "Tc": 599.4, 
+    "Tc_units": "K", 
+    "acentric": 0.668, 
+    "aliases": [
+      "DECAMETHYLTETRASILOXANE"
+    ], 
+    "molemass": 0.310685, 
+    "molemass_units": "kg/mol", 
+    "name": "MD2M", 
+    "pc": 1227000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "141-63-9", 
+    "Tc": 628.36, 
+    "Tc_units": "K", 
+    "acentric": 0.722, 
+    "aliases": [
+      "DODECAMETHYLPENTASILOXANE"
+    ], 
+    "molemass": 0.384839, 
+    "molemass_units": "kg/mol", 
+    "name": "MD3M", 
+    "pc": 945000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "107-52-8", 
+    "Tc": 653.2, 
+    "Tc_units": "K", 
+    "acentric": 0.8246471472642923, 
+    "aliases": [
+      "TETRADECAMETHYLHEXASILOXANE"
+    ], 
+    "molemass": 0.45899328, 
+    "molemass_units": "kg/mol", 
+    "name": "MD4M", 
+    "pc": 877000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "107-51-7", 
+    "Tc": 564.09, 
+    "Tc_units": "K", 
+    "acentric": 0.5297000000000001, 
+    "aliases": [
+      "OCTAMETHYLTRISILOXANE"
+    ], 
+    "molemass": 0.23653146, 
+    "molemass_units": "kg/mol", 
+    "name": "MDM", 
+    "pc": 1415000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "74-82-8", 
+    "Tc": 190.564, 
+    "Tc_units": "K", 
+    "acentric": 0.011420000000000001, 
+    "aliases": [
+      "R50", 
+      "CH4", 
+      "METHANE"
+    ], 
+    "molemass": 0.0160428, 
+    "molemass_units": "kg/mol", 
+    "name": "METHANE", 
+    "pc": 4599200.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "67-56-1", 
+    "Tc": 512.5, 
+    "Tc_units": "K", 
+    "acentric": 0.5720322, 
+    "aliases": [
+      "METHANOL"
+    ], 
+    "molemass": 0.03204216, 
+    "molemass_units": "kg/mol", 
+    "name": "METHANOL", 
+    "pc": 8215850.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "112-63-0", 
+    "Tc": 799.0, 
+    "Tc_units": "K", 
+    "acentric": 0.8054063870556485, 
+    "aliases": [
+      "METHYLLINOLEATE", 
+      "MLINOLEA"
+    ], 
+    "molemass": 0.29447206, 
+    "molemass_units": "kg/mol", 
+    "name": "METHYLLINOLEATE", 
+    "pc": 1341000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "301-00-8", 
+    "Tc": 772.0, 
+    "Tc_units": "K", 
+    "acentric": 1.142605258673496, 
+    "aliases": [
+      "MLINOLEN", 
+      "METHYLLINOLENATE"
+    ], 
+    "molemass": 0.29245618, 
+    "molemass_units": "kg/mol", 
+    "name": "METHYLLINOLENATE", 
+    "pc": 1369000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "112-62-9", 
+    "Tc": 782.0, 
+    "Tc_units": "K", 
+    "acentric": 0.9058493599879012, 
+    "aliases": [
+      "MOLEATE", 
+      "METHYLOLEATE"
+    ], 
+    "molemass": 0.29648794, 
+    "molemass_units": "kg/mol", 
+    "name": "METHYLOLEATE", 
+    "pc": 1246000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "112-39-0", 
+    "Tc": 755.0, 
+    "Tc_units": "K", 
+    "acentric": 0.9103161780000001, 
+    "aliases": [
+      "MPALMITA", 
+      "METHYLPALMITATE"
+    ], 
+    "molemass": 0.27045066, 
+    "molemass_units": "kg/mol", 
+    "name": "METHYLPALMITATE", 
+    "pc": 1350000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "112-61-8", 
+    "Tc": 775.0, 
+    "Tc_units": "K", 
+    "acentric": 1.01756, 
+    "aliases": [
+      "METHYLSTEARATE", 
+      "MSTEARAT"
+    ], 
+    "molemass": 0.29850382000000003, 
+    "molemass_units": "kg/mol", 
+    "name": "METHYLSTEARATE", 
+    "pc": 1239000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "107-46-0", 
+    "Tc": 518.75, 
+    "Tc_units": "K", 
+    "acentric": 0.418, 
+    "aliases": [
+      "HEXAMETHYLDISILOXANE"
+    ], 
+    "molemass": 0.16237752, 
+    "molemass_units": "kg/mol", 
+    "name": "MM", 
+    "pc": 1939000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "106-97-8", 
+    "Tc": 425.125, 
+    "Tc_units": "K", 
+    "acentric": 0.200810094644, 
+    "aliases": [
+      "NBUTANE", 
+      "R600", 
+      "N-BUTANE", 
+      "BUTANE"
+    ], 
+    "molemass": 0.0581222, 
+    "molemass_units": "kg/mol", 
+    "name": "N-BUTANE", 
+    "pc": 3796000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "124-18-5", 
+    "Tc": 617.7, 
+    "Tc_units": "K", 
+    "acentric": 0.4884, 
+    "aliases": [
+      "DECANE", 
+      "N-DECANE"
+    ], 
+    "molemass": 0.14228168, 
+    "molemass_units": "kg/mol", 
+    "name": "N-DECANE", 
+    "pc": 2103000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "112-40-3", 
+    "Tc": 658.1, 
+    "Tc_units": "K", 
+    "acentric": 0.5741822212406891, 
+    "aliases": [
+      "DODECANE", 
+      "NDODECANE", 
+      "N-DODECANE", 
+      "C12"
+    ], 
+    "molemass": 0.17033484000000002, 
+    "molemass_units": "kg/mol", 
+    "name": "N-DODECANE", 
+    "pc": 1817000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "142-82-5", 
+    "Tc": 540.13, 
+    "Tc_units": "K", 
+    "acentric": 0.34900000000000003, 
+    "aliases": [
+      "N-HEPTANE", 
+      "HEPTANE", 
+      "NHEPTANE"
+    ], 
+    "molemass": 0.100202, 
+    "molemass_units": "kg/mol", 
+    "name": "N-HEPTANE", 
+    "pc": 2736000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "110-54-3", 
+    "Tc": 507.82, 
+    "Tc_units": "K", 
+    "acentric": 0.299, 
+    "aliases": [
+      "N-HEXANE", 
+      "NHEXANE", 
+      "HEXANE"
+    ], 
+    "molemass": 0.0861753599999999, 
+    "molemass_units": "kg/mol", 
+    "name": "N-HEXANE", 
+    "pc": 3034000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "111-84-2", 
+    "Tc": 594.5500000000001, 
+    "Tc_units": "K", 
+    "acentric": 0.4433, 
+    "aliases": [
+      "NONANE", 
+      "N-NONANE"
+    ], 
+    "molemass": 0.12825509999999998, 
+    "molemass_units": "kg/mol", 
+    "name": "N-NONANE", 
+    "pc": 2281000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "111-65-9", 
+    "Tc": 569.32, 
+    "Tc_units": "K", 
+    "acentric": 0.395, 
+    "aliases": [
+      "NOCTANE", 
+      "OCTANE", 
+      "N-OCTANE"
+    ], 
+    "molemass": 0.1142285, 
+    "molemass_units": "kg/mol", 
+    "name": "N-OCTANE", 
+    "pc": 2497000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "109-66-0", 
+    "Tc": 469.7000000000001, 
+    "Tc_units": "K", 
+    "acentric": 0.251, 
+    "aliases": [
+      "R601", 
+      "PENTANE", 
+      "NPENTANE", 
+      "N-PENTANE"
+    ], 
+    "molemass": 0.07214878, 
+    "molemass_units": "kg/mol", 
+    "name": "N-PENTANE", 
+    "pc": 3370000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "74-98-6", 
+    "Tc": 369.89, 
+    "Tc_units": "K", 
+    "acentric": 0.1521, 
+    "aliases": [
+      "PROPANE", 
+      "R290", 
+      "N-PROPANE", 
+      "C3H8"
+    ], 
+    "molemass": 0.04409562, 
+    "molemass_units": "kg/mol", 
+    "name": "N-PROPANE", 
+    "pc": 4251200.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "1120-21-4", 
+    "Tc": 638.8000000000001, 
+    "Tc_units": "K", 
+    "acentric": 0.5390371013718567, 
+    "aliases": [
+      "N-UNDECANE", 
+      "C11", 
+      "UNDECANE"
+    ], 
+    "molemass": 0.15630826, 
+    "molemass_units": "kg/mol", 
+    "name": "N-UNDECANE", 
+    "pc": 1990400.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7440-01-9", 
+    "Tc": 44.49180000000001, 
+    "Tc_units": "K", 
+    "acentric": -0.0384492992736859, 
+    "aliases": [
+      "NEON", 
+      "R720"
+    ], 
+    "molemass": 0.020179, 
+    "molemass_units": "kg/mol", 
+    "name": "NEON", 
+    "pc": 2680000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "463-82-1", 
+    "Tc": 433.74, 
+    "Tc_units": "K", 
+    "acentric": 0.1961, 
+    "aliases": [
+      "NEOPENTN", 
+      "NEOPENTANE"
+    ], 
+    "molemass": 0.07214878, 
+    "molemass_units": "kg/mol", 
+    "name": "NEOPENTANE", 
+    "pc": 3196000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7727-37-9", 
+    "Tc": 126.192, 
+    "Tc_units": "K", 
+    "acentric": 0.037200000000000004, 
+    "aliases": [
+      "N2", 
+      "NITROGEN", 
+      "R728"
+    ], 
+    "molemass": 0.02801348, 
+    "molemass_units": "kg/mol", 
+    "name": "NITROGEN", 
+    "pc": 3395800.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "10024-97-2", 
+    "Tc": 309.52, 
+    "Tc_units": "K", 
+    "acentric": 0.1613, 
+    "aliases": [
+      "N2O", 
+      "NITROUSOXIDE"
+    ], 
+    "molemass": 0.0440128, 
+    "molemass_units": "kg/mol", 
+    "name": "NITROUSOXIDE", 
+    "pc": 7245000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "756-13-8", 
+    "Tc": 441.81, 
+    "Tc_units": "K", 
+    "acentric": 0.4710235935799747, 
+    "aliases": [
+      "NOVEC649", 
+      "NOVEC1230"
+    ], 
+    "molemass": 0.3160438, 
+    "molemass_units": "kg/mol", 
+    "name": "NOVEC649", 
+    "pc": 1869026.583064056, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "95-47-6", 
+    "Tc": 630.259, 
+    "Tc_units": "K", 
+    "acentric": 0.312, 
+    "aliases": [
+      "OXYLENE", 
+      "O-XYLENE"
+    ], 
+    "molemass": 0.106165, 
+    "molemass_units": "kg/mol", 
+    "name": "O-XYLENE", 
+    "pc": 3737500.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7782-39-0o", 
+    "Tc": 38.34, 
+    "Tc_units": "K", 
+    "acentric": -0.136290274128, 
+    "aliases": [
+      "ORTHODEUTERIUM"
+    ], 
+    "molemass": 0.0040282, 
+    "molemass_units": "kg/mol", 
+    "name": "ORTHODEUTERIUM", 
+    "pc": 1679600.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "1333-74-0o", 
+    "Tc": 33.22, 
+    "Tc_units": "K", 
+    "acentric": -0.219, 
+    "aliases": [
+      "ORTHOHYD", 
+      "ORTHOHYDROGEN"
+    ], 
+    "molemass": 0.00201594, 
+    "molemass_units": "kg/mol", 
+    "name": "ORTHOHYDROGEN", 
+    "pc": 1310650.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7782-44-7", 
+    "Tc": 154.58100000000002, 
+    "Tc_units": "K", 
+    "acentric": 0.0222, 
+    "aliases": [
+      "O2", 
+      "OXYGEN", 
+      "R732"
+    ], 
+    "molemass": 0.0319988, 
+    "molemass_units": "kg/mol", 
+    "name": "OXYGEN", 
+    "pc": 5043000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "106-42-3", 
+    "Tc": 616.168, 
+    "Tc_units": "K", 
+    "acentric": 0.324, 
+    "aliases": [
+      "PXYLENE", 
+      "P-XYLENE"
+    ], 
+    "molemass": 0.106165, 
+    "molemass_units": "kg/mol", 
+    "name": "P-XYLENE", 
+    "pc": 3531500.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7782-39-0p", 
+    "Tc": 38.34, 
+    "Tc_units": "K", 
+    "acentric": -0.136290274128, 
+    "aliases": [
+      "PARADEUTERIUM"
+    ], 
+    "molemass": 0.0040282, 
+    "molemass_units": "kg/mol", 
+    "name": "PARADEUTERIUM", 
+    "pc": 1679600.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "1333-74-0p", 
+    "Tc": 32.938, 
+    "Tc_units": "K", 
+    "acentric": -0.219, 
+    "aliases": [
+      "PARAHYDROGEN", 
+      "PARAHYD"
+    ], 
+    "molemass": 0.00201588, 
+    "molemass_units": "kg/mol", 
+    "name": "PARAHYDROGEN", 
+    "pc": 1285800.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "115-07-1", 
+    "Tc": 364.211, 
+    "Tc_units": "K", 
+    "acentric": 0.146, 
+    "aliases": [
+      "R1270", 
+      "PROPYLENE", 
+      "PROPYLEN"
+    ], 
+    "molemass": 0.04207974, 
+    "molemass_units": "kg/mol", 
+    "name": "PROPYLENE", 
+    "pc": 4555000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "74-99-7", 
+    "Tc": 402.38, 
+    "Tc_units": "K", 
+    "acentric": 0.20400000000000001, 
+    "aliases": [
+      "PROPYNE"
+    ], 
+    "molemass": 0.04006, 
+    "molemass_units": "kg/mol", 
+    "name": "PROPYNE", 
+    "pc": 5626000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-69-4", 
+    "Tc": 471.06, 
+    "Tc_units": "K", 
+    "acentric": 0.1887506482528083, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.137368, 
+    "molemass_units": "kg/mol", 
+    "name": "R11", 
+    "pc": 4394000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "76-13-1", 
+    "Tc": 487.21, 
+    "Tc_units": "K", 
+    "acentric": 0.252535, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.18737499999999999, 
+    "molemass_units": "kg/mol", 
+    "name": "R113", 
+    "pc": 3392200.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "76-14-2", 
+    "Tc": 418.83, 
+    "Tc_units": "K", 
+    "acentric": 0.2523, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.170921, 
+    "molemass_units": "kg/mol", 
+    "name": "R114", 
+    "pc": 3257000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "76-15-3", 
+    "Tc": 353.1, 
+    "Tc_units": "K", 
+    "acentric": 0.24843499306634578, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.15446641600000002, 
+    "molemass_units": "kg/mol", 
+    "name": "R115", 
+    "pc": 3129036.9682787084, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "76-16-4", 
+    "Tc": 293.03000000000003, 
+    "Tc_units": "K", 
+    "acentric": 0.2566, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.13801182, 
+    "molemass_units": "kg/mol", 
+    "name": "R116", 
+    "pc": 3048000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-71-8", 
+    "Tc": 385.12, 
+    "Tc_units": "K", 
+    "acentric": 0.17947831734355119, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.12091299999999999, 
+    "molemass_units": "kg/mol", 
+    "name": "R12", 
+    "pc": 4136100.0000000014, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "306-83-2", 
+    "Tc": 456.831, 
+    "Tc_units": "K", 
+    "acentric": 0.2819224970363519, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.15293099999999998, 
+    "molemass_units": "kg/mol", 
+    "name": "R123", 
+    "pc": 3672000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "102687-65-0", 
+    "Tc": 439.6, 
+    "Tc_units": "K", 
+    "acentric": 0.3024522935802718, 
+    "aliases": [
+      "R1233ZDE", 
+      "R1233ZD", 
+      "R1233ZD(E)"
+    ], 
+    "molemass": 0.13049439999999998, 
+    "molemass_units": "kg/mol", 
+    "name": "R1233ZD(E)", 
+    "pc": 3623637.776364791, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "754-12-1", 
+    "Tc": 367.85, 
+    "Tc_units": "K", 
+    "acentric": 0.276, 
+    "aliases": [
+      "R1234YF"
+    ], 
+    "molemass": 0.11404159280000001, 
+    "molemass_units": "kg/mol", 
+    "name": "R1234YF", 
+    "pc": 3382200.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "29118-24-9", 
+    "Tc": 382.52, 
+    "Tc_units": "K", 
+    "acentric": 0.313, 
+    "aliases": [
+      "R1234ZE", 
+      "R1234ZE(E)", 
+      "R1234ZEE"
+    ], 
+    "molemass": 0.11404159280000001, 
+    "molemass_units": "kg/mol", 
+    "name": "R1234ZE(E)", 
+    "pc": 3636250.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "29118-25-0", 
+    "Tc": 423.27, 
+    "Tc_units": "K", 
+    "acentric": 0.3274, 
+    "aliases": [
+      "R1234ZE(Z)"
+    ], 
+    "molemass": 0.11404159280000001, 
+    "molemass_units": "kg/mol", 
+    "name": "R1234ZE(Z)", 
+    "pc": 3533000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "2837-89-0", 
+    "Tc": 395.425, 
+    "Tc_units": "K", 
+    "acentric": 0.2880950842214292, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.1364762, 
+    "molemass_units": "kg/mol", 
+    "name": "R124", 
+    "pc": 3624295.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "354-33-6", 
+    "Tc": 339.173, 
+    "Tc_units": "K", 
+    "acentric": 0.3052, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.1200214, 
+    "molemass_units": "kg/mol", 
+    "name": "R125", 
+    "pc": 3617700.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-72-9", 
+    "Tc": 301.88, 
+    "Tc_units": "K", 
+    "acentric": 0.17458632779799999, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.104459, 
+    "molemass_units": "kg/mol", 
+    "name": "R13", 
+    "pc": 3879000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "811-97-2", 
+    "Tc": 374.21, 
+    "Tc_units": "K", 
+    "acentric": 0.32684, 
+    "aliases": [
+      "R134A"
+    ], 
+    "molemass": 0.102032, 
+    "molemass_units": "kg/mol", 
+    "name": "R134A", 
+    "pc": 4059280.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "2314-97-8", 
+    "Tc": 396.44, 
+    "Tc_units": "K", 
+    "acentric": 0.1761811177701855, 
+    "aliases": [
+      "CF3I"
+    ], 
+    "molemass": 0.19591039999999998, 
+    "molemass_units": "kg/mol", 
+    "name": "R13I1", 
+    "pc": 3952566.0717186723, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-73-0", 
+    "Tc": 227.51, 
+    "Tc_units": "K", 
+    "acentric": 0.17850000000000002, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.0880046, 
+    "molemass_units": "kg/mol", 
+    "name": "R14", 
+    "pc": 3750000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "1717-00-6", 
+    "Tc": 477.5, 
+    "Tc_units": "K", 
+    "acentric": 0.2195, 
+    "aliases": [
+      "R141B"
+    ], 
+    "molemass": 0.11694962, 
+    "molemass_units": "kg/mol", 
+    "name": "R141B", 
+    "pc": 4212000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-68-3", 
+    "Tc": 410.26, 
+    "Tc_units": "K", 
+    "acentric": 0.2321, 
+    "aliases": [
+      "R142B"
+    ], 
+    "molemass": 0.10049503, 
+    "molemass_units": "kg/mol", 
+    "name": "R142B", 
+    "pc": 4055000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "420-46-2", 
+    "Tc": 345.857, 
+    "Tc_units": "K", 
+    "acentric": 0.261489646224, 
+    "aliases": [
+      "R143A"
+    ], 
+    "molemass": 0.0840409999999999, 
+    "molemass_units": "kg/mol", 
+    "name": "R143A", 
+    "pc": 3761000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-37-6", 
+    "Tc": 386.411, 
+    "Tc_units": "K", 
+    "acentric": 0.275217114532099, 
+    "aliases": [
+      "R152A"
+    ], 
+    "molemass": 0.066051, 
+    "molemass_units": "kg/mol", 
+    "name": "R152A", 
+    "pc": 4520000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "353-36-6", 
+    "Tc": 375.25, 
+    "Tc_units": "K", 
+    "acentric": 0.2162428410661867, 
+    "aliases": [
+      "FLUOROETHANE"
+    ], 
+    "molemass": 0.0480595, 
+    "molemass_units": "kg/mol", 
+    "name": "R161", 
+    "pc": 5010000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-43-4", 
+    "Tc": 451.48, 
+    "Tc_units": "K", 
+    "acentric": 0.2061, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.10292269999999999, 
+    "molemass_units": "kg/mol", 
+    "name": "R21", 
+    "pc": 5181200.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "76-19-7", 
+    "Tc": 345.02, 
+    "Tc_units": "K", 
+    "acentric": 0.31720000000000004, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.18801933, 
+    "molemass_units": "kg/mol", 
+    "name": "R218", 
+    "pc": 2640000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-45-6", 
+    "Tc": 369.295, 
+    "Tc_units": "K", 
+    "acentric": 0.22082000000000002, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.08646799999999999, 
+    "molemass_units": "kg/mol", 
+    "name": "R22", 
+    "pc": 4990000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "431-89-0", 
+    "Tc": 374.9, 
+    "Tc_units": "K", 
+    "acentric": 0.3576412419532815, 
+    "aliases": [
+      "R227EA"
+    ], 
+    "molemass": 0.17002886, 
+    "molemass_units": "kg/mol", 
+    "name": "R227EA", 
+    "pc": 2925242.2339447653, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-46-7", 
+    "Tc": 299.293, 
+    "Tc_units": "K", 
+    "acentric": 0.262964892496154, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.07001385, 
+    "molemass_units": "kg/mol", 
+    "name": "R23", 
+    "pc": 4832000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "431-63-0", 
+    "Tc": 412.44, 
+    "Tc_units": "K", 
+    "acentric": 0.3687823803991404, 
+    "aliases": [
+      "R236EA"
+    ], 
+    "molemass": 0.1520384, 
+    "molemass_units": "kg/mol", 
+    "name": "R236EA", 
+    "pc": 3420000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "690-39-1", 
+    "Tc": 398.07, 
+    "Tc_units": "K", 
+    "acentric": 0.3769117976336991, 
+    "aliases": [
+      "R236FA"
+    ], 
+    "molemass": 0.1520384, 
+    "molemass_units": "kg/mol", 
+    "name": "R236FA", 
+    "pc": 3200000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "679-86-7", 
+    "Tc": 447.57, 
+    "Tc_units": "K", 
+    "acentric": 0.3545654191235898, 
+    "aliases": [
+      "R245CA"
+    ], 
+    "molemass": 0.13404794, 
+    "molemass_units": "kg/mol", 
+    "name": "R245CA", 
+    "pc": 3940740.4887504284, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "460-73-1", 
+    "Tc": 427.01, 
+    "Tc_units": "K", 
+    "acentric": 0.3776, 
+    "aliases": [
+      "R245FA"
+    ], 
+    "molemass": 0.13404794, 
+    "molemass_units": "kg/mol", 
+    "name": "R245FA", 
+    "pc": 3651000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "75-10-5", 
+    "Tc": 351.255, 
+    "Tc_units": "K", 
+    "acentric": 0.27690000000000003, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.052024, 
+    "molemass_units": "kg/mol", 
+    "name": "R32", 
+    "pc": 5782000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "406-58-6", 
+    "Tc": 460.0, 
+    "Tc_units": "K", 
+    "acentric": 0.3774450971682668, 
+    "aliases": [
+      "R365MFC"
+    ], 
+    "molemass": 0.14807452000000002, 
+    "molemass_units": "kg/mol", 
+    "name": "R365MFC", 
+    "pc": 3266207.0678832484, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "74-87-3", 
+    "Tc": 416.3, 
+    "Tc_units": "K", 
+    "acentric": 0.1500684963962621, 
+    "aliases": [
+      "METHYLCHLORIDE"
+    ], 
+    "molemass": 0.05048752, 
+    "molemass_units": "kg/mol", 
+    "name": "R40", 
+    "pc": 6671686.977141843, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "593-53-3", 
+    "Tc": 317.28000000000003, 
+    "Tc_units": "K", 
+    "acentric": 0.20040000000000002, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.0340329199999999, 
+    "molemass_units": "kg/mol", 
+    "name": "R41", 
+    "pc": 5897000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "115-25-3", 
+    "Tc": 388.38, 
+    "Tc_units": "K", 
+    "acentric": 0.35534499999999997, 
+    "aliases": [
+      ""
+    ], 
+    "molemass": 0.2000312, 
+    "molemass_units": "kg/mol", 
+    "name": "RC318", 
+    "pc": 2777500.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7446-09-5", 
+    "Tc": 430.64, 
+    "Tc_units": "K", 
+    "acentric": 0.2561299361987246, 
+    "aliases": [
+      "SO2", 
+      "SULFURDIOXIDE"
+    ], 
+    "molemass": 0.06406379999999999, 
+    "molemass_units": "kg/mol", 
+    "name": "SULFURDIOXIDE", 
+    "pc": 7886587.600346413, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "2551-62-4", 
+    "Tc": 318.7232, 
+    "Tc_units": "K", 
+    "acentric": 0.21, 
+    "aliases": [
+      "SF6", 
+      "SULFURHEXAFLUORIDE"
+    ], 
+    "molemass": 0.1460554192, 
+    "molemass_units": "kg/mol", 
+    "name": "SULFURHEXAFLUORIDE", 
+    "pc": 3754983.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "108-88-3", 
+    "Tc": 591.75, 
+    "Tc_units": "K", 
+    "acentric": 0.2657, 
+    "aliases": [
+      "TOLUENE"
+    ], 
+    "molemass": 0.09213842, 
+    "molemass_units": "kg/mol", 
+    "name": "TOLUENE", 
+    "pc": 4126000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "624-64-6", 
+    "Tc": 428.61, 
+    "Tc_units": "K", 
+    "acentric": 0.21007683443616, 
+    "aliases": [
+      "TRANS-2-BUTENE", 
+      "T2BUTENE"
+    ], 
+    "molemass": 0.0561063199999999, 
+    "molemass_units": "kg/mol", 
+    "name": "TRANS-2-BUTENE", 
+    "pc": 4027300.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7732-18-5", 
+    "Tc": 647.096, 
+    "Tc_units": "K", 
+    "acentric": 0.3442920843, 
+    "aliases": [
+      "WATER", 
+      "H2O", 
+      "R718"
+    ], 
+    "molemass": 0.018015268, 
+    "molemass_units": "kg/mol", 
+    "name": "WATER", 
+    "pc": 22064000.0, 
+    "pc_units": "Pa"
+  }, 
+  {
+    "CAS": "7440-63-3", 
+    "Tc": 289.733, 
+    "Tc_units": "K", 
+    "acentric": 0.0036300000000000004, 
+    "aliases": [
+      "XENON", 
+      "XE"
+    ], 
+    "molemass": 0.131293, 
+    "molemass_units": "kg/mol", 
+    "name": "XENON", 
+    "pc": 5842000.0, 
+    "pc_units": "Pa"
+  }
+]

@@ -13,5 +13,6 @@ This section includes information about the CoolProp software, listings of input
     Tabular.rst
     Configuration.rst
     REFPROP.rst
+    Cubics.rst
     examples.rst
     changelog.rst

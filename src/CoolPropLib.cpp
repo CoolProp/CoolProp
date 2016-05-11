@@ -251,15 +251,12 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
 {
     try{
         int key = CoolProp::get_parameter_index(param);
-        if (key >= 0){
-            std::string s = CoolProp::get_parameter_information(key, Output);
-            return str2buf(s, Output, n) ? 1 : 0;
-        }
-        else{
-            str2buf(format("parameter is invalid: %s", param), Output, n);
-        }
+        std::string s = CoolProp::get_parameter_information(key, "long");
+        return str2buf(s, Output, n) ? 1 : 0;
     }
-    catch(...){}
+    catch(...){
+		str2buf(format("parameter is invalid: %s", param), Output, n);
+	}
     return 0;
 }
 EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char * Output, int n)
@@ -275,6 +272,12 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     double val = HumidAir::HAPropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
+    reset_fpu();
+    return val;
+}
+EXPORT_CODE double CONVENTION cair_sat(double T)
+{
+    double val = HumidAir::cair_sat(T);
     reset_fpu();
     return val;
 }

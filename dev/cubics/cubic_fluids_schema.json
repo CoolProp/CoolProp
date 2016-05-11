@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Fluid for cubic EOS in CoolProp",
+  "items": {
+    "properties": {
+      "name": {
+        "description": "Name of the fluid",
+        "type": "string"
+      },
+      "CAS": {
+        "description": "CAS registry number of the fluid",
+        "type": "string"
+      },
+      "Tc": {
+        "description": "Critical temperature",
+        "type": "number",
+        "minimum": 0.1,
+        "maximum": 20000
+      },
+      "pc": {
+        "description": "Critical pressure",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 500000000
+      },
+      "acentric": {
+        "description": "Acentric factor",
+        "type": "number",
+        "minimum": -10,
+        "maximum": 10
+      },
+      "molemass": {
+        "description": "Molar mass",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "molemass_units": {
+        "description": "Units of the molar mass provided",
+        "enum": [
+          "kg/mol"
+        ]
+      },
+      "pc_units": {
+        "description": "Units of the critical pressure",
+        "enum": [
+          "Pa"
+        ]
+      },
+      "Tc_units": {
+        "description": "Units of the critical temperature",
+        "enum": [
+          "K"
+        ]
+      },
+      "aliases": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 0
+      }
+    },
+    "required": [
+      "name",
+      "CAS",
+      "Tc",
+      "Tc_units",
+      "pc",
+      "pc_units",
+      "acentric",
+      "molemass",
+      "molemass_units"
+    ]
+  },
+  "type": "array"
+}

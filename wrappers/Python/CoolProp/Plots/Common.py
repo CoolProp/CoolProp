@@ -11,10 +11,15 @@ from CoolProp import AbstractState
 from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
 import CoolProp
 import warnings
-from scipy.interpolate.interpolate import interp1d
 from six import with_metaclass
 
-
+def is_string(in_obj):
+    try:
+        return isinstance(in_obj, basestring)
+    except NameError:
+        return isinstance(in_obj, str)
+    #except:
+    #    return False
 
 def process_fluid_state(fluid_ref):
     """Check input for state object or fluid string
@@ -28,7 +33,7 @@ def process_fluid_state(fluid_ref):
         CoolProp.AbstractState
     """
     # Process the fluid and set self._state
-    if isinstance(fluid_ref, basestring):
+    if is_string(fluid_ref):
         backend, fluids   = extract_backend(fluid_ref)
         fluids, fractions = extract_fractions(fluids)
         #if backend==u'?': backend = u'HEOS'
@@ -51,7 +56,7 @@ def process_fluid_state(fluid_ref):
 
 
 def _get_index(prop):
-    if isinstance(prop, basestring):
+    if is_string(prop):
         return CP.get_parameter_index(prop)
     elif isinstance(prop, int):
         return prop
@@ -198,33 +203,33 @@ class PropertyDict(with_metaclass(ABCMeta),object):
 
 class SIunits(PropertyDict):
     def __init__(self):
-        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=ur'ρ', unit=ur'kg/m³')
-        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=ur'h', unit=ur'J/kg')
-        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=ur'p', unit=ur'Pa')
-        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=ur's', unit=ur'J/kg/K')
-        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=ur'T', unit=ur'K')
-        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=ur'u', unit=ur'J/kg')
-        self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=ur'x', unit=ur'')
+        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=u'ρ', unit=u'kg/m³')
+        self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=u'h', unit=u'J/kg')
+        self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=u'p', unit=u'Pa')
+        self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=u's', unit=u'J/kg/K')
+        self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=u'T', unit=u'K')
+        self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=u'u', unit=u'J/kg')
+        self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=u'x', unit=u'')
 
 class KSIunits(SIunits):
     def __init__(self):
         super(KSIunits, self).__init__()
         self.H.mul_SI=1e-3
-        self.H.unit=r'kJ/kg'
+        self.H.unit=u'kJ/kg'
         self.P.mul_SI=1e-3
-        self.P.unit=r'kPa'
+        self.P.unit=u'kPa'
         self.S.mul_SI=1e-3
-        self.S.unit=r'kJ/kg/K'
+        self.S.unit=u'kJ/kg/K'
         self.U.mul_SI=1e-3
-        self.U.unit=r'kJ/kg'
+        self.U.unit=u'kJ/kg'
 
 class EURunits(KSIunits):
     def __init__(self):
         super(EURunits, self).__init__()
         self.P.mul_SI=1e-5
-        self.P.unit=r'bar'
+        self.P.unit=u'bar'
         self.T.add_SI=-273.15
-        self.T.unit=ur'\u00B0C'
+        self.T.unit=u'°C'
 
 
 class Base2DObject(with_metaclass(ABCMeta),object):
@@ -544,11 +549,11 @@ class IsoLine(Base2DObject):
         #filter = np.logical_and(np.isfinite(self.x),np.isfinite(self.y))
         if validy > validx:
             y = self.y[np.isfinite(self.y)]
-            self.x = interp1d(self.y, self.x, kind='linear')(y)
+            self.x = np.interp(y, self.y, self.x)
             self.y = y
         else:
             x = self.x[np.isfinite(self.x)] 
-            self.y = interp1d(self.x, self.y, kind='linear')(x)
+            self.y = np.interp(x, self.x, self.y)
             self.x = x
             
             
@@ -957,7 +962,7 @@ consider replacing it with \"_get_sat_bounds\".",
             _xv = xv[::-1]
             _yv = yv[::-1]
             #Find x by interpolation
-            x = interp1d(yv, xv)(y)
+            x = np.interp(y, yv, xv)
             trash=0
             (xv,yv)=self._to_pixel_coords(xv,yv)
             (x,trash)=self._to_pixel_coords(x,trash)

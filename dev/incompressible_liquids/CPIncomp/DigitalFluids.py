@@ -11,7 +11,7 @@ parameter form.
 """
 from __future__ import division, print_function
 import numpy as np
-from CPIncomp.DataObjects import DigitalData, PureData
+from .DataObjects import DigitalData, PureData
 
 class HyCool20(PureData,DigitalData):
     def __init__(self):

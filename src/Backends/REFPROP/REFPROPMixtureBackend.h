@@ -47,6 +47,8 @@ public:
     
     std::string backend_name(void){return "REFPROPMixtureBackend";}
     virtual ~REFPROPMixtureBackend();
+
+	static std::string version();
 	
 	std::vector<std::string> calc_fluid_names(){return fluid_names;};
     PhaseEnvelopeData PhaseEnvelope;
@@ -57,6 +59,11 @@ public:
     double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
     /// Get binary mixture string value
     std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
+    /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
+    /// Get binary mixture double value (EXPERT USE ONLY!!!)
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
+
     /// Find the index (1-based for FORTRAN) of the fluid with the given CAS number
     long match_CAS(const std::string &CAS);
 
@@ -94,7 +101,7 @@ public:
     void check_loaded_fluid(void);
 
     /// Returns true if REFPROP is supported on this platform
-    bool REFPROP_supported(void);
+    static bool REFPROP_supported(void);
     
     std::string fluid_param_string(const std::string &ParamName);
 
@@ -149,6 +156,7 @@ public:
 
     CoolPropDbl calc_fugacity_coefficient(std::size_t i);
     CoolPropDbl calc_fugacity(std::size_t i);
+    CoolPropDbl calc_chemical_potential(std::size_t i);
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
     bool has_melting_line(){return true;};
     double calc_melt_Tmax();
@@ -165,6 +173,10 @@ public:
 
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double &T, double &rho);
+
+	/// Calculate the saturation properties
+	CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
+	CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 
     /// Calculate an ideal curve
     void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p);

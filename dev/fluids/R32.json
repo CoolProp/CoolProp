@@ -467,28 +467,49 @@
       "reference_fluid": "Propane", 
       "type": "ECS"
     }, 
-    "viscosity": {
-      "BibTeX": "Huber-IECR-2003", 
-      "epsilon_over_k": 289.65, 
-      "epsilon_over_k_units": "K", 
-      "psi": {
-        "a": [
-          0.7954, 
-          0.0542658, 
-          0.0
+    "viscosity": [
+      {
+        "BibTeX": "Bell-PURDUE-2016-ETA", 
+        "C": 0.79022, 
+        "c_liq": [
+          0.6100913843, 
+          0.4508958312, 
+          -0.017063, 
+          0.000564
         ], 
-        "rhomolar_reducing": 8150.0, 
-        "rhomolar_reducing_units": "mol/m^3", 
-        "t": [
-          0, 
-          1, 
-          2
-        ]
+        "c_vap": [
+          0.0, 
+          1.2, 
+          -0.308598, 
+          0.035317
+        ], 
+        "rhosr_critical": -107473.04273260638, 
+        "type": "rhosr-CS", 
+        "x_crossover": 2
       }, 
-      "reference_fluid": "Propane", 
-      "sigma_eta": 4.098e-10, 
-      "sigma_eta_units": "m", 
-      "type": "ECS"
-    }
+      {
+        "BibTeX": "Huber-IECR-2003", 
+        "epsilon_over_k": 289.65, 
+        "epsilon_over_k_units": "K", 
+        "psi": {
+          "a": [
+            0.7954, 
+            0.0542658, 
+            0.0
+          ], 
+          "rhomolar_reducing": 8150.0, 
+          "rhomolar_reducing_units": "mol/m^3", 
+          "t": [
+            0, 
+            1, 
+            2
+          ]
+        }, 
+        "reference_fluid": "Propane", 
+        "sigma_eta": 4.098e-10, 
+        "sigma_eta_units": "m", 
+        "type": "ECS"
+      }
+    ]
   }
 }

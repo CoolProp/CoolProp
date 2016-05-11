@@ -6,7 +6,7 @@
 #include "IncompressibleFluid.h"
 //#include "crossplatform_shared_ptr.h"
 
-#include "rapidjson/rapidjson_include.h"
+#include "rapidjson_include.h"
 
 #include <map>
 #include <algorithm>

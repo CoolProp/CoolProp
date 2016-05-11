@@ -245,7 +245,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 523, 
+      "T_max": 600,
       "T_max_units": "K", 
       "Ttriple": 166, 
       "Ttriple_units": "K", 
@@ -522,7 +522,7 @@
           "rhomolar_units": "mol/m^3"
         }
       }, 
-      "T_max": 523, 
+      "T_max": 600,
       "T_max_units": "K", 
       "Ttriple": 166, 
       "Ttriple_units": "K", 

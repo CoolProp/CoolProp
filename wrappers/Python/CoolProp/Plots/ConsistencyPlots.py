@@ -63,7 +63,7 @@ def split_pair_xy(pair):
         raise ValueError(pair)
 
 class ConsistencyFigure(object):
-    def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = []):
+    def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = [], mole_fractions = None):
 
         self.fluid = fluid
         self.backend = backend
@@ -72,6 +72,9 @@ class ConsistencyFigure(object):
         pairs_generator = iter(self.pairs)
 
         states = [CP.AbstractState(backend, fluid) for _ in range(3)]
+        if mole_fractions is not None:
+            for state in states:
+                state.set_mole_fractions(mole_fractions)
         self.axes_list = []
         for row in self.axes:
             for ax in row:
@@ -314,7 +317,7 @@ class ConsistencyAxis(object):
                 try:
                     self.state.update(pairkey, self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2))
                 except ValueError as VE:
-                    print('update(1p)', self.pair, self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2), VE)
+                    print('update(1p)', self.pair, 'P',p, 'T',T ,'D',self.state_PT.keyed_output(CP.iDmolar),'{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), VE)
                     _exception = True
 
                 x = self.to_axis_units(xparam, self.state_PT.keyed_output(xkey))
@@ -330,11 +333,11 @@ class ConsistencyAxis(object):
                         xgood.append(x)
                         ygood.append(y)
                         if self.state_PT.phase() != self.state.phase():
-                            print('bad phase', self.pair, x, y, self.state.phase(), 'instead of', self.state_PT.phase())
+                            print('bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_PT.phase())
                             xbadphase.append(x)
                             ybadphase.append(y)
                     else:
-                        print('bad', self.pair, x, y, self.state.delta(), abs(self.state_PT.rhomolar()/self.state.rhomolar()-1), abs(self.state_PT.p()/self.state.p()-1), abs(self.state_PT.T() - self.state.T()))
+                        print('bad', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), 'T:', self.state_PT.T(), 'Drho:', abs(self.state_PT.rhomolar()/self.state.rhomolar()-1), abs(self.state_PT.p()/self.state.p()-1), 'DT:', abs(self.state_PT.T() - self.state.T()))
                         xbad.append(x)
                         ybad.append(y)
 
@@ -366,6 +369,7 @@ class ConsistencyAxis(object):
         xgood, ygood = [], []
         xbad, ybad = [], []
         xexcep, yexcep = [], []
+        xbadphase, ybadphase = [], []
 
         for q in np.linspace(0, 1, 20):
 
@@ -399,7 +403,13 @@ class ConsistencyAxis(object):
                     if abs(self.state_QT.rhomolar()/self.state.rhomolar()-1) < 1e-3 and abs(self.state_QT.p()/self.state.p()-1) < 1e-3 and abs(self.state_QT.T() - self.state.T()) < 1e-3:
                         xgood.append(x)
                         ygood.append(y)
+                        if self.state_QT.phase() != self.state.phase():
+                            print('bad phase (2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_QT.phase())
+                            xbadphase.append(x)
+                            ybadphase.append(y)
                     else:
+                        print('Q',q)
+                        print('bad(2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), 'pnew:', self.state.p(), 'pold:',self.state_QT.p(),'Tnew:', self.state.T(),'T:', self.state_QT.T(), 'Drho:', abs(self.state_QT.rhomolar()/self.state.rhomolar()-1), 'DP', abs(self.state_QT.p()/self.state.p()-1), 'DT:', abs(self.state_QT.T() - self.state.T()))
                         xbad.append(x)
                         ybad.append(y)
 
@@ -407,6 +417,7 @@ class ConsistencyAxis(object):
         self.ax.plot(xbad, ybad, 'r+', ms = 3)
         self.ax.plot(xgood, ygood, 'k.', ms = 1)
         self.ax.plot(xexcep, yexcep, 'rx', ms = 3)
+        self.ax.plot(xbadphase, ybadphase, 'o', ms = 3, mfc = 'none')
         print('2-phase took '+str(toc-tic)+' s for '+self.pair)
 
     def cross_out_axis(self):
@@ -427,13 +438,14 @@ class ConsistencyAxis(object):
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    for fluid in ['R125']:#CP.__fluids__:
+    CP.CoolProp.set_debug_level(10)
+    for fluid in ['R410A.mix']:#CP.__fluids__:
         print('************************************************')
         print(fluid)
         print('************************************************')
         skips = ['DmolarHmolar','DmolarSmolar','DmolarUmolar','HmolarSmolar']
         skips = []
-        ff = ConsistencyFigure(fluid, backend = 'HEOS', additional_skips = skips)
+        ff = ConsistencyFigure(fluid, backend = 'BICUBIC&REFPROP', additional_skips = skips, mole_fractions = [0.7,0.3])
         ff.add_to_pdf(PVT)
         ff.savefig(fluid + '.png')
         ff.savefig(fluid + '.pdf')

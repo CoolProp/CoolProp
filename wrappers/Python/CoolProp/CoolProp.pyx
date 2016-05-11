@@ -12,6 +12,8 @@ cimport cython
 import math
 import warnings
 
+from typedefs cimport CoolPropDbl
+
 try:
     import numpy as np
     _numpy_supported = True
@@ -37,6 +39,14 @@ cdef extern from "Configuration.h" namespace "CoolProp":
     string _get_config_as_json_string "CoolProp::get_config_as_json_string"() except +
     void _set_config_as_json_string "CoolProp::set_config_as_json_string"(string) except +
     string _config_key_description "CoolProp::config_key_description"(string) except +
+    
+    void _set_config_string "CoolProp::set_config_string"(constants_header.configuration_keys,string) except +
+    void _set_config_double "CoolProp::set_config_double"(constants_header.configuration_keys,double) except +
+    void _set_config_bool "CoolProp::set_config_bool"(constants_header.configuration_keys,bint) except +
+    
+    string _get_config_string "CoolProp::get_config_string"(constants_header.configuration_keys) except +
+    double _get_config_double "CoolProp::get_config_double"(constants_header.configuration_keys) except +
+    bint _get_config_bool "CoolProp::get_config_bool"(constants_header.configuration_keys) except +
 
 cdef extern from "DataStructures.h" namespace "CoolProp":    
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
@@ -62,6 +72,7 @@ cdef extern from "CoolProp.h" namespace "CoolProp":
     void _set_reference_stateS "CoolProp::set_reference_stateS"(string, string) except +
     void _set_reference_stateD "CoolProp::set_reference_stateD"(string, double, double, double, double) except +
     double _saturation_ancillary "CoolProp::saturation_ancillary"(string, string, int, string, double) except +
+    bint _add_fluids_as_JSON "CoolProp::add_fluids_as_JSON"(const string backend, const string JSON) except +
  
 cdef extern from "HumidAirProp.h" namespace "HumidAir":
     double _HAPropsSI "HumidAir::HAPropsSI"(string OutputName, string Input1Name, double Input1, string Input2Name, double Input2, string Input3Name, double Input3)
@@ -200,6 +211,30 @@ cpdef set_config_as_json_string(string s):
     Current state can be obtained by calling get_config_as_json_string
     """
     _set_config_as_json_string(s)
+    
+cpdef set_config_double(constants_header.configuration_keys key, double value):
+    """ Set configuration key that is a double-precision float;  wrapper of wrapper of C++ function :cpapi:`CoolProp::set_config_double` """
+    _set_config_double(key, value)
+    
+cpdef set_config_string(constants_header.configuration_keys key, string value):
+    """ Set a configuration key that is a string;  wrapper of wrapper of C++ function :cpapi:`CoolProp::set_config_string` """
+    _set_config_string(key, value)
+    
+cpdef set_config_bool(constants_header.configuration_keys key, bint value):
+    """ Set a configuration key that is a boolean;  wrapper of wrapper of C++ function :cpapi:`CoolProp::set_config_bool` """
+    _set_config_bool(key, value)
+    
+cpdef double get_config_double(constants_header.configuration_keys key):
+    """ Get a configuration key that is a double-precision float;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_double` """
+    _get_config_double(key)
+    
+cpdef string get_config_string(constants_header.configuration_keys key):
+    """ Get a configuration key that is a string;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_string` """
+    _get_config_string(key)
+    
+cpdef bint get_config_bool(constants_header.configuration_keys key):
+    """ Get a configuration key that is a boolean;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_bool` """
+    return _get_config_bool(key)
 
 cpdef int get_parameter_index(string key):
     return _get_parameter_index(key)
@@ -221,6 +256,12 @@ cpdef set_mixture_binary_pair_data(CAS1, CAS2, key, val):
     Set mixture interaction parameter.  Python wrapper of C++ function :cpapi:`CoolProp::set_mixture_binary_pair_data`
     """
     _set_mixture_binary_pair_data(CAS1, CAS2, key, val)
+
+cpdef add_fluids_as_JSON(backend, JSONstring):
+    """
+    Add fluids in a JSON-formatted string format. Python wrapper of C++ function :cpapi:`CoolProp::add_fluids_as_JSON`
+    """
+    _add_fluids_as_JSON(backend, JSONstring)
 
 cpdef get_global_param_string(string param):
     return _get_global_param_string(param)

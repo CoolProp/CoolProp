@@ -31,7 +31,8 @@ namespace SaturationSolvers
     enum sstype_enum {imposed_T, imposed_p};
     struct mixture_VLE_IO
     {
-        int sstype, Nstep_max;
+        sstype_enum sstype;
+        int Nstep_max;
         CoolPropDbl rhomolar_liq, rhomolar_vap, p, T, beta;
         std::vector<CoolPropDbl> x, y, K;
     };
@@ -46,8 +47,10 @@ namespace SaturationSolvers
     @param i Index of component [-]
     */
     static CoolPropDbl Wilson_lnK_factor(const HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, CoolPropDbl p, std::size_t i){ 
-        const EquationOfState &EOS = HEOS.get_components()[i].EOS(); 
-        return log(EOS.reduce.p/p)+5.373*(1 + EOS.acentric)*(1-EOS.reduce.T/T);
+        const double pci = HEOS.get_fluid_constant(i,iP_critical);
+        const double Tci = HEOS.get_fluid_constant(i,iT_critical);
+        const double omegai = HEOS.get_fluid_constant(i, iacentric_factor);
+        return log(pci/p)+5.373*(1 + omegai)*(1-Tci/T);
     };
 
     void saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar, saturation_D_pure_options &options);
@@ -130,13 +133,13 @@ namespace SaturationSolvers
     class WilsonK_resid : public FuncWrapper1D
     {
     public:
-        int input_type;
+        sstype_enum input_type;
         double T, p, beta;
         const std::vector<CoolPropDbl> &z;
         std::vector<CoolPropDbl> &K;
         const HelmholtzEOSMixtureBackend &HEOS;
 
-        WilsonK_resid(const HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, int input_type, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &K)
+        WilsonK_resid(const HelmholtzEOSMixtureBackend &HEOS, double beta, double imposed_value, sstype_enum input_type, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &K)
             : input_type(input_type), T(imposed_value), p(imposed_value), beta(beta), 
             z(z), K(K), HEOS(HEOS){} // if input_type == imposed_T -> use T, else use p; init both
         double call(double input_value){
@@ -154,9 +157,13 @@ namespace SaturationSolvers
             return summer;
         }
     };
-    inline double saturation_preconditioner(HelmholtzEOSMixtureBackend &HEOS, double input_value, int input_type, const std::vector<CoolPropDbl> &z)
+    inline double saturation_preconditioner(HelmholtzEOSMixtureBackend &HEOS, double input_value, sstype_enum input_type, const std::vector<CoolPropDbl> &z)
     {
         double ptriple = 0, pcrit = 0, Ttriple = 0, Tcrit = 0;
+
+        if (HEOS.get_components().empty()){
+            return -1;
+        }
         
         for (unsigned int i = 0; i < z.size(); i++)
         {
@@ -178,18 +185,71 @@ namespace SaturationSolvers
         }
         else{ throw ValueError();}
     }
-    inline double saturation_Wilson(HelmholtzEOSMixtureBackend &HEOS, double beta, double input_value, int input_type, const std::vector<CoolPropDbl> &z, double guess)
+    /**
+     * From Rachford-Rice:
+     * \f[
+     * \sum_i \frac{x_i(K_i-1)}{1 - \beta + \beta K_i} = 0
+     * \f]
+     * When \f$T\f$ is known for \f$\beta=0$, \f$p\f$can be obtained from  
+     * \f[
+     * -1+\sum_i K_ix_i=0,
+     * \f]
+     * or 
+     * \f[
+     * p = \sum_i x_ip_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T).
+     * \f]
+     * Or when \f$T\f$ is known for \f$\beta=1$, \f$p\f$can be obtained from  
+     * \f[
+     * -1+\sum_ix_i=0,
+     * \f]
+     * or 
+     * \f[
+     * p = \left[ \sum_i \frac{y_i}{p_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T)} \right]^{-1}
+     * \f]
+     */
+    inline double saturation_Wilson(HelmholtzEOSMixtureBackend &HEOS, double beta, double input_value, sstype_enum input_type, const std::vector<CoolPropDbl> &z, double guess)
     {
-        double T;
-
+        double out = 0;
         std::string errstr;
 
-        // Find first guess for T using Wilson K-factors
-        WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
-        T = Secant(Resid, guess, 0.001, 1e-10, 100, errstr);
-    
-        if (!ValidNumber(T)){throw ValueError("saturation_p_Wilson failed to get good T");}
-        return T;
+        // If T is input and beta = 0 or beta = 1, explicit solution for p is possible
+        if (input_type == imposed_T && (std::abs(beta) < 1e-12 || std::abs(beta-1) < 1e-12)){
+            const std::vector<double> z = HEOS.get_mole_fractions_ref();
+            bool beta0 = std::abs(beta) < 1e-12; // True is beta is approx. zero
+            for (int i = 0; i < static_cast<int>(z.size()); ++i)
+            {
+                double pci = HEOS.get_fluid_constant(i,iP_critical);
+                double Tci = HEOS.get_fluid_constant(i,iT_critical);
+                double omegai = HEOS.get_fluid_constant(i, iacentric_factor);
+                if (beta0){
+                    out += z[i]*pci*exp(5.373*(1+omegai)*(1-Tci/input_value));
+                }
+                else{
+                    out += z[i]/(pci*exp(5.373*(1+omegai)*(1-Tci/input_value)));
+                }
+            }
+            if (!beta0){ // beta = 1
+                out = 1/out; // summation is for 1/p, take reciprocal to get p
+            }
+            std::vector<CoolPropDbl> &K = HEOS.get_K();
+            for (int i = 0; i < static_cast<int>(z.size()); ++i)
+            {
+                double pci = HEOS.get_fluid_constant(i,iP_critical);
+                double Tci = HEOS.get_fluid_constant(i,iT_critical);
+                double omegai = HEOS.get_fluid_constant(i, iacentric_factor);
+                K[i] = pci/out*exp(5.373*(1+omegai)*(1-Tci/input_value));
+            }
+        }
+        else{
+            // Find first guess for output variable using Wilson K-factors
+            WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
+            if (guess < 0)
+                out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
+            else
+                out = Secant(Resid, guess, 0.001, 1e-10, 100);
+            if (!ValidNumber(out)){throw ValueError("saturation_p_Wilson failed to get good output value");}
+        }
+        return out;
     }
     struct SuccessiveSubstitutionStep
     {
@@ -246,8 +306,9 @@ namespace SaturationSolvers
         std::size_t N;
         bool logging;
         int Nsteps;
-        STLMatrix J;
-        std::vector<CoolPropDbl> K, x, y, z, r, negative_r, err_rel;
+        Eigen::MatrixXd J;
+        Eigen::Vector2d r, err_rel;
+        std::vector<CoolPropDbl> K, x, y, z;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 
         newton_raphson_twophase() : HEOS(NULL), imposed_variable(newton_raphson_twophase_options::NO_VARIABLE_IMPOSED), error_rms(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), T(_HUGE), p(_HUGE), min_rel_change(_HUGE), beta(_HUGE), N(0), logging(false), Nsteps(0)
@@ -328,10 +389,11 @@ namespace SaturationSolvers
         bool logging;
         bool bubble_point;
         int Nsteps;
-        STLMatrix J;
+        Eigen::MatrixXd J;
         HelmholtzEOSMixtureBackend *HEOS;
         CoolPropDbl dTsat_dPsat, dPsat_dTsat;
-        std::vector<CoolPropDbl> K, x, y, r, negative_r, err_rel;
+        std::vector<CoolPropDbl> K, x, y;
+        Eigen::VectorXd r, err_rel;
         std::vector<SuccessiveSubstitutionStep> step_logger;
 
         newton_raphson_saturation(){};
@@ -341,7 +403,6 @@ namespace SaturationSolvers
         // Reset the state of all the internal variables
         void pre_call()
         {
-            K.clear(); x.clear(); y.clear();  
             step_logger.clear(); error_rms = 1e99; Nsteps = 0;
             rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; T = _HUGE; p = _HUGE;
         };
@@ -372,6 +433,46 @@ namespace SaturationSolvers
     };
 };
     
-} /* namespace CoolProp*/
+namespace StabilityRoutines{
+    
+    /** \brief Evaluate phase stability
+     * Based on the work of Gernert et al., J. Chem. Thermodyn., 2014 http://dx.doi.org/10.1016/j.fluid.2014.05.012
+     */
+    class StabilityEvaluationClass{
+    protected:
+        HelmholtzEOSMixtureBackend &HEOS;
+        std::vector<double> lnK, K, K0, x, y;
+        const std::vector<double> &z;
+        double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
+    private:
+        bool _stable;
+        bool debug;
+    public:
+        StabilityEvaluationClass(HelmholtzEOSMixtureBackend &HEOS)
+           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), _stable(false), debug(false) {};
+        /** \brief Calculate trial compositions
+         */
+        void trial_compositions();
+        /** \brief Successive substitution
+         */
+        void successive_substitution(int num_steps);
+        /** \brief Check stability
+         * 1. Check stability by looking at tpd', tpd'' and \f$ \Delta G/(nRT)\f$
+         * 2. Do a full TPD analysis
+         */
+        void check_stability();
+        /** \brief Return best estimate for the stability of the point
+         */
+        bool is_stable(){
+            trial_compositions();
+            successive_substitution(3);
+            check_stability();
+            return _stable;
+        }
+    };
+        
+}; /* namespace StabilityRoutines*/
+    
+}; /* namespace CoolProp*/
 
 #endif

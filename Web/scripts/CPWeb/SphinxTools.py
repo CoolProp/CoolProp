@@ -100,15 +100,21 @@ def entry2html(entry):
 def generate_bibtex_string(fluid):
     string = ''
     for key in bibtex_keys:
+        header_string = ''
+        sect_strings = []
         try:
             # get the item
             bibtex_key = CoolProp.CoolProp.get_BibTeXKey(fluid,key).strip()
-            if bibtex_key.strip() in bibdata.entries.keys():
-                html = BTC.getEntry(key=bibtex_key, fmt='html')
-                sect = bibtex_map[key]
-                string += sect+'\n'+'-'*len(sect)+'\n\n.. raw:: html\n\n   '+html+'\n\n'
+            for thekey in bibtex_key.split(','):
+                if thekey.strip() in bibdata.entries.keys():
+                    html = BTC.getEntry(key=thekey.strip(), fmt='html')
+                    if len(sect_strings) == 0:
+                        sect = bibtex_map[key]
+                        header_string = sect+'\n'+'-'*len(sect)+'\n\n'
+                    sect_strings.append('.. raw:: html\n\n   '+html+'\n\n')
         except ValueError as E:
-            pass
+            print 'error:', E
+        string += header_string + '\n\n.. raw:: html\n\n    <br><br> \n\n'.join(sect_strings)
     return string
 
 class FluidInfoTableGenerator(object):

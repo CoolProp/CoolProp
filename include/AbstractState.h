@@ -154,6 +154,8 @@ protected:
     virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i){ throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend"); };
     /// Using this backend, calculate the fugacity in Pa
     virtual CoolPropDbl calc_fugacity(std::size_t i){ throw NotImplementedError("calc_fugacity is not implemented for this backend"); };
+    /// Using this backend, calculate the chemical potential in J/mol
+    virtual CoolPropDbl calc_chemical_potential(std::size_t i) { throw NotImplementedError("calc_chemical_potential is not implemented for this backend"); };
     /// Using this backend, calculate the phase identification parameter (PIP)
     virtual CoolPropDbl calc_PIP(void){ throw NotImplementedError("calc_PIP is not implemented for this backend"); };
 
@@ -337,9 +339,12 @@ protected:
     virtual void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){ throw NotImplementedError("calc_ideal_curve is not implemented for this backend"); };
 
     /// Using this backend, get the temperature
-    virtual long double calc_T(void){ return _T; }
+    virtual CoolPropDbl calc_T(void){ return _T; }
     /// Using this backend, get the molar density in mol/m^3
-    virtual long double calc_rhomolar(void){ return _rhomolar; }
+    virtual CoolPropDbl calc_rhomolar(void){ return _rhomolar; }
+
+	/// Using this backend, calculate the tangent plane distance for a given trial composition
+	virtual double calc_tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess){ throw NotImplementedError("calc_tangent_plane_distance is not implemented for this backend"); };
 
     /// Using this backend, return true critical point where dp/drho|T = 0 and d2p/drho^2|T = 0
     virtual void calc_true_critical_point(double &T, double &rho){ throw NotImplementedError("calc_true_critical_point is not implemented for this backend"); };
@@ -349,6 +354,7 @@ protected:
     virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
     virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
     virtual std::vector<CriticalState> calc_all_critical_points(void){ throw NotImplementedError("calc_all_critical_points is not implemented for this backend"); };
+    virtual void calc_criticality_contour_values(double &L1star, double &M1star){ throw NotImplementedError("calc_criticality_contour_values is not implemented for this backend"); };
     
     /// Convert mass-based input pair to molar-based input pair;  If molar-based, do nothing
     virtual void mass_to_molar_inputs(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2);
@@ -415,9 +421,11 @@ public:
     virtual void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<CoolPropDbl> &mass_fractions){ throw NotImplementedError("Volume composition has not been implemented."); }
 
+#ifndef COOLPROPDBL_MAPS_TO_DOUBLE
     void set_mole_fractions(const std::vector<double> &mole_fractions){ set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end())); };
     void set_mass_fractions(const std::vector<double> &mass_fractions){ set_mass_fractions(std::vector<CoolPropDbl>(mass_fractions.begin(), mass_fractions.end())); };
     void set_volu_fractions(const std::vector<double> &volu_fractions){ set_volu_fractions(std::vector<CoolPropDbl>(volu_fractions.begin(), volu_fractions.end())); };
+#endif
 
     #ifdef EMSCRIPTEN
     void set_mole_fractions_double(const std::vector<double> &mole_fractions){ set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end())); };
@@ -466,12 +474,18 @@ public:
     
     /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
     virtual void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){ throw NotImplementedError("set_binary_interaction_double is not implemented for this backend"); };
+    /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
+    virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){ throw NotImplementedError("set_binary_interaction_double is not implemented for this backend"); };
     /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
     virtual void set_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const std::string &value){ throw NotImplementedError("set_binary_interaction_string is not implemented for this backend"); };
     /// Get binary mixture double value (EXPERT USE ONLY!!!)
     virtual double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_double is not implemented for this backend"); };
+    /// Get binary mixture double value (EXPERT USE ONLY!!!)
+    virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_double is not implemented for this backend"); };
     /// Get binary mixture string value (EXPERT USE ONLY!!!)
     virtual std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_string is not implemented for this backend"); };
+    /// Apply a simple mixing rule (EXPERT USE ONLY!!!)
+    virtual void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model) { throw NotImplementedError("apply_simple_mixing_rule is not implemented for this backend"); };
 
     /// Clear all the cached values
     virtual bool clear();
@@ -511,6 +525,34 @@ public:
     
     /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
     std::vector<CriticalState> all_critical_points(void){ return calc_all_critical_points(); };
+
+    /// Calculate the criticality contour values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
+    void criticality_contour_values(double &L1star, double &M1star){ return calc_criticality_contour_values(L1star, M1star); }
+
+	/// Return the tangent plane distance for a given trial composition w
+	/// @param T Temperature (K)
+	/// @param p Pressure (Pa)
+	/// @param w The trial composition
+	/// @param rhomolar_guess (mol/m^3) The molar density guess value (if <0 (default), not used; if >0, guess value will be used in flash evaluation)
+	/// 
+	/// \f[
+	/// tpd(w) = \sum_i w_i(\ln w_i + \ln \phi_i(w) - d_i)
+	/// \f]
+	/// with
+	/// \f[ d_i = \ln z_i + \ln \phi_i(z) \f]
+	/// Or you can express the \f$ tpd \f$ in terms of fugacity (See Table 7.3 from GERG 2004 monograph) 
+	/// since \f$ \ln \phi_i = \ln f_i - \ln p -\ln z_i\f$
+	/// thus 
+	/// \f[ d_i = \ln f_i(z) - \ln p\f]
+	/// and
+	/// \f[
+	/// tpd(w) = \sum_i w_i(\ln f_i(w) - \ln p - d_i)
+	/// \f]
+	/// and the \f$ \ln p \f$ cancel, leaving
+	/// \f[
+	/// tpd(w) = \sum_i w_i(\ln f_i(w) - \ln f_i(z))
+	/// \f]
+	double tangent_plane_distance(const double T, const double p, const std::vector<double> &w, const double rhomolar_guess = -1){ return calc_tangent_plane_distance(T, p, w, rhomolar_guess); };
 
     /// Return the reducing point temperature in K
     double T_reducing(void);
@@ -608,6 +650,8 @@ public:
     double fugacity_coefficient(std::size_t i);
     /// Return the fugacity of the i-th component of the mixture
     double fugacity(std::size_t i);
+    /// Return the chemical potential of the i-th component of the mixture
+    double chemical_potential(std::size_t i);
     /// Return the fundamental derivative of gas dynamics
     //double fundamental_derivative_of_gas_dynamics(void){return this->second_partial_deriv(iP, iDmolar, iSmolar, iDmolar, iSmolar)/pow(speed_sound(), 2)/2/pow(this->rhomolar(),3);};
     /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"
@@ -778,7 +822,7 @@ public:
      *
      * @param type currently a dummy variable that is not used
      */
-    void build_phase_envelope(const std::string &type);
+    void build_phase_envelope(const std::string &type = "");
     /**
      * \brief After having calculated the phase envelope, return the phase envelope data
      */

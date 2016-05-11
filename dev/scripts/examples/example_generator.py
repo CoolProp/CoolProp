@@ -247,6 +247,20 @@ high_level_interface = [
     {
         "type": "print",
         "arguments": [
+            "'REFPROP version:'",
+            {
+                "type": "function",
+                "function": "get_global_param_string",
+                "arguments": [
+                    "'REFPROP_version'"
+                ]
+            }
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
             "'Critical temperature of water:'",
             {
                 "type": "function",
@@ -786,7 +800,7 @@ class R(BaseParser):
         return l
 
     def header(self):
-        return 'dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))\nsource("CoolProp.R")\ncacheMetaData(1)\n'
+        return 'dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))\nlibrary(methods) # See http://stackoverflow.com/a/19468533\nsource("CoolProp.R")\ncacheMetaData(1)\n'
 
 class MATLAB(BaseParser):
 

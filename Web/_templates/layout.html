@@ -9,17 +9,3 @@
         <li><a href="{{ pathto('develop/code') }}">Code</a>|</li>
         <li><a href="{{ pathto('coolprop/wrappers/index') }}">Interfaces</a></li>
 {% endblock %}
-
-{% block extrahead %}
-{{ super() }}
-<link rel="stylesheet" type="text/css" href="css/main.css?v=2">
-<style type="text/css">
-body {font-size: 90%;}
-</style>
-
-{% if pagename == 'online/index_full' %}
-    <link rel="stylesheet" type="text/css" href="css/cupertino/jquery-ui-1.9.2.custom.css">
-    <script language="javascript" type="text/javascript" src="lib/LAB.js"></script>
-{% endif %}
-{% endblock %}
-

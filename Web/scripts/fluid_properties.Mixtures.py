@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 
 from CPWeb.BibtexTools import getCitationOrAlternative, getBibtexParser
 import CoolProp
@@ -30,6 +30,7 @@ class Dossier:
 d = Dossier()
 
 pairs = CoolProp.get('mixture_binary_pairs_list')
+print(len(pairs.split(',')))
 for pair in pairs.split(','):
     CAS1, CAS2 = pair.split('&')
     d.add('CAS1', CAS1)

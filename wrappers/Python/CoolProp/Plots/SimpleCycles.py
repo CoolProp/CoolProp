@@ -9,7 +9,6 @@ import numpy as np
 
 import CoolProp
 from CoolProp.CoolProp import PropsSI
-from scipy.optimize import newton
 from .Common import BasePlot, process_fluid_state, PropertyDict, SIunits
 import warnings
 from abc import ABCMeta
@@ -36,7 +35,8 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
 
     """
     
-    warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
+    warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
+    from scipy.optimize import newton
     
     T=numpy.zeros((6))
     h=numpy.zeros_like(T)
@@ -262,7 +262,8 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
     """
     
-    warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
+    warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
+    from scipy.optimize import newton
 
     m=1
 
@@ -286,7 +287,10 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     wdot1=(h2s-h[1])/eta_oi
     h[2]=h[1]+(1-f_p[0])*wdot1
     p[2]=pi
-    T[2]=T_hp(Ref,h[2],pi,T2s)
+    #T[2]=T_hp(Ref,h[2],pi,T2s)
+    T[2]=PropsSI('T','H',h[2],'P',pi,Ref)
+    
+    
     s[2]=PropsSI('S','T',T[2],'P',pi,Ref)
     rho[2]=PropsSI('D','T',T[2],'P',pi,Ref)
 
@@ -321,7 +325,8 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
     p[3]=pi
     h[3]=(m*h[2]+x*h[7])/(m+x)
-    T[3]=T_hp(Ref,h[3],pi,T[2])
+    #T[3]=T_hp(Ref,h[3],pi,T[2])
+    T[3]=PropsSI('T','H',h[3],'P',pi,Ref)
     s[3]=PropsSI('S','T',T[3],'P',pi,Ref)
     rho[3]=PropsSI('D','T',T[3],'P',pi,Ref)
     T4s=newton(lambda T: PropsSI('S','T',T,'P',pc,Ref)-s[3],T[2]+30)
@@ -329,7 +334,8 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     p[4]=pc
     wdot2=(h4s-h[3])/eta_oi
     h[4]=h[3]+(1-f_p[1])*wdot2
-    T[4]=T_hp(Ref,h[4],pc,T4s)
+    #T[4]=T_hp(Ref,h[4],pc,T4s)
+    T[4]=PropsSI('T','H',h[4],'P',pc,Ref)
     s[4]=PropsSI('S','T',T[4],'P',pc,Ref)
     rho[4]=PropsSI('D','T',T[4],'P',pc,Ref)
 

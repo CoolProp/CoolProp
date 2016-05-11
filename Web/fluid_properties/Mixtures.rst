@@ -24,34 +24,29 @@ The only types of inputs that are allowed for mixtures right now are
 .. role:: raw-html(raw)
    :format: html
 
-Binary pairs
-------------
-
-.. note::
-   Please hover the mouse pointer over the coefficients to get the full accuracy
-   for the listed coefficients. You can also get more information on references
-   that are not in bibliography.
-
-.. csv-table:: All binary pairs included in CoolProp
-   :header-rows: 1
-   :file: Mixtures.csv
-
-
 Estimating binary interaction parameters
 ----------------------------------------
 
-If you have a mixture that you would like to include in your analysis, but for which no interaction parameters are currently available, there are two estimation schemes available.  These estimation schemes should be used with extreme caution.  If you use these schemes, you should definitely check that you are getting reasonable output values.  The two schemes available are
+If you have a mixture that you would like to include in your analysis, but for which no interaction parameters are currently available, there are two estimation schemes available.  These estimation schemes should be used with extreme caution.  If you use these schemes, you should definitely check that you are getting reasonable output values.  In general, these estimation schemes should be used for fluids with similar properties.
 
-* ``linear`` - Tr and vr are a linear function of molar composition between the two pure fluid values
+The two schemes available are
+
+* ``linear`` - :math:`T_r` and :math:`v_r` are a linear function of molar composition between the two pure fluid values
 * ``Lorentz-Berthelot`` - all interaction parameters are 1.0
 
-Here is a sample of using this in python::
+Here is a sample of using this in python:
 
-    import CoolProp.CoolProp as CP
-    CAS_He = CP.get_fluid_param_string('Helium','CAS')
-    CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
-    CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
-    CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    In [1]: CAS_He = CP.get_fluid_param_string('Helium','CAS')
+    
+    In [1]: CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
+    
+    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+
+    In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
     
 .. warning::
 
@@ -72,6 +67,9 @@ If you have your own interaction parameters that you would like to use, you can 
 
     # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
     In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    
+    # This is before setting the binary interaction parameters
+    In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
 
     In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'betaT', 1.0)
     
@@ -81,6 +79,25 @@ If you have your own interaction parameters that you would like to use, you can 
     
     In [1]: CP.set_mixture_binary_pair_data(CAS_He, CAS_Xe, 'gammaV', 1.5)
 
+    # This is after setting the interaction parameters
+    In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
+    
+Once you have constructed an instance of an AbstractState using the low-level interface, you can set the interaction parameters for only that instance by calling the ``set_binary_interaction_double`` and ``get_binary_interaction_double`` functions.
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+
+    # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
+    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    
+    In [1]: AS = CP.AbstractState("HEOS","Helium&Xenon")
+    
+    In [1]: AS.set_binary_interaction_double(0, 1, 'betaT', 0.987)
+    
+    In [1]: AS.get_binary_interaction_double(0, 1, 'betaT')
+    
+    # Here you can see that this call to the high-level interface is untouched (is the same as above)
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
 
 Phase Envelope
@@ -98,10 +115,11 @@ Phase Envelope
         except ValueError as VE:
             print(VE)
         PE = HEOS.get_phase_envelope_data()
-        plt.plot(PE.T, PE.p, 'o-')
+        plt.plot(PE.T, PE.p, '-')
 
     plt.xlabel('Temperature [K]')
     plt.ylabel('Pressure [Pa]')
+    plt.yscale('log')
     plt.tight_layout()
 
 Reducing Parameters
@@ -208,6 +226,15 @@ Same idea for the volume
 
     \boxed{\gamma_v = \dfrac{v_{c0}+v_{c1}+\zeta_{01}}{\frac{1}{4}\left(\frac{1}{\rho_{c,i}^{1/3}}+\frac{1}{\rho_{c,j}^{1/3}}\right)^{3}}}
 
-References
-----------
-:ref:`Go to the bibliography <bibliography>`
+
+Binary pairs
+------------
+
+.. note::
+   Please hover the mouse pointer over the coefficients to get the full accuracy
+   for the listed coefficients. You can also get more information on references
+   that are not in bibliography.
+
+.. csv-table:: All binary pairs included in CoolProp
+   :header-rows: 1
+   :file: Mixtures.csv

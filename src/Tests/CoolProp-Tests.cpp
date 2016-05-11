@@ -1335,6 +1335,33 @@ TEST_CASE("Triple point checks", "[triple_point]")
             if (p_EOS < 1e-3){ continue; } // Skip very low pressure below 1 mPa
             CHECK(err_sat_min_vapor < 1e-3);
         }
+        std::ostringstream ss3;
+        ss3 << "Minimum saturation temperature state matches for vapor " << fluids[i];
+        SECTION(ss3.str(), "")
+        {
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 1););
+            
+            double T_EOS = HEOS->T();
+            double T_sat_min_vapor = HEOS->get_components()[0].EOS().sat_min_vapor.T;
+            double err_sat_min_vapor = std::abs(T_EOS-T_sat_min_vapor);
+            CAPTURE(T_EOS);
+            CAPTURE(T_sat_min_vapor);
+            CAPTURE(err_sat_min_vapor);
+            CHECK(err_sat_min_vapor < 1e-3);
+        }
+        std::ostringstream ss4;
+        ss4 << "Minimum saturation temperature state matches for liquid " << fluids[i];
+        SECTION(ss4.str(), "")
+        {
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 0););
+            double T_EOS = HEOS->T();
+            double T_sat_min_vapor = HEOS->get_components()[0].EOS().sat_min_vapor.T;
+            double err_sat_min_vapor = std::abs(T_EOS-T_sat_min_vapor);
+            CAPTURE(T_EOS);
+            CAPTURE(T_sat_min_vapor);
+            CAPTURE(err_sat_min_vapor);
+            CHECK(err_sat_min_vapor < 1e-3);
+        }
 //        std::ostringstream ss2;
 //        ss2 << "Liquid density error < 3% for fluid " << fluids[i] << " at " << T << " K";
 //        SECTION(ss2.str(), "")

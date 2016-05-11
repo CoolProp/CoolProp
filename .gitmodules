@@ -16,3 +16,9 @@
 [submodule "externals/IF97"]
 	path = externals/IF97
 	url = https://github.com/CoolProp/IF97
+[submodule "externals/rapidjson"]
+	path = externals/rapidjson
+	url = https://github.com/miloyip/rapidjson.git
+[submodule "externals/cppformat"]
+	path = externals/cppformat
+	url = https://github.com/cppformat/cppformat.git

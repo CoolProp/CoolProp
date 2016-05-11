@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<FUNCTIONS>
+    
+	<!-- Below are the entries for the CoolProp High-Level functions -->
+    <function>
+        <name>PropsSI</name>
+        <local_name>PropsSI</local_name>
+        <params>"Output Name", "Input Name 1", Value 1, "Input Name 2", Value 2, "Fluid Name"</params>
+        <category>CoolProp</category>
+        <description>Calculates the state dependent property specified by "Output Name" given the input property pair, Value 1 and Value 2, for the specified "Fluid".  Output and Input Names are strings representing a thermodynamic property, i.e. "T", "P", "D", "H", "C", "V", "L", "Q", etc.  For a complete list of valid property names, see the CoolProp documentation at www.coolprop.org.</description>
+    </function>
+    <function>
+        <name>Props1SI</name>
+        <local_name>Props1SI</local_name>
+        <params>"Fluid Name", "Property Name"</params>
+        <category>CoolProp</category>
+        <description>Returns the non-state dependent fluid property specified by "Property Name" for the specified "Fluid Name".  Property Names are strings representing a trivial fluid property, i.e. "Tcrit", "Ptriple", "GAS_CONSTANT", etc.  For a complete list of valid property names, see the CoolProp documentation at www.coolprop.org.</description>
+    </function>
+    <function>
+        <name>HAPropsSI</name>
+        <local_name>HAPropsSI</local_name>
+        <params>"Output Name", "Input Name 1", Value 1, "Input Name 2", Value 2, "Input Name 3", Value 3</params>
+        <category>CoolProp</category>
+        <description>Calculates the state dependent property specified by "Output Name" for Humid Air given the input properties, Value 1, Value 2, and Value 3.  Output and Input Names are strings representing a thermodynamic property, i.e. "T", "P", "D", "H", "C", "V", "L", "Q", etc.  One of these Input Names and values is typically "R" specifying a relative humidity.  For a complete list of valid property names, see the CoolProp documentation at www.coolprop.org.</description>
+    </function>
+    <!-- Below are the entries for the CoolProp Low-Level functions -->
+    <function>
+        <name>get_global_param_string</name>
+        <local_name>get_global_param_string</local_name>
+        <params>"Parameter Name String"</params>
+        <category>CoolProp</category>
+        <description>Returns the value of the requested CoolProps parameter.  Useful parameter strings are "FluidList", to return a comma separated list of all valid fluid name strings, and "version", which returns the installed version of CoolProp.</description>
+    </function>
+    <function>
+        <name>get_fluid_param_string</name>
+        <local_name>get_fluid_param_string</local_name>
+        <params>"Fluid Name", "Parameter String"</params>
+        <category>CoolProp</category>
+        <description>Returns the value of the requested fluid parameter.  Useful parameter strings are "aliases", to return a comma separated list of valid fluid name strings, and "CAS", which returns the fluids Chemical Abstract Service registration number.</description>
+    </function>
+    <function>
+        <name>set_reference_state</name>
+        <local_name>set_reference_state</local_name>
+        <params>"Fluid Name", "Reference State String"</params>
+        <category>CoolProp</category>
+        <description>Sets the reference state for a specific fluid one of the standard reference states: "IIR", "ASHRAE", "NBP", or "DEF" (CoolProp default).</description>
+    </function>
+
+</FUNCTIONS>

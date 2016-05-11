@@ -1,6 +1,10 @@
 #if defined(_MSC_VER)
+#ifndef _CRTDBG_MAP_ALLOC
 #define _CRTDBG_MAP_ALLOC
+#endif
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <crtdbg.h>
 #endif
 
@@ -40,6 +44,7 @@
 #include "Backends/Helmholtz/MixtureParameters.h"
 #include "DataStructures.h"
 #include "Backends/REFPROP/REFPROPMixtureBackend.h"
+#include "Backends/Cubics/CubicsLibrary.h"
 
 #if defined(ENABLE_CATCH)
     #include "catch.hpp"
@@ -512,6 +517,18 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
     }
     #endif
 }
+    
+bool add_fluids_as_JSON(const std::string &backend, const std::string &fluidstring)
+{
+    if (backend == "SRK" || backend == "PR")
+    {
+        CubicLibrary::add_fluids_as_JSON(fluidstring); return true;
+    }
+    else{
+        throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON",backend.c_str()));
+    }
+    
+}
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to PropsSI","[PropsSI]")
 {
@@ -758,7 +775,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
             // Change the value in the library for the given fluid
             set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "IIR");
             if (get_debug_level() > 0){
-                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         }
         else if (!reference_state.compare("ASHRAE"))
@@ -776,7 +793,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
             // Change the value in the library for the given fluid
             set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "ASHRAE");
             if (get_debug_level() > 0){
-                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         }
         else if (!reference_state.compare("NBP"))
@@ -794,7 +811,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
             // Change the value in the library for the given fluid
             set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, "NBP");
             if (get_debug_level() > 0){
-                std::cout << format("set offsets to %g and %g\n", delta_a1, delta_a2);
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         }
         else if (!reference_state.compare("DEF"))
@@ -860,6 +877,12 @@ std::string get_global_param_string(const std::string &ParamName)
     }
     else if (!ParamName.compare("HOME")){
         return get_home_dir();
+    }
+	else if (ParamName == "REFPROP_version"){
+		return REFPROPMixtureBackend::version();
+	}
+    else if (ParamName == "cubic_fluids_schema"){
+        return CoolProp::CubicLibrary::get_cubic_fluids_schema();
     }
     else{
         throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));

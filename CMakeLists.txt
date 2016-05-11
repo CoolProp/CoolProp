@@ -27,9 +27,9 @@ set(app_name ${project_name})
 project(${project_name})
 
 # Project version
-set (COOLPROP_VERSION_MAJOR 5)
-set (COOLPROP_VERSION_MINOR 1)
-set (COOLPROP_VERSION_PATCH 2)
+set (COOLPROP_VERSION_MAJOR 6)
+set (COOLPROP_VERSION_MINOR 0)
+set (COOLPROP_VERSION_PATCH 0)
 set (COOLPROP_VERSION_REVISION )
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
@@ -114,10 +114,9 @@ list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Te
 ## This file is only needed for the library, normal builds do not need it.
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 
-set (APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
-list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/REFPROP-headers")
+set (APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
-list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/IF97")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -312,6 +311,14 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEIGEN_DONT_VECTORIZE")
   ENDIF()
   #
+  # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
+  if (${COOLPROP_OSX_105_COMPATIBILITY})
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
+      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5") 
+    endif()
+  endif()
+
   # Name mangling settings
   IF(COOLPROP_EXTERNC_LIBRARY)
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEXTERNC")
@@ -319,12 +326,22 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   ### All options are set, we are building a library ###
   ADD_DEPENDENCIES(${LIB_NAME} generate_headers)
   #
+  if (CMAKE_VERSION VERSION_GREATER 3.0)
+    # Add target include directories for easy linking with other applications
+    target_include_directories(${LIB_NAME} PUBLIC ${APP_INCLUDE_DIRS})
+  endif()
   
   # Set the bitness
   IF (NOT MSVC)
     MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -m${BITNESS}")
     SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -m${BITNESS}")
+  ENDIF()
+
+  # ADD -fPIC flag if needed
+  IF (COOLPROP_FPIC)
+    MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
+    SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -fPIC")
   ENDIF()
   #
   # calling conventions
@@ -397,21 +414,47 @@ if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
     install (TARGETS ${app_name} DESTINATION "${COOLPROP_INSTALL_PREFIX}/shared_library/VxWorks")
 endif()
 
-if (COOLPROP_MATHCAD_MODULE)
+if (COOLPROP_PRIME_MODULE)
     if(NOT WIN32)
-      message(FATAL_ERROR "COOLPROP_MATHCAD_MODULE can only be used on windows host")
+      message(FATAL_ERROR "COOLPROP_PRIME_MODULE can only be used on windows host")
     endif()
-    IF( "${COOLPROP_MATHCAD_ROOT}" STREQUAL "")
-        message(FATAL_ERROR "You must provide the path to MathCAD Root directory using something like -DCOOLPROP_MATHCAD_ROOT=\"C:/Program Files/PTC/Mathcad Prime 3.0\"")
+    IF( "${COOLPROP_PRIME_ROOT}" STREQUAL "")
+        message(FATAL_ERROR "You must provide the path to MathCAD Prime Root directory using something like -DCOOLPROP_PRIME_ROOT=\"C:/Program Files/PTC/Mathcad Prime 3.1\"")
+    else()
+        message(STATUS "COOLPROP_PRIME_ROOT: ${COOLPROP_PRIME_ROOT}")
     endif()
     list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
-    list(APPEND APP_SOURCES "wrappers/MathCAD/CoolPropMathcad.cpp")
+    list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
     add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
-    include_directories("${COOLPROP_MATHCAD_ROOT}/Custom Functions")
-    target_link_libraries(CoolPropMathcadWrapper "${COOLPROP_MATHCAD_ROOT}/Custom Functions/mcaduser.lib")
+    include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
+    target_link_libraries(CoolPropMathcadWrapper "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser.lib")
     SET_TARGET_PROPERTIES(CoolPropMathcadWrapper PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
     add_dependencies (CoolPropMathcadWrapper generate_headers)
     set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
+    install (TARGETS CoolPropMathcadWrapper DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCADPrime")
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/CoolPropFluidProperties.mcdx" DESTINATION MathCADPrime)    
+endif()
+
+if (COOLPROP_MATHCAD15_MODULE)
+    if(NOT WIN32)
+      message(FATAL_ERROR "COOLPROP_MATHCAD15_MODULE can only be used on windows host")
+    endif()
+    IF( "${COOLPROP_MATHCAD15_ROOT}" STREQUAL "")
+        message(FATAL_ERROR "You must provide the path to MathCAD 15 Root directory using something like -DCOOLPROP_MATHCAD15_ROOT=\"C:/Program Files (x86)/Mathcad/Mathcad 15\"")
+    else()
+        message(STATUS "COOLPROP_MATHCAD15_ROOT: ${COOLPROP_MATHCAD15_ROOT}")
+    endif()
+    list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
+    list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
+    add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+    include_directories("${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/include")
+    target_link_libraries(CoolPropMathcadWrapper "${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/lib/mcaduser.lib")
+    SET_TARGET_PROPERTIES(CoolPropMathcadWrapper PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
+    add_dependencies (CoolPropMathcadWrapper generate_headers)
+    set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
+    install (TARGETS CoolPropMathcadWrapper DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCAD15")
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropFluidProperties.xmcdz" DESTINATION MathCAD15)
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolProp_EN.xml" DESTINATION MathCAD15)
 endif()
 
 # EES is only compiled for windows
@@ -999,11 +1042,15 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   endif()
   
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolPropsetup.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/Example.m DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
-  install (TARGETS CoolPropMATLAB_wrap DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB)
+  if (COOLPROP_MATLAB_INSTALL_PREFIX)
+  else()
+    set(COOLPROP_MATLAB_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX}/MATLAB)
+  endif()
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolPropsetup.m DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/Example.m DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
+  install (TARGETS CoolPropMATLAB_wrap DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
   enable_testing()
   set(MATLAB_WAIT -wait)
   if(UNIX)
@@ -1012,9 +1059,11 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
   # For some reason, the tests don't work on windows, though they should.
   IF(WIN32)
   ELSE()
+  if (BUILD_TESTING)
   add_test(NAME MATLABtest
            COMMAND $ENV{MATLAB_ROOT}/bin/matlab -nodesktop -nosplash -nojvm -nodisplay ${MATLAB_WAIT} -r "result = runtests('Example'); exit(result.Failed)" -logfile Example.out
            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  endif()
   ENDIF() 
 endif()
 
@@ -1061,7 +1110,8 @@ if (COOLPROP_R_MODULE)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
     
     enable_testing()
-    add_test(R_test ${R_EXEC} -f Example.R)
+    
+    add_test(R_test "${R_BIN_DIR}/Rscript" Example.R)
                
 endif()
 
@@ -1241,6 +1291,15 @@ if (COOLPROP_MAIN_MODULE)
   if(COOLPROP_TEST)
      set_target_properties (Main PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
   endif()
+
+  if (COOLPROP_IWYU)
+    find_program(iwyu_path NAMES include-what-you-use iwyu)
+    if(NOT iwyu_path)
+      message(FATAL_ERROR "Could not find the program include-what-you-use")
+    endif()
+    set_property(TARGET Main PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
+  endif()
+
 if(UNIX)
     target_link_libraries (Main ${CMAKE_DL_LIBS})
   endif()

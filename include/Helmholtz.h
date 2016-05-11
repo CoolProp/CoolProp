@@ -3,7 +3,7 @@
 #define HELMHOLTZ_H
 
 #include <vector>
-#include "rapidjson/rapidjson_include.h"
+#include "rapidjson_include.h"
 #include "Eigen/Core"
 #include "time.h"
 #include "CachedElement.h"

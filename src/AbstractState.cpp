@@ -5,7 +5,9 @@
  *      Author: jowr
  */
 
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include <stdlib.h>
 #include "math.h"
@@ -15,6 +17,7 @@
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/IF97/IF97Backend.h"
+#include "Backends/Cubics/CubicBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -74,6 +77,12 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     {
         throw ValueError("TREND backend not yet implemented");
     }
+    else if (backend == "SRK"){
+        return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
+    }
+    else if (backend == "PR" || backend == "Peng-Robinson"){
+        return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
+    }
     else if (!backend.compare("?") || backend.empty())
     {
         std::size_t idel = fluid_names[0].find("::");
@@ -103,6 +112,8 @@ bool AbstractState::clear() {
     // Reset all instances of CachedElement and overwrite
     // the internal double values with -_HUGE
     this->_R = _HUGE;
+    this->_gas_constant.clear();
+    this->_molar_mass.clear();
 
     /// Ancillary curve values
     this->_rhoLanc.clear();
@@ -165,6 +176,10 @@ bool AbstractState::clear() {
     this->_d2alphar_dDelta2_lim.clear();
     this->_d2alphar_dDelta_dTau_lim.clear();
     this->_d3alphar_dDelta2_dTau_lim.clear();
+
+    /// Two-Phase variables
+    this->_rhoLmolar.clear();
+    this->_rhoVmolar.clear();
 
     /// Transport properties
     this->_viscosity.clear();
@@ -312,6 +327,8 @@ double AbstractState::keyed_output(parameters key)
         return hmass();
     case iSmolar:
         return smolar();
+    case iSmolar_residual:
+        return gas_constant()*(tau()*dalphar_dTau() - alphar());
     case iSmass:
         return smass();
     case iUmolar:
@@ -342,12 +359,18 @@ double AbstractState::keyed_output(parameters key)
         return get_reducing_state().rhomolar;
     case ispeed_sound:
         return speed_sound();
+    case ialphar:
+        return alphar(); 
     case ialpha0:
         return alpha0();
     case idalpha0_ddelta_consttau:
         return dalpha0_dDelta();
     case idalpha0_dtau_constdelta:
         return dalpha0_dTau();
+    case idalphar_ddelta_consttau:
+        return dalphar_dDelta();
+    case idalphar_dtau_constdelta:
+        return dalphar_dTau();
     case iBvirial:
         return Bvirial();
     case idBvirial_dT:
@@ -491,6 +514,10 @@ double AbstractState::fugacity(std::size_t i){
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity(i);
 }
+double AbstractState::chemical_potential(std::size_t i) {
+    // TODO: Cache the chemical potential for each component
+    return calc_chemical_potential(i);
+}
 void AbstractState::build_phase_envelope(const std::string &type)
 {
     calc_phase_envelope(type);
@@ -572,6 +599,22 @@ void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropD
         drho = AS.T()*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau());
         if (index == iUmass){
             // du/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iGmass:
+    case iGmolar:
+    {
+        // dg/dT|rho
+        double dTau_dT = 1/dT_dtau;
+        dT = R*AS.T()*(AS.dalpha0_dTau()+AS.dalphar_dTau()+AS.delta()*AS.d2alphar_dDelta_dTau())*dTau_dT + R*(1+AS.alpha0() + AS.alphar() + AS.delta()*AS.dalphar_dDelta());
+        // dg/drho|T
+        double dDelta_drho = 1/rhor;
+        drho = AS.T()*R*(AS.dalpha0_dDelta()+AS.dalphar_dDelta()+AS.delta()*AS.d2alphar_dDelta2() + AS.dalphar_dDelta())*dDelta_drho;
+        if (index == iGmass){
+            // dg/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
             drho /= AS.molar_mass();
             dT /= AS.molar_mass();
         }
@@ -763,6 +806,95 @@ TEST_CASE("Check AbstractState","[AbstractState]")
     {
         CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("REFPROP", "Water")));
     }
+}
+
+TEST_CASE("Check derivatives in first_partial_deriv","[derivs_in_first_partial_deriv]")
+{
+    shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> WaterplusT(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> WaterminusT(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> Waterplusrho(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> Waterminusrho(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    double dT = 1e-3, drho = 1;
+    Water->update(CoolProp::PT_INPUTS, 101325, 300);
+    WaterplusT->update(CoolProp::DmolarT_INPUTS, Water->rhomolar(), 300+dT);
+    WaterminusT->update(CoolProp::DmolarT_INPUTS, Water->rhomolar(), 300-dT);
+    Waterplusrho->update(CoolProp::DmolarT_INPUTS, Water->rhomolar()+drho, 300);
+    Waterminusrho->update(CoolProp::DmolarT_INPUTS, Water->rhomolar()-drho, 300);
+
+    // Numerical derivatives
+    CoolPropDbl dP_dT_num = (WaterplusT->p() - WaterminusT->p())/(2*dT);
+    CoolPropDbl dP_drho_num = (Waterplusrho->p() - Waterminusrho->p())/(2*drho);
+    
+    CoolPropDbl dHmolar_dT_num = (WaterplusT->hmolar() - WaterminusT->hmolar())/(2*dT);
+    CoolPropDbl dHmolar_drho_num = (Waterplusrho->hmolar() - Waterminusrho->hmolar())/(2*drho);
+    CoolPropDbl dHmass_dT_num = (WaterplusT->hmass() - WaterminusT->hmass())/(2*dT);
+    CoolPropDbl dHmass_drho_num = (Waterplusrho->hmass() - Waterminusrho->hmass())/(2*drho);
+
+    CoolPropDbl dSmolar_dT_num = (WaterplusT->smolar() - WaterminusT->smolar())/(2*dT);
+    CoolPropDbl dSmolar_drho_num = (Waterplusrho->smolar() - Waterminusrho->smolar())/(2*drho);
+    CoolPropDbl dSmass_dT_num = (WaterplusT->smass() - WaterminusT->smass())/(2*dT);
+    CoolPropDbl dSmass_drho_num = (Waterplusrho->smass() - Waterminusrho->smass())/(2*drho);
+
+    CoolPropDbl dUmolar_dT_num = (WaterplusT->umolar() - WaterminusT->umolar())/(2*dT);
+    CoolPropDbl dUmolar_drho_num = (Waterplusrho->umolar() - Waterminusrho->umolar())/(2*drho);
+    CoolPropDbl dUmass_dT_num = (WaterplusT->umass() - WaterminusT->umass())/(2*dT);
+    CoolPropDbl dUmass_drho_num = (Waterplusrho->umass() - Waterminusrho->umass())/(2*drho);
+
+    CoolPropDbl dGmolar_dT_num = (WaterplusT->gibbsmolar() - WaterminusT->gibbsmolar())/(2*dT);
+    CoolPropDbl dGmolar_drho_num = (Waterplusrho->gibbsmolar() - Waterminusrho->gibbsmolar())/(2*drho);
+    CoolPropDbl dGmass_dT_num = (WaterplusT->gibbsmass() - WaterminusT->gibbsmass())/(2*dT);
+    CoolPropDbl dGmass_drho_num = (Waterplusrho->gibbsmass() - Waterminusrho->gibbsmass())/(2*drho);
+
+    // Pressure
+    CoolPropDbl dP_dT_analyt, dP_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iP, dP_dT_analyt, dP_drho_analyt);
+    // Enthalpy
+    CoolPropDbl dHmolar_dT_analyt, dHmolar_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iHmolar, dHmolar_dT_analyt, dHmolar_drho_analyt);
+    CoolPropDbl dHmass_dT_analyt, dHmass_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iHmass, dHmass_dT_analyt, dHmass_drho_analyt);
+    // Entropy
+    CoolPropDbl dSmolar_dT_analyt, dSmolar_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iSmolar, dSmolar_dT_analyt, dSmolar_drho_analyt);
+    CoolPropDbl dSmass_dT_analyt, dSmass_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iSmass, dSmass_dT_analyt, dSmass_drho_analyt);
+    // Internal energy
+    CoolPropDbl dUmolar_dT_analyt, dUmolar_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iUmolar, dUmolar_dT_analyt, dUmolar_drho_analyt);
+    CoolPropDbl dUmass_dT_analyt, dUmass_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iUmass, dUmass_dT_analyt, dUmass_drho_analyt);
+    // Gibbs
+    CoolPropDbl dGmolar_dT_analyt, dGmolar_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iGmolar, dGmolar_dT_analyt, dGmolar_drho_analyt);
+    CoolPropDbl dGmass_dT_analyt, dGmass_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iGmass, dGmass_dT_analyt, dGmass_drho_analyt);
+
+    double eps = 1e-3;
+
+    CHECK( std::abs(dP_dT_analyt/dP_dT_num-1) < eps);
+    CHECK( std::abs(dP_drho_analyt/dP_drho_num-1) < eps);
+    
+    CHECK( std::abs(dHmolar_dT_analyt/dHmolar_dT_num-1) < eps);
+    CHECK( std::abs(dHmolar_drho_analyt/dHmolar_drho_num-1) < eps);
+    CHECK( std::abs(dHmass_dT_analyt/dHmass_dT_num-1) < eps);
+    CHECK( std::abs(dHmass_drho_analyt/dHmass_drho_num-1) < eps);
+
+    CHECK( std::abs(dSmolar_dT_analyt/dSmolar_dT_num-1) < eps);
+    CHECK( std::abs(dSmolar_drho_analyt/dSmolar_drho_num-1) < eps);
+    CHECK( std::abs(dSmass_dT_analyt/dSmass_dT_num-1) < eps);
+    CHECK( std::abs(dSmass_drho_analyt/dSmass_drho_num-1) < eps);
+
+    CHECK( std::abs(dUmolar_dT_analyt/dUmolar_dT_num-1) < eps);
+    CHECK( std::abs(dUmolar_drho_analyt/dUmolar_drho_num-1) < eps);
+    CHECK( std::abs(dUmass_dT_analyt/dUmass_dT_num-1) < eps);
+    CHECK( std::abs(dUmass_drho_analyt/dUmass_drho_num-1) < eps);
+
+    CHECK( std::abs(dGmolar_dT_analyt/dGmolar_dT_num-1) < eps);
+    CHECK( std::abs(dGmolar_drho_analyt/dGmolar_drho_num-1) < eps);
+    CHECK( std::abs(dGmass_dT_analyt/dGmass_dT_num-1) < eps);
+    CHECK( std::abs(dGmass_drho_analyt/dGmass_drho_num-1) < eps);
 
 }
 
