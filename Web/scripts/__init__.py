@@ -104,7 +104,7 @@ with open(os.path.join(root_dir,'Doxyfile'),'a+') as fp:
     fp.write('\n\n PROJECT_NUMBER         = ' + CoolProp.__version__ + '\n')
     
 # The normal tasks that are carried out each time the script runs
-normal_tasks = ["../../dev/scripts/examples/OSXRun.py","coolprop.tabular.speed.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py","coolprop.configuration.py"]
+normal_tasks = ["../../dev/scripts/examples/OSXRun.py","coolprop.tabular.speed.py", "fluid_properties.phase_envelope.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py","coolprop.configuration.py"]
 # The expensive tasks that are fired when full_rebuild is True
 expensive_tasks = ["fluid_properties.Consistency.py", "fluid_properties.Incompressibles.sh", "logo_2014.py", "fluid_properties.REFPROPcomparison.py"]
 print "Executing the normal scripts for generating static files."
