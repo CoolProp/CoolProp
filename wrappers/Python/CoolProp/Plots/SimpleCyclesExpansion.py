@@ -92,6 +92,8 @@ class SimpleRankineCycle(BasePowerCycle):
         >>> cycle.simple_solve(T0, p0, T2, p2, 0.7, 0.8, SI=True)
         >>> cycle.steps = 50
         >>> sc = cycle.get_state_changes()
+        >>> import matplotlib.pyplot as plt
+        >>> plt.close(cycle.figure)
         >>> pp.draw_process(sc)
         
         """

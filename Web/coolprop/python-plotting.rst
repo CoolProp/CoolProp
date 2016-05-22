@@ -64,7 +64,7 @@ graphs a little simpler, for example:
     ts_plot = PropertyPlot('Water', 'Ts')
     ts_plot.calc_isolines(CoolProp.iQ, num=11)
     ts_plot.title(r'$T,s$ Graph for Water')
-    ts_plot.xlabel(r'$s$ [{kJ}/{kg K}]')
+    ts_plot.xlabel(r'$s$ [kJ/kg K]')
     ts_plot.ylabel(r'$T$ [K]')
     ts_plot.grid()
     ts_plot.show()
@@ -130,5 +130,7 @@ graph, note how the unit conversion is handled:
     cycle.steps = 50
     sc = cycle.get_state_changes()
     pp.draw_process(sc)
+    import matplotlib.pyplot as plt
+    plt.close(cycle.figure)
     pp.show()
 

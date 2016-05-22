@@ -622,18 +622,18 @@ class BasePlot(Base2DObject):
         if graph_type not in Base2DObject.PLOTS:
             raise ValueError("Invalid graph_type input, expected a string from {0:s}".format(str(self.PLOTS)))
         
-        # call the base class
-        state = process_fluid_state(fluid_ref)
-        Base2DObject.__init__(self, graph_type[1], graph_type[0], state, **kwargs)
-        
         # Process the unit_system and set self._system
         self.system = unit_system
         # Process the plotting range based on T and p
         self.limits = tp_limits
         # Other properties 
-        self.figure = kwargs.get('figure',plt.figure(tight_layout=True))
-        self.axis   = kwargs.get('axis', self.figure.add_subplot(111))
-        self.props  = kwargs.get('props', None)
+        self.figure = kwargs.pop('figure',plt.figure(tight_layout=True))
+        self.axis   = kwargs.pop('axis', self.figure.add_subplot(111))
+        self.props  = kwargs.pop('props', None)
+        
+        # call the base class
+        state = process_fluid_state(fluid_ref)
+        Base2DObject.__init__(self, graph_type[1], graph_type[0], state, **kwargs)
         
     @property
     def system(self): return self._system

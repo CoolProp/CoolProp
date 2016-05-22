@@ -350,7 +350,7 @@ def InlineLabel(xv,yv,x=None,y=None,axis=None,fig=None):
 
 class PropsPlot(PropertyPlot):
     def __init__(self, fluid_name, graph_type, units = 'KSI', reciprocal_density = False, **kwargs):
-        super(PropsPlot, self).__init__(fluid_name, graph_type, units=units, reciprocal_density=reciprocal_density, **kwargs)
+        super(PropsPlot, self).__init__(fluid_name, graph_type, unit_system=units, reciprocal_density=reciprocal_density, **kwargs)
         warnings.warn("You called the deprecated class \"PropsPlot\", use \"PropertyPlot\".",DeprecationWarning)
 
 
