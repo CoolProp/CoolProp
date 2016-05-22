@@ -248,6 +248,12 @@ cdef class AbstractState:
     cpdef double cvmass(self) except *: 
         """ Get the constant volume specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cvmass(void)` """
         return self.thisptr.cvmass()
+    cpdef double gibbsmass(self) except *: 
+        """ Get the mass-specific Gibbs energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gibbsmass(void)` """
+        return self.thisptr.gibbsmass()
+    cpdef double gibbsmolar(self) except *: 
+        """ Get the mole-specific Gibbs energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gibbsmolar(void)` """
+        return self.thisptr.gibbsmolar()
     cpdef double tau(self) except *: 
         """ Get the reciprocal reduced temperature - wrapper of c++ function :cpapi:`CoolProp::AbstractState::tau(void)` """
         return self.thisptr.tau()

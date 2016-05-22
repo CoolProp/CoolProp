@@ -112,6 +112,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double cp0mass() except +ValueError
         double cvmolar() except +ValueError
         double cvmass() except +ValueError
+        double gibbsmolar() except +ValueError
+        double gibbsmass() except +ValueError
         double speed_sound() except +ValueError
         double tau() except +ValueError
         double delta() except +ValueError
