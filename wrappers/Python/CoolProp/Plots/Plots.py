@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import print_function, unicode_literals, absolute_import
+from __future__ import print_function, division, absolute_import
 
 import numpy as np
 import warnings
