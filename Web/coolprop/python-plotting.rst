@@ -102,7 +102,7 @@ graph:
     :include-source:
     import CoolProp
     from CoolProp.Plots.Plots import PropertyPlot
-    from CoolProp.Plots.SimpleCycles import SimpleRankineCycle
+    from CoolProp.Plots.SimpleCyclesExpansion import SimpleRankineCycle
     pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
     pp.calc_isolines(CoolProp.iQ, num=11)
     cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
