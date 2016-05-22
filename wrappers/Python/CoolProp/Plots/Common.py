@@ -13,6 +13,25 @@ import CoolProp
 import warnings
 from six import with_metaclass
 
+
+def interpolate_values_1d(x,y,x_points=None,kind='linear'):
+    try: 
+        from scipy.interpolate.interpolate import interp1d
+        if x_points is None:
+            return interp1d(x, y, kind=kind)(x[np.isfinite(x)])
+        else:
+            return interp1d(x, y, kind=kind)(x_points)
+    except ImportError:
+        if kind != 'linear':
+            warnings.warn(
+              "You requested a non-linear interpolation, but SciPy is not available. Falling back to linear interpolation.",
+              UserWarning)
+        if x_points is None:
+            return np.interp((x[np.isfinite(x)]), x, y)
+        else:
+            return np.interp(x_points, x, y)
+
+
 def is_string(in_obj):
     try:
         return isinstance(in_obj, basestring)
@@ -531,32 +550,28 @@ class IsoLine(Base2DObject):
         validx = None; validy = None
         countx = None; county = None  
         if self.x is not None:
-            validx = np.sum(np.isfinite(self.x))
+            validx = np.isfinite(self.x)
             countx = float(self.x.size)
         else: 
             raise ValueError("The x-axis is not populated, calculate values before you interpolate.")
         if self.y is not None:
-            validy = np.sum(np.isfinite(self.y))
+            validy = np.isfinite(self.y)
             county = float(self.y.size)
         else: 
             raise ValueError("The y-axis is not populated, calculate values before you interpolate.")
         
-        if min([validx/countx,validy/county]) < self.VALID_REQ: 
+        if min([np.sum(validx)/countx,np.sum(validy)/county]) < self.VALID_REQ: 
             warnings.warn(
               "Poor data quality, there are not enough valid entries for x ({0:f}/{1:f}) or y ({2:f}/{3:f}).".format(validx,countx,validy,county),
               UserWarning)
         # TODO: use filter and cubic splines!
         #filter = np.logical_and(np.isfinite(self.x),np.isfinite(self.y))
-        if validy > validx:
-            y = self.y[np.isfinite(self.y)]
-            self.x = np.interp(y, self.y, self.x)
-            self.y = y
+        if np.sum(validy) > np.sum(validx):
+            self.x = interpolate_values_1d(self.y, self.x, x_points=self.y[validy])
+            self.y = self.y[validy]
         else:
-            x = self.x[np.isfinite(self.x)] 
-            self.y = np.interp(x, self.x, self.y)
-            self.x = x
-            
-            
+            self.y = interpolate_values_1d(self.x, self.y, x_points=self.x[validx])
+            self.x = self.x[validx]
 
 
 class BasePlot(Base2DObject):
@@ -962,7 +977,7 @@ consider replacing it with \"_get_sat_bounds\".",
             _xv = xv[::-1]
             _yv = yv[::-1]
             #Find x by interpolation
-            x = np.interp(y, yv, xv)
+            x = interpolate_values_1d(yv, xv, x_points=y)
             trash=0
             (xv,yv)=self._to_pixel_coords(xv,yv)
             (x,trash)=self._to_pixel_coords(x,trash)

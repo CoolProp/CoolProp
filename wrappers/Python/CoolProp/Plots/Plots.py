@@ -7,7 +7,7 @@ import numpy, matplotlib, matplotlib.pyplot, math, re
 import CoolProp.CoolProp as CP
 
 import warnings
-from CoolProp.Plots.Common import IsoLine,BasePlot
+from CoolProp.Plots.Common import IsoLine,BasePlot,interpolate_values_1d
 import CoolProp
 import sys
 from CoolProp.Plots.SimpleCycles import StatePoint, StateContainer,\
@@ -215,8 +215,12 @@ class PropertyPlot(BasePlot):
                     if (#(filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) > 0.010*filter_x(dx) and 
                         (filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) < 0.050*filter_x(dx) or
                         (filter_y(dew.y[dew_filter][-1])-filter_y(bub.y[bub_filter][-1])) < 0.010*filter_y(dy)):
-                        x = numpy.linspace(bub.x[bub_filter][-1], dew.x[dew_filter][-1], 11)
-                        y = numpy.interp(x, numpy.append(bub.x[bub_filter],dew.x[dew_filter][::-1]),numpy.append(bub.y[bub_filter],dew.y[dew_filter][::-1]))
+                        x = numpy.linspace(bub.x[bub_filter][-1], dew.x[dew_filter][-1], 11)                        
+                        y = interpolate_values_1d(
+                          numpy.append(bub.x[bub_filter],dew.x[dew_filter][::-1]), 
+                          numpy.append(bub.y[bub_filter],dew.y[dew_filter][::-1]), 
+                          x_points=x,
+                          kind='cubic')
                         self.axis.plot(dimx.from_SI(x),dimy.from_SI(y),**sat_props)
                         warnings.warn("Detected an incomplete phase envelope, fixing it numerically.")
                         xcrit = x[5]; ycrit = y[5]
