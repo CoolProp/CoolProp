@@ -299,6 +299,9 @@ cdef class AbstractState:
     cpdef double fugacity_coefficient(self, size_t i) except *: 
         """ Get the fugacity coefficient of the i-th component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fugacity_coefficient(std::size_t)` """
         return self.thisptr.fugacity_coefficient(i)
+    cpdef double chemical_potential(self, size_t i) except *: 
+        """ Get the chemical potential of the i-th component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::chemical_potential(std::size_t)` """
+        return self.thisptr.chemical_potential(i)
     
     cpdef mole_fractions_liquid(self):
         """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """

@@ -123,6 +123,7 @@ cdef class AbstractState:
     cpdef double isobaric_expansion_coefficient(self) except *
     cpdef double fugacity(self, size_t) except *
     cpdef double fugacity_coefficient(self, size_t) except *
+    cpdef double chemical_potential(self, size_t) except *
     
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*
