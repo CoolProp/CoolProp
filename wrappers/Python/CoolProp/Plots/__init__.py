@@ -7,3 +7,5 @@ from .Common import IsoLine
 #from .Plots import Ph, Ts, Ps, PT, Prho, Trho, hs
 from .SimpleCycles import SimpleCycle, TwoStage, EconomizedCycle
 
+from .SimpleCycles import SimpleRankineCycle
+

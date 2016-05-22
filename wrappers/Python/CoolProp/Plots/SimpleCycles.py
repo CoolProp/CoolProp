@@ -509,7 +509,7 @@ class StateContainer(object):
     
     >>> from __future__ import print_function
     >>> import CoolProp
-    >>> from CoolProp.PLots.SimpleCycles import StateContainer
+    >>> from CoolProp.Plots.SimpleCycles import StateContainer
     >>> T0 = 300.000; p0 = 200000.000; h0 = 112745.749; s0 = 393.035
     >>> cycle_states = StateContainer()
     >>> cycle_states[0,'H'] = h0
@@ -880,7 +880,8 @@ class SimpleRankineCycle(BasePowerCycle):
         Examples
         --------
         >>> import CoolProp
-        >>> from CoolProp.Plots import PropertyPlot
+        >>> from CoolProp.Plots.Plots import PropertyPlot
+        >>> from CoolProp.Plots.SimpleCycles import SimpleRankineCycle
         >>> pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
         >>> cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
         >>> T0 = 300
