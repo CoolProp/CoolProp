@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, unicode_literals, absolute_import
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-import CoolProp.CoolProp as CP
 from abc import ABCMeta
-from CoolProp import AbstractState
-from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
-import CoolProp
-import warnings
 from six import with_metaclass
+import warnings
+
+import CoolProp
+from CoolProp import AbstractState
+from CoolProp import CoolProp as CP
+from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
 
 
 def interpolate_values_1d(x,y,x_points=None,kind='linear'):

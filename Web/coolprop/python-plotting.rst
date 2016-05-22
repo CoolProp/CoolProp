@@ -3,7 +3,7 @@
 Python Plotting
 ===============
 
-The following example can be used to create a temperature-entropy (T,s) plot for
+The following example can be used to create a temperature-entropy (:math:`T,s`) plot for
 propane (R290) with isolines for the vapour quality in steps of 0.2:
 
 .. plot::
@@ -15,7 +15,7 @@ propane (R290) with isolines for the vapour quality in steps of 0.2:
     ts_plot.calc_isolines(CoolProp.iQ, num=6)
     ts_plot.show()
 
-The following example can be used to create a pressure-enthalpy (log p,h) plot for 
+The following example can be used to create a pressure-enthalpy (:math:`\log p,h`) plot for 
 R-134a with a couple of isotherms and isentropic lines:
 
 .. plot::
@@ -33,6 +33,7 @@ Here is an example for R-245fa using two different ways to generate the isobars:
     
 .. plot::
     :include-source:
+    
     import CoolProp
     from CoolProp.Plots import PropertyPlot
     plot = PropertyPlot('HEOS::R245fa', 'TS', unit_system='EUR', tp_limits='ORC')
@@ -46,9 +47,9 @@ Here is an example for R-245fa using two different ways to generate the isobars:
     plot.show()
     
 The available plots are listed in the :py:class:`CoolProp.Plots.Common.Base2DObject`  
-and at this time (May 2016) this list contains :math:`T,s`, :math:`p,h`, 
-:math:`h,s`, :math:`p,s`, :math:`p,\rho`, :math:`T,\rho`, :math:`p,T` and 
-:math:`p,u` plots. 
+and at this time (May 2016) this list contains (:math:`T,s`), (:math:`p,h`), 
+(:math:`h,s`), (:math:`p,s`), (:math:`p,\rho`), (:math:`T,\rho`), (:math:`p,T`) and 
+(:math:`p,u`) plots. 
 
 Some of the commonly used `Matplotlib <http://www.matplotlib.org>`_ functions,
 such as :func:`title`, :func:`grid`, :func:`xlabel` and :func:`ylabel` have been wrapped in
@@ -58,6 +59,7 @@ graphs a little simpler, for example:
 .. plot::
     :include-source:
 
+    import CoolProp 
     from CoolProp.Plots import PropertyPlot
     ts_plot = PropertyPlot('Water', 'Ts')
     ts_plot.calc_isolines(CoolProp.iQ, num=11)
@@ -82,24 +84,35 @@ to access their members and you can chose the one you like best or mix them:
 .. ipython::
 
     In [0]: from __future__ import print_function
+    
     In [0]: import CoolProp
-    In [0]: from CoolProp.Plots.SimpleCycles import StateContainer
+    
+    In [0]: from CoolProp.Plots import StateContainer
+    
     In [0]: T0 = 300.000; p0 = 200000.000; h0 = 112745.749; s0 = 393.035
+    
     In [0]: cycle_states = StateContainer()
+    
     In [0]: cycle_states[0,'H'] = h0
+    
     In [0]: cycle_states[0]['S'] = s0
+    
     In [0]: cycle_states[0][CoolProp.iP] = p0
+    
     In [0]: cycle_states[0,CoolProp.iT] = T0
+    
     In [0]: cycle_states[1,"T"] = 300.064
+    
     In [0]: print(cycle_states)
 
     
 The utility classes were designed to work well with the plotting objects described above
 and this example illustrates how a simple Rankine cycle can be added to to a :math:`T,s` 
-graph:
+graph, note how the unit conversion is handled:
 
 .. plot::
     :include-source:
+    
     import CoolProp
     from CoolProp.Plots import PropertyPlot
     from CoolProp.Plots import SimpleCompressionCycle

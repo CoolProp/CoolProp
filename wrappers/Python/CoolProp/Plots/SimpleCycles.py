@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function, division
-from six import with_metaclass
+from __future__ import print_function, division, absolute_import
 
-import matplotlib,numpy
-
+import matplotlib, warnings 
 import numpy as np
+
 
 import CoolProp
 from CoolProp.CoolProp import PropsSI
-from .Common import BasePlot, PropertyDict, SIunits
-import warnings
-from abc import ABCMeta
+from CoolProp.Plots.Common import BasePlot, PropertyDict, SIunits
 
 
 def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
@@ -38,10 +35,10 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
     from scipy.optimize import newton
     
-    T=numpy.zeros((6))
-    h=numpy.zeros_like(T)
-    p=numpy.zeros_like(T)
-    s=numpy.zeros_like(T)
+    T=np.zeros((6))
+    h=np.zeros_like(T)
+    p=np.zeros_like(T)
+    s=np.zeros_like(T)
     T[1]=Te+DTsh
     pe=PropsSI('P','T',Te,'Q',1.0,Ref)
     pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
@@ -64,7 +61,7 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     h[5]=h[1]
     s[5]=s[1]
     T[5]=T[1]
-    p=[numpy.nan,pe,pc,pc,pe,pe]
+    p=[np.nan,pe,pc,pc,pe,pe]
     COP=(h[1]-h[4])/(h[2]-h[1])
     COPH=(h[2]-h[3])/(h[2]-h[1])
 
@@ -97,6 +94,7 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
         else:
             raise TypeError('Type of Ts_Ph invalid')
 
+
 def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=False,skipPlot=False,axis=None,**kwargs):
     """
     This function plots a two-stage cycle, on the current axis, or that given by the optional parameter *axis*
@@ -125,13 +123,13 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
     
     warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
 
-    T=numpy.zeros((8))
-    h=numpy.zeros_like(T)
-    p=numpy.zeros_like(T)
-    s=numpy.zeros_like(T)
-    rho=numpy.zeros_like(T)
-    T[0]=numpy.NAN
-    s[0]=numpy.NAN
+    T=np.zeros((8))
+    h=np.zeros_like(T)
+    p=np.zeros_like(T)
+    s=np.zeros_like(T)
+    rho=np.zeros_like(T)
+    T[0]=np.NAN
+    s[0]=np.NAN
     T[1]=Te+DTsh
     pe=PropsSI('P','T',Te,'Q',1.0,Ref)
     pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
@@ -188,7 +186,7 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
     h[7]=h[1]
     s[7]=s[1]
     T[7]=T[1]
-    p=[numpy.nan,pe,pic,pic,pc,pc,pe,pe]
+    p=[np.nan,pe,pic,pic,pc,pc,pe,pe]
     COP=Q/(Wdot1+Wdot2)
     RE=h[1]-h[6]
 
@@ -238,6 +236,7 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
             raise TypeError('Type of Ts_Ph invalid')
     return COP
 
+
 def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=False,axis=None,**kwargs):
     """
     This function plots an economized cycle, on the current axis, or that given by the optional parameter *axis*
@@ -267,14 +266,14 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
     m=1
 
-    T=numpy.zeros((11))
-    h=numpy.zeros_like(T)
-    p=numpy.zeros_like(T)
-    s=numpy.zeros_like(T)
-    rho=numpy.zeros_like(T)
+    T=np.zeros((11))
+    h=np.zeros_like(T)
+    p=np.zeros_like(T)
+    s=np.zeros_like(T)
+    rho=np.zeros_like(T)
 
-    T[0]=numpy.NAN
-    s[0]=numpy.NAN
+    T[0]=np.NAN
+    s[0]=np.NAN
     T[1]=Te+DTsh
     pe=PropsSI('P','T',Te,'Q',1.0,Ref)
     pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
@@ -375,7 +374,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
             ax.plot(h,p)
             ax.set_yscale('log')
         elif Ts_Ph in ['Ts','ts']:
-            ax.plot(numpy.r_[s[7],s[3]],numpy.r_[T[7],T[3]],'b')
+            ax.plot(np.r_[s[7],s[3]],np.r_[T[7],T[3]],'b')
             s_copy=s.copy()
             T_copy=T.copy()
             dT=[0,-5,5,-12,5,12,-12,0,0,0]
@@ -452,6 +451,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 #         return not self<other
 #     def __le__(self, other):
 #         return not other<self
+
 
 class StatePoint(PropertyDict):
     """A simple fixed dimension dict represented by an object with attributes"""
