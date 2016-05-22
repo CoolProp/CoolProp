@@ -4,14 +4,10 @@ from __future__ import print_function, absolute_import
 
 import numpy, matplotlib, matplotlib.pyplot, math, re
 
-import CoolProp.CoolProp as CP
-
 import warnings
 from CoolProp.Plots.Common import IsoLine,BasePlot,interpolate_values_1d
 import CoolProp
-import sys
-from CoolProp.Plots.SimpleCycles import StatePoint, StateContainer,\
-    SimpleRankineCycle
+from CoolProp.Plots.SimpleCycles import StateContainer
 
 
 

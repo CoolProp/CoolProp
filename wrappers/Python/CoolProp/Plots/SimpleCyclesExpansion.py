@@ -78,9 +78,10 @@ class SimpleRankineCycle(BasePowerCycle):
         Examples
         --------
         >>> import CoolProp
-        >>> from CoolProp.Plots.Plots import PropertyPlot
-        >>> from CoolProp.Plots.SimpleCyclesExpansion import SimpleRankineCycle
+        >>> from CoolProp.Plots import PropertyPlot
+        >>> from CoolProp.Plots import SimpleRankineCycle
         >>> pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
+        >>> pp.calc_isolines(CoolProp.iQ, num=11)
         >>> cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
         >>> T0 = 300
         >>> pp.state.update(CoolProp.QT_INPUTS,0.0,T0+15)

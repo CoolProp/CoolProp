@@ -77,9 +77,10 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         Examples
         --------
         >>> import CoolProp
-        >>> from CoolProp.Plots.Plots import PropertyPlot
-        >>> from CoolProp.Plots.SimpleCyclesCompression import SimpleCompressionCycle
+        >>> from CoolProp.Plots import PropertyPlot
+        >>> from CoolProp.Plots import SimpleCompressionCycle
         >>> pp = PropertyPlot('HEOS::R134a', 'PH', unit_system='EUR')
+        >>> pp.calc_isolines(CoolProp.iQ, num=11)
         >>> cycle = SimpleCompressionCycle('HEOS::R134a', 'PH', unit_system='EUR')
         >>> T0 = 280
         >>> pp.state.update(CoolProp.QT_INPUTS,0.0,T0-15)

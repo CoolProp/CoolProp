@@ -9,7 +9,7 @@ import numpy as np
 
 import CoolProp
 from CoolProp.CoolProp import PropsSI
-from .Common import BasePlot, process_fluid_state, PropertyDict, SIunits
+from .Common import BasePlot, PropertyDict, SIunits
 import warnings
 from abc import ABCMeta
 
