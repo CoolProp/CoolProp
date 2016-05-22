@@ -221,7 +221,7 @@ class PropertyDict(with_metaclass(ABCMeta),object):
 
 class SIunits(PropertyDict):
     def __init__(self):
-        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=u'ρ', unit=u'kg/m³')
+        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=u'd', unit=u'kg/m3')
         self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=u'h', unit=u'J/kg')
         self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=u'p', unit=u'Pa')
         self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=u's', unit=u'J/kg/K')
@@ -247,7 +247,7 @@ class EURunits(KSIunits):
         self.P.mul_SI=1e-5
         self.P.unit=u'bar'
         self.T.add_SI=-273.15
-        self.T.unit=u'°C'
+        self.T.unit=u'deg C'
 
 
 class Base2DObject(with_metaclass(ABCMeta),object):
