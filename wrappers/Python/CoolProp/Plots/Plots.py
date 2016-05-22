@@ -51,7 +51,7 @@ class PropertyPlot(BasePlot):
         >>> plot = PropertyPlot('HEOS::R134a', 'PH', unit_system='EUR', tp_limits='ACHP')
         >>> plot.calc_isolines(CoolProp.iQ, num=11)
         >>> plot.calc_isolines(CoolProp.iT, num=25)
-        >>> plot.calc_isolines(CoolProp.iS, num=15)
+        >>> plot.calc_isolines(CoolProp.iSmass, num=15)
         >>> plot.show()
 
         >>> import CoolProp

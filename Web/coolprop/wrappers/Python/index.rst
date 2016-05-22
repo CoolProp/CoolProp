@@ -102,7 +102,7 @@ Once installed, you can use CoolProp for various things:
 * Get some nice graphs::
 
     import CoolProp.Plots as CPP
-    ph_plot = CPP.PropsPlot('Water','Ph')
+    ph_plot = CPP.PropertyPlot('Water','Ph')
     ph_plot.savefig('enthalpy_pressure_graph_for_Water.png')
 
 * Solve `thermodynamics exercices`_
