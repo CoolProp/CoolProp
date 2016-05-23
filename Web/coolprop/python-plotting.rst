@@ -105,10 +105,10 @@ object separately and pass it to the plot object instead of a string.
     :include-source:   
 
     import CoolProp
-    state = CoolProp.AbstractState("REFPROP", "R600a&R290")
+    state = CoolProp.AbstractState("REFPROP", "ISOBUTAN&PROPANE")
     state.set_mass_fractions([0.8,0.2])
     from CoolProp.Plots import PropertyPlot
-    plot = PropertyPlot(state, 'PH', unit_system='EUR', tp_limits='ACHP')
+    plot = PropertyPlot(state, 'TS', unit_system='EUR', tp_limits='ACHP')
     plot.calc_isolines()
     plot.show()
 
