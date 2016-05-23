@@ -96,19 +96,20 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         >>> pp.draw_process(sc)
         
         """
-        if fluid is not None: self.state = process_fluid_state(fluid)
+        if fluid is not None: 
+            self.state = process_fluid_state(fluid)
         if self._state is None: 
             raise ValueError("You have to specify a fluid before you can calculate.")
         
         cycle_states = StateContainer(unit_system=self._system)
         
         if not SI:
-            Tc = self._system[CoolProp.iT].to_SI
-            pc = self._system[CoolProp.iP].to_SI
-            T0 = Tc(T0)
-            p0 = pc(p0)
-            T2 = Tc(T2)
-            p2 = pc(p2)
+            conv_t = self._system[CoolProp.iT].to_SI
+            conv_p = self._system[CoolProp.iP].to_SI
+            T0 = conv_t(T0)
+            p0 = conv_p(p0)
+            T2 = conv_t(T2)
+            p2 = conv_p(p2)
         
         # Gas from evaporator
         self.state.update(CoolProp.PT_INPUTS,p0,T0)
@@ -159,3 +160,82 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         self.fill_states()
         
 
+    def simple_solve_dt(self, Te, Tc, dT_sh, dT_sc, eta_com, fluid=None, SI=True):
+        """" 
+        A simple vapour compression cycle calculation based on 
+        superheat, subcooling and temperatures.
+        
+        Parameters
+        ----------
+        Te : float
+            The evaporation temperature
+        Tc : float
+            The condensation temperature
+        dT_sh : float
+            The superheat after the evaporator
+        dT_sc : float
+            The subcooling after the condenser
+        eta_com : float
+            Isentropic compressor efficiency 
+        
+        Examples
+        --------
+        >>> import CoolProp
+        >>> from CoolProp.Plots import PropertyPlot
+        >>> from CoolProp.Plots import SimpleCompressionCycle
+        >>> pp = PropertyPlot('HEOS::R134a', 'PH', unit_system='EUR')
+        >>> pp.calc_isolines(CoolProp.iQ, num=11)
+        >>> cycle = SimpleCompressionCycle('HEOS::R134a', 'PH', unit_system='EUR')
+        >>> Te = 265
+        >>> Tc = 300
+        >>> cycle.simple_solve_dt(Te, Tc, 10, 15, 0.7, SI=True)
+        >>> cycle.steps = 50
+        >>> sc = cycle.get_state_changes()
+        >>> import matplotlib.pyplot as plt
+        >>> plt.close(cycle.figure)
+        >>> pp.draw_process(sc)
+        """
+        if fluid is not None: 
+            self.state = process_fluid_state(fluid)
+        if self._state is None: 
+            raise ValueError("You have to specify a fluid before you can calculate.")
+        
+        if not SI:
+            conv_t = self._system[CoolProp.iT].to_SI
+            Te = conv_p(Te)
+            Tc = conv_p(Tc)
+        
+        # Get the saturation conditions
+        self.state.update(CoolProp.QT_INPUTS,1.0,Te)
+        p0 = self.state.p()
+        self.state.update(CoolProp.QT_INPUTS,0.0,Tc)
+        p2 = self.state.p()
+        
+        T0 = Te + dT_sh
+        T2 = Tc - dT_sc
+        
+        self.simple_solve(T0, p0, T2, p2, eta_com, fluid=None, SI=True)
+        
+ 
+    def COP_heating(self):
+        """COP for a heating process
+         
+        Calculates the coefficient of performance for a heating process, :math:`COP_h = \frac{q_{con}}{w_{comp}}`.
+         
+        Returns
+        -------
+        float
+        """
+        return (self.cycle_states[1,'H'] - self.cycle_states[2,'H']) / (self.cycle_states[1,'H'] - self.cycle_states[0,'H'])
+    
+    def COP_cooling(self):
+        """COP for a cooling process
+         
+        Calculates the coefficient of performance for a cooling process, :math:`COP_c = \frac{q_{eva}}{w_{comp}}`.
+         
+        Returns
+        -------
+        float
+        """
+        return (self.cycle_states[0,'H'] - self.cycle_states[3,'H']) / (self.cycle_states[1,'H'] - self.cycle_states[0,'H'])
+ 

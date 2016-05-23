@@ -11,7 +11,7 @@ from CoolProp.CoolProp import PropsSI
 from CoolProp.Plots.Common import BasePlot, PropertyDict, SIunits
 
 
-def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
+def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',**kwargs):
     """
     This function plots a simple four-component cycle, on the current axis, or that given by the optional parameter *axis*
 
@@ -33,66 +33,15 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     """
     
     warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
-    from scipy.optimize import newton
     
-    T=np.zeros((6))
-    h=np.zeros_like(T)
-    p=np.zeros_like(T)
-    s=np.zeros_like(T)
-    T[1]=Te+DTsh
-    pe=PropsSI('P','T',Te,'Q',1.0,Ref)
-    pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
-    h[1]=PropsSI('H','T',T[1],'P',pe,Ref)
-    s[1]=PropsSI('S','T',T[1],'P',pe,Ref)
-    T2s=newton(lambda T: PropsSI('S','T',T,'P',pc,Ref)-s[1],T[1]+30)
-    h2s=PropsSI('H','T',T2s,'P',pc,Ref)
-    h[2]=(h2s-h[1])/eta_a+h[1]
-    T[2]=PropsSI('T','H',h[2],'P',pc,Ref)
-    s[2]=PropsSI('S','T',T[2],'P',pc,Ref)
+    for i in kwargs:
+        warnings.warn("This function has been deprecated, your input \"{0}: {1}\" will be ignored".format(i,kwargs[i]),DeprecationWarning)
 
-    sbubble_c=PropsSI('S','P',pc,'Q',0,Ref)
-    sdew_c=PropsSI('S','P',pc,'Q',1,Ref)
-    sbubble_e=PropsSI('S','P',pe,'Q',0,Ref)
-    sdew_e=PropsSI('S','P',pe,'Q',1,Ref)
-    T[3]=Tc-DTsc
-    h[3]=PropsSI('H','T',T[3],'P',pc,Ref)
-    s[3]=PropsSI('S','T',T[3],'P',pc,Ref)
-    h[4]=h[3]
-    h[5]=h[1]
-    s[5]=s[1]
-    T[5]=T[1]
-    p=[np.nan,pe,pc,pc,pe,pe]
-    COP=(h[1]-h[4])/(h[2]-h[1])
-    COPH=(h[2]-h[3])/(h[2]-h[1])
-
-    hsatL=PropsSI('H','T',Te,'Q',0,Ref)
-    hsatV=PropsSI('H','T',Te,'Q',1,Ref)
-    ssatL=PropsSI('S','T',Te,'Q',0,Ref)
-    ssatV=PropsSI('S','T',Te,'Q',1,Ref)
-    vsatL=1/PropsSI('D','T',Te,'Q',0,Ref)
-    vsatV=1/PropsSI('D','T',Te,'Q',1,Ref)
-    x=(h[4]-hsatL)/(hsatV-hsatL)
-    s[4]=x*ssatV+(1-x)*ssatL
-    T[4]=x*Te+(1-x)*Te
-
-    print(COP,COPH)
-    if skipPlot==False:
-        if axis==None:
-            ax=matplotlib.pyplot.gca()
-        if Ts_Ph in ['ph','Ph']:
-            ax.plot(h,p)
-        elif Ts_Ph in ['Ts','ts']:
-            s=list(s)
-            T=list(T)
-            s.insert(5,sdew_e)
-            T.insert(5,Te)
-            s.insert(3,sbubble_c)
-            T.insert(3,Tc)
-            s.insert(3,sdew_c)
-            T.insert(3,Tc)
-            ax.plot(s[1::],T[1::],'b')
-        else:
-            raise TypeError('Type of Ts_Ph invalid')
+    from CoolProp.Plots import SimpleCompressionCycle
+    cycle = SimpleCompressionCycle(fluid_ref=Ref, graph_type=Ts_Ph)
+    cycle.simple_solve_dt(Te, Tc, DTsh, DTsc, eta_a, SI=True)
+    print(cycle.COP_cooling(),cycle.COP_heating())
+    
 
 
 def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=False,skipPlot=False,axis=None,**kwargs):
