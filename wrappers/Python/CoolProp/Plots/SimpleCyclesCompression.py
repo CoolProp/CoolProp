@@ -215,7 +215,6 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         T2 = Tc - dT_sc
         
         self.simple_solve(T0, p0, T2, p2, eta_com, fluid=None, SI=True)
-        
  
     def COP_heating(self):
         """COP for a heating process

@@ -82,3 +82,34 @@ graphs a little simpler, for example:
     ts_plot.ylabel(r'$T$ [K]')
     ts_plot.grid()
     ts_plot.show()
+    
+
+Mixture Syntax
+==============
+
+You can also specify mixtures straight away and pass the mole fractions as part of the 
+fluid string. 
+    
+.. plot::
+    :include-source:   
+
+    from CoolProp.Plots import PropertyPlot
+    plot = PropertyPlot("REFPROP::ISOBUTAN[0.8]&PROPANE[0.2]", 'PH', unit_system='EUR', tp_limits='ACHP')
+    plot.calc_isolines()
+    plot.show()
+    
+If you would like to specify the mass fractions instead, you have to construct the state
+object separately and pass it to the plot object instead of a string.
+    
+.. plot::
+    :include-source:   
+
+    import CoolProp
+    state = CoolProp.AbstractState("REFPROP", "R600a&R290")
+    state.set_mass_fractions([0.8,0.2])
+    from CoolProp.Plots import PropertyPlot
+    plot = PropertyPlot(state, 'PH', unit_system='EUR', tp_limits='ACHP')
+    plot.calc_isolines()
+    plot.show()
+
+

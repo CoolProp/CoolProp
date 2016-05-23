@@ -39,12 +39,13 @@ def is_string(in_obj):
     #except:
     #    return False
 
-def process_fluid_state(fluid_ref):
+def process_fluid_state(fluid_ref, fractions='mole'):
     """Check input for state object or fluid string
     
     Parameters
     ----------
         fluid_ref : str, CoolProp.AbstractState
+        fractions : str, switch to set mass, volu or mole fractions
     
     Returns
     -------
@@ -54,19 +55,11 @@ def process_fluid_state(fluid_ref):
     if is_string(fluid_ref):
         backend, fluids   = extract_backend(fluid_ref)
         fluids, fractions = extract_fractions(fluids)
-        #if backend==u'?': backend = u'HEOS'
-#         # TODO: Fix the backend extraction etc
-#         fluid_def = fluid_ref.split('::')
-#         if len(fluid_def)==2:
-#             backend = fluid_def[0]
-#             fluid = fluid_def[1]
-#         elif len(fluid_def)==1:
-#             backend = "HEOS"
-#             fluid = fluid_def[0]
-#         else: 
-#             raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
         state = AbstractState(backend, '&'.join(fluids))
-        #state.set_mass_fractions(fractions)
+        if len(fluids) > 1 and len(fluids) == len(fractions):
+            if fractions=='mass': state.set_mass_fractions(fractions)
+            elif fractions=='volu': state.set_volu_fractions(fractions)
+            else: state.set_mole_fractions(fractions)
         return state 
     elif isinstance(fluid_ref, AbstractState):
         return fluid_ref
@@ -561,7 +554,7 @@ class IsoLine(Base2DObject):
         
         if min([np.sum(validx)/countx,np.sum(validy)/county]) < self.VALID_REQ: 
             warnings.warn(
-              "Poor data quality, there are not enough valid entries for x ({0:f}/{1:f}) or y ({2:f}/{3:f}).".format(validx,countx,validy,county),
+              "Poor data quality, there are not enough valid entries for x ({0:f}/{1:f}) or y ({2:f}/{3:f}).".format(np.sum(validx),countx,np.sum(validy),county),
               UserWarning)
         # TODO: use filter and cubic splines!
         #filter = np.logical_and(np.isfinite(self.x),np.isfinite(self.y))

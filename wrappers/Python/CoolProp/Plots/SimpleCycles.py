@@ -30,8 +30,7 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',**kwargs):
     * axis : An axis to use instead of the active axis
     * skipPlot : If True, won't actually plot anything, just print COP
 
-    """
-    
+    """    
     warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
     
     for i in kwargs:
