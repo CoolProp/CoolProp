@@ -117,6 +117,28 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     // Also store the mole fractions as doubles
     this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
 };
+void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
+{
+    if (mass_fractions.size() != N)
+    {
+        throw ValueError(format("size of mass fraction vector [%d] does not equal that of component vector [%d]",mass_fractions.size(), N));
+    }    
+    std::vector<CoolPropDbl> moles;
+	CoolPropDbl sum_moles = 0.0;
+	CoolPropDbl tmp = 0.0;
+    for (unsigned int i = 0; i < components.size(); ++i)
+    {
+        tmp = mass_fractions[i]/components[i].molar_mass();
+        moles.push_back(tmp);
+		sum_moles += tmp;
+    }
+	std::vector<CoolPropDbl> mole_fractions;
+	for(std::vector< CoolPropDbl >::iterator it = moles.begin(); it != moles.end(); ++it) 
+    {
+		mole_fractions.push_back(*it/sum_moles);
+	}
+	this->set_mole_fractions(mole_fractions);
+};
 void HelmholtzEOSMixtureBackend::resize(std::size_t N)
 {
     this->mole_fractions.resize(N);

@@ -223,7 +223,7 @@ public:
      * 
      * @param mass_fractions The vector of mass fractions of the components
      */
-    void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw std::exception();};
+    void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions);
 
 	void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p);
 
