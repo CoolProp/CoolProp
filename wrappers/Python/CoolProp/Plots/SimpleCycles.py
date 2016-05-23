@@ -519,8 +519,8 @@ class StateContainer(object):
     >>> cycle_states[1,"T"] = 300.064
     >>> print(cycle_states)
     Stored State Points:
-    state        T (K)       p (Pa)    ρ (kg/m³)     h (J/kg)   s (J/kg/K)
-        0      300.000   200000.000      996.601   112745.749      393.035
+    state        T (K)       p (Pa)    d (kg/m3)     h (J/kg)   s (J/kg/K)
+        0      300.000   200000.000            -   112745.749      393.035
         1      300.064            -            -            -            -
     
     """

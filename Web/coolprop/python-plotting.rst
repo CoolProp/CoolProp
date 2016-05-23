@@ -3,6 +3,20 @@
 Python Plotting
 ===============
 
+The simplest and most straight forward use case is the generation of plots 
+with default isolines and spacing. Here is a brief example to demonstrate 
+how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane 
+(R-290) with automatic isoline spacing:
+
+.. plot::
+    :include-source:
+
+    import CoolProp
+    from CoolProp.Plots import PropertyPlot
+    plot = PropertyPlot('R290', 'ph')
+    plot.calc_isolines()
+    plot.show()
+
 The following example can be used to create a temperature-entropy (:math:`T,s`) plot for
 propane (R290) with isolines for the vapour quality in steps of 0.2:
 
@@ -11,7 +25,7 @@ propane (R290) with isolines for the vapour quality in steps of 0.2:
 
     import CoolProp
     from CoolProp.Plots import PropertyPlot
-    ts_plot = PropertyPlot('R290','Ts')
+    ts_plot = PropertyPlot('R290', 'Ts', tp_limits='ORC')
     ts_plot.calc_isolines(CoolProp.iQ, num=6)
     ts_plot.show()
 
