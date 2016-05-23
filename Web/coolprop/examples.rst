@@ -59,3 +59,4 @@ Plotting
     :maxdepth: 1
 
     python-plotting.rst
+    python-cycles.rst
