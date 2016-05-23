@@ -574,23 +574,32 @@ class StateContainer(object):
     def __getitem__(self, index):
         """Another tweak that changes the default access path"""
         if self._list_like(index):
-            if len(index)==0: raise IndexError("Received empty index.")
-            elif len(index)==1: return self._points[index[0]]
-            elif len(index)==2: return self._points[index[0]][index[1]]
-            else: raise IndexError("Received too long index.")
+            len_var = len(index)
+            if len_var==0: 
+                raise IndexError("Received empty index.")
+            elif len_var==1: 
+                return self._points[index[0]]
+            elif len_var==2: 
+                return self._points[index[0]][index[1]]
+            else: 
+                raise IndexError("Received too long index.")
         return self._points[index]
     
     def __setitem__(self, index, value):
         """Another tweak that changes the default access path"""
         if self._list_like(index):
-            if len(index)==0: raise IndexError("Received empty index.")
-            elif len(index)==1: self._points[index[0]]           = value
-            elif len(index)==2:
+            len_var = len(index)
+            if len_var==0: 
+                raise IndexError("Received empty index.")
+            elif len_var==1: 
+                self._points[index[0]]           = value
+            elif len_var==2:
                 # safeguard against empty entries
                 if index[0] not in self._points:
                     self._points[index[0]] = StatePoint() 
                 self._points[index[0]][index[1]] = value
-            else: raise IndexError("Received too long index.")
+            else: 
+                raise IndexError("Received too long index.")
         else:
             self._points[index] = value 
         
@@ -706,7 +715,7 @@ class BaseCycle(BasePlot):
             self._system = value
         else:
             raise ValueError("Invalid unit_system input \"{0:s}\", expected a string from {1:s}".format(str(value),str(self.UNIT_SYSTEMS.keys())))
-        self._cycle_states._units = self._system
+        self._cycle_states.units = self._system
     
     
     def valid_states(self):

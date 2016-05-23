@@ -265,7 +265,7 @@ class PropertyPlot(BasePlot):
          
                 
                 
-    def draw_process(self, statecontainer, points=None, line_opts={'color' : 'r', 'lw' : 1.5}):
+    def draw_process(self, statecontainer, points=None, line_opts=None):
         """ Draw process or cycle from x and y values in axis units
 
         Parameters
@@ -305,7 +305,9 @@ class PropertyPlot(BasePlot):
         """
         warnings.warn("You called the function \"draw_process\", which is not tested.",UserWarning)
         
-        
+        # Default values
+        line_opts = line_opts or {'color' : 'r', 'lw' : 1.5}
+
         dimx = self.system[self.x_index]
         dimy = self.system[self.y_index]
         

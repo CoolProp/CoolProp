@@ -649,11 +649,14 @@ class BasePlot(Base2DObject):
         return self._limits
     @limits.setter
     def limits(self, value): 
-        try: value = value.upper()
-        except: pass
-        if value in self.TP_LIMITS: self._limits = self.TP_LIMITS[value]
-        elif len(value)==4: self._limits = value
-        else: raise ValueError("Invalid input, expected a list with 4 items or a string from {0:s}".format(str(self.TP_LIMITS.keys())))
+        if is_string(value):
+            value = value.upper()
+        if value in self.TP_LIMITS: 
+            self._limits = self.TP_LIMITS[value]
+        elif len(value)==4: 
+            self._limits = value
+        else: 
+            raise ValueError("Invalid input, expected a list with 4 items or a string from {0:s}".format(str(self.TP_LIMITS.keys())))
         
     @property
     def figure(self): return self._figure
@@ -749,7 +752,7 @@ consider replacing it with \"_get_sat_bounds\".",
         g_map = {'on': True, 'off': False}
         if b is not None:
             b = g_map[b.lower()]
-        if len(kwargs) == 0:
+        if not kwargs: #len=0
             self.axis.grid(b)
         else:
             self.axis.grid(kwargs)
@@ -924,8 +927,8 @@ consider replacing it with \"_get_sat_bounds\".",
         #h = 0.00001*x
         #dy_dx = (f(x+h)-f(x-h))/(2*h)
         #return x,y,dy_dx
-        if len(xv)==len(yv)>1: # assure same length
-            if len(xv)==len(yv)==2: # only two points
+        if len(xv) == len(yv) and len(yv) > 1: # assure same length
+            if len(xv) == len(yv) and len(yv) == 2: # only two points
                 if np.min(xv)<x<np.max(xv):
                     dx    = xv[1] - xv[0]
                     dy    = yv[1] - yv[0]
@@ -1039,8 +1042,8 @@ if __name__ == "__main__":
     
     #bp = BasePlot(fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
     bp = BasePlot('n-Pentane', 'PH', unit_system='EUR')
-    print(bp._get_sat_bounds('P'))
-    print(bp._get_iso_label(iso))
+    #print(bp._get_sat_bounds('P'))
+    #print(bp._get_iso_label(iso))
     print(bp.get_axis_limits())
     
         
