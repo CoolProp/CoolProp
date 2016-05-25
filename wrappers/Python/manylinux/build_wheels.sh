@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SETUP_PY_ARGS="$1"
+
 # Stop on errors
 set -ex 
 
@@ -18,7 +20,7 @@ cd ${DIR}/..
 for PYBIN in /py*; do
     source ${PYBIN}/bin/activate
     c++ --version
-    python setup.py bdist_wheel cmake=default,64
+    python setup.py bdist_wheel ${SETUP_PY_ARGS}
     deactivate
 done
 
