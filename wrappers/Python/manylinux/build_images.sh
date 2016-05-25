@@ -21,7 +21,14 @@ set -ex
 
 # Only start docker-machine if needed
 # https://gist.github.com/ladyrassilon/31fa6877a9c24ae4e8f0
-docker_running=$(docker-machine ls | grep default)
+if hash docker-machine 2>/dev/null
+then
+  docker_running=$(docker-machine ls | grep default)
+else
+  echo "No docker-machine available."
+  docker_running=""
+fi
+
 if [[ "$docker_running" == *"Stopped"* ]] 
 then
   docker-machine start default
