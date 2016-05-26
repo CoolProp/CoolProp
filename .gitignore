@@ -47,3 +47,4 @@
 /build.sh
 /bld.bat
 /conda/
+/include/cubic_fluids_schema_JSON.h
