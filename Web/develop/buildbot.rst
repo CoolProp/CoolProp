@@ -37,7 +37,22 @@ To ensure that the buildbot server stays online, you can make a script with the 
 
     buildbot start /path/to/master_folder
 
-and add it to a cron job
+and add it to a cron job.
+
+
+The work with the ``master.cfg`` has proven to be a little more complicated. Storing changes in the repository 
+and pulling them to the repository on the server is a little too cumbersome, especially when many iterations 
+are needed to fix issues with the configurations. We already discussed this a couple of `times <https://github.com/CoolProp/CoolProp/issues/1052>`, 
+but here the latest version of the preferred work flow for editing the ``master.cfg`` file: 
+
+1. SSH to server and play with configuration file.
+2. Run `./scripts/buildbot.sh reconfig` on server to activate changes, **ignore** git warnings.
+3. Repeat 1. and 2. until you are happy with you configuration 
+4. Copy the server file to your local repository.
+5. Commit and push local repository.
+6. Run `pushd buildbot/CoolProp.git/ && git reset --hard origin/master && popd` on server.
+7. Run `./scripts/buildbot.sh reconfig` on server, make sure there are **no** warnings from git.
+
 
 
 Slaves
