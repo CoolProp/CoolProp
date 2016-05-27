@@ -3,11 +3,11 @@
 BITNESS="$1"
 if [[ "$BITNESS" == "64" ]] 
 then
-  DOCKER_MACHINE_NAME="coolprop/manylinux"
+  DOCKER_IMG_NAME="coolprop/manylinux"
   SETUP_PY_ARGS="cmake=default,64"
 elif [[ "$BITNESS" == "32" ]] 
 then
-  DOCKER_MACHINE_NAME="coolprop/manylinux32"
+  DOCKER_IMG_NAME="coolprop/manylinux32"
   SETUP_PY_ARGS="cmake=default,32"
 else
   echo "Received an unknown argument, aborting."
@@ -54,7 +54,7 @@ CUR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 pushd ${CUR_DIR}/../../..
 
 # Run the build script
-docker run --rm -v `pwd`:/io ${DOCKER_MACHINE_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
+docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
 
 popd 
 
