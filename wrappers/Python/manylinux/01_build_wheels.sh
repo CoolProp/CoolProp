@@ -8,15 +8,16 @@ set -ex
 # Get the directory containing this script
 # see http://stackoverflow.com/a/246128/1360263
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-# Into the pypi directory
-cd ${DIR}/../pypi
 
 # # Build the .tar.gz with the sources
+# pushd ${DIR}/../pypi
 # source /py27/bin/activate
 # python prepare_pypi.py --dist-dir=`pwd`/../dist
 # deactivate
+# popd 
 
-cd ${DIR}/..
+pushd ${DIR}/..
+
 for PYBIN in /py*; do
     source ${PYBIN}/bin/activate
     c++ --version
@@ -29,3 +30,7 @@ for whl in dist/*.whl; do
     # auditwheel comes in base image
     auditwheel repair $whl -w ../../install_root/Python
 done
+
+popd 
+
+exit 0
