@@ -54,6 +54,7 @@ CUR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 pushd ${CUR_DIR}/../../..
 
 # Run the build script
+chmod +x ${CUR_DIR}/01_build_wheels.sh
 docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
 
 popd 
