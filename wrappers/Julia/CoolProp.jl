@@ -1,7 +1,7 @@
 VERSION < v"0.4.0" && __precompile__()
 module CoolProp
 
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output
+export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output, AbstractState_set_binary_interaction_double
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
@@ -225,6 +225,20 @@ function AbstractState_keyed_output(handle::Clong, param::Clong)
     error("CoolProp: no correct state has been set with AbstractState_update")
   end
   return output
+end
+
+function AbstractState_set_binary_interaction_double(handle::Clong,i::Int, j::Int, parameter::AbstractString, value::Cdouble)
+  ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong,Csize_t,Csize_t,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,j,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
+  return nothing
 end
 
 end #module
