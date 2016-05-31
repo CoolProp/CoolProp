@@ -349,6 +349,8 @@
     * @param message_buffer A buffer for the error code
     * @param buffer_length The length of the buffer for the error code
     * @return
+	*
+	* @note If there is an error in an update call for one of the inputs, no change in the output array will be made
 	*/
     EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long *outputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length);
 
@@ -363,8 +365,6 @@
 	* @param message_buffer A buffer for the error code
 	* @param buffer_length The length of the buffer for the error code
 	* @return
-	*
-	* @note If there is an error in an update call for one of the inputs, no change in the output array will be made
 	*/
 	EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const size_t i, const size_t j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
