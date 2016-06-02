@@ -251,7 +251,7 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
 {
     try{
         int key = CoolProp::get_parameter_index(param);
-        std::string s = CoolProp::get_parameter_information(key, "long");
+        std::string s = CoolProp::get_parameter_information(key, Output);
         return str2buf(s, Output, n) ? 1 : 0;
     }
     catch(...){
