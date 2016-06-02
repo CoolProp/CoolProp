@@ -1,17 +1,35 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, division, absolute_import
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-import CoolProp.CoolProp as CP
 from abc import ABCMeta
-from CoolProp import AbstractState
-from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
-import CoolProp
-import warnings
 from six import with_metaclass
+import warnings
+
+import CoolProp
+from CoolProp import AbstractState
+from CoolProp import CoolProp as CP
+from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
+
+
+def interpolate_values_1d(x,y,x_points=None,kind='linear'):
+    try: 
+        from scipy.interpolate.interpolate import interp1d
+        if x_points is None:
+            return interp1d(x, y, kind=kind)(x[np.isfinite(x)])
+        else:
+            return interp1d(x, y, kind=kind)(x_points)
+    except ImportError:
+        if kind != 'linear':
+            warnings.warn(
+              "You requested a non-linear interpolation, but SciPy is not available. Falling back to linear interpolation.",
+              UserWarning)
+        if x_points is None:
+            return np.interp((x[np.isfinite(x)]), x, y)
+        else:
+            return np.interp(x_points, x, y)
+
 
 def is_string(in_obj):
     try:
@@ -21,12 +39,13 @@ def is_string(in_obj):
     #except:
     #    return False
 
-def process_fluid_state(fluid_ref):
+def process_fluid_state(fluid_ref, fractions='mole'):
     """Check input for state object or fluid string
     
     Parameters
     ----------
         fluid_ref : str, CoolProp.AbstractState
+        fractions : str, switch to set mass, volu or mole fractions
     
     Returns
     -------
@@ -36,19 +55,11 @@ def process_fluid_state(fluid_ref):
     if is_string(fluid_ref):
         backend, fluids   = extract_backend(fluid_ref)
         fluids, fractions = extract_fractions(fluids)
-        #if backend==u'?': backend = u'HEOS'
-#         # TODO: Fix the backend extraction etc
-#         fluid_def = fluid_ref.split('::')
-#         if len(fluid_def)==2:
-#             backend = fluid_def[0]
-#             fluid = fluid_def[1]
-#         elif len(fluid_def)==1:
-#             backend = "HEOS"
-#             fluid = fluid_def[0]
-#         else: 
-#             raise ValueError("This is not a valid fluid_ref string: {0:s}".format(str(fluid_ref)))
         state = AbstractState(backend, '&'.join(fluids))
-        #state.set_mass_fractions(fractions)
+        if len(fluids) > 1 and len(fluids) == len(fractions):
+            if fractions=='mass': state.set_mass_fractions(fractions)
+            elif fractions=='volu': state.set_volu_fractions(fractions)
+            else: state.set_mole_fractions(fractions)
         return state 
     elif isinstance(fluid_ref, AbstractState):
         return fluid_ref
@@ -203,7 +214,7 @@ class PropertyDict(with_metaclass(ABCMeta),object):
 
 class SIunits(PropertyDict):
     def __init__(self):
-        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=u'ρ', unit=u'kg/m³')
+        self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=u'd', unit=u'kg/m3')
         self._H = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Enthalpy',        symbol=u'h', unit=u'J/kg')
         self._P = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Pressure',                 symbol=u'p', unit=u'Pa')
         self._S = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Entropy',         symbol=u's', unit=u'J/kg/K')
@@ -229,7 +240,7 @@ class EURunits(KSIunits):
         self.P.mul_SI=1e-5
         self.P.unit=u'bar'
         self.T.add_SI=-273.15
-        self.T.unit=u'°C'
+        self.T.unit=u'deg C'
 
 
 class Base2DObject(with_metaclass(ABCMeta),object):
@@ -531,32 +542,28 @@ class IsoLine(Base2DObject):
         validx = None; validy = None
         countx = None; county = None  
         if self.x is not None:
-            validx = np.sum(np.isfinite(self.x))
+            validx = np.isfinite(self.x)
             countx = float(self.x.size)
         else: 
             raise ValueError("The x-axis is not populated, calculate values before you interpolate.")
         if self.y is not None:
-            validy = np.sum(np.isfinite(self.y))
+            validy = np.isfinite(self.y)
             county = float(self.y.size)
         else: 
             raise ValueError("The y-axis is not populated, calculate values before you interpolate.")
         
-        if min([validx/countx,validy/county]) < self.VALID_REQ: 
+        if min([np.sum(validx)/countx,np.sum(validy)/county]) < self.VALID_REQ: 
             warnings.warn(
-              "Poor data quality, there are not enough valid entries for x ({0:f}/{1:f}) or y ({2:f}/{3:f}).".format(validx,countx,validy,county),
+              "Poor data quality, there are not enough valid entries for x ({0:f}/{1:f}) or y ({2:f}/{3:f}).".format(np.sum(validx),countx,np.sum(validy),county),
               UserWarning)
         # TODO: use filter and cubic splines!
         #filter = np.logical_and(np.isfinite(self.x),np.isfinite(self.y))
-        if validy > validx:
-            y = self.y[np.isfinite(self.y)]
-            self.x = np.interp(y, self.y, self.x)
-            self.y = y
+        if np.sum(validy) > np.sum(validx):
+            self.x = interpolate_values_1d(self.y, self.x, x_points=self.y[validy])
+            self.y = self.y[validy]
         else:
-            x = self.x[np.isfinite(self.x)] 
-            self.y = np.interp(x, self.x, self.y)
-            self.x = x
-            
-            
+            self.y = interpolate_values_1d(self.x, self.y, x_points=self.x[validx])
+            self.x = self.x[validx]
 
 
 class BasePlot(Base2DObject):
@@ -608,18 +615,18 @@ class BasePlot(Base2DObject):
         if graph_type not in Base2DObject.PLOTS:
             raise ValueError("Invalid graph_type input, expected a string from {0:s}".format(str(self.PLOTS)))
         
-        # call the base class
-        state = process_fluid_state(fluid_ref)
-        Base2DObject.__init__(self, graph_type[1], graph_type[0], state, **kwargs)
-        
         # Process the unit_system and set self._system
         self.system = unit_system
         # Process the plotting range based on T and p
         self.limits = tp_limits
         # Other properties 
-        self.figure = kwargs.get('figure',plt.figure(tight_layout=True))
-        self.axis   = kwargs.get('axis', self.figure.add_subplot(111))
-        self.props  = kwargs.get('props', None)
+        self.figure = kwargs.pop('figure',plt.figure(tight_layout=True))
+        self.axis   = kwargs.pop('axis', self.figure.add_subplot(111))
+        self.props  = kwargs.pop('props', None)
+        
+        # call the base class
+        state = process_fluid_state(fluid_ref)
+        Base2DObject.__init__(self, graph_type[1], graph_type[0], state, **kwargs)
         
     @property
     def system(self): return self._system
@@ -635,11 +642,14 @@ class BasePlot(Base2DObject):
         return self._limits
     @limits.setter
     def limits(self, value): 
-        try: value = value.upper()
-        except: pass
-        if value in self.TP_LIMITS: self._limits = self.TP_LIMITS[value]
-        elif len(value)==4: self._limits = value
-        else: raise ValueError("Invalid input, expected a list with 4 items or a string from {0:s}".format(str(self.TP_LIMITS.keys())))
+        if is_string(value):
+            value = value.upper()
+        if value in self.TP_LIMITS: 
+            self._limits = self.TP_LIMITS[value]
+        elif len(value)==4: 
+            self._limits = value
+        else: 
+            raise ValueError("Invalid input, expected a list with 4 items or a string from {0:s}".format(str(self.TP_LIMITS.keys())))
         
     @property
     def figure(self): return self._figure
@@ -735,7 +745,7 @@ consider replacing it with \"_get_sat_bounds\".",
         g_map = {'on': True, 'off': False}
         if b is not None:
             b = g_map[b.lower()]
-        if len(kwargs) == 0:
+        if not kwargs: #len=0
             self.axis.grid(b)
         else:
             self.axis.grid(kwargs)
@@ -910,8 +920,8 @@ consider replacing it with \"_get_sat_bounds\".",
         #h = 0.00001*x
         #dy_dx = (f(x+h)-f(x-h))/(2*h)
         #return x,y,dy_dx
-        if len(xv)==len(yv)>1: # assure same length
-            if len(xv)==len(yv)==2: # only two points
+        if len(xv) == len(yv) and len(yv) > 1: # assure same length
+            if len(xv) == len(yv) and len(yv) == 2: # only two points
                 if np.min(xv)<x<np.max(xv):
                     dx    = xv[1] - xv[0]
                     dy    = yv[1] - yv[0]
@@ -962,7 +972,7 @@ consider replacing it with \"_get_sat_bounds\".",
             _xv = xv[::-1]
             _yv = yv[::-1]
             #Find x by interpolation
-            x = np.interp(y, yv, xv)
+            x = interpolate_values_1d(yv, xv, x_points=y)
             trash=0
             (xv,yv)=self._to_pixel_coords(xv,yv)
             (x,trash)=self._to_pixel_coords(x,trash)
@@ -1025,8 +1035,8 @@ if __name__ == "__main__":
     
     #bp = BasePlot(fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
     bp = BasePlot('n-Pentane', 'PH', unit_system='EUR')
-    print(bp._get_sat_bounds('P'))
-    print(bp._get_iso_label(iso))
+    #print(bp._get_sat_bounds('P'))
+    #print(bp._get_iso_label(iso))
     print(bp.get_axis_limits())
     
         

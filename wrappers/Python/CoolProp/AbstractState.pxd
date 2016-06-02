@@ -55,6 +55,7 @@ cdef class AbstractState:
     cpdef apply_simple_mixing_rule(self, size_t, size_t, string)
     
     cpdef name(self)
+    cpdef fluid_names(self)
     cpdef fluid_param_string(self, string key)
     cpdef change_EOS(self, size_t, string)
     
@@ -105,6 +106,8 @@ cdef class AbstractState:
     cpdef double cpmass(self) except *
     cpdef double cp0mass(self) except *
     cpdef double cvmass(self) except *
+    cpdef double gibbsmass(self) except *
+    cpdef double gibbsmolar(self) except *
     cpdef double speed_sound(self) except *
     cpdef double gas_constant(self) except *
     cpdef double tau(self) except *
@@ -123,6 +126,7 @@ cdef class AbstractState:
     cpdef double isobaric_expansion_coefficient(self) except *
     cpdef double fugacity(self, size_t) except *
     cpdef double fugacity_coefficient(self, size_t) except *
+    cpdef double chemical_potential(self, size_t) except *
     
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*

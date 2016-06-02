@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function, division, absolute_import
 
-from __future__ import print_function, division
-from six import with_metaclass
 
-import matplotlib,numpy
-
+import matplotlib, warnings 
 import numpy as np
+
 
 import CoolProp
 from CoolProp.CoolProp import PropsSI
-from .Common import BasePlot, process_fluid_state, PropertyDict, SIunits
-import warnings
-from abc import ABCMeta
+from CoolProp.Plots.Common import BasePlot, PropertyDict, SIunits
 
 
-def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
+def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',**kwargs):
     """
     This function plots a simple four-component cycle, on the current axis, or that given by the optional parameter *axis*
 
@@ -33,69 +30,18 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',skipPlot=False,axis=None):
     * axis : An axis to use instead of the active axis
     * skipPlot : If True, won't actually plot anything, just print COP
 
-    """
-    
+    """    
     warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
-    from scipy.optimize import newton
     
-    T=numpy.zeros((6))
-    h=numpy.zeros_like(T)
-    p=numpy.zeros_like(T)
-    s=numpy.zeros_like(T)
-    T[1]=Te+DTsh
-    pe=PropsSI('P','T',Te,'Q',1.0,Ref)
-    pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
-    h[1]=PropsSI('H','T',T[1],'P',pe,Ref)
-    s[1]=PropsSI('S','T',T[1],'P',pe,Ref)
-    T2s=newton(lambda T: PropsSI('S','T',T,'P',pc,Ref)-s[1],T[1]+30)
-    h2s=PropsSI('H','T',T2s,'P',pc,Ref)
-    h[2]=(h2s-h[1])/eta_a+h[1]
-    T[2]=PropsSI('T','H',h[2],'P',pc,Ref)
-    s[2]=PropsSI('S','T',T[2],'P',pc,Ref)
+    for i in kwargs:
+        warnings.warn("This function has been deprecated, your input \"{0}: {1}\" will be ignored".format(i,kwargs[i]),DeprecationWarning)
 
-    sbubble_c=PropsSI('S','P',pc,'Q',0,Ref)
-    sdew_c=PropsSI('S','P',pc,'Q',1,Ref)
-    sbubble_e=PropsSI('S','P',pe,'Q',0,Ref)
-    sdew_e=PropsSI('S','P',pe,'Q',1,Ref)
-    T[3]=Tc-DTsc
-    h[3]=PropsSI('H','T',T[3],'P',pc,Ref)
-    s[3]=PropsSI('S','T',T[3],'P',pc,Ref)
-    h[4]=h[3]
-    h[5]=h[1]
-    s[5]=s[1]
-    T[5]=T[1]
-    p=[numpy.nan,pe,pc,pc,pe,pe]
-    COP=(h[1]-h[4])/(h[2]-h[1])
-    COPH=(h[2]-h[3])/(h[2]-h[1])
+    from CoolProp.Plots import SimpleCompressionCycle
+    cycle = SimpleCompressionCycle(fluid_ref=Ref, graph_type=Ts_Ph)
+    cycle.simple_solve_dt(Te, Tc, DTsh, DTsc, eta_a, SI=True)
+    print(cycle.COP_cooling(),cycle.COP_heating())
+    
 
-    hsatL=PropsSI('H','T',Te,'Q',0,Ref)
-    hsatV=PropsSI('H','T',Te,'Q',1,Ref)
-    ssatL=PropsSI('S','T',Te,'Q',0,Ref)
-    ssatV=PropsSI('S','T',Te,'Q',1,Ref)
-    vsatL=1/PropsSI('D','T',Te,'Q',0,Ref)
-    vsatV=1/PropsSI('D','T',Te,'Q',1,Ref)
-    x=(h[4]-hsatL)/(hsatV-hsatL)
-    s[4]=x*ssatV+(1-x)*ssatL
-    T[4]=x*Te+(1-x)*Te
-
-    print(COP,COPH)
-    if skipPlot==False:
-        if axis==None:
-            ax=matplotlib.pyplot.gca()
-        if Ts_Ph in ['ph','Ph']:
-            ax.plot(h,p)
-        elif Ts_Ph in ['Ts','ts']:
-            s=list(s)
-            T=list(T)
-            s.insert(5,sdew_e)
-            T.insert(5,Te)
-            s.insert(3,sbubble_c)
-            T.insert(3,Tc)
-            s.insert(3,sdew_c)
-            T.insert(3,Tc)
-            ax.plot(s[1::],T[1::],'b')
-        else:
-            raise TypeError('Type of Ts_Ph invalid')
 
 def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=False,skipPlot=False,axis=None,**kwargs):
     """
@@ -125,13 +71,13 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
     
     warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
 
-    T=numpy.zeros((8))
-    h=numpy.zeros_like(T)
-    p=numpy.zeros_like(T)
-    s=numpy.zeros_like(T)
-    rho=numpy.zeros_like(T)
-    T[0]=numpy.NAN
-    s[0]=numpy.NAN
+    T=np.zeros((8))
+    h=np.zeros_like(T)
+    p=np.zeros_like(T)
+    s=np.zeros_like(T)
+    rho=np.zeros_like(T)
+    T[0]=np.NAN
+    s[0]=np.NAN
     T[1]=Te+DTsh
     pe=PropsSI('P','T',Te,'Q',1.0,Ref)
     pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
@@ -188,7 +134,7 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
     h[7]=h[1]
     s[7]=s[1]
     T[7]=T[1]
-    p=[numpy.nan,pe,pic,pic,pc,pc,pe,pe]
+    p=[np.nan,pe,pic,pic,pc,pc,pe,pe]
     COP=Q/(Wdot1+Wdot2)
     RE=h[1]-h[6]
 
@@ -238,6 +184,7 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
             raise TypeError('Type of Ts_Ph invalid')
     return COP
 
+
 def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=False,axis=None,**kwargs):
     """
     This function plots an economized cycle, on the current axis, or that given by the optional parameter *axis*
@@ -267,14 +214,14 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
     m=1
 
-    T=numpy.zeros((11))
-    h=numpy.zeros_like(T)
-    p=numpy.zeros_like(T)
-    s=numpy.zeros_like(T)
-    rho=numpy.zeros_like(T)
+    T=np.zeros((11))
+    h=np.zeros_like(T)
+    p=np.zeros_like(T)
+    s=np.zeros_like(T)
+    rho=np.zeros_like(T)
 
-    T[0]=numpy.NAN
-    s[0]=numpy.NAN
+    T[0]=np.NAN
+    s[0]=np.NAN
     T[1]=Te+DTsh
     pe=PropsSI('P','T',Te,'Q',1.0,Ref)
     pc=PropsSI('P','T',Tc,'Q',1.0,Ref)
@@ -375,7 +322,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
             ax.plot(h,p)
             ax.set_yscale('log')
         elif Ts_Ph in ['Ts','ts']:
-            ax.plot(numpy.r_[s[7],s[3]],numpy.r_[T[7],T[3]],'b')
+            ax.plot(np.r_[s[7],s[3]],np.r_[T[7],T[3]],'b')
             s_copy=s.copy()
             T_copy=T.copy()
             dT=[0,-5,5,-12,5,12,-12,0,0,0]
@@ -453,6 +400,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 #     def __le__(self, other):
 #         return not other<self
 
+
 class StatePoint(PropertyDict):
     """A simple fixed dimension dict represented by an object with attributes"""
     
@@ -509,7 +457,7 @@ class StateContainer(object):
     
     >>> from __future__ import print_function
     >>> import CoolProp
-    >>> from CoolProp.PLots.SimpleCycles import StateContainer
+    >>> from CoolProp.Plots.SimpleCycles import StateContainer
     >>> T0 = 300.000; p0 = 200000.000; h0 = 112745.749; s0 = 393.035
     >>> cycle_states = StateContainer()
     >>> cycle_states[0,'H'] = h0
@@ -519,8 +467,8 @@ class StateContainer(object):
     >>> cycle_states[1,"T"] = 300.064
     >>> print(cycle_states)
     Stored State Points:
-    state        T (K)       p (Pa)    ρ (kg/m³)     h (J/kg)   s (J/kg/K)
-        0      300.000   200000.000      996.601   112745.749      393.035
+    state        T (K)       p (Pa)    d (kg/m3)     h (J/kg)   s (J/kg/K)
+        0      300.000   200000.000            -   112745.749      393.035
         1      300.064            -            -            -            -
     
     """
@@ -574,23 +522,32 @@ class StateContainer(object):
     def __getitem__(self, index):
         """Another tweak that changes the default access path"""
         if self._list_like(index):
-            if len(index)==0: raise IndexError("Received empty index.")
-            elif len(index)==1: return self._points[index[0]]
-            elif len(index)==2: return self._points[index[0]][index[1]]
-            else: raise IndexError("Received too long index.")
+            len_var = len(index)
+            if len_var==0: 
+                raise IndexError("Received empty index.")
+            elif len_var==1: 
+                return self._points[index[0]]
+            elif len_var==2: 
+                return self._points[index[0]][index[1]]
+            else: 
+                raise IndexError("Received too long index.")
         return self._points[index]
     
     def __setitem__(self, index, value):
         """Another tweak that changes the default access path"""
         if self._list_like(index):
-            if len(index)==0: raise IndexError("Received empty index.")
-            elif len(index)==1: self._points[index[0]]           = value
-            elif len(index)==2:
+            len_var = len(index)
+            if len_var==0: 
+                raise IndexError("Received empty index.")
+            elif len_var==1: 
+                self._points[index[0]]           = value
+            elif len_var==2:
                 # safeguard against empty entries
                 if index[0] not in self._points:
                     self._points[index[0]] = StatePoint() 
                 self._points[index[0]][index[1]] = value
-            else: raise IndexError("Received too long index.")
+            else: 
+                raise IndexError("Received too long index.")
         else:
             self._points[index] = value 
         
@@ -706,7 +663,7 @@ class BaseCycle(BasePlot):
             self._system = value
         else:
             raise ValueError("Invalid unit_system input \"{0:s}\", expected a string from {1:s}".format(str(value),str(self.UNIT_SYSTEMS.keys())))
-        self._cycle_states._units = self._system
+        self._cycle_states.units = self._system
     
     
     def valid_states(self):
@@ -807,170 +764,3 @@ class BaseCycle(BasePlot):
         for i in range(1,self.STATECOUNT):
             sc.extend(self.get_state_change(i))
         return sc 
-                
-        
-class BasePowerCycle(BaseCycle):
-    """A thermodynamic cycle for power producing processes.
-    
-    Defines the basic properties and methods to unify access to 
-    power cycle-related quantities. 
-    """
-    
-    def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
-        """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details."""
-        BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
-    
-    def eta_carnot(self):
-        """Carnot efficiency
-         
-        Calculates the Carnot efficiency for the specified process, :math:`\eta_c = 1 - \frac{T_c}{T_h}`.
-         
-        Returns
-        -------
-        float
-        """
-        Tvector = self._cycle_states.T
-        return 1. - np.min(Tvector) / np.max(Tvector)
-    
-    def eta_thermal(self):
-        """Thermal efficiency
-         
-        The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
-         
-        Returns
-        -------
-        float
-        """
-        raise NotImplementedError("Implement it in the subclass.")
-
-
-class SimpleRankineCycle(BasePowerCycle):
-    """A simple Rankine cycle *without* regeneration"""
-    STATECOUNT=4
-    STATECHANGE=[
-      lambda inp: BaseCycle.state_change(inp,'S','P',0,ty1='log',ty2='log'), # Pumping process
-      lambda inp: BaseCycle.state_change(inp,'H','P',1,ty1='lin',ty2='lin'), # Heat addition
-      lambda inp: BaseCycle.state_change(inp,'H','P',2,ty1='log',ty2='log'), # Expansion
-      lambda inp: BaseCycle.state_change(inp,'H','P',3,ty1='lin',ty2='lin')  # Heat removal
-      ]
-    
-    def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
-        """see :class:`CoolProp.Plots.SimpleCycles.BasePowerCycle` for details."""
-        BasePowerCycle.__init__(self, fluid_ref, graph_type, **kwargs)
-    
-    def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None, SI=True):
-        """" 
-        A simple Rankine cycle calculation
-        
-        Parameters
-        ----------
-        T0 : float
-            The coldest point, before the pump
-        p0 : float
-            The lowest pressure, before the pump
-        T2 : float
-            The hottest point, before the expander
-        p2 : float
-            The highest pressure, before the expander
-        eta_exp : float
-            Isentropic expander efficiency 
-        eta_pum : float
-            Isentropic pump efficiency
-        
-        Examples
-        --------
-        >>> import CoolProp
-        >>> from CoolProp.Plots import PropertyPlot
-        >>> pp = PropertyPlot('HEOS::Water', 'TS', unit_system='EUR')
-        >>> cycle = SimpleRankineCycle('HEOS::Water', 'TS', unit_system='EUR')
-        >>> T0 = 300
-        >>> pp.state.update(CoolProp.QT_INPUTS,0.0,T0+15)
-        >>> p0 = pp.state.keyed_output(CoolProp.iP)
-        >>> T2 = 700
-        >>> pp.state.update(CoolProp.QT_INPUTS,1.0,T2-150)
-        >>> p2 = pp.state.keyed_output(CoolProp.iP)
-        >>> cycle.simple_solve(T0, p0, T2, p2, 0.7, 0.8, SI=True)
-        >>> cycle.steps = 50
-        >>> sc = cycle.get_state_changes()
-        >>> pp.draw_process(sc)
-        
-        """
-        if fluid is not None: self.state = process_fluid_state(fluid)
-        if self._state is None: 
-            raise ValueError("You have specify a fluid before you calculate.")
-        
-        cycle_states = StateContainer(unit_system=self._system)
-        
-        if not SI:
-            Tc = self._system[CoolProp.iT].to_SI
-            pc = self._system[CoolProp.iP].to_SI
-            T0 = Tc(T0)
-            p0 = pc(p0)
-            T2 = Tc(T2)
-            p2 = pc(p2)
-        
-        # Subcooled liquid
-        self.state.update(CoolProp.PT_INPUTS,p0,T0)
-        h0 = self.state.hmass()
-        s0 = self.state.smass()
-        # Just a showcase for the different accessor methods
-        cycle_states[0,'H'] = h0
-        cycle_states[0]['S'] = s0
-        cycle_states[0][CoolProp.iP] = p0
-        cycle_states[0,CoolProp.iT] = T0
-        
-        # Pressurised liquid
-        p1 = p2
-        self.state.update(CoolProp.PSmass_INPUTS,p1,s0)
-        h1 = h0 + (self.state.hmass() - h0) / eta_pum
-        self.state.update(CoolProp.HmassP_INPUTS,h1,p1)
-        s1 = self.state.smass()
-        T1 = self.state.T()
-        cycle_states[1,'H'] = h1
-        cycle_states[1,'S'] = s1
-        cycle_states[1,'P'] = p1
-        cycle_states[1,'T'] = T1
-        
-        # Evaporated vapour    
-        self.state.update(CoolProp.PT_INPUTS,p2,T2)
-        h2 = self.state.hmass()
-        s2 = self.state.smass()
-        cycle_states[2,'H'] = h2
-        cycle_states[2,'S'] = s2
-        cycle_states[2,'P'] = p2
-        cycle_states[2,'T'] = T2
-        
-        # Expanded gas
-        p3 = p0
-        self.state.update(CoolProp.PSmass_INPUTS,p3,s2)
-        h3 = h2 - eta_exp * (h2 - self.state.hmass())
-        self.state.update(CoolProp.HmassP_INPUTS,h3,p3)
-        s3 = self.state.smass()
-        T3 = self.state.T()
-        cycle_states[3,'H'] = h3
-        cycle_states[3,'S'] = s3
-        cycle_states[3,'P'] = p3
-        cycle_states[3,'T'] = T3
-    
-        w_net = h2 - h3
-        q_boiler = h2 - h1
-        eta_th = w_net / q_boiler
-        
-        self.cycle_states = cycle_states
-        self.fill_states()
-        
-        
-    def eta_thermal(self):
-        """Thermal efficiency
-         
-        The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
-         
-        Returns
-        -------
-        float
-        """    
-        w_net = self.cycle_states[2].H - self.cycle_states[3].H - (self.cycle_states[1].H - self.cycle_states[0].H) 
-        q_boiler = self.cycle_states[2].H - self.cycle_states[1].H
-        return w_net / q_boiler
-        
-
