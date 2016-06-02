@@ -97,6 +97,12 @@ Once mono c# is installed, you can run the builder and tests using::
     cmake --build .
     # Run the integration tests (optional)
     ctest --extra-verbose
+
+If you want to change the package that CoolProp resides in, you can do so by changing the cmake call to read::
+
+    cmake .. -DCOOLPROP_CSHARP_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-namespace package.name"
+
+where ``package.name`` is replaced with the desired name    
     
 .. _csharp_example:
 
