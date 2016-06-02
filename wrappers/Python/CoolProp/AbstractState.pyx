@@ -262,7 +262,7 @@ cdef class AbstractState:
         return self.thisptr.molar_mass()
     cpdef double acentric_factor(self) except *: 
         """ Get the acentric factor - wrapper of c++ function :cpapi:`CoolProp::AbstractState::acentric_factor(void)` """
-        return self.thisptr.molar_mass()
+        return self.thisptr.acentric_factor()
     cpdef double gas_constant(self) except *: 
         """ Get the gas constant in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gas_constant(void)` """
         return self.thisptr.gas_constant()
