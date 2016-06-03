@@ -249,14 +249,21 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Ou
 }
 EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, char * Output, int n)
 {
+    int key;
     try{
-        int key = CoolProp::get_parameter_index(param);
+        key = CoolProp::get_parameter_index(param);
+    }
+    catch(...){
+        str2buf(format("Parameter is invalid: %s", param), Output, n);
+        return 0;
+    }
+    try{
         std::string s = CoolProp::get_parameter_information(key, Output);
         return str2buf(s, Output, n) ? 1 : 0;
     }
     catch(...){
-		str2buf(format("parameter is invalid: %s", param), Output, n);
-	}
+        str2buf(format("Output is invalid: %s", Output), Output, n);
+    }
     return 0;
 }
 EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char * Output, int n)
