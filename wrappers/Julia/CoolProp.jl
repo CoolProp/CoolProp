@@ -55,7 +55,12 @@ end
 
 # CoolProp::get_parameter_information_string
 function get_parameter_information_string(Key::AbstractString)
-message_buffer[1:4] = b"long" # "long" written in UInt8
+message_buffer[1:4] = b"long" # "long" in Byte Array Literals
+  val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Int), Key,message_buffer::Array{UInt8,1},buffer_length)
+  return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
+end
+function get_parameter_information_string(Key::AbstractString,OutType::AbstractString)
+message_buffer[1:length(OutType)] = OutType.data
   val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Int), Key,message_buffer::Array{UInt8,1},buffer_length)
   return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
