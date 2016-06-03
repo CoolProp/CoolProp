@@ -54,15 +54,13 @@ function get_global_param_string(Key::AbstractString)
 end
 
 # CoolProp::get_parameter_information_string
-function get_parameter_information_string(Key::AbstractString)
-message_buffer[1:5] = b"long\0" # "long" in Byte Array Literals
+function get_parameter_information_string(Key::AbstractString,OutType::AbstractString)
+  message_buffer[1:length(OutType)+1] = [OutType.data; 0x00]
   val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Int), Key,message_buffer::Array{UInt8,1},buffer_length)
   return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
-function get_parameter_information_string(Key::AbstractString,OutType::AbstractString)
-message_buffer[1:length(OutType)+1] = [OutType.data; 0x00]
-  val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Int), Key,message_buffer::Array{UInt8,1},buffer_length)
-  return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
+function get_parameter_information_string(Key::AbstractString)
+  return get_parameter_information_string(Key,"long")
 end
 
 # CoolProp::get_mixture_binary_pair_data
