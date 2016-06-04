@@ -23,7 +23,7 @@ void str2buf(const std::string& str, char * buf, int n)
   if (str.size() < static_cast<unsigned int>(n))
     strcpy(buf, str.c_str());
   else
-    throw ValueError("Buffer size is too small");
+    throw CoolProp::ValueError("Buffer size is too small");
 }
 
 // In Microsoft Excel, they seem to check the FPU exception bits and error out because of it.  
@@ -259,7 +259,7 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
         str2buf(s, Output, n);
         return 1;
     }
-    catch (CoolPropBaseError& e){
+    catch (CoolProp::CoolPropBaseError& e){
         // if param is wrong, CoolProp::get_parameter_index throws string like
         // "Your input name [%s] is not valid in get_parameter_index (names are case sensitive)"
         // CoolProp::get_parameter_information throws string like
