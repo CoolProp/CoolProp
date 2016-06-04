@@ -18,13 +18,12 @@
 
 #include <string.h>
 
-bool str2buf(const std::string& str, char * buf, int n)
+void str2buf(const std::string& str, char * buf, int n)
 {
-  if (str.size() < static_cast<unsigned int>(n)) {
+  if (str.size() < static_cast<unsigned int>(n))
     strcpy(buf, str.c_str());
-    return true;
-  }
-  return false;
+  else
+    throw ValueError("Buffer size is too small");
 }
 
 // In Microsoft Excel, they seem to check the FPU exception bits and error out because of it.  
@@ -191,9 +190,13 @@ EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, dou
 }
 EXPORT_CODE long CONVENTION PhaseSI(const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, char *phase, int n)
 {
-    std::string s = CoolProp::PhaseSI(std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
-    reset_fpu();
-    return str2buf(s, phase, n) ? 1 : 0;
+    try{
+        std::string s = CoolProp::PhaseSI(std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
+        reset_fpu();
+        str2buf(s, phase, n);
+        return 1;
+    }
+    catch (...){ return 0; }
 }
 /*
  * EXPORT_CODE double CONVENTION PropsSIZ(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, const double *z, int n)
@@ -241,7 +244,8 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Ou
 {
     try{
         std::string s = CoolProp::get_global_param_string(param);
-        return str2buf(s, Output, n) ? 1 : 0;
+        str2buf(s, Output, n);
+        return 1;
     }
     catch(...){
         return 0;
@@ -249,20 +253,25 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char *param, char * Ou
 }
 EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, char * Output, int n)
 {
-    int key;
     try{
-        key = CoolProp::get_parameter_index(param);
-    }
-    catch(...){
-        str2buf(format("Parameter is invalid: %s", param), Output, n);
-        return 0;
-    }
-    try{
+        int key = CoolProp::get_parameter_index(param);
         std::string s = CoolProp::get_parameter_information(key, Output);
-        return str2buf(s, Output, n) ? 1 : 0;
+        str2buf(s, Output, n);
+        return 1;
+    }
+    catch (CoolPropBaseError& e){
+        // if param is wrong, CoolProp::get_parameter_index throws string like
+        // "Your input name [%s] is not valid in get_parameter_index (names are case sensitive)"
+        // CoolProp::get_parameter_information throws string like
+        // "Bad info string [%s] to get_parameter_information" (if Output is wrong)
+        // or "Unable to match the key [%d] in get_parameter_information for info [%s]"
+        // (see src/DataStructures.cpp)
+        // if n is too small, str2buf throws string
+        // "Buffer size is too small"
+        CoolProp::set_error_string(format("get_parameter_information_string(%s, %s, %d): %s", param, Output, n, e.what()));
     }
     catch(...){
-        str2buf(format("Output is invalid: %s", Output), Output, n);
+        CoolProp::set_error_string(format("get_parameter_information_string(%s, %s, %d): Undefined error", param, Output, n));
     }
     return 0;
 }
@@ -270,7 +279,8 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
 {
     try{
         std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
-        return str2buf(s, Output, n) ? 1 : 0;
+        str2buf(s, Output, n)
+        return 1;
     }
     catch(...){
         return 0;
