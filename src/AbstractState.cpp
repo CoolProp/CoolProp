@@ -142,6 +142,7 @@ bool AbstractState::clear() {
     this->_hmolar.clear();
     this->_smolar.clear();
     this->_gibbsmolar.clear();
+    this->_helmholtzmolar.clear();
     this->_logp.clear();
     this->_logrhomolar.clear();
 
@@ -339,6 +340,10 @@ double AbstractState::keyed_output(parameters key)
         return gibbsmolar();
     case iGmass:
         return gibbsmass();
+    case iHelmholtzmolar:
+        return helmholtzmolar();
+    case iHelmholtzmass:
+        return helmholtzmass();
     case iCvmolar:
         return cvmolar();
     case iCvmass:
@@ -461,6 +466,10 @@ double AbstractState::umolar(void){
 double AbstractState::gibbsmolar(void){
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
     return _gibbsmolar;
+}
+double AbstractState::helmholtzmolar(void){
+    if (!_helmholtzmolar) _helmholtzmolar = calc_helmholtzmolar();
+    return _helmholtzmolar;
 }
 double AbstractState::cpmolar(void){
     if (!_cpmolar) _cpmolar = calc_cpmolar();

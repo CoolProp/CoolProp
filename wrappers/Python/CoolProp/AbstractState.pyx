@@ -257,6 +257,12 @@ cdef class AbstractState:
     cpdef double gibbsmolar(self) except *: 
         """ Get the mole-specific Gibbs energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gibbsmolar(void)` """
         return self.thisptr.gibbsmolar()
+    cpdef double helmholtzmass(self) except *: 
+        """ Get the mass-specific Helmholtz energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmass(void)` """
+        return self.thisptr.helmholtzmass()
+    cpdef double helmholtzmolar(self) except *: 
+        """ Get the mole-specific Helmholtz energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmolar(void)` """
+        return self.thisptr.helmholtzmolar()
     cpdef double tau(self) except *: 
         """ Get the reciprocal reduced temperature - wrapper of c++ function :cpapi:`CoolProp::AbstractState::tau(void)` """
         return self.thisptr.tau()

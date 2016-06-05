@@ -2508,6 +2508,34 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
         throw ValueError(format("phase is invalid in calc_gibbsmolar"));
     }
 }
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_helmholtzmolar(void)
+{
+    if (isTwoPhase())
+    {
+        if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
+        _helmholtzmolar = _Q*SatV->helmholtzmolar() + (1 - _Q)*SatL->helmholtzmolar();
+        return static_cast<CoolPropDbl>(_helmholtzmolar);
+    }
+    else if (isHomogeneousPhase())
+    {
+        // Calculate the reducing parameters
+        _delta = _rhomolar/_reducing.rhomolar;
+        _tau = _reducing.T/_T;
+        
+        // Calculate derivatives if needed, or just use cached values
+        CoolPropDbl ar = alphar();
+        CoolPropDbl a0 = alpha0();
+        CoolPropDbl R_u = gas_constant();
+        
+        // Get molar Helmholtz energy
+        _helmholtzmolar = R_u*_T*(a0 + ar);
+        
+        return static_cast<CoolPropDbl>(_helmholtzmolar);
+    }
+    else{
+        throw ValueError(format("phase is invalid in calc_helmholtzmolar"));
+    }
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(std::size_t i)
 {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;

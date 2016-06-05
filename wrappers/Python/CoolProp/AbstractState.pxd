@@ -108,6 +108,8 @@ cdef class AbstractState:
     cpdef double cvmass(self) except *
     cpdef double gibbsmass(self) except *
     cpdef double gibbsmolar(self) except *
+    cpdef double helmholtzmass(self) except *
+    cpdef double helmholtzmolar(self) except *
     cpdef double speed_sound(self) except *
     cpdef double gas_constant(self) except *
     cpdef double tau(self) except *

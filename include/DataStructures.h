@@ -85,6 +85,7 @@ enum parameters{
     iCvmolar, ///< Mole-based constant-volume specific heat
     iUmolar, ///< Mole-based internal energy
     iGmolar, ///< Mole-based Gibbs energy
+    iHelmholtzmolar, ///< Mole-based Helmholtz energy
     iSmolar_residual, ///< The residual molar entropy (s^r/R = tau*dar_dtau-ar)
 
     // Mass specific thermodynamic properties
@@ -96,6 +97,7 @@ enum parameters{
     iCvmass, ///< Mass-based constant-volume specific heat
     iUmass, ///< Mass-based internal energy
     iGmass, ///< Mass-based Gibbs energy
+    iHelmholtzmass, ///< Mass-based Helmholtz energy
 
     // Transport properties
     iviscosity, ///< Viscosity
