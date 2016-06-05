@@ -130,7 +130,7 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
 
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
-    return PropsS(Output, "", 0, "", 0, FluidName);
+    return PropsS(Output, "T", 0, "T", 0, FluidName);
 }
 EXPORT_CODE double CONVENTION PropsS(const char *Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char * Ref){
     return Props(Output, Name1[0], Prop1, Name2[0], Prop2, Ref);
@@ -142,7 +142,7 @@ EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double
     {
         // Get parameter indices
         std::string sName1 = std::string(1, Name1), sName2 = std::string(1, Name2);
-        long iOutput = get_param_index(Output);
+        long iOutput = CoolProp::get_parameter_index(Output);
         long iName1 = CoolProp::get_parameter_index(sName1);
         long iName2 = CoolProp::get_parameter_index(sName2);
 
