@@ -131,13 +131,11 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
     fpu_reset_guard guard;
-    double val = PropsS(Output, "", 0, "", 0, FluidName);
-    return val;
+    return PropsS(Output, "", 0, "", 0, FluidName);
 }
 EXPORT_CODE double CONVENTION PropsS(const char *Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char * Ref){
     fpu_reset_guard guard;
-    double val = Props(Output, Name1[0], Prop1, Name2[0], Prop2, Ref);
-    return val;
+    return Props(Output, Name1[0], Prop1, Name2[0], Prop2, Ref);
 }
 EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char * Ref)
 {
@@ -169,8 +167,7 @@ EXPORT_CODE double CONVENTION saturation_ancillary(const char *fluid_name, const
     fpu_reset_guard guard;
     try
     {
-        double val = CoolProp::saturation_ancillary(fluid_name, std::string(output), Q, std::string(input), value);
-        return val;
+        return CoolProp::saturation_ancillary(fluid_name, std::string(output), Q, std::string(input), value);
     }
     catch(std::exception &e){CoolProp::set_error_string(e.what());}
     catch(...){CoolProp::set_error_string("Undefined error");}
@@ -179,14 +176,12 @@ EXPORT_CODE double CONVENTION saturation_ancillary(const char *fluid_name, const
 EXPORT_CODE double CONVENTION Props1SI(const char *FluidName, const char *Output)
 {
     fpu_reset_guard guard;
-    double val = CoolProp::Props1SI(std::string(FluidName), std::string(Output));
-    return val;
+    return CoolProp::Props1SI(std::string(FluidName), std::string(Output));
 }
 EXPORT_CODE double CONVENTION PropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName)
 {
     fpu_reset_guard guard;
-    double val = CoolProp::PropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
-    return val;
+    return CoolProp::PropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
 }
 EXPORT_CODE long CONVENTION PhaseSI(const char *Name1, double Prop1, const char *Name2, double Prop2, const char * FluidName, char *phase, int n)
 {
@@ -291,14 +286,12 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     fpu_reset_guard guard;
-    double val = HumidAir::HAPropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
-    return val;
+    return HumidAir::HAPropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
 }
 EXPORT_CODE double CONVENTION cair_sat(double T)
 {
     fpu_reset_guard guard;
-    double val = HumidAir::cair_sat(T);
-    return val;
+    return HumidAir::cair_sat(T);
 }
 EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char * Name3, const double * Prop3, double *output)
 {
@@ -307,8 +300,7 @@ EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, co
 EXPORT_CODE double CONVENTION HAProps(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     fpu_reset_guard guard;
-    double val = HumidAir::HAProps(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
-    return val;
+    return HumidAir::HAProps(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
 }
 EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char * Name3, const double * Prop3, double *output)
 {
