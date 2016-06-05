@@ -130,6 +130,7 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
 
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
+    fpu_reset_guard guard;
     double val = Props1SI(Output, FluidName);
     CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
     return convert_from_SI_to_kSI(iOutput, val);
