@@ -96,10 +96,12 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
     // saturation classes cannot hold copies of the saturation classes
     if (generate_SatL_and_SatV)
     {
-        SatL.reset(new HelmholtzEOSMixtureBackend(components, false));
+        SatL.reset(copy(false));
         SatL->specify_phase(iphase_liquid);
-        SatV.reset(new HelmholtzEOSMixtureBackend(components, false));
+        linked_states.push_back(SatL);
+        SatV.reset(copy(false));
         SatV->specify_phase(iphase_gas);
+        linked_states.push_back(SatV);
     }
 }
 void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
@@ -247,9 +249,10 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t
     else{
         Reducing->set_binary_interaction_double(i,j,parameter,value);
     }
-    /// Also set the parameters in the managed pointers for saturated liquid and vapor states
-    if (this->SatL){ this->SatL->set_binary_interaction_double(i, j, parameter, value); }
-    if (this->SatV) { this->SatV->set_binary_interaction_double(i, j, parameter, value); }
+    /// Also set the parameters in the managed pointers for other states
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it){
+        it->get()->set_binary_interaction_double(i, j, parameter, value);
+    }
 };
 /// Get binary mixture floating point parameter for this instance
 double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
