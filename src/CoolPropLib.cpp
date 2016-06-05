@@ -130,7 +130,9 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
 
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
-    return PropsS(Output, "T", 0, "T", 0, FluidName);
+    double val = Props1SI(Output, FluidName);
+    CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
+    return convert_from_SI_to_kSI(iOutput, val);
 }
 EXPORT_CODE double CONVENTION PropsS(const char *Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char * Ref){
     return Props(Output, Name1[0], Prop1, Name2[0], Prop2, Ref);
@@ -142,13 +144,15 @@ EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double
     {
         // Get parameter indices
         std::string sName1 = std::string(1, Name1), sName2 = std::string(1, Name2);
-        long iOutput = CoolProp::get_parameter_index(Output);
-        long iName1 = CoolProp::get_parameter_index(sName1);
-        long iName2 = CoolProp::get_parameter_index(sName2);
+        CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
+        if (!CoolProp::is_trivial_parameter(iOutput)) {
+            CoolProp::parameters iName1 = CoolProp::get_parameter_index(sName1);
+            CoolProp::parameters iName2 = CoolProp::get_parameter_index(sName2);
 
-        // Convert inputs to SI
-        Prop1 = convert_from_kSI_to_SI(iName1, Prop1);
-        Prop2 = convert_from_kSI_to_SI(iName2, Prop2);
+            // Convert inputs to SI
+            Prop1 = convert_from_kSI_to_SI(iName1, Prop1);
+            Prop2 = convert_from_kSI_to_SI(iName2, Prop2);
+        }
 
         // Call the SI function
         double val = PropsSI(Output, sName1.c_str(), Prop1, sName2.c_str(), Prop2, Ref);
