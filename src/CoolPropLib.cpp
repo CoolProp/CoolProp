@@ -279,7 +279,7 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
 {
     try{
         std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
-        str2buf(s, Output, n)
+        str2buf(s, Output, n);
         return 1;
     }
     catch(...){
