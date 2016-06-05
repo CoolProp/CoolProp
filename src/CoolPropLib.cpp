@@ -130,11 +130,9 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
 
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
-    fpu_reset_guard guard;
     return PropsS(Output, "", 0, "", 0, FluidName);
 }
 EXPORT_CODE double CONVENTION PropsS(const char *Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char * Ref){
-    fpu_reset_guard guard;
     return Props(Output, Name1[0], Prop1, Name2[0], Prop2, Ref);
 }
 EXPORT_CODE double CONVENTION Props(const char *Output, const char Name1, double Prop1, const char Name2, double Prop2, const char * Ref)
@@ -300,7 +298,12 @@ EXPORT_CODE void CONVENTION hapropssi_(const char *Output, const char *Name1, co
 EXPORT_CODE double CONVENTION HAProps(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     fpu_reset_guard guard;
-    return HumidAir::HAProps(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
+    try{
+        return HumidAir::HAProps(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(Name3), Prop3);
+    }
+    catch (std::exception &e){ CoolProp::set_error_string(e.what()); }
+    catch (...){ CoolProp::set_error_string("Undefined error"); }
+    return _HUGE;
 }
 EXPORT_CODE void CONVENTION haprops_(const char *Output, const char *Name1, const double *Prop1, const char *Name2, const double *Prop2, const char * Name3, const double * Prop3, double *output)
 {
