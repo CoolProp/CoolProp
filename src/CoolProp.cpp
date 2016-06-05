@@ -828,7 +828,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
         }
     }
 }
-void set_reference_stateD(const std::string &Ref, double T, double rhomolar, double h0, double s0)
+void set_reference_stateD(const std::string &Ref, double T, double rhomolar, double hmass0, double smass0)
 {
     std::vector<std::string> _comps(1, Ref);
     CoolProp::HelmholtzEOSMixtureBackend HEOS(_comps);
@@ -836,12 +836,11 @@ void set_reference_stateD(const std::string &Ref, double T, double rhomolar, dou
     HEOS.update(DmolarT_INPUTS, rhomolar, T);
 
     // Get current values for the enthalpy and entropy
-    double deltah = HEOS.hmass() - h0; // offset from specified enthalpy in J/mol
-    double deltas = HEOS.smass() - s0; // offset from specified entropy in J/mol/K
-    double delta_a1 = deltas/(8.314472/HEOS.molar_mass());
-    double delta_a2 = -deltah/(8.314472/HEOS.molar_mass()*HEOS.get_reducing_state().T);
-    HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, "custom");
-    HEOS.update_states();
+    double deltah = HEOS.hmass() - hmass0; // offset from specified enthalpy in J/kg
+    double deltas = HEOS.smass() - smass0; // offset from specified entropy in J/kg/K
+    double delta_a1 = deltas/(HEOS.gas_constant()/HEOS.molar_mass());
+    double delta_a2 = -deltah/(HEOS.gas_constant()/HEOS.molar_mass()*HEOS.get_reducing_state().T);
+    set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "custom");
 }
 
 

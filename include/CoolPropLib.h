@@ -138,7 +138,7 @@
      * \sa \ref CoolProp::set_reference_stateD
      * @returns error_code 1 = Ok 0 = error
      */
-    EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rho, double h0, double s0);
+    EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rhomolar, double hmolar0, double smolar0);
     /** \brief FORTRAN 77 style wrapper of the PropsSI function
      * \overload
      * \sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)

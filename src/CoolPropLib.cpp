@@ -115,11 +115,11 @@ EXPORT_CODE int CONVENTION set_reference_stateS(const char *Ref, const char *ref
     catch (...){ CoolProp::set_error_string("Undefined error"); }
     return false;
 }
-EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rho, double h0, double s0)
+EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, double rhomolar, double hmolar0, double smolar0)
 {
     fpu_reset_guard guard;
     try{
-        CoolProp::set_reference_stateD(std::string(Ref), T, rho, h0, s0);
+        CoolProp::set_reference_stateD(std::string(Ref), T, rhomolar, hmolar0, smolar0);
         return true;
     }
     catch (std::exception &e){ CoolProp::set_error_string(e.what()); }
