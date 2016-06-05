@@ -268,10 +268,10 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char *param, 
         // (see src/DataStructures.cpp)
         // if n is too small, str2buf throws string
         // "Buffer size is too small"
-        CoolProp::set_error_string(format("get_parameter_information_string(%s, %s, %d): %s", param, Output, n, e.what()));
+        CoolProp::set_error_string(format("get_parameter_information_string(\"%s\", \"%s\", %d): %s", param, Output, n, e.what()));
     }
     catch(...){
-        CoolProp::set_error_string(format("get_parameter_information_string(%s, %s, %d): Undefined error", param, Output, n));
+        CoolProp::set_error_string(format("get_parameter_information_string(\"%s\", \"%s\", %d): Undefined error", param, Output, n));
     }
     return 0;
 }
