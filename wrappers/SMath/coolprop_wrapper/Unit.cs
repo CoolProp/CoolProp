@@ -87,7 +87,7 @@ namespace coolprop_wrapper
       AddUnits(ref dic, J_kg,
         "H", "HMASS", "Hmass",                                        // [J/kg]    IO Mass specific enthalpy
         "U", "UMASS", "Umass",                                        // [J/kg]    IO Mass specific internal energy
-        "GMASS", "Gmass");                                            // [J/kg]    O  Mass specific Gibbs energy
+        "G", "GMASS", "Gmass");                                       // [J/kg]    O  Mass specific Gibbs energy
       AddUnits(ref dic, Pa,
         "P",                                                          // [Pa]      IO Pressure
         "PCRIT", "P_CRITICAL", "Pcrit", "p_critical", "pcrit",        // [Pa]      O  Pressure at the critical point
@@ -100,7 +100,8 @@ namespace coolprop_wrapper
         "CP0MOLAR", "Cp0molar",                                       // [J/mol/K] O  Ideal gas molar specific constant presssure specific heat
         "CPMOLAR", "Cpmolar",                                         // [J/mol/K] O  Molar specific constant presssure specific heat
         "CVMOLAR", "Cvmolar",                                         // [J/mol/K] O  Molar specific constant volume specific heat
-        "GAS_CONSTANT", "gas_constant");                              // [J/mol/K] O  Molar gas constant
+        "GAS_CONSTANT", "gas_constant",                               // [J/mol/K] O  Molar gas constant
+        "SMOLAR_RESIDUAL", "Smolar_residual");                        // [J/mol/K] O  Residual molar entropy (sr/R = tau*dar_dtau-ar)
       AddUnits(ref dic, J_kg_K,
         "S", "SMASS", "Smass",                                        // [J/kg/K]  IO Mass specific entropy
         "CVMASS", "Cvmass", "O",                                      // [J/kg/K]  O  Mass specific constant volume specific heat
@@ -149,24 +150,26 @@ namespace coolprop_wrapper
       AddUnits(ref dic, unitless,
         "Omega", "HumRat", "W",         // Humidity Ratio [kg water/kg dry air]
         "RH", "RelHum", "R",            // Relative humidity in (0,1) [-]
-        "psi_w", "Y");                  // Mole fraction of water [mol_w/mol]
+        "psi_w", "Y",                   // Mole fraction of water [mol_w/mol]
+        "Z");                           // Compressibility factor (Z=pv/(RT)) [-]
       AddUnits(ref dic, K,
         "Tdb", "T_db", "T",             // Dry-Bulb Temperature [K]
         "Tdp", "T_dp", "DewPoint", "D", // Dew-Point Temperature [K]
         "Twb", "T_wb", "WetBulb", "B"); // Wet-Bulb Temperature [K]
       AddUnits(ref dic, J_kg,
-        "Enthalpy", "H", "Hda",         // Mixture enthalpy [J/kg dry air]
-        "Hha");                         // [J/kg humid air]
+        "Enthalpy", "H", "Hda",         // Mixture enthalpy per dry air [J/kg dry air]
+        "Hha");                         // Mixture enthalpy per humid air [J/kg humid air]
       AddUnits(ref dic, J_kg_K,
-        "Entropy", "S", "Sda",          // Mixture entropy [J/kg dry air/K]
-        "Sha",                          // [J/kg humid air/K]
-        "C", "cp",                      // Mixture specific heat [J/kg dry air/K]
-        "Cha", "cp_ha");                // [J/kg humid air/K]
+        "Entropy", "S", "Sda",          // Mixture entropy per unit dry air [J/kg dry air/K]
+        "Sha",                          // Mixture entropy per unit humid air [J/kg humid air/K]
+        "C", "cp",                      // Mixture specific heat per unit dry air [J/kg dry air/K]
+        "Cha", "cp_ha");                // Mixture specific heat per unit humid air [J/kg humid air/K]
       AddUnits(ref dic, Pa,
-        "P");                           // Pressure [Pa]
+        "P",                            // Pressure [Pa]
+        "P_w");                         // Partial pressure of water vapor [Pa]
       AddUnits(ref dic, m3_kg,
-        "V", "Vda",                     // Mixture volume [m3/kg dry air]
-        "Vha");                         // [m^3/kg humid air]
+        "V", "Vda",                     // Mixture volume per unit dry air [m^3/kg dry air]
+        "Vha");                         // Mixture volume per unit humid air [m^3/kg humid air]
       AddUnits(ref dic, Pa_s,
         "mu", "Visc", "M");             // Mixture viscosity [Pa-s]
       AddUnits(ref dic, W_m_K,
