@@ -24,10 +24,16 @@ protected:
     void post_update(bool optional_checks = true);
     std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > linked_states; ///< States that are linked to this one, and should be updated (BIP, reference state, etc.)
     shared_ptr<HelmholtzEOSMixtureBackend> TPD_state; ///< A temporary state used for calculations of the tangent-plane-distance
+    shared_ptr<HelmholtzEOSMixtureBackend> critical_state; ///< A temporary state used for calculations of the critical point(s)
     /// Update the state class used to calculate the tangent-plane-distance
-    virtual void update_TPD_state(){
+    virtual void add_TPD_state(){
         if (TPD_state.get() == NULL){ bool sat_states = false; TPD_state.reset(copy(sat_states)); linked_states.push_back(TPD_state);
 	    }
+    };
+    /// Update the state class used to calculate the critical point(s)
+    virtual void add_critical_state(){
+        if (critical_state.get() == NULL){ bool sat_states = true; critical_state.reset(copy(sat_states)); linked_states.push_back(critical_state);
+        }
     };
     
     std::vector<CoolPropFluid> components; ///< The components that are in use

@@ -3423,15 +3423,17 @@ void HelmholtzEOSMixtureBackend::get_critical_point_search_radii(double &R_delta
 }
 std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
 {
-    // Store old phase
-    phases old_phase = _phase;
-    // Specify it to be something homogeneous to shortcut phase evaluation
-    specify_phase(iphase_gas);
+    // Populate the temporary class used to calculate the critical point(s)
+    add_critical_state();
+    critical_state->set_mole_fractions(this->get_mole_fractions_ref());
+
+    // Specify state to be something homogeneous to shortcut phase evaluation
+    critical_state->specify_phase(iphase_gas);
 
     double delta0 = _HUGE, tau0 = _HUGE;
-    get_critical_point_starting_values(delta0, tau0);
+    critical_state->get_critical_point_starting_values(delta0, tau0);
     
-    OneDimObjective resid_L0(*this, delta0);
+    OneDimObjective resid_L0(*critical_state, delta0);
     
     // If the derivative of L1star with respect to tau is positive, 
     // tau needs to be increased such that we sit on the other 
@@ -3446,16 +3448,14 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     //double T0 = T_reducing()/tau_L0;
     //double rho0 = delta0*rhomolar_reducing();
 
-    L0CurveTracer tracer(*this, tau_L0, delta0);
+    L0CurveTracer tracer(*critical_state, tau_L0, delta0);
 
     double R_delta = 0, R_tau = 0;
-    get_critical_point_search_radii(R_delta, R_tau);
+    critical_state->get_critical_point_search_radii(R_delta, R_tau);
     tracer.R_delta_tracer = R_delta;
     tracer.R_tau_tracer = R_tau;
     tracer.trace();
 
-    // Reset phase to previous value
-    _phase = old_phase;
     return tracer.critical_points;
 }
 
@@ -3465,7 +3465,7 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 	if (w.size() != z.size()){ 
 		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size())); 
 	}
-    update_TPD_state();
+    add_TPD_state();
 	TPD_state->set_mole_fractions(w);
 	if (rhomolar_guess < 0){
 		TPD_state->update(PT_INPUTS, p, T);
