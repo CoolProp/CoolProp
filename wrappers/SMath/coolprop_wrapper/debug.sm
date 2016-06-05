@@ -20,9 +20,8 @@
     </pageModel>
     <dependences>
       <assembly name="SMath Studio Desktop" version="0.97.5346.24640" guid="a37cba83-b69c-4c71-9992-55ff666763bd" />
-      <assembly name="coolprop_wrapper" version="1.0.5526.20489" guid="2be8d14b-ba62-4002-a959-9e5dad905310" />
+      <assembly name="CoolPropWrapper" version="1.0.5526.20489" guid="ca92ef03-c7da-4888-98ad-528482733e2f" />
       <assembly name="Math Region" version="0.97.5346.24640" guid="02f1ab51-215b-466e-a74d-5d8b1cf85e8d" />
-      <assembly name="Special Functions" version="1.11.5346.31403" guid="2814e667-4e12-48b1-8d51-194e480eabc5" />
       <assembly name="Text Region" version="1.10.5346.31409" guid="485d28c5-349a-48b6-93be-12a35a1c1e39" />
       <assembly name="Plot Region" version="1.9.5346.32570" guid="c451c2b5-798b-4f08-b9ec-b90963d1ddaa" />
     </dependences>

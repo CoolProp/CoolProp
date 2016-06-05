@@ -40,6 +40,7 @@ namespace coolprop_wrapper
           System.Environment.NewLine),
         System.Text.Encoding.UTF8);
 //#endif
+      return;
     }
 
     public static SMath.Math.Numeric.TNumber GetNumberParam(Term[] arg, ref SMath.Math.Store context)
@@ -59,25 +60,6 @@ namespace coolprop_wrapper
 
     public static Term[] MakeDoubleResult(double result, SMath.Math.Symbolic.MItem unit)
     {
-        // override ResultIsAboveMaxAllowedPositiveNumber exception for +/- infinity results
-        if (double.IsInfinity(result))
-        {
-          List<Term> xTerms = new List<Term>();
-
-          xTerms.Add(new Term(Symbols.Infinity, TermType.Operand, 0));
-
-          if (result == double.NegativeInfinity)
-              xTerms.Add(new Term(Operators.Subtraction, TermType.Operator, 1));
-
-          if (unit != 1)
-          {
-              xTerms.AddRange(unit.ToTerms());
-              xTerms.Add(new Term(Operators.Multiplication, TermType.Operator, 2));
-          }
-
-         return xTerms.ToArray();
-      }
-
       var d = new SMath.Math.Numeric.TDouble(result);
       d.Units = unit;
       return d.ToTerms();

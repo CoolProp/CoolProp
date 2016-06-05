@@ -134,7 +134,7 @@ namespace coolprop_wrapper
     }
     static System.Collections.Generic.Dictionary<string, MItem> dic = InitUnitsDictionary();
 
-    public static SMath.Math.Symbolic.MItem Find(string param)
+    public static MItem Find(string param)
     {
       try {
         return dic[param];
@@ -179,7 +179,7 @@ namespace coolprop_wrapper
     }
     static System.Collections.Generic.Dictionary<string, MItem> HAdic = InitHAUnitsDictionary();
 
-    public static SMath.Math.Symbolic.MItem FindHA(string param)
+    public static MItem FindHA(string param)
     {
       try {
         return HAdic[param];
