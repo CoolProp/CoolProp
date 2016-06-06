@@ -12,7 +12,7 @@ else
   errcode = Ref{Clong}(0)
 end
 
-const buffer_length = 255
+const buffer_length = 10000
 message_buffer = Array(UInt8, buffer_length)
 
 # ---------------------------------
@@ -50,6 +50,9 @@ end
 # CoolProp::get_global_param_string
 function get_global_param_string(Key::AbstractString)
   val = ccall( (:get_global_param_string, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Int), Key,message_buffer::Array{UInt8,1},buffer_length)
+  if val == 0
+    error("CoolProp: ", get_global_param_string("errstring"))
+  end
   return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
 
@@ -57,6 +60,9 @@ end
 function get_parameter_information_string(Key::AbstractString,OutType::AbstractString)
   message_buffer[1:length(OutType)+1] = [OutType.data; 0x00]
   val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Int), Key,message_buffer::Array{UInt8,1},buffer_length)
+  if val == 0
+    error("CoolProp: ", get_global_param_string("errstring"))
+  end
   return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
 function get_parameter_information_string(Key::AbstractString)
@@ -73,6 +79,9 @@ end
 # CoolProp::get_fluid_param_string
 function get_fluid_param_string(fluid::AbstractString,param::AbstractString)
   val = ccall( (:get_fluid_param_string, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Ptr{UInt8},Int), fluid,param,message_buffer::Array{UInt8,1},buffer_length)
+  if val == 0
+    error("CoolProp: ", get_global_param_string("errstring"))
+  end
   return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
 
