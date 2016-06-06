@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 2.8.9)
 
 
 if (DEFINED COOLPROP_INSTALL_PREFIX)
@@ -1253,18 +1253,26 @@ endif()
 if (COOLPROP_SMATH_MODULE)
     set(COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}.0)
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini")
+                   "${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    message(STATUS "Generated ${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    FILE(WRITE "${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
+    message(STATUS "Generated ${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/config.ini")
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+                   "${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    message(STATUS "Generated ${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
-    FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/build.bat" "${CMAKE_MAKE_PROGRAM} coolprop_wrapper.sln /p:Configuration=Release")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/build.bat")
+                   "${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+    message(STATUS "Generated ${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+    FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_SOURCE_DIR)
+    FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_TARGET_DIR)
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj.template"
+                   "${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+    message(STATUS "Generated ${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+    include_external_msproject(
+        CoolPropWrapper ${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj
+        TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
+        PLATFORM AnyCPU)
+    message(STATUS "C# project ${CMAKE_CURRENT_BINARY_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj included")
     
 endif()
 
