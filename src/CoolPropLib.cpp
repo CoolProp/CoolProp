@@ -131,6 +131,10 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char *Ref, double T, doubl
 EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output){
     fpu_reset_guard guard;
     double val = Props1SI(Output, FluidName);
+    if (!ValidNumber(val))
+        // Error code was already set in Props1SI
+        return val;
+    // val is valid; so, Output is already checked in Props1SI -> get_parameter_index won't throw
     CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
     return convert_from_SI_to_kSI(iOutput, val);
 }
