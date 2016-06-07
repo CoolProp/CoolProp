@@ -37,7 +37,7 @@ namespace coolprop_wrapper.Functions
         case 8:
           return CoolPropDLLfunc_x64(fluid_name, output, Q, input, value);
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      throw new System.Exception("Unknown platform!");
     }
 
     Term inf;

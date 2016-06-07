@@ -44,7 +44,7 @@ namespace coolprop_wrapper.Functions
         case 8:
           return CoolPropDLLfunc_x64(Name1, Prop1, Name2, Prop2, FluidName, phase, n);
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      throw new System.Exception("Unknown platform!");
     }
 
     Term inf;
@@ -97,7 +97,7 @@ namespace coolprop_wrapper.Functions
         "Name1 = {0}, Prop1 = {1}, Name2 = {2}, Prop2 = {3}, FluidName = {4}, phase = {5}, Result = {6}",
         Name1, Prop1.obj.ToDouble(), Name2, Prop2.obj.ToDouble(), FluidName, phase.ToString(), Result);
       if (Result != 1)
-        throw new EvaluationException(Errors.ArgumentDoesNotMatchToExpectedKind);
+          coolpropPlugin.CoolPropError();
       result = coolpropPlugin.MakeStringResult(phase.ToString());
 
       return true;
