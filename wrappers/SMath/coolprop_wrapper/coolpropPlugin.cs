@@ -25,7 +25,7 @@ namespace coolprop_wrapper
 
     public static void LogInfo(string Category, string Text, params object[] args)
     {
-//#if DEBUG
+#if DEBUG
       var method = new System.Diagnostics.StackFrame(1).GetMethod();
       System.IO.File.AppendAllText(
         LogFile,
@@ -39,7 +39,7 @@ namespace coolprop_wrapper
           string.Format(Text, args),
           System.Environment.NewLine),
         System.Text.Encoding.UTF8);
-//#endif
+#endif
     }
 
     public static SMath.Math.Numeric.TNumber GetNumberParam(Term[] arg, ref SMath.Math.Store context)

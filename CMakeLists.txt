@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 2.8.9)
 
 
 if (DEFINED COOLPROP_INSTALL_PREFIX)
@@ -29,8 +29,8 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 6)
 set (COOLPROP_VERSION_MINOR 0)
-set (COOLPROP_VERSION_PATCH 0)
-set (COOLPROP_VERSION_REVISION )
+set (COOLPROP_VERSION_PATCH 1)
+set (COOLPROP_VERSION_REVISION dev)
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
@@ -1263,8 +1263,16 @@ if (COOLPROP_SMATH_MODULE)
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat.template"
                    "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
     message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
-    FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/build.bat" "${CMAKE_MAKE_PROGRAM} coolprop_wrapper.sln /p:Configuration=Release")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/build.bat")
+    FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_SOURCE_DIR)
+    FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_TARGET_DIR)
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj.template"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+    include_external_msproject(
+        CoolPropWrapper ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj
+        TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
+        PLATFORM AnyCPU)
+    message(STATUS "C# project ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj included")
     
 endif()
 

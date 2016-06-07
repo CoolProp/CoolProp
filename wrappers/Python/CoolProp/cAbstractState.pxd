@@ -58,6 +58,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         void set_binary_interaction_double(const size_t, const size_t, const string &, const double s) except +ValueError
         
         string name() except +ValueError
+        vector[string] fluid_names() except +ValueError
         string fluid_param_string(const string &) except +ValueError
         
         bool clear()
@@ -112,6 +113,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double cp0mass() except +ValueError
         double cvmolar() except +ValueError
         double cvmass() except +ValueError
+        double gibbsmolar() except +ValueError
+        double gibbsmass() except +ValueError
+        double helmholtzmolar() except +ValueError
+        double helmholtzmass() except +ValueError
         double speed_sound() except +ValueError
         double tau() except +ValueError
         double delta() except +ValueError
@@ -130,6 +135,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double isobaric_expansion_coefficient() except +ValueError
         double fugacity(size_t) except +ValueError
         double fugacity_coefficient(size_t) except +ValueError
+        double chemical_potential(size_t) except +ValueError
         
         double keyed_output(constants_header.parameters) except+ValueError
         double trivial_keyed_output(constants_header.parameters) except+ValueError

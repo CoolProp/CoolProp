@@ -1,9 +1,18 @@
-#Bring some functions into the Plots namespace for code concision
-from __future__ import absolute_import
+# -*- coding: utf-8 -*-
+from __future__ import print_function, division, absolute_import
 
-from .Plots import PropertyPlot,PropsPlot
+# Bring some functions into the Plots namespace for code concision, 
+# but be careful not to clutter the namespace with too many 
+# classes and functions.
+
+# Plotting objects and functions
+from .Plots import PropertyPlot
 from .Common import IsoLine
-#from .Plots import PropsPlot, IsoLines, drawIsoLines
-#from .Plots import Ph, Ts, Ps, PT, Prho, Trho, hs
-from .SimpleCycles import SimpleCycle, TwoStage, EconomizedCycle
 
+# Cycle calculation and drawing
+from .SimpleCycles import StateContainer 
+from .SimpleCyclesExpansion import SimpleRankineCycle
+from .SimpleCyclesCompression import SimpleCompressionCycle
+
+# Old and deprecated objects
+from .SimpleCycles import SimpleCycle, TwoStage, EconomizedCycle

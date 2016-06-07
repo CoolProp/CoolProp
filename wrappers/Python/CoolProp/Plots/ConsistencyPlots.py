@@ -1,4 +1,6 @@
-from __future__ import division, print_function
+# -*- coding: utf-8 -*-
+from __future__ import print_function, division, absolute_import
+
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -58,4 +58,5 @@ Plotting
 .. toctree::
     :maxdepth: 1
 
-    Python/plotting.rst
+    python-plotting.rst
+    python-cycles.rst

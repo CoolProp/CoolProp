@@ -67,7 +67,11 @@ namespace coolprop_wrapper.Functions
              Output    = coolpropPlugin.GetStringParam(args[1], ref context);
       var Result = CoolPropDLLfunc(FluidName, Output);
       coolpropPlugin.LogInfo("[INFO ]", "FluidName = {0}, Output = {1}, Result = {2}", FluidName, Output, Result);
-      result = coolpropPlugin.MakeDoubleResult(Result, Unit.Find(Output));
+      var ResUnit = Unit.Find(Output);
+      // Props1SI may take parameters in either order; so, Output may actually be in FluidName
+      if (ResUnit == Unit.unitless)
+        ResUnit = Unit.Find(FluidName);
+      result = coolpropPlugin.MakeDoubleResult(Result, ResUnit);
 
       return true;
     }

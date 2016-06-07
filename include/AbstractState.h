@@ -88,7 +88,7 @@ protected:
     /// Transport properties
     CachedElement _viscosity, _conductivity, _surface_tension;
 
-    CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar;
+    CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar, _helmholtzmolar;
 
     /// Ancillary values
     CachedElement _rhoLanc, _rhoVanc, _pLanc, _pVanc, _TLanc, _TVanc;
@@ -130,6 +130,8 @@ protected:
     virtual CoolPropDbl calc_cvmolar(void){ throw NotImplementedError("calc_cvmolar is not implemented for this backend"); };
     /// Using this backend, calculate the molar Gibbs function in J/mol
     virtual CoolPropDbl calc_gibbsmolar(void){ throw NotImplementedError("calc_gibbsmolar is not implemented for this backend"); };
+    /// Using this backend, calculate the molar Helmholtz energy in J/mol
+    virtual CoolPropDbl calc_helmholtzmolar(void){ throw NotImplementedError("calc_helmholtzmolar is not implemented for this backend"); };
     /// Using this backend, calculate the speed of sound in m/s
     virtual CoolPropDbl calc_speed_sound(void){ throw NotImplementedError("calc_speed_sound is not implemented for this backend"); };
     /// Using this backend, calculate the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
@@ -292,6 +294,7 @@ protected:
     virtual CoolPropDbl calc_cvmass(void){ return cvmolar() / molar_mass(); }
     virtual CoolPropDbl calc_umass(void){ return umolar() / molar_mass(); }
     virtual CoolPropDbl calc_gibbsmass(void){ return gibbsmolar() / molar_mass(); }
+    virtual CoolPropDbl calc_helmholtzmass(void){ return helmholtzmolar() / molar_mass(); }
 
     /// Update the states after having changed the reference state for enthalpy and entropy
     virtual void update_states(void){ throw NotImplementedError("This backend does not implement update_states function"); };
@@ -640,6 +643,10 @@ public:
     double gibbsmolar(void);
     /// Return the Gibbs function in J/kg
     double gibbsmass(void){ return calc_gibbsmass(); };
+    /// Return the Helmholtz energy in J/mol
+    double helmholtzmolar(void);
+    /// Return the Helmholtz energy in J/kg
+    double helmholtzmass(void){ return calc_helmholtzmass(); };
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa

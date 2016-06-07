@@ -38,6 +38,9 @@ cdef class AbstractState:
     cpdef name(self):
         """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """
         return self.thisptr.name()
+    cpdef fluid_names(self):
+        """ Get the list of fluid names - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fluid_names` """
+        return self.thisptr.fluid_names()
         
     cpdef constants_header.phases phase(self) except *:
         """ Get the phase as key value- wrapper of c++ function :cpapi:`CoolProp::AbstractState::phase` """
@@ -248,6 +251,18 @@ cdef class AbstractState:
     cpdef double cvmass(self) except *: 
         """ Get the constant volume specific heat in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::cvmass(void)` """
         return self.thisptr.cvmass()
+    cpdef double gibbsmass(self) except *: 
+        """ Get the mass-specific Gibbs energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gibbsmass(void)` """
+        return self.thisptr.gibbsmass()
+    cpdef double gibbsmolar(self) except *: 
+        """ Get the mole-specific Gibbs energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gibbsmolar(void)` """
+        return self.thisptr.gibbsmolar()
+    cpdef double helmholtzmass(self) except *: 
+        """ Get the mass-specific Helmholtz energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmass(void)` """
+        return self.thisptr.helmholtzmass()
+    cpdef double helmholtzmolar(self) except *: 
+        """ Get the mole-specific Helmholtz energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmolar(void)` """
+        return self.thisptr.helmholtzmolar()
     cpdef double tau(self) except *: 
         """ Get the reciprocal reduced temperature - wrapper of c++ function :cpapi:`CoolProp::AbstractState::tau(void)` """
         return self.thisptr.tau()
@@ -262,7 +277,7 @@ cdef class AbstractState:
         return self.thisptr.molar_mass()
     cpdef double acentric_factor(self) except *: 
         """ Get the acentric factor - wrapper of c++ function :cpapi:`CoolProp::AbstractState::acentric_factor(void)` """
-        return self.thisptr.molar_mass()
+        return self.thisptr.acentric_factor()
     cpdef double gas_constant(self) except *: 
         """ Get the gas constant in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gas_constant(void)` """
         return self.thisptr.gas_constant()
@@ -299,6 +314,9 @@ cdef class AbstractState:
     cpdef double fugacity_coefficient(self, size_t i) except *: 
         """ Get the fugacity coefficient of the i-th component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fugacity_coefficient(std::size_t)` """
         return self.thisptr.fugacity_coefficient(i)
+    cpdef double chemical_potential(self, size_t i) except *: 
+        """ Get the chemical potential of the i-th component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::chemical_potential(std::size_t)` """
+        return self.thisptr.chemical_potential(i)
     
     cpdef mole_fractions_liquid(self):
         """ Get the mole fractions of the liquid phase - wrapper of c++ function :cpapi:`CoolProp::AbstractState::mole_fractions_liquid(void)` """

@@ -22,14 +22,20 @@ class HelmholtzEOSMixtureBackend : public AbstractState {
 protected:
     void pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 );
     void post_update(bool optional_checks = true);
+    std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > linked_states; ///< States that are linked to this one, and should be updated (BIP, reference state, etc.)
     shared_ptr<HelmholtzEOSMixtureBackend> TPD_state; ///< A temporary state used for calculations of the tangent-plane-distance
+    shared_ptr<HelmholtzEOSMixtureBackend> critical_state; ///< A temporary state used for calculations of the critical point(s)
     /// Update the state class used to calculate the tangent-plane-distance
-    virtual void update_TPD_state(){
-        if (TPD_state.get() == NULL){
-		    bool sat_states = false;
-		    TPD_state.reset(new HelmholtzEOSMixtureBackend(components, sat_states));
+    virtual void add_TPD_state(){
+        if (TPD_state.get() == NULL){ bool sat_states = false; TPD_state.reset(copy(sat_states)); linked_states.push_back(TPD_state);
 	    }
     };
+    /// Update the state class used to calculate the critical point(s)
+    virtual void add_critical_state(){
+        if (critical_state.get() == NULL){ bool sat_states = true; critical_state.reset(copy(sat_states)); linked_states.push_back(critical_state);
+        }
+    };
+    
     std::vector<CoolPropFluid> components; ///< The components that are in use
     phases imposed_phase_index;
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
@@ -44,6 +50,12 @@ public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
+    virtual HelmholtzEOSMixtureBackend * copy(bool generate_SatL_and_SatV = true){
+        HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
+        ptr->Reducing = Reducing;
+        ptr->residual_helmholtz = residual_helmholtz;
+        return ptr;
+    };
     virtual ~HelmholtzEOSMixtureBackend(){};
     std::string backend_name(void){return "HelmholtzEOSMixtureBackend";}
     shared_ptr<ReducingFunction> Reducing;
@@ -223,7 +235,7 @@ public:
      * 
      * @param mass_fractions The vector of mass fractions of the components
      */
-    void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw std::exception();};
+    void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions);
 
 	void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p);
 
@@ -240,6 +252,7 @@ public:
     CoolPropDbl calc_cvmolar(void);
     CoolPropDbl calc_cpmolar(void);
     CoolPropDbl calc_gibbsmolar(void);
+    CoolPropDbl calc_helmholtzmolar(void);
     CoolPropDbl calc_cpmolar_idealgas(void);
     CoolPropDbl calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
     CoolPropDbl calc_smolar(void);

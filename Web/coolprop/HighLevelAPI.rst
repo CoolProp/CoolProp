@@ -319,10 +319,10 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
     In [1]: import CoolProp.CoolProp as CP
     
     # Using properties from CoolProp to get R410A density
-    In [2]: CP.PropsSI('C','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
+    In [2]: CP.PropsSI('D','T',300,'P',101325,'HEOS::R32[0.697615]&R125[0.302385]')
     
     # Using properties from REFPROP to get R410A density
-    In [2]: CP.PropsSI('C','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
+    In [2]: CP.PropsSI('D','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
     
 
 C++ Sample Code

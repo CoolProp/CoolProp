@@ -53,6 +53,7 @@ Molar mass [kg/mol],{mm:s}
 CAS number, {CAS:s}
 ASHRAE class, {ASHRAE:s}
 Formula, {formula:s}
+Acentric factor, {acentric:s}
 **Limits**,
 Maximum temperature [K],{Tmax:s}
 Maximum pressure [Pa],{pmax:s}
@@ -140,6 +141,7 @@ class FluidInfoTableGenerator(object):
         pt = CoolProp.CoolProp.PropsSI(self.name,'ptriple')
         Tmax = CoolProp.CoolProp.PropsSI(self.name,'Tmax')
         pmax = CoolProp.CoolProp.PropsSI(self.name,'pmax')
+        acentric = CoolProp.CoolProp.PropsSI(self.name,'acentric')
         rhoc_mass = CoolProp.CoolProp.PropsSI(self.name,'rhomass_critical')
         rhoc_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_critical')
         rhor_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_reducing')
@@ -166,6 +168,7 @@ class FluidInfoTableGenerator(object):
                     rhoc_mass = tos(rhoc_mass),
                     rhoc_molar = tos(rhoc_molar),
                     pc = tos(pc),
+                    acentric = tos(acentric),
                     CAS = tos(CAS),
                     ASHRAE = tos(ASHRAE),
                     Tmax = tos(Tmax),

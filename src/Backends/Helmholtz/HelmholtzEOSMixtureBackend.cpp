@@ -96,10 +96,12 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
     // saturation classes cannot hold copies of the saturation classes
     if (generate_SatL_and_SatV)
     {
-        SatL.reset(new HelmholtzEOSMixtureBackend(components, false));
+        SatL.reset(copy(false));
         SatL->specify_phase(iphase_liquid);
-        SatV.reset(new HelmholtzEOSMixtureBackend(components, false));
+        linked_states.push_back(SatL);
+        SatV.reset(copy(false));
         SatV->specify_phase(iphase_gas);
+        linked_states.push_back(SatV);
     }
 }
 void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
@@ -116,6 +118,28 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     if (this->SatV) this->SatV->resize(N);
     // Also store the mole fractions as doubles
     this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
+};
+void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
+{
+    if (mass_fractions.size() != N)
+    {
+        throw ValueError(format("size of mass fraction vector [%d] does not equal that of component vector [%d]",mass_fractions.size(), N));
+    }    
+    std::vector<CoolPropDbl> moles;
+	CoolPropDbl sum_moles = 0.0;
+	CoolPropDbl tmp = 0.0;
+    for (unsigned int i = 0; i < components.size(); ++i)
+    {
+        tmp = mass_fractions[i]/components[i].molar_mass();
+        moles.push_back(tmp);
+		sum_moles += tmp;
+    }
+	std::vector<CoolPropDbl> mole_fractions;
+	for(std::vector< CoolPropDbl >::iterator it = moles.begin(); it != moles.end(); ++it) 
+    {
+		mole_fractions.push_back(*it/sum_moles);
+	}
+	this->set_mole_fractions(mole_fractions);
 };
 void HelmholtzEOSMixtureBackend::resize(std::size_t N)
 {
@@ -225,9 +249,10 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t
     else{
         Reducing->set_binary_interaction_double(i,j,parameter,value);
     }
-    /// Also set the parameters in the managed pointers for saturated liquid and vapor states
-    if (this->SatL){ this->SatL->set_binary_interaction_double(i, j, parameter, value); }
-    if (this->SatV) { this->SatV->set_binary_interaction_double(i, j, parameter, value); }
+    /// Also set the parameters in the managed pointers for other states
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it){
+        it->get()->set_binary_interaction_double(i, j, parameter, value);
+    }
 };
 /// Get binary mixture floating point parameter for this instance
 double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
@@ -2486,6 +2511,34 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
         throw ValueError(format("phase is invalid in calc_gibbsmolar"));
     }
 }
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_helmholtzmolar(void)
+{
+    if (isTwoPhase())
+    {
+        if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
+        _helmholtzmolar = _Q*SatV->helmholtzmolar() + (1 - _Q)*SatL->helmholtzmolar();
+        return static_cast<CoolPropDbl>(_helmholtzmolar);
+    }
+    else if (isHomogeneousPhase())
+    {
+        // Calculate the reducing parameters
+        _delta = _rhomolar/_reducing.rhomolar;
+        _tau = _reducing.T/_T;
+        
+        // Calculate derivatives if needed, or just use cached values
+        CoolPropDbl ar = alphar();
+        CoolPropDbl a0 = alpha0();
+        CoolPropDbl R_u = gas_constant();
+        
+        // Get molar Helmholtz energy
+        _helmholtzmolar = R_u*_T*(a0 + ar);
+        
+        return static_cast<CoolPropDbl>(_helmholtzmolar);
+    }
+    else{
+        throw ValueError(format("phase is invalid in calc_helmholtzmolar"));
+    }
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(std::size_t i)
 {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
@@ -3370,15 +3423,17 @@ void HelmholtzEOSMixtureBackend::get_critical_point_search_radii(double &R_delta
 }
 std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
 {
-    // Store old phase
-    phases old_phase = _phase;
-    // Specify it to be something homogeneous to shortcut phase evaluation
-    specify_phase(iphase_gas);
+    // Populate the temporary class used to calculate the critical point(s)
+    add_critical_state();
+    critical_state->set_mole_fractions(this->get_mole_fractions_ref());
+
+    // Specify state to be something homogeneous to shortcut phase evaluation
+    critical_state->specify_phase(iphase_gas);
 
     double delta0 = _HUGE, tau0 = _HUGE;
-    get_critical_point_starting_values(delta0, tau0);
+    critical_state->get_critical_point_starting_values(delta0, tau0);
     
-    OneDimObjective resid_L0(*this, delta0);
+    OneDimObjective resid_L0(*critical_state, delta0);
     
     // If the derivative of L1star with respect to tau is positive, 
     // tau needs to be increased such that we sit on the other 
@@ -3393,16 +3448,14 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     //double T0 = T_reducing()/tau_L0;
     //double rho0 = delta0*rhomolar_reducing();
 
-    L0CurveTracer tracer(*this, tau_L0, delta0);
+    L0CurveTracer tracer(*critical_state, tau_L0, delta0);
 
     double R_delta = 0, R_tau = 0;
-    get_critical_point_search_radii(R_delta, R_tau);
+    critical_state->get_critical_point_search_radii(R_delta, R_tau);
     tracer.R_delta_tracer = R_delta;
     tracer.R_tau_tracer = R_tau;
     tracer.trace();
 
-    // Reset phase to previous value
-    _phase = old_phase;
     return tracer.critical_points;
 }
 
@@ -3412,7 +3465,7 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 	if (w.size() != z.size()){ 
 		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size())); 
 	}
-    update_TPD_state();
+    add_TPD_state();
 	TPD_state->set_mole_fractions(w);
 	if (rhomolar_guess < 0){
 		TPD_state->update(PT_INPUTS, p, T);

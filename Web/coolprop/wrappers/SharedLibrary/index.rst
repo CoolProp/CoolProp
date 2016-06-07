@@ -21,6 +21,8 @@ Pre-Compiled Binaries
 
 Download the appropriate shared library for your architecture from from :sfdownloads:`shared_library`, or the development versions from the buildbot server at :sfnightly:`shared_library`.
 
+Users of the Borland compiler might find these instructions useful for using Visual Studio compiled shared libraries with Borland compiler: http://bcbjournal.org/articles/vol4/0012/Using_Visual_C_DLLs_with_CBuilder.htm
+
 User-Compiled Binaries
 ======================
 
@@ -189,3 +191,21 @@ Here is a small example for calling the shared library from C on windows, as con
         }
     }
     
+Here is another snippet of using the shared library in windows when (for your application), you MUST use a Visual Studio 32-bit stdcall dll of CoolProp for compatibility with other tools::
+
+    // This is to get all the function prototypes from the header
+    #define EXPORT_CODE extern "C" __declspec(dllimport)
+    #define CONVENTION __stdcall
+    #include "CoolPropLib.h"
+    #undef EXPORT_CODE
+    #undef CONVENTION
+
+    #include <iostream>
+    //---------------------------------------------------------------------------
+    int main(int argc, char* argv[])
+    {
+        std::cout << PropsSI("T","P",101325,"Q",0,"Water") << std::endl;
+        return 1;
+    }
+
+

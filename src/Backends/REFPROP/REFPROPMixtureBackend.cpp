@@ -574,10 +574,28 @@ void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &m
     this->mole_fractions_long_double = mole_fractions;
     _mole_fractions_set = true;
 }
-void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mole_fractions)
+void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
 {
-    throw NotImplementedError("Mass fractions not currently supported");
-}
+    if (mass_fractions.size() != this->Ncomp)
+    {
+        throw ValueError(format("size of mass fraction vector [%d] does not equal that of component vector [%d]",mass_fractions.size(), this->Ncomp));
+    }
+    std::vector<double> moles(this->Ncomp);
+    double sum_moles = 0.0;
+    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    for (long i = 1L; i <= static_cast<long>(this->Ncomp); ++i){
+        INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
+        moles[i-1] = static_cast<double>(mass_fractions[i-1])/(wmm/1000.0);
+		sum_moles += moles[i-1];
+    }
+    this->mole_fractions.clear();
+	for(std::vector<double>::iterator it = moles.begin(); it != moles.end(); ++it) 
+    {
+		this->mole_fractions.push_back(*it/sum_moles);
+	}
+    this->mole_fractions_long_double = mole_fractions;
+    _mole_fractions_set = true;
+};
 void REFPROPMixtureBackend::check_status(void)
 {
     if (!_mole_fractions_set){ throw ValueError("Mole fractions not yet set");}
