@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Mike Kaganski, Ian Bell, and the CoolProp team")]
 [assembly: AssemblyProduct("CoolProp Wrapper")]
-[assembly: AssemblyCopyright("Copyright © 2015, Mike Kaganski, Ian Bell, and the CoolProp team")]
+[assembly: AssemblyCopyright("Copyright © 2016, Mike Kaganski, Ian Bell, and the CoolProp team")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
