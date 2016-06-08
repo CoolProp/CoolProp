@@ -10,6 +10,7 @@ EXPORTS
   AbstractState_first_partial_deriv = _AbstractState_first_partial_deriv@28
   AbstractState_update_and_5_out = _AbstractState_update_and_5_out@56
   AbstractState_update_and_common_out = _AbstractState_update_and_common_out@52
+  AbstractState_set_binary_interaction_double = AbstractState_set_binary_interaction_double@36
   F2K = _F2K@8
   HAProps = _HAProps@40
   HAPropsSI = _HAPropsSI@40

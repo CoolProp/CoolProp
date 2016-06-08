@@ -354,6 +354,19 @@
     */
     EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long *outputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length);
 
+    /**
+    * @brief Set binary interraction parrameter for mixtures
+    * @param handle The integer handle for the state class stored in memory
+    * @param i indice of the first fluid of the binary pair
+    * @param j indice of the second fluid of the binary pair
+    * @param parameter string wit the name of the parameter
+    * @param value the value of the binary interaction parameter
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const size_t i, const size_t j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
     // *************************************************************************************
     // *************************************************************************************
