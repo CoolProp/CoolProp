@@ -42,7 +42,7 @@ Native Wrapper
 
 4. Make sure the mode is set to Release (not Debug).  Build the project, the generated and copied files will be in ``build/wrappers/SMath/coolprop_wrapper/bin/Release``.
 
-5. From the :sfdownloads:`download page <shared_library>`, download the 64-bit DLL ``CoolProp.dll`` file from ``Windows/64bit`` folder and rename to ``CoolProp.x64.dll`` and place with the files in ``build/wrappers/SMath/coolprop_wrapper/bin/Release``.  Download the 32-bit ``__stdcall`` DLL ``CoolProp.dll`` from ``Windows/32bit__stdcall_calling_convention`` and rename to ``CoolProp.x86.dll`` and place with the files in ``build/wrappers/SMath/coolprop_wrapper/bin/Release``.
+5. From the :sfdownloads:`download page <shared_library>`, download the 64-bit DLL ``CoolProp.dll`` file from ``Windows/64bit`` folder and rename to ``CoolProp_x64.dll`` and place with the files in ``build/wrappers/SMath/coolprop_wrapper/bin/Release``.  Download the 32-bit ``__stdcall`` DLL ``CoolProp.dll`` from ``Windows/32bit__stdcall_calling_convention`` and rename to ``CoolProp_x86.dll`` and place with the files in ``build/wrappers/SMath/coolprop_wrapper/bin/Release``.
 
 6. Run the ``build_zip.bat`` file that is in the ``build/wrappers/SMath`` folder.  It will create a zip file with the needed files. 
 
