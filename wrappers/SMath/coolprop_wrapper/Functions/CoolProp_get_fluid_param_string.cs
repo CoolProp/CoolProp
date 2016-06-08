@@ -35,7 +35,7 @@ namespace coolprop_wrapper.Functions
         case 8:
           return CoolPropDLLfunc_x64(fluid, param, Output, n);
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      throw new System.Exception("Unknown platform!");
     }
 
     Term inf;
@@ -75,7 +75,7 @@ namespace coolprop_wrapper.Functions
       var Result = CoolPropDLLfunc(fluid, param, output, output.Capacity);
       coolpropPlugin.LogInfo("[INFO ]", "fluid = {0} param = {1} output = {2} Result = {3}", fluid, param, output.ToString(), Result);
       if (Result != 1)
-        throw new EvaluationException(Errors.ArgumentDoesNotMatchToExpectedKind);
+          coolpropPlugin.CoolPropError();
       result = coolpropPlugin.MakeStringResult(output.ToString());
 
       return true;

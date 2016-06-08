@@ -1,7 +1,4 @@
 
-Welcome to CoolProp's download directory
-========================================
-
 CoolProp is a thermophysical property database and wrappers for a selection of 
 programming environments. It offers similar functionality to REFPROP, but CoolProp 
 is open-source and free. 

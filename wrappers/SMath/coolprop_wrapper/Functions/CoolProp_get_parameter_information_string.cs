@@ -32,7 +32,7 @@ namespace coolprop_wrapper.Functions
         case 8:
           return CoolPropDLLfunc_x64(key, Output, n);
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      throw new System.Exception("Unknown platform!");
     }
 
     Term inf;
@@ -74,7 +74,7 @@ namespace coolprop_wrapper.Functions
         "key = {0} output(in) = {1} output(out) = {2} Result = {3}",
         key, Output, output.ToString(), Result);
       if (Result != 1)
-        throw new EvaluationException(Errors.ArgumentDoesNotMatchToExpectedKind);
+          coolpropPlugin.CoolPropError();
       result = coolpropPlugin.MakeStringResult(output.ToString());
 
       return true;
