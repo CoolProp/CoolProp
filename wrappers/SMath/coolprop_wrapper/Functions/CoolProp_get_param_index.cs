@@ -7,12 +7,12 @@ namespace coolprop_wrapper.Functions
   {
     // long get_param_index(const char *param);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "get_param_index",
+      "CoolProp_x86", EntryPoint = "get_param_index",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x86(
       string param);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "get_param_index",
+      "CoolProp_x64", EntryPoint = "get_param_index",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x64(
       string param);

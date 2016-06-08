@@ -7,13 +7,13 @@ namespace coolprop_wrapper.Functions
   {
     // double Props1SI(const char *FluidName, const char* Output);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "Props1SI",
+      "CoolProp_x86", EntryPoint = "Props1SI",
       CharSet = CharSet.Ansi)]
     internal static extern double CoolPropDLLfunc_x86(
       string FluidName,
       string Output);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "Props1SI",
+      "CoolProp_x64", EntryPoint = "Props1SI",
       CharSet = CharSet.Ansi)]
     internal static extern double CoolPropDLLfunc_x64(
       string FluidName,
