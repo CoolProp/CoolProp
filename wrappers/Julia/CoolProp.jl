@@ -1,7 +1,7 @@
 VERSION < v"0.4.0" && __precompile__()
 module CoolProp
 
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output, AbstractState_set_binary_interaction_double
+export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output, AbstractState_update_and_common_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
@@ -227,6 +227,63 @@ function AbstractState_keyed_output(handle::Clong, param::Clong)
   return output
 end
 
+# Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy) from the AbstractState using pointers as inputs and output to allow array computation.
+# handle The integer handle for the state class stored in memory
+# input_pair The integer value for the input pair obtained from get_input_pair_index
+# value1 The pointer to the array of the first input parameters
+# value2 The pointer to the array of the second input parameters
+# length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
+# T The pointer to the array of temperature
+# p The pointer to the array of pressure
+# rhomolar The pointer to the array of molar density
+# hmolar The pointer to the array of molar enthalpy
+# smolar The pointer to the array of molar entropy
+function AbstractState_update_and_common_out(handle::Clong, input_pair::Clong, value1::Array, value2::Array, length::Number, T::Array, p::Array, rhomolar::Array, hmolar::Array, smolar::Array)
+  ccall( (:AbstractState_update_and_common_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,T,p,rhomolar,hmolar,smolar,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
+  return nothing
+end
+
+# Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy) from the AbstractState using pointers as inputs and output to allow array computation.
+# handle The integer handle for the state class stored in memory
+# input_pair The integer value for the input pair obtained from get_input_pair_index
+# value1 The pointer to the array of the first input parameters
+# value2 The pointer to the array of the second input parameters
+# length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
+# outputs The 5-element vector of indices for the outputs desired
+# out1 The pointer to the array for the first output
+# out2 The pointer to the array for the second output
+# out3 The pointer to the array for the third output
+# out4 The pointer to the array for the fourth output
+# out5 The pointer to the array for the fifth output
+function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array, value2::Array, length::Number, outputs::Array, out1::Array, out2::Array, out3::Array, out4::Array, out5::Array)
+  ccall( (:AbstractState_update_and_5_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Clong},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,outputs,out1,out2,out3,out4,out5,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
+  return nothing
+end
+
+# Set binary interraction parrameter for mixtures
+# handle The integer handle for the state class stored in memory
+# i indice of the first fluid of the binary pair
+# j indice of the second fluid of the binary pair
+# parameter string wit the name of the parameter
+# value the value of the binary interaction parameter
 function AbstractState_set_binary_interaction_double(handle::Clong,i::Int, j::Int, parameter::AbstractString, value::Cdouble)
   ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong,Csize_t,Csize_t,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,j,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
