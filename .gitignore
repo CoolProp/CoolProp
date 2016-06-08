@@ -34,7 +34,6 @@
 /include/gitrevision.h
 /include/mixture_excess_term_JSON.h
 /include/mixture_reducing_parameters_JSON.h
-/include/cubic_fluids_schema_JSON.h
 /include/version.h
 /include/catch.hpp
 /build/
