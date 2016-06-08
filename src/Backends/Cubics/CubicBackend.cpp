@@ -358,3 +358,19 @@ void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend *donor){
         }
     }
 }
+
+void CoolProp::AbstractCubicBackend::set_C_MC(double c1, double c2, double c3)
+{
+    get_cubic()->set_C_MC(c1, c2, c3);
+
+    if (SatL.get() != NULL){ 
+        /// Cast to this type so that we can access its internal methods
+        CoolProp::AbstractCubicBackend* _SatL = static_cast<CoolProp::AbstractCubicBackend*>(this->SatL.get());
+        _SatL->get_cubic()->set_C_MC(c1, c2, c3);
+    }
+    if (SatV.get() != NULL){ 
+        /// Cast to this type so that we can access its internal methods
+        CoolProp::AbstractCubicBackend* _SatV = static_cast<CoolProp::AbstractCubicBackend*>(this->SatV.get());
+        _SatV->get_cubic()->set_C_MC(c1, c2, c3);
+    }
+}

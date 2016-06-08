@@ -171,6 +171,9 @@ public:
     
     // Copy the entire kij matrix from another instance in one shot
     void copy_k(AbstractCubicBackend *donor);
+
+    void set_C_MC(double c1, double c2, double c3);
+    
 };
 
 
