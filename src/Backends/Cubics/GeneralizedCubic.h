@@ -95,6 +95,7 @@ public:
     void set_C_MC(double c1, double c2, double c3){
         C1.resize(1); C2.resize(1); C3.resize(1);
         C1[0] = c1, C2[0] = c2; C3[0] = c3;
+        simple_aii = false;
     }
     
     /// Get the leading constant in the expression for the pure fluid attractive energy term
