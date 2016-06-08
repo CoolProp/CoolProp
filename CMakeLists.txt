@@ -79,6 +79,10 @@ option (COOLPROP_DEBUG
        "Make a debug build"
        OFF)
        
+option (COOLPROP_SMATH_WORK_INPLACE
+       "Build SMath wrapper in source directory"
+       OFF)
+       
 IF ( COOLPROP_RELEASE AND COOLPROP_DEBUG )
   MESSAGE(FATAL_ERROR "You can only make a release OR and debug build.")
 ENDIF()
@@ -1251,28 +1255,33 @@ if (COOLPROP_MATHEMATICA_MODULE)
 endif()
 
 if (COOLPROP_SMATH_MODULE)
+    if (COOLPROP_SMATH_WORK_INPLACE)
+        set(COOLPROP_WORK_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    else()
+        set(COOLPROP_WORK_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
     set(COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}.0)
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    FILE(WRITE "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/config.ini")
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
     FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_SOURCE_DIR)
-    FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_TARGET_DIR)
+    FILE(TO_NATIVE_PATH "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_TARGET_DIR)
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
     include_external_msproject(
-        CoolPropWrapper ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj
+        CoolPropWrapper ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj
         TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
         PLATFORM AnyCPU)
-    message(STATUS "C# project ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj included")
+    message(STATUS "C# project ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj included")
     
 endif()
 
