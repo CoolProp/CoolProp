@@ -653,7 +653,7 @@ EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const lo
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        AS->set_binary_interaction_double(i, j, parameter, value);
+        AS->set_binary_interaction_double(static_cast<std::size_t>(i), static_cast<std::size_t>(j), parameter, value);
     }
     catch (CoolProp::HandleError &e) {
         std::string errmsg = std::string("HandleError: ") + e.what();

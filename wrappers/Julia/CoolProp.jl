@@ -298,7 +298,7 @@ end
 # parameter string wit the name of the parameter
 # value the value of the binary interaction parameter
 function AbstractState_set_binary_interaction_double(handle::Clong,i::Int, j::Int, parameter::AbstractString, value::Cdouble)
-  ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong,Csize_t,Csize_t,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,j,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong,Clong,Clong,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,j,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
       error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
