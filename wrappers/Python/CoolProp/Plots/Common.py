@@ -26,7 +26,7 @@ def get_critical_point(state):
     except:
         try:
             for crit_state_tmp in state.all_critical_points():
-                if crit_state_tmp.stable and crit_state_tmp.T > crit_state.T:
+                if crit_state_tmp.stable and (crit_state_tmp.T > crit_state.T or not np.isfinite(crit_state.T)):
                     crit_state.T = crit_state_tmp.T
                     crit_state.p = crit_state_tmp.p
                     crit_state.rhomolar = crit_state_tmp.rhomolar
@@ -35,10 +35,17 @@ def get_critical_point(state):
             raise ValueError("Could not calculate the critical point data.")    
     new_state = AbstractState(state.backend_name(), '&'.join(state.fluid_names()))
     masses = state.get_mass_fractions()
-    if len(masses)>1: new_state.set_mass_fractions(masses) # Uses mass fraction to work with incompressibles
-    #new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
-    new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
-    return new_state
+    if len(masses)>1: 
+        new_state.set_mass_fractions(masses) # Uses mass fraction to work with incompressibles
+        #try: new_state.build_phase_envelope("dummy")
+        #except: pass
+    if np.isfinite(crit_state.p) and np.isfinite(crit_state.T):
+        try: new_state.specify_phase(CoolProp.iphase_critical_point)
+        except: pass 
+        new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
+        #new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+        return new_state
+    raise ValueError("Could not calculate the critical point data.")
 
 def interpolate_values_1d(x,y,x_points=None,kind='linear'):
     try: 
@@ -338,6 +345,8 @@ class Base2DObject(with_metaclass(ABCMeta),object):
     @state.setter
     def state(self, value):
         self._state = process_fluid_state(value)
+        #try: self._state.build_phase_envelope("dummy")
+        #except: pass
         self._critical_state = None        
         #self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
         #self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
