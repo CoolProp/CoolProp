@@ -36,7 +36,8 @@ def get_critical_point(state):
     new_state = AbstractState(state.backend_name(), '&'.join(state.fluid_names()))
     masses = state.get_mass_fractions()
     if len(masses)>1: new_state.set_mass_fractions(masses) # Uses mass fraction to work with incompressibles
-    new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+    #new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+    new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
     return new_state
 
 def interpolate_values_1d(x,y,x_points=None,kind='linear'):
