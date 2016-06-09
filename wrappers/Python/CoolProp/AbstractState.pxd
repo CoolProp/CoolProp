@@ -55,6 +55,7 @@ cdef class AbstractState:
     cpdef apply_simple_mixing_rule(self, size_t, size_t, string)
     
     cpdef name(self)
+    cpdef backend_name(self)
     cpdef fluid_names(self)
     cpdef fluid_param_string(self, string key)
     cpdef change_EOS(self, size_t, string)

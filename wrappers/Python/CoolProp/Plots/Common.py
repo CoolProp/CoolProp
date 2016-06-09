@@ -6,12 +6,11 @@ import numpy as np
 from abc import ABCMeta
 from six import with_metaclass
 import warnings
-import copy
 
 import CoolProp
 from CoolProp import AbstractState
 from CoolProp import CoolProp as CP
-from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions, PyCriticalState
+from CoolProp.CoolProp import PropsSI, extract_backend, extract_fractions, PyCriticalState
 
 def get_critical_point(state):
     crit_state = PyCriticalState() 
@@ -33,8 +32,8 @@ def get_critical_point(state):
                     crit_state.rhomolar = crit_state_tmp.rhomolar
                     crit_state.stable = crit_state_tmp.stable
         except:
-            raise ValueError("Could not calculate the critical point data.")
-    new_state = copy.deepcopy(state)
+            raise ValueError("Could not calculate the critical point data.")    
+    new_state = AbstractState(state.backend_name(), '&'.join(state.fluid_names()))
     new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
     return new_state
 
@@ -329,7 +328,7 @@ class Base2DObject(with_metaclass(ABCMeta),object):
     @property
     def critical_state(self):
         if self._critical_state is None and self._state is not None:
-            self._critical_state = get_critical_point(state)
+            self._critical_state = get_critical_point(self._state)
         return self._critical_state
     @property
     def state(self): return self._state

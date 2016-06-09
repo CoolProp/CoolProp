@@ -36,8 +36,11 @@ cdef class AbstractState:
         return self.thisptr.fluid_param_string(key)    
         
     cpdef name(self):
-        """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """
+        """ Get the fluid name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::name` """
         return self.thisptr.name()
+    cpdef backend_name(self):
+        """ Get the backend name - wrapper of c++ function :cpapi:`CoolProp::AbstractState::backend_name` """
+        return self.thisptr.backend_name()
     cpdef fluid_names(self):
         """ Get the list of fluid names - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fluid_names` """
         return self.thisptr.fluid_names()
