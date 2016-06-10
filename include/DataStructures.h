@@ -424,8 +424,8 @@ enum backends {
 };
 
 /// Convert a string into the enum values
-void extract_backend_enums(std::string backend_string, backend_families &f1, backend_families &f2);
-void extract_backend_enums_string(std::string backend_string, backend_families &f1, std::string &f2);
+void extract_backend_families(std::string backend_string, backend_families &f1, backend_families &f2);
+void extract_backend_families_string(std::string backend_string, backend_families &f1, std::string &f2);
 std::string get_backend_string(backends backend);
 
 } /* namespace CoolProp */

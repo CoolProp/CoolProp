@@ -35,7 +35,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
 
     backend_families f1;
     std::string f2;
-    extract_backend_enums_string(backend, f1, f2);
+    extract_backend_families_string(backend, f1, f2);
     if (f1==HEOS_BACKEND_FAMILY)
     {
         if (fluid_names.size() == 1){
