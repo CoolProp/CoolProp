@@ -12,6 +12,7 @@
 #include "HelmholtzEOSMixtureBackend.h"
 #include "Fluids/FluidLibrary.h"
 #include "MixtureParameters.h"
+#include "DataStructures.h"
 
 namespace CoolProp {
 
@@ -57,7 +58,7 @@ public:
         if (get_debug_level() > 0){ std::cout << "successfully set up state" << std::endl; }
     };
     virtual ~HelmholtzEOSBackend(){};
-    std::string backend_name(void){return "HelmholtzEOSBackend";}
+    std::string backend_name(void) { return get_backend_string(HEOS_BACKEND_PURE); }
 };
 
 } /* namespace CoolProp */

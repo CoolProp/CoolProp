@@ -3,6 +3,7 @@
 
 #include "TabularBackends.h"
 #include "Exceptions.h"
+#include "DataStructures.h"
 #include "Eigen/Core"
 
 
@@ -89,7 +90,7 @@ class BicubicBackend : public TabularBackend
             dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
             dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
         };
-        std::string backend_name(void){return "BicubicBackend";}
+        std::string backend_name(void){return get_backend_string(BICUBIC_BACKEND);}
         
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table

@@ -9,6 +9,7 @@
 #define REFPROPMIXTUREBACKEND_H_
 
 #include "AbstractState.h"
+#include "DataStructures.h"
 
 #include <vector>
 
@@ -45,7 +46,7 @@ public:
     /// A function to actually do the initalization to allow it to be called in derived classes
     void construct(const std::vector<std::string>& fluid_names);
     
-    std::string backend_name(void){return "REFPROPMixtureBackend";}
+    std::string backend_name(void) { return get_backend_string(REFPROP_BACKEND_MIX); }
     virtual ~REFPROPMixtureBackend();
 
 	static std::string version();

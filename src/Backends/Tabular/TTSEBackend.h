@@ -2,6 +2,7 @@
 #define TTSEBACKEND_H
 
 #include "TabularBackends.h"
+#include "DataStructures.h"
 
 namespace CoolProp
 {
@@ -9,7 +10,7 @@ namespace CoolProp
 class TTSEBackend : public TabularBackend
 {
     public:
-        std::string backend_name(void){return "TTSEBackend";}
+        std::string backend_name(void) { return get_backend_string(TTSE_BACKEND); }
         /// Instantiator; base class loads or makes tables
         TTSEBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend (AS) {
             imposed_phase_index = iphase_not_imposed;

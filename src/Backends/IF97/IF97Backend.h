@@ -20,7 +20,7 @@ protected:
 
 public:
     /// The name of the backend being used
-    std::string backend_name(void){return "IF97Backend";}
+    std::string backend_name(void) { return get_backend_string(IF97_BACKEND); }
 
     // REQUIRED BUT NOT USED IN IF97 FUNCTIONS
     bool using_mole_fractions(void){return false;};

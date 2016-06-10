@@ -8,6 +8,7 @@
 #include "ExcessHEFunction.h"
 #include "Solvers.h"
 #include "PhaseEnvelope.h"
+#include "DataStructures.h"
 
 #include <vector>
 
@@ -57,7 +58,7 @@ public:
         return ptr;
     };
     virtual ~HelmholtzEOSMixtureBackend(){};
-    std::string backend_name(void){return "HelmholtzEOSMixtureBackend";}
+    std::string backend_name(void) { return get_backend_string(HEOS_BACKEND_MIX); }
     shared_ptr<ReducingFunction> Reducing;
     shared_ptr<ResidualHelmholtz> residual_helmholtz;
     PhaseEnvelopeData PhaseEnvelope;

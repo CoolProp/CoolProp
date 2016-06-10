@@ -39,7 +39,7 @@ protected:
 public:
     IncompressibleBackend();
     virtual ~IncompressibleBackend(){};
-    std::string backend_name(void){return "IncompressibleBackend";}
+    std::string backend_name(void) { return get_backend_string(INCOMP_BACKEND); }
 
     /// The instantiator
     /// @param fluid object, mostly for testing purposes

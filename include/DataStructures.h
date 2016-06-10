@@ -393,5 +393,40 @@ void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);
 extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
 extern void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
 
+
+/// The structure is taken directly from the AbstractState class.
+// !! If you add a parameter, update the map in the corresponding CPP file !!
+enum backend_families {
+    INVALID_BACKEND_FAMILY = 0,
+    HEOS_BACKEND_FAMILY,
+    REFPROP_BACKEND_FAMILY,
+    INCOMP_BACKEND_FAMILY,
+    IF97_BACKEND_FAMILY,
+    TREND_BACKEND_FAMILY,
+    TTSE_BACKEND_FAMILY,
+    BICUBIC_BACKEND_FAMILY,
+    SRK_BACKEND_FAMILY,
+    PR_BACKEND_FAMILY
+};
+enum backends {
+    INVALID_BACKEND = 0,
+    HEOS_BACKEND_PURE,
+    HEOS_BACKEND_MIX,
+    REFPROP_BACKEND_PURE,
+    REFPROP_BACKEND_MIX,
+    INCOMP_BACKEND,
+    IF97_BACKEND,
+    TREND_BACKEND,
+    TTSE_BACKEND,
+    BICUBIC_BACKEND,
+    SRK_BACKEND,
+    PR_BACKEND
+};
+
+/// Convert a string into the enum values
+void extract_backend_enums(std::string backend_string, backend_families &f1, backend_families &f2);
+void extract_backend_enums_string(std::string backend_string, backend_families &f1, std::string &f2);
+std::string get_backend_string(backends backend);
+
 } /* namespace CoolProp */
 #endif /* DATASTRUCTURES_H_ */

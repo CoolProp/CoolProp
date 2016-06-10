@@ -2,6 +2,7 @@
 
 #include "BicubicBackend.h"
 #include "MatrixMath.h"
+#include "DataStructures.h"
 #include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
 void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j)

@@ -215,7 +215,7 @@ public:
         ACB->copy_k(this);
         return ACB;
     }
-    std::string backend_name(void){return "SRKBackend";}
+    std::string backend_name(void) { return get_backend_string(SRK_BACKEND); }
 };
 
 class PengRobinsonBackend : public AbstractCubicBackend  {
@@ -255,7 +255,7 @@ public:
         ACB->copy_k(this);
         return ACB;
     }
-    std::string backend_name(void){return "PengRobinsonBackend";}
+    std::string backend_name(void) { return get_backend_string(PR_BACKEND); }
 };
 
 /**

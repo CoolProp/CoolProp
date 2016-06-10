@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
+#include "DataStructures.h"
 #include "Backends/REFPROP/REFPROPBackend.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
@@ -31,8 +32,11 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     if (get_debug_level() > 0){
         std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << std::endl;
     }
-    static const std::string HEOS_string      = "HEOS";
-    if (!backend.compare(HEOS_string) || !backend.compare("HelmholtzEOSBackend") || !backend.compare("HelmholtzEOSMixtureBackend"))
+
+    backend_families f1;
+    std::string f2;
+    extract_backend_enums_string(backend, f1, f2);
+    if (f1==HEOS_BACKEND_FAMILY)
     {
         if (fluid_names.size() == 1){
             return new HelmholtzEOSBackend(fluid_names[0]);
@@ -41,7 +45,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
             return new HelmholtzEOSMixtureBackend(fluid_names);
         }
     }
-    else if (!backend.compare("REFPROP") || !backend.compare("REFPROPBackend") || !backend.compare("REFPROPMixtureBackend"))
+    else if (f1==REFPROP_BACKEND_FAMILY)
     {
         if (fluid_names.size() == 1){
             return new REFPROPBackend(fluid_names[0]);
@@ -50,37 +54,39 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
             return new REFPROPMixtureBackend(fluid_names);
         }
     }
-    else if (!backend.compare("INCOMP") || !backend.compare("IncompressibleBackend"))
+    else if (f1==INCOMP_BACKEND_FAMILY)
     {
         if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
         return new IncompressibleBackend(fluid_names[0]);
     }
-    else if (!backend.compare("IF97") || !backend.compare("IF97Backend"))
+    else if (f1==IF97_BACKEND_FAMILY)
     {
         return new IF97Backend();
     }
     #if !defined(NO_TABULAR_BACKENDS)
-    else if (backend.find("TTSE&") == 0 || backend.find("TTSEBackend&") == 0)
+    else if (f1==TTSE_BACKEND_FAMILY)
     {
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names));
+        shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new TTSEBackend(AS);
     }
-    else if (backend.find("BICUBIC&") == 0 || backend.find("BicubicBackend&") == 0)
+    else if (f1==BICUBIC_BACKEND_FAMILY)
     {
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(8), fluid_names));
+        shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new BicubicBackend(AS);
     }
     #endif
-    else if (!backend.compare("TREND"))
+    else if (f1==TREND_BACKEND_FAMILY)
     {
         throw ValueError("TREND backend not yet implemented");
     }
-    else if (backend == "SRK" || backend == "SRKBackend") {
+    else if (f1 == SRK_BACKEND_FAMILY) 
+    {
         return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
     }
-    else if (backend == "PR" || backend == "Peng-Robinson" || backend == "PengRobinsonBackend"){
+    else if (f1==PR_BACKEND_FAMILY)
+    {
         return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
     }
     else if (!backend.compare("?") || backend.empty())
@@ -90,7 +96,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         if (idel == std::string::npos) // No '::' found, no backend specified, try HEOS, otherwise a failure
         {
             // Figure out what backend to use
-            return factory(HEOS_string, fluid_names);
+            return factory("HEOS", fluid_names);
         }
         else
         {
