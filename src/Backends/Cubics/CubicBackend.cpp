@@ -298,10 +298,12 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
             double ps_est = pc*pow(10.0, -neg_log10_pr);
             SaturationResidual resid(this, inputs, _T);
             static std::string errstr;
-            double ps = CoolProp::Secant(resid, ps_est, -0.1, 1e-10, 100);
+            double ps = CoolProp::BoundedSecant(resid, ps_est, 1e-10, pc, -0.01*ps_est, 1e-5, 100);
             _p = ps;
             rhoL = resid.deltaL*cubic->T_r;
             rhoV = resid.deltaV*cubic->T_r;
+            this->SatL->update(DmolarT_INPUTS, rhoL, _T);
+            this->SatV->update(DmolarT_INPUTS, rhoV, _T);
         }
         else{
             HelmholtzEOSMixtureBackend::update(QT_INPUTS, _Q, _T);
