@@ -133,7 +133,7 @@ public:
      * \f[ B = \frac{bp}{RT} \f]
      *
      * Sympy code:
-     * R,T,v,b,a,Delta_1,Delta_2,p,Z = symbols('R,T,v,b,a,Delta_1,Delta_2,p,Z')
+     * R,T,v,b,a,Delta_1,Delta_2,p,Z,A,B = symbols('R,T,v,b,a,Delta_1,Delta_2,p,Z,A,B')
      * eqn = (R*T/(v-b)-a/(v+Delta_1*b)/(v+Delta_2*b)-p).subs(v,Z*R*T/p)
      * eqn2 = eqn*(R*T*Z/p-b)*(R*T*Z/p+Delta_2*b)*(R*T*Z/p+Delta_1*b)/(R**3*T**3/p**2)
      * collect(expand(factor(-eqn2)),Z).subs(b*p/(R*T),B).subs(a*p/(R**2*T**2),A)
