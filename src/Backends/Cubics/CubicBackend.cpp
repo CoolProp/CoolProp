@@ -189,6 +189,15 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     double am = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0);
     double bm = cubic->bm_term(mole_fractions);
     
+    // ** SYMPY CODE ***
+    // R,T,v,b,a,Delta_1,Delta_2,p,Z,rho = symbols('R,T,v,b,a,Delta_1,Delta_2,p,Z,rho')
+    // eqn = (R*T/(v-b)-a/(v+Delta_1*b)/(v+Delta_2*b)-p).subs(v,1/rho)
+    // eqn2 = eqn*(-b + 1/rho)*(Delta_1*b + 1/rho)*(Delta_2*b + 1/rho)
+    // display(simplify(factor(expand(eqn2),rho)))
+    //
+    // yields:
+    // (b*rho**3*(Delta_1*Delta_2*R*T*b + Delta_1*Delta_2*b**2*p + a) - p + rho**2*(-Delta_1*Delta_2*b**2*p + Delta_1*R*T*b + Delta_1*b**2*p + Delta_2*R*T*b + Delta_2*b**2*p - a) - rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p))/rho**3
+    
     double crho0 = -p;
     double crho1 = -1*((Delta_1+Delta_2-1)*bm*p - R*T);
     double crho2 = -Delta_1*Delta_2*bm*bm*p + (Delta_1+Delta_2)*(R*T*bm + bm*bm*p) - am;
