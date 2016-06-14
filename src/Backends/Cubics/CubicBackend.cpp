@@ -186,21 +186,32 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     double R = cubic->get_R_u();
     double Delta_1 = cubic->get_Delta_1();
     double Delta_2 = cubic->get_Delta_2();
-    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
-    double B = cubic->bm_term(mole_fractions)*p/(R*T);
-    double Z0=0, Z1=0, Z2=0;
-    solve_cubic(1,
-                B*(Delta_1+Delta_2-1)-1,
-                A + B*B*(Delta_1*Delta_2-Delta_1-Delta_2) - B*(Delta_1+Delta_2),
-                -A*B-Delta_1*Delta_2*(POW2(B)+POW3(B)),
-                Nsolns, Z0, Z1, Z2);
-    if (Nsolns == 1){ rho0 = p/(Z0*R*T); }
-    else if (Nsolns == 3){
-        rho0 = p/(Z0*R*T);
-        rho1 = p/(Z1*R*T);
-        rho2 = p/(Z2*R*T);
-        sort3(rho0, rho1, rho2);
-    }
+    double am = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0);
+    double bm = cubic->bm_term(mole_fractions);
+    
+    double crho0 = -p;
+    double crho1 = -1*((Delta_1+Delta_2-1)*bm*p - R*T);
+    double crho2 = -Delta_1*Delta_2*bm*bm*p + (Delta_1+Delta_2)*(R*T*bm + bm*bm*p) - am;
+    double crho3 = bm*(Delta_1*Delta_2*(R*T*bm + bm*bm*p) + am);
+    solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
+    sort3(rho0, rho1, rho2);
+    return;
+    
+//    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
+//    double B = cubic->bm_term(mole_fractions)*p/(R*T);
+//    double Z0=0, Z1=0, Z2=0;
+//    solve_cubic(1,
+//                B*(Delta_1+Delta_2-1)-1,
+//                A + B*B*(Delta_1*Delta_2-Delta_1-Delta_2) - B*(Delta_1+Delta_2),
+//                -A*B-Delta_1*Delta_2*(POW2(B)+POW3(B)),
+//                Nsolns, Z0, Z1, Z2);
+//    if (Nsolns == 1){ rho0 = p/(Z0*R*T); }
+//    else if (Nsolns == 3){
+//        rho0 = p/(Z0*R*T);
+//        rho1 = p/(Z1*R*T);
+//        rho2 = p/(Z2*R*T);
+//        sort3(rho0, rho1, rho2);
+//    }
 }
 
 class SaturationResidual : public CoolProp::FuncWrapper1D{
