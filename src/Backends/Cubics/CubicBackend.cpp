@@ -14,6 +14,10 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
 		mole_fractions = std::vector<CoolPropDbl>(1, 1.0);
         mole_fractions_double = std::vector<double>(1, 1.0);
 	}
+    else{
+        mole_fractions.clear();
+        mole_fractions_double.clear();
+    }
 	// Now set the reducing function for the mixture
     Reducing.reset(new ConstantReducingFunction(cubic->T_r, cubic->rho_r));
 
