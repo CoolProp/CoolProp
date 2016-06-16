@@ -2585,7 +2585,7 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 {
     deriv_counter++;
     bool cache_values = true;
-    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), cache_values);
+    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), tau, delta, cache_values);
     _alphar = derivs.alphar;
     _dalphar_dDelta = derivs.dalphar_ddelta;
     _dalphar_dTau = derivs.dalphar_dtau;

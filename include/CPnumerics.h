@@ -401,6 +401,8 @@ template<class T> T is_in_closed_range( T x1, T x2, T x)
     */
 void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
 
+void solve_quartic(double a, double b, double c, double d, double e, int &N, double &x0, double &x1, double &x2, double &x3);
+
 template<class T> inline T min3(T x1, T x2, T x3){return std::min(std::min(x1, x2), x3);};
 template<class T> inline T max3(T x1, T x2, T x3){return std::max(std::max(x1, x2), x3);};
 template<class T> inline T min4(T x1, T x2, T x3, T x4){return std::min(std::min(std::min(x1, x2), x3), x4);};

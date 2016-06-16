@@ -698,7 +698,7 @@ class MixtureDerivatives{
     
     static CoolPropDbl alphar(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
         bool cache_values = false;
-        HelmholtzDerivatives HD = HEOS.residual_helmholtz->all(HEOS, HEOS.mole_fractions, cache_values);
+        HelmholtzDerivatives HD = HEOS.residual_helmholtz->all(HEOS, HEOS.mole_fractions, HEOS.tau(), HEOS.delta(), cache_values);
         return HD.alphar;
     }
     static CoolPropDbl dalphar_dxi(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){

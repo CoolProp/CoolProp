@@ -621,7 +621,7 @@ public:
     ExcessTerm Excess;
     CorrespondingStatesTerm CS;
 
-    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, bool cache_values = false)
+    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, double tau, double delta, bool cache_values = false)
     {
         HelmholtzDerivatives a = CS.all(HEOS, mole_fractions, cache_values) + Excess.all(HEOS.tau(), HEOS.delta(), mole_fractions, cache_values);
         a.delta_x_dalphar_ddelta = HEOS.delta()*a.dalphar_ddelta;

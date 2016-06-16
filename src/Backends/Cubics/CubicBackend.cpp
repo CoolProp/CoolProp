@@ -95,7 +95,7 @@ void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double &
 
 CoolPropDbl CoolProp::AbstractCubicBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta){
     bool cache_values = true;
-    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), cache_values);
+    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, mole_fractions, tau, delta, cache_values);
     switch (nTau){
         case 0:
         {
@@ -274,6 +274,33 @@ public:
     };
 };
 
+std::vector<double> CoolProp::AbstractCubicBackend::spinodal_densities(){
+    //// SPINODAL
+    AbstractCubic *cubic = get_cubic().get();
+    double tau = cubic->T_r / _T;
+    std::vector<double> x(1, 1);
+    double a = cubic->am_term(tau, x, 0);
+    double b = cubic->bm_term(x);
+    double R = cubic->get_R_u();
+    double Delta_1 = cubic->get_Delta_1();
+    double Delta_2 = cubic->get_Delta_2();
+
+    double crho4 = -powInt(Delta_1*Delta_2, 2)*R*_T*powInt(b, 4) + a*powInt(b, 3)*(Delta_1 + Delta_2);
+    double crho3 = -2 * ((Delta_1*Delta_1*Delta_2 + Delta_1*Delta_2*Delta_2)*R*_T*powInt(b, 3) + a*powInt(b, 2)*(Delta_1 + Delta_2 - 1));
+    double crho2 = ((-Delta_1*Delta_1 - Delta_2*Delta_2 - 4 * Delta_1*Delta_2)*R*_T*powInt(b, 2) + a*b*(Delta_1 + Delta_2 - 4));
+    double crho1 = -2 * (Delta_1 + Delta_2)*R*_T*b + 2 * a;
+    double crho0 = -R*_T;
+    double rho0, rho1, rho2, rho3;
+    int Nsoln;
+    solve_quartic(crho4, crho3, crho2, crho1, crho0, Nsoln, rho0, rho1, rho2, rho3);
+    std::vector<double> roots;
+    if (rho0 > 0 && 1 / rho0 > b) { roots.push_back(rho0); }
+    if (rho1 > 0 && 1 / rho1 > b) { roots.push_back(rho1); }
+    if (rho2 > 0 && 1 / rho2 > b) { roots.push_back(rho2); }
+    if (rho3 > 0 && 1 / rho3 > b) { roots.push_back(rho3); }
+    return roots;
+}
+
 void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
     AbstractCubic *cubic = get_cubic().get();
     double Tc = cubic->get_Tc()[0], pc = cubic->get_pc()[0], acentric = cubic->get_acentric()[0];
@@ -297,12 +324,31 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
     }
     else if (inputs == QT_INPUTS){
         if (is_pure_or_pseudopure){
-            // Estimate temperature from the acentric factor relationship
-            double neg_log10_pr = (acentric+1)/(1/0.7-1)*(Tc/_T-1);
-            double ps_est = pc*pow(10.0, -neg_log10_pr);
             SaturationResidual resid(this, inputs, _T);
             static std::string errstr;
-            double ps = CoolProp::BoundedSecant(resid, ps_est, 1e-10, pc, -0.01*ps_est, 1e-5, 100);
+            std::vector<double> roots = spinodal_densities();
+
+            // Estimate pressure from the acentric factor relationship
+            double neg_log10_pr = (acentric + 1) / (1 / 0.7 - 1)*(Tc / _T - 1);
+            double ps_est = pc*pow(10.0, -neg_log10_pr);
+
+            double ps;
+            if (roots.size() == 2){
+                double p0 = calc_pressure_nocache(_T, roots[0]);
+                double p1 = calc_pressure_nocache(_T, roots[1]);
+                if (p1 < p0){ std::swap(p0, p1); }
+                //ps = CoolProp::BoundedSecant(resid, p0, p1, pc, -0.01*ps_est, 1e-5, 100);
+                if (p0 > 0 && p1 < pc){
+                    ps = CoolProp::Brent(resid, p0*1.0001, p1*0.9999, DBL_EPSILON, 1e-10, 100);
+                }
+                else{
+                    ps = CoolProp::BoundedSecant(resid, ps_est, 1e-10, pc, -0.01*ps_est, 1e-5, 100);
+                }
+            }
+            else{
+                ps = CoolProp::BoundedSecant(resid, ps_est, 1e-10, pc, -0.01*ps_est, 1e-5, 100);
+            }
+            
             _p = ps;
             rhoL = resid.deltaL*cubic->T_r;
             rhoV = resid.deltaV*cubic->T_r;

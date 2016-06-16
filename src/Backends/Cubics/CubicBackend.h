@@ -72,6 +72,9 @@ public:
 		reducing.rhomolar = cubic->rho_r;
 		return reducing;
 	};
+    CoolPropDbl calc_reduced_density(void) { return _rhomolar/get_cubic()->rho_r; };
+    CoolPropDbl calc_reciprocal_reduced_temperature(void) { return get_cubic()->T_r/_T; };
+    std::vector<double> spinodal_densities();
     
     CoolPropDbl calc_T_critical(void){
         if (is_pure_or_pseudopure){
@@ -272,12 +275,11 @@ public:
 	CubicResidualHelmholtz(AbstractCubicBackend * ACB) : ACB(ACB) {};
 
     /// All the derivatives of the residual Helmholtz energy w.r.t. tau and delta that do not involve composition derivative
-    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, bool cache_values = false)
+    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, double tau, double delta, bool cache_values = false)
     {
 		HelmholtzDerivatives a;
 		std::vector<double> z = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
         shared_ptr<AbstractCubic> &cubic = ACB->get_cubic();
-		double tau = HEOS.tau(), delta = HEOS.delta();
 		a.alphar = cubic->alphar(tau, delta, z, 0, 0);
 		a.dalphar_dtau = cubic->alphar(tau, delta, z, 1, 0);
 		a.dalphar_ddelta = cubic->alphar(tau, delta, z, 0, 1);
