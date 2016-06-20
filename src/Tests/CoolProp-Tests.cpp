@@ -526,6 +526,12 @@ vel("Methane", "T", 400, "D", 1e-12, "L", 49.96e-3, 1e-3),
 vel("Methane", "T", 182, "Q", 0, "L", 82.5e-3, 5e-3),
 vel("Methane", "T", 100, "Dmolar", 28.8e3, "L", 234e-3, 1e-2),
 
+// Sykioti, JPCRD, 2013
+vel("Methanol", "T", 300, "Dmass", 850, "L", 241.48e-3, 1e-2),
+vel("Methanol", "T", 400, "Dmass", 2, "L", 25.803e-3, 1e-2),
+vel("Methanol", "T", 400, "Dmass", 690, "L", 183.59e-3, 1e-2),
+vel("Methanol", "T", 500, "Dmass", 10, "L", 40.495e-3, 1e-2),
+
 // Heavy Water, IAPWS formulation
 vel("HeavyWater", "T", 0.5000*643.847, "Dmass", 3.07*358, "V", 835.786416818*0.742128e-3, 1e-5),
 vel("HeavyWater", "T", 0.9000*643.847, "Dmass", 2.16*358, "V", 627.777590127*0.742128e-3, 1e-5),
