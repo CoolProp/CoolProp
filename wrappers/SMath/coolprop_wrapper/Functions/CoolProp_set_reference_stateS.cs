@@ -7,13 +7,13 @@ namespace coolprop_wrapper.Functions
   {
     // int set_reference_stateS(const char *Ref, const char *reference_state);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "set_reference_stateS",
+      "CoolProp_x86", EntryPoint = "set_reference_stateS",
       CharSet = CharSet.Ansi)]
     internal static extern int CoolPropDLLfunc_x86(
       string Ref,
       string reference_state);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "set_reference_stateS",
+      "CoolProp_x64", EntryPoint = "set_reference_stateS",
       CharSet = CharSet.Ansi)]
     internal static extern int CoolPropDLLfunc_x64(
       string Ref,

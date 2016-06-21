@@ -7,7 +7,7 @@ namespace coolprop_wrapper.Functions
   {
     // double HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Name3, double Prop3);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "HAPropsSI",
+      "CoolProp_x86", EntryPoint = "HAPropsSI",
       CharSet = CharSet.Ansi)]
     internal static extern double CoolPropDLLfunc_x86(
       string Output,
@@ -18,7 +18,7 @@ namespace coolprop_wrapper.Functions
       string Name3,
       double Prop3);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "HAPropsSI",
+      "CoolProp_x64", EntryPoint = "HAPropsSI",
       CharSet = CharSet.Ansi)]
     internal static extern double CoolPropDLLfunc_x64(
       string Output,
