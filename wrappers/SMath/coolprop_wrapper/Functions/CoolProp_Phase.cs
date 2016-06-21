@@ -7,7 +7,7 @@ namespace coolprop_wrapper.Functions
   {
     // long PhaseSI(const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Ref, char *phase, int n);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint="PhaseSI",
+      "CoolProp_x86", EntryPoint="PhaseSI",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x86(
       string Name1,
@@ -18,7 +18,7 @@ namespace coolprop_wrapper.Functions
       System.Text.StringBuilder phase,
       int n);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "PhaseSI",
+      "CoolProp_x64", EntryPoint = "PhaseSI",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x64(
       string Name1,

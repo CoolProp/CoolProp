@@ -7,14 +7,14 @@ namespace coolprop_wrapper.Functions
   {
     // long get_global_param_string(const char *param, char *Output, int n);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "get_global_param_string",
+      "CoolProp_x86", EntryPoint = "get_global_param_string",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x86(
       string param,
       System.Text.StringBuilder Output,
       int n);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "get_global_param_string",
+      "CoolProp_x64", EntryPoint = "get_global_param_string",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x64(
       string param,
