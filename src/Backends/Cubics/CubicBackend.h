@@ -43,11 +43,6 @@ public:
     bool using_mass_fractions(void){return false;}; 
     bool using_volu_fractions(void){return false;};
 
-    void set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions){
-        resize(mole_fractions.size());
-        this->mole_fractions = mole_fractions; 
-        this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
-    };
     void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions){throw NotImplementedError("Mass composition has not been implemented.");};
     void set_volu_fractions(const std::vector<CoolPropDbl> &volu_fractions){throw NotImplementedError("Volume composition has not been implemented.");};
     const std::vector<CoolPropDbl> & get_mole_fractions(void){ return this->mole_fractions; };
@@ -204,6 +199,7 @@ public:
                const double R_u, 
                bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
+        N = fluid_identifiers.size();
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
             CubicLibrary::CubicsValues val = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
             Tc.push_back(val.Tc);
@@ -244,6 +240,7 @@ public:
                         const double R_u, 
                         bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
+        N = fluid_identifiers.size();
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
             CubicLibrary::CubicsValues val = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
             Tc.push_back(val.Tc);

@@ -28,8 +28,10 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
         bool SatLSatV = false;
         SatL.reset(this->get_copy(SatLSatV));
         SatL->specify_phase(iphase_liquid);
+        linked_states.push_back(SatL);
         SatV.reset(this->get_copy(SatLSatV));
         SatV->specify_phase(iphase_gas);
+        linked_states.push_back(SatV);
     }
 }
 
