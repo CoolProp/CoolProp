@@ -113,9 +113,6 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     // Copy values without reallocating memory
     this->mole_fractions = mole_fractions; // Most effective copy
     this->resize(N); // No reallocation of this->mole_fractions happens
-    // Resize the vectors for the liquid and vapor,  but only if they are in use
-    if (this->SatL) this->SatL->resize(N);
-    if (this->SatV) this->SatV->resize(N);
     // Also store the mole fractions as doubles
     this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
 };
@@ -146,6 +143,10 @@ void HelmholtzEOSMixtureBackend::resize(std::size_t N)
     this->mole_fractions.resize(N);
     this->K.resize(N);
     this->lnK.resize(N);
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        it->get()->N = N;
+        it->get()->resize(N);
+    }
 }
 void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase()
 {
