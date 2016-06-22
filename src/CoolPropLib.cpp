@@ -613,6 +613,37 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handl
     }
 }
 
+EXPORT_CODE void CONVENTION AbstractState_update_and_1_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, const long output, double* out, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+
+        for (int i = 0; i<length; i++) {
+            try {
+                AS->update(static_cast<CoolProp::input_pairs>(input_pair), *(value1 + i), *(value2 + i));
+                *(out + i) = AS->keyed_output(static_cast<CoolProp::parameters>(output));
+            }
+            catch (...) {
+
+            }
+        };
+    }
+    catch (CoolProp::HandleError &e) {
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (...) {
+        *errcode = 3;
+    }
+}
+
 EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long* outputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length)
 {
     *errcode = 0;

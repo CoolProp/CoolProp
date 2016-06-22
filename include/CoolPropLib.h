@@ -332,6 +332,25 @@
     EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, double* T, double* p, double* rhomolar, double* hmolar, double* smolar, long *errcode, char *message_buffer, const long buffer_length);
 
     /**
+    * @brief Update the state of the AbstractState and get one output value (temperature, pressure, molar density, molar enthalpy and molar entropy)
+    * @brief from the AbstractState using pointers as inputs and output to allow array computation.
+    * @param handle The integer handle for the state class stored in memory
+    * @param input_pair The integer value for the input pair obtained from get_input_pair_index
+    * @param value1 The pointer to the array of the first input parameters
+    * @param value2 The pointer to the array of the second input parameters
+    * @param length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
+    * @param output The indice for the output desired
+    * @param out The pointer to the array for output
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    *
+    * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
+    */
+    EXPORT_CODE void CONVENTION AbstractState_update_and_1_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, const long output, double* out, long *errcode, char *message_buffer, const long buffer_length);
+
+    /**
     * @brief Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy)
     * @brief from the AbstractState using pointers as inputs and output to allow array computation.
     * @param handle The integer handle for the state class stored in memory
