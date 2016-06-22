@@ -367,7 +367,7 @@ function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1
   return nothing
 end
 function AbstractState_update_and_5_out(handle::Clong, input_pair::AbstractString, value1::Array{Real}, value2::Array{Real}, length::Real, outputs::Array{AbstractString}, out1::Array{Real}, out2::Array{Real}, out3::Array{Real}, out4::Array{Real}, out5::Array{Real})
-  outputs_key = Array(5)
+  outputs_key = Array(Clong,5)
   for k = 1:5
     outputs_key[k] = get_param_index(outputs[k])
   end
