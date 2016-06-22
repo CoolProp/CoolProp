@@ -353,7 +353,7 @@ end
 # out3 The pointer to the array for the third output
 # out4 The pointer to the array for the fourth output
 # out5 The pointer to the array for the fifth output
-function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array{Real}, value2::Array{Real}, length::Real, outputs::Array, out1::Array{Real}, out2::Array{Real}, out3::Array{Real}, out4::Array{Real}, out5::Array{Real})
+function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array{Real}, value2::Array{Real}, length::Real, outputs::Array{Real}, out1::Array{Real}, out2::Array{Real}, out3::Array{Real}, out4::Array{Real}, out5::Array{Real})
   ccall( (:AbstractState_update_and_5_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Clong},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,outputs,out1,out2,out3,out4,out5,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
