@@ -1,7 +1,7 @@
 VERSION < v"0.4.0" && __precompile__()
 module CoolProp
 
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output, AbstractState_update_and_common_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
+export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
@@ -220,6 +220,10 @@ function AbstractState_update(handle::Clong,input_pair::Clong,value1::Number,val
   end
   return nothing
 end
+function AbstractState_update(handle::Clong,input_pair::AbstractString,value1::Number,value2::Number)
+  AbstractState_update(handle::Clong,get_input_pair_index(input_pair),value1::Number,value2::Number)
+  return nothing
+end
 
 # Get an output value from the AbstractState using an integer value for the desired output value
 # param handle The integer handle for the state class stored in memory
@@ -238,6 +242,9 @@ function AbstractState_keyed_output(handle::Clong, param::Clong)
     error("CoolProp: no correct state has been set with AbstractState_update")
   end
   return output
+end
+function AbstractState_output(handle::Clong, param::AbstractString)
+  return AbstractState_keyed_output(handle::Clong, get_param_index(Param))
 end
 
 # Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy) from the AbstractState using pointers as inputs and output to allow array computation.
