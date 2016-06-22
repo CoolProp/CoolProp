@@ -31,6 +31,7 @@ class CubicResidualHelmholtz;
 class AbstractCubicBackend : public HelmholtzEOSMixtureBackend  {
 protected:
     shared_ptr<AbstractCubic> cubic;
+    std::vector<CubicLibrary::CubicsValues> components; ///< The components that are in use
 public:
 	
 	/// Set the pointer to the residual helmholtz class, etc.
@@ -157,6 +158,8 @@ public:
     
     /// Cubic backend flashes for PQ, and QT
     void saturation(CoolProp::input_pairs inputs);
+
+    CoolPropDbl calc_molar_mass(void);
     
     void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter, const double value);
     double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter);
@@ -200,11 +203,12 @@ public:
                bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
+        components.resize(N);
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
-            CubicLibrary::CubicsValues val = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
-            Tc.push_back(val.Tc);
-            pc.push_back(val.pc);
-            acentric.push_back(val.acentric);
+            components[i] = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
+            Tc.push_back(components[i].Tc);
+            pc.push_back(components[i].pc);
+            acentric.push_back(components[i].acentric);
         }
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
 	    setup(generate_SatL_and_SatV);
@@ -241,11 +245,12 @@ public:
                         bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
+        components.resize(N);
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
-            CubicLibrary::CubicsValues val = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
-            Tc.push_back(val.Tc);
-            pc.push_back(val.pc);
-            acentric.push_back(val.acentric);
+            components[i] = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
+            Tc.push_back(components[i].Tc);
+            pc.push_back(components[i].pc);
+            acentric.push_back(components[i].acentric);
         }
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
 	    setup(generate_SatL_and_SatV);

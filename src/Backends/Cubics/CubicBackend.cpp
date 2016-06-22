@@ -404,6 +404,16 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
     return rho;
 }
 
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass(void)
+{
+    double summer = 0;
+    for (unsigned int i = 0; i < N; ++i)
+    {
+        summer += mole_fractions[i] * components[i].molemass;
+    }
+    return summer;
+}
+
 void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
     if (parameter == "kij" || parameter == "k_ij"){
         get_cubic()->set_kij(i,j,value);
