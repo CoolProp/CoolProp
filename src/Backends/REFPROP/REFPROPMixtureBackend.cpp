@@ -1498,7 +1498,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // c     herr--error string (character*255 variable if ierr<>0)
 
             // Unit conversion for REFPROP
-            p_kPa = 0.001*value1; _Q = value2; // Want p in [kPa] in REFPROP
+            p_kPa = 0.001*value1; q = value2; // Want p in [kPa] in REFPROP
 
             long iFlsh = 0, iGuess = 0, ierr = 0;
             if (std::abs(value2) < 1e-10){
@@ -1511,7 +1511,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
                 SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
-                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
                 if (static_cast<int>(ierr) == 0){
                     // Calculate everything else
@@ -1521,7 +1521,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
                 // Use flash routine to find properties
-                PQFLSHdll(&p_kPa,&_Q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
+                PQFLSHdll(&p_kPa,&q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
                     &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                     &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                     &ierr,herr,errormessagelength); // Error terms
@@ -1547,7 +1547,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             long kq = 1;
 
             // Unit conversion for REFPROP
-            _Q = value1; _T = value2;
+            q = value1; _T = value2;
 
             // Use flash routine to find properties
             long iFlsh = 0, iGuess = 0;
@@ -1561,7 +1561,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
                 SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
-                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
                 if (static_cast<int>(ierr) == 0){
                     // Calculate everything else
@@ -1570,7 +1570,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
-                TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
+                TQFLSHdll(&_T,&q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                     &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                     &ierr,herr,errormessagelength); // Error terms
@@ -1768,13 +1768,35 @@ void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
-    if ((key == iDmolar) && _rhoLmolar) return _rhoLmolar;
+    if (_rhoLmolar) {
+        if (key == iDmolar) {
+            return _rhoLmolar;
+        }
+        else if (key == iDmass) {
+            return (double)_rhoLmolar*(double)_molar_mass;
+        }
+        else {
+            throw ValueError("Invalid key.");
+            return _HUGE;
+        }
+    }
     throw ValueError("The saturated liquid state has not been set.");
     return _HUGE;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) {
-    if ((key == iDmolar) && _rhoVmolar) return _rhoVmolar;
-    ValueError("The saturated vapor state has not been set.");
+    if (_rhoVmolar) {
+        if (key == iDmolar) {
+            return _rhoVmolar;
+        }
+        else if (key == iDmass) {
+            return (double)_rhoVmolar*(double)_molar_mass;
+        }
+        else {
+            throw ValueError("Invalid key.");
+            return _HUGE;
+        }
+    }
+    throw ValueError("The saturated vapor state has not been set.");
     return _HUGE;
 }
 
