@@ -274,6 +274,25 @@
      */
     EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long *errcode, char *message_buffer, const long buffer_length);
     /**
+    * @brief Specify the phase to be used for all further calculations
+    * @param handle The integer handle for the state class stored in memory
+    * @param phase The string with the phase to use
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION AbstractState_specify_phase(const long handle, const char *phase, long *errcode, char *message_buffer, const long buffer_length);
+    /**
+    * @brief Unspecify the phase to be used for all further calculations
+    * @param handle The integer handle for the state class stored in memory
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION AbstractState_unspecify_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length);
+    /**
      * @brief Get an output value from the AbstractState using an integer value for the desired output value
      * @param handle The integer handle for the state class stored in memory
      * @param param The integer value for the parameter you want

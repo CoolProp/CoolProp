@@ -1,7 +1,7 @@
 VERSION < v"0.4.0" && __precompile__()
 module CoolProp
 
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
+export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
@@ -97,20 +97,20 @@ end
 
 # Get the index for a parameter "T", "P", etc.
 # returns the index as a long.
-function get_param_index(Param::AbstractString)
-  val = ccall( (:get_param_index, "CoolProp"), Clong, (Ptr{UInt8},), Param)
+function get_param_index(param::AbstractString)
+  val = ccall( (:get_param_index, "CoolProp"), Clong, (Ptr{UInt8},), param)
   if val == -1
-    error("CoolProp: Unknown parameter: ", Param)
+    error("CoolProp: Unknown parameter: ", param)
   end
   return val
 end
 
 # Get the index for an input pair for AbstractState.update function
 # returns the index as a long.
-function get_input_pair_index(Param::AbstractString)
-  val = ccall( (:get_input_pair_index, "CoolProp"), Clong, (Ptr{UInt8},), Param)
+function get_input_pair_index(param::AbstractString)
+  val = ccall( (:get_input_pair_index, "CoolProp"), Clong, (Ptr{UInt8},), param)
   if val == -1
-    error("CoolProp: Unknown input pair: ", Param)
+    error("CoolProp: Unknown input pair: ", param)
   end
   return val
 end
@@ -204,7 +204,7 @@ end
 
 # Update the state of the AbstractState
 # param handle The integer handle for the state class stored in memory
-# param input_pair The integer value for the input pair obtained from get_input_pair_index(Param::AbstractString)
+# param input_pair The integer value for the input pair obtained from get_input_pair_index(param::AbstractString)
 # param value1 The first input value
 # param value2 The second input value
 function AbstractState_update(handle::Clong,input_pair::Clong,value1::Real,value2::Real)
@@ -222,6 +222,45 @@ function AbstractState_update(handle::Clong,input_pair::Clong,value1::Real,value
 end
 function AbstractState_update(handle::Clong,input_pair::AbstractString,value1::Real,value2::Real)
   AbstractState_update(handle::Clong,get_input_pair_index(input_pair),value1::Real,value2::Real)
+  return nothing
+end
+
+# Specify the phase to be used for all further calculations
+# handle The integer handle for the state class stored in memory
+# phase The string with the phase to use
+# errcode The errorcode that is returned (0 = no error, !0 = error)
+# message_buffer A buffer for the error code
+# buffer_length The length of the buffer for the error code
+function AbstractState_specify_phase(handle::Clong,phase::AbstractString)
+  ccall( (:AbstractState_specify_phase, "CoolProp"), Void, (Clong,Ptr{UInt8},Ref{Clong},Ptr{UInt8},Clong), handle,phase,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
+  return nothing
+end
+
+# Unspecify the phase to be used for all further calculations
+# handle The integer handle for the state class stored in memory
+# errcode The errorcode that is returned (0 = no error, !0 = error)
+# message_buffer A buffer for the error code
+# buffer_length The length of the buffer for the error code
+function AbstractState_unspecify_phase(handle::Clong)
+  ccall( (:AbstractState_unspecify_phase, "CoolProp"), Void, (Clong,Ref{Clong},Ptr{UInt8},Clong), handle,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
   return nothing
 end
 
@@ -244,7 +283,7 @@ function AbstractState_keyed_output(handle::Clong, param::Clong)
   return output
 end
 function AbstractState_output(handle::Clong, param::AbstractString)
-  return AbstractState_keyed_output(handle, get_param_index(Param))
+  return AbstractState_keyed_output(handle, get_param_index(param))
 end
 
 # Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy) from the AbstractState using pointers as inputs and output to allow array computation.
@@ -314,7 +353,7 @@ end
 # out3 The pointer to the array for the third output
 # out4 The pointer to the array for the fourth output
 # out5 The pointer to the array for the fifth output
-function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array{Real}, value2::Array{Real}, length::Real{Real}, outputs::Array, out1::Array{Real}, out2::Array{Real}, out3::Array{Real}, out4::Array{Real}, out5::Array{Real})
+function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array{Real}, value2::Array{Real}, length::Real, outputs::Array, out1::Array{Real}, out2::Array{Real}, out3::Array{Real}, out4::Array{Real}, out5::Array{Real})
   ccall( (:AbstractState_update_and_5_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Clong},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,outputs,out1,out2,out3,out4,out5,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1

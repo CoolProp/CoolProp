@@ -479,6 +479,68 @@ EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long i
         *errcode = 3;
     }
 }
+EXPORT_CODE void CONVENTION AbstractState_specify_phase(const long handle,const char *phase, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        return AS->specify_phase(CoolProp::get_phase_index(std::string(phase)));
+    }
+    catch (CoolProp::HandleError &e) {
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (CoolProp::CoolPropBaseError &e) {
+        std::string errmsg = std::string("Error: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (...) {
+        *errcode = 3;
+    }
+}
+EXPORT_CODE void CONVENTION AbstractState_unspecify_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        return AS->unspecify_phase();
+    }
+    catch (CoolProp::HandleError &e) {
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (CoolProp::CoolPropBaseError &e) {
+        std::string errmsg = std::string("Error: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (...) {
+        *errcode = 3;
+    }
+}
 EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length)
 {
     *errcode = 0;
