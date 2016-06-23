@@ -4,13 +4,16 @@ EXPORTS
   AbstractState_factory = _AbstractState_factory@20
   AbstractState_free = _AbstractState_free@16
   AbstractState_keyed_output = _AbstractState_keyed_output@20
+  AbstractState_set_binary_interaction_double = AbstractState_set_binary_interaction_double@36
   AbstractState_set_fractions = _AbstractState_set_fractions@24
   AbstractState_update = _AbstractState_update@36
   AbstractState_first_saturation_deriv = _AbstractState_first_saturation_deriv@24
   AbstractState_first_partial_deriv = _AbstractState_first_partial_deriv@28
+  AbstractState_specify_phase = _AbstractState_specify_phase@20
+  AbstractState_unspecify_phase = _AbstractState_unspecify_phase@16
+  AbstractState_update_and_1_out = _AbstractState_update_and_1_out@40
   AbstractState_update_and_5_out = _AbstractState_update_and_5_out@56
   AbstractState_update_and_common_out = _AbstractState_update_and_common_out@52
-  AbstractState_set_binary_interaction_double = AbstractState_set_binary_interaction_double@36
   F2K = _F2K@8
   HAProps = _HAProps@40
   HAPropsSI = _HAPropsSI@40
@@ -21,6 +24,7 @@ EXPORTS
   Props = _Props@32
   PropsS = _PropsS@32
   PropsSI = _PropsSI@32
+  cair_sat = _cair_sat@8
   get_debug_level = _get_debug_level@0
   get_fluid_param_string = _get_fluid_param_string@16
   get_global_param_string = _get_global_param_string@12
