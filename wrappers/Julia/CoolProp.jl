@@ -297,7 +297,7 @@ end
 # rhomolar The pointer to the array of molar density
 # hmolar The pointer to the array of molar enthalpy
 # smolar The pointer to the array of molar entropy
-function AbstractState_update_and_common_out(handle::Clong, input_pair::Clong, value1::Array{Real}, value2::Array{Real}, length::Real, T::Array{Real}, p::Array{Real}, rhomolar::Array{Real}, hmolar::Array{Real}, smolar::Array{Real})
+function AbstractState_update_and_common_out{R<:Real}(handle::Clong, input_pair::Clong, value1::Array{R}, value2::Array{R}, length::Real, T::Array{R}, p::Array{R}, rhomolar::Array{R}, hmolar::Array{R}, smolar::Array{R})
   ccall( (:AbstractState_update_and_common_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,T,p,rhomolar,hmolar,smolar,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
@@ -310,7 +310,7 @@ function AbstractState_update_and_common_out(handle::Clong, input_pair::Clong, v
   end
   return nothing
 end
-function AbstractState_update_and_common_out(handle::Clong, input_pair::AbstractString, value1::Array{Real}, value2::Array{Real}, length::Real, T::Array{Real}, p::Array{Real}, rhomolar::Array{Real}, hmolar::Array{Real}, smolar::Array{Real})
+function AbstractState_update_and_common_out{R<:Real}(handle::Clong, input_pair::AbstractString, value1::Array{R}, value2::Array{R}, length::Real, T::Array{R}, p::Array{R}, rhomolar::Array{R}, hmolar::Array{R}, smolar::Array{R})
   AbstractState_update_and_common_out(handle, get_input_pair_index(input_pair), value1, value2, length, T, p, rhomolar, hmolar, smolar)
   return nothing
 end
@@ -323,7 +323,7 @@ end
 # length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
 # output The indice for the output desired
 # out The pointer to the array for output
-function AbstractState_update_and_1_out(handle::Clong, input_pair::Clong, value1::Array{Real}, value2::Array{Real}, length::Real, output::Clong, out::Array{Real})
+function AbstractState_update_and_1_out{R<:Real}(handle::Clong, input_pair::Clong, value1::Array{R}, value2::Array{R}, length::Real, output::Clong, out::Array{R})
   ccall( (:AbstractState_update_and_1_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Clong,Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,output,out,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
@@ -336,7 +336,7 @@ function AbstractState_update_and_1_out(handle::Clong, input_pair::Clong, value1
   end
   return nothing
 end
-function AbstractState_update_and_1_out(handle::Clong, input_pair::AbstractString, value1::Array{Real}, value2::Array{Real}, length::Real, output::AbstractString, out::Array{Real})
+function AbstractState_update_and_1_out{R<:Real}(handle::Clong, input_pair::AbstractString, value1::Array{R}, value2::Array{R}, length::Real, output::AbstractString, out::Array{R})
   AbstractState_update_and_1_out(handle, get_input_pair_index(input_pair), value1, value2, length, get_param_index(output), out)
   return nothing
 end
@@ -353,7 +353,7 @@ end
 # out3 The pointer to the array for the third output
 # out4 The pointer to the array for the fourth output
 # out5 The pointer to the array for the fifth output
-function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array{Real}, value2::Array{Real}, length::Real, outputs::Array{Real}, out1::Array{Real}, out2::Array{Real}, out3::Array{Real}, out4::Array{Real}, out5::Array{Real})
+function AbstractState_update_and_5_out{R<:Real}(handle::Clong, input_pair::Clong, value1::Array{R}, value2::Array{R}, length::Real, outputs::Array{R}, out1::Array{R}, out2::Array{R}, out3::Array{R}, out4::Array{R}, out5::Array{R})
   ccall( (:AbstractState_update_and_5_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Clong},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,outputs,out1,out2,out3,out4,out5,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
@@ -366,7 +366,7 @@ function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1
   end
   return nothing
 end
-function AbstractState_update_and_5_out(handle::Clong, input_pair::AbstractString, value1::Array{Real}, value2::Array{Real}, length::Real, outputs::Array{AbstractString}, out1::Array{Real}, out2::Array{Real}, out3::Array{Real}, out4::Array{Real}, out5::Array{Real})
+function AbstractState_update_and_5_out{R<:Real,S<:AbstractString}(handle::Clong, input_pair::AbstractString, value1::Array{R}, value2::Array{R}, length::Real, outputs::Array{S}, out1::Array{R}, out2::Array{R}, out3::Array{R}, out4::Array{R}, out5::Array{R})
   outputs_key = Array(Clong,5)
   for k = 1:5
     outputs_key[k] = get_param_index(outputs[k])
