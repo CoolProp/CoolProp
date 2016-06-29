@@ -14,6 +14,7 @@
 #include <vector>
 #include <cmath>
 
+enum AII_Model {AII_MODEL_NOT_SPECIFIED = 0, AII_MATHIAS_COPEMAN, AII_TWU};
 class AbstractCubic
 {
 protected:
@@ -27,6 +28,8 @@ protected:
     std::vector< std::vector<double> > k; ///< The interaction parameters (k_ii = 0)
     bool simple_aii; ///< True if the Mathias-Copeman equation for a_ii is not being used
     std::vector<double> C1, C2, C3; ///< The Mathias-Copeman coefficients for a_ii
+    std::vector<double> L_Twu, M_Twu, N_Twu; ///< The Twu coefficients for a_ii
+    AII_Model aii_model; ///< Enumeration for the aii model in use
 public:
     static const double rho_r, T_r;
     /**
@@ -53,7 +56,7 @@ public:
         N = static_cast<int>(Tc.size());
         k.resize(N, std::vector<double>(N, 0));
         /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
-        simple_aii = (C1.empty() && C2.empty() && C3.empty());
+        simple_aii = (C1.empty() && C2.empty() && C3.empty() && L_Twu.empty() && M_Twu.empty() && N_Twu.empty());
     };
     /// Set the kij factor for the ij pair
     void set_kij(std::size_t i, std::size_t j, double val){ k[i][j] = val; }
@@ -95,7 +98,14 @@ public:
     void set_C_MC(double c1, double c2, double c3){
         C1.resize(1); C2.resize(1); C3.resize(1);
         C1[0] = c1, C2[0] = c2; C3[0] = c3;
-        simple_aii = false;
+        simple_aii = false; aii_model = AII_MATHIAS_COPEMAN;
+    }
+    /// Set the three Twu constants in one shot for a pure fluid
+    void set_C_Twu(double L, double M, double N){
+        L_Twu.resize(1); L_Twu[0] = L;
+        M_Twu.resize(1); M_Twu[0] = M;
+        N_Twu.resize(1); N_Twu[0] = N;
+        simple_aii = false; aii_model = AII_TWU;
     }
     
     /// Get the leading constant in the expression for the pure fluid attractive energy term

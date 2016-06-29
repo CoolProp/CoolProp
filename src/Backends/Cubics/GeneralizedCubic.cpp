@@ -1,4 +1,5 @@
 #include "GeneralizedCubic.h"
+#include "CPnumerics.h"
 #include <cmath>
 
 const double AbstractCubic::T_r = 1.0;
@@ -109,41 +110,83 @@ double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau)
         }
     }
     else{
-        // Here we are using the full Mathias-Copeman formulation, introducing
-        // some additional computational effort, so we only evaluate the parameters that
-        // we actually need to evaluate, otherwise we just set their value to zero
-        // See info on the conditional (ternary) operator : http://www.cplusplus.com/articles/1AUq5Di1/
-        // Furthermore, this should help with branch prediction
-        double Di = 1-sqrt_Tr_Tci/sqrt(tau);
-        double dDi_dtau = (itau >= 1) ? (1.0/2.0)*sqrt_Tr_Tci/(pow(tau,1.5)) : 0;
-        double d2Di_dtau2 = (itau >= 2) ? -(3.0/4.0)*sqrt_Tr_Tci/(pow(tau,2.5)) : 0;
-        double d3Di_dtau3 = (itau >= 3) ? (15.0/8.0)*sqrt_Tr_Tci/(pow(tau,3.5)) : 0;
-        double d4Di_dtau4 = (itau >= 4) ? -(105.0/16.0)*sqrt_Tr_Tci/(pow(tau,4.5)) : 0;
-        
-        double Bi = 1, dBi_dtau = 0, d2Bi_dtau2 = 0, d3Bi_dtau3 = 0, d4Bi_dtau4 = 0;
-        for (int n = 1; n <= 3; ++n){
-            const std::vector<double> &C = get_C_ref(static_cast<int>(n));
-            Bi += C[i]*pow(Di, n);
-            dBi_dtau += (itau < 1) ? 0 : (n*C[i]*pow(Di,n-1)*dDi_dtau) ;
-            d2Bi_dtau2 += (itau < 2) ? 0 : n*C[i]*((n-1)*pow(dDi_dtau,2) + Di*d2Di_dtau2)*pow(Di, n-2);
-            d3Bi_dtau3 += (itau < 3) ? 0 : n*C[i]*(3*(n-1)*Di*dDi_dtau*d2Di_dtau2 + (n*n-3*n+2)*pow(dDi_dtau,3)+pow(Di,2)*d3Di_dtau3)*pow(Di, n-3);
-            d4Bi_dtau4 += (itau < 4) ? 0 : n*C[i]*(6*(n*n-3*n+2)*Di*pow(dDi_dtau,2)*d2Di_dtau2 + (n*n*n-6*n*n+11*n-6)*pow(dDi_dtau,4)
-                                                   +(4*n*dDi_dtau*d3Di_dtau3+3*n*pow(d2Di_dtau2,2)-4*dDi_dtau*d3Di_dtau3-3*pow(d2Di_dtau2,2) )*pow(Di,2)
-                                                   + pow(Di,3)*d4Di_dtau4 )*pow(Di, n-4);
-        }
-        switch (itau){
-            case 0:
-                return a0_ii(i)*Bi*Bi;
-            case 1:
-                return 2*a0_ii(i)*Bi*dBi_dtau;
-            case 2:
-                return 2*a0_ii(i)*(Bi*d2Bi_dtau2 + dBi_dtau*dBi_dtau);
-            case 3:
-                return 2*a0_ii(i)*(Bi*d3Bi_dtau3 + 3*dBi_dtau*d2Bi_dtau2);
-            case 4:
-                return 2*a0_ii(i)*(Bi*d4Bi_dtau4 + 4*dBi_dtau*d3Bi_dtau3 + 3*pow(d2Bi_dtau2, 2));
-            default:
-                throw -1;
+        switch (aii_model){
+            case AII_MATHIAS_COPEMAN:
+            {
+                
+                // Here we are using the full Mathias-Copeman formulation, introducing
+                // some additional computational effort, so we only evaluate the parameters that
+                // we actually need to evaluate, otherwise we just set their value to zero
+                // See info on the conditional (ternary) operator : http://www.cplusplus.com/articles/1AUq5Di1/
+                // Furthermore, this should help with branch prediction
+                double Di = 1-sqrt_Tr_Tci/sqrt(tau);
+                double dDi_dtau = (itau >= 1) ? (1.0/2.0)*sqrt_Tr_Tci/(pow(tau,1.5)) : 0;
+                double d2Di_dtau2 = (itau >= 2) ? -(3.0/4.0)*sqrt_Tr_Tci/(pow(tau,2.5)) : 0;
+                double d3Di_dtau3 = (itau >= 3) ? (15.0/8.0)*sqrt_Tr_Tci/(pow(tau,3.5)) : 0;
+                double d4Di_dtau4 = (itau >= 4) ? -(105.0/16.0)*sqrt_Tr_Tci/(pow(tau,4.5)) : 0;
+                
+                double Bi = 1, dBi_dtau = 0, d2Bi_dtau2 = 0, d3Bi_dtau3 = 0, d4Bi_dtau4 = 0;
+                for (int n = 1; n <= 3; ++n){
+                    const std::vector<double> &C = get_C_ref(static_cast<int>(n));
+                    Bi += C[i]*pow(Di, n);
+                    dBi_dtau += (itau < 1) ? 0 : (n*C[i]*pow(Di,n-1)*dDi_dtau) ;
+                    d2Bi_dtau2 += (itau < 2) ? 0 : n*C[i]*((n-1)*pow(dDi_dtau,2) + Di*d2Di_dtau2)*pow(Di, n-2);
+                    d3Bi_dtau3 += (itau < 3) ? 0 : n*C[i]*(3*(n-1)*Di*dDi_dtau*d2Di_dtau2 + (n*n-3*n+2)*pow(dDi_dtau,3)+pow(Di,2)*d3Di_dtau3)*pow(Di, n-3);
+                    d4Bi_dtau4 += (itau < 4) ? 0 : n*C[i]*(6*(n*n-3*n+2)*Di*pow(dDi_dtau,2)*d2Di_dtau2 + (n*n*n-6*n*n+11*n-6)*pow(dDi_dtau,4)
+                                                           +(4*n*dDi_dtau*d3Di_dtau3+3*n*pow(d2Di_dtau2,2)-4*dDi_dtau*d3Di_dtau3-3*pow(d2Di_dtau2,2) )*pow(Di,2)
+                                                           + pow(Di,3)*d4Di_dtau4 )*pow(Di, n-4);
+                }
+                switch (itau){
+                    case 0:
+                        return a0_ii(i)*Bi*Bi;
+                    case 1:
+                        return 2*a0_ii(i)*Bi*dBi_dtau;
+                    case 2:
+                        return 2*a0_ii(i)*(Bi*d2Bi_dtau2 + dBi_dtau*dBi_dtau);
+                    case 3:
+                        return 2*a0_ii(i)*(Bi*d3Bi_dtau3 + 3*dBi_dtau*d2Bi_dtau2);
+                    case 4:
+                        return 2*a0_ii(i)*(Bi*d4Bi_dtau4 + 4*dBi_dtau*d3Bi_dtau3 + 3*pow(d2Bi_dtau2, 2));
+                    default:
+                        throw -1;
+                }
+            }
+            case AII_TWU:
+            {
+                // Here we are using the Twu formulation, introducing
+                // some additional computational effort, so we only evaluate the parameters that
+                // we actually need to evaluate, otherwise we just set their value to zero
+                // See info on the conditional (ternary) operator : http://www.cplusplus.com/articles/1AUq5Di1/
+                // Furthermore, this should help with branch prediction
+                double A = pow(Tr_over_Tci/tau, M_Twu[i]*N_Twu[i]);
+                const double L = L_Twu[i], M = M_Twu[i], N = N_Twu[i];
+                double B1 = (itau < 1) ? 0 : N/tau*(L*M*A - M + 1);
+                double dB1_dtau = (itau < 2) ? 0 : N/powInt(tau,2)*(-L*M*M*N*A - L*M*A + M - 1);
+                double d2B1_dtau2 = (itau < 3) ? 0 : N/powInt(tau,3)*(L*M*M*M*N*N*A + 3*L*M*M*N*A + 2*L*M*A - 2*M + 2);
+                double d3B1_dtau3 = (itau < 4) ? 0 : -N/powInt(tau,4)*(L*powInt(M,4)*powInt(N,3)*A + 6*L*M*M*M*N*N*A + 11*L*M*M*N*A + 6*L*M*A -6*M + 6);
+                
+                double dam_dtau, d2am_dtau2, d3am_dtau3, d4am_dtau4;
+                double am = a0_ii(i)*pow(Tr_over_Tci/tau,N*(M-1))*exp(L*(1-pow(Tr_over_Tci/tau,M*N)));
+                
+                if (itau == 0){
+                    return am;
+                }
+                else{
+                    // Calculate terms as needed
+                    dam_dtau = a0_ii(i)*B1;
+                    d2am_dtau2 = (itau < 2) ? 0 : B1*dam_dtau + am*dB1_dtau;
+                    d3am_dtau3 = (itau < 3) ? 0 : B1*d2am_dtau2 + am*d2B1_dtau2 + 2*dB1_dtau*dam_dtau;
+                    d4am_dtau4 = (itau < 4) ? 0 : B1*d3am_dtau3 + am*d3B1_dtau3 + 3*dB1_dtau*d2am_dtau2 + 3*d2B1_dtau2*dam_dtau;
+                }
+                switch (itau){
+                    case 1: return dam_dtau;
+                    case 2: return d2am_dtau2;
+                    case 3: return d3am_dtau3;
+                    case 4: return d4am_dtau4;
+                    default: throw -1;
+                }
+            }
+            default: throw -1;
         }
     }
 }
