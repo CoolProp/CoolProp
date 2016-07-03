@@ -1,6 +1,8 @@
 {
   "ALIASES": [
-    "DICHLOROETHANE"
+    "DICHLOROETHANE", 
+    "1,2-dichloroethane", 
+    "1,2-DICHLOROETHANE"
   ], 
   "ANCILLARIES": {
     "pS": {
@@ -76,7 +78,7 @@
       "using_tau_r": false
     }
   }, 
-  "CAS": "1300-21-6", 
+  "CAS": "107-06-2", 
   "ENVIRONMENTAL": {
     "ASHRAE34": "UNKNOWN", 
     "FH": -1, 
