@@ -716,6 +716,15 @@ protected:
             else if (!target.compare("Methanol")){
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL; return;
             }
+            else if (!target.compare("m-Xylene")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_M_XYLENE; return;
+            }
+            else if (!target.compare("o-Xylene")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_O_XYLENE; return;
+            }
+            else if (!target.compare("p-Xylene")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_P_XYLENE; return;
+            }
             else{
                 throw ValueError(format("hardcoded viscosity [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }

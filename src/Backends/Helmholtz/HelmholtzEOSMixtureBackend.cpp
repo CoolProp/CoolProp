@@ -664,6 +664,12 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl &dilut
                     critical = TransportRoutines::viscosity_R23_hardcoded(*this); break;
                 case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL:
                     critical = TransportRoutines::viscosity_methanol_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_M_XYLENE:
+                    critical = TransportRoutines::viscosity_m_xylene_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_O_XYLENE:
+                    critical = TransportRoutines::viscosity_o_xylene_hardcoded(*this); break;
+                case CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_P_XYLENE:
+                    critical = TransportRoutines::viscosity_p_xylene_hardcoded(*this); break;
                 default:
                     throw ValueError(format("hardcoded viscosity type [%d] is invalid for fluid %s", component.transport.hardcoded_viscosity, name().c_str()));
             }

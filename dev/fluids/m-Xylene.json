@@ -536,27 +536,8 @@
       }
     }, 
     "viscosity": {
-      "BibTeX": "Huber-RP912", 
-      "epsilon_over_k": 489.87, 
-      "epsilon_over_k_units": "K", 
-      "psi": {
-        "a": [
-          1.96357, 
-          -0.722142, 
-          0.130396
-        ], 
-        "rhomolar_reducing": 2665, 
-        "rhomolar_reducing_units": "mol/m^3", 
-        "t": [
-          0, 
-          1, 
-          2
-        ]
-      }, 
-      "reference_fluid": "Propane", 
-      "sigma_eta": 5.8e-10, 
-      "sigma_eta_units": "m", 
-      "type": "ECS"
+      "BibTeX": "Cao-JPCRD-2016-mxylene", 
+      "hardcoded": "m-Xylene"
     }
   }
 }

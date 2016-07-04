@@ -288,6 +288,9 @@ public:
                               VISCOSITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::viscosity_helium_hardcoded
                               VISCOSITY_HARDCODED_R23, ///< Use \ref TransportRoutines::viscosity_R23_hardcoded
                               VISCOSITY_HARDCODED_METHANOL, ///< Use \ref TransportRoutines::viscosity_methanol_hardcoded
+                              VISCOSITY_HARDCODED_M_XYLENE, ///< Use \ref TransportRoutines::viscosity_m_xylene_hardcoded
+                              VISCOSITY_HARDCODED_O_XYLENE, ///< Use \ref TransportRoutines::viscosity_o_xylene_hardcoded
+                              VISCOSITY_HARDCODED_P_XYLENE, ///< Use \ref TransportRoutines::viscosity_p_xylene_hardcoded
                               VISCOSITY_NOT_HARDCODED
                               };
     enum ConductivityHardcodedEnum {
