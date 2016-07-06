@@ -114,6 +114,12 @@ public:
 
     CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta);
     
+    /// Calculate the pressure in most computationally efficient manner
+    CoolPropDbl calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
+    
+    /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
+    virtual void update_DmolarT();
+    
     virtual void update(CoolProp::input_pairs input_pair, double value1, double value2);
     
     /** Use the cubic EOS to solve for density

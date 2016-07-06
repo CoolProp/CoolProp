@@ -94,6 +94,25 @@ void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double &
     delta0 *= rhor_GERGlike/rhomolar_reducing();
     tau0 *= T_reducing()/Tr_GERGlike;
 }
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar){
+    AbstractCubic *cubic = get_cubic().get();
+    double tau = cubic->T_r / T;
+    double delta = rhomolar / cubic->rho_r;
+    return _rhomolar*gas_constant()*_T*(1+delta*cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
+}
+void CoolProp::AbstractCubicBackend::update_DmolarT()
+{
+    // Only works for now when phase is specified
+    if (this->imposed_phase_index != iphase_not_imposed){
+        _p = calc_pressure_nocache(_T, _rhomolar);
+        _Q = -1;
+        _phase = imposed_phase_index;
+    }
+    else{
+        // Pass call to parent class
+        HelmholtzEOSMixtureBackend::update(DmolarT_INPUTS, this->_rhomolar, this->_T);
+    }
+};
 
 CoolPropDbl CoolProp::AbstractCubicBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> & mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta){
     bool cache_values = true;
@@ -166,6 +185,7 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
         case PQ_INPUTS:
             _p = value1; _Q = value2; saturation(input_pair); break;
         case DmolarT_INPUTS:
+            _rhomolar = value1; _T = value2; update_DmolarT(); break;
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
         case DmolarHmolar_INPUTS:
@@ -175,7 +195,6 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
         case PSmolar_INPUTS:
         case PUmolar_INPUTS:
         case HmolarSmolar_INPUTS:
-
         case QSmolar_INPUTS:
         case HmolarQ_INPUTS:
         case DmolarQ_INPUTS:
@@ -318,6 +337,8 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
             _T = Ts;
             rhoL = resid.deltaL*cubic->T_r;
             rhoV = resid.deltaV*cubic->T_r;
+            this->SatL->update(DmolarT_INPUTS, rhoL, _T);
+            this->SatV->update(DmolarT_INPUTS, rhoV, _T);
         }
         else{
             HelmholtzEOSMixtureBackend::update(PQ_INPUTS, _p, _Q);
@@ -328,7 +349,9 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
         if (is_pure_or_pseudopure){
             SaturationResidual resid(this, inputs, _T);
             static std::string errstr;
-            std::vector<double> roots = spinodal_densities();
+            // ** Spinodal densities is disabled for now because it is VERY slow :(
+            // std::vector<double> roots = spinodal_densities();
+            std::vector<double> roots;
 
             // Estimate pressure from the acentric factor relationship
             double neg_log10_pr = (acentric + 1) / (1 / 0.7 - 1)*(Tc / _T - 1);
