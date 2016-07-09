@@ -302,6 +302,9 @@ cdef class AbstractState:
     cpdef double Cvirial(self) except *: 
         """ Get the C virial coefficient - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Cvirial(void)` """
         return self.thisptr.Cvirial()
+    cpdef double fundamental_derivative_of_gas_dynamics(self) except *: 
+        """ Get the fundamental derivative of gas dynamics - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fundamental_derivative_of_gas_dynamics(void)` """
+        return self.thisptr.fundamental_derivative_of_gas_dynamics()
     cpdef double PIP(self) except *: 
         """ Get the phase identification parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::PIP(void)` """
         return self.thisptr.PIP()

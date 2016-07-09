@@ -408,6 +408,8 @@ double AbstractState::keyed_output(parameters key)
         return compressibility_factor();
     case iPIP:
         return PIP();
+    case ifundamental_derivative_of_gas_dynamics:
+        return fundamental_derivative_of_gas_dynamics();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
@@ -548,6 +550,12 @@ double AbstractState::Cvirial(void){ return calc_Cvirial(); }
 double AbstractState::dBvirial_dT(void){ return calc_dBvirial_dT(); }
 double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
+    
+double AbstractState::fundamental_derivative_of_gas_dynamics()
+{
+    // See Colonna, FPE, 2010, Eq. 1
+    return 1 + this->second_partial_deriv(iP, iDmass, iSmolar, iDmass, iSmolar)*this->rhomass()/(2*powInt(speed_sound(), 2));
+};
 
 // Get the derivatives of the parameters in the partial derivative with respect to T and rho
 void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropDbl &drho)

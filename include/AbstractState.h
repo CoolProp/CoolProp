@@ -659,8 +659,15 @@ public:
     double fugacity(std::size_t i);
     /// Return the chemical potential of the i-th component of the mixture
     double chemical_potential(std::size_t i);
-    /// Return the fundamental derivative of gas dynamics
-    //double fundamental_derivative_of_gas_dynamics(void){return this->second_partial_deriv(iP, iDmolar, iSmolar, iDmolar, iSmolar)/pow(speed_sound(), 2)/2/pow(this->rhomolar(),3);};
+    /** \brief Return the fundamental derivative of gas dynamics \f$ \Gamma \f$
+     * 
+     * see also Colonna et al, FPE, 2010
+     *
+     * \f[ \Gamma = 1+\frac{\rho}{c}\left(\frac{partial c}{\partial \rho}\right)_{s} = 1+\frac{\rho}{2c^2}\left(\frac{partial^2 p}{\partial \rho^2}\right)_{s} = 1+\frac{v^3}{2c^2}\left(\frac{partial^2 p}{\partial v^2}\right)_{s}\f]
+     * 
+     * Note: densities are mass-based densities, not mole-based densities
+     */
+    double fundamental_derivative_of_gas_dynamics(void);
     /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"
     double PIP(){ return calc_PIP(); };
 
