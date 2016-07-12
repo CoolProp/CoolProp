@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 import CoolProp as CP
-from CoolProp.Plots import PropsPlot
+#from CoolProp.Plots import PropertyPlot
 
 CP.CoolProp.set_debug_level(00)
 from matplotlib.backends.backend_pdf import PdfPages
