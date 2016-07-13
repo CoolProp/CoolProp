@@ -1776,7 +1776,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters
             return (double)_rhoLmolar*(double)_molar_mass;
         }
         else {
-            throw ValueError("Invalid key.");
+            throw ValueError("Invalid parameter. Only mass and molar density are available with RefProp");
             return _HUGE;
         }
     }
