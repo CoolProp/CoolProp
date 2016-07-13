@@ -352,6 +352,45 @@ cdef class AbstractState:
         self.thisptr.viscosity_contributions(dilute, initial_density, residual, critical)
         return dict(dilute = dilute, initial_density = initial_density, residual = residual, critical = critical)
 
+
+    cpdef double helmholtzmolar_excess(self) except *: 
+        """ Get the mole-specific excess Helmholtz energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmolar_excess(void)` """
+        return self.thisptr.helmholtzmolar_excess()
+    cpdef double helmholtzmass_excess(self) except *: 
+        """ Get the mass-specific excess Helmholtz energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::helmholtzmass_excess(void)` """
+        return self.thisptr.helmholtzmass_excess()
+    cpdef double gibbsmolar_excess(self) except *: 
+        """ Get the mole-specific excess Gibbs energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gibbsmolar_excess(void)` """
+        return self.thisptr.gibbsmolar_excess()
+    cpdef double gibbsmass_excess(self) except *: 
+        """ Get the mass-specific excess Gibbs energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::gibbsmass_excess(void)` """
+        return self.thisptr.gibbsmass_excess()
+    cpdef double umolar_excess(self) except *: 
+        """ Get the mole-specific excess internal energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umolar_excess(void)` """
+        return self.thisptr.umolar_excess()
+    cpdef double umass_excess(self) except *: 
+        """ Get the mass-specific excess internal energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umass_excess(void)` """
+        return self.thisptr.umass_excess()
+    cpdef double hmolar_excess(self) except *: 
+        """ Get the mole-specific excess enthalpy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmolar_excess(void)` """
+        return self.thisptr.hmolar_excess()
+    cpdef double hmass_excess(self) except *: 
+        """ Get the mass-specific excess enthalpy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmass_excess(void)` """
+        return self.thisptr.hmass_excess()
+    cpdef double smolar_excess(self) except *: 
+        """ Get the mole-specific excess entropy in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar_excess(void)` """
+        return self.thisptr.smolar_excess()
+    cpdef double smass_excess(self) except *: 
+        """ Get the mass-specific excess entropy in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smass_excess(void)` """
+        return self.thisptr.smass_excess()
+    cpdef double volumemolar_excess(self) except *: 
+        """ Get the mole-specific excess volume in m^3/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::volumemolar_excess(void)` """
+        return self.thisptr.volumemolar_excess()
+    cpdef double volumemass_excess(self) except *: 
+        """ Get the mass-specific excess volume in m^3/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::volumemass_excess(void)` """
+        return self.thisptr.volumemass_excess()
+
+
     ## ----------------------------------------	
     ##        Derivatives
     ## ----------------------------------------

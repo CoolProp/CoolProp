@@ -131,6 +131,23 @@ cdef class AbstractState:
     cpdef double fugacity(self, size_t) except *
     cpdef double fugacity_coefficient(self, size_t) except *
     cpdef double chemical_potential(self, size_t) except *
+
+    cpdef double gibbsmolar_excess(self) except *
+    cpdef double gibbsmass_excess(self) except *
+    cpdef double hmolar_excess(self) except *
+    cpdef double hmass_excess(self) except *
+    cpdef double smolar_excess(self) except *
+    cpdef double smass_excess(self) except *
+    cpdef double umolar_excess(self) except *
+    cpdef double umass_excess(self) except *
+    cpdef double volumemolar_excess(self) except *
+    cpdef double volumemass_excess(self) except *
+    cpdef double helmholtzmolar_excess(self) except *
+    cpdef double helmholtzmass_excess(self) except *
+
+    
+
+
     
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*

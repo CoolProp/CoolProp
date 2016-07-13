@@ -127,6 +127,19 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         void conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical) except +ValueError
         void viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical) except +ValueError
 
+        double gibbsmolar_excess() except +ValueError
+        double gibbsmass_excess() except +ValueError
+        double hmolar_excess() except +ValueError
+        double hmass_excess() except +ValueError
+        double smolar_excess() except +ValueError
+        double smass_excess() except +ValueError
+        double umolar_excess() except +ValueError
+        double umass_excess() except +ValueError
+        double volumemolar_excess() except +ValueError
+        double volumemass_excess() except +ValueError
+        double helmholtzmolar_excess() except +ValueError
+        double helmholtzmass_excess() except +ValueError
+
         double surface_tension() except+ValueError
         double Prandtl() except +ValueError
         double Bvirial() except +ValueError
