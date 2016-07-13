@@ -1730,6 +1730,48 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
     return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multplied by delta^idel
 }
+/// Calculate excess properties
+void REFPROPMixtureBackend::calc_excess_properties(){
+    this->check_loaded_fluid();
+    long ierr = 0;
+    char herr[255];
+    double T_K = _T, p_kPa = _p/1000.0, rho=1, vE = -1, eE = -1, hE = -1, sE = -1, aE = -1, gE = -1;
+    long kph = 1;
+
+    //    subroutine EXCESS(t, p, x, kph, rho, vE, eE, hE, sE, aE, gE, ierr, herr)
+    //    c
+    //    c  compute excess properties as a function of temperature, pressure,
+    //    c  and composition.
+    //    c
+    //    c  inputs :
+    //c        t--temperature[K]
+    //    c        p--pressure[kPa]
+    //    c        x--composition[array of mol frac]
+    //    c      kph--phase flag : 1 = liquid
+    //    c                        2 = vapor
+    //    c                        0 = stable phase
+    //    c  outputs :
+    //c       rho--molar density[mol / L](if input less than 0, used as initial guess)
+    //    c        vE--excess volume[L / mol]
+    //    c        eE--excess energy[J / mol]
+    //    c        hE--excess enthalpy[J / mol]
+    //    c        sE--excess entropy[J / mol - K]
+    //    c        aE--excess Helmholtz energy[J / mol]
+    //    c        gE--excess Gibbs energy[J / mol]
+    //    c      ierr--error flag : 0 = successful
+    //    c                        55 = T, p inputs in different phase for the pure fluids
+    //    c      herr--error string(character * 255 variable if ierr<>0)
+    EXCESSdll(&T_K, &p_kPa, &(mole_fractions[0]), &kph, 
+        &rho, &vE, &eE, &hE, &sE, &aE, &gE,
+        &ierr, herr, errormessagelength);      // Error message
+    if (static_cast<int>(ierr) > 0) { throw ValueError(format("EXCESSdll: %s", herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    _volumemolar_excess = vE;
+    _umolar_excess = eE;
+    _hmolar_excess = hE;
+    _smolar_excess = sE;
+    _helmholtzmolar_excess = aE;
+    _gibbsmolar_excess = gE;
+}
 
 void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2){
     std::string err;

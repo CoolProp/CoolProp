@@ -2518,6 +2518,28 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
         throw ValueError(format("phase is invalid in calc_gibbsmolar"));
     }
 }
+void HelmholtzEOSMixtureBackend::calc_excess_properties(void)
+{
+    _gibbsmolar_excess = this->gibbsmolar(), 
+    _smolar_excess = this->smolar(), 
+    _hmolar_excess = this->hmolar();
+    _umolar_excess = this->umolar();
+    _volumemolar_excess = 1/this->rhomolar();
+    for (std::size_t i = 0; i < components.size(); ++i)
+    {
+        transient_pure_state.reset(new HelmholtzEOSBackend(components[i].name));
+        transient_pure_state->update(PT_INPUTS, p(), T());
+        double x_i = mole_fractions[i];
+        double R = gas_constant();
+        _gibbsmolar_excess = static_cast<double>(_gibbsmolar_excess) - x_i*(transient_pure_state->gibbsmolar() + R*T()*log(x_i));
+        _hmolar_excess = static_cast<double>(_hmolar_excess) - x_i*transient_pure_state->hmolar();
+        _umolar_excess = static_cast<double>(_umolar_excess) - x_i*transient_pure_state->umolar();
+        _smolar_excess = static_cast<double>(_smolar_excess) - x_i*(transient_pure_state->smolar() - R*log(x_i));
+        _volumemolar_excess = static_cast<double>(_volumemolar_excess) - x_i/transient_pure_state->rhomolar();
+    }
+    _helmholtzmolar_excess = static_cast<double>(_umolar_excess) - _T*static_cast<double>(_smolar_excess);
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_helmholtzmolar(void)
 {
     if (isTwoPhase())

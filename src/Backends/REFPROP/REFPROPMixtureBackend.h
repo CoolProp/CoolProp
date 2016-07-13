@@ -101,6 +101,8 @@ public:
     
     void check_loaded_fluid(void);
 
+    void calc_excess_properties();
+
     /// Returns true if REFPROP is supported on this platform
     static bool REFPROP_supported(void);
     

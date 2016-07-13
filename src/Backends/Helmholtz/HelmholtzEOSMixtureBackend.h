@@ -24,6 +24,7 @@ protected:
     void pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 );
     void post_update(bool optional_checks = true);
     std::vector<shared_ptr<HelmholtzEOSMixtureBackend> > linked_states; ///< States that are linked to this one, and should be updated (BIP, reference state, etc.)
+    shared_ptr<HelmholtzEOSMixtureBackend> transient_pure_state; ///< A temporary state used for calculations of pure fluid properties
     shared_ptr<HelmholtzEOSMixtureBackend> TPD_state; ///< A temporary state used for calculations of the tangent-plane-distance
     shared_ptr<HelmholtzEOSMixtureBackend> critical_state; ///< A temporary state used for calculations of the critical point(s)
     /// Update the state class used to calculate the tangent-plane-distance
@@ -253,6 +254,7 @@ public:
     CoolPropDbl calc_cvmolar(void);
     CoolPropDbl calc_cpmolar(void);
     CoolPropDbl calc_gibbsmolar(void);
+
     CoolPropDbl calc_helmholtzmolar(void);
     CoolPropDbl calc_cpmolar_idealgas(void);
     CoolPropDbl calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
@@ -260,11 +262,14 @@ public:
     CoolPropDbl calc_smolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
     
     CoolPropDbl calc_hmolar(void);
-    CoolPropDbl calc_hmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
+    CoolPropDbl calc_hmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);    
     
     CoolPropDbl calc_umolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
     CoolPropDbl calc_umolar(void);
     CoolPropDbl calc_speed_sound(void);
+
+    void calc_excess_properties();
+
     /** \brief The phase identification parameter of Venkatarathnam et al., FPE, 2011
      * 
      * 

@@ -152,6 +152,13 @@ bool AbstractState::clear() {
     this->_logp.clear();
     this->_logrhomolar.clear();
 
+    this->_hmolar_excess.clear();
+    this->_smolar_excess.clear();
+    this->_gibbsmolar_excess.clear();
+    this->_volumemolar_excess.clear();
+    this->_umolar_excess.clear();
+    this->_helmholtzmolar_excess.clear();
+
     ///// Smoothing values
     //this->rhospline = -_HUGE;
     //this->dsplinedp = -_HUGE;
@@ -463,21 +470,45 @@ double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
     return _hmolar;
 }
+double AbstractState::hmolar_excess(void) {
+    if (!_hmolar_excess) calc_excess_properties();
+    return _hmolar_excess;
+}
 double AbstractState::smolar(void){
     if (!_smolar) _smolar = calc_smolar();
     return _smolar;
+}
+double AbstractState::smolar_excess(void) {
+    if (!_smolar_excess) calc_excess_properties();
+    return _smolar_excess;
 }
 double AbstractState::umolar(void){
     if (!_umolar) _umolar = calc_umolar();
     return _umolar;
 }
+double AbstractState::umolar_excess(void) {
+    if (!_umolar_excess) calc_excess_properties();
+    return _umolar_excess;
+}
 double AbstractState::gibbsmolar(void){
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
     return _gibbsmolar;
 }
+double AbstractState::gibbsmolar_excess(void) {
+    if (!_gibbsmolar_excess) calc_excess_properties();
+    return _gibbsmolar_excess;
+}
 double AbstractState::helmholtzmolar(void){
     if (!_helmholtzmolar) _helmholtzmolar = calc_helmholtzmolar();
     return _helmholtzmolar;
+}
+double AbstractState::helmholtzmolar_excess(void) {
+    if (!_helmholtzmolar_excess) calc_excess_properties();
+    return _helmholtzmolar_excess;
+}
+double AbstractState::volumemolar_excess(void) {
+    if (!_volumemolar_excess) calc_excess_properties();
+    return _volumemolar_excess;
 }
 double AbstractState::cpmolar(void){
     if (!_cpmolar) _cpmolar = calc_cpmolar();

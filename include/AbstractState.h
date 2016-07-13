@@ -90,6 +90,9 @@ protected:
 
     CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar, _helmholtzmolar;
 
+    /// Excess properties
+    CachedElement _hmolar_excess, _smolar_excess, _gibbsmolar_excess, _umolar_excess, _volumemolar_excess, _helmholtzmolar_excess;
+
     /// Ancillary values
     CachedElement _rhoLanc, _rhoVanc, _pLanc, _pVanc, _TLanc, _TVanc;
 
@@ -160,6 +163,10 @@ protected:
     virtual CoolPropDbl calc_chemical_potential(std::size_t i) { throw NotImplementedError("calc_chemical_potential is not implemented for this backend"); };
     /// Using this backend, calculate the phase identification parameter (PIP)
     virtual CoolPropDbl calc_PIP(void){ throw NotImplementedError("calc_PIP is not implemented for this backend"); };
+
+    // Excess properties
+    /// Using this backend, calculate and cache the excess properties
+    virtual void calc_excess_properties(void) { throw NotImplementedError("calc_excess_properties is not implemented for this backend"); };
 
     // Derivatives of residual helmholtz energy
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
@@ -288,13 +295,19 @@ protected:
     /// 
     virtual CoolPropDbl calc_rhomass(void){ return rhomolar()*molar_mass(); }
     virtual CoolPropDbl calc_hmass(void){ return hmolar() / molar_mass(); }
+    virtual CoolPropDbl calc_hmass_excess(void) { return hmolar_excess() / molar_mass(); }
     virtual CoolPropDbl calc_smass(void){ return smolar() / molar_mass(); }
+    virtual CoolPropDbl calc_smass_excess(void) { return smolar_excess() / molar_mass(); }
     virtual CoolPropDbl calc_cpmass(void){ return cpmolar() / molar_mass(); }
     virtual CoolPropDbl calc_cp0mass(void){ return cp0molar() / molar_mass(); }
     virtual CoolPropDbl calc_cvmass(void){ return cvmolar() / molar_mass(); }
     virtual CoolPropDbl calc_umass(void){ return umolar() / molar_mass(); }
+    virtual CoolPropDbl calc_umass_excess(void) { return umolar_excess() / molar_mass(); }
     virtual CoolPropDbl calc_gibbsmass(void){ return gibbsmolar() / molar_mass(); }
+    virtual CoolPropDbl calc_gibbsmass_excess(void) { return gibbsmolar_excess() / molar_mass(); }
     virtual CoolPropDbl calc_helmholtzmass(void){ return helmholtzmolar() / molar_mass(); }
+    virtual CoolPropDbl calc_helmholtzmass_excess(void) { return helmholtzmolar_excess() / molar_mass(); }
+    virtual CoolPropDbl calc_volumemass_excess(void) { return volumemolar_excess() / molar_mass(); }
 
     /// Update the states after having changed the reference state for enthalpy and entropy
     virtual void update_states(void){ throw NotImplementedError("This backend does not implement update_states function"); };
@@ -619,14 +632,26 @@ public:
     double hmolar(void);
     /// Return the mass enthalpy in J/kg
     double hmass(void){ return calc_hmass(); };
+    /// Return the excess molar enthalpy in J/mol
+    double hmolar_excess(void);
+    /// Return the excess mass enthalpy in J/kg
+    double hmass_excess(void) { return calc_hmass_excess(); };
     /// Return the molar entropy in J/mol/K
     double smolar(void);
     /// Return the molar entropy in J/kg/K
     double smass(void){ return calc_smass(); };
+    /// Return the molar entropy in J/mol/K
+    double smolar_excess(void);
+    /// Return the molar entropy in J/kg/K
+    double smass_excess(void) { return calc_smass_excess(); };
     /// Return the molar internal energy in J/mol
     double umolar(void);
     /// Return the mass internal energy in J/kg
     double umass(void){ return calc_umass(); };
+    /// Return the excess internal energy in J/mol
+    double umolar_excess(void);
+    /// Return the excess internal energy in J/kg
+    double umass_excess(void) { return calc_umass_excess(); };
     /// Return the molar constant pressure specific heat in J/mol/K
     double cpmolar(void);
     /// Return the mass constant pressure specific heat in J/kg/K
@@ -639,14 +664,26 @@ public:
     double cvmolar(void);
     /// Return the mass constant volume specific heat in J/kg/K
     double cvmass(void){ return calc_cvmass(); };
-    /// Return the Gibbs function in J/mol
+    /// Return the Gibbs energy in J/mol
     double gibbsmolar(void);
-    /// Return the Gibbs function in J/kg
+    /// Return the Gibbs energy in J/kg
     double gibbsmass(void){ return calc_gibbsmass(); };
+    /// Return the excess Gibbs energy in J/mol
+    double gibbsmolar_excess(void);
+    /// Return the excess Gibbs energy in J/kg
+    double gibbsmass_excess(void) { return calc_gibbsmass_excess(); };
     /// Return the Helmholtz energy in J/mol
     double helmholtzmolar(void);
     /// Return the Helmholtz energy in J/kg
     double helmholtzmass(void){ return calc_helmholtzmass(); };
+    /// Return the excess Helmholtz energy in J/mol
+    double helmholtzmolar_excess(void);
+    /// Return the excess Helmholtz energy in J/kg
+    double helmholtzmass_excess(void) { return calc_helmholtzmass_excess(); };
+    /// Return the excess volume in m^3/mol
+    double volumemolar_excess(void);
+    /// Return the excess volume in m^3/kg
+    double volumemass_excess(void) { return calc_volumemass_excess(); };
     /// Return the speed of sound in m/s
     double speed_sound(void);
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
