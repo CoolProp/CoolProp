@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 plots_path = os.path.join(web_dir,'fluid_properties','incompressibles_consistency')
 
+checked = ["TVP1869", "T66"]
+
 N = 50
 p = 100e5
 Pr = np.empty(N)
@@ -60,7 +62,8 @@ for fluid in CoolProp.__incompressibles_pure__:
     cp_axis.plot(T-273.15,cp)
     
     if np.max(Pr)>10000:
-        print("Very high Prandtl number for "+fluid)
+        if fluid not in checked: 
+            print("Very high Prandtl number for "+fluid)
     
 for fluid in CoolProp.__fluids__:
     continue
