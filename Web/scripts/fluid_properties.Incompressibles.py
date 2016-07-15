@@ -45,10 +45,43 @@ mu_axis.set_ylabel("Dynamic Viscosity $\mu$ / Pa s")
 cp_axis.set_xlabel("Temperature $T$ / deg C")
 cp_axis.set_ylabel("Isobaric Heat Capacity $c_p$ / J/kg/K")
 
-for fluid in CoolProp.__incompressibles_pure__:
+#for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solution__:
+for fluid in CoolProp.__incompressibles_solution__:
+#for fluid in CoolProp.__incompressibles_pure__:
     if "example" in fluid.lower(): continue
     state = CoolProp.AbstractState("INCOMP",fluid)
-    T = np.linspace(state.Tmin(), state.Tmax(), N)
+    error = ""
+    for frac in [0.1,0.2,0.5,0.8,0.9]:
+        error = ""
+        try: 
+            state.set_mass_fractions([frac])
+            state.update(CoolProp.PT_INPUTS,p,state.Tmax())
+            break
+        except Exception as e: 
+            error = e.message
+            try:
+                state.set_volu_fractions([frac])
+                state.update(CoolProp.PT_INPUTS,p,state.Tmax())
+                break
+            except Exception as e: 
+                error = e.message
+                try:
+                    state.set_mole_fractions([frac])
+                    state.update(CoolProp.PT_INPUTS,p,state.Tmax())
+                    break
+                except Exception as e: 
+                    error = e.message
+                    pass
+                
+    
+    Tmin = 0.0
+    try:
+        Tmin = state.keyed_output(CoolProp.iT_freeze)
+    except:
+        pass
+    Tmin = max(state.Tmin(), Tmin)+1
+    Tmax = state.Tmax()
+    T = np.linspace(Tmin,Tmax, N)
     for i, Ti in enumerate(T):
         state.update(CoolProp.PT_INPUTS, p, Ti)
         Pr[i] = state.Prandtl()
@@ -63,7 +96,28 @@ for fluid in CoolProp.__incompressibles_pure__:
     
     if np.max(Pr)>10000:
         if fluid not in checked: 
-            print("Very high Prandtl number for "+fluid)
+            print("Very high Prandtl number for {0:s} of {1:f}".format(fluid,np.max(Pr)))
+    if np.min(Pr)<0.0:
+        if fluid not in checked: 
+            print("Very low Prandtl number for {0:s} of {1:f}".format(fluid,np.min(Pr)))
+    if np.max(la)>0.8:
+        if fluid not in checked: 
+            print("Very high thermal conductivity for {0:s} of {1:f}".format(fluid,np.max(la)))
+    if np.min(la)<0.3:
+        if fluid not in checked: 
+            print("Very low thermal conductivity for {0:s} of {1:f}".format(fluid,np.min(la)))
+    if np.max(mu)>0.2:
+        if fluid not in checked: 
+            print("Very high viscosity for {0:s} of {1:f}".format(fluid,np.max(mu)))
+    if np.min(mu)<1e-8:
+        if fluid not in checked: 
+            print("Very low viscosity for {0:s} of {1:f}".format(fluid,np.min(mu)))
+    if np.max(cp)>5000:
+        if fluid not in checked: 
+            print("Very high heat capacity for {0:s} of {1:f}".format(fluid,np.max(cp)))
+    if np.min(cp)<1000:
+        if fluid not in checked: 
+            print("Very low heat capacity for {0:s} of {1:f}".format(fluid,np.min(cp)))
     
 for fluid in CoolProp.__fluids__:
     continue
@@ -81,14 +135,22 @@ for fluid in CoolProp.__fluids__:
         cp[i] = np.nan 
         try:
             state.update(CoolProp.PT_INPUTS, p, Ti)
-            try: Pr[i] = state.Prandtl()
-            except: pass
-            try: la[i] = state.conductivity()
-            except: pass
-            try: mu[i] = state.viscosity()
-            except: pass
-            try: cp[i] = state.cpmass()
-            except: pass
+            try: 
+                Pr[i] = state.Prandtl()
+            except Exception as e:
+                print(e.message)
+            try: 
+                la[i] = state.conductivity()
+            except Exception as e:
+                print(e.message)
+            try: 
+                mu[i] = state.viscosity()
+            except Exception as e:
+                print(e.message)
+            try: 
+                cp[i] = state.cpmass()
+            except Exception as e:
+                print(e.message)
         except:
             pass    
     #print(np.min(Pr), np.max(Pr))
