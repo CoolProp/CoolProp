@@ -185,7 +185,11 @@ public:
     CoolPropDbl calc_cvmass(void){return cmass();};
     CoolPropDbl calc_viscosity(void){return fluid->visc(_T, _p, _fractions[0]);};
     CoolPropDbl calc_conductivity(void){return fluid->cond(_T, _p, _fractions[0]);};
-    CoolPropDbl calc_T_freeze(void){return fluid->Tfreeze(_p, _fractions[0]);};
+    CoolPropDbl calc_T_freeze(void){
+    	// No update is called - T_freeze is a trivial output
+    	fluid->checkX(_fractions[0]);
+		return fluid->Tfreeze(_p, _fractions[0]);
+    };
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
     CoolPropDbl calc_umass(void);
 
