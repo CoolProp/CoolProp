@@ -32,7 +32,14 @@ IncompressibleBackend::IncompressibleBackend(IncompressibleFluid* fluid) {
     this->set_reference_state();
     if (this->fluid->is_pure()){
     	this->set_fractions(std::vector<CoolPropDbl>(1,1.0));
-    }
+    } else {
+		this->set_fractions(std::vector<CoolPropDbl>(1,0.0));
+	}
+    //} else if (ValidNumber(this->fluid->xmin)) {
+    //	this->set_fractions(std::vector<CoolPropDbl>(1,this->fluid->getxmin()));
+    //} else if (ValidNumber(this->fluid->xmax)) {
+    //	this->set_fractions(std::vector<CoolPropDbl>(1,this->fluid->getxmax()));
+    //}
 }
 
 IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
@@ -40,7 +47,9 @@ IncompressibleBackend::IncompressibleBackend(const std::string &fluid_name) {
     this->set_reference_state();
     if (this->fluid->is_pure()){
     	this->set_fractions(std::vector<CoolPropDbl>(1,1.0));
-    }
+    } else {
+		this->set_fractions(std::vector<CoolPropDbl>(1,0.0));
+	}
 }
 
 IncompressibleBackend::IncompressibleBackend(const std::vector<std::string> &component_names) {
