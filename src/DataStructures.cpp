@@ -550,7 +550,8 @@ const backend_family_info backend_family_list[] = {
     { TTSE_BACKEND_FAMILY, "TTSE" },
     { BICUBIC_BACKEND_FAMILY, "BICUBIC" },
     { SRK_BACKEND_FAMILY, "SRK" },
-    { PR_BACKEND_FAMILY, "PR" }
+    { PR_BACKEND_FAMILY, "PR" },
+    { VTPR_BACKEND_FAMILY, "VTPR" }
 };
 
 const backend_info backend_list[] = {
@@ -564,7 +565,8 @@ const backend_info backend_list[] = {
     { TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY },
     { BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY },
     { SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY },
-    { PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY }
+    { PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY },
+    { VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY }
 };
 
 class BackendInformation {
