@@ -205,7 +205,7 @@ void UNIFAQ::UNIFAQMixture::add_component(const UNIFAQLibrary::Component &comp) 
     for (std::vector<UNIFAQLibrary::ComponentGroup>::const_iterator it = comp.groups.begin(); it != comp.groups.end(); ++it) {
         bool insert_into_unique = true;
         // if already in unique_groups, don't save it, go to next one
-        for (std::vector<UNIFAQLibrary::Group>::const_iterator it2 = unique_groups.cbegin(); it2 != unique_groups.end(); ++it2) {
+        for (std::vector<UNIFAQLibrary::Group>::const_iterator it2 = unique_groups.begin(); it2 != unique_groups.end(); ++it2) {
             if (it2->sgi == it->group.sgi) { insert_into_unique = false; break; }
         }
         if (insert_into_unique) { 
