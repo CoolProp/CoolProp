@@ -12,7 +12,8 @@ matplotlib.use('Agg') #Force mpl to use a non-GUI backend
 import matplotlib.pyplot as plt
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-plots_path = os.path.join(web_dir,'fluid_properties','incompressibles_consistency')
+#plots_path = os.path.join(web_dir,'fluid_properties','incompressibles_consistency')
+plots_path = os.path.join(web_dir,'scripts','incompressibles_consistency')
 
 checked = ["TVP1869", "T66"]
 
@@ -36,22 +37,31 @@ cp_axis = fig.add_subplot(224)
 
 Pr_axis.set_xlabel("Temperature $T$ / deg C")
 Pr_axis.set_ylabel("Prandtl Number $Pr$")
+#Pr_axis.set_ylim([0,10000])
 #Pr_axis.set_yscale("log")
 la_axis.set_xlabel("Temperature $T$ / deg C")
 la_axis.set_ylabel("Thermal Conductivity $\lambda$ / W/m/K")
+#la_axis.set_ylim([0,1])
 mu_axis.set_xlabel("Temperature $T$ / deg C")
 mu_axis.set_ylabel("Dynamic Viscosity $\mu$ / Pa s")
+#mu_axis.set_ylim([0,1])
 #mu_axis.set_yscale("log")
 cp_axis.set_xlabel("Temperature $T$ / deg C")
 cp_axis.set_ylabel("Isobaric Heat Capacity $c_p$ / J/kg/K")
+#cp_axis.set_ylim([0,5000])
 
-#for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solution__:
-for fluid in CoolProp.__incompressibles_solution__:
+for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solution__:
+#for fluid in CoolProp.__incompressibles_solution__:
 #for fluid in CoolProp.__incompressibles_pure__:
-    if "example" in fluid.lower(): continue
+    skip_fluid = False
+    for ignored in ["example","iceea","icena","icepg"]:
+        if ignored in fluid.lower(): 
+            skip_fluid = True
+    if skip_fluid: 
+        continue
     state = CoolProp.AbstractState("INCOMP",fluid)
     error = ""
-    for frac in [0.1,0.2,0.5,0.8,0.9]:
+    for frac in [0.5,0.2,0.8,0.1,0.9]:
         error = ""
         try: 
             state.set_mass_fractions([frac])
@@ -119,16 +129,19 @@ for fluid in CoolProp.__incompressibles_solution__:
         if fluid not in checked: 
             print("Very low heat capacity for {0:s} of {1:f}".format(fluid,np.min(cp)))
     
-for fluid in CoolProp.__fluids__:
-    continue
+#for fluid in CoolProp.__fluids__:
+for fluid in ["Water"]:
     state = CoolProp.AbstractState("HEOS",fluid)
-    T = np.linspace(state.Tmin(), state.Tmax(), N)
+    Tmin = max(state.Tmin(), Pr_axis.get_xlim()[0]+273.15)
+    Tmax = min(state.Tmax(), Pr_axis.get_xlim()[1]+273.15)
+    
+    T = np.linspace(Tmin, Tmax, N)
     for i, Ti in enumerate(T):
         try:
             state.update(CoolProp.QT_INPUTS, 0, Ti)
             p = state.p() + 1e5
         except:
-            p = 100e5
+            p = state.p_critical() + 1e5
         Pr[i] = np.nan
         la[i] = np.nan
         mu[i] = np.nan
@@ -178,30 +191,5 @@ for fluid in CoolProp.__fluids__:
     
 fig.tight_layout()
 fig.savefig(plots_path+'.pdf')
+#fig.savefig(plots_path+'.png')
 sys.exit(0)
-
-template = """from __future__ import division, print_function
-import matplotlib
-matplotlib.use('Agg') #Force mpl to use a non-GUI backend
-
-import matplotlib.pyplot as plt
-from CoolProp.Plots.ConsistencyPlots import ConsistencyFigure
-
-ff = ConsistencyFigure('{fluid:s}')
-ff.savefig('{fluid:s}.png', dpi = 30)
-ff.savefig('{fluid:s}.pdf')
-plt.close()
-del ff
-"""
-if not os.path.exists(plots_path):
-    os.makedirs(plots_path)
-    
-for fluid in CoolProp.__fluids__:
-    print('fluid:', fluid)
-    file_string = template.format(fluid = fluid)
-    file_path = os.path.join(plots_path, fluid + '.py')
-    print('Writing to', file_path)
-    with open(file_path, 'w') as fp:
-        fp.write(file_string)
-    print('calling:', 'python "' + fluid + '.py"', 'in',plots_path)
-    subprocess.check_call('python "' + fluid + '.py"', cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr, shell = True)

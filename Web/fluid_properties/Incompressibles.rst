@@ -434,3 +434,14 @@ heat capacity includes the heat of fusion. It might be necessary to adjust the
 solid content during heat transfer. The implementation is based on the data
 available in `SecCool <http://en.ipu.dk/Indhold/refrigeration-and-energy-technology/seccool.aspx>`_,
 which was originally recorded at the Danish Technological Institute `(DTI) <http://www.dti.dk/>`_.
+
+
+.. figure:: /_static/fluid_properties/incompressibles_consistency.jpg
+    :align: center
+    :alt: Validation figure showing Prandtl numbers for all incompressible fluids
+
+    The figure above shows plots of the Prandtl numbers and associated fluid 
+    properties for all incompressible fluids covering the whole temperature range
+    for each fluid. The original 
+    :download:`PDF version</_static/fluid_properties/incompressibles_consistency.pdf>` 
+    is also available for download.
