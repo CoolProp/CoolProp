@@ -71,13 +71,13 @@ namespace UNIFAQLibrary{
         populate(group_JSON, interaction_JSON, decomp_JSON);
     }
     Group UNIFAQParameterLibrary::get_group(int sgi) const {
-        for (std::vector<Group>::const_iterator it = groups.cbegin(); it != groups.cend(); ++it) {
+        for (std::vector<Group>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
             if (it->sgi == sgi) { return *it; }
         }
         throw CoolProp::ValueError("Could not find group");
     }
     bool UNIFAQParameterLibrary::has_group(int sgi) const {
-        for (std::vector<Group>::const_iterator it = groups.cbegin(); it != groups.cend(); ++it) {
+        for (std::vector<Group>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
             if (it->sgi == sgi) { return true; }
         }
         return false;
@@ -91,7 +91,7 @@ namespace UNIFAQLibrary{
             ip.zero_out();
             return ip;
         }
-        for (std::vector<InteractionParameters>::const_iterator it = interaction_parameters.cbegin(); it != interaction_parameters.cend(); ++it) {
+        for (std::vector<InteractionParameters>::const_iterator it = interaction_parameters.begin(); it != interaction_parameters.end(); ++it) {
             if (it->mgi1 == mgi1 && it->mgi2 == mgi2) {
                 // Correct order, return it
                 return *it;
@@ -108,7 +108,7 @@ namespace UNIFAQLibrary{
 
     Component UNIFAQParameterLibrary::get_component(const std::string &identifier, const std::string &value) const {
         if (identifier == "name"){
-            for (std::vector<Component>::const_iterator it = components.cbegin(); it != components.cend(); ++it ){
+            for (std::vector<Component>::const_iterator it = components.begin(); it != components.end(); ++it ){
                 if (it->name == value ){ return *it; }
             }
         }
