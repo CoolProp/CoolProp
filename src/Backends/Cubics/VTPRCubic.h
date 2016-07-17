@@ -36,7 +36,7 @@ public:
     
     /// The attractive part in cubic EOS
     double a_alpha(double T, std::size_t i){
-        return 1 + m_ii(i)*(1-sqrt(T/Tc[i]));
+        return pow(1 + m_ii(i)*(1-sqrt(T/Tc[i])), 2);
     }
     /// Calculate the non-dimensionalized gE/RT term
     double gE_R_RT(){
@@ -53,7 +53,9 @@ public:
     }
     /// The attractive parameter for the i-th pure component
     double a_ii(std::size_t i){
-        return 0.45724*pow(R_u*Tc[i], 2)/pc[i]*a_alpha(unifaq.get_temperature(), i);
+        double a0 = 0.45724*pow(R_u*Tc[i], 2)/pc[i];
+        double alpha = a_alpha(unifaq.get_temperature(), i);
+        return a0*alpha;
     }
     double bm(){
         double _am,_bm; am_bm(_am, _bm); return _bm;
@@ -100,7 +102,7 @@ public:
         double _am,_bm; am_bm(_am, _bm);
         double _cm = cm();
         if (itau == 0 && idelta == 0){
-            return -log(1-delta*rho_r*(_bm-_cm)) - sqrt(2)*_am*tau/(4*R_u*T_r*_bm)*log( (1+delta*rho_r*(_bm*(1+sqrt(2)+_cm))) / (1+delta*rho_r*(_bm*(1-sqrt(2)+_cm))) );
+            return -log(1-delta*rho_r*(_bm-_cm)) - sqrt(2.0)*_am*tau/(4*R_u*T_r*_bm)*log( (1+delta*rho_r*(_bm*(1+sqrt(2.0)+_cm))) / (1+delta*rho_r*(_bm*(1-sqrt(2.0)+_cm))) );
         }
         else if (itau == 1 && idelta == 0){
             double dtau = 0.01*tau;
