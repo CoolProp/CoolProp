@@ -118,13 +118,13 @@ public:
     virtual double m_ii(std::size_t i) = 0;
     
     /// The residual non-dimensionalized Helmholtz energy \f$\alpha^r\f$
-    double alphar(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta);
+    virtual double alphar(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta);
     /// The first composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d_alphar_dxi(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, bool xN_independent);
+    virtual double d_alphar_dxi(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, bool xN_independent);
     /// The second composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d2_alphar_dxidxj(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent);
+    virtual double d2_alphar_dxidxj(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent);
     /// The third composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d3_alphar_dxidxjdxk(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
+    virtual double d3_alphar_dxidxjdxk(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
     
     /**
      * \brief The n-th derivative of \f$a_m\f$ with respect to \f$\tau\f$
@@ -190,7 +190,8 @@ public:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     virtual double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
-    
+
+protected:
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$
      * \param tau The reciprocal reduced temperature \f$\tau=T_r/T\f$

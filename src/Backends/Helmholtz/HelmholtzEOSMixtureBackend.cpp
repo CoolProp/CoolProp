@@ -141,6 +141,7 @@ void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDb
 void HelmholtzEOSMixtureBackend::resize(std::size_t N)
 {
     this->mole_fractions.resize(N);
+    this->mole_fractions_double.resize(N);
     this->K.resize(N);
     this->lnK.resize(N);
     for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
