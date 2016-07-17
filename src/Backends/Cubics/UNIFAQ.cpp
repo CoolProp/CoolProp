@@ -183,7 +183,6 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
     }
 }
 double UNIFAQ::UNIFAQMixture::ln_gamma_R(std::size_t i) const{
-    const UNIFAQLibrary::Component &c = components[i];
     double summer = 0;
     for (std::vector<UNIFAQLibrary::Group>::const_iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
         std::size_t k = it->sgi;
@@ -220,7 +219,7 @@ void UNIFAQ::UNIFAQMixture::set_components(const std::string &identifier_type, s
     components.clear();
     if (identifier_type == "name") {
         // Iterate over the provided names
-        for (std::vector<std::string>::const_iterator it = identifiers.cbegin(); it != identifiers.cend(); ++it) {
+        for (std::vector<std::string>::const_iterator it = identifiers.begin(); it != identifiers.end(); ++it) {
             // Get and add the component
             UNIFAQLibrary::Component c = library.get_component("name", *it);
             add_component(c);
