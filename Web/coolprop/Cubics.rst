@@ -127,11 +127,11 @@ For mixtures, cubic EOS (and their modifications) are heavily used.  Cubic EOS a
 
     In [0]: AS.set_mole_fractions([0.5, 0.5])
 
-    In [0]: AS.update(CP.QT_INPUTS, 0, 300); print(AS.p())
+    In [0]: AS.update(CP.QT_INPUTS, 0, 120); print(AS.p())
 
     In [0]: AS.set_binary_interaction_double(0,1,"kij",-0.05)
 
-    In [0]: AS.update(CP.QT_INPUTS, 0, 300); print(AS.p())
+    In [0]: AS.update(CP.QT_INPUTS, 0, 120); print(AS.p())
 
 Critical Points
 ---------------
