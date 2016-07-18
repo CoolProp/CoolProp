@@ -57,12 +57,6 @@ public:
         double alpha = a_alpha(unifaq.get_temperature(), i);
         return a0*alpha;
     }
-    double bm(){
-        double _am,_bm; am_bm(_am, _bm); return _bm;
-    }
-    double am(){
-        double _am,_bm; am_bm(_am, _bm); return _am;
-    }
     double cm(){
         return 0;
     }
@@ -98,11 +92,11 @@ public:
     /// The residual non-dimensionalized Helmholtz energy \f$\alpha^r\f$
     double alphar(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta){
         unifaq.set_mole_fractions(x);
-        set_temperature(T_r/tau);
-        double _am,_bm; am_bm(_am, _bm);
-        double _cm = cm();
+        unifaq.set_temperature(T_r/tau);
+        double a_m,b_m; am_bm(a_m, b_m);
+        double c_m = cm();
         if (itau == 0 && idelta == 0){
-            return -log(1-delta*rho_r*(_bm-_cm)) - sqrt(2.0)*_am*tau/(4*R_u*T_r*_bm)*log( (1+delta*rho_r*(_bm*(1+sqrt(2.0)+_cm))) / (1+delta*rho_r*(_bm*(1-sqrt(2.0)+_cm))) );
+            return -log(1-delta*rho_r*(b_m-c_m)) - sqrt(2.0)*a_m*tau/(4*R_u*T_r*b_m)*log( (1+delta*rho_r*(b_m*(1+sqrt(2.0)+c_m))) / (1+delta*rho_r*(b_m*(1-sqrt(2.0)+c_m))) );
         }
         else if (itau == 1 && idelta == 0){
             double dtau = 0.01*tau;
@@ -113,13 +107,15 @@ public:
             return (alphar(tau+dtau,delta,x,0,0) - 2*alphar(tau,delta,x,0,0) + alphar(tau-dtau,delta,x,0,0))/(dtau*dtau);
         }
         else if (itau == 1 && idelta == 1){
-            double dtau = 0.01*tau;
-            return (alphar(tau+dtau,delta,x,0,1) - alphar(tau-dtau,delta,x,0,1))/(2*dtau);
+            double dtau = 0.01*tau, ddelta = 0.001*delta;
+            return (alphar(tau+dtau,delta+ddelta,x,0,0) -alphar(tau-dtau,delta+ddelta,x,0,0) -alphar(tau+dtau,delta-ddelta,x,0,0) + alphar(tau-dtau,delta-ddelta,x,0,0))/(4*ddelta*dtau);
         }
         else if (itau == 0 && idelta == 1){
+            double T= T_r/tau;
+            double analytic = (1.0L/4.0L)*rho_r*(-4*R_u*T*(b_m - c_m)*(b_m*delta*rho_r*(c_m + 1 + sqrt(2)) + 1)*(b_m*delta*rho_r*(c_m - sqrt(2) + 1) + 1) + sqrt(2)*a_m*((b_m*delta*rho_r*(c_m + 1 + sqrt(2)) + 1)*(c_m - sqrt(2) + 1) - (b_m*delta*rho_r*(c_m - sqrt(2) + 1) + 1)*(c_m + 1 + sqrt(2)))*(delta*rho_r*(b_m - c_m) - 1))/(R_u*T*(delta*rho_r*(b_m - c_m) - 1)*(b_m*delta*rho_r*(c_m + 1 + sqrt(2)) + 1)*(b_m*delta*rho_r*(c_m - sqrt(2) + 1) + 1));
             double ddelta = 0.001*delta;
             double val = (alphar(tau,delta+ddelta,x,0,0) - alphar(tau,delta-ddelta,x,0,0))/(2*ddelta);
-            return val;
+            return analytic;
         }
         else if (itau == 0 && idelta == 2){
             double ddelta = 0.001*delta;
