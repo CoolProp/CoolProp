@@ -174,7 +174,7 @@ public:
     double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){throw ValueError("get_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); };
 
     // Return a 1-1 copy of this class
-    virtual AbstractCubicBackend *get_copy(bool generate_SatL_and_SatV = true) = 0;
+    virtual HelmholtzEOSMixtureBackend *get_copy(bool generate_SatL_and_SatV = true) = 0;
     
     // Copy the entire kij matrix from another instance in one shot
     void copy_k(AbstractCubicBackend *donor);
@@ -222,10 +222,10 @@ public:
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
 	    setup(generate_SatL_and_SatV);
     }
-    AbstractCubicBackend *get_copy(bool generate_SatL_and_SatV = true){
+    HelmholtzEOSMixtureBackend *get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend *ACB = new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
         ACB->copy_k(this);
-        return ACB;
+        return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(SRK_BACKEND); }
 };
@@ -264,10 +264,10 @@ public:
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
 	    setup(generate_SatL_and_SatV);
     };
-    AbstractCubicBackend * get_copy(bool generate_SatL_and_SatV = true){
+    HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend * ACB = new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
         ACB->copy_k(this);
-        return ACB;
+        return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(PR_BACKEND); }
 };

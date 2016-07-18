@@ -29,12 +29,12 @@ protected:
     shared_ptr<HelmholtzEOSMixtureBackend> critical_state; ///< A temporary state used for calculations of the critical point(s)
     /// Update the state class used to calculate the tangent-plane-distance
     virtual void add_TPD_state(){
-        if (TPD_state.get() == NULL){ bool sat_states = false; TPD_state.reset(copy(sat_states)); linked_states.push_back(TPD_state);
+        if (TPD_state.get() == NULL){ bool sat_states = false; TPD_state.reset(get_copy(sat_states)); linked_states.push_back(TPD_state);
 	    }
     };
     /// Update the state class used to calculate the critical point(s)
     virtual void add_critical_state(){
-        if (critical_state.get() == NULL){ bool sat_states = true; critical_state.reset(copy(sat_states)); linked_states.push_back(critical_state);
+        if (critical_state.get() == NULL){ bool sat_states = true; critical_state.reset(get_copy(sat_states)); linked_states.push_back(critical_state);
         }
     };
     
@@ -52,7 +52,7 @@ public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
-    virtual HelmholtzEOSMixtureBackend * copy(bool generate_SatL_and_SatV = true){
+    virtual HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
         HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
         ptr->Reducing = Reducing;
         ptr->residual_helmholtz = residual_helmholtz;
