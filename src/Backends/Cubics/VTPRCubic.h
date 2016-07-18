@@ -112,7 +112,7 @@ public:
         }
         else if (itau == 0 && idelta == 1){
             double T= T_r/tau;
-            double analytic = (1.0L/4.0L)*rho_r*(-4*R_u*T*(b_m - c_m)*(b_m*delta*rho_r*(c_m + 1 + sqrt(2)) + 1)*(b_m*delta*rho_r*(c_m - sqrt(2) + 1) + 1) + sqrt(2)*a_m*((b_m*delta*rho_r*(c_m + 1 + sqrt(2)) + 1)*(c_m - sqrt(2) + 1) - (b_m*delta*rho_r*(c_m - sqrt(2) + 1) + 1)*(c_m + 1 + sqrt(2)))*(delta*rho_r*(b_m - c_m) - 1))/(R_u*T*(delta*rho_r*(b_m - c_m) - 1)*(b_m*delta*rho_r*(c_m + 1 + sqrt(2)) + 1)*(b_m*delta*rho_r*(c_m - sqrt(2) + 1) + 1));
+            double analytic = (1.0L/4.0L)*rho_r*(-4*R_u*T*(b_m - c_m)*(b_m*delta*rho_r*(c_m + 1 + sqrt(2.0)) + 1)*(b_m*delta*rho_r*(c_m - sqrt(2.0) + 1) + 1) + sqrt(2.0)*a_m*((b_m*delta*rho_r*(c_m + 1 + sqrt(2.0)) + 1)*(c_m - sqrt(2.0) + 1) - (b_m*delta*rho_r*(c_m - sqrt(2.0) + 1) + 1)*(c_m + 1 + sqrt(2.0)))*(delta*rho_r*(b_m - c_m) - 1))/(R_u*T*(delta*rho_r*(b_m - c_m) - 1)*(b_m*delta*rho_r*(c_m + 1 + sqrt(2.0)) + 1)*(b_m*delta*rho_r*(c_m - sqrt(2.0) + 1) + 1));
             double ddelta = 0.001*delta;
             double val = (alphar(tau,delta+ddelta,x,0,0) - alphar(tau,delta-ddelta,x,0,0))/(2*ddelta);
             return analytic;
