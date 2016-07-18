@@ -102,7 +102,6 @@ A more complete comparison of the accuracy of these methods can be obtained by s
 
 .. plot::
 
-    from CoolProp.Plots import Ph
     import CoolProp
     import CoolProp.CoolProp as CP
     import matplotlib.pyplot as plt
