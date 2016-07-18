@@ -85,7 +85,7 @@ The configuration key for setting the REFPROP path (see :ref:`configuration`) is
 
     In [0]: import json, CoolProp.CoolProp as CP
     
-    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, 'c:\\Program Files\\REFPROP')
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, 'c:\\Program Files\\REFPROP\\')
 
 If you do this, internally CoolProp will call the ``SETPATH`` function in REFPROP to tell REFPROP that it should find the ``fluids`` and ``mixtures`` directories within this directory.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
 
@@ -98,6 +98,16 @@ If you are playing around with mixture parameters, you might want to set a diffe
     In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_HMX_BNC_PATH, 'c:\\Program Files\\REFPROP\\fluids\\HMX.BNC')
 
 If you have set both the ``ALTERNATIVE_REFPROP_PATH`` and ``ALTERNATIVE_REFPROP_HMX_BNC_PATH`` variables, ``ALTERNATIVE_REFPROP_PATH_HMX_BNC_PATH`` "wins", and this path will be used when loading mixture interaction parameters
+
+And now we set them back to their default values
+
+.. ipython::
+
+    In [0]: import json, CoolProp.CoolProp as CP
+    
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_HMX_BNC_PATH, '')
+
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, '')
 
 Other Features
 --------------
@@ -120,3 +130,11 @@ If you want to use the GERG-2008 model, you can do this at the beginning of your
     In [1]: CP.set_config_bool(CP.REFPROP_USE_GERG, True)
 
 Subsquently, all calculations will be done with the simplified EOS from the GERG-2008 model
+
+And now we set them back to their default values
+
+.. ipython::
+
+    In [0]: import json, CoolProp.CoolProp as CP
+    
+    In [1]: CP.set_config_bool(CP.REFPROP_USE_GERG, False)
