@@ -7,6 +7,7 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
     is_pure_or_pseudopure = cubic->get_Tc().size() == 1;
     // Resize the vector
     resize(cubic->get_Tc().size());
+    N = cubic->get_Tc().size();
 	// Reset the residual Helmholtz energy class
 	residual_helmholtz.reset(new CubicResidualHelmholtz(this));
 	// If pure, set the mole fractions to be unity

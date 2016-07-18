@@ -96,10 +96,10 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
     // saturation classes cannot hold copies of the saturation classes
     if (generate_SatL_and_SatV)
     {
-        SatL.reset(copy(false));
+        SatL.reset(get_copy(false));
         SatL->specify_phase(iphase_liquid);
         linked_states.push_back(SatL);
-        SatV.reset(copy(false));
+        SatV.reset(get_copy(false));
         SatV->specify_phase(iphase_gas);
         linked_states.push_back(SatV);
     }
