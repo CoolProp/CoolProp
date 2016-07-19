@@ -85,7 +85,7 @@ public:
             }
         }
         bm = summerbm;
-        am = bm*(summeram + gE_R_RT()/(-0.53087));
+        am = bm*(summeram + R_u*unifaq.get_temperature()*gE_R_RT()/(-0.53087));
     };
     void set_temperature(const double T){ unifaq.set_temperature(T); }
     
