@@ -15,6 +15,7 @@
 #include "crossplatform_shared_ptr.h"
 #include "AbstractState.h"
 #include "Exceptions.h"
+#include "Configuration.h"
 
 #include <string.h>
 
@@ -288,6 +289,13 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
     catch (std::exception &e){ CoolProp::set_error_string(e.what()); }
     catch (...){ CoolProp::set_error_string("Undefined error"); }
     return 0;
+}
+EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val) {
+    try {
+        CoolProp::set_config_string(CoolProp::config_string_to_key(std::string(key)), std::string(val));
+    }
+    catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
+    catch (...) { CoolProp::set_error_string("Undefined error"); }
 }
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {

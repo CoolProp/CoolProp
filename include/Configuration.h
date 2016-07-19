@@ -57,6 +57,9 @@ namespace CoolProp
 /// Convert the configuration key to a string in a 1-1 representation.
 std::string config_key_to_string(configuration_keys keys);
 
+/// Convert a string description to a configuration key
+configuration_keys config_string_to_key(const std::string &s);
+
 /// Return a string description of the configuration key
 std::string config_key_description(configuration_keys keys);
 
