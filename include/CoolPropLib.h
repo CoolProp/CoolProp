@@ -127,6 +127,12 @@
      * @returns error_code 1 = Ok 0 = error
      */
     EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output, int n);
+    /** \brief Set configuration string
+    * @param key The key to configure
+    * @param val The value to set to the key
+    * \note you can get the error message by doing something like get_global_param_string("errstring",output)
+    */
+    EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val);
     /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS

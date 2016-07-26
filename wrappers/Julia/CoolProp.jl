@@ -1,7 +1,7 @@
 VERSION < v"0.4.0" && __precompile__()
 module CoolProp
 
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
+export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, set_config_string, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
@@ -113,6 +113,12 @@ function get_input_pair_index(param::AbstractString)
     error("CoolProp: Unknown input pair: ", param)
   end
   return val
+end
+
+# Set configuration string
+function set_config_string(key::AbstractString,val::AbstractString)
+  ccall( (:set_config_string, "CoolProp"), Void, (Ptr{UInt8},Ptr{UInt8}), key,val)
+  return get_global_param_string("errstring")
 end
 
 # Get the debug level
