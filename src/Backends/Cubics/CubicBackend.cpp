@@ -214,6 +214,7 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     double Delta_2 = cubic->get_Delta_2();
     double am = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0);
     double bm = cubic->bm_term(mole_fractions);
+    double cm = cubic->cm_term();
     
     // ** SYMPY CODE ***
     // R,T,v,b,a,Delta_1,Delta_2,p,Z,rho = symbols('R,T,v,b,a,Delta_1,Delta_2,p,Z,rho')
@@ -230,6 +231,8 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     double crho3 = bm*(Delta_1*Delta_2*(R*T*bm + bm*bm*p) + am);
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
     sort3(rho0, rho1, rho2);
+    // Volume translation
+    if (cm!=0.){rho0 = 1 / (1 / rho0 + cm); rho1 = 1 / (1 / rho1 + cm); rho2 = 1 / (1 / rho2 + cm);}
     return;
     
 //    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
@@ -496,4 +499,9 @@ void CoolProp::AbstractCubicBackend::set_C_Twu(double L, double M, double N){
         CoolProp::AbstractCubicBackend* _SatV = static_cast<CoolProp::AbstractCubicBackend*>(this->SatV.get());
         _SatV->get_cubic()->set_C_Twu(L, M, N);
     }
+}
+
+void CoolProp::AbstractCubicBackend::set_volume_translation(const double value)
+{
+    get_cubic()->set_cm(value);
 }

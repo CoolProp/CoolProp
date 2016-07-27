@@ -1,7 +1,7 @@
 VERSION < v"0.4.0" && __precompile__()
 module CoolProp
 
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, set_config_string, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
+export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, set_config_string, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double, AbstractState_set_volume_translation
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
@@ -389,6 +389,26 @@ end
 # value the value of the binary interaction parameter
 function AbstractState_set_binary_interaction_double(handle::Clong,i::Int, j::Int, parameter::AbstractString, value::Cdouble)
   ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong,Clong,Clong,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,j,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
+  return nothing
+end
+
+# Set binary interraction parrameter for mixtures
+# handle The integer handle for the state class stored in memory
+# i indice of the first fluid of the binary pair
+# j indice of the second fluid of the binary pair
+# parameter string wit the name of the parameter
+# value the value of the binary interaction parameter
+function AbstractState_set_volume_translation(handle::Clong, value::Cdouble)
+  ccall( (:AbstractState_set_volume_translation, "CoolProp"), Void, (Clong,Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
       error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
