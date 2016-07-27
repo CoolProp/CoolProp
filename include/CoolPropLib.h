@@ -412,6 +412,17 @@
     */
     EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const long i, const long j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
+    /**
+    * @brief Set the volume translation parameter (for cubic)
+    * @param handle The integer handle for the state class stored in memory
+    * @param value the value of the volume translation parameter
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION  AbstractState_set_volume_translation(const long handle, const double value, long *errcode, char *message_buffer, const long buffer_length);
+
     // *************************************************************************************
     // *************************************************************************************
     // *****************************  DEPRECATED *******************************************

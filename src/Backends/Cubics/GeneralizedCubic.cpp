@@ -81,6 +81,11 @@ double AbstractCubic::d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::si
     return 0;
 }
 
+double AbstractCubic::cm_term()
+{
+    return cm;
+}
+
 double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau)
 {
     double Tr_over_Tci = T_r/Tc[i];

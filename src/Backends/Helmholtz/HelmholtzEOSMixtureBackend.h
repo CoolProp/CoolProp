@@ -100,6 +100,9 @@ public:
     /// Apply a simple mixing rule
     void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model);
 
+    // Set the volume translation parameter (for cubic)
+    virtual void set_volume_translation(const double value) { throw ValueError("set_volume_translation only defined for cubic backends"); };
+
     phases calc_phase(void){return _phase;};
     
     /** \brief Specify the phase - this phase will always be used in calculations

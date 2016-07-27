@@ -30,6 +30,7 @@ protected:
     std::vector<double> C1, C2, C3; ///< The Mathias-Copeman coefficients for a_ii
     std::vector<double> L_Twu, M_Twu, N_Twu; ///< The Twu coefficients for a_ii
     AII_Model aii_model; ///< Enumeration for the aii model in use
+    double cm = 0.; ///< The volume translation parameter
 public:
     static const double rho_r, T_r;
     /**
@@ -192,6 +193,13 @@ public:
     virtual double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
 
 protected:
+    /**
+    * \brief The term \f$c_{\rm m}\f$ (volume translation)
+    */
+    virtual double cm_term();
+    /// Set the volume translation parameter
+    void set_cm(double val) {cm = val; }
+
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$
      * \param tau The reciprocal reduced temperature \f$\tau=T_r/T\f$
