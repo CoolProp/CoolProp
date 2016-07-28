@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "nHeptane", 
-    "Heptane", 
-    "HEPTANE", 
-    "N-HEPTANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -186,18 +180,6 @@
       ]
     }
   }, 
-  "CAS": "142-82-5", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "n-Heptane", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "Jaeschke-IJT-1995", 
@@ -369,9 +351,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{7}H_{16}", 
-  "NAME": "n-Heptane", 
-  "REFPROP_NAME": "HEPTANE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=8560", 
+    "ALIASES": [
+      "nHeptane", 
+      "Heptane", 
+      "HEPTANE", 
+      "N-HEPTANE"
+    ], 
+    "CAS": "142-82-5", 
+    "CHEMSPIDER_ID": 8560, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "n-Heptane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{7}H_{16}", 
+    "INCHI_KEY": "IMNFDUFMRHMDMM-UHFFFAOYAU", 
+    "INCHI_STRING": "InChI=1/C7H16/c1-3-5-7-6-4-2/h3-7H2,1-2H3", 
+    "NAME": "n-Heptane", 
+    "REFPROP_NAME": "HEPTANE", 
+    "SMILES": "CCCCCCC"
+  }, 
   "STATES": {
     "critical": {
       "T": 540.13, 

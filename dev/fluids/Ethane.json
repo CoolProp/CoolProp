@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "ethane", 
-    "ETHANE", 
-    "R170"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -205,18 +200,6 @@
         1.676
       ]
     }
-  }, 
-  "CAS": "74-84-0", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A3", 
-    "FH": 4, 
-    "GWP100": 2.9, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "Ethane", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -540,9 +523,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}H_{6}", 
-  "NAME": "Ethane", 
-  "REFPROP_NAME": "ETHANE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6084", 
+    "ALIASES": [
+      "ethane", 
+      "ETHANE", 
+      "R170"
+    ], 
+    "CAS": "74-84-0", 
+    "CHEMSPIDER_ID": 6084, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A3", 
+      "FH": 4, 
+      "GWP100": 2.9, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "Ethane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}H_{6}", 
+    "INCHI_KEY": "OTMSDBZUPAUEDD-UHFFFAOYAK", 
+    "INCHI_STRING": "InChI=1/C2H6/c1-2/h1-2H3", 
+    "NAME": "Ethane", 
+    "REFPROP_NAME": "ETHANE", 
+    "SMILES": "CC"
+  }, 
   "STATES": {
     "critical": {
       "T": 305.322, 

@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Fluoroethane", 
-    "FLUOROETHANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +177,6 @@
         1.111
       ]
     }
-  }, 
-  "CAS": "353-36-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": 10.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "R161", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -417,9 +401,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}F_{1}H_{5}", 
-  "NAME": "R161", 
-  "REFPROP_NAME": "R161", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=9243", 
+    "ALIASES": [
+      "Fluoroethane", 
+      "FLUOROETHANE"
+    ], 
+    "CAS": "353-36-6", 
+    "CHEMSPIDER_ID": 9243, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": 10.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "R161", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{2}F_{1}H_{5}", 
+    "INCHI_KEY": "UHCBBWUQDAVSMS-UHFFFAOYAC", 
+    "INCHI_STRING": "InChI=1/C2H5F/c1-2-3/h2H2,1H3", 
+    "NAME": "R161", 
+    "REFPROP_NAME": "R161", 
+    "SMILES": "CCF"
+  }, 
   "STATES": {
     "critical": {
       "T": 375.25, 

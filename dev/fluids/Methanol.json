@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "methanol", 
-    "METHANOL"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -209,18 +205,6 @@
       ]
     }
   }, 
-  "CAS": "67-56-1", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": 2.8, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Methanol", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -422,9 +406,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}H_{4}O_{1}", 
-  "NAME": "Methanol", 
-  "REFPROP_NAME": "METHANOL", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=864", 
+    "ALIASES": [
+      "methanol", 
+      "METHANOL"
+    ], 
+    "CAS": "67-56-1", 
+    "CHEMSPIDER_ID": 864, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": 2.8, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Methanol", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{1}H_{4}O_{1}", 
+    "INCHI_KEY": "OKKJLVBELUTLKV-UHFFFAOYAX", 
+    "INCHI_STRING": "InChI=1/CH4O/c1-2/h2H,1H3", 
+    "NAME": "Methanol", 
+    "REFPROP_NAME": "METHANOL", 
+    "SMILES": "CO"
+  }, 
   "STATES": {
     "critical": {
       "T": 512.5, 

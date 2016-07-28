@@ -1,11 +1,4 @@
 {
-  "ALIASES": [
-    "R744", 
-    "co2", 
-    "CO2", 
-    "carbondioxide", 
-    "CARBONDIOXIDE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -205,18 +198,6 @@
         1.254
       ]
     }
-  }, 
-  "CAS": "124-38-9", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": 1.0, 
-    "GWP20": 1.0, 
-    "GWP500": 1.0, 
-    "HH": 1, 
-    "Name": "CarbonDioxide", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -565,9 +546,35 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}O_{2}", 
-  "NAME": "CarbonDioxide", 
-  "REFPROP_NAME": "CO2", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=274", 
+    "ALIASES": [
+      "R744", 
+      "co2", 
+      "CO2", 
+      "carbondioxide", 
+      "CARBONDIOXIDE"
+    ], 
+    "CAS": "124-38-9", 
+    "CHEMSPIDER_ID": 274, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": 1.0, 
+      "GWP20": 1.0, 
+      "GWP500": 1.0, 
+      "HH": 1, 
+      "Name": "CarbonDioxide", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{1}O_{2}", 
+    "INCHI_KEY": "CURLTUGMZLYLDI-UHFFFAOYAO", 
+    "INCHI_STRING": "InChI=1/CO2/c2-1-3", 
+    "NAME": "CarbonDioxide", 
+    "REFPROP_NAME": "CO2", 
+    "SMILES": "C(=O)=O"
+  }, 
   "STATES": {
     "critical": {
       "T": 304.1282, 

@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -179,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "306-83-2", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "B1", 
-    "FH": 1, 
-    "GWP100": 77.0, 
-    "GWP20": 273.0, 
-    "GWP500": 24.0, 
-    "HH": 2, 
-    "Name": "R123", 
-    "ODP": 0.02, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "Younglove-JPCRD-1994", 
@@ -245,7 +232,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 600,
+      "T_max": 600, 
       "T_max_units": "K", 
       "Ttriple": 166, 
       "Ttriple_units": "K", 
@@ -522,7 +509,7 @@
           "rhomolar_units": "mol/m^3"
         }
       }, 
-      "T_max": 600,
+      "T_max": 600, 
       "T_max_units": "K", 
       "Ttriple": 166, 
       "Ttriple_units": "K", 
@@ -636,9 +623,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}Cl_{2}F_{3}H_{1}", 
-  "NAME": "R123", 
-  "REFPROP_NAME": "R123", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=9016", 
+    "ALIASES": [], 
+    "CAS": "306-83-2", 
+    "CHEMSPIDER_ID": 9016, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "B1", 
+      "FH": 1, 
+      "GWP100": 77.0, 
+      "GWP20": 273.0, 
+      "GWP500": 24.0, 
+      "HH": 2, 
+      "Name": "R123", 
+      "ODP": 0.02, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}Cl_{2}F_{3}H_{1}", 
+    "INCHI_KEY": "OHMHBGPWCHTMQE-UHFFFAOYAP", 
+    "INCHI_STRING": "InChI=1/C2HCl2F3/c3-1(4)2(5,6)7/h1H", 
+    "NAME": "R123", 
+    "REFPROP_NAME": "R123", 
+    "SMILES": "C(C(F)(F)F)(Cl)Cl"
+  }, 
   "STATES": {
     "critical": {
       "T": 456.831, 

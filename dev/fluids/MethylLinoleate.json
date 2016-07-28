@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "METHYLLINOLEATE", 
-    "MLINOLEA"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +177,6 @@
         1.9014
       ]
     }
-  }, 
-  "CAS": "112-63-0", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "MethylLinoleate", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -391,9 +375,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{19}H_{34}O_{2}", 
-  "NAME": "MethylLinoleate", 
-  "REFPROP_NAME": "MLINOLEA", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=4447491", 
+    "ALIASES": [
+      "METHYLLINOLEATE", 
+      "MLINOLEA"
+    ], 
+    "CAS": "112-63-0", 
+    "CHEMSPIDER_ID": 4447491, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "MethylLinoleate", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{19}H_{34}O_{2}", 
+    "INCHI_KEY": "WTTJVINHCBCLGX-NQLNTKRDBF", 
+    "INCHI_STRING": "InChI=1/C19H34O2/c1-3-4-5-6-7-8-9-10-11-12-13-14-15-16-17-18-19(20)21-2/h7-8,10-11H,3-6,9,12-18H2,1-2H3/b8-7-,11-10-", 
+    "NAME": "MethylLinoleate", 
+    "REFPROP_NAME": "MLINOLEA", 
+    "SMILES": "CCCCC/C=C\\C/C=C\\CCCCCCCC(=O)OC"
+  }, 
   "STATES": {
     "critical": {
       "T": 799.0, 

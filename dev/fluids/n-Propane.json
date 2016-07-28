@@ -1,12 +1,4 @@
 {
-  "ALIASES": [
-    "Propane", 
-    "propane", 
-    "R290", 
-    "C3H8", 
-    "PROPANE", 
-    "N-PROPANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -202,18 +194,6 @@
         4.404
       ]
     }
-  }, 
-  "CAS": "74-98-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A3", 
-    "FH": 4, 
-    "GWP100": 3.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "n-Propane", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -452,9 +432,36 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{3}H_{8}", 
-  "NAME": "n-Propane", 
-  "REFPROP_NAME": "PROPANE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6094", 
+    "ALIASES": [
+      "Propane", 
+      "propane", 
+      "R290", 
+      "C3H8", 
+      "PROPANE", 
+      "N-PROPANE"
+    ], 
+    "CAS": "74-98-6", 
+    "CHEMSPIDER_ID": 6094, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A3", 
+      "FH": 4, 
+      "GWP100": 3.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "n-Propane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{3}H_{8}", 
+    "INCHI_KEY": "ATUOYWHBWRKTHZ-UHFFFAOYAU", 
+    "INCHI_STRING": "InChI=1/C3H8/c1-3-2/h3H2,1-2H3", 
+    "NAME": "n-Propane", 
+    "REFPROP_NAME": "PROPANE", 
+    "SMILES": "CCC"
+  }, 
   "STATES": {
     "critical": {
       "T": 369.89, 

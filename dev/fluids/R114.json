@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -178,18 +177,6 @@
         1.258
       ]
     }
-  }, 
-  "CAS": "76-14-2", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": 10000.0, 
-    "GWP20": 8040.0, 
-    "GWP500": 8730.0, 
-    "HH": 1, 
-    "Name": "R114", 
-    "ODP": 1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -416,9 +403,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}Cl_{2}F_{4}", 
-  "NAME": "R114", 
-  "REFPROP_NAME": "R114", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=221830", 
+    "ALIASES": [], 
+    "CAS": "76-14-2", 
+    "CHEMSPIDER_ID": 221830, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": 10000.0, 
+      "GWP20": 8040.0, 
+      "GWP500": 8730.0, 
+      "HH": 1, 
+      "Name": "R114", 
+      "ODP": 1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}Cl_{2}F_{4}", 
+    "INCHI_KEY": "GEOTYZHKCQCORI-UHFFFAOYAT", 
+    "INCHI_STRING": "InChI=1/C19H17NO4/c1-2-23-19(22)18(21)16-11-20-17-9-8-14(10-15(16)17)24-12-13-6-4-3-5-7-13/h3-11,20H,2,12H2,1H3", 
+    "NAME": "R114", 
+    "REFPROP_NAME": "R114", 
+    "SMILES": "CCOC(=O)C(=O)c1c[nH]c2c1cc(cc2)OCc3ccccc3"
+  }, 
   "STATES": {
     "critical": {
       "T": 418.83, 

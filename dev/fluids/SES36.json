@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -194,7 +193,6 @@
       "type": "rational_polynomial"
     }
   }, 
-  "CAS": "SES36.ppf", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -412,8 +410,12 @@
       "pseudo_pure": true
     }
   ], 
-  "NAME": "SES36", 
-  "REFPROP_NAME": "N/A", 
+  "INFO": {
+    "ALIASES": [], 
+    "CAS": "SES36.ppf", 
+    "NAME": "SES36", 
+    "REFPROP_NAME": "N/A"
+  }, 
   "STATES": {
     "critical": {
       "T": 450.70000000000005, 

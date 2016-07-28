@@ -490,8 +490,13 @@ class CoolPropFluid {
         std::string CAS; ///< The CAS number of the fluid
         std::string formula; ///< The chemical formula, in LaTeX form
         std::vector <std::string> aliases; ///< A vector of aliases of names for the fluid
+        std::string InChI; ///< The InChI string for the fluid
+        std::string InChIKey; ///< The InChI key for the fluid
+        std::string smiles; ///< The SMILES identifier for the fluid
+        int ChemSpider_id; ///< The Chemspider identifier for the fluid
+        std::string TwoDPNG_URL; ///< The URL to a 2D representation of the molecule (from ChemSpider)
 
-        BibTeXKeysStruct BibTeXKeys; ///< The BibTeX keys associated 
+        BibTeXKeysStruct BibTeXKeys; ///< The BibTeX keys associated
         EnvironmentalFactorsStruct environment; ///< The environmental variables for global warming potential, ODP, etc.
         Ancillaries ancillaries; ///< The set of ancillary equations for dewpoint, bubblepoint, surface tension, etc.
         TransportPropertyData transport;

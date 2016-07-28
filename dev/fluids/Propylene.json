@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "propylene", 
-    "PROPYLENE", 
-    "PROPYLEN", 
-    "R1270"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -207,18 +201,6 @@
         1.186
       ]
     }
-  }, 
-  "CAS": "115-07-1", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A3", 
-    "FH": 4, 
-    "GWP100": 3.1, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "Propylene", 
-    "ODP": -1.0, 
-    "PH": 1
   }, 
   "EOS": [
     {
@@ -481,9 +463,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{3}H_{6}", 
-  "NAME": "Propylene", 
-  "REFPROP_NAME": "PROPYLEN", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7954", 
+    "ALIASES": [
+      "propylene", 
+      "PROPYLENE", 
+      "PROPYLEN", 
+      "R1270"
+    ], 
+    "CAS": "115-07-1", 
+    "CHEMSPIDER_ID": 7954, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A3", 
+      "FH": 4, 
+      "GWP100": 3.1, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "Propylene", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{3}H_{6}", 
+    "INCHI_KEY": "QQONPFPTGQHPMA-UHFFFAOYAA", 
+    "INCHI_STRING": "InChI=1/C3H6/c1-3-2/h3H,1H2,2H3", 
+    "NAME": "Propylene", 
+    "REFPROP_NAME": "PROPYLEN", 
+    "SMILES": "CC=C"
+  }, 
   "STATES": {
     "critical": {
       "T": 364.211, 
