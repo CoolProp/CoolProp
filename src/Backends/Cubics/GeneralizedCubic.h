@@ -391,7 +391,7 @@ protected:
      * \param x The vector of mole fractions
      */
     double c_term(const std::vector<double> &x){
-        return 1/bm_term(x);
+        return 1/(bm_term(x)+cm_term());
     };
     /**
      * \brief The first composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -400,7 +400,7 @@ protected:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d_c_term_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent){
-        return -d_bm_term_dxi(x,i,xN_independent)/pow(bm_term(x), 2);
+        return -d_bm_term_dxi(x,i,xN_independent)/pow(bm_term(x) + cm_term(), 2);
     };
     /**
      * \brief The second composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -410,8 +410,8 @@ protected:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d2_c_term_dxidxj(const std::vector<double> &x, std::size_t i, std::size_t j, bool xN_independent){
-        double b = bm_term(x);
-        return (2*d_bm_term_dxi(x, i, xN_independent)*d_bm_term_dxi(x, j, xN_independent) - b*d2_bm_term_dxidxj(x, i,j,xN_independent))/pow(b, 3);
+        double bpc = bm_term(x) + cm_term(); // appears only in the form (b+c) in the equations
+        return (2*d_bm_term_dxi(x, i, xN_independent)*d_bm_term_dxi(x, j, xN_independent) - bpc*d2_bm_term_dxidxj(x, i,j,xN_independent))/pow(bpc, 3);
     };
     /**
      * \brief The third composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -422,12 +422,12 @@ protected:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d3_c_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent){
-        double b = bm_term(x);
-        return 1/pow(b,4)*(2*b*(d_bm_term_dxi(x, i, xN_independent)*d2_bm_term_dxidxj(x, j, k, xN_independent)
+        double bpc = bm_term(x) + cm_term(); // appears only in the form (b+c) in the equations
+        return 1/pow(bpc,4)*(2*bpc*(d_bm_term_dxi(x, i, xN_independent)*d2_bm_term_dxidxj(x, j, k, xN_independent)
                                 +d_bm_term_dxi(x, j, xN_independent)*d2_bm_term_dxidxj(x, i, k, xN_independent)
                                 +d_bm_term_dxi(x, k, xN_independent)*d2_bm_term_dxidxj(x, i, j, xN_independent)
                                 )
-                           - pow(b,2)*d3_bm_term_dxidxjdxk(x, i,j,k,xN_independent)
+                           - pow(bpc,2)*d3_bm_term_dxidxjdxk(x, i,j,k,xN_independent)
                            -6*d_bm_term_dxi(x, i, xN_independent)*d_bm_term_dxi(x, j, xN_independent)*d_bm_term_dxi(x, k, xN_independent)
                            );
     };
@@ -443,8 +443,8 @@ protected:
      * \param x The vector of mole fractions
      */
     double A_term(double delta, const std::vector<double> &x){
-        double b = bm_term(x);
-        return log((Delta_1*delta*rho_r*b+1)/(Delta_2*delta*rho_r*b+1));
+        double bpc = bm_term(x)+cm_term(); // appears only in the form (b+c) in the equations
+        return log((Delta_1*delta*rho_r*bpc+1)/(Delta_2*delta*rho_r*bpc+1));
     };
     /**
      * \brief The first composition derivative of the term \f$A\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
