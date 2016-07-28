@@ -98,6 +98,8 @@ void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double &
 CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar){
     AbstractCubic *cubic = get_cubic().get();
     double tau = cubic->T_r / T;
+    // Volume translation
+    rhomolar = 1./(1./rhomolar - cubic->cm_term());
     double delta = rhomolar / cubic->rho_r;
     return _rhomolar*gas_constant()*_T*(1+delta*cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
 }
@@ -232,7 +234,7 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
     sort3(rho0, rho1, rho2);
     // Volume translation
-    if (cm!=0.){rho0 = 1 / (1 / rho0 + cm); rho1 = 1 / (1 / rho1 + cm); rho2 = 1 / (1 / rho2 + cm);}
+    if (cm!=0.){rho0 = 1./(1./rho0 + cm); rho1 = 1./(1./rho1 + cm); rho2 = 1./(1./rho2 + cm);}
     return;
     
 //    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
