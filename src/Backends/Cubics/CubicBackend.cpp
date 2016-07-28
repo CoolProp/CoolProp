@@ -98,8 +98,6 @@ void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double &
 CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar){
     AbstractCubic *cubic = get_cubic().get();
     double tau = cubic->T_r / T;
-    // Volume translation
-    rhomolar = 1./(1./rhomolar - cubic->cm_term());
     double delta = rhomolar / cubic->rho_r;
     return _rhomolar*gas_constant()*_T*(1+delta*cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
 }

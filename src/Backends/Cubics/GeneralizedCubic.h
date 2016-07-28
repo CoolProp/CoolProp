@@ -30,7 +30,7 @@ protected:
     std::vector<double> C1, C2, C3; ///< The Mathias-Copeman coefficients for a_ii
     std::vector<double> L_Twu, M_Twu, N_Twu; ///< The Twu coefficients for a_ii
     AII_Model aii_model; ///< Enumeration for the aii model in use
-    double cm = 0.; ///< The volume translation parameter
+    double cm; ///< The volume translation parameter
 public:
     static const double rho_r, T_r;
     /**
@@ -56,6 +56,7 @@ public:
     {
         N = static_cast<int>(Tc.size());
         k.resize(N, std::vector<double>(N, 0));
+        cm = 0.;
         /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
         simple_aii = (C1.empty() && C2.empty() && C3.empty() && L_Twu.empty() && M_Twu.empty() && N_Twu.empty());
     };
