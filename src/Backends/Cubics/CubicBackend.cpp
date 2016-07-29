@@ -224,15 +224,25 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     //
     // yields:
     // (b*rho**3*(Delta_1*Delta_2*R*T*b + Delta_1*Delta_2*b**2*p + a) - p + rho**2*(-Delta_1*Delta_2*b**2*p + Delta_1*R*T*b + Delta_1*b**2*p + Delta_2*R*T*b + Delta_2*b**2*p - a) - rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p))/rho**3
-    
+    //
+    // Volume translation
+    // from sympy import *
+    // R, T, v, a, Delta_1, Delta_2, p, Z, rho, bmc, bpc = symbols('R,T,v,a,Delta_1,Delta_2,p,Z,rho,bmc,bpc')
+    // eqn = (R*T / (v - bmc) - a / (v + Delta_1*bpc) / (v + Delta_2*bpc) - p)*(v - bmc)*(v + Delta_1*bpc)*(v + Delta_2*bpc)
+    // eqn2 = eqn.subs(v, 1 / rho)
+    // print(simplify(factor(expand(eqn2), rho)))
+    //
+    // yields:
+    // (-p + rho**3*(Delta_1*Delta_2*R*T*bpc**2 + Delta_1*Delta_2*bmc*bpc**2*p + a*bmc) + rho**2*(-Delta_1*Delta_2*bpc**2*p + Delta_1*R*T*bpc + Delta_1*bmc*bpc*p + Delta_2*R*T*bpc + Delta_2*bmc*bpc*p - a) - rho*(Delta_1*bpc*p + Delta_2*bpc*p - R*T - bmc*p))/rho**3
+
+    double bmc = bm - cm;
+    double bpc = bm + cm;
     double crho0 = -p;
-    double crho1 = -1*((Delta_1+Delta_2-1)*bm*p - R*T);
-    double crho2 = -Delta_1*Delta_2*bm*bm*p + (Delta_1+Delta_2)*(R*T*bm + bm*bm*p) - am;
-    double crho3 = bm*(Delta_1*Delta_2*(R*T*bm + bm*bm*p) + am);
+    double crho1 = -1*((Delta_1+Delta_2)*bpc*p - R*T - bmc*p);
+    double crho2 = -Delta_1*Delta_2*bpc*bpc*p + (Delta_1+Delta_2)*(R*T*bpc + bmc*bpc*p) - am;
+    double crho3 = Delta_1*Delta_2*bpc*bpc*(R*T + bmc*p) + am*bmc;
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
     sort3(rho0, rho1, rho2);
-    // Volume translation
-    if (cm!=0.){rho0 = 1./(1./rho0 + cm); rho1 = 1./(1./rho1 + cm); rho2 = 1./(1./rho2 + cm);}
     return;
     
 //    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
