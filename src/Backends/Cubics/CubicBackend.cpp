@@ -227,20 +227,22 @@ void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, 
     //
     // Volume translation
     // from sympy import *
-    // R, T, v, a, Delta_1, Delta_2, p, Z, rho, bmc, bpc = symbols('R,T,v,a,Delta_1,Delta_2,p,Z,rho,bmc,bpc')
-    // eqn = (R*T / (v - bmc) - a / (v + Delta_1*bpc) / (v + Delta_2*bpc) - p)*(v - bmc)*(v + Delta_1*bpc)*(v + Delta_2*bpc)
+    // R,T,v,a,Delta_1,Delta_2,p,Z,rho,b,c = symbols('R,T,v,a,Delta_1,Delta_2,p,Z,rho,b,c')
+    // eqn = (R*T / (v + c - b) - a / (v + c + Delta_1*b) / (v + c + Delta_2*b) - p)*(v + c - b)*(v + c + Delta_1*b)*(v + c + Delta_2*b)
     // eqn2 = eqn.subs(v, 1 / rho)
-    // print(simplify(factor(expand(eqn2), rho)))
+    // print(simplify(factor(expand(eqn2*rho**3),rho)))
     //
     // yields:
-    // (-p + rho**3*(Delta_1*Delta_2*R*T*bpc**2 + Delta_1*Delta_2*bmc*bpc**2*p + a*bmc) + rho**2*(-Delta_1*Delta_2*bpc**2*p + Delta_1*R*T*bpc + Delta_1*bmc*bpc*p + Delta_2*R*T*bpc + Delta_2*bmc*bpc*p - a) - rho*(Delta_1*bpc*p + Delta_2*bpc*p - R*T - bmc*p))/rho**3
-
-    double bmc = bm - cm;
-    double bpc = bm + cm;
+    // -p + rho**3*(Delta_1*Delta_2*R*T*b**2 + Delta_1*Delta_2*b**3*p - Delta_1*Delta_2*b**2*c*p + Delta_1*R*T*b*c + Delta_1*b**2*c*p - Delta_1*b*c**2*p + Delta_2*R*T*b*c + Delta_2*b**2*c*p - Delta_2*b*c**2*p + R*T*c**2 + a*b - a*c + b*c**2*p - c**3*p) + rho**2*(-Delta_1*Delta_2*b**2*p + Delta_1*R*T*b + Delta_1*b**2*p - 2*Delta_1*b*c*p + Delta_2*R*T*b + Delta_2*b**2*p - 2*Delta_2*b*c*p + 2*R*T*c - a + 2*b*c*p - 3*c**2*p) - rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p + 3*c*p)
+    // =>
+    // -p
+    // -rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p + 3 * c*p)
+    // + rho**2 * (-Delta_1*Delta_2*b**2 * p + Delta_1*R*T*b + Delta_1*b**2 * p - 2 * Delta_1*b*c*p + Delta_2*R*T*b + Delta_2*b**2 * p - 2 * Delta_2*b*c*p + 2 * R*T*c - a + 2 * b*c*p - 3 * c**2 * p)
+    // + rho**3 * (Delta_1*Delta_2*R*T*b**2 + Delta_1*Delta_2*b**3 * p - Delta_1*Delta_2*b**2 * c*p + Delta_1*R*T*b*c + Delta_1*b**2 * c*p - Delta_1*b*c**2 * p + Delta_2*R*T*b*c + Delta_2*b**2 * c*p - Delta_2*b*c**2 * p + R*T*c**2 + a*b - a*c + b*c**2 * p - c**3 * p)
     double crho0 = -p;
-    double crho1 = -1*((Delta_1+Delta_2)*bpc*p - R*T - bmc*p);
-    double crho2 = -Delta_1*Delta_2*bpc*bpc*p + (Delta_1+Delta_2)*(R*T*bpc + bmc*bpc*p) - am;
-    double crho3 = Delta_1*Delta_2*bpc*bpc*(R*T + bmc*p) + am*bmc;
+    double crho1 = -1.*((Delta_1+Delta_2-1)*bm*p - R*T + 3.*cm*p);
+    double crho2 = -Delta_1*Delta_2*bm*bm*p + (Delta_1+Delta_2)*bm*(R*T + (bm -2.*cm)*p) + (2.*bm-3*cm)*cm*p + 2*R*T*cm- am;
+    double crho3 = (Delta_1*Delta_2*bm + cm*(Delta_1 + Delta_2))*bm*(R*T + (bm-cm)*p) + R*T*cm*cm + (bm-cm)*(cm*cm*p+am);
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
     sort3(rho0, rho1, rho2);
     return;
