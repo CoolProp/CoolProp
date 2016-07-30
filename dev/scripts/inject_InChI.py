@@ -14,7 +14,9 @@ backup_map = {
     'Fluorine': 22932,
     'Hydrogen': 762,
     'Deuterium': 22931,
-    'HFE143m': 66577
+    'HFE143m': 66577,
+    'SulfurHexafluoride': 16425,
+    'R114': 13853215
 }
 
 # Make sure the key works
@@ -38,6 +40,11 @@ for fname in glob.glob('../fluids/*.json'):
     if '.' not in CAS:
         results = cs.search(CAS)
         results.wait()
+        if fluid in backup_map:
+            results = cs.search(backup_map[fluid])
+            results.wait()
+            assert(len(results) == 1)
+            doset(results[0])
         if len(results) == 1:
             doset(results[0])
         elif fluid in backup_map:

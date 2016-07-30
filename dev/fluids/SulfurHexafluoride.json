@@ -496,13 +496,13 @@
     }
   ], 
   "INFO": {
-    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=21159667", 
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=16425", 
     "ALIASES": [
       "SULFURHEXAFLUORIDE", 
       "SF6"
     ], 
     "CAS": "2551-62-4", 
-    "CHEMSPIDER_ID": 21159667, 
+    "CHEMSPIDER_ID": 16425, 
     "ENVIRONMENTAL": {
       "ASHRAE34": "UNKNOWN", 
       "FH": 0, 
@@ -515,11 +515,11 @@
       "PH": 0
     }, 
     "FORMULA": "F_{6}S_{1}", 
-    "INCHI_KEY": "YZKJHTLQXIIQAU-CYFPFDDLAV", 
-    "INCHI_STRING": "InChI=1/6FH.3H4S/h6*1H;3*1H4/q;;;;;;3*+2/p-6", 
+    "INCHI_KEY": "SFZCNBIFKDRMGX-UHFFFAOYAF", 
+    "INCHI_STRING": "InChI=1/F6S/c1-7(2,3,4,5)6", 
     "NAME": "SulfurHexafluoride", 
     "REFPROP_NAME": "SF6", 
-    "SMILES": "[F-].[F-].[F-].[F-].[F-].[F-].[SH4+2].[SH4+2].[SH4+2]"
+    "SMILES": "FS(F)(F)(F)(F)F"
   }, 
   "STATES": {
     "critical": {
