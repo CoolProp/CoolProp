@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "paradeuterium", 
-    "PARADEUTERIUM"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -171,7 +167,6 @@
       "type": "rational_polynomial"
     }
   }, 
-  "CAS": "7782-39-0p", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -435,8 +430,15 @@
       "pseudo_pure": false
     }
   ], 
-  "NAME": "ParaDeuterium", 
-  "REFPROP_NAME": "N/A", 
+  "INFO": {
+    "ALIASES": [
+      "paradeuterium", 
+      "PARADEUTERIUM"
+    ], 
+    "CAS": "7782-39-0p", 
+    "NAME": "ParaDeuterium", 
+    "REFPROP_NAME": "N/A"
+  }, 
   "STATES": {
     "critical": {
       "T": 38.34, 

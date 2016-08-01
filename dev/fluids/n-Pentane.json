@@ -1,11 +1,4 @@
 {
-  "ALIASES": [
-    "nPentane", 
-    "Pentane", 
-    "PENTANE", 
-    "N-PENTANE", 
-    "R601"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -205,18 +198,6 @@
       ]
     }
   }, 
-  "CAS": "109-66-0", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 4, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "n-Pentane", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "Jaeschke-IJT-1995", 
@@ -407,9 +388,35 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{5}H_{12}", 
-  "NAME": "n-Pentane", 
-  "REFPROP_NAME": "PENTANE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7712", 
+    "ALIASES": [
+      "nPentane", 
+      "Pentane", 
+      "PENTANE", 
+      "N-PENTANE", 
+      "R601"
+    ], 
+    "CAS": "109-66-0", 
+    "CHEMSPIDER_ID": 7712, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 4, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "n-Pentane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{5}H_{12}", 
+    "INCHI_KEY": "OFBQJSOFQDEBGM-UHFFFAOYAN", 
+    "INCHI_STRING": "InChI=1/C5H12/c1-3-5-4-2/h3-5H2,1-2H3", 
+    "NAME": "n-Pentane", 
+    "REFPROP_NAME": "PENTANE", 
+    "SMILES": "CCCCC"
+  }, 
   "STATES": {
     "critical": {
       "T": 469.70000000000005, 

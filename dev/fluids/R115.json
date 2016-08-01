@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "pS": {
       "T_r": 353.1, 
@@ -75,18 +74,6 @@
       "type": "rhoV", 
       "using_tau_r": false
     }
-  }, 
-  "CAS": "76-15-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": 7370, 
-    "GWP20": -1, 
-    "GWP500": -1, 
-    "HH": -1, 
-    "Name": "R115", 
-    "ODP": 0.44, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -246,9 +233,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}F_{5}Cl_{1}", 
-  "NAME": "R115", 
-  "REFPROP_NAME": "R115", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6190", 
+    "ALIASES": [], 
+    "CAS": "76-15-3", 
+    "CHEMSPIDER_ID": 6190, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": 7370, 
+      "GWP20": -1, 
+      "GWP500": -1, 
+      "HH": -1, 
+      "Name": "R115", 
+      "ODP": 0.44, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{2}F_{5}Cl_{1}", 
+    "INCHI_KEY": "RFCAUADVODFSLZ-UHFFFAOYAH", 
+    "INCHI_STRING": "InChI=1/C2ClF5/c3-1(4,5)2(6,7)8", 
+    "NAME": "R115", 
+    "REFPROP_NAME": "R115", 
+    "SMILES": "C(C(F)(F)Cl)(F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 353.1, 

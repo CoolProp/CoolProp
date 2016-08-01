@@ -1,11 +1,4 @@
 {
-  "ALIASES": [
-    "nDodecane", 
-    "Dodecane", 
-    "DODECANE", 
-    "N-DODECANE", 
-    "C12"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -186,18 +179,6 @@
         1.17
       ]
     }
-  }, 
-  "CAS": "112-40-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 2, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "n-Dodecane", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -380,9 +361,35 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{12}H_{26}", 
-  "NAME": "n-Dodecane", 
-  "REFPROP_NAME": "C12", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7890", 
+    "ALIASES": [
+      "nDodecane", 
+      "Dodecane", 
+      "DODECANE", 
+      "N-DODECANE", 
+      "C12"
+    ], 
+    "CAS": "112-40-3", 
+    "CHEMSPIDER_ID": 7890, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 2, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "n-Dodecane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{12}H_{26}", 
+    "INCHI_KEY": "SNRUBQQJIBEYMU-UHFFFAOYAS", 
+    "INCHI_STRING": "InChI=1/C12H26/c1-3-5-7-9-11-12-10-8-6-4-2/h3-12H2,1-2H3", 
+    "NAME": "n-Dodecane", 
+    "REFPROP_NAME": "C12", 
+    "SMILES": "CCCCCCCCCCCC"
+  }, 
   "STATES": {
     "critical": {
       "T": 658.1, 

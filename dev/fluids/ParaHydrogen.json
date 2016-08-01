@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "Parahydrogen", 
-    "parahydrogen", 
-    "PARAHYDROGEN", 
-    "PARAHYD"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -206,18 +200,6 @@
         1.06
       ]
     }
-  }, 
-  "CAS": "1333-74-0p", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "ParaHydrogen", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -440,8 +422,28 @@
       "pseudo_pure": false
     }
   ], 
-  "NAME": "ParaHydrogen", 
-  "REFPROP_NAME": "PARAHYD", 
+  "INFO": {
+    "ALIASES": [
+      "Parahydrogen", 
+      "parahydrogen", 
+      "PARAHYDROGEN", 
+      "PARAHYD"
+    ], 
+    "CAS": "1333-74-0p", 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "ParaHydrogen", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "NAME": "ParaHydrogen", 
+    "REFPROP_NAME": "PARAHYD"
+  }, 
   "STATES": {
     "critical": {
       "T": 32.938, 

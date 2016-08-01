@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "oXylene", 
-    "o-xylene", 
-    "O-XYLENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,7 +178,6 @@
       ]
     }
   }, 
-  "CAS": "95-47-6", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -385,9 +379,22 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{10}", 
-  "NAME": "o-Xylene", 
-  "REFPROP_NAME": "OXYLENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6967", 
+    "ALIASES": [
+      "oXylene", 
+      "o-xylene", 
+      "O-XYLENE"
+    ], 
+    "CAS": "95-47-6", 
+    "CHEMSPIDER_ID": 6967, 
+    "FORMULA": "C_{8}H_{10}", 
+    "INCHI_KEY": "CTQNGGLPUBDAKN-UHFFFAOYAE", 
+    "INCHI_STRING": "InChI=1/C8H10/c1-7-5-3-4-6-8(7)2/h3-6H,1-2H3", 
+    "NAME": "o-Xylene", 
+    "REFPROP_NAME": "OXYLENE", 
+    "SMILES": "Cc1ccccc1C"
+  }, 
   "STATES": {
     "critical": {
       "T": 630.259, 

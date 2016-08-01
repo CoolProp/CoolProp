@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "orthodeuterium", 
-    "ORTHODEUTERIUM"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -171,7 +167,6 @@
       "type": "rational_polynomial"
     }
   }, 
-  "CAS": "7782-39-0o", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -437,8 +432,15 @@
       "pseudo_pure": false
     }
   ], 
-  "NAME": "OrthoDeuterium", 
-  "REFPROP_NAME": "N/A", 
+  "INFO": {
+    "ALIASES": [
+      "orthodeuterium", 
+      "ORTHODEUTERIUM"
+    ], 
+    "CAS": "7782-39-0o", 
+    "NAME": "OrthoDeuterium", 
+    "REFPROP_NAME": "N/A"
+  }, 
   "STATES": {
     "critical": {
       "T": 38.34, 

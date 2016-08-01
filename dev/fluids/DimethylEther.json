@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "DIMETHYLETHER", 
-    "DME"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "115-10-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A3", 
-    "FH": 4, 
-    "GWP100": 1.0, 
-    "GWP20": 1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "DimethylEther", 
-    "ODP": -1.0, 
-    "PH": 2
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -248,7 +232,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 525,
+      "T_max": 525, 
       "T_max_units": "K", 
       "Ttriple": 131.66, 
       "Ttriple_units": "K", 
@@ -410,9 +394,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}H_{6}O_{1}", 
-  "NAME": "DimethylEther", 
-  "REFPROP_NAME": "DME", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7956", 
+    "ALIASES": [
+      "DIMETHYLETHER", 
+      "DME"
+    ], 
+    "CAS": "115-10-6", 
+    "CHEMSPIDER_ID": 7956, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A3", 
+      "FH": 4, 
+      "GWP100": 1.0, 
+      "GWP20": 1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "DimethylEther", 
+      "ODP": -1.0, 
+      "PH": 2
+    }, 
+    "FORMULA": "C_{2}H_{6}O_{1}", 
+    "INCHI_KEY": "LCGLNKUTAGEVQW-UHFFFAOYAU", 
+    "INCHI_STRING": "InChI=1/C2H6O/c1-3-2/h1-2H3", 
+    "NAME": "DimethylEther", 
+    "REFPROP_NAME": "DME", 
+    "SMILES": "COC"
+  }, 
   "STATES": {
     "critical": {
       "T": 400.378, 

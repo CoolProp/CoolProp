@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "SO2", 
-    "SULFURDIOXIDE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +177,6 @@
         0.364
       ]
     }
-  }, 
-  "CAS": "7446-09-5", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "B1", 
-    "FH": 0, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 3, 
-    "Name": "SulfurDioxide", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -565,9 +549,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "O_{2}S_{1}", 
-  "NAME": "SulfurDioxide", 
-  "REFPROP_NAME": "SO2", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=1087", 
+    "ALIASES": [
+      "SO2", 
+      "SULFURDIOXIDE"
+    ], 
+    "CAS": "7446-09-5", 
+    "CHEMSPIDER_ID": 1087, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "B1", 
+      "FH": 0, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 3, 
+      "Name": "SulfurDioxide", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "O_{2}S_{1}", 
+    "INCHI_KEY": "RAHZWNYVWXNFOC-UHFFFAOYAT", 
+    "INCHI_STRING": "InChI=1/O2S/c1-3-2", 
+    "NAME": "SulfurDioxide", 
+    "REFPROP_NAME": "SO2", 
+    "SMILES": "O=S=O"
+  }, 
   "STATES": {
     "critical": {
       "T": 430.64, 

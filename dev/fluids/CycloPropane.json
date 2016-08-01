@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "cyclopropane", 
-    "Cyclopropane", 
-    "CYCLOPROPANE", 
-    "CYCLOPRO"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,18 +177,6 @@
         1.314
       ]
     }
-  }, 
-  "CAS": "75-19-4", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 2, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "CycloPropane", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -402,9 +384,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{3}H_{6}", 
-  "NAME": "CycloPropane", 
-  "REFPROP_NAME": "CYCLOPRO", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6111", 
+    "ALIASES": [
+      "cyclopropane", 
+      "Cyclopropane", 
+      "CYCLOPROPANE", 
+      "CYCLOPRO"
+    ], 
+    "CAS": "75-19-4", 
+    "CHEMSPIDER_ID": 6111, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 2, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "CycloPropane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{3}H_{6}", 
+    "INCHI_KEY": "LVZWSLJZHVFIQJ-UHFFFAOYAL", 
+    "INCHI_STRING": "InChI=1/C3H6/c1-2-3-1/h1-3H2", 
+    "NAME": "CycloPropane", 
+    "REFPROP_NAME": "CYCLOPRO", 
+    "SMILES": "C1CC1"
+  }, 
   "STATES": {
     "critical": {
       "T": 398.3, 

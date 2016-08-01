@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "ethylene", 
-    "ETHYLENE", 
-    "R1150"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -213,18 +208,6 @@
         1.17
       ]
     }
-  }, 
-  "CAS": "74-85-1", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A3", 
-    "FH": 4, 
-    "GWP100": 6.8, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Ethylene", 
-    "ODP": -1.0, 
-    "PH": 2
   }, 
   "EOS": [
     {
@@ -531,9 +514,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}H_{4}", 
-  "NAME": "Ethylene", 
-  "REFPROP_NAME": "ETHYLENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6085", 
+    "ALIASES": [
+      "ethylene", 
+      "ETHYLENE", 
+      "R1150"
+    ], 
+    "CAS": "74-85-1", 
+    "CHEMSPIDER_ID": 6085, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A3", 
+      "FH": 4, 
+      "GWP100": 6.8, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Ethylene", 
+      "ODP": -1.0, 
+      "PH": 2
+    }, 
+    "FORMULA": "C_{2}H_{4}", 
+    "INCHI_KEY": "VGGSQFUCUMXWEO-UHFFFAOYAE", 
+    "INCHI_STRING": "InChI=1/C2H4/c1-2/h1-2H2", 
+    "NAME": "Ethylene", 
+    "REFPROP_NAME": "ETHYLENE", 
+    "SMILES": "C=C"
+  }, 
   "STATES": {
     "critical": {
       "T": 282.35, 

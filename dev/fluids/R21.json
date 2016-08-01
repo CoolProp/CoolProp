@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -178,18 +177,6 @@
         1.259
       ]
     }
-  }, 
-  "CAS": "75-43-4", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "B1", 
-    "FH": -1, 
-    "GWP100": 151.0, 
-    "GWP20": 530.0, 
-    "GWP500": 46.0, 
-    "HH": -1, 
-    "Name": "R21", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -416,9 +403,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}Cl_{2}F_{1}H_{1}", 
-  "NAME": "R21", 
-  "REFPROP_NAME": "R21", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6130", 
+    "ALIASES": [], 
+    "CAS": "75-43-4", 
+    "CHEMSPIDER_ID": 6130, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "B1", 
+      "FH": -1, 
+      "GWP100": 151.0, 
+      "GWP20": 530.0, 
+      "GWP500": 46.0, 
+      "HH": -1, 
+      "Name": "R21", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{1}Cl_{2}F_{1}H_{1}", 
+    "INCHI_KEY": "UMNKXPULIDJLSU-UHFFFAOYAU", 
+    "INCHI_STRING": "InChI=1/CHCl2F/c2-1(3)4/h1H", 
+    "NAME": "R21", 
+    "REFPROP_NAME": "R21", 
+    "SMILES": "C(F)(Cl)Cl"
+  }, 
   "STATES": {
     "critical": {
       "T": 451.48, 

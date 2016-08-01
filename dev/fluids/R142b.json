@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R142B"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "75-68-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A2", 
-    "FH": 1, 
-    "GWP100": 2310.0, 
-    "GWP20": 5490.0, 
-    "GWP500": 705.0, 
-    "HH": 1, 
-    "Name": "R142b", 
-    "ODP": 0.07, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -349,9 +334,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}Cl_{1}F_{2}H_{3}", 
-  "NAME": "R142b", 
-  "REFPROP_NAME": "R142B", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6148", 
+    "ALIASES": [
+      "R142B"
+    ], 
+    "CAS": "75-68-3", 
+    "CHEMSPIDER_ID": 6148, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A2", 
+      "FH": 1, 
+      "GWP100": 2310.0, 
+      "GWP20": 5490.0, 
+      "GWP500": 705.0, 
+      "HH": 1, 
+      "Name": "R142b", 
+      "ODP": 0.07, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}Cl_{1}F_{2}H_{3}", 
+    "INCHI_KEY": "BHNZEZWIUMJCGF-UHFFFAOYAO", 
+    "INCHI_STRING": "InChI=1/C2H3ClF2/c1-2(3,4)5/h1H3", 
+    "NAME": "R142b", 
+    "REFPROP_NAME": "R142B", 
+    "SMILES": "CC(F)(F)Cl"
+  }, 
   "STATES": {
     "critical": {
       "T": 410.26, 

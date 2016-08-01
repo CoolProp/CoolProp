@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -180,18 +179,6 @@
         1.42291
       ]
     }
-  }, 
-  "CAS": "75-45-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 1810.0, 
-    "GWP20": 5160.0, 
-    "GWP500": 549.0, 
-    "HH": 1, 
-    "Name": "R22", 
-    "ODP": 0.05, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -493,9 +480,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}Cl_{1}F_{2}H_{1}", 
-  "NAME": "R22", 
-  "REFPROP_NAME": "R22", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6132", 
+    "ALIASES": [], 
+    "CAS": "75-45-6", 
+    "CHEMSPIDER_ID": 6132, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 1810.0, 
+      "GWP20": 5160.0, 
+      "GWP500": 549.0, 
+      "HH": 1, 
+      "Name": "R22", 
+      "ODP": 0.05, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{1}Cl_{1}F_{2}H_{1}", 
+    "INCHI_KEY": "VOPWNXZWBYDODV-UHFFFAOYAQ", 
+    "INCHI_STRING": "InChI=1/CHClF2/c2-1(3)4/h1H", 
+    "NAME": "R22", 
+    "REFPROP_NAME": "R22", 
+    "SMILES": "C(F)(F)Cl"
+  }, 
   "STATES": {
     "critical": {
       "T": 369.295, 

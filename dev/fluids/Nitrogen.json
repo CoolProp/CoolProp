@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "nitrogen", 
-    "NITROGEN", 
-    "N2", 
-    "R728"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -202,18 +196,6 @@
         1.246
       ]
     }
-  }, 
-  "CAS": "7727-37-9", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 0, 
-    "Name": "Nitrogen", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -522,9 +504,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "N_{2}", 
-  "NAME": "Nitrogen", 
-  "REFPROP_NAME": "NITROGEN", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=922", 
+    "ALIASES": [
+      "nitrogen", 
+      "NITROGEN", 
+      "N2", 
+      "R728"
+    ], 
+    "CAS": "7727-37-9", 
+    "CHEMSPIDER_ID": 922, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 0, 
+      "Name": "Nitrogen", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "N_{2}", 
+    "INCHI_KEY": "IJGRMHOSHXDMSA-UHFFFAOYAF", 
+    "INCHI_STRING": "InChI=1/N2/c1-2", 
+    "NAME": "Nitrogen", 
+    "REFPROP_NAME": "NITROGEN", 
+    "SMILES": "N#N"
+  }, 
   "STATES": {
     "critical": {
       "T": 126.19200000000001, 
