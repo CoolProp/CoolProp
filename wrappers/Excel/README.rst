@@ -187,4 +187,5 @@ Fractions =
     range of cells containing mole fractions of the corresponding fluids in the **Names** range
 
 
-See `CoolProp.org <http://www.coolprop.org>`_ for more details on usage.
+| See `CoolProp.org <http://www.coolprop.org>`_ for more details on usage.
+| See **TestExcel.xlsx** for examples of usage of these functions.
