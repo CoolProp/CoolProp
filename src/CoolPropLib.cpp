@@ -781,6 +781,36 @@ EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const lo
     }
 }
 
+EXPORT_CODE void CONVENTION  AbstractState_set_volume_translation(const long handle, const double value, long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        AS->set_volume_translation(value);
+    }
+    catch (CoolProp::HandleError &e) {
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (CoolProp::CoolPropBaseError &e) {
+        std::string errmsg = std::string("Error: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (...) {
+        *errcode = 3;
+    }
+}
 
 /// *********************************************************************************
 /// *********************************************************************************

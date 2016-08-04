@@ -502,6 +502,8 @@ public:
     virtual std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_string is not implemented for this backend"); };
     /// Apply a simple mixing rule (EXPERT USE ONLY!!!)
     virtual void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model) { throw NotImplementedError("apply_simple_mixing_rule is not implemented for this backend"); };
+    // Set the volume translation parameter (for cubic)
+    virtual void set_volume_translation(const double value) { throw ValueError("set_volume_translation only defined for cubic backends"); };
 
     /// Clear all the cached values
     virtual bool clear();
