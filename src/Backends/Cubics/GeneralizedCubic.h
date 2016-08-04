@@ -192,14 +192,14 @@ public:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     virtual double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
+	/**
+	* \brief The term \f$c_{\rm m}\f$ (volume translation)
+	*/
+	virtual double cm_term();
+	/// Set the volume translation parameter
+	void set_cm(double val) { cm = val; }
 
 protected:
-    /**
-    * \brief The term \f$c_{\rm m}\f$ (volume translation)
-    */
-    virtual double cm_term();
-    /// Set the volume translation parameter
-    void set_cm(double val) {cm = val; }
 
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$
