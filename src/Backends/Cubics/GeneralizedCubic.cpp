@@ -354,7 +354,7 @@ double AbstractCubic::PI_12(double delta, const std::vector<double> &x, std::siz
         case 0:
             return (1+(Delta_1*bm+cm)*rho_r*delta)*(1+(Delta_2*bm+cm)*rho_r*delta);
         case 1:
-            return rho_r*2.*(Delta_1*Delta_2*bm*bm*delta*rho_r + (Delta_1 + Delta_2)*bm*(0.5+cm*delta*rho_r) + cm*(1.+ cm*delta*rho_r));
+            return rho_r*(2.*(bm*Delta_1 + cm)*(bm*Delta_2 + cm)*delta*rho_r + (Delta_1 + Delta_2)*bm + 2.*cm);
         case 2:
             return 2*(Delta_1*bm+cm)*(Delta_2*bm + cm)*pow(rho_r, 2);
         case 3:
