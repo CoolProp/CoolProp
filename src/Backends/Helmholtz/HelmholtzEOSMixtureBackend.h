@@ -37,6 +37,11 @@ protected:
         if (critical_state.get() == NULL){ bool sat_states = true; critical_state.reset(get_copy(sat_states)); linked_states.push_back(critical_state);
         }
     };
+    /// Update the state class used to calculate the critical point(s)
+    virtual void add_transient_pure_state(){
+        if (transient_pure_state.get() == NULL){ bool sat_states = true; transient_pure_state.reset(get_copy(sat_states)); linked_states.push_back(transient_pure_state);
+        }
+    };
     
     std::vector<CoolPropFluid> components; ///< The components that are in use
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
