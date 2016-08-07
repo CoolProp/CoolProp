@@ -39,7 +39,6 @@ protected:
     };
     
     std::vector<CoolPropFluid> components; ///< The components that are in use
-    phases imposed_phase_index;
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
     std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
     std::vector<double> mole_fractions_double; ///< A copy of the bulk mole fractions of the mixture stored as doubles
@@ -97,8 +96,15 @@ public:
     void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model);
 
     phases calc_phase(void){return _phase;};
-    void calc_specify_phase(phases phase){ specify_phase(phase); }
-    void calc_unspecify_phase(){ unspecify_phase(); }
+    
+    /** \brief Specify the phase - this phase will always be used in calculations
+     *
+     * @param phase_index The index from CoolProp::phases
+     */
+    void calc_specify_phase(phases phase_index){ imposed_phase_index = phase_index; _phase = phase_index; }
+    /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
+     */
+    void calc_unspecify_phase(){ imposed_phase_index = iphase_not_imposed;}
     CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
     void calc_ssat_max(void);
     void calc_hsat_max(void);
@@ -202,16 +208,6 @@ public:
      * @param generate_SatL_and_SatV true if SatL and SatV classes should be added, false otherwise.  Added so that saturation classes can be added without infinite recursion of adding saturation classes
      */
     virtual void set_components(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
-
-    /** \brief Specify the phase - this phase will always be used in calculations
-     * 
-     * @param phase_index The index from CoolProp::phases
-     */
-    void specify_phase(phases phase_index){imposed_phase_index = phase_index; _phase = phase_index;};
-    
-    /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
-     */
-    void unspecify_phase(){imposed_phase_index = iphase_not_imposed;};
 
     /** \brief Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
      */

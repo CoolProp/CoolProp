@@ -136,14 +136,15 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
     // Force loading of REFPROP
     REFPROP_supported();
     
-    
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
     
     // Bump the number of REFPROP backends that are in existence;
     REFPROPMixtureBackend::instance_counter++;
-
+    
+    // Set the imposed phase index to default value
+    imposed_phase_index = iphase_not_imposed;
 }
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
@@ -1070,15 +1071,59 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         {
             // Unit conversion for REFPROP
             p_kPa = 0.001*value1; _T = value2; // Want p in [kPa] in REFPROP
-
-            // Use flash routine to find properties
-            TPFLSHdll(&_T,&p_kPa,&(mole_fractions[0]),&rho_mol_L,
-                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-                      &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength); //
-            if (static_cast<int>(ierr) > 0) { 
-                throw ValueError(format("PT: %s",herr).c_str()); 
-            }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            
+            if (imposed_phase_index == iphase_not_imposed){
+                // Use flash routine to find properties
+                TPFLSHdll(&_T,&p_kPa,&(mole_fractions[0]),&rho_mol_L,
+                          &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                          &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
+                          &ierr,herr,errormessagelength); //
+                if (static_cast<int>(ierr) > 0) { 
+                    throw ValueError(format("PT: %s",herr).c_str()); 
+                }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            }
+            else{
+                //c  inputs:
+                //c        t--temperature [K]
+                //c        p--pressure [kPa]
+                //c        x--composition [array of mol frac]
+                //c      kph--phase flag:  1 = liquid
+                //c                        2 = vapor
+                //c                 N.B.:  0 = stable phase--NOT ALLOWED (use TPFLSH)
+                //c                            (unless an initial guess is supplied for rho)
+                //c                       -1 = force the search in the liquid phase (for metastable points)
+                //c                       -2 = force the search in the vapor phase (for metastable points)
+                //c   kguess--input flag:  1 = first guess for rho provided
+                //c                        0 = no first guess provided
+                //c      rho--first guess for molar density [mol/L], only if kguess = 1
+                //c
+                //c  outputs:
+                //c      rho--molar density [mol/L]
+                //c     ierr--error flag:  0 = successful
+                //c                      200 = CRITP did not converge
+                //c                      201 = illegal input (kph <= 0)
+                //c                      202 = liquid-phase iteration did not converge
+                //c                      203 = vapor-phase iteration did not converge
+                //c     herr--error string (character*255 variable if ierr<>0)
+                long kph = -10, kguess = 0;
+                if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid){
+                    kph = 1;
+                }
+                else if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas){
+                    kph = 2;
+                }
+                else{
+                    throw ValueError(format("PT: cannot use this imposed phase for PT inputs"));
+                }
+                // Calculate rho from TP
+                TPRHOdll(&_T,&p_kPa,&(mole_fractions[0]),&kph,&kguess,
+                         &rho_mol_L,
+                         &ierr,herr,errormessagelength);
+                
+                // Calculate everything else
+                THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+                
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
