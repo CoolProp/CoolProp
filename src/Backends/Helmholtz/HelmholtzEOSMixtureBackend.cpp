@@ -119,7 +119,9 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
 HelmholtzEOSMixtureBackend * HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV){
     HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
     *(ptr->residual_helmholtz.get()) = *(residual_helmholtz.get());
-    *(ptr->Reducing.get()) = *(Reducing.get());
+    if (Reducing.get() != NULL){
+        *(ptr->Reducing.get()) = *(Reducing.get());
+    }
     return ptr;
 };
 void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
