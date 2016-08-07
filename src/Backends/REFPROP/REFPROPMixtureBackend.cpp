@@ -390,8 +390,8 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 mole_fractions.resize(N);
                 mole_fractions_liq.resize(N);
                 mole_fractions_vap.resize(N);
-                LoadedREFPROPRef = component_string;
-                cached_component_string = component_string;
+                LoadedREFPROPRef = _components_joined;
+                cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
                 return;
