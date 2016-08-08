@@ -48,6 +48,13 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
         SatV.reset(this->get_copy(SatLSatV));
         SatV->specify_phase(iphase_gas);
         linked_states.push_back(SatV);
+
+		if (is_pure_or_pseudopure) {
+			std::vector<CoolPropDbl> z(1, 1.0);
+			set_mole_fractions(z);
+			SatL->set_mole_fractions(z);
+			SatV->set_mole_fractions(z);
+		}
     }
 }
 
