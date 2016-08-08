@@ -413,15 +413,17 @@
     EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const long i, const long j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
     /**
-    * @brief Set the volume translation parameter (for cubic)
+    * @brief Set some fluid parameter (ie volume translation for cubic)
     * @param handle The integer handle for the state class stored in memory
-    * @param value the value of the volume translation parameter
+	* @param i indice of the fluid the parramter should be applied too (for mixtures)
+	* @param parameter the string specifying the parameter to use, ex "cm" for volume translation
+    * @param value the value of the parameter
     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
     * @param message_buffer A buffer for the error code
     * @param buffer_length The length of the buffer for the error code
     * @return
     */
-    EXPORT_CODE void CONVENTION  AbstractState_set_volume_translation(const long handle, const double value, long *errcode, char *message_buffer, const long buffer_length);
+    EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long handle, const size_t i, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
     // *************************************************************************************
     // *************************************************************************************
