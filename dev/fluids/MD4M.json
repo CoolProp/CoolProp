@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Tetradecamethylhexasiloxane", 
-    "TETRADECAMETHYLHEXASILOXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,7 +178,6 @@
       ]
     }
   }, 
-  "CAS": "107-52-8", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -345,9 +340,21 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{14}H_{42}O_{5}Si_{6}", 
-  "NAME": "MD4M", 
-  "REFPROP_NAME": "MD4M", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7587", 
+    "ALIASES": [
+      "Tetradecamethylhexasiloxane", 
+      "TETRADECAMETHYLHEXASILOXANE"
+    ], 
+    "CAS": "107-52-8", 
+    "CHEMSPIDER_ID": 7587, 
+    "FORMULA": "C_{14}H_{42}O_{5}Si_{6}", 
+    "INCHI_KEY": "ADANNTOYRVPQLJ-UHFFFAOYAG", 
+    "INCHI_STRING": "InChI=1/C14H42O5Si6/c1-20(2,3)15-22(7,8)17-24(11,12)19-25(13,14)18-23(9,10)16-21(4,5)6/h1-14H3", 
+    "NAME": "MD4M", 
+    "REFPROP_NAME": "MD4M", 
+    "SMILES": "C[Si](C)(C)O[Si](C)(C)O[Si](C)(C)O[Si](C)(C)O[Si](C)(C)O[Si](C)(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 653.2, 

@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R227ea"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -184,18 +181,6 @@
         1.421
       ]
     }
-  }, 
-  "CAS": "431-89-0", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": 3220.0, 
-    "GWP20": 5310.0, 
-    "GWP500": 1040.0, 
-    "HH": 1, 
-    "Name": "R227EA", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -430,9 +415,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{3}F_{7}H_{1}", 
-  "NAME": "R227EA", 
-  "REFPROP_NAME": "R227EA", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=61257", 
+    "ALIASES": [
+      "R227ea"
+    ], 
+    "CAS": "431-89-0", 
+    "CHEMSPIDER_ID": 61257, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": 3220.0, 
+      "GWP20": 5310.0, 
+      "GWP500": 1040.0, 
+      "HH": 1, 
+      "Name": "R227EA", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{3}F_{7}H_{1}", 
+    "INCHI_KEY": "YFMFNYKEUDLDTL-UHFFFAOYAL", 
+    "INCHI_STRING": "InChI=1/C3HF7/c4-1(2(5,6)7)3(8,9)10/h1H", 
+    "NAME": "R227EA", 
+    "REFPROP_NAME": "R227EA", 
+    "SMILES": "C(C(F)(F)F)(C(F)(F)F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 374.90000000000003, 

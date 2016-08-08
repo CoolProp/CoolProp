@@ -426,7 +426,21 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
             }
         }
         else{
-            throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
+            if (p < p_critical()){
+                add_transient_pure_state();
+                transient_pure_state->update(PQ_INPUTS, p, 0);
+                if (T > transient_pure_state->T()){
+                    // Gas
+                    rho = rho0;
+                }
+                else{
+                    // Liquid
+                    rho = rho2;
+                }
+            }
+            else{
+                throw ValueError("Cubic has three roots, but phase not imposed and guess density not provided");
+            }
         }
     }
     else{

@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R152a"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -180,18 +177,6 @@
         1.2115
       ]
     }
-  }, 
-  "CAS": "75-37-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A2", 
-    "FH": 4, 
-    "GWP100": 124.0, 
-    "GWP20": 437.0, 
-    "GWP500": 38.0, 
-    "HH": 1, 
-    "Name": "R152A", 
-    "ODP": -1.0, 
-    "PH": 1
   }, 
   "EOS": [
     {
@@ -626,9 +611,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}F_{2}H_{4}", 
-  "NAME": "R152A", 
-  "REFPROP_NAME": "R152A", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6128", 
+    "ALIASES": [
+      "R152a"
+    ], 
+    "CAS": "75-37-6", 
+    "CHEMSPIDER_ID": 6128, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A2", 
+      "FH": 4, 
+      "GWP100": 124.0, 
+      "GWP20": 437.0, 
+      "GWP500": 38.0, 
+      "HH": 1, 
+      "Name": "R152A", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{2}F_{2}H_{4}", 
+    "INCHI_KEY": "NPNPZTNLOVBDOC-UHFFFAOYAM", 
+    "INCHI_STRING": "InChI=1/C2H4F2/c1-2(3)4/h2H,1H3", 
+    "NAME": "R152A", 
+    "REFPROP_NAME": "R152A", 
+    "SMILES": "CC(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 386.411, 

@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Dodecamethylcyclohexasiloxane", 
-    "DODECAMETHYLCYCLOHEXASILOXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "540-97-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "D6", 
-    "ODP": -1.0, 
-    "PH": -1
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -372,9 +356,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{12}H_{36}O_{6}Si_{6}", 
-  "NAME": "D6", 
-  "REFPROP_NAME": "D6", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=10449", 
+    "ALIASES": [
+      "Dodecamethylcyclohexasiloxane", 
+      "DODECAMETHYLCYCLOHEXASILOXANE"
+    ], 
+    "CAS": "540-97-6", 
+    "CHEMSPIDER_ID": 10449, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "D6", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{12}H_{36}O_{6}Si_{6}", 
+    "INCHI_KEY": "IUMSDRXLFWAGNT-UHFFFAOYAY", 
+    "INCHI_STRING": "InChI=1/C12H36O6Si6/c1-19(2)13-20(3,4)15-22(7,8)17-24(11,12)18-23(9,10)16-21(5,6)14-19/h1-12H3", 
+    "NAME": "D6", 
+    "REFPROP_NAME": "D6", 
+    "SMILES": "C[Si]1(O[Si](O[Si](O[Si](O[Si](O[Si](O1)(C)C)(C)C)(C)C)(C)C)(C)C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 645.78, 

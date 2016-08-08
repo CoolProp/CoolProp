@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "CF3I"
-  ], 
   "ANCILLARIES": {
     "pS": {
       "T_r": 396.44, 
@@ -77,18 +74,6 @@
       "type": "rhoV", 
       "using_tau_r": false
     }
-  }, 
-  "CAS": "2314-97-8", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": 0.4, 
-    "GWP20": -1, 
-    "GWP500": -1, 
-    "HH": -1, 
-    "Name": "R115", 
-    "ODP": -1, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -246,9 +231,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}F_{3}I_{1}", 
-  "NAME": "R13I1", 
-  "REFPROP_NAME": "CF3I", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=15962", 
+    "ALIASES": [
+      "CF3I"
+    ], 
+    "CAS": "2314-97-8", 
+    "CHEMSPIDER_ID": 15962, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": 0.4, 
+      "GWP20": -1, 
+      "GWP500": -1, 
+      "HH": -1, 
+      "Name": "R115", 
+      "ODP": -1, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{1}F_{3}I_{1}", 
+    "INCHI_KEY": "VPAYJEUHKVESSD-UHFFFAOYAR", 
+    "INCHI_STRING": "InChI=1/CF3I/c2-1(3,4)5", 
+    "NAME": "R13I1", 
+    "REFPROP_NAME": "CF3I", 
+    "SMILES": "C(F)(F)(F)I"
+  }, 
   "STATES": {
     "critical": {
       "T": 396.44, 

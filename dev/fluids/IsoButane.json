@@ -1,12 +1,4 @@
 {
-  "ALIASES": [
-    "isobutane", 
-    "Isobutane", 
-    "ISOBUTANE", 
-    "R600A", 
-    "R600a", 
-    "ISOBUTAN"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -206,18 +198,6 @@
         1.304
       ]
     }
-  }, 
-  "CAS": "75-28-5", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 4, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "IsoButane", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -475,9 +455,36 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{4}H_{10}", 
-  "NAME": "IsoButane", 
-  "REFPROP_NAME": "ISOBUTAN", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6120", 
+    "ALIASES": [
+      "isobutane", 
+      "Isobutane", 
+      "ISOBUTANE", 
+      "R600A", 
+      "R600a", 
+      "ISOBUTAN"
+    ], 
+    "CAS": "75-28-5", 
+    "CHEMSPIDER_ID": 6120, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 4, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "IsoButane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{4}H_{10}", 
+    "INCHI_KEY": "NNPPMTNAJDCUHE-UHFFFAOYAY", 
+    "INCHI_STRING": "InChI=1/C4H10/c1-4(2)3/h4H,1-3H3", 
+    "NAME": "IsoButane", 
+    "REFPROP_NAME": "ISOBUTAN", 
+    "SMILES": "CC(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 407.817, 

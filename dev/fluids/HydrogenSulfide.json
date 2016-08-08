@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "H2S", 
-    "HYDROGENSULFIDE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "7783-06-4", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 4, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 4, 
-    "Name": "HydrogenSulfide", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -355,9 +339,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "H_{2}S_{1}", 
-  "NAME": "HydrogenSulfide", 
-  "REFPROP_NAME": "H2S", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=391", 
+    "ALIASES": [
+      "H2S", 
+      "HYDROGENSULFIDE"
+    ], 
+    "CAS": "7783-06-4", 
+    "CHEMSPIDER_ID": 391, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 4, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 4, 
+      "Name": "HydrogenSulfide", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "H_{2}S_{1}", 
+    "INCHI_KEY": "RWSOTUBLDIXVET-UHFFFAOYAJ", 
+    "INCHI_STRING": "InChI=1/H2S/h1H2", 
+    "NAME": "HydrogenSulfide", 
+    "REFPROP_NAME": "H2S", 
+    "SMILES": "S"
+  }, 
   "STATES": {
     "critical": {
       "T": 373.1, 

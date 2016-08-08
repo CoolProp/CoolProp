@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "pXylene", 
-    "p-xylene", 
-    "P-XYLENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,7 +178,6 @@
       ]
     }
   }, 
-  "CAS": "106-42-3", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -404,9 +398,22 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{10}", 
-  "NAME": "p-Xylene", 
-  "REFPROP_NAME": "PXYLENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7521", 
+    "ALIASES": [
+      "pXylene", 
+      "p-xylene", 
+      "P-XYLENE"
+    ], 
+    "CAS": "106-42-3", 
+    "CHEMSPIDER_ID": 7521, 
+    "FORMULA": "C_{8}H_{10}", 
+    "INCHI_KEY": "URLKBWYHVLBVBO-UHFFFAOYAE", 
+    "INCHI_STRING": "InChI=1/C8H10/c1-7-3-5-8(2)6-4-7/h3-6H,1-2H3", 
+    "NAME": "p-Xylene", 
+    "REFPROP_NAME": "PXYLENE", 
+    "SMILES": "Cc1ccc(cc1)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 616.168, 

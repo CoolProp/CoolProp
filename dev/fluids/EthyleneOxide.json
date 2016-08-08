@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "ETHYLENEOXIDE"
-  ], 
   "ANCILLARIES": {
     "pS": {
       "T_r": 468.92, 
@@ -77,18 +74,6 @@
       "type": "rhoV", 
       "using_tau_r": false
     }
-  }, 
-  "CAS": "75-21-8", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "EthyleneOxide", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -295,9 +280,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "Cl_{1}H_{4}O_{1}", 
-  "NAME": "EthyleneOxide", 
-  "REFPROP_NAME": "ETYOXIDE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6114", 
+    "ALIASES": [
+      "ETHYLENEOXIDE"
+    ], 
+    "CAS": "75-21-8", 
+    "CHEMSPIDER_ID": 6114, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "EthyleneOxide", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "Cl_{1}H_{4}O_{1}", 
+    "INCHI_KEY": "IAYPIBMASNFSPL-UHFFFAOYAX", 
+    "INCHI_STRING": "InChI=1/C2H4O/c1-2-3-1/h1-2H2", 
+    "NAME": "EthyleneOxide", 
+    "REFPROP_NAME": "ETYOXIDE", 
+    "SMILES": "C1CO1"
+  }, 
   "STATES": {
     "critical": {
       "T": 468.92, 

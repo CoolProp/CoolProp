@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "toluene", 
-    "TOLUENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "108-88-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": 3.3, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Toluene", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -371,9 +355,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{7}H_{8}", 
-  "NAME": "Toluene", 
-  "REFPROP_NAME": "TOLUENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=1108", 
+    "ALIASES": [
+      "toluene", 
+      "TOLUENE"
+    ], 
+    "CAS": "108-88-3", 
+    "CHEMSPIDER_ID": 1108, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": 3.3, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Toluene", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{7}H_{8}", 
+    "INCHI_KEY": "YXFVVABEGXRONW-UHFFFAOYAT", 
+    "INCHI_STRING": "InChI=1/C7H8/c1-7-5-3-2-4-6-7/h2-6H,1H3", 
+    "NAME": "Toluene", 
+    "REFPROP_NAME": "TOLUENE", 
+    "SMILES": "Cc1ccccc1"
+  }, 
   "STATES": {
     "critical": {
       "T": 591.75, 

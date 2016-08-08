@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "Undecane", 
-    "UNDECANE", 
-    "N-UNDECANE", 
-    "C11"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -184,7 +178,6 @@
       ]
     }
   }, 
-  "CAS": "1120-21-4", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -361,9 +354,23 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{11}H_{24}", 
-  "NAME": "n-Undecane", 
-  "REFPROP_NAME": "C11", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=13619", 
+    "ALIASES": [
+      "Undecane", 
+      "UNDECANE", 
+      "N-UNDECANE", 
+      "C11"
+    ], 
+    "CAS": "1120-21-4", 
+    "CHEMSPIDER_ID": 13619, 
+    "FORMULA": "C_{11}H_{24}", 
+    "INCHI_KEY": "RSJKGSCJYJTIGS-UHFFFAOYAC", 
+    "INCHI_STRING": "InChI=1/C11H24/c1-3-5-7-9-11-10-8-6-4-2/h3-11H2,1-2H3", 
+    "NAME": "n-Undecane", 
+    "REFPROP_NAME": "C11", 
+    "SMILES": "CCCCCCCCCCC"
+  }, 
   "STATES": {
     "critical": {
       "T": 638.8000000000001, 

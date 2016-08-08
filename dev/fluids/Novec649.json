@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Novec1230", 
-    "NOVEC649"
-  ], 
   "ANCILLARIES": {
     "pS": {
       "T_r": 441.81, 
@@ -72,18 +68,6 @@
       "type": "rhoV", 
       "using_tau_r": false
     }
-  }, 
-  "CAS": "756-13-8", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "Novec649", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -293,9 +277,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{6}F_{12}O_{1}", 
-  "NAME": "Novec649", 
-  "REFPROP_NAME": "NOVEC649", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=2062563", 
+    "ALIASES": [
+      "Novec1230", 
+      "NOVEC649"
+    ], 
+    "CAS": "756-13-8", 
+    "CHEMSPIDER_ID": 2062563, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "Novec649", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{6}F_{12}O_{1}", 
+    "INCHI_KEY": "RMLFHPWPTXWZNJ-UHFFFAOYAW", 
+    "INCHI_STRING": "InChI=1/C6F12O/c7-2(4(10,11)12,5(13,14)15)1(19)3(8,9)6(16,17)18", 
+    "NAME": "Novec649", 
+    "REFPROP_NAME": "NOVEC649", 
+    "SMILES": "C(=O)(C(C(F)(F)F)(C(F)(F)F)F)C(C(F)(F)F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 441.81, 

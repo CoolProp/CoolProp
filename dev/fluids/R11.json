@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -178,18 +177,6 @@
         1.247
       ]
     }
-  }, 
-  "CAS": "75-69-4", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 4750.0, 
-    "GWP20": 6730.0, 
-    "GWP500": 1620.0, 
-    "HH": 1, 
-    "Name": "R11", 
-    "ODP": 1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -489,7 +476,7 @@
           "rhomolar_units": "mol/m^3"
         }
       }, 
-      "T_max": 625,
+      "T_max": 625, 
       "T_max_units": "K", 
       "Ttriple": 162.68, 
       "Ttriple_units": "K", 
@@ -618,9 +605,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}Cl_{3}F_{1}", 
-  "NAME": "R11", 
-  "REFPROP_NAME": "R11", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6149", 
+    "ALIASES": [], 
+    "CAS": "75-69-4", 
+    "CHEMSPIDER_ID": 6149, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 4750.0, 
+      "GWP20": 6730.0, 
+      "GWP500": 1620.0, 
+      "HH": 1, 
+      "Name": "R11", 
+      "ODP": 1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{1}Cl_{3}F_{1}", 
+    "INCHI_KEY": "CYRMSUTZVYGINF-UHFFFAOYAT", 
+    "INCHI_STRING": "InChI=1/CCl3F/c2-1(3,4)5", 
+    "NAME": "R11", 
+    "REFPROP_NAME": "R11", 
+    "SMILES": "C(F)(Cl)(Cl)Cl"
+  }, 
   "STATES": {
     "critical": {
       "T": 471.06, 

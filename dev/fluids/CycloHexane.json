@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "Cyclohexane", 
-    "CYCLOHEXANE", 
-    "CYCLOHEX"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -198,18 +193,6 @@
         1.263
       ]
     }
-  }, 
-  "CAS": "110-82-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "CycloHexane", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -465,9 +448,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{6}H_{12}", 
-  "NAME": "CycloHexane", 
-  "REFPROP_NAME": "CYCLOHEX", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7787", 
+    "ALIASES": [
+      "Cyclohexane", 
+      "CYCLOHEXANE", 
+      "CYCLOHEX"
+    ], 
+    "CAS": "110-82-7", 
+    "CHEMSPIDER_ID": 7787, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "CycloHexane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{6}H_{12}", 
+    "INCHI_KEY": "XDTMQSROBMDMFD-UHFFFAOYAZ", 
+    "INCHI_STRING": "InChI=1/C6H12/c1-2-4-6-5-3-1/h1-6H2", 
+    "NAME": "CycloHexane", 
+    "REFPROP_NAME": "CYCLOHEX", 
+    "SMILES": "C1CCCCC1"
+  }, 
   "STATES": {
     "critical": {
       "T": 553.6, 

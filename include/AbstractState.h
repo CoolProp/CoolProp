@@ -58,6 +58,7 @@ protected:
     /// Some administrative variables
     long _fluid_type;
     phases _phase; ///< The key for the phase from CoolProp::phases enum
+    phases imposed_phase_index; ///< If the phase is imposed, the imposed phase index
 
     bool isSupercriticalPhase(void){
         return (this->_phase == iphase_supercritical || this->_phase == iphase_supercritical_liquid || this->_phase == iphase_supercritical_gas);

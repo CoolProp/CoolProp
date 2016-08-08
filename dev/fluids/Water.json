@@ -1,11 +1,4 @@
 {
-  "ALIASES": [
-    "water", 
-    "WATER", 
-    "H2O", 
-    "h2o", 
-    "R718"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -246,18 +239,6 @@
       ]
     }
   }, 
-  "CAS": "7732-18-5", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 0, 
-    "Name": "Water", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -312,7 +293,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 2000,
+      "T_max": 2000, 
       "T_max_units": "K", 
       "Ttriple": 273.16, 
       "Ttriple_units": "K", 
@@ -664,9 +645,35 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "H_{2}O_{1}", 
-  "NAME": "Water", 
-  "REFPROP_NAME": "WATER", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=937", 
+    "ALIASES": [
+      "water", 
+      "WATER", 
+      "H2O", 
+      "h2o", 
+      "R718"
+    ], 
+    "CAS": "7732-18-5", 
+    "CHEMSPIDER_ID": 937, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 0, 
+      "Name": "Water", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "H_{2}O_{1}", 
+    "INCHI_KEY": "XLYOFNOQVPJJNP-UHFFFAOYAF", 
+    "INCHI_STRING": "InChI=1/H2O/h1H2", 
+    "NAME": "Water", 
+    "REFPROP_NAME": "WATER", 
+    "SMILES": "O"
+  }, 
   "STATES": {
     "critical": {
       "T": 647.096, 

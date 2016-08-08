@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "oxygen", 
-    "OXYGEN", 
-    "O2", 
-    "R732"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -198,18 +192,6 @@
         1.225
       ]
     }
-  }, 
-  "CAS": "7782-44-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 0, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 0, 
-    "Name": "Oxygen", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -455,9 +437,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "O_{2}", 
-  "NAME": "Oxygen", 
-  "REFPROP_NAME": "OXYGEN", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=952", 
+    "ALIASES": [
+      "oxygen", 
+      "OXYGEN", 
+      "O2", 
+      "R732"
+    ], 
+    "CAS": "7782-44-7", 
+    "CHEMSPIDER_ID": 952, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 0, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 0, 
+      "Name": "Oxygen", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "O_{2}", 
+    "INCHI_KEY": "MYMOFIZGZYHOMD-UHFFFAOYAM", 
+    "INCHI_STRING": "InChI=1/O2/c1-2", 
+    "NAME": "Oxygen", 
+    "REFPROP_NAME": "OXYGEN", 
+    "SMILES": "O=O"
+  }, 
   "STATES": {
     "critical": {
       "T": 154.58100000000002, 

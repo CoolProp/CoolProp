@@ -287,6 +287,13 @@ protected:
 public:
 	CubicResidualHelmholtz(){ ACB = NULL; };
 	CubicResidualHelmholtz(AbstractCubicBackend * ACB) : ACB(ACB) {};
+    
+    // copy assignment
+    CubicResidualHelmholtz& operator=(CubicResidualHelmholtz &other)
+    {
+        ACB = other.ACB;
+        return *this;
+    }
 
     /// All the derivatives of the residual Helmholtz energy w.r.t. tau and delta that do not involve composition derivative
     virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, double tau, double delta, bool cache_values = false)

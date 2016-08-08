@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Octamethylcyclotetrasiloxane", 
-    "OCTAMETHYLCYCLOTETRASILOXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +177,6 @@
         1.207
       ]
     }
-  }, 
-  "CAS": "556-67-2", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "D4", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -578,9 +562,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{24}O_{4}Si_{4}", 
-  "NAME": "D4", 
-  "REFPROP_NAME": "D4", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=10696", 
+    "ALIASES": [
+      "Octamethylcyclotetrasiloxane", 
+      "OCTAMETHYLCYCLOTETRASILOXANE"
+    ], 
+    "CAS": "556-67-2", 
+    "CHEMSPIDER_ID": 10696, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "D4", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{8}H_{24}O_{4}Si_{4}", 
+    "INCHI_KEY": "HMMGMWAXVFQUOA-UHFFFAOYAZ", 
+    "INCHI_STRING": "InChI=1/C8H24O4Si4/c1-13(2)9-14(3,4)11-16(7,8)12-15(5,6)10-13/h1-8H3", 
+    "NAME": "D4", 
+    "REFPROP_NAME": "D4", 
+    "SMILES": "C[Si]1(O[Si](O[Si](O[Si](O1)(C)C)(C)C)(C)C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 586.5, 

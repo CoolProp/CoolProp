@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Octamethyltrisiloxane", 
-    "OCTAMETHYLTRISILOXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +177,6 @@
         1.465
       ]
     }
-  }, 
-  "CAS": "107-51-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 2, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "MDM", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -549,9 +533,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{24}O_{2}Si_{3}", 
-  "NAME": "MDM", 
-  "REFPROP_NAME": "MDM", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=23101", 
+    "ALIASES": [
+      "Octamethyltrisiloxane", 
+      "OCTAMETHYLTRISILOXANE"
+    ], 
+    "CAS": "107-51-7", 
+    "CHEMSPIDER_ID": 23101, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 2, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "MDM", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{8}H_{24}O_{2}Si_{3}", 
+    "INCHI_KEY": "CXQXSVUQTKDNFP-UHFFFAOYAT", 
+    "INCHI_STRING": "InChI=1/C8H24O2Si3/c1-11(2,3)9-13(7,8)10-12(4,5)6/h1-8H3", 
+    "NAME": "MDM", 
+    "REFPROP_NAME": "MDM", 
+    "SMILES": "C[Si](C)(C)O[Si](C)(C)O[Si](C)(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 564.09, 

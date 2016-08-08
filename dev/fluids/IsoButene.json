@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "Isobutene", 
-    "ISOBUTENE", 
-    "IBUTENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "115-11-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 4, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "Isobutene", 
-    "ODP": -1.0, 
-    "PH": 2
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -370,9 +353,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{4}H_{8}", 
-  "NAME": "IsoButene", 
-  "REFPROP_NAME": "IBUTENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7957", 
+    "ALIASES": [
+      "Isobutene", 
+      "ISOBUTENE", 
+      "IBUTENE"
+    ], 
+    "CAS": "115-11-7", 
+    "CHEMSPIDER_ID": 7957, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 4, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "Isobutene", 
+      "ODP": -1.0, 
+      "PH": 2
+    }, 
+    "FORMULA": "C_{4}H_{8}", 
+    "INCHI_KEY": "VQTUBCCKSQIDNK-UHFFFAOYAW", 
+    "INCHI_STRING": "InChI=1/C4H8/c1-4(2)3/h1H2,2-3H3", 
+    "NAME": "IsoButene", 
+    "REFPROP_NAME": "IBUTENE", 
+    "SMILES": "CC(=C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 418.09000000000003, 

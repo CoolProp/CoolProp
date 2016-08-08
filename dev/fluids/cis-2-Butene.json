@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "Cis-2-Butene", 
-    "CIS-2-BUTENE", 
-    "C2BUTENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "590-18-1", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 4, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 0, 
-    "Name": "cis-2-Butene", 
-    "ODP": -1.0, 
-    "PH": 1
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -351,9 +334,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{4}H_{8}", 
-  "NAME": "cis-2-Butene", 
-  "REFPROP_NAME": "C2BUTENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=4449912", 
+    "ALIASES": [
+      "Cis-2-Butene", 
+      "CIS-2-BUTENE", 
+      "C2BUTENE"
+    ], 
+    "CAS": "590-18-1", 
+    "CHEMSPIDER_ID": 4449912, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 4, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 0, 
+      "Name": "cis-2-Butene", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{4}H_{8}", 
+    "INCHI_KEY": "IAQRGUVFOMOMEM-ARJAWSKDBO", 
+    "INCHI_STRING": "InChI=1/C4H8/c1-3-4-2/h3-4H,1-2H3/b4-3-", 
+    "NAME": "cis-2-Butene", 
+    "REFPROP_NAME": "C2BUTENE", 
+    "SMILES": "C/C=C\\C"
+  }, 
   "STATES": {
     "critical": {
       "T": 435.75, 

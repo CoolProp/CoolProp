@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "N2O", 
-    "NITROUSOXIDE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "10024-97-2", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 0, 
-    "GWP100": 320.0, 
-    "GWP20": 290.0, 
-    "GWP500": 180.0, 
-    "HH": 1, 
-    "Name": "NitrousOxide", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -348,9 +332,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "N_{2}O_{1}", 
-  "NAME": "NitrousOxide", 
-  "REFPROP_NAME": "N2O", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=923", 
+    "ALIASES": [
+      "N2O", 
+      "NITROUSOXIDE"
+    ], 
+    "CAS": "10024-97-2", 
+    "CHEMSPIDER_ID": 923, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 0, 
+      "GWP100": 320.0, 
+      "GWP20": 290.0, 
+      "GWP500": 180.0, 
+      "HH": 1, 
+      "Name": "NitrousOxide", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "N_{2}O_{1}", 
+    "INCHI_KEY": "GQPLMRYTRLFLPF-UHFFFAOYAP", 
+    "INCHI_STRING": "InChI=1/N2O/c1-2-3", 
+    "NAME": "NitrousOxide", 
+    "REFPROP_NAME": "N2O", 
+    "SMILES": "[N-]=[N+]=O"
+  }, 
   "STATES": {
     "critical": {
       "T": 309.52, 

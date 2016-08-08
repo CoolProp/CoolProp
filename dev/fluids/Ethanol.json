@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "C2H6O", 
-    "ethanol", 
-    "ETHANOL"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -198,18 +193,6 @@
         0.952
       ]
     }
-  }, 
-  "CAS": "64-17-5", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Ethanol", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -488,9 +471,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}H_{6}O_{1}", 
-  "NAME": "Ethanol", 
-  "REFPROP_NAME": "ETHANOL", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=682", 
+    "ALIASES": [
+      "C2H6O", 
+      "ethanol", 
+      "ETHANOL"
+    ], 
+    "CAS": "64-17-5", 
+    "CHEMSPIDER_ID": 682, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Ethanol", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}H_{6}O_{1}", 
+    "INCHI_KEY": "LFQSCWFLJHTTHZ-UHFFFAOYAB", 
+    "INCHI_STRING": "InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3", 
+    "NAME": "Ethanol", 
+    "REFPROP_NAME": "ETHANOL", 
+    "SMILES": "CCO"
+  }, 
   "STATES": {
     "critical": {
       "T": 514.71, 
