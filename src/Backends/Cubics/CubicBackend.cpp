@@ -513,7 +513,15 @@ void CoolProp::AbstractCubicBackend::set_C_Twu(double L, double M, double N){
     }
 }
 
-void CoolProp::AbstractCubicBackend::set_volume_translation(const double value)
+void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, const std::string parameter, const double value)
 {
-    get_cubic()->set_cm(value);
+	// Set the volume translation parrameter, currently applied to the whole fluid, not to components.
+	if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
+		get_cubic()->set_cm(value);
+		if (this->SatL.get() != NULL) { this->SatL->set_fluid_parameter_double(i, "cm", value); }
+		if (this->SatV.get() != NULL) { this->SatV->set_fluid_parameter_double(i, "cm", value); }
+	}
+	else {
+		throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+	}
 }
