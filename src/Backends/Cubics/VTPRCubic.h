@@ -64,13 +64,60 @@ public:
             return _am;
         }
         else{
-            throw CoolProp::NotImplementedError();
+			double dtau = 0.01*tau;
+			return (am_term(tau + dtau, x, itau - 1) - am_term(tau - dtau, x, itau - 1)) / (2 * dtau);
         }
     }
+	double d_am_term_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent)
+	{
+		throw CoolProp::NotImplementedError();
+	}
+	double d2_am_term_dxidxj(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, bool xN_independent)
+	{
+		throw CoolProp::NotImplementedError();
+	}
+	double d3_am_term_dxidxjdxk(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
+	{
+		throw CoolProp::NotImplementedError();
+	}
+
     double bm_term(const std::vector<double> &x){
         double _am,_bm; am_bm(_am, _bm);
         return _bm;
     }
+	double d_bm_term_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent)
+	{
+		double summer = 0;
+		const std::vector<double> &x = unifaq.get_mole_fractions();
+		if (xN_independent)
+		{
+			for (std::size_t j = 0; j < x.size(); ++j) {
+				summer +=  x[j] * pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
+			}
+			return 2 * summer;
+		}
+		else {
+			for (std::size_t j = 0; j < x.size(); ++j) {
+				summer += x[j] * (pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(j), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
+			}
+			return 2 * (summer - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(i), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
+		}
+	}
+	double d2_bm_term_dxidxj(const std::vector<double> &x, std::size_t i, std::size_t j, bool xN_independent)
+	{
+		if (xN_independent)
+		{
+			return 2.*pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
+		}
+		else {
+			return 2.*(pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(j), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(i), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
+		}
+	}
+	double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
+	{
+		return 0;
+	}
+
     /// Calculate both am and bm because am and bm are dependent on each other
     void am_bm(double &am, double &bm){
         const std::vector<double> &z = unifaq.get_mole_fractions();
