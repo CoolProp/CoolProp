@@ -155,6 +155,14 @@ CoolPropDbl GERG2008ReducingFunction::Tr(const std::vector<CoolPropDbl> &x)
 {
     return Yr(x, beta_T, gamma_T, T_c, Yc_T);
 }
+CoolPropDbl GERG2008ReducingFunction::dTr_dbetaT(const std::vector<CoolPropDbl> &x)
+{
+    return dYr_dbeta(x, beta_T, gamma_T, T_c, Yc_T);
+}
+CoolPropDbl GERG2008ReducingFunction::dTr_dgammaT(const std::vector<CoolPropDbl> &x)
+{
+    return dYr_dgamma(x, beta_T, gamma_T, T_c, Yc_T);
+}
 CoolPropDbl GERG2008ReducingFunction::dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
 {
     return dYrdxi__constxj(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
@@ -174,6 +182,16 @@ CoolPropDbl GERG2008ReducingFunction::d3Trdxidxjdxk(const std::vector<CoolPropDb
 CoolPropDbl GERG2008ReducingFunction::rhormolar(const std::vector<CoolPropDbl> &x)
 {
     return 1/Yr(x, beta_v, gamma_v, v_c, Yc_v);
+}
+CoolPropDbl GERG2008ReducingFunction::drhormolar_dgammaV(const std::vector<CoolPropDbl> &x)
+{
+    CoolPropDbl rhor = rhormolar(x);
+    return -rhor*rhor*dYr_dgamma(x, beta_v, gamma_v, v_c, Yc_v);
+}
+CoolPropDbl GERG2008ReducingFunction::drhormolar_dbetaV(const std::vector<CoolPropDbl> &x)
+{
+    CoolPropDbl rhor = rhormolar(x);
+    return -rhor*rhor*dYr_dbeta(x, beta_v, gamma_v, v_c, Yc_v);
 }
 CoolPropDbl GERG2008ReducingFunction::drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
 {
@@ -238,6 +256,39 @@ CoolPropDbl GERG2008ReducingFunction::Yr(const std::vector<CoolPropDbl> &x, cons
     }
     return Yr;
 }
+    
+CoolPropDbl GERG2008ReducingFunction::dYr_dgamma(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc)
+{
+    CoolPropDbl dYr_dgamma = 0;
+    for (std::size_t i = 0; i < N; i++)
+    {
+        // The last term is only used for the pure component, as it is sum_{i=1}^{N-1}sum_{j=1}^{N}
+        if (i==N-1){ break; }
+        for (std::size_t j = i+1; j < N; j++){
+            dYr_dgamma += 2*beta[i][j]*Y_c_ij[i][j]*f_Y_ij(x, i, j, beta);
+        }
+    }
+    return dYr_dgamma;
+}
+CoolPropDbl GERG2008ReducingFunction::dYr_dbeta(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc)
+{
+    CoolPropDbl dYr_dbeta = 0;
+    for (std::size_t i = 0; i < N; i++)
+    {
+        // The last term is only used for the pure component, as it is sum_{i=1}^{N-1}sum_{j=1}^{N}
+        if (i==N-1){ break; }
+        
+        for (std::size_t j = i+1; j < N; j++)
+        {
+            double xj = x[j], xi = x[i], beta_Y = beta[i][j], beta_Y_squared = beta_Y*beta_Y;
+            if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xj) < 10*DBL_EPSILON){return 0;}
+            double dfYij_dbeta = xi*xj*(-(xi+xj)*(2*beta_Y*xi))/pow(beta_Y_squared*xi+xj, 2);
+            dYr_dbeta += c_Y_ij(i, j, beta, gamma, Y_c_ij)*dfYij_dbeta + f_Y_ij(x, i, j, beta)*2*gamma[i][j]*Y_c_ij[i][j];
+        }
+    }
+    return dYr_dbeta;
+}
+    
 CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i,  const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag)
 {
     if (xN_flag == XN_INDEPENDENT){

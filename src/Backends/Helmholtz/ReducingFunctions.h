@@ -49,6 +49,10 @@ public:
     virtual CoolPropDbl rhormolar(const std::vector<CoolPropDbl> &x) = 0;
     ///Derivative of the molar reducing density with respect to component i mole fraction
     virtual CoolPropDbl drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
+    virtual CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl> &x){throw CoolProp::NotImplementedError("dTr_dgammaT is not implemented for this backend"); }
+    virtual CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl> &x){throw CoolProp::NotImplementedError("dTr_dbetaT is not implemented for this backend"); }
+    virtual CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl> &x){throw CoolProp::NotImplementedError("drhormolar_dgammaV is not implemented for this backend"); }
+    virtual CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl> &x){throw CoolProp::NotImplementedError("drhormolar_dbetaV is not implemented for this backend"); }
 
     virtual CoolPropDbl d2rhormolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) = 0;
     virtual CoolPropDbl d2rhormolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) = 0;
@@ -189,6 +193,17 @@ public:
      * Calculated from \ref Yr with \f$T = Y\f$
      */
     CoolPropDbl Tr(const std::vector<CoolPropDbl> &x);
+    
+    /** \brief The derivative of reducing temperature with respect to gammaT
+     * Calculated from \ref dYr_gamma with \f$T = Y\f$
+     */
+    CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl> &x);
+    
+    /** \brief The derivative of reducing temperature with respect to betaT
+     * Calculated from \ref dYr_beta with \f$T = Y\f$
+     */
+    CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl> &x);
+    
     /** \brief The derivative of reducing temperature with respect to component i mole fraction
      * 
      * Calculated from \ref dYrdxi__constxj with \f$T = Y\f$
@@ -235,6 +250,17 @@ public:
      * Given by \f$ \rho_r = 1/v_r \f$
      */
     CoolPropDbl rhormolar(const std::vector<CoolPropDbl> &x);
+    
+    /** \brief The derivative of reducing density with respect to gammaV
+     * Calculated from \ref dYr_gamma with \f$v = Y\f$
+     */
+    CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl> &x);
+    
+    /** \brief The derivative of reducing density with respect to betaV
+     * Calculated from \ref dYr_beta with \f$v = Y\f$
+     */
+    CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl> &x);
+    
     /** \brief Derivative of the molar reducing density with respect to component i mole fraction
      * 
      * See also GERG 2004, Eqn. 7.57
@@ -271,6 +297,19 @@ public:
      * \f]
      */
     CoolPropDbl Yr(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc);
+    
+    /** \brief Derivative of reducing term \f$Y_r\f$ with respect to \f$\gamma\f$
+     *
+     * \f[
+     * \frac{\partial Y_r}{\partial \gamma} = \sum_{i=1}^{N-1}\sum_{j=i+1}^{N} 2\beta_{ij}Y_{c,ij}f_{Y,ij}(x_i,x_j)
+     * \f]
+     */
+    CoolPropDbl dYr_dgamma(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc);
+    
+    /** \brief Derivative of reducing term \f$Y_r\f$ with respect to \f$\beta\f$
+     */
+    CoolPropDbl dYr_dbeta(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc);
+    
     /** \brief First composition derivative of \f$Y_r\f$ with \f$x_i\f$
      * 
      * If \f$x_N\f$ is given by \f$ x_N = 1-\sum_{i=1}^{N-1}x_i\f$ (Gernert, FPE, 2014, Table S1):
