@@ -454,6 +454,9 @@ cdef class AbstractState:
         pe_out.iTsat_max = pe_data.iTsat_max
         pe_out.ipsat_max = pe_data.ipsat_max
         pe_out.TypeI = pe_data.TypeI
+        pe_out.x = pe_data.x
+        pe_out.y = pe_data.y
+        pe_out.K = pe_data.K
         return pe_out
         
     ## -----------------------------------------

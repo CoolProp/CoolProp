@@ -999,6 +999,15 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio)
     {
         double y; iderv = 0;
+
+        PhaseEnvelope.x.resize(nc);
+        PhaseEnvelope.y.resize(nc);
+        for (isp = 1; isp <= nc; ++isp){
+            SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+            PhaseEnvelope.x[isp-1].push_back(y);
+            PhaseEnvelope.y[isp-1].push_back(get_mole_fractions()[isp-1]);
+        }
+
         PhaseEnvelope.rhomolar_vap.push_back(rho_molL*1000);
         PhaseEnvelope.lnrhomolar_vap.push_back(log(rho_molL*1000));
         isp = nc + 1;

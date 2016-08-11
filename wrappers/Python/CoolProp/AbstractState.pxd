@@ -30,6 +30,7 @@ cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI
     cpdef public size_t iTsat_max, ipsat_max, icrit
     cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+    cpdef public list x, y, K
     
 cdef class PyGuessesStructure:
     cpdef public double T, p, rhomolar, hmolar, smolar

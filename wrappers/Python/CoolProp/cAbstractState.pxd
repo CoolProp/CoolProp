@@ -11,6 +11,7 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
         bool TypeI
         size_t iTsat_max, ipsat_max, icrit
         vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+        vector[vector[double]] x, y, K
     
 cdef extern from "DataStructures.h" namespace "CoolProp":
     cdef cppclass CriticalState:
