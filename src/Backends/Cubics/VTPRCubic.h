@@ -88,29 +88,30 @@ public:
 	double d_bm_term_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent)
 	{
 		double summer = 0;
-		const std::vector<double> &z = unifaq.get_mole_fractions();
 		if (xN_independent)
 		{
-			for (std::size_t j = 0; j < z.size(); ++j) {
-				summer +=  x[j] * pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
+			for (int j = N - 1; j >= 0; --j)
+			{
+				summer += x[j] * bij_term(i, j);
 			}
 			return 2 * summer;
 		}
 		else {
-			for (std::size_t j = 0; j < z.size(); ++j) {
-				summer += x[j] * (pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(j), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
+			for (int k = N - 2; k >= 0; --k)
+			{
+				summer += x[k] * (bij_term(i, k) - bij_term(k, N - 1));
 			}
-			return 2 * (summer - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(i), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
+			return 2 * (summer + x[N - 1] * (bij_term(N - 1, i) - bij_term(N - 1, N - 1)));
 		}
 	}
 	double d2_bm_term_dxidxj(const std::vector<double> &x, std::size_t i, std::size_t j, bool xN_independent)
 	{
 		if (xN_independent)
 		{
-			return 2.*pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
+			return 2 * bij_term(i, j);
 		}
 		else {
-			return 2.*(pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(j), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(i), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
+			return 2 * (bij_term(i, j) - bij_term(j, N - 1) - bij_term(N - 1, i) + bij_term(N - 1, N - 1));
 		}
 	}
 	double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
@@ -125,12 +126,16 @@ public:
         for (std::size_t i = 0; i < z.size(); ++i){
             summeram += z[i]*a_ii(i)/b_ii(i);
             for (std::size_t j = 0; j < z.size(); ++j){
-                summerbm += z[i]*z[j]*pow((pow(b_ii(i), 0.75) + pow(b_ii(j),0.75))/2.0, 4.0/3.0);
+                summerbm += z[i]*z[j]* bij_term(i,j);
             }
         }
         bm = summerbm;
         am = bm*(summeram + R_u*unifaq.get_temperature()*gE_R_RT()/(-0.53087));
     };
+	double bij_term(std::size_t i, std::size_t j)
+	{
+		return pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
+	}
     void set_temperature(const double T){ unifaq.set_temperature(T); }
 };
 
