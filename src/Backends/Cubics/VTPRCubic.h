@@ -88,16 +88,16 @@ public:
 	double d_bm_term_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent)
 	{
 		double summer = 0;
-		const std::vector<double> &x = unifaq.get_mole_fractions();
+		const std::vector<double> &z = unifaq.get_mole_fractions();
 		if (xN_independent)
 		{
-			for (std::size_t j = 0; j < x.size(); ++j) {
+			for (std::size_t j = 0; j < z.size(); ++j) {
 				summer +=  x[j] * pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
 			}
 			return 2 * summer;
 		}
 		else {
-			for (std::size_t j = 0; j < x.size(); ++j) {
+			for (std::size_t j = 0; j < z.size(); ++j) {
 				summer += x[j] * (pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(j), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
 			}
 			return 2 * (summer - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(i), 0.75)) / 2.0, 4.0 / 3.0) - pow((pow(b_ii(N - 1), 0.75) + pow(b_ii(N - 1), 0.75)) / 2.0, 4.0 / 3.0));
