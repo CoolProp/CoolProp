@@ -47,6 +47,15 @@ public:
         }
         return summer;
     }
+	double d_gE_R_RT_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent) {
+		if (xN_independent)
+		{
+			return unifaq.ln_gamma_R(i);
+		}
+		else {
+			return unifaq.ln_gamma_R(i) - unifaq.ln_gamma_R(N - 1);
+		}
+	}
     /// The co-volume for the i-th pure component
     double b_ii(std::size_t i){
         return 0.0778*R_u*Tc[i]/pc[i];
@@ -60,31 +69,63 @@ public:
     double am_term(double tau, const std::vector<double> &x, std::size_t itau){
         if (itau == 0){
             set_temperature(T_r/tau);
-            double _am,_bm; am_bm(_am, _bm);
-            return _am;
+			return bm_term(x)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087));
         }
         else{
 			double dtau = 0.01*tau;
 			return (am_term(tau + dtau, x, itau - 1) - am_term(tau - dtau, x, itau - 1)) / (2 * dtau);
         }
     }
+	double sum_xi_aii_bii(const std::vector<double> &x) {
+		double summeram = 0;
+		for (std::size_t i = 0; i < N; ++i) {
+			summeram += x[i] * a_ii(i) / b_ii(i);
+		}
+		return summeram;
+	}
+	double d_sum_xi_aii_bii_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent) {
+		if (xN_independent)
+		{
+			return x[i] * a_ii(i) / b_ii(i);
+		}
+		else {
+			return x[i] * a_ii(i) / b_ii(i) - x[N - 1] * a_ii(N - 1) / b_ii(N - 1);
+		}
+	}
 	double d_am_term_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent)
 	{
-		throw CoolProp::NotImplementedError();
+		set_temperature(T_r / tau);
+		return d_bm_term_dxi(x, i, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
+			+ bm_term(x)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
 	}
 	double d2_am_term_dxidxj(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, bool xN_independent)
 	{
-		throw CoolProp::NotImplementedError();
+		set_temperature(T_r / tau);
+		return d2_bm_term_dxidxj(x, i, j, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
+			+ d_bm_term_dxi(x, i, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
+			+ d_bm_term_dxi(x, j, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
 	}
 	double d3_am_term_dxidxjdxk(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
 	{
-		throw CoolProp::NotImplementedError();
+		set_temperature(T_r / tau);
+		return d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
+			+ d2_bm_term_dxidxj(x, i, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
+			+ d2_bm_term_dxidxj(x, j, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
 	}
 
     double bm_term(const std::vector<double> &x){
-        double _am,_bm; am_bm(_am, _bm);
-        return _bm;
+		double summerbm = 0;
+		for (std::size_t i = 0; i < N; ++i) {
+			for (std::size_t j = 0; j < N; ++j) {
+				summerbm += x[i] * x[j] * bij_term(i, j);
+			}
+		}
+        return summerbm;
     }
+	double bij_term(std::size_t i, std::size_t j)
+	{
+		return pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
+	}
 	double d_bm_term_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent)
 	{
 		double summer = 0;
@@ -119,23 +160,6 @@ public:
 		return 0;
 	}
 
-    /// Calculate both am and bm because am and bm are dependent on each other
-    void am_bm(double &am, double &bm){
-        const std::vector<double> &z = unifaq.get_mole_fractions();
-        double summeram = 0, summerbm = 0;
-        for (std::size_t i = 0; i < z.size(); ++i){
-            summeram += z[i]*a_ii(i)/b_ii(i);
-            for (std::size_t j = 0; j < z.size(); ++j){
-                summerbm += z[i]*z[j]* bij_term(i,j);
-            }
-        }
-        bm = summerbm;
-        am = bm*(summeram + R_u*unifaq.get_temperature()*gE_R_RT()/(-0.53087));
-    };
-	double bij_term(std::size_t i, std::size_t j)
-	{
-		return pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
-	}
     void set_temperature(const double T){ unifaq.set_temperature(T); }
 };
 
