@@ -827,6 +827,9 @@ if (COOLPROP_PHP_MODULE)
     OUTPUT_VARIABLE php_config_includes
     RESULT_VARIABLE php_config_failed
     )
+  if (php_config_failed)
+    message(FATAL_ERROR "calling \"php-config --includes\" failed; message:" ${php_config_includes})
+  endif()
   string(STRIP "${php_config_includes}" php_config_includes)
   string(REPLACE "-I" "" PHP_INCLUDES "${php_config_includes}")
   SEPARATE_ARGUMENTS(PHP_INCLUDES)
