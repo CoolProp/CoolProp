@@ -200,6 +200,12 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         CoolPropDbl d3alphar_dDelta2_dTau() except+ValueError
         CoolPropDbl d3alphar_dDelta_dTau2() except+ValueError
         CoolPropDbl d3alphar_dTau3() except+ValueError
+        CoolPropDbl d4alphar_dDelta4() except+ValueError
+        CoolPropDbl d4alphar_dDelta3_dTau() except+ValueError
+        CoolPropDbl d4alphar_dDelta2_dTau2() except+ValueError
+        CoolPropDbl d4alphar_dDelta_dTau3() except+ValueError
+        CoolPropDbl d4alphar_dTau4() except+ValueError
+
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":

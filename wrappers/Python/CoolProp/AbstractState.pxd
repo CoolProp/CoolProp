@@ -206,3 +206,9 @@ cdef class AbstractState:
     cpdef CoolPropDbl d3alphar_dDelta2_dTau(self) except *
     cpdef CoolPropDbl d3alphar_dDelta_dTau2(self) except *
     cpdef CoolPropDbl d3alphar_dTau3(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta4(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta3_dTau(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta2_dTau2(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta_dTau3(self) except *
+    cpdef CoolPropDbl d4alphar_dTau4(self) except *
+
