@@ -441,9 +441,40 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
 
             // Actually call the successive substitution solver
             SaturationSolvers::successive_substitution(HEOS, HEOS._Q, HEOS._T, pguess, HEOS.mole_fractions, HEOS.K, options);
+            
+            // -----
+            // Newton-Raphson
+            // -----
+            
+            SaturationSolvers::newton_raphson_saturation NR;
+            SaturationSolvers::newton_raphson_saturation_options IO;
+            
+            IO.bubble_point = (HEOS._Q < 0.5);
+            
+            IO.x = options.x;
+            IO.y = options.y;
+            IO.rhomolar_liq = options.rhomolar_liq;
+            IO.rhomolar_vap = options.rhomolar_vap;
+            IO.T = options.T;
+            IO.p = options.p;
+            IO.Nstep_max = 30;
+            
+            IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::T_IMPOSED;
+            
+            if (IO.bubble_point){
+                // Compositions are z, z_incipient
+                NR.call(HEOS, IO.x, IO.y, IO);
+            }
+            else {
+                // Compositions are z, z_incipient
+                NR.call(HEOS, IO.y, IO.x, IO);
+            }
+            
+            double mu0 = HEOS.SatL->chemical_potential(0);
+            double mu1 = HEOS.SatV->chemical_potential(0);
 
-            HEOS._p = options.p;
-            HEOS._rhomolar = 1/(HEOS._Q/options.rhomolar_vap+(1-HEOS._Q)/options.rhomolar_liq);
+            HEOS._p = IO.p;
+            HEOS._rhomolar = 1/(HEOS._Q/IO.rhomolar_vap+(1-HEOS._Q)/IO.rhomolar_liq);
         }
         // Load the outputs
         HEOS._phase = iphase_twophase;
@@ -631,6 +662,35 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
 
 			// Actually call the successive substitution solver
 			SaturationSolvers::successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, K, io);
+            
+            // -----
+            // Newton-Raphson
+            // -----
+            
+            SaturationSolvers::newton_raphson_saturation NR;
+            SaturationSolvers::newton_raphson_saturation_options IO;
+            
+            IO.bubble_point = (HEOS._Q < 0.5);
+            IO.x = io.x;
+            IO.y = io.y;
+            IO.rhomolar_liq = io.rhomolar_liq;
+            IO.rhomolar_vap = io.rhomolar_vap;
+            IO.T = io.T;
+            IO.p = io.p;
+            IO.Nstep_max = 30;
+            IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::P_IMPOSED;
+            
+            if (IO.bubble_point){
+                // Compositions are z, z_incipient
+                NR.call(HEOS, IO.x, IO.y, IO);
+            }
+            else {
+                // Compositions are z, z_incipient
+                NR.call(HEOS, IO.y, IO.x, IO);
+            }
+            
+            double mu0 = HEOS.SatL->chemical_potential(0);
+            double mu1 = HEOS.SatV->chemical_potential(0);
 			
         }
                     
