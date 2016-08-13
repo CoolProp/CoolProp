@@ -2083,7 +2083,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     phases phase;
 
     // Define the residual to be driven to zero
-    class solver_TP_resid : public FuncWrapper1DWithTwoDerivs
+    class solver_TP_resid : public FuncWrapper1DWithThreeDerivs
     {
     public:
         HelmholtzEOSMixtureBackend *HEOS;
@@ -2104,7 +2104,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
         };
         double second_deriv(double rhomolar){
             // d2p/drho2|T / pspecified
-            return R_u*T/rhomolar*(2*delta*HEOS->dalphar_dDelta() + 4*pow(delta, 2)*HEOS->d2alphar_dDelta2() + pow(delta, 3)*HEOS->calc_d3alphar_dDelta3())/p;
+            return R_u*T/rhor*(2*HEOS->dalphar_dDelta() + 4*delta*HEOS->d2alphar_dDelta2() + pow(delta, 2)*HEOS->calc_d3alphar_dDelta3())/p;
+        };
+        double third_deriv(double rhomolar){
+            // d3p/drho3|T / pspecified
+            return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 4*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4())/p;
         };
     };
     solver_TP_resid resid(this,T,p);
@@ -2150,8 +2154,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                 }
             }
             else{
-                // Try with Halley's method starting at a very high density
-                rhomolar = Halley(resid, 3*rhomolar_reducing(), 1e-8, 100);
+                // Try with 4th order Householder method starting at a very high density
+                rhomolar = Householder4(&resid, 3*rhomolar_reducing(), 1e-8, 100);
             }
             return rhomolar;
         }
@@ -2168,8 +2172,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
 
     try{
         
-        // First we try with Halley's method with analytic derivative
-        double rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100);
+        // First we try with 4th order Householder method with analytic derivatives
+        double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 100);
         if (!ValidNumber(rhomolar)){
             throw ValueError();
         }

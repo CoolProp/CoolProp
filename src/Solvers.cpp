@@ -142,9 +142,10 @@ http://en.wikipedia.org/wiki/Halley%27s_method
 @param x0 The inital guess for the solution
 @param ftol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
+@param xtol_rel The minimum allowable (relative) step size
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter)
+double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, double xtol_rel)
 {
     double x, dx, fval=999, dfdx, d2fdx2;
     int iter=1;
@@ -171,13 +172,76 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
 
         x += dx;
 
-        if (std::abs(dx/x) < 10*DBL_EPSILON){
+        if (std::abs(dx/x) < xtol_rel){
             return x;
         }
 
         if (iter>maxiter){
             f->errstring= "reached maximum number of iterations";
             throw SolutionError(format("Halley reached maximum number of iterations"));
+        }
+        iter=iter+1;
+    }
+    return x;
+}
+    
+/**
+ In the 4-th order Householder method, three derivatives of the input variable are needed, it yields the following method:
+ 
+ \f[
+ x_{n+1} = x_n - f(x_n)\left( \frac {[f'(x_n)]^2 - f(x_n)f''(x_n)/2  } {[f'(x_n)]^3-f(x_n)f'(x_n)f''(x_n)+f'''(x_n)*[f(x_n)]^2/6 } \right)
+ \f]
+ 
+http://numbers.computation.free.fr/Constants/Algorithms/newton.ps
+ 
+ @param f A pointer to an instance of the FuncWrapper1DWithThreeDerivs class that implements the call() and three derivatives
+ @param x0 The inital guess for the solution
+ @param ftol The absolute value of the tolerance accepted for the objective function
+ @param maxiter Maximum number of iterations
+ @param xtol_rel The minimum allowable (relative) step size
+ @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
+ */
+double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int maxiter, double xtol_rel)
+{
+    double x, dx, fval=999, dfdx, d2fdx2, d3fdx3;
+    int iter=1;
+    f->errstring.clear();
+    x = x0;
+    while (iter < 2 || std::abs(fval) > ftol)
+    {
+        if (f->input_not_in_range(x)){
+            throw ValueError(format("Input [%g] is out of range",x));
+        }
+        
+        fval = f->call(x);
+        dfdx = f->deriv(x);
+        d2fdx2 = f->second_deriv(x);
+        d3fdx3 = f->third_deriv(x);
+        
+        if (!ValidNumber(fval)){
+            throw ValueError("Residual function in Householder4 returned invalid number");
+        };
+        if (!ValidNumber(dfdx)){
+            throw ValueError("Derivative function in Householder4 returned invalid number");
+        };
+        if (!ValidNumber(d2fdx2)){
+            throw ValueError("Second derivative function in Householder4 returned invalid number");
+        };
+        if (!ValidNumber(d3fdx3)){
+            throw ValueError("Third derivative function in Householder4 returned invalid number");
+        };
+        
+        dx = -fval*(POW2(dfdx)-fval*d2fdx2/2.0)/(POW3(dfdx)-fval*dfdx*d2fdx2+d3fdx3*POW2(fval)/6.0);
+        
+        x += dx;
+        
+        if (std::abs(dx/x) < xtol_rel){
+            return x;
+        }
+        
+        if (iter>maxiter){
+            f->errstring= "reached maximum number of iterations";
+            throw SolutionError(format("Householder4 reached maximum number of iterations"));
         }
         iter=iter+1;
     }

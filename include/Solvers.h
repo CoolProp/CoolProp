@@ -35,6 +35,12 @@ class FuncWrapper1DWithTwoDerivs : public FuncWrapper1DWithDeriv
 public:
     virtual double second_deriv(double) = 0;
 };
+    
+class FuncWrapper1DWithThreeDerivs : public FuncWrapper1DWithTwoDerivs
+{
+public:
+    virtual double third_deriv(double) = 0;
+};
 
 class FuncWrapperND
 {
@@ -52,9 +58,10 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
 double Secant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter);
 double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter);
 double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter);
-double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter);
+double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12);
+double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12);
 
-// Single-Dimensional solvers
+// Single-Dimensional solvers, refere
 inline double Brent(FuncWrapper1D &f, double a, double b, double macheps, double t, int maxiter){
     return Brent(&f, a, b, macheps, t, maxiter);
 }
@@ -67,9 +74,13 @@ inline double BoundedSecant(FuncWrapper1D &f, double x0, double xmin, double xma
 inline double Newton(FuncWrapper1DWithDeriv &f, double x0, double ftol, int maxiter){
     return Newton(&f, x0, ftol, maxiter);
 }
-inline double Halley(FuncWrapper1DWithTwoDerivs &f, double x0, double ftol, int maxiter){
-    return Halley(&f, x0, ftol, maxiter);
+inline double Halley(FuncWrapper1DWithTwoDerivs &f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12){
+    return Halley(&f, x0, ftol, maxiter, xtol_rel);
 }
+inline double Householder4(FuncWrapper1DWithThreeDerivs &f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12){
+    return Householder4(&f, x0, ftol, maxiter, xtol_rel);
+}
+    
 
 // Multi-Dimensional solvers
 std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter);
