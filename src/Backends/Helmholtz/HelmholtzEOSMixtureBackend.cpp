@@ -2130,19 +2130,28 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                 rhomolar_guess = p/(gas_constant()*T);
             }
         }
-        // It's liquid at subcritical pressure, we can use ancillaries as a backup
         else if (phase == iphase_liquid)
         {
             double rhomolar;
-            CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
-            try{
-                // First we try with Halley's method starting at saturated liquid
-                rhomolar = Halley(resid, _rhoLancval, 1e-16, 100);
+            if (is_pure_or_pseudopure){
+                // It's liquid at subcritical pressure, we can use ancillaries as guess value
+                CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
+                try{
+                    // First we try with Halley's method starting at saturated liquid
+                    rhomolar = Halley(resid, _rhoLancval, 1e-8, 100);
+                    if (!ValidNumber(rhomolar) || first_partial_deriv(iP, iDmolar, iT) < 0 || second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) < 0){
+                        throw ValueError("Liquid density is invalid");
+                    }
+                }
+                catch(std::exception &){
+                    // Next we try with a Brent method bounded solver since the function is 1-1
+                    rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100);
+                    if (!ValidNumber(rhomolar)){throw ValueError();}
+                }
             }
-            catch(std::exception &){
-                // Next we try with a Brent method bounded solver since the function is 1-1
-                rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100);
-                if (!ValidNumber(rhomolar)){throw ValueError();}
+            else{
+                // Try with Halley's method starting at a very high density
+                rhomolar = Halley(resid, 3*rhomolar_reducing(), 1e-8, 100);
             }
             return rhomolar;
         }
@@ -2165,7 +2174,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             throw ValueError();
         }
         if (phase == iphase_liquid && !is_pure_or_pseudopure && first_partial_deriv(iP, iDmolar, iT) < 0){
-            
             // Try again with a larger density in order to end up at the right solution
             rhomolar = Newton(resid, rhomolar_guess*1.5, 1e-8, 100);
             return rhomolar;
