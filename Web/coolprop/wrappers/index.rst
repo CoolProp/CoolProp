@@ -87,7 +87,7 @@ On debian based linux distributions (ubuntu, etc.), you can simply do::
 
     sudo apt-get install cmake git g++ p7zip libpython-dev
 
-although ``git`` is probably already packaged with your operating system; ``g++`` probably isn't.  Python is (probably) included in your distribution, but the headers aren't.
+although ``git`` is probably already packaged with your operating system; ``g++`` probably isn't.  Python is (probably) included in your distribution, but the headers aren't.  For python, you need the ``six`` package, a ``pip install six`` should do it.
 
 OSX
 ---
@@ -95,7 +95,7 @@ OSX should come with a c++ compiler (clang), for git and cmake your best bet is 
 
     brew install cmake git p7zip
     
-OSX includes a python version, but you should be using `Anaconda/Miniconda <https://store.continuum.io/cshop/anaconda/>`_ for your python installation.  Or, you can just install `Miniconda <http://conda.pydata.org/miniconda.html>`_, which is sufficient
+OSX includes a python version, but you should be using `Anaconda/Miniconda <https://store.continuum.io/cshop/anaconda/>`_ for your python installation.  Or, you can just install `Miniconda <http://conda.pydata.org/miniconda.html>`_, which is sufficient. For python, you need the ``six`` package, a ``pip install six`` should do it.
 
 If you have never done any command-line compilation before on OSX, chances are that you do not have the utilities needed. Thus you need to first install Xcode: see the description on the page http://guide.macports.org/#installing.xcode . After installing, you need to accept the license by running the following command in the Terminal::
 

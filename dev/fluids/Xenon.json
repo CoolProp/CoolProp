@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "Xe", 
-    "xenon", 
-    "XENON"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -185,18 +180,6 @@
       ]
     }
   }, 
-  "CAS": "7440-63-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 0, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 0, 
-    "Name": "Xenon", 
-    "ODP": -1.0, 
-    "PH": 3
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -357,9 +340,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "Xe_{1}", 
-  "NAME": "Xenon", 
-  "REFPROP_NAME": "XENON", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=22427", 
+    "ALIASES": [
+      "Xe", 
+      "xenon", 
+      "XENON"
+    ], 
+    "CAS": "7440-63-3", 
+    "CHEMSPIDER_ID": 22427, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 0, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 0, 
+      "Name": "Xenon", 
+      "ODP": -1.0, 
+      "PH": 3
+    }, 
+    "FORMULA": "Xe_{1}", 
+    "INCHI_KEY": "FHNFHKCVQCLJFQ-UHFFFAOYAS", 
+    "INCHI_STRING": "InChI=1/Xe", 
+    "NAME": "Xenon", 
+    "REFPROP_NAME": "XENON", 
+    "SMILES": "[Xe]"
+  }, 
   "STATES": {
     "critical": {
       "T": 289.733, 

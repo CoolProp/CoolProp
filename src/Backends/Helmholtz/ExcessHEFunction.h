@@ -126,6 +126,19 @@ public:
     STLMatrix F;
 
     ExcessTerm():N(0){};
+    
+    // copy assignment
+    ExcessTerm& operator=(ExcessTerm &other)
+    {
+        for (std::size_t i=0; i < N; ++i){
+            for(std::size_t j=0; j<N; ++j){
+                if (i != j){
+                    *(other.DepartureFunctionMatrix[i][j].get()) = *(other.DepartureFunctionMatrix[i][j].get());
+                }
+            }
+        }
+        return *this;
+    }
 
     /// Resize the parts of this term
     void resize(std::size_t N){

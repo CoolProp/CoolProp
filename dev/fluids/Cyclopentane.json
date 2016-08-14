@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "CycloPentane", 
-    "cyclopentane", 
-    "CYCLOPENTANE", 
-    "CYCLOPEN"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,18 +177,6 @@
         1.388
       ]
     }
-  }, 
-  "CAS": "287-92-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Cyclopentane", 
-    "ODP": -1.0, 
-    "PH": 1
   }, 
   "EOS": [
     {
@@ -408,9 +390,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{5}H_{10}", 
-  "NAME": "Cyclopentane", 
-  "REFPROP_NAME": "CYCLOPEN", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=8896", 
+    "ALIASES": [
+      "CycloPentane", 
+      "cyclopentane", 
+      "CYCLOPENTANE", 
+      "CYCLOPEN"
+    ], 
+    "CAS": "287-92-3", 
+    "CHEMSPIDER_ID": 8896, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Cyclopentane", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{5}H_{10}", 
+    "INCHI_KEY": "RGSFGYAAUTVSQA-UHFFFAOYAL", 
+    "INCHI_STRING": "InChI=1/C5H10/c1-2-4-5-3-1/h1-5H2", 
+    "NAME": "Cyclopentane", 
+    "REFPROP_NAME": "CYCLOPEN", 
+    "SMILES": "C1CCCC1"
+  }, 
   "STATES": {
     "critical": {
       "T": 511.72, 

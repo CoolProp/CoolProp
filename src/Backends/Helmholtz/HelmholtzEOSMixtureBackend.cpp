@@ -116,6 +116,14 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     // Also store the mole fractions as doubles
     this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
 };
+HelmholtzEOSMixtureBackend * HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV){
+    HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
+    *(ptr->residual_helmholtz.get()) = *(residual_helmholtz.get());
+    if (Reducing.get() != NULL){
+        *(ptr->Reducing.get()) = *(Reducing.get());
+    }
+    return ptr;
+};
 void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
 {
     if (mass_fractions.size() != N)
@@ -215,6 +223,21 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
         else{
             return "false";
         }
+    }
+    else if (ParamName == "INCHI" || ParamName == "InChI" || ParamName == "INCHI_STRING"){
+        return cpfluid.InChI;
+    }
+    else if (ParamName == "INCHI_Key" || ParamName == "InChIKey" || ParamName == "INCHIKEY"){
+        return cpfluid.InChIKey;
+    }
+    else if (ParamName == "2DPNG_URL"){
+        return cpfluid.TwoDPNG_URL;
+    }
+    else if (ParamName == "SMILES" || ParamName == "smiles"){
+        return cpfluid.smiles;
+    }
+    else if (ParamName == "CHEMSPIDER_ID"){
+        return format("%d", cpfluid.ChemSpider_id);
     }
     else{
         throw ValueError(format("fluid parameter [%s] is invalid",ParamName.c_str()));

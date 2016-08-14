@@ -81,6 +81,11 @@ double AbstractCubic::d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::si
     return 0;
 }
 
+double AbstractCubic::cm_term()
+{
+    return cm;
+}
+
 double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau)
 {
     double Tr_over_Tci = T_r/Tc[i];
@@ -247,20 +252,20 @@ double AbstractCubic::aij_term(double tau, std::size_t i, std::size_t j, std::si
 double AbstractCubic::psi_minus(double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta)
 {
     if (itau > 0) return 0.0;
-    double b = bm_term(x);
-    double bracket = 1-b*delta*rho_r;
+    double bmc = bm_term(x)-cm_term(); // appears only in the form (b-c) in the equations
+    double bracket = 1-bmc*delta*rho_r;
     
     switch(idelta){
         case 0:
             return -log(bracket);
         case 1:
-            return b*rho_r/bracket;
+            return bmc*rho_r/bracket;
         case 2:
-            return pow(b*rho_r/bracket, 2);
+            return pow(bmc*rho_r/bracket, 2);
         case 3:
-            return 2*pow(b*rho_r/bracket, 3);
+            return 2*pow(bmc*rho_r/bracket, 3);
         case 4:
-            return 6*pow(b*rho_r/bracket, 4);
+            return 6*pow(bmc*rho_r/bracket, 4);
         default:
             throw -1;
     }
@@ -268,9 +273,9 @@ double AbstractCubic::psi_minus(double delta, const std::vector<double> &x, std:
 double AbstractCubic::d_psi_minus_dxi(double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, bool xN_independent)
 {
     if (itau > 0) return 0.0;
-    double b = bm_term(x);
+    double bmc = bm_term(x) - cm_term(); // appears only in the form (b-c) in the equations
     double db_dxi = d_bm_term_dxi(x, i, xN_independent);
-    double bracket = 1-b*delta*rho_r;
+    double bracket = 1-bmc*delta*rho_r;
     
     switch(idelta){
         case 0:
@@ -278,11 +283,11 @@ double AbstractCubic::d_psi_minus_dxi(double delta, const std::vector<double> &x
         case 1:
             return rho_r*db_dxi/pow(bracket, 2);
         case 2:
-            return 2*pow(rho_r,2)*b*db_dxi/pow(bracket, 3);
+            return 2*pow(rho_r,2)*bmc*db_dxi/pow(bracket, 3);
         case 3:
-            return 6*pow(rho_r,3)*pow(b, 2)*db_dxi/pow(bracket, 4);
+            return 6*pow(rho_r,3)*pow(bmc, 2)*db_dxi/pow(bracket, 4);
         case 4:
-            return 24*pow(rho_r,4)*pow(b, 3)*db_dxi/pow(bracket, 5);
+            return 24*pow(rho_r,4)*pow(bmc, 3)*db_dxi/pow(bracket, 5);
         default:
             throw -1;
     }
@@ -290,11 +295,11 @@ double AbstractCubic::d_psi_minus_dxi(double delta, const std::vector<double> &x
 double AbstractCubic::d2_psi_minus_dxidxj(double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent)
 {
     if (itau > 0) return 0.0;
-    double b = bm_term(x);
+    double bmc = bm_term(x) - cm_term(); // appears only in the form (b-c) in the equations
     double db_dxi = d_bm_term_dxi(x, i, xN_independent),
     db_dxj = d_bm_term_dxi(x, j, xN_independent),
     d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent);
-    double bracket = 1-b*delta*rho_r;
+    double bracket = 1-bmc*delta*rho_r;
     
     switch(idelta){
         case 0:
@@ -302,11 +307,11 @@ double AbstractCubic::d2_psi_minus_dxidxj(double delta, const std::vector<double
         case 1:
             return 2*delta*pow(rho_r, 2)*db_dxi*db_dxj/pow(bracket, 3) + rho_r*d2b_dxidxj/pow(bracket, 2);
         case 2:
-            return 2*pow(rho_r,2)*db_dxi*db_dxj/pow(bracket, 4)*(2*delta*rho_r*b+1) + 2*pow(rho_r, 2)*b*d2b_dxidxj/pow(bracket,3);
+            return 2*pow(rho_r,2)*db_dxi*db_dxj/pow(bracket, 4)*(2*delta*rho_r*bmc +1) + 2*pow(rho_r, 2)*bmc*d2b_dxidxj/pow(bracket,3);
         case 3:
-            return 12*pow(rho_r,3)*b*db_dxi*db_dxj/pow(bracket, 5)*(delta*rho_r*b+1) + 6*pow(rho_r, 3)*pow(b,2)*d2b_dxidxj/pow(bracket,4);
+            return 12*pow(rho_r,3)*bmc*db_dxi*db_dxj/pow(bracket, 5)*(delta*rho_r*bmc +1) + 6*pow(rho_r, 3)*pow(bmc,2)*d2b_dxidxj/pow(bracket,4);
         case 4:
-            return 24*pow(rho_r,4)*pow(b, 2)*db_dxi*db_dxj/pow(bracket, 6)*(2*delta*rho_r*b + 3) + 24*pow(rho_r, 4)*pow(b,3)*d2b_dxidxj/pow(bracket,5);
+            return 24*pow(rho_r,4)*pow(bmc, 2)*db_dxi*db_dxj/pow(bracket, 6)*(2*delta*rho_r*bmc + 3) + 24*pow(rho_r, 4)*pow(bmc,3)*d2b_dxidxj/pow(bracket,5);
         default:
             throw -1;
     }
@@ -314,7 +319,7 @@ double AbstractCubic::d2_psi_minus_dxidxj(double delta, const std::vector<double
 double AbstractCubic::d3_psi_minus_dxidxjdxk(double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
 {
     if (itau > 0) return 0.0;
-    double b = bm_term(x);
+    double bmc = bm_term(x) - cm_term(); // appears only in the form (b-c) in the equations
     double db_dxi = d_bm_term_dxi(x, i, xN_independent),
     db_dxj = d_bm_term_dxi(x, j, xN_independent),
     db_dxk = d_bm_term_dxi(x, k, xN_independent),
@@ -322,7 +327,7 @@ double AbstractCubic::d3_psi_minus_dxidxjdxk(double delta, const std::vector<dou
     d2b_dxidxk = d2_bm_term_dxidxj(x, i, k, xN_independent),
     d2b_dxjdxk = d2_bm_term_dxidxj(x, j, k, xN_independent),
     d3b_dxidxjdxk = d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent);
-    double bracket = 1-b*delta*rho_r;
+    double bracket = 1-bmc*delta*rho_r;
     
     switch(idelta){
         case 0:
@@ -343,14 +348,15 @@ double AbstractCubic::d3_psi_minus_dxidxjdxk(double delta, const std::vector<dou
 }
 double AbstractCubic::PI_12(double delta, const std::vector<double> &x, std::size_t idelta)
 {
-    double b = bm_term(x);
+    double bm = bm_term(x);
+    double cm = cm_term();
     switch(idelta){
         case 0:
-            return (1+Delta_1*b*rho_r*delta)*(1+Delta_2*b*rho_r*delta);
+            return (1+(Delta_1*bm+cm)*rho_r*delta)*(1+(Delta_2*bm+cm)*rho_r*delta);
         case 1:
-            return b*rho_r*(2*Delta_1*Delta_2*b*delta*rho_r+Delta_1+Delta_2);
+            return rho_r*(2*(bm*Delta_1 + cm)*(bm*Delta_2 + cm)*delta*rho_r + (Delta_1 + Delta_2)*bm + 2*cm);
         case 2:
-            return 2*Delta_1*Delta_2*pow(b*rho_r, 2);
+            return 2*(Delta_1*bm+cm)*(Delta_2*bm + cm)*pow(rho_r, 2);
         case 3:
             return 0;
         case 4:
@@ -361,15 +367,16 @@ double AbstractCubic::PI_12(double delta, const std::vector<double> &x, std::siz
 }
 double AbstractCubic::d_PI_12_dxi(double delta, const std::vector<double> &x, std::size_t idelta, std::size_t i, bool xN_independent)
 {
-    double b = bm_term(x);
+    double bm = bm_term(x);
+    double cm = cm_term();
     double db_dxi = d_bm_term_dxi(x, i, xN_independent);
     switch(idelta){
         case 0:
-            return delta*rho_r*db_dxi*(2*Delta_1*Delta_2*b*delta*rho_r+Delta_1+Delta_2);
+            return delta*rho_r*db_dxi*(2*Delta_1*Delta_2*bm*delta*rho_r+(Delta_1+Delta_2)*(1+cm*delta*rho_r));
         case 1:
-            return rho_r*db_dxi*(4*Delta_1*Delta_2*b*delta*rho_r+Delta_1+Delta_2);
+            return rho_r*db_dxi*(4*Delta_1*Delta_2*bm*delta*rho_r+(Delta_1 + Delta_2)*(1+2*cm*delta*rho_r));
         case 2:
-            return 4*Delta_1*Delta_2*pow(rho_r, 2)*b*db_dxi;
+            return 2*pow(rho_r, 2)*(2*Delta_1*Delta_2*bm+ (Delta_1+Delta_2)*cm)*db_dxi;
         case 3:
             return 0;
         case 4:
@@ -380,17 +387,18 @@ double AbstractCubic::d_PI_12_dxi(double delta, const std::vector<double> &x, st
 }
 double AbstractCubic::d2_PI_12_dxidxj(double delta, const std::vector<double> &x, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent)
 {
-    double b = bm_term(x);
+    double bm = bm_term(x);
+    double cm = cm_term();
     double db_dxi = d_bm_term_dxi(x, i, xN_independent),
     db_dxj = d_bm_term_dxi(x, j, xN_independent),
     d2b_dxidxj = d2_bm_term_dxidxj(x, i, j, xN_independent);
     switch(idelta){
         case 0:
-            return delta*rho_r*(2*Delta_1*Delta_2*delta*rho_r*db_dxi*db_dxj + (2*Delta_1*Delta_2*delta*rho_r*b+Delta_1+Delta_2)*d2b_dxidxj);
+            return delta*rho_r*(2*Delta_1*Delta_2*delta*rho_r*db_dxi*db_dxj + (2* Delta_1*Delta_2*bm*delta*rho_r + (Delta_1 + Delta_2)*(1 + cm*delta*rho_r))*d2b_dxidxj);
         case 1:
-            return rho_r*(4*Delta_1*Delta_2*delta*rho_r*db_dxi*db_dxj + (4*Delta_1*Delta_2*delta*rho_r*b+Delta_1+Delta_2)*d2b_dxidxj);
+            return rho_r*(4*Delta_1*Delta_2*delta*rho_r*db_dxi*db_dxj + (4*Delta_1*Delta_2*bm*delta*rho_r + (Delta_1 + Delta_2)*(1 + 2*cm*delta*rho_r))*d2b_dxidxj);
         case 2:
-            return 4*Delta_1*Delta_2*pow(rho_r,2)*(db_dxi*db_dxj + b*d2b_dxidxj);
+            return 2*pow(rho_r,2)*(2 * Delta_1*Delta_2*db_dxi*db_dxj + (2*Delta_1*Delta_2*bm + (Delta_1 + Delta_2)*cm)*d2b_dxidxj);
         case 3:
             return 0;
         case 4:
@@ -401,7 +409,8 @@ double AbstractCubic::d2_PI_12_dxidxj(double delta, const std::vector<double> &x
 }
 double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double> &x, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
 {
-    double b = bm_term(x);
+    double bm = bm_term(x);
+    double cm = cm_term();
     double db_dxi = d_bm_term_dxi(x, i, xN_independent),
     db_dxj = d_bm_term_dxi(x, j, xN_independent),
     db_dxk = d_bm_term_dxi(x, k, xN_independent),
@@ -411,14 +420,14 @@ double AbstractCubic::d3_PI_12_dxidxjdxk(double delta, const std::vector<double>
     d3b_dxidxjdxk = d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent);
     switch(idelta){
         case 0:
-            return delta*rho_r*((2*Delta_1*Delta_2*delta*rho_r*b+Delta_1+Delta_2)*d3b_dxidxjdxk
+            return delta*rho_r*((2 * Delta_1*Delta_2*bm*delta*rho_r + (Delta_1 + Delta_2)*(1 + cm*delta*rho_r))*d3b_dxidxjdxk
                                 + 2*Delta_1*Delta_2*delta*rho_r*(db_dxi*d2b_dxjdxk
                                                                  +db_dxj*d2b_dxidxk
                                                                  +db_dxk*d2b_dxidxj
                                                                  )
                                 );
         case 1:
-            return rho_r*((4*Delta_1*Delta_2*delta*rho_r*b+Delta_1+Delta_2)*d3b_dxidxjdxk
+            return rho_r*((4.*Delta_1*Delta_2*bm*delta*rho_r + (Delta_1 + Delta_2)*(1 + 2*cm*delta*rho_r))*d3b_dxidxjdxk
                           + 4*Delta_1*Delta_2*delta*rho_r*(db_dxi*d2b_dxjdxk
                                                            + db_dxj*d2b_dxidxk
                                                            + db_dxk*d2b_dxidxj

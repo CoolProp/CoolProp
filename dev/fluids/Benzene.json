@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "benzene", 
-    "BENZENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -185,18 +181,6 @@
         0.3065
       ]
     }
-  }, 
-  "CAS": "71-43-2", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Benzene", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -414,9 +398,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{6}H_{6}", 
-  "NAME": "Benzene", 
-  "REFPROP_NAME": "BENZENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=236", 
+    "ALIASES": [
+      "benzene", 
+      "BENZENE"
+    ], 
+    "CAS": "71-43-2", 
+    "CHEMSPIDER_ID": 236, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Benzene", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{6}H_{6}", 
+    "INCHI_KEY": "UHOVQNZJYSORNB-UHFFFAOYAH", 
+    "INCHI_STRING": "InChI=1/C6H6/c1-2-4-6-5-3-1/h1-6H", 
+    "NAME": "Benzene", 
+    "REFPROP_NAME": "BENZENE", 
+    "SMILES": "c1ccccc1"
+  }, 
   "STATES": {
     "critical": {
       "T": 562.02, 

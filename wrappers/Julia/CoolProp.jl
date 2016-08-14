@@ -1,7 +1,7 @@
 VERSION < v"0.4.0" && __precompile__()
 module CoolProp
 
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double
+export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string,get_fluid_param_string,set_reference_stateS, get_param_index, get_input_pair_index, set_config_string, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double, AbstractState_set_fluid_parameter_double
 
 # Check the current Julia version to make this Julia 0.4 code compatible with older version
 if VERSION <= VersionNumber(0,4)
@@ -113,6 +113,12 @@ function get_input_pair_index(param::AbstractString)
     error("CoolProp: Unknown input pair: ", param)
   end
   return val
+end
+
+# Set configuration string
+function set_config_string(key::AbstractString,val::AbstractString)
+  ccall( (:set_config_string, "CoolProp"), Void, (Ptr{UInt8},Ptr{UInt8}), key,val)
+  return get_global_param_string("errstring")
 end
 
 # Get the debug level
@@ -383,6 +389,25 @@ end
 # value the value of the binary interaction parameter
 function AbstractState_set_binary_interaction_double(handle::Clong,i::Int, j::Int, parameter::AbstractString, value::Cdouble)
   ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong,Clong,Clong,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,j,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
+  return nothing
+end
+
+# Set some fluid parameter (ie volume translation for cubic)
+# handle The integer handle for the state class stored in memory
+# i indice of the fluid the parramter should be applied too (for mixtures)
+# parameter string wit the name of the parameter
+# value the value of the parameter
+function AbstractState_set_fluid_parameter_double(handle::Clong, i::Int, parameter::AbstractString, value::Cdouble)
+  ccall( (:AbstractState_set_fluid_parameter_double, "CoolProp"), Void, (Clong,Clong,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
       error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))

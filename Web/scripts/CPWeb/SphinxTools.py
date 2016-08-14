@@ -19,6 +19,7 @@ Fluid Information
 .. csv-table::
    :header-rows: 1
    :widths: 40, 60
+   :delim: ;
    :file: {fluid:s}-info.csv
    
 REFPROP Validation Data
@@ -48,29 +49,34 @@ In this figure, we start off with a state point given by T,P and then we calcula
 """
 
 table_template = """ Parameter, Value
-**General**,
-Molar mass [kg/mol],{mm:s}
-CAS number, {CAS:s}
-ASHRAE class, {ASHRAE:s}
-Formula, {formula:s}
-Acentric factor, {acentric:s}
-**Limits**,
-Maximum temperature [K],{Tmax:s}
-Maximum pressure [Pa],{pmax:s}
-**Triple point**,
-Triple point temperature [K],{Tt:s}
-Triple point pressure [Pa], {pt:s}
-**Critical point**,
-Critical point temperature [K], {Tc:s}
-Critical point density [kg/m3], {rhoc_mass:s}
-Critical point density [mol/m3], {rhoc_molar:s}
-Critical point pressure [Pa], {pc:s}
+**General**;
+Molar mass [kg/mol];{mm:s}
+CAS number; {CAS:s}
+ASHRAE class; {ASHRAE:s}
+Formula; {formula:s}
+Acentric factor; {acentric:s}
+InChI; {inchi:s}
+InChIKey; {inchikey:s}
+SMILES; {smiles:s}
+ChemSpider ID; {ChemSpider_id:s}
+2D image; .. image:: {twoDurl:s}
+**Limits**;
+Maximum temperature [K];{Tmax:s}
+Maximum pressure [Pa];{pmax:s}
+**Triple point**;
+Triple point temperature [K];{Tt:s}
+Triple point pressure [Pa]; {pt:s}
+**Critical point**;
+Critical point temperature [K]; {Tc:s}
+Critical point density [kg/m3]; {rhoc_mass:s}
+Critical point density [mol/m3]; {rhoc_molar:s}
+Critical point pressure [Pa]; {pc:s}
 {reducing_string:s}
 """
 
-reducing_template = """**Reducing point**,
-Reducing point temperature [K], {Tr:s}
-Reducing point density [mol/m3], {rhor_molar:s}
+reducing_template = """**Reducing point**;
+Reducing point temperature [K]; {Tr:s}
+Reducing point density [mol/m3]; {rhor_molar:s}
 """
 
 bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE','SURFACE_TENSION']
@@ -154,6 +160,11 @@ class FluidInfoTableGenerator(object):
         else:
             formula = 'Not applicable'
         formula = formula.replace('_{1}','')
+        InChI = CoolProp.CoolProp.get_fluid_param_string(self.name, "INCHI")
+        InChiKey = CoolProp.CoolProp.get_fluid_param_string(self.name, "INCHIKEY")
+        smiles = CoolProp.CoolProp.get_fluid_param_string(self.name, "SMILES")
+        ChemSpider_id = CoolProp.CoolProp.get_fluid_param_string(self.name, "CHEMSPIDER_ID")
+        twoDurl = CoolProp.CoolProp.get_fluid_param_string(self.name, "2DPNG_URL")
         
         # Generate (or not) the reducing data
         reducing_data = ''
@@ -174,7 +185,13 @@ class FluidInfoTableGenerator(object):
                     Tmax = tos(Tmax),
                     pmax = tos(pmax),
                     reducing_string = reducing_data,
-                    formula = formula)
+                    formula = formula,
+                    inchi = InChI,
+                    inchikey = InChiKey,
+                    smiles = smiles,
+                    ChemSpider_id = ChemSpider_id,
+                    twoDurl = twoDurl
+                    )
         out = table_template.format(**args)
         
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:

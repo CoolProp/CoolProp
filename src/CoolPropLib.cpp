@@ -15,6 +15,7 @@
 #include "crossplatform_shared_ptr.h"
 #include "AbstractState.h"
 #include "Exceptions.h"
+#include "Configuration.h"
 
 #include <string.h>
 
@@ -288,6 +289,13 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char
     catch (std::exception &e){ CoolProp::set_error_string(e.what()); }
     catch (...){ CoolProp::set_error_string("Undefined error"); }
     return 0;
+}
+EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val) {
+    try {
+        CoolProp::set_config_string(CoolProp::config_string_to_key(std::string(key)), std::string(val));
+    }
+    catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
+    catch (...) { CoolProp::set_error_string("Undefined error"); }
 }
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
@@ -773,6 +781,36 @@ EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const lo
     }
 }
 
+EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long handle, const size_t i, const char* parameter, const double value , long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        AS->set_fluid_parameter_double(static_cast<std::size_t>(i), parameter, value);
+    }
+    catch (CoolProp::HandleError &e) {
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (CoolProp::CoolPropBaseError &e) {
+        std::string errmsg = std::string("Error: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (...) {
+        *errcode = 3;
+    }
+}
 
 /// *********************************************************************************
 /// *********************************************************************************

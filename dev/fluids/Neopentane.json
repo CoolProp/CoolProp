@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "neopentn", 
-    "NEOPENTANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "463-82-1", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 4, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "Neopentane", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -369,9 +353,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{5}H_{12}", 
-  "NAME": "Neopentane", 
-  "REFPROP_NAME": "NEOPENTN", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=9646", 
+    "ALIASES": [
+      "neopentn", 
+      "NEOPENTANE"
+    ], 
+    "CAS": "463-82-1", 
+    "CHEMSPIDER_ID": 9646, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 4, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "Neopentane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{5}H_{12}", 
+    "INCHI_KEY": "CRSOQBOWXPBRES-UHFFFAOYAR", 
+    "INCHI_STRING": "InChI=1/C5H12/c1-5(2,3)4/h1-4H3", 
+    "NAME": "Neopentane", 
+    "REFPROP_NAME": "NEOPENTN", 
+    "SMILES": "CC(C)(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 433.74, 

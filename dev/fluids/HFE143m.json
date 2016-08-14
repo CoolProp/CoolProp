@@ -1,11 +1,4 @@
 {
-  "ALIASES": [
-    "HFE-143m", 
-    "HFE143M", 
-    "HFE-143M", 
-    "RE143A", 
-    "RE143a"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -174,7 +167,6 @@
       "type": "rational_polynomial"
     }
   }, 
-  "CAS": "421-14-7", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -382,9 +374,24 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}F_{3}H_{3}O_{1}", 
-  "NAME": "HFE143m", 
-  "REFPROP_NAME": "RE143A", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=66577", 
+    "ALIASES": [
+      "HFE-143m", 
+      "HFE143M", 
+      "HFE-143M", 
+      "RE143A", 
+      "RE143a"
+    ], 
+    "CAS": "421-14-7", 
+    "CHEMSPIDER_ID": 66577, 
+    "FORMULA": "C_{2}F_{3}H_{3}O_{1}", 
+    "INCHI_KEY": "JRHMNRMPVRXNOS-UHFFFAOYAL", 
+    "INCHI_STRING": "InChI=1/C2H3F3O/c1-6-2(3,4)5/h1H3", 
+    "NAME": "HFE143m", 
+    "REFPROP_NAME": "RE143A", 
+    "SMILES": "COC(F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 377.921, 

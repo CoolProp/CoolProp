@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R134A"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -180,18 +177,6 @@
         1.241
       ]
     }
-  }, 
-  "CAS": "811-97-2", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 1430.0, 
-    "GWP20": 3830.0, 
-    "GWP500": 435.0, 
-    "HH": 1, 
-    "Name": "R134a", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -400,9 +385,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}F_{4}H_{2}", 
-  "NAME": "R134a", 
-  "REFPROP_NAME": "R134A", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=12577", 
+    "ALIASES": [
+      "R134A"
+    ], 
+    "CAS": "811-97-2", 
+    "CHEMSPIDER_ID": 12577, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 1430.0, 
+      "GWP20": 3830.0, 
+      "GWP500": 435.0, 
+      "HH": 1, 
+      "Name": "R134a", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}F_{4}H_{2}", 
+    "INCHI_KEY": "LVGUZGTVOIAKKC-UHFFFAOYAU", 
+    "INCHI_STRING": "InChI=1/C2H2F4/c3-1-2(4,5)6/h1H2", 
+    "NAME": "R134a", 
+    "REFPROP_NAME": "R134A", 
+    "SMILES": "C(C(F)(F)F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 374.21, 

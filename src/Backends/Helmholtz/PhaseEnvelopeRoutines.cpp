@@ -100,10 +100,14 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS, const std::s
         // First we try to generate all the critical points.  This
         // is very useful
         std::vector<CriticalState> critpts;
-        try{
-             critpts = HEOS.all_critical_points();
-        }
-        catch(...){};
+//        try{
+//             critpts = HEOS.all_critical_points();
+//            //throw CoolProp::ValueError("critical points disabled");
+//        }
+//        catch(std::exception &e)
+//        {
+//            if (debug){ std::cout << e.what() << std::endl; }
+//        };
     
         std::size_t failure_count = 0;
         // Set some imput options
@@ -247,9 +251,13 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS, const std::s
                 if (IO.p < 0){
                     throw ValueError("negative pressure");
                 }
+                // Reject steps with enormous steps in temperature
+                if (!env.T.empty() && std::abs(env.T[env.T.size()-1] - IO.T) > 100){
+                    throw ValueError("Change in temperature too large");
+                }
             }
-            catch(...){
-                //std::cout << e.what() << std::endl;
+            catch(std::exception &e){
+                if (debug){ std::cout << e.what() << std::endl; }
                 //std::cout << IO.T << " " << IO.p << std::endl;
                 // Try again, but with a smaller step
                 IO.rhomolar_vap /= factor;
@@ -266,42 +274,42 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS, const std::s
             
             iter ++;
 
-            CoolPropDbl abs_rho_difference = std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq);
+//            CoolPropDbl abs_rho_difference = std::abs((IO.rhomolar_liq - IO.rhomolar_vap)/IO.rhomolar_liq);
             
-            bool next_crosses_crit = false;
-            if (it_critpts != critpts.end() ){
-                // Density at the next critical point
-                double rhoc = (*it_critpts).rhomolar;
-                // Next density that will be used
-                double rho_next = IO.rhomolar_vap*factor;
-                // If the signs of the differences are different, you have crossed 
-                // the critical point density and have a phase inversion
-                // on your hands
-                next_crosses_crit = ((IO.rhomolar_vap-rhoc)*(rho_next-rhoc) < 0);
-            }
+//            bool next_crosses_crit = false;
+//            if (it_critpts != critpts.end() ){
+//                // Density at the next critical point
+//                double rhoc = (*it_critpts).rhomolar;
+//                // Next vapor density that will be used
+//                double rho_next = IO.rhomolar_vap*factor;
+//                // If the signs of the differences are different, you have crossed 
+//                // the critical point density and have a phase inversion
+//                // on your hands
+//                next_crosses_crit = ((IO.rhomolar_vap-rhoc)*(rho_next-rhoc) < 0);
+//            }
 
-            // Critical point jump
-            if (next_crosses_crit || (abs_rho_difference < 0.01 && IO.rhomolar_liq  > IO.rhomolar_vap)){
-                //std::cout << "dv" << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
-                CoolPropDbl rhoc_approx = 0.5*IO.rhomolar_liq + 0.5*IO.rhomolar_vap;
-                if (it_critpts != critpts.end() ){
-                    // We actually know what the critical point is to numerical precision
-                    rhoc_approx = (*it_critpts).rhomolar;
-                }
-                CoolPropDbl rho_vap_new = 1.05*rhoc_approx;
-                // Linearly interpolate to get new guess for T
-                IO.T = LinearInterp(env.rhomolar_vap,env.T,iter-2,iter-1,rho_vap_new);
-                IO.rhomolar_liq = LinearInterp(env.rhomolar_vap, env.rhomolar_liq, iter-2, iter-1, rho_vap_new);
-                for (std::size_t i = 0; i < IO.x.size()-1; ++i){
-                    IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], iter-4, iter-3, iter-2, iter-1, rho_vap_new);
-                }
-                IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
-                factor = rho_vap_new/IO.rhomolar_vap;
-                dont_extrapolate = true; // So that we use the mole fractions we calculated here instead of the extrapolated values
-                //std::cout << "dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
-                iter0 = iter - 1; // Back to linear interpolation again
-                continue;
-            }
+//            // Critical point jump
+//            if (next_crosses_crit || (abs_rho_difference < 0.01 && IO.rhomolar_liq  > IO.rhomolar_vap)){
+//                //std::cout << "dv" << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
+//                CoolPropDbl rhoc_approx = 0.5*IO.rhomolar_liq + 0.5*IO.rhomolar_vap;
+//                if (it_critpts != critpts.end() ){
+//                    // We actually know what the critical point is to numerical precision
+//                    rhoc_approx = (*it_critpts).rhomolar;
+//                }
+//                CoolPropDbl rho_vap_new = 1.05*rhoc_approx;
+//                // Linearly interpolate to get new guess for T
+//                IO.T = LinearInterp(env.rhomolar_vap,env.T,iter-2,iter-1,rho_vap_new);
+//                IO.rhomolar_liq = LinearInterp(env.rhomolar_vap, env.rhomolar_liq, iter-2, iter-1, rho_vap_new);
+//                for (std::size_t i = 0; i < IO.x.size()-1; ++i){
+//                    IO.x[i] = CubicInterp(env.rhomolar_vap, env.x[i], iter-4, iter-3, iter-2, iter-1, rho_vap_new);
+//                }
+//                IO.x[IO.x.size()-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
+//                factor = rho_vap_new/IO.rhomolar_vap;
+//                dont_extrapolate = true; // So that we use the mole fractions we calculated here instead of the extrapolated values
+//                if (debug) std::cout << "[CRIT jump] new values: dv " << rho_vap_new << " dl " << IO.rhomolar_liq << " " << vec_to_string(IO.x, "%0.10Lg") << " " << vec_to_string(IO.y, "%0.10Lg") << std::endl;
+//                iter0 = iter - 1; // Back to linear interpolation again
+//                continue;
+//            }
             
             dont_extrapolate = false;
             if (iter < 5){continue;}
@@ -363,6 +371,9 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend &HEOS, const std::
     if (level == "veryfine"){
         acceptable_pdiff = 0.1;
         acceptable_rhodiff = 0.1;
+    }
+    if (level == "none"){
+        return;
     }
     std::size_t i = 0;
     do{

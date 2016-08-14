@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "COS", 
-    "CARBONYLSULFIDE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "463-58-1", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 4, 
-    "GWP100": 27.0, 
-    "GWP20": 97.0, 
-    "GWP500": -1.0, 
-    "HH": 3, 
-    "Name": "CarbonylSulfide", 
-    "ODP": -1.0, 
-    "PH": 1
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -350,9 +334,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}O_{1}S_{1}", 
-  "NAME": "CarbonylSulfide", 
-  "REFPROP_NAME": "COS", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=9644", 
+    "ALIASES": [
+      "COS", 
+      "CARBONYLSULFIDE"
+    ], 
+    "CAS": "463-58-1", 
+    "CHEMSPIDER_ID": 9644, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 4, 
+      "GWP100": 27.0, 
+      "GWP20": 97.0, 
+      "GWP500": -1.0, 
+      "HH": 3, 
+      "Name": "CarbonylSulfide", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{1}O_{1}S_{1}", 
+    "INCHI_KEY": "JJWKPURADFRFRB-UHFFFAOYAF", 
+    "INCHI_STRING": "InChI=1/COS/c2-1-3", 
+    "NAME": "CarbonylSulfide", 
+    "REFPROP_NAME": "COS", 
+    "SMILES": "C(=O)=S"
+  }, 
   "STATES": {
     "critical": {
       "T": 378.77, 

@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -178,18 +177,6 @@
         1.25
       ]
     }
-  }, 
-  "CAS": "115-25-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": 10300.0, 
-    "GWP20": 7310.0, 
-    "GWP500": 14700.0, 
-    "HH": 1, 
-    "Name": "RC318", 
-    "ODP": -1.0, 
-    "PH": 2
   }, 
   "EOS": [
     {
@@ -433,9 +420,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{4}F_{8}", 
-  "NAME": "RC318", 
-  "REFPROP_NAME": "RC318", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=13846040", 
+    "ALIASES": [], 
+    "CAS": "115-25-3", 
+    "CHEMSPIDER_ID": 13846040, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": 10300.0, 
+      "GWP20": 7310.0, 
+      "GWP500": 14700.0, 
+      "HH": 1, 
+      "Name": "RC318", 
+      "ODP": -1.0, 
+      "PH": 2
+    }, 
+    "FORMULA": "C_{4}F_{8}", 
+    "INCHI_KEY": "BCCOBQSFUDVTJQ-UHFFFAOYAW", 
+    "INCHI_STRING": "InChI=1/C4F8/c5-1(6)2(7,8)4(11,12)3(1,9)10", 
+    "NAME": "RC318", 
+    "REFPROP_NAME": "RC318", 
+    "SMILES": "C1(C(C(C1(F)F)(F)F)(F)F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 388.38, 

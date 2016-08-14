@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +180,6 @@
       ]
     }
   }, 
-  "CAS": "76-16-4", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "R116", 
-    "ODP": -1.0, 
-    "PH": 1
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -366,9 +353,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}F_{6}", 
-  "NAME": "R116", 
-  "REFPROP_NAME": "R116", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6191", 
+    "ALIASES": [], 
+    "CAS": "76-16-4", 
+    "CHEMSPIDER_ID": 6191, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "R116", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{2}F_{6}", 
+    "INCHI_KEY": "WMIYKQLTONQJES-UHFFFAOYAP", 
+    "INCHI_STRING": "InChI=1/C2F6/c3-1(4,5)2(6,7)8", 
+    "NAME": "R116", 
+    "REFPROP_NAME": "R116", 
+    "SMILES": "C(C(F)(F)F)(F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 293.03000000000003, 

@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "DMC", 
-    "dimethylcarbonate", 
-    "DIMETHYLCARBONATE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +177,6 @@
         1.39
       ]
     }
-  }, 
-  "CAS": "616-38-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "DimethylCarbonate", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -429,9 +412,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{3}H_{6}O_{3}", 
-  "NAME": "DimethylCarbonate", 
-  "REFPROP_NAME": "DMC", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=11526", 
+    "ALIASES": [
+      "DMC", 
+      "dimethylcarbonate", 
+      "DIMETHYLCARBONATE"
+    ], 
+    "CAS": "616-38-6", 
+    "CHEMSPIDER_ID": 11526, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "DimethylCarbonate", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{3}H_{6}O_{3}", 
+    "INCHI_KEY": "IEJIGPNLZYLLBP-UHFFFAOYAC", 
+    "INCHI_STRING": "InChI=1/C3H6O3/c1-5-3(4)6-2/h1-2H3", 
+    "NAME": "DimethylCarbonate", 
+    "REFPROP_NAME": "DMC", 
+    "SMILES": "COC(=O)OC"
+  }, 
   "STATES": {
     "critical": {
       "T": 557.0, 

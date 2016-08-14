@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R404a"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -198,18 +195,6 @@
         1.249
       ]
     }
-  }, 
-  "CAS": "R404A.PPF", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 3900.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "R404A", 
-    "ODP": 0.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -438,8 +423,25 @@
       "pseudo_pure": true
     }
   ], 
-  "NAME": "R404A", 
-  "REFPROP_NAME": "R404A", 
+  "INFO": {
+    "ALIASES": [
+      "R404a"
+    ], 
+    "CAS": "R404A.PPF", 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 3900.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "R404A", 
+      "ODP": 0.0, 
+      "PH": 0
+    }, 
+    "NAME": "R404A", 
+    "REFPROP_NAME": "R404A"
+  }, 
   "STATES": {
     "critical": {
       "T": 345.27, 

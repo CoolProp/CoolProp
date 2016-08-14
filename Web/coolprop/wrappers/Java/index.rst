@@ -70,9 +70,9 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Move into the folder you just created
     mkdir -p  CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
-    cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
     # Make the java files
-    make install
+    cmake --build .
     # Run the integration tests
     ctest --extra-verbose
 
@@ -96,7 +96,7 @@ You need to just slightly modify the building procedure::
     # Build the makefile using CMake
     cmake .. -DCOOLPROP_JAVA_MODULE=ON -DBUILD_TESTING=ON
     # Make the Java shared library
-    make install
+    cmake --build . --config Release (drop the --config Release if you use MinGW)
     # Run the integration tests
     ctest --extra-verbose
 

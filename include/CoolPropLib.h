@@ -127,6 +127,12 @@
      * @returns error_code 1 = Ok 0 = error
      */
     EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output, int n);
+    /** \brief Set configuration string
+    * @param key The key to configure
+    * @param val The value to set to the key
+    * \note you can get the error message by doing something like get_global_param_string("errstring",output)
+    */
+    EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val);
     /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS
@@ -405,6 +411,19 @@
     * @return
     */
     EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const long i, const long j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
+
+    /**
+    * @brief Set some fluid parameter (ie volume translation for cubic)
+    * @param handle The integer handle for the state class stored in memory
+	* @param i indice of the fluid the parramter should be applied too (for mixtures)
+	* @param parameter the string specifying the parameter to use, ex "cm" for volume translation
+    * @param value the value of the parameter
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long handle, const size_t i, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
     // *************************************************************************************
     // *************************************************************************************
