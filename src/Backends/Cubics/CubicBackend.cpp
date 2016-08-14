@@ -210,58 +210,25 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
 void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int &Nsolns, double &rho0, double &rho1, double &rho2){
     AbstractCubic *cubic = get_cubic().get();
     double R = cubic->get_R_u();
-    double Delta_1 = cubic->get_Delta_1();
-    double Delta_2 = cubic->get_Delta_2();
     double am = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0);
     double bm = cubic->bm_term(mole_fractions);
     double cm = cubic->cm_term();
+
+    // Introducing new variables to simplify the equation:
+    double d1 = cm - bm;
+    double d2 = cm + cubic->get_Delta_1()*bm;
+    double d3 = cm + cubic->get_Delta_2()*bm;
     
-    // ** SYMPY CODE ***
-    // R,T,v,b,a,Delta_1,Delta_2,p,Z,rho = symbols('R,T,v,b,a,Delta_1,Delta_2,p,Z,rho')
-    // eqn = (R*T/(v-b)-a/(v+Delta_1*b)/(v+Delta_2*b)-p).subs(v,1/rho)
-    // eqn2 = eqn*(-b + 1/rho)*(Delta_1*b + 1/rho)*(Delta_2*b + 1/rho)
-    // display(simplify(factor(expand(eqn2),rho)))
-    //
-    // yields:
-    // (b*rho**3*(Delta_1*Delta_2*R*T*b + Delta_1*Delta_2*b**2*p + a) - p + rho**2*(-Delta_1*Delta_2*b**2*p + Delta_1*R*T*b + Delta_1*b**2*p + Delta_2*R*T*b + Delta_2*b**2*p - a) - rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p))/rho**3
-    //
-    // Volume translation
-    // from sympy import *
-    // R,T,v,a,Delta_1,Delta_2,p,Z,rho,b,c = symbols('R,T,v,a,Delta_1,Delta_2,p,Z,rho,b,c')
-    // eqn = (R*T / (v + c - b) - a / (v + c + Delta_1*b) / (v + c + Delta_2*b) - p)*(v + c - b)*(v + c + Delta_1*b)*(v + c + Delta_2*b)
-    // eqn2 = eqn.subs(v, 1 / rho)
-    // print(simplify(factor(expand(eqn2*rho**3),rho)))
-    //
-    // yields:
-    // -p + rho**3*(Delta_1*Delta_2*R*T*b**2 + Delta_1*Delta_2*b**3*p - Delta_1*Delta_2*b**2*c*p + Delta_1*R*T*b*c + Delta_1*b**2*c*p - Delta_1*b*c**2*p + Delta_2*R*T*b*c + Delta_2*b**2*c*p - Delta_2*b*c**2*p + R*T*c**2 + a*b - a*c + b*c**2*p - c**3*p) + rho**2*(-Delta_1*Delta_2*b**2*p + Delta_1*R*T*b + Delta_1*b**2*p - 2*Delta_1*b*c*p + Delta_2*R*T*b + Delta_2*b**2*p - 2*Delta_2*b*c*p + 2*R*T*c - a + 2*b*c*p - 3*c**2*p) - rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p + 3*c*p)
-    // =>
-    // -p
-    // -rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p + 3 * c*p)
-    // + rho**2 * (-Delta_1*Delta_2*b**2 * p + Delta_1*R*T*b + Delta_1*b**2 * p - 2 * Delta_1*b*c*p + Delta_2*R*T*b + Delta_2*b**2 * p - 2 * Delta_2*b*c*p + 2 * R*T*c - a + 2 * b*c*p - 3 * c**2 * p)
-    // + rho**3 * (Delta_1*Delta_2*R*T*b**2 + Delta_1*Delta_2*b**3 * p - Delta_1*Delta_2*b**2 * c*p + Delta_1*R*T*b*c + Delta_1*b**2 * c*p - Delta_1*b*c**2 * p + Delta_2*R*T*b*c + Delta_2*b**2 * c*p - Delta_2*b*c**2 * p + R*T*c**2 + a*b - a*c + b*c**2 * p - c**3 * p)
+    // Cubic coefficients:
     double crho0 = -p;
-    double crho1 = -1.*((Delta_1+Delta_2-1)*bm*p - R*T + 3.*cm*p);
-    double crho2 = -Delta_1*Delta_2*bm*bm*p + (Delta_1+Delta_2)*bm*(R*T + (bm -2.*cm)*p) + (2.*bm-3*cm)*cm*p + 2*R*T*cm- am;
-    double crho3 = (Delta_1*Delta_2*bm + cm*(Delta_1 + Delta_2))*bm*(R*T + (bm-cm)*p) + R*T*cm*cm + (bm-cm)*(cm*cm*p+am);
+    double crho1 = R*T - p*(d1+d2+d3);
+    double crho2 = R*T*(d2 + d3) - p*(d1*(d2 + d3) + d2*d3) - am;
+    double crho3 = R*T*d2*d3 - p*d1*d2*d3 - d1*am;
+
+    // Solving the cubic:
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
     sort3(rho0, rho1, rho2);
     return;
-    
-//    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
-//    double B = cubic->bm_term(mole_fractions)*p/(R*T);
-//    double Z0=0, Z1=0, Z2=0;
-//    solve_cubic(1,
-//                B*(Delta_1+Delta_2-1)-1,
-//                A + B*B*(Delta_1*Delta_2-Delta_1-Delta_2) - B*(Delta_1+Delta_2),
-//                -A*B-Delta_1*Delta_2*(POW2(B)+POW3(B)),
-//                Nsolns, Z0, Z1, Z2);
-//    if (Nsolns == 1){ rho0 = p/(Z0*R*T); }
-//    else if (Nsolns == 3){
-//        rho0 = p/(Z0*R*T);
-//        rho1 = p/(Z1*R*T);
-//        rho2 = p/(Z2*R*T);
-//        sort3(rho0, rho1, rho2);
-//    }
 }
 
 class SaturationResidual : public CoolProp::FuncWrapper1D{
