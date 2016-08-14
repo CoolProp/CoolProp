@@ -1897,6 +1897,9 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
     }
     while(!good_Tmax);
+    if (rmin*rmax > 0 && std::abs(rmax) < std::abs(rmin)){
+        throw CoolProp::ValueError(format("HS inputs correspond to temperature above maximum temperature of EOS [%g K]",HEOS.Tmax()));
+    }
     Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
 }
 
