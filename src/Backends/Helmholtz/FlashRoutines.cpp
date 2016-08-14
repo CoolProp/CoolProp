@@ -1511,14 +1511,11 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
     }
     else
     {
-        std::cout << format("PHSU flash for mixture\n");
         if (HEOS.PhaseEnvelope.built){
             // Determine whether you are inside or outside
             SimpleState closest_state;
             std::size_t iclosest;
-            std::cout << format("pre is inside\n");
             bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
-            std::cout << format("post is inside\n");
             
             if (!twophase){
                 PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
@@ -1532,7 +1529,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend &HEOS, parameters oth
             
         }
         else{
-            throw ValueError("phase envelope must be built");
+            throw ValueError("phase envelope must be built to carry out HSU_P_flash for mixture");
         }
     }
 }
