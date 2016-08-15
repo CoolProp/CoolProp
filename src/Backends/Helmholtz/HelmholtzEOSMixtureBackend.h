@@ -250,6 +250,7 @@ public:
     CoolPropDbl calc_cvmolar(void);
     CoolPropDbl calc_cpmolar(void);
     CoolPropDbl calc_gibbsmolar(void);
+    CoolPropDbl calc_gibbsmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
     CoolPropDbl calc_helmholtzmolar(void);
     CoolPropDbl calc_cpmolar_idealgas(void);
@@ -432,7 +433,8 @@ public:
 
     virtual CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
     virtual CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase);
-
+    virtual void solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax, CoolPropDbl&light, CoolPropDbl &heavy);
+    virtual CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax);
 };
 
 class CorrespondingStatesTerm

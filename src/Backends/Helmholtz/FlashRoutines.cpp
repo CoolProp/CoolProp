@@ -1909,6 +1909,38 @@ TEST_CASE("PD with T very large should yield error","[PDflash]")
 	HEOS->update(DmassT_INPUTS, 1.1, 1.5*Tc);
 	CHECK_THROWS(HEOS->update(DmassP_INPUTS, 2, 5*HEOS->p()));
 }
+
+TEST_CASE("Stability testing","[stability]")
+{
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("Methane&Ethane&n-Propane&n-Butane",'&')));
+    std::vector<double> z(4); z[0] = 0.1; z[1] = 0.2; z[2] = 0.3; z[3] = 0.4;
+    HEOS->set_mole_fractions(z);
+    
+    HEOS->update(PQ_INPUTS, 101325, 0);
+    double TL = HEOS->T(), rhoL = HEOS->rhomolar();
+    
+    HEOS->update(PQ_INPUTS, 101325, 1);
+    double TV = HEOS->T(), rhoV = HEOS->rhomolar();
+    
+    SECTION("Liquid (feed is stable)"){
+        StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
+        stability_tester.set_TP(TL-1, 101325);
+        CHECK(stability_tester.is_stable() == true);
+    }
+    SECTION("Vapor (feed is stable)"){
+        StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
+        stability_tester.set_TP(TV+1, 101325);
+        CHECK(stability_tester.is_stable() == true);
+    }
+    SECTION("Two-phase (feed is unstable)"){
+        StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
+        stability_tester.set_TP((TV+TL)/2.0, 101325);
+        CHECK(stability_tester.is_stable() == false);
+    }
+}
+    
+    
+    
 #endif
 
 } /* namespace CoolProp */
