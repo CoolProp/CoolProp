@@ -56,41 +56,24 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
     }
     else{
         // Following the strategy of Gernert, 2014
-        
-        // Step 1 a) Get lnK factors using Wilson
-        std::vector<CoolPropDbl> lnK(HEOS.get_mole_fractions().size());
-        for (std::size_t i = 0; i < lnK.size(); ++i){
-            lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS._T, HEOS._p, i);
-        }
-        
-        // Use Rachford-Rice to check whether you are in a homogeneous phase
-        CoolPropDbl g_RR_0 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, static_cast<CoolPropDbl>(0.0));
-        if (g_RR_0 < 0){
-            // Subcooled liquid - done
-            CoolPropDbl rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_liquid);
-            HEOS.specify_phase(iphase_liquid);
-            HEOS.update_TP_guessrho(HEOS._T, HEOS._p, rhomolar_guess);
-            HEOS.unspecify_phase();
-            return;
+        StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
+        if (!stability_tester.is_stable()){
+            throw CoolProp::ValueError("PT_INPUTS are two-phase, not yet supported");
         }
         else{
-            CoolPropDbl g_RR_1 = g_RachfordRice(HEOS.get_mole_fractions(), lnK, static_cast<CoolPropDbl>(1.0));
-            if (g_RR_1 > 0){
-                // Superheated vapor - done
-                CoolPropDbl rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);
-                HEOS.specify_phase(iphase_gas);
-                HEOS.update_TP_guessrho(HEOS._T, HEOS._p, rhomolar_guess);
-                HEOS.unspecify_phase();
-                return;
-            }
+            // It's single-phase
+            double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+            HEOS.update_DmolarT_direct(rho, HEOS.T());
+            HEOS._Q = -1;
+            HEOS._phase = iphase_liquid;
         }
     }
 }
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
-    if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
+    if (HEOS.is_pure_or_pseudopure)
     {
-        if (HEOS.is_pure_or_pseudopure)
+        if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
         {
             // At very low temperature (near the triple point temp), the isotherms are VERY steep
             // Thus it can be very difficult to determine state based on ps = f(T)
@@ -111,14 +94,13 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 throw ValueError("twophase not implemented yet");
             }
         }
-        else{
-            PT_flash_mixtures(HEOS);
-        }
+        // Find density
+        HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
+        HEOS._Q = -1;
     }
-    
-    // Find density
-    HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
-    HEOS._Q = -1;
+    else{
+        PT_flash_mixtures(HEOS);
+    }
 }
     
 // Define the residual to be driven to zero

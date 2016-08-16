@@ -458,6 +458,9 @@ namespace StabilityRoutines{
         /** \brief Calculate the liquid and vapor phase densities based on the guess values
          */
         void rho_TP_w_guesses();
+        /** \brief Calculate the liquid and vapor phase densities using the global analysis
+         */
+        void rho_TP_global();
         /** \brief Calculate the liquid and vapor phase densities based on SRK, with Peneloux volume translation afterwards
          */
         void rho_TP_SRK_translated();

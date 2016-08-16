@@ -1765,7 +1765,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         HEOS.SatL->set_mole_fractions(x); HEOS.SatV->set_mole_fractions(y);
         HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
         
-        this->rho_TP_w_guesses();
+        this->rho_TP_global();
 
         // Calculate the new K-factors from the fugacity coefficients
         double g0 = 0, g1 = 0;
@@ -1858,10 +1858,11 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
         HEOS.SatL->calc_reducing_state();  HEOS.SatV->calc_reducing_state();
         
-        // Re-calculate densities with translated SRK
-        rho_TP_SRK_translated();
-        // Now calculate densities again
-        rho_TP_w_guesses();
+        rho_TP_global();
+//        // Re-calculate densities with translated SRK
+//        rho_TP_SRK_translated();
+//        // Now calculate densities again
+//        rho_TP_w_guesses();
         
         // Calculate and store TPD values
         double tpd_L, tpd_H;
@@ -1890,6 +1891,22 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     }
     // We got this far, no conditions suggest phase split, it seems stable
     _stable = true;
+}
+    
+void StabilityRoutines::StabilityEvaluationClass::rho_TP_global(){
+    
+    // Calculate the temperature and pressure to be used
+    double the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
+    double the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
+    
+    // Calculate covolume of SRK, use it as the maximum density
+    double bL = HEOS.SatL->SRK_covolume();
+    double bV = HEOS.SatV->SRK_covolume();
+    
+    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 1/bL*1.5);
+    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 1/bV*1.5);
+    HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
+    HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
 }
     
 void StabilityRoutines::StabilityEvaluationClass::rho_TP_w_guesses(){

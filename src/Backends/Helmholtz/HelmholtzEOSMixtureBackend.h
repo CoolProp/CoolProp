@@ -414,6 +414,9 @@ public:
     CoolPropDbl calc_compressibility_factor(void){return 1+delta()*dalphar_dDelta();};
     
     void calc_phase_envelope(const std::string &type);
+    
+    CoolPropDbl SRK_covolume();
+    
 
     // ***************************************************************
     // ***************************************************************
@@ -433,7 +436,8 @@ public:
 
     virtual CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
     virtual CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase);
-    virtual void solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax, CoolPropDbl&light, CoolPropDbl &heavy);
+    enum StationaryPointReturnFlag {ZERO_STATIONARY_POINTS, ONE_STATIONARY_POINT_FOUND, TWO_STATIONARY_POINTS_FOUND};
+    virtual StationaryPointReturnFlag solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax, CoolPropDbl&light, CoolPropDbl &heavy);
     virtual CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax);
 };
 

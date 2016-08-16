@@ -2078,7 +2078,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pressure_nocache(CoolPropDbl T, Coo
     // Get pressure
     return rhomolar*gas_constant()*T*(1+delta*dalphar_dDelta);
 }
-void HelmholtzEOSMixtureBackend::solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax, CoolPropDbl&light, CoolPropDbl &heavy){
+HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax, CoolPropDbl&light, CoolPropDbl &heavy){
+    
     /// The residual to be used to find the location where dpdrho=0 for given T
     class dpdrho_resid : public FuncWrapper1DWithTwoDerivs
     {
@@ -2123,6 +2124,23 @@ void HelmholtzEOSMixtureBackend::solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p,
             throw CoolProp::ValueError("curvature cannot be negative");
         }
     }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; heavy = -1;}
+    if (light > 0 && heavy > 0){
+        // Found two stationary points, done!
+        return StationaryPointReturnFlag::TWO_STATIONARY_POINTS_FOUND;
+    }
+    // If no solution is found for dpdrho|T=0 starting at high and low densities,
+    // then try to do a bounded solver to see if you can find any solutions.  If you
+    // can't, p = f(rho) is probably monotonic (supercritical?), and the bounds are
+    else if (light < 0 && heavy < 0){
+        double dpdrho_min = resid.call(1e-10);
+        double dpdrho_max = resid.call(rhomax);
+        if (dpdrho_max*dpdrho_min > 0){
+            return StationaryPointReturnFlag::ZERO_STATIONARY_POINTS;
+        }
+        else{
+            double root = Brent(resid, 1e-10, rhomax, DBL_EPSILON, 1e-8, 100);
+        }
+    }
 }
 // Define the residual to be driven to zero
 class SolverTPResid : public FuncWrapper1DWithThreeDerivs
@@ -2153,61 +2171,79 @@ public:
         return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 4*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4())/p;
     };
 };
-
-CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max){
-    // Find the densities along the isotherm where dpdrho|T = 0
-    CoolPropDbl light = -1, heavy = -1;
-    solver_dpdrho0_Tp(T, p, rhomolar_max, light, heavy);
-    
-    if (light < 0 || heavy < 0){
-        throw CoolProp::ValueError(format("Failed to obtain stationary point densities for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g")));
+CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume(){
+    double b = 0;
+    for (std::size_t i = 0; i < mole_fractions.size(); ++i){
+        // Get the parameters for the cubic EOS
+        CoolPropDbl Tc = get_fluid_constant(i, iT_critical),
+                    pc = get_fluid_constant(i, iP_critical);
+        CoolPropDbl R = 8.3144598;
+        b += mole_fractions[i]*0.08664*R*Tc/pc;
     }
+    return b;
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max){
+    // Find the densities along the isotherm where dpdrho|T = 0 (if you can)
+    CoolPropDbl light = -1, heavy = -1;
+    StationaryPointReturnFlag retval = solver_dpdrho0_Tp(T, p, rhomolar_max, light, heavy);
     
-    // Calculate the pressures at the min and max densities where dpdrho|T = 0
-    double p_at_rhomin = calc_pressure_nocache(T, light);
-    double p_at_rhomax = calc_pressure_nocache(T, heavy);
-
     // Define the solver class
     SolverTPResid resid(this, T, p);
     
-    double rho_liq = -1, rho_vap = -1;
-    if (p > p_at_rhomax){
-        // Look for liquid root starting at stationary point density
-        rho_liq = Brent(resid, heavy, rhomolar_max, DBL_EPSILON, 1e-8, 100);
+    if (retval == StationaryPointReturnFlag::ZERO_STATIONARY_POINTS){
+        // It's monotonic (no stationary points found), so do the full bounded solver
+        // for the density
+        double rho = Brent(resid, 1e-10, rhomolar_max, DBL_EPSILON, 1e-8, 100);
+        return rho;
     }
-    if (p < p_at_rhomin){
-        // Look for vapor root starting at stationary point density
-        rho_vap = Brent(resid, light, 1e-10, DBL_EPSILON, 1e-8, 100);
-    }
+    else if (retval == StationaryPointReturnFlag::TWO_STATIONARY_POINTS_FOUND){
     
-    if (rho_vap > 0 && rho_liq >0){
-        // Both densities are the same
-        if (std::abs(rho_vap-rho_liq) < 1e-10){
-            // return one of them
+        // Calculate the pressures at the min and max densities where dpdrho|T = 0
+        double p_at_rhomin = calc_pressure_nocache(T, light);
+        double p_at_rhomax = calc_pressure_nocache(T, heavy);
+        
+        double rho_liq = -1, rho_vap = -1;
+        if (p > p_at_rhomax){
+            // Look for liquid root starting at stationary point density
+            rho_liq = Brent(resid, heavy, rhomolar_max, DBL_EPSILON, 1e-8, 100);
+        }
+        if (p < p_at_rhomin){
+            // Look for vapor root starting at stationary point density
+            rho_vap = Brent(resid, light, 1e-10, DBL_EPSILON, 1e-8, 100);
+        }
+        
+        if (rho_vap > 0 && rho_liq >0){
+            // Both densities are the same
+            if (std::abs(rho_vap-rho_liq) < 1e-10){
+                // return one of them
+                return rho_vap;
+            }
+            else{
+                // Two solutions found, keep the one with lower Gibbs energy
+                double gibbsmolar_vap = calc_gibbsmolar_nocache(T, rho_vap);
+                double gibbsmolar_liq = calc_gibbsmolar_nocache(T, rho_liq);
+                if (gibbsmolar_liq < gibbsmolar_vap){
+                    return rho_liq;
+                }
+                else{
+                    return rho_vap;
+                }
+            }
+        }
+        else if (rho_vap < 0 && rho_liq >0){
+            // Liquid root found, return it
+            return rho_liq;
+        }
+        else if (rho_vap > 0 && rho_liq < 0){
+            // Vapor root found, return it
             return rho_vap;
         }
         else{
-            // Two solutions found, keep the one with lower Gibbs energy
-            double gibbsmolar_vap = calc_gibbsmolar_nocache(T, rho_vap);
-            double gibbsmolar_liq = calc_gibbsmolar_nocache(T, rho_liq);
-            if (gibbsmolar_liq < gibbsmolar_vap){
-                return rho_liq;
-            }
-            else{
-                return rho_vap;
-            }
+            throw CoolProp::ValueError(format("No density solutions for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g")));
         }
     }
-    else if (rho_vap < 0 && rho_liq >0){
-        // Liquid root found, return it
-        return rho_liq;
-    }
-    else if (rho_vap > 0 && rho_liq < 0){
-        // Vapor root found, return it
-        return rho_vap;
-    }
     else{
-        throw CoolProp::ValueError(format("No density solutions for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g")));
+        throw CoolProp::ValueError(format("One stationary point (not good) for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g")));
     }
 };
     
@@ -3642,12 +3678,9 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 	}
     add_TPD_state();
 	TPD_state->set_mole_fractions(w);
-	if (rhomolar_guess < 0){
-		TPD_state->update(PT_INPUTS, p, T);
-	}
-	else{
-		TPD_state->update_TP_guessrho(T, p, rhomolar_guess);
-	}
+    
+    TPD_state->solver_rho_Tp_global(T, p, 1/TPD_state->SRK_covolume()*1.5);
+    
 	double summer = 0;
 	for (std::size_t i = 0; i < w.size(); ++i){
 		summer += w[i] * (log(MixtureDerivatives::fugacity_i(*TPD_state, i, XN_DEPENDENT)) 
