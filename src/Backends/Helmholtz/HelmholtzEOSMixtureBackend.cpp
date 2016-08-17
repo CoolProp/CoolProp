@@ -2126,7 +2126,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
     }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; heavy = -1;}
     if (light > 0 && heavy > 0){
         // Found two stationary points, done!
-        return StationaryPointReturnFlag::TWO_STATIONARY_POINTS_FOUND;
+        return TWO_STATIONARY_POINTS_FOUND;
     }
     // If no solution is found for dpdrho|T=0 starting at high and low densities,
     // then try to do a bounded solver to see if you can find any solutions.  If you
@@ -2135,10 +2135,10 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         double dpdrho_min = resid.call(1e-10);
         double dpdrho_max = resid.call(rhomax);
         if (dpdrho_max*dpdrho_min > 0){
-            return StationaryPointReturnFlag::ZERO_STATIONARY_POINTS;
+            return ZERO_STATIONARY_POINTS;
         }
         else{
-            double root = Brent(resid, 1e-10, rhomax, DBL_EPSILON, 1e-8, 100);
+            throw CoolProp::ValueError("zero stationary points -- does this make sense?");
         }
     }
 }
