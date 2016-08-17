@@ -2190,13 +2190,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, Cool
     // Define the solver class
     SolverTPResid resid(this, T, p);
     
-    if (retval == StationaryPointReturnFlag::ZERO_STATIONARY_POINTS){
+    if (retval == ZERO_STATIONARY_POINTS){
         // It's monotonic (no stationary points found), so do the full bounded solver
         // for the density
         double rho = Brent(resid, 1e-10, rhomolar_max, DBL_EPSILON, 1e-8, 100);
         return rho;
     }
-    else if (retval == StationaryPointReturnFlag::TWO_STATIONARY_POINTS_FOUND){
+    else if (retval == TWO_STATIONARY_POINTS_FOUND){
     
         // Calculate the pressures at the min and max densities where dpdrho|T = 0
         double p_at_rhomin = calc_pressure_nocache(T, light);
@@ -3674,7 +3674,7 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 	
 	const std::vector<CoolPropDbl> &z = this->get_mole_fractions_ref();
 	if (w.size() != z.size()){ 
-		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size())); 
+		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size()));
 	}
     add_TPD_state();
 	TPD_state->set_mole_fractions(w);
