@@ -389,7 +389,12 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
     _rhomolar = 1/(_Q/rhoV+(1-_Q)/rhoL);
     _phase = iphase_twophase;
 }
-
+CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max)
+{
+    _rhomolar = solver_rho_Tp(T, p, 40000);
+    return static_cast<double>(_rhomolar);
+    
+}
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess){
     int Nsoln = 0;
     double rho0=0, rho1=0, rho2=0, rho = -1;
@@ -454,12 +459,13 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass(void)
 
 void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
     if (parameter == "kij" || parameter == "k_ij"){
-        get_cubic()->set_kij(i,j,value);
-        if (this->SatL.get() != NULL){ this->SatL->set_binary_interaction_double(i,j,"kij",value); }
-        if (this->SatV.get() != NULL){ this->SatV->set_binary_interaction_double(i,j,"kij",value); }
+        get_cubic()->set_kij(i, j, value);
     }
     else{
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        (*it)->set_binary_interaction_double(i,j,parameter,value);
     }
 };
 double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){

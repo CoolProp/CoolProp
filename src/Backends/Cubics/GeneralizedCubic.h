@@ -59,7 +59,7 @@ public:
         simple_aii = (C1.empty() && C2.empty() && C3.empty() && L_Twu.empty() && M_Twu.empty() && N_Twu.empty());
     };
     /// Set the kij factor for the ij pair
-    void set_kij(std::size_t i, std::size_t j, double val){ k[i][j] = val; }
+    void set_kij(std::size_t i, std::size_t j, double val){ k[i][j] = val; k[j][i] = val;}
     /// Get the kij factor for the ij pair
     double get_kij(std::size_t i, std::size_t j){ return k[i][j]; }
     /// Get the vector of critical temperatures (in K)
