@@ -670,9 +670,6 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
                 // Compositions are z, z_incipient
                 NR.call(HEOS, IO.y, IO.x, IO);
             }
-            
-            double mu0 = HEOS.SatL->chemical_potential(0);
-            double mu1 = HEOS.SatV->chemical_potential(0);
 			
         }
                     
