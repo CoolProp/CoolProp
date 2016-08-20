@@ -180,6 +180,7 @@ public:
     CoolPropDbl calc_rhomolar_critical(void);
 	CoolPropDbl calc_rhomolar_reducing(void);
     CoolPropDbl calc_Ttriple(void);
+    CoolPropDbl calc_acentric_factor(void);
 	CoolPropDbl calc_gas_constant(void);
     CoolPropDbl calc_dipole_moment(void);
 

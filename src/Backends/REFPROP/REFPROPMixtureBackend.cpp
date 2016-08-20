@@ -685,6 +685,23 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing(){
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<CoolPropDbl>(rhored_mol_L*1000);
 };
+CoolPropDbl REFPROPMixtureBackend::calc_acentric_factor(){
+    //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas) (see calc_Ttriple())
+    this->check_loaded_fluid();
+    double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
+    long icomp = 1L;
+    // Check if more than one
+    std::size_t size = mole_fractions.size();
+    if (size == 1)
+    {
+        // Get value for first component
+        INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+        return static_cast<CoolPropDbl>(acf);
+    }
+    else{
+        throw CoolProp::ValueError("acentric factor only available for pure components in REFPROP backend");
+    }
+};
 CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
 //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
 //     c
