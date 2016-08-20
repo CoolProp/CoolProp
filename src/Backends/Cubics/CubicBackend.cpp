@@ -485,35 +485,25 @@ void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend *donor){
             this->set_binary_interaction_double(i, j, "kij", val);
         }
     }
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
+        ACB->copy_k(this);
+    }
 }
 
 void CoolProp::AbstractCubicBackend::set_C_MC(double c1, double c2, double c3)
 {
     get_cubic()->set_C_MC(c1, c2, c3);
-
-    if (SatL.get() != NULL){ 
-        /// Cast to this type so that we can access its internal methods
-        CoolProp::AbstractCubicBackend* _SatL = static_cast<CoolProp::AbstractCubicBackend*>(this->SatL.get());
-        _SatL->get_cubic()->set_C_MC(c1, c2, c3);
-    }
-    if (SatV.get() != NULL){ 
-        /// Cast to this type so that we can access its internal methods
-        CoolProp::AbstractCubicBackend* _SatV = static_cast<CoolProp::AbstractCubicBackend*>(this->SatV.get());
-        _SatV->get_cubic()->set_C_MC(c1, c2, c3);
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
+        ACB->set_C_MC(c1,c2,c3);
     }
 }
 
 void CoolProp::AbstractCubicBackend::set_C_Twu(double L, double M, double N){
     get_cubic()->set_C_Twu(L, M, N);
-    
-    if (SatL.get() != NULL){
-        /// Cast to this type so that we can access its internal methods
-        CoolProp::AbstractCubicBackend* _SatL = static_cast<CoolProp::AbstractCubicBackend*>(this->SatL.get());
-        _SatL->get_cubic()->set_C_Twu(L, M, N);
-    }
-    if (SatV.get() != NULL){
-        /// Cast to this type so that we can access its internal methods
-        CoolProp::AbstractCubicBackend* _SatV = static_cast<CoolProp::AbstractCubicBackend*>(this->SatV.get());
-        _SatV->get_cubic()->set_C_Twu(L, M, N);
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
+        ACB->set_C_Twu(L,M,N);
     }
 }
