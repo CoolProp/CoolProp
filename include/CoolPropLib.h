@@ -423,7 +423,7 @@
     * @param buffer_length The length of the buffer for the error code
     * @return
     */
-    EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long handle, const size_t i, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
+    EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long handle, const long i, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
     // *************************************************************************************
     // *************************************************************************************
