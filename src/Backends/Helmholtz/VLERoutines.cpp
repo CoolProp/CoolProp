@@ -1759,7 +1759,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
     HEOS.SatL->set_mole_fractions(x); HEOS.SatL->calc_reducing_state();
     HEOS.SatV->set_mole_fractions(y); HEOS.SatV->calc_reducing_state();
     
-    if (debug){ fmt::printf("2) SS1: i beta K rho' rho''\n"); }
+    if (debug){ fmt::printf("2) SS1: i beta K x y rho' rho''\n"); }
     for (int step_count = 0; step_count < num_steps; ++step_count){
         // Set the composition
         HEOS.SatL->set_mole_fractions(x); HEOS.SatV->set_mole_fractions(y);
@@ -1791,7 +1791,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
         normalize_vector(x);
         normalize_vector(y);
-        if (debug){ fmt::printf("2) %d %g %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f"), rhomolar_liq, rhomolar_vap); }
+        if (debug){ fmt::printf("2) %d %g %s %s %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f"), vec_to_string(x, "%0.6f"), vec_to_string(y, "%0.6f"), rhomolar_liq, rhomolar_vap); }
     }
 }
 void StabilityRoutines::StabilityEvaluationClass::check_stability(){
@@ -1804,7 +1804,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     // If beta value is between epsilon and 1-epsilon, check the TPD
     if (beta > DBL_EPSILON && beta < 1-DBL_EPSILON){
         
-        // Set the composition
+        // Set the composition back to the bulk composition for both liquid and vapor phases
         HEOS.SatL->set_mole_fractions(z); HEOS.SatV->set_mole_fractions(z);
         HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
         
@@ -1815,6 +1815,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
         
         // Calculate the tpd and the Gibbs energy difference (Gernert, 2014, Eqs. 20-22)
+        // The trial compositions are the phase compositions from before
         this->tpd_liq = HEOS.SatL->tangent_plane_distance(the_T, the_p, x, rhomolar_liq);
         this->tpd_vap = HEOS.SatV->tangent_plane_distance(the_T, the_p, y, rhomolar_vap);
         
@@ -1835,9 +1836,10 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     HEOS.update_DmolarT_direct(rho_bulk, the_T);
     
     // Calculate the fugacity coefficient at initial composition of the bulk phase
-    std::vector<double> fugacity_coefficient0(z.size());
+    std::vector<double> fugacity_coefficient0(z.size()), fugacity0(z.size());
     for (std::size_t i = 0; i < z.size(); ++i){
         fugacity_coefficient0[i] = HEOS.fugacity_coefficient(i);
+        fugacity0[i] = HEOS.fugacity(i);
     }
     
     // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
@@ -1852,45 +1854,53 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     // For each composition, use successive substitution to try to evaluate stability
     if (debug){ fmt::printf("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n"); }
 
+    // We got this far, we assume stable phases
+    _stable = true;
+    
+    double diffbulkL = 0, diffbulkH = 0;
     for (int step_count = 0; step_count < 20; ++step_count){
         
         // Set the composition
         HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
         HEOS.SatL->calc_reducing_state();  HEOS.SatV->calc_reducing_state();
         
+        // Do the global density solver for both phases
         rho_TP_global();
-//        // Re-calculate densities with translated SRK
-//        rho_TP_SRK_translated();
-//        // Now calculate densities again
-//        rho_TP_w_guesses();
         
-        // Calculate and store TPD values
-        double tpd_L, tpd_H;
-        tpd_L = HEOS.SatV->tangent_plane_distance(the_T, the_p, xL, rhomolar_vap);
-        tpd_H = HEOS.SatL->tangent_plane_distance(the_T, the_p, xH, rhomolar_liq);
+        double tpd_L = 0, tpd_H = 0;
+        for (std::size_t i = 0; i < xL.size(); ++i){
+            tpd_L += xL[i] * (log(MixtureDerivatives::fugacity_i(*HEOS.SatV, i, XN_DEPENDENT)) - log(fugacity0[i]));
+            tpd_H += xH[i] * (log(MixtureDerivatives::fugacity_i(*HEOS.SatL, i, XN_DEPENDENT)) - log(fugacity0[i]));
+        }
         tpdL.push_back(tpd_L); tpdH.push_back(tpd_H);
         
         // Calculate the new composition from the fugacity coefficients
-        double diffL = 0, diffH = 0;
+        diffbulkL = 0, diffbulkH = 0;
         for (std::size_t i = 0; i < z.size(); ++i){
             xL[i] = z[i]*fugacity_coefficient0[i]/HEOS.SatV->fugacity_coefficient(i);
-            diffL += xL[i] - z[i];
+            diffbulkL += std::abs(xL[i] - z[i]);
             xH[i] = z[i]*fugacity_coefficient0[i]/HEOS.SatL->fugacity_coefficient(i);
-            diffH += xH[i] - z[i];
+            diffbulkH += std::abs(xH[i] - z[i]);
         }
         normalize_vector(xL);
         normalize_vector(xH);
         if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
         
-        // Check if one phase has the bulk composition, if so, phases split, quit
-        if (std::abs(diffL) < 1e-10 || std::abs(diffH) < 1e-10){
+        // Check if both phases have the bulk composition. If so, no phase split, all phases are the same
+        if (diffbulkL < 1e-6 && diffbulkH < 1e-6){
             _stable = true; return;
         }
         
-        if (tpd_L < -1e-12 || tpd_H < -1e-12){_stable = false; return;}
+        // Check if either tpd is negative, if so, phases definitively split, quit
+        if (tpd_L < -1e-12 || tpd_H < -1e-12){
+            _stable = false; return;
+        }
     }
-    // We got this far, no conditions suggest phase split, it seems stable
-    _stable = true;
+    if (diffbulkH > 0.25 || diffbulkL > 0.25){
+        // At least one test phase is definitely not the bulk composition, so phase split predicted
+        _stable = false;
+    }
+
 }
     
 void StabilityRoutines::StabilityEvaluationClass::rho_TP_global(){
@@ -1907,6 +1917,9 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_global(){
     double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 1/bV*1.5);
     HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
     HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
+    
+    rhomolar_liq = HEOS.SatL->rhomolar();
+    rhomolar_vap = HEOS.SatV->rhomolar();
 }
     
 void StabilityRoutines::StabilityEvaluationClass::rho_TP_w_guesses(){
