@@ -186,6 +186,9 @@ public:
     
     // Set the Twu constants L,M,N for a pure fluid
     void set_C_Twu(double L, double M, double N);
+
+	// Set fluid parameter (currently the volume translation parameter)
+	void set_fluid_parameter_double(const size_t i, const std::string parameter, const double value);
     
 };
 

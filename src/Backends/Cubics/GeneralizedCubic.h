@@ -30,6 +30,7 @@ protected:
     std::vector<double> C1, C2, C3; ///< The Mathias-Copeman coefficients for a_ii
     std::vector<double> L_Twu, M_Twu, N_Twu; ///< The Twu coefficients for a_ii
     AII_Model aii_model; ///< Enumeration for the aii model in use
+    double cm; ///< The volume translation parameter
 public:
     static const double rho_r, T_r;
     /**
@@ -55,6 +56,7 @@ public:
     {
         N = static_cast<int>(Tc.size());
         k.resize(N, std::vector<double>(N, 0));
+        cm = 0.;
         /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
         simple_aii = (C1.empty() && C2.empty() && C3.empty() && L_Twu.empty() && M_Twu.empty() && N_Twu.empty());
     };
@@ -118,13 +120,13 @@ public:
     virtual double m_ii(std::size_t i) = 0;
     
     /// The residual non-dimensionalized Helmholtz energy \f$\alpha^r\f$
-    double alphar(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta);
+    virtual double alphar(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta);
     /// The first composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d_alphar_dxi(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, bool xN_independent);
+    virtual double d_alphar_dxi(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, bool xN_independent);
     /// The second composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d2_alphar_dxidxj(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent);
+    virtual double d2_alphar_dxidxj(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent);
     /// The third composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d3_alphar_dxidxjdxk(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
+    virtual double d3_alphar_dxidxjdxk(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
     
     /**
      * \brief The n-th derivative of \f$a_m\f$ with respect to \f$\tau\f$
@@ -190,7 +192,15 @@ public:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     virtual double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
-    
+	/**
+	* \brief The term \f$c_{\rm m}\f$ (volume translation)
+	*/
+	virtual double cm_term();
+	/// Set the volume translation parameter
+	void set_cm(double val) { cm = val; }
+
+protected:
+
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$
      * \param tau The reciprocal reduced temperature \f$\tau=T_r/T\f$
@@ -401,8 +411,8 @@ public:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d2_c_term_dxidxj(const std::vector<double> &x, std::size_t i, std::size_t j, bool xN_independent){
-        double b = bm_term(x);
-        return (2*d_bm_term_dxi(x, i, xN_independent)*d_bm_term_dxi(x, j, xN_independent) - b*d2_bm_term_dxidxj(x, i,j,xN_independent))/pow(b, 3);
+        double bm = bm_term(x);
+        return (2*d_bm_term_dxi(x, i, xN_independent)*d_bm_term_dxi(x, j, xN_independent) - bm*d2_bm_term_dxidxj(x, i,j,xN_independent))/pow(bm, 3);
     };
     /**
      * \brief The third composition derivative of the term \f$c\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
@@ -413,12 +423,12 @@ public:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     double d3_c_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent){
-        double b = bm_term(x);
-        return 1/pow(b,4)*(2*b*(d_bm_term_dxi(x, i, xN_independent)*d2_bm_term_dxidxj(x, j, k, xN_independent)
+        double bm = bm_term(x);
+        return 1/pow(bm,4)*(2*bm*(d_bm_term_dxi(x, i, xN_independent)*d2_bm_term_dxidxj(x, j, k, xN_independent)
                                 +d_bm_term_dxi(x, j, xN_independent)*d2_bm_term_dxidxj(x, i, k, xN_independent)
                                 +d_bm_term_dxi(x, k, xN_independent)*d2_bm_term_dxidxj(x, i, j, xN_independent)
                                 )
-                           - pow(b,2)*d3_bm_term_dxidxjdxk(x, i,j,k,xN_independent)
+                           - pow(bm,2)*d3_bm_term_dxidxjdxk(x, i,j,k,xN_independent)
                            -6*d_bm_term_dxi(x, i, xN_independent)*d_bm_term_dxi(x, j, xN_independent)*d_bm_term_dxi(x, k, xN_independent)
                            );
     };
@@ -434,8 +444,9 @@ public:
      * \param x The vector of mole fractions
      */
     double A_term(double delta, const std::vector<double> &x){
-        double b = bm_term(x);
-        return log((Delta_1*delta*rho_r*b+1)/(Delta_2*delta*rho_r*b+1));
+        double bm = bm_term(x);
+        double cm = cm_term();
+        return log((delta*rho_r*(Delta_1*bm+cm)+1)/(delta*rho_r*(Delta_2*bm + cm) +1));
     };
     /**
      * \brief The first composition derivative of the term \f$A\f$ used in the pure composition partial derivatives of \f$\psi^{(+)}\f$
