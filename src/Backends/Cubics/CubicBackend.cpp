@@ -460,13 +460,7 @@ double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::
 };
 
 void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend *donor){
-    std::size_t N = mole_fractions.size();
-    for (std::size_t i = 0; i < N; ++i){
-        for (std::size_t j = i+1; j < N; ++j){
-            double val = donor->get_binary_interaction_double(i, j, "kij");
-            this->set_binary_interaction_double(i, j, "kij", val);
-        }
-    }
+    get_cubic()->set_kmat(donor->get_cubic()->get_kmat());
     for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
         AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
         ACB->copy_k(this);

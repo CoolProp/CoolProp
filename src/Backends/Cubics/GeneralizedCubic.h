@@ -60,6 +60,10 @@ public:
         /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
         simple_aii = (C1.empty() && C2.empty() && C3.empty() && L_Twu.empty() && M_Twu.empty() && N_Twu.empty());
     };
+    /// Get the entire kij matrix in one shot
+    const std::vector< std::vector<double> > & get_kmat(){return k;};
+    /// Set the entire kij matrix in one shot
+    void set_kmat(const std::vector< std::vector<double> > &k){ this->k = k; };
     /// Set the kij factor for the ij pair
     void set_kij(std::size_t i, std::size_t j, double val){ k[i][j] = val; k[j][i] = val;}
     /// Get the kij factor for the ij pair
