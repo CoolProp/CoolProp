@@ -1809,8 +1809,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
         
         // Update the densities in each class
-        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 20000);
-        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 20000);
+        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 30000);
+        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 30000);
         HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
         HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
         
@@ -1832,7 +1832,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
     
     // Use the global density solver to obtain the density root (or the lowest Gibbs energy root if more than one)
-    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 20000);
+    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 30000);
     HEOS.update_DmolarT_direct(rho_bulk, the_T);
     
     // Calculate the fugacity coefficient at initial composition of the bulk phase
