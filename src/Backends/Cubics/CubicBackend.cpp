@@ -210,43 +210,25 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
 void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int &Nsolns, double &rho0, double &rho1, double &rho2){
     AbstractCubic *cubic = get_cubic().get();
     double R = cubic->get_R_u();
-    double Delta_1 = cubic->get_Delta_1();
-    double Delta_2 = cubic->get_Delta_2();
     double am = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0);
     double bm = cubic->bm_term(mole_fractions);
+    double cm = cubic->cm_term();
+
+    // Introducing new variables to simplify the equation:
+    double d1 = cm - bm;
+    double d2 = cm + cubic->get_Delta_1()*bm;
+    double d3 = cm + cubic->get_Delta_2()*bm;
     
-    // ** SYMPY CODE ***
-    // R,T,v,b,a,Delta_1,Delta_2,p,Z,rho = symbols('R,T,v,b,a,Delta_1,Delta_2,p,Z,rho')
-    // eqn = (R*T/(v-b)-a/(v+Delta_1*b)/(v+Delta_2*b)-p).subs(v,1/rho)
-    // eqn2 = eqn*(-b + 1/rho)*(Delta_1*b + 1/rho)*(Delta_2*b + 1/rho)
-    // display(simplify(factor(expand(eqn2),rho)))
-    //
-    // yields:
-    // (b*rho**3*(Delta_1*Delta_2*R*T*b + Delta_1*Delta_2*b**2*p + a) - p + rho**2*(-Delta_1*Delta_2*b**2*p + Delta_1*R*T*b + Delta_1*b**2*p + Delta_2*R*T*b + Delta_2*b**2*p - a) - rho*(Delta_1*b*p + Delta_2*b*p - R*T - b*p))/rho**3
-    
+    // Cubic coefficients:
     double crho0 = -p;
-    double crho1 = -1*((Delta_1+Delta_2-1)*bm*p - R*T);
-    double crho2 = -Delta_1*Delta_2*bm*bm*p + (Delta_1+Delta_2)*(R*T*bm + bm*bm*p) - am;
-    double crho3 = bm*(Delta_1*Delta_2*(R*T*bm + bm*bm*p) + am);
+    double crho1 = R*T - p*(d1+d2+d3);
+    double crho2 = R*T*(d2 + d3) - p*(d1*(d2 + d3) + d2*d3) - am;
+    double crho3 = R*T*d2*d3 - p*d1*d2*d3 - d1*am;
+
+    // Solving the cubic:
     solve_cubic(crho3, crho2, crho1, crho0, Nsolns, rho0, rho1, rho2);
     sort3(rho0, rho1, rho2);
     return;
-    
-//    double A = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0)*p/(POW2(R*T));
-//    double B = cubic->bm_term(mole_fractions)*p/(R*T);
-//    double Z0=0, Z1=0, Z2=0;
-//    solve_cubic(1,
-//                B*(Delta_1+Delta_2-1)-1,
-//                A + B*B*(Delta_1*Delta_2-Delta_1-Delta_2) - B*(Delta_1+Delta_2),
-//                -A*B-Delta_1*Delta_2*(POW2(B)+POW3(B)),
-//                Nsolns, Z0, Z1, Z2);
-//    if (Nsolns == 1){ rho0 = p/(Z0*R*T); }
-//    else if (Nsolns == 3){
-//        rho0 = p/(Z0*R*T);
-//        rho1 = p/(Z1*R*T);
-//        rho2 = p/(Z2*R*T);
-//        sort3(rho0, rho1, rho2);
-//    }
 }
 
 class SaturationResidual : public CoolProp::FuncWrapper1D{
@@ -506,4 +488,17 @@ void CoolProp::AbstractCubicBackend::set_C_Twu(double L, double M, double N){
         AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
         ACB->set_C_Twu(L,M,N);
     }
+}
+
+void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, const std::string parameter, const double value)
+{
+	// Set the volume translation parrameter, currently applied to the whole fluid, not to components.
+	if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
+		get_cubic()->set_cm(value);
+		if (this->SatL.get() != NULL) { this->SatL->set_fluid_parameter_double(i, "cm", value); }
+		if (this->SatV.get() != NULL) { this->SatV->set_fluid_parameter_double(i, "cm", value); }
+	}
+	else {
+		throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+	}
 }
