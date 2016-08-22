@@ -2818,41 +2818,8 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> &mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta)
 {
     bool cache_values = false;
-    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), tau, delta, cache_values);
-    if (nTau == 0 && nDelta == 0){
-        return derivs.alphar;
-    }
-    else if (nTau == 0 && nDelta == 1){
-        return derivs.dalphar_ddelta;
-    }
-    else if (nTau == 1 && nDelta == 0){
-        return derivs.dalphar_dtau;
-    }
-    else if (nTau == 0 && nDelta == 2){
-        return derivs.d2alphar_ddelta2;
-    }
-    else if (nTau == 1 && nDelta == 1){
-        return derivs.d2alphar_ddelta_dtau;
-    }
-    else if (nTau == 2 && nDelta == 0){
-        return derivs.d2alphar_dtau2;
-    }
-    else if (nTau == 0 && nDelta == 3){
-        return derivs.d3alphar_ddelta3;
-    }
-    else if (nTau == 1 && nDelta == 2){
-        return derivs.d3alphar_ddelta2_dtau;
-    }
-    else if (nTau == 2 && nDelta == 1){
-        return derivs.d3alphar_ddelta_dtau2;
-    }
-    else if (nTau == 3 && nDelta == 0){
-        return derivs.d3alphar_dtau3;
-    }
-    else
-    {
-        throw ValueError();
-    }
+    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, mole_fractions, tau, delta, cache_values);
+    return derivs.get(nTau, nDelta);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> &mole_fractions,
                                                                   const CoolPropDbl &tau, const CoolPropDbl &delta, const CoolPropDbl &Tr, const CoolPropDbl &rhor)

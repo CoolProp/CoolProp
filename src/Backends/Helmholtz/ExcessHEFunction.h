@@ -205,7 +205,7 @@ public:
             return get_deriv_nocomp_notcached(mole_fractions, tau, delta);
         }
     }
-    HelmholtzDerivatives get_deriv_nocomp_notcached(const std::vector<CoolPropDbl> &x, double tau, double delta){
+    HelmholtzDerivatives get_deriv_nocomp_notcached(const std::vector<CoolPropDbl> &x, double tau, double delta) const{
         HelmholtzDerivatives summer;
         // If Excess term is not being used, return zero
         if (N==0){ return summer; }

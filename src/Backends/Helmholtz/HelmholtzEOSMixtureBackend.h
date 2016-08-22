@@ -448,14 +448,13 @@ class CorrespondingStatesTerm
 {
 public:
     /// Calculate all the derivatives that do not involve any composition derivatives
-    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &x, bool cache_values = false)
+    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, double tau, double delta, const std::vector<CoolPropDbl> &x, bool cache_values = false)
     {
         HelmholtzDerivatives summer;
-        const CoolPropDbl tau = HEOS.tau(), delta = HEOS.delta();
-        std::size_t N = HEOS.mole_fractions.size();
+        std::size_t N = x.size();
         for (std::size_t i = 0; i < N; ++i){
             HelmholtzDerivatives derivs = HEOS.components[i].EOS().alphar.all(tau, delta, cache_values);
-            summer = summer + derivs*HEOS.mole_fractions[i];
+            summer = summer + derivs*x[i];
         }
         return summer;
     }
@@ -633,13 +632,13 @@ public:
 
     virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, double tau, double delta, bool cache_values = false)
     {
-        HelmholtzDerivatives a = CS.all(HEOS, mole_fractions, cache_values) + Excess.all(HEOS.tau(), HEOS.delta(), mole_fractions, cache_values);
-        a.delta_x_dalphar_ddelta = HEOS.delta()*a.dalphar_ddelta;
-        a.tau_x_dalphar_dtau = HEOS.tau()*a.dalphar_dtau;
+        HelmholtzDerivatives a = CS.all(HEOS, tau, delta, mole_fractions, cache_values) + Excess.all(tau, delta, mole_fractions, cache_values);
+        a.delta_x_dalphar_ddelta = delta*a.dalphar_ddelta;
+        a.tau_x_dalphar_dtau = tau*a.dalphar_dtau;
 
-        a.delta2_x_d2alphar_ddelta2 = pow(HEOS.delta(), 2)*a.d2alphar_ddelta2;
-        a.deltatau_x_d2alphar_ddelta_dtau = HEOS.delta()*HEOS.tau()*a.d2alphar_ddelta_dtau;
-        a.tau2_x_d2alphar_dtau2 = pow(HEOS.tau(), 2)*a.d2alphar_dtau2;
+        a.delta2_x_d2alphar_ddelta2 = POW2(delta)*a.d2alphar_ddelta2;
+        a.deltatau_x_d2alphar_ddelta_dtau = delta*tau*a.d2alphar_ddelta_dtau;
+        a.tau2_x_d2alphar_dtau2 = POW2(tau)*a.d2alphar_dtau2;
 
         return a;
     }
