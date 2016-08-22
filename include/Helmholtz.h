@@ -160,6 +160,40 @@ struct HelmholtzDerivatives
         return _new;
     }
     HelmholtzDerivatives(){reset(0.0);};
+    /// Retrive a single value based on the number of derivatives with respect to tau and delta
+    double get(std::size_t itau, std::size_t idelta){
+        if (itau == 0){
+            if (idelta == 0){ return alphar; }
+            else if (idelta == 1){ return dalphar_ddelta; }
+            else if (idelta == 2){ return d2alphar_ddelta2; }
+            else if (idelta == 3){ return d3alphar_ddelta3; }
+            else if (idelta == 4){ return d4alphar_ddelta4; }
+            else { throw ValueError(); }
+        }
+        else if (itau == 1){
+            if (idelta == 0){ return dalphar_dtau; }
+            else if (idelta == 1){ return d2alphar_ddelta_dtau; }
+            else if (idelta == 2){ return d3alphar_ddelta2_dtau; }
+            else if (idelta == 3){ return d4alphar_ddelta3_dtau; }
+            else { throw ValueError(); }
+        }
+        else if (itau == 2){
+            if (idelta == 0){ return d2alphar_dtau2; }
+            else if (idelta == 1){ return d3alphar_ddelta_dtau2; }
+            else if (idelta == 2){ return d4alphar_ddelta2_dtau2; }
+            else { throw ValueError(); }
+        }
+        else if (itau == 3){
+            if (idelta == 0){ return d3alphar_dtau3; }
+            else if (idelta == 1){ return d4alphar_ddelta_dtau3; }
+            else { throw ValueError(); }
+        }
+        else if (itau == 4){
+            if (idelta == 0){ return d4alphar_dtau4; }
+            else { throw ValueError(); }
+        }
+        else { throw ValueError(); }
+    }
 };
 #undef LIST_OF_DERIVATIVE_VARIABLES
 
@@ -672,6 +706,7 @@ public:
         }
         return derivs;
     };
+    
     CoolPropDbl base(CoolPropDbl tau, CoolPropDbl delta, const bool dont_use_cache = false) {
         if (!_base || dont_use_cache)
             return all(tau, delta).alphar;

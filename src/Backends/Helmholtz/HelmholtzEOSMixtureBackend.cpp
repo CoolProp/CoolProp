@@ -2817,92 +2817,41 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> &mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta)
 {
-    if (is_pure_or_pseudopure)
-    {
-        bool dont_use_cache = true;
-        if (nTau == 0 && nDelta == 0){
-            return components[0].EOS().alphar.base(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 0 && nDelta == 1){
-            return components[0].EOS().alphar.dDelta(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 1 && nDelta == 0){
-            return components[0].EOS().alphar.dTau(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 0 && nDelta == 2){
-            return components[0].EOS().alphar.dDelta2(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 1 && nDelta == 1){
-            return components[0].EOS().alphar.dDelta_dTau(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 2 && nDelta == 0){
-            return components[0].EOS().alphar.dTau2(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 0 && nDelta == 3){
-            return components[0].EOS().alphar.dDelta3(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 1 && nDelta == 2){
-            return components[0].EOS().alphar.dDelta2_dTau(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 2 && nDelta == 1){
-            return components[0].EOS().alphar.dDelta_dTau2(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 3 && nDelta == 0){
-            return components[0].EOS().alphar.dTau3(tau, delta, dont_use_cache);
-        }
-        else
-        {
-            throw ValueError();
-        }
+    bool cache_values = false;
+    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), tau, delta, cache_values);
+    if (nTau == 0 && nDelta == 0){
+        return derivs.alphar;
     }
-    else{
-        bool dont_use_cache = true;
-        std::size_t N = mole_fractions.size();
-        CoolPropDbl summer = 0;
-        if (nTau == 0 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().alphar.base(tau, delta, dont_use_cache); }
-            return summer + residual_helmholtz->Excess.alphar(mole_fractions);
-        }
-        else if (nTau == 0 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().alphar.dDelta(tau, delta, dont_use_cache); }
-            return summer + residual_helmholtz->Excess.dalphar_dDelta(mole_fractions);
-        }
-        else if (nTau == 1 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().alphar.dTau(tau, delta, dont_use_cache); }
-            return summer + residual_helmholtz->Excess.dalphar_dTau(mole_fractions);
-        }
-        else if (nTau == 0 && nDelta == 2){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().alphar.dDelta2(tau, delta, dont_use_cache); }
-            return summer + residual_helmholtz->Excess.d2alphar_dDelta2(mole_fractions);
-        }
-        else if (nTau == 1 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().alphar.dDelta_dTau(tau, delta, dont_use_cache); }
-            return summer + residual_helmholtz->Excess.d2alphar_dDelta_dTau(mole_fractions);
-        }
-        else if (nTau == 2 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().alphar.dTau2(tau, delta, dont_use_cache); }
-            return summer + residual_helmholtz->Excess.d2alphar_dTau2(mole_fractions);
-        }
-        /*else if (nTau == 0 && nDelta == 3){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta3(tau, delta); }
-            return summer + pExcess.d3alphar_dDelta3(tau, delta);
-        }
-        else if (nTau == 1 && nDelta == 2){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta2_dTau(tau, delta); }
-            return summer + pExcess.d3alphar_dDelta2_dTau(tau, delta);
-        }
-        else if (nTau == 2 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta_dTau2(tau, delta); }
-            return summer + pExcess.d3alphar_dDelta_dTau2(tau, delta);
-        }
-        else if (nTau == 3 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dTau3(tau, delta); }
-            return summer + pExcess.d3alphar_dTau3(tau, delta);
-        }*/
-        else
-        {
-            throw ValueError();
-        }
+    else if (nTau == 0 && nDelta == 1){
+        return derivs.dalphar_ddelta;
+    }
+    else if (nTau == 1 && nDelta == 0){
+        return derivs.dalphar_dtau;
+    }
+    else if (nTau == 0 && nDelta == 2){
+        return derivs.d2alphar_ddelta2;
+    }
+    else if (nTau == 1 && nDelta == 1){
+        return derivs.d2alphar_ddelta_dtau;
+    }
+    else if (nTau == 2 && nDelta == 0){
+        return derivs.d2alphar_dtau2;
+    }
+    else if (nTau == 0 && nDelta == 3){
+        return derivs.d3alphar_ddelta3;
+    }
+    else if (nTau == 1 && nDelta == 2){
+        return derivs.d3alphar_ddelta2_dtau;
+    }
+    else if (nTau == 2 && nDelta == 1){
+        return derivs.d3alphar_ddelta_dtau2;
+    }
+    else if (nTau == 3 && nDelta == 0){
+        return derivs.d3alphar_dtau3;
+    }
+    else
+    {
+        throw ValueError();
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> &mole_fractions,
