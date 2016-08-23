@@ -724,6 +724,29 @@ CoolPropDbl MixtureDerivatives::d3_ndalphardni_dxj_dxk_dDelta__consttau_xi(Helmh
     }
     return term1 + term2 + term3;
 }
+    
+CoolPropDbl MixtureDerivatives::dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    double Tci = HEOS.get_fluid_constant(i, iT_critical);
+    double rhoci = HEOS.get_fluid_constant(i, irhomolar_critical);
+    double Tr = HEOS.T_reducing();
+    double rhor = HEOS.rhomolar_reducing();
+    double tau_ok = HEOS.tau()*Tci/Tr;
+    double delta_ok = HEOS.delta()*rhor/HEOS.rhomolar();
+    double dtauok_dxi = -tau_ok/Tr*HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag);
+    double ddeltaok_dxi = delta_ok/rhor*HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
+    
+    double term = HEOS.components[i].EOS().alpha0.base(tau_ok, delta_ok) - log(HEOS.mole_fractions[i]);
+    
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (int k = 0; k < kmax; ++k){
+        double xk = HEOS.mole_fractions[k];
+        double dalpha0_ok_dxi = HEOS.components[i].EOS().alpha0.dTau(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[i].EOS().alpha0.dDelta(tau_ok, delta_ok)*ddeltaok_dxi;
+        term -= xk*dalpha0_ok_dxi;
+    }
+    return term;
+}
 
 
 } /* namespace CoolProp */
@@ -1041,6 +1064,8 @@ public:
         one("d3_ndalphardni_dDelta_dTau2", MD::d3_ndalphardni_dDelta_dTau2, MD::d2_ndalphardni_dDelta_dTau, TAU);
 
         //two_comp("d_ndalphardni_dxj__constT_V_xi", MD::d_ndalphardni_dxj__constT_V_xi, MD::ndalphar_dni__constT_V_nj);
+        
+        one_comp("dalpha0_dxi",MD::dalpha0_dxi, MD::alpha0);
 
         one_comp("dalphar_dxi",MD::dalphar_dxi, MD::alphar);
         two_comp("d2alphardxidxj",MD::d2alphardxidxj, MD::dalphar_dxi);

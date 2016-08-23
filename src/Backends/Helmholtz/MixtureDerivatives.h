@@ -667,6 +667,7 @@ class MixtureDerivatives{
     static CoolPropDbl d3_ndalphardni_dxj_dxk_dDelta__consttau_xi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag);
     
     
+    static CoolPropDbl dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
     
     /// ****************************************************************************
     /// ****************************************************************************
@@ -694,6 +695,10 @@ class MixtureDerivatives{
     }
     static CoolPropDbl d2_PSI_T_dxj_dxk(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, CoolProp::x_N_dependency_flag xN_flag){
         return HEOS.Reducing->d2_PSI_T_dxj_dxk(HEOS.mole_fractions, i, j, k, xN_flag);
+    }
+    
+    static CoolPropDbl alpha0(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+        return HEOS.calc_alpha0_deriv_nocache(0, 0, HEOS.mole_fractions, HEOS.tau(), HEOS.delta(), HEOS.T_reducing(), HEOS.rhomolar_reducing());
     }
     
     static CoolPropDbl alphar(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
@@ -817,5 +822,5 @@ class MixtureDerivatives{
     
 }; /* class MixtureDerivatives */
 
-} /* namepsace CoolProp*/
+} /* namespace CoolProp*/
 #endif
