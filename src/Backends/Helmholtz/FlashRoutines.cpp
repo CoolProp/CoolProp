@@ -55,17 +55,27 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
         }
     }
     else{
-        // Following the strategy of Gernert, 2014
-        StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
-        if (!stability_tester.is_stable()){
-            throw CoolProp::ValueError("PT_INPUTS are two-phase, not yet supported");
+        if (HEOS.imposed_phase_index == iphase_not_imposed){
+            // Blind flash call
+            // Following the strategy of Gernert, 2014
+            StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
+            if (!stability_tester.is_stable()){
+                throw CoolProp::ValueError("PT_INPUTS are two-phase, not yet supported");
+            }
+            else{
+                // It's single-phase
+                double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+                HEOS.update_DmolarT_direct(rho, HEOS.T());
+                HEOS._Q = -1;
+                HEOS._phase = iphase_liquid;
+            }
         }
         else{
-            // It's single-phase
-            double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+            // It's single-phase, and phase is imposed
+            double rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
             HEOS.update_DmolarT_direct(rho, HEOS.T());
             HEOS._Q = -1;
-            HEOS._phase = iphase_liquid;
+            HEOS._phase = HEOS.imposed_phase_index;
         }
     }
 }
