@@ -2072,7 +2072,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pressure_nocache(CoolPropDbl T, Coo
     CoolPropDbl delta = rhomolar/reducing.rhomolar;
     CoolPropDbl tau = reducing.T/T;
 
-    // Calculate derivative if needed
+    // Calculate derivative
     int nTau = 0, nDelta = 1;
     CoolPropDbl dalphar_dDelta = calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, tau, delta);
 
@@ -2142,6 +2142,9 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             throw CoolProp::ValueError("zero stationary points -- does this make sense?");
         }
     }
+    else{
+        throw CoolProp::ValueError("one stationary points -- ugh?");
+    }
 }
 // Define the residual to be driven to zero
 class SolverTPResid : public FuncWrapper1DWithThreeDerivs
@@ -2200,15 +2203,28 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, Cool
     else if (retval == TWO_STATIONARY_POINTS_FOUND){
     
         // Calculate the pressures at the min and max densities where dpdrho|T = 0
-        double p_at_rhomin = calc_pressure_nocache(T, light);
-        double p_at_rhomax = calc_pressure_nocache(T, heavy);
+        double p_at_rhomin_stationary = calc_pressure_nocache(T, light);
+        double p_at_rhomax_stationary = calc_pressure_nocache(T, heavy);
         
         double rho_liq = -1, rho_vap = -1;
-        if (p > p_at_rhomax){
+        if (p > p_at_rhomax_stationary){
+            int counter = 0;
+            for (/* init above, for debugging */; counter <= 10; counter++){
+                // Bump up rhomax if needed to bound the given pressure
+                double p_at_rhomax = calc_pressure_nocache(T, rhomolar_max);
+                if (p_at_rhomax < p){
+                    rhomolar_max *= 1.05;
+                }
+                else{
+                    break;
+                }
+            }
+            double p_at_rhomax = calc_pressure_nocache(T, rhomolar_max);
             // Look for liquid root starting at stationary point density
             rho_liq = Brent(resid, heavy, rhomolar_max, DBL_EPSILON, 1e-8, 100);
         }
-        if (p < p_at_rhomin){
+        
+        if (p < p_at_rhomin_stationary){
             // Look for vapor root starting at stationary point density
             rho_vap = Brent(resid, light, 1e-10, DBL_EPSILON, 1e-8, 100);
         }

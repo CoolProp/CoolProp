@@ -1809,8 +1809,8 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
         
         // Update the densities in each class
-        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 30000);
-        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 30000);
+        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatL->SRK_covolume());
+        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatV->SRK_covolume());
         HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
         HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
         
@@ -1832,7 +1832,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
     
     // Use the global density solver to obtain the density root (or the lowest Gibbs energy root if more than one)
-    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 30000);
+    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SRK_covolume());
     HEOS.update_DmolarT_direct(rho_bulk, the_T);
     
     // Calculate the fugacity coefficient at initial composition of the bulk phase
@@ -1910,11 +1910,8 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_global(){
     double the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
     
     // Calculate covolume of SRK, use it as the maximum density
-    double bL = HEOS.SatL->SRK_covolume();
-    double bV = HEOS.SatV->SRK_covolume();
-    
-    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 1/bL*1.5);
-    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 1/bV*1.5);
+    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatL->SRK_covolume());
+    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatV->SRK_covolume());
     HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
     HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
     
