@@ -6,7 +6,7 @@ EXPORTS
   AbstractState_keyed_output = _AbstractState_keyed_output@20
   AbstractState_set_binary_interaction_double = AbstractState_set_binary_interaction_double@36
   AbstractState_set_fractions = _AbstractState_set_fractions@24
-  AbstractState_set_volume_translation = _AbstractState_set_volume_translation@24
+  AbstractState_set_fluid_parameter_double = AbstractState_set_fluid_parameter_double@32
   AbstractState_update = _AbstractState_update@36
   AbstractState_first_saturation_deriv = _AbstractState_first_saturation_deriv@24
   AbstractState_first_partial_deriv = _AbstractState_first_partial_deriv@28
