@@ -7,11 +7,10 @@
 
 #if defined(ENABLE_CATCH)
 #include "catch.hpp"
+#include "Backends/Cubics/CubicBackend.h"
 #endif
 
 namespace CoolProp{
-
-
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
 {
@@ -1888,6 +1887,8 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
 
 #if defined(ENABLE_CATCH)
 
+
+
 TEST_CASE("PD with T very large should yield error","[PDflash]")
 {
 	shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend("R134a"));
@@ -1898,7 +1899,7 @@ TEST_CASE("PD with T very large should yield error","[PDflash]")
 
 TEST_CASE("Stability testing","[stability]")
 {
-    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("Methane&Ethane&n-Propane&n-Butane",'&')));
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("n-Propane&n-Butane&n-Pentane&n-Hexane",'&')));
     std::vector<double> z(4); z[0] = 0.1; z[1] = 0.2; z[2] = 0.3; z[3] = 0.4;
     HEOS->set_mole_fractions(z);
     
@@ -1910,13 +1911,21 @@ TEST_CASE("Stability testing","[stability]")
     
     SECTION("Liquid (feed is stable)"){
         StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
-        stability_tester.set_TP(TL-1, 101325);
-        CHECK(stability_tester.is_stable() == true);
+        for (double T = TL-1; T >= 100; T -= 1)
+        {
+            stability_tester.set_TP(T, 101325);
+            CAPTURE(T);
+            CHECK_NOTHROW(stability_tester.is_stable());
+        }
     }
     SECTION("Vapor (feed is stable)"){
         StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
-        stability_tester.set_TP(TV+1, 101325);
-        CHECK(stability_tester.is_stable() == true);
+        for (double T = TV+1; T <= 500; T += 1)
+        {
+            stability_tester.set_TP(T, 101325);
+            CAPTURE(T);
+            CHECK_NOTHROW(stability_tester.is_stable());
+        }
     }
     SECTION("Two-phase (feed is unstable)"){
         StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);
@@ -1925,7 +1934,52 @@ TEST_CASE("Stability testing","[stability]")
     }
 }
     
+TEST_CASE("Test critical points for methane + H2S","[critical_points]")
+{
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("Methane&H2S",'&')));
     
+    double zz[] = {0.998, 0.97, 0.9475, 0.94, 0.93, 0.86, 0.85, 0.84, 0.75, 0.53, 0.52, 0.51, 0.49, 0.36, 0.24, 0.229, 0.09};
+    int Npts[] = {2,2,2,2,2,2,2,2,0,0,2,2,2,1,1,1,1}; // Number of critical points that should be found
+    int imax = sizeof(zz)/sizeof(double);
+    
+    for (int i = 0; i < imax; ++i){
+        double z0 = zz[i];
+        std::vector<double> z(2); z[0] = z0; z[1] = 1-z0;
+        HEOS->set_mole_fractions(z);
+        CAPTURE(z0);
+        std::vector<CriticalState> pts = HEOS->all_critical_points();
+        CHECK(pts.size() == Npts[i]);
+    }
+}
+    
+TEST_CASE("Test critical points for nitrogen + ethane with HEOS","[critical_points]")
+{
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("Nitrogen&Ethane",'&')));
+    std::vector<double> zz = linspace(0.001, 0.999, 21);
+    for (int i = 0; i < static_cast<std::size_t>(zz.size()); ++i){
+        double z0 = zz[i];
+        std::vector<double> z(2); z[0] = z0; z[1] = 1-z0;
+        HEOS->set_mole_fractions(z);
+        CAPTURE(z0);
+        std::vector<CriticalState> pts;
+        CHECK_NOTHROW(pts = HEOS->all_critical_points(););
+    }
+}
+    
+TEST_CASE("Test critical points for nitrogen + ethane with PR","[critical_points]")
+{
+    shared_ptr<PengRobinsonBackend> HEOS(new PengRobinsonBackend(strsplit("Nitrogen&Ethane",'&')));
+    HEOS->set_binary_interaction_double(0, 1, "kij", 0.0407); // Ramırez-Jimenez et al.
+    std::vector<double> zz = linspace(0.001, 0.999, 21);
+    for (int i = 0; i < static_cast<std::size_t>(zz.size()); ++i){
+        double z0 = zz[i];
+        std::vector<double> z(2); z[0] = z0; z[1] = 1-z0;
+        HEOS->set_mole_fractions(z);
+        CAPTURE(z0);
+        std::vector<CriticalState> pts;
+        CHECK_NOTHROW(pts = HEOS->all_critical_points(););
+    }
+}
     
 #endif
 

@@ -2117,14 +2117,21 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         }
     }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; light = -1;}
     
-    try{
-        heavy = Halley(resid, rhomax, 1e-8, 100);
-        double d2pdrho2__constT = resid.deriv(heavy);
-        if (d2pdrho2__constT < 0){
-            // Not possible since curvature should be positive
-            throw CoolProp::ValueError("curvature cannot be negative");
-        }
-    }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; heavy = -1;}
+    // First try a "normal" calculation of the stationary point on the liquid side
+    for (double omega = 1.0; omega > 0; omega -= 0.4){
+        try{
+            resid.options.add_number("omega", omega);
+            heavy = Halley(resid, rhomax, 1e-8, 100);
+            double d2pdrho2__constT = resid.deriv(heavy);
+            if (d2pdrho2__constT < 0){
+                // Not possible since curvature should be positive
+                throw CoolProp::ValueError("curvature cannot be negative");
+            }
+            break; // Jump out, we got a good solution
+        }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; heavy = -1;}
+    }
+    
+    
     if (light > 0 && heavy > 0){
         // Found two stationary points, done!
         return TWO_STATIONARY_POINTS_FOUND;
@@ -2143,7 +2150,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         }
     }
     else{
-        throw CoolProp::ValueError("one stationary points -- ugh?");
+        return ONE_STATIONARY_POINT_FOUND;
     }
 }
 // Define the residual to be driven to zero
