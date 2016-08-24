@@ -19,7 +19,7 @@ Pre-Compiled Binaries
 
 * Modify the PHP.ini file that PHP will load to add::
 
-    extension = "CoolProp.so"
+    extension = "libCoolProp.so"
 
   after ``[PHP]``. If you didn't copy libCoolProp.so into the folder given by ```php-config --extension-dir``` you will need to use the absolute path
 
