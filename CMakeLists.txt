@@ -611,7 +611,10 @@ if (COOLPROP_CSHARP_MODULE)
   endif()
   
   add_dependencies (${app_name} generate_headers)  
-  
+
+  # Remove the Example.cs file so it doesn't get packaged in platform-independent zip file
+  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/Example.cs")
+
   add_custom_command(TARGET CoolProp
                      POST_BUILD
                      COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.cs"
@@ -743,6 +746,9 @@ if (COOLPROP_JAVA_MODULE)
   endif()
   
   add_dependencies (${app_name} generate_headers)
+
+  # Remove the Example.java file so it doesn't get packaged in platform-independent zip file
+  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/Example.java")
   
   add_custom_command(TARGET CoolProp
                      POST_BUILD
