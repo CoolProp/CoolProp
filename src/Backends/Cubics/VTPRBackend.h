@@ -17,6 +17,7 @@
 #include "Exceptions.h"
 #include <vector>
 #include "CubicBackend.h"
+#include "Configuration.h"
 #include "UNIFAQLibrary.h"
 #include "UNIFAQ.h"
 #include "VTPRCubic.h"
@@ -34,7 +35,7 @@ private:
 public:
     
     VTPRBackend(const std::vector<std::string> fluid_identifiers,
-                const double R_u,
+                const double R_u = get_config_double(R_U_CODATA),
                 bool generate_SatL_and_SatV = true)
         : PengRobinsonBackend(fluid_identifiers, R_u)
     {
