@@ -2226,7 +2226,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, Cool
                     break;
                 }
             }
-            double p_at_rhomax = calc_pressure_nocache(T, rhomolar_max);
             // Look for liquid root starting at stationary point density
             rho_liq = Brent(resid, heavy, rhomolar_max, DBL_EPSILON, 1e-8, 100);
         }

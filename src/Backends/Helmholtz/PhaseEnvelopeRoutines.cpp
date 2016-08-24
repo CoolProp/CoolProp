@@ -168,7 +168,6 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS, const std::s
         std::size_t iter = 0, //< The iteration counter
                     iter0 = 0; //< A reference point for the counter, can be increased to go back to linear interpolation
         CoolPropDbl factor = 1.05;
-        std::vector<CriticalState>::const_iterator it_critpts = critpts.begin();
 
         for (;;)
         {
