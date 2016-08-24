@@ -764,6 +764,8 @@ CoolPropDbl MixtureDerivatives::dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, st
 #ifdef ENABLE_CATCH
 #include "catch.hpp"
 
+#include "Backends/Cubics/CubicBackend.h"
+
 using namespace CoolProp;
 
 double mix_deriv_err_func(double numeric, double analytic)
@@ -785,6 +787,7 @@ typedef double (*one_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend
 typedef double (*two_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, CoolProp::x_N_dependency_flag xN_flag);
 typedef double (*three_mole_fraction_pointer)(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, std::size_t k, CoolProp::x_N_dependency_flag xN_flag);
 
+template<class backend>
 class DerivativeFixture
 {
 public:
@@ -793,13 +796,13 @@ public:
                                                      HEOS_plus_T__constp, HEOS_minus_T__constp, HEOS_plus_p__constT, HEOS_minus_p__constT,
                                                      HEOS_plus_T__constrho,HEOS_minus_T__constrho, HEOS_plus_rho__constT, HEOS_minus_rho__constT;
     std::vector<shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> > HEOS_plus_z, HEOS_minus_z, HEOS_plus_z__constTrho, HEOS_minus_z__constTrho, HEOS_plus_n, HEOS_minus_n;
-    static CoolProp::x_N_dependency_flag xN;
+    CoolProp::x_N_dependency_flag xN;
     double dtau, ddelta, dz, dn, tol, dT, drho, dp;
-    DerivativeFixture() {
+    DerivativeFixture() : xN(XN_INDEPENDENT) {
         dtau = 1e-6; ddelta = 1e-6; dz = 1e-6; dn = 1e-6; dT = 1e-3; drho = 1e-3; dp = 1; tol = 5e-6;
         std::vector<std::string> names; names.push_back("Methane"); names.push_back("Ethane"); names.push_back("Propane"); names.push_back("n-Butane");
         std::vector<CoolPropDbl> mole_fractions; mole_fractions.push_back(0.1); mole_fractions.push_back(0.2); mole_fractions.push_back(0.3); mole_fractions.push_back(0.4);
-        HEOS.reset(new CoolProp::HelmholtzEOSMixtureBackend(names));
+        HEOS.reset(new backend(names));
         HEOS->set_mole_fractions(mole_fractions);
         HEOS->specify_phase(CoolProp::iphase_gas);
         HEOS->update_DmolarT_direct(300, 300);
@@ -866,7 +869,7 @@ public:
         }
     };
     void init_state(shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> &other){
-        other.reset(new CoolProp::HelmholtzEOSMixtureBackend(HEOS->get_components()));
+        other.reset(HEOS->get_copy());
         other->set_mole_fractions(HEOS->get_mole_fractions());
         other->specify_phase(CoolProp::iphase_gas); // Something homogeneous
     }
@@ -903,13 +906,14 @@ public:
     };
     void one_comp(const std::string &name, one_mole_fraction_pointer f, zero_mole_fraction_pointer g, derivative wrt = CONST_TAU_DELTA){
         for (int i = 0; i < 4; ++i){
-                double analytic = f(*HEOS, i, xN);
+                double analytic;
+                CHECK_NOTHROW(analytic = f(*HEOS, i, xN););
                 double numeric = -10000;
                 if (wrt == CONST_TAU_DELTA){
-                    numeric = (g(*HEOS_plus_z[i], xN) - g(*HEOS_minus_z[i], xN))/(2*dz);
+                    CHECK_NOTHROW(numeric = (g(*HEOS_plus_z[i], xN) - g(*HEOS_minus_z[i], xN))/(2*dz););
                 }
                 else if (wrt == CONST_TRHO){
-                    numeric = (g(*HEOS_plus_z__constTrho[i], xN) - g(*HEOS_minus_z__constTrho[i], xN))/(2*dz);
+                    CHECK_NOTHROW(numeric = (g(*HEOS_plus_z__constTrho[i], xN) - g(*HEOS_minus_z__constTrho[i], xN))/(2*dz););
                 }
             
                 CAPTURE(name);
@@ -1166,13 +1170,21 @@ public:
     }
 };
 
-CoolProp::x_N_dependency_flag DerivativeFixture::xN = XN_INDEPENDENT;
-
-TEST_CASE_METHOD(DerivativeFixture, "Check derivatives", "[mixture_derivs2]")
+TEST_CASE_METHOD(DerivativeFixture<HelmholtzEOSMixtureBackend>, "Check derivatives for HEOS", "[mixture_derivs2]")
 {
     run_checks();
-//    DerivativeFixture::xN = XN_DEPENDENT;
-//    run_checks();
+};
+
+TEST_CASE_METHOD(DerivativeFixture<PengRobinsonBackend>, "Check derivatives for Peng-Robinson", "[mixture_derivs2]")
+{
+    tol = 1e-4; // Relax the tolerance a bit
+    run_checks();
+};
+
+TEST_CASE_METHOD(DerivativeFixture<SRKBackend>, "Check derivatives for SRK", "[mixture_derivs2]")
+{
+    tol = 1e-4; // Relax the tolerance a bit
+    run_checks();
 };
 
 #endif

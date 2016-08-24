@@ -18,6 +18,7 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #include "DataStructures.h"
 #include "GeneralizedCubic.h"
 #include "CubicsLibrary.h"
+#include "Configuration.h"
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "Exceptions.h"
@@ -213,7 +214,7 @@ public:
 		setup(generate_SatL_and_SatV);
     }
     SRKBackend(const std::vector<std::string> fluid_identifiers, 
-               const double R_u, 
+               const double R_u = get_config_double(R_U_CODATA),
                bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
@@ -255,7 +256,7 @@ public:
 		setup(generate_SatL_and_SatV);
     };
     PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, 
-                        const double R_u, 
+                        const double R_u = get_config_double(R_U_CODATA),
                         bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
