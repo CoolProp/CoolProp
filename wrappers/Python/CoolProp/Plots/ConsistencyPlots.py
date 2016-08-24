@@ -69,6 +69,9 @@ class ConsistencyFigure(object):
 
         self.fluid = fluid
         self.backend = backend
+        print('***********************************************************************************')
+        print('*************** '+backend+'::'+fluid+' ************************')
+        print('***********************************************************************************')
         self.fig, self.axes = plt.subplots(nrows = 5, ncols = 3, figsize = figsize)
         self.pairs = all_solvers
         pairs_generator = iter(self.pairs)
@@ -357,6 +360,10 @@ class ConsistencyAxis(object):
         tic = time.time()
         state = self.state
 
+        if state.fluid_param_string('pure') == 'false':
+            print("Not a pure-fluid, skipping two-phase evaluation")
+            return
+
         # Update the state given the desired set of inputs
         param1, param2 = split_pair(self.pair)
         key1 = getattr(CP, 'i'+param1)
@@ -440,14 +447,14 @@ class ConsistencyAxis(object):
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    CP.CoolProp.set_debug_level(10)
-    for fluid in ['R410A.mix']:#CP.__fluids__:
+    CP.CoolProp.set_debug_level(0)
+    for fluid in ['R410A']:#CP.__fluids__:
         print('************************************************')
         print(fluid)
         print('************************************************')
         skips = ['DmolarHmolar','DmolarSmolar','DmolarUmolar','HmolarSmolar']
         skips = []
-        ff = ConsistencyFigure(fluid, backend = 'BICUBIC&REFPROP', additional_skips = skips, mole_fractions = [0.7,0.3])
+        ff = ConsistencyFigure(fluid, backend = 'HEOS', additional_skips = skips)
         ff.add_to_pdf(PVT)
         ff.savefig(fluid + '.png')
         ff.savefig(fluid + '.pdf')
