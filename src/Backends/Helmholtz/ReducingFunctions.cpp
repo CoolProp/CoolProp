@@ -2,7 +2,7 @@
 
 namespace CoolProp{
 
-CoolPropDbl ReducingFunction::d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const
 {
     if (xN_flag == XN_INDEPENDENT){
         CoolPropDbl s = 0;
@@ -27,7 +27,7 @@ CoolPropDbl ReducingFunction::d_ndTrdni_dxj__constxi(const std::vector<CoolPropD
         throw ValueError(format("xN dependency flag invalid"));
     }   
 }
-CoolPropDbl ReducingFunction::d2_ndTrdni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d2_ndTrdni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const
 {
 	if (xN_flag == XN_INDEPENDENT){
 		CoolPropDbl s = 0;
@@ -52,7 +52,7 @@ CoolPropDbl ReducingFunction::d2_ndTrdni_dxj_dxk__constxi(const std::vector<Cool
 		throw ValueError(format("xN dependency flag invalid"));
 	}
 }
-CoolPropDbl ReducingFunction::d_ndrhorbardni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d_ndrhorbardni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const
 {
     CoolPropDbl s = 0;
     for (std::size_t k = 0; k < N; k++)
@@ -61,7 +61,7 @@ CoolPropDbl ReducingFunction::d_ndrhorbardni_dxj__constxi(const std::vector<Cool
     }
     return d2rhormolardxidxj(x,j,i, xN_flag)-drhormolardxi__constxj(x,j, xN_flag)-s;
 }
-CoolPropDbl ReducingFunction::d2_ndrhorbardni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d2_ndrhorbardni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const
 {
 	CoolPropDbl s = 0;
 	for (std::size_t m = 0; m < N; m++)
@@ -70,7 +70,7 @@ CoolPropDbl ReducingFunction::d2_ndrhorbardni_dxj_dxk__constxi(const std::vector
 	}
 	return d3rhormolardxidxjdxk(x, i, j, k, xN_flag)-2*d2rhormolardxidxj(x, j, k, xN_flag)-s;
 }
-CoolPropDbl ReducingFunction::ndrhorbardni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::ndrhorbardni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     if (xN_flag == XN_INDEPENDENT){
         CoolPropDbl summer_term1 = 0;
@@ -93,7 +93,7 @@ CoolPropDbl ReducingFunction::ndrhorbardni__constnj(const std::vector<CoolPropDb
         throw ValueError(format("xN dependency flag invalid"));
     }
 }
-CoolPropDbl ReducingFunction::ndTrdni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::ndTrdni__constnj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     if (xN_flag == XN_INDEPENDENT){
         // GERG Equation 7.54
@@ -117,15 +117,15 @@ CoolPropDbl ReducingFunction::ndTrdni__constnj(const std::vector<CoolPropDbl> &x
         throw ValueError(format("xN dependency flag invalid"));
     }
 }
-CoolPropDbl ReducingFunction::PSI_rho(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::PSI_rho(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
 	return 1-1/rhormolar(x)*ndrhorbardni__constnj(x, i, xN_flag);
 }
-CoolPropDbl ReducingFunction::d_PSI_rho_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d_PSI_rho_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const
 {	
 	return -1/rhormolar(x)*(d_ndrhorbardni_dxj__constxi(x, i, j, xN_flag) - drhormolardxi__constxj(x, j, xN_flag)*(1 - PSI_rho(x, i, xN_flag))) ;
 }
-CoolPropDbl ReducingFunction::d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const
 {
 	double line1 = d2_ndrhorbardni_dxj_dxk__constxi(x, i, j, k, xN_flag);
 	double line2 = -1/rhormolar(x)*drhormolardxi__constxj(x, k, xN_flag)*d_ndrhorbardni_dxj__constxi(x, i, j, xN_flag);
@@ -133,15 +133,15 @@ CoolPropDbl ReducingFunction::d2_PSI_rho_dxj_dxk(const std::vector<CoolPropDbl> 
 	double line4 = -(d2rhormolardxidxj(x, j, k, xN_flag)-1/rhormolar(x)*drhormolardxi__constxj(x, k, xN_flag)*drhormolardxi__constxj(x, j, xN_flag))*(1-PSI_rho(x, i, xN_flag));
 	return -1/rhormolar(x)*(line1 + line2 + line3 + line4);
 }
-CoolPropDbl ReducingFunction::PSI_T(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::PSI_T(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
 	return 1/Tr(x)*ndTrdni__constnj(x, i, xN_flag);
 }
-CoolPropDbl ReducingFunction::d_PSI_T_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d_PSI_T_dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const
 {
 	return 1/Tr(x)*(d_ndTrdni_dxj__constxi(x, i, j, xN_flag) - dTrdxi__constxj(x, j, xN_flag)*PSI_T(x, i, xN_flag));
 }
-CoolPropDbl ReducingFunction::d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+CoolPropDbl ReducingFunction::d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const
 {
 	double line1 = d2_ndTrdni_dxj_dxk__constxi(x, i, j, k, xN_flag);
 	double line2 = -1/Tr(x)*dTrdxi__constxj(x, k, xN_flag)*d_ndTrdni_dxj__constxi(x, i, j, xN_flag);
@@ -151,83 +151,83 @@ CoolPropDbl ReducingFunction::d2_PSI_T_dxj_dxk(const std::vector<CoolPropDbl> &x
 }
 
 
-CoolPropDbl GERG2008ReducingFunction::Tr(const std::vector<CoolPropDbl> &x)
+CoolPropDbl GERG2008ReducingFunction::Tr(const std::vector<CoolPropDbl> &x) const
 {
     return Yr(x, beta_T, gamma_T, T_c, Yc_T);
 }
-CoolPropDbl GERG2008ReducingFunction::dTr_dbetaT(const std::vector<CoolPropDbl> &x)
+CoolPropDbl GERG2008ReducingFunction::dTr_dbetaT(const std::vector<CoolPropDbl> &x) const
 {
     return dYr_dbeta(x, beta_T, gamma_T, T_c, Yc_T);
 }
-CoolPropDbl GERG2008ReducingFunction::dTr_dgammaT(const std::vector<CoolPropDbl> &x)
+CoolPropDbl GERG2008ReducingFunction::dTr_dgammaT(const std::vector<CoolPropDbl> &x) const
 {
     return dYr_dgamma(x, beta_T, gamma_T, T_c, Yc_T);
 }
-CoolPropDbl GERG2008ReducingFunction::dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     return dYrdxi__constxj(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d2Trdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2Trdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     return d2Yrdxi2__constxj(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d2Trdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2Trdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const
 {
     return d2Yrdxidxj(x, i, j, beta_T, gamma_T, T_c, Yc_T, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d3Trdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d3Trdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const
 {
 	return d3Yrdxidxjdxk(x, i, j, k, beta_T, gamma_T, T_c, Yc_T, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::rhormolar(const std::vector<CoolPropDbl> &x)
+CoolPropDbl GERG2008ReducingFunction::rhormolar(const std::vector<CoolPropDbl> &x) const
 {
     return 1/Yr(x, beta_v, gamma_v, v_c, Yc_v);
 }
-CoolPropDbl GERG2008ReducingFunction::drhormolar_dgammaV(const std::vector<CoolPropDbl> &x)
+CoolPropDbl GERG2008ReducingFunction::drhormolar_dgammaV(const std::vector<CoolPropDbl> &x) const
 {
     CoolPropDbl rhor = rhormolar(x);
     return -rhor*rhor*dYr_dgamma(x, beta_v, gamma_v, v_c, Yc_v);
 }
-CoolPropDbl GERG2008ReducingFunction::drhormolar_dbetaV(const std::vector<CoolPropDbl> &x)
+CoolPropDbl GERG2008ReducingFunction::drhormolar_dbetaV(const std::vector<CoolPropDbl> &x) const
 {
     CoolPropDbl rhor = rhormolar(x);
     return -rhor*rhor*dYr_dbeta(x, beta_v, gamma_v, v_c, Yc_v);
 }
-CoolPropDbl GERG2008ReducingFunction::drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::drhormolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     CoolPropDbl rhor = rhormolar(x);
     return -rhor*rhor*dvrmolardxi__constxj(x, i, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::dvrmolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::dvrmolardxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     return dYrdxi__constxj(x, i, beta_v, gamma_v, v_c, Yc_v, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d2vrmolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2vrmolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     return d2Yrdxi2__constxj(x, i, beta_v, gamma_v, v_c, Yc_v, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d2vrmolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2vrmolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const
 {
     return d2Yrdxidxj(x, i, j, beta_v, gamma_v, v_c, Yc_v, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d3vrmolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d3vrmolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const
 {
 	return d3Yrdxidxjdxk(x, i, j, k, beta_v, gamma_v, v_c, Yc_v, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d2rhormolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2rhormolardxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     CoolPropDbl rhor = this->rhormolar(x);
     CoolPropDbl dvrbardxi = this->dvrmolardxi__constxj(x,i, xN_flag);
     return 2*pow(rhor,3)*pow(dvrbardxi,2)-pow(rhor,2)*this->d2vrmolardxi2__constxj(x,i, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d2rhormolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2rhormolardxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) const
 {
     double rhor = this->rhormolar(x);
     double dvrbardxi = this->dvrmolardxi__constxj(x,i, xN_flag);
     double dvrbardxj = this->dvrmolardxi__constxj(x,j, xN_flag);
     return 2*pow(rhor,3)*dvrbardxi*dvrbardxj-pow(rhor,2)*this->d2vrmolardxidxj(x,i,j, xN_flag);
 }
-CoolPropDbl GERG2008ReducingFunction::d3rhormolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d3rhormolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const
 {
 	double rhor = this->rhormolar(x);
 	double line1 = -pow(rhor, 2)*d3vrmolardxidxjdxk(x, i, j, k, xN_flag);
@@ -238,7 +238,7 @@ CoolPropDbl GERG2008ReducingFunction::d3rhormolardxidxjdxk(const std::vector<Coo
 	return line1 + line2 + line3;
 }
 
-CoolPropDbl GERG2008ReducingFunction::Yr(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc)
+CoolPropDbl GERG2008ReducingFunction::Yr(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc) const
 {
     CoolPropDbl Yr = 0;
     for (std::size_t i = 0; i < N; i++)
@@ -257,7 +257,7 @@ CoolPropDbl GERG2008ReducingFunction::Yr(const std::vector<CoolPropDbl> &x, cons
     return Yr;
 }
     
-CoolPropDbl GERG2008ReducingFunction::dYr_dgamma(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc)
+CoolPropDbl GERG2008ReducingFunction::dYr_dgamma(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc) const
 {
     CoolPropDbl dYr_dgamma = 0;
     for (std::size_t i = 0; i < N; i++)
@@ -270,7 +270,7 @@ CoolPropDbl GERG2008ReducingFunction::dYr_dgamma(const std::vector<CoolPropDbl> 
     }
     return dYr_dgamma;
 }
-CoolPropDbl GERG2008ReducingFunction::dYr_dbeta(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc)
+CoolPropDbl GERG2008ReducingFunction::dYr_dbeta(const std::vector<CoolPropDbl> &x, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc) const
 {
     CoolPropDbl dYr_dbeta = 0;
     for (std::size_t i = 0; i < N; i++)
@@ -289,7 +289,7 @@ CoolPropDbl GERG2008ReducingFunction::dYr_dbeta(const std::vector<CoolPropDbl> &
     return dYr_dbeta;
 }
     
-CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i,  const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i,  const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
 {
     if (xN_flag == XN_INDEPENDENT){
         // See Table B9 from Kunz Wagner 2012 (GERG 2008)
@@ -330,7 +330,7 @@ CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolProp
         throw ValueError(format("xN dependency flag invalid"));
     }
 }
-CoolPropDbl GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i,  const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<CoolPropDbl> &x, std::size_t i,  const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
 {
     if (xN_flag == XN_INDEPENDENT){
         // See Table B9 from Kunz Wagner 2012 (GERG 2008)
@@ -371,7 +371,7 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<CoolPr
     }
 }
 
-CoolPropDbl GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
 {
     if (std::abs(x[i]) < 10*DBL_EPSILON && std::abs(x[j]) < 10*DBL_EPSILON){return 0;}
     if (xN_flag == XN_INDEPENDENT){
@@ -404,7 +404,7 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<CoolPropDbl> 
     }
 }
 
-CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k,const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag)
+CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k,const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
 {
 	if (std::abs(x[i]) < 10 * DBL_EPSILON && std::abs(x[j]) < 10 * DBL_EPSILON){ return 0; }
 	if (xN_flag == XN_INDEPENDENT){
@@ -476,13 +476,13 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
 	}
 }
 
-CoolPropDbl GERG2008ReducingFunction::dfYkidxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::dfYkidxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta) const
 {
 	double xk = x[k], xi = x[i], beta_Y = beta[k][i], beta_Y_squared = beta_Y*beta_Y;
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return xk*(xk+xi)/(beta_Y_squared*xk+xi)+xk*xi/(beta_Y_squared*xk+xi)*(1-(xk+xi)/(beta_Y_squared*xk+xi));
 }
-CoolPropDbl GERG2008ReducingFunction::dfYikdxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::dfYikdxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta) const
 {
 	double xk = x[k], xi = x[i], beta_Y = beta[i][k], beta_Y_squared = beta_Y*beta_Y;
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
@@ -492,25 +492,25 @@ const CoolPropDbl GERG2008ReducingFunction::c_Y_ij(const std::size_t i, const st
 {
     return 2*beta[i][j]*gamma[i][j]*Y_c[i][j];
 }
-CoolPropDbl GERG2008ReducingFunction::f_Y_ij(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::f_Y_ij(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta) const
 {
     double xi = x[i], xj = x[j], beta_Y = beta[i][j];
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xj) < 10*DBL_EPSILON){return 0;}
     return xi*xj*(xi+xj)/(beta_Y*beta_Y*xi+xj);
 }
-CoolPropDbl GERG2008ReducingFunction::d2fYikdxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::d2fYikdxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta) const
 {
     double xi = x[i], xk = x[k], beta_Y = beta[i][k];
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return 1/(beta_Y*beta_Y*xi+xk)*(1-beta_Y*beta_Y*(xi+xk)/(beta_Y*beta_Y*xi+xk))*(2*xk-xi*xk*2*beta_Y*beta_Y/(beta_Y*beta_Y*xi+xk));
 }
-CoolPropDbl GERG2008ReducingFunction::d2fYkidxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::d2fYkidxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta) const
 {
     double xi = x[i], xk = x[k], beta_Y = beta[k][i];
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return 1/(beta_Y*beta_Y*xk+xi)*(1-(xk+xi)/(beta_Y*beta_Y*xk+xi))*(2*xk-xk*xi*2/(beta_Y*beta_Y*xk+xi));
 }
-CoolPropDbl GERG2008ReducingFunction::d2fYijdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::d2fYijdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta) const
 {
     double xi = x[i], xj = x[j], beta_Y = beta[i][j], beta_Y2 = beta_Y*beta_Y;
     if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xj) < 10*DBL_EPSILON){return 0;}
@@ -518,25 +518,25 @@ CoolPropDbl GERG2008ReducingFunction::d2fYijdxidxj(const std::vector<CoolPropDbl
         +xi/(beta_Y2*xi+xj)*(1-beta_Y2*(xi+xj)/(beta_Y2*xi+xj))
         -xi*xj/pow(beta_Y2*xi+xj,2)*(1+beta_Y2-2*beta_Y2*(xi+xj)/(beta_Y2*xi+xj));
 }
-CoolPropDbl GERG2008ReducingFunction::d3fYijdxi2dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::d3fYijdxi2dxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta) const
 {
 	double x_i = x[i], x_j = x[j], beta_Y = beta[i][j], beta_Y2 = beta_Y*beta_Y;
 	double den = pow(beta_Y, 8)*pow(x_i, 4) + 4*pow(beta_Y, 6)*pow(x_i, 3)*x_j + 6*pow(beta_Y, 4)*pow(x_i*x_j, 2) + 4*beta_Y2*x_i*pow(x_j, 3) + pow(x_j, 4);
 	return -6*beta_Y2*x_i*x_j*x_j*(beta_Y2-1)/den;
 }
-CoolPropDbl GERG2008ReducingFunction::d3fYijdxidxj2(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::d3fYijdxidxj2(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta) const
 {
 	double x_i = x[i], x_j = x[j], beta_Y = beta[i][j], beta_Y2 = beta_Y*beta_Y;
 	double den = pow(beta_Y, 8)*pow(x_i, 4) + 4*pow(beta_Y, 6)*pow(x_i, 3)*x_j + 6*pow(beta_Y, 4)*pow(x_i*x_j, 2) + 4*beta_Y2*x_i*pow(x_j, 3) + pow(x_j, 4);
 	return 6*beta_Y2*x_i*x_i*x_j*(beta_Y2-1)/den;
 }
-CoolPropDbl GERG2008ReducingFunction::d3fYikdxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::d3fYikdxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta) const
 {
 	double x_i = x[i], x_k = x[k], beta_Y = beta[i][k], beta_Y2 = beta_Y*beta_Y;
 	double den = pow(beta_Y, 8)*pow(x_i, 4) + 4*pow(beta_Y, 6)*pow(x_i, 3)*x_k + 6*pow(beta_Y, 4)*pow(x_i*x_k, 2) + 4*beta_Y2*x_i*pow(x_k, 3) + pow(x_k, 4);
 	return 6*beta_Y2*x_k*x_k*x_k*(beta_Y2-1)/den;
 }
-CoolPropDbl GERG2008ReducingFunction::d3fYkidxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta)
+CoolPropDbl GERG2008ReducingFunction::d3fYkidxi3__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta) const
 {
 	double x_i = x[i], x_k = x[k], beta_Y = beta[k][i], beta_Y2 = beta_Y*beta_Y;
 	return 6*beta_Y2*x_k*x_k*x_k*(1-beta_Y2)/pow(beta_Y2*x_k+x_i, 4);
