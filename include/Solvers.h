@@ -4,15 +4,25 @@
 #include <vector>
 #include <string>
 #include "Exceptions.h"
+#include "CoolPropTools.h"
 
 namespace CoolProp
 {
 
+// *****************************************************************************
+// *****************************************************************************
+//                              SOLVER WRAPPER CLASSES
+// *****************************************************************************
+// *****************************************************************************
+    
+    
 class FuncWrapper1D
 {
 public:
     int errcode;
-    std::string errstring;    
+    std::string errstring;
+    Dictionary options;
+    int iter;
     FuncWrapper1D() : errcode(0), errstring("") {};
     virtual ~FuncWrapper1D(){};
     virtual double call(double) = 0;
@@ -52,6 +62,12 @@ public:
     virtual std::vector<double> call(const std::vector<double>&) = 0;// must be provided
     virtual std::vector<std::vector<double> > Jacobian(const std::vector<double>&);
 };
+    
+// *****************************************************************************
+// *****************************************************************************
+//                              SOLVER ROUTINES
+// *****************************************************************************
+// *****************************************************************************
 
 // Single-Dimensional solvers, pointer versions
 double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter);
