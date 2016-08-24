@@ -112,7 +112,7 @@ namespace UNIFAQLibrary{
                 if (it->name == value ){ return *it; }
             }
         }
-        throw CoolProp::ValueError("Could not find component");
+        throw CoolProp::ValueError(format("Could not find component: %s with identifier: %s", value, identifier));
     }
 
 }; /* namespace UNIFAQLibrary */
