@@ -2841,6 +2841,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
                                                                   const CoolPropDbl &tau, const CoolPropDbl &delta, const CoolPropDbl &Tr, const CoolPropDbl &rhor)
 {
     CoolPropDbl val;
+    if (components.size() == 0){
+        throw ValueError("No alpha0 derivatives are available");
+    }
     if (is_pure_or_pseudopure)
     {
         if (nTau == 0 && nDelta == 0){
@@ -2890,9 +2893,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer = 0;
         CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
-        if (components.size() == 0){
-            throw ValueError("Cannot evaluate alpha0 derivatives since components is empty");
-        }
         for (unsigned int i = 0; i < N; ++i){
             rho_ci = components[i].EOS().reduce.rhomolar;
             T_ci = components[i].EOS().reduce.T;
