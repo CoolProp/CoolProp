@@ -1278,7 +1278,8 @@ const std::vector<CoolPropDbl> HelmholtzEOSMixtureBackend::calc_mass_fractions()
     std::vector<CoolPropDbl> &mole_fractions = get_mole_fractions_ref();
     std::vector<CoolPropDbl> mass_fractions(mole_fractions.size());
     for (std::size_t i = 0; i < mole_fractions.size(); ++i){
-        mass_fractions[i] = (components[i].molar_mass())*(mole_fractions[i])/mm;
+        double mmi = get_fluid_constant(i, imolar_mass);
+        mass_fractions[i] = mmi*(mole_fractions[i])/mm;
     }
     return mass_fractions;
 }

@@ -54,6 +54,7 @@ public:
             case iP_critical: return cubic->get_pc()[i];
             case iT_critical: return cubic->get_Tc()[i];
             case iacentric_factor: return cubic->get_acentric()[i];
+            case imolar_mass: return components[i].molemass;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
         }
