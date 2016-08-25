@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R507a"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -198,18 +195,6 @@
         1.25
       ]
     }
-  }, 
-  "CAS": "R507A.PPF", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 3985.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "R507A", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -444,8 +429,25 @@
       "pseudo_pure": true
     }
   ], 
-  "NAME": "R507A", 
-  "REFPROP_NAME": "R507A", 
+  "INFO": {
+    "ALIASES": [
+      "R507a"
+    ], 
+    "CAS": "R507A.PPF", 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 3985.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "R507A", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "NAME": "R507A", 
+    "REFPROP_NAME": "R507A"
+  }, 
   "STATES": {
     "critical": {
       "T": 343.765, 

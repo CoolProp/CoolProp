@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "Orthohydrogen", 
-    "orthohydrogen", 
-    "ORTHOHYDROGEN", 
-    "ORTHOHYD"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -172,18 +166,6 @@
       "max_abs_error_units": "J/mol/K", 
       "type": "rational_polynomial"
     }
-  }, 
-  "CAS": "1333-74-0o", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "OrthoHydrogen", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -400,8 +382,28 @@
       "pseudo_pure": false
     }
   ], 
-  "NAME": "OrthoHydrogen", 
-  "REFPROP_NAME": "ORTHOHYD", 
+  "INFO": {
+    "ALIASES": [
+      "Orthohydrogen", 
+      "orthohydrogen", 
+      "ORTHOHYDROGEN", 
+      "ORTHOHYD"
+    ], 
+    "CAS": "1333-74-0o", 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "OrthoHydrogen", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "NAME": "OrthoHydrogen", 
+    "REFPROP_NAME": "ORTHOHYD"
+  }, 
   "STATES": {
     "critical": {
       "T": 33.22, 

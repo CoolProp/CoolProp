@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Hexamethyldisiloxane", 
-    "HEXAMETHYLDISILOXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "107-46-0", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "MM", 
-    "ODP": -1.0, 
-    "PH": 1
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -248,7 +232,7 @@
           "smolar_units": "J/mol/K"
         }
       }, 
-      "T_max": 673,
+      "T_max": 673, 
       "T_max_units": "K", 
       "Ttriple": 204.93, 
       "Ttriple_units": "K", 
@@ -606,9 +590,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{6}H_{18}O_{1}Si_{2}", 
-  "NAME": "MM", 
-  "REFPROP_NAME": "MM", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=23150", 
+    "ALIASES": [
+      "Hexamethyldisiloxane", 
+      "HEXAMETHYLDISILOXANE"
+    ], 
+    "CAS": "107-46-0", 
+    "CHEMSPIDER_ID": 23150, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "MM", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{6}H_{18}O_{1}Si_{2}", 
+    "INCHI_KEY": "UQEAIHBTYFGYIE-UHFFFAOYAL", 
+    "INCHI_STRING": "InChI=1/C6H18OSi2/c1-8(2,3)7-9(4,5)6/h1-6H3", 
+    "NAME": "MM", 
+    "REFPROP_NAME": "MM", 
+    "SMILES": "C[Si](C)(C)O[Si](C)(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 518.75, 

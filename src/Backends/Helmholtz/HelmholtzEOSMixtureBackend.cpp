@@ -116,6 +116,14 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     // Also store the mole fractions as doubles
     this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
 };
+HelmholtzEOSMixtureBackend * HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV){
+    HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
+    *(ptr->residual_helmholtz.get()) = *(residual_helmholtz.get());
+    if (Reducing.get() != NULL){
+        *(ptr->Reducing.get()) = *(Reducing.get());
+    }
+    return ptr;
+};
 void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
 {
     if (mass_fractions.size() != N)
@@ -141,6 +149,7 @@ void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDb
 void HelmholtzEOSMixtureBackend::resize(std::size_t N)
 {
     this->mole_fractions.resize(N);
+    this->mole_fractions_double.resize(N);
     this->K.resize(N);
     this->lnK.resize(N);
     for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
@@ -214,6 +223,21 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
         else{
             return "false";
         }
+    }
+    else if (ParamName == "INCHI" || ParamName == "InChI" || ParamName == "INCHI_STRING"){
+        return cpfluid.InChI;
+    }
+    else if (ParamName == "INCHI_Key" || ParamName == "InChIKey" || ParamName == "INCHIKEY"){
+        return cpfluid.InChIKey;
+    }
+    else if (ParamName == "2DPNG_URL"){
+        return cpfluid.TwoDPNG_URL;
+    }
+    else if (ParamName == "SMILES" || ParamName == "smiles"){
+        return cpfluid.smiles;
+    }
+    else if (ParamName == "CHEMSPIDER_ID"){
+        return format("%d", cpfluid.ChemSpider_id);
     }
     else{
         throw ValueError(format("fluid parameter [%s] is invalid",ParamName.c_str()));
@@ -1111,7 +1135,7 @@ void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, Coo
     const CoolPropDbl        T_min = 0;
     
     if (rhomolar < rhomolar_min) {
-            throw ValueError(format("The molar density of %f kg/mol is below the minimum of %f kg/mol", rhomolar, rhomolar_min));
+            throw ValueError(format("The molar density of %f mol/m3 is below the minimum of %f mol/m3", rhomolar, rhomolar_min));
     }
 
     if (T < T_min) {
@@ -1254,7 +1278,8 @@ const std::vector<CoolPropDbl> HelmholtzEOSMixtureBackend::calc_mass_fractions()
     std::vector<CoolPropDbl> &mole_fractions = get_mole_fractions_ref();
     std::vector<CoolPropDbl> mass_fractions(mole_fractions.size());
     for (std::size_t i = 0; i < mole_fractions.size(); ++i){
-        mass_fractions[i] = (components[i].molar_mass())*(mole_fractions[i])/mm;
+        double mmi = get_fluid_constant(i, imolar_mass);
+        mass_fractions[i] = mmi*(mole_fractions[i])/mm;
     }
     return mass_fractions;
 }
@@ -2048,43 +2073,209 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pressure_nocache(CoolPropDbl T, Coo
     CoolPropDbl delta = rhomolar/reducing.rhomolar;
     CoolPropDbl tau = reducing.T/T;
 
-    // Calculate derivative if needed
+    // Calculate derivative
     int nTau = 0, nDelta = 1;
     CoolPropDbl dalphar_dDelta = calc_alphar_deriv_nocache(nTau, nDelta, mole_fractions, tau, delta);
 
     // Get pressure
     return rhomolar*gas_constant()*T*(1+delta*dalphar_dDelta);
 }
-CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_guess)
-{
-    phases phase;
-
-    // Define the residual to be driven to zero
-    class solver_TP_resid : public FuncWrapper1DWithTwoDerivs
+HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax, CoolPropDbl&light, CoolPropDbl &heavy){
+    
+    /// The residual to be used to find the location where dpdrho=0 for given T
+    class dpdrho_resid : public FuncWrapper1DWithTwoDerivs
     {
     public:
         HelmholtzEOSMixtureBackend *HEOS;
         CoolPropDbl T, p, delta, rhor, tau, R_u;
-
-        solver_TP_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl p)
+        
+        dpdrho_resid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl p)
         : HEOS(HEOS),T(T),p(p),delta(_HUGE),rhor(HEOS->get_reducing_state().rhomolar),
-          tau(HEOS->get_reducing_state().T/T),R_u(HEOS->gas_constant()){}
+        tau(HEOS->get_reducing_state().T/T),R_u(HEOS->gas_constant()){}
         double call(double rhomolar){
             delta = rhomolar/rhor; // needed for derivative
             HEOS->update_DmolarT_direct(rhomolar, T);
-            CoolPropDbl peos = HEOS->p();
-            return (peos-p)/p;
+            // dp/drho|T
+            return R_u*T*(1+2*delta*HEOS->dalphar_dDelta()+POW2(delta)*HEOS->d2alphar_dDelta2());
         };
         double deriv(double rhomolar){
-            // dp/drho|T / pspecified
-            return R_u*T*(1+2*delta*HEOS->dalphar_dDelta()+pow(delta, 2)*HEOS->d2alphar_dDelta2())/p;
+            // d2p/drho2|T
+            return R_u*T/rhor*(2*HEOS->dalphar_dDelta() + 4*delta*HEOS->d2alphar_dDelta2() + POW2(delta)*HEOS->calc_d3alphar_dDelta3());
         };
         double second_deriv(double rhomolar){
-            // d2p/drho2|T / pspecified
-            return R_u*T/rhomolar*(2*delta*HEOS->dalphar_dDelta() + 4*pow(delta, 2)*HEOS->d2alphar_dDelta2() + pow(delta, 3)*HEOS->calc_d3alphar_dDelta3())/p;
+            // d3p/drho3|T
+            return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 6*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4());
         };
     };
-    solver_TP_resid resid(this,T,p);
+    dpdrho_resid resid(this,T,p);
+    light = -1; heavy = -1;
+    try{
+        light = Halley(resid, 1e-6, 1e-8, 100);
+        double d2pdrho2__constT = resid.deriv(light);
+        if (d2pdrho2__constT > 0){
+            // Not possible since curvature should be negative
+            throw CoolProp::ValueError("curvature cannot be positive");
+        }
+    }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; light = -1;}
+    
+    // First try a "normal" calculation of the stationary point on the liquid side
+    for (double omega = 1.0; omega > 0; omega -= 0.4){
+        try{
+            resid.options.add_number("omega", omega);
+            heavy = Halley(resid, rhomax, 1e-8, 100);
+            double d2pdrho2__constT = resid.deriv(heavy);
+            if (d2pdrho2__constT < 0){
+                // Not possible since curvature should be positive
+                throw CoolProp::ValueError("curvature cannot be negative");
+            }
+            break; // Jump out, we got a good solution
+        }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; heavy = -1;}
+    }
+    
+    
+    if (light > 0 && heavy > 0){
+        // Found two stationary points, done!
+        return TWO_STATIONARY_POINTS_FOUND;
+    }
+    // If no solution is found for dpdrho|T=0 starting at high and low densities,
+    // then try to do a bounded solver to see if you can find any solutions.  If you
+    // can't, p = f(rho) is probably monotonic (supercritical?), and the bounds are
+    else if (light < 0 && heavy < 0){
+        double dpdrho_min = resid.call(1e-10);
+        double dpdrho_max = resid.call(rhomax);
+        if (dpdrho_max*dpdrho_min > 0){
+            return ZERO_STATIONARY_POINTS;
+        }
+        else{
+            throw CoolProp::ValueError("zero stationary points -- does this make sense?");
+        }
+    }
+    else{
+        return ONE_STATIONARY_POINT_FOUND;
+    }
+}
+// Define the residual to be driven to zero
+class SolverTPResid : public FuncWrapper1DWithThreeDerivs
+{
+public:
+    HelmholtzEOSMixtureBackend *HEOS;
+    CoolPropDbl T, p, delta, rhor, tau, R_u;
+    
+    SolverTPResid(HelmholtzEOSMixtureBackend *HEOS, CoolPropDbl T, CoolPropDbl p)
+    : HEOS(HEOS),T(T),p(p),delta(_HUGE),rhor(HEOS->get_reducing_state().rhomolar),
+    tau(HEOS->get_reducing_state().T/T),R_u(HEOS->gas_constant()){}
+    double call(double rhomolar){
+        delta = rhomolar/rhor; // needed for derivative
+        HEOS->update_DmolarT_direct(rhomolar, T);
+        CoolPropDbl peos = HEOS->p();
+        return (peos-p)/p;
+    };
+    double deriv(double rhomolar){
+        // dp/drho|T / pspecified
+        return R_u*T*(1+2*delta*HEOS->dalphar_dDelta()+POW2(delta)*HEOS->d2alphar_dDelta2())/p;
+    };
+    double second_deriv(double rhomolar){
+        // d2p/drho2|T / pspecified
+        return R_u*T/rhor*(2*HEOS->dalphar_dDelta() + 4*delta*HEOS->d2alphar_dDelta2() + POW2(delta)*HEOS->calc_d3alphar_dDelta3())/p;
+    };
+    double third_deriv(double rhomolar){
+        // d3p/drho3|T / pspecified
+        return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 4*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4())/p;
+    };
+};
+CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume(){
+    double b = 0;
+    for (std::size_t i = 0; i < mole_fractions.size(); ++i){
+        // Get the parameters for the cubic EOS
+        CoolPropDbl Tc = get_fluid_constant(i, iT_critical),
+                    pc = get_fluid_constant(i, iP_critical);
+        CoolPropDbl R = 8.3144598;
+        b += mole_fractions[i]*0.08664*R*Tc/pc;
+    }
+    return b;
+}
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max){
+    // Find the densities along the isotherm where dpdrho|T = 0 (if you can)
+    CoolPropDbl light = -1, heavy = -1;
+    StationaryPointReturnFlag retval = solver_dpdrho0_Tp(T, p, rhomolar_max, light, heavy);
+    
+    // Define the solver class
+    SolverTPResid resid(this, T, p);
+    
+    if (retval == ZERO_STATIONARY_POINTS){
+        // It's monotonic (no stationary points found), so do the full bounded solver
+        // for the density
+        double rho = Brent(resid, 1e-10, rhomolar_max, DBL_EPSILON, 1e-8, 100);
+        return rho;
+    }
+    else if (retval == TWO_STATIONARY_POINTS_FOUND){
+    
+        // Calculate the pressures at the min and max densities where dpdrho|T = 0
+        double p_at_rhomin_stationary = calc_pressure_nocache(T, light);
+        double p_at_rhomax_stationary = calc_pressure_nocache(T, heavy);
+        
+        double rho_liq = -1, rho_vap = -1;
+        if (p > p_at_rhomax_stationary){
+            int counter = 0;
+            for (/* init above, for debugging */; counter <= 10; counter++){
+                // Bump up rhomax if needed to bound the given pressure
+                double p_at_rhomax = calc_pressure_nocache(T, rhomolar_max);
+                if (p_at_rhomax < p){
+                    rhomolar_max *= 1.05;
+                }
+                else{
+                    break;
+                }
+            }
+            // Look for liquid root starting at stationary point density
+            rho_liq = Brent(resid, heavy, rhomolar_max, DBL_EPSILON, 1e-8, 100);
+        }
+        
+        if (p < p_at_rhomin_stationary){
+            // Look for vapor root starting at stationary point density
+            rho_vap = Brent(resid, light, 1e-10, DBL_EPSILON, 1e-8, 100);
+        }
+        
+        if (rho_vap > 0 && rho_liq >0){
+            // Both densities are the same
+            if (std::abs(rho_vap-rho_liq) < 1e-10){
+                // return one of them
+                return rho_vap;
+            }
+            else{
+                // Two solutions found, keep the one with lower Gibbs energy
+                double gibbsmolar_vap = calc_gibbsmolar_nocache(T, rho_vap);
+                double gibbsmolar_liq = calc_gibbsmolar_nocache(T, rho_liq);
+                if (gibbsmolar_liq < gibbsmolar_vap){
+                    return rho_liq;
+                }
+                else{
+                    return rho_vap;
+                }
+            }
+        }
+        else if (rho_vap < 0 && rho_liq >0){
+            // Liquid root found, return it
+            return rho_liq;
+        }
+        else if (rho_vap > 0 && rho_liq < 0){
+            // Vapor root found, return it
+            return rho_vap;
+        }
+        else{
+            throw CoolProp::ValueError(format("No density solutions for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g")));
+        }
+    }
+    else{
+        throw CoolProp::ValueError(format("One stationary point (not good) for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g")));
+    }
+};
+    
+CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_guess)
+{
+    phases phase;
+
+    SolverTPResid resid(this,T,p);
 
     // Check if the phase is imposed
     if (imposed_phase_index != iphase_not_imposed)
@@ -2107,26 +2298,33 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                 rhomolar_guess = p/(gas_constant()*T);
             }
         }
-        // It's liquid at subcritical pressure, we can use ancillaries as a backup
         else if (phase == iphase_liquid)
         {
             double rhomolar;
-            CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
-            try{
-                // First we try with Halley's method starting at saturated liquid
-                rhomolar = Halley(resid, _rhoLancval, 1e-16, 100);
+            if (is_pure_or_pseudopure){
+                // It's liquid at subcritical pressure, we can use ancillaries as guess value
+                CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
+                try{
+                    // First we try with Halley's method starting at saturated liquid
+                    rhomolar = Halley(resid, _rhoLancval, 1e-8, 100);
+                    if (!ValidNumber(rhomolar) || first_partial_deriv(iP, iDmolar, iT) < 0 || second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) < 0){
+                        throw ValueError("Liquid density is invalid");
+                    }
+                }
+                catch(std::exception &){
+                    // Next we try with a Brent method bounded solver since the function is 1-1
+                    rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100);
+                    if (!ValidNumber(rhomolar)){throw ValueError();}
+                }
             }
-            catch(std::exception &){
-                // Next we try with a Brent method bounded solver since the function is 1-1
-                rhomolar = Brent(resid, _rhoLancval*0.9, _rhoLancval*1.3, DBL_EPSILON,1e-8,100);
-                if (!ValidNumber(rhomolar)){throw ValueError();}
+            else{
+                // Try with 4th order Householder method starting at a very high density
+                rhomolar = Householder4(&resid, 3*rhomolar_reducing(), 1e-8, 100);
             }
             return rhomolar;
         }
         else if (phase == iphase_supercritical_liquid){
-            
             CoolPropDbl rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
-            
             // Next we try with a Brent method bounded solver since the function is 1-1
             double rhomolar = Brent(resid, rhoLancval*0.99, rhomolar_critical()*4, DBL_EPSILON,1e-8,100);
             if (!ValidNumber(rhomolar)){throw ValueError();}
@@ -2136,41 +2334,34 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
 
     try{
         
-        // First we try with Halley's method with analytic derivative
-        double rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100);
+        // First we try with 4th order Householder method with analytic derivatives
+        double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 100);
         if (!ValidNumber(rhomolar)){
             throw ValueError();
         }
-        if (phase == iphase_liquid && !is_pure_or_pseudopure && first_partial_deriv(iP, iDmolar, iT) < 0){
-            
-            // Try again with a larger density in order to end up at the right solution
-            rhomolar = Newton(resid, rhomolar_guess*1.5, 1e-8, 100);
-            return rhomolar;
+        if (phase == iphase_liquid){
+            double dpdrho = first_partial_deriv(iP, iDmolar, iT);
+            double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
+            if(dpdrho < 0 || d2pdrho2 < 0){
+                // Try again with a larger density in order to end up at the right solution
+                rhomolar = Householder4(resid, 3*rhomolar_reducing(), 1e-8, 100);
+                return rhomolar;
+            }
+        }
+        else if (phase == iphase_gas){
+            double dpdrho = first_partial_deriv(iP, iDmolar, iT);
+            double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
+            if(dpdrho < 0 || d2pdrho2 > 0){
+                // Try again with a tiny density in order to end up at the right solution
+                rhomolar = Householder4(resid, 1e-6, 1e-8, 100);
+                return rhomolar;
+            }
         }
         return rhomolar;
     }
-    catch(...)
+    catch(std::exception &e)
     {
-        try{
-            // Next we try with Secant method shooting off from the guess value
-            double rhomolar = Secant(resid, rhomolar_guess, 1.1*rhomolar_guess, 1e-8, 100);
-            if (!ValidNumber(rhomolar)){throw ValueError();}
-            return rhomolar;
-            
-        }
-        catch(...)
-        {
-            try{
-                // Next we try with a Brent method bounded solver since the function is 1-1
-                double rhomolar = Brent(resid, 0.1*rhomolar_guess, 2*rhomolar_guess,DBL_EPSILON,1e-8,100);
-                if (!ValidNumber(rhomolar)){throw ValueError();}
-                return rhomolar;
-            }
-            catch(...){
-                
-                throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg",T,p,rhomolar_guess));
-            }
-        }
+        throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg",T,p,rhomolar_guess));
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase)
@@ -2489,6 +2680,21 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 
     return static_cast<double>(_speed_sound);
 }
+    
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar)
+{
+    // Calculate the reducing parameters
+    CoolPropDbl delta = rhomolar/_reducing.rhomolar;
+    CoolPropDbl tau = _reducing.T/T;
+    
+    // Calculate derivatives
+    CoolPropDbl dar_dDelta = calc_alphar_deriv_nocache(0, 1, mole_fractions, tau, delta);
+    CoolPropDbl ar = calc_alphar_deriv_nocache(0, 0, mole_fractions, tau, delta);
+    CoolPropDbl a0 = calc_alpha0_deriv_nocache(0, 0, mole_fractions, tau, delta, _reducing.T, _reducing.rhomolar);
+    
+    // Get molar gibbs function
+    return gas_constant()*T*(1 + a0 + ar + delta*dar_dDelta);
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar(void)
 {
     if (isTwoPhase())
@@ -2634,98 +2840,17 @@ void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<C
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> &mole_fractions, const CoolPropDbl &tau, const CoolPropDbl &delta)
 {
-    if (is_pure_or_pseudopure)
-    {
-        bool dont_use_cache = true;
-        if (nTau == 0 && nDelta == 0){
-            return components[0].EOS().alphar.base(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 0 && nDelta == 1){
-            return components[0].EOS().alphar.dDelta(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 1 && nDelta == 0){
-            return components[0].EOS().alphar.dTau(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 0 && nDelta == 2){
-            return components[0].EOS().alphar.dDelta2(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 1 && nDelta == 1){
-            return components[0].EOS().alphar.dDelta_dTau(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 2 && nDelta == 0){
-            return components[0].EOS().alphar.dTau2(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 0 && nDelta == 3){
-            return components[0].EOS().alphar.dDelta3(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 1 && nDelta == 2){
-            return components[0].EOS().alphar.dDelta2_dTau(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 2 && nDelta == 1){
-            return components[0].EOS().alphar.dDelta_dTau2(tau, delta, dont_use_cache);
-        }
-        else if (nTau == 3 && nDelta == 0){
-            return components[0].EOS().alphar.dTau3(tau, delta, dont_use_cache);
-        }
-        else
-        {
-            throw ValueError();
-        }
-    }
-    else{
-
-        std::size_t N = mole_fractions.size();
-        CoolPropDbl summer = 0;
-        if (nTau == 0 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().baser(tau, delta); }
-            return summer + residual_helmholtz->Excess.alphar(mole_fractions);
-        }
-        else if (nTau == 0 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dDelta(tau, delta); }
-            return summer + residual_helmholtz->Excess.dalphar_dDelta(mole_fractions);
-        }
-        else if (nTau == 1 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().dalphar_dTau(tau, delta); }
-            return summer + residual_helmholtz->Excess.dalphar_dTau(mole_fractions);
-        }
-        else if (nTau == 0 && nDelta == 2){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta2(tau, delta); }
-            return summer + residual_helmholtz->Excess.d2alphar_dDelta2(mole_fractions);
-        }
-        else if (nTau == 1 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dDelta_dTau(tau, delta); }
-            return summer + residual_helmholtz->Excess.d2alphar_dDelta_dTau(mole_fractions);
-        }
-        else if (nTau == 2 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d2alphar_dTau2(tau, delta); }
-            return summer + residual_helmholtz->Excess.d2alphar_dTau2(mole_fractions);
-        }
-        /*else if (nTau == 0 && nDelta == 3){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta3(tau, delta); }
-            return summer + pExcess.d3alphar_dDelta3(tau, delta);
-        }
-        else if (nTau == 1 && nDelta == 2){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta2_dTau(tau, delta); }
-            return summer + pExcess.d3alphar_dDelta2_dTau(tau, delta);
-        }
-        else if (nTau == 2 && nDelta == 1){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dDelta_dTau2(tau, delta); }
-            return summer + pExcess.d3alphar_dDelta_dTau2(tau, delta);
-        }
-        else if (nTau == 3 && nDelta == 0){
-            for (unsigned int i = 0; i < N; ++i){ summer += mole_fractions[i]*components[i].EOS().d3alphar_dTau3(tau, delta); }
-            return summer + pExcess.d3alphar_dTau3(tau, delta);
-        }*/
-        else
-        {
-            throw ValueError();
-        }
-    }
+    bool cache_values = false;
+    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, mole_fractions, tau, delta, cache_values);
+    return derivs.get(nTau, nDelta);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl> &mole_fractions,
                                                                   const CoolPropDbl &tau, const CoolPropDbl &delta, const CoolPropDbl &Tr, const CoolPropDbl &rhor)
 {
     CoolPropDbl val;
+    if (components.size() == 0){
+        throw ValueError("No alpha0 derivatives are available");
+    }
     if (is_pure_or_pseudopure)
     {
         if (nTau == 0 && nDelta == 0){
@@ -2775,9 +2900,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer = 0;
         CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
-        if (components.size() == 0){
-            throw ValueError("Cannot evaluate alpha0 derivatives since components is empty");
-        }
         for (unsigned int i = 0; i < N; ++i){
             rho_ci = components[i].EOS().reduce.rhomolar;
             T_ci = components[i].EOS().reduce.T;
@@ -3492,16 +3614,14 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 	
 	const std::vector<CoolPropDbl> &z = this->get_mole_fractions_ref();
 	if (w.size() != z.size()){ 
-		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size())); 
+		throw ValueError(format("Trial composition vector size [%d] is not the same as bulk composition [%d]", w.size(), z.size()));
 	}
     add_TPD_state();
 	TPD_state->set_mole_fractions(w);
-	if (rhomolar_guess < 0){
-		TPD_state->update(PT_INPUTS, p, T);
-	}
-	else{
-		TPD_state->update_TP_guessrho(T, p, rhomolar_guess);
-	}
+    
+    CoolPropDbl rho = TPD_state->solver_rho_Tp_global(T, p, 1/TPD_state->SRK_covolume()*1.5);
+    TPD_state->update_DmolarT_direct(rho, T);
+    
 	double summer = 0;
 	for (std::size_t i = 0; i < w.size(); ++i){
 		summer += w[i] * (log(MixtureDerivatives::fugacity_i(*TPD_state, i, XN_DEPENDENT)) 

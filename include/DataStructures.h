@@ -406,7 +406,8 @@ enum backend_families {
     TTSE_BACKEND_FAMILY,
     BICUBIC_BACKEND_FAMILY,
     SRK_BACKEND_FAMILY,
-    PR_BACKEND_FAMILY
+    PR_BACKEND_FAMILY,
+    VTPR_BACKEND_FAMILY
 };
 enum backends {
     INVALID_BACKEND = 0,
@@ -420,7 +421,8 @@ enum backends {
     TTSE_BACKEND,
     BICUBIC_BACKEND,
     SRK_BACKEND,
-    PR_BACKEND
+    PR_BACKEND,
+    VTPR_BACKEND
 };
 
 /// Convert a string into the enum values

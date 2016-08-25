@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "acetone", 
-    "ACETONE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +177,6 @@
         1.16
       ]
     }
-  }, 
-  "CAS": "67-64-1", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": 0.5, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Acetone", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -373,9 +357,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{3}H_{6}O_{1}", 
-  "NAME": "Acetone", 
-  "REFPROP_NAME": "ACETONE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=175", 
+    "ALIASES": [
+      "acetone", 
+      "ACETONE"
+    ], 
+    "CAS": "67-64-1", 
+    "CHEMSPIDER_ID": 175, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": 0.5, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Acetone", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{3}H_{6}O_{1}", 
+    "INCHI_KEY": "CSCPPACGZOOCGX-UHFFFAOYAF", 
+    "INCHI_STRING": "InChI=1/C3H6O/c1-3(2)4/h1-2H3", 
+    "NAME": "Acetone", 
+    "REFPROP_NAME": "ACETONE", 
+    "SMILES": "CC(=O)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 508.1, 

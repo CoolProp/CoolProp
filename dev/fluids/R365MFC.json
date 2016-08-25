@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R365mfc"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -180,18 +177,6 @@
         1.21
       ]
     }
-  }, 
-  "CAS": "406-58-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": 794.0, 
-    "GWP20": 2520.0, 
-    "GWP500": 241.0, 
-    "HH": -1, 
-    "Name": "R365MFC", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -386,9 +371,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{4}F_{5}H_{5}", 
-  "NAME": "R365MFC", 
-  "REFPROP_NAME": "R365MFC", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=61201", 
+    "ALIASES": [
+      "R365mfc"
+    ], 
+    "CAS": "406-58-6", 
+    "CHEMSPIDER_ID": 61201, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": 794.0, 
+      "GWP20": 2520.0, 
+      "GWP500": 241.0, 
+      "HH": -1, 
+      "Name": "R365MFC", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{4}F_{5}H_{5}", 
+    "INCHI_KEY": "WZLFPVPRZGTCKP-UHFFFAOYAP", 
+    "INCHI_STRING": "InChI=1/C4H5F5/c1-3(5,6)2-4(7,8)9/h2H2,1H3", 
+    "NAME": "R365MFC", 
+    "REFPROP_NAME": "R365MFC", 
+    "SMILES": "CC(CC(F)(F)F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 460.0, 

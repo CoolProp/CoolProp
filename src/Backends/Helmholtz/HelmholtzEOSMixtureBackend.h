@@ -37,9 +37,13 @@ protected:
         if (critical_state.get() == NULL){ bool sat_states = true; critical_state.reset(get_copy(sat_states)); linked_states.push_back(critical_state);
         }
     };
+    /// Update the state class used to calculate the critical point(s)
+    virtual void add_transient_pure_state(){
+        if (transient_pure_state.get() == NULL){ bool sat_states = true; transient_pure_state.reset(get_copy(sat_states)); linked_states.push_back(transient_pure_state);
+        }
+    };
     
     std::vector<CoolPropFluid> components; ///< The components that are in use
-    phases imposed_phase_index;
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
     std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
     std::vector<double> mole_fractions_double; ///< A copy of the bulk mole fractions of the mixture stored as doubles
@@ -52,12 +56,7 @@ public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
-    virtual HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
-        HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
-        ptr->Reducing = Reducing;
-        ptr->residual_helmholtz = residual_helmholtz;
-        return ptr;
-    };
+    virtual HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true);
     virtual ~HelmholtzEOSMixtureBackend(){};
     std::string backend_name(void) { return get_backend_string(HEOS_BACKEND_MIX); }
     shared_ptr<ReducingFunction> Reducing;
@@ -101,12 +100,19 @@ public:
     /// Apply a simple mixing rule
     void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model);
 
-    // Set the volume translation parameter (for cubic)
-    virtual void set_volume_translation(const double value) { throw ValueError("set_volume_translation only defined for cubic backends"); };
+    // Set fluid parameter (currently the volume translation parameter for cubic)
+    virtual void set_fluid_parameter_double(const size_t i, const std::string parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
 
     phases calc_phase(void){return _phase;};
-    void calc_specify_phase(phases phase){ specify_phase(phase); }
-    void calc_unspecify_phase(){ unspecify_phase(); }
+    
+    /** \brief Specify the phase - this phase will always be used in calculations
+     *
+     * @param phase_index The index from CoolProp::phases
+     */
+    void calc_specify_phase(phases phase_index){ imposed_phase_index = phase_index; _phase = phase_index; }
+    /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
+     */
+    void calc_unspecify_phase(){ imposed_phase_index = iphase_not_imposed;}
     CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
     void calc_ssat_max(void);
     void calc_hsat_max(void);
@@ -154,6 +160,7 @@ public:
             case iT_critical: return fld.crit.T;
             case irhomolar_critical: return fld.crit.rhomolar;
             case iacentric_factor: return fld.EOS().acentric;
+            case imolar_mass: return fld.EOS().molar_mass;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
         }
@@ -211,16 +218,6 @@ public:
      */
     virtual void set_components(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
 
-    /** \brief Specify the phase - this phase will always be used in calculations
-     * 
-     * @param phase_index The index from CoolProp::phases
-     */
-    void specify_phase(phases phase_index){imposed_phase_index = phase_index; _phase = phase_index;};
-    
-    /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
-     */
-    void unspecify_phase(){imposed_phase_index = iphase_not_imposed;};
-
     /** \brief Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
      */
     void set_mixture_parameters();
@@ -257,6 +254,7 @@ public:
     CoolPropDbl calc_cvmolar(void);
     CoolPropDbl calc_cpmolar(void);
     CoolPropDbl calc_gibbsmolar(void);
+    CoolPropDbl calc_gibbsmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
     CoolPropDbl calc_helmholtzmolar(void);
     CoolPropDbl calc_cpmolar_idealgas(void);
@@ -420,6 +418,9 @@ public:
     CoolPropDbl calc_compressibility_factor(void){return 1+delta()*dalphar_dDelta();};
     
     void calc_phase_envelope(const std::string &type);
+    
+    CoolPropDbl SRK_covolume();
+    
 
     // ***************************************************************
     // ***************************************************************
@@ -439,21 +440,22 @@ public:
 
     virtual CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
     virtual CoolPropDbl solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase);
-
+    enum StationaryPointReturnFlag {ZERO_STATIONARY_POINTS, ONE_STATIONARY_POINT_FOUND, TWO_STATIONARY_POINTS_FOUND};
+    virtual StationaryPointReturnFlag solver_dpdrho0_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax, CoolPropDbl&light, CoolPropDbl &heavy);
+    virtual CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax);
 };
 
 class CorrespondingStatesTerm
 {
 public:
     /// Calculate all the derivatives that do not involve any composition derivatives
-    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &x, bool cache_values = false)
+    virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, double tau, double delta, const std::vector<CoolPropDbl> &x, bool cache_values = false)
     {
         HelmholtzDerivatives summer;
-        const CoolPropDbl tau = HEOS.tau(), delta = HEOS.delta();
-        std::size_t N = HEOS.mole_fractions.size();
+        std::size_t N = x.size();
         for (std::size_t i = 0; i < N; ++i){
             HelmholtzDerivatives derivs = HEOS.components[i].EOS().alphar.all(tau, delta, cache_values);
-            summer = summer + derivs*HEOS.mole_fractions[i];
+            summer = summer + derivs*x[i];
         }
         return summer;
     }
@@ -631,13 +633,13 @@ public:
 
     virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, double tau, double delta, bool cache_values = false)
     {
-        HelmholtzDerivatives a = CS.all(HEOS, mole_fractions, cache_values) + Excess.all(HEOS.tau(), HEOS.delta(), mole_fractions, cache_values);
-        a.delta_x_dalphar_ddelta = HEOS.delta()*a.dalphar_ddelta;
-        a.tau_x_dalphar_dtau = HEOS.tau()*a.dalphar_dtau;
+        HelmholtzDerivatives a = CS.all(HEOS, tau, delta, mole_fractions, cache_values) + Excess.all(tau, delta, mole_fractions, cache_values);
+        a.delta_x_dalphar_ddelta = delta*a.dalphar_ddelta;
+        a.tau_x_dalphar_dtau = tau*a.dalphar_dtau;
 
-        a.delta2_x_d2alphar_ddelta2 = pow(HEOS.delta(), 2)*a.d2alphar_ddelta2;
-        a.deltatau_x_d2alphar_ddelta_dtau = HEOS.delta()*HEOS.tau()*a.d2alphar_ddelta_dtau;
-        a.tau2_x_d2alphar_dtau2 = pow(HEOS.tau(), 2)*a.d2alphar_dtau2;
+        a.delta2_x_d2alphar_ddelta2 = POW2(delta)*a.d2alphar_ddelta2;
+        a.deltatau_x_d2alphar_ddelta_dtau = delta*tau*a.d2alphar_ddelta_dtau;
+        a.tau2_x_d2alphar_dtau2 = POW2(tau)*a.d2alphar_dtau2;
 
         return a;
     }

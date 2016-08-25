@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -178,18 +177,6 @@
         1.237
       ]
     }
-  }, 
-  "CAS": "354-33-6", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 1, 
-    "GWP100": 3500.0, 
-    "GWP20": 6350.0, 
-    "GWP500": 1100.0, 
-    "HH": 1, 
-    "Name": "R125", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -398,9 +385,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}F_{5}H_{1}", 
-  "NAME": "R125", 
-  "REFPROP_NAME": "R125", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=9256", 
+    "ALIASES": [], 
+    "CAS": "354-33-6", 
+    "CHEMSPIDER_ID": 9256, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 1, 
+      "GWP100": 3500.0, 
+      "GWP20": 6350.0, 
+      "GWP500": 1100.0, 
+      "HH": 1, 
+      "Name": "R125", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}F_{5}H_{1}", 
+    "INCHI_KEY": "GTLACDSXYULKMZ-UHFFFAOYAX", 
+    "INCHI_STRING": "InChI=1/C2HF5/c3-1(4)2(5,6)7/h1H", 
+    "NAME": "R125", 
+    "REFPROP_NAME": "R125", 
+    "SMILES": "C(C(F)(F)F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 339.173, 

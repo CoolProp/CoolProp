@@ -23,6 +23,10 @@ Windows
 
 * This change (telling CMake to use the MinGW generator with ``-G "MinGW Makefiles"``) is needed because by default on windows it tries to use the most-recent installed version of Visual Studio, which conflicts with the Android SDK.
 
+.. warning:
+
+    As of Aug 2016, the version 12 of the NDK does not compile CoolProp correctly.  You must use 10e for some reason.  See also https://github.com/CoolProp/CoolProp/issues/1178
+
 Linux & OSX
 -----------
 

@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "MethylChloride"
-  ], 
   "ANCILLARIES": {
     "pS": {
       "T_r": 416.3, 
@@ -90,18 +87,6 @@
         1.2177
       ]
     }
-  }, 
-  "CAS": "74-87-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1, 
-    "GWP20": -1, 
-    "GWP500": -1, 
-    "HH": -1, 
-    "Name": "DiethylEther", 
-    "ODP": -1, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -282,9 +267,31 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}Cl_{1}H_{3}", 
-  "NAME": "R40", 
-  "REFPROP_NAME": "R40", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6087", 
+    "ALIASES": [
+      "MethylChloride"
+    ], 
+    "CAS": "74-87-3", 
+    "CHEMSPIDER_ID": 6087, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1, 
+      "GWP20": -1, 
+      "GWP500": -1, 
+      "HH": -1, 
+      "Name": "DiethylEther", 
+      "ODP": -1, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{1}Cl_{1}H_{3}", 
+    "INCHI_KEY": "NEHMKBQYUWJMIP-UHFFFAOYAW", 
+    "INCHI_STRING": "InChI=1/CH3Cl/c1-2/h1H3", 
+    "NAME": "R40", 
+    "REFPROP_NAME": "R40", 
+    "SMILES": "CCl"
+  }, 
   "STATES": {
     "critical": {
       "T": 416.3, 

@@ -60,8 +60,12 @@ public:
         /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
         simple_aii = (C1.empty() && C2.empty() && C3.empty() && L_Twu.empty() && M_Twu.empty() && N_Twu.empty());
     };
+    /// Get the entire kij matrix in one shot
+    const std::vector< std::vector<double> > & get_kmat(){return k;};
+    /// Set the entire kij matrix in one shot
+    void set_kmat(const std::vector< std::vector<double> > &k){ this->k = k; };
     /// Set the kij factor for the ij pair
-    void set_kij(std::size_t i, std::size_t j, double val){ k[i][j] = val; }
+    void set_kij(std::size_t i, std::size_t j, double val){ k[i][j] = val; k[j][i] = val;}
     /// Get the kij factor for the ij pair
     double get_kij(std::size_t i, std::size_t j){ return k[i][j]; }
     /// Get the vector of critical temperatures (in K)
@@ -120,13 +124,13 @@ public:
     virtual double m_ii(std::size_t i) = 0;
     
     /// The residual non-dimensionalized Helmholtz energy \f$\alpha^r\f$
-    double alphar(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta);
+    virtual double alphar(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta);
     /// The first composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d_alphar_dxi(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, bool xN_independent);
+    virtual double d_alphar_dxi(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, bool xN_independent);
     /// The second composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d2_alphar_dxidxj(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent);
+    virtual double d2_alphar_dxidxj(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, bool xN_independent);
     /// The third composition derivative of \f$\alpha^r\f$ as well as derivatives with respect to \f$\tau\f$ and \f$\delta\f$
-    double d3_alphar_dxidxjdxk(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
+    virtual double d3_alphar_dxidxjdxk(double tau, double delta, const std::vector<double> &x, std::size_t itau, std::size_t idelta, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
     
     /**
      * \brief The n-th derivative of \f$a_m\f$ with respect to \f$\tau\f$
@@ -192,13 +196,14 @@ public:
      * \param xN_independent True if \f$x_N\f$ is an independent variable, false otherwise (dependent on other \f$N-1\f$ mole fractions)
      */
     virtual double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent);
-    
-    /**
-    * \brief The term \f$c_{\rm m}\f$ (volume translation)
-    */
-    virtual double cm_term();
-    /// Set the volume translation parameter
-    void set_cm(double val) {cm = val; }
+	/**
+	* \brief The term \f$c_{\rm m}\f$ (volume translation)
+	*/
+	virtual double cm_term();
+	/// Set the volume translation parameter
+	void set_cm(double val) { cm = val; }
+
+protected:
 
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$

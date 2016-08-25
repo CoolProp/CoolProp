@@ -18,6 +18,7 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #include "DataStructures.h"
 #include "GeneralizedCubic.h"
 #include "CubicsLibrary.h"
+#include "Configuration.h"
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "Exceptions.h"
@@ -53,6 +54,7 @@ public:
             case iP_critical: return cubic->get_pc()[i];
             case iT_critical: return cubic->get_Tc()[i];
             case iacentric_factor: return cubic->get_acentric()[i];
+            case imolar_mass: return components[i].molemass;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
         }
@@ -156,6 +158,8 @@ public:
      * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
      */
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);
+    
+    CoolPropDbl solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomax);
 
     /// Update the state used to calculate the tangent-plane-distance
     void update_TPD_state(){
@@ -185,8 +189,8 @@ public:
     // Set the Twu constants L,M,N for a pure fluid
     void set_C_Twu(double L, double M, double N);
 
-    // Set the volume translation parameter
-    void set_volume_translation(const double value);
+	// Set fluid parameter (currently the volume translation parameter)
+	void set_fluid_parameter_double(const size_t i, const std::string parameter, const double value);
     
 };
 
@@ -211,7 +215,7 @@ public:
 		setup(generate_SatL_and_SatV);
     }
     SRKBackend(const std::vector<std::string> fluid_identifiers, 
-               const double R_u, 
+               const double R_u = get_config_double(R_U_CODATA),
                bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
@@ -253,7 +257,7 @@ public:
 		setup(generate_SatL_and_SatV);
     };
     PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, 
-                        const double R_u, 
+                        const double R_u = get_config_double(R_U_CODATA),
                         bool generate_SatL_and_SatV = true){
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
@@ -287,6 +291,13 @@ protected:
 public:
 	CubicResidualHelmholtz(){ ACB = NULL; };
 	CubicResidualHelmholtz(AbstractCubicBackend * ACB) : ACB(ACB) {};
+    
+    // copy assignment
+    CubicResidualHelmholtz& operator=(CubicResidualHelmholtz &other)
+    {
+        ACB = other.ACB;
+        return *this;
+    }
 
     /// All the derivatives of the residual Helmholtz energy w.r.t. tau and delta that do not involve composition derivative
     virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, double tau, double delta, bool cache_values = false)

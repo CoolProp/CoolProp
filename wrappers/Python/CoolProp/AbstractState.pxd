@@ -30,6 +30,7 @@ cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI
     cpdef public size_t iTsat_max, ipsat_max, icrit
     cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+    cpdef public list x, y, K
     
 cdef class PyGuessesStructure:
     cpdef public double T, p, rhomolar, hmolar, smolar
@@ -205,3 +206,9 @@ cdef class AbstractState:
     cpdef CoolPropDbl d3alphar_dDelta2_dTau(self) except *
     cpdef CoolPropDbl d3alphar_dDelta_dTau2(self) except *
     cpdef CoolPropDbl d3alphar_dTau3(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta4(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta3_dTau(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta2_dTau2(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta_dTau3(self) except *
+    cpdef CoolPropDbl d4alphar_dTau4(self) except *
+

@@ -4,8 +4,9 @@ EXPORTS
   AbstractState_factory = _AbstractState_factory@20
   AbstractState_free = _AbstractState_free@16
   AbstractState_keyed_output = _AbstractState_keyed_output@20
-  AbstractState_set_binary_interaction_double = AbstractState_set_binary_interaction_double@36
+  AbstractState_set_binary_interaction_double = _AbstractState_set_binary_interaction_double@36
   AbstractState_set_fractions = _AbstractState_set_fractions@24
+  AbstractState_set_fluid_parameter_double = _AbstractState_set_fluid_parameter_double@32
   AbstractState_update = _AbstractState_update@36
   AbstractState_first_saturation_deriv = _AbstractState_first_saturation_deriv@24
   AbstractState_first_partial_deriv = _AbstractState_first_partial_deriv@28
@@ -36,6 +37,7 @@ EXPORTS
   propssi_ = _propssi_@28
   redirect_stdout = _redirect_stdout@4
   saturation_ancillary = _saturation_ancillary@24
+  set_config_string = _set_config_string@8
   set_debug_level = _set_debug_level@4
   set_reference_stateD = _set_reference_stateD@36
   set_reference_stateS = _set_reference_stateS@8

@@ -99,6 +99,17 @@
                 throw CoolProp::ValueError(format("%s could not be matched in get_number",s.c_str()));
             }
         };
+        /// Get a double, or return the default value if not found
+        double get_double(const std::string &s, const double default_value) const
+        {
+            numbers_map::const_iterator i = numbers.find(s);
+            if (i != numbers.end()){
+                return i->second;
+            }
+            else{
+                return default_value;
+            }
+        };
         double get_number(const std::string &s) const
         {
             return get_double(s);

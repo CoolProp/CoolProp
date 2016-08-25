@@ -1,7 +1,4 @@
 {
-  "ALIASES": [
-    "R410a"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -198,18 +195,6 @@
         1.246
       ]
     }
-  }, 
-  "CAS": "R410A.PPF", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 2088.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "R410A", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -434,8 +419,25 @@
       "pseudo_pure": true
     }
   ], 
-  "NAME": "R410A", 
-  "REFPROP_NAME": "R410A", 
+  "INFO": {
+    "ALIASES": [
+      "R410a"
+    ], 
+    "CAS": "R410A.PPF", 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 2088.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "R410A", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "NAME": "R410A", 
+    "REFPROP_NAME": "R410A"
+  }, 
   "STATES": {
     "critical": {
       "T": 344.494, 

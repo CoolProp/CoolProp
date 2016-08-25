@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -181,18 +180,6 @@
       ]
     }
   }, 
-  "CAS": "75-46-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 14800.0, 
-    "GWP20": 12000.0, 
-    "GWP500": 12200.0, 
-    "HH": 1, 
-    "Name": "R23", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -369,9 +356,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{1}F_{3}H_{1}", 
-  "NAME": "R23", 
-  "REFPROP_NAME": "R23", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=21106179", 
+    "ALIASES": [], 
+    "CAS": "75-46-7", 
+    "CHEMSPIDER_ID": 21106179, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 14800.0, 
+      "GWP20": 12000.0, 
+      "GWP500": 12200.0, 
+      "HH": 1, 
+      "Name": "R23", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{1}F_{3}H_{1}", 
+    "INCHI_KEY": "XPDWGBQVDMORPB-UHFFFAOYAM", 
+    "INCHI_STRING": "InChI=1/CHF3/c2-1(3)4/h1H", 
+    "NAME": "R23", 
+    "REFPROP_NAME": "R23", 
+    "SMILES": "C(F)(F)F"
+  }, 
   "STATES": {
     "critical": {
       "T": 299.293, 

@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "DEE", 
-    "DiethylEther"
-  ], 
   "ANCILLARIES": {
     "pS": {
       "T_r": 466.7, 
@@ -85,18 +81,6 @@
         1.5021
       ]
     }
-  }, 
-  "CAS": "60-29-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1, 
-    "GWP20": -1, 
-    "GWP500": -1, 
-    "HH": -1, 
-    "Name": "DiethylEther", 
-    "ODP": -1, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -268,9 +252,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{4}H_{10}O_{1}", 
-  "NAME": "DiethylEther", 
-  "REFPROP_NAME": "DEE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=3168", 
+    "ALIASES": [
+      "DEE", 
+      "DiethylEther"
+    ], 
+    "CAS": "60-29-7", 
+    "CHEMSPIDER_ID": 3168, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1, 
+      "GWP20": -1, 
+      "GWP500": -1, 
+      "HH": -1, 
+      "Name": "DiethylEther", 
+      "ODP": -1, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{4}H_{10}O_{1}", 
+    "INCHI_KEY": "RTZKZFJDLAIYFH-UHFFFAOYAB", 
+    "INCHI_STRING": "InChI=1/C4H10O/c1-3-5-4-2/h3-4H2,1-2H3", 
+    "NAME": "DiethylEther", 
+    "REFPROP_NAME": "DEE", 
+    "SMILES": "CCOCC"
+  }, 
   "STATES": {
     "critical": {
       "T": 466.7, 

@@ -454,6 +454,9 @@ cdef class AbstractState:
         pe_out.iTsat_max = pe_data.iTsat_max
         pe_out.ipsat_max = pe_data.ipsat_max
         pe_out.TypeI = pe_data.TypeI
+        pe_out.x = pe_data.x
+        pe_out.y = pe_data.y
+        pe_out.K = pe_data.K
         return pe_out
         
     ## -----------------------------------------
@@ -531,3 +534,18 @@ cdef class AbstractState:
     cpdef CoolPropDbl d3alphar_dDelta3(self) except *:
         """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d3alphar_dDelta3` """
         return self.thisptr.d3alphar_dDelta3()
+    cpdef CoolPropDbl d4alphar_dTau4(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d4alphar_dTau4` """
+        return self.thisptr.d4alphar_dTau4()
+    cpdef CoolPropDbl d4alphar_dDelta_dTau3(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d4alphar_dDelta_dTau3` """
+        return self.thisptr.d4alphar_dDelta_dTau3()
+    cpdef CoolPropDbl d4alphar_dDelta2_dTau2(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d4alphar_dDelta2_dTau2` """
+        return self.thisptr.d4alphar_dDelta2_dTau2()
+    cpdef CoolPropDbl d4alphar_dDelta3_dTau(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d4alphar_dDelta3_dTau` """
+        return self.thisptr.d4alphar_dDelta3_dTau()
+    cpdef CoolPropDbl d4alphar_dDelta4(self) except *:
+        """ Get the residual reduced Helmholtz energy - wrapper of c++ function :cpapi:`CoolProp::AbstractState::d4alphar_dDelta4` """
+        return self.thisptr.d4alphar_dDelta4()

@@ -444,12 +444,27 @@ namespace StabilityRoutines{
         std::vector<double> lnK, K, K0, x, y;
         const std::vector<double> &z;
         double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
+        double m_T, ///< The temperature to be used (if specified, otherwise that from HEOS)
+               m_p; ///< The pressure to be used (if specified, otherwise that from HEOS)
     private:
         bool _stable;
         bool debug;
     public:
         StabilityEvaluationClass(HelmholtzEOSMixtureBackend &HEOS)
-           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), _stable(false), debug(false) {};
+           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), m_T(-1), m_p(-1), _stable(false),debug(false) {};
+        /** \brief Specify T&P, otherwise they are loaded the HEOS instance
+         */
+        void set_TP(double T, double p){m_T = T; m_p = p;};
+        /** \brief Calculate the liquid and vapor phase densities based on the guess values
+         */
+        void rho_TP_w_guesses();
+        /** \brief Calculate the liquid and vapor phase densities using the global analysis
+         */
+        void rho_TP_global();
+        /** \brief Calculate the liquid and vapor phase densities based on SRK, with Peneloux volume translation afterwards
+         */
+        void rho_TP_SRK_translated();
+        
         /** \brief Calculate trial compositions
          */
         void trial_compositions();

@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "ihexane", 
-    "ISOHEXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "107-83-5", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "Isohexane", 
-    "ODP": -1.0, 
-    "PH": 1
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -350,9 +334,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{6}H_{14}", 
-  "NAME": "Isohexane", 
-  "REFPROP_NAME": "IHEXANE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7604", 
+    "ALIASES": [
+      "ihexane", 
+      "ISOHEXANE"
+    ], 
+    "CAS": "107-83-5", 
+    "CHEMSPIDER_ID": 7604, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "Isohexane", 
+      "ODP": -1.0, 
+      "PH": 1
+    }, 
+    "FORMULA": "C_{6}H_{14}", 
+    "INCHI_KEY": "AFABGHUZZDYHJO-UHFFFAOYAZ", 
+    "INCHI_STRING": "InChI=1/C6H14/c1-4-5-6(2)3/h6H,4-5H2,1-3H3", 
+    "NAME": "Isohexane", 
+    "REFPROP_NAME": "IHEXANE", 
+    "SMILES": "CCCC(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 497.70000000000005, 

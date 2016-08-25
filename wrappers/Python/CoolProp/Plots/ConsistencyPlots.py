@@ -69,6 +69,9 @@ class ConsistencyFigure(object):
 
         self.fluid = fluid
         self.backend = backend
+        print('***********************************************************************************')
+        print('*************** '+backend+'::'+fluid+' ************************')
+        print('***********************************************************************************')
         self.fig, self.axes = plt.subplots(nrows = 5, ncols = 3, figsize = figsize)
         self.pairs = all_solvers
         pairs_generator = iter(self.pairs)
@@ -334,10 +337,11 @@ class ConsistencyAxis(object):
                     if abs(self.state_PT.rhomolar()/self.state.rhomolar()-1) < 1e-3 and abs(self.state_PT.p()/self.state.p()-1) < 1e-3 and abs(self.state_PT.T() - self.state.T()) < 1e-3:
                         xgood.append(x)
                         ygood.append(y)
-                        if self.state_PT.phase() != self.state.phase():
-                            print('bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_PT.phase())
-                            xbadphase.append(x)
-                            ybadphase.append(y)
+                        if 'REFPROP' not in self.backend:
+                            if self.state_PT.phase() != self.state.phase():
+                                print('bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_PT.phase())
+                                xbadphase.append(x)
+                                ybadphase.append(y)
                     else:
                         print('bad', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), 'T:', self.state_PT.T(), 'Drho:', abs(self.state_PT.rhomolar()/self.state.rhomolar()-1), abs(self.state_PT.p()/self.state.p()-1), 'DT:', abs(self.state_PT.T() - self.state.T()))
                         xbad.append(x)
@@ -356,6 +360,13 @@ class ConsistencyAxis(object):
 
         tic = time.time()
         state = self.state
+
+        try:
+            if state.fluid_param_string('pure') == 'false':
+                print("Not a pure-fluid, skipping two-phase evaluation")
+                return
+        except:
+            pass
 
         # Update the state given the desired set of inputs
         param1, param2 = split_pair(self.pair)
@@ -391,7 +402,7 @@ class ConsistencyAxis(object):
                     state.update(pairkey, self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2))
                 except ValueError as VE:
                     print('update_QT', T, q)
-                    print('update', self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2), VE)
+                    print('update', param1, self.state_QT.keyed_output(key1), param2, self.state_QT.keyed_output(key2), VE)
                     _exception = True
 
                 x = self.to_axis_units(xparam, self.state_QT.keyed_output(xkey))
@@ -405,10 +416,11 @@ class ConsistencyAxis(object):
                     if abs(self.state_QT.rhomolar()/self.state.rhomolar()-1) < 1e-3 and abs(self.state_QT.p()/self.state.p()-1) < 1e-3 and abs(self.state_QT.T() - self.state.T()) < 1e-3:
                         xgood.append(x)
                         ygood.append(y)
-                        if self.state_QT.phase() != self.state.phase():
-                            print('bad phase (2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_QT.phase())
-                            xbadphase.append(x)
-                            ybadphase.append(y)
+                        if 'REFPROP' not in self.backend:
+                            if self.state_QT.phase() != self.state.phase():
+                                print('bad phase (2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_QT.phase())
+                                xbadphase.append(x)
+                                ybadphase.append(y)
                     else:
                         print('Q',q)
                         print('bad(2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), 'pnew:', self.state.p(), 'pold:',self.state_QT.p(),'Tnew:', self.state.T(),'T:', self.state_QT.T(), 'Drho:', abs(self.state_QT.rhomolar()/self.state.rhomolar()-1), 'DP', abs(self.state_QT.p()/self.state.p()-1), 'DT:', abs(self.state_QT.T() - self.state.T()))
@@ -440,14 +452,11 @@ class ConsistencyAxis(object):
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')
-    CP.CoolProp.set_debug_level(10)
-    for fluid in ['R410A.mix']:#CP.__fluids__:
-        print('************************************************')
-        print(fluid)
-        print('************************************************')
+    CP.CoolProp.set_debug_level(0)
+    for fluid in ['PROPANE']:#CP.__fluids__:
         skips = ['DmolarHmolar','DmolarSmolar','DmolarUmolar','HmolarSmolar']
         skips = []
-        ff = ConsistencyFigure(fluid, backend = 'BICUBIC&REFPROP', additional_skips = skips, mole_fractions = [0.7,0.3])
+        ff = ConsistencyFigure(fluid, backend = 'REFPROP', additional_skips = skips)
         ff.add_to_pdf(PVT)
         ff.savefig(fluid + '.png')
         ff.savefig(fluid + '.pdf')

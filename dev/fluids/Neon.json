@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "neon", 
-    "NEON", 
-    "R720"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -201,18 +196,6 @@
         1.6567
       ]
     }
-  }, 
-  "CAS": "7440-01-9", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 0, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 0, 
-    "Name": "Neon", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -448,9 +431,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "Ne_{1}", 
-  "NAME": "Neon", 
-  "REFPROP_NAME": "NEON", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=22377", 
+    "ALIASES": [
+      "neon", 
+      "NEON", 
+      "R720"
+    ], 
+    "CAS": "7440-01-9", 
+    "CHEMSPIDER_ID": 22377, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 0, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 0, 
+      "Name": "Neon", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "Ne_{1}", 
+    "INCHI_KEY": "GKAOGPIIYCISHV-UHFFFAOYAG", 
+    "INCHI_STRING": "InChI=1/Ne", 
+    "NAME": "Neon", 
+    "REFPROP_NAME": "NEON", 
+    "SMILES": "[Ne]"
+  }, 
   "STATES": {
     "critical": {
       "T": 44.491800000000005, 

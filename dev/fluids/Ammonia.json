@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "NH3", 
-    "ammonia", 
-    "R717", 
-    "AMMONIA"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -185,18 +179,6 @@
         5.585
       ]
     }
-  }, 
-  "CAS": "7664-41-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "B2", 
-    "FH": 1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 3, 
-    "Name": "Ammonia", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -394,9 +376,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "H_{3}N_{1}", 
-  "NAME": "Ammonia", 
-  "REFPROP_NAME": "AMMONIA", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=217", 
+    "ALIASES": [
+      "NH3", 
+      "ammonia", 
+      "R717", 
+      "AMMONIA"
+    ], 
+    "CAS": "7664-41-7", 
+    "CHEMSPIDER_ID": 217, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "B2", 
+      "FH": 1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 3, 
+      "Name": "Ammonia", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "H_{3}N_{1}", 
+    "INCHI_KEY": "QGZKDVFQNNGYKY-UHFFFAOYAF", 
+    "INCHI_STRING": "InChI=1/H3N/h1H3", 
+    "NAME": "Ammonia", 
+    "REFPROP_NAME": "AMMONIA", 
+    "SMILES": "N"
+  }, 
   "STATES": {
     "critical": {
       "T": 405.40000000000003, 

@@ -1,5 +1,4 @@
 {
-  "ALIASES": [], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -178,18 +177,6 @@
         1.197
       ]
     }
-  }, 
-  "CAS": "2837-89-0", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A1", 
-    "FH": 1, 
-    "GWP100": 609.0, 
-    "GWP20": 2070.0, 
-    "GWP500": 185.0, 
-    "HH": 1, 
-    "Name": "R124", 
-    "ODP": 0.022, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -383,9 +370,29 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{2}Cl_{1}F_{4}H_{1}", 
-  "NAME": "R124", 
-  "REFPROP_NAME": "R124", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=16841", 
+    "ALIASES": [], 
+    "CAS": "2837-89-0", 
+    "CHEMSPIDER_ID": 16841, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A1", 
+      "FH": 1, 
+      "GWP100": 609.0, 
+      "GWP20": 2070.0, 
+      "GWP500": 185.0, 
+      "HH": 1, 
+      "Name": "R124", 
+      "ODP": 0.022, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{2}Cl_{1}F_{4}H_{1}", 
+    "INCHI_KEY": "BOUGCJDAQLKBQH-UHFFFAOYAT", 
+    "INCHI_STRING": "InChI=1/C2HClF4/c3-1(4)2(5,6)7/h1H", 
+    "NAME": "R124", 
+    "REFPROP_NAME": "R124", 
+    "SMILES": "C(C(F)(F)F)(F)Cl"
+  }, 
   "STATES": {
     "critical": {
       "T": 395.425, 

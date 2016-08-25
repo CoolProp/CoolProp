@@ -22,6 +22,16 @@ typedef unsigned int UINT32;
 
 namespace cpjson
 {
+    
+    /// Convert a JSON-formatted string to a rapidjson::Document object
+    inline void JSON_string_to_rapidjson(const std::string &JSON_string, rapidjson::Document &doc)
+    {
+        doc.Parse<0>(JSON_string.c_str());
+        if (doc.HasParseError()) {
+            throw CoolProp::ValueError("Unable to load JSON string");
+        }
+    }
+    
     struct value_information{
         bool isnull, isfalse, istrue, isbool, isobject, isarray, isnumber, isint, isint64, isuint, isuint64, isdouble, isstring;
     };

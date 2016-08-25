@@ -19,6 +19,7 @@
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/IF97/IF97Backend.h"
 #include "Backends/Cubics/CubicBackend.h"
+#include "Backends/Cubics/VTPRBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -88,6 +89,10 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     else if (f1==PR_BACKEND_FAMILY)
     {
         return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
+    }
+    else if (f1==VTPR_BACKEND_FAMILY)
+    {
+        return new VTPRBackend(fluid_names, get_config_double(R_U_CODATA));
     }
     else if (!backend.compare("?") || backend.empty())
     {

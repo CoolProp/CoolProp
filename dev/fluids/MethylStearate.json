@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "METHYLSTEARATE", 
-    "MSTEARAT"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,18 +179,6 @@
         1.163
       ]
     }
-  }, 
-  "CAS": "112-61-8", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 0, 
-    "Name": "MethylStearate", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -416,9 +400,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{19}H_{38}O_{2}", 
-  "NAME": "MethylStearate", 
-  "REFPROP_NAME": "MSTEARAT", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7909", 
+    "ALIASES": [
+      "METHYLSTEARATE", 
+      "MSTEARAT"
+    ], 
+    "CAS": "112-61-8", 
+    "CHEMSPIDER_ID": 7909, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 0, 
+      "Name": "MethylStearate", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{19}H_{38}O_{2}", 
+    "INCHI_KEY": "HPEUJPJOZXNMSJ-UHFFFAOYAE", 
+    "INCHI_STRING": "InChI=1/C19H38O2/c1-3-4-5-6-7-8-9-10-11-12-13-14-15-16-17-18-19(20)21-2/h3-18H2,1-2H3", 
+    "NAME": "MethylStearate", 
+    "REFPROP_NAME": "MSTEARAT", 
+    "SMILES": "CCCCCCCCCCCCCCCCCC(=O)OC"
+  }, 
   "STATES": {
     "critical": {
       "T": 775.0, 

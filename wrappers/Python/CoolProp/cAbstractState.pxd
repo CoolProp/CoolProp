@@ -11,6 +11,7 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
         bool TypeI
         size_t iTsat_max, ipsat_max, icrit
         vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+        vector[vector[double]] x, y, K
     
 cdef extern from "DataStructures.h" namespace "CoolProp":
     cdef cppclass CriticalState:
@@ -199,6 +200,12 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         CoolPropDbl d3alphar_dDelta2_dTau() except+ValueError
         CoolPropDbl d3alphar_dDelta_dTau2() except+ValueError
         CoolPropDbl d3alphar_dTau3() except+ValueError
+        CoolPropDbl d4alphar_dDelta4() except+ValueError
+        CoolPropDbl d4alphar_dDelta3_dTau() except+ValueError
+        CoolPropDbl d4alphar_dDelta2_dTau2() except+ValueError
+        CoolPropDbl d4alphar_dDelta_dTau3() except+ValueError
+        CoolPropDbl d4alphar_dTau4() except+ValueError
+
 
 # The static factory method for the AbstractState
 cdef extern from "AbstractState.h" namespace "CoolProp::AbstractState":
