@@ -816,6 +816,16 @@ class MixtureDerivatives{
     static CoolPropDbl dalphar_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
         return HEOS.dalphar_dDelta();
     }
+    static CoolPropDbl d2alphar_dDelta2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+        return HEOS.d2alphar_dDelta2();
+    }
+    static CoolPropDbl dalphar_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+        return HEOS.dalphar_dTau();
+    }
+    static CoolPropDbl d2alphar_dTau2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+        return HEOS.d2alphar_dTau2();
+    }
+    
     static CoolPropDbl ln_fugacity(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
         return log(MixtureDerivatives::fugacity_i(HEOS, i, xN_flag));
     }

@@ -765,6 +765,7 @@ CoolPropDbl MixtureDerivatives::dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, st
 #include "catch.hpp"
 
 #include "Backends/Cubics/CubicBackend.h"
+#include "Backends/Cubics/VTPRBackend.h"
 
 using namespace CoolProp;
 
@@ -800,7 +801,7 @@ public:
     double dtau, ddelta, dz, dn, tol, dT, drho, dp;
     DerivativeFixture() : xN(XN_INDEPENDENT) {
         dtau = 1e-6; ddelta = 1e-6; dz = 1e-6; dn = 1e-6; dT = 1e-3; drho = 1e-3; dp = 1; tol = 5e-6;
-        std::vector<std::string> names; names.push_back("Methane"); names.push_back("Ethane"); names.push_back("Propane"); names.push_back("n-Butane");
+        std::vector<std::string> names; names.push_back("n-Pentane"); names.push_back("Ethane"); names.push_back("n-Propane"); names.push_back("n-Butane");
         std::vector<CoolPropDbl> mole_fractions; mole_fractions.push_back(0.1); mole_fractions.push_back(0.2); mole_fractions.push_back(0.3); mole_fractions.push_back(0.4);
         HEOS.reset(new backend(names));
         HEOS->set_mole_fractions(mole_fractions);
@@ -872,6 +873,23 @@ public:
         other.reset(HEOS->get_copy());
         other->set_mole_fractions(HEOS->get_mole_fractions());
         other->specify_phase(CoolProp::iphase_gas); // Something homogeneous
+    }
+    void zero(const std::string &name, zero_mole_fraction_pointer f, zero_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV){
+        double analytic = f(*HEOS, xN);
+        double numeric = 0;
+        if (wrt == TAU){
+            numeric = (g(*HEOS_plus_tau, xN) - g(*HEOS_minus_tau, xN))/(2*dtau);
+        }
+        else if (wrt == DELTA){
+            numeric = (g(*HEOS_plus_delta, xN) - g(*HEOS_minus_delta, xN))/(2*ddelta);
+        }
+        CAPTURE(name);
+        CAPTURE(analytic)
+        CAPTURE(numeric);
+        CAPTURE(xN);
+        double error = mix_deriv_err_func(numeric, analytic);
+        CAPTURE(error);
+        CHECK(error < tol);
     }
     void one(const std::string &name, one_mole_fraction_pointer f, one_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV){
         for (int i = 0; i < 4; ++i){
@@ -1076,6 +1094,11 @@ public:
         one("d2_ndalphardni_dDelta_dTau", MD::d2_ndalphardni_dDelta_dTau, MD::d_ndalphardni_dDelta, TAU);
         one("d3_ndalphardni_dDelta2_dTau", MD::d3_ndalphardni_dDelta2_dTau, MD::d2_ndalphardni_dDelta2, TAU);
         one("d3_ndalphardni_dDelta_dTau2", MD::d3_ndalphardni_dDelta_dTau2, MD::d2_ndalphardni_dDelta_dTau, TAU);
+        
+        zero("dalphar_dDelta", MD::dalphar_dDelta, MD::alphar, DELTA);
+        zero("d2alphar_dDelta2", MD::d2alphar_dDelta2, MD::dalphar_dDelta, DELTA);
+        zero("dalphar_dTau", MD::dalphar_dTau, MD::alphar, TAU);
+        zero("d2alphar_dTau2", MD::d2alphar_dTau2, MD::dalphar_dTau, TAU);
 
         //two_comp("d_ndalphardni_dxj__constT_V_xi", MD::d_ndalphardni_dxj__constT_V_xi, MD::ndalphar_dni__constT_V_nj);
         
@@ -1174,17 +1197,21 @@ TEST_CASE_METHOD(DerivativeFixture<HelmholtzEOSMixtureBackend>, "Check derivativ
 {
     run_checks();
 };
-
 TEST_CASE_METHOD(DerivativeFixture<PengRobinsonBackend>, "Check derivatives for Peng-Robinson", "[mixture_derivs2]")
 {
     tol = 1e-4; // Relax the tolerance a bit
     run_checks();
 };
-
 TEST_CASE_METHOD(DerivativeFixture<SRKBackend>, "Check derivatives for SRK", "[mixture_derivs2]")
 {
     tol = 1e-4; // Relax the tolerance a bit
     run_checks();
 };
+// Make sure you set the VTPR UNIFAQ path with something like set_config_string(VTPR_UNIFAQ_PATH, "/Users/ian/Code/CUBAC/dev/unifaq/");
+//TEST_CASE_METHOD(DerivativeFixture<VTPRBackend>, "Check derivatives for VTPR", "[mixture_derivs2]")
+//{
+//    tol = 1e-4; // Relax the tolerance a bit
+//    run_checks();
+//};
 
 #endif
