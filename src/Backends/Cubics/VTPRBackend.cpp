@@ -96,6 +96,9 @@ TEST_CASE("VTPR test","[VTPR]")
         double tau = 0.001, dz = 1e-6;
         std::vector<double> zp = z, zm = z;
         zp[0] += dz; zm[0] -= dz;
+        if (!XN_INDEPENDENT) {
+            zp[2] -= dz; zm[2] += dz;
+        }
         
         double dam_dxi_num = (cubic->am_term(tau, zp, 0) - cubic->am_term(tau, zm, 0))/(2*dz);
         double dam_dxi_ana = cubic->d_am_term_dxi(tau, z, 0, 0, XN_INDEPENDENT);
