@@ -94,23 +94,41 @@ public:
     }
     double d_am_term_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent)
     {
-        set_temperature(T_r / tau);
-        return d_bm_term_dxi(x, i, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
-            + bm_term(x)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        if (itau == 0) {
+            set_temperature(T_r / tau);
+            return d_bm_term_dxi(x, i, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
+                + bm_term(x)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        }
+        else {
+            double dtau = 0.01*tau;
+            return (d_am_term_dxi(tau + dtau, x, itau - 1, i, xN_independent) - d_am_term_dxi(tau - dtau, x, itau - 1, i, xN_independent)) / (2 * dtau);
+        }
     }
     double d2_am_term_dxidxj(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, bool xN_independent)
     {
-        set_temperature(T_r / tau);
-        return d2_bm_term_dxidxj(x, i, j, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
-            + d_bm_term_dxi(x, i, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
-            + d_bm_term_dxi(x, j, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        if (itau == 0) {
+            set_temperature(T_r / tau);
+            return d2_bm_term_dxidxj(x, i, j, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
+                + d_bm_term_dxi(x, i, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
+                + d_bm_term_dxi(x, j, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        }
+        else {
+            double dtau = 0.01*tau;
+            return (d2_am_term_dxidxj(tau + dtau, x, itau - 1, i, j, xN_independent) - d2_am_term_dxidxj(tau - dtau, x, itau - 1, i, j, xN_independent)) / (2 * dtau);
+        }
     }
     double d3_am_term_dxidxjdxk(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
     {
-        set_temperature(T_r / tau);
-        return d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
-            + d2_bm_term_dxidxj(x, i, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
-            + d2_bm_term_dxidxj(x, j, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        if (itau == 0) {
+            set_temperature(T_r / tau);
+            return d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
+                + d2_bm_term_dxidxj(x, i, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
+                + d2_bm_term_dxidxj(x, j, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        }
+        else {
+            double dtau = 0.01*tau;
+            return (d3_am_term_dxidxjdxk(tau + dtau, x, itau - 1, i, j, k, xN_independent) - d3_am_term_dxidxjdxk(tau - dtau, x, itau - 1, i, j, k, xN_independent)) / (2 * dtau);
+        }
     }
 
     double bm_term(const std::vector<double> &x) {
