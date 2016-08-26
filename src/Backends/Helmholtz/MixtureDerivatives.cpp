@@ -738,7 +738,7 @@ CoolPropDbl MixtureDerivatives::dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, st
     double delta_oi = HEOS.delta()*rhor/rhoci;
     double Rratioi = 1;//HEOS.gas_constant()/HEOS.components[i].EOS().R_u;
     
-    double term = Rratioi*HEOS.components[i].EOS().alpha0.base(tau_oi, delta_oi) + log(HEOS.mole_fractions[i]);
+    double term = Rratioi*HEOS.components[i].EOS().alpha0.base(tau_oi, delta_oi) + log(HEOS.mole_fractions[i]) + 1;
     
     std::size_t kmax = HEOS.mole_fractions.size();
     if (xN_flag == XN_DEPENDENT){ kmax--; }
@@ -753,7 +753,147 @@ CoolPropDbl MixtureDerivatives::dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, st
         
         double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
         double dalpha0_ok_dxi = HEOS.components[k].EOS().alpha0.dTau(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta(tau_ok, delta_ok)*ddeltaok_dxi;
-        term += xk*(Rratiok*dalpha0_ok_dxi + 1/xk*Kronecker_delta(k,i));
+        term += xk*(Rratiok*dalpha0_ok_dxi);
+    }
+    return term;
+}
+
+CoolPropDbl MixtureDerivatives::d2alpha0_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    // Reducing values are constant for all components under consideration
+    double Tr = HEOS.T_reducing();
+    double rhor = HEOS.rhomolar_reducing();
+    
+    // Values for the i-th component
+    double Tci = HEOS.get_fluid_constant(i, iT_critical);
+    double rhoci = HEOS.get_fluid_constant(i, irhomolar_critical);
+    double tau_oi = HEOS.tau()*Tci/Tr;
+    double delta_oi = HEOS.delta()*rhor/rhoci;
+    double Rratioi = 1;//HEOS.gas_constant()/HEOS.components[i].EOS().R_u;
+    
+    double term = rhor/rhoci*Rratioi*HEOS.components[i].EOS().alpha0.dDelta(tau_oi, delta_oi);
+    
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (std::size_t k = 0; k < kmax; ++k){
+        double xk = HEOS.mole_fractions[k];
+        double Tck = HEOS.get_fluid_constant(k, iT_critical);
+        double rhock = HEOS.get_fluid_constant(k, irhomolar_critical);
+        double tau_ok = HEOS.tau()*Tck / Tr;
+        double delta_ok = HEOS.delta()*rhor / rhock;
+        double dtauok_dxi = -tau_ok / Tr*HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag); // (Gernert, supp, B.19)
+        double drhor_dxi = HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
+        double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
+        
+        double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
+        double dalpha0ok_ddeltaok = HEOS.components[k].EOS().alpha0.dDelta(tau_ok, delta_ok);
+
+        double d_dalpha0ok_ddeltaok_dxi = HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta2(tau_ok, delta_ok)*ddeltaok_dxi;
+        term += xk/rhock*(rhor*d_dalpha0ok_ddeltaok_dxi + drhor_dxi*dalpha0ok_ddeltaok);
+    }
+    return term;
+}
+
+CoolPropDbl MixtureDerivatives::d2alpha0_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag)
+{
+    // Reducing values are constant for all components under consideration
+    double Tr = HEOS.T_reducing();
+    double rhor = HEOS.rhomolar_reducing();
+    
+    // Values for the i-th component
+    double Tci = HEOS.get_fluid_constant(i, iT_critical);
+    double rhoci = HEOS.get_fluid_constant(i, irhomolar_critical);
+    double tau_oi = HEOS.tau()*Tci/Tr;
+    double delta_oi = HEOS.delta()*rhor/rhoci;
+    double Rratioi = 1;//HEOS.gas_constant()/HEOS.components[i].EOS().R_u;
+    
+    double term = Tci/Tr*Rratioi*HEOS.components[i].EOS().alpha0.dTau(tau_oi, delta_oi);
+    
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (std::size_t k = 0; k < kmax; ++k){
+        double xk = HEOS.mole_fractions[k];
+        double Tck = HEOS.get_fluid_constant(k, iT_critical);
+        double rhock = HEOS.get_fluid_constant(k, irhomolar_critical);
+        double tau_ok = HEOS.tau()*Tck / Tr;
+        double delta_ok = HEOS.delta()*rhor / rhock;
+        double dTr_dxi = HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag);
+        double dtauok_dxi = -tau_ok/Tr*dTr_dxi; // (Gernert, supp, B.19)
+        double drhor_dxi = HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
+        double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
+        
+        double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
+        double dalpha0ok_dtauok = HEOS.components[k].EOS().alpha0.dTau(tau_ok, delta_ok);
+        
+        double d_dalpha0ok_dTauok_dxi = HEOS.components[k].EOS().alpha0.dTau2(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*ddeltaok_dxi;
+        term += xk*Tck*(1/Tr*d_dalpha0ok_dTauok_dxi + -1/POW2(Tr)*dTr_dxi*dalpha0ok_dtauok);
+    }
+    return term;
+}
+    
+CoolPropDbl MixtureDerivatives::d2alpha0_dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+{
+    // Reducing values are constant for all components under consideration
+    double Tr = HEOS.T_reducing();
+    double rhor = HEOS.rhomolar_reducing();
+    
+    // Values for the i-th component
+    double Tci = HEOS.get_fluid_constant(i, iT_critical);
+    double rhoci = HEOS.get_fluid_constant(i, irhomolar_critical);
+    double tau_oi = HEOS.tau()*Tci/Tr;
+    double delta_oi = HEOS.delta()*rhor/rhoci;
+    double dTr_dxi = HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag);
+    double drhor_dxi = HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
+    
+    // Values for the j-th component
+    double Tcj = HEOS.get_fluid_constant(j, iT_critical);
+    double rhocj = HEOS.get_fluid_constant(j, irhomolar_critical);
+    double tau_oj = HEOS.tau()*Tcj/Tr;
+    double delta_oj = HEOS.delta()*rhor/rhocj;
+    double dTr_dxj = HEOS.Reducing->dTrdxi__constxj(HEOS.mole_fractions, j, xN_flag);
+    double drhor_dxj = HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, j, xN_flag);
+
+    // Cross-terms with both i & j
+    double dtauoi_dxj = -tau_oi/Tr*dTr_dxj; // (Gernert, supp, B.19)
+    double ddeltaoi_dxj = delta_oi/rhor*drhor_dxj; // (Gernert, supp. B.20)
+    double dtauoj_dxi = -tau_oj/Tr*dTr_dxi; // (Gernert, supp, B.19)
+    double ddeltaoj_dxi = delta_oj/rhor*drhor_dxi; // (Gernert, supp. B.20)
+    double d2Tr_dxidxj = HEOS.Reducing->d2Trdxidxj(HEOS.mole_fractions, i, j, xN_flag);
+    double d2rhor_dxidxj = HEOS.Reducing->d2rhormolardxidxj(HEOS.mole_fractions, i, j, xN_flag);
+    
+    double Rratioi = 1;//HEOS.gas_constant()/HEOS.components[i].EOS().R_u;
+    
+    double d_dalpha0oi_dxj = HEOS.components[i].EOS().alpha0.dTau(tau_oi, delta_oi)*dtauoi_dxj + HEOS.components[i].EOS().alpha0.dDelta(tau_oi, delta_oi)*ddeltaoi_dxj;
+    double d_dalpha0oj_dxi = HEOS.components[j].EOS().alpha0.dTau(tau_oj, delta_oj)*dtauoj_dxi + HEOS.components[j].EOS().alpha0.dDelta(tau_oj, delta_oj)*ddeltaoj_dxi;
+    
+    double xi = HEOS.mole_fractions[i];
+    double term = d_dalpha0oi_dxj + d_dalpha0oj_dxi + Kronecker_delta(i,j)/xi;
+    
+    std::size_t kmax = HEOS.mole_fractions.size();
+    if (xN_flag == XN_DEPENDENT){ kmax--; }
+    for (std::size_t k = 0; k < kmax; ++k){
+        // Values for the k-th component
+        double xk = HEOS.mole_fractions[k];
+        double Tck = HEOS.get_fluid_constant(k, iT_critical);
+        double rhock = HEOS.get_fluid_constant(k, irhomolar_critical);
+        double tau_ok = HEOS.tau()*Tck / Tr;
+        double delta_ok = HEOS.delta()*rhor / rhock;
+        
+        double dtauok_dxj = -tau_ok/Tr*dTr_dxj; // (Gernert, supp, B.19)
+        double ddeltaok_dxj = delta_ok/rhor*drhor_dxj; // (Gernert, supp. B.20)
+        double dtauok_dxi = -tau_ok/Tr*dTr_dxi; // (Gernert, supp, B.19)
+        double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
+        
+        double dalpha0ok_dtauok = HEOS.components[k].EOS().alpha0.dTau(tau_ok, delta_ok);
+        double d2tauok_dxidxj = -Tck*HEOS.tau()*(POW2(Tr)*d2Tr_dxidxj-dTr_dxi*(2*Tr*dTr_dxj))/POW4(Tr);
+        double d_dalpha0ok_dtauok_dxj = HEOS.components[k].EOS().alpha0.dTau2(tau_ok, delta_ok)*dtauok_dxj + HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*ddeltaok_dxj;
+
+        double dalpha0ok_ddeltaok = HEOS.components[k].EOS().alpha0.dDelta(tau_ok, delta_ok);
+        double d2deltaok_dxidxj = HEOS.delta()/rhock*d2rhor_dxidxj;
+        double d_dalpha0ok_ddeltaok_dxj = HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*dtauok_dxj + HEOS.components[k].EOS().alpha0.dDelta2(tau_ok, delta_ok)*ddeltaok_dxj;
+        
+        term += xk*(dalpha0ok_dtauok*d2tauok_dxidxj + d_dalpha0ok_dtauok_dxj*dtauok_dxi
+                    +dalpha0ok_ddeltaok*d2deltaok_dxidxj + d_dalpha0ok_ddeltaok_dxj*ddeltaok_dxi);
     }
     return term;
 }
@@ -1103,6 +1243,9 @@ public:
         //two_comp("d_ndalphardni_dxj__constT_V_xi", MD::d_ndalphardni_dxj__constT_V_xi, MD::ndalphar_dni__constT_V_nj);
         
         one_comp("dalpha0_dxi",MD::dalpha0_dxi, MD::alpha0);
+        one("d2alpha0_dxi_dDelta", MD::d2alpha0_dxi_dDelta, MD::dalpha0_dxi, DELTA);
+        one("d2alpha0_dxi_dTau", MD::d2alpha0_dxi_dTau, MD::dalpha0_dxi, TAU);
+        two_comp("d2alpha0_dxidxj",MD::d2alpha0_dxidxj, MD::dalpha0_dxi);
 
         one_comp("dalphar_dxi",MD::dalphar_dxi, MD::alphar);
         two_comp("d2alphardxidxj",MD::d2alphardxidxj, MD::dalphar_dxi);

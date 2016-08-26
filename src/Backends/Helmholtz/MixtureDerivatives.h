@@ -668,6 +668,9 @@ class MixtureDerivatives{
     
     
     static CoolPropDbl dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alpha0_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alpha0_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alpha0_dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
     
     /// ****************************************************************************
     /// ****************************************************************************
