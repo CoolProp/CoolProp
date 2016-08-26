@@ -86,10 +86,10 @@ public:
     double d_sum_xi_aii_bii_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent) {
         if (xN_independent)
         {
-            return x[i] * a_ii(i) / b_ii(i);
+            return a_ii(i) / b_ii(i);
         }
         else {
-            return x[i] * a_ii(i) / b_ii(i) - x[N - 1] * a_ii(N - 1) / b_ii(N - 1);
+            return a_ii(i) / b_ii(i) - a_ii(N - 1) / b_ii(N - 1);
         }
     }
     double d_am_term_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent)
