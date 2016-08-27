@@ -670,7 +670,7 @@ class MixtureDerivatives{
     static CoolPropDbl dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
     static CoolPropDbl d2alpha0_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
     static CoolPropDbl d2alpha0_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
-    static CoolPropDbl d2alpha0_dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alpha0dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
     
     /// ****************************************************************************
     /// ****************************************************************************
@@ -828,6 +828,24 @@ class MixtureDerivatives{
     static CoolPropDbl d2alphar_dTau2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
         return HEOS.d2alphar_dTau2();
     }
+    
+    static CoolPropDbl alpha(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+        return alphar(HEOS, xN_flag) + alpha0(HEOS, xN_flag);
+    }
+    static CoolPropDbl dalpha_dxi(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
+        return dalphar_dxi(HEOS, i, xN_flag) + dalpha0_dxi(HEOS, i, xN_flag);
+    }
+    static CoolPropDbl d2alpha_dxi_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
+        return d2alphar_dxi_dDelta(HEOS, i, xN_flag) + d2alpha0_dxi_dDelta(HEOS, i, xN_flag);
+    }
+    static CoolPropDbl d2alpha_dxi_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
+        return d2alphar_dxi_dTau(HEOS, i, xN_flag) + d2alpha0_dxi_dTau(HEOS, i, xN_flag);
+    }
+    static CoolPropDbl d2alphadxidxj(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, CoolProp::x_N_dependency_flag xN_flag){
+        return d2alphardxidxj(HEOS, i, j, xN_flag) + d2alpha0dxidxj(HEOS, i, j, xN_flag);
+    }
+    
+    
     
     static CoolPropDbl ln_fugacity(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
         return log(MixtureDerivatives::fugacity_i(HEOS, i, xN_flag));

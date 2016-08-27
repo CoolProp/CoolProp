@@ -831,7 +831,7 @@ CoolPropDbl MixtureDerivatives::d2alpha0_dxi_dTau(HelmholtzEOSMixtureBackend &HE
     return term;
 }
     
-CoolPropDbl MixtureDerivatives::d2alpha0_dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
+CoolPropDbl MixtureDerivatives::d2alpha0dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag)
 {
     // Reducing values are constant for all components under consideration
     double Tr = HEOS.T_reducing();
@@ -1245,7 +1245,12 @@ public:
         one_comp("dalpha0_dxi",MD::dalpha0_dxi, MD::alpha0);
         one("d2alpha0_dxi_dDelta", MD::d2alpha0_dxi_dDelta, MD::dalpha0_dxi, DELTA);
         one("d2alpha0_dxi_dTau", MD::d2alpha0_dxi_dTau, MD::dalpha0_dxi, TAU);
-        two_comp("d2alpha0_dxidxj",MD::d2alpha0_dxidxj, MD::dalpha0_dxi);
+        two_comp("d2alpha0dxidxj",MD::d2alpha0dxidxj, MD::dalpha0_dxi);
+        
+        one_comp("dalpha_dxi",MD::dalpha_dxi, MD::alpha);
+        one("d2alpha_dxi_dDelta", MD::d2alpha_dxi_dDelta, MD::dalpha_dxi, DELTA);
+        one("d2alpha_dxi_dTau", MD::d2alpha_dxi_dTau, MD::dalpha_dxi, TAU);
+        two_comp("d2alphadxidxj",MD::d2alphadxidxj, MD::dalpha_dxi);
 
         one_comp("dalphar_dxi",MD::dalphar_dxi, MD::alphar);
         two_comp("d2alphardxidxj",MD::d2alphardxidxj, MD::dalphar_dxi);
