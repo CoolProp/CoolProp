@@ -76,6 +76,10 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
 }
 
 double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
+
+    if (this->interaction.size() == 0){
+        throw CoolProp::ValueError("interaction parameters for UNIFAQ not yet set");
+    }
     std::size_t mgi1 = m_sgi_to_mgi.find(sgi1)->second;
     std::size_t mgi2 = m_sgi_to_mgi.find(sgi2)->second;
     std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int,int>(mgi1,mgi2));
