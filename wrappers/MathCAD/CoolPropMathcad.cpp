@@ -3,7 +3,9 @@
 
 #include <string>
 
-#ifndef NOMINMAX; // Kill window's horrible min() and max() macros
+#ifndef NOMINMAX // Kill windows' horrible min() and max() macros
+#define NOMINMAX
+#endif
 #include "mcadincl.h"
 #undef NOMINMAX; 
 
@@ -12,8 +14,6 @@ enum { MC_STRING = STRING };  // substitute enumeration variable MC_STRING for S
 
 #include "CoolProp.h"
 #include "HumidAirProp.h"
-
-
 
 enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUST_BE_REAL };   // Mathcad Error Codes
 
