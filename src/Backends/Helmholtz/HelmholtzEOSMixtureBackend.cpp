@@ -2180,7 +2180,7 @@ public:
     };
     double third_deriv(double rhomolar){
         // d3p/drho3|T / pspecified
-        return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 4*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4())/p;
+        return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 6*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4())/p;
     };
 };
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume(){
@@ -2333,7 +2333,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
 
     try{
-        
         // First we try with 4th order Householder method with analytic derivatives
         double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 100);
         if (!ValidNumber(rhomolar)){
@@ -2361,6 +2360,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
     catch(std::exception &e)
     {
+        if (phase == iphase_supercritical || phase == iphase_supercritical_gas){
+            double rhomolar = Brent(resid, 1e-10, 3*rhomolar_reducing(), DBL_EPSILON, 1e-8, 100);
+            return rhomolar;
+        }
         throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg",T,p,rhomolar_guess));
     }
 }
