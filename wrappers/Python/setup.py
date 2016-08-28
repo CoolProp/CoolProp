@@ -16,7 +16,7 @@ def copy_files():
     for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
-    copytree(os.path.join(CProot, 'externals/cppformat/cppformat'), os.path.join('CoolProp','include','externals','cppformat','cppformat'))
+    copytree(os.path.join(CProot, 'externals/cppformat/fmt'), os.path.join('CoolProp','include','externals','cppformat','fmt'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 
@@ -262,6 +262,7 @@ if __name__=='__main__':
         os.path.join(CProot, 'include'), 
         os.path.join(CProot, 'src'), 
         os.path.join(CProot, 'externals', 'Eigen'), 
+        os.path.join(CProot, 'externals', 'cppformat'), 
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     ## If the file is run directly without any parameters, clean, build and install
