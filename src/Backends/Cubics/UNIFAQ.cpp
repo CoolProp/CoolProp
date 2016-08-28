@@ -4,8 +4,14 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
     for (int i = 0; i < unique_groups.size(); ++i) {
         for (int j = i + 1; j < unique_groups.size(); ++j) {
             int mgi1 = unique_groups[i].mgi, mgi2 = unique_groups[j].mgi;
+            // Insert in normal order
             std::pair< std::pair<int, int>, UNIFAQLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi1, mgi2), library.get_interaction_parameters(mgi1, mgi2));
             interaction.insert(m_pair);
+            // Insert in backwards order
+            if (mgi1 != mgi2){
+                std::pair< std::pair<int, int>, UNIFAQLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi2, mgi1), library.get_interaction_parameters(mgi2, mgi1));
+                interaction.insert(m_pair);
+            }
         }
     }
 }
@@ -82,12 +88,18 @@ double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
     }
     std::size_t mgi1 = m_sgi_to_mgi.find(sgi1)->second;
     std::size_t mgi2 = m_sgi_to_mgi.find(sgi2)->second;
-    std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int,int>(mgi1,mgi2));
-    if (it != this->interaction.end()){
-        return exp(-(it->second.a_ij + it->second.b_ij*this->m_T + it->second.c_ij*this->m_T*this->m_T)/this->m_T);
+    if (mgi1 == mgi2){
+        return 1;
     }
     else{
-        return 1;
+        std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int,int>(mgi1,mgi2));
+        if (it != this->interaction.end()){
+            double val = exp(-(it->second.a_ij + it->second.b_ij*this->m_T + it->second.c_ij*this->m_T*this->m_T) / this->m_T);
+            return val;
+        }
+        else{
+            throw CoolProp::ValueError(format("Could not match mgi[%d]-mgi[%d] interaction in UNIFAQ", static_cast<int>(mgi1), static_cast<int>(mgi2)));
+        }
     }
 }
 
