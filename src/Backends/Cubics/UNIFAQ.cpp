@@ -18,6 +18,10 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
 
 /// Set the mole fractions of the components in the mixtures (not the groups)
 void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
+    // If the vector fractions are the same as last ones, don't do anything and return
+    if (!mole_fractions.empty() && maxvectordiff(z, mole_fractions) < 1e-15){
+        return;
+    }
     pure_data.clear();
     this->mole_fractions = z;
     std::size_t N = z.size();
