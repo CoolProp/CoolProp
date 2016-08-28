@@ -37,6 +37,16 @@ inline bool ValidNumber(double x)
 #undef min
 #undef max
 
+/// Return the maximum difference between elements in two vectors where comparing z1[i] and z2[i]
+template <typename T> T maxvectordiff(const std::vector<T> &z1, const std::vector<T> &z2) {
+    T maxvecdiff = 0;
+    for (std::size_t i = 0; i < z1.size(); ++i) {
+        T diff = std::abs(z1[i] - z2[i]);
+        if (std::abs(diff) > maxvecdiff){ maxvecdiff = diff; }
+    }
+    return maxvecdiff;
+}
+
 /// Make a linearly spaced vector of points
 template <typename T> std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);

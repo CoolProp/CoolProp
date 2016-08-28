@@ -54,7 +54,7 @@ public:
     }
     double gE_R(double tau, const std::vector<double> &x, std::size_t itau) {
         if (itau == 0) {
-            set_temperature(T_r / tau);
+            set_temperature(T_r / tau, x);
             return R_u*T_r/tau*gE_R_RT();
         }
         else {
@@ -64,7 +64,7 @@ public:
     }
     double d_gE_R_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent) {
         if (itau == 0) {
-            set_temperature(T_r / tau);
+            set_temperature(T_r / tau, x);
             return R_u*T_r/tau*d_gE_R_RT_dxi(x, i, xN_independent);
         }
         else {
@@ -156,7 +156,7 @@ public:
         return 0;
     }
 
-    void set_temperature(const double T) { unifaq.set_temperature(T); }
+    void set_temperature(const double T, const std::vector<double> &z) { unifaq.set_temperature(T, z); }
 };
 
 #endif /* VTPRCubic_h */

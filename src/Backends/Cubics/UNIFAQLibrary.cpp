@@ -140,7 +140,7 @@ TEST_CASE("Check Poling example for UNIFAQ", "[UNIFAQ]")
        
         std::vector<double> z(2,0.047); z[1] = 1-z[0];
         mix.set_mole_fractions(z);
-        CHECK_NOTHROW(mix.set_temperature(307););
+        CHECK_NOTHROW(mix.set_temperature(307, z););
         
         double lngammaR0 = mix.ln_gamma_R(0);
         double lngammaR1 = mix.ln_gamma_R(1);

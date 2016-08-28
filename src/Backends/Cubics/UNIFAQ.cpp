@@ -115,7 +115,12 @@ double UNIFAQ::UNIFAQMixture::theta_pure(std::size_t i, std::size_t sgi) const {
     return pure_data[i].theta.find(sgi)->second;
 }
 
-void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
+void UNIFAQ::UNIFAQMixture::set_temperature(const double T, const std::vector<double> &z){
+    // Check whether you are using exactly the same temperature and mole fractions as last time
+    if (static_cast<bool>(_T) && std::abs(static_cast<double>(_T) - T) < 1e-15 && maxvectordiff(z, mole_fractions) < 1e-15){
+        // 
+        return;
+    }
     this->m_T = T;
     for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
         const UNIFAQLibrary::Component &c = components[i];
@@ -197,6 +202,7 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
         lnGammag.insert(std::pair<std::size_t, double>(itk->sgi, itk->Q_k*s));
         //printf("log(Gamma)_{%d}: %g\n", itk->sgi, itk->Q_k*s);
     }
+    _T = m_T;
 }
 double UNIFAQ::UNIFAQMixture::ln_gamma_R(std::size_t i) const{
     double summer = 0;
