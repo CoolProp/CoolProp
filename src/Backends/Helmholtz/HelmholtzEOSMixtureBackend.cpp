@@ -1296,6 +1296,8 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
     {
         case PQ_INPUTS:
             _p = value1; _Q = value2; FlashRoutines::PQ_flash_with_guesses(*this, guesses); break;
+        case QT_INPUTS:
+            _Q = value1; _T = value2; FlashRoutines::QT_flash_with_guesses(*this, guesses); break;
         case PT_INPUTS:
             _p = value1; _T = value2; FlashRoutines::PT_flash_with_guesses(*this, guesses); break;
         default:
