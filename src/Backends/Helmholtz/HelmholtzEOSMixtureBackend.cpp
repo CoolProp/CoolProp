@@ -2118,6 +2118,25 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         }
     }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; light = -1;}
     
+    if (light < 0){
+        try{
+            // Now we are going to do something VERY slow - increase density until curvature is positive
+            double rho = 1e-6;
+            for (std::size_t counter = 0; counter <= 100; counter ++){
+                double dpdrho = resid.call(rho); // Updates the state
+                double curvature = resid.deriv(rho);
+                if (curvature > 0){
+                    light = rho;
+                    break;
+                }
+                rho *= 2;
+            }
+        }
+        catch(...){
+            
+        }
+    }
+    
     // First try a "normal" calculation of the stationary point on the liquid side
     for (double omega = 1.0; omega > 0; omega -= 0.4){
         try{
@@ -2129,7 +2148,28 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
                 throw CoolProp::ValueError("curvature cannot be negative");
             }
             break; // Jump out, we got a good solution
-        }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; heavy = -1;}
+        }catch(std::exception &e){
+            if (get_debug_level() > 5) { std::cout << e.what() << std::endl; }; heavy = -1;
+        }
+    }
+    
+    if (heavy < 0){
+        try{
+            // Now we are going to do something VERY slow - decrease density until curvature is negative or pressure is negative
+            double rho = rhomax;
+            for (std::size_t counter = 0; counter <= 100; counter ++){
+                resid.call(rho); // Updates the state
+                double curvature = resid.deriv(rho);
+                if (curvature < 0 || this->p() < 0){
+                    heavy = rho;
+                    break;
+                }
+                rho /= 1.1;
+            }
+        }
+        catch(...){
+            
+        }
     }
     
     
@@ -3510,7 +3550,16 @@ public:
                 // be searching in, use Newton's method to refine the solution since we also
                 // have an analytic solution for the derivative
                 R_tau = R_tau_tracer; R_delta = R_delta_tracer;
-                theta = Newton(this, theta_last, 1e-10, 100);
+                try{
+                    theta = Newton(this, theta_last, 1e-10, 100);
+                }
+                catch(...){
+                    if (N_critical_points > 0 && delta > 1.5*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
+                        // Stopping the search - probably we have a kink in the L1*=0 contour
+                        // caused by poor low-temperature behavior
+                        continue;
+                    }
+                }
                 
                 // If the solver takes a U-turn, going in the opposite direction of travel
                 // this is not a good thing, and force a Brent's method solver call to make sure we keep
@@ -3518,7 +3567,7 @@ public:
                 if (std::abs(angle_difference(theta, theta_last)) > M_PI/2.0){
                     // We have found at least one critical point and we are now well above the density
                     // associated with the first critical point
-                    if (N_critical_points > 0 && delta > 2.5*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
+                    if (N_critical_points > 0 && delta > 1.2*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
                         // Stopping the search - probably we have a kink in the L1*=0 contour
                         // caused by poor low-temperature behavior
                         continue;
