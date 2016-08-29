@@ -1055,8 +1055,8 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
     #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32") 
   endif()
 
-  if (UNIX)
-    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-static") 
+  if (UNIX AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS " -static") 
   endif()
   
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
