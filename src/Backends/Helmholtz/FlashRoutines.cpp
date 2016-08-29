@@ -730,7 +730,7 @@ void FlashRoutines::QT_flash_with_guesses(HelmholtzEOSMixtureBackend &HEOS, cons
     IO.bubble_point = false;
     IO.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::T_IMPOSED;
 
-    if (get_debug_level() > 9) { printf( " QT w/ guess  p %g T %g dl %g dv %g x %s y %s\n", IO.p, IO.T, IO.rhomolar_liq, IO.rhomolar_vap, vec_to_string(IO.x,"%g"), vec_to_string(IO.y, "%g")); }
+    if (get_debug_level() > 9) { fmt::printf( " QT w/ guess  p %g T %g dl %g dv %g x %s y %s\n", IO.p, IO.T, IO.rhomolar_liq, IO.rhomolar_vap, vec_to_string(IO.x,"%g").c_str(), vec_to_string(IO.y, "%g").c_str()); }
 
     if (std::abs(HEOS.Q()) < 1e-10) {
         IO.bubble_point = true;
