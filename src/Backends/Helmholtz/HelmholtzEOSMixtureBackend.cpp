@@ -1187,15 +1187,13 @@ void HelmholtzEOSMixtureBackend::update_TP_guessrho(CoolPropDbl T, CoolPropDbl p
     // Set up the state
     pre_update(pair, p, T);
     
-    // Do the flash call
+    // Do the flash call to find rho = f(T,p)
     CoolPropDbl rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
     
     // Update the class with the new calculated density
     update_DmolarT_direct(rhomolar, T);
     
-    // Cleanup
-    bool optional_checks = false;
-    post_update(optional_checks);
+    // Skip the cleanup, already done in update_DmolarT_direct
 }
 
 void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 )
