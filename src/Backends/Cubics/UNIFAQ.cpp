@@ -18,10 +18,10 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
 
 /// Set the mole fractions of the components in the mixtures (not the groups)
 void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
-    // If the vector fractions are the same as last ones, don't do anything and return
-    if (!mole_fractions.empty() && maxvectordiff(z, mole_fractions) < 1e-15){
-        return;
-    }
+//    // If the vector fractions are the same as last ones, don't do anything and return
+//    if (!mole_fractions.empty() && maxvectordiff(z, mole_fractions) < 1e-15){
+//        return;
+//    }
     pure_data.clear();
     this->mole_fractions = z;
     std::size_t N = z.size();
@@ -83,6 +83,40 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
     for (std::size_t i = 0; i < z.size(); ++i) {
         //printf("%g %g %g %g %g %g\n", l[i], phi[i], q[i], r[i], theta[i], ln_Gamma_C[i]);
     }
+    
+    std::map<std::size_t, double> &Xg = m_Xg, &thetag = m_thetag;
+    Xg.clear(); thetag.clear();
+    
+    // Iterate over the fluids
+    double X_summer = 0;
+    for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
+        X_summer += this->mole_fractions[i] * pure_data[i].group_count;
+    }
+    /// Calculations for each group in the total mixture
+    for (std::vector<UNIFAQLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it){
+        double X = 0;
+        // Iterate over the fluids
+        for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
+            X += this->mole_fractions[i]*group_count(i, it->sgi);
+        }
+        Xg.insert(std::pair<std::size_t, double>(it->sgi, X));
+    }
+    /// Now come back through and divide by the sum(z_i*count) for this fluid
+    for (std::map<std::size_t, double>::iterator it = Xg.begin(); it != Xg.end(); ++it) {
+        it->second /= X_summer;
+        //printf("X_{%d}: %g\n", it->first, it->second);
+    }
+    double theta_summer = 0;
+    for (std::vector<UNIFAQLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
+        double cont = Xg.find(it->sgi)->second * it->Q_k;
+        theta_summer += cont;
+        thetag.insert(std::pair<std::size_t, double>(it->sgi, cont));
+    }
+    /// Now come back through and divide by the sum(X*Q) for this fluid
+    for (std::map<std::size_t, double>::iterator it = thetag.begin(); it != thetag.end(); ++it) {
+        it->second /= theta_summer;
+        //printf("theta_{%d}: %g\n", it->first, it->second);
+    }
 }
 
 double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
@@ -120,12 +154,17 @@ double UNIFAQ::UNIFAQMixture::theta_pure(std::size_t i, std::size_t sgi) const {
 }
 
 void UNIFAQ::UNIFAQMixture::set_temperature(const double T, const std::vector<double> &z){
-    // Check whether you are using exactly the same temperature and mole fractions as last time
-    if (static_cast<bool>(_T) && std::abs(static_cast<double>(_T) - T) < 1e-15 && maxvectordiff(z, mole_fractions) < 1e-15){
-        // 
-        return;
-    }
+//    // Check whether you are using exactly the same temperature and mole fractions as last time
+//    if (static_cast<bool>(_T) && std::abs(static_cast<double>(_T) - T) < 1e-15 && maxvectordiff(z, mole_fractions) < 1e-15){
+//        // 
+//        return;
+//    }
     this->m_T = T;
+    
+    if (this->mole_fractions.empty()){
+        throw CoolProp::ValueError("mole fractions must be set before calling set_temperature");
+    }
+    
     for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
         const UNIFAQLibrary::Component &c = components[i];
         for (std::size_t k = 0; k < c.groups.size(); ++k) {
@@ -152,43 +191,7 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T, const std::vector<do
         }
     }
     
-    if (this->mole_fractions.empty()){
-        throw CoolProp::ValueError("mole fractions must be set before calling set_temperature");
-    }
-
-    std::map<std::size_t, double> &Xg = m_Xg, &thetag = m_thetag, &lnGammag = m_lnGammag;
-    Xg.clear(); thetag.clear(); lnGammag.clear();
-
-    // Iterate over the fluids
-    double X_summer = 0; 
-    for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
-        X_summer += this->mole_fractions[i] * pure_data[i].group_count;
-    }
-    /// Calculations for each group in the total mixture
-    for (std::vector<UNIFAQLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it){
-        double X = 0;
-        // Iterate over the fluids
-        for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
-            X += this->mole_fractions[i]*group_count(i, it->sgi);
-        }
-        Xg.insert(std::pair<std::size_t, double>(it->sgi, X));
-    }
-    /// Now come back through and divide by the sum(z_i*count) for this fluid
-    for (std::map<std::size_t, double>::iterator it = Xg.begin(); it != Xg.end(); ++it) {
-        it->second /= X_summer;
-        //printf("X_{%d}: %g\n", it->first, it->second);
-    }
-    double theta_summer = 0;
-    for (std::vector<UNIFAQLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
-        double cont = Xg.find(it->sgi)->second * it->Q_k;
-        theta_summer += cont;
-        thetag.insert(std::pair<std::size_t, double>(it->sgi, cont));
-    }
-    /// Now come back through and divide by the sum(X*Q) for this fluid
-    for (std::map<std::size_t, double>::iterator it = thetag.begin(); it != thetag.end(); ++it) {
-        it->second /= theta_summer;
-        //printf("theta_{%d}: %g\n", it->first, it->second);
-    }
+    std::map<std::size_t, double> &thetag = m_thetag, &lnGammag = m_lnGammag;
 
     for (std::vector<UNIFAQLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
         double sum1 = 0;
