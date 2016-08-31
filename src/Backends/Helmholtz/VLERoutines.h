@@ -198,7 +198,7 @@ namespace SaturationSolvers
      * \f[
      * p = \sum_i x_ip_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T).
      * \f]
-     * Or when \f$T\f$ is known for \f$\beta=1$, \f$p\f$can be obtained from  
+     * Or when \f$T\f$ is known for \f$\beta=1\f$, \f$p\f$can be obtained from
      * \f[
      * -1+\sum_ix_i=0,
      * \f]
