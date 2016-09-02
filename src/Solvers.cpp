@@ -74,10 +74,21 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
         Eigen::Vector2d v = J.colPivHouseholderQr().solve(-r);
 
         // Update the guess
-        for (std::size_t i = 0; i<x0.size(); i++){ x0[i] += v(i);}
+        double max_relchange = -1;
+        for (std::size_t i = 0; i<x0.size(); i++){
+            x0[i] += v(i);
+            double relchange = std::abs(v(i)/x0[i]);
+            if (std::abs(x0[i]) > 1e-16 && relchange > max_relchange ){
+                max_relchange = relchange;
+            }
+        }
         
         // Stop if the solution is not changing by more than numerical precision
-        if (v.cwiseAbs().maxCoeff() < DBL_EPSILON*100){
+        double max_abschange = v.cwiseAbs().maxCoeff();
+        if (max_abschange < DBL_EPSILON*100){
+            return x0;
+        }
+        if (max_relchange < 1e-12){
             return x0;
         }
         error = root_sum_square(f0);
