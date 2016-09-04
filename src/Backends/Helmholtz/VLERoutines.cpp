@@ -1858,7 +1858,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     _stable = true;
     
     double diffbulkL = 0, diffbulkH = 0;
-    for (int step_count = 0; step_count < 20; ++step_count){
+    for (int step_count = 0; step_count < 100; ++step_count){
         
         // Set the composition
         HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
