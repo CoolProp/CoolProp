@@ -3671,7 +3671,7 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
     add_TPD_state();
 	TPD_state->set_mole_fractions(w);
     
-    CoolPropDbl rho = TPD_state->solver_rho_Tp_global(T, p, 1/TPD_state->SRK_covolume()*1.5);
+    CoolPropDbl rho = TPD_state->solver_rho_Tp_global(T, p, 0.9/TPD_state->SRK_covolume());
     TPD_state->update_DmolarT_direct(rho, T);
     
 	double summer = 0;
