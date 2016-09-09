@@ -1884,7 +1884,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         }
         normalize_vector(xL);
         normalize_vector(xH);
-        if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
+        if (debug){ fmt::printf("3) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
         
         // Check if either of the phases have the bulk composition. If so, no phase split
         if (diffbulkL < 1e-2 || diffbulkH < 1e-2){
