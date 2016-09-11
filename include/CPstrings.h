@@ -6,7 +6,9 @@
     #include <algorithm>
     #include <functional>
 
+    #ifndef FMT_HEADER_ONLY
     #define FMT_HEADER_ONLY
+    #endif
     #include "fmt/format.h" // For addition of the string formatting functions and macros from cppformat
     #undef FMT_HEADER_ONLY
 
