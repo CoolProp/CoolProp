@@ -339,6 +339,14 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                     throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
                 }
                 set_mole_fractions(std::vector<CoolPropDbl>(x.begin(), x.begin()+N));
+                if (get_config_bool(REFPROP_USE_PENGROBINSON)) {
+                    long iflag = 2; // Tell REFPROP to use Peng-Robinson;
+                    PREOSdll(&iflag);
+                }
+                else{
+                    long iflag = 0; // Tell REFPROP to use normal Helmholtz models
+                    PREOSdll(&iflag);
+                }
                 return;
             }
             else{
@@ -394,6 +402,15 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
+                
+                if (get_config_bool(REFPROP_USE_PENGROBINSON)) {
+                    long iflag = 2; // Tell REFPROP to use Peng-Robinson;
+                    PREOSdll(&iflag);
+                }
+                else{
+                    long iflag = 0; // Tell REFPROP to use normal Helmholtz models
+                    PREOSdll(&iflag);
+                }
                 return;
             }
             else if (k < number_of_endings-1){ // Keep going
