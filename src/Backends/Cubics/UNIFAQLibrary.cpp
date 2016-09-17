@@ -116,3 +116,46 @@ namespace UNIFAQLibrary{
     }
 
 }; /* namespace UNIFAQLibrary */
+
+#if defined(ENABLE_CATCH)
+#include "catch.hpp"
+
+#include "UNIFAQ.h"
+
+TEST_CASE("Check Poling example for UNIFAQ", "[UNIFAQ]")
+{
+    std::string acetone_pentane_groups = "[{ \"Tc\": 508.1, \"acentric\": 0.3071, \"groups\": [ { \"count\": 1,  \"sgi\": 1 },  {\"count\": 1, \"sgi\": 18 } ],  \"inchikey\": \"?????????????\",  \"name\": \"Acetone\", \"pc\": 4700000.0, \"registry_number\": \"67-64-1\", \"userid\": \"\" },  { \"Tc\": 469.7000000000001,  \"acentric\": 0.251,    \"groups\": [ { \"count\": 2, \"sgi\": 1 }, { \"count\": 3, \"sgi\": 2 } ],  \"inchikey\": \"?????????????\", \"name\": \"n-Pentane\", \"pc\": 3370000.0,  \"registry_number\": \"109-66-0\",  \"userid\": \"\" } ]";
+    std::string groups = "[{\"Q_k\": 0.848, \"R_k\": 0.9011, \"maingroup_name\": \"CH2\", \"mgi\": 1, \"sgi\": 1, \"subgroup_name\": \"CH3\"},"
+        "{\"Q_k\": 0.540, \"R_k\": 0.6744, \"maingroup_name\": \"CH2\", \"mgi\": 1, \"sgi\": 2, \"subgroup_name\": \"CH2\"},"
+        "{\"Q_k\": 1.488, \"R_k\": 1.6724, \"maingroup_name\": \"CH2CO\", \"mgi\": 9, \"sgi\": 18, \"subgroup_name\": \"CH3CO\"}]";
+    std::string interactions = "[{\"a_ij\": 476.4, \"a_ji\": 26.76, \"b_ij\": 0.0, \"b_ji\": 0.0,  \"c_ij\": 0.0, \"c_ji\": 0.0, \"mgi1\": 1, \"mgi2\": 9}]";
+
+    SECTION("Validate AC for acetone + n-pentane") {
+        UNIFAQLibrary::UNIFAQParameterLibrary lib;
+        CHECK_NOTHROW(lib.populate(groups, interactions, acetone_pentane_groups););
+        UNIFAQ::UNIFAQMixture mix(lib);
+        std::vector<std::string> names; names.push_back("Acetone"); names.push_back("n-Pentane");
+        mix.set_components("name",names);
+        mix.set_interaction_parameters();
+       
+        std::vector<double> z(2,0.047); z[1] = 1-z[0];
+        mix.set_mole_fractions(z);
+        CHECK_NOTHROW(mix.set_temperature(307, z););
+        
+        double lngammaR0 = mix.ln_gamma_R(0);
+        double lngammaR1 = mix.ln_gamma_R(1);
+        CAPTURE(lngammaR0);
+        CAPTURE(lngammaR1);
+        CHECK(std::abs(lngammaR0 - 1.66) < 1e-2);
+        CHECK(std::abs(lngammaR1 - 5.68e-3) < 1e-3);
+
+        double gamma0 = mix.activity_coefficient(0);
+        double gamma1 = mix.activity_coefficient(1);
+        CAPTURE(gamma0);
+        CAPTURE(gamma1);
+        CHECK(std::abs(gamma0 - 4.99) < 1e-2);
+        CHECK(std::abs(gamma1 - 1.005) < 1e-3);
+    };
+};
+
+#endif

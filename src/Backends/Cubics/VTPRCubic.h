@@ -34,10 +34,6 @@ public:
     /// Get a reference to the managed UNIFAQ instance
     UNIFAQ::UNIFAQMixture &get_unifaq() { return unifaq; }
 
-    /// The attractive part in cubic EOS
-    double a_alpha(double T, std::size_t i) {
-        return pow(1 + m_ii(i)*(1 - sqrt(T / Tc[i])), 2);
-    }
     /// Calculate the non-dimensionalized gE/RT term
     double gE_R_RT() {
         const std::vector<double> &z = unifaq.get_mole_fractions();
@@ -56,61 +52,61 @@ public:
             return unifaq.ln_gamma_R(i) - unifaq.ln_gamma_R(N - 1);
         }
     }
-    /// The co-volume for the i-th pure component
-    double b_ii(std::size_t i) {
-        return 0.0778*R_u*Tc[i] / pc[i];
-    }
-    /// The attractive parameter for the i-th pure component
-    double a_ii(std::size_t i) {
-        double a0 = 0.45724*pow(R_u*Tc[i], 2) / pc[i];
-        double alpha = a_alpha(unifaq.get_temperature(), i);
-        return a0*alpha;
-    }
-    double am_term(double tau, const std::vector<double> &x, std::size_t itau) {
+    double gE_R(double tau, const std::vector<double> &x, std::size_t itau) {
         if (itau == 0) {
-            set_temperature(T_r / tau);
-            return bm_term(x)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087));
+            set_temperature(T_r / tau, x);
+            return R_u*T_r/tau*gE_R_RT();
         }
         else {
             double dtau = 0.01*tau;
-            return (am_term(tau + dtau, x, itau - 1) - am_term(tau - dtau, x, itau - 1)) / (2 * dtau);
+            return (gE_R(tau + dtau, x, itau - 1) - gE_R(tau - dtau, x, itau - 1)) / (2 * dtau);
         }
     }
-    double sum_xi_aii_bii(const std::vector<double> &x) {
+    double d_gE_R_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent) {
+        if (itau == 0) {
+            set_temperature(T_r / tau, x);
+            return R_u*T_r/tau*d_gE_R_RT_dxi(x, i, xN_independent);
+        }
+        else {
+            double dtau = 0.01*tau;
+            return (d_gE_R_dxi(tau + dtau, x, itau - 1, i, xN_independent) - d_gE_R_dxi(tau - dtau, x, itau - 1, i, xN_independent)) / (2 * dtau);
+        }
+    }
+    double am_term(double tau, const std::vector<double> &x, std::size_t itau) {
+        return bm_term(x)*(sum_xi_aii_bii(tau, x, itau) + gE_R(tau, x, itau) / (-0.53087));
+    }
+    double sum_xi_aii_bii(double tau, const std::vector<double> &x, std::size_t itau) {
         double summeram = 0;
         for (std::size_t i = 0; i < N; ++i) {
-            summeram += x[i] * a_ii(i) / b_ii(i);
+            summeram += x[i] * aii_term(tau, i, itau) / b0_ii(i);
         }
         return summeram;
     }
-    double d_sum_xi_aii_bii_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent) {
+    double d_sum_xi_aii_bii_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent) {
         if (xN_independent)
         {
-            return x[i] * a_ii(i) / b_ii(i);
+            return aii_term(tau, i, itau) / b0_ii(i);
         }
         else {
-            return x[i] * a_ii(i) / b_ii(i) - x[N - 1] * a_ii(N - 1) / b_ii(N - 1);
+            return aii_term(tau, i, itau) / b0_ii(i) - aii_term(tau, N - 1, itau) / b0_ii(N - 1);
         }
     }
     double d_am_term_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent)
     {
-        set_temperature(T_r / tau);
-        return d_bm_term_dxi(x, i, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
-            + bm_term(x)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        return d_bm_term_dxi(x, i, xN_independent)*(sum_xi_aii_bii(tau,x,itau) + gE_R(tau, x, itau) / (-0.53087))
+            + bm_term(x)*(d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau , x, itau, i, xN_independent) / (-0.53087));
     }
     double d2_am_term_dxidxj(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, bool xN_independent)
     {
-        set_temperature(T_r / tau);
-        return d2_bm_term_dxidxj(x, i, j, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
-            + d_bm_term_dxi(x, i, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
-            + d_bm_term_dxi(x, j, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        return d2_bm_term_dxidxj(x, i, j, xN_independent)*(sum_xi_aii_bii(tau, x, itau) + gE_R(tau, x, itau) / (-0.53087))
+            + d_bm_term_dxi(x, i, xN_independent)*(d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087))
+            + d_bm_term_dxi(x, j, xN_independent)*(d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087));
     }
     double d3_am_term_dxidxjdxk(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
     {
-        set_temperature(T_r / tau);
-        return d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent)*(sum_xi_aii_bii(x) + R_u*unifaq.get_temperature()*gE_R_RT() / (-0.53087))
-            + d2_bm_term_dxidxj(x, i, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, j, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, j, xN_independent) / (-0.53087))
-            + d2_bm_term_dxidxj(x, j, k, xN_independent)*(d_sum_xi_aii_bii_dxi(x, i, xN_independent) + R_u*unifaq.get_temperature()*d_gE_R_RT_dxi(x, i, xN_independent) / (-0.53087));
+        return d3_bm_term_dxidxjdxk(x, i, j, k, xN_independent)*(sum_xi_aii_bii(tau, x, itau) + gE_R(tau, x, itau) / (-0.53087))
+            + d2_bm_term_dxidxj(x, i, k, xN_independent)*(d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087))
+            + d2_bm_term_dxidxj(x, j, k, xN_independent)*(d_sum_xi_aii_bii_dxi(tau, x, itau, i, xN_independent) + d_gE_R_dxi(tau, x, itau, i, xN_independent) / (-0.53087));
     }
 
     double bm_term(const std::vector<double> &x) {
@@ -124,7 +120,7 @@ public:
     }
     double bij_term(std::size_t i, std::size_t j)
     {
-        return pow((pow(b_ii(i), 0.75) + pow(b_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
+        return pow((pow(b0_ii(i), 0.75) + pow(b0_ii(j), 0.75)) / 2.0, 4.0 / 3.0);
     }
     double d_bm_term_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent)
     {
@@ -160,7 +156,7 @@ public:
         return 0;
     }
 
-    void set_temperature(const double T) { unifaq.set_temperature(T); }
+    void set_temperature(const double T, const std::vector<double> &z) { unifaq.set_temperature(T, z); }
 };
 
 #endif /* VTPRCubic_h */

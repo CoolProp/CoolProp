@@ -26,6 +26,35 @@ void str2buf(const std::string& str, char * buf, int n)
   else
     throw CoolProp::ValueError("Buffer size is too small");
 }
+void HandleException(long *errcode, char *message_buffer, const long buffer_length)
+{
+    try{
+        throw;
+    }
+    catch (CoolProp::HandleError &e) {
+        std::string errmsg = std::string("HandleError: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (CoolProp::CoolPropBaseError &e) {
+        std::string errmsg = std::string("Error: ") + e.what();
+        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
+            *errcode = 1;
+            strcpy(message_buffer, errmsg.c_str());
+        }
+        else {
+            *errcode = 2;
+        }
+    }
+    catch (...) {
+        *errcode = 3;
+	}
+}
 
 // In Microsoft Excel, they seem to check the FPU exception bits and error out because of it.  
 // By calling the _clearfp(), we can reset these bits, and not get the error
@@ -361,29 +390,9 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluids));
         return handle_manager.add(AS);
     }
-    catch(CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
     return -1;
 }
 EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long *errcode, char *message_buffer, const long buffer_length)
@@ -392,29 +401,9 @@ EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long *errcode,
     try{
         handle_manager.remove(handle);
     }
-    catch(CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const double *fractions, const long N, long *errcode, char *message_buffer, const long buffer_length)
 {
@@ -432,29 +421,9 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
             AS->set_volu_fractions(_fractions);
         }
     }
-    catch(CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long *errcode, char *message_buffer, const long buffer_length)
 {
@@ -463,29 +432,9 @@ EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long i
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         AS->update(static_cast<CoolProp::input_pairs>(input_pair), value1, value2);
     }
-    catch(CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 EXPORT_CODE void CONVENTION AbstractState_specify_phase(const long handle,const char *phase, long *errcode, char *message_buffer, const long buffer_length)
 {
@@ -494,29 +443,9 @@ EXPORT_CODE void CONVENTION AbstractState_specify_phase(const long handle,const 
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         return AS->specify_phase(CoolProp::get_phase_index(std::string(phase)));
     }
-    catch (CoolProp::HandleError &e) {
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
-    catch (CoolProp::CoolPropBaseError &e) {
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
     catch (...) {
-        *errcode = 3;
-    }
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 EXPORT_CODE void CONVENTION AbstractState_unspecify_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length)
 {
@@ -525,29 +454,9 @@ EXPORT_CODE void CONVENTION AbstractState_unspecify_phase(const long handle, lon
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         return AS->unspecify_phase();
     }
-    catch (CoolProp::HandleError &e) {
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
-    catch (CoolProp::CoolPropBaseError &e) {
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
     catch (...) {
-        *errcode = 3;
-    }
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length)
 {
@@ -556,29 +465,9 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output(const long handle, cons
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         return AS->keyed_output(static_cast<CoolProp::parameters>(param));
     }
-    catch(CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(CoolProp::CoolPropBaseError &e){
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch(...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
     return _HUGE;
 }
 
@@ -589,29 +478,9 @@ EXPORT_CODE double CONVENTION AbstractState_first_saturation_deriv(const long ha
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         return AS->first_saturation_deriv(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt));
     }
-    catch (CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch (CoolProp::CoolPropBaseError &e){
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch (...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
     return _HUGE;
 }
 
@@ -622,29 +491,9 @@ EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handl
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         return AS->first_partial_deriv(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt), static_cast<CoolProp::parameters>(Constant));
     }
-    catch (CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch (CoolProp::CoolPropBaseError &e){
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch (...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
     return _HUGE;
 }
 
@@ -668,19 +517,9 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handl
             }
         };
     }
-    catch (CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch (...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 
 EXPORT_CODE void CONVENTION AbstractState_update_and_1_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, const long output, double* out, long *errcode, char *message_buffer, const long buffer_length)
@@ -699,19 +538,9 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_1_out(const long handle, co
             }
         };
     }
-    catch (CoolProp::HandleError &e) {
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
     catch (...) {
-        *errcode = 3;
-    }
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 
 EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long* outputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length)
@@ -734,19 +563,9 @@ EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, co
             }
         };
     }
-    catch (CoolProp::HandleError &e){
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)){
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else{
-            *errcode = 2;
-        }
-    }
-    catch (...){
-        *errcode = 3;
-    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 
 EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const long i, const long j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length)
@@ -756,29 +575,9 @@ EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const lo
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         AS->set_binary_interaction_double(static_cast<std::size_t>(i), static_cast<std::size_t>(j), parameter, value);
     }
-    catch (CoolProp::HandleError &e) {
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
-    catch (CoolProp::CoolPropBaseError &e) {
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
     catch (...) {
-        *errcode = 3;
-    }
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 
 EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long handle, const long i, const char* parameter, const double value , long *errcode, char *message_buffer, const long buffer_length) {
@@ -787,29 +586,9 @@ EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         AS->set_fluid_parameter_double(static_cast<std::size_t>(i), parameter, value);
     }
-    catch (CoolProp::HandleError &e) {
-        std::string errmsg = std::string("HandleError: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
-    catch (CoolProp::CoolPropBaseError &e) {
-        std::string errmsg = std::string("Error: ") + e.what();
-        if (errmsg.size() < static_cast<std::size_t>(buffer_length)) {
-            *errcode = 1;
-            strcpy(message_buffer, errmsg.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
     catch (...) {
-        *errcode = 3;
-    }
+		HandleException(errcode, message_buffer, buffer_length);
+	}
 }
 
 /// *********************************************************************************

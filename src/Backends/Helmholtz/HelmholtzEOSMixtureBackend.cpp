@@ -1187,15 +1187,13 @@ void HelmholtzEOSMixtureBackend::update_TP_guessrho(CoolPropDbl T, CoolPropDbl p
     // Set up the state
     pre_update(pair, p, T);
     
-    // Do the flash call
+    // Do the flash call to find rho = f(T,p)
     CoolPropDbl rhomolar = solver_rho_Tp(T, p, rhomolar_guess);
     
     // Update the class with the new calculated density
     update_DmolarT_direct(rhomolar, T);
     
-    // Cleanup
-    bool optional_checks = false;
-    post_update(optional_checks);
+    // Skip the cleanup, already done in update_DmolarT_direct
 }
 
 void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2 )
@@ -1296,6 +1294,8 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
     {
         case PQ_INPUTS:
             _p = value1; _Q = value2; FlashRoutines::PQ_flash_with_guesses(*this, guesses); break;
+        case QT_INPUTS:
+            _Q = value1; _T = value2; FlashRoutines::QT_flash_with_guesses(*this, guesses); break;
         case PT_INPUTS:
             _p = value1; _T = value2; FlashRoutines::PT_flash_with_guesses(*this, guesses); break;
         default:
@@ -2118,8 +2118,27 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         }
     }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; light = -1;}
     
+    if (light < 0){
+        try{
+            // Now we are going to do something VERY slow - increase density until curvature is positive
+            double rho = 1e-6;
+            for (std::size_t counter = 0; counter <= 100; counter ++){
+                double dpdrho = resid.call(rho); // Updates the state
+                double curvature = resid.deriv(rho);
+                if (curvature > 0){
+                    light = rho;
+                    break;
+                }
+                rho *= 2;
+            }
+        }
+        catch(...){
+            
+        }
+    }
+    
     // First try a "normal" calculation of the stationary point on the liquid side
-    for (double omega = 1.0; omega > 0; omega -= 0.4){
+    for (double omega = 0.7; omega > 0; omega -= 0.2){
         try{
             resid.options.add_number("omega", omega);
             heavy = Halley(resid, rhomax, 1e-8, 100);
@@ -2129,7 +2148,28 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
                 throw CoolProp::ValueError("curvature cannot be negative");
             }
             break; // Jump out, we got a good solution
-        }catch(std::exception &e){ if (get_debug_level() > 5) {std::cout << e.what() << std::endl; }; heavy = -1;}
+        }catch(std::exception &e){
+            if (get_debug_level() > 5) { std::cout << e.what() << std::endl; }; heavy = -1;
+        }
+    }
+    
+    if (heavy < 0){
+        try{
+            // Now we are going to do something VERY slow - decrease density until curvature is negative or pressure is negative
+            double rho = rhomax;
+            for (std::size_t counter = 0; counter <= 100; counter ++){
+                resid.call(rho); // Updates the state
+                double curvature = resid.deriv(rho);
+                if (curvature < 0 || this->p() < 0){
+                    heavy = rho;
+                    break;
+                }
+                rho /= 1.1;
+            }
+        }
+        catch(...){
+            
+        }
     }
     
     
@@ -2180,7 +2220,7 @@ public:
     };
     double third_deriv(double rhomolar){
         // d3p/drho3|T / pspecified
-        return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 4*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4())/p;
+        return R_u*T/POW2(rhor)*(6*HEOS->d2alphar_dDelta2() + 6*delta*HEOS->d3alphar_dDelta3() + POW2(delta)*HEOS->calc_d4alphar_dDelta4())/p;
     };
 };
 CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume(){
@@ -2333,7 +2373,6 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
 
     try{
-        
         // First we try with 4th order Householder method with analytic derivatives
         double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 100);
         if (!ValidNumber(rhomolar)){
@@ -2361,6 +2400,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
     catch(std::exception &e)
     {
+        if (phase == iphase_supercritical || phase == iphase_supercritical_gas){
+            double rhomolar = Brent(resid, 1e-10, 3*rhomolar_reducing(), DBL_EPSILON, 1e-8, 100);
+            return rhomolar;
+        }
         throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg",T,p,rhomolar_guess));
     }
 }
@@ -3507,7 +3550,16 @@ public:
                 // be searching in, use Newton's method to refine the solution since we also
                 // have an analytic solution for the derivative
                 R_tau = R_tau_tracer; R_delta = R_delta_tracer;
-                theta = Newton(this, theta_last, 1e-10, 100);
+                try{
+                    theta = Newton(this, theta_last, 1e-10, 100);
+                }
+                catch(...){
+                    if (N_critical_points > 0 && delta > 1.5*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
+                        // Stopping the search - probably we have a kink in the L1*=0 contour
+                        // caused by poor low-temperature behavior
+                        continue;
+                    }
+                }
                 
                 // If the solver takes a U-turn, going in the opposite direction of travel
                 // this is not a good thing, and force a Brent's method solver call to make sure we keep
@@ -3515,7 +3567,7 @@ public:
                 if (std::abs(angle_difference(theta, theta_last)) > M_PI/2.0){
                     // We have found at least one critical point and we are now well above the density
                     // associated with the first critical point
-                    if (N_critical_points > 0 && delta > 2.5*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
+                    if (N_critical_points > 0 && delta > 1.2*critical_points[0].rhomolar/HEOS.rhomolar_reducing()){
                         // Stopping the search - probably we have a kink in the L1*=0 contour
                         // caused by poor low-temperature behavior
                         continue;
@@ -3619,7 +3671,7 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
     add_TPD_state();
 	TPD_state->set_mole_fractions(w);
     
-    CoolPropDbl rho = TPD_state->solver_rho_Tp_global(T, p, 1/TPD_state->SRK_covolume()*1.5);
+    CoolPropDbl rho = TPD_state->solver_rho_Tp_global(T, p, 0.9/TPD_state->SRK_covolume());
     TPD_state->update_DmolarT_direct(rho, T);
     
 	double summer = 0;

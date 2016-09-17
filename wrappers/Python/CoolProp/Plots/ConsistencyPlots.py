@@ -65,7 +65,7 @@ def split_pair_xy(pair):
         raise ValueError(pair)
 
 class ConsistencyFigure(object):
-    def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = [], mole_fractions = None):
+    def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = [], mole_fractions = None, p_limits_1phase = None, T_limits_1phase = None, NT_1phase = 40, Np_1phase = 40, NT_2phase = 20, NQ_2phase = 20):
 
         self.fluid = fluid
         self.backend = backend
@@ -84,7 +84,9 @@ class ConsistencyFigure(object):
         for row in self.axes:
             for ax in row:
                 pair = pairs_generator.next()
-                self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, *states))
+                kwargs = dict(p_limits_1phase = p_limits_1phase, T_limits_1phase = T_limits_1phase, NT_1phase = NT_1phase, Np_1phase = Np_1phase,
+                              NT_2phase = NT_2phase, NQ_2phase = NQ_2phase)
+                self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, *states, **kwargs))
                 ax.set_title(pair)
 
         self.calc_saturation_curves()
@@ -221,7 +223,10 @@ class ConsistencyFigure(object):
         self.fig.savefig(fname, **kwargs)
 
 class ConsistencyAxis(object):
-    def __init__(self, axis, fig, pair, fluid, backend, state1, state2,  state3):
+    def __init__(self, axis, fig, pair, fluid, backend, state1, state2,  state3, 
+                 p_limits_1phase = None, T_limits_1phase = None, NT_1phase = 40, Np_1phase = 40,
+                 NT_2phase = 20, NQ_2phase = 20
+                 ):
         self.ax = axis
         self.fig = fig
         self.pair = pair
@@ -230,6 +235,12 @@ class ConsistencyAxis(object):
         self.state = state1
         self.state_PT = state2
         self.state_QT = state3
+        self.p_limits_1phase = p_limits_1phase
+        self.T_limits_1phase = T_limits_1phase
+        self.NT_1phase = NT_1phase
+        self.Np_1phase = Np_1phase
+        self.NQ_2phase = NQ_2phase
+        self.NT_2phase = NT_2phase
         #self.saturation_curves()
 
     def label_axes(self):
@@ -293,23 +304,37 @@ class ConsistencyAxis(object):
         xexcep, yexcep = [], []
         xbadphase, ybadphase = [], []        
 
-        for p in np.logspace(np.log10(self.state.keyed_output(CP.iP_min)*1.01), np.log10(self.state.keyed_output(CP.iP_max)), 40):
+        if self.p_limits_1phase is not None:
+            # User-specified limits were provided, use them
+            p_min, p_max = self.p_limits_1phase
+        else:
+            # No user-specified limits were provided, use the defaults
+            p_min = self.state.keyed_output(CP.iP_min)*1.01
+            p_max = self.state.keyed_output(CP.iP_max)
 
-            Tmin = self.state.keyed_output(CP.iT_triple)
-            if self.state.has_melting_line():
-                try:
-                    pmelt_min = self.state.melting_line(CP.iP_min, -1, -1)
-                    if p < pmelt_min:
-                        T0 = Tmin
-                    else:
-                        T0 = self.state.melting_line(CP.iT, CP.iP, p)
-                except Exception as E:
-                    T0 = Tmin + 1.1
-                    print('MeltingLine:', E)
+        for p in np.logspace(np.log10(p_min), np.log10(p_max), self.Np_1phase):
+
+            if self.T_limits_1phase is None:
+                # No user-specified limits were provided, using the defaults
+                Tmin = self.state.keyed_output(CP.iT_triple)
+                if self.state.has_melting_line():
+                    try:
+                        pmelt_min = self.state.melting_line(CP.iP_min, -1, -1)
+                        if p < pmelt_min:
+                            T0 = Tmin
+                        else:
+                            T0 = self.state.melting_line(CP.iT, CP.iP, p)
+                    except Exception as E:
+                        T0 = Tmin + 1.1
+                        print('MeltingLine:', E)
+                else:
+                    T0 = Tmin+1.1
+                Tvec = np.linspace(T0, self.state.keyed_output(CP.iT_max), self.NT_1phase)
             else:
-                T0 = Tmin+1.1
+                # Use the provided limits for T
+                Tvec = np.linspace(self.T_limits_1phase[0], self.T_limits_1phase[1], self.NT_1phase)
 
-            for T in np.linspace(T0, self.state.keyed_output(CP.iT_max), 40):
+            for T in Tvec:
                 
                 try:
                     # Update the state using PT inputs in order to calculate all the remaining inputs
@@ -384,11 +409,11 @@ class ConsistencyAxis(object):
         xexcep, yexcep = [], []
         xbadphase, ybadphase = [], []
 
-        for q in np.linspace(0, 1, 20):
+        for q in np.linspace(0, 1, self.NQ_2phase):
 
             Tmin = state.keyed_output(CP.iT_triple)+1
 
-            for T in np.linspace(Tmin, state.keyed_output(CP.iT_critical)-1, 20):
+            for T in np.linspace(Tmin, state.keyed_output(CP.iT_critical)-1, self.NT_2phase):
 
                 try:
                     # Update the state using QT inputs in order to calculate all the remaining inputs
@@ -456,7 +481,7 @@ if __name__=='__main__':
     for fluid in ['PROPANE']:#CP.__fluids__:
         skips = ['DmolarHmolar','DmolarSmolar','DmolarUmolar','HmolarSmolar']
         skips = []
-        ff = ConsistencyFigure(fluid, backend = 'REFPROP', additional_skips = skips)
+        ff = ConsistencyFigure(fluid, backend = 'REFPROP', additional_skips = skips)#, NT_1phase = 10, Np_1phase = 10, NT_2phase = 100, NQ_2phase = 0)
         ff.add_to_pdf(PVT)
         ff.savefig(fluid + '.png')
         ff.savefig(fluid + '.pdf')

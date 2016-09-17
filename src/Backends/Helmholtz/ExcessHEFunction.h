@@ -25,7 +25,7 @@ public:
     ResidualHelmholtzGeneralizedExponential phi;
     HelmholtzDerivatives derivs;
 
-    void update(double tau, double delta){
+    virtual void update(double tau, double delta){
         derivs.reset(0.0);
         phi.all(tau, delta, derivs);
     };

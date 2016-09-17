@@ -668,6 +668,46 @@ class MixtureDerivatives{
     
     
     static CoolPropDbl dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alpha0_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alpha0_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    static CoolPropDbl d2alpha0dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    
+    /// Return the Helmholtz energy density \f$\psi = \rho a\f$
+    static CoolPropDbl psi(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return (HEOS.alphar() + HEOS.alpha0())*HEOS.rhomolar()*HEOS.gas_constant()*HEOS.T();
+    }
+    /// Return the first partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$\delta\f$
+    static CoolPropDbl dpsi_dDelta(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+    
+    /// Return the first partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$\tau\f$
+    static CoolPropDbl dpsi_dTau(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+    
+    /// Return the first partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$x_i\f$
+    static CoolPropDbl dpsi_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    
+    /// Return the first partial of the product \f$\rho_{\rm r}T_{\rm r}\f$ with respect to \f$x_i\f$
+    static CoolPropDbl d_rhorTr_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+    
+    /// Return the second partial of the product \f$\rho_{\rm r}T_{\rm r}\f$ with respect to \f$x_i\f$ and \f$x_j\f$
+    static CoolPropDbl d2_rhorTr_dxidxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag);
+    
+    /// Return the second partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$\delta\f$
+    static CoolPropDbl d2psi_dDelta2(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+    
+    /// Return the second cross partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$\delta\f$ and \f$\tau\f$
+    static CoolPropDbl d2psi_dDelta_dTau(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+    
+    /// Return the second partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$\tau\f$
+    static CoolPropDbl d2psi_dTau2(HelmholtzEOSMixtureBackend &HEOS, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+    
+    /// Return the second partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$\tau\f$ and \f$x_i\f$
+    static CoolPropDbl d2psi_dxi_dTau(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+    
+    /// Return the second partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$\delta\f$ and \f$x_i\f$
+    static CoolPropDbl d2psi_dxi_dDelta(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+    
+    /// Return the second partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$x_i\f$ and \f$x_j\f$
+    static CoolPropDbl d2psi_dxi_dxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
     
     /// ****************************************************************************
     /// ****************************************************************************
@@ -701,7 +741,7 @@ class MixtureDerivatives{
         return HEOS.calc_alpha0_deriv_nocache(0, 0, HEOS.mole_fractions, HEOS.tau(), HEOS.delta(), HEOS.T_reducing(), HEOS.rhomolar_reducing());
     }
     
-    static CoolPropDbl alphar(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+    static CoolPropDbl alphar(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
         bool cache_values = false;
         HelmholtzDerivatives HD = HEOS.residual_helmholtz->all(HEOS, HEOS.mole_fractions, HEOS.tau(), HEOS.delta(), cache_values);
         return HD.alphar;
@@ -813,18 +853,54 @@ class MixtureDerivatives{
         return HEOS.p();
     }
     
-    static CoolPropDbl dalphar_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+    
+    static CoolPropDbl dalphar_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
         return HEOS.dalphar_dDelta();
     }
-    static CoolPropDbl d2alphar_dDelta2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+    static CoolPropDbl d2alphar_dDelta2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
         return HEOS.d2alphar_dDelta2();
     }
-    static CoolPropDbl dalphar_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+    static CoolPropDbl dalphar_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
         return HEOS.dalphar_dTau();
     }
-    static CoolPropDbl d2alphar_dTau2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag){
+    static CoolPropDbl d2alphar_dTau2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
         return HEOS.d2alphar_dTau2();
     }
+    
+    
+    static CoolPropDbl alpha(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.alphar() + alpha0(HEOS, xN_flag);
+    }
+    static CoolPropDbl dalpha_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.dalphar_dDelta() + HEOS.dalpha0_dDelta();
+    }
+    static CoolPropDbl dalpha_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.dalphar_dTau() + HEOS.dalpha0_dTau();
+    }
+    static CoolPropDbl d2alpha_dDelta2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.d2alphar_dDelta2() + HEOS.d2alpha0_dDelta2();
+    }
+    static CoolPropDbl d2alpha_dDelta_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.d2alphar_dDelta_dTau() + HEOS.d2alpha0_dDelta_dTau();
+    }
+    static CoolPropDbl d2alpha_dTau2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.d2alphar_dTau2() + HEOS.d2alpha0_dTau2();
+    }
+    
+    static CoolPropDbl dalpha_dxi(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
+        return dalphar_dxi(HEOS, i, xN_flag) + dalpha0_dxi(HEOS, i, xN_flag);
+    }
+    static CoolPropDbl d2alpha_dxi_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
+        return d2alphar_dxi_dDelta(HEOS, i, xN_flag) + d2alpha0_dxi_dDelta(HEOS, i, xN_flag);
+    }
+    static CoolPropDbl d2alpha_dxi_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
+        return d2alphar_dxi_dTau(HEOS, i, xN_flag) + d2alpha0_dxi_dTau(HEOS, i, xN_flag);
+    }
+    static CoolPropDbl d2alphadxidxj(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, CoolProp::x_N_dependency_flag xN_flag){
+        return d2alphardxidxj(HEOS, i, j, xN_flag) + d2alpha0dxidxj(HEOS, i, j, xN_flag);
+    }
+    
+    
     
     static CoolPropDbl ln_fugacity(CoolProp::HelmholtzEOSMixtureBackend &HEOS, std::size_t i, CoolProp::x_N_dependency_flag xN_flag){
         return log(MixtureDerivatives::fugacity_i(HEOS, i, xN_flag));

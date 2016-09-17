@@ -4,6 +4,7 @@
 #include <map>
 
 #include "UNIFAQLibrary.h"
+#include "CachedElement.h"
 
 /// Structure containing data for the pure fluid in the mixture
 struct ComponentData {
@@ -16,6 +17,8 @@ namespace UNIFAQ
     class UNIFAQMixture
     {
     private:
+        CoolProp::CachedElement _T; ///< The cached temperature
+
         double m_T; ///< The temperature in K
 
         std::vector<double> m_r,
@@ -65,8 +68,8 @@ namespace UNIFAQ
         /// Get the mole fractions of the components in the mixtures (not the groups)
         const std::vector<double> & get_mole_fractions() { return mole_fractions; }
 
-        /// Set the mole fractions of the components in the mixtures (not the groups)
-        void set_temperature(const double T);
+        /// Set the mole fractions of the components in the mixtures (not the groups) AND the mole fractions you want to use
+        void set_temperature(const double T, const std::vector<double> &z);
 
         /// Get the temperature
         double get_temperature() const { return m_T; }

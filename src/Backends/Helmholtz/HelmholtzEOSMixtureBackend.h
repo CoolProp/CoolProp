@@ -137,7 +137,7 @@ public:
     /// Get the search radius in delta and tau for the tracer
     virtual void get_critical_point_search_radii(double &R_delta, double &R_tau);
     /// Checking function to see if we should stop the tracing of the critical contour
-    virtual bool get_critical_is_terminated(double &delta, double &tau){ return delta > 5; }
+    virtual bool get_critical_is_terminated(double &delta, double &tau){ return delta > 5 || tau > 4; }
 
     /// Calculate the values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
     void calc_criticality_contour_values(double &L1star, double &M1star);

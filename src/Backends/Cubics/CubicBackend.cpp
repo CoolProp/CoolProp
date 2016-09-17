@@ -388,7 +388,15 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
         if (imposed_phase_index != iphase_not_imposed){
             // Use imposed phase to select root
             if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas){
-                rho = rho0;
+                if (rho0 > 0){
+                    rho = rho0;
+                }
+                else if (rho1 > 0){
+                    rho = rho1;
+                }
+                else{
+                    throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
+                }
             }
             else if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid){
                 rho = rho2;
@@ -402,8 +410,17 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                 add_transient_pure_state();
                 transient_pure_state->update(PQ_INPUTS, p, 0);
                 if (T > transient_pure_state->T()){
+                    double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
                     // Gas
-                    rho = rho0;
+                    if (rho0 > 0 && rho0 < rhoV){
+                        rho = rho0;
+                    }
+                    else if( rho1 > 0 && rho1 < rhoV){
+                        rho = rho1;
+                    }
+                    else{
+                        throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
+                    }
                 }
                 else{
                     // Liquid
