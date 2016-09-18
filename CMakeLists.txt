@@ -34,6 +34,9 @@ set (COOLPROP_VERSION_REVISION dev)
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
+string ( TIMESTAMP COOLPROP_YEAR 2010-%Y)
+set ( COOLPROP_PUBLISHER "The CoolProp developers")
+
 #######################################
 #           BUILD OPTIONS             #
 #-------------------------------------#
@@ -507,6 +510,40 @@ if (COOLPROP_EES_MODULE)
   install(
     CODE "file( INSTALL ${CMAKE_CURRENT_BINARY_DIR}/Output/SetupCOOLPROP_EES.exe DESTINATION ${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME} )"
   )
+endif()
+
+# Excel add-in
+if (COOLPROP_EXCEL_MODULE)
+  message(STATUS "Creating Excel add-in for COOLPROP_VERSION=${COOLPROP_VERSION}")
+  set(COOLPROP_EXCEL_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}../../bin/MicrosoftExcel")
+  set(COOLPROP_EXCEL_ISS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
+  set(COOLPROP_EXCEL_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/source")
+  
+  set(COOLPROP_EXCEL_SRC_FILES
+    "${COOLPROP_EXCEL_SRC_DIR}/CoolProp_xls_std.dll"
+    "${COOLPROP_EXCEL_SRC_DIR}/CoolProp_xls_x64.dll"
+    "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xlam"
+    "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xla"
+    "${COOLPROP_EXCEL_SRC_DIR}/TestExcel.xlsx"
+  )
+  message(STATUS "COOLPROP_EXCEL_SRC_FILES='${COOLPROP_EXCEL_SRC_FILES}'")	
+  
+  file(GLOB_RECURSE COOLPROP_EXCEL_ISS_FILES ${COOLPROP_EXCEL_ISS_DIR}/*)
+  message(STATUS "COOLPROP_EXCEL_ISS_FILES='${COOLPROP_EXCEL_ISS_FILES}'")	
+  
+  add_custom_target(COOLPROP_EXCEL)
+  foreach(COOLPROP_EXCEL_SRC_FILE ${COOLPROP_EXCEL_SRC_FILES})
+  add_custom_command(TARGET COOLPROP_EXCEL 
+                     PRE_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E
+                       copy "${COOLPROP_EXCEL_SRC_FILE}" "${COOLPROP_EXCEL_TMP_DIR}/")
+  endforeach()
+  # Assume the new files are available
+  CONFIGURE_FILE("${CMAKE_CURRENT_BINARY_DIR}/cmake-templates/config.iss" "${CMAKE_CURRENT_BINARY_DIR}/config.iss")
+  add_custom_command(TARGET COOLPROP_EXCEL
+                     POST_BUILD
+                     COMMAND iscc /cc addin-installer.iss
+                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
