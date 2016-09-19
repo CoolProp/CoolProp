@@ -1180,17 +1180,24 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Unit conversion for REFPROP
             _rhomolar = value1; rho_mol_L = 0.001*value1; _T = value2; // Want rho in [mol/L] in REFPROP
 
-            // Use flash routine to find properties
-            TDFLSHdll(&_T,&rho_mol_L,&(mole_fractions[0]),&p_kPa,
-                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-                      &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength);
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (imposed_phase_index == iphase_not_imposed || imposed_phase_index == iphase_twophase) {
+                // Use flash routine to find properties
+                TDFLSHdll(&_T,&rho_mol_L,&(mole_fractions[0]),&p_kPa,
+                          &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                          &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
+                          &ierr,herr,errormessagelength);
+                if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            }
+            else{
+                // phase is imposed
+                // Calculate everything else
+                THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+            }
 
             // Set all cache values that can be set with unit conversion to SI
-            _p = p_kPa*1000;
-            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _p = p_kPa * 1000;
+            _rhoLmolar = rhoLmol_L * 1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L * 1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassT_INPUTS:
