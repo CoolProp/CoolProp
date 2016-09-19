@@ -562,7 +562,7 @@ if (COOLPROP_EXCEL_MODULE)
     COMMAND ${CMAKE_COMMAND} -E copy "${COOLPROP_EXCEL_SRC_DIR}/TestExcel.xlsx" "${COOLPROP_EXCEL_TMP_DIR}/source/")
   # Copy the Inno Script files to the build directory
   add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
-    COMMAND xcopy "${COOLPROP_EXCEL_ISS_DIR}\\*" "${COOLPROP_EXCEL_TMP_DIR}\\" /S /Y )
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${COOLPROP_EXCEL_ISS_DIR}" "${COOLPROP_EXCEL_TMP_DIR}")
   # Configure variables like version number and build year
   CONFIGURE_FILE("${COOLPROP_EXCEL_ISS_DIR}/cmake-templates/config.iss" "${COOLPROP_EXCEL_TMP_DIR}/config.iss")
   # Compile the installer executable
