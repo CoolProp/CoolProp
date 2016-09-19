@@ -34,6 +34,9 @@ set (COOLPROP_VERSION_REVISION dev)
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
+string ( TIMESTAMP COOLPROP_YEAR 2010-%Y)
+set ( COOLPROP_PUBLISHER "The CoolProp developers")
+
 #######################################
 #           BUILD OPTIONS             #
 #-------------------------------------#
@@ -57,6 +60,10 @@ option (COOLPROP_OBJECT_LIBRARY
 
 option (COOLPROP_EES_MODULE
         "Build the EES module"
+        OFF)
+        
+option (COOLPROP_EXCEL_MODULE
+        "Build the Excel add-in installer"
         OFF)
 
 option (BUILD_TESTING 
@@ -507,6 +514,72 @@ if (COOLPROP_EES_MODULE)
   install(
     CODE "file( INSTALL ${CMAKE_CURRENT_BINARY_DIR}/Output/SetupCOOLPROP_EES.exe DESTINATION ${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME} )"
   )
+endif()
+
+# Excel add-in
+if (COOLPROP_EXCEL_MODULE)
+  message(STATUS "Creating Excel add-in for COOLPROP_VERSION=${COOLPROP_VERSION}")
+  # Setting some basic build paths
+  set(COOLPROP_EXCEL_32B_DIR "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL")
+  file(MAKE_DIRECTORY ${COOLPROP_EXCEL_32B_DIR})
+  set(COOLPROP_EXCEL_64B_DIR "${CMAKE_CURRENT_BINARY_DIR}/64bitDLL")
+  file(MAKE_DIRECTORY ${COOLPROP_EXCEL_64B_DIR})
+  set(COOLPROP_EXCEL_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/InnoScript")
+  file(MAKE_DIRECTORY ${COOLPROP_EXCEL_TMP_DIR})
+  file(MAKE_DIRECTORY ${COOLPROP_EXCEL_TMP_DIR}/source)
+  # Pointers to the sources
+  set(COOLPROP_EXCEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
+  set(COOLPROP_EXCEL_ISS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
+  # Generator for DLLs
+  set(COOLPROP_EXCEL_DLL_GEN "Visual Studio 10 2010")
+  
+  # *************************************************************
+  # Add the target for Excel and populate it with custom commands
+  # *************************************************************
+  add_custom_target(COOLPROP_EXCEL)
+  # Build the 32bit DLL
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
+    COMMAND ${CMAKE_COMMAND} -E copy "${COOLPROP_EXCEL_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_std.dll"
+    WORKING_DIRECTORY ${COOLPROP_EXCEL_32B_DIR}
+    COMMENT "Building the 32bit shared library"
+    VERBATIM )
+  # Build the 64bit DLL
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN} Win64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
+    COMMAND ${CMAKE_COMMAND} -E copy "${COOLPROP_EXCEL_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_x64.dll"
+    WORKING_DIRECTORY ${COOLPROP_EXCEL_64B_DIR}
+    COMMENT "Building the 64bit shared library"
+    VERBATIM )
+  # Copy the Excel files
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xla" "${COOLPROP_EXCEL_TMP_DIR}/source/")
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xlam" "${COOLPROP_EXCEL_TMP_DIR}/source/")
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${COOLPROP_EXCEL_SRC_DIR}/TestExcel.xlsx" "${COOLPROP_EXCEL_TMP_DIR}/source/")
+  # Copy the Inno Script files to the build directory
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND xcopy "${COOLPROP_EXCEL_ISS_DIR}\\*" "${COOLPROP_EXCEL_TMP_DIR}\\" /S /Y )
+  # Configure variables like version number and build year
+  CONFIGURE_FILE("${COOLPROP_EXCEL_ISS_DIR}/cmake-templates/config.iss" "${COOLPROP_EXCEL_TMP_DIR}/config.iss")
+  # Compile the installer executable
+  SET(BINDIR32_ENV_NAME "ProgramFiles(x86)")
+  SET(BINDIR32 $ENV{${BINDIR32_ENV_NAME}})
+  SET(BINDIR64_ENV_NAME "ProgramFiles")
+  SET(BINDIR64 $ENV{${BINDIR64_ENV_NAME}})
+  find_program (COOLPROP_EXCEL_ISS_EXE 
+    NAMES iscc.exe 
+    HINTS "${BINDIR32}/Inno Setup 5" "${BINDIR64}/Inno Setup 5"
+  )
+  message(STATUS "COOLPROP_EXCEL_ISS_EXE='${COOLPROP_EXCEL_ISS_EXE}'")	 
+  add_custom_command(TARGET COOLPROP_EXCEL
+                     POST_BUILD
+                     COMMAND ${COOLPROP_EXCEL_ISS_EXE} addin-installer.iss
+                     WORKING_DIRECTORY "${COOLPROP_EXCEL_TMP_DIR}"
+                     COMMENT "The new installer is located in '${COOLPROP_EXCEL_TMP_DIR}/deploy'")
 endif()
 
 if (COOLPROP_OCTAVE_MODULE)
