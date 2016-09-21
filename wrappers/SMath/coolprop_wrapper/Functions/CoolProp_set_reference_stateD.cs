@@ -44,9 +44,9 @@ namespace coolprop_wrapper.Functions
         Term inf;
         public static int[] Arguments = new [] {5};
 
-        public CoolProp_set_reference_stateD(int childCount)
+        public CoolProp_set_reference_stateD(int argsCount)
         {
-            inf = new Term(this.GetType().Name, TermType.Function, childCount);
+            inf = new Term(this.GetType().Name, TermType.Function, argsCount);
         }
 
         Term IFunction.Info { get { return inf; } }

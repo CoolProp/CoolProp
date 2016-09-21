@@ -42,9 +42,9 @@ namespace coolprop_wrapper.Functions
         Term inf;
         public static int[] Arguments = new [] {1};
 
-        public CoolProp_get_global_param_string(int childCount)
+        public CoolProp_get_global_param_string(int argsCount)
         {
-            inf = new Term(this.GetType().Name, TermType.Function, childCount);
+            inf = new Term(this.GetType().Name, TermType.Function, argsCount);
         }
 
         Term IFunction.Info { get { return inf; } }

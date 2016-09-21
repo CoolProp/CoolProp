@@ -136,12 +136,10 @@ namespace coolprop_wrapper
 
         public static MItem Find(string param)
         {
-            try {
-                return dic[param];
-            }
-            catch (System.Exception) {
+            if (!dic.ContainsKey(param))
                 return unitless;
-            }
+
+            return dic[param];
         }
 
         static System.Collections.Generic.Dictionary<string, MItem> InitHAUnitsDictionary()
@@ -181,12 +179,10 @@ namespace coolprop_wrapper
 
         public static MItem FindHA(string param)
         {
-            try {
-                return HAdic[param];
-            }
-            catch (System.Exception) {
+            if (!HAdic.ContainsKey(param))
                 return unitless;
-            }
+
+            return HAdic[param];
         }
 
         static void matchInternal(MItem unit, SMath.Math.Numeric.TNumber val, ref SMath.Math.Store context)

@@ -49,9 +49,9 @@ namespace coolprop_wrapper.Functions
         Term inf;
         public static int[] Arguments = new[] { 7 };
 
-        public CoolProp_HAProps(int childCount)
+        public CoolProp_HAProps(int argsCount)
         {
-            inf = new Term(this.GetType().Name, TermType.Function, childCount);
+            inf = new Term(this.GetType().Name, TermType.Function, argsCount);
         }
 
         Term IFunction.Info { get { return inf; } }

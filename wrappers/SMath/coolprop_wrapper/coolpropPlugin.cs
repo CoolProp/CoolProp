@@ -69,7 +69,7 @@ namespace coolprop_wrapper
             var dbl = GetNumberParam(arg, context).obj as SMath.Math.Numeric.TDouble;
             if (!dbl.isText)
                 throw new SMath.Manager.MathException(Errors.ArgumentMustBeString);
-            return dbl.ToString().Trim('"');
+            return dbl.ToString().Trim(Symbols.StringChar[0]);
         }
 
         public static Entry MakeDoubleResult(double result, SMath.Math.Symbolic.MItem unit)
