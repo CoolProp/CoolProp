@@ -7,7 +7,7 @@ namespace coolprop_wrapper.Functions
   {
     // int set_reference_stateD(const char *Ref, double T, double rho, double h0, double s0);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "set_reference_stateD",
+      "CoolProp_x86", EntryPoint = "set_reference_stateD",
       CharSet = CharSet.Ansi)]
     internal static extern int CoolPropDLLfunc_x86(
       string Ref,
@@ -16,7 +16,7 @@ namespace coolprop_wrapper.Functions
       double h0,
       double s0);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "set_reference_stateD",
+      "CoolProp_x64", EntryPoint = "set_reference_stateD",
       CharSet = CharSet.Ansi)]
     internal static extern int CoolPropDLLfunc_x64(
       string Ref,
@@ -38,7 +38,7 @@ namespace coolprop_wrapper.Functions
         case 8:
           return CoolPropDLLfunc_x64(Ref, T, rho, h0, s0);
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      throw new System.Exception("Unknown platform!");
     }
 
     Term inf;

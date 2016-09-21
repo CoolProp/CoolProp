@@ -49,6 +49,18 @@ namespace coolprop_wrapper
       return SMath.Math.Decision.NumericCalculation(arg, ref context);
     }
 
+    public static void CoolPropError(string message = "")
+    {
+        string errStr;
+        if (!Functions.CoolProp_get_global_param_string.CoolPropDLLfunc("errstring", out errStr))
+        {
+            // Call it second time - most probably will get something like "buffer too small"
+            Functions.CoolProp_get_global_param_string.CoolPropDLLfunc("errstring", out errStr);
+            errStr = "Error message couldn't be retrieved from CoolProp library (buffer size issue?); the second try returned: " + errStr;
+        }
+        throw new System.Exception(message+errStr);
+    }
+
     public static string GetStringParam(Term[] arg, ref SMath.Math.Store context)
     {
       var dbl = GetNumberParam(arg, ref context).obj as SMath.Math.Numeric.TDouble;
@@ -59,9 +71,14 @@ namespace coolprop_wrapper
 
     public static Term[] MakeDoubleResult(double result, SMath.Math.Symbolic.MItem unit)
     {
-      var d = new SMath.Math.Numeric.TDouble(result);
-      d.Units = unit;
-      return d.ToTerms();
+        if (double.IsInfinity(result))
+        {
+            CoolPropError();
+        }
+
+        var d = new SMath.Math.Numeric.TDouble(result);
+        d.Units = unit;
+        return d.ToTerms();
     }
 
     public static Term[] MakeStringResult(string result)

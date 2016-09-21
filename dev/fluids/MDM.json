@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Octamethyltrisiloxane", 
-    "OCTAMETHYLTRISILOXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,19 +178,203 @@
       ]
     }
   }, 
-  "CAS": "107-51-7", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 2, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "MDM", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
+    {
+      "BibTeX_CP0": "", 
+      "BibTeX_EOS": "Thol-JCED-2016-MDM", 
+      "STATES": {
+        "hs_anchor": {
+          "T": 620.4990000000001, 
+          "T_units": "K", 
+          "hmolar": 114352.21837753351, 
+          "hmolar_units": "J/mol", 
+          "p": 2445366.9758180794, 
+          "p_units": "Pa", 
+          "rhomolar": 976.8929592599991, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 216.5795799055232, 
+          "smolar_units": "J/mol/K"
+        }, 
+        "reducing": {
+          "T": 565.3609, 
+          "T_units": "K", 
+          "hmolar": 82939.91864085311, 
+          "hmolar_units": "J/mol", 
+          "p": 1437537.7551312034, 
+          "p_units": "Pa", 
+          "rhomolar": 1134, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": 165.18396396527157, 
+          "smolar_units": "J/mol/K"
+        }, 
+        "sat_min_liquid": {
+          "T": 187.2, 
+          "T_units": "K", 
+          "hmolar": -102885.06233262179, 
+          "hmolar_units": "J/mol", 
+          "p": 0.0010820636776824137, 
+          "p_units": "Pa", 
+          "rhomolar": 3907.2013504745096, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": -347.8759487238905, 
+          "smolar_units": "J/mol/K"
+        }, 
+        "sat_min_vapor": {
+          "T": 187.2, 
+          "T_units": "K", 
+          "hmolar": -43550.60989486778, 
+          "hmolar_units": "J/mol", 
+          "p": 0.0010820636776824137, 
+          "p_units": "Pa", 
+          "rhomolar": 6.948713197934248e-07, 
+          "rhomolar_units": "mol/m^3", 
+          "smolar": -30.918403650418046, 
+          "smolar_units": "J/mol/K"
+        }
+      }, 
+      "T_max": 575.0, 
+      "T_max_units": "K", 
+      "Ttriple": 187.2, 
+      "Ttriple_units": "K", 
+      "acentric": 0.5280658490542447, 
+      "acentric_units": "-", 
+      "alpha0": [
+        {
+          "a1": 117.9946064218, 
+          "a2": -19.6600754238, 
+          "type": "IdealGasHelmholtzLead"
+        }, 
+        {
+          "a": 3, 
+          "type": "IdealGasHelmholtzLogTau"
+        }, 
+        {
+          "n": [
+            28.817, 
+            46.951, 
+            31.054
+          ], 
+          "t": [
+            0.0353756335, 
+            2.7769872306, 
+            8.3132738751
+          ], 
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        }
+      ], 
+      "alphar": [
+        {
+          "d": [
+            4.0, 
+            1.0, 
+            1.0, 
+            2.0, 
+            3.0, 
+            1.0, 
+            3.0, 
+            2.0, 
+            2.0, 
+            7.0
+          ], 
+          "l": [
+            0.0, 
+            0.0, 
+            0.0, 
+            0.0, 
+            0.0, 
+            2.0, 
+            2.0, 
+            1.0, 
+            2.0, 
+            1.0
+          ], 
+          "n": [
+            0.05039724, 
+            1.189992, 
+            -2.468723, 
+            -0.743856, 
+            0.4434056, 
+            -1.371359, 
+            -1.529621, 
+            0.4445898, 
+            -1.009921, 
+            -0.05903694
+          ], 
+          "t": [
+            1.0, 
+            0.188, 
+            1.03, 
+            0.7, 
+            0.464, 
+            2.105, 
+            1.376, 
+            0.8, 
+            1.8, 
+            1.005
+          ], 
+          "type": "ResidualHelmholtzPower"
+        }, 
+        {
+          "beta": [
+            0.966, 
+            0.237, 
+            0.954, 
+            0.861, 
+            0.909
+          ], 
+          "d": [
+            1.0, 
+            1.0, 
+            3.0, 
+            2.0, 
+            2.0
+          ], 
+          "epsilon": [
+            0.928, 
+            2.081, 
+            0.282, 
+            1.496, 
+            0.805
+          ], 
+          "eta": [
+            0.986, 
+            1.715, 
+            0.837, 
+            1.312, 
+            1.191
+          ], 
+          "gamma": [
+            1.25, 
+            1.438, 
+            0.894, 
+            0.9, 
+            0.899
+          ], 
+          "n": [
+            3.515188, 
+            0.08367608, 
+            1.646856, 
+            -0.2851917, 
+            -2.457571
+          ], 
+          "t": [
+            0.7, 
+            0.66, 
+            1.138, 
+            1.56, 
+            1.31
+          ], 
+          "type": "ResidualHelmholtzGaussian"
+        }
+      ], 
+      "gas_constant": 8.3144621, 
+      "gas_constant_units": "J/mol/K", 
+      "molar_mass": 0.23653146, 
+      "molar_mass_units": "kg/mol", 
+      "p_max": 130000000.0, 
+      "p_max_units": "Pa", 
+      "pseudo_pure": false
+    }, 
     {
       "BibTeX_CP0": "", 
       "BibTeX_EOS": "Colonna-FPE-2008", 
@@ -353,44 +533,67 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{24}O_{2}Si_{3}", 
-  "NAME": "MDM", 
-  "REFPROP_NAME": "MDM", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=23101", 
+    "ALIASES": [
+      "Octamethyltrisiloxane", 
+      "OCTAMETHYLTRISILOXANE"
+    ], 
+    "CAS": "107-51-7", 
+    "CHEMSPIDER_ID": 23101, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 2, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "MDM", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{8}H_{24}O_{2}Si_{3}", 
+    "INCHI_KEY": "CXQXSVUQTKDNFP-UHFFFAOYAT", 
+    "INCHI_STRING": "InChI=1/C8H24O2Si3/c1-11(2,3)9-13(7,8)10-12(4,5)6/h1-8H3", 
+    "NAME": "MDM", 
+    "REFPROP_NAME": "MDM", 
+    "SMILES": "C[Si](C)(C)O[Si](C)(C)O[Si](C)(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 564.09, 
       "T_units": "K", 
-      "hmolar": 82797.96517545884, 
+      "hmolar": 82466.88315732972, 
       "hmolar_units": "J/mol", 
-      "p": 1415000.0, 
+      "p": 1410044.755816551, 
       "p_units": "Pa", 
       "rhomolar": 1085.436621399999, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": 164.96692930694059, 
+      "smolar": 164.39021255235468, 
       "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
       "T": 187.2, 
       "T_units": "K", 
-      "hmolar": -105762.44019402962, 
+      "hmolar": -102885.06233262179, 
       "hmolar_units": "J/mol", 
-      "p": 0.0007990830782352535, 
+      "p": 0.0010820636776824137, 
       "p_units": "Pa", 
-      "rhomolar": 3930.823263642575, 
+      "rhomolar": 3907.2013504745096, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": -360.2602949388952, 
+      "smolar": -347.8759487238905, 
       "smolar_units": "J/mol/K"
     }, 
     "triple_vapor": {
       "T": 187.2, 
       "T_units": "K", 
-      "hmolar": -43809.68222646088, 
+      "hmolar": -43550.60989486778, 
       "hmolar_units": "J/mol", 
-      "p": 0.0007990830782352535, 
+      "p": 0.0010820636776824137, 
       "p_units": "Pa", 
-      "rhomolar": 5.134127178430136e-07, 
+      "rhomolar": 6.948713197934248e-07, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": -29.316075026669083, 
+      "smolar": -30.918403650418046, 
       "smolar_units": "J/mol/K"
     }
   }

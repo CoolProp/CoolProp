@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "ethylbenzene", 
-    "ETHYLBENZENE", 
-    "EBENZENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,7 +178,6 @@
       ]
     }
   }, 
-  "CAS": "100-41-4", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -402,9 +396,22 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{10}", 
-  "NAME": "EthylBenzene", 
-  "REFPROP_NAME": "EBENZENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7219", 
+    "ALIASES": [
+      "ethylbenzene", 
+      "ETHYLBENZENE", 
+      "EBENZENE"
+    ], 
+    "CAS": "100-41-4", 
+    "CHEMSPIDER_ID": 7219, 
+    "FORMULA": "C_{8}H_{10}", 
+    "INCHI_KEY": "YNQLUTRBYVCPMQ-UHFFFAOYAM", 
+    "INCHI_STRING": "InChI=1/C8H10/c1-2-8-6-4-3-5-7-8/h3-7H,2H2,1H3", 
+    "NAME": "EthylBenzene", 
+    "REFPROP_NAME": "EBENZENE", 
+    "SMILES": "CCc1ccccc1"
+  }, 
   "STATES": {
     "critical": {
       "T": 617.12, 

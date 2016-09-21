@@ -10,8 +10,42 @@ import warnings
 import CoolProp
 from CoolProp import AbstractState
 from CoolProp import CoolProp as CP
-from CoolProp.CoolProp import PropsSI,extract_backend,extract_fractions
+from CoolProp.CoolProp import PropsSI, extract_backend, extract_fractions, PyCriticalState
 
+def get_critical_point(state):
+    crit_state = PyCriticalState() 
+    crit_state.T = np.nan
+    crit_state.p = np.nan
+    crit_state.rhomolar = np.nan
+    crit_state.stable = False
+    try:
+        crit_state.T = state.T_critical()
+        crit_state.p = state.p_critical()
+        crit_state.rhomolar = state.rhomolar_critical()
+        crit_state.stable = True
+    except:
+        try:
+            for crit_state_tmp in state.all_critical_points():
+                if crit_state_tmp.stable and (crit_state_tmp.T > crit_state.T or not np.isfinite(crit_state.T)):
+                    crit_state.T = crit_state_tmp.T
+                    crit_state.p = crit_state_tmp.p
+                    crit_state.rhomolar = crit_state_tmp.rhomolar
+                    crit_state.stable = crit_state_tmp.stable
+        except:
+            raise ValueError("Could not calculate the critical point data.")    
+    new_state = AbstractState(state.backend_name(), '&'.join(state.fluid_names()))
+    masses = state.get_mass_fractions()
+    if len(masses)>1: 
+        new_state.set_mass_fractions(masses) # Uses mass fraction to work with incompressibles
+        #try: new_state.build_phase_envelope("dummy")
+        #except: pass
+    if np.isfinite(crit_state.p) and np.isfinite(crit_state.T):
+        try: new_state.specify_phase(CoolProp.iphase_critical_point)
+        except: pass 
+        new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
+        #new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+        return new_state
+    raise ValueError("Could not calculate the critical point data.")
 
 def interpolate_values_1d(x,y,x_points=None,kind='linear'):
     try: 
@@ -290,6 +324,7 @@ class Base2DObject(with_metaclass(ABCMeta),object):
     def __init__(self, x_type, y_type, state=None, small=None):
         self._x_index = _get_index(x_type)
         self._y_index = _get_index(y_type)
+        self._critical_state = None
         if small is not None: self._small = small
         else: self._small = 1e-7
         if state is not None: self.state = state
@@ -301,12 +336,23 @@ class Base2DObject(with_metaclass(ABCMeta),object):
     @property
     def y_index(self): return self._y_index
     @property
+    def critical_state(self):
+        if self._critical_state is None and self._state is not None:
+            self._critical_state = get_critical_point(self._state)
+        return self._critical_state
+    @property
     def state(self): return self._state
     @state.setter
     def state(self, value):
         self._state = process_fluid_state(value)
-        self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
-        self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
+        #try: self._state.build_phase_envelope("dummy")
+        #except: pass
+        self._critical_state = None        
+        #self._T_small = self._state.trivial_keyed_output(CoolProp.iT_critical)*self._small
+        #self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
+        self._T_small = self.critical_state.keyed_output(CoolProp.iT)*self._small
+        self._P_small = self.critical_state.keyed_output(CoolProp.iP)*self._small
+        
 
         
     def _get_sat_bounds(self, kind, smin=None, smax=None):
@@ -325,10 +371,10 @@ class Base2DObject(with_metaclass(ABCMeta),object):
         kind = _get_index(kind)
         if kind == CoolProp.iP:
             fluid_min = self._state.keyed_output(CoolProp.iP)+self._P_small
-            fluid_max = self._state.trivial_keyed_output(CoolProp.iP_critical)-self._P_small
+            fluid_max = self.critical_state.keyed_output(CoolProp.iP)-self._P_small
         elif kind == CoolProp.iT:
             fluid_min = self._state.keyed_output(CoolProp.iT)+self._T_small
-            fluid_max = self._state.trivial_keyed_output(CoolProp.iT_critical)-self._T_small
+            fluid_max = self.critical_state.keyed_output(CoolProp.iT)-self._T_small
         else:
             raise ValueError("Saturation boundaries have to be defined in T or P, but not in {0:s}".format(str(kind)))
                 
@@ -453,9 +499,9 @@ class IsoLine(Base2DObject):
             one = np.resize(np.array(self.value),two.shape)
             pair = CoolProp.QT_INPUTS
 
-        Tcrit = self.state.trivial_keyed_output(CoolProp.iT_critical)
-        Pcrit = self.state.trivial_keyed_output(CoolProp.iP_critical)
-        Dcrit = self.state.trivial_keyed_output(CoolProp.irhomass_critical)
+        Tcrit = self.critical_state.keyed_output(CoolProp.iT)
+        Pcrit = self.critical_state.keyed_output(CoolProp.iP)
+        Dcrit = self.critical_state.keyed_output(CoolProp.iDmass)
         try:
             self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
             xcrit = self.state.keyed_output(self._x_index)

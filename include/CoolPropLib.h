@@ -127,6 +127,12 @@
      * @returns error_code 1 = Ok 0 = error
      */
     EXPORT_CODE long CONVENTION get_fluid_param_string(const char *fluid, const char *param, char *Output, int n);
+    /** \brief Set configuration string
+    * @param key The key to configure
+    * @param val The value to set to the key
+    * \note you can get the error message by doing something like get_global_param_string("errstring",output)
+    */
+    EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val);
     /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS
@@ -274,6 +280,25 @@
      */
     EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long *errcode, char *message_buffer, const long buffer_length);
     /**
+    * @brief Specify the phase to be used for all further calculations
+    * @param handle The integer handle for the state class stored in memory
+    * @param phase The string with the phase to use
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION AbstractState_specify_phase(const long handle, const char *phase, long *errcode, char *message_buffer, const long buffer_length);
+    /**
+    * @brief Unspecify the phase to be used for all further calculations
+    * @param handle The integer handle for the state class stored in memory
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION AbstractState_unspecify_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length);
+    /**
      * @brief Get an output value from the AbstractState using an integer value for the desired output value
      * @param handle The integer handle for the state class stored in memory
      * @param param The integer value for the parameter you want
@@ -332,6 +357,25 @@
     EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, double* T, double* p, double* rhomolar, double* hmolar, double* smolar, long *errcode, char *message_buffer, const long buffer_length);
 
     /**
+    * @brief Update the state of the AbstractState and get one output value (temperature, pressure, molar density, molar enthalpy and molar entropy)
+    * @brief from the AbstractState using pointers as inputs and output to allow array computation.
+    * @param handle The integer handle for the state class stored in memory
+    * @param input_pair The integer value for the input pair obtained from get_input_pair_index
+    * @param value1 The pointer to the array of the first input parameters
+    * @param value2 The pointer to the array of the second input parameters
+    * @param length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
+    * @param output The indice for the output desired
+    * @param out The pointer to the array for output
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    *
+    * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
+    */
+    EXPORT_CODE void CONVENTION AbstractState_update_and_1_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, const long output, double* out, long *errcode, char *message_buffer, const long buffer_length);
+
+    /**
     * @brief Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy)
     * @brief from the AbstractState using pointers as inputs and output to allow array computation.
     * @param handle The integer handle for the state class stored in memory
@@ -354,6 +398,32 @@
     */
     EXPORT_CODE void CONVENTION AbstractState_update_and_5_out(const long handle, const long input_pair, const double* value1, const double* value2, const long length, long *outputs, double* out1, double* out2, double* out3, double* out4, double* out5, long *errcode, char *message_buffer, const long buffer_length);
 
+    /**
+    * @brief Set binary interraction parrameter for mixtures
+    * @param handle The integer handle for the state class stored in memory
+    * @param i indice of the first fluid of the binary pair
+    * @param j indice of the second fluid of the binary pair
+    * @param parameter string wit the name of the parameter
+    * @param value the value of the binary interaction parameter
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const long i, const long j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
+
+    /**
+    * @brief Set some fluid parameter (ie volume translation for cubic)
+    * @param handle The integer handle for the state class stored in memory
+	* @param i indice of the fluid the parramter should be applied too (for mixtures)
+	* @param parameter the string specifying the parameter to use, ex "cm" for volume translation
+    * @param value the value of the parameter
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long handle, const long i, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
     // *************************************************************************************
     // *************************************************************************************

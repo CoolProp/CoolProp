@@ -9,6 +9,7 @@
 #define REFPROPMIXTUREBACKEND_H_
 
 #include "AbstractState.h"
+#include "DataStructures.h"
 
 #include <vector>
 
@@ -45,7 +46,7 @@ public:
     /// A function to actually do the initalization to allow it to be called in derived classes
     void construct(const std::vector<std::string>& fluid_names);
     
-    std::string backend_name(void){return "REFPROPMixtureBackend";}
+    std::string backend_name(void) { return get_backend_string(REFPROP_BACKEND_MIX); }
     virtual ~REFPROPMixtureBackend();
 
 	static std::string version();
@@ -71,6 +72,15 @@ public:
     bool using_mole_fractions(){return true;}
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
+    
+    /** \brief Specify the phase - this phase will always be used in calculations
+     *
+     * @param phase_index The index from CoolProp::phases
+     */
+    void calc_specify_phase(phases phase_index){ imposed_phase_index = phase_index; _phase = phase_index; }
+    /**\brief Unspecify the phase - the phase is no longer imposed, different solvers can do as they like
+     */
+    void calc_unspecify_phase(){ imposed_phase_index = iphase_not_imposed;}
 
     /// Updating function for REFPROP
     /**
@@ -99,6 +109,8 @@ public:
     CoolPropDbl calc_molar_mass(void);
     
     void check_loaded_fluid(void);
+
+    void calc_excess_properties();
 
     /// Returns true if REFPROP is supported on this platform
     static bool REFPROP_supported(void);
@@ -168,6 +180,7 @@ public:
     CoolPropDbl calc_rhomolar_critical(void);
 	CoolPropDbl calc_rhomolar_reducing(void);
     CoolPropDbl calc_Ttriple(void);
+    CoolPropDbl calc_acentric_factor(void);
 	CoolPropDbl calc_gas_constant(void);
     CoolPropDbl calc_dipole_moment(void);
 

@@ -9,6 +9,7 @@
 #define REFPROPBACKEND_H_
 
 #include "REFPROPMixtureBackend.h"
+#include "DataStructures.h"
 
 namespace CoolProp {
 
@@ -22,7 +23,7 @@ public:
     
     REFPROPBackend();
     REFPROPBackend(const std::string &fluid_name);
-    std::string backend_name(void){return "REFPROPBackend";}
+    std::string backend_name(void) { return get_backend_string(REFPROP_BACKEND_PURE); }
     
     virtual ~REFPROPBackend();
 };

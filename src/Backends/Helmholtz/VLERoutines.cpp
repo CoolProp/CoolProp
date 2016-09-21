@@ -1202,7 +1202,7 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
 
     HEOS.SatL->update_TP_guessrho(T, p, HEOS.SatL->rhomolar());
     HEOS.SatV->update_TP_guessrho(T, p, HEOS.SatV->rhomolar());
-
+    
     options.p = HEOS.SatL->p();
     options.T = HEOS.SatL->T();
     options.rhomolar_liq = HEOS.SatL->rhomolar();
@@ -1717,7 +1717,14 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions(){
     
     for (int i = 0; i < static_cast<int>(z.size()); ++i){
         // Calculate the K-factor
-        lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS.T(), HEOS.p(), i);
+        if (m_T < 0 && m_p < 0){
+            // Using T&P from the class
+            lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS.T(), HEOS.p(), i);
+        }
+        else{
+            // Using specified T&P
+            lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, m_T, m_p, i);
+        }
         K[i] = exp(lnK[i]);
         g0 += z[i]*(K[i]-1);   // The summation for beta = 0
         g1 += z[i]*(1-1/K[i]); // The summation for beta = 1
@@ -1752,36 +1759,13 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
     HEOS.SatL->set_mole_fractions(x); HEOS.SatL->calc_reducing_state();
     HEOS.SatV->set_mole_fractions(y); HEOS.SatV->calc_reducing_state();
     
-    // First use cubic as a guess for the density of liquid and vapor phases
-    rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid); // [mol/m^3]
-    rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas); // [mol/m^3]
-    
-    if (HEOS.backend_name().find("Helmholtz") == 0){
-        // Use Peneloux volume translation to shift liquid volume
-        // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
-        double summer_c = 0, v_SRK = 1/rhomolar_liq;
-        for (std::size_t i = 0; i < z.size(); ++i){
-            // Get the parameters for the cubic EOS
-            CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical),
-                        pc = HEOS.get_fluid_constant(i, iP_critical),
-                        rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
-            CoolPropDbl R = 8.3144598;
-            summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));
-        }
-        rhomolar_liq = 1/(v_SRK - summer_c);
-    }
-    
-    if (debug){ fmt::printf("2) SS1: i beta K rho' rho''\n"); }
+    if (debug){ fmt::printf("2) SS1: i beta K x y rho' rho''\n"); }
     for (int step_count = 0; step_count < num_steps; ++step_count){
         // Set the composition
         HEOS.SatL->set_mole_fractions(x); HEOS.SatV->set_mole_fractions(y);
         HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
         
-        // Re-calculate the density
-        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
-        rhomolar_liq = HEOS.SatL->rhomolar();
-        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
-        rhomolar_vap = HEOS.SatV->rhomolar();
+        this->rho_TP_global();
 
         // Calculate the new K-factors from the fugacity coefficients
         double g0 = 0, g1 = 0;
@@ -1807,64 +1791,175 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
         normalize_vector(x);
         normalize_vector(y);
-        if (debug){ fmt::printf("2) %d %g %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f"), rhomolar_liq, rhomolar_vap); }
+        if (debug){ fmt::printf("2) %d %g %s %s %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f"), vec_to_string(x, "%0.6f"), vec_to_string(y, "%0.6f"), rhomolar_liq, rhomolar_vap); }
     }
 }
 void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     std::vector<double> tpdL, tpdH;
-    _stable = true;
-    if (beta > DBL_EPSILON || beta < 1-DBL_EPSILON){
+    
+    // Calculate the temperature and pressure to be used
+    double the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
+    double the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
+    
+    // If beta value is between epsilon and 1-epsilon, check the TPD
+    if (beta > DBL_EPSILON && beta < 1-DBL_EPSILON){
+        
+        // Set the composition back to the bulk composition for both liquid and vapor phases
+        HEOS.SatL->set_mole_fractions(z); HEOS.SatV->set_mole_fractions(z);
+        HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
+        
+        // Update the densities in each class
+        double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatL->SRK_covolume());
+        double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatV->SRK_covolume());
+        HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
+        HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
+        
         // Calculate the tpd and the Gibbs energy difference (Gernert, 2014, Eqs. 20-22)
-        this->tpd_liq = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), x, rhomolar_liq);
-        this->tpd_vap = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), y, rhomolar_vap);
+        // The trial compositions are the phase compositions from before
+        this->tpd_liq = HEOS.SatL->tangent_plane_distance(the_T, the_p, x, rhomolar_liq);
+        this->tpd_vap = HEOS.SatV->tangent_plane_distance(the_T, the_p, y, rhomolar_vap);
+        
         this->DELTAG_nRT = (1-beta)*tpd_liq + beta*(tpd_vap);
         if (debug){ fmt::printf("3) tpd': %g tpd'': %g DELTAG/nRT: %g\n", tpd_liq, tpd_vap, DELTAG_nRT); }
         
-        // If any of these cases are met, conclusively unstable, stop!
+        // If any of these cases are met, feed is conclusively unstable, stop!
         if (this->tpd_liq < -DBL_EPSILON || this->tpd_vap < -DBL_EPSILON || this->DELTAG_nRT < -DBL_EPSILON){
+            if (debug){ fmt::printf("3) PHASE SPLIT beta in (eps,1-eps) \n"); }
             _stable = false; return;
         }
     }
     
     // Ok, we aren't sure about stability, need to keep going with the full tpd analysis
     
+    // Use the global density solver to obtain the density root (or the lowest Gibbs energy root if more than one)
+    CoolPropDbl rho_bulk = HEOS.solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SRK_covolume());
+    HEOS.update_DmolarT_direct(rho_bulk, the_T);
+    
+    // Calculate the fugacity coefficient at initial composition of the bulk phase
+    std::vector<double> fugacity_coefficient0(z.size()), fugacity0(z.size());
+    for (std::size_t i = 0; i < z.size(); ++i){
+        fugacity_coefficient0[i] = HEOS.fugacity_coefficient(i);
+        fugacity0[i] = HEOS.fugacity(i);
+    }
+    
     // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
     std::vector<double> xL(z.size()), xH(z.size());
     for (std::size_t i = 0; i < z.size(); ++i){
-        xL[i] = z[i]*K0[i];
-        xH[i] = z[i]/K0[i];
+        xL[i] = z[i]*K0[i]; // Light-phase composition
+        xH[i] = z[i]/K0[i]; // Heavy-phase composition
     }
     normalize_vector(xL);
     normalize_vector(xH);
     
     // For each composition, use successive substitution to try to evaluate stability
     if (debug){ fmt::printf("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n"); }
-    for (int step_count = 0; step_count < 20; ++step_count){
+
+    // We got this far, we assume stable phases
+    _stable = true;
+    
+    double diffbulkL = 0, diffbulkH = 0;
+    for (int step_count = 0; step_count < 100; ++step_count){
+        
         // Set the composition
         HEOS.SatL->set_mole_fractions(xH); HEOS.SatV->set_mole_fractions(xL);
-        HEOS.SatL->calc_reducing_state(); HEOS.SatV->calc_reducing_state();
+        HEOS.SatL->calc_reducing_state();  HEOS.SatV->calc_reducing_state();
         
-        // Re-calculate the density
-        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
-        rhomolar_liq = HEOS.SatL->rhomolar();
-        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
-        rhomolar_vap = HEOS.SatV->rhomolar();
+        // Do the global density solver for both phases
+        rho_TP_global();
         
-        // Calculate and store TPD values
-        double tpd_L = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xL, rhomolar_vap);
-        double tpd_H = HEOS.tangent_plane_distance(HEOS.T(), HEOS.p(), xH, rhomolar_liq);
+        double tpd_L = 0, tpd_H = 0;
+        for (std::size_t i = 0; i < xL.size(); ++i){
+            tpd_L += xL[i] * (log(MixtureDerivatives::fugacity_i(*HEOS.SatV, i, XN_DEPENDENT)) - log(fugacity0[i]));
+            tpd_H += xH[i] * (log(MixtureDerivatives::fugacity_i(*HEOS.SatL, i, XN_DEPENDENT)) - log(fugacity0[i]));
+        }
         tpdL.push_back(tpd_L); tpdH.push_back(tpd_H);
         
         // Calculate the new composition from the fugacity coefficients
+        diffbulkL = 0, diffbulkH = 0;
         for (std::size_t i = 0; i < z.size(); ++i){
-            xL[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatV->fugacity_coefficient(i);
-            xH[i] = z[i]*HEOS.fugacity_coefficient(i)/HEOS.SatL->fugacity_coefficient(i);
+            xL[i] = z[i]*fugacity_coefficient0[i]/HEOS.SatV->fugacity_coefficient(i);
+            diffbulkL += std::abs(xL[i] - z[i]);
+            xH[i] = z[i]*fugacity_coefficient0[i]/HEOS.SatL->fugacity_coefficient(i);
+            diffbulkH += std::abs(xH[i] - z[i]);
         }
         normalize_vector(xL);
         normalize_vector(xH);
-        if (debug){ fmt::printf("2) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
+        if (debug){ fmt::printf("3) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
         
-        if (tpd_L < -DBL_EPSILON || tpd_H < -DBL_EPSILON){_stable = false; return;}
+        // Check if either of the phases have the bulk composition. If so, no phase split
+        if (diffbulkL < 1e-2 || diffbulkH < 1e-2){
+            _stable = true; return;
+        }
+        
+        // Check if either tpd is negative, if so, phases definitively split, quit
+        if (tpd_L < -1e-12 || tpd_H < -1e-12){
+            _stable = false; return;
+        }
+    }
+    if (diffbulkH > 0.25 || diffbulkL > 0.25){
+        // At least one test phase is definitely not the bulk composition, so phase split predicted
+        _stable = false;
+    }
+
+}
+    
+void StabilityRoutines::StabilityEvaluationClass::rho_TP_global(){
+    
+    // Calculate the temperature and pressure to be used
+    double the_T = (m_T > 0 && m_p > 0) ? m_T : HEOS.T();
+    double the_p = (m_T > 0 && m_p > 0) ? m_p : HEOS.p();
+    
+    // Calculate covolume of SRK, use it as the maximum density
+    double rhoL = HEOS.SatL->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatL->SRK_covolume());
+    double rhoV = HEOS.SatV->solver_rho_Tp_global(the_T, the_p, 0.9/HEOS.SatV->SRK_covolume());
+    HEOS.SatL->update_DmolarT_direct(rhoL, the_T);
+    HEOS.SatV->update_DmolarT_direct(rhoV, the_T);
+    
+    rhomolar_liq = HEOS.SatL->rhomolar();
+    rhomolar_vap = HEOS.SatV->rhomolar();
+}
+    
+void StabilityRoutines::StabilityEvaluationClass::rho_TP_w_guesses(){
+    
+    // Re-calculate the density
+    if (m_T > 0 && m_p > 0){
+        HEOS.SatL->update_TP_guessrho(m_T, m_p, rhomolar_liq);
+        HEOS.SatV->update_TP_guessrho(m_T, m_p, rhomolar_vap);
+    }
+    else{
+        HEOS.SatL->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_liq);
+        HEOS.SatV->update_TP_guessrho(HEOS.T(), HEOS.p(), rhomolar_vap);
+    }
+    rhomolar_liq = HEOS.SatL->rhomolar();
+    rhomolar_vap = HEOS.SatV->rhomolar();
+}
+
+void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated(){
+    
+    // First use cubic as a guess for the density of liquid and vapor phases
+    if (m_T > 0 && m_p > 0){
+        rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(m_T, m_p, iphase_liquid); // [mol/m^3]
+        rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(m_T, m_p, iphase_gas); // [mol/m^3]
+    }
+    else{
+        rhomolar_liq = HEOS.SatL->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_liquid); // [mol/m^3]
+        rhomolar_vap = HEOS.SatV->solver_rho_Tp_SRK(HEOS.T(), HEOS.p(), iphase_gas); // [mol/m^3]
+    }
+    
+    // Apply volume translation to liquid density only
+    if (HEOS.backend_name().find("Helmholtz") == 0){
+        // Use Peneloux volume translation to shift liquid volume
+        // As in Horstmann :: doi:10.1016/j.fluid.2004.11.002
+        double summer_c = 0, v_SRK = 1/rhomolar_liq;
+        for (std::size_t i = 0; i < z.size(); ++i){
+            // Get the parameters for the cubic EOS
+            CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical),
+            pc = HEOS.get_fluid_constant(i, iP_critical),
+            rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
+            CoolPropDbl R = 8.3144598;
+            summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));
+        }
+        rhomolar_liq = 1/(v_SRK - summer_c);
     }
 }
 

@@ -288,6 +288,9 @@ public:
                               VISCOSITY_HARDCODED_HELIUM, ///< Use \ref TransportRoutines::viscosity_helium_hardcoded
                               VISCOSITY_HARDCODED_R23, ///< Use \ref TransportRoutines::viscosity_R23_hardcoded
                               VISCOSITY_HARDCODED_METHANOL, ///< Use \ref TransportRoutines::viscosity_methanol_hardcoded
+                              VISCOSITY_HARDCODED_M_XYLENE, ///< Use \ref TransportRoutines::viscosity_m_xylene_hardcoded
+                              VISCOSITY_HARDCODED_O_XYLENE, ///< Use \ref TransportRoutines::viscosity_o_xylene_hardcoded
+                              VISCOSITY_HARDCODED_P_XYLENE, ///< Use \ref TransportRoutines::viscosity_p_xylene_hardcoded
                               VISCOSITY_NOT_HARDCODED
                               };
     enum ConductivityHardcodedEnum {
@@ -487,8 +490,13 @@ class CoolPropFluid {
         std::string CAS; ///< The CAS number of the fluid
         std::string formula; ///< The chemical formula, in LaTeX form
         std::vector <std::string> aliases; ///< A vector of aliases of names for the fluid
+        std::string InChI; ///< The InChI string for the fluid
+        std::string InChIKey; ///< The InChI key for the fluid
+        std::string smiles; ///< The SMILES identifier for the fluid
+        int ChemSpider_id; ///< The Chemspider identifier for the fluid
+        std::string TwoDPNG_URL; ///< The URL to a 2D representation of the molecule (from ChemSpider)
 
-        BibTeXKeysStruct BibTeXKeys; ///< The BibTeX keys associated 
+        BibTeXKeysStruct BibTeXKeys; ///< The BibTeX keys associated
         EnvironmentalFactorsStruct environment; ///< The environmental variables for global warming potential, ODP, etc.
         Ancillaries ancillaries; ///< The set of ancillary equations for dewpoint, bubblepoint, surface tension, etc.
         TransportPropertyData transport;

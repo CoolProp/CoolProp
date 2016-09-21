@@ -241,10 +241,44 @@ vel("Benzene", "T", 300, "Dmass", 875, "V", 608.52e-6, 1e-4),
 vel("Benzene", "T", 400, "Dmass", 760, "V", 211.74e-6, 1e-4),
 vel("Benzene", "T", 550, "Dmass", 500, "V", 60.511e-6, 1e-4),
 
+// From Cao, JPCRD, 2016
+vel("m-Xylene", "T", 300, "Dmolar", 1e-10, "V", 6.637e-6, 1e-4),
+vel("m-Xylene", "T", 300, "Dmolar", 0.04*1e3, "V", 6.564e-6, 1e-4),
+vel("m-Xylene", "T", 300, "Dmolar", 8.0849*1e3, "V", 569.680e-6, 1e-4),
+vel("m-Xylene", "T", 300, "Dmolar", 8.9421*1e3, "V", 1898.841e-6, 1e-4),
+vel("m-Xylene", "T", 400, "Dmolar", 1e-10, "V", 8.616e-6, 1e-4),
+vel("m-Xylene", "T", 400, "Dmolar", 0.04*1e3, "V", 8.585e-6, 1e-4),
+vel("m-Xylene", "T", 400, "Dmolar", 7.2282*1e3, "V", 238.785e-6, 1e-4),
+vel("m-Xylene", "T", 400, "Dmolar", 8.4734*1e3, "V", 718.950e-6, 1e-4),
+vel("m-Xylene", "T", 600, "Dmolar", 1e-10, "V", 12.841e-6, 1e-4),
+vel("m-Xylene", "T", 600, "Dmolar", 0.04*1e3, "V", 12.936e-6, 1e-4),
+vel("m-Xylene", "T", 600, "Dmolar", 7.6591*1e3, "V", 299.164e-6, 1e-4),
+
+// From Cao, JPCRD, 2016
+vel("o-Xylene", "T", 300, "Dmolar", 1e-10, "V", 6.670e-6, 1e-4),
+vel("o-Xylene", "T", 300, "Dmolar", 0.04*1e3, "V", 6.598e-6, 1e-4),
+vel("o-Xylene", "T", 300, "Dmolar", 8.2369*1e3, "V", 738.286e-6, 1e-4),
+vel("o-Xylene", "T", 300, "Dmolar", 8.7845*1e3, "V", 1645.436e-6, 1e-4),
+vel("o-Xylene", "T", 400, "Dmolar", 1e-10, "V", 8.658e-6, 1e-4),
+vel("o-Xylene", "T", 400, "Dmolar", 0.04*1e3, "V", 8.634e-6, 1e-4),
+vel("o-Xylene", "T", 400, "Dmolar", 7.4060*1e3, "V", 279.954e-6, 1e-4),
+vel("o-Xylene", "T", 400, "Dmolar", 8.2291*1e3, "V", 595.652e-6, 1e-4),
+vel("o-Xylene", "T", 600, "Dmolar", 1e-10, "V", 12.904e-6, 1e-4),
+vel("o-Xylene", "T", 600, "Dmolar", 0.04*1e3, "V", 13.018e-6, 1e-4),
+vel("o-Xylene", "T", 600, "Dmolar", 7.2408*1e3, "V", 253.530e-6, 1e-4),
+
+// From Balogun, JPCRD, 2016
+vel("p-Xylene", "T", 300, "Dmolar", 1e-10, "V", 6.604e-6, 1e-4),
+vel("p-Xylene", "T", 300, "Dmolar", 0.049*1e3, "V", 6.405e-6, 1e-4),
+vel("p-Xylene", "T", 300, "Dmolar", 8.0548*1e3, "V", 593.272e-6, 1e-4),
+vel("p-Xylene", "T", 300, "Dmolar", 8.6309*1e3, "V", 1266.337e-6, 1e-4),
+vel("p-Xylene", "T", 400, "Dmolar", 1e-10, "V", 8.573e-6, 1e-4),
+vel("p-Xylene", "T", 400, "Dmolar", 7.1995*1e3, "V", 239.202e-6, 1e-4),
+vel("p-Xylene", "T", 400, "Dmolar", 8.0735*1e3, "V", 484.512e-6, 1e-4),
+vel("p-Xylene", "T", 600, "Dmolar", 1e-10, "V", 12.777e-6, 1e-4),
+vel("p-Xylene", "T", 600, "Dmolar", 7.0985*1e3, "V", 209.151e-6, 1e-4),
+
 // From Mylona, JPCRD, 2014
-vel("o-Xylene", "T", 635, "Dmass", 270, "V", 28.59e-6, 1e-2),
-vel("m-Xylene", "T", 616, "Dmass", 220, "V", 41.6424e-6, 1e-2), // CoolProp is correct, paper is incorrect (it seems)
-vel("p-Xylene", "T", 620, "Dmass", 287, "V", 23.98e-6, 1e-2),
 vel("EthylBenzene", "T", 617, "Dmass", 316, "V", 33.22e-6, 1e-2),
 
 // Heavy Water, IAPWS formulation
@@ -525,6 +559,12 @@ vel("Methane", "T", 100, "D", 1e-12, "L", 9.83e-3, 1e-3),
 vel("Methane", "T", 400, "D", 1e-12, "L", 49.96e-3, 1e-3),
 vel("Methane", "T", 182, "Q", 0, "L", 82.5e-3, 5e-3),
 vel("Methane", "T", 100, "Dmolar", 28.8e3, "L", 234e-3, 1e-2),
+
+// Sykioti, JPCRD, 2013
+vel("Methanol", "T", 300, "Dmass", 850, "L", 241.48e-3, 1e-2),
+vel("Methanol", "T", 400, "Dmass", 2, "L", 25.803e-3, 1e-2),
+vel("Methanol", "T", 400, "Dmass", 690, "L", 183.59e-3, 1e-2),
+vel("Methanol", "T", 500, "Dmass", 10, "L", 40.495e-3, 1e-2),
 
 // Heavy Water, IAPWS formulation
 vel("HeavyWater", "T", 0.5000*643.847, "Dmass", 3.07*358, "V", 835.786416818*0.742128e-3, 1e-5),

@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "nHexane", 
-    "Hexane", 
-    "HEXANE", 
-    "N-HEXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -185,18 +179,6 @@
         1.05893
       ]
     }
-  }, 
-  "CAS": "110-54-3", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 3, 
-    "GWP100": 3.1, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 2, 
-    "Name": "n-Hexane", 
-    "ODP": -1.0, 
-    "PH": 0
   }, 
   "EOS": [
     {
@@ -388,9 +370,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{6}H_{14}", 
-  "NAME": "n-Hexane", 
-  "REFPROP_NAME": "HEXANE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7767", 
+    "ALIASES": [
+      "nHexane", 
+      "Hexane", 
+      "HEXANE", 
+      "N-HEXANE"
+    ], 
+    "CAS": "110-54-3", 
+    "CHEMSPIDER_ID": 7767, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 3, 
+      "GWP100": 3.1, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 2, 
+      "Name": "n-Hexane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{6}H_{14}", 
+    "INCHI_KEY": "VLKZOEOYAKHREP-UHFFFAOYAD", 
+    "INCHI_STRING": "InChI=1/C6H14/c1-3-5-6-4-2/h3-6H2,1-2H3", 
+    "NAME": "n-Hexane", 
+    "REFPROP_NAME": "HEXANE", 
+    "SMILES": "CCCCCC"
+  }, 
   "STATES": {
     "critical": {
       "T": 507.82, 

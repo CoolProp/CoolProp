@@ -7,14 +7,14 @@ namespace coolprop_wrapper.Functions
   {
     // long get_parameter_information_string(const char *key, char *Output, int n);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "get_parameter_information_string",
+      "CoolProp_x86", EntryPoint = "get_parameter_information_string",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x86(
       string key,
       System.Text.StringBuilder Output,
       int n);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "get_parameter_information_string",
+      "CoolProp_x64", EntryPoint = "get_parameter_information_string",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x64(
       string key,
@@ -32,7 +32,7 @@ namespace coolprop_wrapper.Functions
         case 8:
           return CoolPropDLLfunc_x64(key, Output, n);
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      throw new System.Exception("Unknown platform!");
     }
 
     Term inf;
@@ -74,7 +74,7 @@ namespace coolprop_wrapper.Functions
         "key = {0} output(in) = {1} output(out) = {2} Result = {3}",
         key, Output, output.ToString(), Result);
       if (Result != 1)
-        throw new EvaluationException(Errors.ArgumentDoesNotMatchToExpectedKind);
+          coolpropPlugin.CoolPropError();
       result = coolpropPlugin.MakeStringResult(output.ToString());
 
       return true;

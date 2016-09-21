@@ -34,6 +34,9 @@ set (COOLPROP_VERSION_REVISION dev)
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
+string ( TIMESTAMP COOLPROP_YEAR 2010-%Y)
+set ( COOLPROP_PUBLISHER "The CoolProp developers")
+
 #######################################
 #           BUILD OPTIONS             #
 #-------------------------------------#
@@ -58,6 +61,10 @@ option (COOLPROP_OBJECT_LIBRARY
 option (COOLPROP_EES_MODULE
         "Build the EES module"
         OFF)
+        
+option (COOLPROP_EXCEL_MODULE
+        "Build the Excel add-in installer"
+        OFF)
 
 option (BUILD_TESTING 
         "Enable testing for this given builder" 
@@ -77,6 +84,10 @@ option (COOLPROP_RELEASE
        
 option (COOLPROP_DEBUG
        "Make a debug build"
+       OFF)
+       
+option (COOLPROP_SMATH_WORK_INPLACE
+       "Build SMath wrapper in source directory"
        OFF)
        
 IF ( COOLPROP_RELEASE AND COOLPROP_DEBUG )
@@ -117,6 +128,7 @@ list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 set (APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
+list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/cppformat")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list (APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
@@ -504,6 +516,81 @@ if (COOLPROP_EES_MODULE)
   )
 endif()
 
+# Excel add-in
+if (COOLPROP_EXCEL_MODULE)
+  message(STATUS "Creating Excel add-in for COOLPROP_VERSION=${COOLPROP_VERSION}")
+  # Setting some basic build paths
+  set(COOLPROP_EXCEL_32B_DIR "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL")
+  set(COOLPROP_EXCEL_64B_DIR "${CMAKE_CURRENT_BINARY_DIR}/64bitDLL")
+  set(COOLPROP_EXCEL_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/InnoScript")
+  # Pointers to the sources
+  set(COOLPROP_EXCEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
+  set(COOLPROP_EXCEL_ISS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
+  # Generator for DLLs
+  set(COOLPROP_EXCEL_DLL_GEN "Visual Studio 10 2010")
+  # Configure variables like version number and build year
+  CONFIGURE_FILE("${COOLPROP_EXCEL_ISS_DIR}/cmake-templates/config.iss" "${COOLPROP_EXCEL_ISS_DIR}/config.iss")
+  # Find the installer generator executable
+  SET(BINDIR32_ENV_NAME "ProgramFiles(x86)")
+  SET(BINDIR32 $ENV{${BINDIR32_ENV_NAME}})
+  SET(BINDIR64_ENV_NAME "ProgramFiles")
+  SET(BINDIR64 $ENV{${BINDIR64_ENV_NAME}})
+  find_program (COOLPROP_EXCEL_ISS_EXE 
+    NAMES iscc.exe 
+    HINTS "${BINDIR32}/Inno Setup 5" "${BINDIR64}/Inno Setup 5"
+  )
+  #message(STATUS "COOLPROP_EXCEL_ISS_EXE='${COOLPROP_EXCEL_ISS_EXE}'")	 
+  # *************************************************************
+  # Add the target for Excel and populate it with custom commands
+  # *************************************************************
+  add_custom_target(COOLPROP_EXCEL)
+  # Prepare directories
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_32B_DIR}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_64B_DIR}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}/source"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_EXCEL_TMP_DIR}/bin"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}/bin"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Preparing the directories for the Excel installer"
+    VERBATIM )
+  # Build the 32bit DLL
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_std.dll"
+    WORKING_DIRECTORY ${COOLPROP_EXCEL_32B_DIR}
+    COMMENT "Building the 32bit shared library"
+    VERBATIM )
+  # Build the 64bit DLL
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN} Win64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_x64.dll"
+    WORKING_DIRECTORY ${COOLPROP_EXCEL_64B_DIR}
+    COMMENT "Building the 64bit shared library"
+    VERBATIM )
+  # Copy the files
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xla" "${COOLPROP_EXCEL_TMP_DIR}/source/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xlam" "${COOLPROP_EXCEL_TMP_DIR}/source/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_SRC_DIR}/TestExcel.xlsx" "${COOLPROP_EXCEL_TMP_DIR}/source/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_EXCEL_ISS_DIR}" "${COOLPROP_EXCEL_TMP_DIR}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Copying the Excel and Inno Script files for the installer"
+    VERBATIM )
+  # Build the installer and copy it to the bin directory
+  add_custom_command(TARGET COOLPROP_EXCEL POST_BUILD
+    COMMAND ${COOLPROP_EXCEL_ISS_EXE} ARGS "addin-installer.iss"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy" "${COOLPROP_EXCEL_TMP_DIR}/bin/MicrosoftExcel"
+    WORKING_DIRECTORY "${COOLPROP_EXCEL_TMP_DIR}"
+    COMMENT "The new installer is located in '${COOLPROP_EXCEL_TMP_DIR}/bin/MicrosoftExcel'"
+    VERBATIM )
+endif()
+
 if (COOLPROP_OCTAVE_MODULE)
   
   # Must have SWIG and Octave
@@ -607,7 +694,10 @@ if (COOLPROP_CSHARP_MODULE)
   endif()
   
   add_dependencies (${app_name} generate_headers)  
-  
+
+  # Remove the Example.cs file so it doesn't get packaged in platform-independent zip file
+  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/Example.cs")
+
   add_custom_command(TARGET CoolProp
                      POST_BUILD
                      COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.cs"
@@ -739,6 +829,9 @@ if (COOLPROP_JAVA_MODULE)
   endif()
   
   add_dependencies (${app_name} generate_headers)
+
+  # Remove the Example.java file so it doesn't get packaged in platform-independent zip file
+  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/Example.java")
   
   add_custom_command(TARGET CoolProp
                      POST_BUILD
@@ -823,8 +916,11 @@ if (COOLPROP_PHP_MODULE)
     OUTPUT_VARIABLE php_config_includes
     RESULT_VARIABLE php_config_failed
     )
-  string(STRIP ${php_config_includes} php_config_includes)
-  string(REPLACE "-I" "" PHP_INCLUDES ${php_config_includes})
+  if (php_config_failed)
+    message(FATAL_ERROR "calling \"php-config --includes\" failed; message:" ${php_config_includes})
+  endif()
+  string(STRIP "${php_config_includes}" php_config_includes)
+  string(REPLACE "-I" "" PHP_INCLUDES "${php_config_includes}")
   SEPARATE_ARGUMENTS(PHP_INCLUDES)
 
   message(STATUS "php includes=${PHP_INCLUDES}")
@@ -1040,6 +1136,10 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
     #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -DEXTERNC -DCONVENTION= -m32")
     #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32") 
   endif()
+
+  if (UNIX AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS " -static") 
+  endif()
   
   add_dependencies (CoolPropMATLAB_wrap generate_headers)
   if (COOLPROP_MATLAB_INSTALL_PREFIX)
@@ -1207,7 +1307,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
   add_definitions(-s ASSERTIONS=1)
   add_definitions(--bind)
-  set(CMAKE_EXE_LINKER_FLAGS "--bind --memory-init-file 1 -s ASSERTIONS=1 ")
+  set(CMAKE_EXE_LINKER_FLAGS "--bind --memory-init-file 1 -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0 ")
   set(CMAKE_BUILD_TYPE Release)
   
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -1251,28 +1351,33 @@ if (COOLPROP_MATHEMATICA_MODULE)
 endif()
 
 if (COOLPROP_SMATH_MODULE)
+    if (COOLPROP_SMATH_WORK_INPLACE)
+        set(COOLPROP_WORK_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    else()
+        set(COOLPROP_WORK_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
     set(COOLPROP_VERSION ${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}.0)
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
-    FILE(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/config.ini")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/Properties/AssemblyInfo.cs")
+    FILE(WRITE "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/config.ini" "${COOLPROP_VERSION}")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/config.ini")
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/install.bat")
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/build_zip.bat")
     FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_SOURCE_DIR)
-    FILE(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_TARGET_DIR)
+    FILE(TO_NATIVE_PATH "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper" DOS_STYLE_TARGET_DIR)
     CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj.template"
-                   "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
-    message(STATUS "Generated ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+                   "${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
+    message(STATUS "Generated ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj")
     include_external_msproject(
-        CoolPropWrapper ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj
+        CoolPropWrapper ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj
         TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
         PLATFORM AnyCPU)
-    message(STATUS "C# project ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj included")
+    message(STATUS "C# project ${COOLPROP_WORK_BASE_DIR}/wrappers/SMath/coolprop_wrapper/coolprop_wrapper.csproj included")
     
 endif()
 

@@ -7,7 +7,7 @@ namespace coolprop_wrapper.Functions
   {
     // double saturation_ancillary(const char *fluid_name, const char *output, int Q, const char *input, double value);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "saturation_ancillary",
+      "CoolProp_x86", EntryPoint = "saturation_ancillary",
       CharSet = CharSet.Ansi)]
     internal static extern double CoolPropDLLfunc_x86(
       string fluid_name,
@@ -16,7 +16,7 @@ namespace coolprop_wrapper.Functions
       string input,
       double value);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "saturation_ancillary",
+      "CoolProp_x64", EntryPoint = "saturation_ancillary",
       CharSet = CharSet.Ansi)]
     internal static extern double CoolPropDLLfunc_x64(
       string fluid_name,
@@ -37,7 +37,7 @@ namespace coolprop_wrapper.Functions
         case 8:
           return CoolPropDLLfunc_x64(fluid_name, output, Q, input, value);
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      throw new System.Exception("Unknown platform!");
     }
 
     Term inf;

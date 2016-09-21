@@ -116,6 +116,9 @@ public:
     static CoolPropDbl viscosity_water_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_helium_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_R23_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_m_xylene_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_o_xylene_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
+    static CoolPropDbl viscosity_p_xylene_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
 
     static CoolPropDbl viscosity_toluene_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);
     static CoolPropDbl viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend &HEOS);

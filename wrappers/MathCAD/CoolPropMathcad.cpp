@@ -1,9 +1,14 @@
-// CoolPropMathcad.c : Defines the exported functions for the DLL Add-in.
+// CoolPropMathcad.cpp : Defines the exported functions for the DLL Add-in.
 //
 
 #include <string>
 
+#ifndef NOMINMAX // Kill windows' horrible min() and max() macros
+#define NOMINMAX
+#endif
 #include "mcadincl.h"
+#undef NOMINMAX; 
+
 enum { MC_STRING = STRING };  // substitute enumeration variable MC_STRING for STRING, use MC_STRING below
 #undef STRING                 // undefine STRING as it conflicts with STRING enum in cppformat/format.h
 

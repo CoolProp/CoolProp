@@ -74,10 +74,21 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
         Eigen::Vector2d v = J.colPivHouseholderQr().solve(-r);
 
         // Update the guess
-        for (std::size_t i = 0; i<x0.size(); i++){ x0[i] += v(i);}
+        double max_relchange = -1;
+        for (std::size_t i = 0; i<x0.size(); i++){
+            x0[i] += v(i);
+            double relchange = std::abs(v(i)/x0[i]);
+            if (std::abs(x0[i]) > 1e-16 && relchange > max_relchange ){
+                max_relchange = relchange;
+            }
+        }
         
         // Stop if the solution is not changing by more than numerical precision
-        if (v.cwiseAbs().maxCoeff() < DBL_EPSILON*100){
+        double max_abschange = v.cwiseAbs().maxCoeff();
+        if (max_abschange < DBL_EPSILON*100){
+            return x0;
+        }
+        if (max_relchange < 1e-12){
             return x0;
         }
         error = root_sum_square(f0);
@@ -142,15 +153,22 @@ http://en.wikipedia.org/wiki/Halley%27s_method
 @param x0 The inital guess for the solution
 @param ftol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
+@param xtol_rel The minimum allowable (relative) step size
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter)
+double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, double xtol_rel)
 {
     double x, dx, fval=999, dfdx, d2fdx2;
-    int iter=1;
+    
+    // Initialize
+    f->iter=0;
     f->errstring.clear();
     x = x0;
-    while (iter < 2 || std::abs(fval) > ftol)
+    
+    // The relaxation factor (less than 1 for smaller steps)
+    double omega = f->options.get_double("omega", 1.0);
+    
+    while (f->iter < 2 || std::abs(fval) > ftol)
     {
         if (f->input_not_in_range(x)){
             throw ValueError(format("Input [%g] is out of range",x));
@@ -167,19 +185,88 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
             throw ValueError("Derivative function in Halley returned invalid number");
         };
         
-        dx = -(2*fval*dfdx)/(2*POW2(dfdx)-fval*d2fdx2);
+        dx = -omega*(2*fval*dfdx)/(2*POW2(dfdx)-fval*d2fdx2);
 
         x += dx;
 
-        if (std::abs(dx/x) < 10*DBL_EPSILON){
+        if (std::abs(dx/x) < xtol_rel){
             return x;
         }
 
-        if (iter>maxiter){
+        if (f->iter>maxiter){
             f->errstring= "reached maximum number of iterations";
             throw SolutionError(format("Halley reached maximum number of iterations"));
         }
-        iter=iter+1;
+        f->iter += 1;
+    }
+    return x;
+}
+    
+/**
+ In the 4-th order Householder method, three derivatives of the input variable are needed, it yields the following method:
+ 
+ \f[
+ x_{n+1} = x_n - f(x_n)\left( \frac {[f'(x_n)]^2 - f(x_n)f''(x_n)/2  } {[f'(x_n)]^3-f(x_n)f'(x_n)f''(x_n)+f'''(x_n)*[f(x_n)]^2/6 } \right)
+ \f]
+ 
+http://numbers.computation.free.fr/Constants/Algorithms/newton.ps
+ 
+ @param f A pointer to an instance of the FuncWrapper1DWithThreeDerivs class that implements the call() and three derivatives
+ @param x0 The inital guess for the solution
+ @param ftol The absolute value of the tolerance accepted for the objective function
+ @param maxiter Maximum number of iterations
+ @param xtol_rel The minimum allowable (relative) step size
+ @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
+ */
+double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int maxiter, double xtol_rel)
+{
+    double x, dx, fval=999, dfdx, d2fdx2, d3fdx3;
+    
+    // Initialization
+    f->iter=1;
+    f->errstring.clear();
+    x = x0;
+    
+    // The relaxation factor (less than 1 for smaller steps)
+    double omega = f->options.get_double("omega", 1.0);
+    
+    while (f->iter < 2 || std::abs(fval) > ftol)
+    {
+        if (f->input_not_in_range(x)){
+            throw ValueError(format("Input [%g] is out of range",x));
+        }
+        
+        fval = f->call(x);
+        dfdx = f->deriv(x);
+        d2fdx2 = f->second_deriv(x);
+        d3fdx3 = f->third_deriv(x);
+        
+        if (!ValidNumber(fval)){
+            throw ValueError("Residual function in Householder4 returned invalid number");
+        };
+        if (!ValidNumber(dfdx)){
+            throw ValueError("Derivative function in Householder4 returned invalid number");
+        };
+        if (!ValidNumber(d2fdx2)){
+            throw ValueError("Second derivative function in Householder4 returned invalid number");
+        };
+        if (!ValidNumber(d3fdx3)){
+            throw ValueError("Third derivative function in Householder4 returned invalid number");
+        };
+        
+        dx = -omega*fval*(POW2(dfdx)-fval*d2fdx2/2.0)/(POW3(dfdx)-fval*dfdx*d2fdx2+d3fdx3*POW2(fval)/6.0);
+        
+        x += dx;
+        
+        if (std::abs(dx/x) < xtol_rel){
+            return x;
+        }
+        
+        if (f->iter>maxiter){
+            f->errstring= "reached maximum number of iterations";
+            throw SolutionError(format("Householder4 reached maximum number of iterations"));
+        }
+        f->iter += 1;
     }
     return x;
 }
@@ -201,16 +288,20 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
     xlog.clear(); flog.clear();
     #endif
 
+    // Initialization
     double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
-    int iter=1;
+    f->iter=1;
     f->errstring.clear();
+    
+    // The relaxation factor (less than 1 for smaller steps)
+    double omega = f->options.get_double("omega", 1.0);
 
     if (std::abs(dx)==0){ f->errstring="dx cannot be zero"; return _HUGE;}
-    while (iter<=2 || std::abs(fval)>tol)
+    while (f->iter<=2 || std::abs(fval)>tol)
     {
-        if (iter==1){x1=x0; x=x1;}
-        if (iter==2){x2=x0+dx; x=x2;}
-        if (iter>2) {x=x2;}
+        if (f->iter==1){x1=x0; x=x1;}
+        if (f->iter==2){x2=x0+dx; x=x2;}
+        if (f->iter>2) {x=x2;}
         
             if (f->input_not_in_range(x)){
                 throw ValueError(format("Input [%g] is out of range",x));
@@ -226,8 +317,8 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
             if (!ValidNumber(fval)){
                 throw ValueError("Residual function in secant returned invalid number");
             };
-        if (iter==1){y1=fval;}
-        if (iter>1)
+        if (f->iter==1){y1=fval;}
+        if (f->iter>1)
         {
             double deltax = x2-x1;
             if (std::abs(deltax)<1e-14){
@@ -235,19 +326,19 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
             }
             y2=fval;
             double deltay = y2-y1;
-            if (iter > 2 && std::abs(deltay)<1e-14){
+            if (f->iter > 2 && std::abs(deltay)<1e-14){
                 return x;
             }
-            x3=x2-y2/(y2-y1)*(x2-x1);
+            x3=x2-omega*y2/(y2-y1)*(x2-x1);
             y1=y2; x1=x2; x2=x3;
 
         }
-        if (iter>maxiter)
+        if (f->iter>maxiter)
         {
             f->errstring=std::string("reached maximum number of iterations");
             throw SolutionError(format("Secant reached maximum number of iterations"));
         }
-        iter=iter+1;
+        f->iter += 1;
     }
     return x3;
 }

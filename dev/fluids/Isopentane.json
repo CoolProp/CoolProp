@@ -1,10 +1,4 @@
 {
-  "ALIASES": [
-    "ipentane", 
-    "R601a", 
-    "ISOPENTANE", 
-    "IPENTANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -199,18 +193,6 @@
       ]
     }
   }, 
-  "CAS": "78-78-4", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "A3", 
-    "FH": 4, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "Isopentane", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -386,9 +368,34 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{5}H_{12}", 
-  "NAME": "Isopentane", 
-  "REFPROP_NAME": "IPENTANE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=6308", 
+    "ALIASES": [
+      "ipentane", 
+      "R601a", 
+      "ISOPENTANE", 
+      "IPENTANE"
+    ], 
+    "CAS": "78-78-4", 
+    "CHEMSPIDER_ID": 6308, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "A3", 
+      "FH": 4, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "Isopentane", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{5}H_{12}", 
+    "INCHI_KEY": "QWTDNUCVQCZILF-UHFFFAOYAE", 
+    "INCHI_STRING": "InChI=1/C5H12/c1-4-5(2)3/h5H,4H2,1-3H3", 
+    "NAME": "Isopentane", 
+    "REFPROP_NAME": "IPENTANE", 
+    "SMILES": "CCC(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 460.35, 

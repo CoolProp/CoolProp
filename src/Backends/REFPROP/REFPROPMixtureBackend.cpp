@@ -136,14 +136,15 @@ void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_name
     // Force loading of REFPROP
     REFPROP_supported();
     
-    
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
     
     // Bump the number of REFPROP backends that are in existence;
     REFPROPMixtureBackend::instance_counter++;
-
+    
+    // Set the imposed phase index to default value
+    imposed_phase_index = iphase_not_imposed;
 }
 
 REFPROPMixtureBackend::~REFPROPMixtureBackend() {
@@ -338,6 +339,14 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                     throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
                 }
                 set_mole_fractions(std::vector<CoolPropDbl>(x.begin(), x.begin()+N));
+                if (get_config_bool(REFPROP_USE_PENGROBINSON)) {
+                    long iflag = 2; // Tell REFPROP to use Peng-Robinson;
+                    PREOSdll(&iflag);
+                }
+                else{
+                    long iflag = 0; // Tell REFPROP to use normal Helmholtz models
+                    PREOSdll(&iflag);
+                }
                 return;
             }
             else{
@@ -389,10 +398,19 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 mole_fractions.resize(N);
                 mole_fractions_liq.resize(N);
                 mole_fractions_vap.resize(N);
-                LoadedREFPROPRef = component_string;
-                cached_component_string = component_string;
+                LoadedREFPROPRef = _components_joined;
+                cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
+                
+                if (get_config_bool(REFPROP_USE_PENGROBINSON)) {
+                    long iflag = 2; // Tell REFPROP to use Peng-Robinson;
+                    PREOSdll(&iflag);
+                }
+                else{
+                    long iflag = 0; // Tell REFPROP to use normal Helmholtz models
+                    PREOSdll(&iflag);
+                }
                 return;
             }
             else if (k < number_of_endings-1){ // Keep going
@@ -683,6 +701,23 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing(){
     double rhored_mol_L = 0, Tr = 0;
     REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
     return static_cast<CoolPropDbl>(rhored_mol_L*1000);
+};
+CoolPropDbl REFPROPMixtureBackend::calc_acentric_factor(){
+    //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas) (see calc_Ttriple())
+    this->check_loaded_fluid();
+    double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
+    long icomp = 1L;
+    // Check if more than one
+    std::size_t size = mole_fractions.size();
+    if (size == 1)
+    {
+        // Get value for first component
+        INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
+        return static_cast<CoolPropDbl>(acf);
+    }
+    else{
+        throw CoolProp::ValueError("acentric factor only available for pure components in REFPROP backend");
+    }
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
 //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
@@ -998,6 +1033,15 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio)
     {
         double y; iderv = 0;
+
+        PhaseEnvelope.x.resize(nc);
+        PhaseEnvelope.y.resize(nc);
+        for (isp = 1; isp <= nc; ++isp){
+            SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+            PhaseEnvelope.x[isp-1].push_back(y);
+            PhaseEnvelope.y[isp-1].push_back(get_mole_fractions()[isp-1]);
+        }
+
         PhaseEnvelope.rhomolar_vap.push_back(rho_molL*1000);
         PhaseEnvelope.lnrhomolar_vap.push_back(log(rho_molL*1000));
         isp = nc + 1;
@@ -1070,15 +1114,59 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         {
             // Unit conversion for REFPROP
             p_kPa = 0.001*value1; _T = value2; // Want p in [kPa] in REFPROP
-
-            // Use flash routine to find properties
-            TPFLSHdll(&_T,&p_kPa,&(mole_fractions[0]),&rho_mol_L,
-                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-                      &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength); //
-            if (static_cast<int>(ierr) > 0) { 
-                throw ValueError(format("PT: %s",herr).c_str()); 
-            }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            
+            if (imposed_phase_index == iphase_not_imposed){
+                // Use flash routine to find properties
+                TPFLSHdll(&_T,&p_kPa,&(mole_fractions[0]),&rho_mol_L,
+                          &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                          &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
+                          &ierr,herr,errormessagelength); //
+                if (static_cast<int>(ierr) > 0) { 
+                    throw ValueError(format("PT: %s",herr).c_str()); 
+                }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            }
+            else{
+                //c  inputs:
+                //c        t--temperature [K]
+                //c        p--pressure [kPa]
+                //c        x--composition [array of mol frac]
+                //c      kph--phase flag:  1 = liquid
+                //c                        2 = vapor
+                //c                 N.B.:  0 = stable phase--NOT ALLOWED (use TPFLSH)
+                //c                            (unless an initial guess is supplied for rho)
+                //c                       -1 = force the search in the liquid phase (for metastable points)
+                //c                       -2 = force the search in the vapor phase (for metastable points)
+                //c   kguess--input flag:  1 = first guess for rho provided
+                //c                        0 = no first guess provided
+                //c      rho--first guess for molar density [mol/L], only if kguess = 1
+                //c
+                //c  outputs:
+                //c      rho--molar density [mol/L]
+                //c     ierr--error flag:  0 = successful
+                //c                      200 = CRITP did not converge
+                //c                      201 = illegal input (kph <= 0)
+                //c                      202 = liquid-phase iteration did not converge
+                //c                      203 = vapor-phase iteration did not converge
+                //c     herr--error string (character*255 variable if ierr<>0)
+                long kph = -10, kguess = 0;
+                if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid){
+                    kph = 1;
+                }
+                else if (imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas){
+                    kph = 2;
+                }
+                else{
+                    throw ValueError(format("PT: cannot use this imposed phase for PT inputs"));
+                }
+                // Calculate rho from TP
+                TPRHOdll(&_T,&p_kPa,&(mole_fractions[0]),&kph,&kguess,
+                         &rho_mol_L,
+                         &ierr,herr,errormessagelength);
+                
+                // Calculate everything else
+                THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+                
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1092,17 +1180,24 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Unit conversion for REFPROP
             _rhomolar = value1; rho_mol_L = 0.001*value1; _T = value2; // Want rho in [mol/L] in REFPROP
 
-            // Use flash routine to find properties
-            TDFLSHdll(&_T,&rho_mol_L,&(mole_fractions[0]),&p_kPa,
-                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
-                      &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
-                      &ierr,herr,errormessagelength);
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (imposed_phase_index == iphase_not_imposed || imposed_phase_index == iphase_twophase) {
+                // Use flash routine to find properties
+                TDFLSHdll(&_T,&rho_mol_L,&(mole_fractions[0]),&p_kPa,
+                          &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
+                          &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
+                          &ierr,herr,errormessagelength);
+                if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            }
+            else{
+                // phase is imposed
+                // Calculate everything else
+                THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+            }
 
             // Set all cache values that can be set with unit conversion to SI
-            _p = p_kPa*1000;
-            _rhoLmolar = rhoLmol_L*1000; // 1000 for conversion from mol/L to mol/m3
-            _rhoVmolar = rhoVmol_L*1000; // 1000 for conversion from mol/L to mol/m3
+            _p = p_kPa * 1000;
+            _rhoLmolar = rhoLmol_L * 1000; // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L * 1000; // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassT_INPUTS:
@@ -1498,7 +1593,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // c     herr--error string (character*255 variable if ierr<>0)
 
             // Unit conversion for REFPROP
-            p_kPa = 0.001*value1; _Q = value2; // Want p in [kPa] in REFPROP
+            p_kPa = 0.001*value1; q = value2; // Want p in [kPa] in REFPROP
 
             long iFlsh = 0, iGuess = 0, ierr = 0;
             if (std::abs(value2) < 1e-10){
@@ -1511,7 +1606,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
                 SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
-                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
                 if (static_cast<int>(ierr) == 0){
                     // Calculate everything else
@@ -1521,7 +1616,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
                 // Use flash routine to find properties
-                PQFLSHdll(&p_kPa,&_Q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
+                PQFLSHdll(&p_kPa,&q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
                     &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                     &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                     &ierr,herr,errormessagelength); // Error terms
@@ -1547,7 +1642,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             long kq = 1;
 
             // Unit conversion for REFPROP
-            _Q = value1; _T = value2;
+            q = value1; _T = value2;
 
             // Use flash routine to find properties
             long iFlsh = 0, iGuess = 0;
@@ -1561,7 +1656,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
                 SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
-                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &_Q,
+                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
                 if (static_cast<int>(ierr) == 0){
                     // Calculate everything else
@@ -1570,7 +1665,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
-                TQFLSHdll(&_T,&_Q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
+                TQFLSHdll(&_T,&q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                     &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                     &ierr,herr,errormessagelength); // Error terms
@@ -1730,6 +1825,48 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
     return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multplied by delta^idel
 }
+/// Calculate excess properties
+void REFPROPMixtureBackend::calc_excess_properties(){
+    this->check_loaded_fluid();
+    long ierr = 0;
+    char herr[255];
+    double T_K = _T, p_kPa = _p/1000.0, rho=1, vE = -1, eE = -1, hE = -1, sE = -1, aE = -1, gE = -1;
+    long kph = 1;
+
+    //    subroutine EXCESS(t, p, x, kph, rho, vE, eE, hE, sE, aE, gE, ierr, herr)
+    //    c
+    //    c  compute excess properties as a function of temperature, pressure,
+    //    c  and composition.
+    //    c
+    //    c  inputs :
+    //c        t--temperature[K]
+    //    c        p--pressure[kPa]
+    //    c        x--composition[array of mol frac]
+    //    c      kph--phase flag : 1 = liquid
+    //    c                        2 = vapor
+    //    c                        0 = stable phase
+    //    c  outputs :
+    //c       rho--molar density[mol / L](if input less than 0, used as initial guess)
+    //    c        vE--excess volume[L / mol]
+    //    c        eE--excess energy[J / mol]
+    //    c        hE--excess enthalpy[J / mol]
+    //    c        sE--excess entropy[J / mol - K]
+    //    c        aE--excess Helmholtz energy[J / mol]
+    //    c        gE--excess Gibbs energy[J / mol]
+    //    c      ierr--error flag : 0 = successful
+    //    c                        55 = T, p inputs in different phase for the pure fluids
+    //    c      herr--error string(character * 255 variable if ierr<>0)
+    EXCESSdll(&T_K, &p_kPa, &(mole_fractions[0]), &kph, 
+        &rho, &vE, &eE, &hE, &sE, &aE, &gE,
+        &ierr, herr, errormessagelength);      // Error message
+    if (static_cast<int>(ierr) > 0) { throw ValueError(format("EXCESSdll: %s", herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    _volumemolar_excess = vE;
+    _umolar_excess = eE;
+    _hmolar_excess = hE;
+    _smolar_excess = sE;
+    _helmholtzmolar_excess = aE;
+    _gibbsmolar_excess = gE;
+}
 
 void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2){
     std::string err;
@@ -1768,13 +1905,35 @@ void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
-    if ((key == iDmolar) && _rhoLmolar) return _rhoLmolar;
+    if (_rhoLmolar) {
+        if (key == iDmolar) {
+            return _rhoLmolar;
+        }
+        else if (key == iDmass) {
+            return (double)_rhoLmolar*(double)_molar_mass;
+        }
+        else {
+            throw ValueError("Invalid parameter. Only mass and molar density are available with RefProp");
+            return _HUGE;
+        }
+    }
     throw ValueError("The saturated liquid state has not been set.");
     return _HUGE;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) {
-    if ((key == iDmolar) && _rhoVmolar) return _rhoVmolar;
-    ValueError("The saturated vapor state has not been set.");
+    if (_rhoVmolar) {
+        if (key == iDmolar) {
+            return _rhoVmolar;
+        }
+        else if (key == iDmass) {
+            return (double)_rhoVmolar*(double)_molar_mass;
+        }
+        else {
+            throw ValueError("Invalid key.");
+            return _HUGE;
+        }
+    }
+    throw ValueError("The saturated vapor state has not been set.");
     return _HUGE;
 }
 

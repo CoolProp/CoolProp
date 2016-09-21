@@ -19,7 +19,7 @@ Pre-Compiled Binaries
 
 * Modify the PHP.ini file that PHP will load to add::
 
-    extension = "CoolProp.so"
+    extension = "libCoolProp.so"
 
   after ``[PHP]``. If you didn't copy libCoolProp.so into the folder given by ```php-config --extension-dir``` you will need to use the absolute path
 
@@ -69,10 +69,16 @@ Additionally, you need SWIG, which can be obtained on Debian-based OS with::
 
     sudo apt-get install swig
 
+On Ubuntu 16.04 LTS, the default PHP is 7.0, which is not compatible with SWIG as of Aug 10, 2016.  So to get PHP 5.6 on ubuntu 16.04, you can do::
+
+    sudo add-apt-repository ppa:ondrej/php
+    sudo apt-get update
+    sudo apt-get install php5.6 php5.6-dev
+
 Linux
 -----
 
-1. Check out coolprop::
+1. Check out CoolProp::
 
     git clone https://github.com/CoolProp/CoolProp --recursive
 
@@ -82,11 +88,11 @@ Linux
 
 3. Build the php module::
 
-    cmake .. -DCOOLPROP_PHP_MODULE=ON
+    cmake .. -DCOOLPROP_PHP_MODULE=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON
 
 4. Build (verbosely so we can see if there are any problems)::
 
-    make VERBOSE=1
+    cmake --build .
 
   This will generate the file libCoolProp.so and the php module CoolProp.php
 

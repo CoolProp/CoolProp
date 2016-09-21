@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "pXylene", 
-    "p-xylene", 
-    "P-XYLENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,7 +178,6 @@
       ]
     }
   }, 
-  "CAS": "106-42-3", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -404,9 +398,22 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{10}", 
-  "NAME": "p-Xylene", 
-  "REFPROP_NAME": "PXYLENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7521", 
+    "ALIASES": [
+      "pXylene", 
+      "p-xylene", 
+      "P-XYLENE"
+    ], 
+    "CAS": "106-42-3", 
+    "CHEMSPIDER_ID": 7521, 
+    "FORMULA": "C_{8}H_{10}", 
+    "INCHI_KEY": "URLKBWYHVLBVBO-UHFFFAOYAE", 
+    "INCHI_STRING": "InChI=1/C8H10/c1-7-3-5-8(2)6-4-7/h3-6H,1-2H3", 
+    "NAME": "p-Xylene", 
+    "REFPROP_NAME": "PXYLENE", 
+    "SMILES": "Cc1ccc(cc1)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 616.168, 
@@ -534,27 +541,8 @@
       }
     }, 
     "viscosity": {
-      "BibTeX": "Huber-RP912", 
-      "epsilon_over_k": 500.48, 
-      "epsilon_over_k_units": "K", 
-      "psi": {
-        "a": [
-          0.312445906, 
-          0.403396269, 
-          -0.0603026419
-        ], 
-        "rhomolar_reducing": 2693.92, 
-        "rhomolar_reducing_units": "mol/m^3", 
-        "t": [
-          0, 
-          1, 
-          2
-        ]
-      }, 
-      "reference_fluid": "Propane", 
-      "sigma_eta": 5.813e-10, 
-      "sigma_eta_units": "m", 
-      "type": "ECS"
+      "BibTeX": "Balogun-JPCRD-2015-pxylene", 
+      "hardcoded": "p-Xylene"
     }
   }
 }

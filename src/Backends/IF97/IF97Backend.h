@@ -20,7 +20,7 @@ protected:
 
 public:
     /// The name of the backend being used
-    std::string backend_name(void){return "IF97Backend";}
+    std::string backend_name(void) { return get_backend_string(IF97_BACKEND); }
 
     // REQUIRED BUT NOT USED IN IF97 FUNCTIONS
     bool using_mole_fractions(void){return false;};
@@ -70,6 +70,9 @@ public:
     /// Return the mass-based constant volume specific heat in J/kg/K
 	double cvmass(void){return calc_cvmass();}
     CoolPropDbl calc_cvmass(void){ return IF97::cvmass_Tp(_T, _p); }
+    /// Return the speed of sound
+    double speed_sound(void){ return calc_speed_sound(); }
+    CoolPropDbl calc_speed_sound(void) { return IF97::speed_sound_Tp(_T, _p); }
 };
 
 } /* namespace CoolProp */

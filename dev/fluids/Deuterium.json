@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "deuterium", 
-    "DEUTERIUM", 
-    "D2"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +177,6 @@
         1.258
       ]
     }
-  }, 
-  "CAS": "7782-39-0", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": 0.0, 
-    "GWP20": 0.0, 
-    "GWP500": 0.0, 
-    "HH": -1, 
-    "Name": "Deuterium", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -460,9 +443,33 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "H_{2}", 
-  "NAME": "Deuterium", 
-  "REFPROP_NAME": "D2", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=22931", 
+    "ALIASES": [
+      "deuterium", 
+      "DEUTERIUM", 
+      "D2"
+    ], 
+    "CAS": "7782-39-0", 
+    "CHEMSPIDER_ID": 22931, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": 0.0, 
+      "GWP20": 0.0, 
+      "GWP500": 0.0, 
+      "HH": -1, 
+      "Name": "Deuterium", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "H_{2}", 
+    "INCHI_KEY": "UFHFLCQGNIYNRP-VVKOMZTBEA", 
+    "INCHI_STRING": "InChI=1/H2/h1H/i1+1D", 
+    "NAME": "Deuterium", 
+    "REFPROP_NAME": "D2", 
+    "SMILES": "[2H][2H]"
+  }, 
   "STATES": {
     "critical": {
       "T": 38.34, 

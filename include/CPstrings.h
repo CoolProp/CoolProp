@@ -6,8 +6,10 @@
     #include <algorithm>
     #include <functional>
 
+    #ifndef FMT_HEADER_ONLY
     #define FMT_HEADER_ONLY
-    #include "externals/cppformat/cppformat/format.h" // For addition of the string formatting functions and macros from cppformat
+    #endif
+    #include "fmt/format.h" // For addition of the string formatting functions and macros from cppformat
     #undef FMT_HEADER_ONLY
 
     #if !defined(__powerpc__)

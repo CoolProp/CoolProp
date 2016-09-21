@@ -317,13 +317,13 @@ protected:
      *  */
     bool checkP(double T, double p, double x);
 
+public:
     /// Check validity of composition input.
     /** Compares the given composition x to a stored minimum and
      *  maximum value. Enforces the redefinition of xmin and
      *  xmax since the default values cause an error. */
     bool checkX(double x);
 
-public:
     /// Check validity of temperature, pressure and composition input.
     bool checkTPX(double T, double p, double x){
         return (checkT(T,p,x) && checkP(T,p,x) && checkX(x));

@@ -1,5 +1,6 @@
 #include "CPnumerics.h"
 #include "MatrixMath.h"
+#include <unsupported/Eigen/Polynomials>
 
 double root_sum_square(const std::vector<double> &x)
 {
@@ -144,6 +145,24 @@ void solve_cubic(double a, double b, double c, double d, int &N, double &x0, dou
         x1 = t1-b/(3*a);
         x2 = t2-b/(3*a);
     }
+}
+void solve_quartic(double a, double b, double c, double d, double e, int &N, double &x0, double &x1, double &x2, double &x3){
+    
+    // 0 = ax^4 + b*x^3 + c*x^2 + d*x + e
+    
+    Eigen::PolynomialSolver<double, Eigen::Dynamic> solver;
+    Eigen::VectorXd coeff(5);
+    coeff << e,d,c,b,a;
+    solver.compute(coeff);
+
+    std::vector<double> realRoots;
+    solver.realRoots(realRoots);
+    N = static_cast<int>(realRoots.size());
+    
+    if (N>0){ x0 = realRoots[0]; }
+    if (N>1){ x1 = realRoots[1]; }
+    if (N>2){ x2 = realRoots[2]; }
+    if (N>3){ x3 = realRoots[3]; }
 }
 
 bool SplineClass::build()

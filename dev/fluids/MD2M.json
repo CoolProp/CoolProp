@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "Decamethyltetrasiloxane", 
-    "DECAMETHYLTETRASILOXANE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -182,18 +178,6 @@
       ]
     }
   }, 
-  "CAS": "141-62-8", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": 2, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": 1, 
-    "Name": "MD2M", 
-    "ODP": -1.0, 
-    "PH": 0
-  }, 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -353,9 +337,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{10}H_{30}O_{3}Si_{4}", 
-  "NAME": "MD2M", 
-  "REFPROP_NAME": "MD2M", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=8520", 
+    "ALIASES": [
+      "Decamethyltetrasiloxane", 
+      "DECAMETHYLTETRASILOXANE"
+    ], 
+    "CAS": "141-62-8", 
+    "CHEMSPIDER_ID": 8520, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": 2, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": 1, 
+      "Name": "MD2M", 
+      "ODP": -1.0, 
+      "PH": 0
+    }, 
+    "FORMULA": "C_{10}H_{30}O_{3}Si_{4}", 
+    "INCHI_KEY": "YFCGDEUVHLPRCZ-UHFFFAOYAR", 
+    "INCHI_STRING": "InChI=1/C10H30O3Si4/c1-14(2,3)11-16(7,8)13-17(9,10)12-15(4,5)6/h1-10H3", 
+    "NAME": "MD2M", 
+    "REFPROP_NAME": "MD2M", 
+    "SMILES": "C[Si](C)(C)O[Si](C)(C)O[Si](C)(C)O[Si](C)(C)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 599.4, 

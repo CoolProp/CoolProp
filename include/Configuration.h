@@ -28,11 +28,13 @@
     X(ALTERNATIVE_REFPROP_HMX_BNC_PATH, "ALTERNATIVE_REFPROP_HMX_BNC_PATH", "", "An alternative path to the HMX.BNC file.  If provided, it will be passed into REFPROP's SETUP or SETMIX routines") \
     X(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS, "REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS", false, "If true, if the binary interaction parameters in REFPROP are estimated, throw an error rather than silently continuing") \
     X(REFPROP_USE_GERG, "REFPROP_USE_GERG", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the pure-fluid EOS from GERG-2008") \
+    X(REFPROP_USE_PENGROBINSON, "REFPROP_USE_PENGROBINSON", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the Peng-Robinson EOS") \
     X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0, "The maximum allowed size of the directory that is used to store tabular data") \
     X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false, "If true, when possible, CoolProp will skip checking whether values are inside the property limits") \
 	X(HENRYS_LAW_TO_GENERATE_VLE_GUESSES, "HENRYS_LAW_TO_GENERATE_VLE_GUESSES", false, "If true, when doing water-based mixture dewpoint calculations, use Henry's Law to generate guesses for liquid-phase composition") \
     X(PHASE_ENVELOPE_STARTING_PRESSURE_PA, "PHASE_ENVELOPE_STARTING_PRESSURE_PA", 100.0, "Starting pressure [Pa] for phase envelope construction") \
     X(R_U_CODATA, "R_U_CODATA", 8.3144598, "The value for the ideal gas constant in J/mol/K according to CODATA 2014.  This value is used to harmonize all the ideal gas constants. This is especially important in the critical region.") \
+    X(VTPR_UNIFAQ_PATH, "VTPR_UNIFAQ_PATH", "", "The path to the directory containing the UNIFAQ JSON files.  Should be slash terminated") \
 
  // Use preprocessor to create the Enum
  enum configuration_keys{
@@ -56,6 +58,9 @@ namespace CoolProp
 
 /// Convert the configuration key to a string in a 1-1 representation.
 std::string config_key_to_string(configuration_keys keys);
+
+/// Convert a string description to a configuration key
+configuration_keys config_string_to_key(const std::string &s);
 
 /// Return a string description of the configuration key
 std::string config_key_description(configuration_keys keys);

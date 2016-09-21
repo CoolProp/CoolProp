@@ -30,6 +30,7 @@ cdef class PyPhaseEnvelopeData:
     cpdef public bool TypeI
     cpdef public size_t iTsat_max, ipsat_max, icrit
     cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+    cpdef public list x, y, K
     
 cdef class PyGuessesStructure:
     cpdef public double T, p, rhomolar, hmolar, smolar
@@ -55,6 +56,7 @@ cdef class AbstractState:
     cpdef apply_simple_mixing_rule(self, size_t, size_t, string)
     
     cpdef name(self)
+    cpdef backend_name(self)
     cpdef fluid_names(self)
     cpdef fluid_param_string(self, string key)
     cpdef change_EOS(self, size_t, string)
@@ -124,11 +126,29 @@ cdef class AbstractState:
     cpdef double Bvirial(self) except *
     cpdef double Cvirial(self) except *
     cpdef double PIP(self) except *
+    cpdef double fundamental_derivative_of_gas_dynamics(self) except *
     cpdef double isothermal_compressibility(self) except *
     cpdef double isobaric_expansion_coefficient(self) except *
     cpdef double fugacity(self, size_t) except *
     cpdef double fugacity_coefficient(self, size_t) except *
     cpdef double chemical_potential(self, size_t) except *
+
+    cpdef double gibbsmolar_excess(self) except *
+    cpdef double gibbsmass_excess(self) except *
+    cpdef double hmolar_excess(self) except *
+    cpdef double hmass_excess(self) except *
+    cpdef double smolar_excess(self) except *
+    cpdef double smass_excess(self) except *
+    cpdef double umolar_excess(self) except *
+    cpdef double umass_excess(self) except *
+    cpdef double volumemolar_excess(self) except *
+    cpdef double volumemass_excess(self) except *
+    cpdef double helmholtzmolar_excess(self) except *
+    cpdef double helmholtzmass_excess(self) except *
+
+    
+
+
     
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*
@@ -186,3 +206,9 @@ cdef class AbstractState:
     cpdef CoolPropDbl d3alphar_dDelta2_dTau(self) except *
     cpdef CoolPropDbl d3alphar_dDelta_dTau2(self) except *
     cpdef CoolPropDbl d3alphar_dTau3(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta4(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta3_dTau(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta2_dTau2(self) except *
+    cpdef CoolPropDbl d4alphar_dDelta_dTau3(self) except *
+    cpdef CoolPropDbl d4alphar_dTau4(self) except *
+

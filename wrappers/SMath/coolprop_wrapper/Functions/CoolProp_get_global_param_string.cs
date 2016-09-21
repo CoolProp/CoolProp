@@ -7,32 +7,36 @@ namespace coolprop_wrapper.Functions
   {
     // long get_global_param_string(const char *param, char *Output, int n);
     [DllImport(
-      "CoolProp.x86.dll", EntryPoint = "get_global_param_string",
+      "CoolProp_x86", EntryPoint = "get_global_param_string",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x86(
       string param,
       System.Text.StringBuilder Output,
       int n);
     [DllImport(
-      "CoolProp.x64.dll", EntryPoint = "get_global_param_string",
+      "CoolProp_x64", EntryPoint = "get_global_param_string",
       CharSet = CharSet.Ansi)]
     internal static extern long CoolPropDLLfunc_x64(
       string param,
       System.Text.StringBuilder Output,
       int n);
-    internal static long CoolPropDLLfunc(
-      string param,
-      System.Text.StringBuilder Output,
-      int n)
+    internal static bool CoolPropDLLfunc(string param, out string resultStr)
     {
+      var output = new System.Text.StringBuilder(10000);
+      long Result = 0;
       switch (System.IntPtr.Size)
       {
         case 4:
-          return CoolPropDLLfunc_x86(param, Output, n);
+          Result = CoolPropDLLfunc_x86(param, output, output.Capacity);
+          break;
         case 8:
-          return CoolPropDLLfunc_x64(param, Output, n);
+          Result = CoolPropDLLfunc_x64(param, output, output.Capacity);
+          break;
+        default:
+          throw new System.Exception("Unknown platform!");
       }
-      throw new EvaluationException(Errors.PluginCannotBeEnabled);
+      coolpropPlugin.LogInfo("[INFO ]", "param = {0} output = {1} Result = {2}", param, resultStr = output.ToString(), Result);
+      return (Result == 1);
     }
 
     Term inf;
@@ -64,15 +68,12 @@ namespace coolprop_wrapper.Functions
 
     bool IFunction.ExpressionEvaluation(Term root, Term[][] args, ref SMath.Math.Store context, ref Term[] result)
     {
-      var param = coolpropPlugin.GetStringParam(args[0], ref context);
-      var output = new System.Text.StringBuilder(10000);
-      var Result = CoolPropDLLfunc(param, output, output.Capacity);
-      coolpropPlugin.LogInfo("[INFO ]", "param = {0} output = {1} Result = {2}", param, output.ToString(), Result);
-      if (Result != 1)
-        throw new EvaluationException(Errors.ArgumentDoesNotMatchToExpectedKind);
-      result = coolpropPlugin.MakeStringResult(output.ToString());
-
-      return true;
+        var param = coolpropPlugin.GetStringParam(args[0], ref context);
+        string resultStr;
+        if (!CoolPropDLLfunc(param, out resultStr))
+            coolpropPlugin.CoolPropError();
+        result = coolpropPlugin.MakeStringResult(resultStr);
+        return true;
     }
   }
 }

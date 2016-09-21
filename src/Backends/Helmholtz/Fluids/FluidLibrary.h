@@ -716,6 +716,15 @@ protected:
             else if (!target.compare("Methanol")){
                 fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_METHANOL; return;
             }
+            else if (!target.compare("m-Xylene")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_M_XYLENE; return;
+            }
+            else if (!target.compare("o-Xylene")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_O_XYLENE; return;
+            }
+            else if (!target.compare("p-Xylene")) {
+                fluid.transport.hardcoded_viscosity = CoolProp::TransportPropertyData::VISCOSITY_HARDCODED_P_XYLENE; return;
+            }
             else{
                 throw ValueError(format("hardcoded viscosity [%s] is not understood for fluid %s",target.c_str(), fluid.name.c_str()));
             }
@@ -1159,29 +1168,67 @@ public:
         CoolPropFluid &fluid = fluid_map[index];
 
         // Fluid name
-        fluid.name = fluid_json["NAME"].GetString(); name_vector.push_back(fluid.name);
+        fluid.name = fluid_json["INFO"]["NAME"].GetString(); name_vector.push_back(fluid.name);
 
         try{
             // CAS number
-            if (!fluid_json.HasMember("CAS")){ throw ValueError(format("fluid [%s] does not have \"CAS\" member",fluid.name.c_str())); }
-            fluid.CAS = fluid_json["CAS"].GetString();
+            if (!fluid_json["INFO"].HasMember("CAS")){ throw ValueError(format("fluid [%s] does not have \"CAS\" member",fluid.name.c_str())); }
+            fluid.CAS = fluid_json["INFO"]["CAS"].GetString();
+            
             // REFPROP alias
-            if (!fluid_json.HasMember("REFPROP_NAME")){ throw ValueError(format("fluid [%s] does not have \"REFPROP_NAME\" member",fluid.name.c_str())); }
-            fluid.REFPROPname = fluid_json["REFPROP_NAME"].GetString();
+            if (!fluid_json["INFO"].HasMember("REFPROP_NAME")){ throw ValueError(format("fluid [%s] does not have \"REFPROP_NAME\" member",fluid.name.c_str())); }
+            fluid.REFPROPname = fluid_json["INFO"]["REFPROP_NAME"].GetString();
+
+            if (fluid_json["INFO"].HasMember("FORMULA")){
+                fluid.formula = cpjson::get_string(fluid_json["INFO"], "FORMULA");
+            }
+            else{ fluid.formula = "N/A"; }
+            
+            if (fluid_json["INFO"].HasMember("INCHI_STRING")){
+                fluid.InChI = cpjson::get_string(fluid_json["INFO"], "INCHI_STRING");
+            }
+            else{ fluid.InChI = "N/A"; }
+            
+            if (fluid_json["INFO"].HasMember("INCHI_KEY")){
+                fluid.InChIKey = cpjson::get_string(fluid_json["INFO"], "INCHI_KEY");
+            }
+            else{ fluid.InChIKey = "N/A"; }
+            
+            if (fluid_json["INFO"].HasMember("SMILES")){
+                fluid.smiles = cpjson::get_string(fluid_json["INFO"], "SMILES");
+            }
+            else{ fluid.smiles = "N/A"; }
+            
+            if (fluid_json["INFO"].HasMember("CHEMSPIDER_ID")){
+                fluid.ChemSpider_id = cpjson::get_integer(fluid_json["INFO"], "CHEMSPIDER_ID");
+            }
+            else{ fluid.ChemSpider_id = -1; }
+            
+            if (fluid_json["INFO"].HasMember("2DPNG_URL")){
+                fluid.TwoDPNG_URL = cpjson::get_string(fluid_json["INFO"], "2DPNG_URL");
+            }
+            else{ fluid.TwoDPNG_URL = "N/A"; }
+            
+            // Parse the environmental parameters
+            if (!(fluid_json["INFO"].HasMember("ENVIRONMENTAL"))){
+                if (get_debug_level() > 0){
+                    std::cout << format("Environmental data are missing for fluid [%s]\n", fluid.name.c_str()) ;
+                }
+            }
+            else{
+                parse_environmental(fluid_json["INFO"]["ENVIRONMENTAL"], fluid);
+            }
+            
+            // Aliases
+            fluid.aliases = cpjson::get_string_array(fluid_json["INFO"]["ALIASES"]);
+            
             // Critical state
             if (!fluid_json.HasMember("STATES")){ throw ValueError(format("fluid [%s] does not have \"STATES\" member",fluid.name.c_str())); }
-            parse_states(fluid_json["STATES"], fluid);
-            if (fluid_json.HasMember("FORMULA")){    
-                fluid.formula = cpjson::get_string(fluid_json, "FORMULA");
-            }
             parse_states(fluid_json["STATES"], fluid);
 
             if (get_debug_level() > 5){
                 std::cout << format("Loading fluid %s with CAS %s; %d fluids loaded\n", fluid.name.c_str(), fluid.CAS.c_str(), index);
             }
-
-            // Aliases
-            fluid.aliases = cpjson::get_string_array(fluid_json["ALIASES"]);
 
             // EOS
             parse_EOS_listing(fluid_json["EOS"], fluid);
@@ -1211,16 +1258,6 @@ public:
             }
             else{
                 parse_melting_line(fluid_json["ANCILLARIES"]["melting_line"], fluid);
-            }
-
-            // Parse the environmental parameters
-            if (!(fluid_json.HasMember("ENVIRONMENTAL"))){
-                if (get_debug_level() > 0){
-                    std::cout << format("Environmental data are missing for fluid [%s]\n", fluid.name.c_str()) ;
-                }
-            }
-            else{
-                parse_environmental(fluid_json["ENVIRONMENTAL"], fluid);
             }
 
             // Parse the environmental parameters

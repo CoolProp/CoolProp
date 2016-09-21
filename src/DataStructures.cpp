@@ -410,7 +410,7 @@ const input_pair_info input_pair_list[] = {
     { QSmass_INPUTS,       "QS_INPUTS",           "Molar quality, Entropy in J/kg/K"                   },
     { HmolarQ_INPUTS,      "HQ_INPUTS",           "Enthalpy in J/mol, Molar quality"                   },
     { HmassQ_INPUTS,       "HQ_INPUTS",           "Enthalpy in J/kg, Molar quality"                    },
-    { DmassQ_INPUTS,       "DmassQ_INPUTS",       "Molar density kg/m^3, Molar quality"               },
+    { DmassQ_INPUTS,       "DmassQ_INPUTS",       "Molar density kg/m^3, Molar quality"                },
     { DmolarQ_INPUTS,      "DmolarQ_INPUTS",      "Molar density in mol/m^3, Molar quality"            },
 
     { PQ_INPUTS,           "PQ_INPUTS",           "Pressure in Pa, Molar quality"                      },
@@ -527,6 +527,106 @@ void split_input_pair(input_pairs pair, parameters &p1, parameters &p2)
         case SmolarUmolar_INPUTS: p1 = iSmolar; p2 = iUmolar; break;
         default: throw ValueError(format("Invalid input pair"));
     }
+}
+
+struct backend_family_info {
+    backend_families family;
+    const char * name;
+};
+
+struct backend_info {
+    backends backend;
+    const char * name;
+    backend_families family;
+
+};
+
+const backend_family_info backend_family_list[] = {
+    { HEOS_BACKEND_FAMILY, "HEOS"},
+    { REFPROP_BACKEND_FAMILY, "REFPROP" },
+    { INCOMP_BACKEND_FAMILY, "INCOMP" },
+    { IF97_BACKEND_FAMILY, "IF97" },
+    { TREND_BACKEND_FAMILY, "TREND" },
+    { TTSE_BACKEND_FAMILY, "TTSE" },
+    { BICUBIC_BACKEND_FAMILY, "BICUBIC" },
+    { SRK_BACKEND_FAMILY, "SRK" },
+    { PR_BACKEND_FAMILY, "PR" },
+    { VTPR_BACKEND_FAMILY, "VTPR" }
+};
+
+const backend_info backend_list[] = {
+    { HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY },
+    { HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY },
+    { REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY },
+    { REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY },
+    { INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY },
+    { IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY },
+    { TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY },
+    { TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY },
+    { BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY },
+    { SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY },
+    { PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY },
+    { VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY }
+};
+
+class BackendInformation {
+public:
+    std::map<backend_families, std::string> family_name_map; /// < from family to family name
+    std::map<backends, backend_families> backend_family_map; /// < from backend to family
+    std::map<backends, std::string> backend_name_map;        /// < from backend to backend name
+
+    std::map<std::string, backend_families> family_name_map_r; /// < from backend name **or** family name to family
+    std::map<std::string, backends> backend_name_map_r;        /// < from backend name to backend
+
+    BackendInformation() {
+        const backend_family_info* const family_end = backend_family_list + sizeof(backend_family_list) / sizeof(backend_family_list[0]);
+        for (const backend_family_info* el = backend_family_list; el != family_end; ++el) {
+            family_name_map.insert(std::pair<backend_families, std::string>(el->family, el->name));
+            family_name_map_r.insert(std::pair<std::string, backend_families>(el->name, el->family));
+        }
+        const backend_info* const backend_end = backend_list + sizeof(backend_list) / sizeof(backend_list[0]);
+        for (const backend_info* el = backend_list; el != backend_end; ++el) {
+            backend_family_map.insert(std::pair<backends, backend_families>(el->backend, el->family));
+            backend_name_map.insert(std::pair<backends, std::string>(el->backend, el->name));
+            backend_name_map_r.insert(std::pair<std::string, backends>(el->name, el->backend));
+            family_name_map_r.insert(std::pair<std::string, backend_families>(el->name, el->family));
+        }
+    }
+};
+
+static BackendInformation backend_information;
+
+/// Convert a string into the enum values
+void extract_backend_families(std::string backend_string, backend_families &f1, backend_families &f2) {
+    f1 = INVALID_BACKEND_FAMILY;
+    f2 = INVALID_BACKEND_FAMILY;
+    std::size_t i = backend_string.find("&");
+    std::map<std::string, backend_families>::const_iterator it;
+    if (i != std::string::npos) {
+        it = backend_information.family_name_map_r.find(backend_string.substr(0, i));// Before "&"
+        if (it != backend_information.family_name_map_r.end()) f1 = it->second;
+        it = backend_information.family_name_map_r.find(backend_string.substr(i + 1)); // After "&"
+        if (it != backend_information.family_name_map_r.end()) f2 = it->second;
+    } else {
+        it = backend_information.family_name_map_r.find(backend_string);
+        if (it != backend_information.family_name_map_r.end()) f1 = it->second;
+    }
+}
+
+void extract_backend_families_string(std::string backend_string, backend_families &f1, std::string &f2) {
+    backend_families f2_enum;
+    extract_backend_families(backend_string, f1, f2_enum);
+    std::map<backend_families, std::string>::const_iterator it;
+    it = backend_information.family_name_map.find(f2_enum);
+    if (it != backend_information.family_name_map.end()) f2 = it->second;
+    else f2.clear();
+}
+
+std::string get_backend_string(backends backend) {
+    std::map<backends, std::string>::const_iterator it;
+    it = backend_information.backend_name_map.find(backend);
+    if (it != backend_information.backend_name_map.end()) return it->second;
+    else return std::string("");
 }
 
 } /* namespace CoolProp */

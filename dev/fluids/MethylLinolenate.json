@@ -1,8 +1,4 @@
 {
-  "ALIASES": [
-    "METHYLLINOLENATE", 
-    "MLINOLEN"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -170,18 +166,6 @@
       "max_abs_error_units": "J/mol/K", 
       "type": "rational_polynomial"
     }
-  }, 
-  "CAS": "301-00-8", 
-  "ENVIRONMENTAL": {
-    "ASHRAE34": "UNKNOWN", 
-    "FH": -1, 
-    "GWP100": -1.0, 
-    "GWP20": -1.0, 
-    "GWP500": -1.0, 
-    "HH": -1, 
-    "Name": "MethylLinolenate", 
-    "ODP": -1.0, 
-    "PH": -1
   }, 
   "EOS": [
     {
@@ -403,9 +387,32 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{19}H_{32}O_{2}", 
-  "NAME": "MethylLinolenate", 
-  "REFPROP_NAME": "MLINOLEN", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=4477947", 
+    "ALIASES": [
+      "METHYLLINOLENATE", 
+      "MLINOLEN"
+    ], 
+    "CAS": "301-00-8", 
+    "CHEMSPIDER_ID": 4477947, 
+    "ENVIRONMENTAL": {
+      "ASHRAE34": "UNKNOWN", 
+      "FH": -1, 
+      "GWP100": -1.0, 
+      "GWP20": -1.0, 
+      "GWP500": -1.0, 
+      "HH": -1, 
+      "Name": "MethylLinolenate", 
+      "ODP": -1.0, 
+      "PH": -1
+    }, 
+    "FORMULA": "C_{19}H_{32}O_{2}", 
+    "INCHI_KEY": "DVWSXZIHSUZZKJ-YSTUJMKBBH", 
+    "INCHI_STRING": "InChI=1/C19H32O2/c1-3-4-5-6-7-8-9-10-11-12-13-14-15-16-17-18-19(20)21-2/h4-5,7-8,10-11H,3,6,9,12-18H2,1-2H3/b5-4-,8-7-,11-10-", 
+    "NAME": "MethylLinolenate", 
+    "REFPROP_NAME": "MLINOLEN", 
+    "SMILES": "CC/C=C\\C/C=C\\C/C=C\\CCCCCCCC(=O)OC"
+  }, 
   "STATES": {
     "critical": {
       "T": 772.0, 

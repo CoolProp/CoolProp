@@ -37,6 +37,16 @@ inline bool ValidNumber(double x)
 #undef min
 #undef max
 
+/// Return the maximum difference between elements in two vectors where comparing z1[i] and z2[i]
+template <typename T> T maxvectordiff(const std::vector<T> &z1, const std::vector<T> &z2) {
+    T maxvecdiff = 0;
+    for (std::size_t i = 0; i < z1.size(); ++i) {
+        T diff = std::abs(z1[i] - z2[i]);
+        if (std::abs(diff) > maxvecdiff){ maxvecdiff = diff; }
+    }
+    return maxvecdiff;
+}
+
 /// Make a linearly spaced vector of points
 template <typename T> std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
@@ -400,6 +410,8 @@ template<class T> T is_in_closed_range( T x1, T x2, T x)
     * @param x2 The third solution found
     */
 void solve_cubic(double a, double b, double c, double d, int &N, double &x0, double &x1, double &x2);
+
+void solve_quartic(double a, double b, double c, double d, double e, int &N, double &x0, double &x1, double &x2, double &x3);
 
 template<class T> inline T min3(T x1, T x2, T x3){return std::min(std::min(x1, x2), x3);};
 template<class T> inline T max3(T x1, T x2, T x3){return std::max(std::max(x1, x2), x3);};

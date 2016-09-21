@@ -1,9 +1,4 @@
 {
-  "ALIASES": [
-    "mXylene", 
-    "m-xylene", 
-    "M-XYLENE"
-  ], 
   "ANCILLARIES": {
     "hL": {
       "A": [
@@ -183,7 +178,6 @@
       ]
     }
   }, 
-  "CAS": "108-38-3", 
   "EOS": [
     {
       "BibTeX_CP0": "", 
@@ -406,9 +400,22 @@
       "pseudo_pure": false
     }
   ], 
-  "FORMULA": "C_{8}H_{10}", 
-  "NAME": "m-Xylene", 
-  "REFPROP_NAME": "MXYLENE", 
+  "INFO": {
+    "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7641", 
+    "ALIASES": [
+      "mXylene", 
+      "m-xylene", 
+      "M-XYLENE"
+    ], 
+    "CAS": "108-38-3", 
+    "CHEMSPIDER_ID": 7641, 
+    "FORMULA": "C_{8}H_{10}", 
+    "INCHI_KEY": "IVSZLXZYQVIEFR-UHFFFAOYAX", 
+    "INCHI_STRING": "InChI=1/C8H10/c1-7-4-3-5-8(2)6-7/h3-6H,1-2H3", 
+    "NAME": "m-Xylene", 
+    "REFPROP_NAME": "MXYLENE", 
+    "SMILES": "Cc1cccc(c1)C"
+  }, 
   "STATES": {
     "critical": {
       "T": 616.89, 
@@ -536,27 +543,8 @@
       }
     }, 
     "viscosity": {
-      "BibTeX": "Huber-RP912", 
-      "epsilon_over_k": 489.87, 
-      "epsilon_over_k_units": "K", 
-      "psi": {
-        "a": [
-          1.96357, 
-          -0.722142, 
-          0.130396
-        ], 
-        "rhomolar_reducing": 2665, 
-        "rhomolar_reducing_units": "mol/m^3", 
-        "t": [
-          0, 
-          1, 
-          2
-        ]
-      }, 
-      "reference_fluid": "Propane", 
-      "sigma_eta": 5.8e-10, 
-      "sigma_eta_units": "m", 
-      "type": "ECS"
+      "BibTeX": "Cao-JPCRD-2016-mxylene", 
+      "hardcoded": "m-Xylene"
     }
   }
 }

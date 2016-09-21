@@ -12,12 +12,14 @@
 #include <stdlib.h>
 #include "math.h"
 #include "AbstractState.h"
+#include "DataStructures.h"
 #include "Backends/REFPROP/REFPROPBackend.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 #include "Backends/IF97/IF97Backend.h"
 #include "Backends/Cubics/CubicBackend.h"
+#include "Backends/Cubics/VTPRBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -31,8 +33,11 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     if (get_debug_level() > 0){
         std::cout << "AbstractState::factory(" << backend << "," << stringvec_to_string(fluid_names) << ")" << std::endl;
     }
-    static const std::string HEOS_string = "HEOS";
-    if (!backend.compare(HEOS_string))
+
+    backend_families f1;
+    std::string f2;
+    extract_backend_families_string(backend, f1, f2);
+    if (f1==HEOS_BACKEND_FAMILY)
     {
         if (fluid_names.size() == 1){
             return new HelmholtzEOSBackend(fluid_names[0]);
@@ -41,7 +46,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
             return new HelmholtzEOSMixtureBackend(fluid_names);
         }
     }
-    else if (!backend.compare("REFPROP"))
+    else if (f1==REFPROP_BACKEND_FAMILY)
     {
         if (fluid_names.size() == 1){
             return new REFPROPBackend(fluid_names[0]);
@@ -50,38 +55,44 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
             return new REFPROPMixtureBackend(fluid_names);
         }
     }
-    else if (!backend.compare("INCOMP"))
+    else if (f1==INCOMP_BACKEND_FAMILY)
     {
         if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
         return new IncompressibleBackend(fluid_names[0]);
     }
-    else if (!backend.compare("IF97"))
+    else if (f1==IF97_BACKEND_FAMILY)
     {
         return new IF97Backend();
     }
     #if !defined(NO_TABULAR_BACKENDS)
-    else if (backend.find("TTSE&") == 0)
+    else if (f1==TTSE_BACKEND_FAMILY)
     {
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(5), fluid_names));
+        shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new TTSEBackend(AS);
     }
-    else if (backend.find("BICUBIC&") == 0)
+    else if (f1==BICUBIC_BACKEND_FAMILY)
     {
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(backend.substr(8), fluid_names));
+        shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new BicubicBackend(AS);
     }
     #endif
-    else if (!backend.compare("TREND"))
+    else if (f1==TREND_BACKEND_FAMILY)
     {
         throw ValueError("TREND backend not yet implemented");
     }
-    else if (backend == "SRK"){
+    else if (f1 == SRK_BACKEND_FAMILY) 
+    {
         return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
     }
-    else if (backend == "PR" || backend == "Peng-Robinson"){
+    else if (f1==PR_BACKEND_FAMILY)
+    {
         return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
+    }
+    else if (f1==VTPR_BACKEND_FAMILY)
+    {
+        return new VTPRBackend(fluid_names, get_config_double(R_U_CODATA));
     }
     else if (!backend.compare("?") || backend.empty())
     {
@@ -90,7 +101,7 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         if (idel == std::string::npos) // No '::' found, no backend specified, try HEOS, otherwise a failure
         {
             // Figure out what backend to use
-            return factory(HEOS_string, fluid_names);
+            return factory("HEOS", fluid_names);
         }
         else
         {
@@ -145,6 +156,13 @@ bool AbstractState::clear() {
     this->_helmholtzmolar.clear();
     this->_logp.clear();
     this->_logrhomolar.clear();
+
+    this->_hmolar_excess.clear();
+    this->_smolar_excess.clear();
+    this->_gibbsmolar_excess.clear();
+    this->_volumemolar_excess.clear();
+    this->_umolar_excess.clear();
+    this->_helmholtzmolar_excess.clear();
 
     ///// Smoothing values
     //this->rhospline = -_HUGE;
@@ -402,6 +420,8 @@ double AbstractState::keyed_output(parameters key)
         return compressibility_factor();
     case iPIP:
         return PIP();
+    case ifundamental_derivative_of_gas_dynamics:
+        return fundamental_derivative_of_gas_dynamics();
     default:
         throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output",key,get_parameter_information(key,"short").c_str()));
     }
@@ -455,21 +475,45 @@ double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
     return _hmolar;
 }
+double AbstractState::hmolar_excess(void) {
+    if (!_hmolar_excess) calc_excess_properties();
+    return _hmolar_excess;
+}
 double AbstractState::smolar(void){
     if (!_smolar) _smolar = calc_smolar();
     return _smolar;
+}
+double AbstractState::smolar_excess(void) {
+    if (!_smolar_excess) calc_excess_properties();
+    return _smolar_excess;
 }
 double AbstractState::umolar(void){
     if (!_umolar) _umolar = calc_umolar();
     return _umolar;
 }
+double AbstractState::umolar_excess(void) {
+    if (!_umolar_excess) calc_excess_properties();
+    return _umolar_excess;
+}
 double AbstractState::gibbsmolar(void){
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
     return _gibbsmolar;
 }
+double AbstractState::gibbsmolar_excess(void) {
+    if (!_gibbsmolar_excess) calc_excess_properties();
+    return _gibbsmolar_excess;
+}
 double AbstractState::helmholtzmolar(void){
     if (!_helmholtzmolar) _helmholtzmolar = calc_helmholtzmolar();
     return _helmholtzmolar;
+}
+double AbstractState::helmholtzmolar_excess(void) {
+    if (!_helmholtzmolar_excess) calc_excess_properties();
+    return _helmholtzmolar_excess;
+}
+double AbstractState::volumemolar_excess(void) {
+    if (!_volumemolar_excess) calc_excess_properties();
+    return _volumemolar_excess;
 }
 double AbstractState::cpmolar(void){
     if (!_cpmolar) _cpmolar = calc_cpmolar();
@@ -542,6 +586,12 @@ double AbstractState::Cvirial(void){ return calc_Cvirial(); }
 double AbstractState::dBvirial_dT(void){ return calc_dBvirial_dT(); }
 double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
+    
+double AbstractState::fundamental_derivative_of_gas_dynamics()
+{
+    // See Colonna, FPE, 2010, Eq. 1
+    return 1 + this->second_partial_deriv(iP, iDmass, iSmolar, iDmass, iSmolar)*this->rhomass()/(2*powInt(speed_sound(), 2));
+};
 
 // Get the derivatives of the parameters in the partial derivative with respect to T and rho
 void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropDbl &drho)

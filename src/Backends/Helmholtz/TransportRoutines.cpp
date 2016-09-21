@@ -545,6 +545,66 @@ CoolPropDbl TransportRoutines::viscosity_R23_hardcoded(HelmholtzEOSMixtureBacken
     return (pow((rhoL-rhobar)/rhoL,C1)*eta_DG+pow(rhobar/rhoL,C1)*eta_L+DELTAeta_c)/1e6;
 }
 
+CoolPropDbl TransportRoutines::viscosity_o_xylene_hardcoded(HelmholtzEOSMixtureBackend &HEOS){
+    // From CAO, JPCRD, 2016
+    double D[] = {-2.05581e-3, 2.38762, 0, 10.4497, 15.9587};
+    double n[] = {10.3,3.3,25,0.7,0.4};
+    double E[] = {2.65651e-3,0,1.77616e-12,-18.2446,0};
+    double k[] = {0.8, 0, 4.4};
+    double Tr = HEOS.T()/630.259, rhor = HEOS.rhomolar()/1000.0/2.6845;
+
+    double A0 = -1.4933, B0 = 473.2, C0 = -57033, T = HEOS.T();
+    double ln_Seta = A0 + B0/T + C0/(T*T);
+    double eta0 = 0.22225*sqrt(T)/exp(ln_Seta); // [uPa-s]
+    
+    double A1 = 13.2814, B1 = -10862.4, C1 = 1664060, rho_molL = HEOS.rhomolar()/1000.0;
+    double eta1 = (A1 + B1/T + C1/(T*T))*rho_molL; // [uPa-s]
+
+    double f = (D[0] + E[0]*pow(Tr,-k[0]))*pow(rhor,n[0]) + D[1]*pow(rhor,n[1]) + E[2]*pow(rhor,n[2])/pow(Tr,k[2]) 
+               + (D[3]*rhor+E[3]*Tr)*pow(rhor,n[3]) + D[4]*pow(rhor,n[4]);
+    double DELTAeta = pow(rhor, 2.0/3.0)*sqrt(Tr)*f; // [uPa-s]
+
+    return (eta0 + eta1 + DELTAeta)/1e6;
+}
+CoolPropDbl TransportRoutines::viscosity_m_xylene_hardcoded(HelmholtzEOSMixtureBackend &HEOS) {
+    // From CAO, JPCRD, 2016
+    double D[] = { -0.268950, -0.0290018, 0, 14.7728, 17.1128 };
+    double n[] = { 6.8, 3.3, 22.0, 0.6, 0.4 };
+    double E[] = { 0.320971, 0, 1.72866e-10,-18.9852,0 };
+    double k[] = { 0.3, 0, 3.2 };
+    double Tr = HEOS.T() / 616.89, rhor = HEOS.rhomolar() / 1000.0 / 2.665;
+
+    double A0 = -1.4933, B0 = 473.2, C0 = -57033, T = HEOS.T();
+    double ln_Seta = A0 + B0 / T + C0 / (T*T);
+    double eta0 = 0.22115*sqrt(T) / exp(ln_Seta); // [uPa-s]
+
+    double A1 = 13.2814, B1 = -10862.4, C1 = 1664060, rho_molL = HEOS.rhomolar() / 1000.0;
+    double eta1 = (A1 + B1 / T + C1 / (T*T))*rho_molL; // [uPa-s]
+
+    double f = (D[0] + E[0] * pow(Tr, -k[0]))*pow(rhor, n[0]) + D[1] * pow(rhor, n[1]) + E[2] * pow(rhor, n[2]) / pow(Tr, k[2])
+        + (D[3] * rhor + E[3] * Tr)*pow(rhor, n[3]) + D[4] * pow(rhor, n[4]);
+    double DELTAeta = pow(rhor, 2.0 / 3.0)*sqrt(Tr)*f; // [uPa-s]
+
+    return (eta0 + eta1 + DELTAeta)/1e6; // [Pa-s]
+}
+CoolPropDbl TransportRoutines::viscosity_p_xylene_hardcoded(HelmholtzEOSMixtureBackend &HEOS) {
+    // From Balogun, JPCRD, 2016
+    double Tr = HEOS.T() / 616.168, rhor = HEOS.rhomolar() / 1000.0 / 2.69392;
+
+    double A0 = -1.4933, B0 = 473.2, C0 = -57033, T = HEOS.T();
+    double ln_Seta = A0 + B0 / T + C0 / (T*T);
+    double eta0 = 0.22005*sqrt(T) / exp(ln_Seta); // [uPa-s]
+
+    double A1 = 13.2814, B1 = -10862.4, C1 = 1664060, rho_molL = HEOS.rhomolar() / 1000.0;
+    double eta1 = (A1 + B1 / T + C1 / (T*T))*rho_molL; // [uPa-s]
+
+    double sum1 = 122.919*pow(rhor, 1.5)-282.329*pow(rhor, 2)+ 279.348*pow(rhor, 3)-146.776*pow(rhor, 4)+ 28.361*pow(rhor, 5)-0.004585*pow(rhor, 11);
+    double sum2 = 15.337*pow(rhor, 1.5) - 0.0004382*pow(rhor, 11)+0.00002307*pow(rhor, 15);
+    double DELTAeta = pow(rhor, 2.0/3.0)*(sum1 + 1/sqrt(Tr)*sum2);
+
+    return (eta0 + eta1 + DELTAeta) / 1e6; // [Pa-s]
+}
+
 CoolPropDbl TransportRoutines::viscosity_dilute_ethane(HelmholtzEOSMixtureBackend &HEOS)
 {
     double C[] = {0, -3.0328138281, 16.918880086, -37.189364917, 41.288861858, -24.615921140, 8.9488430959, -1.8739245042, 0.20966101390, -9.6570437074e-3};

@@ -363,7 +363,7 @@ class SecCoolSolutionData(DigitalData):
         print(", {0}".format(sec[-1].name), end="")
         sec += [SecCoolSolutionData(sFile='NBS, Water'   ,sFolder='xPure',name='NBS' ,desc='NBS, Water'                                      ,ref='Schmidt1979,Skovrup2013', densityFactor=None, heatFactor=None, conductivityFactor=None, viscosityFactor=1e-6)]
         print(", {0}".format(sec[-1].name), end="")
-        sec += [SecCoolSolutionData(sFile='Paracryol'    ,sFolder='xPure',name='PCL' ,desc='Paracryol, Aliphatic Hydrocarbon'                ,ref='Sulzer1999,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
+        sec += [SecCoolSolutionData(sFile='Paracryol'    ,sFolder='xPure',name='PCL' ,desc='Paracryol, Aliphatic Hydrocarbon'                ,ref='Sulzer1999,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-5)]
         print(", {0}".format(sec[-1].name), end="")
         sec += [SecCoolSolutionData(sFile='Paratherm NF' ,sFolder='xPure',name='PNF2' ,desc='Paratherm NF, Hydrotreated mineral oil'          ,ref='Paratherm2013,Skovrup2013', densityFactor=None, heatFactor=1e3, conductivityFactor=None, viscosityFactor=1e-3)]
         print(", {0}".format(sec[-1].name), end="")

@@ -186,6 +186,11 @@ namespace SaturationSolvers
         else{ throw ValueError();}
     }
     /**
+     * Wilson gives the K-factor as
+     * \f[
+     * \ln K_i = \ln\left(\frac{p_{c,i}}{p}\right)+5.373(1+\omega_i)\left(1-\frac{T_{c,i}}{T}\right)
+     * \f]
+     *
      * From Rachford-Rice:
      * \f[
      * \sum_i \frac{x_i(K_i-1)}{1 - \beta + \beta K_i} = 0
@@ -198,7 +203,7 @@ namespace SaturationSolvers
      * \f[
      * p = \sum_i x_ip_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T).
      * \f]
-     * Or when \f$T\f$ is known for \f$\beta=1$, \f$p\f$can be obtained from  
+     * Or when \f$T\f$ is known for \f$\beta=1\f$, \f$p\f$can be obtained from
      * \f[
      * -1+\sum_ix_i=0,
      * \f]
@@ -444,12 +449,27 @@ namespace StabilityRoutines{
         std::vector<double> lnK, K, K0, x, y;
         const std::vector<double> &z;
         double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
+        double m_T, ///< The temperature to be used (if specified, otherwise that from HEOS)
+               m_p; ///< The pressure to be used (if specified, otherwise that from HEOS)
     private:
         bool _stable;
         bool debug;
     public:
         StabilityEvaluationClass(HelmholtzEOSMixtureBackend &HEOS)
-           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), _stable(false), debug(false) {};
+           : HEOS(HEOS), z(HEOS.get_mole_fractions_doubleref()), rhomolar_liq(-1), rhomolar_vap(-1), beta(-1), tpd_liq(10000), tpd_vap(100000), DELTAG_nRT(10000), m_T(-1), m_p(-1), _stable(false),debug(false) {};
+        /** \brief Specify T&P, otherwise they are loaded the HEOS instance
+         */
+        void set_TP(double T, double p){m_T = T; m_p = p;};
+        /** \brief Calculate the liquid and vapor phase densities based on the guess values
+         */
+        void rho_TP_w_guesses();
+        /** \brief Calculate the liquid and vapor phase densities using the global analysis
+         */
+        void rho_TP_global();
+        /** \brief Calculate the liquid and vapor phase densities based on SRK, with Peneloux volume translation afterwards
+         */
+        void rho_TP_SRK_translated();
+        
         /** \brief Calculate trial compositions
          */
         void trial_compositions();
