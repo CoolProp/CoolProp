@@ -13,3 +13,4 @@ Information for Developers
   documentation.rst
   release.rst
   testing.rst
+  web2py_online.rst
