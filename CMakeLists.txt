@@ -521,6 +521,7 @@ if (COOLPROP_EXCEL_MODULE)
   message(STATUS "Creating Excel add-in for COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Setting some basic build paths
   set(COOLPROP_EXCEL_32B_DIR "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL")
+  set(COOLPROP_EXCEL_32B_DIR_ALT "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL_cdecl")
   set(COOLPROP_EXCEL_64B_DIR "${CMAKE_CURRENT_BINARY_DIR}/64bitDLL")
   set(COOLPROP_EXCEL_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/InnoScript")
   # Pointers to the sources
@@ -547,6 +548,7 @@ if (COOLPROP_EXCEL_MODULE)
   # Prepare directories
   add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_32B_DIR}"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_32B_DIR_ALT}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_64B_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}/source"
@@ -557,19 +559,28 @@ if (COOLPROP_EXCEL_MODULE)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Preparing the directories for the Excel installer"
     VERBATIM )
-  # Build the 32bit DLL
+  # Build the 32bit DLLs
   add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_std.dll"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_stdcall.dll"
     WORKING_DIRECTORY ${COOLPROP_EXCEL_32B_DIR}
-    COMMENT "Building the 32bit shared library"
+    COMMENT "Building the 32bit shared library with stdcall"
+    VERBATIM )
+  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_CDECL_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_32B_DIR_ALT}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_cdecl.dll"
+    WORKING_DIRECTORY ${COOLPROP_EXCEL_32B_DIR_ALT}
+    COMMENT "Building the 32bit shared library with cdecl"
     VERBATIM )
   # Build the 64bit DLL
   add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN} Win64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_x64.dll"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_x64.dll"
     WORKING_DIRECTORY ${COOLPROP_EXCEL_64B_DIR}
     COMMENT "Building the 64bit shared library"
     VERBATIM )
@@ -586,8 +597,9 @@ if (COOLPROP_EXCEL_MODULE)
   add_custom_command(TARGET COOLPROP_EXCEL POST_BUILD
     COMMAND ${COOLPROP_EXCEL_ISS_EXE} ARGS "addin-installer.iss"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy" "${COOLPROP_EXCEL_TMP_DIR}/bin/MicrosoftExcel"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy" "${COOLPROP_EXCEL_TMP_DIR}/bin/shared_library/Windows"
     WORKING_DIRECTORY "${COOLPROP_EXCEL_TMP_DIR}"
-    COMMENT "The new installer is located in '${COOLPROP_EXCEL_TMP_DIR}/bin/MicrosoftExcel'"
+    COMMENT "The new installer is located in '${COOLPROP_EXCEL_TMP_DIR}/bin/MicrosoftExcel' and '${COOLPROP_EXCEL_TMP_DIR}/bin/shared_library/Windows'"
     VERBATIM )
 endif()
 
