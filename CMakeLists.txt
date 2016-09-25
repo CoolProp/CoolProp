@@ -62,8 +62,8 @@ option (COOLPROP_EES_MODULE
         "Build the EES module"
         OFF)
         
-option (COOLPROP_EXCEL_MODULE
-        "Build the Excel add-in installer"
+option (COOLPROP_WINDOWS_PACKAGE
+        "Build the Windows installer"
         OFF)
 
 option (BUILD_TESTING 
@@ -469,137 +469,169 @@ if (COOLPROP_MATHCAD15_MODULE)
     install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolProp_EN.xml" DESTINATION MathCAD15)
 endif()
 
-# EES is only compiled for windows
+# EES is only compiled for 32bit Windows
 if (COOLPROP_EES_MODULE)
-  list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
-  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
+  IF (NOT "${BITNESS}" STREQUAL "32")
+    MESSAGE(FATAL_ERROR "You cannot build the EES wrapper as a 64-bit library.")
+  ENDIF()
+  # Prepare the sources
   include_directories(${APP_INCLUDE_DIRS})
+  list (APPEND APP_SOURCES "wrappers/EES/main.cpp")
+  list (APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")  
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
+  # Modify the target and add dependencies
+  add_dependencies (COOLPROP_EES generate_headers)
   set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
-  add_dependencies (COOLPROP_EES generate_headers)
-  set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
-  message(STATUS "Injecting the version COOLPROP_VERSION=${COOLPROP_VERSION}")
-  # Put the version into the InnoInstaller setup file
-  CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/BuildInnoInstaller.iss.in" "${CMAKE_CURRENT_BINARY_DIR}/BuildInnoInstaller.iss")
-  if (NOT MSVC)
-    set_target_properties(COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
-  endif()
-
-  add_dependencies (COOLPROP_EES generate_headers)
-  
-  if ( MSVC )
-    set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
-    set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
-    set_target_properties( COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR})
+  set_target_properties (COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
+  # Creates "COOLPROP_EES.dlf"
+  if ( NOT MSVC )
+    set_target_properties (COOLPROP_EES PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+  elseif ( MSVC )
+    set_target_properties (COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} )
+    set_target_properties (COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR})
+    set_target_properties (COOLPROP_EES PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR})
     # etc for the other available configuration types (MinSizeRel, RelWithDebInfo)
   endif ()
   # copy required files
-  set(REQUIRED_FILES
-    CoolProp.htm
-    CoolProp.LIB
-    CoolProp_EES_Sample.EES
-    )
-    foreach (_FILE ${REQUIRED_FILES})
-        add_custom_command(TARGET COOLPROP_EES
-                           PRE_BUILD
-                           COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/${_FILE} ${CMAKE_CURRENT_BINARY_DIR}/.)
-    endforeach()
-  
-  # Run InnoSetup to make the installer (must be on your path)
-  add_custom_command(TARGET COOLPROP_EES
-                     POST_BUILD
-                     COMMAND iscc /cc BuildInnoInstaller.iss
-                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  # install the generated executable installer from InnoSetup
-  install(
-    CODE "file( INSTALL ${CMAKE_CURRENT_BINARY_DIR}/Output/SetupCOOLPROP_EES.exe DESTINATION ${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME} )"
+  add_custom_command (TARGET COOLPROP_EES PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.htm" "${CMAKE_CURRENT_BINARY_DIR}/."
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp.LIB" "${CMAKE_CURRENT_BINARY_DIR}/."
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/EES/CoolProp_EES_Sample.EES" "${CMAKE_CURRENT_BINARY_DIR}/."
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Copying the EES files to the build directory"
+    VERBATIM 
   )
+  ## install the generated executable installer from InnoSetup
+  #install(
+  #  CODE "file( INSTALL ${CMAKE_CURRENT_BINARY_DIR}/Output/SetupCOOLPROP_EES.exe DESTINATION ${CMAKE_INSTALL_PREFIX}/EES/${CMAKE_SYSTEM_NAME} )"
+  #)
 endif()
 
-# Excel add-in
-if (COOLPROP_EXCEL_MODULE)
+# Windows package
+if (COOLPROP_WINDOWS_PACKAGE)
+
   message(STATUS "Creating Excel add-in for COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Setting some basic build paths
-  set(COOLPROP_EXCEL_32B_DIR "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL")
-  set(COOLPROP_EXCEL_32B_DIR_ALT "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL_cdecl")
-  set(COOLPROP_EXCEL_64B_DIR "${CMAKE_CURRENT_BINARY_DIR}/64bitDLL")
-  set(COOLPROP_EXCEL_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/InnoScript")
+  set(COOLPROP_WINDOWS_PACKAGE_32B_DIR "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL")
+  set(COOLPROP_WINDOWS_PACKAGE_32B_DIR_STDCALL "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL_stdcall")
+  set(COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL_cdecl")
+  set(COOLPROP_WINDOWS_PACKAGE_64B_DIR "${CMAKE_CURRENT_BINARY_DIR}/64bitDLL")
+  set(COOLPROP_WINDOWS_PACKAGE_EES_DIR "${CMAKE_CURRENT_BINARY_DIR}/EES")
+  set(COOLPROP_WINDOWS_PACKAGE_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/InnoScript")
   # Pointers to the sources
-  set(COOLPROP_EXCEL_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
-  set(COOLPROP_EXCEL_ISS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
+  set(COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
+  set(COOLPROP_WINDOWS_PACKAGE_ISS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
   # Generator for DLLs
-  set(COOLPROP_EXCEL_DLL_GEN "Visual Studio 10 2010")
+  set(COOLPROP_WINDOWS_PACKAGE_DLL_GEN "Visual Studio 10 2010")
   # Configure variables like version number and build year
-  CONFIGURE_FILE("${COOLPROP_EXCEL_ISS_DIR}/cmake-templates/config.iss" "${COOLPROP_EXCEL_ISS_DIR}/config.iss")
+  CONFIGURE_FILE("${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}/cmake-templates/config.iss" "${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}/config.iss")
   # Find the installer generator executable
   SET(BINDIR32_ENV_NAME "ProgramFiles(x86)")
   SET(BINDIR32 $ENV{${BINDIR32_ENV_NAME}})
   SET(BINDIR64_ENV_NAME "ProgramFiles")
   SET(BINDIR64 $ENV{${BINDIR64_ENV_NAME}})
-  find_program (COOLPROP_EXCEL_ISS_EXE 
+  find_program (COOLPROP_WINDOWS_PACKAGE_ISS_EXE 
     NAMES iscc.exe 
     HINTS "${BINDIR32}/Inno Setup 5" "${BINDIR64}/Inno Setup 5"
   )
-  #message(STATUS "COOLPROP_EXCEL_ISS_EXE='${COOLPROP_EXCEL_ISS_EXE}'")	 
-  # *************************************************************
-  # Add the target for Excel and populate it with custom commands
-  # *************************************************************
-  add_custom_target(COOLPROP_EXCEL)
+  
+  # ******************************************************************
+  # Add the target that prepares the build directory for the subbuilds
+  # ******************************************************************
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_PREPARE) 
   # Prepare directories
-  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_32B_DIR}"
-	COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_32B_DIR_ALT}"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_64B_DIR}"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}/source"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_EXCEL_TMP_DIR}/bin"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_EXCEL_TMP_DIR}/bin"
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_PREPARE PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR}"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR_STDCALL}"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_64B_DIR}"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_EES_DIR}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Preparing the directories for the Excel installer"
+    COMMENT "Preparing the directories for the Windows installer"
     VERBATIM )
+  
+  # **************************************************************
+  # Add the target for the shared libraries, 3x 32bit and 1x 64bit
+  # **************************************************************
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)  
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES COOLPROP_WINDOWS_PACKAGE_PREPARE)
   # Build the 32bit DLLs
-  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_std.dll"
-	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_stdcall.dll"
-    WORKING_DIRECTORY ${COOLPROP_EXCEL_32B_DIR}
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x86.dll"
+    WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
+    COMMENT "Building the 32bit shared library with default settings"
+    VERBATIM )
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_xls_std.dll"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR_STDCALL}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_stdcall.dll"
+    WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR_STDCALL}
     COMMENT "Building the 32bit shared library with stdcall"
     VERBATIM )
-  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_CDECL_LIBRARY=ON"
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_CDECL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_32B_DIR_ALT}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_cdecl.dll"
-    WORKING_DIRECTORY ${COOLPROP_EXCEL_32B_DIR_ALT}
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_cdecl.dll"
+    WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL}
     COMMENT "Building the 32bit shared library with cdecl"
     VERBATIM )
   # Build the 64bit DLL
-  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_EXCEL_DLL_GEN} Win64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN} Win64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_xls_x64.dll"
-	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_EXCEL_TMP_DIR}/source/CoolProp_x64.dll"
-    WORKING_DIRECTORY ${COOLPROP_EXCEL_64B_DIR}
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_xls_x64.dll"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x64.dll"
+    WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_64B_DIR}
     COMMENT "Building the 64bit shared library"
     VERBATIM )
+
+  # *************************************************************
+  # Add the target for EES and populate it with custom commands
+  # *************************************************************
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_EES)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_EES COOLPROP_WINDOWS_PACKAGE_PREPARE)
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_EES PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_EES_MODULE=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "COOLPROP_EES" "--config" "Release"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_WINDOWS_PACKAGE_EES_DIR}" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/EES"
+    WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_EES_DIR}
+    COMMENT "Building the 32bit library for EES"
+    VERBATIM )
+	
+  # *************************************************************
+  # Add the target for Excel and populate it with custom commands
+  # *************************************************************
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_EXCEL)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_EXCEL COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
   # Copy the files
-  add_custom_command(TARGET COOLPROP_EXCEL PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xla" "${COOLPROP_EXCEL_TMP_DIR}/source/"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_SRC_DIR}/CoolProp.xlam" "${COOLPROP_EXCEL_TMP_DIR}/source/"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_EXCEL_SRC_DIR}/TestExcel.xlsx" "${COOLPROP_EXCEL_TMP_DIR}/source/"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_EXCEL_ISS_DIR}" "${COOLPROP_EXCEL_TMP_DIR}"
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_EXCEL PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/CoolProp.xla" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/CoolProp.xlam" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/TestExcel.xlsx" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Copying the Excel and Inno Script files for the installer"
     VERBATIM )
+
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_INSTALLER)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_EES)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_EXCEL)
   # Build the installer and copy it to the bin directory
-  add_custom_command(TARGET COOLPROP_EXCEL POST_BUILD
-    COMMAND ${COOLPROP_EXCEL_ISS_EXE} ARGS "addin-installer.iss"
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy" "${COOLPROP_EXCEL_TMP_DIR}/bin/MicrosoftExcel"
-	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_EXCEL_TMP_DIR}/deploy" "${COOLPROP_EXCEL_TMP_DIR}/bin/shared_library/Windows"
-    WORKING_DIRECTORY "${COOLPROP_EXCEL_TMP_DIR}"
-    COMMENT "The new installer is located in '${COOLPROP_EXCEL_TMP_DIR}/bin/MicrosoftExcel' and '${COOLPROP_EXCEL_TMP_DIR}/bin/shared_library/Windows'"
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_INSTALLER POST_BUILD
+    COMMAND ${COOLPROP_WINDOWS_PACKAGE_ISS_EXE} ARGS "addin-installer.iss"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/installer/Windows"
+    WORKING_DIRECTORY "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}"
+    COMMENT "The new installer is located in '${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/installer/Windows'"
     VERBATIM )
 endif()
 
