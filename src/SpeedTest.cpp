@@ -26,7 +26,7 @@ void compare_REFPROP_and_CoolProp(const std::string &fluid, CoolProp::input_pair
     t2 = clock();
 
     double elap = ((double)(t2-t1))/CLOCKS_PER_SEC/((double)N)*1e6;
-    printf("Elapsed time for CoolProp is %g us/call\n",elap);
+    std::cout << format("Elapsed time for CoolProp is %g us/call\n",elap);
 
     State.reset(AbstractState::factory("REFPROP", fluid));
     t1 = clock();
@@ -36,7 +36,7 @@ void compare_REFPROP_and_CoolProp(const std::string &fluid, CoolProp::input_pair
     }
     t2 = clock();
     elap = ((double)(t2-t1))/CLOCKS_PER_SEC/((double)N)*1e6;
-    printf("Elapsed time for REFPROP is %g us/call\n",elap);
+    std::cout << format("Elapsed time for REFPROP is %g us/call\n",elap);
 }
 
 } /* namespace CoolProp */

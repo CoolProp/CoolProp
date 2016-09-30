@@ -114,7 +114,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
                 }
             }
             else{
-                printf("accepted");
+                std::cout << format("accepted");
             }
         }
         

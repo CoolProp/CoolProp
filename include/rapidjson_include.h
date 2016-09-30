@@ -299,12 +299,12 @@ namespace cpjson
     inline schema_validation_code validate_schema(const std::string &schemaJson, const std::string &inputJson, std::string &errstr){
         rapidjson::Document sd;
         sd.Parse(schemaJson.c_str());
-        if (sd.HasParseError()) { errstr = fmt::sprintf("Invalid schema: %s\n", schemaJson.c_str()); return SCHEMA_INVALID_JSON; }
+        if (sd.HasParseError()) { errstr = format("Invalid schema: %s\n", schemaJson.c_str()); return SCHEMA_INVALID_JSON; }
         rapidjson::SchemaDocument schema(sd); // Compile a Document to SchemaDocument
         
         rapidjson::Document d;
         d.Parse(inputJson.c_str());
-        if (d.HasParseError()) { errstr = fmt::sprintf("Invalid input json: %s\n", inputJson.c_str()); return INPUT_INVALID_JSON; }
+        if (d.HasParseError()) { errstr = format("Invalid input json: %s\n", inputJson.c_str()); return INPUT_INVALID_JSON; }
         
         rapidjson::SchemaValidator validator(schema);
         if (!d.Accept(validator)) {
@@ -312,8 +312,8 @@ namespace cpjson
             // Output diagnostic information
             rapidjson::StringBuffer sb;
             validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-            errstr = fmt::sprintf("Invalid schema: %s\n", sb.GetString());
-            errstr += fmt::sprintf("Invalid keyword: %s\n", validator.GetInvalidSchemaKeyword());
+            errstr = format("Invalid schema: %s\n", sb.GetString());
+            errstr += format("Invalid keyword: %s\n", validator.GetInvalidSchemaKeyword());
             sb.Clear();
             return SCHEMA_NOT_VALIDATED;
         }

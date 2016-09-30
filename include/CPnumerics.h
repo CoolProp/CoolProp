@@ -7,6 +7,7 @@
 #include <stdlib.h> // For abs
 #include <algorithm> // For max
 #include <numeric>
+#include <cmath>
 #include "CPstrings.h"
 #include "Exceptions.h"
 

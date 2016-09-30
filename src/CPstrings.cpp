@@ -1,4 +1,6 @@
 #include "CPstrings.h"
+#include "crossplatform_shared_ptr.h"
+#include <cstdio>
 
 std::string strjoin(const std::vector<std::string> &strings, const std::string &delim)
 {

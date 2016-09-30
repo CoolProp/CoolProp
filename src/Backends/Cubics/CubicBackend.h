@@ -56,7 +56,7 @@ public:
             case iacentric_factor: return cubic->get_acentric()[i];
             case imolar_mass: return components[i].molemass;
             default:
-                throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
+                throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         }
     }
 

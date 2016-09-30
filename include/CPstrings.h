@@ -12,6 +12,9 @@
     #endif
     #include "fmt/format.h" // For addition of the string formatting functions and macros from cppformat
     #undef FMT_HEADER_ONLY
+#else
+    #include <vector>
+    #include <string>
 #endif
 
     #if !defined(__powerpc__)

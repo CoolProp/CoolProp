@@ -67,7 +67,7 @@ unsigned long long CalculateDirSize(const std::wstring &path, std::vector<std::w
 
     return size;
 } 
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(__powerpc__)
   // Android doesn't have ftw.h, also doesn't accept not having this file
   unsigned long long CalculateDirSize(const std::string &path){
      return 0;
