@@ -26,3 +26,21 @@ std::vector<std::string> strsplit(const std::string &s, char del)
     }
     return v;
 }
+
+#if defined(NO_CPPFORMAT)
+std::string format(const char* fmt, ...)
+{
+    const int size = 512;
+    struct deleter{ static void delarray(char* p) { delete[] p; } }; // to use delete[]
+    shared_ptr<char> buffer(new char[size], deleter::delarray); // I'd prefer unique_ptr, but it's only available since c++11
+    va_list vl;
+    va_start(vl,fmt);
+    int nsize = vsnprintf(buffer.get(),size,fmt,vl);
+    if(size<=nsize){//fail delete buffer and try again
+        buffer.reset(new char[++nsize], deleter::delarray);//+1 for /0
+        nsize = vsnprintf(buffer.get(),nsize,fmt,vl);
+    }
+    va_end(vl);
+    return buffer.get();
+}
+#endif
