@@ -47,7 +47,7 @@
 
 #if defined(NO_CPPFORMAT)
     // Missing string formatting function, this old guy is needed for ancient gcc compilers on PowerPC for VxWorks
-    std::string format(const char* fmt, ...)
+    inline std::string format(const char* fmt, ...)
 #else
     // Missing std::string formatting function - provided by the cppformat library
     inline std::string format(const char *format, fmt::ArgList args) {
