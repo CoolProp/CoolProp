@@ -48,14 +48,14 @@ deb http://debian.repo.frc.s3.amazonaws.com jessie main
 Add the maintainer key for the repository
 
 ```
-sudo wget -O - http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key | apt-key add -
+sudo wget -O - http://debian.repo.frc.s3.amazonaws.com/rbmj.gpg.key | sudo apt-key add -
 ```
 
 Run the following commands:
 
 ```
 sudo apt-get update
-sudo apt-get install gcc-powerpc-wrs-vxwork
+sudo apt-get install gcc-powerpc-wrs-vxworks
 ```
 
 Building your own version of GCC for VxWorks Target
