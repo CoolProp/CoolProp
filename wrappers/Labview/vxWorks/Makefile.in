@@ -2,6 +2,8 @@
 # appropriate.
 DEBUG_MODE = 0
 
+COOLPROP_ROOT = ${COOLPROP_ROOT}
+
 ADDED_CFLAGS = -D__powerpc__ -DDISABLE_CATCH
 ADDED_INCLUDES = ${INCLUDE_DIRECTORIES}
 ADDED_LIBS = -lstdc++ -lgcc -lsupc++
@@ -41,7 +43,7 @@ TOOL_FAMILY = gnu
 TOOL = gnu
 CC_ARCH_SPEC = -mcpu=603 -mstrict-align 
 
-IDE_INCLUDES = -I$(WIND_BASE)/target/h -I$(WIND_BASE)/target/h/wrn/coreip ${APP_INCLUDE_DIRS}
+IDE_INCLUDES = -I$(WIND_BASE)/target/h -I$(WIND_BASE)/target/h/wrn/coreip
 
 # This basic rule compiles a .c file into a .o file. It can be adapted to
 # all other source files that gcc can compile, including assembly (.s) and
@@ -49,10 +51,20 @@ IDE_INCLUDES = -I$(WIND_BASE)/target/h -I$(WIND_BASE)/target/h/wrn/coreip ${APP_
 # copy this rule and modify its extension and compile flags for the
 # required source file type.
 
+# Recursively find all sources
+# see http://stackoverflow.com/a/3774731
+SOURCES := $(shell find $(COOLPROP_ROOT)src -name '*.cpp')
+
+# Get list of object files, with paths
+# see http://stackoverflow.com/a/3774731
+OBJECTS := $(addprefix $(OBJ_DIR)/,$(SOURCES:%.cpp=%.o))
+# Strip off the root path
+OBJECTS := $(subst $(COOLPROP_ROOT),, $(OBJECTS))
+
 # Adapted rule for .cpp files
-$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp
-	mkdir -p $(subst $(SRC_DIR),$(OBJ_DIR)/,$<)
-	powerpc-wrs-vxworks-g++ $(CFLAGS) $(CC_ARCH_SPEC) -ansi  -Wall  -MD -MP $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
+$(OBJ_DIR)/%.o : $(COOLPROP_ROOT)%.cpp
+	mkdir -p $(subst $(COOLPROP_ROOT),$(OBJ_DIR)/, $<)
+	g++ppc $(CFLAGS) $(CC_ARCH_SPEC) -ansi  -Wall  -MD -MP $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 
 all:
   @echo "Please execute next commands:"
@@ -63,7 +75,6 @@ $(PROJECT_TARGETS) : $(OBJECTS)
 	powerpc-wrs-vxworks-g++ $(LINKFLAGS) $(CC_ARCH_SPEC) -fdollars-in-identifiers -Wall $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES)  -o ctdt.o -c ctdt.c
 	powerpc-wrs-vxworks-g++ -r -nostdlib -Wl,-X -T /usr/powerpc-wrs-vxworks/share/ldscripts/dkm.ld -o "$@" $(OBJECTS) $(LIBPATH) $(LIBS)  $(ADDED_LIBPATH) $(ADDED_LIBS) ctdt.o
 	rm -f ctdt.c ctdt.o
-
 
 check_objectdir :
 	@if [ ! -d "$(OBJ_DIR)" ]; then\
