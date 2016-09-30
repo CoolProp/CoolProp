@@ -4,7 +4,7 @@ DEBUG_MODE = 0
 
 COOLPROP_ROOT = ${COOLPROP_ROOT}
 
-ADDED_CFLAGS = -D__powerpc__ -DNO_CPPFORMAT
+ADDED_CFLAGS = -D__powerpc__ -DNO_CPPFORMAT -DNO_TABULAR_BACKENDS
 ADDED_INCLUDES = ${INCLUDE_DIRECTORIES}
 ADDED_LIBS = -lstdc++ -lgcc -lsupc++
 
@@ -13,7 +13,7 @@ OBJ_DIR := PPC603gnu_DEBUG
 CFLAGS = -g -mlongcall
 else
 OBJ_DIR := PPC603gnu
-CFLAGS = -Os -fstrength-reduce -fno-builtin -fno-strict-aliasing -mlongcall
+CFLAGS = -Os -fstrength-reduce -fno-builtin -fno-strict-aliasing -mlongcall -fpermissive
 endif
 
 LINKFLAGS = $(CFLAGS) -v
@@ -64,7 +64,7 @@ OBJECTS := $(subst $(COOLPROP_ROOT),, $(OBJECTS))
 # Adapted rule for .cpp files
 $(OBJ_DIR)/%.o : $(COOLPROP_ROOT)%.cpp
 	mkdir -p $(subst $(COOLPROP_ROOT),$(OBJ_DIR)/, $<)
-	g++ppc $(CFLAGS) $(CC_ARCH_SPEC) -ansi  -Wall  -MD -MP $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
+	powerpc-wrs-vxworks-g++ $(CFLAGS) $(CC_ARCH_SPEC) -ansi  -Wall  -MD -MP $(ADDED_CFLAGS) $(IDE_INCLUDES) $(ADDED_INCLUDES) -DCPU=$(CPU) -DTOOL_FAMILY=$(TOOL_FAMILY) -DTOOL=$(TOOL) -D_WRS_KERNEL   $(DEFINES) -o "$@" -c "$<"
 
 all:
   @echo "Please execute next commands:"
