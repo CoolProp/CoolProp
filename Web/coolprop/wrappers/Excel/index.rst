@@ -45,25 +45,71 @@ Pre-compiled Binaries for OSX
 
 Part 1:
 -------
-Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit/`. Place the downloaded file called libCoolProp.dylib in the ${HOME}/lib folder (make this folder if needed).
+We need to convince Microsoft Excel to load our shared library, and it seems the only place it is willing to look for shared libraries is in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``, where ``${USER}`` should be replaced with your user name.  This is because Excel is now sandboxed.
+
+Following http://apple.stackexchange.com/a/106814, save these contents as the file ``~/Library/LaunchAgents/my.startup.plist`` (obviously replace ``ihb`` with the appropriate user name)::
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+    <key>Label</key>
+    <string>my.startup</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>sh</string>
+      <string>-c</string>
+      <string>launchctl setenv DYLD_LIBRARY_PATH "/Users/ihb/Library/Group Containers/UBF8T346G9.Office"</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    </dict>
+    </plist>
+
+This ``.plist`` will be run as soon as the computer starts, and will set the ``DYLD_LIBRARY_PATH`` environmental variable, and Microsoft Excel will then read this variable, and be willing to load your shared library
+
+Make sure to log out and log back in to have this ``.plist`` take effect.
+
+Part 1a:
+--------
+If you want to add additional paths to the terminal, you can add a line like this to your ``~/.bash_profile`` for instance to append paths to the ``DYLD_LIBRARY_PATH`` variable. It calls ``launchctl`` to extract the ``DYLD_LIBRARY_PATH`` environment variable and prepends ``/another/path`` to it::
+
+    export DYLD_LIBRARY_PATH="/another/path:`launchctl getenv DYLD_LIBRARY_PATH`"
 
 Part 2:
 -------
-Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version from :sfnightly:`MicrosoftExcel`.
+Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library/Darwin/32bit/`.  Development binaries coming from the buildbot server can be found at :sfnightly:`shared_library/Darwin/32bit/`. Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version from :sfnightly:`MicrosoftExcel`.
 
-1. Open Excel 2011 for Mac
-2. Go to the menu Tools-->Add-Ins
-3. Click the "Select..." button
-4. Browse to the file CoolProp.xlam you downloaded, select it
-5. Make sure the CoolProp Add-in is selected.
-6. Add this code to a cell - it should work::
+.. warning:: 
+
+    Tested on Excel 2016 only
+
+Place XLAM file in ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``, where ``${USER}`` should be replaced with your user name
+
+Place the downloaded file ``libCoolProp.dylib`` in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office`` too, but RENAME it to ``libCoolProp_32bit.dylib`` (this is to ensure that there is no name clash with the standard 64-bit shared library).
+
+Part 3:
+-------
+
+Open Excel, go to ``Tools/Add-ins...`` . In browse, go to the folder listed above with the ``BF8T346G9.Office`` in it. Select CoolProp.xlam.
+
+Part 4:
+-------
+Add this to a cell::
 
     =PropsSI("T","P",101325,"Q",0,"Water")
 
-If it doesn't work and you get error number 53, it might be because you have a 64-bit .dylib file and you want a 32-bit .dylib file.  For instance when you run the ``file`` command on your .dylib, you should see something like:
+make sure you get something like 373.1242958 K.
 
-    $ file libCoolProp.dylib
+Debugging
+---------
+
+* If it doesn't work and you get error number 53, it might be because you have a 64-bit .dylib file and you want a 32-bit .dylib file.  For instance when you run the ``file`` command on your .dylib, you should see something like:
+
+    $ file libCoolProp_32bit.dylib
     libCoolProp.dylib: Mach-O dynamically linked shared library i386
+
+  the ``i386`` is the important bit, that indicates that the shared library is 32-bit.
 
 User-compiled Binaries
 ======================
