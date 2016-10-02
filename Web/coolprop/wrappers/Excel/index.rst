@@ -18,12 +18,23 @@ Part 1:
 Part 2:
 -------
 1. Open Excel
-2. Go to the menu File-->Options-->Add-Ins
-3. At the bottom, select Manage: Excel Add-ins, then click the Go.. button
-4. Click the browse button
-5. Browse to the file CoolProp.xlam you downloaded, select it
-6. Make sure the CoolProp Add-in is selected.
-7. Open the file TestExcel.xlsx and try to re-evaluate one of the cells - they should work now
+2. Determine the trusted directory for addins by going to File->Options...->Trust Center->Trust Center Settings...->Trusted Locations . Note the add-ins directory. Put your CoolProp.xlam in that directory
+3. Go to the menu File-->Options-->Add-Ins
+4. At the bottom, select Manage: Excel Add-ins, then click the Go.. button
+5. Click the browse button
+6. Browse to the file CoolProp.xlam you downloaded, select it (if necessary, CoolProp might already be visible)
+7. Make sure the CoolProp Add-in is selected.
+8. Open the file TestExcel.xlsx and try to re-evaluate one of the cells - they should work now
+
+If you are trying to over-write the CoolProp xlam, you should:
+
+a) In Excel, determine the location of the CoolProp xlam that it wants to load by going to Addins menu
+b) Move the xlam somewhere else temporarily
+c) In Excel, uncheck the CoolProp add-in - it might have already warned about the addin not being in the right place
+d) Restart Excel. Check that the addin has been removed, or at least the path is not the old path to CoolProp
+e) Determine the trusted directory for addins by going to File->Options...->Trust Center->Trust Center Settings...->Trusted Locations . Note the add-ins directory. Put your CoolProp.xlam in that directory
+f) In Excel, add the add-in for CoolProp again by checking it and browsing to the correct location
+g) Restart Excel, add-in should still be there.
 
 .. note::
 
