@@ -1380,6 +1380,8 @@ public:
         two("d2_ndtaudni_dxj_dTau__constdelta", MD::d2_ndtaudni_dxj_dTau__constdelta, MD::d_ndtaudni_dxj__constdelta_tau, TAU);
         
         one_comp("dTrdxi__constxj", MD::dTrdxi__constxj, MD::Tr);
+        one_comp("d2Tr_dxidbetaT", MD::d2Tr_dxidbetaT, MD::dTr_dbetaT);
+        one_comp("d2Tr_dxidgammaT", MD::d2Tr_dxidgammaT, MD::dTr_dgammaT);
         // (??)two_comp("d2Trdxi2__constxj", MD::d2Trdxi2__constxj, MD::dTrdxi__constxj);
         two_comp("d2Trdxidxj", MD::d2Trdxidxj, MD::dTrdxi__constxj);
         three_comp("d3Trdxidxjdxk", MD::d3Trdxidxjdxk, MD::d2Trdxidxj);
@@ -1388,6 +1390,8 @@ public:
         three_comp("d2_ndTrdni_dxj_dxk__constxi", MD::d2_ndTrdni_dxj_dxk__constxi, MD::d_ndTrdni_dxj__constxi);
         
         one_comp("drhormolardxi__constxj", MD::drhormolardxi__constxj, MD::rhormolar);
+        one_comp("d2rhormolar_dxidbetaV", MD::d2rhormolar_dxidbetaV, MD::drhormolar_dbetaV);
+        one_comp("d2rhormolar_dxidgammaV", MD::d2rhormolar_dxidgammaV, MD::drhormolar_dgammaV);
         // (??) two_comp("d2rhormolardxi2__constxj", MD::d2rhormolardxi2__constxj, MD::drhormolardxi__constxj);
         two_comp("d2rhormolardxidxj", MD::d2rhormolardxidxj, MD::drhormolardxi__constxj);
         three_comp("d3rhormolardxidxjdxk", MD::d3rhormolardxidxjdxk, MD::d2rhormolardxidxj);

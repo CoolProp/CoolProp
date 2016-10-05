@@ -163,6 +163,15 @@ CoolPropDbl GERG2008ReducingFunction::dTr_dgammaT(const std::vector<CoolPropDbl>
 {
     return dYr_dgamma(x, beta_T, gamma_T, T_c, Yc_T);
 }
+CoolPropDbl GERG2008ReducingFunction::d2Tr_dxidgammaT(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
+{
+    return d2Yrdxidgamma(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
+};
+CoolPropDbl GERG2008ReducingFunction::d2Tr_dxidbetaT(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
+{
+    return d2Yrdxidbeta(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
+};
+
 CoolPropDbl GERG2008ReducingFunction::dTrdxi__constxj(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
 {
     return dYrdxi__constxj(x, i, beta_T, gamma_T, T_c, Yc_T, xN_flag);
@@ -183,6 +192,25 @@ CoolPropDbl GERG2008ReducingFunction::rhormolar(const std::vector<CoolPropDbl> &
 {
     return 1/Yr(x, beta_v, gamma_v, v_c, Yc_v);
 }
+
+CoolPropDbl GERG2008ReducingFunction::d2rhormolar_dxidgammaV(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
+{
+    CoolPropDbl rhor = rhormolar(x);
+    return -rhor*rhor*d2vrmolar_dxidgammaV(x,i,xN_flag) + 2*POW3(rhor)*dvrmolardxi__constxj(x,i,xN_flag)*dYr_dgamma(x,beta_v,gamma_v,v_c,Yc_v);
+}
+CoolPropDbl GERG2008ReducingFunction::d2rhormolar_dxidbetaV(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
+{
+    CoolPropDbl rhor = rhormolar(x);
+    return -rhor*rhor*d2vrmolar_dxidbetaV(x,i,xN_flag) + 2*POW3(rhor)*dvrmolardxi__constxj(x,i,xN_flag)*dYr_dbeta(x, beta_v, gamma_v, v_c, Yc_v);
+}
+CoolPropDbl GERG2008ReducingFunction::d2vrmolar_dxidgammaV(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
+{
+    return d2Yrdxidgamma(x, i, beta_v, gamma_v, v_c, Yc_v, xN_flag);
+};
+CoolPropDbl GERG2008ReducingFunction::d2vrmolar_dxidbetaV(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const
+{
+    return d2Yrdxidbeta(x, i, beta_v, gamma_v, v_c, Yc_v, xN_flag);
+};
 CoolPropDbl GERG2008ReducingFunction::drhormolar_dgammaV(const std::vector<CoolPropDbl> &x) const
 {
     CoolPropDbl rhor = rhormolar(x);
@@ -327,6 +355,84 @@ CoolPropDbl GERG2008ReducingFunction::dYrdxi__constxj(const std::vector<CoolProp
         return dYr_dxi;
     }
     else{
+        throw ValueError(format("xN dependency flag invalid"));
+    }
+}
+CoolPropDbl GERG2008ReducingFunction::d2Yrdxidbeta(const std::vector<CoolPropDbl> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
+{
+    if (xN_flag == XN_INDEPENDENT) {
+        // See Table B9 from Kunz Wagner 2012 (GERG 2008)
+        CoolPropDbl xi = x[i];
+        CoolPropDbl deriv = 0;
+        for (std::size_t k = 0; k < i; k++)
+        {
+            /*
+            Sympy code:
+            x_k,x_i,beta_Y = symbols('x_k,x_i,beta_Y')
+            dfkidxi = x_k*(x_k+x_i)/(beta_Y**2*x_k+x_i) + x_k*x_i/(beta_Y**2*x_k+x_i)*(1-(x_k+x_i)/(beta_Y**2*x_k+x_i))
+            simplify(diff(dfkidxi, beta_Y))
+            */
+            double xk = x[k], beta_Y = beta[k][i], beta_Y_squared = beta_Y*beta_Y;
+            double d2fYkidxidbeta = 2*beta_Y*pow(xk, 2)*(xi*(xi + xk*(-beta_Y_squared + 1) + xk) - (xi + xk)*(beta_Y_squared*xk + xi)) / pow(beta_Y_squared*xk + xi, 3);
+            deriv += c_Y_ij(k, i, beta, gamma, Y_c_ij)*d2fYkidxidbeta + dfYkidxi__constxk(x, k, i, beta)*2*gamma[k][i]*Y_c_ij[k][i];
+        }
+        for (std::size_t k = i + 1; k < N; k++)
+        {
+            /*
+            x_k,x_i,beta_Y = symbols('x_k,x_i,beta_Y')
+            dfikdxi = x_k*(x_i+x_k)/(beta_Y**2*x_i+x_k) + x_i*x_k/(beta_Y**2*x_i+x_k)*(1-beta_Y**2*(x_i+x_k)/(beta_Y**2*x_i+x_k))
+            print(ccode(simplify(diff(dfikdxi, beta_Y))))
+            */
+            double xk = x[k], beta_Y = beta[i][k], beta_Y_squared = beta_Y*beta_Y;
+            double d2fYikdxidbeta = 2 * beta_Y*xi*xk*(xi*(-beta_Y_squared*xi + beta_Y_squared*(xi + xk) - xk) - xk*(xi + xk) - (xi + xk)*(beta_Y_squared*xi + xk)) / pow(beta_Y_squared*xi + xk, 3);
+            deriv += c_Y_ij(i, k, beta, gamma, Y_c_ij)*d2fYikdxidbeta + dfYikdxi__constxk(x, i, k, beta)*2*gamma[i][k]*Y_c_ij[i][k];
+
+        }
+        return deriv;
+    }
+    else if (xN_flag == XN_DEPENDENT) {
+        throw NotImplementedError("Not yet implemented for xN_dependent");
+    }
+    else {
+        throw ValueError(format("xN dependency flag invalid"));
+    }
+}
+CoolPropDbl GERG2008ReducingFunction::d2Yrdxidgamma(const std::vector<CoolPropDbl> &x, std::size_t i, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
+{
+    if (xN_flag == XN_INDEPENDENT) {
+        // See Table B9 from Kunz Wagner 2012 (GERG 2008)
+        CoolPropDbl xi = x[i];
+        CoolPropDbl deriv = 0;
+        for (std::size_t k = 0; k < i; k++){
+            deriv += 2*beta[k][i]*Y_c_ij[k][i]*dfYkidxi__constxk(x, k, i, beta);
+        }
+        for (std::size_t k = i + 1; k < N; k++){
+            deriv += 2*beta[i][k]*Y_c_ij[i][k]*dfYikdxi__constxk(x, i, k, beta);
+        }
+        return deriv;
+    }
+    else if (xN_flag == XN_DEPENDENT) {
+        // Table S1 from Gernert, 2014, supplemental information
+        if (i == N - 1) { return 0.0; }
+        CoolPropDbl deriv = 0;
+        for (std::size_t k = 0; k < i; k++)
+        {
+            deriv += 2 * beta[k][i] * Y_c_ij[k][i] * dfYkidxi__constxk(x, k, i, beta);
+        }
+        for (std::size_t k = i + 1; k < N - 1; k++)
+        {
+            deriv += 2 * beta[i][k] * Y_c_ij[i][k] * dfYikdxi__constxk(x, i, k, beta);
+        }
+        double beta_Y_iN = beta[i][N - 1], xN = x[N - 1];
+        deriv += 2 * beta[i][N - 1] * Y_c_ij[i][N - 1] * (xN*(x[i] + xN) / (pow(beta_Y_iN, 2)*x[i] + xN) + (1 - beta_Y_iN*beta_Y_iN)*x[i] * xN*xN / POW2(beta_Y_iN*beta_Y_iN*x[i] + xN));
+        for (std::size_t k = 0; k < N - 1; ++k)
+        {
+            double beta_Y_kN = beta[k][N - 1], xk = x[k], beta_Y_kN_squared = beta_Y_kN*beta_Y_kN;
+            deriv += 2 * beta[k][N - 1] * Y_c_ij[k][N - 1] * (-xk*(xk + xN) / (beta_Y_kN_squared*xk + xN) + (1 - beta_Y_kN_squared)*xN*xk*xk / POW2(beta_Y_kN_squared*xk + xN));
+        }
+        return deriv;
+    }
+    else {
         throw ValueError(format("xN dependency flag invalid"));
     }
 }
