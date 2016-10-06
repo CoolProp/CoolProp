@@ -382,6 +382,28 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   #
 ENDIF()
 
+if (COOLPROP_IOS_TARGET)
+  # Set the Base SDK (only change the SDKVER value, if for instance, you are building for iOS 5.0):
+  set(SDKVER "9.2")
+  set(DEVROOT "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer")
+  set(SDKROOT "${DEVROOT}/SDKs/iPhoneOS${SDKVER}.sdk")
+  if(EXISTS ${SDKROOT})
+      set(CMAKE_OSX_SYSROOT "${SDKROOT}")
+  else()
+      message("Warning, iOS Base SDK path not found: " ${SDKROOT})
+  endif()
+
+  # Will resolve to "Standard (armv6 armv7)" on Xcode 4.0.2 and to "Standard (armv7)" on Xcode 4.2:
+  set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_32_BIT)")
+
+  # seamless toggle between device and simulator
+  set(CMAKE_XCODE_EFFECTIVE_PLATFORMS "-iphoneos;-iphonesimulator")
+
+  include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+  )
+endif()
+
 if (COOLPROP_DEBIAN_PACKAGE)
     if(NOT UNIX)
       message(FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
