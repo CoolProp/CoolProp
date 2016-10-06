@@ -157,6 +157,14 @@ public:
     /// Default destructor
     ~GERG2008ReducingFunction(){};
 
+    /// Set all beta and gamma values in one shot
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, double betaT, double gammaT, double betaV, double gammaV){
+        beta_T[i][j] = betaT; beta_T[j][i] = 1/betaT;
+        gamma_T[i][j] = gammaT; gamma_T[j][i] = gammaT;
+        beta_v[i][j] = betaV; beta_v[j][i] = 1/betaV;
+        gamma_v[i][j] = gammaV; gamma_v[j][i] = gammaV;
+    }
+    
     /// Set a parameter
     virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value){
         if (parameter == "betaT"){
