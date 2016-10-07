@@ -13,7 +13,7 @@ This tutorial is based on a tutorial put together by `Babak Samareh <mailto:baba
     
 2. Make a build folder and generate the headers::
 
-    mkdir build && cd build
+    cd CoolProp && mkdir build && cd build
     cmake .. -G Xcode -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_IOS_TARGET=ON
     
 3. Open the generated CoolProp.xcodeproj file in xCode.
