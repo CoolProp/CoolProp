@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 2.8.11)
 
 
 if (DEFINED COOLPROP_INSTALL_PREFIX)
@@ -34,8 +34,8 @@ set (COOLPROP_VERSION_REVISION dev)
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
-#string ( TIMESTAMP COOLPROP_YEAR 2010-%Y )
-set ( COOLPROP_YEAR "2010-2016" )
+string ( TIMESTAMP COOLPROP_YEAR 2010-%Y )
+#set ( COOLPROP_YEAR "2010-2016" )
 set ( COOLPROP_PUBLISHER "The CoolProp developers")
 
 #######################################
@@ -382,6 +382,28 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   #
 ENDIF()
 
+if (COOLPROP_IOS_TARGET)
+  # Set the Base SDK (only change the SDKVER value, if for instance, you are building for iOS 5.0):
+  set(SDKVER "9.2")
+  set(DEVROOT "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer")
+  set(SDKROOT "${DEVROOT}/SDKs/iPhoneOS${SDKVER}.sdk")
+  if(EXISTS ${SDKROOT})
+      set(CMAKE_OSX_SYSROOT "${SDKROOT}")
+  else()
+      message("Warning, iOS Base SDK path not found: " ${SDKROOT})
+  endif()
+
+  # Will resolve to "Standard (armv6 armv7)" on Xcode 4.0.2 and to "Standard (armv7)" on Xcode 4.2:
+  set(CMAKE_OSX_ARCHITECTURES "$(ARCHS_STANDARD_32_BIT)")
+
+  # seamless toggle between device and simulator
+  set(CMAKE_XCODE_EFFECTIVE_PLATFORMS "-iphoneos;-iphonesimulator")
+
+  include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+  )
+endif()
+
 if (COOLPROP_DEBIAN_PACKAGE)
     if(NOT UNIX)
       message(FATAL_ERROR "COOLPROP_DEBIAN_PACKAGE can only be used on linux host")
@@ -395,29 +417,24 @@ if (COOLPROP_DEBIAN_PACKAGE)
     install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolPropLib.h DESTINATION "${CMAKE_INSTALL_PREFIX}/usr/include")
 endif()
 
-#~ if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
-    #~ # strip off the path up to the src directory
+if (COOLPROP_VXWORKS_MAKEFILE)
     
-    #~ set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    set(INCLUDE_DIRECTORIES)
+    foreach (_srcFile ${APP_INCLUDE_DIRS})
+        string(CONCAT _el "-I\"" ${_srcFile} "\"")
+        string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "$(COOLPROP_ROOT)" _el "${_el}")
+        list (APPEND INCLUDE_DIRECTORIES ${_el})
+    endforeach()
+    string(REPLACE ";" " " INCLUDE_DIRECTORIES "${INCLUDE_DIRECTORIES}")
+    set(OLD_ROOT /home/ian/.wine/drive_c/)
+    set(NEW_ROOT c:/)
+    string(REPLACE ${OLD_ROOT} ${NEW_ROOT} INCLUDE_DIRECTORIES "${INCLUDE_DIRECTORIES}")
+    set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    string(REPLACE ${OLD_ROOT} ${NEW_ROOT} SRC "${SRC}")
+    file(RELATIVE_PATH COOLPROP_ROOT "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
     
-    #~ set(OBJECTS)
-    #~ foreach (_srcFile ${APP_SOURCES})
-        #~ string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/src/" "$(OBJ_DIR)/" _el ${_srcFile})
-        #~ string(REPLACE ".cpp" ".o" _el ${_el})
-        #~ list (APPEND OBJECTS ${_el})
-    #~ endforeach()
-    #~ set(OBJECTS "${OBJECTS}")
-    #~ string(REPLACE ";" " " OBJECTS "${OBJECTS}")
-    
-    #~ set(INCLUDE_DIRECTORIES)
-    #~ foreach (_srcFile ${APP_INCLUDE_DIRS})
-        #~ string(CONCAT _el "-I\"" ${_srcFile} "\"")
-        #~ list (APPEND INCLUDE_DIRECTORIES ${_el})
-    #~ endforeach()
-    #~ string(REPLACE ";" " " INCLUDE_DIRECTORIES "${INCLUDE_DIRECTORIES}")
-    
-    #~ CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Labview/VxWorks/Makefile.in" "Makefile")
-#~ endif()
+    CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Labview/vxWorks/Makefile.in" "vxWorksMakefile")
+endif()
 
 if (COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
     list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
@@ -740,12 +757,9 @@ if (COOLPROP_CSHARP_MODULE)
   
   add_dependencies (${app_name} generate_headers)  
 
-  # Remove the Example.cs file so it doesn't get packaged in platform-independent zip file
-  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/Example.cs")
-
   add_custom_command(TARGET CoolProp
                      POST_BUILD
-                     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.cs"
+                     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.cs" -x!Example.cs
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   add_custom_command(TARGET CoolProp
                      POST_BUILD
@@ -874,13 +888,10 @@ if (COOLPROP_JAVA_MODULE)
   endif()
   
   add_dependencies (${app_name} generate_headers)
-
-  # Remove the Example.java file so it doesn't get packaged in platform-independent zip file
-  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/Example.java")
   
   add_custom_command(TARGET CoolProp
                      POST_BUILD
-                     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.java"
+                     COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.java" -x!Example.java
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   add_custom_command(TARGET CoolProp
                      POST_BUILD

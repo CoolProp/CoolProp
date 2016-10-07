@@ -6,11 +6,16 @@
     #include <algorithm>
     #include <functional>
 
+#if !defined(NO_CPPFORMAT)
     #ifndef FMT_HEADER_ONLY
     #define FMT_HEADER_ONLY
     #endif
     #include "fmt/format.h" // For addition of the string formatting functions and macros from cppformat
     #undef FMT_HEADER_ONLY
+#else
+    #include <vector>
+    #include <string>
+#endif
 
     #if !defined(__powerpc__)
     /// Copy string to wstring
@@ -43,11 +48,16 @@
         return lhs == rhs;
     }
 
+#if defined(NO_CPPFORMAT)
+    // Missing string formatting function, this old guy is needed for ancient gcc compilers on PowerPC for VxWorks
+    inline std::string format(const char* fmt, ...);
+#else
     // Missing std::string formatting function - provided by the cppformat library
     inline std::string format(const char *format, fmt::ArgList args) {
       return fmt::sprintf(format, args);
     }
     FMT_VARIADIC(std::string, format, const char *)
+#endif
 
     // Missing string split - like in Python
     std::vector<std::string> strsplit(const std::string &s, char del);

@@ -647,8 +647,8 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData &env, parameters i
     
     // If number of intersections is 0, input is out of range, quit
     if (intersections.size() == 0){ 
-        throw ValueError(format("Input is out of range for primary value [%Lg], inputs were (%d,%Lg,%d,%Lg); no intersections found", 
-            value1, get_parameter_information(iInput1,"short"), value1, get_parameter_information(iInput2,"short"), value2
+        throw ValueError(format("Input is out of range for primary value [%Lg], inputs were (%s,%Lg,%s,%Lg); no intersections found", 
+            value1, get_parameter_information(iInput1,"short").c_str(), value1, get_parameter_information(iInput2,"short").c_str(), value2
             )); 
     }
     

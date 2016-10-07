@@ -233,33 +233,21 @@ namespace cpjson
         return buffer.GetString();
     };
 
-//    /// A convenience function to set an array compactly
-//    template<typename T>
-//    inline void set_array(const char *key, const std::vector<T> &vec, rapidjson::Value &value, rapidjson::Document &doc)
-//    {
-//        rapidjson::Value _v(rapidjson::kArrayType);
-//        for (unsigned int i = 0; i < vec.size(); ++i)
-//        {
-//            _v.PushBack(vec[i],doc.GetAllocator());
-//        }
-//        value.AddMember(key, _v, doc.GetAllocator());
-//    };
-//
-//    /// A convenience function to set an array compactly
-//    template<typename T>
-//    inline void set_array2D(const char *key, const std::vector< std::vector<T> > &vec, rapidjson::Value &value, rapidjson::Document &doc)
-//    {
-//        rapidjson::Value _i(rapidjson::kArrayType);
-//        rapidjson::Value _j;
-//        for (unsigned int i = 0; i < vec.size(); ++i) {
-//            _j = rapidjson::Value(rapidjson::kArrayType);
-//            for (unsigned int j = 0; j < vec[i].size(); ++j) {
-//                _j.PushBack(vec[j],doc.GetAllocator());
-//            }
-//            _i.PushBack(_j,doc.GetAllocator());
-//        }
-//        value.AddMember(key, _i, doc.GetAllocator());
-//    };
+    /// A convenience function to set a 2D array of double compactly
+    inline void set_double_array2D(const char *key, const std::vector< std::vector<double> > &vec, rapidjson::Value &value, rapidjson::Document &doc)
+    {
+        rapidjson::Value _i(rapidjson::kArrayType);
+        for (unsigned int i = 0; i < vec.size(); ++i) {
+            rapidjson::Value _j(rapidjson::kArrayType);
+            for (unsigned int j = 0; j < vec[i].size(); ++j) {
+                rapidjson::Value v(rapidjson::kNumberType);
+                v.SetDouble(vec[i][j]);
+                _j.PushBack(v, doc.GetAllocator());
+            }
+            _i.PushBack(_j,doc.GetAllocator());
+        }
+        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _i, doc.GetAllocator());
+    };
 
     /// A convenience function to set a double array compactly
     inline void set_double_array(const char *key, const std::vector<double> &vec, rapidjson::Value &value, rapidjson::Document &doc)
@@ -299,12 +287,12 @@ namespace cpjson
     inline schema_validation_code validate_schema(const std::string &schemaJson, const std::string &inputJson, std::string &errstr){
         rapidjson::Document sd;
         sd.Parse(schemaJson.c_str());
-        if (sd.HasParseError()) { errstr = fmt::sprintf("Invalid schema: %s\n", schemaJson.c_str()); return SCHEMA_INVALID_JSON; }
+        if (sd.HasParseError()) { errstr = format("Invalid schema: %s\n", schemaJson.c_str()); return SCHEMA_INVALID_JSON; }
         rapidjson::SchemaDocument schema(sd); // Compile a Document to SchemaDocument
         
         rapidjson::Document d;
         d.Parse(inputJson.c_str());
-        if (d.HasParseError()) { errstr = fmt::sprintf("Invalid input json: %s\n", inputJson.c_str()); return INPUT_INVALID_JSON; }
+        if (d.HasParseError()) { errstr = format("Invalid input json: %s\n", inputJson.c_str()); return INPUT_INVALID_JSON; }
         
         rapidjson::SchemaValidator validator(schema);
         if (!d.Accept(validator)) {
@@ -312,8 +300,8 @@ namespace cpjson
             // Output diagnostic information
             rapidjson::StringBuffer sb;
             validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-            errstr = fmt::sprintf("Invalid schema: %s\n", sb.GetString());
-            errstr += fmt::sprintf("Invalid keyword: %s\n", validator.GetInvalidSchemaKeyword());
+            errstr = format("Invalid schema: %s\n", sb.GetString());
+            errstr += format("Invalid keyword: %s\n", validator.GetInvalidSchemaKeyword());
             sb.Clear();
             return SCHEMA_NOT_VALIDATED;
         }

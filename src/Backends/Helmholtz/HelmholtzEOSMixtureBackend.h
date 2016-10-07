@@ -162,7 +162,7 @@ public:
             case iacentric_factor: return fld.EOS().acentric;
             case imolar_mass: return fld.EOS().molar_mass;
             default:
-                throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short")));
+                throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         }
     }
 

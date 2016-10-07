@@ -1262,8 +1262,8 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         
         Eigen::VectorXd diffn = (r1-r2)/(2*dT);
         std::cout << format("For T\n");
-        std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
-        std::cout << "analytic: " << vec_to_string(J0.col(N-1), "%0.11Lg") << std::endl;
+        //std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
+        //std::cout << "analytic: " << vec_to_string(J0.col(N-1), "%0.11Lg") << std::endl;
     }
     {
         // Derivatives with respect to rho'
@@ -1281,8 +1281,8 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
         
         Eigen::VectorXd diffn = (rr1-rr2)/(2*drho);
         std::cout << format("For rho\n");
-        std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
-        std::cout << "analytic: " << vec_to_string(J0.col(N-1), "%0.11Lg") << std::endl;
+        //std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
+        //std::cout << "analytic: " << vec_to_string(J0.col(N-1), "%0.11Lg") << std::endl;
     }
     for (std::size_t i = 0; i < x.size()-1;  ++i)
     {
@@ -1306,8 +1306,8 @@ void SaturationSolvers::newton_raphson_saturation::check_Jacobian()
     
         Eigen::VectorXd diffn = (r1-r2)/(2*dx);
         std::cout << format("For x%d N %d\n", i, N);
-        std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
-        std::cout << "analytic: " << vec_to_string(J0.col(i), "%0.11Lg") << std::endl;
+        //std::cout << "numerical: " << vec_to_string(diffn, "%0.11Lg") << std::endl;
+        //std::cout << "analytic: " << vec_to_string(J0.col(i), "%0.11Lg") << std::endl;
     }
 }
 void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &z, std::vector<CoolPropDbl> &z_incipient, newton_raphson_saturation_options &IO)
@@ -1382,7 +1382,7 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
             throw ValueError("invalid imposed_variable");
         }
         if(debug){
-			std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+			//std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
 		}
         
         min_rel_change = err_rel.cwiseAbs().minCoeff();
@@ -1749,7 +1749,7 @@ void StabilityRoutines::StabilityEvaluationClass::trial_compositions(){
     SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
     normalize_vector(x);
     normalize_vector(y);
-    if (debug){ fmt::printf("1) T: %g p: %g beta: %g\n", HEOS.T(), HEOS.p(), beta); }
+    if (debug){ std::cout << format("1) T: %g p: %g beta: %g\n", HEOS.T(), HEOS.p(), beta); }
 }
 void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int num_steps){
     // ----
@@ -1759,7 +1759,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
     HEOS.SatL->set_mole_fractions(x); HEOS.SatL->calc_reducing_state();
     HEOS.SatV->set_mole_fractions(y); HEOS.SatV->calc_reducing_state();
     
-    if (debug){ fmt::printf("2) SS1: i beta K x y rho' rho''\n"); }
+    if (debug){ std::cout << format("2) SS1: i beta K x y rho' rho''\n"); }
     for (int step_count = 0; step_count < num_steps; ++step_count){
         // Set the composition
         HEOS.SatL->set_mole_fractions(x); HEOS.SatV->set_mole_fractions(y);
@@ -1791,7 +1791,7 @@ void StabilityRoutines::StabilityEvaluationClass::successive_substitution(int nu
         SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
         normalize_vector(x);
         normalize_vector(y);
-        if (debug){ fmt::printf("2) %d %g %s %s %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f"), vec_to_string(x, "%0.6f"), vec_to_string(y, "%0.6f"), rhomolar_liq, rhomolar_vap); }
+        if (debug){ std::cout << format("2) %d %g %s %s %s %g %g\n", step_count, beta, vec_to_string(K, "%0.6f").c_str(), vec_to_string(x, "%0.6f").c_str(), vec_to_string(y, "%0.6f").c_str(), rhomolar_liq, rhomolar_vap); }
     }
 }
 void StabilityRoutines::StabilityEvaluationClass::check_stability(){
@@ -1820,11 +1820,11 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         this->tpd_vap = HEOS.SatV->tangent_plane_distance(the_T, the_p, y, rhomolar_vap);
         
         this->DELTAG_nRT = (1-beta)*tpd_liq + beta*(tpd_vap);
-        if (debug){ fmt::printf("3) tpd': %g tpd'': %g DELTAG/nRT: %g\n", tpd_liq, tpd_vap, DELTAG_nRT); }
+        if (debug){ std::cout << format("3) tpd': %g tpd'': %g DELTAG/nRT: %g\n", tpd_liq, tpd_vap, DELTAG_nRT); }
         
         // If any of these cases are met, feed is conclusively unstable, stop!
         if (this->tpd_liq < -DBL_EPSILON || this->tpd_vap < -DBL_EPSILON || this->DELTAG_nRT < -DBL_EPSILON){
-            if (debug){ fmt::printf("3) PHASE SPLIT beta in (eps,1-eps) \n"); }
+            if (debug){ std::cout << format("3) PHASE SPLIT beta in (eps,1-eps) \n"); }
             _stable = false; return;
         }
     }
@@ -1852,7 +1852,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     normalize_vector(xH);
     
     // For each composition, use successive substitution to try to evaluate stability
-    if (debug){ fmt::printf("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n"); }
+    if (debug){ std::cout << format("3) SS2: i x' x'' rho' rho'' tpd' tpd''\n"); }
 
     // We got this far, we assume stable phases
     _stable = true;
@@ -1884,7 +1884,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
         }
         normalize_vector(xL);
         normalize_vector(xH);
-        if (debug){ fmt::printf("3) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f"), vec_to_string(xH, "%0.6f"), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
+        if (debug){ std::cout << format("3) %d %s %s %g %g %g %g\n", step_count, vec_to_string(xL, "%0.6f").c_str(), vec_to_string(xH, "%0.6f").c_str(), rhomolar_liq, rhomolar_vap, tpd_L, tpd_H); }
         
         // Check if either of the phases have the bulk composition. If so, no phase split
         if (diffbulkL < 1e-2 || diffbulkH < 1e-2){

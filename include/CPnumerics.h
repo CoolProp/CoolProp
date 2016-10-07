@@ -7,6 +7,7 @@
 #include <stdlib.h> // For abs
 #include <algorithm> // For max
 #include <numeric>
+#include <cmath>
 #include "CPstrings.h"
 #include "Exceptions.h"
 
@@ -125,7 +126,7 @@ template <typename T> void bisect_vector(const std::vector<T> &vec, T val, std::
                 L = MR; rL = vec[MR] - val;
             }
             else{
-                throw CoolProp::ValueError(format("Unable to bisect segmented vector; neither chunk contains the solution %g %g %g %g", rL, rML, rMR, rR));
+                throw CoolProp::ValueError(format("Unable to bisect segmented vector; neither chunk contains the solution val:%g left:(%g,%g) right:(%g,%g)", val, vec[L], vec[ML], vec[MR], vec[R]));
             }
             M = (L+R)/2;
         }
@@ -195,7 +196,7 @@ template <typename T> void bisect_segmented_vector_slice(const std::vector<std::
                 L = MR; rL = mat[MR][j] - val;
             }
             else{
-                throw CoolProp::ValueError(format("Unable to bisect segmented vector slice; neither chunk contains the solution %g %g %g %g", rL,rML,rMR,rR));
+                throw CoolProp::ValueError(format("Unable to bisect segmented vector slice; neither chunk contains the solution %g lef:(%g,%g) right:(%g,%g)", val, mat[L][j], mat[ML][j], mat[MR][j], mat[R][j]));
             }
             M = (L+R)/2;
         }
