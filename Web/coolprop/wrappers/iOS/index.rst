@@ -26,6 +26,7 @@ This tutorial is based on a tutorial put together by `Babak Samareh <mailto:baba
 5. Setup your project.
 
     Under Architectures: Make sure that Build Active Architecture Only is set to NO
+    
     Under Deployment: Targeted Device Family: 1,2
 
 6. Change your scheme from Debug to Release. Build the project. 
