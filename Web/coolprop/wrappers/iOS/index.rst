@@ -23,7 +23,7 @@ This tutorial is based on a tutorial put together by `Babak Samareh <mailto:baba
     .. image:: xcode.png
         :height: 283px
 
-5. Set up your project.
+5. Setup your project.
 
     Under Architectures: Make sure that Build Active Architecture Only is set to NO
     Under Deployment: Targeted Device Family: 1,2
