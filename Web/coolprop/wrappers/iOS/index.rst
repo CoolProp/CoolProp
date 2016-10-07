@@ -11,13 +11,14 @@ This tutorial is based on a tutorial put together by `Babak Samareh <mailto:baba
 
     git clone https://github.com/CoolProp/CoolProp --recursive
     
-2. Generate the headers::
+2. Make a build folder and generate the headers::
 
-    cd CoolProp/dev && python generate_headers.py
+    mkdir build && cd build
+    cmake .. -G Xcode -DCOOLPROP_STATIC_LIBRARY=ON -DCOOLPROP_IOS_TARGET=ON
     
-3. Open XCode and create a new project, for the template, under iOS, choose Cocoa Touch Static Library and save the project somewhere.  Now there are two files generated with your project name, one .h and one .m. Get rid of them.
+3. Open the generated CoolProp.xcodeproj file in xCode.
 
-4. Right click on your project name and select "add files". Go to the folder where you have compiled CoolProp and add /src and /include folders. You should end up with something like this:
+4. Select the project root then under TARGETS select the CoolProp (Cocoa Touch Static Library) and open the Build Settings tab. You should end up with something like this:
 
     .. image:: xcode.png
         :height: 200px
