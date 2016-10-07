@@ -528,7 +528,7 @@ endif()
 # Windows package
 if (COOLPROP_WINDOWS_PACKAGE)
 
-  message(STATUS "Creating Excel add-in for COOLPROP_VERSION=${COOLPROP_VERSION}")
+  message(STATUS "Creating Windows installer for COOLPROP_VERSION=${COOLPROP_VERSION}")
   # Setting some basic build paths
   set(COOLPROP_WINDOWS_PACKAGE_32B_DIR "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL")
   set(COOLPROP_WINDOWS_PACKAGE_32B_DIR_STDCALL "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL_stdcall")
@@ -554,7 +554,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   )
   
   # ******************************************************************
-  # Add the target that prepares the build directory for the subbuilds
+  # Add the targets that prepare the build directory for the subbuilds
   # ******************************************************************
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_PREPARE) 
   # Prepare directories
@@ -566,12 +566,24 @@ if (COOLPROP_WINDOWS_PACKAGE)
 	COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_EES_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source"
+    #COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy"
+    #COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Preparing the directories for the Windows installer"
+    VERBATIM )
+    
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_DELETE) 
+  # Delete directories
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_DELETE PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Preparing the directories for the Windows installer"
+    COMMENT "Removing the old build directories for the Windows installer"
     VERBATIM )
   
   # **************************************************************
@@ -629,7 +641,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   # Add the target for Excel and populate it with custom commands
   # *************************************************************
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_EXCEL)
-  add_dependencies (COOLPROP_WINDOWS_PACKAGE_EXCEL COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_EXCEL COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES COOLPROP_WINDOWS_PACKAGE_PREPARE)
   # Copy the files
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_EXCEL PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/CoolProp.xla" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/"
@@ -640,7 +652,12 @@ if (COOLPROP_WINDOWS_PACKAGE)
     COMMENT "Copying the Excel and Inno Script files for the installer"
     VERBATIM )
 
+  # *****************************************************************************
+  # Add the target for the installer package and populate it with custom commands
+  # *****************************************************************************
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_INSTALLER)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_DELETE)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_PREPARE)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_EES)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_EXCEL)
