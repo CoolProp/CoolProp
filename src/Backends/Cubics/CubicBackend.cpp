@@ -408,6 +408,7 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
         else{
             if (p < p_critical()){
                 add_transient_pure_state();
+		transient_pure_state->set_mole_fractions(this->mole_fractions);
                 transient_pure_state->update(PQ_INPUTS, p, 0);
                 if (T > transient_pure_state->T()){
                     double rhoV = transient_pure_state->saturated_vapor_keyed_output(iDmolar);
