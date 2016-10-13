@@ -50,15 +50,17 @@ void CoolProp::AbstractCubicBackend::set_alpha_from_components(){
         const std::string &alpha_type = components[i].alpha_type;
         if (alpha_type != "default"){
             const std::vector<double> &c = components[i].alpha_coeffs;
+            shared_ptr<AbstractCubicAlphaFunction> acaf;
             if (alpha_type == "Twu"){
-                cubic->set_alpha_function(i, shared_ptr<AbstractCubicAlphaFunction>(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r/get_cubic()->get_Tc()[i])));
+                acaf.reset(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r/get_cubic()->get_Tc()[i]));
             }
             else if (alpha_type == "MathiasCopeman" || alpha_type == "Mathias-Copeman"){
-                cubic->set_alpha_function(i, shared_ptr<AbstractCubicAlphaFunction>(new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r / get_cubic()->get_Tc()[i])));
+                acaf.reset(new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r / get_cubic()->get_Tc()[i]));
             }
             else{
                 throw ValueError("alpha function is not understood");
             }
+            cubic->set_alpha_function(i, acaf);
         }
     }
 }

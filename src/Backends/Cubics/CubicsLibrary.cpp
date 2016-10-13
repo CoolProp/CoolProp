@@ -35,8 +35,8 @@ public:
             val.aliases = cpjson::get_string_array(*itr, "aliases");
             if (itr->HasMember("alpha") && (*itr)["alpha"].IsObject()){
                 rapidjson::Value &alpha = (*itr)["alpha"];
-                val.alpha_type = cpjson::get_string(*itr, "type");
-                val.alpha_coeffs = cpjson::get_double_array(*itr, "c");
+                val.alpha_type = cpjson::get_string(alpha, "type");
+                val.alpha_coeffs = cpjson::get_double_array(alpha, "c");
             }
             else{
                 val.alpha_type = "default";
