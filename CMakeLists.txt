@@ -591,14 +591,20 @@ if (COOLPROP_WINDOWS_PACKAGE)
   # **************************************************************
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)  
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES COOLPROP_WINDOWS_PACKAGE_PREPARE)
-  # Build the 32bit DLLs
+  # Copy the header file
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
-    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
-	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x86.dll"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/include/CoolPropLib.h" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolPropLib.h"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
-    COMMENT "Building the 32bit shared library with default settings"
+    COMMENT "Copy the header file for the CoolProp library"
     VERBATIM )
+  # # Build the 32bit DLLs
+  # add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
+  #   COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+  #   COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
+  #   COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x86.dll"
+  #   WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
+  #   COMMENT "Building the 32bit shared library with default settings"
+  #   VERBATIM )
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
