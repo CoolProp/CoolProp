@@ -13,8 +13,48 @@
 
 #include <vector>
 #include <cmath>
+#include "crossplatform_shared_ptr.h"
 
-enum AII_Model {AII_MODEL_NOT_SPECIFIED = 0, AII_MATHIAS_COPEMAN, AII_TWU};
+/// An abstract alpha function for the EOS, defining the interface for the alpha function
+class AbstractCubicAlphaFunction{
+protected:
+    double a0; ///< The constant term multiplying the alpha function
+    double Tr_over_Tci,  ///< The (constant) reducing temperature divided by the critical temperature of the pure component
+           sqrt_Tr_Tci;  ///< The sqrt of the (constant) reducing temperature divided by the critical temperature of the pure component
+    std::vector<double> c; ///< The vector of constants
+public:
+    virtual double term(double tau, std::size_t itau) = 0;
+    AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
+};
+
+/// An implementation of AbstractCubicAlphaFunction for the Twu alpha function
+class BasicaMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction {
+    double m; ///< The term coming from the function of omega
+public:
+    BasicaMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci){
+        this->m = m_ii;
+    };
+    double term(double tau, std::size_t itau);
+};
+
+/// An implementation of AbstractCubicAlphaFunction for the Twu alpha function
+class TwuAlphaFunction : public AbstractCubicAlphaFunction {
+public:
+    TwuAlphaFunction(double a0, double L, double M, double N, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci) {
+        c.resize(3); c[0] = L; c[1] = M; c[2] = N;
+    };
+    double term(double tau, std::size_t itau);
+};
+
+/// An implementation of AbstractCubicAlphaFunction for the Mathias-Copeman alpha function
+class MathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction{
+public:
+    MathiasCopemanAlphaFunction(double a0, double c1, double c2, double c3, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci) {
+        c.resize(3); c[0] = c1; c[1] = c2; c[2] = c3;
+    };
+    double term(double tau, std::size_t itau);
+};
+
 class AbstractCubic
 {
 protected:
@@ -23,14 +63,11 @@ protected:
     acentric; ///< Vector of acentric factors (unitless)
     double R_u; ///< The universal gas constant  in J/(mol*K)
     double Delta_1, ///< The first cubic constant
-    Delta_2; ///< The second cubic constant
+           Delta_2; ///< The second cubic constant
     int N; ///< Number of components in the mixture
     std::vector< std::vector<double> > k; ///< The interaction parameters (k_ii = 0)
-    bool simple_aii; ///< True if the Mathias-Copeman equation for a_ii is not being used
-    std::vector<double> C1, C2, C3; ///< The Mathias-Copeman coefficients for a_ii
-    std::vector<double> L_Twu, M_Twu, N_Twu; ///< The Twu coefficients for a_ii
-    AII_Model aii_model; ///< Enumeration for the aii model in use
     double cm; ///< The volume translation parameter
+    std::vector<shared_ptr<AbstractCubicAlphaFunction> > alpha; ///< The vector of alpha functions for the pure components
 public:
     static const double rho_r, T_r;
     /**
@@ -50,16 +87,12 @@ public:
                   double Delta_2,
                   std::vector<double> C1 = std::vector<double>(),
                   std::vector<double> C2 = std::vector<double>(),
-                  std::vector<double> C3 = std::vector<double>()
-                  )
-    : Tc(Tc), pc(pc), acentric(acentric), R_u(R_u), Delta_1(Delta_1), Delta_2(Delta_2), C1(C1), C2(C2), C3(C3)
-    {
-        N = static_cast<int>(Tc.size());
-        k.resize(N, std::vector<double>(N, 0));
-        cm = 0.;
-        /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
-        simple_aii = (C1.empty() && C2.empty() && C3.empty() && L_Twu.empty() && M_Twu.empty() && N_Twu.empty());
-    };
+                  std::vector<double> C3 = std::vector<double>());
+    /// Set the constants for the Mathias-Copeman alpha function, or if C1,C2,C3 are all empty, set the default alpha model
+    void set_alpha(const std::vector<double> &C1, const std::vector<double> &C2, const std::vector<double> &C3);
+    /// Set the alpha function for the i-th component
+    void set_alpha_function(std::size_t i, shared_ptr<AbstractCubicAlphaFunction> &acaf){ alpha[i] = acaf; };
+    
     /// Get the entire kij matrix in one shot
     const std::vector< std::vector<double> > & get_kmat(){return k;};
     /// Set the entire kij matrix in one shot
@@ -80,40 +113,14 @@ public:
     double get_Delta_2(){ return Delta_2; }
     /// Read-only accessor for value of R_u (universal gas constant)
     double get_R_u(){ return R_u; }
-    /// Get a constant reference to a constant vector of Mathias-Copeman constants
-    const std::vector<double> &get_C_ref(int i){
-        switch (i){
-            case 1: return C1;
-            case 2: return C2;
-            case 3: return C3;
-            default:
-                throw -1;
-        }
-    }
-    /// Get a constant reference to a constant vector of Mathias-Copeman constants
-    std::vector<double> &get_C(int i){
-        switch (i){
-            case 1: return C1;
-            case 2: return C2;
-            case 3: return C3;
-            default:
-                throw -1;
-        }
-    }
     /// Set the three Mathias-Copeman constants in one shot for a pure fluid
     void set_C_MC(double c1, double c2, double c3){
-        C1.resize(1); C2.resize(1); C3.resize(1);
-        C1[0] = c1, C2[0] = c2; C3[0] = c3;
-        simple_aii = false; aii_model = AII_MATHIAS_COPEMAN;
+        alpha[0].reset(new MathiasCopemanAlphaFunction(a0_ii(0),c1,c2,c3,T_r/Tc[0]));
     }
     /// Set the three Twu constants in one shot for a pure fluid
     void set_C_Twu(double L, double M, double N){
-        L_Twu.resize(1); L_Twu[0] = L;
-        M_Twu.resize(1); M_Twu[0] = M;
-        N_Twu.resize(1); N_Twu[0] = N;
-        simple_aii = false; aii_model = AII_TWU;
+        alpha[0].reset(new TwuAlphaFunction(a0_ii(0),L,M,N,T_r/Tc[0]));
     }
-    
     /// Get the leading constant in the expression for the pure fluid attractive energy term
     /// (must be implemented by derived classes)
     virtual double a0_ii(std::size_t i) = 0;
@@ -511,17 +518,21 @@ public:
                  std::vector<double> C2 = std::vector<double>(),
                  std::vector<double> C3 = std::vector<double>()
                  )
-    : AbstractCubic(Tc, pc, acentric, R_u, 1+sqrt(2.0), 1-sqrt(2.0),C1,C2,C3) {};
+    : AbstractCubic(Tc, pc, acentric, R_u, 1+sqrt(2.0), 1-sqrt(2.0),C1,C2,C3) {
+        set_alpha(C1, C2, C3);
+    };
     
     PengRobinson(double Tc,
                  double pc,
                  double acentric,
                  double R_u)
-    : AbstractCubic(std::vector<double>(1,Tc), std::vector<double>(1,pc), std::vector<double>(1,acentric), R_u, 1+sqrt(2.0), 1-sqrt(2.0)) {};
+    : AbstractCubic(std::vector<double>(1,Tc), std::vector<double>(1,pc), std::vector<double>(1,acentric), R_u, 1+sqrt(2.0), 1-sqrt(2.0)) {
+        set_alpha(std::vector<double>(), std::vector<double>(), std::vector<double>());
+    };
     
-    virtual double a0_ii(std::size_t i);
-    virtual double b0_ii(std::size_t i);
-    virtual double m_ii(std::size_t i);
+    double a0_ii(std::size_t i);
+    double b0_ii(std::size_t i);
+    double m_ii(std::size_t i);
 };
 
 class SRK : public AbstractCubic
@@ -534,16 +545,20 @@ public:
         std::vector<double> C1 = std::vector<double>(),
         std::vector<double> C2 = std::vector<double>(),
         std::vector<double> C3 = std::vector<double>())
-    : AbstractCubic(Tc, pc, acentric, R_u, 1, 0, C1, C2, C3) {};
+    : AbstractCubic(Tc, pc, acentric, R_u, 1, 0, C1, C2, C3) {
+        set_alpha(C1,C2,C3);
+    };
     SRK(double Tc,
         double pc,
         double acentric,
         double R_u)
-    : AbstractCubic(std::vector<double>(1,Tc), std::vector<double>(1,pc), std::vector<double>(1,acentric), R_u, 1, 0) {};
+    : AbstractCubic(std::vector<double>(1,Tc), std::vector<double>(1,pc), std::vector<double>(1,acentric), R_u, 1, 0) {
+        set_alpha(std::vector<double>(), std::vector<double>(), std::vector<double>());
+    };
     
-    virtual double a0_ii(std::size_t i);
-    virtual double b0_ii(std::size_t i);
-    virtual double m_ii(std::size_t i);
+    double a0_ii(std::size_t i);
+    double b0_ii(std::size_t i);
+    double m_ii(std::size_t i);
 };
 
 #endif

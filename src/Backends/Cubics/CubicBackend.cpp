@@ -3,11 +3,14 @@
 #include "Backends/Helmholtz/VLERoutines.h"
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
-    // Set the pure fluid flag
-    is_pure_or_pseudopure = cubic->get_Tc().size() == 1;
-    // Resize the vector
-    resize(cubic->get_Tc().size());
     N = cubic->get_Tc().size();
+    
+    // Set the pure fluid flag
+    is_pure_or_pseudopure = (N == 1);
+    
+    // Resize the vectors
+    resize(N);
+    
 	// Reset the residual Helmholtz energy class
 	residual_helmholtz.reset(new CubicResidualHelmholtz(this));
 	// If pure, set the mole fractions to be unity
@@ -22,6 +25,9 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
 	// Now set the reducing function for the mixture
     Reducing.reset(new ConstantReducingFunction(cubic->T_r, cubic->rho_r));
 
+    // Set the alpha function based on the components in use
+    set_alpha_from_components();
+
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
     if (generate_SatL_and_SatV)
@@ -33,6 +39,27 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
         SatV.reset(this->get_copy(SatLSatV));
         SatV->specify_phase(iphase_gas);
         linked_states.push_back(SatV);
+    }
+}
+
+void CoolProp::AbstractCubicBackend::set_alpha_from_components(){
+    /// If components is not present, you are using a vanilla cubic, so don't do anything
+    if (components.empty()){ return; }
+
+    for (std::size_t i = 0; i < N; ++i){
+        const std::string &alpha_type = components[i].alpha_type;
+        if (alpha_type != "default"){
+            const std::vector<double> &c = components[i].alpha_coeffs;
+            if (alpha_type == "Twu"){
+                cubic->set_alpha_function(i, shared_ptr<AbstractCubicAlphaFunction>(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r/get_cubic()->get_Tc()[i])));
+            }
+            else if (alpha_type == "MathiasCopeman" || alpha_type == "Mathias-Copeman"){
+                cubic->set_alpha_function(i, shared_ptr<AbstractCubicAlphaFunction>(new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r / get_cubic()->get_Tc()[i])));
+            }
+            else{
+                throw ValueError("alpha function is not understood");
+            }
+        }
     }
 }
 
