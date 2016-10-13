@@ -129,7 +129,7 @@ void AbstractCubic::set_alpha(const std::vector<double> &C1, const std::vector<d
     /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
     if (C1.empty() && C2.empty() && C3.empty()) {
         for (std::size_t i = 0; i < Tc.size(); ++i) {
-            alpha[i].reset(new BasicaMathiasCopemanAlphaFunction(a0_ii(i), m_ii(i), T_r / Tc[i]));
+            alpha[i].reset(new BasicMathiasCopemanAlphaFunction(a0_ii(i), m_ii(i), T_r / Tc[i]));
         }
     }
     else {

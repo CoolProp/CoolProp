@@ -28,10 +28,10 @@ public:
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the Twu alpha function
-class BasicaMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction {
+class BasicMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction {
     double m; ///< The term coming from the function of omega
 public:
-    BasicaMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci){
+    BasicMathiasCopemanAlphaFunction(double a0, double m_ii, double Tr_over_Tci) : AbstractCubicAlphaFunction(a0, Tr_over_Tci){
         this->m = m_ii;
     };
     double term(double tau, std::size_t itau);
