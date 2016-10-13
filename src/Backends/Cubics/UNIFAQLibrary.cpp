@@ -50,6 +50,16 @@ namespace UNIFAQLibrary{
             if ((*itr).HasMember("userid")){
                 c.userid = (*itr)["userid"].GetString();
             }
+            // If provided, store information about the alpha function in use
+            if ((*itr).HasMember("alpha") && (*itr)["alpha"].IsObject()){
+                rapidjson::Value &alpha = (*itr)["alpha"];
+                c.alpha_type = cpjson::get_string(alpha, "type");
+                c.alpha_coeffs = cpjson::get_double_array(alpha, "c");
+            }
+            else{
+                c.alpha_type = "default";
+            }
+            
             rapidjson::Value &groups = (*itr)["groups"];
             for (rapidjson::Value::ValueIterator itrg = groups.Begin(); itrg != groups.End(); ++itrg)
             {

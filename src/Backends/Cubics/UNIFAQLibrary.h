@@ -57,6 +57,8 @@ namespace UNIFAQLibrary{
                pc,                   ///< The critical pressure in Pa
                acentric;             ///< The acentric factor
         std::vector<ComponentGroup> groups;
+        std::string alpha_type; ///< The type of alpha function
+        std::vector<double> alpha_coeffs; ///< The vector of coefficients for the alpha function
     };
 
     /**

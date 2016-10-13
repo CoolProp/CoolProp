@@ -38,6 +38,9 @@ public:
 	/// Set the pointer to the residual helmholtz class, etc.
 	void setup(bool generate_SatL_and_SatV = true);
 
+    /// Set the alpha function based on the alpha function defined in the components vector;
+    void set_alpha_from_components();
+
 	/// Get a reference to the shared pointer managing the generalized cubic class
 	shared_ptr<AbstractCubic> &get_cubic(){ return cubic; };
 	

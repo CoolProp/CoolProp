@@ -57,6 +57,9 @@ public:
         return ACB;
     }
     
+    /// Set the alpha function based on the alpha function defined in the components vector;
+    void set_alpha_from_components();
+    
     /// Return the fluid names
     std::vector<std::string> calc_fluid_names(void) { return m_fluid_names; }
     

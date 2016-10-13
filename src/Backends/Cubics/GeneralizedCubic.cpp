@@ -5,6 +5,141 @@
 const double AbstractCubic::T_r = 1.0;
 const double AbstractCubic::rho_r = 1.0;
 
+double BasicMathiasCopemanAlphaFunction::term(double tau, std::size_t itau){
+
+    // If we are not using the full Mathias-Copeman formulation for a_ii,
+    // we just use the simple results from the supplemental information because
+    // they are much more computationally efficient
+   
+    // All derivatives have a common bracketed term, so we factor it out
+    // and calculate it here
+    double B = 1 + m*(1 - sqrt_Tr_Tci*sqrt(1 / tau));
+
+    switch (itau) {
+    case 0:
+        return a0*B*B;
+    case 1:
+        return a0*m*B / pow(tau, 3.0 / 2.0)*sqrt_Tr_Tci;
+    case 2:
+        return a0*m / 2.0*(m / pow(tau, 3)*Tr_over_Tci - 3 * B / pow(tau, 5.0 / 2.0)*sqrt_Tr_Tci);
+    case 3:
+        return (3.0 / 4.0)*a0*m*(-3.0*m / pow(tau, 4)*Tr_over_Tci + 5 * B / pow(tau, 7.0 / 2.0)*sqrt_Tr_Tci);
+    case 4:
+        return (3.0 / 8.0)*a0*m*(29.0*m / pow(tau, 5)*Tr_over_Tci - 35 * B / pow(tau, 9.0 / 2.0)*sqrt_Tr_Tci);
+    default:
+        throw - 1;
+    }
+}
+
+double MathiasCopemanAlphaFunction::term(double tau, std::size_t itau) {
+    // Here we are using the full Mathias-Copeman formulation, introducing
+    // some additional computational effort, so we only evaluate the parameters that
+    // we actually need to evaluate, otherwise we just set their value to zero
+    // See info on the conditional (ternary) operator : http://www.cplusplus.com/articles/1AUq5Di1/
+    // Furthermore, this should help with branch prediction
+    double Di = 1 - sqrt_Tr_Tci / sqrt(tau);
+    double dDi_dtau = (itau >= 1) ? (1.0 / 2.0)*sqrt_Tr_Tci / (pow(tau, 1.5)) : 0;
+    double d2Di_dtau2 = (itau >= 2) ? -(3.0 / 4.0)*sqrt_Tr_Tci / (pow(tau, 2.5)) : 0;
+    double d3Di_dtau3 = (itau >= 3) ? (15.0 / 8.0)*sqrt_Tr_Tci / (pow(tau, 3.5)) : 0;
+    double d4Di_dtau4 = (itau >= 4) ? -(105.0 / 16.0)*sqrt_Tr_Tci / (pow(tau, 4.5)) : 0;
+
+    double Bi = 1, dBi_dtau = 0, d2Bi_dtau2 = 0, d3Bi_dtau3 = 0, d4Bi_dtau4 = 0;
+    for (int n = 1; n <= 3; ++n) {
+        Bi += c[n-1]*pow(Di, n);
+        dBi_dtau += (itau < 1) ? 0 : (n*c[n-1] * pow(Di, n - 1)*dDi_dtau);
+        d2Bi_dtau2 += (itau < 2) ? 0 : n*c[n-1] * ((n - 1)*pow(dDi_dtau, 2) + Di*d2Di_dtau2)*pow(Di, n - 2);
+        d3Bi_dtau3 += (itau < 3) ? 0 : n*c[n-1] * (3 * (n - 1)*Di*dDi_dtau*d2Di_dtau2 + (n*n - 3 * n + 2)*pow(dDi_dtau, 3) + pow(Di, 2)*d3Di_dtau3)*pow(Di, n - 3);
+        d4Bi_dtau4 += (itau < 4) ? 0 : n*c[n-1] * (6 * (n*n - 3 * n + 2)*Di*pow(dDi_dtau, 2)*d2Di_dtau2 + (n*n*n - 6 * n*n + 11 * n - 6)*pow(dDi_dtau, 4)
+            + (4 * n*dDi_dtau*d3Di_dtau3 + 3 * n*pow(d2Di_dtau2, 2) - 4 * dDi_dtau*d3Di_dtau3 - 3 * pow(d2Di_dtau2, 2))*pow(Di, 2)
+            + pow(Di, 3)*d4Di_dtau4)*pow(Di, n - 4);
+    }
+    switch (itau) {
+    case 0:
+        return a0*Bi*Bi;
+    case 1:
+        return 2 * a0*Bi*dBi_dtau;
+    case 2:
+        return 2 * a0*(Bi*d2Bi_dtau2 + dBi_dtau*dBi_dtau);
+    case 3:
+        return 2 * a0*(Bi*d3Bi_dtau3 + 3 * dBi_dtau*d2Bi_dtau2);
+    case 4:
+        return 2 * a0*(Bi*d4Bi_dtau4 + 4 * dBi_dtau*d3Bi_dtau3 + 3 * pow(d2Bi_dtau2, 2));
+    default:
+        throw - 1;
+    }
+}
+
+double TwuAlphaFunction::term(double tau, std::size_t itau){
+    // Here we are using the Twu formulation, introducing
+    // some additional computational effort, so we only evaluate the parameters that
+    // we actually need to evaluate, otherwise we just set their value to zero
+    // See info on the conditional (ternary) operator : http://www.cplusplus.com/articles/1AUq5Di1/
+    // Furthermore, this should help with branch prediction
+    
+    const double L = c[0], M = c[1], N = c[2];
+    double A = pow(Tr_over_Tci / tau, M*N);
+    double B1 = (itau < 1) ? 0 : N / tau*(L*M*A - M + 1);
+    double dB1_dtau = (itau < 2) ? 0 : N / powInt(tau, 2)*(-L*M*M*N*A - L*M*A + M - 1);
+    double d2B1_dtau2 = (itau < 3) ? 0 : N / powInt(tau, 3)*(L*M*M*M*N*N*A + 3 * L*M*M*N*A + 2 * L*M*A - 2 * M + 2);
+    double d3B1_dtau3 = (itau < 4) ? 0 : -N / powInt(tau, 4)*(L*powInt(M, 4)*powInt(N, 3)*A + 6 * L*M*M*M*N*N*A + 11 * L*M*M*N*A + 6 * L*M*A - 6 * M + 6);
+
+    double dam_dtau, d2am_dtau2, d3am_dtau3, d4am_dtau4;
+    double am = a0*pow(Tr_over_Tci / tau, N*(M - 1))*exp(L*(1 - pow(Tr_over_Tci / tau, M*N)));
+
+    if (itau == 0) {
+        return am;
+    }
+    else {
+        // Calculate terms as needed
+        dam_dtau = a0*B1;
+        d2am_dtau2 = (itau < 2) ? 0 : B1*dam_dtau + am*dB1_dtau;
+        d3am_dtau3 = (itau < 3) ? 0 : B1*d2am_dtau2 + am*d2B1_dtau2 + 2 * dB1_dtau*dam_dtau;
+        d4am_dtau4 = (itau < 4) ? 0 : B1*d3am_dtau3 + am*d3B1_dtau3 + 3 * dB1_dtau*d2am_dtau2 + 3 * d2B1_dtau2*dam_dtau;
+    }
+    switch (itau) {
+    case 1: return dam_dtau;
+    case 2: return d2am_dtau2;
+    case 3: return d3am_dtau3;
+    case 4: return d4am_dtau4;
+    default: throw - 1;
+    }
+}
+
+AbstractCubic::AbstractCubic(
+    std::vector<double> Tc,
+    std::vector<double> pc,
+    std::vector<double> acentric,
+    double R_u,
+    double Delta_1,
+    double Delta_2,
+    std::vector<double> C1,
+    std::vector<double> C2,
+    std::vector<double> C3)
+    : Tc(Tc), pc(pc), acentric(acentric), R_u(R_u), Delta_1(Delta_1), Delta_2(Delta_2)
+{
+    N = static_cast<int>(Tc.size());
+    k.resize(N, std::vector<double>(N, 0));
+    cm = 0.;
+    alpha.resize(N);
+};
+
+void AbstractCubic::set_alpha(const std::vector<double> &C1, const std::vector<double> &C2, const std::vector<double> &C3){
+    /// Resize the vector of alpha functions
+    alpha.resize(Tc.size());
+    /// If no Mathias-Copeman coefficients are passed in (all empty vectors), use the predictive scheme for m_ii
+    if (C1.empty() && C2.empty() && C3.empty()) {
+        for (std::size_t i = 0; i < Tc.size(); ++i) {
+            alpha[i].reset(new BasicMathiasCopemanAlphaFunction(a0_ii(i), m_ii(i), T_r / Tc[i]));
+        }
+    }
+    else {
+        /// Use the Mathias-Copeman constants passed in to initialize Mathias-Copeman alpha functions
+        for (std::size_t i = 0; i < Tc.size(); ++i) {
+            alpha[i].reset(new MathiasCopemanAlphaFunction(a0_ii(i), C1[i], C2[i], C3[i], T_r / Tc[i]));
+        }
+    }
+}
+
 double AbstractCubic::am_term(double tau, const std::vector<double> &x, std::size_t itau)
 {
     double summer = 0;
@@ -88,112 +223,7 @@ double AbstractCubic::cm_term()
 
 double AbstractCubic::aii_term(double tau, std::size_t i, std::size_t itau)
 {
-    double Tr_over_Tci = T_r/Tc[i];
-    double sqrt_Tr_Tci = sqrt(Tr_over_Tci);
-    // If we are not using the full Mathias-Copeman formulation for a_ii,
-    // we just use the simple results from the supplemental information because
-    // they are much more computationally efficient
-    if (simple_aii){
-        // All derivatives have a common bracketed term, so we factor it out
-        // and calculate it here
-        double m = m_ii(i);
-        double B = 1 + m*(1-sqrt_Tr_Tci*sqrt(1/tau));
-        
-        switch (itau){
-            case 0:
-                return a0_ii(i)*B*B;
-            case 1:
-                return a0_ii(i)*m*B/pow(tau, 3.0/2.0)*sqrt_Tr_Tci;
-            case 2:
-                return a0_ii(i)*m/2.0*(m/pow(tau, 3)*Tr_over_Tci - 3*B/pow(tau, 5.0/2.0)*sqrt_Tr_Tci);
-            case 3:
-                return (3.0/4.0)*a0_ii(i)*m*(-3.0*m/pow(tau, 4)*Tr_over_Tci + 5*B/pow(tau, 7.0/2.0)*sqrt_Tr_Tci);
-            case 4:
-                return (3.0/8.0)*a0_ii(i)*m*(29.0*m/pow(tau, 5)*Tr_over_Tci - 35*B/pow(tau, 9.0/2.0)*sqrt_Tr_Tci);
-            default:
-                throw -1;
-        }
-    }
-    else{
-        switch (aii_model){
-            case AII_MATHIAS_COPEMAN:
-            {
-                
-                // Here we are using the full Mathias-Copeman formulation, introducing
-                // some additional computational effort, so we only evaluate the parameters that
-                // we actually need to evaluate, otherwise we just set their value to zero
-                // See info on the conditional (ternary) operator : http://www.cplusplus.com/articles/1AUq5Di1/
-                // Furthermore, this should help with branch prediction
-                double Di = 1-sqrt_Tr_Tci/sqrt(tau);
-                double dDi_dtau = (itau >= 1) ? (1.0/2.0)*sqrt_Tr_Tci/(pow(tau,1.5)) : 0;
-                double d2Di_dtau2 = (itau >= 2) ? -(3.0/4.0)*sqrt_Tr_Tci/(pow(tau,2.5)) : 0;
-                double d3Di_dtau3 = (itau >= 3) ? (15.0/8.0)*sqrt_Tr_Tci/(pow(tau,3.5)) : 0;
-                double d4Di_dtau4 = (itau >= 4) ? -(105.0/16.0)*sqrt_Tr_Tci/(pow(tau,4.5)) : 0;
-                
-                double Bi = 1, dBi_dtau = 0, d2Bi_dtau2 = 0, d3Bi_dtau3 = 0, d4Bi_dtau4 = 0;
-                for (int n = 1; n <= 3; ++n){
-                    const std::vector<double> &C = get_C_ref(static_cast<int>(n));
-                    Bi += C[i]*pow(Di, n);
-                    dBi_dtau += (itau < 1) ? 0 : (n*C[i]*pow(Di,n-1)*dDi_dtau) ;
-                    d2Bi_dtau2 += (itau < 2) ? 0 : n*C[i]*((n-1)*pow(dDi_dtau,2) + Di*d2Di_dtau2)*pow(Di, n-2);
-                    d3Bi_dtau3 += (itau < 3) ? 0 : n*C[i]*(3*(n-1)*Di*dDi_dtau*d2Di_dtau2 + (n*n-3*n+2)*pow(dDi_dtau,3)+pow(Di,2)*d3Di_dtau3)*pow(Di, n-3);
-                    d4Bi_dtau4 += (itau < 4) ? 0 : n*C[i]*(6*(n*n-3*n+2)*Di*pow(dDi_dtau,2)*d2Di_dtau2 + (n*n*n-6*n*n+11*n-6)*pow(dDi_dtau,4)
-                                                           +(4*n*dDi_dtau*d3Di_dtau3+3*n*pow(d2Di_dtau2,2)-4*dDi_dtau*d3Di_dtau3-3*pow(d2Di_dtau2,2) )*pow(Di,2)
-                                                           + pow(Di,3)*d4Di_dtau4 )*pow(Di, n-4);
-                }
-                switch (itau){
-                    case 0:
-                        return a0_ii(i)*Bi*Bi;
-                    case 1:
-                        return 2*a0_ii(i)*Bi*dBi_dtau;
-                    case 2:
-                        return 2*a0_ii(i)*(Bi*d2Bi_dtau2 + dBi_dtau*dBi_dtau);
-                    case 3:
-                        return 2*a0_ii(i)*(Bi*d3Bi_dtau3 + 3*dBi_dtau*d2Bi_dtau2);
-                    case 4:
-                        return 2*a0_ii(i)*(Bi*d4Bi_dtau4 + 4*dBi_dtau*d3Bi_dtau3 + 3*pow(d2Bi_dtau2, 2));
-                    default:
-                        throw -1;
-                }
-            }
-            case AII_TWU:
-            {
-                // Here we are using the Twu formulation, introducing
-                // some additional computational effort, so we only evaluate the parameters that
-                // we actually need to evaluate, otherwise we just set their value to zero
-                // See info on the conditional (ternary) operator : http://www.cplusplus.com/articles/1AUq5Di1/
-                // Furthermore, this should help with branch prediction
-                double A = pow(Tr_over_Tci/tau, M_Twu[i]*N_Twu[i]);
-                const double L = L_Twu[i], M = M_Twu[i], N = N_Twu[i];
-                double B1 = (itau < 1) ? 0 : N/tau*(L*M*A - M + 1);
-                double dB1_dtau = (itau < 2) ? 0 : N/powInt(tau,2)*(-L*M*M*N*A - L*M*A + M - 1);
-                double d2B1_dtau2 = (itau < 3) ? 0 : N/powInt(tau,3)*(L*M*M*M*N*N*A + 3*L*M*M*N*A + 2*L*M*A - 2*M + 2);
-                double d3B1_dtau3 = (itau < 4) ? 0 : -N/powInt(tau,4)*(L*powInt(M,4)*powInt(N,3)*A + 6*L*M*M*M*N*N*A + 11*L*M*M*N*A + 6*L*M*A -6*M + 6);
-                
-                double dam_dtau, d2am_dtau2, d3am_dtau3, d4am_dtau4;
-                double am = a0_ii(i)*pow(Tr_over_Tci/tau,N*(M-1))*exp(L*(1-pow(Tr_over_Tci/tau,M*N)));
-                
-                if (itau == 0){
-                    return am;
-                }
-                else{
-                    // Calculate terms as needed
-                    dam_dtau = a0_ii(i)*B1;
-                    d2am_dtau2 = (itau < 2) ? 0 : B1*dam_dtau + am*dB1_dtau;
-                    d3am_dtau3 = (itau < 3) ? 0 : B1*d2am_dtau2 + am*d2B1_dtau2 + 2*dB1_dtau*dam_dtau;
-                    d4am_dtau4 = (itau < 4) ? 0 : B1*d3am_dtau3 + am*d3B1_dtau3 + 3*dB1_dtau*d2am_dtau2 + 3*d2B1_dtau2*dam_dtau;
-                }
-                switch (itau){
-                    case 1: return dam_dtau;
-                    case 2: return d2am_dtau2;
-                    case 3: return d3am_dtau3;
-                    case 4: return d4am_dtau4;
-                    default: throw -1;
-                }
-            }
-            default: throw -1;
-        }
-    }
+    return alpha[i]->term(tau, itau);
 }
 double AbstractCubic::u_term(double tau, std::size_t i, std::size_t j, std::size_t itau)
 {

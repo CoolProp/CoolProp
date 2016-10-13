@@ -59,6 +59,26 @@
           "type": "string"
         },
         "minItems": 0
+      },
+      "alpha": {
+        "description": "The alpha function being used",
+        "properties": {
+          "type":{
+            "enum": [
+              "Twu",
+              "Mathias-Copeman",
+              "default"
+            ]
+          },
+          "c":{
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+          }
+        }
       }
     },
     "required": [

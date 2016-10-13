@@ -33,6 +33,14 @@ public:
             val.molemass = cpjson::get_double(*itr, "molemass");
             val.name = cpjson::get_string(*itr, "name");
             val.aliases = cpjson::get_string_array(*itr, "aliases");
+            if (itr->HasMember("alpha") && (*itr)["alpha"].IsObject()){
+                rapidjson::Value &alpha = (*itr)["alpha"];
+                val.alpha_type = cpjson::get_string(alpha, "type");
+                val.alpha_coeffs = cpjson::get_double_array(alpha, "c");
+            }
+            else{
+                val.alpha_type = "default";
+            }
             fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val) );
 
             for (std::vector<std::string>::const_iterator it = val.aliases.begin(); it != val.aliases.end(); ++it){
