@@ -5,7 +5,7 @@
 const double AbstractCubic::T_r = 1.0;
 const double AbstractCubic::rho_r = 1.0;
 
-double BasicaMathiasCopemanAlphaFunction::term(double tau, std::size_t itau){
+double BasicMathiasCopemanAlphaFunction::term(double tau, std::size_t itau){
 
     // If we are not using the full Mathias-Copeman formulation for a_ii,
     // we just use the simple results from the supplemental information because
