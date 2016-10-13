@@ -154,7 +154,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmak
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
 find_package (PythonInterp 2.7 REQUIRED)
-if(UNIX)
+if(CMAKE_DL_LIBS)
     find_package (${CMAKE_DL_LIBS} REQUIRED)
 endif()
 
