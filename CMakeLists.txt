@@ -648,14 +648,28 @@ if (COOLPROP_WINDOWS_PACKAGE)
   # *************************************************************
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_EXCEL)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_EXCEL COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES COOLPROP_WINDOWS_PACKAGE_PREPARE)
-  # Copy the files
+  # Copy the Excel files
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_EXCEL PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/CoolProp.xla" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/CoolProp.xlam" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/TestExcel.xlsx" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/CoolProp.xla" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/MicrosoftExcel/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/CoolProp.xlam" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/MicrosoftExcel/"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR}/TestExcel.xlsx" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/MicrosoftExcel/"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Copying the Excel files for the installer"
+    VERBATIM )
+    
+  # *******************************************************************
+  # Add the target for Inno Script and populate it with custom commands
+  # *******************************************************************
+  add_custom_target(COOLPROP_WINDOWS_PACKAGE_ISS)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_ISS COOLPROP_WINDOWS_PACKAGE_EXCEL COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES COOLPROP_WINDOWS_PACKAGE_PREPARE)
+  # Copy the ISS files
+  add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_ISS PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Copying the Excel and Inno Script files for the installer"
+    COMMENT "Copying the Inno Script files for the installer"
     VERBATIM )
 
   # *****************************************************************************
@@ -667,6 +681,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_EES)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_EXCEL)
+  add_dependencies (COOLPROP_WINDOWS_PACKAGE_INSTALLER COOLPROP_WINDOWS_PACKAGE_ISS)
   # Build the installer and copy it to the bin directory
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_INSTALLER POST_BUILD
     COMMAND ${COOLPROP_WINDOWS_PACKAGE_ISS_EXE} ARGS "addin-installer.iss"
