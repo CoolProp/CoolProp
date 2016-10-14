@@ -25,6 +25,9 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double rhomolar_liq, rhomolar_vap
         double _rhomolar_liq, _rhomolar_vap
         vector[double] x, y
+
+    cdef cppclass SpinodalData:
+        vector[double] tau, delta, M1
         
     cdef cppclass AbstractState:
         
@@ -78,6 +81,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double p_critical() except +ValueError
         vector[CriticalState] all_critical_points() except +ValueError
         void criticality_contour_values(double &L1star, double &M1star) except +ValueError
+
+        ## Spinodal curve
+        void build_spinodal() except +ValueError
+        SpinodalData get_spinodal_data() except +ValueError
         
         ## Tangent plane analysis
         double tangent_plane_distance(const double, const double, const vector[double], const double) except +ValueError

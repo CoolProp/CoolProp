@@ -39,7 +39,10 @@ cdef class PyGuessesStructure:
 
 cdef class PyCriticalState:
     cpdef public double T, p, rhomolar, hmolar, smolar
-    cpdef public bool stable    
+    cpdef public bool stable
+
+cdef class PySpinodalData:
+    cpdef public vector[double] tau, delta, M1
 
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
@@ -78,6 +81,10 @@ cdef class AbstractState:
     cpdef double p_critical(self) except *
     cpdef list all_critical_points(self)
     cpdef tuple criticality_contour_values(self)
+
+    ## Spinodal curve(s)
+    cpdef void build_spinodal(self) except *
+    cpdef PySpinodalData get_spinodal_data(self)
     
     ## Reducing point
     cpdef double T_reducing(self) except *

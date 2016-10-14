@@ -3494,7 +3494,7 @@ public:
     std::vector<CoolProp::CriticalState> critical_points;
     int N_critical_points;
     Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
-    SpinodalValues spinodal_values;
+    SpinodalData spinodal_values;
     bool find_critical_points; ///< If true, actually calculate the critical points, otherwise, skip evaluation of critical points but still trace the spinodal
     L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), M1_last(_HUGE), N_critical_points(0), find_critical_points(true)
     {

@@ -19,6 +19,9 @@ cdef class PyGuessesStructure:
         self.rhomolar_vap = get_HUGE()
         self.x = []
         self.y = []
+
+cdef class PySpinodalData:
+    pass
     
 cdef class AbstractState:
     """
@@ -169,6 +172,18 @@ cdef class AbstractState:
         cdef CoolPropDbl L1star = 0, M1star = 0
         self.thisptr.criticality_contour_values(L1star, M1star)
         return L1star, M1star
+
+    cpdef void build_spinodal(self) except *:
+        """ Calculate the spinodal - wrapper of c++ function :cpapi:`CoolProp::AbstractState::build_spinodal` """
+        self.thisptr.build_spinodal()
+    cpdef PySpinodalData get_spinodal_data(self):
+        """ Get the data from the spinodal - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_spinodal_data` """
+        cdef cAbstractState.SpinodalData data = self.thisptr.get_spinodal_data()
+        cdef PySpinodalData out = PySpinodalData()
+        out.tau = data.tau
+        out.delta = data.delta
+        out.M1 = data.M1
+        return out
         
     ## Reducing point
     cpdef double T_reducing(self) except *:
