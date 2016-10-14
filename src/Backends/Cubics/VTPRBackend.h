@@ -45,6 +45,8 @@ public:
         const UNIFAQLibrary::UNIFAQParameterLibrary & lib = LoadLibrary();
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
             UNIFAQLibrary::Component comp = lib.get_component("name", fluid_identifiers[i]);
+            // Taking the mole fraction from the cubic library. TODO: Need a better solution
+            components[i] = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
             Tc.push_back(comp.Tc); // [K]
             pc.push_back(comp.pc); // [Pa]
             acentric.push_back(comp.acentric); // [-]
