@@ -210,8 +210,6 @@ public:
 	/// Set the volume translation parameter
 	void set_cm(double val) { cm = val; }
 
-protected:
-
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$
      * \param tau The reciprocal reduced temperature \f$\tau=T_r/T\f$
