@@ -591,6 +591,42 @@ EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long
 	}
 }
 
+EXPORT_CODE void CONVENTION AbstractState_build_phase_envelope(const long handle, const char *level, long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        AS->build_phase_envelope(level);
+    }
+    catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long handle, const long length, double* T, double* p, double* rhomolar_vap, double *rhomolar_liq, double *x, double *y, long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        CoolProp::PhaseEnvelopeData pe = AS->get_phase_envelope_data();
+        if (pe.T.size() > length){
+            throw CoolProp::ValueError(format("Length of phase envelope vectors [%d] is greater than allocated buffer length [%d]", static_cast<int>(pe.T.size()), static_cast<int>(length)));
+        }
+        std::size_t N = pe.x.size();
+        for (int i = 0; i<pe.T.size(); i++){
+            *(T+i) = pe.T[i];
+            *(p+i) = pe.p[i];
+            *(rhomolar_vap+i) = pe.rhomolar_vap[i];
+            *(rhomolar_liq+i) = pe.rhomolar_liq[i];
+            for (int j = 0; j < N; ++j){
+                *(x+i*N+j) = pe.x[j][i];
+                *(y+i*N+j) = pe.y[j][i];
+            }
+        }
+    }
+    catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
 /// *********************************************************************************
 /// *********************************************************************************
 ///                     EMSCRIPTEN (for javascript)
