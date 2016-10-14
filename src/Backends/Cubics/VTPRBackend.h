@@ -37,25 +37,21 @@ public:
     VTPRBackend(const std::vector<std::string> fluid_identifiers,
                 const double R_u = get_config_double(R_U_CODATA),
                 bool generate_SatL_and_SatV = true)
-        : PengRobinsonBackend(fluid_identifiers, R_u)
     {
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
         components.resize(N);
+        // Extract data from the UNIFAQ parameter library
+        const UNIFAQLibrary::UNIFAQParameterLibrary & lib = LoadLibrary();
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
-            components[i] = CubicLibrary::get_cubic_values(fluid_identifiers[i]);
-            Tc.push_back(components[i].Tc);
-            pc.push_back(components[i].pc);
-            acentric.push_back(components[i].acentric);
+            UNIFAQLibrary::Component comp = lib.get_component("name", fluid_identifiers[i]);
+            Tc.push_back(comp.Tc); // [K]
+            pc.push_back(comp.pc); // [Pa]
+            acentric.push_back(comp.acentric); // [-]
         }
-        cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, LoadLibrary()));
+        cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
-    AbstractCubicBackend * get_copy(bool generate_SatL_and_SatV){
-        AbstractCubicBackend * ACB = new VTPRBackend(fluid_names(), cubic->get_R_u(), generate_SatL_and_SatV);
-        //ACB->copy_k(this);
-        return ACB;
-    }
     
     /// Set the alpha function based on the alpha function defined in the components vector;
     void set_alpha_from_components();

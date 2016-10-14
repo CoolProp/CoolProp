@@ -243,6 +243,7 @@ public:
 class PengRobinsonBackend : public AbstractCubicBackend  {
 
 public:
+    PengRobinsonBackend(){}; // Default constructor (make sure you know what you are doing)
 	PengRobinsonBackend(const std::vector<double> &Tc, 
 		       const std::vector<double> &pc, 
 		       const std::vector<double> &acentric,
