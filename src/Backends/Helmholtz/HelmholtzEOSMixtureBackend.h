@@ -52,6 +52,9 @@ protected:
 
     SimpleState _crit;
     std::size_t N; ///< Number of components
+    
+    /// This overload is protected because it doesn't follow the base class definition, since this function is needed for constructing spinodals
+    std::vector<CoolProp::CriticalState> _calc_all_critical_points(bool find_critical_points = true);
 public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
@@ -64,6 +67,7 @@ public:
     PhaseEnvelopeData PhaseEnvelope;
     SimpleState hsat_max;
     SsatSimpleState ssat_max;
+    SpinodalValues spinodal_values;
 
     bool clear(){
         // Clear the locally cached values for the derivatives of the residual Helmholtz energy
@@ -129,7 +133,9 @@ public:
     CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
     
     CriticalState calc_critical_point(double rho0, double T0);
-    std::vector<CoolProp::CriticalState> calc_all_critical_points();
+    /// An overload to make the compiler (clang in this case) happy
+    std::vector<CoolProp::CriticalState> calc_all_critical_points(){ bool find_critical_points = true; return _calc_all_critical_points(find_critical_points); };
+
     virtual void get_critical_point_starting_values(double &delta0, double &tau0){
         delta0 = 0.5; // The value of delta where we start searching for crossing with Lstar=0 contour
         tau0 = 0.66; // The value of tau where we start searching at delta=delta0
@@ -138,6 +144,12 @@ public:
     virtual void get_critical_point_search_radii(double &R_delta, double &R_tau);
     /// Checking function to see if we should stop the tracing of the critical contour
     virtual bool get_critical_is_terminated(double &delta, double &tau){ return delta > 5 || tau > 4; }
+    
+    /// Build the spinodal curve
+    virtual void calc_build_spinodal();
+    
+    /// Get the data from the spinodal curve
+    virtual SpinodalValues calc_get_spinodal_data(){ return spinodal_values; };
 
     /// Calculate the values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
     void calc_criticality_contour_values(double &L1star, double &M1star);

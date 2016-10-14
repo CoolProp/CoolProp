@@ -3475,9 +3475,13 @@ public:
     };
 };
 
+
+/** This class is used to trace the spinodal of the mixture, and is also used to calculate critical points
+ */
 class L0CurveTracer : public FuncWrapper1DWithDeriv
 {
 public:
+
     CoolProp::HelmholtzEOSMixtureBackend &HEOS;
     double delta,
            tau,
@@ -3490,7 +3494,9 @@ public:
     std::vector<CoolProp::CriticalState> critical_points;
     int N_critical_points;
     Eigen::MatrixXd Lstar, adjLstar, dLstardTau, d2LstardTau2, dLstardDelta;
-    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), M1_last(_HUGE), N_critical_points(0)
+    SpinodalValues spinodal_values;
+    bool find_critical_points; ///< If true, actually calculate the critical points, otherwise, skip evaluation of critical points but still trace the spinodal
+    L0CurveTracer(HelmholtzEOSMixtureBackend &HEOS, double tau0, double delta0) : HEOS(HEOS), delta(delta0), tau(tau0), M1_last(_HUGE), N_critical_points(0), find_critical_points(true)
     {
         R_delta_tracer = 0.1;
         R_delta = R_delta_tracer;
@@ -3498,7 +3504,7 @@ public:
         R_tau = R_tau_tracer;
     };
     /***
-     \brief Calculate the value of L1
+     \brief Update values for tau, delta
      @param theta The angle
      @param tau The old value of tau
      @param delta The old value of delta
@@ -3594,7 +3600,8 @@ public:
             // If the sign of M1 and the previous value of M1 have different signs, it means that
             // you have bracketed a critical point, run the full critical point solver to
             // find the critical point and store it
-            if (i > 0 && M1*M1_last < 0){
+            // Only enabled if find_critical_points is true (the default)
+            if (i > 0 && M1*M1_last < 0 && find_critical_points){
                 double rhomolar = HEOS.rhomolar_reducing()*(delta+delta_new)/2.0, T = HEOS.T_reducing()/((tau+tau_new)/2.0);
                 CoolProp::CriticalState crit = HEOS.calc_critical_point(rhomolar, T);
                 critical_points.push_back(crit);
@@ -3609,6 +3616,10 @@ public:
             this->delta = delta_new;
             this->M1_last = M1;
             this->theta_last = theta;
+            
+            this->spinodal_values.tau.push_back(tau_new);
+            this->spinodal_values.delta.push_back(delta_new);
+            this->spinodal_values.M1.push_back(M1);
         }
     };
 };
@@ -3624,7 +3635,7 @@ void HelmholtzEOSMixtureBackend::calc_criticality_contour_values(double &L1star,
 void HelmholtzEOSMixtureBackend::get_critical_point_search_radii(double &R_delta, double &R_tau){
     R_delta = 0.025; R_tau = 0.1;
 }
-std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critical_points()
+std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::_calc_all_critical_points(bool find_critical_points)
 {
     // Populate the temporary class used to calculate the critical point(s)
     add_critical_state();
@@ -3652,12 +3663,15 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::calc_all_critic
     //double rho0 = delta0*rhomolar_reducing();
 
     L0CurveTracer tracer(*critical_state, tau_L0, delta0);
+    tracer.find_critical_points = find_critical_points;
 
     double R_delta = 0, R_tau = 0;
     critical_state->get_critical_point_search_radii(R_delta, R_tau);
     tracer.R_delta_tracer = R_delta;
     tracer.R_tau_tracer = R_tau;
     tracer.trace();
+    
+    this->spinodal_values = tracer.spinodal_values;
 
     return tracer.critical_points;
 }
@@ -3680,6 +3694,12 @@ double HelmholtzEOSMixtureBackend::calc_tangent_plane_distance(const double T, c
 			              - log(MixtureDerivatives::fugacity_i(*this, i, XN_DEPENDENT)));
 	}
 	return summer;
+}
+    
+void HelmholtzEOSMixtureBackend::calc_build_spinodal(){
+    // Ok, we are faking a little bit here, hijacking the code for critical points, but skipping evaluation of critical points
+    bool find_critical_points = false;
+    _calc_all_critical_points(find_critical_points);
 }
 
 } /* namespace CoolProp */

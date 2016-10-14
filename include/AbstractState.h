@@ -16,6 +16,14 @@
 #include <numeric>
 
 namespace CoolProp {
+    
+/// This structure holds values obtained while tracing the spinodal curve
+/// (in the process of finding critical points, but not only)
+struct SpinodalValues{
+    std::vector<double> tau,   ///< The reciprocal reduced temperature (\f$\tau=T_r/T\f$)
+                        delta, ///< The reduced density (\f$\delta=\rho/\rho_r\f$)
+                        M1;    ///< The determinant of the scaled matrix for the second criticality condition
+};
 
 /// This simple class holds the values for guesses for use in some solvers
 /// that have the ability to use guess values intelligently
@@ -371,6 +379,8 @@ protected:
     virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
     virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
     virtual std::vector<CriticalState> calc_all_critical_points(void){ throw NotImplementedError("calc_all_critical_points is not implemented for this backend"); };
+    virtual void calc_build_spinodal(){ throw NotImplementedError("calc_build_spinodal is not implemented for this backend"); };
+    virtual SpinodalValues calc_get_spinodal_data(){ throw NotImplementedError("calc_get_spinodal_data is not implemented for this backend"); };
     virtual void calc_criticality_contour_values(double &L1star, double &M1star){ throw NotImplementedError("calc_criticality_contour_values is not implemented for this backend"); };
     
     /// Convert mass-based input pair to molar-based input pair;  If molar-based, do nothing
@@ -544,6 +554,12 @@ public:
     
     /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
     std::vector<CriticalState> all_critical_points(void){ return calc_all_critical_points(); };
+    
+    /// Construct the spinodal curve for the mixture (or pure fluid)
+    void build_spinodal(){ calc_build_spinodal(); };
+    
+    /// Get the data from the spinodal curve constructed in the call to build_spinodal()
+    SpinodalValues get_spinodal_data(){ return calc_get_spinodal_data(); };
 
     /// Calculate the criticality contour values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
     void criticality_contour_values(double &L1star, double &M1star){ return calc_criticality_contour_values(L1star, M1star); }
