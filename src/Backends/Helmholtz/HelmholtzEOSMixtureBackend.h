@@ -67,7 +67,7 @@ public:
     PhaseEnvelopeData PhaseEnvelope;
     SimpleState hsat_max;
     SsatSimpleState ssat_max;
-    SpinodalValues spinodal_values;
+    SpinodalData spinodal_values;
 
     bool clear(){
         // Clear the locally cached values for the derivatives of the residual Helmholtz energy
@@ -149,7 +149,7 @@ public:
     virtual void calc_build_spinodal();
     
     /// Get the data from the spinodal curve
-    virtual SpinodalValues calc_get_spinodal_data(){ return spinodal_values; };
+    virtual SpinodalData calc_get_spinodal_data(){ return spinodal_values; };
 
     /// Calculate the values \f$\mathcal{L}_1^*\f$ and \f$\mathcal{M}_1^*\f$
     void calc_criticality_contour_values(double &L1star, double &M1star);
