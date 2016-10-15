@@ -43,6 +43,8 @@ public:
 
 	/// Get a reference to the shared pointer managing the generalized cubic class
 	shared_ptr<AbstractCubic> &get_cubic(){ return cubic; };
+
+    std::vector<std::string> calc_fluid_names(void);
 	
     bool using_mole_fractions(void){return true;};
     bool using_mass_fractions(void){return false;}; 

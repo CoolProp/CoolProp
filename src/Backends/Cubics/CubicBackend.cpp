@@ -65,6 +65,15 @@ void CoolProp::AbstractCubicBackend::set_alpha_from_components(){
     }
 }
 
+std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names(void)
+{
+    std::vector<std::string> out;
+    for (std::size_t i = 0; i < components.size(); ++i){
+        out.push_back(components[i].name);
+    }
+    return out;
+}
+
 void CoolProp::AbstractCubicBackend::get_linear_reducing_parameters(double &rhomolar_r, double &T_r){
     // In the case of models where the reducing temperature is not a function of composition (SRK, PR, etc.), 
     // we need to use an appropriate value for T_r and v_r, here we use a linear weighting
