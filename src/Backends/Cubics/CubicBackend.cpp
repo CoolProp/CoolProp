@@ -515,6 +515,14 @@ double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::
     }
 };
 
+void CoolProp::AbstractCubicBackend::copy_all_alpha_functions(AbstractCubicBackend *donor){
+    get_cubic()->set_all_alpha_functions(donor->get_cubic()->get_all_alpha_functions());
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
+        ACB->copy_all_alpha_functions(this);
+    }
+}
+
 void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend *donor){
     get_cubic()->set_kmat(donor->get_cubic()->get_kmat());
     for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {

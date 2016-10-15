@@ -187,6 +187,9 @@ public:
     
     // Copy the entire kij matrix from another instance in one shot
     void copy_k(AbstractCubicBackend *donor);
+    
+    //
+    void copy_all_alpha_functions(AbstractCubicBackend *donor);
 
     // Set the Mathias-Copeman constants c1,c2,c3 for a pure fluid
     void set_C_MC(double c1, double c2, double c3);
@@ -236,8 +239,7 @@ public:
     }
     HelmholtzEOSMixtureBackend *get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend *ACB = new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
-        ACB->copy_k(this);
-        ACB->get_cubic()->set_all_alpha_functions(this->get_cubic()->get_all_alpha_functions());
+        ACB->copy_k(this); ACB->copy_all_alpha_functions(this);
         return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(SRK_BACKEND); }
@@ -280,8 +282,7 @@ public:
     };
     HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend * ACB = new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
-        ACB->copy_k(this);
-        ACB->get_cubic()->set_all_alpha_functions(this->get_cubic()->get_all_alpha_functions());
+        ACB->copy_k(this); ACB->copy_all_alpha_functions(this);
         return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(PR_BACKEND); }
