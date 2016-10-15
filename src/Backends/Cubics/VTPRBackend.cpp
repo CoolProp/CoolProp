@@ -34,9 +34,6 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
     // Store the fluid names
     m_fluid_names = names;
     
-    // Resize the vectors
-    resize(names.size());
-    
     // Set the alpha function for the backend
     set_alpha_from_components();
     
@@ -59,6 +56,9 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
 			SatV->set_mole_fractions(z);
 		}
     }
+
+    // Resize the vectors (including linked states)
+    resize(names.size());
 }
 
 void CoolProp::VTPRBackend::set_alpha_from_components(){
