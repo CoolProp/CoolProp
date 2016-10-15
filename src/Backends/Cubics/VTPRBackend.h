@@ -29,7 +29,7 @@ class VTPRBackend : public PengRobinsonBackend  {
     
 private:
     
-    std::vector<double> Tc, pc, omega, m_ii;
+    std::vector<double> Tc, pc, omega, molemass, m_ii;
     double R;
     std::vector<std::string> m_fluid_names;
 public:
@@ -48,6 +48,7 @@ public:
             Tc.push_back(comp.Tc); // [K]
             pc.push_back(comp.pc); // [Pa]
             acentric.push_back(comp.acentric); // [-]
+            molemass.push_back(comp.molemass); // [kg/mol]
         }
         cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
         setup(fluid_identifiers, generate_SatL_and_SatV);
@@ -71,6 +72,9 @@ public:
         VTPRCubic * _cubic= static_cast<VTPRCubic *>(cubic.get());
         _cubic->get_unifaq().set_mole_fractions(z);
     };
+
+    /// Calculate the molar mass
+    CoolPropDbl calc_molar_mass(void);
     
 };
     

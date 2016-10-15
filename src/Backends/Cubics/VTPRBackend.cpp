@@ -88,7 +88,14 @@ void CoolProp::VTPRBackend::set_alpha_from_components(){
     }
 }
 
-
+CoolPropDbl CoolProp::VTPRBackend::calc_molar_mass(void)
+{
+    double summer = 0;
+    for (unsigned int i = 0; i < N; ++i){
+        summer += mole_fractions[i]*molemass[i];
+    }
+    return summer;
+}
 
 const UNIFAQLibrary::UNIFAQParameterLibrary & CoolProp::VTPRBackend::LoadLibrary(){
     if (!lib.is_populated()){

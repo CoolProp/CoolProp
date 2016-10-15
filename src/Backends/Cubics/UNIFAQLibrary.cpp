@@ -46,6 +46,7 @@ namespace UNIFAQLibrary{
             c.Tc = (*itr)["Tc"].GetDouble();
             c.pc = (*itr)["pc"].GetDouble();
             c.acentric = (*itr)["acentric"].GetDouble();
+            c.molemass = (*itr)["molemass"].GetDouble();
             // userid is an optional user identifier
             if ((*itr).HasMember("userid")){
                 c.userid = (*itr)["userid"].GetString();

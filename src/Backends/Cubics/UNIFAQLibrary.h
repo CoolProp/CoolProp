@@ -55,7 +55,8 @@ namespace UNIFAQLibrary{
                     userid;          ///< A user-specified string identifier
         double Tc,                   ///< The critical temperature in K
                pc,                   ///< The critical pressure in Pa
-               acentric;             ///< The acentric factor
+               acentric,             ///< The acentric factor
+               molemass;             ///< The molar mass in kg/mol
         std::vector<ComponentGroup> groups;
         std::string alpha_type; ///< The type of alpha function
         std::vector<double> alpha_coeffs; ///< The vector of coefficients for the alpha function
