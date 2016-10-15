@@ -33,7 +33,16 @@ private:
     double R;
     std::vector<std::string> m_fluid_names;
 public:
-    
+    VTPRBackend(const std::vector<std::string> fluid_identifiers,
+		const std::vector<double> &Tc,
+		const std::vector<double> &pc,
+		const std::vector<double> &acentric,
+		double R_u,
+		bool generate_SatL_and_SatV = true) {
+		const UNIFAQLibrary::UNIFAQParameterLibrary & lib = LoadLibrary();
+		cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
+		setup(fluid_identifiers, generate_SatL_and_SatV);
+	};
     VTPRBackend(const std::vector<std::string> fluid_identifiers,
                 const double R_u = get_config_double(R_U_CODATA),
                 bool generate_SatL_and_SatV = true)
@@ -53,7 +62,11 @@ public:
         cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
-    
+    HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
+        AbstractCubicBackend * ACB = new VTPRBackend(calc_fluid_names(),cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
+        ACB->copy_k(this); ACB->copy_all_alpha_functions(this);
+        return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
+    }
     /// Set the alpha function based on the alpha function defined in the components vector;
     void set_alpha_from_components();
     
