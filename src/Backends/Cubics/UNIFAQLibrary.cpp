@@ -113,7 +113,7 @@ namespace UNIFAQLibrary{
                 return ip;
             }
         }
-        throw CoolProp::ValueError("Could not find interaction pair");
+        throw CoolProp::ValueError(format("Could not find interaction between pair mgi[%d]-mgi[%d]", static_cast<int>(mgi1), static_cast<int>(mgi2)));
     }
 
     Component UNIFAQParameterLibrary::get_component(const std::string &identifier, const std::string &value) const {
