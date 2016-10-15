@@ -235,6 +235,7 @@ public:
     HelmholtzEOSMixtureBackend *get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend *ACB = new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
         ACB->copy_k(this);
+        ACB->set_alpha_from_components();
         return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(SRK_BACKEND); }
@@ -278,6 +279,7 @@ public:
     HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend * ACB = new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
         ACB->copy_k(this);
+        ACB->set_alpha_from_components();
         return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(PR_BACKEND); }
