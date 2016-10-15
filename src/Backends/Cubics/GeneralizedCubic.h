@@ -92,6 +92,12 @@ public:
     void set_alpha(const std::vector<double> &C1, const std::vector<double> &C2, const std::vector<double> &C3);
     /// Set the alpha function for the i-th component
     void set_alpha_function(std::size_t i, shared_ptr<AbstractCubicAlphaFunction> &acaf){ alpha[i] = acaf; };
+    /// Get the alpha function for the i-th component
+    shared_ptr<AbstractCubicAlphaFunction> get_alpha_function(std::size_t i) { return alpha[i]; };
+    /// Set all the alpha functions
+    void set_all_alpha_functions(std::vector<shared_ptr<AbstractCubicAlphaFunction> > &alpha) { this->alpha = alpha; };
+    /// Get all the alpha functions
+    std::vector<shared_ptr<AbstractCubicAlphaFunction> > get_all_alpha_functions() { return this->alpha; };
     
     /// Get the entire kij matrix in one shot
     const std::vector< std::vector<double> > & get_kmat(){return k;};
