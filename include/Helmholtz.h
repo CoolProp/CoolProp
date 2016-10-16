@@ -206,6 +206,8 @@ struct ResidualHelmholtzGeneralizedExponentialElement
     CoolPropDbl c, l_double, omega, m_double, eta1, epsilon1, eta2, epsilon2, beta1, gamma1, beta2, gamma2;
     /// If l_i or m_i are integers, we will store them as integers in order to call pow(double, int) rather than pow(double, double)
     int l_int, m_int;
+    /// If l is an integer, store a boolean flag so we can evaluate the correct pow() function
+    bool l_is_int, m_is_int;
     
     ResidualHelmholtzGeneralizedExponentialElement()
     {
@@ -399,6 +401,9 @@ public:
             eta2[i] = elements[i].eta2;
             gamma2[i] = elements[i].gamma2;
             beta2[i] = elements[i].beta2;
+            
+            // See if l is an integer, and store a flag if it is
+            elements[i].l_is_int = ( std::abs(static_cast<long>(elements[i].l_double) - elements[i].l_double) < 1e-14 );
         }
         uE.resize(elements.size());
         du_ddeltaE.resize(elements.size());
