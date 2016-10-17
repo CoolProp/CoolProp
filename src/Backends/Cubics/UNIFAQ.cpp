@@ -192,6 +192,7 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T, const std::vector<do
     }
     
     std::map<std::size_t, double> &thetag = m_thetag, &lnGammag = m_lnGammag;
+    lnGammag.clear();
 
     for (std::vector<UNIFAQLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
         double sum1 = 0;
