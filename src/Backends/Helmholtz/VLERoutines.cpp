@@ -1173,7 +1173,16 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
             df += dfdK*(deriv_liq-deriv_vap);
         }
         
-        change = -f/df;
+        if (std::abs(df) <= 1e-12) { // To avoid dividing by 0
+            change = -f;
+            if (std::abs(f) > 1e-12)
+            {
+                set_warning_string("df verry small in successive_substitution but f do not seems converged");
+            }
+        }
+        else {
+            change = -f / df;
+        }
         
         double omega = 1.0;
         if (options.sstype == imposed_p){
