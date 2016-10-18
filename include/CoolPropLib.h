@@ -472,7 +472,7 @@
      *
      * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
      */
-EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, const long length, double *T, double *p, double *rhomolar, long *stable, long *errcode, char *message_buffer, const long buffer_length);
+    EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, const long length, double *T, double *p, double *rhomolar, long *stable, long *errcode, char *message_buffer, const long buffer_length);
 
     // *************************************************************************************
     // *************************************************************************************
