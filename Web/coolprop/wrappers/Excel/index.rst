@@ -10,7 +10,7 @@ Pre-compiled Binaries for windows
 
 Automated Installation
 ----------------------
-As of October 2016, the Excel wrapper for Microsoft Windows can installed from the Windows package as described on the :ref:`page on installation packages <Installers>`. Please refer to the documentation there for issues related to the installation process on Windows.
+As of October 2016, the Excel wrapper for Microsoft Windows can be installed from the Windows package as described on the :ref:`page on installation packages <Installers>`. Please refer to the documentation there for issues related to the installation process on Windows.
 
 .. [#] If you get security warnings after you installed the CoolProp add-in, you can try adding the installation folder to your trusted directories: Got to ``File->Options->Trust Center->Trust Center Settings...->Trusted Locations`` and add the folder where your ``xlam``-file lives. This is most likely ``C:\Users\username\AppData\Roaming\Microsoft\AddIns\``.
 

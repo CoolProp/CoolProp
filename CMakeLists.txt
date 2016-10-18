@@ -685,9 +685,9 @@ if (COOLPROP_WINDOWS_PACKAGE)
   # Build the installer and copy it to the bin directory
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_INSTALLER POST_BUILD
     COMMAND ${COOLPROP_WINDOWS_PACKAGE_ISS_EXE} ARGS "addin-installer.iss"
-	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/installer/Windows"
+	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/deploy" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/Installers/Windows"
     WORKING_DIRECTORY "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}"
-    COMMENT "The new installer is located in '${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/installer/Windows'"
+    COMMENT "The new installer is located in '${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/bin/Installers/Windows'"
     VERBATIM )
 endif()
 

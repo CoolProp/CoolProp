@@ -133,3 +133,4 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     DelphiLazarus/index.rst
     VB.net/index.rst
     R/index.rst
+    Installers/index.rst

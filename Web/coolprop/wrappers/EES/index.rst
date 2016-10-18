@@ -9,8 +9,12 @@ EES is an acausal solver that can be used to solve a wide range of technical pro
 Users
 =====
 
-Install
--------
+Automated Installation
+----------------------
+As of October 2016, the EES wrapper can be installed from the Windows package as described on the :ref:`page on installation packages <Installers>`. Please refer to the documentation there for issues related to the installation process.
+
+Manual Install
+--------------
 Pre-compiled binaries can be downloaded from :sfdownloads:`EES` - follow the instructions there.  Of you can download an installer from the development preview at :sfnightly:`EES`.
 
 Usage
