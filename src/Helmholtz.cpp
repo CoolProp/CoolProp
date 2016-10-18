@@ -161,7 +161,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl &tau, const 
         
         if (delta_li_in_u){
             CoolPropDbl  ci = el.c, l_double = el.l_double;
-            if (ValidNumber(l_double) && ci > 0){
+            if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON){
                 const CoolPropDbl u_increment = (el.l_is_int) ? -ci*powInt(delta, el.l_int) : -ci*pow(delta, l_double);
                 const CoolPropDbl du_ddelta_increment = l_double*u_increment*one_over_delta;
                 const CoolPropDbl d2u_ddelta2_increment = (l_double-1)*du_ddelta_increment*one_over_delta;
