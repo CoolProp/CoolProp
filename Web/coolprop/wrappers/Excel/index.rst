@@ -7,38 +7,44 @@ Excel Wrapper
 
 Pre-compiled Binaries for windows
 =================================
-Pre-compiled release binaries can be downloaded from :sfdownloads:`MicrosoftExcel`.  Development binaries coming from the buildbot server can be found at :sfnightly:`MicrosoftExcel`.
 
-Download all the files. The basic protocol is:
+Automated Installation
+----------------------
+As of October 2016, the Excel wrapper for Microsoft Windows can installed from the Windows package as described on the :ref:`page on installation packages <Installers>`. Please refer to the documentation there for issues related to the installation process on Windows.
 
-Part 1:
--------
-1. Copy the files CoolProp.dll and CoolProp_x64.dll to c:\\CoolProp folder. Technically you only need the DLL that matches your system architecture (CoolProp.dll = 32-bit, CoolProp_x64.dll = 64-bit), but it can't hurt to copy both if you don't know which system architecture version you have.
+Manual Installation
+-------------------
+For a manual installation,   
 
-Part 2:
--------
-1. Open Excel
-2. Determine the trusted directory for addins by going to File->Options...->Trust Center->Trust Center Settings...->Trusted Locations . Note the add-ins directory. Put your CoolProp.xlam in that directory
-3. Go to the menu File-->Options-->Add-Ins
-4. At the bottom, select Manage: Excel Add-ins, then click the Go.. button
-5. Click the browse button
-6. Browse to the file CoolProp.xlam you downloaded, select it (if necessary, CoolProp might already be visible)
-7. Make sure the CoolProp Add-in is selected.
-8. Open the file TestExcel.xlsx and try to re-evaluate one of the cells - they should work now
+1.  Get the shared libraries at :sfdownloads:`shared_library/Windows/32bit__stdcall` and :sfdownloads:`shared_library/Windows/64bit`, put the DLLs into a folder of your choice and rename them to `CoolProp_stdcall.dll` and `CoolProp_x64.dll`. Make sure to add that folder to your path.  Technically you only need the DLL that matches your system architecture (`CoolProp_stdcall.dll` = 32-bit, `CoolProp_x64.dll` = 64-bit), but it can’t hurt to copy both if you don’t know which system architecture version you have.  The Excel macro will select the correct one and use it.
+2.  Download the xla and xlam files from :sfdownloads:`MicrosoftExcel` and activate the add-in from Excel as described below. and copy the files to a convenient accessible location.
+3.  The **TestExcel.xlsx** from :sfdownloads:`MicrosoftExcel` can be copied to a working directory in ``My Documents``.
 
-If you are trying to over-write the CoolProp xlam, you should:
 
-a) In Excel, determine the location of the CoolProp xlam that it wants to load by going to Addins menu
-b) Move the xlam somewhere else temporarily
-c) In Excel, uncheck the CoolProp add-in - it might have already warned about the addin not being in the right place
-d) Restart Excel. Check that the addin has been removed, or at least the path is not the old path to CoolProp
-e) Determine the trusted directory for addins by going to File->Options...->Trust Center->Trust Center Settings...->Trusted Locations . Note the add-ins directory. Put your CoolProp.xlam in that directory
-f) In Excel, add the add-in for CoolProp again by checking it and browsing to the correct location
-g) Restart Excel, add-in should still be there.
+1.  Open Excel
+2.  Go to the menu ``File–>Options–>Add-Ins``
+3.  At the bottom, select ``Manage: Excel Add-ins``, then click the ``Go...`` button
+4.  Click the ``Browse`` button on the Add-in Manager panel
+5.  Browse to the file **CoolProp.xlam** you downloaded and select it
+6.  Make sure the CoolProp Add-in is selected (box checked) and close the Add-in Manager.
+7.  Open the file **TestExcel.xlsx** and try to re-evaluate one of the cells; the CoolProp formulas should all be working now. (To recalculate the entire worksheet, press ``Ctrl``-``Alt``-``Shift``-``F9`` ) [#]_
 
-.. note::
+.. [#] **Alertnate DLL Location** - Some environments, lock down the folders included in the binary search path for normal users for security reasons.  If this is the case, you will need to put the DLL files in an alternate location (possibly on a shared network location for all users).  Follow the instructions below:
 
-    If you are having problems with the path to the XLAM in your worksheet appearing as the complete path to the xlam (but not the correct path), you might need to go into ``Data->Update Links`` in Excel, select CoolProp.xlam, and select "Change Source..." and select the location of your xlam file.  That should update all the links.
+  1. Place the CoolProp DLL files in the alternate location
+  2. Place the CoolProp xlam file in a writable location and open it.
+  3. You will get an Excel error, ``File not found - CoolProp_stdcall.dll``.  Clicking **Ok** on the error will only clear the first of many.  Press and hold the **``Enter``** key until all of the errors clear.
+  4. Make sure that the Developer ribbon is visible on the main menu.  If not
+  
+     - Go to **File | Options** on the main menu and select Cusomize Ribbon
+     - Make sure that the Developer main tab is checked (ON)
+     
+  5. Open the Visual Basic editor and use **Edit | Replace** to replace all occurances of **CoolProp_stdcall.dll** with the full path to the alternate location for your DLL files, making sure to press the save button (disk image) or **File | Save** before exiting the VBA editor.
+  6. Save the CoolProp.xlam file.
+
+
+.. [#] If you are having problems with the path to the XLAM in your worksheet appearing as the complete path to the xlam (but not the correct path), you might need to go into ``Data->Update Links`` in Excel, select CoolProp.xlam, and select ``Change Source...`` and select the location of your xlam file.  That should update all the links.
+
     
 Pre-compiled Binaries for OSX
 =============================
