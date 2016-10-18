@@ -627,6 +627,36 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
     }
 }
 
+EXPORT_CODE void CONVENTION AbstractState_build_spinodal(const long handle, long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        AS->build_spinodal();
+    }
+    catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE void CONVENTION AbstractState_get_spinodal_data(const long handle, const long length, double* tau, double* delta, double* M1, long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        CoolProp::SpinodalData spin = AS->get_spinodal_data();
+        if (spin.tau.size() > length){
+            throw CoolProp::ValueError(format("Length of spinodal vectors [%d] is greater than allocated buffer length [%d]", static_cast<int>(spin.tau.size()), static_cast<int>(length)));
+        }
+        for (int i = 0; i<spin.tau.size(); ++i){
+            *(tau+i) = spin.tau[i];
+            *(delta+i) = spin.delta[i];
+            *(M1+i) = spin.M1[i];
+        }
+    }
+    catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
 EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, long length, double *T, double *p, double *rhomolar, long *stable, long *errcode, char *message_buffer, const long buffer_length) {
     *errcode = 0;
     try {

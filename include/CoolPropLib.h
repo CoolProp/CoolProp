@@ -458,6 +458,32 @@
     EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long handle, const long length, double* T, double* p, double* rhomolar_vap, double *rhomolar_liq, double *x, double *y, long *errcode, char *message_buffer, const long buffer_length);
 
     /**
+     * @brief Build the spinodal
+     * @param handle The integer handle for the state class stored in memory
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+    EXPORT_CODE void CONVENTION AbstractState_build_spinodal(const long handle, long *errcode, char *message_buffer, const long buffer_length);
+
+    /**
+     * @brief Get data for the spinodal curve
+     * @param handle The integer handle for the state class stored in memory
+     * @param length The number of elements stored in the arrays (all outputs MUST be the same length)
+     * @param tau The pointer to the array of reciprocal reduced temperature
+     * @param delta The pointer to the array of reduced density
+     * @param M1 The pointer to the array of M1 values (when L1=M1=0, critical point)
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     *
+     * @note If there is an error, no change in the output arrays will be made
+     */
+    EXPORT_CODE void CONVENTION AbstractState_get_spinodal_data(const long handle, const long length, double* tau, double* delta, double* M1, long *errcode, char *message_buffer, const long buffer_length);
+
+    /**
      * @brief Calculate all the critical points for a given composition
      * @param handle The integer handle for the state class stored in memory
      * @param length The length of the buffers passed to this function
