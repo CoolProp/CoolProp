@@ -457,6 +457,23 @@
      */
     EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long handle, const long length, double* T, double* p, double* rhomolar_vap, double *rhomolar_liq, double *x, double *y, long *errcode, char *message_buffer, const long buffer_length);
 
+    /**
+     * @brief Calculate all the critical points for a given composition
+     * @param handle The integer handle for the state class stored in memory
+     * @param length The length of the buffers passed to this function
+     * @param T The pointer to the array of temperature (K)
+     * @param p The pointer to the array of pressure (Pa)
+     * @param rhomolar The pointer to the array of molar density (m^3/mol)
+     * @param stable The pointer to the array of boolean flags for whether the critical point is stable (1) or unstable (0)
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     *
+     * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
+     */
+EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, const long length, double *T, double *p, double *rhomolar, long *stable, long *errcode, char *message_buffer, const long buffer_length);
+
     // *************************************************************************************
     // *************************************************************************************
     // *****************************  DEPRECATED *******************************************

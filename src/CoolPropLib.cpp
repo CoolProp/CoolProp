@@ -627,6 +627,26 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
     }
 }
 
+EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, long length, double *T, double *p, double *rhomolar, long *stable, long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        std::vector<CoolProp::CriticalState> pts = AS->all_critical_points();
+        if (pts.size() > length){
+            throw CoolProp::ValueError(format("Length of critical point vector [%d] is greater than allocated buffer length [%d]", static_cast<int>(pts.size()), static_cast<int>(length)));
+        }
+        for (int i = 0; i < pts.size(); ++i){
+            *(T+i) = pts[i].T;
+            *(p+i) = pts[i].p;
+            *(rhomolar+i) = pts[i].rhomolar;
+            *(stable+i) = pts[i].stable;
+        }
+    }
+    catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
 /// *********************************************************************************
 /// *********************************************************************************
 ///                     EMSCRIPTEN (for javascript)
