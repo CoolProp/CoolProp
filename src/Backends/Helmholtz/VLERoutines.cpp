@@ -1175,12 +1175,12 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
         
         if (std::abs(df) <= 1e-12) { // To avoid dividing by 0
             if (std::abs(f) <= 1e-12)
-+            {
-+                change = -f; // Should be converged. f <= e-12, so change will have nearly no impact.
-+            }
-+            else {
+             {
+                 change = -f; // Should be converged. f <= e-12, so change will have nearly no impact.
+             }
+             else {
                  throw ValueError(format("df very small (df = %g) in successive_substitution but f is not converged (f = %g < 1e-12).",df,f));
-+            }
+             }
         }
         else {
             change = -f / df;
