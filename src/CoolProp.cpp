@@ -524,10 +524,13 @@ bool add_fluids_as_JSON(const std::string &backend, const std::string &fluidstri
     {
         CubicLibrary::add_fluids_as_JSON(fluidstring); return true;
     }
-    else{
-        throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON",backend.c_str()));
+    else if (backend == "HEOS")
+    {
+        JSONFluidLibrary::add_many(fluidstring); return true;
     }
-    
+    else{
+        throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON; valid options are SRK, PR, HEOS",backend.c_str()));
+    }
 }
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to PropsSI","[PropsSI]")

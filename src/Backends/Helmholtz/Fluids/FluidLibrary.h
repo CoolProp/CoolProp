@@ -1145,6 +1145,9 @@ public:
         _is_empty = true;
     };
     bool is_empty(void){ return _is_empty;};
+    
+    /// Add all the fluid entries in the JSON-encoded string passed in
+    static void add_many(const std::string &JSON_string);
 
     /// Add all the fluid entries in the rapidjson::Value instance passed in
     void add_many(rapidjson::Value &listing)

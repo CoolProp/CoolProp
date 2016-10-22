@@ -78,6 +78,17 @@ void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string &flui
     }
 }
     
+/// Add all the fluid entries in the JSON-encoded string passed in
+void JSONFluidLibrary::add_many(const std::string &JSON_string){
+    
+    // First load all the baseline fluids
+    if (library.is_empty()){ load(); }
+    
+    // Then, load the fluids we would like to add
+    rapidjson::Document doc;
+    cpjson::JSON_string_to_rapidjson(JSON_string, doc);
+    library.add_many(doc);
+};
 
 JSONFluidLibrary & get_library(void){
     if (library.is_empty()){ load(); }
