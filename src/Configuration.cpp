@@ -35,7 +35,7 @@ std::string config_key_description(configuration_keys keys)
     return ""; // will never get here, just to make compiler happy
 };
 
-std::string config_key_description(std::string key)
+std::string config_key_description(const std::string &key)
 {
     /* ***MAGIC WARNING**!!
     * See http://stackoverflow.com/a/148610

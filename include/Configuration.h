@@ -66,7 +66,7 @@ configuration_keys config_string_to_key(const std::string &s);
 std::string config_key_description(configuration_keys keys);
 
 /// Return a string description of the configuration key (with the key passed as a string)
-std::string config_key_description(std::string key);
+std::string config_key_description(const std::string &key);
     
 /// A class that contains one entry in configuration
 /// Can be cast to yield the output value

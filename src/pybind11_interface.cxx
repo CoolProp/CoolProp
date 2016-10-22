@@ -2,6 +2,10 @@
 
 #include "CoolProp.h"
 #include "AbstractState.h"
+#include "Configuration.h"
+#include "HumidAirProp.h"
+#include "DataStructures.h"
+#include "Backends/Helmholtz/MixtureParameters.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -320,6 +324,43 @@ void init_CoolProp(py::module &m){
         .def("d4alphar_dTau4", &AbstractState::d4alphar_dTau4);
 
     m.def("AbstractState", &factory);
+    
+    m.def("get_config_as_json_string", &get_config_as_json_string);
+    m.def("set_config_as_json_string", &set_config_as_json_string);
+    m.def("config_key_description", (std::string (*)(configuration_keys))&config_key_description);
+    m.def("config_key_description", (std::string (*)(const std::string &))&config_key_description);
+    m.def("set_config_string", &set_config_string);
+    m.def("set_config_double", &set_config_double);
+    m.def("set_config_bool", &set_config_bool);
+    m.def("get_config_string", &get_config_string);
+    m.def("get_config_double", &get_config_double);
+    m.def("get_config_bool", &get_config_bool);
+    m.def("get_parameter_information", &get_parameter_information);
+    m.def("get_parameter_index", &get_parameter_index);
+    m.def("get_phase_index", &get_phase_index);
+    m.def("is_trivial_parameter", &is_trivial_parameter);
+    m.def("generate_update_pair", &generate_update_pair<double>);
+    m.def("Props1SI", &Props1SI);
+    m.def("PropsSI", &PropsSI);
+    m.def("PhaseSI", &PhaseSI);
+    m.def("PropsSImulti", &PropsSImulti);
+    m.def("get_global_param_string", &get_global_param_string);
+    m.def("get_debug_level", &get_debug_level);
+    m.def("set_debug_level", &set_debug_level);
+    m.def("get_fluid_param_string", &get_fluid_param_string);
+    m.def("extract_backend", &extract_backend);
+    m.def("extract_fractions", &extract_fractions);
+    m.def("set_reference_stateS", &set_reference_stateS);
+    m.def("set_reference_stateD", &set_reference_stateD);
+    m.def("saturation_ancillary", &saturation_ancillary);
+    m.def("add_fluids_as_JSON", &add_fluids_as_JSON);
+    m.def("HAPropsSI", &HumidAir::HAPropsSI);
+    m.def("HAProps", &HumidAir::HAProps);
+    m.def("HAProps_Aux", &HumidAir::HAProps_Aux);
+    m.def("cair_sat", &HumidAir::cair_sat);
+    m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);
+    m.def("set_mixture_binary_pair_data", &set_mixture_binary_pair_data);
+    m.def("apply_simple_mixing_rule", &apply_simple_mixing_rule);
 }
 
 #if defined(COOLPROP_PYBIND11_MODULE)
