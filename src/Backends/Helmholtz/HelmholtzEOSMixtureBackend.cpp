@@ -1436,6 +1436,15 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         {
             case iT:
             {
+                if (_T < Tmin()){
+                    if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)){
+                        _phase = iphase_liquid;
+                    }
+                    else{
+                        throw ValueError(format("For now, we don't support T [%g K] below Tmin(saturation) [%g K]", _T, Tmin()));
+                    }
+                }
+                
                 CoolPropDbl T_vap =  0.1 + static_cast<double>(_TVanc);
                 CoolPropDbl T_liq = -0.1 + static_cast<double>(_TLanc);
 
