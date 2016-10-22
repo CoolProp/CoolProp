@@ -322,6 +322,7 @@ void init_CoolProp(py::module &m){
     m.def("AbstractState", &factory);
 }
 
+#if defined(COOLPROP_PYBIND11_MODULE)
 PYBIND11_PLUGIN(CoolProp) {
     py::module m("CoolProp", "CoolProp module");
 
@@ -329,5 +330,6 @@ PYBIND11_PLUGIN(CoolProp) {
 
     return m.ptr();
 }
+#endif
 
 #endif

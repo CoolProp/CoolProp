@@ -18,5 +18,6 @@ add_subdirectory("${ROOT_DIR}" "_CoolProp")
 
 add_subdirectory("${ROOT_DIR}/externals/pybind11" "pybind11")
 add_definitions(-DPYBIND11)
+add_definitions(-DCOOLPROP_PYBIND11_MODULE)
 pybind11_add_module(CoolProp ${APP_SOURCES} "${ROOT_DIR}/src/pybind11_interface.cxx")
 target_link_libraries (CoolProp PUBLIC _CoolProp)
