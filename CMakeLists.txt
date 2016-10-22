@@ -142,6 +142,8 @@ set(SWIG_DEPENDENCIES
     ${CMAKE_CURRENT_SOURCE_DIR}/include/Configuration.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/PhaseEnvelope.h)
 
+set(COOLPROP_APP_SOURCES ${APP_SOURCES} CACHE LIST "List of CPP sources needed for CoolProp")
+set(COOLPROP_INCLUDE_DIRECTORIES ${APP_INCLUDE_DIRS} CACHE LIST "List of include directories needed for CoolProp")
 
 #######################################
 #         REQUIRED MODULES            #

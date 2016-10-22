@@ -7,9 +7,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set (ROOT_DIR "../../..")
 
-# Add core CoolProp dependency as a static library
-set(COOLPROP_STATIC_LIBRARY true CACHE BOOL "Use CoolProp")
-set(COOLPROP_LIBRARY_NAME "_CoolProp" CACHE PATH "The name of the CoolProp static library")
+# Add core CoolProp dependency to get the list of files
 add_subdirectory("${ROOT_DIR}" "_CoolProp")
 
 # ----------------------------
@@ -19,5 +17,5 @@ add_subdirectory("${ROOT_DIR}" "_CoolProp")
 add_subdirectory("${ROOT_DIR}/externals/pybind11" "pybind11")
 add_definitions(-DPYBIND11)
 add_definitions(-DCOOLPROP_PYBIND11_MODULE)
-pybind11_add_module(CoolProp ${APP_SOURCES} "${ROOT_DIR}/src/pybind11_interface.cxx")
-target_link_libraries (CoolProp PUBLIC _CoolProp)
+include_directories(${COOLPROP_INCLUDE_DIRECTORIES})
+pybind11_add_module(CoolProp ${COOLPROP_APP_SOURCES} "${ROOT_DIR}/src/pybind11_interface.cxx")

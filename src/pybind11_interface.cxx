@@ -167,7 +167,7 @@ void init_CoolProp(py::module &m){
         .value("DmolarUmolar_INPUTS", input_pairs::DmolarUmolar_INPUTS)
         .export_values();
 
-    py::class_<AbstractState>(m, "AbstractState")
+    py::class_<AbstractState>(m, "_AbstractState")
         .def("set_T", &AbstractState::set_T)
         .def("backend_name", &AbstractState::backend_name)
         .def("using_mole_fractions", &AbstractState::using_mole_fractions)
