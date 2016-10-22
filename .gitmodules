@@ -25,3 +25,6 @@
 [submodule "externals/ExcelAddinInstaller"]
 	path = externals/ExcelAddinInstaller
 	url = https://github.com/CoolProp/ExcelAddinInstaller.git
+[submodule "externals/pybind11"]
+	path = externals/pybind11
+	url = https://github.com/pybind/pybind11.git
