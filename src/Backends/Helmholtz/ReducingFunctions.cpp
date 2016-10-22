@@ -401,7 +401,6 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxidgamma(const std::vector<CoolPropDb
 {
     if (xN_flag == XN_INDEPENDENT) {
         // See Table B9 from Kunz Wagner 2012 (GERG 2008)
-        CoolPropDbl xi = x[i];
         CoolPropDbl deriv = 0;
         for (std::size_t k = 0; k < i; k++){
             deriv += 2*beta[k][i]*Y_c_ij[k][i]*dfYkidxi__constxk(x, k, i, beta);

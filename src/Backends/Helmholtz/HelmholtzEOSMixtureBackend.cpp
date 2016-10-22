@@ -2123,7 +2123,7 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             // Now we are going to do something VERY slow - increase density until curvature is positive
             double rho = 1e-6;
             for (std::size_t counter = 0; counter <= 100; counter ++){
-                double dpdrho = resid.call(rho); // Updates the state
+                resid.call(rho); // Updates the state
                 double curvature = resid.deriv(rho);
                 if (curvature > 0){
                     light = rho;
