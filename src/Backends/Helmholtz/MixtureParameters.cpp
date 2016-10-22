@@ -143,25 +143,32 @@ public:
         }
     }
     /// Add a simple mixing rule
-    void add_simple_mixing_rule(const std::string &CAS1, const std::string &CAS2, const std::string &rule){
+    void add_simple_mixing_rule(const std::string &identifier1, const std::string &identifier2, const std::string &rule){
         // Get the empty dictionary to be filled by the appropriate reducing parameter filling function
         Dictionary dict;
+        
+        // Get the names/CAS of the compounds
+        std::vector<std::string> names1(1,identifier1);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS1(new CoolProp::HelmholtzEOSMixtureBackend(names1));
+        std::string name1 = HEOS1->name();
+        std::string CAS1 = HEOS1->fluid_param_string("CAS");
+        std::vector<std::string> names2(1,identifier2);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS2(new CoolProp::HelmholtzEOSMixtureBackend(names2));
+        std::string name2 = HEOS2->name();
+        std::string CAS2 = HEOS2->fluid_param_string("CAS");
         
         // Get the vector of CAS numbers
         std::vector<std::string> CAS;
         CAS.push_back(CAS1);
         CAS.push_back(CAS2);
-
+        
         // Sort the CAS number vector
         std::sort(CAS.begin(), CAS.end());
-
-        // Get the names of the compounds
-        std::vector<std::string> names1(1,CAS[0]);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS1(new CoolProp::HelmholtzEOSMixtureBackend(names1));
-        std::string name1 = HEOS1->name();
-        std::vector<std::string> names2(1,CAS[1]);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS2(new CoolProp::HelmholtzEOSMixtureBackend(names2));
-        std::string name2 = HEOS2->name();
+        
+        // Swap fluid names if the CAS numbers were swapped
+        if (CAS[0] != CAS1){
+            std::swap(name1, name2);
+        }
         
         // Populate the dictionary with common terms
         dict.add_string("name1", name1);
@@ -205,8 +212,8 @@ static MixtureBinaryPairLibrary mixturebinarypairlibrary;
 static MixtureBinaryPairLibrary mixturebinarypairlibrary_default;
 
 /// Add a simple mixing rule
-void apply_simple_mixing_rule(const std::string &CAS1, const std::string &CAS2, const std::string &rule){
-    mixturebinarypairlibrary.add_simple_mixing_rule(CAS1, CAS2, rule);
+void apply_simple_mixing_rule(const std::string &identifier1, const std::string &identifier2, const std::string &rule){
+    mixturebinarypairlibrary.add_simple_mixing_rule(identifier1, identifier2, rule);
 }
 
 std::string get_csv_mixture_binary_pairs()
