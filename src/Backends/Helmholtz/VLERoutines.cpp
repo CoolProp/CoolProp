@@ -1173,13 +1173,13 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
             df += dfdK*(deriv_liq-deriv_vap);
         }
         
-        if (std::abs(df) <= 1e-12) { // To avoid dividing by 0
-            if (std::abs(f) <= 1e-12)
+        if (std::abs(df) <= 1e-14) { // To avoid dividing by 0
+            if (std::abs(f) <= 1e-12) // 1e-12 is the loop convergence criterion
              {
                  change = -f; // Should be converged. f <= e-12, so change will have nearly no impact.
              }
              else {
-                 throw ValueError(format("df very small (df = %g) in successive_substitution but f is not converged (f = %g < 1e-12).",df,f));
+                 throw ValueError(format("df very small (df = %g) in successive_substitution but f is not converged (f = %g > 1e-12).",df,f));
              }
         }
         else {
