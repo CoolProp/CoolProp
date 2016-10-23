@@ -14,6 +14,9 @@ static UNIFAQLibrary::UNIFAQParameterLibrary lib;
 void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool generate_SatL_and_SatV){
 
     R = get_config_double(R_U_CODATA);
+
+    // Set the pure fluid flag
+    is_pure_or_pseudopure = (N == 1);
     
     // Reset the residual Helmholtz energy class
     residual_helmholtz.reset(new CubicResidualHelmholtz(this));
