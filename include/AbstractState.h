@@ -19,7 +19,8 @@ namespace CoolProp {
     
 /// This structure holds values obtained while tracing the spinodal curve
 /// (most often in the process of finding critical points, but not only)
-struct SpinodalData{
+class SpinodalData{
+public:
     std::vector<double> tau,   ///< The reciprocal reduced temperature (\f$\tau=T_r/T\f$)
                         delta, ///< The reduced density (\f$\delta=\rho/\rho_r\f$)
                         M1;    ///< The determinant of the scaled matrix for the second criticality condition
