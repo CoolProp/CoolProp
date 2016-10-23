@@ -1437,11 +1437,22 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             case iT:
             {
                 if (_T < Tmin()){
-                    if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)){
-                        _phase = iphase_liquid;
+                    if (has_melting_line()){
+                        double Tm = melting_line(iT, iP, _p);
+                        if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)){
+                            _phase = iphase_liquid;
+                        }
+                        else{
+                            throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
+                        }
                     }
                     else{
-                        throw ValueError(format("For now, we don't support T [%g K] below Tmin(saturation) [%g K]", _T, Tmin()));
+                        if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)){
+                            _phase = iphase_liquid;
+                        }
+                        else{
+                            throw ValueError(format("For now, we don't support T [%g K] below Tmin(saturation) [%g K]", _T, Tmin()));
+                        }
                     }
                 }
                 
