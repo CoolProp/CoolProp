@@ -217,6 +217,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
                 printf("add location of REFPROP to the PATH environment variable or your library path.\n\n");
                 printf("In case you do not use Windows, have a look at https://github.com/jowr/librefprop.so \n");
                 printf("to find instructions on how to compile your own version of the REFPROP library.\n\n");
+                printf("ALTERNATIVE_REFPROP_PATH: %s\n", alt_rp_path.c_str());
                 _REFPROP_supported = false;
                 return false;
             }
