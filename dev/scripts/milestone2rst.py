@@ -1,12 +1,41 @@
 from __future__ import print_function
-import urllib, json, sys
+import urllib, json, sys, os
+
+def get_milestones(milestone):
+    fname = milestone+'-milestones.json'
+    if not os.path.exists(fname):
+        # Find the milestone number for the given name
+        milestones_json = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/milestones').read())
+        with open(fname,'w') as fp:
+            fp.write(json.dumps(milestones_json, indent = 2))
+    with open(fname,'r') as fp:
+        return json.load(fp)
+
+def get_PR_JSON(milestone, number):
+    # Get the merged pull requests associated with the milestone
+    fname = milestone+'-PR.json'
+    if not os.path.exists(fname):
+        # Find the milestone number for the given name
+        PR = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/pulls?state=closed&per_page=1000&milestone='+str(number)).read())
+        with open(fname,'w') as fp:
+            fp.write(json.dumps(PR, indent = 2))
+    with open(fname,'r') as fp:
+        return json.load(fp)
+
+def get_issues_JSON(milestone, number):
+    # Get the merged pull requests associated with the milestone
+    fname = milestone+'-issues.json'
+    if not os.path.exists(fname):
+        # Find the milestone number for the given name
+        issues = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/issues?state=all&per_page=1000&milestone='+str(number)).read())
+        with open(fname,'w') as fp:
+            fp.write(json.dumps(issues, indent = 2))
+    with open(fname,'r') as fp:
+        return json.load(fp)
 
 def generate_issues(milestone):
     
-    # Find the milestone number for the given name
-    milestones_json = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/milestones').read())
-
-    print(milestones_json)
+    milestones_json = get_milestones(milestone)
 
     # Map between name and number
     title_to_number_map = {stone['title']: stone['number'] for stone in milestones_json}
@@ -15,7 +44,7 @@ def generate_issues(milestone):
     number = title_to_number_map[milestone]
 
     # Get the issues associated with the milestone
-    issues = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/issues?state=all&per_page=1000&milestone='+str(number)).read())
+    issues = get_issues_JSON(milestone,     number) 
 
     # Make sure all issues are closed in this milestone
     for issue in issues:
@@ -28,7 +57,7 @@ def generate_issues(milestone):
 def generate_PR(milestone):
     
     # Find the milestone number for the given name
-    milestones_json = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/milestones').read())
+    milestones_json = get_milestones(milestone)
 
     # Map between name and number
     title_to_number_map = {stone['title']: stone['number'] for stone in milestones_json}
@@ -36,13 +65,12 @@ def generate_PR(milestone):
     # Find the desired number
     number = title_to_number_map[milestone]
 
-    # Get the merged pull requests associated with the milestone
-    PR = json.loads(urllib.urlopen('https://api.github.com/repos/CoolProp/CoolProp/pulls?state=closed&per_page=1000&milestone='+str(number)).read())
+    PR = get_PR_JSON(milestone, number)
 
+    rst = 'Pull Requests merged:\n\n'
     for issue in PR:
-        print(issue)
-        
-    rst = 'Pull Requests merged:\n\n'+'\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}'.format(n = issue['number'], t = issue['title'].encode('utf-8')) for issue in PR if issue['milestone']['title'] == milestone])
+        if issue['milestone'] is not None and issue['milestone']['title'] == milestone:
+            rst += '* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}\n'.format(n = issue['number'], t = issue['title'].encode('utf-8'))
     
     return rst
 
