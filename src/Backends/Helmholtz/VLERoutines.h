@@ -436,6 +436,49 @@ namespace SaturationSolvers
          */
         void check_Jacobian();
     };
+    
+    struct PTflash_twophase_options{
+        int Nstep_max;
+        std::size_t Nsteps;
+        CoolPropDbl omega, rhomolar_liq, rhomolar_vap, pL, pV, p, T;
+        std::vector<CoolPropDbl> x, ///< Liquid mole fractions
+                                 y, ///< Vapor mole fractions
+                                 z; ///< Bulk mole fractions
+        PTflash_twophase_options() : omega(_HUGE), rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), pL(_HUGE), pV(_HUGE), p(_HUGE), T(_HUGE){
+            Nstep_max = 30;  Nsteps = 0; // Defaults
+        }
+    };
+    
+    class PTflash_twophase
+    {
+    public:
+        double error_rms;
+        bool logging;
+        int Nsteps;
+        Eigen::MatrixXd J;
+        Eigen::VectorXd r, err_rel;
+        HelmholtzEOSMixtureBackend &HEOS;
+        PTflash_twophase_options &IO;
+        std::vector<SuccessiveSubstitutionStep> step_logger;
+        
+        PTflash_twophase(HelmholtzEOSMixtureBackend &HEOS, PTflash_twophase_options &IO) : HEOS(HEOS), IO(IO){};
+        
+        /** \brief Call the Newton-Raphson Solver to solve the equilibrium conditions
+         *
+         * This solver must be passed reasonable guess values for the mole fractions,
+         * densities, etc.  You may want to take a few steps of successive substitution
+         * before you start with Newton Raphson.
+         *
+         */
+        void solve();
+        
+        /** \brief Build the arrays for the Newton-Raphson solve
+         *
+         * This method builds the Jacobian matrix, the sensitivity matrix, etc.
+         *
+         */
+        void build_arrays();
+    };
 };
     
 namespace StabilityRoutines{
@@ -446,7 +489,7 @@ namespace StabilityRoutines{
     class StabilityEvaluationClass{
     protected:
         HelmholtzEOSMixtureBackend &HEOS;
-        std::vector<double> lnK, K, K0, x, y;
+        std::vector<double> lnK, K, K0, x, y, xL, xH;
         const std::vector<double> &z;
         double rhomolar_liq, rhomolar_vap, beta, tpd_liq, tpd_vap, DELTAG_nRT;
         double m_T, ///< The temperature to be used (if specified, otherwise that from HEOS)
@@ -489,6 +532,10 @@ namespace StabilityRoutines{
             check_stability();
             return _stable;
         }
+        /// Accessor for liquid-phase composition and density
+        void get_liq(std::vector<double> &x, double &rhomolar){ x = this->x; rhomolar = rhomolar_liq; }
+        /// Accessor for vapor-phase composition and density
+        void get_vap(std::vector<double> &y, double &rhomolar){ y = this->y; rhomolar = rhomolar_vap; }
     };
         
 }; /* namespace StabilityRoutines*/

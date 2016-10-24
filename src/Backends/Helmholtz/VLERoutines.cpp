@@ -1854,7 +1854,7 @@ void StabilityRoutines::StabilityEvaluationClass::check_stability(){
     }
     
     // Generate light and heavy test compositions (Gernert, 2014, Eq. 23)
-    std::vector<double> xL(z.size()), xH(z.size());
+    xL.resize(z.size()); xH.resize(z.size());
     for (std::size_t i = 0; i < z.size(); ++i){
         xL[i] = z[i]*K0[i]; // Light-phase composition
         xH[i] = z[i]/K0[i]; // Heavy-phase composition
@@ -1973,11 +1973,129 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated(){
         rhomolar_liq = 1/(v_SRK - summer_c);
     }
 }
-
-
     
-    
-    
-    
-
+    void SaturationSolvers::PTflash_twophase::solve(){
+        const std::size_t N = IO.x.size();
+        int iter = 0;
+        double min_rel_change;
+        do
+        {
+            // Build the Jacobian and residual vectors
+            build_arrays();
+            
+            // Solve for the step; v is the step with the contents
+            // [delta(x'_0), delta(x'_1), ..., delta(x'_{N-1}), delta(x''_0), delta(x''_1), ..., delta(x''_{N-1})]
+            
+            // Uncomment to see Jacobian and residual at every step
+            //std::cout << vec_to_string(J, "%0.12Lg") << std::endl;
+            //std::cout << vec_to_string(-r, "%0.12Lg") << std::endl;
+            
+            Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
+            
+            for (unsigned int i = 0; i < N-1; ++i){
+                err_rel[i] = v[i]/IO.x[i];
+                IO.x[i] += v[i];
+                err_rel[i+(N-1)] = v[i+(N-1)]/IO.y[i];
+                IO.y[i] += v[i+(N-1)];
+            }
+            IO.x[N-1] = 1 - std::accumulate(IO.x.begin(), IO.x.end()-1, 0.0);
+            IO.y[N-1] = 1 - std::accumulate(IO.y.begin(), IO.y.end()-1, 0.0);
+            
+            //std::cout << format("\t%Lg ", this->error_rms) << T << " " << rhomolar_liq << " " << rhomolar_vap << " v " << vec_to_string(v, "%0.10Lg")  << " x " << vec_to_string(x, "%0.10Lg") << " r " << vec_to_string(r, "%0.10Lg") << std::endl;
+            
+            min_rel_change = err_rel.cwiseAbs().minCoeff();
+            iter++;
+            
+            if (iter == IO.Nstep_max){
+                throw ValueError(format("PTflash_twophase::call reached max number of iterations [%d]",IO.Nstep_max));
+            }
+        }
+        while(this->error_rms > 1e-9 && min_rel_change > 1000*DBL_EPSILON && iter < IO.Nstep_max);
+        
+    }
+    void SaturationSolvers::PTflash_twophase::build_arrays(){
+        const std::size_t N = IO.x.size();
+        
+        r.resize(2*N-2);
+        J.resize(2*N-2, 2*N-2);
+        err_rel.resize(2*N-2);
+        
+        HEOS.SatL->set_mole_fractions(IO.x);
+        HEOS.SatL->update_TP_guessrho(IO.T, IO.p, IO.rhomolar_liq);
+        
+        HEOS.SatV->set_mole_fractions(IO.y);
+        HEOS.SatV->update_TP_guessrho(IO.T, IO.p, IO.rhomolar_vap);
+        
+        // Independent variables are
+        // [delta(x'_0), delta(x'_1), ..., delta(x'_{N-1}), delta(x''_0), delta(x''_1), ..., delta(x''_{N-1})]
+        
+        // First N residuals are the iso-fugacity condition
+        for (std::size_t k = 0; k < N; ++k){
+            r(k) = log(HEOS.SatL->fugacity(k)/HEOS.SatV->fugacity(k));
+            for (std::size_t j = 0; j < N-1; ++j){
+                if (k == N-1){
+                    J(k,j) = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), k, j, XN_DEPENDENT);
+                    J(k,j+N-1) = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), k, j, XN_DEPENDENT);
+                }
+                else{
+                    J(k,j) = MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatL.get()), k, j, XN_DEPENDENT);
+                    J(k,j+N-1) = -MixtureDerivatives::dln_fugacity_dxj__constT_p_xi(*(HEOS.SatV.get()), k, j, XN_DEPENDENT);
+                }
+            }
+        }
+        // Next N-2 residuals are amount of substance balances
+        for (std::size_t i = 0; i < N-2; ++i){
+            std::size_t k = i + N;
+            r(k) = (IO.z[i] - IO.x[i])/(IO.y[i]-IO.x[i]) - (IO.z[N-1] - IO.x[N-1])/(IO.y[N-1]-IO.x[N-1]);
+            for (std::size_t j = 0; j < N-2; ++j){
+                J(k,j) = (IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
+                J(k,j+N-1) = -(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
+            }
+            std::size_t j = N-1;
+            J(k,j) = -(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
+            J(k,j+N-1) = +(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
+        }
+        this->error_rms = r.norm();
+    }
 } /* namespace CoolProp*/
+
+#if defined(ENABLE_CATCH)
+#include "catch.hpp"
+
+TEST_CASE("Check the PT flash calculation for two-phase inputs","[PTflash_twophase]")
+{
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane&Ethane"));
+    AS->set_mole_fractions(std::vector<double>(2, 0.5));
+    // Dewpoint calculation
+    AS->update(CoolProp::PQ_INPUTS, 101325, 1);
+    
+    // Do a dummy calculation at the dewpoint state - make sure all the residuals are zero as they should be
+    CoolProp::SaturationSolvers::PTflash_twophase_options o;
+    o.x = AS->mole_fractions_liquid();
+    o.y = AS->mole_fractions_vapor();
+    o.z = AS->get_mole_fractions();
+    o.rhomolar_liq = AS->saturated_liquid_keyed_output(CoolProp::iDmolar);
+    o.rhomolar_vap = AS->saturated_vapor_keyed_output(CoolProp::iDmolar);
+    o.T = AS->T();
+    o.p = AS->p();
+    o.omega = 1.0;
+    CoolProp::SaturationSolvers::PTflash_twophase solver( *static_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get()), o ) ;
+    solver.build_arrays();
+    double err = solver.r.norm();
+    REQUIRE(std::abs(err) < 1e-10);
+    
+    // Now, perturb the solution a little bit and actually do the solve
+    std::vector<double> x0 = o.x;
+    o.x[0] *= 1.1;
+    o.x[1] = 1 - o.x[0];
+    solver.solve();
+    // Make sure we end up with the same liquid composition
+    double diffx0 = o.x[0] - x0[0];
+    REQUIRE(std::abs(diffx0) < 1e-10);
+    
+    // Now do the blind flash call with PT as inputs
+    AS->update(CoolProp::PT_INPUTS, AS->p(), AS->T()-2);
+    REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+}
+
+#endif

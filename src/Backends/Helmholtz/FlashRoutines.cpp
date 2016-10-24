@@ -59,7 +59,19 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
             // Following the strategy of Gernert, 2014
             StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
             if (!stability_tester.is_stable()){
-                throw CoolProp::ValueError("PT_INPUTS are two-phase, not yet supported");
+                // There is a phase split and liquid and vapor phases are formed
+                CoolProp::SaturationSolvers::PTflash_twophase_options o;
+                stability_tester.get_liq(o.x, o.rhomolar_liq);
+                stability_tester.get_vap(o.y, o.rhomolar_vap);
+                o.z = HEOS.get_mole_fractions();
+                o.T = HEOS.T();
+                o.p = HEOS.p();
+                o.omega = 1.0;
+                CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
+                solver.solve();
+                HEOS._phase = iphase_twophase;
+                HEOS._Q = (o.z[0] - o.x[0])/(o.y[0]-o.x[0]); // All vapor qualities are the same (these are the residuals in the solver)
+                HEOS._rhomolar = 1/(HEOS._Q/HEOS.SatV->rhomolar() + (1 - HEOS._Q)/HEOS.SatL->rhomolar());
             }
             else{
                 // It's single-phase
