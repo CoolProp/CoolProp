@@ -55,8 +55,8 @@ Once the dependencies are installed, you can run the installer with::
     mkdir CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
     cmake .. -DCOOLPROP_EES_MODULE=ON
-    # Make the DLF file and the installer (by default installer will be generated in folder install_root/EES relative to CMakeLists.txt file)
-    cmake --build . --target install
+    # Make the DLF file
+    cmake --build . --target COOLPROP_EES
 
 Low-level debugging
 -------------------
