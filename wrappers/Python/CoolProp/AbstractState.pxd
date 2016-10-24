@@ -83,7 +83,7 @@ cdef class AbstractState:
     cpdef tuple criticality_contour_values(self)
 
     ## Spinodal curve(s)
-    cpdef build_spinodal(self) except *
+    cpdef build_spinodal(self)
     cpdef PySpinodalData get_spinodal_data(self)
     
     ## Reducing point
