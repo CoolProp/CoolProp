@@ -53,9 +53,9 @@ MODULE CPINTERFACE
         FUNCTION AbstractState_keyed_output(handle, output, errcode, &
             buffer, buffersize) BIND(C, NAME='AbstractState_keyed_output')
             use iso_c_binding
-                real(C_DOUBLE) :: AbstractState_keyed_output
-            integer(C_long) :: handle
-            integer(C_long) :: output
+            real(C_DOUBLE) :: AbstractState_keyed_output
+            integer(C_long),VALUE :: handle
+            integer(C_long),VALUE :: output
             integer(C_long) :: errcode
             character(kind=c_char) :: buffer(*)
             integer(C_long), VALUE :: buffersize
