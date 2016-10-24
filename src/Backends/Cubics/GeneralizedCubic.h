@@ -27,7 +27,7 @@ public:
     AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
 };
 
-/// An implementation of AbstractCubicAlphaFunction for the Twu alpha function
+/// An implementation of AbstractCubicAlphaFunction for the baseline alpha function of PR or SRK
 class BasicMathiasCopemanAlphaFunction : public AbstractCubicAlphaFunction {
     double m; ///< The term coming from the function of omega
 public:
