@@ -143,7 +143,7 @@ public:
     /// Get the search radius in delta and tau for the tracer
     virtual void get_critical_point_search_radii(double &R_delta, double &R_tau);
     /// Checking function to see if we should stop the tracing of the critical contour
-    virtual bool get_critical_is_terminated(double &delta, double &tau){ return delta > 5 || tau > 4; }
+    virtual bool get_critical_is_terminated(double &delta, double &tau){ return delta > 5 || tau > 5; }
     
     /// Build the spinodal curve
     virtual void calc_build_spinodal();
