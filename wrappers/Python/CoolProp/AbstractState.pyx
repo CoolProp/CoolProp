@@ -173,7 +173,7 @@ cdef class AbstractState:
         self.thisptr.criticality_contour_values(L1star, M1star)
         return L1star, M1star
 
-    cpdef void build_spinodal(self) except *:
+    cpdef build_spinodal(self) except *:
         """ Calculate the spinodal - wrapper of c++ function :cpapi:`CoolProp::AbstractState::build_spinodal` """
         self.thisptr.build_spinodal()
     cpdef PySpinodalData get_spinodal_data(self):
