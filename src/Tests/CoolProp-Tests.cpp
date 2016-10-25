@@ -699,7 +699,7 @@ public:
         State.update(pair, x1, x2);
 
         // Make sure we end up back at the same temperature and pressure we started out with
-		if(State.Q() < 1 && State.Q() > 0) throw CoolProp::ValueError(format("Q [%g K] is between 0 and 1; two-phase solution",State.Q()));
+		if(State.Q() < 1 && State.Q() > 0) throw CoolProp::ValueError(format("Q [%g] is between 0 and 1; two-phase solution",State.Q()));
         if(std::abs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%Lg K] is greater than 1e-2",std::abs(State.T()-T)));
         if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%Lg %%] is greater than 1e-2 %%",std::abs(p-State.p())/p*100));
     }

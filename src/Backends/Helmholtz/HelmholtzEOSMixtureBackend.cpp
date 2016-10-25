@@ -1446,9 +1446,6 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         if (_T < Tm){
                             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
                         }
-                        if (_T < Tmin()){
-                            throw ValueError(format("For now, we don't support T [%g K] below Tmin(saturation) [%g K]", _T, Tmin()));
-                        }
                     }
                 }
                 else{
