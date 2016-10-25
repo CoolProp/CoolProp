@@ -260,6 +260,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS, const std::s
                 //std::cout << IO.T << " " << IO.p << std::endl;
                 // Try again, but with a smaller step
                 IO.rhomolar_vap /= factor;
+                if (iter < 4){ throw ValueError(format("Unable to calculate at least 4 points in phase envelope; quitting")); }
                 IO.rhomolar_liq = QuadInterp(env.rhomolar_vap, env.rhomolar_liq, iter-3, iter-2, iter-1, IO.rhomolar_vap);
                 factor = 1 + (factor-1)/2;
                 failure_count++;
