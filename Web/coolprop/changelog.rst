@@ -19,8 +19,10 @@ New features:
 Contributors to this release:
 ibell, JonWel, jowr, babaksamareh, mikekaganski
 
-Issues Closed:
-
+* `#1290 <https://github.com/CoolProp/CoolProp/issues/1290>`_ : Catch runs should be Release builds
+* `#1288 <https://github.com/CoolProp/CoolProp/issues/1288>`_ : Actually check if T < Tmelt for p > pmin
+* `#1287 <https://github.com/CoolProp/CoolProp/issues/1287>`_ : Actually commit new pybind11 submodule
+* `#1286 <https://github.com/CoolProp/CoolProp/issues/1286>`_ : in phase envelope construction, potential crash
 * `#1284 <https://github.com/CoolProp/CoolProp/issues/1284>`_ : Make low-level interface accessible through high-level interface in FORTRAN
 * `#1283 <https://github.com/CoolProp/CoolProp/issues/1283>`_ : Add pure fluid check to VTPR
 * `#1282 <https://github.com/CoolProp/CoolProp/issues/1282>`_ : Correct typo, see #1270
@@ -117,10 +119,6 @@ Issues Closed:
 * `#1109 <https://github.com/CoolProp/CoolProp/issues/1109>`_ : SMath wrapper: update AssemblyInfo.cs.template
 * `#1108 <https://github.com/CoolProp/CoolProp/issues/1108>`_ : SMath copyright year outdated
 * `#1107 <https://github.com/CoolProp/CoolProp/issues/1107>`_ : Allow conditional build of SMath in source tree (fixes #1110)
-* `#1104 <https://github.com/CoolProp/CoolProp/issues/1104>`_ : Update cubic code to publication version
-* `#1103 <https://github.com/CoolProp/CoolProp/issues/1103>`_ : One small tweak to Props1
-* `#1101 <https://github.com/CoolProp/CoolProp/issues/1101>`_ : Add error handling to some functions, see #1096
-* `#1100 <https://github.com/CoolProp/CoolProp/issues/1100>`_ : Allow cmake properly build SMath wrapper
 
 Pull Requests merged:
 
