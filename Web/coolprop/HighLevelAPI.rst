@@ -29,6 +29,19 @@ All :ref:`the wrappers <wrappers>` wrap this function in exactly the same way.
 
 For pure and pseudo-pure fluids, two state points are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), and then comes inputs where neither :math:`T` nor :math:`\rho` are given, like :math:`p,h`.  They will be much slower.  If speed is an issue, you can look into table-based interpolation methods using TTSE or bicubic interpolation. 
 
+Fluid information
+-----------------
+
+You can obtain string-encoded information about the fluid from the ``get_fluid_param_string`` function with something like:
+
+ .. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+    
+    In [1]: for k in ['formula','CAS','aliases','ASHRAE34','REFPROP_name','pure','INCHI','INCHI_Key','CHEMSPIDER_ID']:
+       ...:     print k, '-->', CP.get_fluid_param_string("R125", k)
+       ...:
+
 .. _trivial_inputs:
 
 Trivial inputs
