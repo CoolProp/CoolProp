@@ -19,6 +19,8 @@
 # in /home/project-web/coolprop/htdocs and /home/frs/project/coolprop/
 # to reset all permissions.
 #
+# Force quit on all errors
+set -e
 #
 # Make sure that only two arguments are passed to this script - the version that
 # will be released and the dryrun vs. release option.
