@@ -167,6 +167,17 @@ void init_CoolProp(py::module &m){
         .value("DmolarUmolar_INPUTS", input_pairs::DmolarUmolar_INPUTS)
         .export_values();
 
+    py::enum_<phases>(m, "phases")
+        .value("iphase_liquid", phases::iphase_liquid)
+        .value("iphase_supercritical", phases::iphase_supercritical)
+        .value("iphase_supercritical_gas", phases::iphase_supercritical_gas)
+        .value("iphase_supercritical_liquid", phases::iphase_supercritical_liquid)
+        .value("iphase_critical_point", phases::iphase_critical_point)
+        .value("iphase_gas", phases::iphase_gas)
+        .value("iphase_twophase", phases::iphase_twophase)
+        .value("iphase_unknown", phases::iphase_unknown)
+        .export_values();
+
     py::class_<AbstractState>(m, "_AbstractState")
         .def("set_T", &AbstractState::set_T)
         .def("backend_name", &AbstractState::backend_name)
