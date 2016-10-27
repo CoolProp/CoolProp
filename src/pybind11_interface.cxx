@@ -223,7 +223,7 @@ void init_CoolProp(py::module &m){
         .def("all_critical_points", &AbstractState::all_critical_points)
         .def("build_spinodal", &AbstractState::build_spinodal)
         .def("get_spinodal_data", &AbstractState::get_spinodal_data)
-        .def("criticality_contour_values", &AbstractState::criticality_contour_values)
+        .def("criticality_contour_values", [](AbstractState &AS) { double L, M; AS.criticality_contour_values(L, M); return py::make_tuple(L, M); })
         .def("tangent_plane_distance", &AbstractState::tangent_plane_distance)
         .def("T_reducing", &AbstractState::T_reducing)
         .def("rhomolar_reducing", &AbstractState::rhomolar_reducing)
