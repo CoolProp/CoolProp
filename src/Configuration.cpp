@@ -139,3 +139,23 @@ void set_config_as_json_string(const std::string &s){
 
 }
 
+#if defined(PYBIND11)
+
+#include <pybind11/pybind11.h>
+namespace py = pybind11;
+
+// Add Configuration variables to pybind11 wrapper
+void init_CoolProp_Configuration_constants(py::module &m)
+{
+    // See http://stackoverflow.com/a/148610 and http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+    
+    py::enum_<configuration_keys>(m, "configuration_keys")
+    #define X(Enum, String, Default, Desc) \
+        .value(String, configuration_keys::Enum)
+        CONFIGURATION_KEYS_ENUM
+    #undef X
+    .export_values();
+}
+
+#endif
+

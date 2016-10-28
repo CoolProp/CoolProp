@@ -15,6 +15,8 @@ CoolProp::AbstractState * factory(const std::string &backend, const std::string 
     return CoolProp::AbstractState::factory(backend, fluid_names);
 }
 
+void init_CoolProp_Configuration_constants(py::module &m);
+
 void init_CoolProp(py::module &m){
     using namespace CoolProp;
 
@@ -372,6 +374,8 @@ void init_CoolProp(py::module &m){
     m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);
     m.def("set_mixture_binary_pair_data", &set_mixture_binary_pair_data);
     m.def("apply_simple_mixing_rule", &apply_simple_mixing_rule);
+
+    init_CoolProp_Configuration_constants(m);
 }
 
 #if defined(COOLPROP_PYBIND11_MODULE)
