@@ -133,6 +133,12 @@
     * \note you can get the error message by doing something like get_global_param_string("errstring",output)
     */
     EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val);
+    /** \brief Set configuration numerical value as double
+    * @param key The key to configure
+    * @param val The value to set to the key
+    * \note you can get the error message by doing something like get_global_param_string("errstring",output)
+    */
+    EXPORT_CODE void CONVENTION set_config_double(const char * key, const double val);
     /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS

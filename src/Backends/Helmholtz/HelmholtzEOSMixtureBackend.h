@@ -9,6 +9,7 @@
 #include "Solvers.h"
 #include "PhaseEnvelope.h"
 #include "DataStructures.h"
+#include "Configuration.h"
 
 #include <vector>
 
@@ -137,7 +138,7 @@ public:
     std::vector<CoolProp::CriticalState> calc_all_critical_points(){ bool find_critical_points = true; return _calc_all_critical_points(find_critical_points); };
 
     virtual void get_critical_point_starting_values(double &delta0, double &tau0){
-        delta0 = 0.5; // The value of delta where we start searching for crossing with Lstar=0 contour
+        delta0 = get_config_double(SPINODAL_MINIMUM_DELTA); // The value of delta where we start searching for crossing with Lstar=0 contour
         tau0 = 0.66; // The value of tau where we start searching at delta=delta0
     } 
     /// Get the search radius in delta and tau for the tracer

@@ -326,6 +326,13 @@ EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val
     catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
     catch (...) { CoolProp::set_error_string("Undefined error"); }
 }
+EXPORT_CODE void CONVENTION set_config_double(const char * key, const double val) {
+    try {
+        CoolProp::set_config_double(CoolProp::config_string_to_key(std::string(key)), val);
+    }
+    catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
+    catch (...) { CoolProp::set_error_string("Undefined error"); }
+}
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
     fpu_reset_guard guard;
