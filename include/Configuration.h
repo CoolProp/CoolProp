@@ -35,7 +35,9 @@
     X(PHASE_ENVELOPE_STARTING_PRESSURE_PA, "PHASE_ENVELOPE_STARTING_PRESSURE_PA", 100.0, "Starting pressure [Pa] for phase envelope construction") \
     X(R_U_CODATA, "R_U_CODATA", 8.3144598, "The value for the ideal gas constant in J/mol/K according to CODATA 2014.  This value is used to harmonize all the ideal gas constants. This is especially important in the critical region.") \
     X(VTPR_UNIFAQ_PATH, "VTPR_UNIFAQ_PATH", "", "The path to the directory containing the UNIFAQ JSON files.  Should be slash terminated") \
-    X(SPINODAL_MINIMUM_DELTA, "SPINODAL_MINIMUM_DELTA", 0.5, "The minimal delta to be used in tracing out the spinodal; make sure that the EOS has a spinodal at this value of delta=rho/rho_r")
+    X(SPINODAL_MINIMUM_DELTA, "SPINODAL_MINIMUM_DELTA", 0.5, "The minimal delta to be used in tracing out the spinodal; make sure that the EOS has a spinodal at this value of delta=rho/rho_r") \
+    X(OVERWRITE_FLUIDS, "OVERWRITE_FLUIDS", false, "If true, and a fluid is added to the fluids library that is already there, rather than not adding the fluid (and probably throwing an exception), overwrite it")
+
 
  // Use preprocessor to create the Enum
  enum configuration_keys{

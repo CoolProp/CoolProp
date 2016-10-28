@@ -6,6 +6,7 @@
 #include "rapidjson_include.h"
 #include "CPstrings.h"
 #include "CoolProp.h"
+#include "Configuration.h"
 
 namespace CoolProp{
 namespace CubicLibrary{
@@ -41,7 +42,14 @@ public:
             else{
                 val.alpha_type = "default";
             }
-            fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val) );
+            std::pair<std::map<std::string, CubicsValues>::iterator, bool> ret;
+            ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val) );
+            if (ret.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
+                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+                fluid_map.erase(ret.first);
+                ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val));
+                assert(ret.second == true);
+            }
 
             for (std::vector<std::string>::const_iterator it = val.aliases.begin(); it != val.aliases.end(); ++it){
                 if (aliases_map.find(*it) == aliases_map.end()){
