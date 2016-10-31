@@ -51,5 +51,29 @@ public:
     static void set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS);
 };
 
+/// A Data structure for holding BIP coming from REFPROP
+struct REFPROP_binary_element{
+    std::string CAS1, CAS2, model;
+    double betaT, gammaT, betaV, gammaV, Fij;
+    std::vector<std::string> comments;
+};
+/// A data structure for holding departure functions coming from REFPROP
+struct REFPROP_departure_function{
+    short Npower, Nspecial, Nterms_power, Nterms_special;
+    std::string model;
+    std::vector<double> a, t, d, e, eta, epsilon, beta, gamma;
+    std::vector<std::string> comments;
+};
+
+/** 
+ * @brief Set the departure functions in the departure function library from a string format
+ * @param string_data The departure functions to be set, either provided as a JSON-formatted string
+ *                    or as a string of the contents of a HMX.BNC file from REFPROP
+ *
+ * @note By default, if a departure function already exists in the library, this is an error,
+ * unless the configuration variable OVERWRITE_DEPARTURE is set to true
+ */
+void set_departure_functions(const std::string &string_data);
+
 } /* namespace CoolProp */
 #endif

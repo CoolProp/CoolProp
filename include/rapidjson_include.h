@@ -215,7 +215,7 @@ namespace cpjson
         return out;
     };
     
-    /// A convenience function to get a double array compactly
+    /// A convenience function to get a string array compactly
     inline std::vector<std::string> get_string_array(rapidjson::Value &v, std::string m)
     {
         if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
@@ -247,6 +247,19 @@ namespace cpjson
             _i.PushBack(_j,doc.GetAllocator());
         }
         value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _i, doc.GetAllocator());
+    };
+    
+    /// A convenience function to set a string array compactly
+    inline void set_string_array(const char *key, const std::vector<std::string> &vec, rapidjson::Value &value, rapidjson::Document &doc)
+    {
+        rapidjson::Value _v(rapidjson::kArrayType);
+        for (unsigned int i = 0; i < vec.size(); ++i)
+        {
+            _v.PushBack(rapidjson::Value(vec[i].c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
+        }
+        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(),
+                        _v,
+                        doc.GetAllocator());
     };
 
     /// A convenience function to set a double array compactly

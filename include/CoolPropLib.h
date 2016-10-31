@@ -139,6 +139,15 @@
     * \note you can get the error message by doing something like get_global_param_string("errstring",output)
     */
     EXPORT_CODE void CONVENTION set_config_double(const char * key, const double val);
+    /** 
+     * @brief Set the departure functions in the departure function library from a string format
+     * @param string_data The departure functions to be set, either provided as a JSON-formatted string
+     *                    or as a string of the contents of a HMX.BNC file from REFPROP
+     *
+     * @note By default, if a departure function already exists in the library, this is an error,
+     *       unless the configuration variable OVERWRITE_DEPARTURE is set to true
+     */
+    EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data);
     /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS
