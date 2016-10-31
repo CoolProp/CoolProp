@@ -334,6 +334,13 @@ EXPORT_CODE void CONVENTION set_config_double(const char * key, const double val
     catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
     catch (...) { CoolProp::set_error_string("Undefined error"); }
 }
+EXPORT_CODE void CONVENTION set_config_bool(const char * key, const bool val) {
+    try {
+        CoolProp::set_config_bool(CoolProp::config_string_to_key(std::string(key)), val);
+    }
+    catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
+    catch (...) { CoolProp::set_error_string("Undefined error"); }
+}
 EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data) {
     try {
         CoolProp::set_departure_functions(string_data);

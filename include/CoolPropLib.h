@@ -139,7 +139,13 @@
     * \note you can get the error message by doing something like get_global_param_string("errstring",output)
     */
     EXPORT_CODE void CONVENTION set_config_double(const char * key, const double val);
-    /** 
+    /** \brief Set configuration value as a boolean
+     * @param key The key to configure
+     * @param val The value to set to the key
+     * \note you can get the error message by doing something like get_global_param_string("errstring",output)
+     */
+    EXPORT_CODE void CONVENTION set_config_bool(const char * key, const bool val);
+    /**
      * @brief Set the departure functions in the departure function library from a string format
      * @param string_data The departure functions to be set, either provided as a JSON-formatted string
      *                    or as a string of the contents of a HMX.BNC file from REFPROP
