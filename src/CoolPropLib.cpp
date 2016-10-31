@@ -580,7 +580,7 @@ EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const lo
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        AS->set_binary_interaction_double(static_cast<std::size_t>(i), static_cast<std::size_t>(j), std::string(parameter), value);
+        AS->set_binary_interaction_double(static_cast<std::size_t>(i), static_cast<std::size_t>(j), parameter, value);
     }
     catch (...) {
 		HandleException(errcode, message_buffer, buffer_length);
