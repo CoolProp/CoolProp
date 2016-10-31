@@ -532,32 +532,32 @@ void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend *donor){
 }
 
 void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3){
-	if (parameter == "MC" || parameter == "mc" || parameter == "Mathias-Copeman") {
-		get_cubic()->set_C_MC(i,c1, c2, c3);
-	}
-	else if (parameter == "TWU" || parameter == "Twu" || parameter == "twu") {
-		get_cubic()->set_C_Twu(i,c1, c2, c3);
-	}
-	else {
-		throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
-	}
-	for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-		AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
-		ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);
-	}
+    if (parameter == "MC" || parameter == "mc" || parameter == "Mathias-Copeman") {
+        get_cubic()->set_C_MC(i,c1, c2, c3);
+    }
+    else if (parameter == "TWU" || parameter == "Twu" || parameter == "twu") {
+        get_cubic()->set_C_Twu(i,c1, c2, c3);
+    }
+    else {
+        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
+        ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);
+    }
 }
 
 void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value)
 {
-	// Set the volume translation parrameter, currently applied to the whole fluid, not to components.
-	if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
-		get_cubic()->set_cm(value);
-		for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+    // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
+    if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
+        get_cubic()->set_cm(value);
+        for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
             AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
-	}
-	else {
-		throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
-	}
+    }
+    else {
+        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
 }
