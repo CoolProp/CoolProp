@@ -216,13 +216,23 @@ public:
             throw ValueError(format("Your simple mixing rule [%s] was not understood", rule.c_str()));
         }
         
-        if (m_binary_pair_map.find(CAS) == m_binary_pair_map.end()){
+        std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator it = m_binary_pair_map.find(CAS);
+        if (it == m_binary_pair_map.end()){
             // Add to binary pair map by creating one-element vector
             m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
         }
         else
         {
-            m_binary_pair_map[CAS].push_back(dict);
+            if (!get_config_bool(OVERWRITE_BINARY_INTERACTION)){
+                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+                m_binary_pair_map.erase(it);
+                std::pair<std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator, bool> ret;
+                ret = m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
+                assert(ret.second == true);
+            }
+            else{
+                m_binary_pair_map[CAS].push_back(dict);
+            }
         }
     }
 };
@@ -397,22 +407,32 @@ public:
             }
 
             // Check if this name is already in use
-            if (m_departure_function_map.find(Name) == m_departure_function_map.end())
+            std::map<std::string, Dictionary>::iterator it = m_departure_function_map.find(Name);
+            if (it == m_departure_function_map.end())
             {
                 // Not in map, add new entry to map with dictionary as value and Name as key
                 m_departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
             }
             else
             {
-                // Error if already in map!
-                //
-                // Collect all the current names for departure functions for a nicer error message
-                std::vector<std::string> names;
-                for (std::map<std::string, Dictionary>::const_iterator it = m_departure_function_map.begin(); it != m_departure_function_map.end(); ++it)
-                {
-                    names.push_back(it->first);
+                if (!get_config_bool(OVERWRITE_DEPARTURE_FUNCTION)){
+                    // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+                    m_departure_function_map.erase(it);
+                    std::pair<std::map<std::string, Dictionary>::iterator, bool> ret;
+                    ret = m_departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
+                    assert(ret.second == true);
                 }
-                throw ValueError(format("Name of departure function [%s] is already loaded. Current departure function names are: %s", Name.c_str(), strjoin(names,",").c_str() ));
+                else{
+                    // Error if already in map!
+                    //
+                    // Collect all the current names for departure functions for a nicer error message
+                    std::vector<std::string> names;
+                    for (std::map<std::string, Dictionary>::const_iterator it = m_departure_function_map.begin(); it != m_departure_function_map.end(); ++it)
+                    {
+                        names.push_back(it->first);
+                    }
+                    throw ValueError(format("Name of departure function [%s] is already loaded. Current departure function names are: %s", Name.c_str(), strjoin(names,",").c_str() ));
+                }
             }
         }
     }

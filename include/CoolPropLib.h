@@ -145,7 +145,7 @@
      *                    or as a string of the contents of a HMX.BNC file from REFPROP
      *
      * @note By default, if a departure function already exists in the library, this is an error,
-     *       unless the configuration variable OVERWRITE_DEPARTURE is set to true
+     *       unless the configuration variable OVERWRITE_DEPARTURE_FUNCTIONS is set to true
      */
     EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data);
     /**
