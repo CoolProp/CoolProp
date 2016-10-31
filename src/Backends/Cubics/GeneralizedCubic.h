@@ -119,13 +119,13 @@ public:
     double get_Delta_2(){ return Delta_2; }
     /// Read-only accessor for value of R_u (universal gas constant)
     double get_R_u(){ return R_u; }
-    /// Set the three Mathias-Copeman constants in one shot for a pure fluid
-    void set_C_MC(double c1, double c2, double c3){
-        alpha[0].reset(new MathiasCopemanAlphaFunction(a0_ii(0),c1,c2,c3,T_r/Tc[0]));
+    /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture
+    void set_C_MC(std::size_t i,double c1, double c2, double c3){
+        alpha[i].reset(new MathiasCopemanAlphaFunction(a0_ii(i),c1,c2,c3,T_r/Tc[i]));
     }
-    /// Set the three Twu constants in one shot for a pure fluid
-    void set_C_Twu(double L, double M, double N){
-        alpha[0].reset(new TwuAlphaFunction(a0_ii(0),L,M,N,T_r/Tc[0]));
+    /// Set the three Twu constants in one shot for the component i of a mixture
+    void set_C_Twu(std::size_t i,double L, double M, double N){
+        alpha[i].reset(new TwuAlphaFunction(a0_ii(i),L,M,N,T_r/Tc[i]));
     }
     /// Get the leading constant in the expression for the pure fluid attractive energy term
     /// (must be implemented by derived classes)

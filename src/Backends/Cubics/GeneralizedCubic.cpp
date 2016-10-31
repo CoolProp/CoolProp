@@ -84,7 +84,7 @@ double TwuAlphaFunction::term(double tau, std::size_t itau){
     double d3B1_dtau3 = (itau < 4) ? 0 : -N / powInt(tau, 4)*(L*powInt(M, 4)*powInt(N, 3)*A + 6 * L*M*M*M*N*N*A + 11 * L*M*M*N*A + 6 * L*M*A - 6 * M + 6);
 
     double dam_dtau, d2am_dtau2, d3am_dtau3, d4am_dtau4;
-    double am = a0*pow(Tr_over_Tci / tau, N*(M - 1))*exp(L*(1 - pow(Tr_over_Tci / tau, M*N)));
+    double am = a0*pow(Tr_over_Tci / tau, N*(M - 1))*exp(L*(1 - A));
 
     if (itau == 0) {
         return am;

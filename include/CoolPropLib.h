@@ -433,6 +433,21 @@
     */
     EXPORT_CODE void CONVENTION AbstractState_set_binary_interaction_double(const long handle, const long i, const long j, const char* parameter, const double value, long *errcode, char *message_buffer, const long buffer_length);
 
+        /**
+    * @brief Set cubic's alpha function parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param i indice of the fluid the parramter should be applied too (for mixtures)
+	* @param parameter the string specifying the alpha function to use, ex "TWU" for the TWU alpha function
+    * @param c1 the first parameter for the alpha function
+    * @param c2 the second parameter for the alpha function
+    * @param c3 the third parameter for the alpha function
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+    EXPORT_CODE void CONVENTION  AbstractState_set_cubic_alpha_C(const long handle, const long i, const char* parameter, const double c1, const double c2, const double c3 , long *errcode, char *message_buffer, const long buffer_length);
+
     /**
     * @brief Set some fluid parameter (ie volume translation for cubic)
     * @param handle The integer handle for the state class stored in memory

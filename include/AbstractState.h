@@ -514,8 +514,10 @@ public:
     virtual std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_string is not implemented for this backend"); };
     /// Apply a simple mixing rule (EXPERT USE ONLY!!!)
     virtual void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model) { throw NotImplementedError("apply_simple_mixing_rule is not implemented for this backend"); };
-    // Set fluid parameter (currently the volume translation parameter for cubic)
-	virtual void set_fluid_parameter_double(const size_t i, const std::string parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
+    /// Set the cubic alpha function's constants:
+    virtual void set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3) { throw ValueError("set_cubic_alpha_C only defined for cubic backends"); };
+    /// Set fluid parameter (currently the volume translation parameter for cubic)
+	virtual void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
 
     /// Clear all the cached values
     virtual bool clear();
