@@ -591,7 +591,7 @@ EXPORT_CODE void CONVENTION  AbstractState_set_cubic_alpha_C(const long handle, 
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        AS->set_cubic_alpha_C(static_cast<std::size_t>(i),std::string(parameter), c1, c2, c3);
+        AS->set_cubic_alpha_C(static_cast<std::size_t>(i),parameter, c1, c2, c3);
     }
     catch (...) {
 		HandleException(errcode, message_buffer, buffer_length);
@@ -602,7 +602,7 @@ EXPORT_CODE void CONVENTION  AbstractState_set_fluid_parameter_double(const long
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        AS->set_fluid_parameter_double(static_cast<std::size_t>(i), std::string(parameter), value);
+        AS->set_fluid_parameter_double(static_cast<std::size_t>(i), parameter, value);
     }
     catch (...) {
 		HandleException(errcode, message_buffer, buffer_length);

@@ -190,18 +190,12 @@ public:
     
     //
     void copy_all_alpha_functions(AbstractCubicBackend *donor);
-
-    // Set the Mathias-Copeman constants c1,c2,c3 for a pure fluid
-    void set_C_MC(double c1, double c2, double c3);
-    
-    // Set the Twu constants L,M,N for a pure fluid
-    void set_C_Twu(double L, double M, double N);
     
     // Set the cubic alpha function's constants:
-    void set_cubic_alpha_C(const size_t i, const std::string parameter, const double c1, const double c2, const double c3);
+    void set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3);
 
     // Set fluid parameter (currently the volume translation parameter)
-    void set_fluid_parameter_double(const size_t i, const std::string parameter, const double value);
+    void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value);
     
 };
 

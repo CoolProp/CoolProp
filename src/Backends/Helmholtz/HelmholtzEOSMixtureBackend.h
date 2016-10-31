@@ -106,10 +106,10 @@ public:
     void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model);
 
     // Set the cubic alpha function's constants:
-    virtual void set_cubic_alpha_C(const size_t i, const std::string parameter, const double c1, const double c2, const double c3) { throw ValueError("set_cubic_alpha_C only defined for cubic backends"); };
+    virtual void set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3) { throw ValueError("set_cubic_alpha_C only defined for cubic backends"); };
 
     // Set fluid parameter (currently the volume translation parameter for cubic)
-    virtual void set_fluid_parameter_double(const size_t i, const std::string parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
+    virtual void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
 
     phases calc_phase(void){return _phase;};
     
