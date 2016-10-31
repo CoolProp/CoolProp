@@ -17,6 +17,8 @@
     #include <string>
 #endif
 
+    #include "Exceptions.h"
+
     #if !defined(__powerpc__)
     /// Copy string to wstring
     /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
@@ -75,5 +77,33 @@
     }
 
     std::string strjoin(const std::vector<std::string> &strings, const std::string &delim);
+
+    /// A convenience function that return true if a string begins with the given other string
+    inline bool strstartswith(const std::string &s, const std::string &other){ return s.find(other) == 0; };
+
+    /**
+     * @brief Convert a number encoded as a string to a double
+     * @param s The string to be converted
+     *
+     * @note 
+     */
+    inline double string2double(const std::string &s){
+        std::string mys = s; //copy
+        // replace D with e (FORTRAN style scientific definition)
+        if (mys.find("D") != std::string::npos){ std::size_t pos = mys.find("D"), len = 1; mys.replace(pos,len,"e"); }
+        // replace d with e (FORTRAN style scientific definition)
+        if (mys.find("d") != std::string::npos){ std::size_t pos = mys.find("d"), len = 1; mys.replace(pos,len,"e"); }
+        
+        const char * cs = mys.c_str();
+        char* pEnd;
+        double val = strtod(cs, &pEnd);
+        if ((pEnd - &(cs[0])) != s.size() ){
+            // Found a character that is not able to be converted to number
+            throw CoolProp::ValueError(format("Unable to convert this string to a number:%s",cs));
+        }
+        else{
+            return val;
+        }
+    }
 
 #endif

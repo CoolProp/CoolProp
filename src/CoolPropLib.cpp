@@ -16,6 +16,7 @@
 #include "AbstractState.h"
 #include "Exceptions.h"
 #include "Configuration.h"
+#include "Backends/Helmholtz/MixtureParameters.h"
 
 #include <string.h>
 
@@ -329,6 +330,13 @@ EXPORT_CODE void CONVENTION set_config_string(const char * key, const char * val
 EXPORT_CODE void CONVENTION set_config_double(const char * key, const double val) {
     try {
         CoolProp::set_config_double(CoolProp::config_string_to_key(std::string(key)), val);
+    }
+    catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
+    catch (...) { CoolProp::set_error_string("Undefined error"); }
+}
+EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data) {
+    try {
+        CoolProp::set_departure_functions(string_data);
     }
     catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
     catch (...) { CoolProp::set_error_string("Undefined error"); }

@@ -1,4 +1,5 @@
 #include "MixtureParameters.h"
+#include "CPstrings.h"
 #include "mixture_departure_functions_JSON.h" // Creates the variable mixture_departure_functions_JSON
 #include "mixture_binary_pairs_JSON.h" // Creates the variable mixture_binary_pairs_JSON
 #include "predefined_mixtures_JSON.h" // Makes a std::string variable called predefined_mixtures_JSON
@@ -60,20 +61,39 @@ bool is_predefined_mixture(const std::string &name, Dictionary &dict){
  * Each entry in the binary pair library includes reducing parameters as well as the name of the reducing function to be used and
  */
 class MixtureBinaryPairLibrary{
-public:
+private:
     /// Map from sorted pair of CAS numbers to reducing parameter map.  The reducing parameter map is a map from key (string) to value (double)
-    std::map< std::vector<std::string>, std::vector<Dictionary> > binary_pair_map;
-
+    std::map< std::vector<std::string>, std::vector<Dictionary> > m_binary_pair_map;
+public:
+    std::map< std::vector<std::string>, std::vector<Dictionary> > & binary_pair_map(){
+        // Set the default departure functions if none have been provided yet
+        if(m_binary_pair_map.size() == 0){ load_defaults(); }
+        return m_binary_pair_map;
+    };
+    
+    void load_from_string(const std::string &str){
+        rapidjson::Document doc;
+        doc.Parse<0>(str.c_str());
+        if (doc.HasParseError()){
+            std::cout << str << std::endl ;
+            throw ValueError("Unable to parse departure function string");
+        }
+        load_from_JSON(doc);
+    }
+    
+    // Load the defaults that come from the JSON-encoded string compiled into library
+    // as the variable mixture_departure_functions_JSON
+    void load_defaults()
+    {
+        load_from_string(mixture_binary_pairs_JSON);
+    }
+    
     /** \brief Construct the binary pair library including all the binary pairs that are possible
      *
      * The data structure also includes space for a string that gives the pointer to the departure function to be used for this binary pair.
      */
-    MixtureBinaryPairLibrary()
+    void load_from_JSON(rapidjson::Document &doc)
     {
-        rapidjson::Document doc;
-
-        doc.Parse<0>(mixture_binary_pairs_JSON.c_str());
-        if (doc.HasParseError()){throw ValueError();}
 
         // Iterate over the papers in the listing
         for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr)
@@ -132,13 +152,13 @@ public:
                 continue;
             }
 
-            if (binary_pair_map.find(CAS) == binary_pair_map.end()){
+            if (m_binary_pair_map.find(CAS) == m_binary_pair_map.end()){
                 // Add to binary pair map by creating one-element vector
-                binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
+                m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
             }
             else
             {
-                binary_pair_map[CAS].push_back(dict);
+                m_binary_pair_map[CAS].push_back(dict);
             }
         }
     }
@@ -196,13 +216,23 @@ public:
             throw ValueError(format("Your simple mixing rule [%s] was not understood", rule.c_str()));
         }
         
-        if (binary_pair_map.find(CAS) == binary_pair_map.end()){
+        std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator it = m_binary_pair_map.find(CAS);
+        if (it == m_binary_pair_map.end()){
             // Add to binary pair map by creating one-element vector
-            binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
+            m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
         }
         else
         {
-            binary_pair_map[CAS].push_back(dict);
+            if (!get_config_bool(OVERWRITE_BINARY_INTERACTION)){
+                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+                m_binary_pair_map.erase(it);
+                std::pair<std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator, bool> ret;
+                ret = m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
+                assert(ret.second == true);
+            }
+            else{
+                m_binary_pair_map[CAS].push_back(dict);
+            }
         }
     }
 };
@@ -218,8 +248,9 @@ void apply_simple_mixing_rule(const std::string &identifier1, const std::string 
 
 std::string get_csv_mixture_binary_pairs()
 {
+    
     std::vector<std::string> out;
-    for (std::map< std::vector<std::string>, std::vector<Dictionary> >::const_iterator it = mixturebinarypairlibrary.binary_pair_map.begin(); it != mixturebinarypairlibrary.binary_pair_map.end(); ++it)
+    for (std::map< std::vector<std::string>, std::vector<Dictionary> >::const_iterator it = mixturebinarypairlibrary.binary_pair_map().begin(); it != mixturebinarypairlibrary.binary_pair_map().end(); ++it)
     {
         out.push_back(strjoin(it->first, "&"));
     }
@@ -233,8 +264,8 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
     CAS.push_back(CAS1);
     CAS.push_back(CAS2);
 
-    if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
-        std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map[CAS];
+    if (mixturebinarypairlibrary.binary_pair_map().find(CAS) != mixturebinarypairlibrary.binary_pair_map().end()){
+        std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map()[CAS];
         try{
             if (key == "name1"){ return v[0].get_string("name1"); }
             else if (key == "name2"){ return v[0].get_string("name2"); }
@@ -256,7 +287,7 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
     else{
         // Sort, see if other order works properly
         std::sort(CAS.begin(), CAS.end());
-        if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end())
+        if (mixturebinarypairlibrary.binary_pair_map().find(CAS) != mixturebinarypairlibrary.binary_pair_map().end())
         {
             throw ValueError(format("Could not match the binary pair [%s,%s] - order of CAS numbers is backwards; found the swapped CAS numbers.",CAS1.c_str(), CAS2.c_str()));
         }
@@ -267,13 +298,14 @@ std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::str
 }
 void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value)
 {
+    
     // Find pair
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
     CAS.push_back(CAS2);
 
-    if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
-        std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map[CAS];
+    if (mixturebinarypairlibrary.binary_pair_map().find(CAS) != mixturebinarypairlibrary.binary_pair_map().end()){
+        std::vector<Dictionary> &v = mixturebinarypairlibrary.binary_pair_map()[CAS];
         if (v[0].has_number(key)){
             v[0].add_number(key, value);
         }
@@ -285,7 +317,7 @@ void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CA
     else{
         // Sort, see if other order works properly
         std::sort(CAS.begin(), CAS.end());
-        if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end())
+        if (mixturebinarypairlibrary.binary_pair_map().find(CAS) != mixturebinarypairlibrary.binary_pair_map().end())
         {
             throw ValueError(format("Could not match the binary pair [%s,%s] - order of CAS numbers is backwards; found the swapped CAS numbers.",CAS1.c_str(), CAS2.c_str()));
         }
@@ -297,6 +329,7 @@ void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CA
 
 std::string get_reducing_function_name(const std::string &CAS1, const std::string &CAS2)
 {
+    
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
     CAS.push_back(CAS2);
@@ -304,8 +337,8 @@ std::string get_reducing_function_name(const std::string &CAS1, const std::strin
     // Sort the CAS number vector - map is based on sorted CAS codes
     std::sort(CAS.begin(), CAS.end());
 
-    if (mixturebinarypairlibrary.binary_pair_map.find(CAS) != mixturebinarypairlibrary.binary_pair_map.end()){
-        return mixturebinarypairlibrary.binary_pair_map[CAS][0].get_string("function");
+    if (mixturebinarypairlibrary.binary_pair_map().find(CAS) != mixturebinarypairlibrary.binary_pair_map().end()){
+        return mixturebinarypairlibrary.binary_pair_map()[CAS][0].get_string("function");
     }
     else{
         throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
@@ -315,21 +348,28 @@ std::string get_reducing_function_name(const std::string &CAS1, const std::strin
 /** \brief A container for the departure functions for CoolProp mixtures
  */
 class MixtureDepartureFunctionsLibrary{
-public:
+private:
     /// Map from sorted pair of CAS numbers to departure term dictionary.
-    std::map<std::string, Dictionary> departure_function_map;
-
-    MixtureDepartureFunctionsLibrary()
-    {
+    std::map<std::string, Dictionary> m_departure_function_map;
+public:
+    
+    std::map<std::string, Dictionary> & departure_function_map(){
+        // Set the default departure functions if none have been provided yet
+        if(m_departure_function_map.size() == 0){ load_defaults(); }
+        return m_departure_function_map;
+    };
+    
+    void load_from_string(const std::string &str){
         rapidjson::Document doc;
-
-        // Load the JSON data for the departure functions
-        doc.Parse<0>(mixture_departure_functions_JSON.c_str());
+        doc.Parse<0>(str.c_str());
         if (doc.HasParseError()){
-            std::cout << mixture_departure_functions_JSON << std::endl ;
-            throw ValueError("Unable to parse mixture_departure_functions_JSON.h");
+            std::cout << str << std::endl ;
+            throw ValueError("Unable to parse departure function string");
         }
-
+        load_from_JSON(doc);
+    }
+    void load_from_JSON(rapidjson::Document &doc)
+    {
         // Iterate over the departure functions in the listing
         for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr)
         {
@@ -367,30 +407,47 @@ public:
             }
 
             // Check if this name is already in use
-            if (departure_function_map.find(Name) == departure_function_map.end())
+            std::map<std::string, Dictionary>::iterator it = m_departure_function_map.find(Name);
+            if (it == m_departure_function_map.end())
             {
                 // Not in map, add new entry to map with dictionary as value and Name as key
-                departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
+                m_departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
             }
             else
             {
-                // Error if already in map!
-                //
-                // Collect all the current names for departure functions for a nicer error message
-                std::vector<std::string> names;
-                for (std::map<std::string, Dictionary>::const_iterator it = departure_function_map.begin(); it != departure_function_map.end(); ++it)
-                {
-                    names.push_back(it->first);
+                if (!get_config_bool(OVERWRITE_DEPARTURE_FUNCTION)){
+                    // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+                    m_departure_function_map.erase(it);
+                    std::pair<std::map<std::string, Dictionary>::iterator, bool> ret;
+                    ret = m_departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
+                    assert(ret.second == true);
                 }
-                throw ValueError(format("Name of departure function [%s] is already loaded. Current departure function names are: %s", Name.c_str(), strjoin(names,",").c_str() ));
+                else{
+                    // Error if already in map!
+                    //
+                    // Collect all the current names for departure functions for a nicer error message
+                    std::vector<std::string> names;
+                    for (std::map<std::string, Dictionary>::const_iterator it = m_departure_function_map.begin(); it != m_departure_function_map.end(); ++it)
+                    {
+                        names.push_back(it->first);
+                    }
+                    throw ValueError(format("Name of departure function [%s] is already loaded. Current departure function names are: %s", Name.c_str(), strjoin(names,",").c_str() ));
+                }
             }
         }
+    }
+    // Load the defaults that come from the JSON-encoded string compiled into library
+    // as the variable mixture_departure_functions_JSON
+    void load_defaults()
+    {
+        load_from_string(mixture_departure_functions_JSON);
     }
 };
 static MixtureDepartureFunctionsLibrary mixturedeparturefunctionslibrary;
 
 void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 {
+    
     std::vector<CoolPropFluid> components = HEOS.get_components();
 
     std::size_t N = components.size();
@@ -422,13 +479,13 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             //         Reducing parameters for binary pair
             // ***************************************************
 
-            if (mixturebinarypairlibrary.binary_pair_map.find(CAS) == mixturebinarypairlibrary.binary_pair_map.end())
+            if (mixturebinarypairlibrary.binary_pair_map().find(CAS) == mixturebinarypairlibrary.binary_pair_map().end())
             {
                 throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.", CAS[0].c_str(), CAS[1].c_str()));
             }
 
             // Get a reference to the first matching binary pair in the dictionary
-            Dictionary &dict_red = mixturebinarypairlibrary.binary_pair_map[CAS][0];
+            Dictionary &dict_red = mixturebinarypairlibrary.binary_pair_map()[CAS][0];
 
             // Get the name of the type being used, one of GERG-2008, Lemmon-xi-zeta, etc.
             std::string type_red = dict_red.get_string("type");
@@ -478,7 +535,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             std::string Name = CoolProp::get_reducing_function_name(components[i].CAS, components[j].CAS);
 
             // Get the dictionary itself
-            Dictionary &dict_dep = mixturedeparturefunctionslibrary.departure_function_map[Name];
+            Dictionary &dict_dep = mixturedeparturefunctionslibrary.departure_function_map()[Name];
 
             if (dict_dep.is_empty()){throw ValueError(format("Departure function name [%s] seems to be invalid",Name.c_str()));}
 
@@ -514,5 +571,211 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
     // We have obtained all the parameters needed for the reducing function, now set the reducing function for the mixture
     HEOS.Reducing = shared_ptr<ReducingFunction>(new GERG2008ReducingFunction(components, beta_v, gamma_v, beta_T, gamma_T));
 }
+ 
+void parse_HMX_BNC(const std::string &s, std::vector<REFPROP_binary_element> &BIP, std::vector<REFPROP_departure_function> &functions)
+{
+    // Capture the betas, gammas, Fij, models
+    bool block_started = false, block_ended = false;
+    std::size_t i_started = 0, i_ended = 0, i = 0;
+    std::vector<std::string> lines = strsplit(s, '\n');
+    for(std::vector<std::string>::iterator it = lines.begin(); it != lines.end(); ++it){
+        if (strstartswith(strstrip(*it), "#BNC")){
+            block_started = true;
+            i_started = i+1;
+        }
+        if (block_started && strstrip(*it).empty()){
+            block_ended = true;
+            i_ended = i-1;
+            break;
+        }
+        i++;
+    }
+    i = 0;
+    // Find the first line with a !
+    for (i = i_started; i < i_ended; ++i){
+        if (strstrip(lines[i]) == "!" ){ i_started = i; break; }
+    }
+    // Find all the lines that '!' - these are delimiters
+    std::vector<std::pair<std::size_t, std::size_t> > bounds; // The left and right indices (inclusive) that form a binary pair
+    std::size_t last_excalamation = i_started;
+    for (i = i_started; i <= i_ended; ++i){
+        if (strstrip(lines[i]) == "!" ){
+            bounds.push_back(std::make_pair<std::size_t, std::size_t>(last_excalamation+1, i-1));
+            last_excalamation = i;
+        }
+    }
+    // Parse each chunk
+    std::vector<REFPROP_binary_element> chunks;
+    for (std::vector<std::pair<std::size_t, std::size_t> >::iterator it = bounds.begin(); it != bounds.end(); ++it){
+        REFPROP_binary_element bnc;
+        for (std::size_t i = it->first; i <= it->second; ++i){
+            // Store comments
+            if (strstartswith(lines[i], "?")){ bnc.comments.push_back(lines[i]); continue; }
+            // Parse the line with the thermo BIP
+            if (lines[i].find("/") > 0){
+                // Split at ' '
+                std::vector<std::string> bits = strsplit(strstrip(lines[i]), ' ');
+                // Remove empty elements
+                for (std::size_t j = bits.size()-1; j > 0; --j){ if (bits[j].empty()){ bits.erase(bits.begin() + j); } }
+                // Get the line that contains the thermo BIP
+                if (bits[0].find("/") > 0 && bits[1].size()==3){
+                    std::vector<std::string> theCAS = strsplit(bits[0], '/');
+                    bnc.CAS1 = theCAS[0]; bnc.CAS2 = theCAS[1];
+                    bnc.model = bits[1];
+                    bnc.betaT = string2double(bits[2]);
+                    bnc.gammaT = string2double(bits[3]);
+                    bnc.betaV = string2double(bits[4]);
+                    bnc.gammaV = string2double(bits[5]);
+                    bnc.Fij = string2double(bits[6]);
+                    break;
+                }
+                else if (strstrip(bits[0]) == "CAS#"){
+                    break;
+                }
+                else{
+                    throw CoolProp::ValueError(format("Unable to parse binary interaction line: %s", lines[i]));
+                }
+            }
+        }
+        if (!bnc.CAS1.empty()){
+            BIP.push_back(bnc);
+        }
+    }
+    
+    // ****************************************
+    //      Parse the departure functions
+    // ****************************************
+    for (std::size_t i = i_ended+1; i < lines.size(); ++i){
+        std::size_t j_end = i;
+        // Find the end of this block
+        for (j_end = i+1; j_end < lines.size(); ++j_end){ if (strstrip(lines[j_end]).empty()) { j_end -= 1; break; } }
+        
+        if (strstartswith(lines[i], "#MXM")){
+            REFPROP_departure_function dep;
+            dep.Npower = -1;
+            dep.model = std::string(lines[i+1].begin(), lines[i+1].begin()+3);
+            dep.comments.push_back(lines[i+1]);
+            for (std::size_t j = i+2; j <= j_end; ++j){
+                if (strstartswith(strstrip(lines[j]), "?")){
+                    dep.comments.push_back(lines[j]); continue;
+                }
+                if (strstartswith(strstrip(lines[j]), "!")){
+                    j += 2; // Skip the BIP here, not used
+                    continue;
+                }
+                std::vector<std::string> bits = strsplit(lines[j], ' ');
+                // Remove empty elements
+                for (std::size_t k = bits.size()-1; k > 0; --k){ if (bits[k].empty()){ bits.erase(bits.begin() + k); } }
+                
+                if (dep.Npower < 0){ // Not extracted yet, let's do it now
+                    // Extract the number of terms
+                    dep.Npower = strtol(bits[0].c_str(), NULL, 10);
+                    dep.Nterms_power = strtol(bits[1].c_str(), NULL, 10);
+                    dep.Nspecial = strtol(bits[3].c_str(), NULL, 10);
+                    dep.Nterms_special = strtol(bits[4].c_str(), NULL, 10);
+                }
+                else{
+                    dep.a.push_back(string2double(bits[0]));
+                    dep.t.push_back(string2double(bits[1]));
+                    dep.d.push_back(string2double(bits[2]));
+                    // Extracting "polynomial" terms
+                    if (dep.Nterms_power == 4){
+                        dep.e.push_back(string2double(bits[3]));
+                    }
+                    if (dep.Nspecial > 0){
+                        if (dep.a.size()-1 < dep.Npower){
+                            dep.eta.push_back(0);
+                            dep.epsilon.push_back(0);
+                            dep.beta.push_back(0);
+                            dep.gamma.push_back(0);
+                        }
+                        else{
+                            // Extracting "special" terms
+                            dep.eta.push_back(string2double(bits[3]));
+                            dep.epsilon.push_back(string2double(bits[4]));
+                            dep.beta.push_back(string2double(bits[5]));
+                            dep.gamma.push_back(string2double(bits[6]));
+                        }
+                    }
+                }
+            }
+            functions.push_back(dep);
+        }
+    }
+}
+    
+void set_departure_functions(const std::string &string_data)
+{
+    if (string_data.find("#MXM") > 0 ){
+        // REFPROP HMX.BNC file was provided
+        std::vector<REFPROP_binary_element> BIP;
+        std::vector<REFPROP_departure_function> functions;
+        parse_HMX_BNC(string_data, BIP, functions);
+        
+        {
+            rapidjson::Document doc; doc.SetArray();
+            for(std::vector<REFPROP_binary_element>::const_iterator it = BIP.begin(); it < BIP.end(); ++it){
+                rapidjson::Value el; el.SetObject();
+                el.AddMember("CAS1", rapidjson::Value(it->CAS1.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
+                el.AddMember("CAS2", rapidjson::Value(it->CAS2.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
+                el.AddMember("Name1", "??", doc.GetAllocator());
+                el.AddMember("Name2", "??", doc.GetAllocator());
+                el.AddMember("betaT", it->betaT, doc.GetAllocator());
+                el.AddMember("gammaT", it->gammaT, doc.GetAllocator());
+                el.AddMember("betaV", it->betaV, doc.GetAllocator());
+                el.AddMember("gammaV", it->gammaV, doc.GetAllocator());
+                el.AddMember("F", it->Fij, doc.GetAllocator());
+                el.AddMember("function", rapidjson::Value(it->model.c_str(), doc.GetAllocator()).Move() , doc.GetAllocator());
+                std::string tex_string = "(from HMX.BNC format)::" + strjoin(it->comments, "\n");
+                el.AddMember("BibTeX", rapidjson::Value(tex_string.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
+                doc.PushBack(el, doc.GetAllocator());
+            }
+            mixturebinarypairlibrary.load_from_JSON(doc);
+        }
+        {
+            rapidjson::Document doc; doc.SetArray();
+            for(std::vector<REFPROP_departure_function>::const_iterator it = functions.begin(); it < functions.end(); ++it){
+                rapidjson::Value el; el.SetObject();
+                el.AddMember("Name", rapidjson::Value(it->model.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
+                std::vector<std::string> aliases;
+                cpjson::set_string_array("aliases", aliases, el, doc);
+                cpjson::set_double_array("n", it->a, el, doc);
+                cpjson::set_double_array("d", it->d, el, doc);
+                cpjson::set_double_array("t", it->t, el, doc);
+                if (it->Nterms_special > 0 || it->Nterms_power == 3){
+                    el.AddMember("type", "GERG-2008", doc.GetAllocator());
+                    el.AddMember("Npower", it->Npower, doc.GetAllocator());
+                    if (it->Nterms_power == 3 && it->Nspecial == 0){
+                        std::vector<double> zeros(it->a.size(), 0);
+                        cpjson::set_double_array("eta", zeros, el, doc);
+                        cpjson::set_double_array("epsilon", zeros, el, doc);
+                        cpjson::set_double_array("beta", zeros, el, doc);
+                        cpjson::set_double_array("gamma", zeros, el, doc);
+                    }
+                    else{
+                        cpjson::set_double_array("eta", it->eta, el, doc);
+                        cpjson::set_double_array("epsilon", it->epsilon, el, doc);
+                        cpjson::set_double_array("beta", it->beta, el, doc);
+                        cpjson::set_double_array("gamma", it->gamma, el, doc);
+                    }
+                }
+                else{
+                    el.AddMember("type", "Exponential", doc.GetAllocator());
+                    cpjson::set_double_array("l", it->e, el, doc);
+                }
+                
+                std::string tex_string = "(from HMX.BNC format)::" + strjoin(it->comments, "\n");
+                el.AddMember("BibTeX", rapidjson::Value(tex_string.c_str(), doc.GetAllocator()).Move(), doc.GetAllocator());
+                doc.PushBack(el, doc.GetAllocator());
+            }
+            mixturedeparturefunctionslibrary.load_from_JSON(doc);
+        }
+    }
+    else{
+        // JSON-encoded string for departure functions
+        mixturedeparturefunctionslibrary.load_from_string(string_data);
+    }
+}
+
 
 } /* namespace CoolProp */

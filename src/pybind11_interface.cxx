@@ -15,8 +15,6 @@ CoolProp::AbstractState * factory(const std::string &backend, const std::string 
     return CoolProp::AbstractState::factory(backend, fluid_names);
 }
 
-void init_CoolProp_Configuration_constants(py::module &m);
-
 void init_CoolProp(py::module &m){
     using namespace CoolProp;
 
@@ -56,6 +54,13 @@ void init_CoolProp(py::module &m){
         .def_readwrite("conductivity_liq", &PhaseEnvelopeData::conductivity_liq)
         .def_readwrite("conductivity_vap", &PhaseEnvelopeData::conductivity_vap)
         .def_readwrite("speed_sound_vap", &PhaseEnvelopeData::speed_sound_vap);
+    
+    // See http://stackoverflow.com/a/148610 and http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
+    py::enum_<configuration_keys>(m, "configuration_keys")
+        #define X(Enum, String, Default, Desc) .value(String, configuration_keys::Enum)
+            CONFIGURATION_KEYS_ENUM
+        #undef X
+        .export_values();
     
     py::enum_<parameters>(m, "parameters")
         .value("igas_constant", parameters::igas_constant)
@@ -344,6 +349,7 @@ void init_CoolProp(py::module &m){
     m.def("config_key_description", (std::string (*)(const std::string &))&config_key_description);
     m.def("set_config_string", &set_config_string);
     m.def("set_config_double", &set_config_double);
+    m.def("set_departure_functions", &set_departure_functions);
     m.def("set_config_bool", &set_config_bool);
     m.def("get_config_string", &get_config_string);
     m.def("get_config_double", &get_config_double);
@@ -374,8 +380,7 @@ void init_CoolProp(py::module &m){
     m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);
     m.def("set_mixture_binary_pair_data", &set_mixture_binary_pair_data);
     m.def("apply_simple_mixing_rule", &apply_simple_mixing_rule);
-
-    init_CoolProp_Configuration_constants(m);
+    
 }
 
 #if defined(COOLPROP_PYBIND11_MODULE)
