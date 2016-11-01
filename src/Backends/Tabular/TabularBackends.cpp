@@ -1448,15 +1448,15 @@ TEST_CASE_METHOD(TabularFixture, "Tests for tabular backends with water", "[Tabu
         CHECK(std::abs((expected-actual_TTSE)/expected) < 1e-2);
         CHECK(std::abs((expected-actual_BICUBIC)/expected) < 1e-2);
     }
-    SECTION("check D=1, T=300 inputs process"){
+    SECTION("check D=1 mol/m3, T=500 K inputs"){
         setup();
         double d = 1;
         CAPTURE(d);
-        ASHEOS->update(CoolProp::DmolarT_INPUTS, d, 300);
+        ASHEOS->update(CoolProp::DmolarT_INPUTS, d, 500);
         double expected = ASHEOS->p();
-        ASTTSE->update(CoolProp::DmolarT_INPUTS, d, 300);
+        ASTTSE->update(CoolProp::DmolarT_INPUTS, d, 500);
         double actual_TTSE = ASTTSE->p();
-        ASBICUBIC->update(CoolProp::DmolarT_INPUTS, d, 300);
+        ASBICUBIC->update(CoolProp::DmolarT_INPUTS, d, 500);
         double actual_BICUBIC = ASBICUBIC->p();
         CAPTURE(expected);
         CAPTURE(actual_TTSE);
