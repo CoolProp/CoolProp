@@ -785,7 +785,7 @@ CoolPropDbl MixtureDerivatives::d2alpha0_dxi_dDelta(HelmholtzEOSMixtureBackend &
         double drhor_dxi = HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
         double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
         
-        double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
+        //double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
         double dalpha0ok_ddeltaok = HEOS.components[k].EOS().alpha0.dDelta(tau_ok, delta_ok);
 
         double d_dalpha0ok_ddeltaok_dxi = HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta2(tau_ok, delta_ok)*ddeltaok_dxi;
@@ -822,7 +822,7 @@ CoolPropDbl MixtureDerivatives::d2alpha0_dxi_dTau(HelmholtzEOSMixtureBackend &HE
         double drhor_dxi = HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
         double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
         
-        double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
+        //double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
         double dalpha0ok_dtauok = HEOS.components[k].EOS().alpha0.dTau(tau_ok, delta_ok);
         
         double d_dalpha0ok_dTauok_dxi = HEOS.components[k].EOS().alpha0.dTau2(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*ddeltaok_dxi;
@@ -861,7 +861,7 @@ CoolPropDbl MixtureDerivatives::d2alpha0dxidxj(HelmholtzEOSMixtureBackend &HEOS,
     double d2Tr_dxidxj = HEOS.Reducing->d2Trdxidxj(HEOS.mole_fractions, i, j, xN_flag);
     double d2rhor_dxidxj = HEOS.Reducing->d2rhormolardxidxj(HEOS.mole_fractions, i, j, xN_flag);
     
-    double Rratioi = 1;//HEOS.gas_constant()/HEOS.components[i].EOS().R_u;
+    //double Rratioi = 1;//HEOS.gas_constant()/HEOS.components[i].EOS().R_u;
     
     double d_dalpha0oi_dxj = HEOS.components[i].EOS().alpha0.dTau(tau_oi, delta_oi)*dtauoi_dxj + HEOS.components[i].EOS().alpha0.dDelta(tau_oi, delta_oi)*ddeltaoi_dxj;
     double d_dalpha0oj_dxi = HEOS.components[j].EOS().alpha0.dTau(tau_oj, delta_oj)*dtauoj_dxi + HEOS.components[j].EOS().alpha0.dDelta(tau_oj, delta_oj)*ddeltaoj_dxi;
