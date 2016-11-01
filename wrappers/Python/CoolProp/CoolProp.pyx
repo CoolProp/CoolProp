@@ -226,11 +226,11 @@ cpdef set_config_bool(constants_header.configuration_keys key, bint value):
     
 cpdef double get_config_double(constants_header.configuration_keys key):
     """ Get a configuration key that is a double-precision float;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_double` """
-    _get_config_double(key)
+    return _get_config_double(key)
     
 cpdef string get_config_string(constants_header.configuration_keys key):
     """ Get a configuration key that is a string;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_string` """
-    _get_config_string(key)
+    return _get_config_string(key)
     
 cpdef bint get_config_bool(constants_header.configuration_keys key):
     """ Get a configuration key that is a boolean;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_bool` """
