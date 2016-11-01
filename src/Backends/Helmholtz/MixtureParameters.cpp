@@ -669,10 +669,10 @@ void parse_HMX_BNC(const std::string &s, std::vector<REFPROP_binary_element> &BI
                 
                 if (dep.Npower < 0){ // Not extracted yet, let's do it now
                     // Extract the number of terms
-                    dep.Npower = strtol(bits[0].c_str(), NULL, 10);
-                    dep.Nterms_power = strtol(bits[1].c_str(), NULL, 10);
-                    dep.Nspecial = strtol(bits[3].c_str(), NULL, 10);
-                    dep.Nterms_special = strtol(bits[4].c_str(), NULL, 10);
+                    dep.Npower = static_cast<short>(strtol(bits[0].c_str(), NULL, 10));
+                    dep.Nterms_power = static_cast<short>(strtol(bits[1].c_str(), NULL, 10));
+                    dep.Nspecial = static_cast<short>(strtol(bits[3].c_str(), NULL, 10));
+                    dep.Nterms_special = static_cast<short>(strtol(bits[4].c_str(), NULL, 10));
                 }
                 else{
                     dep.a.push_back(string2double(bits[0]));

@@ -9,7 +9,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
 {
     // Get the starting array of variables of integration
     std::vector<double> xold = ode.get_initial_array();
-    const long N = xold.size();
+    const long N = static_cast<long>(xold.size());
     
     // Start at an index of 0
     int Itheta = 0;

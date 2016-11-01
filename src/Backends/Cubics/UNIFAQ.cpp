@@ -130,7 +130,7 @@ double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
         return 1;
     }
     else{
-        std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int,int>(mgi1,mgi2));
+        std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int,int>(static_cast<int>(mgi1),static_cast<int>(mgi2)));
         if (it != this->interaction.end()){
             double val = exp(-(it->second.a_ij + it->second.b_ij*this->m_T + it->second.c_ij*this->m_T*this->m_T) / this->m_T);
             return val;
