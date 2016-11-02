@@ -153,9 +153,9 @@ double UNIFAQ::UNIFAQMixture::theta_pure(std::size_t i, std::size_t sgi) const {
     return pure_data[i].theta.find(sgi)->second;
 }
 
-void UNIFAQ::UNIFAQMixture::set_temperature(const double T, const std::vector<double> &z){
-//    // Check whether you are using exactly the same temperature and mole fractions as last time
-//    if (static_cast<bool>(_T) && std::abs(static_cast<double>(_T) - T) < 1e-15 && maxvectordiff(z, mole_fractions) < 1e-15){
+void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
+//    // Check whether you are using exactly the same temperature as last time
+//    if (static_cast<bool>(_T) && std::abs(static_cast<double>(_T) - T) < 1e-15 {
 //        // 
 //        return;
 //    }
@@ -212,20 +212,27 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T, const std::vector<do
     }
     _T = m_T;
 }
-double UNIFAQ::UNIFAQMixture::ln_gamma_R(std::size_t i) const{
-    double summer = 0;
-    for (std::vector<UNIFAQLibrary::Group>::const_iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
-        std::size_t k = it->sgi;
-        std::size_t count = group_count(i, k);
-        if (count > 0){
-            summer += count*(m_lnGammag.find(k)->second - pure_data[i].lnGamma.find(k)->second);
+double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::size_t itau) const{
+    if (itau == 0) {
+        set_temperature(T_r / tau);
+        double summer = 0;
+        for (std::vector<UNIFAQLibrary::Group>::const_iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
+            std::size_t k = it->sgi;
+            std::size_t count = group_count(i, k);
+            if (count > 0){
+                summer += count*(m_lnGammag.find(k)->second - pure_data[i].lnGamma.find(k)->second);
+            }
         }
+        //printf("log(gamma)_{%d}: %g\n", i+1, summer);
+        return summer;
     }
-    //printf("log(gamma)_{%d}: %g\n", i+1, summer);
-    return summer;
+    else {
+        double dtau = 0.01*tau;
+        return (ln_gamma_R(tau + dtau, i, itau - 1) - ln_gamma_R(tau - dtau, i, itau - 1)) / (2 * dtau);
+    }
 }
-double UNIFAQ::UNIFAQMixture::activity_coefficient(std::size_t i) const {
-    return exp(ln_gamma_R(i) + m_ln_Gamma_C[i]);
+double UNIFAQ::UNIFAQMixture::activity_coefficient(double tau, std::size_t i) const {
+    return exp(ln_gamma_R(tau, i, 0) + m_ln_Gamma_C[i]);
 }
 
 /// Add a component with the defined groups defined by (count, sgi) pairs

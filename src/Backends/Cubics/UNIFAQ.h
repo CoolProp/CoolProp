@@ -20,6 +20,7 @@ namespace UNIFAQ
         CoolProp::CachedElement _T; ///< The cached temperature
 
         double m_T; ///< The temperature in K
+        double T_r; ///< Reduce temperature
 
         std::vector<double> m_r,
                             m_q,
@@ -52,7 +53,7 @@ namespace UNIFAQ
     
     public:
         
-        UNIFAQMixture(const UNIFAQLibrary::UNIFAQParameterLibrary &library) : library(library) {};
+        UNIFAQMixture(const UNIFAQLibrary::UNIFAQParameterLibrary &library, const double T_r) : library(library), T_r(T_r) {};
 
         /** 
         * \brief Set all the interaction parameters between groups
@@ -68,8 +69,8 @@ namespace UNIFAQ
         /// Get the mole fractions of the components in the mixtures (not the groups)
         const std::vector<double> & get_mole_fractions() { return mole_fractions; }
 
-        /// Set the mole fractions of the components in the mixtures (not the groups) AND the mole fractions you want to use
-        void set_temperature(const double T, const std::vector<double> &z);
+        /// Set the temperature of the components in the mixtures (not the groups)
+        void set_temperature(const double T);
 
         /// Get the temperature
         double get_temperature() const { return m_T; }
@@ -78,9 +79,9 @@ namespace UNIFAQ
 
         double theta_pure(std::size_t i, std::size_t sgi) const;
 
-        double activity_coefficient(std::size_t i) const;
+        double activity_coefficient(double tau, std::size_t i) const;
 
-        double ln_gamma_R(std::size_t i) const;
+        double ln_gamma_R(const double tau, std::size_t i, std::size_t itau) const;
 
         std::size_t group_count(std::size_t i, std::size_t sgi) const;
 
