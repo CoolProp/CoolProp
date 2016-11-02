@@ -79,9 +79,9 @@ namespace UNIFAQ
 
         double theta_pure(std::size_t i, std::size_t sgi) const;
 
-        double activity_coefficient(double tau, std::size_t i) const;
+        double activity_coefficient(double tau, std::size_t i);
 
-        double ln_gamma_R(const double tau, std::size_t i, std::size_t itau) const;
+        double ln_gamma_R(const double tau, std::size_t i, std::size_t itau);
 
         std::size_t group_count(std::size_t i, std::size_t sgi) const;
 

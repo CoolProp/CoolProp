@@ -212,7 +212,7 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
     }
     _T = m_T;
 }
-double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::size_t itau) const{
+double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::size_t itau){
     if (itau == 0) {
         set_temperature(T_r / tau);
         double summer = 0;
@@ -231,7 +231,7 @@ double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::s
         return (ln_gamma_R(tau + dtau, i, itau - 1) - ln_gamma_R(tau - dtau, i, itau - 1)) / (2 * dtau);
     }
 }
-double UNIFAQ::UNIFAQMixture::activity_coefficient(double tau, std::size_t i) const {
+double UNIFAQ::UNIFAQMixture::activity_coefficient(double tau, std::size_t i){
     return exp(ln_gamma_R(tau, i, 0) + m_ln_Gamma_C[i]);
 }
 
