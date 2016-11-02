@@ -298,6 +298,8 @@ protected:
     virtual CoolPropDbl calc_p_reducing(void){ throw NotImplementedError("calc_p_reducing is not implemented for this backend"); };
     /// Using this backend, get the critical point molar density in mol/m^3
     virtual CoolPropDbl calc_rhomolar_critical(void){ throw NotImplementedError("calc_rhomolar_critical is not implemented for this backend"); };
+    /// Using this backend, get the critical point mass density in kg/m^3 - Added for IF97Backend which is mass based
+    virtual CoolPropDbl calc_rhomass_critical(void){ throw NotImplementedError("calc_rhomass_critical is not implemented for this backend"); };
     /// Using this backend, get the reducing point molar density in mol/m^3
     virtual CoolPropDbl calc_rhomolar_reducing(void){ throw NotImplementedError("calc_rhomolar_reducing is not implemented for this backend"); };
     /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
@@ -552,7 +554,7 @@ public:
     double p_critical(void);
     /// Return the critical molar density in mol/m^3
     double rhomolar_critical(void);
-    /// Return the critical molar density in kg/m^3
+    /// Return the critical mass density in kg/m^3
     double rhomass_critical(void);
     
     /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
