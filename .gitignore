@@ -37,7 +37,7 @@
 /include/cubic_fluids_schema_JSON.h
 /include/version.h
 /include/catch.hpp
-/build/
+/build*/
 /dev/hashes.json
 /include/cpversion.h
 /dev/all_incompressibles.json

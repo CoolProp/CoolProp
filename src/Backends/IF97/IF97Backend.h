@@ -43,36 +43,83 @@ public:
     void update(CoolProp::input_pairs input_pair, double value1, double value2){
         switch(input_pair){
             case PT_INPUTS: _p = value1; _T = value2; break;
+            /* TODO:  Add input pairs for saturation functions 
+            case PQ_INPUTS: _p = value1; _Q = value2; break;
+            case QT_INPUTS: _Q = value1; _T = value2; break;
+            */
             default:
                 throw ValueError("bad input_pair");
         }
     };
 
-    /** We have to override some of the functions from the AbstractState.
+    /*  We have to override some of the functions from the AbstractState.
 	 *  IF97 is only mass-based and does not support conversion
 	 *  from mass- to molar-specific quantities.
 	 */
+    // ************************************************************************* //
+    //                   Basic Thermodynamic Functions                           //
+    // ************************************************************************* //
 	/// Return the mass density in kg/m^3
-    double rhomass(void){ return calc_rhomass(); }
-    CoolPropDbl calc_rhomass(void){ return IF97::rhomass_Tp(_T, _p); }
+    double rhomass(void){ return calc_rhomass(); };
+    double calc_rhomass(void){ return IF97::rhomass_Tp(_T, _p); };
 	/// Return the mass enthalpy in J/kg
-	double hmass(void){return calc_hmass();}
-    CoolPropDbl calc_hmass(void){ return IF97::hmass_Tp(_T, _p); }
+	double hmass(void){return calc_hmass();};
+    double calc_hmass(void){ return IF97::hmass_Tp(_T, _p); };
 	/// Return the molar entropy in J/mol/K
-	double smass(void){return calc_smass();}
-    CoolPropDbl calc_smass(void){ return IF97::smass_Tp(_T, _p); }
+	double smass(void){return calc_smass();};
+    double calc_smass(void){ return IF97::smass_Tp(_T, _p); };
 	/// Return the molar internal energy in J/mol
-	double umass(void){return calc_umass();}
-    CoolPropDbl calc_umass(void){ return IF97::umass_Tp(_T, _p); }
+	double umass(void){return calc_umass();};
+    double calc_umass(void){ return IF97::umass_Tp(_T, _p); };
 	/// Return the mass-based constant pressure specific heat in J/kg/K
-	double cpmass(void){return calc_cpmass();}
-    CoolPropDbl calc_cpmass(void){ return IF97::cpmass_Tp(_T, _p); }
+	double cpmass(void){return calc_cpmass();};
+    double calc_cpmass(void){ return IF97::cpmass_Tp(_T, _p); };
     /// Return the mass-based constant volume specific heat in J/kg/K
-	double cvmass(void){return calc_cvmass();}
-    CoolPropDbl calc_cvmass(void){ return IF97::cvmass_Tp(_T, _p); }
+	double cvmass(void){return calc_cvmass();};
+    double calc_cvmass(void){ return IF97::cvmass_Tp(_T, _p); };
     /// Return the speed of sound
-    double speed_sound(void){ return calc_speed_sound(); }
-    CoolPropDbl calc_speed_sound(void) { return IF97::speed_sound_Tp(_T, _p); }
+    double speed_sound(void){ return calc_speed_sound(); };
+    double calc_speed_sound(void) { return IF97::speed_sound_Tp(_T, _p); };
+
+    // ************************************************************************* //
+    //                         Trivial Functions                                 //
+    // ************************************************************************* //
+    /// Using this backend, get the triple point temperature in K
+    double calc_Ttriple(void){ return IF97::get_Ttrip(); };
+    /// Using this backend, get the triple point pressure in Pa
+    double calc_p_triple(void){ return IF97::get_ptrip(); };
+    /// Using this backend, get the critical point temperature in K
+    double calc_T_critical(void){ return IF97::get_Tcrit(); };
+    /// Using this backend, get the critical point pressure in Pa
+    double calc_p_critical(void){ return IF97::get_pcrit(); };
+    /// Using this backend, get the ideal gas constant in J/mol*K
+    /// ==> multiplies IF97 Rgas by molar_mass() to put on molar basis per CoolProp convention
+    double calc_gas_constant(void){ return IF97::get_Rgas()*molar_mass(); };
+    /// Using this backend, get the molar mass in kg/mol
+    double calc_molar_mass(void){ return IF97::get_MW(); };
+    /// Using this backend, get the acentric factor (unitless)
+    double calc_acentric_factor(void){ return IF97::get_Acentric(); };
+    /// Using this backend, get the high pressure limit in Pa
+    // TODO: May want to adjust this based on _T, since Region 5
+    //       is limited to 50 MPa, instead of 100 MPa elsewhere.
+    double calc_pmax(void){ return IF97::get_Pmax(); };
+    /// Note: Pmin not implemented in Abstract State or CoolProp
+    /// Using this backend, get the high temperature limit in K
+    double calc_Tmax(void){ return IF97::get_Tmax(); };
+    /// Using this backend, get the high pressure limit in K
+    double calc_Tmin(void){ return IF97::get_Tmin(); };
+    /// Using this backend, get the critical point density in kg/m³
+    /// Replace molar-based AbstractState functions since IF97 is mass based only
+    double rhomolar_critical(void){
+        return calc_rhomass_critical()/molar_mass();
+    }
+    double rhomass_critical(void){
+        return calc_rhomass_critical();
+    }
+    // Overwrite the virtual calc_ functions for density
+    double calc_rhomolar_critical(void){ return rhomass_critical()/molar_mass(); };
+    double calc_rhomass_critical(void){ return IF97::get_rhocrit(); };
+
 };
 
 } /* namespace CoolProp */
