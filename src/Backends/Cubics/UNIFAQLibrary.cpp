@@ -144,24 +144,24 @@ TEST_CASE("Check Poling example for UNIFAQ", "[UNIFAQ]")
     SECTION("Validate AC for acetone + n-pentane") {
         UNIFAQLibrary::UNIFAQParameterLibrary lib;
         CHECK_NOTHROW(lib.populate(groups, interactions, acetone_pentane_groups););
-        UNIFAQ::UNIFAQMixture mix(lib);
+        UNIFAQ::UNIFAQMixture mix(lib,1.0);
         std::vector<std::string> names; names.push_back("Acetone"); names.push_back("n-Pentane");
         mix.set_components("name",names);
         mix.set_interaction_parameters();
        
         std::vector<double> z(2,0.047); z[1] = 1-z[0];
         mix.set_mole_fractions(z);
-        CHECK_NOTHROW(mix.set_temperature(307, z););
+        CHECK_NOTHROW(mix.set_temperature(307););
         
-        double lngammaR0 = mix.ln_gamma_R(0);
-        double lngammaR1 = mix.ln_gamma_R(1);
+        double lngammaR0 = mix.ln_gamma_R(1.0/307,0,0);
+        double lngammaR1 = mix.ln_gamma_R(1.0/307,1,0);
         CAPTURE(lngammaR0);
         CAPTURE(lngammaR1);
         CHECK(std::abs(lngammaR0 - 1.66) < 1e-2);
         CHECK(std::abs(lngammaR1 - 5.68e-3) < 1e-3);
 
-        double gamma0 = mix.activity_coefficient(0);
-        double gamma1 = mix.activity_coefficient(1);
+        double gamma0 = mix.activity_coefficient(1.0/307,0);
+        double gamma1 = mix.activity_coefficient(1.0/307,1);
         CAPTURE(gamma0);
         CAPTURE(gamma1);
         CHECK(std::abs(gamma0 - 4.99) < 1e-2);
