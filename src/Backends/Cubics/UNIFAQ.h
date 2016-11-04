@@ -22,13 +22,6 @@ namespace UNIFAQ
         double m_T; ///< The temperature in K
         double T_r; ///< Reduce temperature
 
-        std::vector<double> m_r,
-                            m_q,
-                            m_l,
-                            m_phi,
-                            m_theta,
-                            m_ln_Gamma_C;
-
         std::map<std::size_t, double> m_Xg,  ///< Map from sgi to mole fraction of group in the mixture
                                       m_thetag, ///< Map from sgi to theta for the group in the mixture
                                       m_lnGammag; ///< Map from sgi to ln(Gamma) for the group in the mixture
@@ -79,7 +72,7 @@ namespace UNIFAQ
 
         double theta_pure(std::size_t i, std::size_t sgi) const;
 
-        double activity_coefficient(double tau, std::size_t i);
+        void activity_coefficients(double tau, const std::vector<double> &z, std::vector<double> &gamma);
 
         double ln_gamma_R(const double tau, std::size_t i, std::size_t itau);
 

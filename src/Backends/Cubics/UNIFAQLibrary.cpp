@@ -160,12 +160,12 @@ TEST_CASE("Check Poling example for UNIFAQ", "[UNIFAQ]")
         CHECK(std::abs(lngammaR0 - 1.66) < 1e-2);
         CHECK(std::abs(lngammaR1 - 5.68e-3) < 1e-3);
 
-        double gamma0 = mix.activity_coefficient(1.0/307,0);
-        double gamma1 = mix.activity_coefficient(1.0/307,1);
-        CAPTURE(gamma0);
-        CAPTURE(gamma1);
-        CHECK(std::abs(gamma0 - 4.99) < 1e-2);
-        CHECK(std::abs(gamma1 - 1.005) < 1e-3);
+        std::vector<double> gamma(2);
+        mix.activity_coefficients(1.0/307,z,gamma);
+        CAPTURE(gamma[0]);
+        CAPTURE(gamma[1]);
+        CHECK(std::abs(gamma[0] - 4.99) < 1e-2);
+        CHECK(std::abs(gamma[1] - 1.005) < 1e-3);
     };
 };
 

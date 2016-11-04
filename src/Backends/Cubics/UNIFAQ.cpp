@@ -25,34 +25,9 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
     pure_data.clear();
     this->mole_fractions = z;
     std::size_t N = z.size();
-    std::vector<double> &r = m_r, &q = m_q, &l = m_l, &phi = m_phi, &theta = m_theta, &ln_Gamma_C = m_ln_Gamma_C;
-    r.resize(N); q.resize(N); l.resize(N); phi.resize(N); theta.resize(N); ln_Gamma_C.resize(N);
-    double summerzr = 0, summerzq = 0, summerzl = 0;
-    for (std::size_t i = 0; i < z.size(); ++i) {
-        double summerr = 0, summerq = 0;
-        const UNIFAQLibrary::Component &c = components[i];
-        for (std::size_t j = 0; j < c.groups.size(); ++j) {
-            const UNIFAQLibrary::ComponentGroup &cg = c.groups[j];
-            summerr += cg.count*cg.group.R_k;
-            summerq += cg.count*cg.group.Q_k;
-        }
-        r[i] = summerr;
-        q[i] = summerq;
-        summerzr += z[i] * r[i];
-        summerzq += z[i] * q[i];
-    }
-    for (std::size_t i = 0; i < z.size(); ++i) {
-        phi[i] = z[i] * r[i] / summerzr;
-        theta[i] = z[i] * q[i] / summerzq;
-        l[i] = 10.0 / 2.0*(r[i] - q[i]) - (r[i] - 1);
-        summerzl += z[i] * l[i];
-    }
-    for (std::size_t i = 0; i < z.size(); ++i) {
-        ln_Gamma_C[i] = log(phi[i]/z[i]) + 10.0/2.0*q[i] * log(theta[i]/phi[i]) + l[i] - phi[i]/z[i]*summerzl;
-    }
     
     /// Calculate the parameters X and theta for the pure components, which does not depend on temperature
-    for (std::size_t i = 0; i < z.size(); ++i){
+    for (std::size_t i = 0; i < N; ++i){
         int totalgroups = 0;
         const UNIFAQLibrary::Component &c = components[i];
         ComponentData cd;
@@ -80,7 +55,7 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
         }
         pure_data.push_back(cd);
     }
-    for (std::size_t i = 0; i < z.size(); ++i) {
+    for (std::size_t i = 0; i < N; ++i) {
         //printf("%g %g %g %g %g %g\n", l[i], phi[i], q[i], r[i], theta[i], ln_Gamma_C[i]);
     }
     
@@ -231,8 +206,33 @@ double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::s
         return (ln_gamma_R(tau + dtau, i, itau - 1) - ln_gamma_R(tau - dtau, i, itau - 1)) / (2 * dtau);
     }
 }
-double UNIFAQ::UNIFAQMixture::activity_coefficient(double tau, std::size_t i){
-    return exp(ln_gamma_R(tau, i, 0) + m_ln_Gamma_C[i]);
+void UNIFAQ::UNIFAQMixture::activity_coefficients(double tau, const std::vector<double> &z, std::vector<double> &gamma){
+    std::size_t N = z.size();
+    std::vector<double> r(N), q(N), l(N), phi(N), theta(N), ln_Gamma_C(N);
+    double summerzr = 0, summerzq = 0, summerzl = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        double summerr = 0, summerq = 0;
+        const UNIFAQLibrary::Component &c = components[i];
+        for (std::size_t j = 0; j < c.groups.size(); ++j) {
+            const UNIFAQLibrary::ComponentGroup &cg = c.groups[j];
+            summerr += cg.count*cg.group.R_k;
+            summerq += cg.count*cg.group.Q_k;
+        }
+        r[i] = summerr;
+        q[i] = summerq;
+        summerzr += z[i] * r[i];
+        summerzq += z[i] * q[i];
+    }
+    for (std::size_t i = 0; i < N; ++i) {
+        phi[i] = z[i] * r[i] / summerzr;
+        theta[i] = z[i] * q[i] / summerzq;
+        l[i] = 10.0 / 2.0*(r[i] - q[i]) - (r[i] - 1);
+        summerzl += z[i] * l[i];
+    }
+    for (std::size_t i = 0; i < N; ++i) {
+        ln_Gamma_C[i] = log(phi[i] / z[i]) + 10.0 / 2.0*q[i] * log(theta[i] / phi[i]) + l[i] - phi[i] / z[i] * summerzl;
+        gamma[i] = exp(ln_gamma_R(tau, i, 0) + ln_Gamma_C[i]);
+    } 
 }
 
 /// Add a component with the defined groups defined by (count, sgi) pairs
