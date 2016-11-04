@@ -982,13 +982,13 @@ EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
     register_vector<double>("VectorDouble");
     register_vector<std::string>("VectorString");
 
-    //value_object<CoolProp::PhaseEnvelopeData>("CoolProp::PhaseEnvelopeData")
-    //    // Use X macros to auto-generate the variables; 
-    //    // each will look something like: .field("T", &CoolProp::PhaseEnvelopeData::T);
-    //    #define X(name) .field("name", &CoolProp::PhaseEnvelopeData::name)
-    //        PHASE_ENVELOPE_VECTORS
-    //    #undef X
-    //    ;
+    value_object<CoolProp::PhaseEnvelopeData>("CoolProp::PhaseEnvelopeData")
+        // Use X macros to auto-generate the variables; 
+        // each will look something like: .field("T", &CoolProp::PhaseEnvelopeData::T);
+        #define X(name) .field(#name, &CoolProp::PhaseEnvelopeData::name)
+            PHASE_ENVELOPE_VECTORS
+        #undef X
+        ;
 
     function("factory", &factory, allow_raw_pointers());
 
