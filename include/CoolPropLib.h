@@ -115,11 +115,6 @@
      * @returns error_code 1 = Ok 0 = error
      */
     EXPORT_CODE long CONVENTION get_parameter_information_string(const char *key, char *Output, int n);
-    /**
-     * \overload
-     * \sa \ref CoolProp::get_mixture_binary_pair_data
-     */
-    EXPORT_CODE long CONVENTION get_mixture_binary_pair_data(const char *CAS1, const char *CAS2, const char *key);
     /** 
      * \overload
      * \sa \ref CoolProp::get_fluid_param_string
@@ -557,18 +552,7 @@
     /**
     Works just like \ref CoolProp::Props1SI, but units are in KSI system.  This function is deprecated, no longer supported, and users should transition to using the Props1SI function
     */
-    EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output);
-    ///**
-    //\overload
-    // IsFluidType(std::string, std::string)
-    //*/
-    //EXPORT_CODE int CONVENTION IsFluidType(const char *Ref, const char *Type);
-
-    // This version uses the indices in place of the strings for speed.  Get the parameter indices
-    // from get_param_index('D') for instance and the Fluid index from get_Fluid_index('Air') for instance
-    EXPORT_CODE double CONVENTION IPropsSI(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
-    EXPORT_CODE double CONVENTION IProps(long iOutput, long iName1, double Prop1, long iName2, double Prop2, long iFluid);
-    
+    EXPORT_CODE double CONVENTION Props1(const char *FluidName, const char *Output);    
     
     
 #endif
