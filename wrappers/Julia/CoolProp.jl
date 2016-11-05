@@ -13,7 +13,7 @@ else
   errcode = Ref{Clong}(0)
 end
 
-const buffer_length = 10000
+const buffer_length = 20000
 message_buffer = Array(UInt8, buffer_length)
 
 # ---------------------------------
