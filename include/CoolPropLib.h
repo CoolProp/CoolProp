@@ -149,11 +149,14 @@
      * @brief Set the departure functions in the departure function library from a string format
      * @param string_data The departure functions to be set, either provided as a JSON-formatted string
      *                    or as a string of the contents of a HMX.BNC file from REFPROP
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
      *
      * @note By default, if a departure function already exists in the library, this is an error,
      *       unless the configuration variable OVERWRITE_DEPARTURE_FUNCTIONS is set to true
      */
-    EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data);
+    EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data, long *errcode, char *message_buffer, const long buffer_length);
     /**
      * \overload
      * \sa \ref CoolProp::set_reference_stateS

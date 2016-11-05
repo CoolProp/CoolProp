@@ -341,12 +341,15 @@ EXPORT_CODE void CONVENTION set_config_bool(const char * key, const bool val) {
     catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
     catch (...) { CoolProp::set_error_string("Undefined error"); }
 }
-EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data) {
+EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data, long *errcode, char *message_buffer, const long buffer_length) {
+    *errcode = 1;
     try {
         CoolProp::set_departure_functions(string_data);
+        *errcode = 0; // All is well
     }
-    catch (std::exception &e) { CoolProp::set_error_string(e.what()); }
-    catch (...) { CoolProp::set_error_string("Undefined error"); }
+    catch (...) { 
+        HandleException(errcode, message_buffer, buffer_length);
+    }
 }
 EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char * Name3, double Prop3)
 {
