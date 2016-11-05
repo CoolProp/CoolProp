@@ -223,8 +223,8 @@ public:
         }
         else
         {
-            if (!get_config_bool(OVERWRITE_BINARY_INTERACTION)){
-                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+            if (get_config_bool(OVERWRITE_BINARY_INTERACTION)){
+                // Already there, see http://www.cplusplus.com/reference/map/map/insert/, so we are going to pop it and overwrite it
                 m_binary_pair_map.erase(it);
                 std::pair<std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator, bool> ret;
                 ret = m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
@@ -405,34 +405,45 @@ public:
             else{
                 throw ValueError(format("It was not possible to parse departure function with type [%s]", type.c_str()));
             }
-
-            // Check if this name is already in use
-            std::map<std::string, Dictionary>::iterator it = m_departure_function_map.find(Name);
-            if (it == m_departure_function_map.end())
-            {
-                // Not in map, add new entry to map with dictionary as value and Name as key
-                m_departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
+            // Add the normal name;
+            add_one(Name, dict);
+            std::vector<std::string> aliases = dict.get_string_vector("aliases");
+            // Add the aliases too;
+            for (std::vector<std::string>::const_iterator it = aliases.begin(); it != aliases.end(); ++it){
+                // Add the alias;
+                add_one(*it, dict);
             }
-            else
-            {
-                if (!get_config_bool(OVERWRITE_DEPARTURE_FUNCTION)){
-                    // Already there, see http://www.cplusplus.com/reference/map/map/insert/
-                    m_departure_function_map.erase(it);
-                    std::pair<std::map<std::string, Dictionary>::iterator, bool> ret;
-                    ret = m_departure_function_map.insert(std::pair<std::string, Dictionary>(Name, dict));
-                    assert(ret.second == true);
+        }
+    }
+    void add_one(const std::string &name, Dictionary &dict)
+    {
+
+        // Check if this name is already in use
+        std::map<std::string, Dictionary>::iterator it = m_departure_function_map.find(name);
+        if (it == m_departure_function_map.end())
+        {
+            // Not in map, add new entry to map with dictionary as value and Name as key
+            m_departure_function_map.insert(std::pair<std::string, Dictionary>(name, dict));
+        }
+        else
+        {
+            if (get_config_bool(OVERWRITE_DEPARTURE_FUNCTION)){
+                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+                m_departure_function_map.erase(it);
+                std::pair<std::map<std::string, Dictionary>::iterator, bool> ret;
+                ret = m_departure_function_map.insert(std::pair<std::string, Dictionary>(name, dict));
+                assert(ret.second == true);
+            }
+            else{
+                // Error if already in map!
+                //
+                // Collect all the current names for departure functions for a nicer error message
+                std::vector<std::string> names;
+                for (std::map<std::string, Dictionary>::const_iterator it = m_departure_function_map.begin(); it != m_departure_function_map.end(); ++it)
+                {
+                    names.push_back(it->first);
                 }
-                else{
-                    // Error if already in map!
-                    //
-                    // Collect all the current names for departure functions for a nicer error message
-                    std::vector<std::string> names;
-                    for (std::map<std::string, Dictionary>::const_iterator it = m_departure_function_map.begin(); it != m_departure_function_map.end(); ++it)
-                    {
-                        names.push_back(it->first);
-                    }
-                    throw ValueError(format("Name of departure function [%s] is already loaded. Current departure function names are: %s", Name.c_str(), strjoin(names,",").c_str() ));
-                }
+                throw ValueError(format("Name of departure function [%s] is already loaded. Current departure function names are: %s", name.c_str(), strjoin(names,",").c_str() ));
             }
         }
     }
