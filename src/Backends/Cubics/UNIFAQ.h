@@ -20,13 +20,7 @@ namespace UNIFAQ
         CoolProp::CachedElement _T; ///< The cached temperature
 
         double m_T; ///< The temperature in K
-
-        std::vector<double> m_r,
-                            m_q,
-                            m_l,
-                            m_phi,
-                            m_theta,
-                            m_ln_Gamma_C;
+        double T_r; ///< Reduce temperature
 
         std::map<std::size_t, double> m_Xg,  ///< Map from sgi to mole fraction of group in the mixture
                                       m_thetag, ///< Map from sgi to theta for the group in the mixture
@@ -52,7 +46,7 @@ namespace UNIFAQ
     
     public:
         
-        UNIFAQMixture(const UNIFAQLibrary::UNIFAQParameterLibrary &library) : library(library) {};
+        UNIFAQMixture(const UNIFAQLibrary::UNIFAQParameterLibrary &library, const double T_r) : library(library), T_r(T_r) {};
 
         /** 
         * \brief Set all the interaction parameters between groups
@@ -68,8 +62,8 @@ namespace UNIFAQ
         /// Get the mole fractions of the components in the mixtures (not the groups)
         const std::vector<double> & get_mole_fractions() { return mole_fractions; }
 
-        /// Set the mole fractions of the components in the mixtures (not the groups) AND the mole fractions you want to use
-        void set_temperature(const double T, const std::vector<double> &z);
+        /// Set the temperature of the components in the mixtures (not the groups)
+        void set_temperature(const double T);
 
         /// Get the temperature
         double get_temperature() const { return m_T; }
@@ -78,9 +72,9 @@ namespace UNIFAQ
 
         double theta_pure(std::size_t i, std::size_t sgi) const;
 
-        double activity_coefficient(std::size_t i) const;
+        void activity_coefficients(double tau, const std::vector<double> &z, std::vector<double> &gamma);
 
-        double ln_gamma_R(std::size_t i) const;
+        double ln_gamma_R(const double tau, std::size_t i, std::size_t itau);
 
         std::size_t group_count(std::size_t i, std::size_t sgi) const;
 

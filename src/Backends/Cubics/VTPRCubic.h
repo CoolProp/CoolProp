@@ -7,6 +7,7 @@
 //
 
 #include "GeneralizedCubic.h"
+#include "Exceptions.h"
 
 #ifndef VTPRCubic_h
 #define VTPRCubic_h
@@ -22,33 +23,33 @@ public:
         double R_u,
         const UNIFAQLibrary::UNIFAQParameterLibrary & lib
     )
-        : PengRobinson(Tc, pc, acentric, R_u), unifaq(lib) {};
+        : PengRobinson(Tc, pc, acentric, R_u), unifaq(lib,T_r) {};
 
     VTPRCubic(double Tc,
         double pc,
         double acentric,
         double R_u,
         const UNIFAQLibrary::UNIFAQParameterLibrary & lib)
-        : PengRobinson(std::vector<double>(1, Tc), std::vector<double>(1, pc), std::vector<double>(1, acentric), R_u), unifaq(lib) {};
+        : PengRobinson(std::vector<double>(1, Tc), std::vector<double>(1, pc), std::vector<double>(1, acentric), R_u), unifaq(lib,T_r) {};
 
     /// Get a reference to the managed UNIFAQ instance
     UNIFAQ::UNIFAQMixture &get_unifaq() { return unifaq; }
 
     /// Calculate the non-dimensionalized gE/RT term
-    double gE_R_RT(const std::vector<double> &x) {
+    double gE_R_RT(double tau, const std::vector<double> &x, std::size_t itau) {
         double summer = 0;
         for (std::size_t i = 0; i < x.size(); ++i) {
-            summer += x[i] * unifaq.ln_gamma_R(i);
+            summer += x[i] * unifaq.ln_gamma_R(tau, i, itau);
         }
         return summer;
     }
-    double d_gE_R_RT_dxi(const std::vector<double> &x, std::size_t i, bool xN_independent) {
+    double d_gE_R_RT_dxi(double tau, const std::vector<double> &x, std::size_t itau, std::size_t i, bool xN_independent) {
         if (xN_independent)
         {
-            return unifaq.ln_gamma_R(i);
+            return unifaq.ln_gamma_R(tau, i, itau);
         }
         else {
-            return unifaq.ln_gamma_R(i) - unifaq.ln_gamma_R(N - 1);
+            return unifaq.ln_gamma_R(tau, i, itau) - unifaq.ln_gamma_R(tau, N-1, itau);
         }
     }
     double gE_R(double tau, const std::vector<double> &x, std::size_t itau) {
@@ -56,13 +57,28 @@ public:
             return 0.;
         }
         else {
-            if (itau == 0) {
-                set_temperature(T_r / tau, x);
-                return R_u*T_r / tau*gE_R_RT(x);
-            }
-            else {
-                double dtau = 0.01*tau;
-                return (gE_R(tau + dtau, x, itau - 1) - gE_R(tau - dtau, x, itau - 1)) / (2 * dtau);
+            switch (itau){
+                case 0:
+                {
+                    return R_u*T_r / tau*gE_R_RT(tau,x,0);
+                }
+                case 1:
+                {
+                    return R_u*T_r / tau*(-gE_R_RT(tau,x,0)/tau + gE_R_RT(tau,x,1));
+                }
+                case 2:
+                {
+                    return R_u*T_r / tau*( 2*gE_R_RT(tau,x,0)/powInt(tau, 2) - 2*gE_R_RT(tau,x,1)/tau + gE_R_RT(tau,x,2));
+                }
+                case 3:
+                {
+                    return R_u*T_r / tau*(-6*gE_R_RT(tau,x,0)/powInt(tau, 3) + 6*gE_R_RT(tau,x,1)/powInt(tau, 2) - 3*gE_R_RT(tau,x,2)/tau + gE_R_RT(tau,x,3));
+                }
+                case 4:
+                {
+                    return R_u*T_r / tau*(24*gE_R_RT(tau,x,0)/powInt(tau, 4) - 24*gE_R_RT(tau,x,1)/powInt(tau, 3) + 12*gE_R_RT(tau,x,2)/powInt(tau, 2) - 4*gE_R_RT(tau,x,3)/tau + gE_R_RT(tau,x,4));
+                }
+                default: throw CoolProp::ValueError(format("itau (%d) is invalid",itau));
             }
         }
     }
@@ -71,13 +87,28 @@ public:
             return 0.;
         }
         else {
-            if (itau == 0) {
-                set_temperature(T_r / tau, x);
-                return R_u*T_r / tau*d_gE_R_RT_dxi(x, i, xN_independent);
-            }
-            else {
-                double dtau = 0.01*tau;
-                return (d_gE_R_dxi(tau + dtau, x, itau - 1, i, xN_independent) - d_gE_R_dxi(tau - dtau, x, itau - 1, i, xN_independent)) / (2 * dtau);
+            switch (itau){
+                case 0:
+                {
+                    return R_u*T_r / tau*d_gE_R_RT_dxi(tau,x,0,i,xN_independent);
+                }
+                case 1:
+                {
+                    return R_u*T_r / tau*(-d_gE_R_RT_dxi(tau,x,0,i,xN_independent)/tau + d_gE_R_RT_dxi(tau,x,1,i,xN_independent));
+                }
+                case 2:
+                {
+                    return R_u*T_r / tau*( 2*d_gE_R_RT_dxi(tau,x,0,i,xN_independent)/powInt(tau, 2) - 2*d_gE_R_RT_dxi(tau,x,1,i,xN_independent)/tau + d_gE_R_RT_dxi(tau,x,2,i,xN_independent));
+                }
+                case 3:
+                {
+                    return R_u*T_r / tau*(-6*d_gE_R_RT_dxi(tau,x,0,i,xN_independent)/powInt(tau, 3) + 6*d_gE_R_RT_dxi(tau,x,1,i,xN_independent)/powInt(tau, 2) - 3*d_gE_R_RT_dxi(tau,x,2,i,xN_independent)/tau + d_gE_R_RT_dxi(tau,x,3,i,xN_independent));
+                }
+                case 4:
+                {
+                    return R_u*T_r / tau*(24*d_gE_R_RT_dxi(tau,x,0,i,xN_independent)/powInt(tau, 4) - 24*d_gE_R_RT_dxi(tau,x,1,i,xN_independent)/powInt(tau, 3) + 12*d_gE_R_RT_dxi(tau,x,2,i,xN_independent)/powInt(tau, 2) - 4*d_gE_R_RT_dxi(tau,x,3,i,xN_independent)/tau + d_gE_R_RT_dxi(tau,x,4,i,xN_independent));
+                }
+                default: throw CoolProp::ValueError(format("itau (%d) is invalid",itau));
             }
         }
     }
@@ -164,8 +195,6 @@ public:
     {
         return 0;
     }
-
-    void set_temperature(const double T, const std::vector<double> &z) { unifaq.set_temperature(T, z); }
 };
 
 #endif /* VTPRCubic_h */
