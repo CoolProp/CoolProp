@@ -85,7 +85,9 @@ public:
     // as the variable mixture_departure_functions_JSON
     void load_defaults()
     {
+        set_config_bool(OVERWRITE_BINARY_INTERACTION, true);
         load_from_string(mixture_binary_pairs_JSON);
+        set_config_bool(OVERWRITE_BINARY_INTERACTION, false);
     }
     
     /** \brief Construct the binary pair library including all the binary pairs that are possible
@@ -151,14 +153,25 @@ public:
                 std::cout << "Loading error: binary pair of " << name1 << " & " << name2 << "does not provide either a) xi and zeta b) gammaT, gammaV, betaT, and betaV" << std::endl;
                 continue;
             }
-
-            if (m_binary_pair_map.find(CAS) == m_binary_pair_map.end()){
+            
+            std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator it = m_binary_pair_map.find(CAS);
+            if (it == m_binary_pair_map.end()){
                 // Add to binary pair map by creating one-element vector
                 m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
             }
             else
             {
-                m_binary_pair_map[CAS].push_back(dict);
+                if (get_config_bool(OVERWRITE_BINARY_INTERACTION)){
+                    // Already there, see http://www.cplusplus.com/reference/map/map/insert/, so we are going to pop it and overwrite it
+                    m_binary_pair_map.erase(it);
+                    std::pair<std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator, bool> ret;
+                    ret = m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
+                    assert(ret.second == true);
+                }
+                else{
+                    // Error if already in map!
+                    throw ValueError(format("CAS pair(%s,%s) already in binary interaction map; considering enabling configuration key OVERWRITE_BINARY_INTERACTION", CAS[0].c_str(), CAS[1].c_str()));
+                }
             }
         }
     }
@@ -231,7 +244,8 @@ public:
                 assert(ret.second == true);
             }
             else{
-                m_binary_pair_map[CAS].push_back(dict);
+                // Error if already in map!
+                throw ValueError(format("CAS pair(%s,%s) already in binary interaction map; considering enabling configuration key OVERWRITE_BINARY_INTERACTION", CAS[0].c_str(), CAS[1].c_str()));
             }
         }
     }
@@ -451,7 +465,9 @@ public:
     // as the variable mixture_departure_functions_JSON
     void load_defaults()
     {
+        set_config_bool(OVERWRITE_DEPARTURE_FUNCTION, true);
         load_from_string(mixture_departure_functions_JSON);
+        set_config_bool(OVERWRITE_DEPARTURE_FUNCTION, false);
     }
 };
 static MixtureDepartureFunctionsLibrary mixturedeparturefunctionslibrary;
