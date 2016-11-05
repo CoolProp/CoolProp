@@ -135,7 +135,7 @@ namespace UNIFAQLibrary{
 
 TEST_CASE("Check Poling example for UNIFAQ", "[UNIFAQ]")
 {
-    std::string acetone_pentane_groups = "[{ \"Tc\": 508.1, \"acentric\": 0.3071, \"groups\": [ { \"count\": 1,  \"sgi\": 1 },  {\"count\": 1, \"sgi\": 18 } ],  \"inchikey\": \"?????????????\",  \"name\": \"Acetone\", \"pc\": 4700000.0, \"registry_number\": \"67-64-1\", \"userid\": \"\" },  { \"Tc\": 469.7000000000001,  \"acentric\": 0.251,    \"groups\": [ { \"count\": 2, \"sgi\": 1 }, { \"count\": 3, \"sgi\": 2 } ],  \"inchikey\": \"?????????????\", \"name\": \"n-Pentane\", \"pc\": 3370000.0,  \"registry_number\": \"109-66-0\",  \"userid\": \"\" } ]";
+    std::string acetone_pentane_groups = "[{ \"Tc\": 508.1, \"acentric\": 0.3071, \"groups\": [ { \"count\": 1,  \"sgi\": 1 },  {\"count\": 1, \"sgi\": 18 } ],  \"molemass\": 0.44, \"inchikey\": \"?????????????\",  \"name\": \"Acetone\", \"pc\": 4700000.0, \"registry_number\": \"67-64-1\", \"userid\": \"\" },  { \"Tc\": 469.7000000000001,  \"acentric\": 0.251,  \"molemass\": 0.44,    \"groups\": [ { \"count\": 2, \"sgi\": 1 }, { \"count\": 3, \"sgi\": 2 } ],  \"inchikey\": \"?????????????\", \"name\": \"n-Pentane\", \"pc\": 3370000.0,  \"registry_number\": \"109-66-0\",  \"userid\": \"\" } ]";
     std::string groups = "[{\"Q_k\": 0.848, \"R_k\": 0.9011, \"maingroup_name\": \"CH2\", \"mgi\": 1, \"sgi\": 1, \"subgroup_name\": \"CH3\"},"
         "{\"Q_k\": 0.540, \"R_k\": 0.6744, \"maingroup_name\": \"CH2\", \"mgi\": 1, \"sgi\": 2, \"subgroup_name\": \"CH2\"},"
         "{\"Q_k\": 1.488, \"R_k\": 1.6724, \"maingroup_name\": \"CH2CO\", \"mgi\": 9, \"sgi\": 18, \"subgroup_name\": \"CH3CO\"}]";
