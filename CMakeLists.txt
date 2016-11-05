@@ -1435,7 +1435,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   set(CMAKE_EXE_LINKER_FLAGS "--bind --memory-init-file 1 -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0 ")
   set(CMAKE_BUILD_TYPE Release)
   
-  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/emscripten_interface.cxx")
   include_directories(${APP_INCLUDE_DIRS})
   add_executable(coolprop ${APP_SOURCES})
   add_dependencies (coolprop generate_headers)

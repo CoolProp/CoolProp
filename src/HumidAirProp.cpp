@@ -2352,22 +2352,3 @@ TEST_CASE("HAPropsSI", "[HAPropsSI]")
  */
 
 #endif /* CATCH_ENABLED */
-
-/// *********************************************************************************
-/// *********************************************************************************
-///                     EMSCRIPTEN (for javascript)
-/// *********************************************************************************
-/// *********************************************************************************
-
-#ifdef EMSCRIPTEN
-
-#include <emscripten/bind.h>
-using namespace emscripten;
-
-// Binding code
-EMSCRIPTEN_BINDINGS(humid_air_bindings) {
-    function("HAPropsSI", &HumidAir::HAPropsSI);
-}
-
-#endif
-

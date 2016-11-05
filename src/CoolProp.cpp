@@ -976,24 +976,3 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
 */
 } /* namespace CoolProp */
 
-
-
-/// *********************************************************************************
-/// *********************************************************************************
-///                     EMSCRIPTEN (for javascript)
-/// *********************************************************************************
-/// *********************************************************************************
-
-#ifdef EMSCRIPTEN
-
-#include <emscripten/bind.h>
-using namespace emscripten;
-
-// Binding code
-EMSCRIPTEN_BINDINGS(coolprop_bindings) {
-    function("Props1SI", &CoolProp::Props1SI);
-    function("PropsSI", &CoolProp::PropsSI);
-    function("get_global_param_string", &CoolProp::get_global_param_string);
-}
-
-#endif
