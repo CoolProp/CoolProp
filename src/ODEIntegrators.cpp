@@ -177,7 +177,7 @@ TEST_CASE("Integrate y'=y","[ODEIntegrator]")
     double yfinal_integration = simple.y[simple.y.size()-1];
     double tfinal_integration = simple.t[simple.t.size()-1];
     
-    double yfinal_analytic = exp(4);
+    double yfinal_analytic = exp(4.0);
     double error = yfinal_integration/yfinal_analytic-1;
 
     CAPTURE(yfinal_analytic);
