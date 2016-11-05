@@ -30,7 +30,7 @@ void str2buf(const std::string& str, char * buf, int n)
 void HandleException(long *errcode, char *message_buffer, const long buffer_length)
 {
     try{
-        throw;
+        throw; // Rethrow the error, and here we handle the error
     }
     catch (CoolProp::HandleError &e) {
         std::string errmsg = std::string("HandleError: ") + e.what();
@@ -342,10 +342,9 @@ EXPORT_CODE void CONVENTION set_config_bool(const char * key, const bool val) {
     catch (...) { CoolProp::set_error_string("Undefined error"); }
 }
 EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data, long *errcode, char *message_buffer, const long buffer_length) {
-    *errcode = 1;
+    *errcode = 0;
     try {
         CoolProp::set_departure_functions(string_data);
-        *errcode = 0; // All is well
     }
     catch (...) { 
         HandleException(errcode, message_buffer, buffer_length);
