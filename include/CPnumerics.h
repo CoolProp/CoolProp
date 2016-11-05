@@ -165,8 +165,6 @@ protected:
     std::vector<element_type> mElements;
 };
 
-template class Spline<double,double>;
-
 /// Return the maximum difference between elements in two vectors where comparing z1[i] and z2[i]
 template <typename T> T maxvectordiff(const std::vector<T> &z1, const std::vector<T> &z2) {
     T maxvecdiff = 0;
