@@ -139,6 +139,8 @@ if __name__=='__main__':
             cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
         if 'linux' in sys.platform:
             cmake_config_args += ['-DCOOLPROP_FPIC=ON']
+        if sys.platform.startswith('win'):
+            cmake_config_args += ['-DCOOLPROP_MSVC_STATIC=OFF']
         
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
