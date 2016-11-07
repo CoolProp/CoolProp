@@ -798,6 +798,7 @@ public:
         }
     }
     void run_p(double p){
+        CAPTURE(p);
         for (double zH2O = 0.999; zH2O > 0; zH2O -= 0.001){
             setup(zH2O);
             AS->set_mole_fractions(z);
@@ -805,7 +806,7 @@ public:
             CHECK_NOTHROW(AS->update(PQ_INPUTS, p, 1));
             if (AS->T() < 273.15){ break; }
         }
-        CAPTURE(p);
+        
     }
     void run_checks(){
         fluids = strsplit("Water&Nitrogen&Oxygen&Argon&CO2",'&');
