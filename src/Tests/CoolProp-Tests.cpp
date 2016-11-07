@@ -703,14 +703,7 @@ public:
         if(std::abs(T-State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%Lg K] is greater than 1e-2",std::abs(State.T()-T)));
         if(std::abs(p-State.p())/p*100 > 1e-2)  throw CoolProp::ValueError(format("Error on p [%Lg %%] is greater than 1e-2 %%",std::abs(p-State.p())/p*100));
     }
-};
-
-TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all valid backends", "[consistency]")
-{
-    CHECK_NOTHROW(set_backend("HEOS", "Water"));
-
-    SECTION("Subcritical pressure liquid",""){
-            
+    void subcritical_pressure_liquid(){
         // Subcritical pressure liquid
         int inputsN = sizeof(inputs)/sizeof(inputs[0]);
         for (double p = pState->p_triple()*1.1; p < pState->p_critical(); p *= 3)
@@ -720,7 +713,7 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all v
             for (double T = Tmelt; T < Ts-0.1; T += 0.1)
             {
                 CHECK_NOTHROW(set_TP(T, p));
-
+                
                 for (int i = 0; i < inputsN; ++i)
                 {
                     CoolProp::input_pairs pair = inputs[i];
@@ -732,18 +725,25 @@ TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all v
                     get_variables();
                     CAPTURE(x1);
                     CAPTURE(x2);
-					CAPTURE(Ts);
-					CHECK_NOTHROW(single_phase_consistency_check());
+                    CAPTURE(Ts);
+                    CHECK_NOTHROW(single_phase_consistency_check());
                     double rhomolar_RP = PropsSI("Dmolar","P",p,"T",T,"REFPROP::Water");
                     if (ValidNumber(rhomolar_RP)){
-						CAPTURE(rhomolar_RP);
-						CAPTURE(rhomolar);
+                        CAPTURE(rhomolar_RP);
+                        CAPTURE(rhomolar);
                         CHECK(std::abs((rhomolar_RP-rhomolar)/rhomolar) < 1e-3);
                     }
                 }
             }
         }
     }
+};
+
+TEST_CASE_METHOD(ConsistencyFixture, "Test all input pairs for Water using all valid backends", "[consistency]")
+{
+    CHECK_NOTHROW(set_backend("HEOS", "Water"));
+    subcritical_pressure_liquid();
+
     
 //    int inputsN = sizeof(inputs)/sizeof(inputs[0]);
 //    for (double p = 600000; p < pState->pmax(); p *= 3)
@@ -1301,61 +1301,82 @@ TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFP
         CHECK(ValidNumber(val));
     }
 }
-TEST_CASE("Ancillary functions", "[ancillary]")
-{
-    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
-    for (std::size_t i = 0; i < fluids.size(); ++i){
-        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
-        
-        double Tc = AS->T_critical();
-        double Tt = AS->Ttriple();
-        
-        for (double f = 0.1; f < 1; f += 0.4)
-        {
-            double T = f*Tc + (1-f)*Tt;
-            
-            std::ostringstream ss1;
-            ss1 << "Pressure error < 2% for fluid " << fluids[i] << " at " << T << " K";
-            SECTION(ss1.str(), "")
-            {
-                AS->update(CoolProp::QT_INPUTS, 0, T);
-                double p_EOS = AS->p();
-                double p_anc = AS->saturation_ancillary(CoolProp::iP, 0, CoolProp::iT, T);
-                double err = std::abs(p_EOS-p_anc)/p_anc;
-                CAPTURE(p_EOS);
-                CAPTURE(p_anc);
-                CAPTURE(T);
-                CHECK(err < 0.02);
-            }
-            std::ostringstream ss2;
-            ss2 << "Liquid density error < 3% for fluid " << fluids[i] << " at " << T << " K";
-            SECTION(ss2.str(), "")
-            {
-                AS->update(CoolProp::QT_INPUTS, 0, T);
-                double rho_EOS = AS->rhomolar();
-                double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 0, CoolProp::iT, T);
-                double err = std::abs(rho_EOS-rho_anc)/rho_anc;
-                CAPTURE(rho_EOS);
-                CAPTURE(rho_anc);
-                CAPTURE(T);
-                CHECK(err < 0.03);
-            }
-            std::ostringstream ss3;
-            ss3 << "Vapor density error < 3% for fluid " << fluids[i] << " at " << T << " K";
-            SECTION(ss3.str(), "")
-            {
-                AS->update(CoolProp::QT_INPUTS, 1, T);
-                double rho_EOS = AS->rhomolar();
-                double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 1, CoolProp::iT, T);
-                double err = std::abs(rho_EOS-rho_anc)/rho_anc;
-                CAPTURE(rho_EOS);
-                CAPTURE(rho_anc);
-                CAPTURE(T);
-                CHECK(err < 0.03);
-            }
+
+class AncillaryFixture{
+public:
+    std::string name;
+    void run_checks(){
+        std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+        for (std::size_t i = 0; i < fluids.size(); ++i){
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+            do_sat(AS);
         }
     }
-}
+    void do_sat(shared_ptr<CoolProp::AbstractState> &AS){
+        for (double f = 0.1; f < 1; f += 0.4)
+        {
+            double Tc = AS->T_critical();
+            double Tt = AS->Ttriple();
+            double T = f*Tc + (1-f)*Tt;
+            name = strjoin(AS->fluid_names(),"&");
+            
+            AS->update(CoolProp::QT_INPUTS, 0, T);
+            check_rhoL(AS);
+            check_pL(AS);
+            
+            AS->update(CoolProp::QT_INPUTS, 1, T);
+            check_rhoV(AS);
+            check_pV(AS);
+        }
+    }
+    void check_pL(const shared_ptr<CoolProp::AbstractState> &AS){
+        double p_EOS = AS->saturated_liquid_keyed_output(iP);
+        double p_anc = AS->saturation_ancillary(CoolProp::iP, 0, CoolProp::iT, AS->T());
+        double err = std::abs(p_EOS-p_anc)/p_anc;
+        CAPTURE(name);
+        CAPTURE("pL");
+        CAPTURE(p_EOS);
+        CAPTURE(p_anc);
+        CAPTURE(AS->T());
+        CHECK(err < 0.02);
+    }
+    void check_pV(const shared_ptr<CoolProp::AbstractState> &AS){
+        double p_EOS = AS->saturated_liquid_keyed_output(iP);
+        double p_anc = AS->saturation_ancillary(CoolProp::iP, 1, CoolProp::iT, AS->T());
+        double err = std::abs(p_EOS-p_anc)/p_anc;
+        CAPTURE(name);
+        CAPTURE("pV");
+        CAPTURE(p_EOS);
+        CAPTURE(p_anc);
+        CAPTURE(AS->T());
+        CHECK(err < 0.02);
+    }
+    void check_rhoL(const shared_ptr<CoolProp::AbstractState> &AS){
+        double rho_EOS = AS->saturated_liquid_keyed_output(iDmolar);
+        double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 0, CoolProp::iT, AS->T());
+        double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+        CAPTURE("rhoL");
+        CAPTURE(name);
+        CAPTURE(rho_EOS);
+        CAPTURE(rho_anc);
+        CAPTURE(AS->T());
+        CHECK(err < 0.03);
+    }
+    void check_rhoV(const shared_ptr<CoolProp::AbstractState> &AS){
+        double rho_EOS = AS->saturated_vapor_keyed_output(iDmolar);
+        double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 1, CoolProp::iT, AS->T());
+        double err = std::abs(rho_EOS-rho_anc)/rho_anc;
+        CAPTURE("rhoV");
+        CAPTURE(name);
+        CAPTURE(rho_EOS);
+        CAPTURE(rho_anc);
+        CAPTURE(AS->T());
+        CHECK(err < 0.03);
+    }
+};
+TEST_CASE_METHOD(AncillaryFixture, "Ancillary functions", "[ancillary]"){
+    run_checks();
+};
 
 TEST_CASE("Triple point checks", "[triple_point]")
 {
@@ -1577,77 +1598,86 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
         }
     }
 }
-TEST_CASE("Test that enthalpies and entropies are correct for fixed states for all reference states", "[fixed_states]")
-{
-    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
-    for (std::size_t i = 0; i < fluids.size(); ++i)
-    {
-        std::string ref_state[4] = {"DEF", "IIR", "ASHRAE", "NBP"};
-        for (std::size_t j = 0; j < 4; ++j)
+
+class FixedStateFixture{
+public:
+    void run_fluid(const std::string &fluid, const std::string &state, const std::string &ref_state){
+        
+        // Skip impossible reference states
+        if (Props1SI("Ttriple", fluid) > 233.15 && ref_state == "ASHRAE"){ return; }
+        if (Props1SI("Tcrit", fluid) < 233.15 && ref_state == "ASHRAE"){ return; }
+        if (Props1SI("Tcrit", fluid) < 273.15 && ref_state == "IIR"){ return; }
+        if (Props1SI("Ttriple", fluid) > 273.15 && ref_state == "IIR"){ return; }
+        if (Props1SI("ptriple", fluid) > 101325 && ref_state == "NBP"){ return; }
+        
+        // First reset the reference state
+        if (ref_state != "DEF"){
+            set_reference_stateS(fluid, "DEF");
+            try{
+                // Then try to set to the specified reference state
+                set_reference_stateS(fluid, ref_state);
+            }
+            catch(std::exception &e){
+                // Then set the reference state back to the default
+                set_reference_stateS(fluid,"DEF");
+                CAPTURE(e.what());
+                REQUIRE(false);
+            }
+        }
+        
+        std::ostringstream name;
+        name << "Check state for " << state << " for " << fluid << " for reference state " << ref_state;
+        CAPTURE(name);
+        
+        std::vector<std::string> fl(1, fluid);
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
+        
+        // Skip the saturation maxima states for pure fluids
+        if (HEOS->is_pure() && (state == "max_sat_T" || state == "max_sat_p")){ return; }
+        
+        // Get the state
+        CoolProp::SimpleState _state = HEOS->calc_state(state);
+        HEOS->specify_phase(iphase_gas); // something homogenous
+        // Bump a tiny bit for EOS with non-analytic parts
+        double f = 1.0;
+        if ((fluid == "Water" || fluid == "CarbonDioxide") && (state == "reducing" || state == "critical")){
+            f = 1.00001;
+        }
+        HEOS->update(CoolProp::DmolarT_INPUTS, _state.rhomolar*f, _state.T*f);
+        CAPTURE(_state.hmolar);
+        CAPTURE(_state.smolar);
+        CHECK(ValidNumber(_state.hmolar));
+        CHECK(ValidNumber(_state.smolar));
+        double EOS_hmolar = HEOS->hmolar();
+        double EOS_smolar = HEOS->smolar();
+        CAPTURE(EOS_hmolar);
+        CAPTURE(EOS_smolar);
+        CHECK( std::abs(EOS_hmolar - _state.hmolar) < 1e-2);
+        CHECK( std::abs(EOS_smolar - _state.smolar) < 1e-2);
+        // Then set the reference state back to the default
+        set_reference_stateS(fluid,"DEF");
+        
+    };
+    void run_checks(){
+        
+        std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+        for (std::size_t i = 0; i < fluids.size(); ++i)
         {
-            std::string states[] = {"hs_anchor","reducing","critical","max_sat_T","max_sat_p","triple_liquid","triple_vapor"};
-            for (std::size_t k = 0; k < 7; ++k)
+            std::string ref_state[4] = {"DEF", "IIR", "ASHRAE", "NBP"};
+            for (std::size_t j = 0; j < 4; ++j)
             {
-
-                // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-                std::ostringstream ss1;
-                ss1 << "Check state for " << states[k] << " for " << fluids[i] << " for reference state " << ref_state[j];
-                SECTION(ss1.str(),"")
+                std::string states[] = {"hs_anchor","reducing","critical","max_sat_T","max_sat_p","triple_liquid","triple_vapor"};
+                for (std::size_t k = 0; k < 7; ++k)
                 {
-                    // Skip impossible reference states
-                    if (Props1SI("Ttriple", fluids[i]) > 233.15 && ref_state[j] == "ASHRAE"){ continue; }
-                    if (Props1SI("Tcrit", fluids[i]) < 233.15 && ref_state[j] == "ASHRAE"){ continue; }
-                    if (Props1SI("Tcrit", fluids[i]) < 273.15 && ref_state[j] == "IIR"){ continue; }
-                    if (Props1SI("Ttriple", fluids[i]) > 273.15 && ref_state[j] == "IIR"){ continue; }
-                    if (Props1SI("ptriple", fluids[i]) > 101325 && ref_state[j] == "NBP"){ continue; }
-
-                    // First reset the reference state
-                    if (ref_state[j] != "DEF"){
-                        set_reference_stateS(fluids[i], "DEF");
-                        try{
-                            // Then try to set to the specified reference state
-                            set_reference_stateS(fluids[i], ref_state[j]);
-                        }
-                        catch(std::exception &e){
-                            // Then set the reference state back to the default
-                            set_reference_stateS(fluids[i],"DEF");
-                            CAPTURE(e.what());
-                            REQUIRE(false);
-                        }
-                    }
-
-                    std::vector<std::string> fl(1, fluids[i]);
-                    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
-
-                    // Skip the saturation maxima states for pure fluids
-                    if (HEOS->is_pure() && (states[k] == "max_sat_T" || states[k] == "max_sat_p")){ continue; }
-                    
-                    // Get the state
-                    CoolProp::SimpleState state = HEOS->calc_state(states[k]);
-                    HEOS->specify_phase(iphase_gas); // something homogenous
-                    // Bump a tiny bit for EOS with non-analytic parts
-                    double f = 1.0;
-                    if ((fluids[i] == "Water" || fluids[i] == "CarbonDioxide") && (states[k] == "reducing" || states[k] == "critical")){
-                        f = 1.00001;
-                    }
-                    HEOS->update(CoolProp::DmolarT_INPUTS, state.rhomolar*f, state.T*f);
-                    CAPTURE(state.hmolar);
-                    CAPTURE(state.smolar);
-                    CHECK(ValidNumber(state.hmolar));
-                    CHECK(ValidNumber(state.smolar));
-                    double EOS_hmolar = HEOS->hmolar();
-                    double EOS_smolar = HEOS->smolar();
-                    CAPTURE(EOS_hmolar);
-                    CAPTURE(EOS_smolar);
-                    CHECK( std::abs(EOS_hmolar - state.hmolar) < 1e-2);
-                    CHECK( std::abs(EOS_smolar - state.smolar) < 1e-2);
-                    // Then set the reference state back to the default
-                    set_reference_stateS(fluids[i],"DEF");
+                    run_fluid(fluids[i], states[k], ref_state[j]);
                 }
             }
         }
     }
-}
+};
+TEST_CASE_METHOD(FixedStateFixture, "Test that enthalpies and entropies are correct for fixed states for all reference states", "[fixed_states]"){
+    run_checks();
+};
 
 TEST_CASE("Check the first partial derivatives", "[first_saturation_partial_deriv]")
 {
