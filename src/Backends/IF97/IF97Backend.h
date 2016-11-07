@@ -160,37 +160,43 @@ public:
     double rhomass(void){ return calc_rhomass(); };
     double calc_rhomass(void){ return calc_Flash(iDmass); };
     /// Return the molar density in mol/m³
-    double rhomolar(void){ return calc_rhomass()/molar_mass(); };    /// kg/m³ * mol/kg = mol/m³
+    double rhomolar(void){ return calc_rhomolar(); };
+    double calc_rhomolar(void){ return rhomass()/molar_mass(); };    /// kg/m³ * mol/kg = mol/m³
 
 	/// Return the mass enthalpy in J/kg
     double hmass(void){ return calc_hmass(); };
     double calc_hmass(void){ return calc_Flash(iHmass); };
 	/// Return the molar enthalpy in J/mol
-    double hmolar(void){ return calc_hmass()*molar_mass(); };        /// J/kg * kg/mol = J/mol
+    double hmolar(void){ return calc_hmolar(); };
+    double calc_hmolar(void){ return hmass()*molar_mass(); };        /// J/kg * kg/mol = J/mol
 
 	/// Return the mass entropy in J/kg/K
     double smass(void){ return calc_smass(); };
     double calc_smass(void){ return calc_Flash(iSmass); };
 	/// Return the molar entropy in J/mol/K
-    double smolar(void){ return calc_smass()*molar_mass(); };        /// J/kg-K * kg/mol = J/mol-K
+    double smolar(void){ return calc_smolar(); };
+    double calc_smolar(void){ return smass()*molar_mass(); };        /// J/kg-K * kg/mol = J/mol-K
 
 	/// Return the mass internal energy in J/kg
     double umass(void){ return calc_umass(); };
     double calc_umass(void){ return calc_Flash(iUmass); };
 	/// Return the molar internal energy in J/mol
-    double umolar(void){ return calc_umass()*molar_mass(); };        /// J/kg * kg/mol = J/mol
+    double umolar(void){ return calc_umolar(); };
+    double calc_umolar(void){ return umass()*molar_mass(); };        /// J/kg * kg/mol = J/mol
 
 	/// Return the mass-based constant pressure specific heat in J/kg/K
     double cpmass(void){ return calc_cpmass(); };
     double calc_cpmass(void){ return calc_Flash(iCpmass); };
 	/// Return the molar-based constant pressure specific heat in J/mol/K
-    double cpmolar(void){ return calc_cpmass()*molar_mass(); };        /// J/kg-K * kg/mol = J/mol-K
+    double cpmolar(void){ return calc_cpmolar(); };
+    double calc_cpmolar(void){ return cpmass()*molar_mass(); };      /// J/kg-K * kg/mol = J/mol-K
 
     /// Return the mass-based constant volume specific heat in J/kg/K
     double cvmass(void){ return calc_cvmass(); };
     double calc_cvmass(void){ return calc_Flash(iCvmass); };
     /// Return the molar-based constant volume specific heat in J/mol/K
-    double cvmolar(void){ return calc_cvmass()*molar_mass(); };        /// J/kg-K * kg/mol = J/mol-K
+    double cvmolar(void){ return calc_cvmolar(); };
+    double calc_cvmolar(void){ return cvmass()*molar_mass(); };      /// J/kg-K * kg/mol = J/mol-K
 
     /// Return the speed of sound in m/s
     double speed_sound(void){ return calc_speed_sound(); };
@@ -241,6 +247,11 @@ public:
     // ************************************************************************* //
     //
     double calc_pressure(void){ return _p; };
+    //
+    // ************************************************************************* //
+    //                      Saturation Functions                                 //
+    // ************************************************************************* //
+    //
 };
 
 } /* namespace CoolProp */
