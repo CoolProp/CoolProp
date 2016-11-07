@@ -2394,41 +2394,54 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             return rhomolar;
         }
     }
-
-    try{
-        // First we try with 4th order Householder method with analytic derivatives
-        double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 100);
-        if (!ValidNumber(rhomolar)){
-            throw ValueError();
-        }
-        if (phase == iphase_liquid){
-            double dpdrho = first_partial_deriv(iP, iDmolar, iT);
-            double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
-            if(dpdrho < 0 || d2pdrho2 < 0){
-                // Try again with a larger density in order to end up at the right solution
-                rhomolar = Householder4(resid, 3*rhomolar_reducing(), 1e-8, 100);
-                return rhomolar;
+    
+    double rhomolar;
+    for (short solver_order = 4; solver_order > 1; --solver_order){
+        try{
+            if (solver_order == 4){
+                rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 100);
             }
-        }
-        else if (phase == iphase_gas){
-            double dpdrho = first_partial_deriv(iP, iDmolar, iT);
-            double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
-            if(dpdrho < 0 || d2pdrho2 > 0){
-                // Try again with a tiny density in order to end up at the right solution
-                rhomolar = Householder4(resid, 1e-6, 1e-8, 100);
-                return rhomolar;
+            else if (solver_order == 3){
+                rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100);
             }
+            else if (solver_order == 2){
+                rhomolar = Newton(resid, rhomolar_guess, 1e-8, 100);
+            }
+            if (!ValidNumber(rhomolar) || rhomolar < 0){
+                throw ValueError();
+            }
+            break;
         }
-        return rhomolar;
+        catch(...){
+            // Keep trying
+        };
     }
-    catch(std::exception &e)
-    {
-        if (phase == iphase_supercritical || phase == iphase_supercritical_gas){
+    
+    double dpdrho = first_partial_deriv(iP, iDmolar, iT);
+    double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
+    
+    if (phase == iphase_liquid){
+        if(dpdrho < 0 || d2pdrho2 < 0){
+            // Try again with a larger density in order to end up at the right solution
+            rhomolar = Householder4(resid, 3*rhomolar_reducing(), 1e-8, 100);
+            return rhomolar;
+        }
+    }
+    else if (phase == iphase_gas){
+        if(dpdrho < 0 || d2pdrho2 > 0){
+            // Try again with a tiny density in order to end up at the right solution
+            rhomolar = Householder4(resid, 1e-6, 1e-8, 100);
+            return rhomolar;
+        }
+    }
+    else if (phase == iphase_supercritical || phase == iphase_supercritical_gas){
+        if(dpdrho < 0 || d2pdrho2 > 0){
             double rhomolar = Brent(resid, 1e-10, 3*rhomolar_reducing(), DBL_EPSILON, 1e-8, 100);
             return rhomolar;
         }
-        throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg with error: %s",T,p,rhomolar_guess, e.what()));
     }
+    
+    throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg",T,p,rhomolar_guess));
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase)
 {

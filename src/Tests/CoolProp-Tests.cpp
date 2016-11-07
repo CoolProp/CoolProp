@@ -784,6 +784,40 @@ TEST_CASE("Test saturation properties for a few fluids", "[saturation],[slow]")
     }
 }
 
+class HumidAirDewpointFixture{
+public:
+    shared_ptr<CoolProp::AbstractState> AS;
+    std::vector<std::string> fluids;
+    std::vector<double> z;
+    void setup(double zH2O){
+        double z_Air[4] = {0.7810, 0.2095, 0.0092, 0.0003}; // N2, O2, Ar, CO2
+        z.resize(5);
+        z[0] = zH2O;
+        for (int i = 0; i < 4; ++i){
+            z[i+1] = (1-zH2O)*z_Air[i];
+        }
+    }
+    void run_p(double p){
+        for (double zH2O = 0.999; zH2O > 0; zH2O -= 0.001){
+            setup(zH2O);
+            AS->set_mole_fractions(z);
+            CAPTURE(zH2O);
+            CHECK_NOTHROW(AS->update(PQ_INPUTS, p, 1));
+            if (AS->T() < 273.15){ break; }
+        }
+        CAPTURE(p);
+    }
+    void run_checks(){
+        fluids = strsplit("Water&Nitrogen&Oxygen&Argon&CO2",'&');
+        AS.reset(AbstractState::factory("HEOS",fluids));
+        run_p(1e5); run_p(1e6); run_p(1e7);
+    }
+};
+TEST_CASE_METHOD(HumidAirDewpointFixture, "Humid air dewpoint calculations", "[humid_air_dewpoint]")
+{
+    run_checks();
+}
+
 TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert models in REFPROP", "[Gernert]")
 {
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
@@ -1470,38 +1504,45 @@ TEST_CASE("Triple point checks", "[triple_point]")
     }
 }
 
-TEST_CASE("Test that saturation solvers solve all the way to T = Tc", "[sat_T_to_Tc]")
-{
-    std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
-    for (std::size_t i = 0; i < fluids.size(); ++i)
-    {
-        double Tc = Props1SI(fluids[i], "Tcrit");
-        std::ostringstream ss1;
-        ss1 << "Check sat_T at Tc for " << fluids[i];
-        SECTION(ss1.str(),"")
-        {
-            if (fluids[i] == "Water" || fluids[i] == "CarbonDioxide") {}
-            else{
-                double pc = PropsSI("P","T",Tc,"Q",0,fluids[i]);
-                CAPTURE(pc);
-                CHECK(ValidNumber(pc));
-            }
-        }
-        for (double j = 0.1; j > 1e-10; j /= 10)
-        {
-            std::ostringstream ss2;
-            ss2 << "Check sat_T for " << fluids[i] << " for Tc - T = " << j << " K";
-            SECTION(ss2.str(),"")
-            {
-				double val = PropsSI("D","T",Tc-j,"Q",0,fluids[i]);
-				std::string err = get_global_param_string("errstring");
-				CAPTURE(val);
-				CAPTURE(err);
-                CHECK(ValidNumber(val));
-            }
+class SatTFixture{
+public:
+    std::string name;
+    double Tc;
+    void run_checks(){
+        std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"),',');
+        for (std::size_t i = 0; i < fluids.size(); ++i){
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+            do_sat(AS);
         }
     }
-}
+    void do_sat(shared_ptr<CoolProp::AbstractState> &AS){
+        Tc = AS->T_critical();
+        name = strjoin(AS->fluid_names(),"&");
+        check_at_Tc(AS);
+        double Tt = AS->Ttriple();
+        if (AS->fluid_param_string("pure") == "true"){
+            Tc = std::min(Tc, AS->T_reducing());
+        }
+        for (double j = 0.1; j > 1e-10; j /= 10){
+            check_QT(AS, Tc-j);
+        }
+    }
+    void check_at_Tc(const shared_ptr<CoolProp::AbstractState> &AS){
+        CAPTURE("Check @ Tc");
+        CAPTURE(name);
+        CHECK_NOTHROW(AS->update(QT_INPUTS, 0, Tc););
+    }
+    void check_QT(const shared_ptr<CoolProp::AbstractState> &AS, double T){
+        std::string test_name = "Check --> Tc";
+        CAPTURE(test_name);
+        CAPTURE(name);
+        CAPTURE(T);
+        CHECK_NOTHROW(AS->update(QT_INPUTS, 0, T););
+    }
+};
+TEST_CASE_METHOD(SatTFixture, "Test that saturation solvers solve all the way to T = Tc", "[sat_T_to_Tc]"){
+    run_checks();
+};
 
 TEST_CASE("Predefined mixtures", "[predefined_mixtures]")
 {
