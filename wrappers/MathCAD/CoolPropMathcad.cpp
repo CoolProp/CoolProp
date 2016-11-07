@@ -7,7 +7,7 @@
 #define NOMINMAX
 #endif
 #include "mcadincl.h"
-#undef NOMINMAX; 
+#undef NOMINMAX 
 
 enum { MC_STRING = STRING };  // substitute enumeration variable MC_STRING for STRING, use MC_STRING below
 #undef STRING                 // undefine STRING as it conflicts with STRING enum in cppformat/format.h
