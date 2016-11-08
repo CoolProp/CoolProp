@@ -43,7 +43,7 @@ for pair in pairs.split(','):
 
 import pandas
 df = pandas.DataFrame(d.data)
-df = df.sort(['BibTeX','name1'], ascending = [0, 1])
+df = df.sort_values(by=['BibTeX','name1'], ascending = [0, 1])
 
 bibtexer = getBibtexParser()#filename = '../../../CoolPropBibTeXLibrary.bib')
 

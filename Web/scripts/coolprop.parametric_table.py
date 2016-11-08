@@ -24,7 +24,7 @@ for k, v in grouping.iteritems():
 headers = ['Parameter','Units','Input/Output','Trivial','Description']
 
 df3 = pandas.DataFrame(grouping2, columns = headers)
-df4 = df3.sort_index(by = ['Input/Output', 'Parameter'])
+df4 = df3.sort_values(by = ['Input/Output', 'Parameter'])
 grouping2 = [row for row in df4.values]
 
 N = []

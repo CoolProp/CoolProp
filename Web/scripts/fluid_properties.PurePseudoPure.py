@@ -57,7 +57,7 @@ for fluid in CoolProp.__fluids__:
             
 import pandas
 df = pandas.DataFrame(d.data)
-df = df.sort(['name'], ascending = [1])
+df = df.sort_values(by=['name'], ascending = [1])
 
 def build_citation(key):
     if not key:
