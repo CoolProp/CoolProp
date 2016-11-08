@@ -63,7 +63,7 @@ if __name__=='__main__':
     #
     # python setup.py install cmake=default,64
 
-    cmake_args = [_ for _ in sys.argv if _.startswith('cmake=')]   
+    cmake_args = [_ for _ in sys.argv if _.startswith('cmake=')]
     if cmake_args:
         i = sys.argv.index(cmake_args[0])
         sys.argv.pop(i)
@@ -139,17 +139,17 @@ if __name__=='__main__':
             cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
         if 'linux' in sys.platform:
             cmake_config_args += ['-DCOOLPROP_FPIC=ON']
-        if sys.platform.startswith('win'):
-            cmake_config_args += ['-DCOOLPROP_MSVC_STATIC=OFF']
-        
+        #if sys.platform.startswith('win'):
+        #    cmake_config_args += ['-DCOOLPROP_MSVC_STATIC=OFF']
+
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
-            
+
         cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
-        
+
         cmake_build_string = ' '.join(['cmake','--build', '.'] + cmake_build_args)
         print('calling: ' + cmake_build_string)
         subprocess.check_call(cmake_build_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
@@ -221,7 +221,7 @@ if __name__=='__main__':
             # Generate the headers - does nothing if up to date - but only if not pypi
             generate_headers.generate()
             del generate_headers
-            
+
         import generate_constants_module
         generate_constants_module.generate()
         del generate_constants_module
@@ -260,11 +260,11 @@ if __name__=='__main__':
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp')
     include_dirs  = [
-        os.path.join(CProot), 
-        os.path.join(CProot, 'include'), 
-        os.path.join(CProot, 'src'), 
-        os.path.join(CProot, 'externals', 'Eigen'), 
-        os.path.join(CProot, 'externals', 'cppformat'), 
+        os.path.join(CProot),
+        os.path.join(CProot, 'include'),
+        os.path.join(CProot, 'src'),
+        os.path.join(CProot, 'externals', 'Eigen'),
+        os.path.join(CProot, 'externals', 'cppformat'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     ## If the file is run directly without any parameters, clean, build and install
