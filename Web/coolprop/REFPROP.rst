@@ -109,6 +109,13 @@ And now we set them back to their default values
 
     In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, '')
 
+Other Platforms
+---------------
+
+On linux and OSX, you can build your own copy of REFPROP shared library using the instructions here: https://github.com/usnistgov/REFPROP-cmake
+
+On linux, here are instructions for adding your shared library to the ``LD_LIBRARY_PATH`` variable: http://stackoverflow.com/a/13428971/1360263
+
 Other Features
 --------------
 
