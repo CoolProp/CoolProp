@@ -991,6 +991,10 @@ endif()
 # A module for Android
 if (COOLPROP_ANDROID_MODULE)
 
+  if(WIN32 AND (NOT MINGW))
+    message(FATAL_ERROR "On windows, you must use the MinGW Makefiles generator ")
+  endif()
+
   # For now, these must be changed manually
   set(ANDROID_MODULE_NAME "CoolProp")
   set(ANDROID_PACKAGE_NAME "CoolProp") # or blah.di.blah.CoolProp

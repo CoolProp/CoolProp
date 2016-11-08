@@ -14,6 +14,8 @@ Common Requirements
 -------------------
 Compilation of the Android wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
+Furthermore, you will need to install swig, which can be obtained from http://www.swig.org/download.html for windows users (add the unzipped directory to your PATH variable), or from your package manager (apt, homebrew, etc.) on other platforms.
+
 Windows
 -------
 
@@ -23,7 +25,7 @@ Windows
 
 * This change (telling CMake to use the MinGW generator with ``-G "MinGW Makefiles"``) is needed because by default on windows it tries to use the most-recent installed version of Visual Studio, which conflicts with the Android SDK.
 
-.. warning:
+.. warning::
 
     As of Aug 2016, the version 12 of the NDK does not compile CoolProp correctly.  You must use 10e for some reason.  See also https://github.com/CoolProp/CoolProp/issues/1178
 
