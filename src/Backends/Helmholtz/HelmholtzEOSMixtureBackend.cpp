@@ -2396,31 +2396,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
 
     try{
-        double rhomolar;
-        for (short solver_order = 4; solver_order > 1; --solver_order){
-            for (double omega = 1; omega > 0.1; omega -= 0.2){
-                resid.options.add_number("omega", omega);
-                try{
-                    if (solver_order == 4){
-                        rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 100);
-                    }
-                    else if (solver_order == 3){
-                        rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100);
-                    }
-                    else if (solver_order == 2){
-                        rhomolar = Newton(resid, rhomolar_guess, 1e-8, 100);
-                    }
-                    if (!ValidNumber(rhomolar) || rhomolar < 0){
-                        throw ValueError();
-                    }
-                    break;
-                }
-                catch(...){
-                    // Keep going ...
-                }
-            }
+        double rhomolar = rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 20);
+        if (!ValidNumber(rhomolar) || rhomolar < 0) {
+            throw ValueError();
         }
-        
         if (phase == iphase_liquid){
             double dpdrho = first_partial_deriv(iP, iDmolar, iT);
             double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
