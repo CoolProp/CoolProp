@@ -375,7 +375,12 @@ void init_CoolProp(py::module &m){
     m.def("add_fluids_as_JSON", &add_fluids_as_JSON);
     m.def("HAPropsSI", &HumidAir::HAPropsSI);
     m.def("HAProps", &HumidAir::HAProps);
-    m.def("HAProps_Aux", &HumidAir::HAProps_Aux);
+    m.def("HAProps_Aux", [](std::string out_string, double T, double p, double psi_w) { 
+                        char units[1000]; 
+                        double out = HumidAir::HAProps_Aux(out_string.c_str(), T, p, psi_w, units); 
+                        return py::make_tuple(out, std::string(units));
+                    }
+         );
     m.def("cair_sat", &HumidAir::cair_sat);
     m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);
     m.def("set_mixture_binary_pair_data", &set_mixture_binary_pair_data);
