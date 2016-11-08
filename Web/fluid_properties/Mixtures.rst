@@ -34,17 +34,14 @@ The two schemes available are
 * ``linear`` - :math:`T_r` and :math:`v_r` are a linear function of molar composition between the two pure fluid values
 * ``Lorentz-Berthelot`` - all interaction parameters are 1.0
 
+
 Here is a sample of using this in python:
 
 .. ipython::
 
     In [1]: import CoolProp.CoolProp as CP
     
-    In [1]: CAS_He = CP.get_fluid_param_string('Helium','CAS')
-    
-    In [1]: CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
-    
-    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    In [1]: CP.apply_simple_mixing_rule('Helium', 'Xenon', 'linear')
 
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
     
@@ -58,15 +55,16 @@ Using your own interaction parameters
 If you have your own interaction parameters that you would like to use, you can set them using the ``set_mixture_binary_pair_data`` function.  (You can also retrieve them using the ``set_mixture_binary_pair_data`` function).  You must do this before you would like to call other functions.  Some sample code is below.
 
 .. ipython::
+    :okexcept:
 
     In [1]: import CoolProp.CoolProp as CP
-    
-    In [1]: CAS_He = CP.get_fluid_param_string('Helium','CAS')
-    
-    In [1]: CAS_Xe = CP.get_fluid_param_string('Xe','CAS')
 
     # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
-    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    In [1]: CP.apply_simple_mixing_rule('Helium', 'Xenon', 'linear')
+
+    # If the binary interaction pair is already there, set the configuration flag 
+    # to allow binary interaction parameters to be over-written
+    In [1]: CP.set_config_bool(CP.OVERWRITE_BINARY_INTERACTION, True)
     
     # This is before setting the binary interaction parameters
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
@@ -99,6 +97,14 @@ Once you have constructed an instance of an AbstractState using the low-level in
     
     # Here you can see that this call to the high-level interface is untouched (is the same as above)
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
+
+And now, reset the configuration variable
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+
+    In [1]: CP.set_config_bool(CP.OVERWRITE_BINARY_INTERACTION, False)
 
 Phase Envelope
 --------------
