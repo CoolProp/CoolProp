@@ -221,6 +221,11 @@ macro(modify_msvc_flags flag_default) # Use a macro to avoid a new scope
   endif()
 endmacro()
 
+#if(MSVC)
+#  add_compiler_flag_release("/EHsc")
+#  add_compiler_flag_debug("/EHsc")
+#endif()
+
 #######################################
 #                 BITNESS             #
 #-------------------------------------#
