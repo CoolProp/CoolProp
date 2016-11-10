@@ -94,6 +94,7 @@ namespace coolprop_wrapper.Functions
             coolpropPlugin.LogInfo("[INFO]",
                                    "Output = {0}, Name1 = {1}, Prop1 = {2}, Name2 = {3}, Prop2 = {4}, FluidName = {5}, Result = {6}",
                                    Output, Name1, Prop1.obj.ToDouble(), Name2, Prop2.obj.ToDouble(), FluidName, Result);
+
             result = coolpropPlugin.MakeDoubleResult(Result, Unit.Find(Output));
 
             return true;
