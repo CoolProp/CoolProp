@@ -83,11 +83,8 @@ public:
     
     // Load the defaults that come from the JSON-encoded string compiled into library
     // as the variable mixture_departure_functions_JSON
-    void load_defaults()
-    {
-        set_config_bool(OVERWRITE_BINARY_INTERACTION, true);
+    void load_defaults(){
         load_from_string(mixture_binary_pairs_JSON);
-        set_config_bool(OVERWRITE_BINARY_INTERACTION, false);
     }
     
     /** \brief Construct the binary pair library including all the binary pairs that are possible
@@ -463,11 +460,8 @@ public:
     }
     // Load the defaults that come from the JSON-encoded string compiled into library
     // as the variable mixture_departure_functions_JSON
-    void load_defaults()
-    {
-        set_config_bool(OVERWRITE_DEPARTURE_FUNCTION, true);
+    void load_defaults(){
         load_from_string(mixture_departure_functions_JSON);
-        set_config_bool(OVERWRITE_DEPARTURE_FUNCTION, false);
     }
 };
 static MixtureDepartureFunctionsLibrary mixturedeparturefunctionslibrary;
