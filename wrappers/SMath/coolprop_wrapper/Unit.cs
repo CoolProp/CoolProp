@@ -139,7 +139,9 @@ namespace coolprop_wrapper
             if (!dic.ContainsKey(param))
                 return unitless;
 
-            return dic[param];
+            // HACK: fix for SS-2414
+            return SMath.Math.Decision.SymbolicCalculation(dic[param].ToEntry(), new SMath.Math.Store());
+            //return dic[param];
         }
 
         static System.Collections.Generic.Dictionary<string, MItem> InitHAUnitsDictionary()
@@ -182,7 +184,9 @@ namespace coolprop_wrapper
             if (!HAdic.ContainsKey(param))
                 return unitless;
 
-            return HAdic[param];
+            // HACK: fix for SS-2414
+            return SMath.Math.Decision.SymbolicCalculation(HAdic[param].ToEntry(), new SMath.Math.Store());
+            //return HAdic[param];
         }
 
         static void matchInternal(MItem unit, SMath.Math.Numeric.TNumber val, ref SMath.Math.Store context)
