@@ -1911,7 +1911,12 @@ CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters
             return _rhoLmolar;
         }
         else if (key == iDmass) {
-            return (double)_rhoLmolar*(double)_molar_mass;
+            return static_cast<double>(_rhoLmolar)*calc_saturated_liquid_keyed_output(imolar_mass);
+        }
+        else if (key == imolar_mass){
+            double wmm_kg_kmol = 0;
+            WMOLdll(&(mole_fractions_liq[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
+            return wmm_kg_kmol/1000; // kg/mol
         }
         else {
             throw ValueError("Invalid parameter. Only mass and molar density are available with RefProp");
@@ -1927,7 +1932,12 @@ CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters 
             return _rhoVmolar;
         }
         else if (key == iDmass) {
-            return (double)_rhoVmolar*(double)_molar_mass;
+            return static_cast<double>(_rhoVmolar)*calc_saturated_liquid_keyed_output(imolar_mass);
+        }
+        else if (key == imolar_mass){
+            double wmm_kg_kmol = 0;
+            WMOLdll(&(mole_fractions_vap[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
+            return wmm_kg_kmol/1000; // kg/mol
         }
         else {
             throw ValueError("Invalid key.");
