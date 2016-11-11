@@ -325,6 +325,41 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
     public:
         BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
         ~BrentSolverResids(){};
+        
+        double call(double T){
+            double p_ws;
+            if (T>=273.16){
+                // Saturation pressure [Pa] using IF97 formulation
+                p_ws= IF97::psat97(T);
+            }
+            else{
+                // Sublimation pressure [Pa]
+                p_ws=psub_Ice(T);
+            }
+            double f = f_factor(T, p);
+            double pp_water_calc = f*p_ws;
+            double psi_w_calc = pp_water_calc/p;
+            return (psi_w_calc - psi_w)/psi_w;
+        }
+    };
+    
+    BrentSolverResids Resids(psi_w, p);
+    
+    T = CoolProp::Secant(Resids, T_guess, 0.001*T_guess, 1e-7, 100);
+    
+    return T;
+}
+    
+static double Brent_Tdb_at_saturated_W(double psi_w, double p, double T_min, double T_max)
+{
+    double T;
+    class BrentSolverResids : public CoolProp::FuncWrapper1D
+    {
+    private:
+        double pp_water, psi_w, p;
+    public:
+        BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
+        ~BrentSolverResids(){};
 
         double call(double T){
             double p_ws;
@@ -1573,9 +1608,19 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                 T_max = 1000;
             }
             else{
-                // Calculate the saturated humid air water partial pressure;
-                double psi_w_sat = MoleFractionWater(T_min, p, GIVEN_HUMRAT, MainInputValue);
-                //double pp_water_sat = psi_w_sat*p; // partial pressure of water, which is equal to f*p_{w_s}
+                // Convert given humidity ratio to water mole fraction in vapor phase
+                double T_dummy = -1, // Not actually needed
+                       psi_w_sat = MoleFractionWater(T_dummy, p, GIVEN_HUMRAT, MainInputValue);
+                // Partial pressure of water, which is equal to f*p_{w_s}
+                double pp_water_sat = psi_w_sat*p;
+                // Assume unity enhancement factor, calculate guess for dewpoint temperature
+                // for given water phase composition
+                if (pp_water_sat > Water->p_triple()){
+                    T_min = IF97::Tsat97(pp_water_sat);
+                }
+                else{
+                    T_min = 230;
+                }
                 // Iteratively solve for temperature that will give desired pp_water_sat
                 T_min = Secant_Tdb_at_saturated_W(psi_w_sat, p, T_min);
             }
