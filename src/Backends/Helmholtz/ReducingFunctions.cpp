@@ -582,13 +582,11 @@ CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDb
 CoolPropDbl GERG2008ReducingFunction::dfYkidxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta) const
 {
 	double xk = x[k], xi = x[i], beta_Y = beta[k][i], beta_Y_squared = beta_Y*beta_Y;
-    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return xk*(xk+xi)/(beta_Y_squared*xk+xi)+xk*xi/(beta_Y_squared*xk+xi)*(1-(xk+xi)/(beta_Y_squared*xk+xi));
 }
 CoolPropDbl GERG2008ReducingFunction::dfYikdxi__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta) const
 {
 	double xk = x[k], xi = x[i], beta_Y = beta[i][k], beta_Y_squared = beta_Y*beta_Y;
-    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return xk*(xi+xk)/(beta_Y_squared*xi+xk)+xi*xk/(beta_Y_squared*xi+xk)*(1-beta_Y_squared*(xi+xk)/(beta_Y_squared*xi+xk));
 }
 const CoolPropDbl GERG2008ReducingFunction::c_Y_ij(const std::size_t i, const std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c) const
@@ -598,25 +596,21 @@ const CoolPropDbl GERG2008ReducingFunction::c_Y_ij(const std::size_t i, const st
 CoolPropDbl GERG2008ReducingFunction::f_Y_ij(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta) const
 {
     double xi = x[i], xj = x[j], beta_Y = beta[i][j];
-    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xj) < 10*DBL_EPSILON){return 0;}
     return xi*xj*(xi+xj)/(beta_Y*beta_Y*xi+xj);
 }
 CoolPropDbl GERG2008ReducingFunction::d2fYikdxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t k, const STLMatrix &beta) const
 {
     double xi = x[i], xk = x[k], beta_Y = beta[i][k];
-    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return 1/(beta_Y*beta_Y*xi+xk)*(1-beta_Y*beta_Y*(xi+xk)/(beta_Y*beta_Y*xi+xk))*(2*xk-xi*xk*2*beta_Y*beta_Y/(beta_Y*beta_Y*xi+xk));
 }
 CoolPropDbl GERG2008ReducingFunction::d2fYkidxi2__constxk(const std::vector<CoolPropDbl> &x, std::size_t k, std::size_t i, const STLMatrix &beta) const
 {
     double xi = x[i], xk = x[k], beta_Y = beta[k][i];
-    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xk) < 10*DBL_EPSILON){return 0;}
     return 1/(beta_Y*beta_Y*xk+xi)*(1-(xk+xi)/(beta_Y*beta_Y*xk+xi))*(2*xk-xk*xi*2/(beta_Y*beta_Y*xk+xi));
 }
 CoolPropDbl GERG2008ReducingFunction::d2fYijdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta) const
 {
     double xi = x[i], xj = x[j], beta_Y = beta[i][j], beta_Y2 = beta_Y*beta_Y;
-    if (std::abs(xi) < 10*DBL_EPSILON && std::abs(xj) < 10*DBL_EPSILON){return 0;}
     return (xi+xj)/(beta_Y2*xi+xj) + xj/(beta_Y2*xi+xj)*(1-(xi+xj)/(beta_Y2*xi+xj))
         +xi/(beta_Y2*xi+xj)*(1-beta_Y2*(xi+xj)/(beta_Y2*xi+xj))
         -xi*xj/pow(beta_Y2*xi+xj,2)*(1+beta_Y2-2*beta_Y2*(xi+xj)/(beta_Y2*xi+xj));

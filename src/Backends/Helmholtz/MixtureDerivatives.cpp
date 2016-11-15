@@ -1112,12 +1112,14 @@ public:
                 numeric = (g(*HEOS_plus_p__constT, i, xN) - g(*HEOS_minus_p__constT, i, xN))/(2*dp);
             }
             else if (wrt == T_CONSTRHO){
-                numeric = (g(*HEOS_plus_T__constrho, i, xN) - g(*HEOS_minus_T__constrho, i, xN))/(2*dT);
+                double g1 = g(*HEOS_plus_T__constrho, i, xN), g2 = g(*HEOS_minus_T__constrho, i, xN);
+                numeric = (g1 - g2)/(2*dT);
             }
             else if (wrt == RHO_CONSTT){
                 numeric = (g(*HEOS_plus_rho__constT, i, xN) - g(*HEOS_minus_rho__constT, i, xN))/(2*drho);
             }
             CAPTURE(name);
+            CAPTURE(i);
             CAPTURE(analytic)
             CAPTURE(numeric);
             CAPTURE(xN);
@@ -1244,6 +1246,7 @@ public:
                     CAPTURE(name);
                     CAPTURE(i);
                     CAPTURE(j);
+                    CAPTURE(k);
                     CAPTURE(analytic)
                     CAPTURE(numeric);
                     CAPTURE(xN);
