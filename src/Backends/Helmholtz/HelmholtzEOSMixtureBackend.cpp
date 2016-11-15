@@ -2972,7 +2972,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
             delta_i = delta*rhor/rho_ci;
 
             if (nTau == 0 && nDelta == 0){
-                summer += mole_fractions[i]*(components[i].EOS().base0(tau_i, delta_i)+log(mole_fractions[i]));
+                double logxi = (std::abs(mole_fractions[i]) > DBL_EPSILON) ? log(mole_fractions[i]) : 0;
+                summer += mole_fractions[i]*(components[i].EOS().base0(tau_i, delta_i) + logxi);
             }
             else if (nTau == 0 && nDelta == 1){
                 summer += mole_fractions[i]*rhor/rho_ci*components[i].EOS().dalpha0_dDelta(tau_i, delta_i);

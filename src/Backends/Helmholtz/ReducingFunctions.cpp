@@ -478,7 +478,6 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxi2__constxj(const std::vector<CoolPr
 
 CoolPropDbl GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
 {
-    if (std::abs(x[i]) < 10*DBL_EPSILON && std::abs(x[j]) < 10*DBL_EPSILON){return 0;}
     if (xN_flag == XN_INDEPENDENT){
         if (i == j)
         {
@@ -511,7 +510,6 @@ CoolPropDbl GERG2008ReducingFunction::d2Yrdxidxj(const std::vector<CoolPropDbl> 
 
 CoolPropDbl GERG2008ReducingFunction::d3Yrdxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k,const STLMatrix &beta, const STLMatrix &gamma, const STLMatrix &Y_c_ij, const std::vector<CoolPropDbl> &Yc, x_N_dependency_flag xN_flag) const
 {
-	if (std::abs(x[i]) < 10 * DBL_EPSILON && std::abs(x[j]) < 10 * DBL_EPSILON){ return 0; }
 	if (xN_flag == XN_INDEPENDENT){
 		if (i != j && j != k && k != i){
 			return 0;
