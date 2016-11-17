@@ -102,6 +102,8 @@ public:
     virtual double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
     ///// Get binary mixture string value
     //virtual std::string get_binary_interaction_string(const std::size_t &i, const std::size_t &j, const std::string &parameter);
+    /// Set a binary interaction string
+    void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string &parameter, const std::string & value);
     /// Apply a simple mixing rule
     void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string &model);
 

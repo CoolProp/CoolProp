@@ -51,6 +51,13 @@ public:
     static void set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS);
 };
 
+/** 
+ * @brief Get the allocated Departure function for a given departure function name
+ * @param Name The name of the function to be used, or its alias
+ * @warning The pointer points to an instance created with new, you should manage the pointer with shared_ptr or similar
+ */
+DepartureFunction * get_departure_function(const std::string &Name);
+
 /// A Data structure for holding BIP coming from REFPROP
 struct REFPROP_binary_element{
     std::string CAS1, CAS2, model;

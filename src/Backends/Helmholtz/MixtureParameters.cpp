@@ -466,6 +466,40 @@ public:
 };
 static MixtureDepartureFunctionsLibrary mixturedeparturefunctionslibrary;
 
+DepartureFunction * get_departure_function(const std::string &Name){
+    // Get the dictionary itself
+    Dictionary &dict_dep = mixturedeparturefunctionslibrary.departure_function_map()[Name];
+    
+    if (dict_dep.is_empty()){throw ValueError(format("Departure function name [%s] seems to be invalid",Name.c_str()));}
+    
+    // These terms are common
+    std::vector<double> n = dict_dep.get_double_vector("n");
+    std::vector<double> d = dict_dep.get_double_vector("d");
+    std::vector<double> t = dict_dep.get_double_vector("t");
+    
+    std::string type_dep = dict_dep.get_string("type");
+    
+    if (!type_dep.compare("GERG-2008")){
+        // Number of power terms needed
+        int Npower = static_cast<int>(dict_dep.get_number("Npower"));
+        // Terms for the gaussian
+        std::vector<double> eta = dict_dep.get_double_vector("eta");
+        std::vector<double> epsilon = dict_dep.get_double_vector("epsilon");
+        std::vector<double> beta = dict_dep.get_double_vector("beta");
+        std::vector<double> gamma = dict_dep.get_double_vector("gamma");
+        return new GERG2008DepartureFunction(n, d, t, eta, epsilon, beta, gamma, Npower);
+    }
+    else if (!type_dep.compare("Exponential"))
+    {
+        // Powers of the exponents inside the exponential term
+        std::vector<double> l = dict_dep.get_double_vector("l");
+        return new ExponentialDepartureFunction(n, d, t, l);
+    }
+    else
+    {
+        throw ValueError();
+    }
+}
 void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 {
     
@@ -554,39 +588,8 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 
             // Get the name of the departure function to be used for this binary pair
             std::string Name = CoolProp::get_reducing_function_name(components[i].CAS, components[j].CAS);
-
-            // Get the dictionary itself
-            Dictionary &dict_dep = mixturedeparturefunctionslibrary.departure_function_map()[Name];
-
-            if (dict_dep.is_empty()){throw ValueError(format("Departure function name [%s] seems to be invalid",Name.c_str()));}
-
-            // These terms are common
-            std::vector<double> n = dict_dep.get_double_vector("n");
-            std::vector<double> d = dict_dep.get_double_vector("d");
-            std::vector<double> t = dict_dep.get_double_vector("t");
-
-            std::string type_dep = dict_dep.get_string("type");
-
-            if (!type_dep.compare("GERG-2008")){
-                // Number of power terms needed
-                int Npower = static_cast<int>(dict_dep.get_number("Npower"));
-                // Terms for the gaussian
-                std::vector<double> eta = dict_dep.get_double_vector("eta");
-                std::vector<double> epsilon = dict_dep.get_double_vector("epsilon");
-                std::vector<double> beta = dict_dep.get_double_vector("beta");
-                std::vector<double> gamma = dict_dep.get_double_vector("gamma");
-                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(new GERG2008DepartureFunction(n, d, t, eta, epsilon, beta, gamma, Npower));
-            }
-            else if (!type_dep.compare("Exponential"))
-            {
-                // Powers of the exponents inside the exponential term
-                std::vector<double> l = dict_dep.get_double_vector("l");
-                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n, d, t, l));
-            }
-            else
-            {
-                throw ValueError();
-            }
+            
+            HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(get_departure_function(Name));
         }
     }
     // We have obtained all the parameters needed for the reducing function, now set the reducing function for the mixture
