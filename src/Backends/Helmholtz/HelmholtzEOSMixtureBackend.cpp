@@ -292,6 +292,19 @@ double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size
 //std::string HelmholtzEOSMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
 //    return CoolProp::get_mixture_binary_pair_data(CAS1, CAS2, parameter);
 //}
+/// Set binary mixture floating point parameter for this instance
+void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string &parameter, const std::string & value){
+    if (parameter == "function"){
+        residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(get_departure_function(value));
+    }
+    else{
+        throw ValueError(format("Cannot process this string parameter [%s] in set_binary_interaction_string", parameter.c_str()));
+    }
+    /// Also set the parameters in the managed pointers for other states
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it){
+        it->get()->set_binary_interaction_string(i, j, parameter, value);
+    }
+};
     
 void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std::string &EOS_name){
 

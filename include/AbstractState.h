@@ -508,6 +508,8 @@ public:
     virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){ throw NotImplementedError("set_binary_interaction_double is not implemented for this backend"); };
     /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
     virtual void set_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const std::string &value){ throw NotImplementedError("set_binary_interaction_string is not implemented for this backend"); };
+    /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
+    virtual void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string &parameter, const std::string &value){ throw NotImplementedError("set_binary_interaction_string is not implemented for this backend"); };
     /// Get binary mixture double value (EXPERT USE ONLY!!!)
     virtual double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){ throw NotImplementedError("get_binary_interaction_double is not implemented for this backend"); };
     /// Get binary mixture double value (EXPERT USE ONLY!!!)
