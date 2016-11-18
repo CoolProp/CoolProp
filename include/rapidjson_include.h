@@ -249,6 +249,14 @@ namespace cpjson
         value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _i, doc.GetAllocator());
     };
     
+    /// A convenience function to set a string compactly
+    inline void set_string(const std::string &key, const std::string &s, rapidjson::Value &value, rapidjson::Document &doc)
+    {
+        value.AddMember(rapidjson::Value(key.c_str(), doc.GetAllocator()).Move(),
+                        rapidjson::Value(s.c_str(), doc.GetAllocator()).Move(),
+                        doc.GetAllocator());
+    };
+    
     /// A convenience function to set a string array compactly
     inline void set_string_array(const char *key, const std::vector<std::string> &vec, rapidjson::Value &value, rapidjson::Document &doc)
     {
