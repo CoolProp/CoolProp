@@ -49,14 +49,15 @@ functions, each of which take the vector x. The data is managed using std::vecto
 @param errstring  A string with the returned error.  If the length of errstring is zero, no errors were found
 @returns If no errors are found, the solution.  Otherwise, _HUGE, the value for infinity
 */
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter)
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector<double> &x, double tol, int maxiter)
 {
     int iter=0;
     f->errstring.clear();
     std::vector<double> f0,v;
     std::vector<std::vector<double> > JJ;
+    std::vector<double> x0 = x;
     Eigen::VectorXd r(x0.size());
-    Eigen::Matrix2d J(x0.size(), x0.size());
+    Eigen::MatrixXd J(x0.size(), x0.size());
     double error = 999;
     while (iter==0 || std::abs(error)>tol){
         f0 = f->call(x0);
@@ -71,7 +72,7 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<doubl
             }
         }
 
-        Eigen::Vector2d v = J.colPivHouseholderQr().solve(-r);
+        Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
 
         // Update the guess
         double max_relchange = -1;

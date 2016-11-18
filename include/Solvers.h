@@ -99,7 +99,7 @@ inline double Householder4(FuncWrapper1DWithThreeDerivs &f, double x0, double ft
     
 
 // Multi-Dimensional solvers
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, std::vector<double> &x0, double tol, int maxiter);
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector<double> &x0, double tol, int maxiter);
 
 }; /*namespace CoolProp*/
 #endif
