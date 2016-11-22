@@ -392,7 +392,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (get_config_bool(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS) && ierr == -117){
                 throw ValueError(format("Interaction parameter estimation has been disabled: %s", herr));
             }
-
+            if (get_config_bool(REFPROP_IGNORE_ERROR_ESTIMATED_INTERACTION_PARAMETERS) && ierr == 117) {
+                ierr = 0;
+            }
             if (static_cast<int>(ierr) <= 0) // Success (or a warning, which is silently squelched for now)
             {
                 this->Ncomp = N;
