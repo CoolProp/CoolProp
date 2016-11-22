@@ -182,7 +182,8 @@ def gitrev_to_file(root_dir):
             p = subprocess.Popen('git rev-parse HEAD', 
                              stdout=subprocess.PIPE, 
                              stderr=subprocess.PIPE,
-                             shell = True)
+                             shell = True,
+                             cwd = os.path.dirname(__file__))
             stdout, stderr = p.communicate()
             stdout = stdout.decode('utf-8')
             
