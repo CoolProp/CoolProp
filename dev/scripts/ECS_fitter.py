@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from math import sqrt,exp
 import CoolProp
 import numpy as np
@@ -102,7 +104,7 @@ def HFO():
 
         plt.plot(rhor, yy, 'o-',label='from experimental data')
         p = np.polyfit(rhor, yy, 2)
-        print p[::-1]
+        print(p[::-1])
         plt.plot(rhor, np.polyval(p, rhor), 'o-',label = 'from correlation')
         plt.xlabel(r'$\rho_r$')
         plt.ylabel('$\psi$')
@@ -162,7 +164,7 @@ def pentanes():
         plt.title(fluid)
         plt.plot(rhor, yy, 'o-',label='from experimental data')
         p = np.polyfit(rhor, yy, 2)
-        print p[::-1]
+        print(p[::-1])
         plt.plot(rhor, np.polyval(p, rhor), 'o-',label = 'from correlation')
         plt.xlabel(r'$\rho_r$')
         plt.ylabel('$\psi$')
