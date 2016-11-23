@@ -1308,22 +1308,38 @@ public:
             return get(it->second);
         }
         else{
-            if (endswith(key, "-SRK")){
-                std::string used_name = key.substr(0, key.size()-4);
-                it = string_to_index_map.find(used_name);
-                if (it != string_to_index_map.end()){
-                    CoolPropFluid fluid = get(it->second);
-                    // Remove all the residual contributions to the Helmholtz energy
-                    fluid.EOSVector[0].alphar.empty_the_EOS();
-                    // Get the parameters for the cubic EOS
-                    CoolPropDbl Tc = fluid.EOSVector[0].reduce.T;
-                    CoolPropDbl pc = fluid.EOSVector[0].reduce.p;
-                    CoolPropDbl rhomolarc = fluid.EOSVector[0].reduce.rhomolar;
-                    CoolPropDbl acentric = fluid.EOSVector[0].acentric;
-                    CoolPropDbl R = 8.3144598; // fluid.EOSVector[0].R_u;
-                    // Set the SRK contribution
-                    fluid.EOSVector[0].alphar.SRK = ResidualHelmholtzSRK(Tc, pc, rhomolarc, acentric, R);
-                    return fluid;
+            // Here we check for the use of a cubic Helmholtz energy transformation for a multi-fluid model
+            std::vector<std::string> endings; endings.push_back("-SRK"); endings.push_back("-PengRobinson");
+            for (std::vector<std::string>::const_iterator end = endings.begin(); end != endings.end(); ++end){
+                if (endswith(key, *end)){
+                    std::string used_name = key.substr(0, key.size()-(*end).size());
+                    it = string_to_index_map.find(used_name);
+                    if (it != string_to_index_map.end()){
+                        // We found the name of the fluid within the library of multiparameter 
+                        // Helmholtz-explicit models.  We will load its parameters from the 
+                        // multiparameter EOS
+                        //
+                        CoolPropFluid fluid = get(it->second);
+                        // Remove all the residual contributions to the Helmholtz energy
+                        fluid.EOSVector[0].alphar.empty_the_EOS();
+                        // Get the parameters for the cubic EOS
+                        CoolPropDbl Tc = fluid.EOSVector[0].reduce.T;
+                        CoolPropDbl pc = fluid.EOSVector[0].reduce.p;
+                        CoolPropDbl rhomolarc = fluid.EOSVector[0].reduce.rhomolar;
+                        CoolPropDbl acentric = fluid.EOSVector[0].acentric;
+                        CoolPropDbl R = 8.3144598; // fluid.EOSVector[0].R_u;
+                        // Set the cubic contribution to the residual Helmholtz energy
+                        shared_ptr<AbstractCubic> ac;
+                        if (*end == "-SRK"){
+                            ac.reset(new SRK(Tc, pc, acentric, R));
+                        }
+                        else if (*end == "PengRobinson"){
+                            ac.reset(new PengRobinson(Tc, pc, acentric, R));
+                        }
+                        ac->set_Tr(Tc);
+                        ac->set_rhor(rhomolarc);
+                        return fluid;
+                    }
                 }
             }
             throw ValueError(format("key [%s] was not found in string_to_index_map in JSONFluidLibrary", key.c_str()));

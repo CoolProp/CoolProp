@@ -23,7 +23,7 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
         mole_fractions_double.clear();
     }
 	// Now set the reducing function for the mixture
-    Reducing.reset(new ConstantReducingFunction(cubic->T_r, cubic->rho_r));
+    Reducing.reset(new ConstantReducingFunction(cubic->get_Tr(), cubic->get_rhor()));
 
     // Set the alpha function based on the components in use
     set_alpha_from_components();
@@ -52,10 +52,10 @@ void CoolProp::AbstractCubicBackend::set_alpha_from_components(){
             const std::vector<double> &c = components[i].alpha_coeffs;
             shared_ptr<AbstractCubicAlphaFunction> acaf;
             if (alpha_type == "Twu"){
-                acaf.reset(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r/get_cubic()->get_Tc()[i]));
+                acaf.reset(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr()/get_cubic()->get_Tc()[i]));
             }
             else if (alpha_type == "MathiasCopeman" || alpha_type == "Mathias-Copeman"){
-                acaf.reset(new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->T_r / get_cubic()->get_Tc()[i]));
+                acaf.reset(new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
             }
             else{
                 throw ValueError("alpha function is not understood");
@@ -135,8 +135,8 @@ void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double &
 }
 CoolPropDbl CoolProp::AbstractCubicBackend::calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar){
     AbstractCubic *cubic = get_cubic().get();
-    double tau = cubic->T_r / T;
-    double delta = rhomolar / cubic->rho_r;
+    double tau = cubic->get_Tr() / T;
+    double delta = rhomolar / cubic->get_rhor();
     return _rhomolar*gas_constant()*_T*(1+delta*cubic->alphar(tau, delta, this->get_mole_fractions_doubleref(), 0, 1));
 }
 void CoolProp::AbstractCubicBackend::update_DmolarT()
@@ -248,7 +248,7 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
 void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int &Nsolns, double &rho0, double &rho1, double &rho2){
     AbstractCubic *cubic = get_cubic().get();
     double R = cubic->get_R_u();
-    double am = cubic->am_term(cubic->T_r/T, mole_fractions_double, 0);
+    double am = cubic->am_term(cubic->get_Tr()/T, mole_fractions_double, 0);
     double bm = cubic->bm_term(mole_fractions);
     double cm = cubic->cm_term();
 
@@ -300,7 +300,7 @@ public:
         // Calculate the difference in Gibbs between the phases
         // -----------------------------------------------------
         AbstractCubic *cubic = ACB->get_cubic().get();
-        double rho_r = cubic->rho_r, T_r = cubic->T_r;
+        double rho_r = cubic->get_rhor(), T_r = cubic->get_Tr();
         double tau = T_r/T;
         // There are three density solutions, we know the highest is the liquid, the lowest is the vapor
         deltaL = rho2/rho_r; deltaV = rho0/rho_r;
@@ -319,7 +319,7 @@ public:
 std::vector<double> CoolProp::AbstractCubicBackend::spinodal_densities(){
     //// SPINODAL
     AbstractCubic *cubic = get_cubic().get();
-    double tau = cubic->T_r / _T;
+    double tau = cubic->get_Tr() / _T;
     std::vector<double> x(1, 1);
     double a = cubic->am_term(tau, x, 0);
     double b = cubic->bm_term(x);
@@ -356,8 +356,8 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
             static std::string errstr;
             double Ts = CoolProp::Secant(resid, Ts_est, -0.1, 1e-10, 100);
             _T = Ts;
-            rhoL = resid.deltaL*cubic->T_r;
-            rhoV = resid.deltaV*cubic->T_r;
+            rhoL = resid.deltaL*cubic->get_Tr();
+            rhoV = resid.deltaV*cubic->get_Tr();
             this->SatL->update(DmolarT_INPUTS, rhoL, _T);
             this->SatV->update(DmolarT_INPUTS, rhoV, _T);
         }
@@ -396,8 +396,8 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs){
             }
             
             _p = ps;
-            rhoL = resid.deltaL*cubic->T_r;
-            rhoV = resid.deltaV*cubic->T_r;
+            rhoL = resid.deltaL*cubic->get_Tr();
+            rhoV = resid.deltaV*cubic->get_Tr();
             this->SatL->update(DmolarT_INPUTS, rhoL, _T);
             this->SatV->update(DmolarT_INPUTS, rhoV, _T);
         }

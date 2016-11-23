@@ -324,7 +324,10 @@ void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std:
             // Remove the residual part
             EOS.alphar.empty_the_EOS();
             // Set the SRK contribution
-            EOS.alphar.SRK = ResidualHelmholtzSRK(Tc, pc, rhomolarc, acentric, R);
+            shared_ptr<AbstractCubic> srk(new SRK(Tc, pc, acentric, R));
+            srk->set_Tr(Tc);
+            srk->set_rhor(rhomolarc);
+            EOS.alphar.cubic = ResidualHelmholtzGeneralizedCubic(srk);
         }
         else if (EOS_name == "XiangDeiters"){
 

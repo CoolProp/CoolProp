@@ -7,6 +7,8 @@
 #include "Eigen/Core"
 #include "time.h"
 #include "CachedElement.h"
+#include "Backends/Cubics/GeneralizedCubic.h"
+#include "crossplatform_shared_ptr.h"
 
 namespace CoolProp{
 
@@ -502,29 +504,19 @@ public:
     void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 };
 
-class ResidualHelmholtzSRK : public BaseHelmholtzTerm{
-
+class ResidualHelmholtzGeneralizedCubic : public BaseHelmholtzTerm{
+protected:
+    shared_ptr<AbstractCubic> m_abstractcubic;
+    std::vector<double> z; /// Vector of mole fractions, will be initialized to [1.0] since this is a pure fluid
 public:
     bool enabled;
-    CoolPropDbl Tc, pc, rhomolarc, acentric, R, a, b, kappa;
+
     /// Default Constructor
-    ResidualHelmholtzSRK() : Tc(_HUGE), pc(_HUGE), rhomolarc(_HUGE), acentric(_HUGE), R(_HUGE), a(_HUGE), b(_HUGE), kappa(_HUGE) 
-    { enabled = false; };
-    /// Constructor
-    ResidualHelmholtzSRK(
-        const CoolPropDbl Tc,
-        const CoolPropDbl pc,
-        const CoolPropDbl rhomolarc,
-        const CoolPropDbl acentric,
-        const CoolPropDbl R
-        )
-        : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R)
-    {
-        // Values from Soave, 1972 (Equilibium constants from a ..)
-        a = 0.42747*R*R*Tc*Tc/pc;
-        b = 0.08664*R*Tc/pc;
-        kappa = 0.480 + 1.574*acentric - 0.176*acentric*acentric;
-        enabled = true;
+    ResidualHelmholtzGeneralizedCubic() { enabled = false; };
+    /// Constructor given an abstract cubic instance
+    ResidualHelmholtzGeneralizedCubic(shared_ptr<AbstractCubic> & ac) : m_abstractcubic(ac){ 
+        enabled = true; 
+        z = std::vector<double>(1,1); // Init the vector to [1.0]
     };
 
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
@@ -672,14 +664,14 @@ public:
     ResidualHelmholtzNonAnalytic NonAnalytic;
     ResidualHelmholtzSAFTAssociating SAFT;
     ResidualHelmholtzGeneralizedExponential GenExp;
-    ResidualHelmholtzSRK SRK;
+    ResidualHelmholtzGeneralizedCubic cubic;
     ResidualHelmholtzXiangDeiters XiangDeiters;
 
     void empty_the_EOS(){
         NonAnalytic = ResidualHelmholtzNonAnalytic();
         SAFT = ResidualHelmholtzSAFTAssociating();
         GenExp = ResidualHelmholtzGeneralizedExponential();
-        SRK = ResidualHelmholtzSRK();
+        cubic = ResidualHelmholtzGeneralizedCubic();
         XiangDeiters = ResidualHelmholtzXiangDeiters();
     }
     void clear(){
@@ -695,7 +687,7 @@ public:
         GenExp.all(tau, delta, derivs);
         NonAnalytic.all(tau, delta, derivs);
         SAFT.all(tau, delta, derivs);
-        SRK.all(tau, delta, derivs);
+        cubic.all(tau, delta, derivs);
         XiangDeiters.all(tau, delta, derivs);
         if (cache_values){
             _base = derivs.alphar;
