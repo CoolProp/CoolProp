@@ -1309,7 +1309,7 @@ public:
         }
         else{
             if (endswith(key, "-SRK")){
-                std::string used_name = strsplit(key, '-')[0];
+                std::string used_name = key.substr(0, key.size()-4);
                 it = string_to_index_map.find(used_name);
                 if (it != string_to_index_map.end()){
                     CoolPropFluid fluid = get(it->second);
