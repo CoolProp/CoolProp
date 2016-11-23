@@ -10,6 +10,8 @@
 #include <map>
 #include <algorithm>
 #include "Configuration.h"
+#include "Backends/Cubics/CubicsLibrary.h"
+#include "Helmholtz.h"
 
 namespace CoolProp{
 
@@ -1338,6 +1340,7 @@ public:
                         }
                         ac->set_Tr(Tc);
                         ac->set_rhor(rhomolarc);
+                        fluid.EOSVector[0].alphar.cubic = ResidualHelmholtzGeneralizedCubic(ac);
                         return fluid;
                     }
                 }
