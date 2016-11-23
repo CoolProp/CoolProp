@@ -312,7 +312,7 @@ void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std:
         CoolPropFluid &fluid = components[i];
         EquationOfState &EOS = fluid.EOSVector[0];
 
-        if (EOS_name == "SRK"){
+        if (EOS_name == "SRK" || EOS_name == "Peng-Robinson"){
 
             // Get the parameters for the cubic EOS
             CoolPropDbl Tc = EOS.reduce.T;
@@ -323,11 +323,17 @@ void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std:
 
             // Remove the residual part
             EOS.alphar.empty_the_EOS();
-            // Set the SRK contribution
-            shared_ptr<AbstractCubic> srk(new SRK(Tc, pc, acentric, R));
-            srk->set_Tr(Tc);
-            srk->set_rhor(rhomolarc);
-            EOS.alphar.cubic = ResidualHelmholtzGeneralizedCubic(srk);
+            // Set the contribution
+            shared_ptr<AbstractCubic> ac;
+            if (EOS_name == "SRK"){
+                ac.reset(new SRK(Tc, pc, acentric, R));
+            }
+            else{
+                ac.reset(new PengRobinson(Tc, pc, acentric, R));
+            }
+            ac->set_Tr(Tc);
+            ac->set_rhor(rhomolarc);
+            EOS.alphar.cubic = ResidualHelmholtzGeneralizedCubic(ac);
         }
         else if (EOS_name == "XiangDeiters"){
 
