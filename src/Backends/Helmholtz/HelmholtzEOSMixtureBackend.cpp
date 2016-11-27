@@ -3265,7 +3265,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
         return -POW2(rhomass())*(1/SatV->rhomass() - 1/SatL->rhomass())/(SatV->hmass() - SatL->hmass());
     }
     else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
-        // v = 1/rho; dvdrho = -rho^2; dvdrho = -1/rho^2
+        // v = 1/rho; drhodv = -rho^2; dvdrho = -1/rho^2
         CoolPropDbl dvdrhoL = -1/POW2(SatL->rhomolar());
         CoolPropDbl dvdrhoV = -1/POW2(SatV->rhomolar());
         CoolPropDbl dvL_dp = dvdrhoL*SatL->calc_first_saturation_deriv(iDmolar, iP, *SatL, *SatV);
@@ -3277,7 +3277,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
         return -POW2(rhomolar())*dvdp_h;
     }
     else if (Of == iDmass && Wrt == iP && Constant == iHmass){
-        // v = 1/rho; dvdrho = -rho^2; dvdrho = -1/rho^2
+        // v = 1/rho; drhodv = -rho^2; dvdrho = -1/rho^2
         CoolPropDbl dvdrhoL = -1/POW2(SatL->rhomass());
         CoolPropDbl dvdrhoV = -1/POW2(SatV->rhomass());
         CoolPropDbl dvL_dp = dvdrhoL*SatL->calc_first_saturation_deriv(iDmass, iP, *SatL, *SatV);
