@@ -13,6 +13,12 @@ else
   errcode = Ref{Clong}(0)
 end
 
+if VERSION < v"0.5.0-dev+4612"
+	const unsafe_string = Base.bytestring
+else
+	const unsafe_string = Base.unsafe_string
+end
+
 const buffer_length = 20000
 message_buffer = Array(UInt8, buffer_length)
 
