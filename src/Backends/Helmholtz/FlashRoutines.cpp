@@ -1754,7 +1754,9 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
         }
     }
 
-    if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._p))
+    //if (HEOS.isHomogeneousPhase() && !ValidNumber(HEOS._p)) // original, pre 1352
+	// only the solver requires single phase
+	if (((other == iDmolar) || HEOS.isHomogeneousPhase()) && !ValidNumber(HEOS._p)) // post 1352
     {
         switch (other)
         {
