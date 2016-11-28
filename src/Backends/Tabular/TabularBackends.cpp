@@ -754,7 +754,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv_splined(paramet
 	CoolPropDbl drho_dh_liq__constp = AS->first_partial_deriv(iDmolar, iHmolar, iP);
 	CoolPropDbl d2rhodhdp_liq = AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
 	// End of spline
-	AS->specify_phase(iphase_twophase);
+	//AS->specify_phase(iphase_twophase);
+	AS->unspecify_phase(); // See issue #1352
 	AS->update(DmolarT_INPUTS, dE, TE);
 	CoolPropDbl drho_dh_end__constp = AS->first_partial_deriv(iDmolar, iHmolar, iP);
 	CoolPropDbl d2rhodhdp_end = AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
