@@ -13,6 +13,12 @@ else
   errcode = Ref{Clong}(0)
 end
 
+if VERSION < v"0.5.0-dev+4612"
+	const unsafe_string = Base.bytestring
+else
+	const unsafe_string = Base.unsafe_string
+end
+
 const buffer_length = 20000
 message_buffer = Array(UInt8, buffer_length)
 
@@ -41,7 +47,7 @@ end
 # CoolProp::PhaseSI(const std::string &, double, const std::string &, double, const std::string&)
 function PhaseSI(Name1::AbstractString, Value1::Real, Name2::AbstractString, Value2::Real, Fluid::AbstractString)
   val = ccall( (:PhaseSI, "CoolProp"), Int32, (Ptr{UInt8},Float64,Ptr{UInt8},Float64,Ptr{UInt8}, Ptr{UInt8}, Int), Name1,Value1,Name2,Value2,Fluid,message_buffer::Array{UInt8,1},buffer_length)
-  val = bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
+  val = unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
   if val == ""
     error("CoolProp: ", get_global_param_string("errstring"))
   end
@@ -54,7 +60,7 @@ function get_global_param_string(Key::AbstractString)
   if val == 0
     error("CoolProp: ", get_global_param_string("errstring"))
   end
-  return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
+  return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
 
 # CoolProp::get_parameter_information_string
@@ -64,7 +70,7 @@ function get_parameter_information_string(Key::AbstractString,OutType::AbstractS
   if val == 0
     error("CoolProp: ", get_global_param_string("errstring"))
   end
-  return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
+  return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
 function get_parameter_information_string(Key::AbstractString)
   return get_parameter_information_string(Key,"long")
@@ -83,7 +89,7 @@ function get_fluid_param_string(fluid::AbstractString,param::AbstractString)
   if val == 0
     error("CoolProp: ", get_global_param_string("errstring"))
   end
-  return bytestring(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
+  return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8,1})))
 end
 
 # CoolProp::set_reference_stateS
@@ -165,7 +171,7 @@ function AbstractState_factory(backend::AbstractString, fluids::AbstractString)
   AbstractState = ccall( (:AbstractState_factory, "CoolProp"), Clong, (Ptr{UInt8},Ptr{UInt8},Ref{Clong},Ptr{UInt8},Clong), backend,fluids,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -181,7 +187,7 @@ function AbstractState_free(handle::Clong)
   ccall( (:AbstractState_free, "CoolProp"), Void, (Clong,Ref{Clong},Ptr{UInt8},Clong), handle,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -198,7 +204,7 @@ function AbstractState_set_fractions(handle::Clong,fractions::Array)
   ccall( (:AbstractState_set_fractions, "CoolProp"), Void, (Clong,Ptr{Cdouble},Clong,Ref{Clong},Ptr{UInt8},Clong), handle,fractions,length(fractions),errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -217,7 +223,7 @@ function AbstractState_update(handle::Clong,input_pair::Clong,value1::Real,value
   ccall( (:AbstractState_update, "CoolProp"), Void, (Clong,Clong,Cdouble,Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -241,7 +247,7 @@ function AbstractState_specify_phase(handle::Clong,phase::AbstractString)
   ccall( (:AbstractState_specify_phase, "CoolProp"), Void, (Clong,Ptr{UInt8},Ref{Clong},Ptr{UInt8},Clong), handle,phase,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -260,7 +266,7 @@ function AbstractState_unspecify_phase(handle::Clong)
   ccall( (:AbstractState_unspecify_phase, "CoolProp"), Void, (Clong,Ref{Clong},Ptr{UInt8},Clong), handle,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -277,7 +283,7 @@ function AbstractState_keyed_output(handle::Clong, param::Clong)
   output = ccall( (:AbstractState_keyed_output, "CoolProp"), Cdouble, (Clong,Clong,Ref{Clong},Ptr{UInt8},Clong), handle,param,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -307,7 +313,7 @@ function AbstractState_update_and_common_out{R1<:Real,R2<:Real,F<:AbstractFloat}
   ccall( (:AbstractState_update_and_common_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,T,p,rhomolar,hmolar,smolar,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -333,7 +339,7 @@ function AbstractState_update_and_1_out{R1<:Real,R2<:Real,F<:AbstractFloat}(hand
   ccall( (:AbstractState_update_and_1_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Clong,Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,output,out,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -363,7 +369,7 @@ function AbstractState_update_and_5_out{R1<:Real,R2<:Real,F<:AbstractFloat}(hand
   ccall( (:AbstractState_update_and_5_out, "CoolProp"), Void, (Clong,Clong,Ref{Cdouble},Ref{Cdouble},Clong,Ref{Clong},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Cdouble},Ref{Clong},Ptr{UInt8},Clong), handle,input_pair,value1,value2,length,outputs,out1,out2,out3,out4,out5,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -391,7 +397,7 @@ function AbstractState_set_binary_interaction_double(handle::Clong,i::Int, j::In
   ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong,Clong,Clong,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,j,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -412,7 +418,7 @@ function AbstractState_set_cubic_alpha_C(handle::Clong, i::Int, parameter::Abstr
   ccall( (:AbstractState_set_cubic_alpha_C, "CoolProp"), Void, (Clong,Clong,Ptr{UInt8},Cdouble,Cdouble,Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,parameter,c1,c2,c3,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
@@ -431,7 +437,7 @@ function AbstractState_set_fluid_parameter_double(handle::Clong, i::Int, paramet
   ccall( (:AbstractState_set_fluid_parameter_double, "CoolProp"), Void, (Clong,Clong,Ptr{UInt8},Cdouble,Ref{Clong},Ptr{UInt8},Clong), handle,i,parameter,value,errcode,message_buffer::Array{UInt8,1},buffer_length)
   if errcode[] != 0
     if errcode[] == 1
-      error("CoolProp: ", bytestring(convert(Ptr{UInt8}, pointer(message_buffer))))
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
     elseif errcode[] == 2
       error("CoolProp: message buffer too small")
     else # == 3
