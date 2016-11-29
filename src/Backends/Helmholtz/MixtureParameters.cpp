@@ -178,51 +178,69 @@ public:
         Dictionary dict;
         
         // Get the names/CAS of the compounds
-        std::vector<std::string> names1(1,identifier1);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS1(new CoolProp::HelmholtzEOSMixtureBackend(names1));
-        std::string name1 = HEOS1->name();
-        std::string CAS1 = HEOS1->fluid_param_string("CAS");
-        std::vector<std::string> names2(1,identifier2);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS2(new CoolProp::HelmholtzEOSMixtureBackend(names2));
-        std::string name2 = HEOS2->name();
-        std::string CAS2 = HEOS2->fluid_param_string("CAS");
-        
+        std::string CAS1, CAS2, name1 = identifier1, name2 = identifier2;
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS1, HEOS2;
+
+        std::vector<std::string> id1split = strsplit(identifier1, '-');
+        if (id1split.size() == 3){ // Check if identifier is in CAS format
+            CAS1 = identifier1;
+        }
+        else{
+            std::vector<std::string> names1(1, identifier1);
+            HEOS1.reset(new CoolProp::HelmholtzEOSMixtureBackend(names1));
+            CAS1 = HEOS1->fluid_param_string("CAS");
+        }
+
+        std::vector<std::string> id2split = strsplit(identifier2, '-');
+        if (id2split.size() == 3){ // Check if identifier is in CAS format
+            CAS2 = identifier2;
+        }
+        else{
+            std::vector<std::string> names2(1, identifier2);
+            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(names2));
+            CAS2 = HEOS2->fluid_param_string("CAS");
+        }
+
         // Get the vector of CAS numbers
         std::vector<std::string> CAS;
         CAS.push_back(CAS1);
         CAS.push_back(CAS2);
-        
+
         // Sort the CAS number vector
         std::sort(CAS.begin(), CAS.end());
-        
+
         // Swap fluid names if the CAS numbers were swapped
-        if (CAS[0] != CAS1){
+        if (CAS[0] != CAS1) {
             std::swap(name1, name2);
         }
-        
+
         // Populate the dictionary with common terms
         dict.add_string("name1", name1);
         dict.add_string("name2", name2);
-        dict.add_string("BibTeX", "N/A - LINEAR MIXING");
+        dict.add_string("BibTeX", "N/A - " + rule);
         dict.add_number("F", 0);
-        dict.add_string("type","GERG-2008");
-        
-        if (rule == "linear"){
+        dict.add_string("type", "GERG-2008");
+
+        if (rule == "linear") {
             // Terms for linear mixing
-            dict.add_number("gammaT", 0.5*(HEOS1->T_critical()+HEOS2->T_critical())/sqrt(HEOS1->T_critical()*HEOS2->T_critical()));
+            HEOS1.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1,name1)));
+            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(2,name2)));
+
+            dict.add_number("gammaT", 0.5*(HEOS1->T_critical() + HEOS2->T_critical()) / sqrt(HEOS1->T_critical()*HEOS2->T_critical()));
             double rhoc1 = HEOS1->rhomolar_critical(), rhoc2 = HEOS2->rhomolar_critical();
-            dict.add_number("gammaV", 4*(1/rhoc1+1/rhoc2)/pow(1/pow(rhoc1,1.0/3.0)+1/pow(rhoc2,1.0/3.0),3));
+            dict.add_number("gammaV", 4 * (1 / rhoc1 + 1 / rhoc2) / pow(1 / pow(rhoc1, 1.0 / 3.0) + 1 / pow(rhoc2, 1.0 / 3.0), 3));
             dict.add_number("betaV", 1.0);
             dict.add_number("betaT", 1.0);
         }
-        else if (rule == "Lorentz-Berthelot"){
+        else if (rule == "Lorentz-Berthelot") {
             // Terms for Lorentz-Berthelot quadratic mixing
+
             dict.add_number("gammaT", 1.0);
             dict.add_number("gammaV", 1.0);
             dict.add_number("betaV", 1.0);
             dict.add_number("betaT", 1.0);
         }
-        else{
+        else {
             throw ValueError(format("Your simple mixing rule [%s] was not understood", rule.c_str()));
         }
         
