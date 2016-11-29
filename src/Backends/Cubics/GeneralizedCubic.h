@@ -57,7 +57,10 @@ public:
 
 class AbstractCubic
 {
+    
 protected:
+    double rho_r, ///< The reducing density to be used [mol/m3]
+           T_r; ///< The reducing temperature to be used [K]
     std::vector<double> Tc, ///< Vector of critical temperatures (in K)
     pc, ///< Vector of critical pressures (in Pa)
     acentric; ///< Vector of acentric factors (unitless)
@@ -69,7 +72,7 @@ protected:
     double cm; ///< The volume translation parameter
     std::vector<shared_ptr<AbstractCubicAlphaFunction> > alpha; ///< The vector of alpha functions for the pure components
 public:
-    static const double rho_r, T_r;
+    
     /**
      \brief The abstract base clase for the concrete implementations of the cubic equations of state
      
@@ -119,6 +122,15 @@ public:
     double get_Delta_2(){ return Delta_2; }
     /// Read-only accessor for value of R_u (universal gas constant)
     double get_R_u(){ return R_u; }
+    /// Set the reducing temperature to be used
+    void set_Tr(double Tr){ T_r = Tr; }
+    /// Set the reducing density to be used
+    void set_rhor(double rhor) { rho_r = rhor; }
+    /// Get the reducing temperature to be used
+    double get_Tr() { return T_r; }
+    /// Get the reducing density to be used
+    double get_rhor() { return rho_r; }
+
     /// Set the three Mathias-Copeman constants in one shot for the component i of a mixture
     void set_C_MC(std::size_t i,double c1, double c2, double c3){
         alpha[i].reset(new MathiasCopemanAlphaFunction(a0_ii(i),c1,c2,c3,T_r/Tc[i]));

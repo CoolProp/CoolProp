@@ -12,25 +12,38 @@
         "type": "string"
       },
       "Tc": {
-        "description": "Critical temperature",
+        "description": "Critical temperature (K)",
         "type": "number",
         "minimum": 0.1,
         "maximum": 20000
       },
       "pc": {
-        "description": "Critical pressure",
+        "description": "Critical pressure (Pa)",
         "type": "number",
         "minimum": 0,
         "maximum": 500000000
       },
+      "rhomolarc": {
+        "description": "Critical density (mol/m^3)",
+        "type": "number",
+        "minimum": 0.1,
+        "maximum": 20000
+      },
+      "rhomolarc_units": {
+        "description": "Units of the critical density provided",
+        "enum": [
+          "mol/m^3",
+          "kg/m^3"
+        ]
+      },
       "acentric": {
-        "description": "Acentric factor",
+        "description": "Acentric factor (-)",
         "type": "number",
         "minimum": -10,
         "maximum": 10
       },
       "molemass": {
-        "description": "Molar mass",
+        "description": "Molar mass (kg/mol)",
         "type": "number",
         "minimum": 0,
         "maximum": 1

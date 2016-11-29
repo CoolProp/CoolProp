@@ -2,9 +2,6 @@
 #include "CPnumerics.h"
 #include <cmath>
 
-const double AbstractCubic::T_r = 1.0;
-const double AbstractCubic::rho_r = 1.0;
-
 double BasicMathiasCopemanAlphaFunction::term(double tau, std::size_t itau){
 
     // If we are not using the full Mathias-Copeman formulation for a_ii,
@@ -121,6 +118,8 @@ AbstractCubic::AbstractCubic(
     k.resize(N, std::vector<double>(N, 0));
     cm = 0.;
     alpha.resize(N);
+    T_r = 1.0;
+    rho_r = 1.0;
 };
 
 void AbstractCubic::set_alpha(const std::vector<double> &C1, const std::vector<double> &C2, const std::vector<double> &C3){

@@ -167,12 +167,14 @@ namespace SaturationSolvers
         
         for (unsigned int i = 0; i < z.size(); i++)
         {
-            const EquationOfState &EOS = HEOS.get_components()[i].EOS(); 
-
-            ptriple += EOS.sat_min_liquid.p*z[i];
-            pcrit += EOS.reduce.p*z[i];
-            Ttriple += EOS.sat_min_liquid.T*z[i];
-            Tcrit += EOS.reduce.T*z[i];
+            Tcrit += HEOS.get_fluid_constant(i, iT_critical)*z[i];
+            pcrit += HEOS.get_fluid_constant(i, iP_critical)*z[i];
+            Ttriple += HEOS.get_fluid_constant(i, iT_triple)*z[i];
+            ptriple += HEOS.get_fluid_constant(i, iP_triple)*z[i];
+        }
+        // Return an invalid number if either triple point temperature or pressure are not available
+        if (!ValidNumber(Ttriple) || !ValidNumber(ptriple)){
+            return _HUGE;
         }
 
         if (input_type == imposed_T)
@@ -248,7 +250,7 @@ namespace SaturationSolvers
         else{
             // Find first guess for output variable using Wilson K-factors
             WilsonK_resid Resid(HEOS, beta, input_value, input_type, z, HEOS.get_K());
-            if (guess < 0)
+            if (guess < 0 || !ValidNumber(guess))
                 out = Brent(Resid, 50, 10000, 1e-10, 1e-10, 100);
             else
                 out = Secant(Resid, guess, 0.001, 1e-10, 100);

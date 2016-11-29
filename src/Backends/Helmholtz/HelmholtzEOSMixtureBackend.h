@@ -179,6 +179,8 @@ public:
             case irhomolar_critical: return fld.crit.rhomolar;
             case iacentric_factor: return fld.EOS().acentric;
             case imolar_mass: return fld.EOS().molar_mass;
+            case iT_triple: return fld.EOS().sat_min_liquid.T;
+            case iP_triple: return fld.EOS().sat_min_liquid.p;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         }

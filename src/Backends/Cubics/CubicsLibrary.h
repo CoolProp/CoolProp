@@ -14,13 +14,15 @@ namespace CoolProp{
             double Tc, ///< Critical temperature (K)
                 pc, ///< Critical pressure (Pa)
                 molemass, ///< Molar mass (kg/mol)
-                acentric; ///< Acentric factor (-)
+                acentric, ///< Acentric factor (-)
+                rhomolarc; ///< Critical density (mol/m3) (initialized to an invalid negative number)
             std::string name, // name of fluid
                         CAS, // CAS reference number of fluid
                         BibTeX; // BibTex key(s) for the values
             std::vector<std::string> aliases;
             std::string alpha_type; ///< The type of alpha function
             std::vector<double> alpha_coeffs; ///< The vector of coefficients for the alpha function
+            CubicsValues() : rhomolarc(-1) {};
         };
 
         /**

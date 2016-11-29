@@ -1125,14 +1125,10 @@ void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend &HEOS
     double summer_c = 0, v_SRK = 1/rhomolar_liq;
     const std::vector<CoolPropFluid> & components = HEOS.get_components();
     for (std::size_t i = 0; i < components.size(); ++i){
-        
-        // Reference to EOS
-        const EquationOfState &EOS = components[i].EOSVector[0];
-
         // Get the parameters for the cubic EOS
-        CoolPropDbl Tc = EOS.reduce.T;
-        CoolPropDbl pc = EOS.reduce.p;
-        CoolPropDbl rhomolarc = EOS.reduce.rhomolar;
+        CoolPropDbl Tc = HEOS.get_fluid_constant(i, iT_critical);
+        CoolPropDbl pc = HEOS.get_fluid_constant(i, iP_critical);
+        CoolPropDbl rhomolarc = HEOS.get_fluid_constant(i, irhomolar_critical);
         CoolPropDbl R = 8.3144598;
 
         summer_c += z[i]*(0.40768*R*Tc/pc*(0.29441 - pc/(rhomolarc*R*Tc)));

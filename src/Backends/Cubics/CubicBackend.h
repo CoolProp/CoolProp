@@ -71,12 +71,12 @@ public:
 	SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl> & mole_fractions)
 	{
 		SimpleState reducing;
-		reducing.T = cubic->T_r;
-		reducing.rhomolar = cubic->rho_r;
+		reducing.T = cubic->get_Tr();
+		reducing.rhomolar = cubic->get_rhor();
 		return reducing;
 	};
-    CoolPropDbl calc_reduced_density(void) { return _rhomolar/get_cubic()->rho_r; };
-    CoolPropDbl calc_reciprocal_reduced_temperature(void) { return get_cubic()->T_r/_T; };
+    CoolPropDbl calc_reduced_density(void) { return _rhomolar/get_cubic()->get_rhor(); };
+    CoolPropDbl calc_reciprocal_reduced_temperature(void) { return get_cubic()->get_Tr()/_T; };
     std::vector<double> spinodal_densities();
     
     CoolPropDbl calc_T_critical(void){
