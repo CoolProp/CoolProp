@@ -21,6 +21,7 @@ namespace coolprop_wrapper
                 return System.IO.Path.GetDirectoryName(filepath);
             }
         }
+
         static string LogFile
         {
             get { return System.IO.Path.Combine(AssemblyDirectory, "log.txt"); }

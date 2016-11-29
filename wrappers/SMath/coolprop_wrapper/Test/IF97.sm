@@ -1,0 +1,687 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?application progid="SMath Studio Desktop" version="0.98.6128.10018"?>
+<regions>
+  <settings>
+    <identity>
+      <id>5dac1d59-6181-4c08-9279-eb0d09d3f36d</id>
+      <revision>11</revision>
+    </identity>
+    <calculation>
+      <precision>6</precision>
+      <exponentialThreshold>9</exponentialThreshold>
+      <fractions>decimal</fractions>
+    </calculation>
+    <pageModel active="true" printAreas="true" simpleEqualsOnly="false" printBackgroundImages="true">
+      <paper id="9" orientation="Landscape" width="1169" height="827" />
+      <margins left="39" right="39" top="39" bottom="39" />
+      <header alignment="Center" color="#a9a9a9">&amp;[DATE] &amp;[TIME] - &amp;[FILENAME]</header>
+      <footer alignment="Center" color="#a9a9a9">&amp;[PAGENUM] / &amp;[COUNT]</footer>
+      <backgrounds />
+    </pageModel>
+    <dependencies>
+      <assembly name="SMath Studio Desktop" version="0.98.6128.10018" guid="a37cba83-b69c-4c71-9992-55ff666763bd" />
+      <assembly name="Math Region" version="0.98.6128.10018" guid="02f1ab51-215b-466e-a74d-5d8b1cf85e8d" />
+      <assembly name="Text Region" version="1.10.6128.10025" guid="485d28c5-349a-48b6-93be-12a35a1c1e39" />
+      <assembly name="CoolProp Wrapper" version="6.1.0.0" guid="ca92ef03-c7da-4888-98ad-528482733e2f" />
+    </dependencies>
+  </settings>
+  <region id="0" left="261" top="9" width="209" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <text lang="eng">
+      <p bold="true" underline="true">CoolProp IAPWS IF97 Test</p>
+    </text>
+  </region>
+  <region id="1" left="639" top="9" width="445" height="26" color="#000000" bgColor="#91c8ff" fontSize="10">
+    <math decimalPlaces="4">
+      <input>
+        <e type="operand" style="string">version</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">6.1.0</e>
+      </result>
+    </math>
+  </region>
+  <region id="2" left="0" top="54" width="114" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">101325</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="3" left="153" top="54" width="106" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">T1</e>
+        <e type="operand">308.15</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="4" left="0" top="99" width="168" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <text lang="eng">
+      <p underline="true">1.0 Saturation Test</p>
+    </text>
+  </region>
+  <region id="5" left="9" top="135" width="324" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <text lang="eng">
+      <p underline="true">1.1 Saturation ancillary function test</p>
+    </text>
+  </region>
+  <region id="6" left="18" top="171" width="527" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">T</e>
+        <e type="function" args="1">p_sat</e>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">0</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="function" preserve="true" args="5">CoolProp_saturation_ancillary</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="7" left="630" top="171" width="184" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">T1</e>
+        <e type="function" args="1">p_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">Pa</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">5.63</e>
+        <e type="operand">10</e>
+        <e type="operand">3</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="8" left="18" top="207" width="576" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">T</e>
+        <e type="function" args="1">p_sat</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">0</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="function" preserve="true" args="5">CoolProp_saturation_ancillary</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="9" left="630" top="207" width="124" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">T1</e>
+        <e type="function" args="1">p_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">Pa</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="10" left="828" top="207" width="737" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">lastError</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">key [IF97::water] was not found in string_to_index_map in JSONFluidLibrary</e>
+      </result>
+    </math>
+  </region>
+  <region id="11" left="18" top="243" width="527" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="function" args="1">T_sat</e>
+        <e type="operand" style="string">water</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">0</e>
+        <e type="function" preserve="true" args="5">CoolProp_saturation_ancillary</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="12" left="630" top="243" width="124" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="function" args="1">T_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">°C</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="13" left="828" top="243" width="540" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">lastError</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">Q [101325] is invalid in calc_saturation_ancillary</e>
+      </result>
+    </math>
+  </region>
+  <region id="14" left="18" top="279" width="576" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="function" args="1">T_sat</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">0</e>
+        <e type="function" preserve="true" args="5">CoolProp_saturation_ancillary</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="15" left="630" top="279" width="124" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="function" args="1">T_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">°C</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="16" left="828" top="279" width="737" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">lastError</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">key [IF97::water] was not found in string_to_index_map in JSONFluidLibrary</e>
+      </result>
+    </math>
+  </region>
+  <region id="17" left="9" top="324" width="201" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <text lang="eng">
+      <p underline="true">1.2 Props function test</p>
+    </text>
+  </region>
+  <region id="18" left="18" top="360" width="444" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">T</e>
+        <e type="function" args="1">p_sat</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand" style="string">Q</e>
+        <e type="operand">0</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="19" left="630" top="360" width="184" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">T1</e>
+        <e type="function" args="1">p_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">Pa</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">5.63</e>
+        <e type="operand">10</e>
+        <e type="operand">3</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="20" left="18" top="396" width="493" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">T</e>
+        <e type="function" args="1">p_sat</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand" style="string">Q</e>
+        <e type="operand">0</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="21" left="630" top="396" width="124" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">T1</e>
+        <e type="function" args="1">p_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">Pa</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="22" left="828" top="396" width="622" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">lastError</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">bad input_pair : PropsSI('P','Q',0,'T',308.15,'IF97::water')</e>
+      </result>
+    </math>
+  </region>
+  <region id="23" left="18" top="432" width="444" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="function" args="1">T_sat</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">Q</e>
+        <e type="operand">0</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="24" left="630" top="432" width="157" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="function" args="1">T_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">°C</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">99.97</e>
+      </result>
+    </math>
+  </region>
+  <region id="25" left="18" top="468" width="493" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="function" args="1">T_sat</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">Q</e>
+        <e type="operand">0</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="26" left="630" top="468" width="124" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="function" args="1">T_sat</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">°C</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="27" left="828" top="468" width="622" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">lastError</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">bad input_pair : PropsSI('T','P',101325,'Q',0,'IF97::water')</e>
+      </result>
+    </math>
+  </region>
+  <region id="28" left="0" top="522" width="357" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <text lang="eng">
+      <p underline="true">2.0 Subcooled or superheated function Test</p>
+    </text>
+  </region>
+  <region id="29" left="18" top="567" width="509" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">h_pT</e>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="30" left="630" top="567" width="193" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">h_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">kJ</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">146.73</e>
+      </result>
+    </math>
+  </region>
+  <region id="31" left="18" top="612" width="525" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">rho_pT</e>
+        <e type="operand" style="string">D</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="32" left="630" top="612" width="213" height="50" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">rho_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">kg</e>
+        <e type="operand" style="unit">m</e>
+        <e type="operand">3</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">994.04</e>
+      </result>
+    </math>
+  </region>
+  <region id="33" left="18" top="657" width="517" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">Cp_pT</e>
+        <e type="operand" style="string">C</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="34" left="630" top="657" width="216" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">Cp_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">kJ</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operand" style="unit">Δ°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">4.18</e>
+      </result>
+    </math>
+  </region>
+  <region id="35" left="18" top="702" width="517" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">Cv_pT</e>
+        <e type="operand" style="string">O</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="36" left="630" top="702" width="216" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">Cv_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">kJ</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operand" style="unit">Δ°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">4.10</e>
+      </result>
+    </math>
+  </region>
+  <region id="37" left="18" top="756" width="517" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">mu_pT</e>
+        <e type="operand" style="string">V</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="38" left="630" top="756" width="170" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">mu_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">s</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="39" left="837" top="756" width="960" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">lastError</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">calc_viscosity is not implemented for this backend : PropsSI('V','P',101325,'T',308.15,'IF97::water')</e>
+      </result>
+    </math>
+  </region>
+  <region id="40" left="18" top="801" width="468" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">mu_pT</e>
+        <e type="operand" style="string">V</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="41" left="630" top="801" width="239" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">mu_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">s</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">7.19</e>
+        <e type="operand">10</e>
+        <e type="operand">4</e>
+        <e type="operator" args="1">-</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="42" left="18" top="846" width="509" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">k_pT</e>
+        <e type="operand" style="string">L</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">IF97::water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="43" left="630" top="846" width="175" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">k_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">W</e>
+        <e type="operand" style="unit">m</e>
+        <e type="operand" style="unit">Δ°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="44" left="837" top="855" width="985" height="24" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">lastError</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">calc_conductivity is not implemented for this backend : PropsSI('L','P',101325,'T',308.15,'IF97::water')</e>
+      </result>
+    </math>
+  </region>
+  <region id="45" left="18" top="891" width="460" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math>
+      <input>
+        <e type="operand">p</e>
+        <e type="operand">T</e>
+        <e type="function" args="2">k_pT</e>
+        <e type="operand" style="string">L</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">p</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">T</e>
+        <e type="operand" style="string">water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="46" left="630" top="891" width="200" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="2" exponentialThreshold="3" trailingZeros="true">
+      <input>
+        <e type="operand">p1</e>
+        <e type="operand">T1</e>
+        <e type="function" args="2">k_pT</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">W</e>
+        <e type="operand" style="unit">m</e>
+        <e type="operand" style="unit">Δ°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">0.62</e>
+      </result>
+    </math>
+  </region>
+</regions>
