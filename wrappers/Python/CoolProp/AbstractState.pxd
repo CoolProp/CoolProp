@@ -54,7 +54,7 @@ cdef class AbstractState:
 
     cpdef set_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter, double val)
     cpdef double get_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter) except *
-    cpdef set_binary_interaction_string(self, string CAS1, string CAS2, string parameter, string val)
+    cpdef set_binary_interaction_string(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter, string val)
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
     cpdef apply_simple_mixing_rule(self, size_t, size_t, string)
     

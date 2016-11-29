@@ -56,6 +56,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         void set_binary_interaction_string(const string &, const string &, const string &, const string &) except +ValueError
         double get_binary_interaction_double(const string &, const string &, const string &) except +ValueError
         string get_binary_interaction_string(const string &, const string &, const string &) except +ValueError
+        void set_binary_interaction_string(const size_t, const size_t, const string &, const string &) except +ValueError
         void apply_simple_mixing_rule(size_t, size_t, const string &) except +ValueError
         
         double get_binary_interaction_double(const size_t, const size_t, const string &) except +ValueError

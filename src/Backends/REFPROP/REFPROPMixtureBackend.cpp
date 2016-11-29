@@ -525,6 +525,25 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
         return "";
     }
 }
+/// Set binary mixture string value
+void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string &parameter, const std::string &value) {
+
+    long icomp = static_cast<long>(i) + 1, jcomp = static_cast<long>(j) + 1, ierr = 0L;
+    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    double fij[6];
+    char herr[255];
+
+    // Get the current state
+    GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
+
+    if (parameter == "model") {
+        strcpy(hmodij, value.c_str());
+    }
+    else {
+        throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
+    }
+    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+}
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
     long icomp = static_cast<long>(i)+1, jcomp = static_cast<long>(j)+1, ierr = 0L;
@@ -552,6 +571,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
         throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     }
 }
+
 /// Get binary mixture double value (EXPERT USE ONLY!!!)
 double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
     long icomp = static_cast<long>(i)+1, jcomp = static_cast<long>(j)+1;
