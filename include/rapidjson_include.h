@@ -54,7 +54,7 @@ namespace cpjson
         return i;
     };
     
-    inline std::string json2string(rapidjson::Value &v)
+    inline std::string json2string(const rapidjson::Value &v)
     {
         rapidjson::StringBuffer buffer;
         rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
@@ -63,10 +63,10 @@ namespace cpjson
         return buffer.GetString();
     }
     /// A convenience function to get a double from a JSON value, including error checking
-    inline int get_integer(rapidjson::Value &v, std::string m)
+    inline int get_integer(const rapidjson::Value &v, std::string m)
     {
         if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
-        rapidjson::Value &el = v[m.c_str()];
+        const rapidjson::Value &el = v[m.c_str()];
         if (!el.IsInt()){  throw CoolProp::ValueError(format("Member [%s] is not an integer",m.c_str())); }
         else
         {
@@ -74,10 +74,10 @@ namespace cpjson
         }
     };
     /// A convenience function to get a double from a JSON value, including error checking
-    inline double get_double(rapidjson::Value &v, std::string m)
+    inline double get_double(const rapidjson::Value &v, std::string m)
     {
         if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
-        rapidjson::Value &el = v[m.c_str()];
+        const rapidjson::Value &el = v[m.c_str()];
         if (!el.IsNumber()){  throw CoolProp::ValueError(format("Member [%s] is not a number",m.c_str())); }
         else
         {
@@ -85,10 +85,10 @@ namespace cpjson
         }
     };
     /// A convenience function to get a bool from a JSON value, including error checking
-    inline bool get_bool(rapidjson::Value &v, std::string m)
+    inline bool get_bool(const rapidjson::Value &v, std::string m)
     {
         if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
-        rapidjson::Value &el = v[m.c_str()];
+        const rapidjson::Value &el = v[m.c_str()];
         if (!el.IsBool()){  throw CoolProp::ValueError(format("Member [%s] is not a boolean",m.c_str())); }
         else
         {
@@ -96,10 +96,10 @@ namespace cpjson
         }
     };
     /// A convenience function to get a string from a JSON value, including error checking
-    inline std::string get_string(rapidjson::Value &v, std::string m)
+    inline std::string get_string(const rapidjson::Value &v, std::string m)
     {
         if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
-        rapidjson::Value &el = v[m.c_str()];
+        const rapidjson::Value &el = v[m.c_str()];
         if (!el.IsString()){  throw CoolProp::ValueError(format("Member [%s] is not a string",m.c_str())); }
         else
         {
@@ -111,11 +111,11 @@ namespace cpjson
     
     
     /// A convenience function to get a double array compactly
-    inline std::vector<double> get_double_array(rapidjson::Value &v)
+    inline std::vector<double> get_double_array(const rapidjson::Value &v)
     {
         std::vector<double> out;
         if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
-        for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
+        for (rapidjson::Value::ConstValueIterator itr = v.Begin(); itr != v.End(); ++itr)
         {
             if (!itr->IsNumber()){throw CoolProp::ValueError("input is not a number");}
             out.push_back(itr->GetDouble());
@@ -124,7 +124,7 @@ namespace cpjson
     };
     
     /// A convenience function to get a double array compactly
-    inline std::vector<double> get_double_array(rapidjson::Value &v, std::string m)
+    inline std::vector<double> get_double_array(const rapidjson::Value &v, std::string m)
     {
         if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
         else{
@@ -133,11 +133,11 @@ namespace cpjson
     };    
 
     /// A convenience function to get a long double array compactly
-    inline std::vector<CoolPropDbl> get_long_double_array(rapidjson::Value &v)
+    inline std::vector<CoolPropDbl> get_long_double_array(const rapidjson::Value &v)
     {
         std::vector<CoolPropDbl> out;
         if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
-        for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
+        for (rapidjson::Value::ConstValueIterator itr = v.Begin(); itr != v.End(); ++itr)
         {
             if (!itr->IsNumber()){throw CoolProp::ValueError("input is not a number");}
             out.push_back(itr->GetDouble());
@@ -146,12 +146,12 @@ namespace cpjson
     };
 
     /// A convenience function to get a 2D double array compactly
-    inline std::vector< std::vector<double> > get_double_array2D(rapidjson::Value &v)
+    inline std::vector< std::vector<double> > get_double_array2D(const rapidjson::Value &v)
     {
         std::vector< std::vector<double> > out;
         std::vector<double> tmp;
         if (!v.IsArray()) {throw CoolProp::ValueError("input is not an array"); }
-        for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
+        for (rapidjson::Value::ConstValueIterator itr = v.Begin(); itr != v.End(); ++itr)
         {
             // This is here for debugging purposes
             // cpjson::value_information vi = cpjson::get_information((*itr));
@@ -159,7 +159,7 @@ namespace cpjson
                 throw CoolProp::ValueError(format("input \"%s\" is not a 2D array",cpjson::json2string(v).c_str())); 
             }
             tmp.clear();
-            for (rapidjson::Value::ValueIterator i = itr->Begin(); i != itr->End(); ++i)
+            for (rapidjson::Value::ConstValueIterator i = itr->Begin(); i != itr->End(); ++i)
             {
                 if (!i->IsNumber()){throw CoolProp::ValueError("input is not a number");}
                 tmp.push_back(i->GetDouble());
@@ -170,16 +170,16 @@ namespace cpjson
     };
 
     /// A convenience function to get a 2D long double array compactly
-    inline std::vector< std::vector<CoolPropDbl> >  get_long_double_array2D(rapidjson::Value &v)
+    inline std::vector< std::vector<CoolPropDbl> >  get_long_double_array2D(const rapidjson::Value &v)
     {
         std::vector< std::vector<CoolPropDbl> > out;
         std::vector<CoolPropDbl> tmp;
         if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
-        for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
+        for (rapidjson::Value::ConstValueIterator itr = v.Begin(); itr != v.End(); ++itr)
         {
             if (!itr->IsArray()) { throw CoolProp::ValueError("input is not a 2D array"); }
             tmp.clear();
-            for (rapidjson::Value::ValueIterator i = itr->Begin(); i != itr->End(); ++i)
+            for (rapidjson::Value::ConstValueIterator i = itr->Begin(); i != itr->End(); ++i)
             {
                 if (!i->IsNumber()){throw CoolProp::ValueError("input is not a number");}
                 tmp.push_back(i->GetDouble());
@@ -190,12 +190,12 @@ namespace cpjson
     };
 
     /// A convenience function to get a long double array compactly
-    inline std::vector<CoolPropDbl> get_long_double_array(rapidjson::Value &v, std::string name)
+    inline std::vector<CoolPropDbl> get_long_double_array(const rapidjson::Value &v, std::string name)
     {
         std::vector<CoolPropDbl> out;
         if (!v.HasMember(name.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",name.c_str())); }
         if (!v[name.c_str()].IsArray()) { throw CoolProp::ValueError("input is not an array"); }
-        for (rapidjson::Value::ValueIterator itr = v[name.c_str()].Begin(); itr != v[name.c_str()].End(); ++itr)
+        for (rapidjson::Value::ConstValueIterator itr = v[name.c_str()].Begin(); itr != v[name.c_str()].End(); ++itr)
         {
             if (!itr->IsNumber()){throw CoolProp::ValueError("input is not a number");}
             out.push_back(itr->GetDouble());
@@ -204,11 +204,11 @@ namespace cpjson
     };
 
     /// A convenience function to get a string array compactly
-    inline std::vector<std::string> get_string_array(rapidjson::Value &v)
+    inline std::vector<std::string> get_string_array(const rapidjson::Value &v)
     {
         std::vector<std::string> out;
         if (!v.IsArray()) { throw CoolProp::ValueError("input is not an array"); }
-        for (rapidjson::Value::ValueIterator itr = v.Begin(); itr != v.End(); ++itr)
+        for (rapidjson::Value::ConstValueIterator itr = v.Begin(); itr != v.End(); ++itr)
         {
             out.push_back(itr->GetString());
         }
@@ -216,7 +216,7 @@ namespace cpjson
     };
     
     /// A convenience function to get a string array compactly
-    inline std::vector<std::string> get_string_array(rapidjson::Value &v, std::string m)
+    inline std::vector<std::string> get_string_array(const rapidjson::Value &v, std::string m)
     {
         if (!v.HasMember(m.c_str())){ throw CoolProp::ValueError(format("Does not have member [%s]",m.c_str())); }
         else{
