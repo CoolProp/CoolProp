@@ -9,25 +9,85 @@
       "1BUTENE", 
       "1-BUTENE"
     ], 
-    "molemass": 0.0561063199999999, 
+    "alpha0": [
+      {
+        "a1": -0.00101126, 
+        "a2": 2.3869174, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.9197, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.9406, 
+          6.5395, 
+          14.535, 
+          5.8971
+        ], 
+        "t": [
+          0.6534856543203987, 
+          2.268119917002552, 
+          5.072861265472584, 
+          13.71842877244866
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.05610631999999999, 
     "molemass_units": "kg/mol", 
     "name": "1-BUTENE", 
     "pc": 4005100.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4240.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "67-64-1", 
     "Tc": 508.1, 
     "Tc_units": "K", 
-    "acentric": 0.30710000000000004, 
+    "acentric": 0.3071, 
     "aliases": [
       "ACETONE"
+    ], 
+    "alpha0": [
+      {
+        "a1": -9.4883659997, 
+        "a2": 7.1422719708, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          3.7072, 
+          7.0675, 
+          11.012
+        ], 
+        "t": [
+          0.6101161188742373, 
+          6.849045463491438, 
+          3.101751623696123
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 9.7898709978717, 
+        "a2": -4.41053410795899, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
     ], 
     "molemass": 0.05807914, 
     "molemass_units": "kg/mol", 
     "name": "ACETONE", 
     "pc": 4700000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4699.999999999999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7664-41-7", 
@@ -39,11 +99,43 @@
       "NH3", 
       "R717"
     ], 
-    "molemass": 0.017030260000000002, 
+    "alpha0": [
+      {
+        "a1": -15.81502, 
+        "a2": 4.255726, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          11.47434, 
+          -1.296211, 
+          0.5706757
+        ], 
+        "t": [
+          0.3333333333333333, 
+          -1.5, 
+          -1.75
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "a1": -0.965940085369186, 
+        "a2": 0.723282863334932, 
+        "reference": "OTH", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.01703026, 
     "molemass_units": "kg/mol", 
     "name": "AMMONIA", 
     "pc": 11333000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 13211.777154312384, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7440-37-1", 
@@ -52,13 +144,33 @@
     "acentric": -0.00219, 
     "aliases": [
       "R740", 
-      "ARGON"
+      "ARGON", 
+      "AR"
+    ], 
+    "alpha0": [
+      {
+        "a1": 8.31666243, 
+        "a2": -4.94651164, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "a1": -18.6104772308484, 
+        "a2": 4.94617011642842, 
+        "reference": "OTH", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
     ], 
     "molemass": 0.039948, 
     "molemass_units": "kg/mol", 
     "name": "ARGON", 
     "pc": 4863000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 13407.429658556124, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "71-43-2", 
@@ -68,27 +180,95 @@
     "aliases": [
       "BENZENE"
     ], 
-    "molemass": 0.0781118, 
+    "alpha0": [
+      {
+        "a1": -0.6740687105, 
+        "a2": 2.5560188958, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.94645, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          7.36374, 
+          18.649, 
+          4.01834
+        ], 
+        "t": [
+          7.32358279064802, 
+          2.6885164229031, 
+          1.120956549588983
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -2.8421709430404e-12, 
+        "a2": 4.99600884354027e-11, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.07811180000000001, 
     "molemass_units": "kg/mol", 
     "name": "BENZENE", 
     "pc": 4894000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3902.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "124-38-9", 
     "Tc": 304.1282, 
     "Tc_units": "K", 
-    "acentric": 0.22394000000000003, 
+    "acentric": 0.22394, 
     "aliases": [
       "CO2", 
       "CARBONDIOXIDE", 
       "R744"
     ], 
-    "molemass": 0.044009799999999995, 
+    "alpha0": [
+      {
+        "a1": 8.37304456, 
+        "a2": -3.70454304, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.99427042, 
+          0.62105248, 
+          0.41195293, 
+          1.04028922, 
+          0.08327678
+        ], 
+        "t": [
+          3.15163, 
+          6.1119, 
+          6.77708, 
+          11.32384, 
+          27.08792
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -14.4979156224319, 
+        "a2": 8.82013935801453, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.0440098, 
     "molemass_units": "kg/mol", 
     "name": "CARBONDIOXIDE", 
     "pc": 7377300.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 10624.9063, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "630-08-0", 
@@ -99,11 +279,42 @@
       "CARBONMONOXIDE", 
       "CO"
     ], 
+    "alpha0": [
+      {
+        "a1": -3.3728318564, 
+        "a2": 3.3683460039, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -9.111274701235156e-05
+        ], 
+        "t": [
+          -1.5
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          1.0128
+        ], 
+        "t": [
+          23.25003763359927
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.0280101, 
     "molemass_units": "kg/mol", 
     "name": "CARBONMONOXIDE", 
     "pc": 3494000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 10850.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "463-58-1", 
@@ -114,11 +325,39 @@
       "COS", 
       "CARBONYLSULFIDE"
     ], 
+    "alpha0": [
+      {
+        "a1": -3.6587449805, 
+        "a2": 3.7349245016, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.1651, 
+          0.93456, 
+          1.0623, 
+          0.34269
+        ], 
+        "t": [
+          2.027615703461204, 
+          3.59848984872086, 
+          8.382395649074637, 
+          33.87015867148929
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.0600751, 
     "molemass_units": "kg/mol", 
     "name": "CARBONYLSULFIDE", 
     "pc": 6370000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 7410.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "590-18-1", 
@@ -129,26 +368,82 @@
       "C2BUTENE", 
       "CIS-2-BUTENE"
     ], 
-    "molemass": 0.0561063199999999, 
+    "alpha0": [
+      {
+        "a1": 0.2591542, 
+        "a2": 2.4189888, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.9687, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          3.2375, 
+          7.0437, 
+          11.414, 
+          7.3722
+        ], 
+        "t": [
+          0.5691336775674125, 
+          2.714859437751004, 
+          4.800917957544463, 
+          10.09064830751578
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.05610631999999999, 
     "molemass_units": "kg/mol", 
     "name": "CIS-2-BUTENE", 
     "pc": 4225500.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4244.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "110-82-7", 
     "Tc": 553.6, 
     "Tc_units": "K", 
-    "acentric": 0.20926000000000003, 
+    "acentric": 0.20926, 
     "aliases": [
       "CYCLOHEXANE", 
       "CYCLOHEX"
     ], 
-    "molemass": 0.08415948, 
+    "alpha0": [
+      {
+        "a1": 0.9891140602, 
+        "a2": 1.6359660572, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.83775, 
+          16.036, 
+          24.636, 
+          7.1715
+        ], 
+        "t": [
+          1.396315028901734, 
+          1.69978323699422, 
+          3.946893063583815, 
+          8.11958092485549
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.08415948000000001, 
     "molemass_units": "kg/mol", 
     "name": "CYCLOHEXANE", 
     "pc": 4082400.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3224.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "287-92-3", 
@@ -159,11 +454,39 @@
       "CYCLOPEN", 
       "CYCLOPENTANE"
     ], 
-    "molemass": 0.0701329, 
+    "alpha0": [
+      {
+        "a1": 3.2489131288, 
+        "a2": 2.6444166315, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 0.96, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          3.34, 
+          18.6, 
+          13.9, 
+          4.86
+        ], 
+        "t": [
+          0.2345032439615415, 
+          2.540451809583366, 
+          5.276322989134683, 
+          10.35722660830141
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.07013290000000001, 
     "molemass_units": "kg/mol", 
     "name": "CYCLOPENTANE", 
     "pc": 4571200.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3820.000000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-19-4", 
@@ -174,11 +497,49 @@
       "CYCLOPRO", 
       "CYCLOPROPANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 398.3, 
+        "c": [
+          6.378038040672545, 
+          -0.04582023302189515, 
+          0.0002558503477107775, 
+          -3.908517142596848e-07, 
+          2.051746651955177e-10
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -10.9358280454636, 
+        "a2": 8.75156673092286, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.042081, 
     "molemass_units": "kg/mol", 
     "name": "CYCLOPROPANE", 
     "pc": 5579700.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 6142.914900000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "556-67-2", 
@@ -188,11 +549,38 @@
     "aliases": [
       "OCTAMETHYLCYCLOTETRASILOXANE"
     ], 
+    "alpha0": [
+      {
+        "_note": "a1 and a2 calculated by IB.  Values in Thol thesis incorrect", 
+        "a1": 71.1636049792958, 
+        "a2": -21.6743650975623, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.292757, 
+          38.2456, 
+          58.975
+        ], 
+        "t": [
+          0.06820119352088662, 
+          0.3410059676044331, 
+          3.0690537084398977
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.29661576, 
     "molemass_units": "kg/mol", 
     "name": "D4", 
     "pc": 1347215.3560904593, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 1043.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "541-02-6", 
@@ -202,11 +590,51 @@
     "aliases": [
       "DECAMETHYLCYCLOPENTASILOXANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -7.87509994783932, 
+        "a2": 8.32698146948877, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 484.050286854327, 
+        "Tc": 619.23462341, 
+        "cp_over_R": -4.19725991019033, 
+        "type": "IdealGasHelmholtzCP0Constant"
+      }, 
+      {
+        "T0": 484.050286854327, 
+        "Tc": 619.23462341, 
+        "c": [
+          0.223886736283434, 
+          -0.000168790032608204, 
+          6.01361096651718e-08
+        ], 
+        "t": [
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": 1.14677427554e-08, 
+        "a2": -8.98010396499625e-09, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.3707697, 
     "molemass_units": "kg/mol", 
     "name": "D5", 
     "pc": 1160000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 822.3684000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "540-97-6", 
@@ -216,11 +644,42 @@
     "aliases": [
       "DODECAMETHYLCYCLOHEXASILOXANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -7.938561730464921, 
+        "a2": 8.452340963237452, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 518.109977174843, 
+        "Tc": 645.78, 
+        "c": [
+          56.37158920013201, 
+          118.0111016069331, 
+          1792.1, 
+          82.5909330141469, 
+          786.8
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "a1": 16.2776881308826, 
+        "a2": -9.86112982952628, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.444924, 
     "molemass_units": "kg/mol", 
     "name": "D6", 
     "pc": 961000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 627.2885477999996, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7782-39-0", 
@@ -231,55 +690,178 @@
       "D2", 
       "DEUTERIUM"
     ], 
+    "alpha0": [
+      {
+        "a1": -2.0677351753, 
+        "a2": 2.4237151502, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -3.54145, 
+          3.0326, 
+          -3.52422, 
+          -1.73421, 
+          -3.57135, 
+          2.14858, 
+          6.23107, 
+          -3.30425, 
+          6.23098, 
+          -3.57137, 
+          3.32901, 
+          0.97782
+        ], 
+        "t": [
+          187.1178925404277, 
+          225.2217005738132, 
+          23.54460093896714, 
+          4.723526343244653, 
+          11.43714136671883, 
+          131.3041210224309, 
+          7.039645279081897, 
+          5.996348461137194, 
+          17.38132498695879, 
+          11.81011997913406, 
+          5.007824726134585, 
+          30.97548252477829
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.0040282, 
     "molemass_units": "kg/mol", 
     "name": "DEUTERIUM", 
     "pc": 1679600.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 17230.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
-    "CAS": "1300-21-6", 
+    "CAS": "107-06-2", 
     "Tc": 561.6, 
     "Tc_units": "K", 
-    "acentric": 0.268578500873581, 
+    "acentric": 0.26857850087358104, 
     "aliases": [
+      "1,2-DICHLOROETHANE", 
       "DICHLOROETHANE"
     ], 
-    "molemass": 0.09895899999999999, 
+    "alpha0": [
+      {
+        "a1": 25.029988, 
+        "a2": -4.8999527, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.0, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          5.35, 
+          10.05
+        ], 
+        "t": [
+          0.04006410256410256, 
+          3.587962962962963
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.098959, 
     "molemass_units": "kg/mol", 
     "name": "DICHLOROETHANE", 
     "pc": 5227585.103082351, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4330.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "60-29-7", 
-    "Tc": 466.70000000000005, 
+    "Tc": 466.7, 
     "Tc_units": "K", 
     "acentric": 0.2819293311752744, 
     "aliases": [
       "DIETHYLETHER", 
       "DEE"
     ], 
+    "alpha0": [
+      {
+        "a1": 17.099494, 
+        "a2": -6.160844, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.36281, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -8.943822, 
+          0.54621, 
+          -0.016604
+        ], 
+        "t": [
+          -1, 
+          -2, 
+          -3
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }
+    ], 
     "molemass": 0.0741216, 
     "molemass_units": "kg/mol", 
     "name": "DIETHYLETHER", 
-    "pc": 3649016.8965285365, 
-    "pc_units": "Pa"
+    "pc": 3649016.896528536, 
+    "pc_units": "Pa", 
+    "rhomolarc": 3561.7148, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "616-38-6", 
     "Tc": 557.0, 
     "Tc_units": "K", 
-    "acentric": 0.34600000000000003, 
+    "acentric": 0.346, 
     "aliases": [
       "DMC", 
       "DIMETHYLCARBONATE"
+    ], 
+    "alpha0": [
+      {
+        "a1": 4.9916462, 
+        "a2": -0.1709449, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 8.28421, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.48525, 
+          0.822585, 
+          16.2453, 
+          1.15925
+        ], 
+        "t": [
+          0.03770197486535009, 
+          2.405745062836625, 
+          3.001795332136445, 
+          13.27648114901257
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
     ], 
     "molemass": 0.0900779, 
     "molemass_units": "kg/mol", 
     "name": "DIMETHYLCARBONATE", 
     "pc": 4908800.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4000.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "115-10-6", 
@@ -290,11 +872,39 @@
       "DIMETHYLETHER", 
       "DME"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.980976, 
+        "a2": 3.171218, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.039, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.641, 
+          2.123, 
+          8.992, 
+          6.191
+        ], 
+        "t": [
+          0.901647942694154, 
+          2.432701097462898, 
+          4.785477723551244, 
+          10.36520488138709
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.04606844, 
     "molemass_units": "kg/mol", 
     "name": "DIMETHYLETHER", 
     "pc": 5336800.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5940.000000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "74-84-0", 
@@ -305,11 +915,45 @@
       "R170", 
       "ETHANE"
     ], 
-    "molemass": 0.030069040000000002, 
+    "alpha0": [
+      {
+        "a1": 9.212802589, 
+        "a2": -4.68224855, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.003039265, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.117433359, 
+          3.467773215, 
+          6.94194464, 
+          5.970850948
+        ], 
+        "t": [
+          1.409105233, 
+          4.009917071, 
+          6.596709834, 
+          13.97981027
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -12.3066235581354, 
+        "a2": 7.93255065878148, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.03006904, 
     "molemass_units": "kg/mol", 
     "name": "ETHANE", 
     "pc": 4872200.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 6856.8866849999995, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "64-17-5", 
@@ -320,11 +964,45 @@
       "C2H6O", 
       "ETHANOL"
     ], 
+    "alpha0": [
+      {
+        "a1": -12.7531, 
+        "a2": 9.39094, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.43069, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.14326, 
+          5.09206, 
+          6.60138, 
+          5.70777
+        ], 
+        "t": [
+          0.816771, 
+          2.59175, 
+          3.80408, 
+          8.58736
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 9.10869959576363, 
+        "a2": -4.32013218872146, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.04606844, 
     "molemass_units": "kg/mol", 
     "name": "ETHANOL", 
     "pc": 6268000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5930.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "100-41-4", 
@@ -335,40 +1013,126 @@
       "EBENZENE", 
       "ETHYLBENZENE"
     ], 
+    "alpha0": [
+      {
+        "a1": 5.70409, 
+        "a2": -0.52414353, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 4.2557889, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          9.7329909, 
+          11.201832, 
+          25.440749
+        ], 
+        "t": [
+          0.9479517759917034, 
+          7.16230230749287, 
+          2.710980036297641
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.106165, 
     "molemass_units": "kg/mol", 
     "name": "ETHYLBENZENE", 
     "pc": 3622400.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2741.016, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "74-85-1", 
     "Tc": 282.35, 
     "Tc_units": "K", 
-    "acentric": 0.08660000000000001, 
+    "acentric": 0.0866, 
     "aliases": [
       "ETHYLENE", 
       "R1150"
+    ], 
+    "alpha0": [
+      {
+        "a1": 8.68815523, 
+        "a2": -4.47960564, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.49395851, 
+          3.0027152, 
+          2.5126584, 
+          3.99064217
+        ], 
+        "t": [
+          4.43266896, 
+          5.74840149, 
+          7.8027825, 
+          15.5851154
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -12.2225787966305, 
+        "a2": 7.89924916929716, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
     ], 
     "molemass": 0.02805376, 
     "molemass_units": "kg/mol", 
     "name": "ETHYLENE", 
     "pc": 5041800.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 7636.765980745539, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-21-8", 
     "Tc": 468.92, 
     "Tc_units": "K", 
-    "acentric": 0.2101954890499582, 
+    "acentric": 0.21019548904995825, 
     "aliases": [
       "ETHYLENEOXIDE"
+    ], 
+    "alpha0": [
+      {
+        "a1": -3.90644775, 
+        "a2": 4.0000956, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.0, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          6.79, 
+          4.53, 
+          3.68
+        ], 
+        "t": [
+          2.8363047001620743, 
+          4.627655037106543, 
+          9.532542864454491
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
     ], 
     "molemass": 0.04405256, 
     "molemass_units": "kg/mol", 
     "name": "ETHYLENEOXIDE", 
     "pc": 7304686.159635853, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 7170.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7782-41-4", 
@@ -378,11 +1142,62 @@
     "aliases": [
       "FLUORINE"
     ], 
-    "molemass": 0.03799681, 
+    "alpha0": [
+      {
+        "n": [
+          3.0717001e-06, 
+          -5.2985762e-05, 
+          -16.372517, 
+          3.6884682e-05, 
+          4.3887271
+        ], 
+        "t": [
+          -4, 
+          -3, 
+          1, 
+          2, 
+          0
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "a": 2.5011231, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "c": [
+          1
+        ], 
+        "d": [
+          -1
+        ], 
+        "n": [
+          1.012767
+        ], 
+        "t": [
+          -8.9057501
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinsteinGeneralized"
+      }, 
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a1": -7.97036812567026, 
+        "a2": 19.8946542032696, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.03799681000000001, 
     "molemass_units": "kg/mol", 
     "name": "FLUORINE", 
     "pc": 5172400.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 15603.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7789-20-0", 
@@ -393,11 +1208,47 @@
       "HEAVYWATER", 
       "D2O"
     ], 
-    "molemass": 0.020027508000000003, 
+    "alpha0": [
+      {
+        "a1": -8.6739710041, 
+        "a2": 6.9611755531, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.0, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.00863, 
+          0.97454, 
+          2.0646, 
+          0.23528, 
+          0.29555
+        ], 
+        "t": [
+          0.4255669437, 
+          2.6093155672, 
+          6.0185106089, 
+          11.3380974051, 
+          29.5101165339
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 3.046062707632114, 
+        "a2": -1.5272349660106577, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.020027508, 
     "molemass_units": "kg/mol", 
     "name": "HEAVYWATER", 
     "pc": 21672051.479828164, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 17775.55, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7440-59-7", 
@@ -409,11 +1260,30 @@
       "HELIUM", 
       "HE"
     ], 
+    "alpha0": [
+      {
+        "a1": 0.1871304489697973, 
+        "a2": 0.4848903984696551, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "a1": -0.0278608575394308, 
+        "a2": -0.00835828466224539, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.004002602, 
     "molemass_units": "kg/mol", 
     "name": "HELIUM", 
     "pc": 227600.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 18130.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "421-14-7", 
@@ -425,11 +1295,51 @@
       "HFE143M", 
       "HFE-143M"
     ], 
+    "alpha0": [
+      {
+        "a1": -17.97705674077087, 
+        "a2": 12.92642879298097, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 273.15, 
+        "Tc": 377.921, 
+        "cp_over_R": 2.449945107759098, 
+        "type": "IdealGasHelmholtzCP0Constant"
+      }, 
+      {
+        "T0": 273.15, 
+        "Tc": 377.921, 
+        "c": [
+          0.03509543360059424, 
+          -2.345308276941699e-05, 
+          5.592658198860973e-09
+        ], 
+        "t": [
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": 7.64964970449937e-05, 
+        "a2": -8.0498560479886e-05, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.10004, 
     "molemass_units": "kg/mol", 
     "name": "HFE143M", 
     "pc": 3635000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4648.140743999999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "1333-74-0", 
@@ -441,26 +1351,82 @@
       "HYDROGEN", 
       "R702"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.4579856475, 
+        "a2": 1.888076782, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.616, 
+          -0.4117, 
+          -0.792, 
+          0.758, 
+          1.217
+        ], 
+        "t": [
+          16.0205159149, 
+          22.6580178006, 
+          60.0090511389, 
+          74.9434303817, 
+          206.9392065168
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.00201588, 
     "molemass_units": "kg/mol", 
     "name": "HYDROGEN", 
     "pc": 1296400.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 15508.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7647-01-0", 
     "Tc": 324.55, 
     "Tc_units": "K", 
-    "acentric": 0.1281892174308736, 
+    "acentric": 0.12818921743087364, 
     "aliases": [
       "HYDROGENCHLORIDE", 
       "HCL"
     ], 
+    "alpha0": [
+      {
+        "a1": 7.95672158, 
+        "a2": -3.21709065, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.0033327, 
+          0.935243, 
+          0.209996
+        ], 
+        "t": [
+          0.924356801725466, 
+          12.324757356339546, 
+          19.411492836234785
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.0364609, 
     "molemass_units": "kg/mol", 
     "name": "HYDROGENCHLORIDE", 
-    "pc": 8288160.904447134, 
-    "pc_units": "Pa"
+    "pc": 8288160.904447133, 
+    "pc_units": "Pa", 
+    "rhomolarc": 11800.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7783-06-4", 
@@ -471,11 +1437,44 @@
       "HYDROGENSULFIDE", 
       "H2S"
     ], 
+    "alpha0": [
+      {
+        "a1": -4.0740770957, 
+        "a2": 3.7632137341, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -0.002753352822675789
+        ], 
+        "t": [
+          -1.5
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          1.1364, 
+          1.9721
+        ], 
+        "t": [
+          4.886089520235862, 
+          10.62717770034843
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.03408088, 
     "molemass_units": "kg/mol", 
     "name": "HYDROGENSULFIDE", 
     "pc": 9000000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 10190.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-28-5", 
@@ -487,11 +1486,45 @@
       "R600A", 
       "ISOBUTANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 11.60865546, 
+        "a2": -5.29450411, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.05956619, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          4.94641014, 
+          4.09475197, 
+          15.6632824, 
+          9.73918122
+        ], 
+        "t": [
+          0.951277902, 
+          2.387895885, 
+          4.346904269, 
+          10.36885864
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -17.6081648486994, 
+        "a2": 10.3134499204439, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.0581222, 
     "molemass_units": "kg/mol", 
     "name": "ISOBUTANE", 
     "pc": 3629000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3879.756788283995, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "115-11-7", 
@@ -502,11 +1535,39 @@
       "IBUTENE", 
       "ISOBUTENE"
     ], 
-    "molemass": 0.0561063199999999, 
+    "alpha0": [
+      {
+        "a1": -0.12737888, 
+        "a2": 2.3125128, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          4.8924, 
+          7.832, 
+          7.2867, 
+          8.7293
+        ], 
+        "t": [
+          0.9543399746466072, 
+          3.037623478198474, 
+          4.795618168336961, 
+          9.60797914324667
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.05610631999999999, 
     "molemass_units": "kg/mol", 
     "name": "ISOBUTENE", 
     "pc": 4009800.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4170.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "107-83-5", 
@@ -517,41 +1578,110 @@
       "IHEXANE", 
       "ISOHEXANE"
     ], 
-    "molemass": 0.0861753599999999, 
+    "alpha0": [
+      {
+        "a1": 6.9259123919, 
+        "a2": -0.3128629679, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          7.9127, 
+          16.871, 
+          19.257, 
+          14.075
+        ], 
+        "t": [
+          0.6530038175607796, 
+          2.310628892907374, 
+          4.816154309825196, 
+          11.84046614426361
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.08617535999999999, 
     "molemass_units": "kg/mol", 
     "name": "ISOHEXANE", 
     "pc": 3040000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2715.0000000000005, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "78-78-4", 
     "Tc": 460.35, 
     "Tc_units": "K", 
-    "acentric": 0.22740000000000002, 
+    "acentric": 0.2274, 
     "aliases": [
       "ISOPENTANE", 
       "IPENTANE", 
       "R601A"
     ], 
+    "alpha0": [
+      {
+        "a1": 2.5822330405, 
+        "a2": 1.1609103419, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          7.4056, 
+          9.5772, 
+          15.765, 
+          12.119
+        ], 
+        "t": [
+          0.9601390246551537, 
+          2.409036602584989, 
+          4.494406429890301, 
+          9.108287172803301
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.07214878, 
     "molemass_units": "kg/mol", 
     "name": "ISOPENTANE", 
     "pc": 3378000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3271.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7439-90-9", 
     "Tc": 209.48, 
     "Tc_units": "K", 
-    "acentric": -0.0008900000000000001, 
+    "acentric": -0.00089, 
     "aliases": [
       "KRYPTON"
+    ], 
+    "alpha0": [
+      {
+        "a1": -3.7506412806, 
+        "a2": 3.7798018435, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }
     ], 
     "molemass": 0.083798, 
     "molemass_units": "kg/mol", 
     "name": "KRYPTON", 
     "pc": 5525000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 10850.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "108-38-3", 
@@ -562,11 +1692,45 @@
       "MXYLENE", 
       "M-XYLENE"
     ], 
+    "alpha0": [
+      {
+        "a1": 12.652887, 
+        "a2": 0.45975624, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.169909, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          4.44312, 
+          2.862794, 
+          24.83298, 
+          16.26077
+        ], 
+        "t": [
+          0.259365527079382, 
+          0.3079965634067662, 
+          2.160839047480102, 
+          5.667136766684498
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -7.79365691983003e-08, 
+        "a2": -0.919512475110122, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.106165, 
     "molemass_units": "kg/mol", 
     "name": "M-XYLENE", 
     "pc": 3534600.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2665.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "141-62-8", 
@@ -576,11 +1740,42 @@
     "aliases": [
       "DECAMETHYLTETRASILOXANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -7.756334333038524, 
+        "a2": 8.304835522982922, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 467.506025761878, 
+        "Tc": 599.4, 
+        "c": [
+          39.91834959574101, 
+          93.46354164160995, 
+          1813.8, 
+          62.70993515884111, 
+          795.1
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "a1": 9.28428984830427, 
+        "a2": -5.60685303331121, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.310685, 
     "molemass_units": "kg/mol", 
     "name": "MD2M", 
     "pc": 1227000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 914.6616014999984, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "141-63-9", 
@@ -590,55 +1785,182 @@
     "aliases": [
       "DODECAMETHYLPENTASILOXANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -7.835183629103501, 
+        "a2": 8.367692358068204, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 503.022623775204, 
+        "Tc": 628.36, 
+        "c": [
+          55.71009199381512, 
+          115.1245683430048, 
+          2117.1, 
+          88.79697953159261, 
+          908.5
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "a1": 10.9232086184983, 
+        "a2": -6.79248521719259, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.384839, 
     "molemass_units": "kg/mol", 
     "name": "MD3M", 
     "pc": 945000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 685.7981626999992, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "107-52-8", 
     "Tc": 653.2, 
     "Tc_units": "K", 
-    "acentric": 0.8246471472642923, 
+    "acentric": 0.8246471472642924, 
     "aliases": [
       "TETRADECAMETHYLHEXASILOXANE"
+    ], 
+    "alpha0": [
+      {
+        "a1": -8.139550790894862, 
+        "a2": 8.769441336438911, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 532.723355998617, 
+        "Tc": 653.2, 
+        "cp_over_R": -2.41398371417933, 
+        "type": "IdealGasHelmholtzCP0Constant"
+      }, 
+      {
+        "T0": 532.723355998617, 
+        "Tc": 653.2, 
+        "c": [
+          0.268026640777671, 
+          -0.000157724988429812, 
+          3.44219091723443e-08
+        ], 
+        "t": [
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }
     ], 
     "molemass": 0.45899328, 
     "molemass_units": "kg/mol", 
     "name": "MD4M", 
     "pc": 877000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 606.0605999999999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "107-51-7", 
     "Tc": 564.09, 
     "Tc_units": "K", 
-    "acentric": 0.5297000000000001, 
+    "acentric": 0.5280658490542447, 
     "aliases": [
       "OCTAMETHYLTRISILOXANE"
+    ], 
+    "alpha0": [
+      {
+        "a1": 117.9946064218, 
+        "a2": -19.6600754238, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          28.817, 
+          46.951, 
+          31.054
+        ], 
+        "t": [
+          0.0353756335, 
+          2.7769872306, 
+          8.3132738751
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
     ], 
     "molemass": 0.23653146, 
     "molemass_units": "kg/mol", 
     "name": "MDM", 
-    "pc": 1415000.0, 
-    "pc_units": "Pa"
+    "pc": 1410044.755816551, 
+    "pc_units": "Pa", 
+    "rhomolarc": 1085.436621399999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "74-82-8", 
     "Tc": 190.564, 
     "Tc_units": "K", 
-    "acentric": 0.011420000000000001, 
+    "acentric": 0.01142, 
     "aliases": [
       "R50", 
       "CH4", 
       "METHANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 9.91243972, 
+        "a2": -6.33270087, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.0016, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.008449, 
+          4.6942, 
+          3.4865, 
+          1.6572, 
+          1.4115
+        ], 
+        "t": [
+          3.400432401, 
+          10.26951575, 
+          20.43932747, 
+          29.93744884, 
+          79.13351945
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -12.8829893867948, 
+        "a2": 9.22344625310864, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.0160428, 
     "molemass_units": "kg/mol", 
     "name": "METHANE", 
     "pc": 4599200.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 10139.128, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "67-56-1", 
@@ -648,11 +1970,52 @@
     "aliases": [
       "METHANOL"
     ], 
+    "alpha0": [
+      {
+        "a1": 13.9864114647, 
+        "a2": 3200.6369296, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.1950423807804, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -0.585735321498174, 
+          -0.06899642310301084, 
+          0.008650264506162275
+        ], 
+        "t": [
+          -1, 
+          -2, 
+          -3
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          4.70118076896145
+        ], 
+        "t": [
+          3.7664265756
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -18.655572723326, 
+        "a2": -3195.18522006798, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.03204216, 
     "molemass_units": "kg/mol", 
     "name": "METHANOL", 
     "pc": 8215850.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 8520.024867237415, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "112-63-0", 
@@ -663,11 +2026,54 @@
       "METHYLLINOLEATE", 
       "MLINOLEA"
     ], 
+    "alpha0": [
+      {
+        "a1": -1, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 799, 
+        "c": [
+          22.97031008102499
+        ], 
+        "t": [
+          0.020213
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          52.60358084073167, 
+          34.54482738049993, 
+          38.72236264672008
+        ], 
+        "t": [
+          3.81991239048811, 
+          0.9344568210262828, 
+          2.032953692115144
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 56.2531140679551, 
+        "a2": -23.9733038177064, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.29447206, 
     "molemass_units": "kg/mol", 
     "name": "METHYLLINOLEATE", 
     "pc": 1341000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 808.4000000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "301-00-8", 
@@ -678,11 +2084,54 @@
       "MLINOLEN", 
       "METHYLLINOLENATE"
     ], 
+    "alpha0": [
+      {
+        "a1": -1, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 772, 
+        "c": [
+          9.572622290387171
+        ], 
+        "t": [
+          0.214648
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          34.92452677692582, 
+          9.794043446174333, 
+          57.11499178781286
+        ], 
+        "t": [
+          1.571554404145078, 
+          0.7496787564766839, 
+          3.626670984455958
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 49.2444711864376, 
+        "a2": -21.5426591230667, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.29245618, 
     "molemass_units": "kg/mol", 
     "name": "METHYLLINOLENATE", 
     "pc": 1369000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 847.3000000000002, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "112-62-9", 
@@ -693,26 +2142,112 @@
       "MOLEATE", 
       "METHYLOLEATE"
     ], 
+    "alpha0": [
+      {
+        "a1": -1, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 782, 
+        "c": [
+          10.85318466404121
+        ], 
+        "t": [
+          0.146118
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          28.23955628210667, 
+          40.38356254011078, 
+          51.91670619613609
+        ], 
+        "t": [
+          0.7845639386189258, 
+          1.797071611253197, 
+          3.667212276214834
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 60.4208015509131, 
+        "a2": -25.9023485195146, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.29648794, 
     "molemass_units": "kg/mol", 
     "name": "METHYLOLEATE", 
     "pc": 1246000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 812.8499999999999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "112-39-0", 
     "Tc": 755.0, 
     "Tc_units": "K", 
-    "acentric": 0.9103161780000001, 
+    "acentric": 0.910316178, 
     "aliases": [
       "MPALMITA", 
       "METHYLPALMITATE"
+    ], 
+    "alpha0": [
+      {
+        "a1": -1, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 755, 
+        "c": [
+          14.49629032366697
+        ], 
+        "t": [
+          0.0801627
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          41.56848444495333, 
+          34.76324173080383, 
+          36.27879196658549
+        ], 
+        "t": [
+          3.910423841059603, 
+          0.9730503311258278, 
+          2.110662251655629
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 50.7611531834779, 
+        "a2": -21.442651306684, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
     ], 
     "molemass": 0.27045066, 
     "molemass_units": "kg/mol", 
     "name": "METHYLPALMITATE", 
     "pc": 1350000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 897.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "112-61-8", 
@@ -723,11 +2258,54 @@
       "METHYLSTEARATE", 
       "MSTEARAT"
     ], 
-    "molemass": 0.29850382000000003, 
+    "alpha0": [
+      {
+        "a1": -1, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 775, 
+        "c": [
+          29.72106947981784
+        ], 
+        "t": [
+          -0.0916606
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          33.30818842134534, 
+          49.19097688945251, 
+          56.85291862189204
+        ], 
+        "t": [
+          0.7176387096774193, 
+          1.692709677419355, 
+          3.646077419354839
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 67.9678895651248, 
+        "a2": -28.5988132374956, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.29850382, 
     "molemass_units": "kg/mol", 
     "name": "METHYLSTEARATE", 
     "pc": 1239000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 794.3000000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "107-46-0", 
@@ -737,11 +2315,45 @@
     "aliases": [
       "HEXAMETHYLDISILOXANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          19.74, 
+          29.58, 
+          18.59, 
+          4.87
+        ], 
+        "t": [
+          6.940427993, 
+          2.699055331, 
+          0.038557933, 
+          12.14574899
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 72.1107541562, 
+        "a2": -10.4314993483, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.16237752, 
     "molemass_units": "kg/mol", 
     "name": "MM", 
     "pc": 1939000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 1589.825, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "106-97-8", 
@@ -754,11 +2366,45 @@
       "N-BUTANE", 
       "BUTANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 12.54882924, 
+        "a2": -5.46976878, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.24680487, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          5.54913289, 
+          11.4648996, 
+          7.59987584, 
+          9.66033239
+        ], 
+        "t": [
+          0.774840445, 
+          3.340602552, 
+          4.970513096, 
+          9.975553778
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -17.9737888338978, 
+        "a2": 10.3892639083242, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.0581222, 
     "molemass_units": "kg/mol", 
     "name": "N-BUTANE", 
     "pc": 3796000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3922.769612987809, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "124-18-5", 
@@ -769,44 +2415,149 @@
       "DECANE", 
       "N-DECANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 13.9361966549, 
+        "a2": -10.5265128286, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 18.109, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          25.685, 
+          28.233, 
+          12.417, 
+          10.035
+        ], 
+        "t": [
+          1.931358264529707, 
+          3.46446495062328, 
+          7.710862878419944, 
+          17.58458798769629
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.14228168, 
     "molemass_units": "kg/mol", 
     "name": "N-DECANE", 
     "pc": 2103000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 1640.0000000000002, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "112-40-3", 
     "Tc": 658.1, 
     "Tc_units": "K", 
-    "acentric": 0.5741822212406891, 
+    "acentric": 0.574182221240689, 
     "aliases": [
       "DODECANE", 
       "NDODECANE", 
       "N-DODECANE", 
       "C12"
     ], 
-    "molemass": 0.17033484000000002, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 22.085, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          37.776, 
+          29.369, 
+          12.461, 
+          7.7733
+        ], 
+        "t": [
+          1.944993162133414, 
+          3.645342653092235, 
+          8.661297675125361, 
+          21.07430481689713
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 20.5642482037682, 
+        "a2": -15.5930644722635, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.17033484, 
     "molemass_units": "kg/mol", 
     "name": "N-DODECANE", 
     "pc": 1817000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 1330.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "142-82-5", 
     "Tc": 540.13, 
     "Tc_units": "K", 
-    "acentric": 0.34900000000000003, 
+    "acentric": 0.349, 
     "aliases": [
       "N-HEPTANE", 
       "HEPTANE", 
       "NHEPTANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.599437140443368, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 371.533277446, 
+        "Tc": 540.13, 
+        "c": [
+          4, 
+          13.7266, 
+          169.789, 
+          30.4707, 
+          836.195
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "T0": 371.533277446, 
+        "Tc": 540.13, 
+        "c": [
+          0, 
+          43.5561, 
+          1760.46, 
+          0, 
+          0
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "a1": 12.1096994176959, 
+        "a2": 0.37483941500785, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.100202, 
     "molemass_units": "kg/mol", 
     "name": "N-HEPTANE", 
     "pc": 2736000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2315.3230474441625, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "110-54-3", 
@@ -818,11 +2569,54 @@
       "NHEXANE", 
       "HEXANE"
     ], 
-    "molemass": 0.0861753599999999, 
+    "alpha0": [
+      {
+        "a1": -1.570859897210351, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 341.864512243, 
+        "Tc": 507.82, 
+        "c": [
+          4, 
+          11.6977, 
+          182.326, 
+          26.8142, 
+          859.207
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "T0": 341.864512243, 
+        "Tc": 507.82, 
+        "c": [
+          0, 
+          38.6164, 
+          1826.59, 
+          0, 
+          0
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "a1": 7.55444021933976, 
+        "a2": 1.95248104655686, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.08617535999999999, 
     "molemass_units": "kg/mol", 
     "name": "N-HEXANE", 
     "pc": 3034000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2705.877875067769, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "111-84-2", 
@@ -833,11 +2627,39 @@
       "NONANE", 
       "N-NONANE"
     ], 
-    "molemass": 0.12825509999999998, 
+    "alpha0": [
+      {
+        "a1": 10.7927224829, 
+        "a2": -8.2418318753, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 16.349, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          24.926, 
+          24.842, 
+          11.188, 
+          17.483
+        ], 
+        "t": [
+          2.053654024051804, 
+          3.774283071230343, 
+          8.423177192834919, 
+          19.71911529728366
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.1282551, 
     "molemass_units": "kg/mol", 
     "name": "N-NONANE", 
     "pc": 2281000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 1810.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "111-65-9", 
@@ -849,11 +2671,54 @@
       "OCTANE", 
       "N-OCTANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.601873998562896, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 398.773831136, 
+        "Tc": 569.32, 
+        "c": [
+          4, 
+          15.6865, 
+          158.922, 
+          33.8029, 
+          815.064
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "T0": 398.773831136, 
+        "Tc": 569.32, 
+        "c": [
+          0, 
+          48.1731, 
+          1693.07, 
+          0, 
+          0
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "a1": 17.1871525209699, 
+        "a2": -1.39902544739164, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.1142285, 
     "molemass_units": "kg/mol", 
     "name": "N-OCTANE", 
     "pc": 2497000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2056.4, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "109-66-0", 
@@ -866,11 +2731,54 @@
       "NPENTANE", 
       "N-PENTANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.548185641277708, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 469.7, 
+        "c": [
+          4, 
+          8.95043, 
+          178.67, 
+          21.836, 
+          840.538
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 469.7, 
+        "c": [
+          0, 
+          33.4032, 
+          1774.25, 
+          0, 
+          0
+        ], 
+        "type": "IdealGasHelmholtzCP0AlyLee"
+      }, 
+      {
+        "a1": 4.12081292405308, 
+        "a2": 3.14199957169349, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.07214878, 
     "molemass_units": "kg/mol", 
     "name": "N-PENTANE", 
     "pc": 3370000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3215.5775884221466, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "74-98-6", 
@@ -883,11 +2791,39 @@
       "N-PROPANE", 
       "C3H8"
     ], 
+    "alpha0": [
+      {
+        "a1": -4.970583, 
+        "a2": 4.29352, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          3.043, 
+          5.874, 
+          9.337, 
+          7.922
+        ], 
+        "t": [
+          1.062478, 
+          3.344237, 
+          5.363757, 
+          11.762957
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.04409562, 
     "molemass_units": "kg/mol", 
     "name": "N-PROPANE", 
     "pc": 4251200.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5000.000000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "1120-21-4", 
@@ -899,26 +2835,85 @@
       "C11", 
       "UNDECANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 638.8, 
+        "c": [
+          -1158848, 
+          20321.8, 
+          -119.4274, 
+          0.4284215, 
+          -0.0004157728, 
+          1.61828e-07
+        ], 
+        "t": [
+          -2, 
+          -1, 
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": 9.44957570130074, 
+        "a2": -2.12108576273657, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.15630826, 
     "molemass_units": "kg/mol", 
     "name": "N-UNDECANE", 
     "pc": 1990400.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 1514.9168636385564, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7440-01-9", 
-    "Tc": 44.49180000000001, 
+    "Tc": 44.491800000000005, 
     "Tc_units": "K", 
     "acentric": -0.0384492992736859, 
     "aliases": [
       "NEON", 
       "R720"
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "a1": -3.05975215768078, 
+        "a2": 3.25252304485349, 
+        "reference": "NBP", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.020179, 
     "molemass_units": "kg/mol", 
     "name": "NEON", 
     "pc": 2680000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 23882.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "463-82-1", 
@@ -929,27 +2924,90 @@
       "NEOPENTN", 
       "NEOPENTANE"
     ], 
+    "alpha0": [
+      {
+        "a1": 0.8702452614, 
+        "a2": 1.6071746358, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          14.422, 
+          12.868, 
+          17.247, 
+          12.663
+        ], 
+        "t": [
+          1.636925346982063, 
+          3.977036934569097, 
+          7.562133997325587, 
+          17.9531516576751
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.07214878, 
     "molemass_units": "kg/mol", 
     "name": "NEOPENTANE", 
     "pc": 3196000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3270.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7727-37-9", 
     "Tc": 126.192, 
     "Tc_units": "K", 
-    "acentric": 0.037200000000000004, 
+    "acentric": 0.0372, 
     "aliases": [
       "N2", 
       "NITROGEN", 
       "R728"
     ], 
+    "alpha0": [
+      {
+        "a1": -12.76952708, 
+        "a2": -0.00784163, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -0.0001934819, 
+          -1.247742e-05, 
+          6.678326e-08
+        ], 
+        "t": [
+          -1, 
+          -2, 
+          -3
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          1.012941
+        ], 
+        "t": [
+          26.65788
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.02801348, 
     "molemass_units": "kg/mol", 
     "name": "NITROGEN", 
     "pc": 3395800.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 11183.901464580624, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "10024-97-2", 
@@ -960,11 +3018,37 @@
       "N2O", 
       "NITROUSOXIDE"
     ], 
+    "alpha0": [
+      {
+        "a1": -4.4262736272, 
+        "a2": 4.3120475243, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.1769, 
+          1.6145, 
+          0.48393
+        ], 
+        "t": [
+          2.839881106229, 
+          7.663478935125356, 
+          17.598216593435
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.0440128, 
     "molemass_units": "kg/mol", 
     "name": "NITROUSOXIDE", 
     "pc": 7245000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 10270.000000000002, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "756-13-8", 
@@ -975,11 +3059,33 @@
       "NOVEC649", 
       "NOVEC1230"
     ], 
+    "alpha0": [
+      {
+        "a1": -30.6610503233, 
+        "a2": 6.8305296372, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 29.8, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          29.8
+        ], 
+        "t": [
+          4.391027817387565
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.3160438, 
     "molemass_units": "kg/mol", 
     "name": "NOVEC649", 
     "pc": 1869026.583064056, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 1920.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "95-47-6", 
@@ -990,11 +3096,39 @@
       "OXYLENE", 
       "O-XYLENE"
     ], 
+    "alpha0": [
+      {
+        "a1": 10.137376, 
+        "a2": -0.91282993, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.748798, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          4.754892, 
+          6.915052, 
+          25.84813, 
+          10.93886
+        ], 
+        "t": [
+          0.3569960920827787, 
+          0.9948291099373432, 
+          2.738556688599449, 
+          7.83963418213782
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.106165, 
     "molemass_units": "kg/mol", 
     "name": "O-XYLENE", 
     "pc": 3737500.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2684.5000000000005, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7782-39-0o", 
@@ -1004,11 +3138,55 @@
     "aliases": [
       "ORTHODEUTERIUM"
     ], 
+    "alpha0": [
+      {
+        "a1": -2.0672670563, 
+        "a2": 2.4234599781, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          4.04482, 
+          -4.65391, 
+          -4.65342, 
+          3.46313, 
+          -4.58637, 
+          -4.6503, 
+          -4.65124, 
+          2.67024, 
+          15.20455, 
+          0.87164, 
+          -4.7608, 
+          4.32447
+        ], 
+        "t": [
+          41.49713093375065, 
+          12.56129368805425, 
+          12.32133541992697, 
+          9.447052686489306, 
+          53.15597287428273, 
+          12.08137715179969, 
+          12.81429316640584, 
+          70.77203964527908, 
+          16.13458528951487, 
+          225.4042775169536, 
+          25.08346374543558, 
+          6.604068857589984
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.0040282, 
     "molemass_units": "kg/mol", 
     "name": "ORTHODEUTERIUM", 
     "pc": 1679600.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 17230.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "1333-74-0o", 
@@ -1019,11 +3197,39 @@
       "ORTHOHYD", 
       "ORTHOHYDROGEN"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.4675442336, 
+        "a2": 1.8845068862, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.54151, 
+          -2.3661, 
+          1.00365, 
+          1.22447
+        ], 
+        "t": [
+          25.7676098736, 
+          43.4677904877, 
+          66.044551475, 
+          209.7531607465
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.00201594, 
     "molemass_units": "kg/mol", 
     "name": "ORTHOHYDROGEN", 
     "pc": 1310650.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 15444.540313699812, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7782-44-7", 
@@ -1035,11 +3241,47 @@
       "OXYGEN", 
       "R732"
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.51808732, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.02323928, 
+          0.784357918, 
+          0.00337183363, 
+          -0.0170864084, 
+          0.0463751562
+        ], 
+        "t": [
+          14.5316979447668, 
+          72.8419165356674, 
+          7.7710849975094, 
+          0.446425786480874, 
+          34.4677188658373
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -14.716836666461498, 
+        "a2": -0.011083985429237124, 
+        "reference": "CUSTOM", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.0319988, 
     "molemass_units": "kg/mol", 
     "name": "OXYGEN", 
     "pc": 5043000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 13630.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "106-42-3", 
@@ -1050,11 +3292,39 @@
       "PXYLENE", 
       "P-XYLENE"
     ], 
+    "alpha0": [
+      {
+        "a1": 5.9815241, 
+        "a2": -0.52477835, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 4.2430504, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          5.2291378, 
+          19.549862, 
+          16.656178, 
+          5.9390291
+        ], 
+        "t": [
+          0.6718946780748107, 
+          2.038405110294595, 
+          4.299152179275782, 
+          10.84282208748263
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.106165, 
     "molemass_units": "kg/mol", 
     "name": "P-XYLENE", 
     "pc": 3531500.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2693.92, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7782-39-0p", 
@@ -1064,11 +3334,53 @@
     "aliases": [
       "PARADEUTERIUM"
     ], 
+    "alpha0": [
+      {
+        "a1": -2.0683998716, 
+        "a2": 2.4241000701, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.28527, 
+          1.11376, 
+          -2.491, 
+          6.38763, 
+          6.17406, 
+          -3.13698, 
+          -3.14254, 
+          -2.29511, 
+          -3.37, 
+          1.13634, 
+          0.72512
+        ], 
+        "t": [
+          132.1857068335941, 
+          26.10328638497652, 
+          6.820552947313511, 
+          11.40323422013563, 
+          8.145539906103286, 
+          9.984350547730829, 
+          9.30620761606677, 
+          7.686489306207615, 
+          17.79864371413667, 
+          6.416275430359937, 
+          7.227438706311946
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.0040282, 
     "molemass_units": "kg/mol", 
     "name": "PARADEUTERIUM", 
     "pc": 1679600.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 17230.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "1333-74-0p", 
@@ -1079,11 +3391,45 @@
       "PARAHYDROGEN", 
       "PARAHYD"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.4485891134, 
+        "a2": 1.884521239, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          4.30256, 
+          13.0289, 
+          -47.7365, 
+          50.0013, 
+          -18.6261, 
+          0.993973, 
+          0.536078
+        ], 
+        "t": [
+          15.14967511472, 
+          25.0925982148, 
+          29.4735563787, 
+          35.4059141417, 
+          40.724998482, 
+          163.7925799988, 
+          309.2173173842
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.00201588, 
     "molemass_units": "kg/mol", 
     "name": "PARAHYDROGEN", 
     "pc": 1285800.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 15538.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "115-07-1", 
@@ -1095,25 +3441,97 @@
       "PROPYLENE", 
       "PROPYLEN"
     ], 
+    "alpha0": [
+      {
+        "a1": 4.9916462, 
+        "a2": -0.1709449, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.544, 
+          4.013, 
+          8.923, 
+          6.02
+        ], 
+        "t": [
+          0.8895942187358427, 
+          2.671528317376466, 
+          5.304617378387802, 
+          11.85301926630442
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -10.1739741651451, 
+        "a2": 4.53493517654279, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.04207974, 
     "molemass_units": "kg/mol", 
     "name": "PROPYLENE", 
     "pc": 4555000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5457.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "74-99-7", 
     "Tc": 402.38, 
     "Tc_units": "K", 
-    "acentric": 0.20400000000000001, 
+    "acentric": 0.204, 
     "aliases": [
       "PROPYNE"
     ], 
-    "molemass": 0.04006, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 402.38, 
+        "c": [
+          1.649840044261093, 
+          0.02333952849909193, 
+          -1.673911795340558e-05, 
+          6.980952359188388e-09, 
+          -1.29200161168108e-12
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -11.004154248087, 
+        "a2": 8.92674898200796, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.04006000000000001, 
     "molemass_units": "kg/mol", 
     "name": "PROPYNE", 
     "pc": 5626000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 6113.33, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-69-4", 
@@ -1123,11 +3541,66 @@
     "aliases": [
       ""
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 471.11, 
+        "cp_over_R": 4.00564923248634, 
+        "type": "IdealGasHelmholtzCP0Constant"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 471.11, 
+        "c": [
+          0.0002228874581905608
+        ], 
+        "t": [
+          1
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          1, 
+          2, 
+          1, 
+          2, 
+          1, 
+          2
+        ], 
+        "t": [
+          3.313613168898983, 
+          2.586756086688884, 
+          1.634512228566577, 
+          1.215500498821931, 
+          1.06738046316147, 
+          0.7360191462715714
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -20.0312014458899, 
+        "a2": 12.6387040144928, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.137368, 
     "molemass_units": "kg/mol", 
     "name": "R11", 
     "pc": 4394000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4113.0394269407725, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "76-13-1", 
@@ -1137,11 +3610,45 @@
     "aliases": [
       ""
     ], 
-    "molemass": 0.18737499999999999, 
+    "alpha0": [
+      {
+        "a1": 13.1479282, 
+        "a2": -5.4053715, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.9999966, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          12.4464495, 
+          2.72181845, 
+          0.692712415, 
+          3.32248298
+        ], 
+        "t": [
+          1.04971737, 
+          3.29788641, 
+          8.62650812, 
+          3.29670446
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -35.0036997726949, 
+        "a2": 17.3478156256033, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.187375, 
     "molemass_units": "kg/mol", 
     "name": "R113", 
     "pc": 3392200.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 2988.6591060707137, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "76-14-2", 
@@ -1151,25 +3658,93 @@
     "aliases": [
       ""
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 418.83, 
+        "c": [
+          2.007414931364566, 
+          0.06662223065231744, 
+          -0.0001211907268430731, 
+          1.385112968303604e-07, 
+          -7.290244178478347e-11
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -28.2691959611666, 
+        "a2": 17.4464013989786, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.170921, 
     "molemass_units": "kg/mol", 
     "name": "R114", 
     "pc": 3257000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3393.2000000000007, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "76-15-3", 
     "Tc": 353.1, 
     "Tc_units": "K", 
-    "acentric": 0.24843499306634578, 
+    "acentric": 0.2484349930663459, 
     "aliases": [
       ""
     ], 
-    "molemass": 0.15446641600000002, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          7.142, 
+          10.61
+        ], 
+        "t": [
+          0.8184650240725007, 
+          3.6845086377796656
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -13.405002276849826, 
+        "a2": 10.001553773783856, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.154466416, 
     "molemass_units": "kg/mol", 
     "name": "R115", 
-    "pc": 3129036.9682787084, 
-    "pc_units": "Pa"
+    "pc": 3129036.968278708, 
+    "pc_units": "Pa", 
+    "rhomolarc": 3980.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "76-16-4", 
@@ -1179,25 +3754,85 @@
     "aliases": [
       ""
     ], 
+    "alpha0": [
+      {
+        "a1": -10.7088650331, 
+        "a2": 8.9148979056, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.4818, 
+          7.0622, 
+          7.9951
+        ], 
+        "t": [
+          0.6483977749718459, 
+          2.122649558065727, 
+          5.016551206361124
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.13801182, 
     "molemass_units": "kg/mol", 
     "name": "R116", 
     "pc": 3048000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4444.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-71-8", 
     "Tc": 385.12, 
     "Tc_units": "K", 
-    "acentric": 0.17947831734355119, 
+    "acentric": 0.1794783173435512, 
     "aliases": [
       ""
     ], 
-    "molemass": 0.12091299999999999, 
+    "alpha0": [
+      {
+        "a1": 10.0100905, 
+        "a2": -4.66434985, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.00361975, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          3.16062357, 
+          0.371258136, 
+          3.56226039, 
+          2.12152336
+        ], 
+        "t": [
+          3.72204562, 
+          6.30985083, 
+          1.78037889, 
+          1.07087607
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -24.7279903483588, 
+        "a2": 14.0673715241366, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.120913, 
     "molemass_units": "kg/mol", 
     "name": "R12", 
-    "pc": 4136100.0000000014, 
-    "pc_units": "Pa"
+    "pc": 4136100.000000001, 
+    "pc_units": "Pa", 
+    "rhomolarc": 4672.781255944357, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "306-83-2", 
@@ -1207,27 +3842,108 @@
     "aliases": [
       ""
     ], 
-    "molemass": 0.15293099999999998, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 456.82, 
+        "cp_over_R": 2.046009, 
+        "type": "IdealGasHelmholtzCP0Constant"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 456.82, 
+        "c": [
+          0.04866685127621383, 
+          -5.586658475955018e-05, 
+          2.823486262027407e-08
+        ], 
+        "t": [
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -26.675860613148, 
+        "a2": 16.0562030850291, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.152931, 
     "molemass_units": "kg/mol", 
     "name": "R123", 
     "pc": 3672000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3596.417, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "102687-65-0", 
     "Tc": 439.6, 
     "Tc_units": "K", 
-    "acentric": 0.3024522935802718, 
+    "acentric": 0.3024522935801768, 
     "aliases": [
       "R1233ZDE", 
       "R1233ZD", 
       "R1233ZD(E)"
     ], 
-    "molemass": 0.13049439999999998, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 439.6, 
+        "c": [
+          4
+        ], 
+        "t": [
+          0
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          11.795, 
+          8.6848
+        ], 
+        "t": [
+          1.4331210191082802, 
+          5.072793448589627
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -20.872151262403126, 
+        "a2": 13.935740313938968, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.1304944, 
     "molemass_units": "kg/mol", 
     "name": "R1233ZD(E)", 
-    "pc": 3623637.776364791, 
-    "pc_units": "Pa"
+    "pc": 3623637.7763647954, 
+    "pc_units": "Pa", 
+    "rhomolarc": 3680.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "754-12-1", 
@@ -1237,11 +3953,39 @@
     "aliases": [
       "R1234YF"
     ], 
-    "molemass": 0.11404159280000001, 
+    "alpha0": [
+      {
+        "a1": -12.837928, 
+        "a2": 8.042605, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 4.944, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          7.549, 
+          1.537, 
+          2.03, 
+          7.455
+        ], 
+        "t": [
+          1.951882560826424, 
+          2.384123963572108, 
+          12.13809976892755, 
+          4.770966426532554
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.1140415928, 
     "molemass_units": "kg/mol", 
     "name": "R1234YF", 
     "pc": 3382200.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4170.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "29118-24-9", 
@@ -1253,11 +3997,41 @@
       "R1234ZE(E)", 
       "R1234ZEE"
     ], 
-    "molemass": 0.11404159280000001, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.0, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          9.3575, 
+          10.717
+        ], 
+        "t": [
+          1.34113088966911, 
+          5.15538034001459
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -12.5586602313194, 
+        "a2": 8.79132625741231, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.1140415928, 
     "molemass_units": "kg/mol", 
     "name": "R1234ZE(E)", 
     "pc": 3636250.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4290.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "29118-25-0", 
@@ -1267,11 +4041,41 @@
     "aliases": [
       "R1234ZE(Z)"
     ], 
-    "molemass": 0.11404159280000001, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298, 
+        "Tc": 423.27, 
+        "c": [
+          -1.6994, 
+          0.05794646443168663, 
+          -5.539762719017151e-05, 
+          1.998892498570471e-08
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }
+    ], 
+    "molemass": 0.1140415928, 
     "molemass_units": "kg/mol", 
     "name": "R1234ZE(Z)", 
     "pc": 3533000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4121.303363626818, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "2837-89-0", 
@@ -1281,11 +4085,43 @@
     "aliases": [
       ""
     ], 
+    "alpha0": [
+      {
+        "a1": -11.669406, 
+        "a2": 9.8760443, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.175638, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -7.389735, 
+          0.8736831, 
+          -0.1115133
+        ], 
+        "t": [
+          -1, 
+          -2, 
+          -3
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "a1": -0.000144036507408073, 
+        "a2": 7.30088431548676e-05, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.1364762, 
     "molemass_units": "kg/mol", 
     "name": "R124", 
     "pc": 3624295.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4103.279546177282, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "354-33-6", 
@@ -1295,25 +4131,98 @@
     "aliases": [
       ""
     ], 
+    "alpha0": [
+      {
+        "a1": 37.2674, 
+        "a2": 8.88404, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -49.8651
+        ], 
+        "t": [
+          -0.1
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          2.303, 
+          5.086, 
+          7.3
+        ], 
+        "t": [
+          0.92578, 
+          2.22895, 
+          5.03283
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.1200214, 
     "molemass_units": "kg/mol", 
     "name": "R125", 
     "pc": 3617700.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4779.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-72-9", 
     "Tc": 301.88, 
     "Tc_units": "K", 
-    "acentric": 0.17458632779799999, 
+    "acentric": 0.174586327798, 
     "aliases": [
       ""
+    ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 301.88, 
+        "c": [
+          2.4766458, 
+          0.018074269, 
+          2.1945535e-05, 
+          -8.5810657e-08, 
+          6.3199171e-11
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -17.2649115260318, 
+        "a2": 13.7187307950669, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
     ], 
     "molemass": 0.104459, 
     "molemass_units": "kg/mol", 
     "name": "R13", 
     "pc": 3879000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5580.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "811-97-2", 
@@ -1323,39 +4232,129 @@
     "aliases": [
       "R134A"
     ], 
+    "alpha0": [
+      {
+        "a1": -1.019535, 
+        "a2": 9.047135, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1.629789, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -9.723916, 
+          -3.92717
+        ], 
+        "t": [
+          -0.5, 
+          -0.75
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }
+    ], 
     "molemass": 0.102032, 
     "molemass_units": "kg/mol", 
     "name": "R134A", 
     "pc": 4059280.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5017.053, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "2314-97-8", 
     "Tc": 396.44, 
     "Tc_units": "K", 
-    "acentric": 0.1761811177701855, 
+    "acentric": 0.17618111777018552, 
     "aliases": [
       "CF3I"
     ], 
-    "molemass": 0.19591039999999998, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          6.2641
+        ], 
+        "t": [
+          1.7505801634547473
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -24.691504134838297, 
+        "a2": 14.217528781905427, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.1959104, 
     "molemass_units": "kg/mol", 
     "name": "R13I1", 
-    "pc": 3952566.0717186723, 
-    "pc_units": "Pa"
+    "pc": 3952566.071718672, 
+    "pc_units": "Pa", 
+    "rhomolarc": 4430.6, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-73-0", 
     "Tc": 227.51, 
     "Tc_units": "K", 
-    "acentric": 0.17850000000000002, 
+    "acentric": 0.1785, 
     "aliases": [
       ""
+    ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 227.51, 
+        "c": [
+          3.946282613411975, 
+          -0.008858129431283382, 
+          0.0001393877086940782, 
+          -3.005436298807747e-07, 
+          2.050274501811892e-10
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -14.8563435687485, 
+        "a2": 20.1558709204447, 
+        "reference": "OTH", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
     ], 
     "molemass": 0.0880046, 
     "molemass_units": "kg/mol", 
     "name": "R14", 
     "pc": 3750000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 7109.419400000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "1717-00-6", 
@@ -1365,11 +4364,37 @@
     "aliases": [
       "R141B"
     ], 
+    "alpha0": [
+      {
+        "a1": -15.5074814985, 
+        "a2": 9.1871858933, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          6.8978, 
+          7.8157, 
+          3.2039
+        ], 
+        "t": [
+          1.05130890052356, 
+          3.290052356020942, 
+          9.63979057591623
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.11694962, 
     "molemass_units": "kg/mol", 
     "name": "R141B", 
     "pc": 4212000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3921.000000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-68-3", 
@@ -1379,11 +4404,39 @@
     "aliases": [
       "R142B"
     ], 
+    "alpha0": [
+      {
+        "a1": -12.6016527149, 
+        "a2": 8.3160183265, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          5.0385, 
+          6.8356, 
+          4.0591, 
+          2.8136
+        ], 
+        "t": [
+          1.152927411885146, 
+          3.061473212109394, 
+          6.086384244137864, 
+          16.67235411690148
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.10049503, 
     "molemass_units": "kg/mol", 
     "name": "R142B", 
     "pc": 4055000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4438.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "420-46-2", 
@@ -1393,11 +4446,52 @@
     "aliases": [
       "R143A"
     ], 
-    "molemass": 0.0840409999999999, 
+    "alpha0": [
+      {
+        "a1": 5.903087, 
+        "a2": 7.307253, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 273.15, 
+        "Tc": 345.857, 
+        "c": [
+          1.0578
+        ], 
+        "t": [
+          0.33
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          4.4402, 
+          3.7515
+        ], 
+        "t": [
+          5.178440800677737, 
+          2.379596191489546
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -20.4128125563124, 
+        "a2": 4.0000801727654, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.08404099999999999, 
     "molemass_units": "kg/mol", 
     "name": "R143A", 
     "pc": 3761000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5128.45, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-37-6", 
@@ -1407,11 +4501,47 @@
     "aliases": [
       "R152A"
     ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 386.411, 
+        "c": [
+          3.354951, 
+          0.0109864910678, 
+          2.50161504325e-05, 
+          -2.78744429549e-08
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -14.5767531651083, 
+        "a2": 11.1518708142201, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.066051, 
     "molemass_units": "kg/mol", 
     "name": "R152A", 
     "pc": 4520000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5571.452362568319, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "353-36-6", 
@@ -1421,11 +4551,43 @@
     "aliases": [
       "FLUOROETHANE"
     ], 
+    "alpha0": [
+      {
+        "a1": -6.9187, 
+        "a2": 5.4788, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.059, 
+          9.253, 
+          6.088
+        ], 
+        "t": [
+          1.11925383077948, 
+          4.125249833444371, 
+          10.34510326449034
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 4.21805657510139e-05, 
+        "a2": -4.5424171382829e-06, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.0480595, 
     "molemass_units": "kg/mol", 
     "name": "R161", 
     "pc": 5010000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 6280.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-43-4", 
@@ -1435,39 +4597,164 @@
     "aliases": [
       ""
     ], 
-    "molemass": 0.10292269999999999, 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 451.48, 
+        "c": [
+          2.941888561986215, 
+          0.01573866857206258, 
+          4.012367529660798e-06, 
+          -3.085298103142579e-08, 
+          2.125677686617732e-11
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3, 
+          4
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -19.5492777147267, 
+        "a2": 12.6393155496886, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.1029227, 
     "molemass_units": "kg/mol", 
     "name": "R21", 
     "pc": 5181200.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5110.765599999999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "76-19-7", 
     "Tc": 345.02, 
     "Tc_units": "K", 
-    "acentric": 0.31720000000000004, 
+    "acentric": 0.3172, 
     "aliases": [
       ""
+    ], 
+    "alpha0": [
+      {
+        "a1": -15.6587335175, 
+        "a2": 11.4531412796, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          7.2198, 
+          7.2692, 
+          11.599
+        ], 
+        "t": [
+          0.9448727609993625, 
+          1.724537707958959, 
+          4.315691843951075
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
     ], 
     "molemass": 0.18801933, 
     "molemass_units": "kg/mol", 
     "name": "R218", 
     "pc": 2640000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3340.0000000000005, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-45-6", 
     "Tc": 369.295, 
     "Tc_units": "K", 
-    "acentric": 0.22082000000000002, 
+    "acentric": 0.22082, 
     "aliases": [
       ""
     ], 
-    "molemass": 0.08646799999999999, 
+    "alpha0": [
+      {
+        "a1": -15.86079407387002, 
+        "a2": 11.68367319965483, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 273.15, 
+        "Tc": 369.295, 
+        "cp_over_R": 4.00526140446, 
+        "type": "IdealGasHelmholtzCP0Constant"
+      }, 
+      {
+        "T0": 273.15, 
+        "Tc": 369.295, 
+        "c": [
+          0.000120662553
+        ], 
+        "t": [
+          1
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "n": [
+          1, 
+          1, 
+          1, 
+          1, 
+          1, 
+          1, 
+          1, 
+          1, 
+          1
+        ], 
+        "t": [
+          11.78545471777306, 
+          5.240144329059424, 
+          5.111575732138263, 
+          4.589509308276581, 
+          4.34795618678834, 
+          3.147982615524174, 
+          2.322026780757931, 
+          1.640223615266927, 
+          1.437630674663887
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 1.17703822802506, 
+        "a2": -0.622087185111783, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.086468, 
     "molemass_units": "kg/mol", 
     "name": "R22", 
     "pc": 4990000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 6058.220000000001, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "431-89-0", 
@@ -1477,11 +4764,35 @@
     "aliases": [
       "R227EA"
     ], 
+    "alpha0": [
+      {
+        "a1": -15.8291124137, 
+        "a2": 11.0879509962, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          11.43, 
+          12.83
+        ], 
+        "t": [
+          1.07495332088557, 
+          3.809015737530008
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.17002886, 
     "molemass_units": "kg/mol", 
     "name": "R227EA", 
     "pc": 2925242.2339447653, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3495.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-46-7", 
@@ -1491,11 +4802,39 @@
     "aliases": [
       ""
     ], 
+    "alpha0": [
+      {
+        "a1": -8.31386064, 
+        "a2": 6.55087253, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.999, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          2.371, 
+          3.237, 
+          2.61, 
+          0.8274
+        ], 
+        "t": [
+          2.485858339486724, 
+          4.874821663052594, 
+          7.133477896242144, 
+          16.4086697650797
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.07001385, 
     "molemass_units": "kg/mol", 
     "name": "R23", 
     "pc": 4832000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 7519.999999999999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "431-63-0", 
@@ -1505,11 +4844,39 @@
     "aliases": [
       "R236EA"
     ], 
+    "alpha0": [
+      {
+        "a1": -14.121424135, 
+        "a2": 10.2355589225, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.762, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.7762, 
+          10.41, 
+          12.18, 
+          3.332
+        ], 
+        "t": [
+          0.3491416933372127, 
+          0.93346911065852, 
+          3.724178062263602, 
+          17.26554165454369
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.1520384, 
     "molemass_units": "kg/mol", 
     "name": "R236EA", 
     "pc": 3420000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3716.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "690-39-1", 
@@ -1519,25 +4886,77 @@
     "aliases": [
       "R236FA"
     ], 
+    "alpha0": [
+      {
+        "a1": -17.5983849, 
+        "a2": 8.87150449, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 9.175, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          9.8782, 
+          18.236, 
+          49.934
+        ], 
+        "t": [
+          2.416660386364208, 
+          6.014017635089306, 
+          13.03288366367724
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.1520384, 
     "molemass_units": "kg/mol", 
     "name": "R236FA", 
     "pc": 3200000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3626.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "679-86-7", 
     "Tc": 447.57, 
     "Tc_units": "K", 
-    "acentric": 0.3545654191235898, 
+    "acentric": 0.35456541912358985, 
     "aliases": [
       "R245CA"
+    ], 
+    "alpha0": [
+      {
+        "a1": -18.09410031, 
+        "a2": 8.996084665, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 7.888, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.8843, 
+          14.46, 
+          5.331
+        ], 
+        "t": [
+          1.9326585785463726, 
+          2.5068704336751795, 
+          6.323033268539
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
     ], 
     "molemass": 0.13404794, 
     "molemass_units": "kg/mol", 
     "name": "R245CA", 
-    "pc": 3940740.4887504284, 
-    "pc_units": "Pa"
+    "pc": 3940740.488750428, 
+    "pc_units": "Pa", 
+    "rhomolarc": 3920.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "460-73-1", 
@@ -1547,25 +4966,79 @@
     "aliases": [
       "R245FA"
     ], 
+    "alpha0": [
+      {
+        "a1": -13.4283638514, 
+        "a2": 9.87236538, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          5.5728, 
+          10.385, 
+          12.554
+        ], 
+        "t": [
+          0.5197115834815994, 
+          2.364453600524394, 
+          5.735555763648281
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.13404794, 
     "molemass_units": "kg/mol", 
     "name": "R245FA", 
     "pc": 3651000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3875.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "75-10-5", 
     "Tc": 351.255, 
     "Tc_units": "K", 
-    "acentric": 0.27690000000000003, 
+    "acentric": 0.2769, 
     "aliases": [
       ""
+    ], 
+    "alpha0": [
+      {
+        "a1": -8.258096, 
+        "a2": 6.353098, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.004486, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.160761, 
+          2.645151, 
+          5.794987, 
+          1.129475
+        ], 
+        "t": [
+          2.2718538, 
+          11.914421, 
+          5.1415638, 
+          32.768217
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
     ], 
     "molemass": 0.052024, 
     "molemass_units": "kg/mol", 
     "name": "R32", 
     "pc": 5782000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 8150.084599999999, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "406-58-6", 
@@ -1575,53 +5048,187 @@
     "aliases": [
       "R365MFC"
     ], 
-    "molemass": 0.14807452000000002, 
+    "alpha0": [
+      {
+        "a1": -16.3423704513, 
+        "a2": 10.2889710846, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          17.47, 
+          16.29
+        ], 
+        "t": [
+          1.236956521739131, 
+          4.852173913043479
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.14807452, 
     "molemass_units": "kg/mol", 
     "name": "R365MFC", 
     "pc": 3266207.0678832484, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3200.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "74-87-3", 
     "Tc": 416.3, 
     "Tc_units": "K", 
-    "acentric": 0.1500684963962621, 
+    "acentric": 0.1500684963962622, 
     "aliases": [
       "METHYLCHLORIDE"
+    ], 
+    "alpha0": [
+      {
+        "a1": 7.499423, 
+        "a2": -2.997533, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.92518, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -0.060842, 
+          -0.11525, 
+          0.010843
+        ], 
+        "t": [
+          -1, 
+          -2, 
+          -3
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          3.764997
+        ], 
+        "t": [
+          3.7101
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
     ], 
     "molemass": 0.05048752, 
     "molemass_units": "kg/mol", 
     "name": "R40", 
     "pc": 6671686.977141843, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 7194.233, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "593-53-3", 
     "Tc": 317.28000000000003, 
     "Tc_units": "K", 
-    "acentric": 0.20040000000000002, 
+    "acentric": 0.2004, 
     "aliases": [
       ""
     ], 
-    "molemass": 0.0340329199999999, 
+    "alpha0": [
+      {
+        "a1": -4.867644116, 
+        "a2": 4.2527951258, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -0.0268688568
+        ], 
+        "t": [
+          -1
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          5.6936, 
+          2.9351
+        ], 
+        "t": [
+          5.802445789208271, 
+          13.33837619768028
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": 0.00152259725820867, 
+        "a2": -0.00354958910457479, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
+    "molemass": 0.03403291999999999, 
     "molemass_units": "kg/mol", 
     "name": "R41", 
     "pc": 5897000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 9300.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "115-25-3", 
     "Tc": 388.38, 
     "Tc_units": "K", 
-    "acentric": 0.35534499999999997, 
+    "acentric": 0.355345, 
     "aliases": [
       ""
+    ], 
+    "alpha0": [
+      {
+        "a1": 0, 
+        "a2": 0, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": -1, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "T0": 298.15, 
+        "Tc": 388.38, 
+        "c": [
+          2.911028455074322, 
+          0.06984062483537816, 
+          -6.093191543939451e-05, 
+          1.857067747732578e-08
+        ], 
+        "t": [
+          0, 
+          1, 
+          2, 
+          3
+        ], 
+        "type": "IdealGasHelmholtzCP0PolyT"
+      }, 
+      {
+        "a1": -32.5172232538152, 
+        "a2": 20.7826742209953, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
     ], 
     "molemass": 0.2000312, 
     "molemass_units": "kg/mol", 
     "name": "RC318", 
     "pc": 2777500.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3099.38, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7446-09-5", 
@@ -1632,11 +5239,44 @@
       "SO2", 
       "SULFURDIOXIDE"
     ], 
-    "molemass": 0.06406379999999999, 
+    "alpha0": [
+      {
+        "a1": -4.5414235721, 
+        "a2": 4.4732289572, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          -0.0159272204
+        ], 
+        "t": [
+          -1
+        ], 
+        "type": "IdealGasHelmholtzPower"
+      }, 
+      {
+        "n": [
+          1.0875, 
+          1.916
+        ], 
+        "t": [
+          1.8182240386401636, 
+          4.328441389559726
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.0640638, 
     "molemass_units": "kg/mol", 
     "name": "SULFURDIOXIDE", 
-    "pc": 7886587.600346413, 
-    "pc_units": "Pa"
+    "pc": 7886587.6003464125, 
+    "pc_units": "Pa", 
+    "rhomolarc": 8195.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "2551-62-4", 
@@ -1647,11 +5287,43 @@
       "SF6", 
       "SULFURHEXAFLUORIDE"
     ], 
+    "alpha0": [
+      {
+        "a1": 11.638611086, 
+        "a2": -6.392241811, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          3.66118232, 
+          7.87885103, 
+          3.45981679
+        ], 
+        "t": [
+          1.617282065, 
+          2.747115139, 
+          4.232907175
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }, 
+      {
+        "a1": -27.047571044927, 
+        "a2": 17.2073865481014, 
+        "reference": "IIR", 
+        "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+      }
+    ], 
     "molemass": 0.1460554192, 
     "molemass_units": "kg/mol", 
     "name": "SULFURHEXAFLUORIDE", 
     "pc": 3754983.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 5082.317411198119, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "108-88-3", 
@@ -1661,11 +5333,41 @@
     "aliases": [
       "TOLUENE"
     ], 
+    "alpha0": [
+      {
+        "a1": 3.5241174832, 
+        "a2": 1.1360823464, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          1.6994, 
+          8.0577, 
+          17.059, 
+          8.4567, 
+          8.6423
+        ], 
+        "t": [
+          0.3210815378115758, 
+          1.346852555978031, 
+          2.735952682720744, 
+          5.191381495564005, 
+          13.37558090409801
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.09213842, 
     "molemass_units": "kg/mol", 
     "name": "TOLUENE", 
     "pc": 4126000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 3169.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "624-64-6", 
@@ -1676,11 +5378,39 @@
       "TRANS-2-BUTENE", 
       "T2BUTENE"
     ], 
-    "molemass": 0.0561063199999999, 
+    "alpha0": [
+      {
+        "a1": 0.5917816, 
+        "a2": 2.1427758, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 2.9988, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          5.3276, 
+          13.29, 
+          9.6745, 
+          0.40087
+        ], 
+        "t": [
+          0.8445906535078509, 
+          3.739996733627307, 
+          8.700216980471756, 
+          10.5620494155526
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
+    "molemass": 0.05610631999999999, 
     "molemass_units": "kg/mol", 
     "name": "TRANS-2-BUTENE", 
     "pc": 4027300.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 4213.0, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7732-18-5", 
@@ -1692,25 +5422,68 @@
       "H2O", 
       "R718"
     ], 
+    "alpha0": [
+      {
+        "a1": -8.3204464837497, 
+        "a2": 6.6832105275932, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 3.00632, 
+        "type": "IdealGasHelmholtzLogTau"
+      }, 
+      {
+        "n": [
+          0.012436, 
+          0.97315, 
+          1.2795, 
+          0.96956, 
+          0.24873
+        ], 
+        "t": [
+          1.28728967, 
+          3.53734222, 
+          7.74073708, 
+          9.24437796, 
+          27.5075105
+        ], 
+        "type": "IdealGasHelmholtzPlanckEinstein"
+      }
+    ], 
     "molemass": 0.018015268, 
     "molemass_units": "kg/mol", 
     "name": "WATER", 
     "pc": 22064000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 17873.72799560906, 
+    "rhomolarc_units": "mol/m^3"
   }, 
   {
     "CAS": "7440-63-3", 
     "Tc": 289.733, 
     "Tc_units": "K", 
-    "acentric": 0.0036300000000000004, 
+    "acentric": 0.00363, 
     "aliases": [
       "XENON", 
       "XE"
+    ], 
+    "alpha0": [
+      {
+        "a1": -3.8227178129, 
+        "a2": 3.8416395351, 
+        "type": "IdealGasHelmholtzLead"
+      }, 
+      {
+        "a": 1.5, 
+        "type": "IdealGasHelmholtzLogTau"
+      }
     ], 
     "molemass": 0.131293, 
     "molemass_units": "kg/mol", 
     "name": "XENON", 
     "pc": 5842000.0, 
-    "pc_units": "Pa"
+    "pc_units": "Pa", 
+    "rhomolarc": 8400.0, 
+    "rhomolarc_units": "mol/m^3"
   }
 ]

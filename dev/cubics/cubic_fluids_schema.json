@@ -27,7 +27,7 @@
         "description": "Critical density (mol/m^3)",
         "type": "number",
         "minimum": 0.1,
-        "maximum": 20000
+        "maximum": 2000000
       },
       "rhomolarc_units": {
         "description": "Units of the critical density provided",

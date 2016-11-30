@@ -8,9 +8,12 @@ for fluid in CoolProp.__fluids__:
                          pc = PropsSI('pcrit', fluid),
                          pc_units = "Pa",
                          acentric = PropsSI('acentric', fluid),
+                         rhomolarc = PropsSI('rhomolar_critical', fluid),
+                         rhomolarc_units = "mol/m^3",
                          molemass = PropsSI('molemass', fluid),
                          molemass_units = "kg/mol",
                          name = fluid.upper(),
+                         alpha0 = json.loads(open('../fluids/'+fluid+'.json','r').read())['EOS'][0]['alpha0'],
                          CAS = CoolProp.CoolProp.get_fluid_param_string(fluid,"CAS"),
                          aliases = list(set([_.upper() for _ in CoolProp.CoolProp.get_fluid_param_string(fluid,"aliases").split(', ')]))
                          ))
