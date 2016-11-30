@@ -40,6 +40,9 @@ public:
 
     /// Set the alpha function based on the alpha function defined in the components vector;
     void set_alpha_from_components();
+    
+    /// Set the non-dimensionalized Helmholtz energy based on the fluids defined in the components vector
+    void set_alpha0_from_components();
 
 	/// Get a reference to the shared pointer managing the generalized cubic class
 	shared_ptr<AbstractCubic> &get_cubic(){ return cubic; };
@@ -60,6 +63,9 @@ public:
             case iT_critical: return cubic->get_Tc()[i];
             case iacentric_factor: return cubic->get_acentric()[i];
             case imolar_mass: return components[i].molemass;
+            case iT_triple: return HelmholtzEOSMixtureBackend::get_components()[i].EOS().sat_min_liquid.T; // From the base class data structure
+            case iP_triple: return HelmholtzEOSMixtureBackend::get_components()[i].EOS().sat_min_liquid.p; // From the base class data structure
+            case irhomolar_critical: return components[i].rhomolarc;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         }
@@ -191,6 +197,9 @@ public:
     //
     void copy_all_alpha_functions(AbstractCubicBackend *donor);
     
+    /// Copy the internals from another class into this one (kij, alpha functions, cp0 functions, etc.)
+    void copy_internals(AbstractCubicBackend &donor);
+    
     // Set the cubic alpha function's constants:
     void set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3);
 
@@ -236,7 +245,7 @@ public:
     }
     HelmholtzEOSMixtureBackend *get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend *ACB = new SRKBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
-        ACB->copy_k(this); ACB->copy_all_alpha_functions(this);
+        ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(SRK_BACKEND); }
@@ -279,7 +288,7 @@ public:
     };
     HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend * ACB = new PengRobinsonBackend(cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
-        ACB->copy_k(this); ACB->copy_all_alpha_functions(this);
+        ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend *>(ACB);
     }
     std::string backend_name(void) { return get_backend_string(PR_BACKEND); }

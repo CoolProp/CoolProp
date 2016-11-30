@@ -7,6 +7,7 @@
 #include "CPstrings.h"
 #include "CoolProp.h"
 #include "Configuration.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 namespace CoolProp{
 namespace CubicLibrary{
@@ -35,6 +36,9 @@ public:
             val.name = cpjson::get_string(*itr, "name");
             val.aliases = cpjson::get_string_array(*itr, "aliases");
             val.CAS = cpjson::get_string(*itr, "CAS");
+            if (itr->HasMember("rhomolarc") && (*itr)["rhomolarc"].IsNumber()){
+                val.rhomolarc = cpjson::get_double(*itr, "rhomolarc");
+            }
             if (itr->HasMember("alpha") && (*itr)["alpha"].IsObject()){
                 rapidjson::Value &alpha = (*itr)["alpha"];
                 val.alpha_type = cpjson::get_string(alpha, "type");
@@ -42,6 +46,9 @@ public:
             }
             else{
                 val.alpha_type = "default";
+            }
+            if (itr->HasMember("alpha0") && (*itr)["alpha0"].IsArray()){
+                val.alpha0 = JSONFluidLibrary::parse_alpha0((*itr)["alpha0"]);
             }
             std::pair<std::map<std::string, CubicsValues>::iterator, bool> ret;
             ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val) );

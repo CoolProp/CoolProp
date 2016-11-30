@@ -2988,8 +2988,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         CoolPropDbl summer = 0;
         CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
         for (unsigned int i = 0; i < N; ++i){
-            rho_ci = components[i].EOS().reduce.rhomolar;
-            T_ci = components[i].EOS().reduce.T;
+            
+            rho_ci = get_fluid_constant(i, irhomolar_critical);
+            T_ci = get_fluid_constant(i, iT_critical);
             tau_i = T_ci*tau/Tr;
             delta_i = delta*rhor/rho_ci;
 

@@ -27,6 +27,9 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
 
     // Set the alpha function based on the components in use
     set_alpha_from_components();
+    
+    // Set the ideal-gas helmholtz energy based on the components in use;
+    set_alpha0_from_components();
 
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
@@ -62,6 +65,22 @@ void CoolProp::AbstractCubicBackend::set_alpha_from_components(){
             }
             cubic->set_alpha_function(i, acaf);
         }
+    }
+}
+
+void CoolProp::AbstractCubicBackend::set_alpha0_from_components(){
+    
+    // If empty so far (e.g., for SatL and SatV)
+    if (components.size() == 0){ return; }
+    
+    // Get the vector of CoolProp fluids from the base class
+    std::vector<CoolPropFluid> & _components = HelmholtzEOSMixtureBackend::get_components();
+
+    for (std::size_t i = 0; i < N; ++i){
+        CoolPropFluid fld;
+        fld.EOSVector.push_back(EquationOfState());
+        fld.EOS().alpha0 = components[i].alpha0;
+        _components.push_back(fld);
     }
 }
 
@@ -530,6 +549,21 @@ void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend *donor){
         ACB->copy_k(this);
     }
 }
+
+void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend &donor){
+    this->copy_k(&donor);
+    
+    this->components = donor.components;
+    this->set_alpha_from_components();
+    this->set_alpha0_from_components();
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
+        ACB->components = donor.components;
+        ACB->set_alpha_from_components();
+        ACB->set_alpha0_from_components();
+    }
+}
+
 
 void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3){
     if (parameter == "MC" || parameter == "mc" || parameter == "Mathias-Copeman") {
