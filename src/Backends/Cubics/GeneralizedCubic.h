@@ -24,6 +24,7 @@ protected:
     std::vector<double> c; ///< The vector of constants
 public:
     virtual double term(double tau, std::size_t itau) = 0;
+    void set_Tr_over_Tci(double Tr_over_Tci){ this->Tr_over_Tci = Tr_over_Tci; this->sqrt_Tr_Tci = sqrt(Tr_over_Tci); };
     AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
 };
 
@@ -123,7 +124,7 @@ public:
     /// Read-only accessor for value of R_u (universal gas constant)
     double get_R_u(){ return R_u; }
     /// Set the reducing temperature to be used
-    void set_Tr(double Tr){ T_r = Tr; }
+    void set_Tr(double Tr){ T_r = Tr; for (std::size_t i = 0; i < alpha.size(); ++i){ alpha[i]->set_Tr_over_Tci(T_r/Tc[i]); } }
     /// Set the reducing density to be used
     void set_rhor(double rhor) { rho_r = rhor; }
     /// Get the reducing temperature to be used

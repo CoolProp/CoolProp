@@ -966,10 +966,15 @@ public:
 
     HelmholtzConsistencyFixture(){
         shared_ptr<AbstractCubic> _SRK(new SRK(300, 4e6, 0.3, 8.314461));
+        _SRK->set_Tr(300);
+        _SRK->set_rhor(4000);
         Soave.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_SRK));
 
         shared_ptr<AbstractCubic> _PR(new PengRobinson(300, 4e6, 0.3, 8.314461));
+        _PR->set_Tr(300);
+        _PR->set_rhor(4000);
         PR.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_PR));
+
 
         XiangDeiters.reset(new CoolProp::ResidualHelmholtzXiangDeiters(300, 4e6, 4000, 0.3, 8.3144621));
         Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
