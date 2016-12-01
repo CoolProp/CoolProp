@@ -15,7 +15,7 @@ CoolProp (as of version 6) comes with two standard cubic equations of state: Soa
 
   p = \frac{RT}{v-b} + \frac{a}{(v+\Delta_1b)(v+\Delta_2b)}
 
-where for pure fluids, a and b are not composition dependent, whereas for mixtures, they have composition dependence.
+where for pure fluids, :math:`a` and :math:`b` are not composition dependent, whereas for mixtures, they have composition dependence.  These cubic EOS can be converted to a form that is compatible with the multi-fluid model used in CoolProp according to the analysis in Bell and Jager :cite:`Bell-JRN-2016`.
 
 The motivations for the use of cubic EOS are twofold:
 
@@ -150,6 +150,20 @@ According to a forthcoming paper from Bell *et al.*, it is possible to calculate
 
     In [0]: [(pt.T, pt.p, pt.rhomolar, pt.stable) for pt in pts]
 
+Cubics in multi-fluid model
+---------------------------
+
+The cubic equations of state can also be used to replace a single fluid in a multi-fluid model (the GERG-like model) (see Bell and Jager :cite:`Bell-JRN-2016`), by appending either ``-SRK`` or ``-PengRobinson`` to the fluid name.  For instance, you could calculate the NBP with both the conventional multi-fluid model (as in GERG), or translating both to cubic equations of state
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    # With the normal multi-fluid model
+    In [0]: CP.PropsSI('T', 'P', 101325, 'Q', 0, 'HEOS::Methane-SRK[0.4]&Ethane-SRK[0.6]')
+
+    # With both fluids using cubic translations in the multi-fluid model
+    In [0]: CP.PropsSI('T', 'P', 101325, 'Q', 0, 'HEOS::Methane[0.4]&Ethane[0.6]')
 
 Detailed Example
 ----------------
@@ -188,6 +202,13 @@ Here we plot phase envelopes and critical points for an equimolar methane/ethane
         pts = SRK.all_critical_points()
         for pt in pts:
           plt.plot(pt.T, pt.p, '*', color = c)
+
+    # A phase envelope calculated with SRK transformations in a multi-fluid model
+    HEOS = CP.AbstractState('HEOS','Methane-SRK&Ethane-SRK')
+    HEOS.set_mole_fractions([0.5, 0.5])
+    HEOS.build_phase_envelope("none")
+    PE = HEOS.get_phase_envelope_data()
+    plt.plot(PE.T, PE.p, '-', label = 'SRK with transformations in multi-fluid', color = 'g')
 
     plt.xlabel('Temperature [K]')
     plt.ylabel('Pressure [Pa]')
@@ -239,6 +260,12 @@ A `JSON schema <http://json-schema.org>`_ defines the structure of the data, and
     In [0]: CP.add_fluids_as_JSON("PR", json.dumps(fake_fluids))
 
     In [0]: CP.PropsSI("T","P",101325,"Q",0,"SRK::FAKEFLUID")
+
+    # Put in a placeholder interaction parameter (all beta and gamma values are 1.0)
+    In [0]: CP.apply_simple_mixing_rule("000-0-00", CP.get_fluid_param_string("Ethane","CAS"), "Lorentz-Berthelot")
+
+    # Once a fluid has been added to the cubic library, it can be used in the multi-fluid model
+    In [0]: CP.PropsSI("T","P",101325,"Q",0,"HEOS::FAKEFLUID-SRK[0.3]&Ethane-SRK[0.7]")
 
 Complete fluid schema
 ---------------------
