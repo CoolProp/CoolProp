@@ -373,21 +373,25 @@ void CoolProp::TabularBackend::load_tables(){
 CoolPropDbl CoolProp::TabularBackend::calc_saturated_vapor_keyed_output(parameters key){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+	double factor = 1.0;
+	mass_to_molar(key, factor, molar_mass());
     if (is_mixture){
-        return phase_envelope_sat(phase_envelope, key, iP, _p);
+		return phase_envelope_sat(phase_envelope, key, iP, _p) * factor;
     }
     else{
-        return pure_saturation.evaluate(key, _p, 1, cached_saturation_iL, cached_saturation_iV);
+		return pure_saturation.evaluate(key, _p, 1, cached_saturation_iL, cached_saturation_iV) * factor;
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(parameters key){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
+	double factor = 1.0;
+	mass_to_molar(key, factor, molar_mass());
     if (is_mixture){
-        return phase_envelope_sat(phase_envelope, key, iP, _p);
+		return phase_envelope_sat(phase_envelope, key, iP, _p) * factor;
     }
     else{
-        return pure_saturation.evaluate(key, _p, 0, cached_saturation_iL, cached_saturation_iV);
+		return pure_saturation.evaluate(key, _p, 0, cached_saturation_iL, cached_saturation_iV) * factor;
     }
 };
 
