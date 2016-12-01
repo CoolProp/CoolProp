@@ -1,5 +1,8 @@
 # List of functions
 
+Below there is the list of all the functions provided by this plugin inside [SMath Studio](http://en.smath.info).
+
+****
 ```
 CoolProp_get_fluid_param_string(FluidName, ParamName)
 ```
@@ -7,18 +10,21 @@ CoolProp_get_fluid_param_string(FluidName, ParamName)
 * `FluidName` The name of the fluid that is part of CoolProp, for instance `"n-Propane"`
 * `ParamName` A string, can be in one of `"aliases"`, `"CAS"`, `"CAS_number"`, `"ASHRAE34"`, `"REFPROPName"`, `"REFPROP_name"`
 
+****
 ```
 CoolProp_get_global_param_string(ParamName)
 ```
 *Get a globally-defined string*
 * `ParamName` A string, one of `"version"`, `"errstring"`, `"warnstring"`, `"gitrevision"`, `"FluidsList"`, `"fluids_list"`, `"parameter_list"`, `"predefined_mixtures"`
 
+****
 ```
 CoolProp_get_param_index(Name)
 ```
 *Return the index of a parameter*
 * `Name`: The parameter name, one of `"Tcrit"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 
+****
 ```
 CoolProp_get_parameter_information_string(Key, Output)
 ```
@@ -26,6 +32,7 @@ CoolProp_get_parameter_information_string(Key, Output)
 * `Key` A string
 * `Output` A string, one of `"IO"`, `"short"`, `"long"`, `"units"`
 
+****
 ```
 CoolProp_HAProps(Output, Name1, Prop1, Name2, Prop2, Name3, Prop3)
 ```
@@ -38,6 +45,7 @@ CoolProp_HAProps(Output, Name1, Prop1, Name2, Prop2, Name3, Prop3)
 * `Name3` The third state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop3` The third state variable value
 
+****
 ```
 CoolProp_Phase(Name1, Prop1, Name2, Prop2, FluidName)
 ```
@@ -48,6 +56,7 @@ CoolProp_Phase(Name1, Prop1, Name2, Prop2, FluidName)
 * `Prop2` The second state variable value
 * `FluidName` The fluid name
 
+****
 ```
 CoolProp_Props(Output, Name1, Prop1, Name2, Prop2, FluidName)
 ```
@@ -59,6 +68,7 @@ CoolProp_Props(Output, Name1, Prop1, Name2, Prop2, FluidName)
 * `Prop2` The second state variable value
 * `FluidName` The fluid name
 
+****
 ```
 CoolProp_Props1(FluidName, Output)
 ```
@@ -66,6 +76,7 @@ CoolProp_Props1(FluidName, Output)
 * `FluidName` The fluid name
 * `Output` The output parameter, one of `"Tcrit"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 
+****
 ```
 CoolProp_saturation_ancillary(FluidName, output, Q, input, value)
 ```
@@ -76,6 +87,7 @@ CoolProp_saturation_ancillary(FluidName, output, Q, input, value)
 * `input` The input variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `value` The second state variable value
 
+****
 ```
 CoolProp_set_reference_stateD(FluidName, T, RhoMolar, h0, s0)
 ```
@@ -86,6 +98,7 @@ CoolProp_set_reference_stateD(FluidName, T, RhoMolar, h0, s0)
 * `h0` Enthalpy at reference state [J/mol]
 * `s0` Entropy at references state [J/mol/K]
 
+****
 ```
 CoolProp_set_reference_stateS(FluidName, ReferenceState)
 ```
