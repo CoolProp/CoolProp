@@ -60,7 +60,7 @@ CoolProp_Phase(Name1, Prop1, Name2, Prop2, FluidName)
 ```
 CoolProp_Props(Output, Name1, Prop1, Name2, Prop2, FluidName)
 ```
-*Return a value that **depends** on the thermodynamic state.*
+*Return a value that __depends__ on the thermodynamic state.*
 * `Output` The output parameter, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Name1` The first state variable name, one of `"T"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 * `Prop1` The first state variable value
@@ -72,7 +72,7 @@ CoolProp_Props(Output, Name1, Prop1, Name2, Prop2, FluidName)
 ```
 CoolProp_Props1(FluidName, Output)
 ```
-*Return a value that does **not depends** on the thermodynamic state.*
+*Return a value that does __not depends__ on the thermodynamic state.*
 * `FluidName` The fluid name
 * `Output` The output parameter, one of `"Tcrit"`, `"D"`, `"H"`, [etc...](http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table)
 
