@@ -41,9 +41,8 @@ namespace coolprop_wrapper.Functions
 
         TermInfo IFunction.GetTermInfo(string lang)
         {
-            string funcInfo = "(FluidName, Output) Return a value that does not depend on the thermodynamic state\r\n" +
-                "FluidName The fluid name\r\n" +
-                "Output The output parameter, one of \"Tcrit\",\"D\",\"H\",etc.";
+            string funcInfo = "(Name) Returns the index of a parameter\r\n" +
+                "Name: The parameter name, one of \"Tcrit\", \"D\", \"H\", etc...";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),

@@ -52,7 +52,7 @@ namespace coolprop_wrapper.Functions
         TermInfo IFunction.GetTermInfo(string lang)
         {
             string funcInfo = "(ParamName) Get a globally-defined string\r\n" +
-                "ParamName A string, one of \"version\", \"errstring\", \"warnstring\", \"gitrevision\", \"FluidsList\", \"fluids_list\", \"parameter_list\",\"predefined_mixtures\"";
+                "ParamName: A string, one of \"version\", \"errstring\", \"warnstring\", \"gitrevision\", \"FluidsList\", \"fluids_list\", \"parameter_list\",\"predefined_mixtures\"";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String)

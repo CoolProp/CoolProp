@@ -56,12 +56,12 @@ namespace coolprop_wrapper.Functions
         TermInfo IFunction.GetTermInfo(string lang)
         {
             string funcInfo = "(Output, Name1, Prop1, Name2, Prop2, FluidName) Return a value that depends on the thermodynamic state\r\n" +
-                "Output The output parameter, one of \"T\",\"D\",\"H\",etc.\r\n" +
-                "Name1 The first state variable name, one of \"T\",\"D\",\"H\",etc.\r\n" +
-                "Prop1 The first state variable value\r\n" +
-                "Name2 The second state variable name, one of \"T\",\"D\",\"H\",etc.\r\n" +
-                "Prop2 The second state variable value\r\n" +
-                "FluidName The fluid name";
+                "Output: The output parameter, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "Name1: The first state variable name, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "Prop1: The first state variable value\r\n" +
+                "Name2: The second state variable name, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "Prop2: The second state variable value\r\n" +
+                "FluidName: The fluid name";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),

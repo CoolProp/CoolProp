@@ -47,9 +47,9 @@ namespace coolprop_wrapper.Functions
 
         public TermInfo GetTermInfo(string lang)
         {
-            string funcInfo = "(key, Output) Get a parameter information string\r\n" +
-                "key A string\r\n" +
-                "Output A string (one of \"IO\", \"short\", \"long\", \"units\")";
+            string funcInfo = "(Key, Output) Get a parameter information string\r\n" +
+                "Key: A string\r\n" +
+                "Output: A string, one of \"IO\", \"short\", \"long\", \"units\"";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),

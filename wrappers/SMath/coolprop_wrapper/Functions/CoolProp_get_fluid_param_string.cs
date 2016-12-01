@@ -51,8 +51,8 @@ namespace coolprop_wrapper.Functions
         public TermInfo GetTermInfo(string lang)
         {
             string funcInfo = "(FluidName, ParamName) Get a string for a value from a fluid\r\n" +
-                "FluidName The name of the fluid that is part of CoolProp, for instance \"n-Propane\"\r\n" +
-                "ParamName A string, can be in one of \"aliases\", \"CAS\", \"CAS_number\", \"ASHRAE34\", \"REFPROPName\", \"REFPROP_name\"";
+                "FluidName: The name of the fluid that is part of CoolProp, for instance \"n-Propane\"\r\n" +
+                "ParamName: A string, can be in one of \"aliases\", \"CAS\", \"CAS_number\", \"ASHRAE34\", \"REFPROPName\", \"REFPROP_name\"";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),

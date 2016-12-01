@@ -52,12 +52,12 @@ namespace coolprop_wrapper.Functions
 
         TermInfo IFunction.GetTermInfo(string lang)
         {
-            string funcInfo = "(fluid_name, output, Q, input, value) Extract a value from the saturation ancillary\r\n" +
-                "fluid_name The name of the fluid to be used - HelmholtzEOS backend only\r\n" +
-                "output The desired output variable (\"P\" for instance for pressure)\r\n" +
-                "Q The quality, 0 or 1\r\n" +
-                "input The input variable (\"T\")\r\n" +
-                "value The input value";
+            string funcInfo = "(FluidName, output, Q, input, value) Extract a value from the saturation ancillary\r\n" +
+                "FluidName: The name of the fluid to be used - HelmholtzEOS backend only\r\n" +
+                "output: The desired output variable (\"P\" for instance for pressure)\r\n" +
+                "Q: The mass vapor quality, 0 or 1\r\n" +
+                "input: The input variable name, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "value: The input value";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),

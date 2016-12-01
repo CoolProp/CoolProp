@@ -59,13 +59,13 @@ namespace coolprop_wrapper.Functions
         TermInfo IFunction.GetTermInfo(string lang)
         {
             string funcInfo = "(Output, Name1, Prop1, Name2, Prop2, Name3, Prop3) Return a humid air property\r\n" +
-                "Output The output parameter, one of \"T\",\"D\",\"H\",etc.\r\n" +
-                "Name1 The first state variable name, one of \"T\",\"D\",\"H\",etc.\r\n" +
-                "Prop1 The first state variable value\r\n" +
-                "Name2 The second state variable name, one of \"T\",\"D\",\"H\",etc.\r\n" +
-                "Prop2 The second state variable value\r\n" +
-                "Name3 The third state variable name, one of \"T\",\"D\",\"H\",etc.\r\n" +
-                "Prop3 The third state variable value";
+                "Output: The output parameter, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "Name1: The first state variable name, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "Prop1: The first state variable value\r\n" +
+                "Name2: The second state variable name, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "Prop2: The second state variable value\r\n" +
+                "Name3: The third state variable name, one of \"T\", \"D\", \"H\", etc...\r\n" +
+                "Prop3: The third state variable value";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),

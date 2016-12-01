@@ -44,9 +44,9 @@ namespace coolprop_wrapper.Functions
 
         public TermInfo GetTermInfo(string lang)
         {
-            string funcInfo = "(FluidName, reference_state) Set the reference state based on a string representation\r\n" +
-                "FluidName The name of the fluid\r\n" +
-                "reference_state The reference state to use, one of \"IIR\", \"ASHRAE\", \"NBP\", \"DEF\", \"RESET\"";
+            string funcInfo = "(FluidName, ReferenceState) Set the reference state based on a string representation\r\n" +
+                "FluidName: The name of the fluid\r\n" +
+                "ReferenceState: The reference state to use, one of \"IIR\", \"ASHRAE\", \"NBP\", \"DEF\", \"RESET\"";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),

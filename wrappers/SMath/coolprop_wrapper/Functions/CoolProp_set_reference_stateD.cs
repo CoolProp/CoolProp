@@ -53,12 +53,12 @@ namespace coolprop_wrapper.Functions
 
         public TermInfo GetTermInfo(string lang)
         {
-            string funcInfo = "(FluidName, T, rhomolar, h0, s0) Set the reference state based on a thermodynamic state point specified by temperature and molar density\r\n" +
-                "FluidName The name of the fluid\r\n" +
-                "T Temperature at reference state [K]\r\n" +
-                "rhomolar Density at reference state [mol/m^3]\r\n" +
-                "h0 Enthalpy at reference state [J/mol]\r\n" +
-                "s0 Entropy at references state [J/mol/K]";
+            string funcInfo = "(FluidName, T, RhoMolar, h0, s0) Set the reference state based on a thermodynamic state point specified by temperature and molar density\r\n" +
+                "FluidName: The name of the fluid\r\n" +
+                "T: Temperature at reference state [K]\r\n" +
+                "RhoMolar: Density at reference state [mol/m^3]\r\n" +
+                "h0: Enthalpy at reference state [J/mol]\r\n" +
+                "s0: Entropy at references state [J/mol/K]";
 
             var argsInfos = new [] {
                 new ArgumentInfo(ArgumentSections.String),
