@@ -3304,9 +3304,43 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv(parameters Of
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end)
 {
+	// Note: If you need all three values (drho_dh__p, drho_dp__h and rho_spline), 
+	// you should calculate drho_dp__h first to avoid duplicate calculations.
+
+	bool drho_dh__p = false;
+	bool drho_dp__h = false;
+	bool rho_spline = false;
+
+	if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
+		drho_dh__p = true;
+		if (_drho_spline_dh__constp) return _drho_spline_dh__constp;
+	}
+	else if (Of == iDmass && Wrt == iHmass && Constant == iP){
+		return first_two_phase_deriv_splined(iDmolar, iHmolar, iP, x_end)*POW2(molar_mass());
+	}
+	else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
+		drho_dp__h = true;
+		if (_drho_spline_dp__consth) return _drho_spline_dp__consth;
+	}
+	else if (Of == iDmass && Wrt == iP && Constant == iHmass){
+		return first_two_phase_deriv_splined(iDmolar, iP, iHmolar, x_end)*molar_mass();
+	}
+	// Add the special case for the splined density
+	else if (Of == iDmolar && Wrt == iDmolar && Constant == iDmolar){
+		rho_spline = true;
+		if (_rho_spline) return _rho_spline;
+	}
+	else if (Of == iDmass && Wrt == iDmass && Constant == iDmass){
+		return first_two_phase_deriv_splined(iDmolar, iDmolar, iDmolar, x_end)*molar_mass();
+	}
+	else{
+		throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+	}
+
 	if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_first_two_phase_deriv_splined"));
-    if (_Q > x_end){throw ValueError(format("Q [%g] is greater than x_end [%Lg]", _Q, x_end).c_str());}
-    if (_phase != iphase_twophase){throw ValueError(format("state is not two-phase")); }
+	if (_Q > x_end){ throw ValueError(format("Q [%g] is greater than x_end [%Lg]", _Q, x_end).c_str()); }
+	if (_phase != iphase_twophase){ throw ValueError(format("state is not two-phase")); }
+
     shared_ptr<HelmholtzEOSMixtureBackend> Liq(new HelmholtzEOSMixtureBackend(this->get_components())), 
                                            End(new HelmholtzEOSMixtureBackend(this->get_components()));
     
@@ -3314,91 +3348,73 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
     Liq->_Q = -1;
     Liq->update_DmolarT_direct(SatL->rhomolar(), SatL->T());
     End->update(QT_INPUTS, x_end, SatL->T());
-    
-    bool mass_based_inputs = ((Of == iDmass) && ((Wrt == iHmass && Constant == iP) || (Wrt == iP && Constant == iHmass) || (Wrt == iDmass && Constant == iDmass)));
-    bool mole_based_inputs = ((Of == iDmolar) && ((Wrt == iHmolar && Constant == iP) || (Wrt == iP && Constant == iHmolar) || (Wrt == iDmolar && Constant == iDmolar)));
-    if (mass_based_inputs || mole_based_inputs)
-    {
-        parameters p_key, h_key, rho_key;
-        if (mass_based_inputs){ 
-            rho_key = iDmass; h_key = iHmass; p_key = iP;
-        }
-        else{
-            rho_key = iDmolar; h_key = iHmolar; p_key = iP;
-        }
+           
+    CoolPropDbl Delta = Q()*(SatV->keyed_output(iHmolar) - SatL->keyed_output(iHmolar));
+    CoolPropDbl Delta_end = End->keyed_output(iHmolar) - SatL->keyed_output(iHmolar);
         
-        CoolPropDbl Delta = Q()*(SatV->keyed_output(h_key) - SatL->keyed_output(h_key));
-        CoolPropDbl Delta_end = End->keyed_output(h_key) - SatL->keyed_output(h_key);
+    // At the end of the zone to which spline is applied
+    CoolPropDbl drho_dh_end = End->calc_first_two_phase_deriv(iDmolar, iHmolar, iP);
+    CoolPropDbl rho_end = End->keyed_output(iDmolar);
         
-        // At the end of the zone to which spline is applied
-        CoolPropDbl drho_dh_end = End->calc_first_two_phase_deriv(rho_key, h_key, p_key);
-        CoolPropDbl rho_end = End->keyed_output(rho_key);
+    // Faking single-phase
+    CoolPropDbl rho_liq = Liq->keyed_output(iDmolar);
+    CoolPropDbl drho_dh_liq__constp = Liq->first_partial_deriv(iDmolar, iHmolar, iP);
         
-        // Faking single-phase
-        CoolPropDbl rho_liq = Liq->keyed_output(rho_key);
-        CoolPropDbl drho_dh_liq__constp = Liq->first_partial_deriv(rho_key, h_key, p_key);
+    // Spline coordinates a, b, c, d
+    CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+    CoolPropDbl a = 1/POW3(Delta_end) * Abracket;
+    CoolPropDbl b = 3/POW2(Delta_end) * (-rho_liq + rho_end) - 1/Delta_end * (drho_dh_end + 2 * drho_dh_liq__constp);
+    CoolPropDbl c = drho_dh_liq__constp;
+    CoolPropDbl d = rho_liq;
         
-        // Spline coordinates a, b, c, d
-        CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
-        CoolPropDbl a = 1/POW3(Delta_end) * Abracket;
-        CoolPropDbl b = 3/POW2(Delta_end) * (-rho_liq + rho_end) - 1/Delta_end * (drho_dh_end + 2 * drho_dh_liq__constp);
-        CoolPropDbl c = drho_dh_liq__constp;
-        CoolPropDbl d = rho_liq;
+	// Either the spline value or drho/dh|p can be directly evaluated now
+	_rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
+	_drho_spline_dh__constp = 3 * a*POW2(Delta) + 2 * b*Delta + c;
+	if (rho_spline) return _rho_spline;
+	if (drho_dh__p) return _drho_spline_dh__constp;
         
-        // Either the spline value or drho/dh|p can be directly evaluated now
-        CoolPropDbl rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
-        CoolPropDbl d_rho_spline_dh__constp = 3*a*POW2(Delta) + 2*b*Delta + c;
-        if ((Wrt == iDmass || Wrt == iDmolar) && (Constant == iDmass || Constant == iDmolar)){
-            return rho_spline;
-        }
-        if ((Wrt == iHmass || Wrt == iHmolar) && Constant == iP){
-            return d_rho_spline_dh__constp;
-        }
+    // It's drho/dp|h
+    // ... calculate some more things
         
-        // It's drho/dp|h
-        // ... calculate some more things
+    // Derivatives *along* the saturation curve using the special internal method
+    CoolPropDbl dhL_dp_sat =  SatL->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
+    CoolPropDbl dhV_dp_sat =  SatV->calc_first_saturation_deriv(iHmolar, iP, *SatL, *SatV);
+    CoolPropDbl drhoL_dp_sat = SatL->calc_first_saturation_deriv(iDmolar, iP, *SatL, *SatV);
+    CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(iDmolar, iP, *SatL, *SatV);
+    CoolPropDbl rhoV = SatV->keyed_output(iDmolar);
+    CoolPropDbl rhoL = SatL->keyed_output(iDmolar);
+    CoolPropDbl drho_dp_end = POW2(End->keyed_output(iDmolar))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
         
-        // Derivatives *along* the saturation curve using the special internal method
-        CoolPropDbl dhL_dp_sat =  SatL->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
-        CoolPropDbl dhV_dp_sat =  SatV->calc_first_saturation_deriv(h_key, p_key, *SatL, *SatV);
-        CoolPropDbl drhoL_dp_sat = SatL->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
-        CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(rho_key, p_key, *SatL, *SatV);
-        CoolPropDbl rhoV = SatV->keyed_output(rho_key);
-        CoolPropDbl rhoL = SatL->keyed_output(rho_key);
-        CoolPropDbl drho_dp_end = POW2(End->keyed_output(rho_key))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
+    // Faking single-phase
+    //CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(iDmolar, iP, iHmolar);
+    CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar); // ?
         
-        // Faking single-phase
-        //CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
-        CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
+    // Derivatives at the end point
+    // CoolPropDbl drho_dp__consth_end = End->calc_first_two_phase_deriv(iDmolar, iP, iHmolar);
+    CoolPropDbl d2rhodhdp_end = End->calc_second_two_phase_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
         
-        // Derivatives at the end point
-        // CoolPropDbl drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
-        CoolPropDbl d2rhodhdp_end = End->calc_second_two_phase_deriv(rho_key, h_key, p_key, p_key, h_key);
+    // Reminder:
+    // Delta = Q()*(hV-hL) = h-hL
+    // Delta_end = x_end*(hV-hL);
+    CoolPropDbl d_Delta_dp__consth = -dhL_dp_sat;
+    CoolPropDbl d_Delta_end_dp__consth = x_end*(dhV_dp_sat - dhL_dp_sat);
         
-        // Reminder:
-        // Delta = Q()*(hV-hL) = h-hL
-        // Delta_end = x_end*(hV-hL);
-        CoolPropDbl d_Delta_dp__consth = -dhL_dp_sat;
-        CoolPropDbl d_Delta_end_dp__consth = x_end*(dhV_dp_sat - dhL_dp_sat);
+    // First pressure derivative at constant h of the coefficients a,b,c,d
+    // CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+    CoolPropDbl d_Abracket_dp_consth = (2*drhoL_dp_sat - 2*drho_dp_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_end_dp__consth*(drho_dh_liq__constp + drho_dh_end));
+    CoolPropDbl da_dp = 1/POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3/POW4(Delta_end)*d_Delta_end_dp__consth);
+    CoolPropDbl db_dp = - 6/POW3(Delta_end)*d_Delta_end_dp__consth*(rho_end - rho_liq)
+                        + 3/POW2(Delta_end)*(drho_dp_end - drhoL_dp_sat)
+                        + (1/POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end + 2*drho_dh_liq__constp)
+                        - (1/Delta_end) * (d2rhodhdp_end + 2*d2rhodhdp_liq);
+    CoolPropDbl dc_dp = d2rhodhdp_liq;
+    CoolPropDbl dd_dp = drhoL_dp_sat;
         
-        // First pressure derivative at constant h of the coefficients a,b,c,d
-        // CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
-        CoolPropDbl d_Abracket_dp_consth = (2*drhoL_dp_sat - 2*drho_dp_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_end_dp__consth*(drho_dh_liq__constp + drho_dh_end));
-        CoolPropDbl da_dp = 1/POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3/POW4(Delta_end)*d_Delta_end_dp__consth);
-        CoolPropDbl db_dp = - 6/POW3(Delta_end)*d_Delta_end_dp__consth*(rho_end - rho_liq)
-                            + 3/POW2(Delta_end)*(drho_dp_end - drhoL_dp_sat)
-                            + (1/POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end + 2*drho_dh_liq__constp)
-                            - (1/Delta_end) * (d2rhodhdp_end + 2*d2rhodhdp_liq);
-        CoolPropDbl dc_dp = d2rhodhdp_liq;
-        CoolPropDbl dd_dp = drhoL_dp_sat;
-        
-        CoolPropDbl d_rho_spline_dp__consth = (3*a*POW2(Delta) + 2*b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
-    
-        return d_rho_spline_dp__consth;
-    }
-    else{
-        throw ValueError("inputs to calc_first_two_phase_deriv_splined are currently invalid");
-    }
+	_drho_spline_dp__consth = (3 * a*POW2(Delta) + 2 * b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
+	if (drho_dp__h) return _drho_spline_dp__consth;
+
+	throw ValueError("Something went wrong in HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined");
+	return _HUGE;
 }
 
 CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0)

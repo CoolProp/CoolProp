@@ -109,7 +109,8 @@ protected:
     CachedElement _fugacity_coefficient;
 
     /// Smoothing values
-    double _rhospline, _dsplinedp, _dsplinedh;
+	CachedElement _rho_spline, _drho_spline_dh__constp, _drho_spline_dp__consth;
+
 
     /// Cached low-level elements for in-place calculation of other properties
     CachedElement _alpha0, _dalpha0_dTau, _dalpha0_dDelta, _d2alpha0_dTau2, _d2alpha0_dDelta_dTau,
@@ -393,7 +394,7 @@ protected:
     virtual void calc_change_EOS(const std::size_t i, const std::string &EOS_name){ throw NotImplementedError("calc_change_EOS is not implemented for this backend"); };
 public:
 
-    AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown), _rhospline(-_HUGE), _dsplinedp(-_HUGE), _dsplinedh(-_HUGE){ clear(); }
+    AbstractState() :_fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown){ clear(); }
     virtual ~AbstractState(){};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
@@ -878,7 +879,7 @@ public:
     * "Methods to increase the robustness of finite-volume flow models in thermodynamic systems",
     * Energies 7 (3), 1621-1640
     *
-    * \note Not all derivatives are supported!
+    * \note Not all derivatives are supported! If you need all three currently supported values (drho_dh__p, drho_dp__h and rho_spline), you should calculate drho_dp__h first to avoid duplicate calculations.
     *
     * @param Of The parameter to be derived
     * @param Wrt The parameter that the derivative is taken with respect to

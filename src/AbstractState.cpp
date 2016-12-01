@@ -164,10 +164,10 @@ bool AbstractState::clear() {
     this->_umolar_excess.clear();
     this->_helmholtzmolar_excess.clear();
 
-    ///// Smoothing values
-    //this->rhospline = -_HUGE;
-    //this->dsplinedp = -_HUGE;
-    //this->dsplinedh = -_HUGE;
+    /// Smoothing values
+	this->_rho_spline.clear();
+	this->_drho_spline_dh__constp.clear();
+	this->_drho_spline_dp__consth.clear();
 
     /// Cached low-level elements for in-place calculation of other properties
     this->_alpha0.clear();

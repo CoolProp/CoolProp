@@ -1022,6 +1022,8 @@ class TabularBackend : public AbstractState
         */
         CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
         CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
+
+		/// If you need all three values (drho_dh__p, drho_dp__h and rho_spline), you should calculate drho_dp__h first to avoid duplicate calculations.
 		CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
 		
         void check_tables(){
