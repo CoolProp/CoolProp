@@ -1,0 +1,1169 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?application progid="SMath Studio Desktop" version="0.98.6128.10018"?>
+<regions>
+  <settings>
+    <identity>
+      <id>10e3ec23-5120-46df-a6ea-a718032967f7</id>
+      <revision>67</revision>
+    </identity>
+    <calculation>
+      <precision>6</precision>
+      <exponentialThreshold>9</exponentialThreshold>
+      <fractions>decimal</fractions>
+    </calculation>
+    <pageModel active="true" printAreas="true" simpleEqualsOnly="false" printBackgroundImages="true">
+      <paper id="1" orientation="Portrait" width="850" height="1100" />
+      <margins left="39" right="39" top="39" bottom="39" />
+      <header alignment="Center" color="#a9a9a9">&amp;[DATE] &amp;[TIME] - &amp;[FILENAME]</header>
+      <footer alignment="Center" color="#a9a9a9">&amp;[PAGENUM] / &amp;[COUNT]</footer>
+      <backgrounds />
+    </pageModel>
+    <dependencies>
+      <assembly name="SMath Studio Desktop" version="0.98.6128.10018" guid="a37cba83-b69c-4c71-9992-55ff666763bd" />
+      <assembly name="Math Region" version="0.98.6128.10018" guid="02f1ab51-215b-466e-a74d-5d8b1cf85e8d" />
+      <assembly name="Custom Functions" version="1.1.6100.11764" guid="18dadffd-79a3-4cf9-aee1-d66deb0ea720" />
+      <assembly name="Special Functions" version="1.11.6128.10019" guid="2814e667-4e12-48b1-8d51-194e480eabc5" />
+      <assembly name="CoolProp Wrapper" version="6.1.6143.14019" guid="ca92ef03-c7da-4888-98ad-528482733e2f" />
+    </dependencies>
+  </settings>
+  <region id="0" left="0" top="0" width="546" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Speed of sound for water @20°C, 1 atm</p>
+      </description>
+      <input>
+        <e type="operand" style="string">A</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">20</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">1482.3462</e>
+        <e type="operand" style="unit">m</e>
+        <e type="operand" style="unit">s</e>
+        <e type="operator" args="2">/</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="1" top="72" color="#000000" bgColor="#ffff80">
+    <area collapsed="false">
+      <title lang="rus">
+        <p>Prepare a matrix of all CoolProp_Props() params demo</p>
+      </title>
+    </area>
+    <region id="2" left="0" top="99" width="603" height="28" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Top" lang="rus">
+          <p>Vector of all supported params</p>
+        </description>
+        <input>
+          <e type="operand">params</e>
+          <e type="operand" style="string">parameter_list</e>
+          <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+          <e type="operand" style="string">,</e>
+          <e type="function" preserve="true" args="2">strsplit</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="3" left="0" top="153" width="172" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <input>
+          <e type="operand">params</e>
+          <e type="function" preserve="true" args="1">length</e>
+        </input>
+        <result action="numeric">
+          <e type="operand">169</e>
+        </result>
+      </math>
+    </region>
+    <region id="4" left="0" top="189" width="532" height="39" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="rus">
+          <p>Long descriptions of params</p>
+        </description>
+        <input>
+          <e type="operand">desc.l</e>
+          <e type="operand">params</e>
+          <e type="operand" style="string">long</e>
+          <e type="function" preserve="true" args="2">CoolProp_get_parameter_information_string</e>
+          <e type="function" preserve="true" args="1">vectorize</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="5" left="0" top="234" width="541" height="39" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="rus">
+          <p>Short descriptions of params</p>
+        </description>
+        <input>
+          <e type="operand">desc.s</e>
+          <e type="operand">params</e>
+          <e type="operand" style="string">short</e>
+          <e type="function" preserve="true" args="2">CoolProp_get_parameter_information_string</e>
+          <e type="function" preserve="true" args="1">vectorize</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="6" left="0" top="279" width="525" height="39" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="rus">
+          <p>Input or output param</p>
+        </description>
+        <input>
+          <e type="operand">desc.io</e>
+          <e type="operand">params</e>
+          <e type="operand" style="string">IO</e>
+          <e type="function" preserve="true" args="2">CoolProp_get_parameter_information_string</e>
+          <e type="function" preserve="true" args="1">vectorize</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="7" left="0" top="324" width="541" height="39" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="rus">
+          <p>Units of params</p>
+        </description>
+        <input>
+          <e type="operand">desc.u</e>
+          <e type="operand">params</e>
+          <e type="operand" style="string">units</e>
+          <e type="function" preserve="true" args="2">CoolProp_get_parameter_information_string</e>
+          <e type="function" preserve="true" args="1">vectorize</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="8" left="0" top="369" width="542" height="80" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="rus">
+          <p>Demo: Value of paramfor water @20°C, 1 atm</p>
+        </description>
+        <input>
+          <e type="operand">vals.std</e>
+          <e type="operand">params</e>
+          <e type="operand" style="string">T</e>
+          <e type="operand">20</e>
+          <e type="operand" style="unit">°C</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">P</e>
+          <e type="operand">1</e>
+          <e type="operand" style="unit">atm</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">Water</e>
+          <e type="function" preserve="true" args="6">CoolProp_Props</e>
+          <e type="operand" style="string">ERROR</e>
+          <e type="function" preserve="true" args="2">try</e>
+          <e type="function" preserve="true" args="1">vectorize</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="9" left="0" top="459" width="506" height="34" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <input>
+          <e type="operand">result</e>
+          <e type="operand">params</e>
+          <e type="operand">desc.io</e>
+          <e type="operand">desc.u</e>
+          <e type="operand">desc.s</e>
+          <e type="operand">desc.l</e>
+          <e type="operand">vals.std</e>
+          <e type="function" preserve="true" args="6">augment</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="10" left="0" top="504" width="1167" height="355" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="15" matrixOptions="0,0,6,10">
+        <input>
+          <e type="operand">result</e>
+        </input>
+        <result action="numeric">
+          <e type="operand" style="string">A</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">m/s</e>
+          <e type="operand" style="string">speed_of_sound</e>
+          <e type="operand" style="string">Speed of sound</e>
+          <e type="operand">1482.34617484756</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">ACENTRIC</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand" style="string">acentric</e>
+          <e type="operand" style="string">Acentric factor</e>
+          <e type="operand">0.3442920843</e>
+          <e type="operand" style="string">ALPHA0</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand" style="string">alpha0</e>
+          <e type="operand" style="string">Ideal Helmholtz energy</e>
+          <e type="operand">9.94269815083411</e>
+          <e type="operand" style="string">ALPHAR</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand" style="string">alphar</e>
+          <e type="operand" style="string">Residual Helmholtz energy</e>
+          <e type="operand">9.96488898126671</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand" style="string">BVIRIAL</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand" style="string">Bvirial</e>
+          <e type="operand" style="string">Second virial coefficient</e>
+          <e type="operand">0.001357832070615</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand" style="string">Bvirial</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand" style="string">Bvirial</e>
+          <e type="operand" style="string">Second virial coefficient</e>
+          <e type="operand">0.001357832070615</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand" style="string">C</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">J/kg/K</e>
+          <e type="operand" style="string">Cpmass</e>
+          <e type="operand" style="string">Mass specific constant pressure specific heat</e>
+          <e type="operand">4184.05092452354</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operand" style="unit">K</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">CONDUCTIVITY</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">W/m/K</e>
+          <e type="operand" style="string">conductivity</e>
+          <e type="operand" style="string">Thermal conductivity</e>
+          <e type="operand">0.598012355523438</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="unit">K</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">3</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">CP0MASS</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">J/kg/K</e>
+          <e type="operand" style="string">Cp0mass</e>
+          <e type="operand" style="string">Ideal gas mass specific constant pressure specific heat</e>
+          <e type="operand">1863.18070035154</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operand" style="unit">K</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">CP0MOLAR</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">J/mol/K</e>
+          <e type="operand" style="string">Cp0molar</e>
+          <e type="operand" style="string">Ideal gas molar specific constant pressure specific heat</e>
+          <e type="operand">33.5656996492606</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="unit">mol</e>
+          <e type="operand" style="unit">K</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">10</e>
+          <e type="operand">6</e>
+          <e type="function" preserve="true" args="62">mat</e>
+        </result>
+      </math>
+    </region>
+    <region id="11" left="0" top="864" width="128" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="eng">
+          <p>Find parameters which units are not recognized by wrapper</p>
+        </description>
+        <input>
+          <e type="operand">M</e>
+          <e type="operand">0</e>
+          <e type="operand">6</e>
+          <e type="function" preserve="true" args="2">matrix</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="12" left="0" top="891" width="365" height="106" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="false" position="Right" lang="eng">
+          <p />
+        </description>
+        <input>
+          <e type="operand">r</e>
+          <e type="operand">1</e>
+          <e type="operand">result</e>
+          <e type="function" preserve="true" args="1">rows</e>
+          <e type="function" preserve="true" args="2">range</e>
+          <e type="operand">result</e>
+          <e type="operand">r</e>
+          <e type="operand">3</e>
+          <e type="function" preserve="true" args="3">el</e>
+          <e type="operand" style="string">-</e>
+          <e type="operator" args="2">≠</e>
+          <e type="bracket">(</e>
+          <e type="operand">result</e>
+          <e type="operand">r</e>
+          <e type="operand">6</e>
+          <e type="function" preserve="true" args="3">el</e>
+          <e type="function" preserve="true" args="1">UnitsOf</e>
+          <e type="operand">1</e>
+          <e type="operator" args="2">≡</e>
+          <e type="bracket">(</e>
+          <e type="operator" args="2">&amp;</e>
+          <e type="operand">M</e>
+          <e type="operand">M</e>
+          <e type="operand">result</e>
+          <e type="operand">r</e>
+          <e type="function" preserve="true" args="2">row</e>
+          <e type="function" preserve="true" args="2">stack</e>
+          <e type="operator" args="2">:</e>
+          <e type="operand">continue</e>
+          <e type="function" preserve="true" args="3">if</e>
+          <e type="function" preserve="true" args="3">for</e>
+        </input>
+      </math>
+    </region>
+    <region id="13" left="0" top="1035" width="821" height="99" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4" matrixOptions="0,0,6,31">
+        <input>
+          <e type="operand">M</e>
+        </input>
+        <result action="numeric">
+          <e type="operand" style="string">HELMHOLTZMASS</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">J/kg</e>
+          <e type="operand" style="string">Helmholtzmass</e>
+          <e type="operand" style="string">Mass specific Helmholtz energy</e>
+          <e type="operand">3002.2866</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand" style="string">HELMHOLTZMOLAR</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">J/mol</e>
+          <e type="operand" style="string">Helmholtzmolar</e>
+          <e type="operand" style="string">Molar specific Helmholtz energy</e>
+          <e type="operand">54.087</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand" style="string">Helmholtzmass</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">J/kg</e>
+          <e type="operand" style="string">Helmholtzmass</e>
+          <e type="operand" style="string">Mass specific Helmholtz energy</e>
+          <e type="operand">3002.2866</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand" style="string">Helmholtzmolar</e>
+          <e type="operand" style="string">O</e>
+          <e type="operand" style="string">J/mol</e>
+          <e type="operand" style="string">Helmholtzmolar</e>
+          <e type="operand" style="string">Molar specific Helmholtz energy</e>
+          <e type="operand">54.087</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand" style="string">Q</e>
+          <e type="operand" style="string">IO</e>
+          <e type="operand" style="string">mol/mol</e>
+          <e type="operand" style="string">Q</e>
+          <e type="operand" style="string">Mass vapor quality</e>
+          <e type="operand">1</e>
+          <e type="operator" args="1">-</e>
+          <e type="operand">5</e>
+          <e type="operand">6</e>
+          <e type="function" preserve="true" args="32">mat</e>
+        </result>
+      </math>
+    </region>
+    <region id="14" left="0" top="1152" width="128" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="eng">
+          <p>Now find trivial parameters</p>
+        </description>
+        <input>
+          <e type="operand">M</e>
+          <e type="operand">0</e>
+          <e type="operand">3</e>
+          <e type="function" preserve="true" args="2">matrix</e>
+          <e type="operator" args="2">:</e>
+        </input>
+      </math>
+    </region>
+    <region id="15" left="0" top="1188" width="561" height="111" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <input>
+          <e type="operand">r</e>
+          <e type="operand">1</e>
+          <e type="operand">params</e>
+          <e type="function" preserve="true" args="1">rows</e>
+          <e type="function" preserve="true" args="2">range</e>
+          <e type="operand">M</e>
+          <e type="operand">M</e>
+          <e type="operand">params</e>
+          <e type="operand">r</e>
+          <e type="function" preserve="true" args="2">el</e>
+          <e type="operand">desc.u</e>
+          <e type="operand">r</e>
+          <e type="function" preserve="true" args="2">el</e>
+          <e type="operand">params</e>
+          <e type="operand">r</e>
+          <e type="function" preserve="true" args="2">el</e>
+          <e type="operand" style="string">Water</e>
+          <e type="function" preserve="true" args="2">CoolProp_Props1</e>
+          <e type="operand">1</e>
+          <e type="operand">3</e>
+          <e type="function" preserve="true" args="5">mat</e>
+          <e type="function" preserve="true" args="2">stack</e>
+          <e type="operator" args="2">:</e>
+          <e type="operand">continue</e>
+          <e type="function" preserve="true" args="2">try</e>
+          <e type="function" preserve="true" args="3">for</e>
+        </input>
+      </math>
+    </region>
+    <region id="16" left="0" top="1314" width="384" height="469" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <input>
+          <e type="operand">M</e>
+        </input>
+        <result action="numeric">
+          <e type="operand" style="string">ACENTRIC</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand">0.3443</e>
+          <e type="operand" style="string">FH</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand">0</e>
+          <e type="operand" style="string">GAS_CONSTANT</e>
+          <e type="operand" style="string">J/mol/K</e>
+          <e type="operand">8.3144</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="unit">mol</e>
+          <e type="operand" style="unit">K</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">HH</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand">0</e>
+          <e type="operand" style="string">M</e>
+          <e type="operand" style="string">kg/mol</e>
+          <e type="operand">0.018</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">mol</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">MOLARMASS</e>
+          <e type="operand" style="string">kg/mol</e>
+          <e type="operand">0.018</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">mol</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">MOLAR_MASS</e>
+          <e type="operand" style="string">kg/mol</e>
+          <e type="operand">0.018</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">mol</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">MOLEMASS</e>
+          <e type="operand" style="string">kg/mol</e>
+          <e type="operand">0.018</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">mol</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">PCRIT</e>
+          <e type="operand" style="string">Pa</e>
+          <e type="operand">22064000</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">PH</e>
+          <e type="operand" style="string">-</e>
+          <e type="operand">0</e>
+          <e type="operand" style="string">PMAX</e>
+          <e type="operand" style="string">Pa</e>
+          <e type="operand">1</e>
+          <e type="operand">10</e>
+          <e type="operand">9</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">PMIN</e>
+          <e type="operand" style="string">Pa</e>
+          <e type="operand">611.6548</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">PTRIPLE</e>
+          <e type="operand" style="string">Pa</e>
+          <e type="operand">611.6548</e>
+          <e type="operand" style="unit">kg</e>
+          <e type="operand" style="unit">m</e>
+          <e type="operand" style="unit">s</e>
+          <e type="operand">2</e>
+          <e type="operator" args="2">^</e>
+          <e type="operator" args="2">*</e>
+          <e type="operator" args="2">/</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand">13</e>
+          <e type="operand">3</e>
+          <e type="function" preserve="true" args="41">mat</e>
+        </result>
+      </math>
+    </region>
+    <region id="17" top="1791" color="#000000" bgColor="#ffff80">
+      <area terminator="true" />
+    </region>
+  </region>
+  <region id="18" left="0" top="1818" width="689" height="207" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4" matrixOptions="0,0,1,10">
+      <description active="true" position="Top" lang="rus">
+        <p>Vector of all supported pure and pseudo-pure fluids</p>
+      </description>
+      <input>
+        <e type="operand" style="string">fluids_list</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+        <e type="operand" style="string">,</e>
+        <e type="function" preserve="true" args="2">strsplit</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">1-Butene</e>
+        <e type="operand" style="string">Acetone</e>
+        <e type="operand" style="string">Air</e>
+        <e type="operand" style="string">Ammonia</e>
+        <e type="operand" style="string">Argon</e>
+        <e type="operand" style="string">Benzene</e>
+        <e type="operand" style="string">CarbonDioxide</e>
+        <e type="operand" style="string">CarbonMonoxide</e>
+        <e type="operand" style="string">CarbonylSulfide</e>
+        <e type="operand" style="string">cis-2-Butene</e>
+        <e type="operand">10</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="12">mat</e>
+      </result>
+    </math>
+  </region>
+  <region id="19" left="0" top="2052" width="511" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math error="9" decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Trying to use an invalid parameter</p>
+      </description>
+      <input>
+        <e type="operand" style="string">Invalid</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">20</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">#</e>
+      </result>
+    </math>
+  </region>
+  <region id="20" left="0" top="2106" width="420" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Getting last error string</p>
+      </description>
+      <input>
+        <e type="operand" style="string">errstring</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string" />
+      </result>
+    </math>
+  </region>
+  <region id="21" left="0" top="2160" width="506" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="eng">
+        <p>Making a calculation that sets a warning</p>
+      </description>
+      <input>
+        <e type="operand" style="string">V</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">0</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Air.mix</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">0</e>
+        <e type="operand" style="unit">s</e>
+        <e type="operand" style="unit">Pa</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="22" left="0" top="2223" width="832" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Getting last warning string</p>
+      </description>
+      <input>
+        <e type="operand" style="string">warnstring</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">Mixture model for viscosity is highly approximate</e>
+      </result>
+    </math>
+  </region>
+  <region id="23" left="0" top="2277" width="445" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>CoolProp library version</p>
+      </description>
+      <input>
+        <e type="operand" style="string">version</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">6.1.0</e>
+      </result>
+    </math>
+  </region>
+  <region id="24" left="0" top="2331" width="766" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>CoolProp library git revision</p>
+      </description>
+      <input>
+        <e type="operand" style="string">gitrevision</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">7864c2614ce5a0ef972386ee7f39859f0d3f8038</e>
+      </result>
+    </math>
+  </region>
+  <region id="25" left="0" top="2385" width="821" height="207" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4" matrixOptions="0,0,1,10">
+      <description active="true" position="Top" lang="rus">
+        <p>Vector of all predefined mixtures</p>
+      </description>
+      <input>
+        <e type="operand" style="string">predefined_mixtures</e>
+        <e type="function" preserve="true" args="1">CoolProp_get_global_param_string</e>
+        <e type="operand" style="string">,</e>
+        <e type="function" preserve="true" args="2">strsplit</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">Air.mix</e>
+        <e type="operand" style="string">Amarillo.mix</e>
+        <e type="operand" style="string">Ekofisk.mix</e>
+        <e type="operand" style="string">GulfCoast.mix</e>
+        <e type="operand" style="string">GulfCoastGas(NIST1).mix</e>
+        <e type="operand" style="string">HighCO2.mix</e>
+        <e type="operand" style="string">HighN2.mix</e>
+        <e type="operand" style="string">NaturalGasSample.mix</e>
+        <e type="operand" style="string">R401A.mix</e>
+        <e type="operand" style="string">R401B.mix</e>
+        <e type="operand">10</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="12">mat</e>
+      </result>
+    </math>
+  </region>
+  <region id="26" left="0" top="2619" width="694" height="89" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Getting fluid general info </p>
+      </description>
+      <input>
+        <e type="operand" style="string">Ethane</e>
+        <e type="operand" style="string">aliases</e>
+        <e type="operand" style="string">CAS</e>
+        <e type="operand" style="string">ASHRAE34</e>
+        <e type="operand" style="string">REFPROPName</e>
+        <e type="operand">4</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="6">mat</e>
+        <e type="function" preserve="true" args="2">CoolProp_get_fluid_param_string</e>
+        <e type="function" preserve="true" args="1">vectorize</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">ethane, ETHANE, R170</e>
+        <e type="operand" style="string">74-84-0</e>
+        <e type="operand" style="string">A3</e>
+        <e type="operand" style="string">ETHANE</e>
+        <e type="operand">4</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="6">mat</e>
+      </result>
+    </math>
+  </region>
+  <region id="27" top="2736" color="#000000" bgColor="#ffff80">
+    <area collapsed="false">
+      <title lang="rus">
+        <p>Using CoolProp_Phase</p>
+      </title>
+    </area>
+    <region id="28" left="0" top="2754" width="495" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <input>
+          <e type="operand" style="string">T</e>
+          <e type="operand">20</e>
+          <e type="operand" style="unit">°C</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">P</e>
+          <e type="operand">1</e>
+          <e type="operand" style="unit">atm</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">Benzene</e>
+          <e type="function" preserve="true" args="5">CoolProp_Phase</e>
+        </input>
+        <result action="numeric">
+          <e type="operand" style="string">liquid</e>
+        </result>
+      </math>
+    </region>
+    <region id="29" left="0" top="2781" width="470" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <input>
+          <e type="operand" style="string">T</e>
+          <e type="operand">20</e>
+          <e type="operand" style="unit">°C</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">P</e>
+          <e type="operand">1</e>
+          <e type="operand" style="unit">atm</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">Ammonia</e>
+          <e type="function" preserve="true" args="5">CoolProp_Phase</e>
+        </input>
+        <result action="numeric">
+          <e type="operand" style="string">gas</e>
+        </result>
+      </math>
+    </region>
+    <region id="30" left="0" top="2808" width="438" height="28" color="#000000" bgColor="#ffffff" fontSize="10">
+      <math decimalPlaces="4">
+        <description active="true" position="Right" lang="eng">
+          <p>Just FYI :) Filed upstream as #1098</p>
+        </description>
+        <input>
+          <e type="operand" style="string">T</e>
+          <e type="operand">5</e>
+          <e type="operator" args="1">-</e>
+          <e type="bracket">(</e>
+          <e type="operand" style="unit">°C</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">P</e>
+          <e type="operand">1</e>
+          <e type="operand" style="unit">atm</e>
+          <e type="operator" args="2">*</e>
+          <e type="operand" style="string">Water</e>
+          <e type="function" preserve="true" args="5">CoolProp_Phase</e>
+        </input>
+        <result action="numeric">
+          <e type="operand" style="string" />
+        </result>
+      </math>
+    </region>
+    <region id="31" top="2844" color="#000000" bgColor="#ffff80">
+      <area terminator="true" />
+    </region>
+  </region>
+  <region id="32" left="0" top="2862" width="385" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Getting a state-independent property</p>
+      </description>
+      <input>
+        <e type="operand" style="string">Oxygen</e>
+        <e type="operand" style="string">Tcrit</e>
+        <e type="function" preserve="true" args="2">CoolProp_Props1</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">154.581</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+      </result>
+    </math>
+  </region>
+  <region id="33" left="0" top="2916" width="594" height="54" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Use a mixture</p>
+      </description>
+      <input>
+        <e type="operand">mix</e>
+        <e type="operand" style="string">HEOS::Nitrogen[0.7812]&amp;Oxygen[0.2096]&amp;Argon[0.0092]</e>
+        <e type="operator" args="2">:</e>
+        <e type="operand" style="string">S</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">15</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand">mix</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+        <e type="operand">2</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="4">line</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">kJ</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">6.826</e>
+      </result>
+    </math>
+  </region>
+  <region id="34" left="0" top="2997" width="644" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Getting a first partial derivative of mass enthalpy by temperature, const pressure (no units support)</p>
+      </description>
+      <input>
+        <e type="operand" style="string">d(Hmass)/d(T)|P</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">300</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">4180.6358</e>
+      </result>
+    </math>
+  </region>
+  <region id="35" left="0" top="3051" width="557" height="41" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>... which is constant pressure specific heat</p>
+      </description>
+      <input>
+        <e type="operand" style="string">C</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">300</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <contract>
+        <e type="operand" style="unit">J</e>
+        <e type="operand" style="unit">kg</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operator" args="2">/</e>
+      </contract>
+      <result action="numeric">
+        <e type="operand">4180.6358</e>
+      </result>
+    </math>
+  </region>
+  <region id="36" left="0" top="3123" width="743" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Getting its second partial derivative with respect to mass-based specific enthalpy, const pressure</p>
+      </description>
+      <input>
+        <e type="operand" style="string">d(d(Hmass)/d(T)|P)/d(Hmass)|P</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">300</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">0.0001</e>
+        <e type="operator" args="1">-</e>
+      </result>
+    </math>
+  </region>
+  <region id="37" left="0" top="3186" width="638" height="26" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <description active="true" position="Top" lang="rus">
+        <p>Getting first saturation derivative of enthalpy ALONG the saturated vapor curve</p>
+      </description>
+      <input>
+        <e type="operand" style="string">d(Hmolar)/d(T)|sigma</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Q</e>
+        <e type="operand">1</e>
+        <e type="operand" style="string">Water</e>
+        <e type="function" preserve="true" args="6">CoolProp_Props</e>
+      </input>
+      <result action="numeric">
+        <e type="operand">28.4278</e>
+      </result>
+    </math>
+  </region>
+  <region id="38" left="0" top="3249" width="722" height="155" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <input>
+        <e type="operand">HAProps</e>
+        <e type="operand" style="string">Omega</e>
+        <e type="operand" style="string">HumRat</e>
+        <e type="operand" style="string">W</e>
+        <e type="operand" style="string">RH</e>
+        <e type="operand" style="string">RelHum</e>
+        <e type="operand" style="string">R</e>
+        <e type="operand" style="string">psi_w</e>
+        <e type="operand">7</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="9">mat</e>
+        <e type="operand" style="string">Y</e>
+        <e type="operand" style="string">Z</e>
+        <e type="operand" style="string">Tdb</e>
+        <e type="operand" style="string">T_db</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand" style="string">Tdp</e>
+        <e type="operand" style="string">T_dp</e>
+        <e type="operand">7</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="9">mat</e>
+        <e type="operand" style="string">DewPoint</e>
+        <e type="operand" style="string">D</e>
+        <e type="operand" style="string">Twb</e>
+        <e type="operand" style="string">T_wb</e>
+        <e type="operand" style="string">WetBulb</e>
+        <e type="operand" style="string">B</e>
+        <e type="operand" style="string">Enthalpy</e>
+        <e type="operand">7</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="9">mat</e>
+        <e type="operand" style="string">H</e>
+        <e type="operand" style="string">Hda</e>
+        <e type="operand" style="string">Hha</e>
+        <e type="operand" style="string">Entropy</e>
+        <e type="operand" style="string">S</e>
+        <e type="operand" style="string">Sda</e>
+        <e type="operand" style="string">Sha</e>
+        <e type="operand">7</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="9">mat</e>
+        <e type="operand" style="string">C</e>
+        <e type="operand" style="string">cp</e>
+        <e type="operand" style="string">Cha</e>
+        <e type="operand" style="string">cp_ha</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand" style="string">P_w</e>
+        <e type="operand" style="string">V</e>
+        <e type="operand">7</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="9">mat</e>
+        <e type="operand" style="string">Vda</e>
+        <e type="operand" style="string">Vha</e>
+        <e type="operand" style="string">mu</e>
+        <e type="operand" style="string">Visc</e>
+        <e type="operand" style="string">M</e>
+        <e type="operand" style="string">k</e>
+        <e type="operand" style="string">Conductivity</e>
+        <e type="operand" style="string">K</e>
+        <e type="operand">8</e>
+        <e type="operand">1</e>
+        <e type="function" preserve="true" args="10">mat</e>
+        <e type="function" preserve="true" args="6">stack</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="39" left="0" top="3420" width="552" height="39" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <input>
+        <e type="operand">vals.HA</e>
+        <e type="operand">HAProps</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">20</e>
+        <e type="operand" style="unit">°C</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">P</e>
+        <e type="operand">1</e>
+        <e type="operand" style="unit">atm</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">R</e>
+        <e type="operand">0.5</e>
+        <e type="function" preserve="true" args="7">CoolProp_HAProps</e>
+        <e type="function" preserve="true" args="1">vectorize</e>
+        <e type="operator" args="2">:</e>
+      </input>
+    </math>
+  </region>
+  <region id="40" left="0" top="3465" width="443" height="440" color="#000000" bgColor="#ffffff" fontSize="10">
+    <math decimalPlaces="4">
+      <input>
+        <e type="operand">HAProps</e>
+        <e type="operand">vals.HA</e>
+        <e type="function" preserve="true" args="2">augment</e>
+      </input>
+      <result action="numeric">
+        <e type="operand" style="string">Omega</e>
+        <e type="operand">0.0073</e>
+        <e type="operand" style="string">HumRat</e>
+        <e type="operand">0.0073</e>
+        <e type="operand" style="string">W</e>
+        <e type="operand">0.0073</e>
+        <e type="operand" style="string">RH</e>
+        <e type="operand">0.5</e>
+        <e type="operand" style="string">RelHum</e>
+        <e type="operand">0.5</e>
+        <e type="operand" style="string">R</e>
+        <e type="operand">0.5</e>
+        <e type="operand" style="string">psi_w</e>
+        <e type="operand">0.0116</e>
+        <e type="operand" style="string">Y</e>
+        <e type="operand">0.0116</e>
+        <e type="operand" style="string">Z</e>
+        <e type="operand">0.9996</e>
+        <e type="operand" style="string">Tdb</e>
+        <e type="operand">293.15</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T_db</e>
+        <e type="operand">293.15</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T</e>
+        <e type="operand">293.15</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Tdp</e>
+        <e type="operand">282.4244</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T_dp</e>
+        <e type="operand">282.4244</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">DewPoint</e>
+        <e type="operand">282.4244</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">D</e>
+        <e type="operand">282.4244</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Twb</e>
+        <e type="operand">286.9265</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">T_wb</e>
+        <e type="operand">286.9265</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">WetBulb</e>
+        <e type="operand">286.9265</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">B</e>
+        <e type="operand">286.9265</e>
+        <e type="operand" style="unit">K</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand" style="string">Enthalpy</e>
+        <e type="operand">38622.8389</e>
+        <e type="operand" style="unit">m</e>
+        <e type="operand">2</e>
+        <e type="operator" args="2">^</e>
+        <e type="operand" style="unit">s</e>
+        <e type="operand">2</e>
+        <e type="operator" args="2">^</e>
+        <e type="operator" args="2">/</e>
+        <e type="operator" args="2">*</e>
+        <e type="operand">21</e>
+        <e type="operand">2</e>
+        <e type="function" preserve="true" args="44">mat</e>
+      </result>
+    </math>
+  </region>
+</regions>
