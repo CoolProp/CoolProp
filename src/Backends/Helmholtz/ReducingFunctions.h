@@ -519,6 +519,16 @@ public:
 	/// \brief Derivative of the molar reducing density with respect to component i, j, and k mole fractions
 	CoolPropDbl d3rhormolardxidxjdxk(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag) const{ return 0; };
     
+    CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl> &x) const{ return 0; }
+    CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl> &x) const{ return 0; }
+    CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl> &x) const{ return 0; }
+    CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl> &x) const{ return 0; }
+    
+    CoolPropDbl d2Tr_dxidgammaT(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const { return 0; }
+    CoolPropDbl d2Tr_dxidbetaT(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const { return 0; }
+    CoolPropDbl d2rhormolar_dxidgammaV(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const { return 0; }
+    CoolPropDbl d2rhormolar_dxidbetaV(const std::vector<CoolPropDbl> &x, std::size_t i, x_N_dependency_flag xN_flag) const { return 0; }
+    
     //virtual CoolPropDbl d_ndTrdni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
     //virtual CoolPropDbl d2_ndTrdni_dxj_dxk__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, std::size_t k, x_N_dependency_flag xN_flag){ return 0; };
     //virtual CoolPropDbl d_ndrhorbardni_dxj__constxi(const std::vector<CoolPropDbl> &x, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag){ return 0; };
