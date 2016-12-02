@@ -1160,13 +1160,8 @@ public:
     static void add_many(const std::string &JSON_string);
 
     /// Add all the fluid entries in the rapidjson::Value instance passed in
-    void add_many(rapidjson::Value &listing)
-    {
-        for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr)
-        {
-            add_one(*itr);
-        }
-    };
+    void add_many(rapidjson::Value &listing);
+    
     void add_one(rapidjson::Value &fluid_json)
     {
         _is_empty = false;

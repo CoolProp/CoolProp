@@ -89,6 +89,14 @@ void JSONFluidLibrary::add_many(const std::string &JSON_string){
     cpjson::JSON_string_to_rapidjson(JSON_string, doc);
     library.add_many(doc);
 };
+    
+void JSONFluidLibrary::add_many(rapidjson::Value &listing)
+{
+    for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr)
+    {
+        add_one(*itr);
+    }
+};
 
 JSONFluidLibrary & get_library(void){
     if (library.is_empty()){ load(); }
