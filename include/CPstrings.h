@@ -11,6 +11,7 @@
     #define FMT_HEADER_ONLY
     #endif
     #include "fmt/format.h" // For addition of the string formatting functions and macros from cppformat
+    #include "fmt/printf.h" // For sprintf
     #undef FMT_HEADER_ONLY
 #else
     #include <vector>
