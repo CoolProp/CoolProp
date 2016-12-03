@@ -877,6 +877,19 @@ class MixtureDerivatives{
         return HEOS.p();
     }
     
+    static CoolPropDbl dalpha0_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.dalpha0_dDelta();
+    }
+    static CoolPropDbl d2alpha0_dDelta2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.d2alpha0_dDelta2();
+    }
+    static CoolPropDbl dalpha0_dTau(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.dalpha0_dTau();
+    }
+    static CoolPropDbl d2alpha0_dTau2(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
+        return HEOS.d2alpha0_dTau2();
+    }
+    
     
     static CoolPropDbl dalphar_dDelta(CoolProp::HelmholtzEOSMixtureBackend &HEOS, CoolProp::x_N_dependency_flag xN_flag = XN_INDEPENDENT){
         return HEOS.dalphar_dDelta();

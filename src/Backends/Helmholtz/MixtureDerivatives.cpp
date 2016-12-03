@@ -1326,6 +1326,11 @@ public:
         zero("dalphar_dTau", MD::dalphar_dTau, MD::alphar, TAU);
         zero("d2alphar_dTau2", MD::d2alphar_dTau2, MD::dalphar_dTau, TAU);
         
+        zero("dalpha0_dDelta", MD::dalpha0_dDelta, MD::alpha0, DELTA);
+        zero("d2alpha0_dDelta2", MD::d2alpha0_dDelta2, MD::dalpha0_dDelta, DELTA);
+        zero("dalpha0_dTau", MD::dalpha0_dTau, MD::alpha0, TAU);
+        zero("d2alpha0_dTau2", MD::d2alpha0_dTau2, MD::dalpha0_dTau, TAU);
+        
         one_comp("dalpha0_dxi",MD::dalpha0_dxi, MD::alpha0);
         one("d2alpha0_dxi_dDelta", MD::d2alpha0_dxi_dDelta, MD::dalpha0_dxi, DELTA);
         one("d2alpha0_dxi_dTau", MD::d2alpha0_dxi_dTau, MD::dalpha0_dxi, TAU);
