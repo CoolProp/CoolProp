@@ -1469,6 +1469,9 @@ if (COOLPROP_JAVASCRIPT_MODULE)
     message(FATAL_ERROR "Cannot use visual studio, use MinGW Makefiles generator on windows")
   endif()
 
+  add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
+  add_definitions(-s ASSERTIONS=1)
+  add_definitions(--bind)
   # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
   if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
     set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 0")
