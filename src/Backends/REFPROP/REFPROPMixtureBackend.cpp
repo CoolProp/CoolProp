@@ -128,21 +128,21 @@ std::string get_REFPROP_HMX_BNC_path()
 
 namespace CoolProp {
 
-    
+
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
     // Do the REFPROP instantiation for this fluid
     _mole_fractions_set = false;
-    
+
     // Force loading of REFPROP
     REFPROP_supported();
-    
+
     // Try to add this fluid to REFPROP - might want to think about making array of
     // components and setting mole fractions if they change a lot.
     this->set_REFPROP_fluids(fluid_names);
-    
+
     // Bump the number of REFPROP backends that are in existence;
     REFPROPMixtureBackend::instance_counter++;
-    
+
     // Set the imposed phase index to default value
     imposed_phase_index = iphase_not_imposed;
 }
@@ -205,7 +205,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
             std::string err;
             const std::string &alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
             bool loaded_REFPROP = ::load_REFPROP(err, alt_rp_path);
-                
+
             if (loaded_REFPROP) {
                 return true;
             }
@@ -236,7 +236,9 @@ std::string REFPROPMixtureBackend::version(){
     long N = -1;
     long ierr = 0;
     char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
-    REFPROPMixtureBackend::REFPROP_supported();
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
+      return "n/a";
+    };
     // Pad the version string with NULL characters
     for (int i = 0; i < 255; ++i){
         herr[i] = '\0';
@@ -281,7 +283,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         std::string components_joined_raw = strjoin(fluid_names,"|");
         std::string fdPath = get_REFPROP_fluid_path_prefix();
         long N = static_cast<long>(fluid_names.size());
-        
+
         // Get path to HMX.BNC file
         char hmx_bnc[255];
         const std::string HMX_path = get_REFPROP_HMX_BNC_path();
@@ -306,12 +308,12 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             ierr = 0;
             std::vector<double> x(ncmax);
             char mix[255], reference_state[4] = "DEF";
-            
+
             std::string path_to_MIX_file = get_REFPROP_mixtures_path_prefix() + components_joined_raw;
             const char * _components_joined_raw  = path_to_MIX_file.c_str();
             if (strlen(_components_joined_raw) > 255){ throw ValueError(format("components (%s) is too long", components_joined_raw.c_str())); }
             strcpy(mix, _components_joined_raw);
-            
+
             SETMIXdll(mix,
                       hmx_bnc,
                       reference_state,
@@ -405,7 +407,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
                 if (dbg_refprop) std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str());
-                
+
                 if (get_config_bool(REFPROP_USE_PENGROBINSON)) {
                     long iflag = 2; // Tell REFPROP to use Peng-Robinson;
                     PREOSdll(&iflag);
@@ -498,21 +500,21 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::string &C
 }
 /// Get binary mixture string value
 std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){
-        
+
     long icomp, jcomp;
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
-    
+
     icomp = match_CAS(CAS1);
     jcomp = match_CAS(CAS2);
-    
+
     // Get the current state
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
-    
+
     std::string shmodij(hmodij);
     if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
     {
-        if (parameter == "model"){ 
+        if (parameter == "model"){
             return shmodij;
         }
         else {
@@ -550,10 +552,10 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
     char herr[255];
-    
+
     // Get the prior state
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
-    
+
     std::string shmodij(hmodij);
     if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
     {
@@ -577,10 +579,10 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     long icomp = static_cast<long>(i)+1, jcomp = static_cast<long>(j)+1;
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
-    
+
     // Get the current state
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
-    
+
     std::string shmodij(hmodij);
     if (shmodij.find("KW")==0 || shmodij.find("GE")==0)// Starts with KW or GE
     {
@@ -630,7 +632,7 @@ void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &m
 		sum_moles += moles[i-1];
     }
     this->mole_fractions.clear();
-	for(std::vector<double>::iterator it = moles.begin(); it != moles.end(); ++it) 
+	for(std::vector<double>::iterator it = moles.begin(); it != moles.end(); ++it)
     {
 		this->mole_fractions.push_back(*it/sum_moles);
 	}
@@ -904,7 +906,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
 const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions()
 {
     // mass fraction is mass_i/total_mass;
-    // REFPROP yields mm in kg/kmol, CP uses base SI units of kg/mol; 
+    // REFPROP yields mm in kg/kmol, CP uses base SI units of kg/mol;
     CoolPropDbl mm = molar_mass();
     std::vector<CoolPropDbl> mass_fractions(mole_fractions.size());
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
@@ -912,15 +914,15 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions()
     for (long i = 1L; i <= static_cast<long>(mole_fractions.size()); ++i){
         // Get value for first component
         INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
-        mass_fractions[i-1] = (wmm/1000.0)*mole_fractions[i-1]/mm; 
+        mass_fractions[i-1] = (wmm/1000.0)*mole_fractions[i-1]/mm;
     }
     return mass_fractions;
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_PIP(void)
 {
-    // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using 
-    // partial derivatives of pressure, volume,and temperature without reference to saturation properties: 
+    // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using
+    // partial derivatives of pressure, volume,and temperature without reference to saturation properties:
     // Applications in phase equilibria calculations"
     double t = _T, rho = _rhomolar/1000.0, // mol/dm^3
         p = 0,e = 0,h = 0,s = 0,cv = 0,cp = 0,w = 0,Z = 0,hjt = 0,A = 0,G = 0,
@@ -1046,7 +1048,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     long isp = 0, iderv = -1;
     if (SPLNVALdll==NULL){
         std::string rpv = get_global_param_string("REFPROP_version");
-        throw ValueError(format("Your version of REFFPROP(%s) does not have the SPLNVALdll function; cannot extract phase envelope values",rpv.c_str())); 
+        throw ValueError(format("Your version of REFFPROP(%s) does not have the SPLNVALdll function; cannot extract phase envelope values",rpv.c_str()));
     };
     SPLNVALdll(&isp, &iderv, &c, &rhoymin, &ierr, herr, errormessagelength);
     iderv = -2;
@@ -1137,15 +1139,15 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         {
             // Unit conversion for REFPROP
             p_kPa = 0.001*value1; _T = value2; // Want p in [kPa] in REFPROP
-            
+
             if (imposed_phase_index == iphase_not_imposed){
                 // Use flash routine to find properties
                 TPFLSHdll(&_T,&p_kPa,&(mole_fractions[0]),&rho_mol_L,
                           &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                           &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
                           &ierr,herr,errormessagelength); //
-                if (static_cast<int>(ierr) > 0) { 
-                    throw ValueError(format("PT: %s",herr).c_str()); 
+                if (static_cast<int>(ierr) > 0) {
+                    throw ValueError(format("PT: %s",herr).c_str());
                 }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
             }
             else{
@@ -1185,10 +1187,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 TPRHOdll(&_T,&p_kPa,&(mole_fractions[0]),&kph,&kguess,
                          &rho_mol_L,
                          &ierr,herr,errormessagelength);
-                
+
                 // Calculate everything else
                 THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
-                
+
             }
 
             // Set all cache values that can be set with unit conversion to SI
@@ -1750,7 +1752,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             //THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
             long kguess = 1; // guess provided
             if (!ValidNumber(guesses.rhomolar)){ throw ValueError(format("rhomolar must be provided in guesses")); }
-            
+
             long kph = (guesses.rhomolar > calc_rhomolar_critical()) ? 1 : 2; // liquid  if density > rhoc, vapor otherwise - though we are passing the guess density
             rho_mol_L = guesses.rhomolar/1000.0;
             TPRHOdll(&_T, &p_kPa, &(mole_fractions[0]), &kph, &kguess, &rho_mol_L, &ierr, herr, errormessagelength);
@@ -1768,7 +1770,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             long iFlsh = 0,
                  iGuess = 1, // Use guesses
                  ierr = 0;
-            
+
             if (std::abs(value2) < 1e-10){
                 iFlsh = 3; // bubble point
                 if (!guesses.x.empty()){
@@ -1797,7 +1799,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             else{
                 _T = guesses.T;
             }
-            
+
             // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
             SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess,
                      &rho_mol_L, &rhoLmol_L, &rhoVmol_L,
@@ -1805,7 +1807,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                      &ierr,herr,errormessagelength);
 
             if (static_cast<int>(ierr) > 0) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-            
+
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
             _rhomolar = rho_mol_L*1000; // 1000 for conversion from mol/L to mol/m3
@@ -1879,7 +1881,7 @@ void REFPROPMixtureBackend::calc_excess_properties(){
     //    c      ierr--error flag : 0 = successful
     //    c                        55 = T, p inputs in different phase for the pure fluids
     //    c      herr--error string(character * 255 variable if ierr<>0)
-    EXCESSdll(&T_K, &p_kPa, &(mole_fractions[0]), &kph, 
+    EXCESSdll(&T_K, &p_kPa, &(mole_fractions[0]), &kph,
         &rho, &vE, &eE, &hE, &sE, &aE, &gE,
         &ierr, herr, errormessagelength);      // Error message
     if (static_cast<int>(ierr) > 0) { throw ValueError(format("EXCESSdll: %s", herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
