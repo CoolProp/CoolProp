@@ -236,7 +236,9 @@ std::string REFPROPMixtureBackend::version(){
     long N = -1;
     long ierr = 0;
     char fluids[10000] = "", hmx[] = "HMX.BNC", default_reference_state[] = "DEF", herr[255] = "";
-    REFPROPMixtureBackend::REFPROP_supported();
+    if (!REFPROP_supported()) {
+      return "n/a";
+    };
     // Pad the version string with NULL characters
     for (int i = 0; i < 255; ++i){
         herr[i] = '\0';
