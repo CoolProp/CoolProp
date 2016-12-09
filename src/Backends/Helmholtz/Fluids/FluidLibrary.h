@@ -28,6 +28,8 @@ class JSONFluidLibrary
 {
     /// Map from CAS code to JSON instance.  For pseudo-pure fluids, use name in place of CAS code since no CASE number is defined for mixtures
     std::map<std::size_t, CoolPropFluid> fluid_map;
+    /// Map from index of fluid to a string
+    std::map<std::size_t, std::string> JSONstring_map;
     std::vector<std::string> name_vector;
     std::map<std::string, std::size_t> string_to_index_map;
     bool _is_empty;
@@ -1163,6 +1165,31 @@ public:
     void add_many(rapidjson::Value &listing);
     
     void add_one(rapidjson::Value &fluid_json);
+    
+    std::string get_JSONstring(const std::string &key)
+    {
+        // Try to find it
+        std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
+        if (it != string_to_index_map.end()){
+            
+            std::map<std::size_t, std::string>::const_iterator it2 = JSONstring_map.find(it->second);
+            if (it2 != JSONstring_map.end()){
+                // Then, load the fluids we would like to add
+                rapidjson::Document doc;
+                cpjson::JSON_string_to_rapidjson(it2->second, doc);
+                rapidjson::Document doc2; doc2.SetArray();
+                doc2.PushBack(doc, doc.GetAllocator());
+                return cpjson::json2string(doc2);
+            }
+            else{
+                throw ValueError(format("Unable to obtain JSON string for this identifier [%d]", it->second));
+            }
+        }
+        else{
+            throw ValueError(format("Unable to obtain index for this identifier [%s]", key.c_str()));
+        }
+    }
+
     /// Get a CoolPropFluid instance stored in this library
     /**
     @param key Either a CAS number or the name (CAS number should be preferred)
@@ -1291,6 +1318,9 @@ std::string get_fluid_list(void);
 
 /// Get the fluid structure
 CoolPropFluid get_fluid(const std::string &fluid_string);
+    
+/// Get the fluid as a JSON string, suitable for modification and reloading
+std::string get_fluid_as_JSONstring(const std::string &indentifier);
 
 /// Set the internal enthalpy and entropy offset variables
 void set_fluid_enthalpy_entropy_offset(const std::string &fluid, double delta_a1, double delta_a2, const std::string &ref);

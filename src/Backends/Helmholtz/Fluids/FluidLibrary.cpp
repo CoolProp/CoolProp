@@ -236,6 +236,11 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
                 
                 // Remove the actual fluid instance
                 std::size_t index = string_to_index_map.find(fluid.name)->second;
+                
+                if (JSONstring_map.find(index) != JSONstring_map.end()){
+                    JSONstring_map.erase(JSONstring_map.find(index));
+                }
+                
                 if (string_to_index_map.find(fluid.name) != string_to_index_map.end()){
                     fluid_map.erase(fluid_map.find(index));
                 }
@@ -268,6 +273,8 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         // Add index->fluid mapping
         fluid_map[index] = fluid;
         
+        JSONstring_map[index] = cpjson::json2string(fluid_json);
+        
         // Add CAS->index mapping
         string_to_index_map[fluid.CAS] = index;
         
@@ -299,6 +306,11 @@ JSONFluidLibrary & get_library(void){
 CoolPropFluid get_fluid(const std::string &fluid_string){
     if (library.is_empty()){ load(); }
     return library.get(fluid_string);
+}
+    
+std::string get_fluid_as_JSONstring(const std::string &identifier){
+    if (library.is_empty()){ load(); }
+    return library.get_JSONstring(identifier);
 }
 
 std::string get_fluid_list(void){
