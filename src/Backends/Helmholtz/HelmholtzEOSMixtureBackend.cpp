@@ -239,6 +239,9 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
     else if (ParamName == "CHEMSPIDER_ID"){
         return format("%d", cpfluid.ChemSpider_id);
     }
+    else if (ParamName == "JSON"){
+        return get_fluid_as_JSONstring(cpfluid.CAS);
+    }
     else{
         throw ValueError(format("fluid parameter [%s] is invalid",ParamName.c_str()));
     }

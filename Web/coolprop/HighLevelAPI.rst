@@ -336,7 +336,31 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
     
     # Using properties from REFPROP to get R410A density
     In [2]: CP.PropsSI('D','T',300,'P',101325,'REFPROP::R32[0.697615]&R125[0.302385]')
+
+Adding Fluids
+-------------
+
+The fluids in CoolProp are all compiled into the library itself, and are given in the `JSON <http://json.org>`_ format.  They are all stored in the ``dev/fluids`` folder relative to the root of the repository.  If you want to obtain the JSON data for a fluid from CoolProp, print out a part of it, and then load it back into CoolProp, you could do:
+
+.. ipython::
+    :okexcept:
+
+    In [1]: import CoolProp.CoolProp as CP
     
+    # Get the JSON structure for Water
+    In [2]: jj = CP.get_fluid_param_string("Water", "JSON")
+    
+    # Now load it back into CoolProp - oops this isn't going to work because it is already there
+    In [2]: CP.add_fluids_as_JSON("HEOS", jj)
+
+    # Set the configuration variable allowing for overwriting
+    In [2]: CP.set_config_bool(CP.OVERWRITE_FLUIDS, True)
+
+    # Now load it back into CoolProp - success
+    In [2]: CP.add_fluids_as_JSON("HEOS", jj)
+
+    # Turn overwriting back off
+    In [2]: CP.set_config_bool(CP.OVERWRITE_FLUIDS, False)
 
 C++ Sample Code
 ---------------
