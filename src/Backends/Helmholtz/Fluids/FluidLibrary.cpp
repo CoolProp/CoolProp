@@ -236,6 +236,11 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
                 
                 // Remove the actual fluid instance
                 std::size_t index = string_to_index_map.find(fluid.name)->second;
+                
+                if (JSONstring_map.find(index) != JSONstring_map.end()){
+                    JSONstring_map.erase(JSONstring_map.find(index));
+                }
+                
                 if (string_to_index_map.find(fluid.name) != string_to_index_map.end()){
                     fluid_map.erase(fluid_map.find(index));
                 }
