@@ -1685,10 +1685,10 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
             return MassInternalEnergy_per_kgha(T,p,psi_w); //[J/kg_ha]
         }
         case GIVEN_ENTROPY:{
-            return MassEntropy_per_kgda(T,p,psi_w); //[J/kg_da/J]
+            return MassEntropy_per_kgda(T,p,psi_w); //[J/kg_da/K]
         }
         case GIVEN_ENTROPY_HA:{
-            return MassEntropy_per_kgha(T,p,psi_w); //[J/kg_ha/J]
+            return MassEntropy_per_kgha(T,p,psi_w); //[J/kg_ha/K]
         }
         case GIVEN_TDP:{
             return DewpointTemperature(T,p,psi_w); //[K]
