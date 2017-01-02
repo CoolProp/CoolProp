@@ -101,6 +101,15 @@ public:
             return HelmholtzEOSMixtureBackend::calc_p_critical();
         }
     };
+    CoolPropDbl calc_acentric_factor(void)
+    {
+        if (is_pure_or_pseudopure){
+            return cubic->get_acentric()[0];
+        }
+        else{
+            throw ValueError("acentric factor cannot be calculated for mixtures");
+        }
+    }
     CoolPropDbl calc_rhomolar_critical(void){
         if (is_pure_or_pseudopure){
             // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
