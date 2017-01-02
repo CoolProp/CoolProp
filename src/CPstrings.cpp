@@ -46,3 +46,20 @@ std::string format(const char* fmt, ...)
     return buffer.get();
 }
 #endif
+
+#if defined(ENABLE_CATCH)
+
+#include "crossplatform_shared_ptr.h"
+#include "catch.hpp"
+#include "CoolPropTools.h"
+#include "CoolProp.h"
+
+TEST_CASE("Test endswith function", "[endswith]")
+{
+    REQUIRE(endswith("aaa","-PengRobinson") == false);
+    REQUIRE(endswith("Ethylbenzene","-PengRobinson") == false);
+    REQUIRE(endswith("Ethylbenzene-PengRobinson","-PengRobinson") == true);
+    REQUIRE(endswith("Ethylbenzene","Ethylbenzene") == true);
+}
+
+#endif

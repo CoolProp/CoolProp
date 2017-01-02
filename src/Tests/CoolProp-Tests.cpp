@@ -1545,6 +1545,19 @@ TEST_CASE_METHOD(SatTFixture, "Test that saturation solvers solve all the way to
     run_checks();
 };
 
+TEST_CASE("Check mixtures with fluid name aliases", "[mixture_name_aliasing]")
+{
+    shared_ptr<CoolProp::AbstractState> AS1, AS2;
+    AS1.reset(CoolProp::AbstractState::factory("HEOS", "EBENZENE&P-XYLENE"));
+    AS2.reset(CoolProp::AbstractState::factory("HEOS", "EthylBenzene&P-XYLENE"));
+    REQUIRE(AS1->fluid_names().size() == AS2->fluid_names().size());
+    std::size_t N = AS1->fluid_names().size();
+    for (std::size_t i = 0; i < N; ++i){
+        CAPTURE(i);
+        CHECK(AS1->fluid_names()[i] == AS2->fluid_names()[i]);
+    }
+}
+
 TEST_CASE("Predefined mixtures", "[predefined_mixtures]")
 {
 	SECTION("PropsSI"){
