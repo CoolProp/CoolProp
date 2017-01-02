@@ -817,9 +817,15 @@ double Conductivity(double T, double p, double psi_w)
     Phi_va=sqrt(2.0)/4.0*pow(1+Mw/Ma,-0.5)*pow(1+sqrt(mu_w/mu_a)*pow(Ma/Mw,0.25),2); //[-]
     return (1-psi_w)*k_a/((1-psi_w)+psi_w*Phi_av)+psi_w*k_w/(psi_w+(1-psi_w)*Phi_va);
 }
+/**
+ @param T Temperature in K
+ @param p Pressure in Pa
+ @param psi_w Water mole fraction in mol_w/mol_ha
+ @returns v Molar volume on a humid-air basis in m^3/mol_ha
+ */
 double MolarVolume(double T, double p, double psi_w)
 {
-    // Output in m^3/mol
+    // Output in m^3/mol_ha
     int iter;
     double v_bar0, v_bar=0, R_bar=8.314472,x1=0,x2=0,x3,y1=0,y2,resid,eps,Bm,Cm;
 
@@ -828,11 +834,11 @@ double MolarVolume(double T, double p, double psi_w)
     // -----------------------------
 
     // Start by assuming it is an ideal gas to get initial guess
-    v_bar0=R_bar*T/p;
+    v_bar0 = R_bar*T/p; // [m^3/mol_ha]
 
-    //Bring outside the loop since not a function of v_bar
-    Bm=B_m(T,psi_w);
-    Cm=C_m(T,psi_w);
+    // Bring outside the loop since not a function of v_bar
+    Bm = B_m(T,psi_w);
+    Cm = C_m(T,psi_w);
 
     iter=1; eps=1e-11; resid=999;
     while ((iter<=3 || std::abs(resid)>eps) && iter<100)
@@ -841,7 +847,7 @@ double MolarVolume(double T, double p, double psi_w)
         if (iter==2){x2=v_bar0+0.000001; v_bar=x2;}
         if (iter>2) {v_bar=x2;}
 
-            // want v_bar in m^3/mol and R_bar in J/mol-K
+            // want v_bar in m^3/mol_ha and R_bar in J/mol_ha-K
             resid = (p-(R_bar)*T/v_bar*(1+Bm/v_bar+Cm/(v_bar*v_bar)))/p;
 
         if (iter==1){y1=resid;}
@@ -853,7 +859,7 @@ double MolarVolume(double T, double p, double psi_w)
         }
         iter=iter+1;
     }
-    return v_bar;
+    return v_bar; // [J/mol_ha]
 }
 double Pressure(double T, double v_bar, double psi_w){
     double R_bar = 8.314472;
@@ -861,9 +867,9 @@ double Pressure(double T, double v_bar, double psi_w){
     double Cm = C_m(T, psi_w);
     return (R_bar)*T/v_bar*(1+Bm/v_bar+Cm/(v_bar*v_bar));
 }
-double IdealGasMolarEnthalpy_Water(double T, double vmolar)
+double IdealGasMolarEnthalpy_Water(double T, double p)
 {
-    double hbar_w_0, tau, rhomolar, hbar_w;
+    double hbar_w_0, tau, hbar_w;
     // Ideal-Gas contribution to enthalpy of water
     hbar_w_0 = -0.01102303806; //[J/mol]
     
@@ -875,15 +881,18 @@ double IdealGasMolarEnthalpy_Water(double T, double vmolar)
     double hoffset = href - href_EOS;
     
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
-    rhomolar = 1/vmolar; //[mol/m^3]
     Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(rhomolar, T);
+    Water->update_DmolarT_direct(p/(R_bar*T), T);
     Water->unspecify_phase();
     hbar_w = hbar_w_0 + hoffset + R_bar*T*(1+tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
     return hbar_w;
 }
 double IdealGasMolarEntropy_Water(double T, double p)
 {
+    
+    // Serious typo in RP-1485 - should use total pressure rather than
+    // reference pressure in density calculation for water vapor molar entropy
+    
     double sbar_w, tau, R_bar;
     R_bar = 8.314371; //[J/mol/K]
     
@@ -894,6 +903,7 @@ double IdealGasMolarEntropy_Water(double T, double p)
     double sref_EOS = R_bar*(tauref*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0));
     double soffset = sref - sref_EOS;
     
+    // Now calculate it based on the given inputs
     tau = Water->keyed_output(CoolProp::iT_reducing)/T;
     Water->specify_phase(CoolProp::iphase_gas);
     Water->update(CoolProp::DmolarT_INPUTS,p/(R_bar*T),T);
@@ -901,9 +911,9 @@ double IdealGasMolarEntropy_Water(double T, double p)
     sbar_w = soffset + R_bar*(tau*Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Water->keyed_output(CoolProp::ialpha0)); //[kJ/kmol/K]
     return sbar_w;
 }
-double IdealGasMolarEnthalpy_Air(double T, double vmolar)
+double IdealGasMolarEnthalpy_Air(double T, double p)
 {
-    double hbar_a_0, tau, rhomolar, hbar_a, R_bar_Lemmon;
+    double hbar_a_0, tau, hbar_a, R_bar_Lemmon;
     // Ideal-Gas contribution to enthalpy of air
     hbar_a_0 = -7914.149298; //[J/mol]
     
@@ -917,10 +927,9 @@ double IdealGasMolarEnthalpy_Air(double T, double vmolar)
     
     // Tj is given by 132.6312 K
     tau = 132.6312/T;
-    rhomolar = 1/vmolar; //[mol/m^3]
     // Now calculate it based on the given inputs
     Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(rhomolar, T);
+    Air->update_DmolarT_direct(p/(R_bar*T), T);
     Air->unspecify_phase();
     hbar_a = hbar_a_0 + hoffset + R_bar_Lemmon*T*(1+tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)); //[J/mol]
     return hbar_a;
@@ -949,9 +958,16 @@ double IdealGasMolarEntropy_Air(double T, double vmolar_a)
     Air->unspecify_phase();
     sbar_a=sbar_0_Lem + soffset + R_bar_Lemmon*(tau*Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)-Air->keyed_output(CoolProp::ialpha0))+R_bar_Lemmon*log(vmolar_a/vmolar_a_0); //[J/mol/K]
 
-    return sbar_a; //[J/mol/K]
+    return sbar_a; //[J/mol[air]/K]
 }
 
+/**
+ @param T Temperature, in K
+ @param p Pressure (not used)
+ @param psi_w Water mole fraction (mol_w/mol_ha)
+ @param vmolar Mixture molar volume in m^3/mol_ha
+ @returns h_ha Mixture molar enthalpy on a humid air basis in J/mol_ha
+ */
 double MolarEnthalpy(double T, double p, double psi_w, double vmolar)
 {
     // In units of kJ/kmol
@@ -971,8 +987,8 @@ double MolarEnthalpy(double T, double p, double psi_w, double vmolar)
         hbar_a = 9.2486716590E-04*T*T + 2.8557221776E+01*T - 7.8616129429E+03;
     }
     else{
-        hbar_w = IdealGasMolarEnthalpy_Water(T, vmolar);
-        hbar_a = IdealGasMolarEnthalpy_Air(T, vmolar);
+        hbar_w = IdealGasMolarEnthalpy_Water(T, p); // [J/mol[water]]
+        hbar_a = IdealGasMolarEnthalpy_Air(T, p); // [J/mol[dry air]]
     }
 
     // If the user changes the reference state for water or Air, we need to ensure that the values returned from this 
@@ -980,7 +996,7 @@ double MolarEnthalpy(double T, double p, double psi_w, double vmolar)
     // enthalpy should be and then correct the calculated values for the enthalpy.
 
     hbar = hbar_0+(1-psi_w)*hbar_a+psi_w*hbar_w+R_bar*T*((B_m(T,psi_w)-T*dB_m_dT(T,psi_w))/vmolar+(C_m(T,psi_w)-T/2.0*dC_m_dT(T,psi_w))/(vmolar*vmolar));
-    return hbar; //[J/mol]
+    return hbar; //[J/mol_ha]
 }
 double MolarInternalEnergy(double T, double p, double psi_w, double vmolar)
 {
@@ -1017,12 +1033,15 @@ double MassInternalEnergy_per_kgda(double T, double p, double psi_w)
     return h_bar*(1+W)/M_ha; //[J/kg_da]
 }
 
+/**
+ @param T Temperature, in K
+ @param p Pressure (not used)
+ @param psi_w Water mole fraction (mol_w/mol_ha)
+ @param v_bar Mixture molar volume in m^3/mol_ha
+ @returns s_ha Mixture molar entropy on a humid air basis in J/mol_ha/K
+ */
 double MolarEntropy(double T, double p, double psi_w, double v_bar)
 {
-    // In units of J/mol_da/K
-
-    // Serious typo in RP-1485 - should use total pressure rather than
-    // reference pressure in density calculation for water vapor molar entropy
 
     // vbar (molar volume) in m^3/mol
     double x1=0,x2=0,x3=0,y1=0,y2=0,eps=1e-8,f=999,R_bar_Lem=8.314510;
@@ -1072,7 +1091,7 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar)
     else{
         sbar = sbar_0+sbar_a;
     }
-    return sbar; //[kJ/kmol/K]
+    return sbar; //[J/mol_ha/K]
 }
 
 double MassEntropy_per_kgha(double T, double p, double psi_w)
@@ -1709,34 +1728,21 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
             return Conductivity(T,p,psi_w);
         }
         case GIVEN_CP:{
-            double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3,W;
-            v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
-            h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
-            v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
-            h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
-            W=HumidityRatio(psi_w); //[kg_w/kg_da]
-            cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_ha/K]
-            return cp_bar*(1+W)/M_ha; //[J/kg_da/K]
+            // [J/kg_ha/K]*[kg_ha/kg_da] because 1+W = kg_ha/kg_da
+            return _HAPropsSI_outputs(GIVEN_CPHA, p, T, psi_w)*(1+HumidityRatio(psi_w));
         }
         case GIVEN_CPHA:{
-            double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3;
+            double v_bar1,v_bar2,h_bar1,h_bar2, cp_ha, dT = 1e-3;
             v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
-            h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
+            h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[J/mol_ha]
             v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
-            h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
-            cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_ha/K]
-            return cp_bar/M_ha; //[J/kg_ha/K]
+            h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[J/mol_ha]
+            cp_ha = (h_bar2-h_bar1)/(2*dT); //[J/mol_ha/K]
+            return cp_ha/M_ha; //[J/kg_ha/K]
         }
         case GIVEN_CV:{
-            double v_bar,u_bar1,u_bar2, cv_bar, p_1, p_2, dT = 1e-3,W;
-            v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
-            p_1 = Pressure(T-dT, v_bar, psi_w);
-            u_bar1=MolarInternalEnergy(T-dT,p_1,psi_w,v_bar); //[J/mol_ha]
-            p_2 = Pressure(T+dT, v_bar, psi_w);
-            u_bar2=MolarInternalEnergy(T+dT,p_2,psi_w,v_bar); //[J/mol_ha]
-            W=HumidityRatio(psi_w); //[kg_w/kg_da]
-            cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_ha/K]
-            return cv_bar*(1+W)/M_ha; //[J/kg_da/K]
+            // [J/kg_ha/K]*[kg_ha/kg_da] because 1+W = kg_ha/kg_da
+            return _HAPropsSI_outputs(GIVEN_CVHA, p, T, psi_w)*(1+HumidityRatio(psi_w));
         }
         case GIVEN_CVHA:{
             double v_bar,p_1,p_2,u_bar1,u_bar2, cv_bar, dT = 1e-3;
@@ -2028,13 +2034,11 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
         //}
         else if (!strcmp(Name,"hbaro_w"))
         {
-            v_bar=MolarVolume(T,p,psi_w);
-            return IdealGasMolarEnthalpy_Water(T,v_bar);
+            return IdealGasMolarEnthalpy_Water(T,p);
         }
         else if (!strcmp(Name,"hbaro_a"))
         {
-            v_bar=MolarVolume(T,p,psi_w);
-            return IdealGasMolarEnthalpy_Air(T,v_bar);
+            return IdealGasMolarEnthalpy_Air(T,p);
         }
         else if (!strcmp(Name,"h_Ice"))
         {

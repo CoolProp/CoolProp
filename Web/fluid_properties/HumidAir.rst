@@ -211,7 +211,7 @@ Table of Inputs/Outputs to HAPropsSI
     ``R``, ``RH``, ``RelHum``; ; Input/Output; Relative humidity in [0, 1]
     ``S``, ``Sda``, ``Entropy``; J/kg dry air/K; Input/Output; Mixture entropy per unit dry air
     ``Sha``; J/kg humid air/K; Input/Output; Mixture entropy per unit humid air 
-    ``T``, ``Tdb``, ```T_db``; K; Input/Output; Dry-Bulb Temperature
+    ``T``, ``Tdb``, ``T_db``; K; Input/Output; Dry-Bulb Temperature
     ``V``, ``Vda``; m :math:`^3` /kg dry air; Input/Output;  Mixture volume per unit dry air
     ``Vha``; m :math:`^3` /kg humid air; Input/Output;  Mixture volume per unit humid air
     ``W``, ``Omega``, ``HumRat``; kg water/kg dry air; Input/Output; Humidity Ratio
