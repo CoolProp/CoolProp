@@ -1708,45 +1708,45 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
         case GIVEN_COND:{
             return Conductivity(T,p,psi_w);
         }
-        case GIVEN_CPHA:{
+        case GIVEN_CP:{
             double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3,W;
             v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
             h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
             v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
             h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
             W=HumidityRatio(psi_w); //[kg_w/kg_da]
-            cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_da/K]
-            return cp_bar*(1+W)/M_ha; //[J/kg_ha/K]
+            cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_ha/K]
+            return cp_bar*(1+W)/M_ha; //[J/kg_da/K]
         }
-        case GIVEN_CP:{
+        case GIVEN_CPHA:{
             double v_bar1,v_bar2,h_bar1,h_bar2, cp_bar, dT = 1e-3;
             v_bar1=MolarVolume(T-dT,p,psi_w); //[m^3/mol_ha]
             h_bar1=MolarEnthalpy(T-dT,p,psi_w,v_bar1); //[kJ/kmol_ha]
             v_bar2=MolarVolume(T+dT,p,psi_w); //[m^3/mol_ha]
             h_bar2=MolarEnthalpy(T+dT,p,psi_w,v_bar2); //[kJ/kmol_ha]
-            cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_da/K]
-            return cp_bar/M_ha; //[J/kg_da/K]
+            cp_bar = (h_bar2-h_bar1)/(2*dT); //[J/mol_ha/K]
+            return cp_bar/M_ha; //[J/kg_ha/K]
         }
-        case GIVEN_CVHA:{
+        case GIVEN_CV:{
             double v_bar,u_bar1,u_bar2, cv_bar, p_1, p_2, dT = 1e-3,W;
             v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
             p_1 = Pressure(T-dT, v_bar, psi_w);
-            u_bar1=MolarInternalEnergy(T-dT,p_1,psi_w,v_bar); //[J/mol_da]
+            u_bar1=MolarInternalEnergy(T-dT,p_1,psi_w,v_bar); //[J/mol_ha]
             p_2 = Pressure(T+dT, v_bar, psi_w);
-            u_bar2=MolarInternalEnergy(T+dT,p_2,psi_w,v_bar); //[J/mol_da]
+            u_bar2=MolarInternalEnergy(T+dT,p_2,psi_w,v_bar); //[J/mol_ha]
             W=HumidityRatio(psi_w); //[kg_w/kg_da]
-            cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_da/K]
-            return cv_bar*(1+W)/M_ha; //[J/kg_ha/K]
+            cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_ha/K]
+            return cv_bar*(1+W)/M_ha; //[J/kg_da/K]
         }
-        case GIVEN_CV:{
+        case GIVEN_CVHA:{
             double v_bar,p_1,p_2,u_bar1,u_bar2, cv_bar, dT = 1e-3;
             v_bar = MolarVolume(T,p,psi_w); //[m^3/mol_ha]
             p_1 = Pressure(T-dT, v_bar, psi_w);
             u_bar1=MolarInternalEnergy(T-dT,p_1,psi_w,v_bar); //[J/mol_ha]
             p_2 = Pressure(T+dT, v_bar, psi_w);
             u_bar2=MolarInternalEnergy(T+dT,p_2,psi_w,v_bar); //[J/mol_ha]
-            cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_da/K]
-            return cv_bar/M_ha; //[J/kg_da/K]
+            cv_bar = (u_bar2-u_bar1)/(2*dT); //[J/mol_ha/K]
+            return cv_bar/M_ha; //[J/kg_ha/K]
         }
         case GIVEN_ISENTROPIC_EXPONENT:{
             CoolPropDbl v_bar, dv = 1e-8, p_1, p_2;
