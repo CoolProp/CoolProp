@@ -222,7 +222,7 @@
      */
     EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Name3, double Prop3);
 
-    /** \brief Air saturation specific heat at 1 atmosphere, based on a correlation from EES.
+    /** \brief Humid air saturation specific heat at 1 atmosphere, based on a correlation from EES.
      * \sa \ref HumidAir::cair_sat(double);
      *
      * @param T [K] good from 250K to 300K, no error bound checking is carried out.
