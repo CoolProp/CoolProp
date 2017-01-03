@@ -2076,7 +2076,7 @@ double HAProps_Aux(const char* Name,double T, double p, double W, char *units)
 }
 double cair_sat(double T)
 {
-    // Air saturation specific heat
+    // Humid air saturation specific heat at 1 atmosphere.
     // Based on a correlation from EES, good from 250K to 300K.
     // No error bound checking is carried out
     // T: [K]
