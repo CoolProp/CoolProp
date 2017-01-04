@@ -222,9 +222,13 @@
      */
     EXPORT_CODE double CONVENTION HAPropsSI(const char *Output, const char *Name1, double Prop1, const char *Name2, double Prop2, const char *Name3, double Prop3);
 
-    /** \brief DLL wrapper of the cair_sat function
+    /** \brief Humid air saturation specific heat at 1 atmosphere, based on a correlation from EES.
      * \sa \ref HumidAir::cair_sat(double);
-     */
+     *
+     * @param T [K] good from 250K to 300K, no error bound checking is carried out.
+     *
+     * \note Equals partial derivative of enthalpy with respect to temperature at constant relative humidity of 100 percent and pressure of 1 atmosphere.
+
     EXPORT_CODE double CONVENTION cair_sat(double T);
 
     /** \brief FORTRAN 77 style wrapper of the HAPropsSI function
