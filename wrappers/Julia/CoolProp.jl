@@ -1,14 +1,11 @@
 module CoolProp
 using Compat
-export PropsSI, PhaseSI, get_global_param_string, get_parameter_information_string, get_fluid_param_string, set_reference_stateS, get_param_index, get_input_pair_index, set_config, F2K, K2F, HAPropsSI, AbstractState_factory, AbstractState_free, AbstractState_set_fractions, AbstractState_update, AbstractState_specify_phase, AbstractState_unspecify_phase, AbstractState_keyed_output, AbstractState_output, AbstractState_update_and_common_out, AbstractState_update_and_1_out, AbstractState_update_and_5_out, AbstractState_set_binary_interaction_double, AbstractState_set_cubic_alpha_C, AbstractState_set_fluid_parameter_double
-export propssi, phasesi, k2f, f2k, hapropssi, cair_sat, set_reference_state
-export abstractstate_factory, abstractstate_free, abstractstate_set_fractions, abstractstate_update, abstractstate_keyed_output, abstractstate_specify_phase, abstractstate_unspecify_phase, abstractstate_update_and_common_out!, abstractstate_update_and_5_out!, abstractstate_update_and_1_out!, abstractstate_set_binary_interaction_double, abstractstate_set_cubic_alpha_c, abstractstate_set_fluid_parameter_double, abstractstate_output
-errcode = Ref{Clong}(0)
 
+errcode = Ref{Clong}(0)
 const buffer_length = 20000
 message_buffer = Array(UInt8, buffer_length)
 
-const inputs_to_get_global_param_string = ["version", "gitrevision", "errstring", "warnstring", "FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "parameter_list", "predefined_mixtures", "HOME", "cubic_fluids_schema"];
+const inputs_to_get_global_param_string = ["version", "gitrevision", "errstring", "warnstring", "FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "parameter_list", "predefined_mixtures", "HOME", "cubic_fluids_schema"]
 
 # ---------------------------------
 #        High-level functions
@@ -121,20 +118,29 @@ function phasesi(name1::AbstractString, value1::Real, name2::AbstractString, val
   return val
 end
 
-###
-#    /**
-#     * @brief Set the departure functions in the departure function library from a string format
-#     * @param string_data The departure functions to be set, either provided as a JSON-formatted string
-#     *                    or as a string of the contents of a HMX.BNC file from REFPROP
-#     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#     * @param message_buffer A buffer for the error code
-#     * @param buffer_length The length of the buffer for the error code
-#     *
-#     * @note By default, if a departure function already exists in the library, this is an error,
-#     *       unless the configuration variable OVERWRITE_DEPARTURE_FUNCTIONS is set to true
-#     */
-#    EXPORT_CODE void CONVENTION set_departure_functions(const char * string_data, long *errcode, char *message_buffer, const long buffer_length);
-###
+#=No sample no test
+"""
+    set_departure_functions(string_data::AbstractString)
+
+Set the departure functions in the departure function library from a string format
+
+# Arguments
+* `string_data`: The departure functions to be set, either provided as a JSON-formatted string or as a string of the contents of a HMX.BNC file from REFPROP
+
+# Note
+By default, if a departure function already exists in the library, this is an error, unless the configuration variable OVERWRITE_DEPARTURE_FUNCTIONS is set to true
+
+# Ref
+CoolProp::set_departure_functions(const char * string_data, long *errcode, char *message_buffer, const long buffer_length);
+"""
+function set_departure_functions(string_data::AbstractString)
+  errcode = ref{Clong}(0);
+  ccall( (:set_departure_functions, "CoolProp"), Void, (Cstring, Ptr{Clong}, Ptr{UInt8}, Int), string_data, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  if errcode != 0
+    error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1}))))
+  end
+end
+=#
 
 """
     set_reference_state(ref::AbstractString, reference_state::AbstractString)
@@ -200,6 +206,33 @@ set_reference_stateD(const char* Ref, double T, double rhomolar, double hmolar0,
 function set_reference_state(fluid::AbstractString, temp::Real, rhomolar::Real, hmolar0::Real, smolar0::Real)
   val = ccall( (:set_reference_stateD, "CoolProp"), Cint, (Cstring, Cdouble, Cdouble, Cdouble, Cdouble), fluid, temp, rhomolar, hmolar0, smolar0)
   if val == 0
+    error("CoolProp: ", get_global_param_string("errstring"))
+  end
+  return val
+end
+
+"""
+    saturation_ancillary(fluid_name::AbstractString, output::AbstractString, quality::Integer, input::AbstractString, value::Real)
+
+Extract a value from the saturation ancillary.
+
+# Arguments
+* `fluid_name`: The name of the fluid to be used - HelmholtzEOS backend only
+* `output`: The desired output variable ("P" for instance for pressure)
+* `quality`: The quality, 0 or 1
+* `input`: The input variable ("T")
+* `value`: The input value
+
+#  Example
+julia> saturation_ancillary("R410A","I",1,"T", 300)
+0.004877519938463293
+
+# Ref
+double saturation_ancillary(const char* fluid_name, const char* output, int Q, const char* input, double value);
+"""
+function saturation_ancillary(fluid_name::AbstractString, output::AbstractString, quality::Integer, input::AbstractString, value::Real)
+  val = ccall( (:saturation_ancillary, "CoolProp"), Cdouble, (Cstring, Cstring, Cint, Cstring, Cdouble), fluid_name, output, quality, input, value)
+  if val == Inf
     error("CoolProp: ", get_global_param_string("errstring"))
   end
   return val
@@ -342,7 +375,7 @@ julia> get_parameter_information_string("HMOLAR", "units")
 A tabular output for this function is available with `?parameters` or `parameters=parameters()`
 """
 function get_parameter_information_string(key::AbstractString, outtype::AbstractString)
-  message_buffer[1:length(outtype)+1] = [outtype.data; 0x00]
+  message_buffer[1:length(outtype)+1] = [Vector{UInt8}(outtype); 0x00]
   val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Cstring, Ptr{UInt8}, Int), key, message_buffer::Array{UInt8, 1}, buffer_length)
   if val == 0
     error("CoolProp: ", get_global_param_string("errstring"))
@@ -506,18 +539,6 @@ function set_debug_level(level::Integer) # change ::Int to ::Integer to make set
   ccall( (:set_debug_level, "CoolProp"), Void, (Cint,), level)
 end
 
-###
-#    /* \brief Extract a value from the saturation ancillary
-#     *
-#     * @param fluid_name The name of the fluid to be used - HelmholtzEOS backend only
-#     * @param output The desired output variable ("P" for instance for pressure)
-#     * @param Q The quality, 0 or 1
-#     * @param input The input variable ("T")
-#     * @param value The input value
-#     */
-#    EXPORT_CODE double CONVENTION saturation_ancillary(const char *fluid_name, const char *output, int Q, const char *input, double value);
-###
-
 # ---------------------------------
 #        Humid Air Properties
 # ---------------------------------
@@ -590,20 +611,31 @@ end
 """
     cair_sat(t::Real)
 
-Air saturation specific heat in [kJ/kg-K] based on a correlation from EES, good from 250K to 300K.
+Humid air saturation specific in [kJ/kg-K] heat at 1 atmosphere, based on a correlation from EES.
 
 # Arguments
-* `t`: Temperature in Kelvin
+* `t`: T [K] good from 250K to 300K, no error bound checking is carried out.
 
 # Ref
 HumidAir::cair_sat(double);
 
 # Note
-No error bound checking is carried out
+Equals partial derivative of enthalpy with respect to temperature at constant relative humidity of 100 percent and pressure of 1 atmosphere.
 """
 function cair_sat(t::Real)
   val = ccall( (:cair_sat, "CoolProp"), Cdouble, (Cdouble, ), t)
   return val;
+end
+function raise(errcode, message_buffer)
+  if errcode[] != 0
+    if errcode[] == 1
+      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
+    elseif errcode[] == 2
+      error("CoolProp: message buffer too small")
+    else # == 3
+      error("CoolProp: unknown error")
+    end
+  end
 end
 
 # ---------------------------------
@@ -630,15 +662,7 @@ julia> PR = abstractstate_factory("PR", "R245fa");
 """
 function abstractstate_factory(backend::AbstractString, fluids::AbstractString)
   AbstractState = ccall( (:AbstractState_factory, "CoolProp"), Clong, (Cstring, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), backend, fluids, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return AbstractState
 end
 
@@ -652,15 +676,7 @@ Release a state class generated by the low-level interface wrapper.
 """
 function abstractstate_free(handle::Clong)
   ccall( (:AbstractState_free, "CoolProp"), Void, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -687,15 +703,7 @@ julia> abstractstate_free(handle);
 """
 function abstractstate_set_fractions(handle::Clong, fractions::Array{Float64})
   ccall( (:AbstractState_set_fractions, "CoolProp"), Void, (Clong, Ptr{Cdouble}, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, fractions, length(fractions), errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -726,15 +734,7 @@ julia> abstractstate_free(handle);
 """
 function abstractstate_update(handle::Clong, input_pair::Clong, value1::Real, value2::Real)
   ccall( (:AbstractState_update, "CoolProp"), Void, (Clong, Clong, Cdouble, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -757,15 +757,8 @@ See `abstractstate_output`
 """
 function abstractstate_keyed_output(handle::Clong, param::Clong)
   output = ccall( (:AbstractState_keyed_output, "CoolProp"), Cdouble, (Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, param, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  elseif output == -Inf
+  raise(errcode, message_buffer)
+  if output == -Inf
     error("CoolProp: no correct state has been set with AbstractState_update")
   end
   return output
@@ -823,15 +816,7 @@ julia> abstractstate_free(heos);
 """
 function abstractstate_specify_phase(handle::Clong, phase::AbstractString)
   ccall( (:AbstractState_specify_phase, "CoolProp"), Void, (Clong, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), handle, phase, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -845,15 +830,7 @@ Unspecify the phase to be used for all further calculations.
 """
 function abstractstate_unspecify_phase(handle::Clong)
   ccall( (:AbstractState_unspecify_phase, "CoolProp"), Void, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -888,14 +865,7 @@ julia> abstractstate_free(handle);
 """
 function abstractstate_update_and_common_out!{F<:Float64}(handle::Clong, input_pair::Clong, value1::Array{F}, value2::Array{F}, length::Integer, T::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
   ccall( (:AbstractState_update_and_common_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, T, p, rhomolar, hmolar, smolar, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -922,15 +892,7 @@ Update the state of the AbstractState and get one output value (temperature, pre
 """
 function abstractstate_update_and_1_out!{F<:Float64}(handle::Clong, input_pair::Clong, value1::Array{F}, value2::Array{F}, length::Integer, output::Clong, out::Array{F})
   ccall( (:AbstractState_update_and_1_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Clong, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, output, out, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -961,15 +923,7 @@ Update the state of the AbstractState and get an output value five common output
 """
 function abstractstate_update_and_5_out!{F<:Float64}(handle::Clong, input_pair::Clong, value1::Array{F}, value2::Array{F}, length::Integer, outputs::Array{Clong}, out1::Array{F}, out2::Array{F}, out3::Array{F}, out4::Array{F}, out5::Array{F})
   ccall( (:AbstractState_update_and_5_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Clong}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, outputs, out1, out2, out3, out4, out5, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
@@ -1007,24 +961,16 @@ julia> abstractstate_keyed_output(handle, t)
 julia> abstractstate_free(handle);
 ```
 """
-function abstractstate_set_binary_interaction_double(handle::Clong, i::Integer, j::Integer, parameter::AbstractString, value::Float64)
+function abstractstate_set_binary_interaction_double(handle::Clong, i::Integer, j::Integer, parameter::AbstractString, value::Real)
   ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong, Clong, Clong, Cstring, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, j, parameter, value, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
 """
-    abstractstate_set_cubic_alpha_c(handle::Clong, i::Integer, parameter::AbstractString, c1::Float64, c2::Float64, c3::Float64)
+    abstractstate_set_cubic_alpha_c(handle::Clong, i::Integer, parameter::AbstractString, c1::Real, c2::Real, c3::Real)
 
- Set cubic's alpha function parameters.
+Set cubic's alpha function parameters.
 
 # Arguments
 * `handle`: The integer handle for the state class stored in memory
@@ -1034,22 +980,14 @@ end
 * `c2`: the second parameter for the alpha function
 * `c3`: the third parameter for the alpha function
 """
-function abstractstate_set_cubic_alpha_c(handle::Clong, i::Integer, parameter::AbstractString, c1::Float64, c2::Float64, c3::Float64)
+function abstractstate_set_cubic_alpha_c(handle::Clong, i::Integer, parameter::AbstractString, c1::Real, c2::Real, c3::Real)
   ccall( (:AbstractState_set_cubic_alpha_C, "CoolProp"), Void, (Clong, Clong, Cstring, Cdouble, Cdouble, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, parameter, c1, c2, c3, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
 """
-    abstractstate_set_fluid_parameter_double(handle::Clong, i::Integer, parameter::AbstractString, value::Float64)
+    abstractstate_set_fluid_parameter_double(handle::Clong, i::Integer, parameter::AbstractString, value::Real)
 
 Set some fluid parameter (ie volume translation for cubic). Currently applied to the whole fluid not to components.
 
@@ -1059,140 +997,213 @@ Set some fluid parameter (ie volume translation for cubic). Currently applied to
 * `parameter`: string wit the name of the parameter, e.g. "c", "cm", "c_m" for volume translation parrameter.
 * `value`: the value of the parameter
 """
-function abstractstate_set_fluid_parameter_double(handle::Clong, i::Integer, parameter::AbstractString, value::Float64)
+function abstractstate_set_fluid_parameter_double(handle::Clong, i::Integer, parameter::AbstractString, value::Real)
   ccall( (:AbstractState_set_fluid_parameter_double, "CoolProp"), Void, (Clong, Clong, Cstring, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, parameter, value, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
-    end
-  end
+  raise(errcode, message_buffer)
   return nothing
 end
 
-#    /**
-#    * @brief Calculate a saturation derivative from the AbstractState using integer values for the desired parameters
-#    * @param handle The integer handle for the state class stored in memory
-#    * @param Of The parameter of which the derivative is being taken
-#    * @param Wrt The derivative with with respect to this parameter
-#    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#    * @param message_buffer A buffer for the error code
-#    * @param buffer_length The length of the buffer for the error code
-#    * @return
-#    */
-#    EXPORT_CODE double CONVENTION AbstractState_first_saturation_deriv(const long handle, const long Of, const long Wrt, long *errcode, char *message_buffer, const long buffer_length);
-#
-#    /**
-#    * @brief Calculate the first partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
-#    * @param handle The integer handle for the state class stored in memory
-#    * @param Of The parameter of which the derivative is being taken
-#    * @param Wrt The derivative with with respect to this parameter
-#    * @param Constant The parameter that is not affected by the derivative
-#    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#    * @param message_buffer A buffer for the error code
-#    * @param buffer_length The length of the buffer for the error code
-#    * @return
-#    */
-#    EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handle, const long Of, const long Wrt, const long Constant, long *errcode, char *message_buffer, const long buffer_length);
+"""
+    abstractstate_first_saturation_deriv(handle::Clong, of::Clong, wrt::Clong)
 
+Calculate a saturation derivative from the AbstractState using integer values for the desired parameters.
 
-#    /**
-#     * @brief Build the phase envelope
-#     * @param handle The integer handle for the state class stored in memory
-#     * @param level How much refining of the phase envelope ("none" to skip refining (recommended))
-#     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#     * @param message_buffer A buffer for the error code
-#     * @param buffer_length The length of the buffer for the error code
-#     * @return
-#     *
-#     * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
-#     */
-#    EXPORT_CODE void CONVENTION AbstractState_build_phase_envelope(const long handle, const char *level, long *errcode, char *message_buffer, const long buffer_length);
-#
-#    /**
-#     * @brief Get data from the phase envelope for the given mixture composition
-#     * @param handle The integer handle for the state class stored in memory
-#     * @param length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
-#     * @param T The pointer to the array of temperature (K)
-#     * @param p The pointer to the array of pressure (Pa)
-#     * @param rhomolar_vap The pointer to the array of molar density for vapor phase (m^3/mol)
-#     * @param rhomolar_liq The pointer to the array of molar density for liquid phase (m^3/mol)
-#     * @param x The compositions of the "liquid" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
-#     * @param y The compositions of the "vapor" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
-#     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#     * @param message_buffer A buffer for the error code
-#     * @param buffer_length The length of the buffer for the error code
-#     * @return
-#     *
-#     * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
-#     */
-#    EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long handle, const long length, double* T, double* p, double* rhomolar_vap, double *rhomolar_liq, double *x, double *y, long *errcode, char *message_buffer, const long buffer_length);
-#
-#    /**
-#     * @brief Build the spinodal
-#     * @param handle The integer handle for the state class stored in memory
-#     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#     * @param message_buffer A buffer for the error code
-#     * @param buffer_length The length of the buffer for the error code
-#     * @return
-#     */
-#    EXPORT_CODE void CONVENTION AbstractState_build_spinodal(const long handle, long *errcode, char *message_buffer, const long buffer_length);
-#
-#    /**
-#     * @brief Get data for the spinodal curve
-#     * @param handle The integer handle for the state class stored in memory
-#     * @param length The number of elements stored in the arrays (all outputs MUST be the same length)
-#     * @param tau The pointer to the array of reciprocal reduced temperature
-#     * @param delta The pointer to the array of reduced density
-#     * @param M1 The pointer to the array of M1 values (when L1=M1=0, critical point)
-#     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#     * @param message_buffer A buffer for the error code
-#     * @param buffer_length The length of the buffer for the error code
-#     * @return
-#     *
-#     * @note If there is an error, no change in the output arrays will be made
-#     */
-#    EXPORT_CODE void CONVENTION AbstractState_get_spinodal_data(const long handle, const long length, double* tau, double* delta, double* M1, long *errcode, char *message_buffer, const long buffer_length);
-#
-#    /**
-#     * @brief Calculate all the critical points for a given composition
-#     * @param handle The integer handle for the state class stored in memory
-#     * @param length The length of the buffers passed to this function
-#     * @param T The pointer to the array of temperature (K)
-#     * @param p The pointer to the array of pressure (Pa)
-#     * @param rhomolar The pointer to the array of molar density (m^3/mol)
-#     * @param stable The pointer to the array of boolean flags for whether the critical point is stable (1) or unstable (0)
-#     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
-#     * @param message_buffer A buffer for the error code
-#     * @param buffer_length The length of the buffer for the error code
-#     * @return
-#     *
-#     * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
-#     */
-#    EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, const long length, double *T, double *p, double *rhomolar, long *stable, long *errcode, char *message_buffer, const long buffer_length);
+# Arguments
+* `handle`: The integer handle for the state class stored in memory
+* `of`: The parameter of which the derivative is being taken
+* `wrt`: The derivative with with respect to this parameter
 
-const PropsSI = propssi;
-const PhaseSI = phasesi;
-const K2F = k2f;
-const F2K = f2k;
-const HAPropsSI = hapropssi;
-const AbstractState_factory = abstractstate_factory;
-const AbstractState_free = abstractstate_free;
-const AbstractState_set_fractions = abstractstate_set_fractions;
-const AbstractState_update = abstractstate_update;
-const AbstractState_keyed_output = abstractstate_keyed_output;
-const AbstractState_output = abstractstate_output;
-const AbstractState_specify_phase = abstractstate_specify_phase;
-const AbstractState_unspecify_phase = abstractstate_unspecify_phase;
-const AbstractState_update_and_common_out = abstractstate_update_and_common_out!;
-const AbstractState_update_and_1_out = abstractstate_update_and_1_out!;
-const AbstractState_update_and_5_out = abstractstate_update_and_5_out!;
-const AbstractState_set_binary_interaction_double = abstractstate_set_binary_interaction_double;
-const AbstractState_set_cubic_alpha_C = abstractstate_set_cubic_alpha_c;
-const AbstractState_set_fluid_parameter_double = abstractstate_set_fluid_parameter_double;
-const set_reference_stateS = set_reference_state;
-const set_reference_stateD = set_reference_state;
+# Example
+```julia
+julia> as = abstractstate_factory("HEOS", "Water");
+julia> abstractstate_update(as, "PQ_INPUTS", 15e5, 0);
+julia> abstractstate_first_saturation_deriv(as, get_param_index("Hmolar"), get_param_index("P"))
+0.0025636362140578207
+```
+
+# Ref
+double CoolProp::AbstractState_first_saturation_deriv(const long handle, const long Of, const long Wrt, long* errcode, char* message_buffer, const long buffer_length);
+"""
+function abstractstate_first_saturation_deriv(handle::Clong, of::Clong, wrt::Clong)
+  output = ccall( (:AbstractState_first_saturation_deriv, "CoolProp"), Cdouble, (Clong, Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, of, wrt, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  raise(errcode, message_buffer)
+  if output == -Inf
+    error("CoolProp: no correct state has been set with AbstractState_update")
+  end
+  return output
+end
+
+"""
+    abstractstate_first_partial_deriv(handle::Clong, of::Clong, wrt::Clong, constant::Clong)
+
+Calculate the first partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters.
+
+# Arguments
+* `handle`: The integer handle for the state class stored in memory
+* `of`: The parameter of which the derivative is being taken
+* `Wrt`: The derivative with with respect to this parameter
+* `Constant`: The parameter that is not affected by the derivative
+
+# Example
+```julia
+julia> as = abstractstate_factory("HEOS", "Water");
+julia> abstractstate_update(as, "PQ_INPUTS", 15e5, 0);
+julia> abstractstate_first_partial_deriv(as, get_param_index("Hmolar"), get_param_index("P"), get_param_index("S"))
+2.07872526058326e-5
+julia> abstractstate_first_partial_deriv(as, get_param_index("Hmolar"), get_param_index("P"), get_param_index("D"))
+5.900781297636475e-5
+```
+
+# Ref
+double CoolProp::AbstractState_first_partial_deriv(const long handle, const long Of, const long Wrt, const long Constant, long* errcode, char* message_buffer, const long buffer_length);
+"""
+function abstractstate_first_partial_deriv(handle::Clong, of::Clong, wrt::Clong, constant::Clong)
+  output = ccall( (:AbstractState_first_partial_deriv, "CoolProp"), Cdouble, (Clong, Clong, Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, of, wrt, constant, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  raise(errcode, message_buffer)
+  if output == -Inf
+    error("CoolProp: no correct state has been set with AbstractState_update")
+  end
+  return output
+end
+
+"""
+    abstractstate_build_phase_envelope(handle::Clong, level::AbstractString)
+
+Build the phase envelope.
+
+# Arguments
+* `handle`: The integer handle for the state class stored in memory
+* `level`: How much refining of the phase envelope ("none" to skip refining (recommended) or "veryfine")
+
+# Note
+If there is an error in an update call for one of the inputs, no change in the output array will be made
+
+# Ref
+CoolPRop::AbstractState_build_phase_envelope(const long handle, const char* level, long* errcode, char* message_buffer, const long buffer_length);
+"""
+function abstractstate_build_phase_envelope(handle::Clong, level::AbstractString)
+  ccall( (:AbstractState_build_phase_envelope, "CoolProp"), Void, (Clong, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), handle, level, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  raise(errcode, message_buffer)
+  return nothing
+end
+
+"""
+    abstractstate_get_phase_envelope_data!{F<:Float64}(handle::Clong, length::Integer, temp::Array{F}, p::Array{F}, rhomolar_vap::Array{F}, rhomolar_liq::Array{F}, x::Array{F}, y::Array{F})
+
+Get data from the phase envelope for the given mixture composition.
+
+# Arguments
+* `handle`: The integer handle for the state class stored in memory
+* `length`: The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
+* `temp`: The pointer to the array of temperature (K)
+* `p`: The pointer to the array of pressure (Pa)
+* `rhomolar_vap`: The pointer to the array of molar density for vapor phase (m^3/mol)
+* `rhomolar_liq`: The pointer to the array of molar density for liquid phase (m^3/mol)
+* `x`: The compositions of the "liquid" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
+* `y`: The compositions of the "vapor" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
+
+# Example
+```julia
+julia> HEOS=AbstractState_factory("HEOS","Methane&Ethane");
+julia> length=200;
+julia> t=zeros(length);p=zeros(length);x=zeros(2*length);y=zeros(2*length);rhomolar_vap=zeros(length);rhomolar_liq=zeros(length);
+julia> AbstractState_set_fractions(HEOS, [0.2, 1 - 0.2])
+julia> AbstractState_build_phase_envelope(HEOS, "none")
+julia> AbstractState_get_phase_envelope_data(HEOS, length, t, p, rhomolar_vap, rhomolar_liq, x, y)
+julia> AbstractState_free(HEOS)
+```
+
+# Note
+If there is an error in an update call for one of the inputs, no change in the output array will be made
+
+# Ref
+CoolProp::AbstractState_get_phase_envelope_data(const long handle, const long length, double* T, double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y, long* errcode, char* message_buffer, const long buffer_length);
+"""
+function abstractstate_get_phase_envelope_data!{F<:Float64}(handle::Clong, length::Integer, temp::Array{F}, p::Array{F}, rhomolar_vap::Array{F}, rhomolar_liq::Array{F}, x::Array{F}, y::Array{F})
+  ccall( (:AbstractState_get_phase_envelope_data, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, temp, p, rhomolar_vap, rhomolar_liq, x, y, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  raise(errcode, message_buffer)
+  return nothing
+end
+
+"""
+    abstractstate_build_spinodal(handle::Clong)
+
+Build the spinodal.
+
+# Arguments
+* `handle`: The integer handle for the state class stored in memory
+
+# Ref
+CoolProp::AbstractState_build_spinodal(const long handle, long* errcode, char* message_buffer, const long buffer_length);
+"""
+function abstractstate_build_spinodal(handle::Clong)
+  ccall( (:AbstractState_build_spinodal, "CoolProp"), Void, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  raise(errcode, message_buffer)
+  return nothing
+end
+
+"""
+    abstractstate_get_spinodal_data!{F<:Float64}(handle::Clong, length::Integer, tau::Array{F}, dalta::Array{F}, m1::Array{F})
+
+Get data for the spinodal curve.
+
+# Arguments
+* `handle`: The integer handle for the state class stored in memory
+* `length`: The number of elements stored in the arrays (all outputs MUST be the same length)
+* `tau`: The pointer to the array of reciprocal reduced temperature
+* `delta`: The pointer to the array of reduced density
+* `m1`: The pointer to the array of M1 values (when L1=M1=0, critical point)
+
+# Note
+If there is an error, no change in the output arrays will be made
+
+# Ref
+CoolProp::AbstractState_get_spinodal_data(const long handle, const long length, double* tau, double* delta, double* M1, long* errcode, char* message_buffer, const long buffer_length);
+"""
+function abstractstate_get_spinodal_data!{F<:Float64}(handle::Clong, length::Integer, tau::Array{F}, delta::Array{F}, m1::Array{F})
+  ccall( (:AbstractState_get_spinodal_data, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, tau, delta, m1, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  raise(errcode, message_buffer)
+  return nothing
+end
+
+"""
+    abstractState_all_critical_points!{F<:Float64}(handle::Clong, length::Integer, temp::Array{F}, p::Array{F}, rhomolar::Array{F}, stable::Array{Clong})
+
+Calculate all the critical points for a given composition.
+
+# Arguments
+* `handle`: The integer handle for the state class stored in memory
+* `length`: The length of the buffers passed to this function
+* `T`: The pointer to the array of temperature (K)
+* `p`: The pointer to the array of pressure (Pa)
+* `rhomolar`: The pointer to the array of molar density (m^3/mol)
+* `stable`: The pointer to the array of boolean flags for whether the critical point is stable (1) or unstable (0)
+
+# Note
+If there is an error in an update call for one of the inputs, no change in the output array will be made
+
+# Ref
+CoolProp::AbstractState_all_critical_points(const long handle, const long length, double* T, double* p, double* rhomolar, long* stable, long* errcode, char* message_buffer, const long buffer_length);
+"""
+function abstractstate_all_critical_points!{F<:Float64}(handle::Clong, length::Integer, temp::Array{F}, p::Array{F}, rhomolar::Array{F}, stable::Array{Clong})
+  ccall( (:AbstractState_all_critical_points, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, temp, p, rhomolar, stable, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  raise(errcode, message_buffer)
+  return nothing
+end
+
+for sym=[:PropsSI, :PhaseSI, :K2F, :F2K, :HAPropsSI, :AbstractState_factory, :AbstractState_free, :AbstractState_set_fractions, :AbstractState_update, :AbstractState_keyed_output, :AbstractState_output, :AbstractState_specify_phase, :AbstractState_unspecify_phase, :AbstractState_update_and_common_out, :AbstractState_update_and_1_out, :AbstractState_update_and_5_out, :AbstractState_set_binary_interaction_double, :AbstractState_set_cubic_alpha_C, :AbstractState_set_fluid_parameter_double, :AbstractState_first_saturation_deriv, :AbstractState_first_partial_deriv, :AbstractState_build_phase_envelope, :AbstractState_build_spinodal]
+  symorigin = Symbol(replace(lowercase(string(sym)),r"out$","out!"))
+  @eval const $sym = $symorigin
+  @eval export $sym, $symorigin
+end
+const set_reference_stateS = set_reference_state
+const set_reference_stateD = set_reference_state
+const AbstractState_get_phase_envelope_data = abstractstate_get_phase_envelope_data!
+const AbstractState_all_critical_points = abstractstate_all_critical_points!
+const AbstractState_get_spinodal_data = abstractstate_get_spinodal_data!
+const set_config_string = set_config
+export set_reference_stateS, set_reference_stateD, AbstractState_get_spinodal_data, AbstractState_all_critical_points, AbstractState_get_phase_envelope_data
+export set_reference_state, abstractstate_get_spinodal_data!, abstractState_all_critical_points!, abstractstate_get_phase_envelope_data!
+export get_global_param_string, get_parameter_information_string, get_fluid_param_string, get_param_index, get_input_pair_index, set_config
+export saturation_ancillary, set_departure_functions, set_config_string, cair_sat
 end #module
