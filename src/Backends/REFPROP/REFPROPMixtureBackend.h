@@ -153,8 +153,8 @@ public:
 
     const CoolProp::PhaseEnvelopeData &calc_phase_envelope_data(){return PhaseEnvelope;};
 
-    std::vector<CoolPropDbl> calc_mole_fractions_liquid(void){return std::vector<CoolPropDbl>(mole_fractions_liq.begin(), mole_fractions_liq.end());}
-    std::vector<CoolPropDbl> calc_mole_fractions_vapor(void){return std::vector<CoolPropDbl>(mole_fractions_vap.begin(), mole_fractions_vap.end());}
+    std::vector<CoolPropDbl> calc_mole_fractions_liquid(void){return std::vector<CoolPropDbl>(mole_fractions_liq.begin(), mole_fractions_liq.end()+this->Ncomp);}
+    std::vector<CoolPropDbl> calc_mole_fractions_vapor(void){return std::vector<CoolPropDbl>(mole_fractions_vap.begin(), mole_fractions_vap.end()+this->Ncomp);}
 
     /// Check if the mole fractions have been set, etc.
     void check_status();
