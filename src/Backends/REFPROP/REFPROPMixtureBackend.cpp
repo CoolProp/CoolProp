@@ -269,9 +269,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str());
         long N = static_cast<long>(fluid_names.size());
         this->Ncomp = N;
-        mole_fractions.resize(N);
-        mole_fractions_liq.resize(N);
-        mole_fractions_vap.resize(N);
+        mole_fractions.resize(20);
+        mole_fractions_liq.resize(20);
+        mole_fractions_vap.resize(20);
         return;
     }
     else
@@ -329,9 +329,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                       255);
             if (static_cast<int>(ierr) <= 0){
                 this->Ncomp = N;
-                mole_fractions.resize(N);
-                mole_fractions_liq.resize(N);
-                mole_fractions_vap.resize(N);
+                mole_fractions.resize(20);
+                mole_fractions_liq.resize(20);
+                mole_fractions_vap.resize(20);
                 LoadedREFPROPRef = mix;
                 cached_component_string = mix;
                 this->fluid_names.clear();
@@ -400,9 +400,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (static_cast<int>(ierr) <= 0) // Success (or a warning, which is silently squelched for now)
             {
                 this->Ncomp = N;
-                mole_fractions.resize(N);
-                mole_fractions_liq.resize(N);
-                mole_fractions_vap.resize(N);
+                mole_fractions.resize(20);
+                mole_fractions_liq.resize(20);
+                mole_fractions_vap.resize(20);
                 LoadedREFPROPRef = _components_joined;
                 cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
@@ -605,13 +605,8 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
-    if (mole_fractions.size() != this->Ncomp)
-    {
-        throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]",mole_fractions.size(), this->Ncomp));
-    }
-    this->mole_fractions.resize(mole_fractions.size());
-    for (std::size_t i = 0; i < mole_fractions.size(); ++i)
-    {
+    this->mole_fractions = std::vector<CoolPropDbl>(20, 0.0);
+    for (std::size_t i = 0; i < mole_fractions.size(); ++i){
         this->mole_fractions[i] = static_cast<double>(mole_fractions[i]);
     }
     this->mole_fractions_long_double = mole_fractions;
@@ -636,6 +631,9 @@ void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &m
     {
 		this->mole_fractions.push_back(*it/sum_moles);
 	}
+    while (this->mole_fractions.size() < 20) {
+        this->mole_fractions.push_back(0.0);
+    }
     this->mole_fractions_long_double = mole_fractions;
     _mole_fractions_set = true;
 };
@@ -886,12 +884,12 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
         return p_kPa*1000;
     }
     else if (param == iT && given == iP){
-        double p_kPa = static_cast<double>(value), _T;
+        double p_kPa = static_cast<double>(value)/1000.0, _T;
         MELTPdll(&p_kPa, &(mole_fractions[0]),
              &_T,
              &ierr,herr,errormessagelength);      // Error message
         if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
-        return p_kPa*1000;
+        return _T;
     }
     else{
         throw ValueError(format("calc_melting_line(%s,%s,%Lg) is an invalid set of inputs ",
@@ -1053,7 +1051,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     SPLNVALdll(&isp, &iderv, &c, &rhoymin, &ierr, herr, errormessagelength);
     iderv = -2;
     SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr, errormessagelength);
-    long nc = static_cast<long>(mole_fractions.size());
+    long nc = this->Ncomp;
     double ratio = pow(rhoymax/rhoymin,1/double(N));
     for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio)
     {
@@ -1122,7 +1120,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         hmol=_HUGE,emol=_HUGE,smol=_HUGE,cvmol=_HUGE,cpmol=_HUGE,
         w=_HUGE,q=_HUGE, mm=_HUGE, p_kPa = _HUGE, hjt = _HUGE;
     long ierr = 0;
-    char herr[errormessagelength+1];
+    char herr[errormessagelength+1] = " ";
 
     clear();
 
@@ -1775,6 +1773,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                 iFlsh = 3; // bubble point
                 if (!guesses.x.empty()){
                     mole_fractions = guesses.x;
+                    while(mole_fractions.size() < 20){ mole_fractions.push_back(0.0); }
                 }
                 else{
                     throw ValueError(format("x must be provided in guesses"));
@@ -1784,6 +1783,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                 iFlsh = 4; // dew point
                 if (!guesses.y.empty()){
                     mole_fractions = guesses.y;
+                    while (mole_fractions.size() < 20) { mole_fractions.push_back(0.0); }
                 }
                 else{
                     throw ValueError(format("y must be provided in guesses"));
