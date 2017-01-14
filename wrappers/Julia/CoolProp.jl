@@ -315,20 +315,63 @@ function set_config(key::AbstractString, val::Bool)
 end
 
 export parameters, fluids;
-
 """
-# CoolProp parameters table
+# CoolProp parameters table, to build run `parameters()`
 
 $(readstring(abspath(@__FILE__, "..", "parameters.table")))
 """
-parameters() = readdlm(abspath(@__FILE__, "..", "parameters.table"), '|', skipstart=2);
-
+parameters() = begin
+  logf = open("parameters.table", "w");
+  println(logf, "Paramerer |Description |Unit |Comment ");
+  println(logf, ":---------|:-----------|:----|:-------" );
+  counter = 0;
+  longunits = Set();
+  for p in coolpropparameters
+    longunit = get_parameter_information_string(p, "long") * " | " * get_parameter_information_string(p, "units");
+    note = "";
+    if (!in(longunit, longunits))
+      push!(longunits, longunit);
+    else
+      note = " *Duplicated* "
+    end
+    for fluid in coolpropfluids
+      try
+        res = ("$(PropsSI(p, fluid))");
+        note *= " **Constant Property** "
+        break;
+      catch err
+      end
+    end
+    println(logf, "$p" * " | " * longunit * " | " * note);
+  end
+  close(logf);
+  readdlm(abspath(@__FILE__, "..", "parameters.table"), '|', skipstart=2);
+end
 """
-# CoolProp fluids table
+# CoolProp fluids table, to build run `fluids()`
 
 $(readstring(abspath(@__FILE__, "..", "fluids.table")))
 """
-fluids() = readdlm(abspath(@__FILE__, "..", "fluids.table"), '|', skipstart=2);
+fluids() = begin
+  logf = open("fluids.table", "w");
+  println(logf, "ID |Name |Alias |CAS |Pure |Formula |BibTeX ");
+  println(logf, ":--|:----|:-----|:---|:----|:-------|:------");
+  id = 0;
+  for fluid in coolpropfluids
+    id+=1;
+    print(logf, "$id | $fluid | $(get_fluid_param_string(fluid, "aliases"))");
+    print(logf, " | $(get_fluid_param_string(fluid, "CAS"))");
+    pure = get_fluid_param_string(fluid, "pure");
+    print(logf, " | $pure");
+    print(logf, " | $(get_fluid_param_string(fluid, "formula")) | ");
+    for bi in ["BibTeX-CONDUCTIVITY", "BibTeX-EOS", "BibTeX-CP0", "BibTeX-SURFACE_TENSION","BibTeX-MELTING_LINE","BibTeX-VISCOSITY"]
+      print(logf, " $bi:$(get_fluid_param_string(fluid, bi))");
+    end
+    print(logf, "\n");
+  end
+  close(logf);
+  readdlm(abspath(@__FILE__, "..", "fluids.table"), '|', skipstart=2);
+end
 
 # ---------------------------------
 #       Information functions
@@ -510,6 +553,8 @@ function get_input_pair_index(pair::AbstractString)
   end
   return val
 end
+const coolpropparameters = map(Compat.String, split(get_global_param_string("parameter_list"),','));
+const coolpropfluids = map(Compat.String, split(get_global_param_string("FluidsList"),','));
 
 # ---------------------------------
 # Getter and setter for debug level
