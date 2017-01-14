@@ -16,7 +16,8 @@ protected:
 
     /// Additional cached elements used only in this backend since the "normal"
     /// backends use only molar units while IF97 uses mass-based units
-    CachedElement  _cpmass, _cvmass, _hmass, _rhomass, _smass, _umass;
+    CachedElement  _hmass, _rhomass, _smass;
+    /// CachedElement  _hVmass, _hLmass, _sVmass, sLmass;
 
 public:
     /// The name of the backend being used
@@ -37,10 +38,12 @@ public:
     // the internal double values with -_HUGE
     // Default phase condition is no phase imposed
     // IF97 will make phase/region determination
-        this->_rhomolar = -_HUGE;
         this->_T = -_HUGE;
         this->_p = -_HUGE;
         this->_Q = -_HUGE;
+        this->_rhomass.clear();
+        this->_hmass.clear();
+        this->_smass.clear();
         this->_phase = iphase_not_imposed; 
         return true;
     };
@@ -55,6 +58,8 @@ public:
     @param value2 Second input value
     */
     void update(CoolProp::input_pairs input_pair, double value1, double value2){
+
+        double H,S,hLmass,hVmass,sLmass,sVmass;
         
         clear();  //clear the few cached values we are using
 
@@ -71,6 +76,60 @@ public:
                 _T = value2; 
                 _p = IF97::psat97(_T);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
+                break;
+            case HmolarP_INPUTS:
+                // IF97 is mass based so convert hmolar input to hmass
+                _hmass = value1/molar_mass();  // Convert to mass basis : (J/mol) / (kg/mol) = J/kg
+                _p = value2;
+                // Fall thru to mass basis inputs
+            case HmassP_INPUTS:
+                if (!(_hmass)) _hmass = value1;  // don't set if already set above
+                _p = value2;
+                _T = IF97::T_phmass(_p, _hmass);
+                // ...if in the vapor dome (Region 4), calculate Quality...
+                if (IF97::BackwardRegion(_p, _hmass, IF97_HMASS) == 4){
+                    H = _hmass;
+                    hVmass = IF97::hvap_p(_p);
+                    hLmass = IF97::hliq_p(_p);
+                    _Q = (H - hLmass)/(hVmass - hLmass);
+                    _phase = iphase_twophase;
+                }
+                break;
+            case PSmolar_INPUTS:
+                // IF97 is mass based so convert smolar input to smass
+                _p = value1;
+                _smass = value2/molar_mass();  // Convert to mass basis : (J/mol-K) / (kg/mol) = J/kg-K
+                // Fall thru to mass basis inputs
+            case PSmass_INPUTS:
+                _p = value1;
+                if (!(_smass)) _smass   = value2;
+                _T = IF97::T_psmass(_p, _smass);
+                if (IF97::BackwardRegion(_p, _smass, IF97_SMASS) == 4){
+                    S = _smass;
+                    sVmass = IF97::svap_p(_p);
+                    sLmass = IF97::sliq_p(_p);
+                    _Q = (S - sLmass)/(sVmass - sLmass);
+                    _phase = iphase_twophase;
+                }
+                break;
+            case HmolarSmolar_INPUTS:
+                // IF97 is mass based so convert smolar input to smass
+                _hmass = value1/molar_mass();  // Convert to mass basis : (J/mol) / (kg/mol) = J/kg
+                _smass = value2/molar_mass();  // Convert to mass basis : (J/mol-K) / (kg/mol) = J/kg-K
+                // Fall thru to mass basis inputs
+            case HmassSmass_INPUTS:
+                _hmass = value1;
+                _smass = value2;
+                _p     = IF97::p_hsmass(_hmass, _smass);
+                _T     = IF97::T_phmass(_p, _hmass);
+                // ...if in the vapor dome (Region 4), calculate Quality...
+                if (IF97::BackwardRegion(_p, _hmass, IF97_HMASS) == 4){
+                    H = _hmass;
+                    hVmass = IF97::hvap_p(_p);
+                    hLmass = IF97::hliq_p(_p);
+                    _Q = (H - hLmass)/(hVmass - hLmass);
+                    _phase = iphase_twophase;
+                }
                 break;
             default:
                 throw ValueError("Bad input_pair");
@@ -123,11 +182,11 @@ public:
                     case iDmass:
                         return 1.0/(_Q/calc_SatVapor(iDmass) + (1.0-_Q)/calc_SatLiquid(iDmass)); break;
                     case iCpmass:
-                        throw NotImplementedError(format("Isobaric Specific Heat not implemented in two phase region")); break;
+                        throw NotImplementedError(format("Isobaric Specific Heat not valid in two phase region")); break;
                     case iCvmass:
-                        throw NotImplementedError(format("Isochoric Specific Heat not implemented in two phase region")); break;
+                        throw NotImplementedError(format("Isochoric Specific Heat not valid in two phase region")); break;
                     case ispeed_sound:
-                        throw NotImplementedError(format("Speed of Sound not implemented in two phase region")); break;
+                        throw NotImplementedError(format("Speed of Sound not valid in two phase region")); break;
                     default:
                         return _Q*calc_SatVapor(iCalc) + (1.0-_Q)*calc_SatLiquid(iCalc);
                     };
