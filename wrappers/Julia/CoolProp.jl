@@ -835,8 +835,8 @@ function abstractstate_unspecify_phase(handle::Clong)
 end
 
 """
-    abstractstate_update_and_common_out!{F<:AbstractFloat}(handle::Clong, input_pair::Clong, value1::Array{F}, value2::Array{F}, length::Integer, T::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
-    abstractstate_update_and_common_out!{F<:AbstractFloat}(handle::Clong, input_pair::AbstractString, value1::Array{F}, value2::Array{F}, length::Integer, T::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
+    abstractstate_update_and_common_out!{F<:AbstractFloat}(handle::Clong, input_pair::Clong, value1::Array{F}, value2::Array{F}, length::Integer, temp::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
+    abstractstate_update_and_common_out!{F<:AbstractFloat}(handle::Clong, input_pair::AbstractString, value1::Array{F}, value2::Array{F}, length::Integer, temp::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
 
 Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy) from the AbstractState using pointers as inputs and output to allow array computation.
 
@@ -847,7 +847,7 @@ Update the state of the AbstractState and get an output value five common output
 * `value1`: The pointer to the array of the first input parameters
 * `value2`: The pointer to the array of the second input parameters
 * `length`: The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
-* `T`: The pointer to the array of temperature
+* `temp`: The pointer to the array of temperature
 * `p`: The pointer to the array of pressure
 * `rhomolar`: Array of molar density
 * `hmolar`: The array of molar enthalpy
@@ -863,14 +863,14 @@ julia> abstractstate_update_and_common_out!(handle, pq_inputs, [101325.0], [0.0]
 julia> abstractstate_free(handle);
 ```
 """
-function abstractstate_update_and_common_out!{F<:Float64}(handle::Clong, input_pair::Clong, value1::Array{F}, value2::Array{F}, length::Integer, T::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
-  ccall( (:AbstractState_update_and_common_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, T, p, rhomolar, hmolar, smolar, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+function abstractstate_update_and_common_out!{F<:Float64}(handle::Clong, input_pair::Clong, value1::Array{F}, value2::Array{F}, length::Integer, temp::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
+  ccall( (:AbstractState_update_and_common_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, temp, p, rhomolar, hmolar, smolar, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
   raise(errcode, message_buffer)
   return nothing
 end
 
-function abstractstate_update_and_common_out!{F<:Float64}(handle::Clong, input_pair::AbstractString, value1::Array{F}, value2::Array{F}, length::Integer, T::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
-  abstractstate_update_and_common_out!(handle, get_input_pair_index(input_pair), value1, value2, length, T, p, rhomolar, hmolar, smolar)
+function abstractstate_update_and_common_out!{F<:Float64}(handle::Clong, input_pair::AbstractString, value1::Array{F}, value2::Array{F}, length::Integer, temp::Array{F}, p::Array{F}, rhomolar::Array{F}, hmolar::Array{F}, smolar::Array{F})
+  abstractstate_update_and_common_out!(handle, get_input_pair_index(input_pair), value1, value2, length, temp, p, rhomolar, hmolar, smolar)
   return nothing
 end
 
@@ -1174,7 +1174,7 @@ Calculate all the critical points for a given composition.
 # Arguments
 * `handle`: The integer handle for the state class stored in memory
 * `length`: The length of the buffers passed to this function
-* `T`: The pointer to the array of temperature (K)
+* `temp`: The pointer to the array of temperature (K)
 * `p`: The pointer to the array of pressure (Pa)
 * `rhomolar`: The pointer to the array of molar density (m^3/mol)
 * `stable`: The pointer to the array of boolean flags for whether the critical point is stable (1) or unstable (0)
