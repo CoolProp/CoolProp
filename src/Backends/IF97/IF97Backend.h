@@ -153,6 +153,10 @@ public:
         case iCvmass: return IF97::cvliq_p(_p); break;  ///< Mass-based constant-volume specific heat
         case iUmass:  return IF97::uliq_p(_p); break;   ///< Mass-based internal energy
         case ispeed_sound: return IF97::speed_soundliq_p(_p); break;  ///< Speed of Sound
+        case iviscosity: return IF97::viscliq_p(_p); break;      ///< Viscosity function
+        case iconductivity: return IF97::tcondliq_p(_p); break;  ///< Thermal conductivity
+        case isurface_tension: return IF97::sigma97(_T); break;  ///< Surface Tension
+        case iPrandtl: return IF97::prandtlliq_p(_p); break;     ///< Prandtl number
         default: return -_HUGE;
         };
     }
@@ -165,6 +169,10 @@ public:
         case iCvmass: return IF97::cvvap_p(_p); break;  ///< Mass-based constant-volume specific heat
         case iUmass:  return IF97::uvap_p(_p); break;   ///< Mass-based internal energy
         case ispeed_sound: return IF97::speed_soundvap_p(_p); break;  ///< Speed of Sound
+        case iviscosity: return IF97::viscvap_p(_p); break;      ///< Viscosity function
+        case iconductivity: return IF97::tcondvap_p(_p); break;  ///< Thermal conductivity
+        case isurface_tension: return IF97::sigma97(_T); break;  ///< Surface Tension
+        case iPrandtl: return IF97::prandtlvap_p(_p); break;     ///< Prandtl number
         default: return -_HUGE;
         };
     }
@@ -180,6 +188,7 @@ public:
                 else {                               // else "inside" bubble ( 0 < Q < 1 )    
                     switch(iCalc){ 
                     case iDmass:
+                        // Density is an inverse phase weighted property, since it's the inverse of specific volume
                         return 1.0/(_Q/calc_SatVapor(iDmass) + (1.0-_Q)/calc_SatLiquid(iDmass)); break;
                     case iCpmass:
                         throw NotImplementedError(format("Isobaric Specific Heat not valid in two phase region")); break;
@@ -187,8 +196,16 @@ public:
                         throw NotImplementedError(format("Isochoric Specific Heat not valid in two phase region")); break;
                     case ispeed_sound:
                         throw NotImplementedError(format("Speed of Sound not valid in two phase region")); break;
+                    case iviscosity:
+                        throw NotImplementedError(format("Viscosity not valid in two phase region")); break;
+                    case iconductivity:
+                        throw NotImplementedError(format("Viscosity not valid in two phase region")); break;
+                    case isurface_tension:
+                        return IF97::sigma97(_T); break;  // Surface Tension is not a phase-weighted property
+                    case iPrandtl:
+                        throw NotImplementedError(format("Prandtl number is not valid in two phase region")); break;
                     default:
-                        return _Q*calc_SatVapor(iCalc) + (1.0-_Q)*calc_SatLiquid(iCalc);
+                        return _Q*calc_SatVapor(iCalc) + (1.0-_Q)*calc_SatLiquid(iCalc);  // Phase weighted combination
                     };
                 }
                 break;
@@ -200,7 +217,12 @@ public:
                 case iCpmass: return IF97::cpmass_Tp(_T, _p); break;  ///< Mass-based constant-pressure specific heat
                 case iCvmass: return IF97::cvmass_Tp(_T, _p); break;  ///< Mass-based constant-volume specific heat
                 case iUmass:  return IF97::umass_Tp(_T, _p); break;   ///< Mass-based internal energy
-                case ispeed_sound: return IF97::speed_sound_Tp(_T, _p); break;  ///< speed of sound
+                case ispeed_sound: return IF97::speed_sound_Tp(_T, _p); break;  ///< Speed of sound
+                case iviscosity: return IF97::visc_Tp(_T,_p); break;     ///< Viscosity function
+                case iconductivity: return IF97::tcond_Tp(_T,_p); break; ///< Thermal conductivity
+                case isurface_tension:
+                        throw NotImplementedError(format("Viscosity only valid along saturation curve")); break;
+                case iPrandtl: return IF97::prandtl_Tp(_T,_p); break;    ///< Prandtl number
                 default: throw NotImplementedError(format("Output variable not implemented in IF97 Backend"));
                 };
         }
@@ -298,9 +320,20 @@ public:
     double calc_pressure(void){ return _p; };
     //
     // ************************************************************************* //
-    //                      Saturation Functions                                 //
+    //                 Transport Property Functions                              //
     // ************************************************************************* //
     //
+    // Return viscosity in [Pa-s]
+    double viscosity(void) { return calc_viscosity(); };
+    double calc_viscosity(void){ return calc_Flash(iviscosity); };
+    // Return thermal conductivity in [W/m-K]
+    double conductivity(void) { return calc_conductivity(); };
+    double calc_conductivity(void){ return calc_Flash(iconductivity); };
+    // Return surface tension in [N/m]
+    double surface_tension(void) { return calc_surface_tension(); };
+    double calc_surface_tension(void){ return calc_Flash(isurface_tension); };
+    // Return Prandtl number (mu*Cp/k) [dimensionless]
+    double Prandtl(void) { return calc_Flash(iPrandtl); };
 };
 
 } /* namespace CoolProp */
