@@ -503,6 +503,13 @@ public:
     /// Return a vector of strings of the fluid names that are in use
     std::vector<std::string> fluid_names(void);
     
+    /** Get a constant for one of the fluids forming this mixture
+     *  @param i Index (0-based) of the fluid
+     *  @param param parameter you want to obtain (probably one that is a trivial parameter)
+     */
+    virtual const double get_fluid_constant(std::size_t i, parameters param) const{ throw NotImplementedError("get_fluid_constant is not implemented for this backend"); };
+;
+    
     /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
     virtual void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){ throw NotImplementedError("set_binary_interaction_double is not implemented for this backend"); };
     /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)

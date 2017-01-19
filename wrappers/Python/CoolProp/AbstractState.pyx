@@ -209,6 +209,10 @@ cdef class AbstractState:
     ##        Fluid property accessors
     ## ----------------------------------------
     
+    cpdef double get_fluid_constant(self, size_t i,constants_header.parameters param) except *:
+        """ Get a constant for a fluid in the mixture :cpapi:`CoolProp::AbstractState::get_fluid_constant` """
+        return self.thisptr.get_fluid_constant(i, param)
+
     cpdef double keyed_output(self, parameters iOutput) except *: 
         """ Get a keyed output :cpapi:`CoolProp::AbstractState::keyed_output(parameters key)` """
         return self.thisptr.keyed_output(iOutput)

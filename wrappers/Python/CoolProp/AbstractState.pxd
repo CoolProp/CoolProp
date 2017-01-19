@@ -160,6 +160,7 @@ cdef class AbstractState:
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*
     cpdef tuple true_critical_point(self)
+    cpdef double get_fluid_constant(self,size_t,constants_header.parameters) except*
     cpdef double keyed_output(self, constants_header.parameters) except *
     cpdef double trivial_keyed_output(self, constants_header.parameters) except *
     cpdef double saturated_liquid_keyed_output(self, constants_header.parameters) except *
