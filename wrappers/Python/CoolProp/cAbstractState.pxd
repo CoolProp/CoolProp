@@ -161,6 +161,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double fugacity_coefficient(size_t) except +ValueError
         double chemical_potential(size_t) except +ValueError
         
+        double get_fluid_constant(size_t,constants_header.parameters) except+ValueError
         double keyed_output(constants_header.parameters) except+ValueError
         double trivial_keyed_output(constants_header.parameters) except+ValueError
         double saturated_liquid_keyed_output(constants_header.parameters) except+ValueError
