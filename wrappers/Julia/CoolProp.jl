@@ -1280,9 +1280,9 @@ function AbstractState_all_critical_points(handle::Clong, length::Integer)
   return  AbstractState_all_critical_points(handle, length, T, p, rhomolar, stable)
 end
 
-for sym=[:PropsSI, :PhaseSI, :K2F, :F2K, :HAPropsSI, :AbstractState_factory, :AbstractState_free, :AbstractState_set_fractions, :AbstractState_update, :AbstractState_keyed_output, :AbstractState_output, :AbstractState_specify_phase, :AbstractState_unspecify_phase, :AbstractState_update_and_common_out, :AbstractState_update_and_1_out, :AbstractState_update_and_5_out, :AbstractState_set_binary_interaction_double, :AbstractState_set_cubic_alpha_C, :AbstractState_set_fluid_parameter_double, :AbstractState_first_saturation_deriv, :AbstractState_first_partial_deriv, :AbstractState_build_phase_envelope, :AbstractState_build_spinodal, :AbstractState_all_critical_points, :AbstractState_get_phase_envelope_data, :AbstractState_get_spinodal_data]
-  symorigin = Symbol(lowercase(string(sym)))
-  @eval const $symorigin = $sym
+for symorigin = [:PropsSI, :PhaseSI, :K2F, :F2K, :HAPropsSI, :AbstractState_factory, :AbstractState_free, :AbstractState_set_fractions, :AbstractState_update, :AbstractState_keyed_output, :AbstractState_output, :AbstractState_specify_phase, :AbstractState_unspecify_phase, :AbstractState_update_and_common_out, :AbstractState_update_and_1_out, :AbstractState_update_and_5_out, :AbstractState_set_binary_interaction_double, :AbstractState_set_cubic_alpha_C, :AbstractState_set_fluid_parameter_double, :AbstractState_first_saturation_deriv, :AbstractState_first_partial_deriv, :AbstractState_build_phase_envelope, :AbstractState_build_spinodal, :AbstractState_all_critical_points, :AbstractState_get_phase_envelope_data, :AbstractState_get_spinodal_data]
+  sym = Symbol(lowercase(string(symorigin)))
+  @eval const $sym = $symorigin
   @eval export $sym, $symorigin
 end
 const set_reference_stateS = set_reference_state
