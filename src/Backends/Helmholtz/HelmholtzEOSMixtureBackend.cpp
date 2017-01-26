@@ -3767,4 +3767,144 @@ void HelmholtzEOSMixtureBackend::calc_build_spinodal(){
     _calc_all_critical_points(find_critical_points);
 }
 
+
+void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string &reference_state){
+    for(std::size_t i = 0; i < components.size(); ++i)
+    {
+        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, components[i]));
+        if(!reference_state.compare("IIR"))
+        {
+            if(HEOS.Ttriple() > 273.15){
+                throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K", HEOS.Ttriple()));
+            }
+            HEOS.update(QT_INPUTS, 0, 273.15);
+
+            // Get current values for the enthalpy and entropy
+            double deltah = HEOS.hmass() - 200000; // offset from 200000 J/kg enthalpy
+            double deltas = HEOS.smass() - 1000; // offset from 1000 J/kg/K entropy
+            double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
+            double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass()*HEOS.get_reducing_state().T);
+            // Change the value in the library for the given fluid
+            set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "IIR");
+            if(get_debug_level() > 0){
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
+            }
+        }
+        else if(!reference_state.compare("ASHRAE"))
+        {
+            if(HEOS.Ttriple() > 233.15){
+                throw ValueError(format("Cannot use ASHRAE reference state; Ttriple [%Lg] is greater than than 233.15 K", HEOS.Ttriple()));
+            }
+            HEOS.update(QT_INPUTS, 0, 233.15);
+
+            // Get current values for the enthalpy and entropy
+            double deltah = HEOS.hmass() - 0; // offset from 0 J/kg enthalpy
+            double deltas = HEOS.smass() - 0; // offset from 0 J/kg/K entropy
+            double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
+            double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass()*HEOS.get_reducing_state().T);
+            // Change the value in the library for the given fluid
+            set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "ASHRAE");
+            if(get_debug_level() > 0){
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
+            }
+        }
+        else if(!reference_state.compare("NBP"))
+        {
+            if(HEOS.p_triple() > 101325){
+                throw ValueError(format("Cannot use NBP reference state; p_triple [%Lg Pa] is greater than than 101325 Pa", HEOS.p_triple()));
+            }
+            // Saturated liquid boiling point at 1 atmosphere
+            HEOS.update(PQ_INPUTS, 101325, 0);
+
+            double deltah = HEOS.hmass() - 0; // offset from 0 kJ/kg enthalpy
+            double deltas = HEOS.smass() - 0; // offset from 0 kJ/kg/K entropy
+            double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
+            double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass()*HEOS.get_reducing_state().T);
+            // Change the value in the library for the given fluid
+            set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "NBP");
+            if(get_debug_level() > 0){
+                std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
+            }
+        }
+        else if(!reference_state.compare("DEF"))
+        {
+            set_fluid_enthalpy_entropy_offset(components[i], 0, 0, "DEF");
+        }
+        else if(!reference_state.compare("RESET"))
+        {
+            set_fluid_enthalpy_entropy_offset(components[i], 0, 0, "RESET");
+        }
+        else
+        {
+            throw ValueError(format("reference state string is invalid: [%s]", reference_state.c_str()));
+        }
+    }
+}
+
+/// Set the reference state based on a thermodynamic state point specified by temperature and molar density
+/// @param T Temperature at reference state [K]
+/// @param rhomolar Molar density at reference state [mol/m^3]
+/// @param hmolar0 Molar enthalpy at reference state [J/mol]
+/// @param smolar0 Molar entropy at reference state [J/mol/K]
+void HelmholtzEOSMixtureBackend::set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0){
+    for(std::size_t i = 0; i < components.size(); ++i)
+    {
+        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, components[i]));
+
+        HEOS.update(DmolarT_INPUTS, rhomolar, T);
+
+        // Get current values for the enthalpy and entropy
+        double deltah = HEOS.hmolar() - hmolar0; // offset from specified enthalpy in J/mol
+        double deltas = HEOS.smolar() - smolar0; // offset from specified entropy in J/mol/K
+        double delta_a1 = deltas / (HEOS.gas_constant());
+        double delta_a2 = -deltah / (HEOS.gas_constant()*HEOS.get_reducing_state().T);
+        set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "custom");
+    }
+}
+
+void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2, const std::string &ref)
+{
+    component.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
+
+    shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(component));
+    HEOS->specify_phase(iphase_gas); // Something homogeneous;
+                                        // Calculate the new enthalpy and entropy values
+    HEOS->update(DmolarT_INPUTS, component.EOS().hs_anchor.rhomolar, component.EOS().hs_anchor.T);
+    component.EOS().hs_anchor.hmolar = HEOS->hmolar();
+    component.EOS().hs_anchor.smolar = HEOS->smolar();
+
+    double f = (HEOS->name() == "Water" || HEOS->name() == "CarbonDioxide") ? 1.00001 : 1.0;
+
+    // Calculate the new enthalpy and entropy values at the reducing state
+    HEOS->update(DmolarT_INPUTS, component.EOS().reduce.rhomolar*f, component.EOS().reduce.T*f);
+    component.EOS().reduce.hmolar = HEOS->hmolar();
+    component.EOS().reduce.smolar = HEOS->smolar();
+
+    // Calculate the new enthalpy and entropy values at the critical state
+    HEOS->update(DmolarT_INPUTS, component.crit.rhomolar*f, component.crit.T*f);
+    component.crit.hmolar = HEOS->hmolar();
+    component.crit.smolar = HEOS->smolar();
+
+    // Calculate the new enthalpy and entropy values
+    HEOS->update(DmolarT_INPUTS, component.triple_liquid.rhomolar, component.triple_liquid.T);
+    component.triple_liquid.hmolar = HEOS->hmolar();
+    component.triple_liquid.smolar = HEOS->smolar();
+
+    // Calculate the new enthalpy and entropy values
+    HEOS->update(DmolarT_INPUTS, component.triple_vapor.rhomolar, component.triple_vapor.T);
+    component.triple_vapor.hmolar = HEOS->hmolar();
+    component.triple_vapor.smolar = HEOS->smolar();
+
+    if(!HEOS->is_pure()){
+        // Calculate the new enthalpy and entropy values
+        HEOS->update(DmolarT_INPUTS, component.EOS().max_sat_T.rhomolar, component.EOS().max_sat_T.T);
+        component.EOS().max_sat_T.hmolar = HEOS->hmolar();
+        component.EOS().max_sat_T.smolar = HEOS->smolar();
+        // Calculate the new enthalpy and entropy values
+        HEOS->update(DmolarT_INPUTS, component.EOS().max_sat_p.rhomolar, component.EOS().max_sat_p.T);
+        component.EOS().max_sat_p.hmolar = HEOS->hmolar();
+        component.EOS().max_sat_p.smolar = HEOS->smolar();
+    }
+}
+
 } /* namespace CoolProp */
