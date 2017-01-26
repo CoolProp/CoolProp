@@ -452,6 +452,41 @@ public:
     virtual void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions) = 0;
     virtual void set_volu_fractions(const std::vector<CoolPropDbl> &mass_fractions){ throw NotImplementedError("Volume composition has not been implemented."); }
 
+
+
+    /**
+    \brief Set the reference state based on a string representation
+
+    @param reference_state The reference state to use, one of
+
+    Reference State | Description
+    -------------   | -------------------
+    "IIR"           | h = 200 kJ/kg, s=1 kJ/kg/K at 0C saturated liquid
+    "ASHRAE"        | h = 0, s = 0 @ -40C saturated liquid
+    "NBP"           | h = 0, s = 0 @ 1.0 bar saturated liquid
+    "DEF"           | Reset to the default reference state for the fluid
+    "RESET"         | Remove the offset
+
+    The offset in the ideal gas Helmholtz energy can be obtained from
+    \f[
+    \displaystyle\frac{\Delta s}{R_u/M}+\frac{\Delta h}{(R_u/M)T}\tau
+    \f]
+    where \f$ \Delta s = s-s_{spec} \f$ and \f$ \Delta h = h-h_{spec} \f$
+    */
+    virtual void set_reference_stateS(const std::string &reference_state){
+        throw NotImplementedError("Setting reference state has not been implemented for this backend. Try using CoolProp::set_reference_stateD instead.");
+    }
+
+    /// Set the reference state based on a thermodynamic state point specified by temperature and molar density
+    /// @param T Temperature at reference state [K]
+    /// @param rhomolar Molar density at reference state [mol/m^3]
+    /// @param hmolar0 Molar enthalpy at reference state [J/mol]
+    /// @param smolar0 Molar entropy at reference state [J/mol/K]
+    virtual void set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0){
+        throw NotImplementedError("Setting reference state has not been implemented for this backend. Try using CoolProp::set_reference_stateD instead.");
+    }
+
+
 #ifndef COOLPROPDBL_MAPS_TO_DOUBLE
     void set_mole_fractions(const std::vector<double> &mole_fractions){ set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end())); };
     void set_mass_fractions(const std::vector<double> &mass_fractions){ set_mass_fractions(std::vector<CoolPropDbl>(mass_fractions.begin(), mass_fractions.end())); };
