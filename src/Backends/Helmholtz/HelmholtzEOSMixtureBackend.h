@@ -56,6 +56,9 @@ protected:
     
     /// This overload is protected because it doesn't follow the base class definition, since this function is needed for constructing spinodals
     std::vector<CoolProp::CriticalState> _calc_all_critical_points(bool find_critical_points = true);
+
+    static void set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2, const std::string &ref);
+
 public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
@@ -96,6 +99,12 @@ public:
     /// Return a string from the backend for the mixture/fluid
     std::string fluid_param_string(const std::string &);
     
+    /// brief Set the reference state based on a string representation
+    virtual void set_reference_stateS(const std::string &reference_state) override;
+
+    /// Set the reference state based on a thermodynamic state point specified by temperature and molar density
+    virtual void set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0) override;
+
     /// Set binary mixture floating point parameter
     virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
     /// Get binary mixture double value
