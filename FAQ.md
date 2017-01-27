@@ -7,7 +7,15 @@ Usage
 
 1. My enthalpy and entropy values are not the same as what are used in REFPROP, or EES, or ...
 
-    Enthalpy and entropy are only equivalent to within an additive constant, so you should always compare enthalpy and entropy *differences* rather than enthalpy and entropy values
+    Values for enthalpy, entropy and internal energy are calculated as *difference* 
+    with respect to an arbitrarily chosen reference state. 
+    As a consequence, absolute values may differ hugely between different tools, 
+    but the difference between two states should be equal.  
+    At least the following three states are frequently chosen as reference states:  
+    IIR: saturated liquid (Q=0) at T=273.15 K  
+    ASHRAE: saturated liquid (Q=0) at T=233.15 K  
+    NBP: saturated liquid (Q=0) at p=101325.0 Pa
+    
     
 2. My calls to REFPROP fail with a mysterious `Segementation Fault`: 
 
