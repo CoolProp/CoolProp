@@ -1,0 +1,171 @@
+Paramerer |Description |Unit |Comment 
+:---------|:-----------|:----|:-------
+A | Speed of sound | m/s | 
+ACENTRIC | Acentric factor | - |  **Constant Property** 
+ALPHA0 | Ideal Helmholtz energy | - | 
+ALPHAR | Residual Helmholtz energy | - | 
+BVIRIAL | Second virial coefficient | - | 
+Bvirial | Second virial coefficient | - |  *Duplicated* 
+C | Mass specific constant pressure specific heat | J/kg/K | 
+CONDUCTIVITY | Thermal conductivity | W/m/K | 
+CP0MASS | Ideal gas mass specific constant pressure specific heat | J/kg/K | 
+CP0MOLAR | Ideal gas molar specific constant pressure specific heat | J/mol/K | 
+CPMASS | Mass specific constant pressure specific heat | J/kg/K |  *Duplicated* 
+CPMOLAR | Molar specific constant pressure specific heat | J/mol/K | 
+CVIRIAL | Third virial coefficient | - | 
+CVMASS | Mass specific constant volume specific heat | J/kg/K | 
+CVMOLAR | Molar specific constant volume specific heat | J/mol/K | 
+Cp0mass | Ideal gas mass specific constant pressure specific heat | J/kg/K |  *Duplicated* 
+Cp0molar | Ideal gas molar specific constant pressure specific heat | J/mol/K |  *Duplicated* 
+Cpmass | Mass specific constant pressure specific heat | J/kg/K |  *Duplicated* 
+Cpmolar | Molar specific constant pressure specific heat | J/mol/K |  *Duplicated* 
+Cvirial | Third virial coefficient | - |  *Duplicated* 
+Cvmass | Mass specific constant volume specific heat | J/kg/K |  *Duplicated* 
+Cvmolar | Molar specific constant volume specific heat | J/mol/K |  *Duplicated* 
+D | Mass density | kg/m^3 | 
+DALPHA0_DDELTA_CONSTTAU | Derivative of ideal Helmholtz energy with delta | - | 
+DALPHA0_DTAU_CONSTDELTA | Derivative of ideal Helmholtz energy with tau | - | 
+DALPHAR_DDELTA_CONSTTAU | Derivative of residual Helmholtz energy with delta | - | 
+DALPHAR_DTAU_CONSTDELTA | Derivative of residual Helmholtz energy with tau | - | 
+DBVIRIAL_DT | Derivative of second virial coefficient with respect to T | - | 
+DCVIRIAL_DT | Derivative of third virial coefficient with respect to T | - | 
+DELTA | Reduced density (rho/rhoc) | - | 
+DIPOLE_MOMENT | Dipole moment | C-m | 
+DMASS | Mass density | kg/m^3 |  *Duplicated* 
+DMOLAR | Molar density | mol/m^3 | 
+Delta | Reduced density (rho/rhoc) | - |  *Duplicated* 
+Dmass | Mass density | kg/m^3 |  *Duplicated* 
+Dmolar | Molar density | mol/m^3 |  *Duplicated* 
+FH | Flammability hazard | - |  **Constant Property** 
+FRACTION_MAX | Fraction (mole, mass, volume) maximum value for incompressible solutions | - | 
+FRACTION_MIN | Fraction (mole, mass, volume) minimum value for incompressible solutions | - | 
+FUNDAMENTAL_DERIVATIVE_OF_GAS_DYNAMICS | Fundamental derivative of gas dynamics | - | 
+G | Mass specific Gibbs energy | J/kg | 
+GAS_CONSTANT | Molar gas constant | J/mol/K |  **Constant Property** 
+GMASS | Mass specific Gibbs energy | J/kg |  *Duplicated* 
+GMOLAR | Molar specific Gibbs energy | J/mol | 
+GWP100 | 100-year global warming potential | - |  **Constant Property** 
+GWP20 | 20-year global warming potential | - |  **Constant Property** 
+GWP500 | 500-year global warming potential | - |  **Constant Property** 
+Gmass | Mass specific Gibbs energy | J/kg |  *Duplicated* 
+Gmolar | Molar specific Gibbs energy | J/mol |  *Duplicated* 
+H | Mass specific enthalpy | J/kg | 
+HELMHOLTZMASS | Mass specific Helmholtz energy | J/kg | 
+HELMHOLTZMOLAR | Molar specific Helmholtz energy | J/mol | 
+HH | Health hazard | - |  **Constant Property** 
+HMASS | Mass specific enthalpy | J/kg |  *Duplicated* 
+HMOLAR | Molar specific enthalpy | J/mol | 
+Helmholtzmass | Mass specific Helmholtz energy | J/kg |  *Duplicated* 
+Helmholtzmolar | Molar specific Helmholtz energy | J/mol |  *Duplicated* 
+Hmass | Mass specific enthalpy | J/kg |  *Duplicated* 
+Hmolar | Molar specific enthalpy | J/mol |  *Duplicated* 
+I | Surface tension | N/m | 
+ISOBARIC_EXPANSION_COEFFICIENT | Isobaric expansion coefficient | 1/K | 
+ISOTHERMAL_COMPRESSIBILITY | Isothermal compressibility | 1/Pa | 
+L | Thermal conductivity | W/m/K |  *Duplicated* 
+M | Molar mass | kg/mol |  **Constant Property** 
+MOLARMASS | Molar mass | kg/mol |  *Duplicated*  **Constant Property** 
+MOLAR_MASS | Molar mass | kg/mol |  *Duplicated*  **Constant Property** 
+MOLEMASS | Molar mass | kg/mol |  *Duplicated*  **Constant Property** 
+O | Mass specific constant volume specific heat | J/kg/K |  *Duplicated* 
+ODP | Ozone depletion potential | - |  **Constant Property** 
+P | Pressure | Pa | 
+PCRIT | Pressure at the critical point | Pa |  **Constant Property** 
+PH | Physical hazard | - |  **Constant Property** 
+PHASE | Phase index as a float | - | 
+PIP | Phase identification parameter | - | 
+PMAX | Maximum pressure limit | Pa |  **Constant Property** 
+PMIN | Minimum pressure limit | Pa |  **Constant Property** 
+PRANDTL | Prandtl number | - | 
+PTRIPLE | Pressure at the triple point (pure only) | Pa |  **Constant Property** 
+P_CRITICAL | Pressure at the critical point | Pa |  *Duplicated*  **Constant Property** 
+P_MAX | Maximum pressure limit | Pa |  *Duplicated*  **Constant Property** 
+P_MIN | Minimum pressure limit | Pa |  *Duplicated*  **Constant Property** 
+P_REDUCING | Pressure at the reducing point | Pa |  **Constant Property** 
+P_TRIPLE | Pressure at the triple point (pure only) | Pa |  *Duplicated*  **Constant Property** 
+P_max | Maximum pressure limit | Pa |  *Duplicated*  **Constant Property** 
+P_min | Minimum pressure limit | Pa |  *Duplicated*  **Constant Property** 
+Pcrit | Pressure at the critical point | Pa |  *Duplicated*  **Constant Property** 
+Phase | Phase index as a float | - |  *Duplicated* 
+Prandtl | Prandtl number | - |  *Duplicated* 
+Q | Mass vapor quality | mol/mol | 
+RHOCRIT | Mass density at critical point | kg/m^3 |  **Constant Property** 
+RHOMASS_CRITICAL | Mass density at critical point | kg/m^3 |  *Duplicated*  **Constant Property** 
+RHOMASS_REDUCING | Mass density at reducing point | kg/m^3 | 
+RHOMOLAR_CRITICAL | Molar density at critical point | mol/m^3 |  **Constant Property** 
+RHOMOLAR_REDUCING | Molar density at reducing point | mol/m^3 |  **Constant Property** 
+S | Mass specific entropy | J/kg/K | 
+SMASS | Mass specific entropy | J/kg/K |  *Duplicated* 
+SMOLAR | Molar specific entropy | J/mol/K | 
+SMOLAR_RESIDUAL | Residual molar entropy (sr/R = tau*dar_dtau-ar) | J/mol/K | 
+SPEED_OF_SOUND | Speed of sound | m/s |  *Duplicated* 
+SURFACE_TENSION | Surface tension | N/m |  *Duplicated* 
+Smass | Mass specific entropy | J/kg/K |  *Duplicated* 
+Smolar | Molar specific entropy | J/mol/K |  *Duplicated* 
+Smolar_residual | Residual molar entropy (sr/R = tau*dar_dtau-ar) | J/mol/K |  *Duplicated* 
+T | Temperature | K | 
+TAU | Reciprocal reduced temperature (Tc/T) | - | 
+TCRIT | Temperature at the critical point | K |  **Constant Property** 
+TMAX | Maximum temperature limit | K |  **Constant Property** 
+TMIN | Minimum temperature limit | K |  **Constant Property** 
+TTRIPLE | Temperature at the triple point | K |  **Constant Property** 
+T_CRITICAL | Temperature at the critical point | K |  *Duplicated*  **Constant Property** 
+T_FREEZE | Freezing temperature for incompressible solutions | K | 
+T_MAX | Maximum temperature limit | K |  *Duplicated*  **Constant Property** 
+T_MIN | Minimum temperature limit | K |  *Duplicated*  **Constant Property** 
+T_REDUCING | Temperature at the reducing point | K |  **Constant Property** 
+T_TRIPLE | Temperature at the triple point | K |  *Duplicated*  **Constant Property** 
+T_critical | Temperature at the critical point | K |  *Duplicated*  **Constant Property** 
+T_freeze | Freezing temperature for incompressible solutions | K |  *Duplicated* 
+T_max | Maximum temperature limit | K |  *Duplicated*  **Constant Property** 
+T_min | Minimum temperature limit | K |  *Duplicated*  **Constant Property** 
+T_reducing | Temperature at the reducing point | K |  *Duplicated*  **Constant Property** 
+T_triple | Temperature at the triple point | K |  *Duplicated*  **Constant Property** 
+Tau | Reciprocal reduced temperature (Tc/T) | - |  *Duplicated* 
+Tcrit | Temperature at the critical point | K |  *Duplicated*  **Constant Property** 
+Tmax | Maximum temperature limit | K |  *Duplicated*  **Constant Property** 
+Tmin | Minimum temperature limit | K |  *Duplicated*  **Constant Property** 
+Ttriple | Temperature at the triple point | K |  *Duplicated*  **Constant Property** 
+U | Mass specific internal energy | J/kg | 
+UMASS | Mass specific internal energy | J/kg |  *Duplicated* 
+UMOLAR | Molar specific internal energy | J/mol | 
+Umass | Mass specific internal energy | J/kg |  *Duplicated* 
+Umolar | Molar specific internal energy | J/mol |  *Duplicated* 
+V | Viscosity | Pa-s | 
+VISCOSITY | Viscosity | Pa-s |  *Duplicated* 
+Z | Compressibility factor | - | 
+acentric | Acentric factor | - |  *Duplicated*  **Constant Property** 
+alpha0 | Ideal Helmholtz energy | - |  *Duplicated* 
+alphar | Residual Helmholtz energy | - |  *Duplicated* 
+conductivity | Thermal conductivity | W/m/K |  *Duplicated* 
+dBvirial_dT | Derivative of second virial coefficient with respect to T | - |  *Duplicated* 
+dCvirial_dT | Derivative of third virial coefficient with respect to T | - |  *Duplicated* 
+dalpha0_ddelta_consttau | Derivative of ideal Helmholtz energy with delta | - |  *Duplicated* 
+dalpha0_dtau_constdelta | Derivative of ideal Helmholtz energy with tau | - |  *Duplicated* 
+dalphar_ddelta_consttau | Derivative of residual Helmholtz energy with delta | - |  *Duplicated* 
+dalphar_dtau_constdelta | Derivative of residual Helmholtz energy with tau | - |  *Duplicated* 
+dipole_moment | Dipole moment | C-m |  *Duplicated* 
+fraction_max | Fraction (mole, mass, volume) maximum value for incompressible solutions | - |  *Duplicated* 
+fraction_min | Fraction (mole, mass, volume) minimum value for incompressible solutions | - |  *Duplicated* 
+fundamental_derivative_of_gas_dynamics | Fundamental derivative of gas dynamics | - |  *Duplicated* 
+gas_constant | Molar gas constant | J/mol/K |  *Duplicated*  **Constant Property** 
+isobaric_expansion_coefficient | Isobaric expansion coefficient | 1/K |  *Duplicated* 
+isothermal_compressibility | Isothermal compressibility | 1/Pa |  *Duplicated* 
+molar_mass | Molar mass | kg/mol |  *Duplicated*  **Constant Property** 
+molarmass | Molar mass | kg/mol |  *Duplicated*  **Constant Property** 
+molemass | Molar mass | kg/mol |  *Duplicated*  **Constant Property** 
+p_critical | Pressure at the critical point | Pa |  *Duplicated*  **Constant Property** 
+p_reducing | Pressure at the reducing point | Pa |  *Duplicated*  **Constant Property** 
+p_triple | Pressure at the triple point (pure only) | Pa |  *Duplicated*  **Constant Property** 
+pcrit | Pressure at the critical point | Pa |  *Duplicated*  **Constant Property** 
+pmax | Maximum pressure limit | Pa |  *Duplicated*  **Constant Property** 
+pmin | Minimum pressure limit | Pa |  *Duplicated*  **Constant Property** 
+ptriple | Pressure at the triple point (pure only) | Pa |  *Duplicated*  **Constant Property** 
+rhocrit | Mass density at critical point | kg/m^3 |  *Duplicated*  **Constant Property** 
+rhomass_critical | Mass density at critical point | kg/m^3 |  *Duplicated*  **Constant Property** 
+rhomass_reducing | Mass density at reducing point | kg/m^3 |  *Duplicated* 
+rhomolar_critical | Molar density at critical point | mol/m^3 |  *Duplicated*  **Constant Property** 
+rhomolar_reducing | Molar density at reducing point | mol/m^3 |  *Duplicated*  **Constant Property** 
+speed_of_sound | Speed of sound | m/s |  *Duplicated* 
+surface_tension | Surface tension | N/m |  *Duplicated* 
+viscosity | Viscosity | Pa-s |  *Duplicated* 
