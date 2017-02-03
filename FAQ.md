@@ -7,7 +7,7 @@ Usage
 
 1. My enthalpy and entropy values are not the same as what are used in REFPROP, or EES, or ...
 
-    Values for enthalpy, entropy and internal energy are calculated as *difference* 
+    Values for enthalpy, entropy and internal energy are calculated as *differences* 
     with respect to an arbitrarily chosen reference state. 
     As a consequence, absolute values may differ hugely between different tools, 
     but the difference between two states should be equal.  
