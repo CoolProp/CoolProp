@@ -14,20 +14,9 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
             }
         }
     }
-}
-
-/// Set the mole fractions of the components in the mixtures (not the groups)
-void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
-//    // If the vector fractions are the same as last ones, don't do anything and return
-//    if (!mole_fractions.empty() && maxvectordiff(z, mole_fractions) < 1e-15){
-//        return;
-//    }
+    /// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
     pure_data.clear();
-    this->mole_fractions = z;
-    std::size_t N = z.size();
-    
-    /// Calculate the parameters X and theta for the pure components, which does not depend on temperature
-    for (std::size_t i = 0; i < N; ++i){
+    for (std::size_t i = 0; i < N; ++i) {
         int totalgroups = 0;
         const UNIFAQLibrary::Component &c = components[i];
         ComponentData cd;
@@ -37,7 +26,7 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
             const UNIFAQLibrary::ComponentGroup &cg = c.groups[j];
             double x = static_cast<double>(cg.count);
             double theta = static_cast<double>(cg.count*cg.group.Q_k);
-            cd.X.insert( std::pair<int,double>(cg.group.sgi, x) );
+            cd.X.insert(std::pair<int, double>(cg.group.sgi, x));
             cd.theta.insert(std::pair<int, double>(cg.group.sgi, theta));
             cd.group_count += cg.count;
             totalgroups += cg.count;
@@ -49,14 +38,23 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
             //printf("X^(%d)_{%d}: %g\n", static_cast<int>(i + 1), static_cast<int>(it->first), it->second);
         }
         /// Now come back through and divide by the sum(X*Q) for this fluid
-        for (std::map<std::size_t,double>::iterator it = cd.theta.begin(); it != cd.theta.end(); ++it){
+        for (std::map<std::size_t, double>::iterator it = cd.theta.begin(); it != cd.theta.end(); ++it) {
             it->second /= summerxq;
             //printf("theta^(%d)_{%d}: %g\n", static_cast<int>(i+1), static_cast<int>(it->first), it->second);
         }
         pure_data.push_back(cd);
     }
-    for (std::size_t i = 0; i < N; ++i) {
-        //printf("%g %g %g %g %g %g\n", l[i], phi[i], q[i], r[i], theta[i], ln_Gamma_C[i]);
+}
+
+/// Set the mole fractions of the components in the mixtures (not the groups)
+void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
+//    // If the vector fractions are the same as last ones, don't do anything and return
+//    if (!mole_fractions.empty() && maxvectordiff(z, mole_fractions) < 1e-15){
+//        return;
+//    }
+    this->mole_fractions = z;
+    if (this->N != z.size()) {
+        throw CoolProp::ValueError("Size of molar fraction do not match number of components.");
     }
     
     std::map<std::size_t, double> &Xg = m_Xg, &thetag = m_thetag;
@@ -254,6 +252,7 @@ void UNIFAQ::UNIFAQMixture::add_component(const UNIFAQLibrary::Component &comp) 
 
 void UNIFAQ::UNIFAQMixture::set_components(const std::string &identifier_type, std::vector<std::string> identifiers) {
     components.clear();
+    N = identifiers.size();
     if (identifier_type == "name") {
         // Iterate over the provided names
         for (std::vector<std::string>::const_iterator it = identifiers.begin(); it != identifiers.end(); ++it) {
