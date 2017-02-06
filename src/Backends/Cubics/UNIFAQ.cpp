@@ -17,7 +17,6 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
     /// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
     pure_data.clear();
     for (std::size_t i = 0; i < N; ++i) {
-        int totalgroups = 0;
         const UNIFAQLibrary::Component &c = components[i];
         ComponentData cd;
         double summerxq = 0;
@@ -29,12 +28,11 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
             cd.X.insert(std::pair<int, double>(cg.group.sgi, x));
             cd.theta.insert(std::pair<int, double>(cg.group.sgi, theta));
             cd.group_count += cg.count;
-            totalgroups += cg.count;
             summerxq += x*cg.group.Q_k;
         }
         /// Now come back through and divide by the total # groups for this fluid
         for (std::map<std::size_t, double>::iterator it = cd.X.begin(); it != cd.X.end(); ++it) {
-            it->second /= totalgroups;
+            it->second /= cd.group_count;
             //printf("X^(%d)_{%d}: %g\n", static_cast<int>(i + 1), static_cast<int>(it->first), it->second);
         }
         /// Now come back through and divide by the sum(X*Q) for this fluid
@@ -158,8 +156,7 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
                 }
                 s -= theta_pure(i, sgim)*Psi(sgik, sgim)/sum2;
             }
-            ComponentData &cd = pure_data[i];
-            cd.lnGamma.insert(std::pair<int, double>(sgik, Q*s));
+            pure_data[i].lnGamma[sgik] = Q*s;
             //printf("ln(Gamma)^(%d)_{%d}: %g\n", static_cast<int>(i + 1), sgik, Q*s);
         }
     }
@@ -190,10 +187,10 @@ double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::s
         set_temperature(T_r / tau);
         double summer = 0;
         for (std::vector<UNIFAQLibrary::Group>::const_iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
-            std::size_t k = it->sgi;
-            std::size_t count = group_count(i, k);
+            std::size_t sgik = it->sgi;
+            std::size_t count = group_count(i, sgik);
             if (count > 0){
-                summer += count*(m_lnGammag.find(k)->second - pure_data[i].lnGamma.find(k)->second);
+                summer += count*(m_lnGammag.find(sgik)->second - pure_data[i].lnGamma[sgik]);
             }
         }
         //printf("log(gamma)_{%d}: %g\n", i+1, summer);
