@@ -24,10 +24,7 @@ namespace UNIFAQ
         double m_T; ///< The temperature in K
         double T_r; ///< Reduce temperature
 
-        std::map<std::pair<std::size_t, std::size_t>, double> aij, ///< Map from pair index to the interaction parameter value
-                                                              bij,
-                                                              cij,
-                                                              Psi_; /// < temporary storage for Psi
+        std::map<std::pair<std::size_t, std::size_t>, double> Psi_; /// < temporary storage for Psi
 
         std::map<std::size_t, double> m_Xg,  ///< Map from sgi to mole fraction of group in the mixture
                                       m_thetag, ///< Map from sgi to theta for the group in the mixture
@@ -75,7 +72,7 @@ namespace UNIFAQ
         /// Get the temperature
         double get_temperature() const { return m_T; }
 
-        double Psi(std::size_t sgi1, std::size_t sgi2);
+        double Psi(std::size_t sgi1, std::size_t sgi2) const;
 
         double theta_pure(std::size_t i, std::size_t sgi) const;
 
