@@ -42,6 +42,23 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
         }
         pure_data.push_back(cd);
     }
+
+    /// Prepare the parameters in an array
+    aij.clear(); bij.clear(); cij.clear();
+
+    for (std::vector<UNIFAQLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
+        std::size_t mgik = m_sgi_to_mgi.find(itk->sgi)->second;
+        for (std::vector<UNIFAQLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
+            std::size_t mgim = m_sgi_to_mgi.find(itm->sgi)->second;
+            if (itk->sgi != itm->sgi) { // We need only to store when different: Psi is already 1 when it's equal.
+                std::pair<std::size_t, std::size_t> pair = std::pair<std::size_t, std::size_t>(itk->sgi, itm->sgi);
+                std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int, int>(static_cast<int>(mgik), static_cast<int>(mgim)));
+                aij[pair] = it->second.a_ij;
+                bij[pair] = it->second.b_ij;
+                cij[pair] = it->second.c_ij;
+            }
+        }
+    }
 }
 
 /// Set the mole fractions of the components in the mixtures (not the groups)
@@ -90,26 +107,12 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
     }
 }
 
-double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
-
-    if (this->interaction.size() == 0){
-        throw CoolProp::ValueError("interaction parameters for UNIFAQ not yet set");
-    }
-    std::size_t mgi1 = m_sgi_to_mgi.find(sgi1)->second;
-    std::size_t mgi2 = m_sgi_to_mgi.find(sgi2)->second;
-    if (mgi1 == mgi2){
+double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) {
+    if (sgi1 == sgi2) {
         return 1;
     }
-    else{
-        std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int,int>(static_cast<int>(mgi1),static_cast<int>(mgi2)));
-        if (it != this->interaction.end()){
-            double val = exp(-(it->second.a_ij + it->second.b_ij*this->m_T + it->second.c_ij*this->m_T*this->m_T) / this->m_T);
-            return val;
-        }
-        else{
-            throw CoolProp::ValueError(format("Could not match mgi[%d]-mgi[%d] interaction in UNIFAQ", static_cast<int>(mgi1), static_cast<int>(mgi2)));
-        }
-    }
+    std::pair<std::size_t, std::size_t> pair = std::pair<std::size_t, std::size_t>(sgi1, sgi2);
+    return exp(-(aij.find(pair)->second / m_T + bij.find(pair)->second + cij.find(pair)->second * m_T));
 }
 
 std::size_t UNIFAQ::UNIFAQMixture::group_count(std::size_t i, std::size_t sgi) const {
@@ -135,6 +138,13 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
     if (this->mole_fractions.empty()){
         throw CoolProp::ValueError("mole fractions must be set before calling set_temperature");
     }
+
+    ///Compute Psi once for the different cals
+    for (std::vector<UNIFAQLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
+        for (std::vector<UNIFAQLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
+            Psi_[std::pair<std::size_t, std::size_t>(itk->sgi, itm->sgi)] = Psi(itk->sgi, itm->sgi);
+        }
+    }
     
     for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
         const UNIFAQLibrary::Component &c = components[i];
@@ -144,7 +154,7 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
             double sum1 = 0;
             for (std::size_t m = 0; m < c.groups.size(); ++m) {
                 int sgim = c.groups[m].group.sgi;
-                sum1 += theta_pure(i, sgim)*Psi(sgim, sgik);
+                sum1 += theta_pure(i, sgim)*Psi_.find(std::pair<std::size_t, std::size_t>(sgim, sgik))->second;
             }
             double s = 1 - log(sum1);
             for (std::size_t m = 0; m < c.groups.size(); ++m) {
@@ -152,9 +162,9 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
                 double sum2 = 0;
                 for (std::size_t n = 0; n < c.groups.size(); ++n) {
                     int sgin = c.groups[n].group.sgi;
-                    sum2 += theta_pure(i, sgin)*Psi(sgin, sgim);
+                    sum2 += theta_pure(i, sgin)*Psi_.find(std::pair<std::size_t, std::size_t>(sgin, sgim))->second;
                 }
-                s -= theta_pure(i, sgim)*Psi(sgik, sgim)/sum2;
+                s -= theta_pure(i, sgim)*Psi_.find(std::pair<std::size_t, std::size_t>(sgik, sgim))->second/sum2;
             }
             pure_data[i].lnGamma[sgik] = Q*s;
             //printf("ln(Gamma)^(%d)_{%d}: %g\n", static_cast<int>(i + 1), sgik, Q*s);
@@ -167,15 +177,15 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
     for (std::vector<UNIFAQLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
         double sum1 = 0;
         for (std::vector<UNIFAQLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
-            sum1 += thetag.find(itm->sgi)->second*this->Psi(itm->sgi, itk->sgi);
+            sum1 += thetag.find(itm->sgi)->second*Psi_.find(std::pair<std::size_t, std::size_t>(itm->sgi, itk->sgi))->second;
         }
         double s = 1-log(sum1);
         for (std::vector<UNIFAQLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
             double sum3 = 0;
             for (std::vector<UNIFAQLibrary::Group>::iterator itn = unique_groups.begin(); itn != unique_groups.end(); ++itn) {
-                sum3 += thetag.find(itn->sgi)->second*this->Psi(itn->sgi, itm->sgi);
+                sum3 += thetag.find(itn->sgi)->second*Psi_.find(std::pair<std::size_t, std::size_t>(itn->sgi, itm->sgi))->second;
             }
-            s -= thetag.find(itm->sgi)->second*Psi(itk->sgi, itm->sgi)/sum3;
+            s -= thetag.find(itm->sgi)->second*Psi_.find(std::pair<std::size_t, std::size_t>(itk->sgi, itm->sgi))->second/sum3;
         }
         lnGammag.insert(std::pair<std::size_t, double>(itk->sgi, itk->Q_k*s));
         //printf("log(Gamma)_{%d}: %g\n", itk->sgi, itk->Q_k*s);
@@ -190,7 +200,7 @@ double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::s
             std::size_t sgik = it->sgi;
             std::size_t count = group_count(i, sgik);
             if (count > 0){
-                summer += count*(m_lnGammag.find(sgik)->second - pure_data[i].lnGamma[sgik]);
+                summer += count*(m_lnGammag.find(sgik)->second - pure_data[i].lnGamma.find(sgik)->second);
             }
         }
         //printf("log(gamma)_{%d}: %g\n", i+1, summer);
