@@ -1,8 +1,8 @@
 #include "UNIFAQ.h"
 
 void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
-    for (int i = 0; i < unique_groups.size(); ++i) {
-        for (int j = i + 1; j < unique_groups.size(); ++j) {
+    for (std::size_t i = 0; i < unique_groups.size(); ++i) {
+        for (std::size_t j = i + 1; j < unique_groups.size(); ++j) {
             int mgi1 = unique_groups[i].mgi, mgi2 = unique_groups[j].mgi;
             // Insert in normal order
             std::pair< std::pair<int, int>, UNIFAQLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi1, mgi2), library.get_interaction_parameters(mgi1, mgi2));
