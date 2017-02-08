@@ -19,8 +19,12 @@ namespace UNIFAQ
     private:
         CoolProp::CachedElement _T; ///< The cached temperature
 
+        std::size_t N = 0; ///< Number of components
+
         double m_T; ///< The temperature in K
         double T_r; ///< Reduce temperature
+
+        std::map<std::pair<std::size_t, std::size_t>, double> Psi_; /// < temporary storage for Psi
 
         std::map<std::size_t, double> m_Xg,  ///< Map from sgi to mole fraction of group in the mixture
                                       m_thetag, ///< Map from sgi to theta for the group in the mixture
