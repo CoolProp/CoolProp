@@ -195,6 +195,11 @@ public:
     {
         return 0;
     }
+    // Allows to modify the unifac interaction parameters aij, bij and cij
+    void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value)
+    {
+        unifaq.set_interaction_parameter(mgi1, mgi2, parameter, value);
+    }
 };
 
 #endif /* VTPRCubic_h */

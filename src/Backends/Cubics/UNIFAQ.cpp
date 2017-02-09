@@ -14,36 +14,21 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
             }
         }
     }
-    /// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
-    pure_data.clear();
-    for (std::size_t i = 0; i < N; ++i) {
-        const UNIFAQLibrary::Component &c = components[i];
-        ComponentData cd;
-        double summerxq = 0;
-        cd.group_count = 0;
-        for (std::size_t j = 0; j < c.groups.size(); ++j) {
-            const UNIFAQLibrary::ComponentGroup &cg = c.groups[j];
-            double x = static_cast<double>(cg.count);
-            double theta = static_cast<double>(cg.count*cg.group.Q_k);
-            cd.X.insert(std::pair<int, double>(cg.group.sgi, x));
-            cd.theta.insert(std::pair<int, double>(cg.group.sgi, theta));
-            cd.group_count += cg.count;
-            summerxq += x*cg.group.Q_k;
-        }
-        /// Now come back through and divide by the total # groups for this fluid
-        for (std::map<std::size_t, double>::iterator it = cd.X.begin(); it != cd.X.end(); ++it) {
-            it->second /= cd.group_count;
-            //printf("X^(%d)_{%d}: %g\n", static_cast<int>(i + 1), static_cast<int>(it->first), it->second);
-        }
-        /// Now come back through and divide by the sum(X*Q) for this fluid
-        for (std::map<std::size_t, double>::iterator it = cd.theta.begin(); it != cd.theta.end(); ++it) {
-            it->second /= summerxq;
-            //printf("theta^(%d)_{%d}: %g\n", static_cast<int>(i+1), static_cast<int>(it->first), it->second);
-        }
-        pure_data.push_back(cd);
+}
+
+void UNIFAQ::UNIFAQMixture::set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value) {
+    if (parameter == "aij") {
+        this->interaction[std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2))].a_ij = value;
     }
-    // Should not be required
-    Psi_.clear();
+    else if (parameter == "bij") {
+        this->interaction[std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2))].b_ij = value;
+    }
+    else if (parameter == "cij") {
+        this->interaction[std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2))].c_ij = value;
+    }
+    else {
+        throw CoolProp::ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
 }
 
 /// Set the mole fractions of the components in the mixtures (not the groups)
@@ -268,5 +253,33 @@ void UNIFAQ::UNIFAQMixture::set_components(const std::string &identifier_type, s
     }
     else {
         throw CoolProp::ValueError("Cannot understand identifier_type");
+    }
+    /// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
+    pure_data.clear();
+    for (std::size_t i = 0; i < N; ++i) {
+        const UNIFAQLibrary::Component &c = components[i];
+        ComponentData cd;
+        double summerxq = 0;
+        cd.group_count = 0;
+        for (std::size_t j = 0; j < c.groups.size(); ++j) {
+            const UNIFAQLibrary::ComponentGroup &cg = c.groups[j];
+            double x = static_cast<double>(cg.count);
+            double theta = static_cast<double>(cg.count*cg.group.Q_k);
+            cd.X.insert(std::pair<int, double>(cg.group.sgi, x));
+            cd.theta.insert(std::pair<int, double>(cg.group.sgi, theta));
+            cd.group_count += cg.count;
+            summerxq += x*cg.group.Q_k;
+        }
+        /// Now come back through and divide by the total # groups for this fluid
+        for (std::map<std::size_t, double>::iterator it = cd.X.begin(); it != cd.X.end(); ++it) {
+            it->second /= cd.group_count;
+            //printf("X^(%d)_{%d}: %g\n", static_cast<int>(i + 1), static_cast<int>(it->first), it->second);
+        }
+        /// Now come back through and divide by the sum(X*Q) for this fluid
+        for (std::map<std::size_t, double>::iterator it = cd.theta.begin(); it != cd.theta.end(); ++it) {
+            it->second /= summerxq;
+            //printf("theta^(%d)_{%d}: %g\n", static_cast<int>(i+1), static_cast<int>(it->first), it->second);
+        }
+        pure_data.push_back(cd);
     }
 }

@@ -5,6 +5,7 @@
 
 #include "UNIFAQLibrary.h"
 #include "CachedElement.h"
+#include "Exceptions.h"
 
 /// Structure containing data for the pure fluid in the mixture
 struct ComponentData {
@@ -59,6 +60,7 @@ namespace UNIFAQ
         * permutations represent the set of posisble binary interactions
         */
         void set_interaction_parameters();
+        void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value);
 
         /// Set the mole fractions of the components in the mixtures (not the groups)
         void set_mole_fractions(const std::vector<double> &z);
