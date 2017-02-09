@@ -257,7 +257,7 @@ Key                     |Default|Description
 ALTERNATIVE_TABLES_DIRECTORY | "" | If provided, this path will be the root directory for the tabular data.  Otherwise, \${HOME}/.CoolProp/Tables is used
 ALTERNATIVE_REFPROP_PATH | "" | An alternative path to be provided to the directory that contains REFPROP's fluids and mixtures directories.  If provided, the SETPATH function will be called with this directory prior to calling any REFPROP functions.
 ALTERNATIVE_REFPROP_HMX_BNC_PATH | "" | An alternative path to the HMX.BNC file.  If provided, it will be passed into REFPROP's SETUP or SETMIX routines
-VTPR_UNIFAQ_PATH | "" | The path to the directory containing the UNIFAQ JSON files.  Should be slash terminated
+VTPR_UNIFAC_PATH | "" | The path to the directory containing the UNIFAC JSON files.  Should be slash terminated
 """
 function set_config(key::AbstractString, val::AbstractString)
   ccall( (:set_config_string, "CoolProp"), Void, (Cstring, Cstring), key, val)

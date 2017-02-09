@@ -1,12 +1,12 @@
-#ifndef UNIFAQ_LIBRARY_H
-#define UNIFAQ_LIBRARY_H
+#ifndef UNIFAC_LIBRARY_H
+#define UNIFAC_LIBRARY_H
 
 #include <vector>
 #include <exception>
 
 #include "rapidjson_include.h"
 
-namespace UNIFAQLibrary{
+namespace UNIFACLibrary{
 
     /// A structure containing references for a single group (its multiplicity, main group index, etc.)
     struct Group{
@@ -43,8 +43,8 @@ namespace UNIFAQLibrary{
     /// A structure containing a group (its count, index, etc.) for a subgroup forming a part of a component
     struct ComponentGroup {
         int count;
-        UNIFAQLibrary::Group group;
-        ComponentGroup(const int count, const UNIFAQLibrary::Group group) : count(count), group(group) {};
+        UNIFACLibrary::Group group;
+        ComponentGroup(const int count, const UNIFACLibrary::Group group) : count(count), group(group) {};
     };
 
     /// A structure containing the groups and additional information for a component
@@ -63,15 +63,15 @@ namespace UNIFAQLibrary{
     };
 
     /**
-     * \brief A container for the parameters for a given UNIFAQ model
+     * \brief A container for the parameters for a given UNIFAC model
      *
-     * This container is intended to be sufficiently generic to allow the user to populate it with UNIFAQ parameters from
-     * any of the standard UNIFAQ models
+     * This container is intended to be sufficiently generic to allow the user to populate it with UNIFAC parameters from
+     * any of the standard UNIFAC models
      * 
      * Input of parameters (population) is done using JSON-formatted strings, and the class can be interrogated to return
      * the desired group information and/or interaction parameters
      */
-    struct UNIFAQParameterLibrary{
+    struct UNIFACParameterLibrary{
     private:
         bool m_populated; ///< True if the library has been populated
         std::vector<Group> groups; ///< The collection of groups forming the component from the group decomposition
@@ -85,7 +85,7 @@ namespace UNIFAQLibrary{
         void populate(rapidjson::Value &group_data, rapidjson::Value &interaction_data, rapidjson::Value &decomp_data);
 
     public:
-        UNIFAQParameterLibrary() : m_populated(false) {};
+        UNIFACParameterLibrary() : m_populated(false) {};
         
         /// Return true if library has been populated
         bool is_populated(){ return m_populated; };
@@ -106,6 +106,6 @@ namespace UNIFAQLibrary{
         InteractionParameters get_interaction_parameters(int mgi1, int mgi2) const;
     };
 
-}; /* namespace UNIFAQLibrary*/
+}; /* namespace UNIFACLibrary*/
 
 #endif

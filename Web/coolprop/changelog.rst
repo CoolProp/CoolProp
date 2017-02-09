@@ -60,7 +60,7 @@ ibell, JonWel, jowr, babaksamareh, mikekaganski
 * `#1217 <https://github.com/CoolProp/CoolProp/issues/1217>`_ : Peng-Robinson issue with Hydrogen
 * `#1215 <https://github.com/CoolProp/CoolProp/issues/1215>`_ : Vapour QT_INPUT with VTPR
 * `#1214 <https://github.com/CoolProp/CoolProp/issues/1214>`_ : Refactor exceptions in CoolPropLib.cpp close #1200
-* `#1213 <https://github.com/CoolProp/CoolProp/issues/1213>`_ : Add tests for Poling example with UNIFAQ code
+* `#1213 <https://github.com/CoolProp/CoolProp/issues/1213>`_ : Add tests for Poling example with UNIFAC code
 * `#1212 <https://github.com/CoolProp/CoolProp/issues/1212>`_ : Add derivatives of a*rho with respect to tau,delta,x
 * `#1211 <https://github.com/CoolProp/CoolProp/issues/1211>`_ : Use aii_term and b0_ii from cubic
 * `#1209 <https://github.com/CoolProp/CoolProp/issues/1209>`_ : Correct tau derivatives in VTPR
@@ -68,7 +68,7 @@ ibell, JonWel, jowr, babaksamareh, mikekaganski
 * `#1206 <https://github.com/CoolProp/CoolProp/issues/1206>`_ : Segmentation fault when calling get_mass_fractions() with SRK and PR
 * `#1204 <https://github.com/CoolProp/CoolProp/issues/1204>`_ : Make all functions in reducing function const
 * `#1203 <https://github.com/CoolProp/CoolProp/issues/1203>`_ : Allow VTPR to pass only names by setting default R_u value
-* `#1202 <https://github.com/CoolProp/CoolProp/issues/1202>`_ : Better error message when UNIFAQ component cannot be found
+* `#1202 <https://github.com/CoolProp/CoolProp/issues/1202>`_ : Better error message when UNIFAC component cannot be found
 * `#1201 <https://github.com/CoolProp/CoolProp/issues/1201>`_ : Update MixtureDerivatives.cpp
 * `#1199 <https://github.com/CoolProp/CoolProp/issues/1199>`_ : dalpha0_dxi is wrong
 * `#1198 <https://github.com/CoolProp/CoolProp/issues/1198>`_ : Cubic CP

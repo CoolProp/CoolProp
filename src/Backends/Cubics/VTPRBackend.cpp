@@ -9,7 +9,7 @@
 #include "Configuration.h"
 #include "Exceptions.h"
 
-static UNIFAQLibrary::UNIFAQParameterLibrary lib;
+static UNIFACLibrary::UNIFACParameterLibrary lib;
 
 void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool generate_SatL_and_SatV){
 
@@ -67,7 +67,7 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
 void CoolProp::VTPRBackend::set_alpha_from_components(){
     
     VTPRCubic * _cubic= static_cast<VTPRCubic *>(cubic.get());
-    const std::vector<UNIFAQLibrary::Component> &components = _cubic->get_unifaq().get_components();
+    const std::vector<UNIFACLibrary::Component> &components = _cubic->get_unifaq().get_components();
     
     /// If components is not present, you are using a vanilla cubic, so don't do anything
     if (components.empty()){ return; }
@@ -107,20 +107,20 @@ void CoolProp::VTPRBackend::set_binary_interaction_double(const std::size_t i, c
     }
 };
 
-const UNIFAQLibrary::UNIFAQParameterLibrary & CoolProp::VTPRBackend::LoadLibrary(){
+const UNIFACLibrary::UNIFACParameterLibrary & CoolProp::VTPRBackend::LoadLibrary(){
     if (!lib.is_populated()){
-        std::string UNIFAQ_path = get_config_string(VTPR_UNIFAQ_PATH);
-        if (UNIFAQ_path.empty()){
-            throw ValueError("You must provide the path to the UNIFAQ library files as VTPR_UNIFAQ_PATH");
+        std::string UNIFAC_path = get_config_string(VTPR_UNIFAC_PATH);
+        if (UNIFAC_path.empty()){
+            throw ValueError("You must provide the path to the UNIFAC library files as VTPR_UNIFAC_PATH");
         }
-        if (!(UNIFAQ_path[UNIFAQ_path.size()-1] == '\\' || UNIFAQ_path[UNIFAQ_path.size()-1] == '/')){
-            throw ValueError("VTPR_UNIFAQ_PATH must end with / or \\ character");
+        if (!(UNIFAC_path[UNIFAC_path.size()-1] == '\\' || UNIFAC_path[UNIFAC_path.size()-1] == '/')){
+            throw ValueError("VTPR_UNIFAC_PATH must end with / or \\ character");
         }
-        std::string group_path = UNIFAQ_path + "/group_data.json";
+        std::string group_path = UNIFAC_path + "/group_data.json";
         std::string groups = get_file_contents(group_path.c_str());
-        std::string interaction_path = UNIFAQ_path + "/interaction_parameters.json";
+        std::string interaction_path = UNIFAC_path + "/interaction_parameters.json";
         std::string interaction = get_file_contents(interaction_path.c_str());
-        std::string decomps_path = UNIFAQ_path + "/decompositions.json";
+        std::string decomps_path = UNIFAC_path + "/decompositions.json";
         std::string decomps = get_file_contents(decomps_path.c_str());
         lib.populate(groups, interaction, decomps);
     }
