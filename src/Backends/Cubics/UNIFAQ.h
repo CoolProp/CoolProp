@@ -5,6 +5,7 @@
 
 #include "UNIFAQLibrary.h"
 #include "CachedElement.h"
+#include "Exceptions.h"
 
 /// Structure containing data for the pure fluid in the mixture
 struct ComponentData {
@@ -19,8 +20,12 @@ namespace UNIFAQ
     private:
         CoolProp::CachedElement _T; ///< The cached temperature
 
+        std::size_t N = 0; ///< Number of components
+
         double m_T; ///< The temperature in K
         double T_r; ///< Reduce temperature
+
+        std::map<std::pair<std::size_t, std::size_t>, double> Psi_; /// < temporary storage for Psi
 
         std::map<std::size_t, double> m_Xg,  ///< Map from sgi to mole fraction of group in the mixture
                                       m_thetag, ///< Map from sgi to theta for the group in the mixture
@@ -55,6 +60,7 @@ namespace UNIFAQ
         * permutations represent the set of posisble binary interactions
         */
         void set_interaction_parameters();
+        void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value);
 
         /// Set the mole fractions of the components in the mixtures (not the groups)
         void set_mole_fractions(const std::vector<double> &z);

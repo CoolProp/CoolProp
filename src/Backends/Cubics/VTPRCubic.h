@@ -117,7 +117,7 @@ public:
     }
     double sum_xi_aii_bii(double tau, const std::vector<double> &x, std::size_t itau) {
         double summeram = 0;
-        for (std::size_t i = 0; i < N; ++i) {
+        for (int i = 0; i < N; ++i) {
             summeram += x[i] * aii_term(tau, i, itau) / b0_ii(i);
         }
         return summeram;
@@ -151,8 +151,8 @@ public:
 
     double bm_term(const std::vector<double> &x) {
         double summerbm = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            for (std::size_t j = 0; j < N; ++j) {
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j < N; ++j) {
                 summerbm += x[i] * x[j] * bij_term(i, j);
             }
         }
@@ -194,6 +194,11 @@ public:
     double d3_bm_term_dxidxjdxk(const std::vector<double> &x, std::size_t i, std::size_t j, std::size_t k, bool xN_independent)
     {
         return 0;
+    }
+    // Allows to modify the unifac interaction parameters aij, bij and cij
+    void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value)
+    {
+        unifaq.set_interaction_parameter(mgi1, mgi2, parameter, value);
     }
 };
 

@@ -14,6 +14,7 @@
 #include <vector>
 #include <cmath>
 #include "crossplatform_shared_ptr.h"
+#include "Exceptions.h"
 
 /// An abstract alpha function for the EOS, defining the interface for the alpha function
 class AbstractCubicAlphaFunction{
@@ -522,6 +523,8 @@ public:
                      +2*d_PI_12_dxi(delta, x, idelta, j, xN_independent)*d_PI_12_dxi(delta, x, idelta, k, xN_independent)*d_bm_term_dxi(x,i, xN_independent)
                      );
     };
+    // Allows to modify the unifac interaction parameters aij, bij and cij. Only for use with VTPR backend.
+    virtual void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value){throw CoolProp::NotImplementedError("set_interaction_parameter is not implemented for this backend");}
 };
 
 class PengRobinson : public AbstractCubic

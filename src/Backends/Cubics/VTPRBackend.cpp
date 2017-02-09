@@ -100,6 +100,13 @@ CoolPropDbl CoolProp::VTPRBackend::calc_molar_mass(void)
     return summer;
 }
 
+void CoolProp::VTPRBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value) {
+    cubic->set_interaction_parameter(i, j, parameter, value);
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        (*it)->set_binary_interaction_double(i, j, parameter, value);
+    }
+};
+
 const UNIFAQLibrary::UNIFAQParameterLibrary & CoolProp::VTPRBackend::LoadLibrary(){
     if (!lib.is_populated()){
         std::string UNIFAQ_path = get_config_string(VTPR_UNIFAQ_PATH);
