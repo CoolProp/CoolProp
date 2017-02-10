@@ -195,7 +195,9 @@ double UNIFAC::UNIFACMixture::ln_gamma_R(const double tau, std::size_t i, std::s
     }
 }
 void UNIFAC::UNIFACMixture::activity_coefficients(double tau, const std::vector<double> &z, std::vector<double> &gamma){
-    std::size_t N = z.size();
+    if (this->N != z.size()) {
+        throw CoolProp::ValueError("Size of molar fraction do not match number of components.");
+    }
     std::vector<double> r(N), q(N), l(N), phi(N), theta(N), ln_Gamma_C(N);
     double summerzr = 0, summerzq = 0, summerzl = 0;
     for (std::size_t i = 0; i < N; ++i) {
