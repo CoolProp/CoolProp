@@ -1278,15 +1278,30 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
         case HmolarSmolar_INPUTS:
             _hmolar = value1; _smolar = value2; FlashRoutines::HS_flash(*this); break;
         case QT_INPUTS:
-            _Q = value1; _T = value2; FlashRoutines::QT_flash(*this); break;
+            _Q = value1; _T = value2; 
+            if ((_Q < 0) || (_Q > 1)) 
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::QT_flash(*this); break;
         case PQ_INPUTS:
-            _p = value1; _Q = value2; FlashRoutines::PQ_flash(*this); break;
+            _p = value1; _Q = value2; 
+            if ((_Q < 0) || (_Q > 1)) 
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::PQ_flash(*this); break;
         case QSmolar_INPUTS:
-            _Q = value1; _smolar = value2; FlashRoutines::QS_flash(*this); break;
+            _Q = value1; _smolar = value2; 
+            if ((_Q < 0) || (_Q > 1)) 
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::QS_flash(*this); break;
         case HmolarQ_INPUTS:
-            _hmolar = value1; _Q = value2; FlashRoutines::HQ_flash(*this); break;
+            _hmolar = value1; _Q = value2; 
+            if ((_Q < 0) || (_Q > 1)) 
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::HQ_flash(*this); break;
         case DmolarQ_INPUTS:
-            _rhomolar = value1; _Q = value2; FlashRoutines::DQ_flash(*this); break;
+            _rhomolar = value1; _Q = value2; 
+            if ((_Q < 0) || (_Q > 1)) 
+                throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::DQ_flash(*this); break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }

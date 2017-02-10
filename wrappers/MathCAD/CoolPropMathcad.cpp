@@ -2,6 +2,7 @@
 //
 
 #include <string>
+// #include <sstream>
 
 #ifndef NOMINMAX // Kill windows' horrible min() and max() macros
 #define NOMINMAX
@@ -13,19 +14,50 @@ enum { MC_STRING = STRING };  // substitute enumeration variable MC_STRING for S
 #undef STRING                 // undefine STRING as it conflicts with STRING enum in cppformat/format.h
 
 #include "CoolProp.h"
+#include "DataStructures.h"
 #include "HumidAirProp.h"
 
-enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUST_BE_REAL };   // Mathcad Error Codes
+/*
+#define MSGBOX(x) \
+{ \
+   std::ostringstream oss; \
+   oss << x; \
+   MessageBox(NULL,oss.str().c_str(), "CoolProp Error Message", MB_OK | MB_ICONINFORMATION); \
+}
+*/
+
+enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad Error Codes
+          BAD_FLUID, BAD_PARAMETER, BAD_REF, NON_TRIVIAL,           // CoolProp Error Codes
+          NO_REFPROP, NOT_AVAIL, BAD_INPUT_PAIR, BAD_QUAL,
+          TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
+          H_OUT_OF_RANGE, S_OUT_OF_RANGE, HA_INPUTS, UNKNOWN,
+          NUMBER_OF_ERRORS };                                       // Dummy Code for Error Count
 
     // table of error messages
     // if user function never returns an
     // error -- you do not need to create this
     // table
-    char * myErrorMessageTable[NUMBER_OF_ERRORS] =  
+    char * CPErrorMessageTable[NUMBER_OF_ERRORS] =  
     {   
-        "Interrupted"
-        "Insufficient Memory"
-        "Argument must be real"
+        "Interrupted",
+        "Insufficient Memory",
+        "Argument must be real",
+        "Invalid Fluid String",
+        "Invalid Parameter String",
+        "Cannot use this REF State with this fluid",
+        "Input Parameter is Non-Trivial",
+        "REFPROP not installed correctly",
+        "This Output parameter is not available for this Fluid",
+        "This Input Pair is not yet support for this Fluid",
+        "Input vapor quality must be between 0 and 1",
+        "Output variable not valid in two phase region",
+        "Temperature out of range",
+        "Pressure out of range",
+        "Enthalpy out of range",
+        "Entropy out of range",
+        "At least one of the inputs must be [T], [R], [W], or [Tdp]",
+        "ERROR: Use get_global_param_string(\"errstring\") for more info",
+        "Error Count - Not Used"
     };
     
     // this code executes the user function CP_get_global_param_string, which is a wrapper for
@@ -34,9 +66,21 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
                             LPMCSTRING ParamValue,   // output (value of parameter)
                             LPCMCSTRING ParamName )  // name of parameter (string) to retrieve
     {  
+        std::string s;
         // Invoke the std::string form of get_global_param_string() function, save result to a new string s
-        std::string s = CoolProp::get_global_param_string(ParamName->str);
-        char * c = new char [s.size()+1]; // creat a c-string (pointer) c with the same size as s
+        try {
+            s = CoolProp::get_global_param_string(ParamName->str);
+        }
+        catch (const CoolProp::ValueError& e) {
+            std::string emsg(e.what());
+            CoolProp::set_error_string(emsg);
+            if (emsg.find("parameter")!=std::string::npos)
+                return MAKELRESULT(BAD_PARAMETER,1);
+            else
+                return MAKELRESULT(UNKNOWN,1);
+        }
+
+        char * c = new char [s.size()+1]; // create a c-string (pointer) c with the same size as s
         // copy s into c, this process avoids the const-cast type which would result from instead
         // converting the string using s.c_str()
         std::copy(s.begin(), s.end(), c); 
@@ -52,12 +96,27 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
     // the CoolProp.get_fluid_param_string() function, used to get a fluid string parameter from CoolProp
     LRESULT  CP_get_fluid_param_string(
                             LPMCSTRING ParamValue,   // output (value of parameter)
-                            LPCMCSTRING FluidName,  // name of fluidr (string) to retrieve
+                            LPCMCSTRING FluidName,   // name of fluid (string) to retrieve
                             LPCMCSTRING ParamName )  // name of parameter (string) to retrieve
     {  
+        std::string s;
         // Invoke the std::string form of get_fluid_param_string() function, save result to a new string s
-        std::string s = CoolProp::get_fluid_param_string(FluidName->str, ParamName->str);
-        char * c = new char [s.size()+1]; // creat a c-string (pointer) c with the same size as s
+        try {
+            s = CoolProp::get_fluid_param_string(FluidName->str, ParamName->str);
+        }
+        catch (const CoolProp::ValueError& e) {
+            // MSGBOX(e.what());
+            std::string emsg(e.what());
+            CoolProp::set_error_string(emsg);
+            if (emsg.find("key")!=std::string::npos)
+                return MAKELRESULT(BAD_FLUID,1);
+            else if (emsg.find("parameter")!=std::string::npos)
+                return MAKELRESULT(BAD_PARAMETER,2);
+            else
+                return MAKELRESULT(UNKNOWN,1);
+        }
+
+        char * c = new char [s.size()+1]; // create a c-string (pointer) c with the same size as s
         // copy s into c, this process avoids the const-cast type which would result from instead
         // converting the string using s.c_str()
         std::copy(s.begin(), s.end(), c); 
@@ -78,7 +137,25 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
                             LPCMCSTRING StateStr )     // name of standard state (string) to set
     {  
         // Invoke the set_reference_stateS() function, no result from this void function.
-        CoolProp::set_reference_stateS(FluidName->str, StateStr->str);
+        try {
+            CoolProp::set_reference_stateS(FluidName->str, StateStr->str);
+        }
+        catch (const CoolProp::ValueError& e) {
+            std::string emsg(e.what());
+            CoolProp::set_error_string(emsg);
+            if (emsg.find("key")!=std::string::npos)
+                return MAKELRESULT(BAD_FLUID,1);
+            else if ((emsg.find("Cannot use")!=std::string::npos)  ||
+                     (emsg.find("Temperature to QT_flash")!=std::string::npos) )
+                return MAKELRESULT(BAD_REF,2);
+            else if ((emsg.find("reference state")!=std::string::npos) ||
+                     (emsg.find("Reference state")!=std::string::npos) ||
+                     (emsg.find("Reference State")!=std::string::npos) )
+                return MAKELRESULT(BAD_PARAMETER,2);
+            else
+                return MAKELRESULT(UNKNOWN,1);
+        }
+        
         // assign the dummy return value
         Conf->real = 0;
 
@@ -93,9 +170,54 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
                             LPCOMPLEXSCALAR Prop,   // pointer to the result
                             LPCMCSTRING Fluid,      // string with a valid CoolProp fluid name
                             LPCMCSTRING PropName )  // a fluid property
-    {  
+    {
+        unsigned int errPos;
+        std::string PropNameBrackets(PropName->str);
+            PropNameBrackets = "[" + PropNameBrackets + "]";
+        std::string FluidString = Fluid->str;
+
         // pass the arguments to the CoolProp.Props1() function
         Prop->real = CoolProp::Props1SI(Fluid->str, PropName->str);
+
+        // Note: Props1SI does not throw exceptions, but instead
+        // sets global parameter "errstring" and returns _HUGE. 
+        // Use ValidNumber(val) to see if Props1SI failed with an error message...
+        if (!ValidNumber(Prop->real)) {
+            std::string emsg = CoolProp::get_global_param_string("errstring");
+            CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
+            if (emsg.find("valid fluid")!=std::string::npos) {
+                if (emsg.find("Neither input")!=std::string::npos)
+                    if (emsg.find("REFPROP")!=std::string::npos) {
+                        // Fluid can be in either parameter location, find out which.
+                        // It will be in brackets in the error message.
+                        if (FluidString.find("REFPROP")!=std::string::npos)
+                            errPos = 1;  // [REFPROP::???] is in Fluid->str, i.e. position 1
+                        else
+                            errPos = 2;  // [REFPROP::???] is in PropName->str, i.e. position 2
+                        return MAKELRESULT(NO_REFPROP,errPos);
+                    } else
+                        return MAKELRESULT(BAD_FLUID,1);
+                else //  "Both inputs"
+                    return MAKELRESULT(BAD_PARAMETER,2);
+            } else if (emsg.find("Unable to use")!=std::string::npos) {
+                // PropName can be in either parameter location, find out which.
+                // It will be in brackets in the error message.
+                if (emsg.find(PropNameBrackets)!=std::string::npos)
+                    errPos = 2;  // [PropName] is in error message, i.e. position 2
+                else
+                    errPos = 1;  // [Fluid] variable is in error message, i.e. position 1
+                // Now determine specific error type
+                if (emsg.find("Output string is invalid")!=std::string::npos)
+                    return MAKELRESULT(BAD_PARAMETER,errPos);
+                else if (emsg.find("non-trivial")!=std::string::npos)
+                    return MAKELRESULT(NON_TRIVIAL,errPos);
+                else if (emsg.find("No outputs")!=std::string::npos)
+                    return MAKELRESULT(NOT_AVAIL,errPos);
+                else
+                    return MAKELRESULT(UNKNOWN,errPos);
+            } else
+                return MAKELRESULT(UNKNOWN,1);
+        }
 
         // normal return
         return 0;
@@ -112,17 +234,81 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
                             LPCCOMPLEXSCALAR InputProp2, // CoolProp InputProp2
                             LPCMCSTRING      FluidName ) // CoolProp Fluid
     {  
+        unsigned int errPos;
+        std::string Prop1Name(InputName1->str);
+        std::string Prop2Name(InputName2->str);
+        std::string FluidString = FluidName->str;
+        CoolProp::parameters key1;
+
         // check that the first scalar argument is real
         if (InputProp1->imag != 0.0)
             return MAKELRESULT( MUST_BE_REAL, 3);    // if not, display "Argument must be real" under scalar argument
 
         // check that the second scalar argument is real
         if (InputProp2->imag != 0.0)
-            return MAKELRESULT( MUST_BE_REAL, 6);    // if not, display "Argument must be real" under scalar argument
+            return MAKELRESULT( MUST_BE_REAL, 5);    // if not, display "Argument must be real" under scalar argument
 
         // pass the arguments to the CoolProp.Props() function
         Prop->real = CoolProp::PropsSI(OutputName->str, InputName1->str, InputProp1->real, InputName2->str, InputProp2->real, FluidName->str);
-        
+          
+        // Note: PropsSI does not throw exceptions, but instead
+        // sets global parameter "errstring" and returns _HUGE. 
+        // Use ValidNumber(val) to see if PropsSI failed with an error message...
+        if (!ValidNumber(Prop->real)) {
+            std::string emsg = CoolProp::get_global_param_string("errstring");
+            CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
+            if (emsg.find("Input pair variable is invalid")!=std::string::npos) {
+                if (!is_valid_parameter(Prop1Name, key1))
+                    errPos = 2;  // First input parameter string; position 2.
+                else  // must be the second input parameter that's bad
+                    errPos = 4;  // Second input parameter string; position 4.
+                return MAKELRESULT(BAD_PARAMETER,errPos);
+            } else if (emsg.find("This pair of inputs")!=std::string::npos) {
+                return MAKELRESULT(BAD_INPUT_PAIR,2);  // second position parameter
+            } else if (emsg.find("Input vapor quality")!=std::string::npos) {
+                if (Prop1Name == "Q")
+                    return MAKELRESULT(BAD_QUAL,3);  // First value position
+                else
+                    return MAKELRESULT(BAD_QUAL,5);  // Second value position
+            } else if (emsg.find("Output string is invalid")!=std::string::npos) {
+                return MAKELRESULT(BAD_PARAMETER,1);  // first position parameter
+            } else if (emsg.find("not valid in two phase region")!=std::string::npos) {
+                return MAKELRESULT(TWO_PHASE,1);  // first position parameter
+            } else if (emsg.find("not implemented")!=std::string::npos) {
+                return MAKELRESULT(NOT_AVAIL,1);      // first position parameter
+            } else if (emsg.find("Initialize failed")!=std::string::npos) {
+                if (emsg.find("REFPROP")!=std::string::npos) {
+                    if (emsg.find("cannot use")!=std::string::npos)
+                        return MAKELRESULT(NO_REFPROP,6);
+                    else
+                        return MAKELRESULT(BAD_FLUID,6);
+                } else
+                    return MAKELRESULT(BAD_FLUID,6);
+            } else if (emsg.find("Temperature")!=std::string::npos) {
+                if (Prop1Name == "T")
+                    return MAKELRESULT(T_OUT_OF_RANGE,3);  // First value position
+                else
+                    return MAKELRESULT(T_OUT_OF_RANGE,5);  // Second value position
+            } else if (emsg.find("Pressure")!=std::string::npos) {
+                if (Prop1Name == "P")
+                    return MAKELRESULT(P_OUT_OF_RANGE,3);  // First value position
+                else
+                    return MAKELRESULT(P_OUT_OF_RANGE,5);  // Second value position
+            } else if ((emsg.find("Enthalpy")!=std::string::npos) ||
+                       (emsg.find("solution because Hmolar")!=std::string::npos)) {
+                if ((Prop1Name == "H") || (Prop1Name == "Hmolar"))
+                    return MAKELRESULT(H_OUT_OF_RANGE,3);  // First value position
+                else
+                    return MAKELRESULT(H_OUT_OF_RANGE,5);  // Second value position
+            } else if ((emsg.find("Entropy")!=std::string::npos) ||
+                       (emsg.find("solution because Smolar")!=std::string::npos)) {
+                if ((Prop1Name == "S") || (Prop1Name == "Smolar"))
+                    return MAKELRESULT(S_OUT_OF_RANGE,3);  // First value position
+                else
+                    return MAKELRESULT(S_OUT_OF_RANGE,5);  // Second value position
+            } else
+                return MAKELRESULT(UNKNOWN,1);
+        }
         // normal return
         return 0;
     }
@@ -139,6 +325,12 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
                             LPCMCSTRING        InputName3, // CoolProp InputName3
                             LPCCOMPLEXSCALAR   InputProp3) // CoolProp InputProp3
     {  
+        unsigned int errPos;
+        std::string OutName(OutputName->str);   OutName   = "[" + OutName + "]";
+        std::string Prop1Name(InputName1->str); Prop1Name = "[" + Prop1Name + "]";
+        std::string Prop2Name(InputName2->str); Prop2Name = "[" + Prop2Name + "]";
+        std::string Prop3Name(InputName3->str); Prop3Name = "[" + Prop3Name + "]";
+
         // check that the first scalar argument is real
         if (InputProp1->imag != 0.0)
             return MAKELRESULT( MUST_BE_REAL, 3);  // if not, display "must be real" under scalar argument
@@ -153,7 +345,33 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
 
         // pass the arguments to the HumidAirProp.HAProps() function
         Prop->real = HumidAir::HAPropsSI(OutputName->str, InputName1->str, InputProp1->real, InputName2->str, InputProp2->real, InputName3->str, InputProp3->real);
-        
+
+        // Note: HAPropsSI does not throw exceptions, but instead
+        // sets global parameter "errstring" and returns _HUGE. 
+        // Use ValidNumber(val) to see if HAPropsSI failed with an error message...
+        if (!ValidNumber(Prop->real)) {
+            std::string emsg = CoolProp::get_global_param_string("errstring");
+            CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
+
+            errPos = 0;
+            if (emsg.find(OutName)!=std::string::npos)
+                errPos = 1;
+            else if (emsg.find(Prop1Name)!=std::string::npos)
+                errPos = 2;
+            else if (emsg.find(Prop2Name)!=std::string::npos)
+                errPos = 4;
+            else if (emsg.find(Prop3Name)!=std::string::npos)
+                errPos = 6;
+
+            if (errPos != 0)
+                return MAKELRESULT( BAD_PARAMETER, errPos );
+            else if (emsg.find("at least one of the variables")!=std::string::npos)
+                return MAKELRESULT( HA_INPUTS, 2 );
+            else
+            // Only the Generic Error message supported at this time for HAPropsSI for any other errors
+                return MAKELRESULT( UNKNOWN, 1 );
+        }
+
         // normal return
         return 0;
     }
@@ -253,7 +471,7 @@ enum EC { INTERRUPTED, INSUFFICIENT_MEMORY, MUST_BE_REAL, NUMBER_OF_ERRORS = MUS
                     // Note, that if your function never returns
                     // an error -- you do not need to 
                     // register an error message table
-                    if ( !CreateUserErrorMessageTable( hDLL, NUMBER_OF_ERRORS, myErrorMessageTable ) )
+                    if ( !CreateUserErrorMessageTable( hDLL, NUMBER_OF_ERRORS, CPErrorMessageTable ) )
                         break;
 
                     // and if the errors register OK
