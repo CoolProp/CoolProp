@@ -1,22 +1,22 @@
-#include "UNIFAQ.h"
+#include "UNIFAC.h"
 
-void UNIFAQ::UNIFAQMixture::set_interaction_parameters() {
+void UNIFAC::UNIFACMixture::set_interaction_parameters() {
     for (std::size_t i = 0; i < unique_groups.size(); ++i) {
         for (std::size_t j = i + 1; j < unique_groups.size(); ++j) {
             int mgi1 = unique_groups[i].mgi, mgi2 = unique_groups[j].mgi;
             // Insert in normal order
-            std::pair< std::pair<int, int>, UNIFAQLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi1, mgi2), library.get_interaction_parameters(mgi1, mgi2));
+            std::pair< std::pair<int, int>, UNIFACLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi1, mgi2), library.get_interaction_parameters(mgi1, mgi2));
             interaction.insert(m_pair);
             // Insert in backwards order
             if (mgi1 != mgi2){
-                std::pair< std::pair<int, int>, UNIFAQLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi2, mgi1), library.get_interaction_parameters(mgi2, mgi1));
+                std::pair< std::pair<int, int>, UNIFACLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi2, mgi1), library.get_interaction_parameters(mgi2, mgi1));
                 interaction.insert(m_pair);
             }
         }
     }
 }
 
-void UNIFAQ::UNIFAQMixture::set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value) {
+void UNIFAC::UNIFACMixture::set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value) {
     if (parameter == "aij") {
         this->interaction[std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2))].a_ij = value;
     }
@@ -32,7 +32,7 @@ void UNIFAQ::UNIFAQMixture::set_interaction_parameter(const std::size_t mgi1, co
 }
 
 /// Set the mole fractions of the components in the mixtures (not the groups)
-void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
+void UNIFAC::UNIFACMixture::set_mole_fractions(const std::vector<double> &z) {
 //    // If the vector fractions are the same as last ones, don't do anything and return
 //    if (!mole_fractions.empty() && maxvectordiff(z, mole_fractions) < 1e-15){
 //        return;
@@ -51,7 +51,7 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
         X_summer += this->mole_fractions[i] * pure_data[i].group_count;
     }
     /// Calculations for each group in the total mixture
-    for (std::vector<UNIFAQLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it){
+    for (std::vector<UNIFACLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it){
         double X = 0;
         // Iterate over the fluids
         for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
@@ -65,7 +65,7 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
         //printf("X_{%d}: %g\n", it->first, it->second);
     }
     double theta_summer = 0;
-    for (std::vector<UNIFAQLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
+    for (std::vector<UNIFACLibrary::Group>::iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
         double cont = Xg.find(it->sgi)->second * it->Q_k;
         theta_summer += cont;
         thetag.insert(std::pair<std::size_t, double>(it->sgi, cont));
@@ -77,10 +77,10 @@ void UNIFAQ::UNIFAQMixture::set_mole_fractions(const std::vector<double> &z) {
     }
 }
 
-double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
+double UNIFAC::UNIFACMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
 
     if (this->interaction.size() == 0) {
-        throw CoolProp::ValueError("interaction parameters for UNIFAQ not yet set");
+        throw CoolProp::ValueError("interaction parameters for UNIFAC not yet set");
     }
     std::size_t mgi1 = m_sgi_to_mgi.find(sgi1)->second;
     std::size_t mgi2 = m_sgi_to_mgi.find(sgi2)->second;
@@ -88,29 +88,29 @@ double UNIFAQ::UNIFAQMixture::Psi(std::size_t sgi1, std::size_t sgi2) const {
         return 1;
     }
     else {
-        std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2)));
+        std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters>::const_iterator it = this->interaction.find(std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2)));
         if (it != this->interaction.end()) {
             return exp(-(it->second.a_ij / this->m_T + it->second.b_ij + it->second.c_ij*this->m_T));
         }
         else {
-            throw CoolProp::ValueError(format("Could not match mgi[%d]-mgi[%d] interaction in UNIFAQ", static_cast<int>(mgi1), static_cast<int>(mgi2)));
+            throw CoolProp::ValueError(format("Could not match mgi[%d]-mgi[%d] interaction in UNIFAC", static_cast<int>(mgi1), static_cast<int>(mgi2)));
         }
     }
 }
 
-std::size_t UNIFAQ::UNIFAQMixture::group_count(std::size_t i, std::size_t sgi) const {
-    const UNIFAQLibrary::Component &c = components[i];
-    for (std::vector<UNIFAQLibrary::ComponentGroup>::const_iterator it = c.groups.begin(); it != c.groups.end(); ++it){
+std::size_t UNIFAC::UNIFACMixture::group_count(std::size_t i, std::size_t sgi) const {
+    const UNIFACLibrary::Component &c = components[i];
+    for (std::vector<UNIFACLibrary::ComponentGroup>::const_iterator it = c.groups.begin(); it != c.groups.end(); ++it){
         if (it->group.sgi == sgi){ return it->count; }
     }
     return 0;
 }
 
-double UNIFAQ::UNIFAQMixture::theta_pure(std::size_t i, std::size_t sgi) const {
+double UNIFAC::UNIFACMixture::theta_pure(std::size_t i, std::size_t sgi) const {
     return pure_data[i].theta.find(sgi)->second;
 }
 
-void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
+void UNIFAC::UNIFACMixture::set_temperature(const double T){
 //    // Check whether you are using exactly the same temperature as last time
 //    if (static_cast<bool>(_T) && std::abs(static_cast<double>(_T) - T) < 1e-15 {
 //        // 
@@ -123,14 +123,14 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
     }
 
     ///Compute Psi once for the different calls
-    for (std::vector<UNIFAQLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
-        for (std::vector<UNIFAQLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
+    for (std::vector<UNIFACLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
+        for (std::vector<UNIFACLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
             Psi_[std::pair<std::size_t, std::size_t>(itk->sgi, itm->sgi)] = Psi(itk->sgi, itm->sgi);
         }
     }
     
     for (std::size_t i = 0; i < this->mole_fractions.size(); ++i) {
-        const UNIFAQLibrary::Component &c = components[i];
+        const UNIFACLibrary::Component &c = components[i];
         for (std::size_t k = 0; k < c.groups.size(); ++k) {
             double Q = c.groups[k].group.Q_k;
             int sgik = c.groups[k].group.sgi;
@@ -157,15 +157,15 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
     std::map<std::size_t, double> &thetag = m_thetag, &lnGammag = m_lnGammag;
     lnGammag.clear();
 
-    for (std::vector<UNIFAQLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
+    for (std::vector<UNIFACLibrary::Group>::iterator itk = unique_groups.begin(); itk != unique_groups.end(); ++itk) {
         double sum1 = 0;
-        for (std::vector<UNIFAQLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
+        for (std::vector<UNIFACLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
             sum1 += thetag.find(itm->sgi)->second*Psi_.find(std::pair<std::size_t, std::size_t>(itm->sgi, itk->sgi))->second;
         }
         double s = 1-log(sum1);
-        for (std::vector<UNIFAQLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
+        for (std::vector<UNIFACLibrary::Group>::iterator itm = unique_groups.begin(); itm != unique_groups.end(); ++itm) {
             double sum3 = 0;
-            for (std::vector<UNIFAQLibrary::Group>::iterator itn = unique_groups.begin(); itn != unique_groups.end(); ++itn) {
+            for (std::vector<UNIFACLibrary::Group>::iterator itn = unique_groups.begin(); itn != unique_groups.end(); ++itn) {
                 sum3 += thetag.find(itn->sgi)->second*Psi_.find(std::pair<std::size_t, std::size_t>(itn->sgi, itm->sgi))->second;
             }
             s -= thetag.find(itm->sgi)->second*Psi_.find(std::pair<std::size_t, std::size_t>(itk->sgi, itm->sgi))->second/sum3;
@@ -175,11 +175,11 @@ void UNIFAQ::UNIFAQMixture::set_temperature(const double T){
     }
     _T = m_T;
 }
-double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::size_t itau){
+double UNIFAC::UNIFACMixture::ln_gamma_R(const double tau, std::size_t i, std::size_t itau){
     if (itau == 0) {
         set_temperature(T_r / tau);
         double summer = 0;
-        for (std::vector<UNIFAQLibrary::Group>::const_iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
+        for (std::vector<UNIFACLibrary::Group>::const_iterator it = unique_groups.begin(); it != unique_groups.end(); ++it) {
             std::size_t sgik = it->sgi;
             std::size_t count = group_count(i, sgik);
             if (count > 0){
@@ -194,15 +194,15 @@ double UNIFAQ::UNIFAQMixture::ln_gamma_R(const double tau, std::size_t i, std::s
         return (ln_gamma_R(tau + dtau, i, itau - 1) - ln_gamma_R(tau - dtau, i, itau - 1)) / (2 * dtau);
     }
 }
-void UNIFAQ::UNIFAQMixture::activity_coefficients(double tau, const std::vector<double> &z, std::vector<double> &gamma){
+void UNIFAC::UNIFACMixture::activity_coefficients(double tau, const std::vector<double> &z, std::vector<double> &gamma){
     std::size_t N = z.size();
     std::vector<double> r(N), q(N), l(N), phi(N), theta(N), ln_Gamma_C(N);
     double summerzr = 0, summerzq = 0, summerzl = 0;
     for (std::size_t i = 0; i < N; ++i) {
         double summerr = 0, summerq = 0;
-        const UNIFAQLibrary::Component &c = components[i];
+        const UNIFACLibrary::Component &c = components[i];
         for (std::size_t j = 0; j < c.groups.size(); ++j) {
-            const UNIFAQLibrary::ComponentGroup &cg = c.groups[j];
+            const UNIFACLibrary::ComponentGroup &cg = c.groups[j];
             summerr += cg.count*cg.group.R_k;
             summerq += cg.count*cg.group.Q_k;
         }
@@ -224,13 +224,13 @@ void UNIFAQ::UNIFAQMixture::activity_coefficients(double tau, const std::vector<
 }
 
 /// Add a component with the defined groups defined by (count, sgi) pairs
-void UNIFAQ::UNIFAQMixture::add_component(const UNIFAQLibrary::Component &comp) {
+void UNIFAC::UNIFACMixture::add_component(const UNIFACLibrary::Component &comp) {
     components.push_back(comp);
     // Check if you also need to add group into list of unique groups
-    for (std::vector<UNIFAQLibrary::ComponentGroup>::const_iterator it = comp.groups.begin(); it != comp.groups.end(); ++it) {
+    for (std::vector<UNIFACLibrary::ComponentGroup>::const_iterator it = comp.groups.begin(); it != comp.groups.end(); ++it) {
         bool insert_into_unique = true;
         // if already in unique_groups, don't save it, go to next one
-        for (std::vector<UNIFAQLibrary::Group>::const_iterator it2 = unique_groups.begin(); it2 != unique_groups.end(); ++it2) {
+        for (std::vector<UNIFACLibrary::Group>::const_iterator it2 = unique_groups.begin(); it2 != unique_groups.end(); ++it2) {
             if (it2->sgi == it->group.sgi) { insert_into_unique = false; break; }
         }
         if (insert_into_unique) { 
@@ -240,14 +240,14 @@ void UNIFAQ::UNIFAQMixture::add_component(const UNIFAQLibrary::Component &comp) 
     }
 }
 
-void UNIFAQ::UNIFAQMixture::set_components(const std::string &identifier_type, std::vector<std::string> identifiers) {
+void UNIFAC::UNIFACMixture::set_components(const std::string &identifier_type, std::vector<std::string> identifiers) {
     components.clear();
     N = identifiers.size();
     if (identifier_type == "name") {
         // Iterate over the provided names
         for (std::vector<std::string>::const_iterator it = identifiers.begin(); it != identifiers.end(); ++it) {
             // Get and add the component
-            UNIFAQLibrary::Component c = library.get_component("name", *it);
+            UNIFACLibrary::Component c = library.get_component("name", *it);
             add_component(c);
         }
     }
@@ -257,12 +257,12 @@ void UNIFAQ::UNIFAQMixture::set_components(const std::string &identifier_type, s
     /// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
     pure_data.clear();
     for (std::size_t i = 0; i < N; ++i) {
-        const UNIFAQLibrary::Component &c = components[i];
+        const UNIFACLibrary::Component &c = components[i];
         ComponentData cd;
         double summerxq = 0;
         cd.group_count = 0;
         for (std::size_t j = 0; j < c.groups.size(); ++j) {
-            const UNIFAQLibrary::ComponentGroup &cg = c.groups[j];
+            const UNIFACLibrary::ComponentGroup &cg = c.groups[j];
             double x = static_cast<double>(cg.count);
             double theta = static_cast<double>(cg.count*cg.group.Q_k);
             cd.X.insert(std::pair<int, double>(cg.group.sgi, x));

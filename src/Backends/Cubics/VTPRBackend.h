@@ -18,8 +18,8 @@
 #include <vector>
 #include "CubicBackend.h"
 #include "Configuration.h"
-#include "UNIFAQLibrary.h"
-#include "UNIFAQ.h"
+#include "UNIFACLibrary.h"
+#include "UNIFAC.h"
 #include "VTPRCubic.h"
 
 namespace CoolProp {
@@ -39,7 +39,7 @@ public:
 		const std::vector<double> &acentric,
 		double R_u,
 		bool generate_SatL_and_SatV = true) {
-		const UNIFAQLibrary::UNIFAQParameterLibrary & lib = LoadLibrary();
+		const UNIFACLibrary::UNIFACParameterLibrary & lib = LoadLibrary();
 		cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
 		setup(fluid_identifiers, generate_SatL_and_SatV);
 	};
@@ -50,10 +50,10 @@ public:
         std::vector<double> Tc, pc, acentric;
         N = fluid_identifiers.size();
         components.resize(N);
-        // Extract data from the UNIFAQ parameter library
-        const UNIFAQLibrary::UNIFAQParameterLibrary & lib = LoadLibrary();
+        // Extract data from the UNIFAC parameter library
+        const UNIFACLibrary::UNIFACParameterLibrary & lib = LoadLibrary();
         for (std::size_t i = 0; i < fluid_identifiers.size(); ++i){
-            UNIFAQLibrary::Component comp = lib.get_component("name", fluid_identifiers[i]);
+            UNIFACLibrary::Component comp = lib.get_component("name", fluid_identifiers[i]);
             Tc.push_back(comp.Tc); // [K]
             pc.push_back(comp.pc); // [Pa]
             acentric.push_back(comp.acentric); // [-]
@@ -76,8 +76,8 @@ public:
     /// Set the pointer to the residual helmholtz class, etc.
     void setup(const std::vector<std::string> &names, bool generate_SatL_and_SatV = true);
     
-    /// Load the UNIFAQ library if needed and get const reference to it
-    const UNIFAQLibrary::UNIFAQParameterLibrary &LoadLibrary();
+    /// Load the UNIFAC library if needed and get const reference to it
+    const UNIFACLibrary::UNIFACParameterLibrary &LoadLibrary();
     
     void set_mole_fractions(const std::vector<double> &z){
         mole_fractions = z;

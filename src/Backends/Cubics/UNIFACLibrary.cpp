@@ -1,8 +1,8 @@
-#include "UNIFAQLibrary.h"
+#include "UNIFACLibrary.h"
 
-namespace UNIFAQLibrary{
+namespace UNIFACLibrary{
 
-    void UNIFAQParameterLibrary::jsonize(std::string &s, rapidjson::Document &d)
+    void UNIFACParameterLibrary::jsonize(std::string &s, rapidjson::Document &d)
     {
         d.Parse<0>(s.c_str());
         if (d.HasParseError()) {
@@ -12,7 +12,7 @@ namespace UNIFAQLibrary{
             return;
         }
     }
-    void UNIFAQParameterLibrary::populate(rapidjson::Value &group_data, rapidjson::Value &interaction_data, rapidjson::Value &comp_data)
+    void UNIFACParameterLibrary::populate(rapidjson::Value &group_data, rapidjson::Value &interaction_data, rapidjson::Value &comp_data)
     {
         // Schema should have been used to validate the data already, so by this point we are can safely consume the data without checking ...
         for (rapidjson::Value::ValueIterator itr = group_data.Begin(); itr != group_data.End(); ++itr)
@@ -74,27 +74,27 @@ namespace UNIFAQLibrary{
             components.push_back(c);
         }
     }
-    void UNIFAQParameterLibrary::populate(std::string &group_data, std::string &interaction_data, std::string &decomp_data)
+    void UNIFACParameterLibrary::populate(std::string &group_data, std::string &interaction_data, std::string &decomp_data)
     {
         rapidjson::Document group_JSON; jsonize(group_data, group_JSON);
         rapidjson::Document interaction_JSON; jsonize(interaction_data, interaction_JSON);
         rapidjson::Document decomp_JSON; jsonize(decomp_data, decomp_JSON);
         populate(group_JSON, interaction_JSON, decomp_JSON);
     }
-    Group UNIFAQParameterLibrary::get_group(int sgi) const {
+    Group UNIFACParameterLibrary::get_group(int sgi) const {
         for (std::vector<Group>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
             if (it->sgi == sgi) { return *it; }
         }
         throw CoolProp::ValueError("Could not find group");
     }
-    bool UNIFAQParameterLibrary::has_group(int sgi) const {
+    bool UNIFACParameterLibrary::has_group(int sgi) const {
         for (std::vector<Group>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
             if (it->sgi == sgi) { return true; }
         }
         return false;
     }
 
-    InteractionParameters UNIFAQParameterLibrary::get_interaction_parameters(int mgi1, int mgi2) const {
+    InteractionParameters UNIFACParameterLibrary::get_interaction_parameters(int mgi1, int mgi2) const {
 
         // If both mgi are the same, yield all zeros for the interaction parameters
         if (mgi1 == mgi2){
@@ -117,7 +117,7 @@ namespace UNIFAQLibrary{
         throw CoolProp::ValueError(format("Could not find interaction between pair mgi[%d]-mgi[%d]", static_cast<int>(mgi1), static_cast<int>(mgi2)));
     }
 
-    Component UNIFAQParameterLibrary::get_component(const std::string &identifier, const std::string &value) const {
+    Component UNIFACParameterLibrary::get_component(const std::string &identifier, const std::string &value) const {
         if (identifier == "name"){
             for (std::vector<Component>::const_iterator it = components.begin(); it != components.end(); ++it ){
                 if (it->name == value ){ return *it; }
@@ -126,14 +126,14 @@ namespace UNIFAQLibrary{
         throw CoolProp::ValueError(format("Could not find component: %s with identifier: %s", value.c_str(), identifier.c_str()));
     }
 
-}; /* namespace UNIFAQLibrary */
+}; /* namespace UNIFACLibrary */
 
 #if defined(ENABLE_CATCH)
 #include "catch.hpp"
 
-#include "UNIFAQ.h"
+#include "UNIFAC.h"
 
-TEST_CASE("Check Poling example for UNIFAQ", "[UNIFAQ]")
+TEST_CASE("Check Poling example for UNIFAC", "[UNIFAC]")
 {
     std::string acetone_pentane_groups = "[{ \"Tc\": 508.1, \"acentric\": 0.3071, \"groups\": [ { \"count\": 1,  \"sgi\": 1 },  {\"count\": 1, \"sgi\": 18 } ],  \"molemass\": 0.44, \"inchikey\": \"?????????????\",  \"name\": \"Acetone\", \"pc\": 4700000.0, \"registry_number\": \"67-64-1\", \"userid\": \"\" },  { \"Tc\": 469.7000000000001,  \"acentric\": 0.251,  \"molemass\": 0.44,    \"groups\": [ { \"count\": 2, \"sgi\": 1 }, { \"count\": 3, \"sgi\": 2 } ],  \"inchikey\": \"?????????????\", \"name\": \"n-Pentane\", \"pc\": 3370000.0,  \"registry_number\": \"109-66-0\",  \"userid\": \"\" } ]";
     std::string groups = "[{\"Q_k\": 0.848, \"R_k\": 0.9011, \"maingroup_name\": \"CH2\", \"mgi\": 1, \"sgi\": 1, \"subgroup_name\": \"CH3\"},"
@@ -142,9 +142,9 @@ TEST_CASE("Check Poling example for UNIFAQ", "[UNIFAQ]")
     std::string interactions = "[{\"a_ij\": 476.4, \"a_ji\": 26.76, \"b_ij\": 0.0, \"b_ji\": 0.0,  \"c_ij\": 0.0, \"c_ji\": 0.0, \"mgi1\": 1, \"mgi2\": 9}]";
 
     SECTION("Validate AC for acetone + n-pentane") {
-        UNIFAQLibrary::UNIFAQParameterLibrary lib;
+        UNIFACLibrary::UNIFACParameterLibrary lib;
         CHECK_NOTHROW(lib.populate(groups, interactions, acetone_pentane_groups););
-        UNIFAQ::UNIFAQMixture mix(lib,1.0);
+        UNIFAC::UNIFACMixture mix(lib,1.0);
         std::vector<std::string> names; names.push_back("Acetone"); names.push_back("n-Pentane");
         mix.set_components("name",names);
         mix.set_interaction_parameters();

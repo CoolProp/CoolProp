@@ -1,9 +1,9 @@
-#ifndef UNIFAQ_H_
-#define UNIFAQ_H_
+#ifndef UNIFAC_H_
+#define UNIFAC_H_
 
 #include <map>
 
-#include "UNIFAQLibrary.h"
+#include "UNIFACLibrary.h"
 #include "CachedElement.h"
 #include "Exceptions.h"
 
@@ -13,9 +13,9 @@ struct ComponentData {
     int group_count; ///< The total number of groups in the pure fluid
 };
 
-namespace UNIFAQ
+namespace UNIFAC
 {
-    class UNIFAQMixture
+    class UNIFACMixture
     {
     private:
         CoolProp::CachedElement _T; ///< The cached temperature
@@ -32,26 +32,26 @@ namespace UNIFAQ
                                       m_lnGammag; ///< Map from sgi to ln(Gamma) for the group in the mixture
 
         /// A const reference to the library of group and interaction parameters
-        const UNIFAQLibrary::UNIFAQParameterLibrary &library;
+        const UNIFACLibrary::UNIFACParameterLibrary &library;
 
         /// A map from (i, j) indices for subgroup, subgroup indices to the interaction parameters for this pair
-        std::map<std::pair<int, int>, UNIFAQLibrary::InteractionParameters> interaction;
+        std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters> interaction;
 
         /// A map from SGI to MGI
         std::map<std::size_t, std::size_t> m_sgi_to_mgi;
 
         /// A vector of unique groups in this mixture
-        std::vector<UNIFAQLibrary::Group> unique_groups;
+        std::vector<UNIFACLibrary::Group> unique_groups;
     
         std::vector<double> mole_fractions;
 
-        std::vector<UNIFAQLibrary::Component> components;
+        std::vector<UNIFACLibrary::Component> components;
 
         std::vector<ComponentData> pure_data;
     
     public:
         
-        UNIFAQMixture(const UNIFAQLibrary::UNIFAQParameterLibrary &library, const double T_r) : library(library), T_r(T_r) {};
+        UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary &library, const double T_r) : library(library), T_r(T_r) {};
 
         /** 
         * \brief Set all the interaction parameters between groups
@@ -85,13 +85,13 @@ namespace UNIFAQ
         std::size_t group_count(std::size_t i, std::size_t sgi) const;
 
         /// Add a component with the defined groups defined by (count, sgi) pairs
-        void add_component(const UNIFAQLibrary::Component &comp);
+        void add_component(const UNIFACLibrary::Component &comp);
     
         void set_components(const std::string &identifier_type, std::vector<std::string> identifiers);
         
-        const std::vector<UNIFAQLibrary::Component> & get_components() { return components; };
+        const std::vector<UNIFACLibrary::Component> & get_components() { return components; };
     };
 
-} /* namespace UNIFAQ */
+} /* namespace UNIFAC */
 
 #endif

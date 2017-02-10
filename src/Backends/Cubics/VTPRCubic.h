@@ -15,13 +15,13 @@
 class VTPRCubic : public PengRobinson
 {
 private:
-    UNIFAQ::UNIFAQMixture unifaq;
+    UNIFAC::UNIFACMixture unifaq;
 public:
     VTPRCubic(std::vector<double> Tc,
         std::vector<double> pc,
         std::vector<double> acentric,
         double R_u,
-        const UNIFAQLibrary::UNIFAQParameterLibrary & lib
+        const UNIFACLibrary::UNIFACParameterLibrary & lib
     )
         : PengRobinson(Tc, pc, acentric, R_u), unifaq(lib,T_r) {};
 
@@ -29,11 +29,11 @@ public:
         double pc,
         double acentric,
         double R_u,
-        const UNIFAQLibrary::UNIFAQParameterLibrary & lib)
+        const UNIFACLibrary::UNIFACParameterLibrary & lib)
         : PengRobinson(std::vector<double>(1, Tc), std::vector<double>(1, pc), std::vector<double>(1, acentric), R_u), unifaq(lib,T_r) {};
 
-    /// Get a reference to the managed UNIFAQ instance
-    UNIFAQ::UNIFAQMixture &get_unifaq() { return unifaq; }
+    /// Get a reference to the managed UNIFAC instance
+    UNIFAC::UNIFACMixture &get_unifaq() { return unifaq; }
 
     /// Calculate the non-dimensionalized gE/RT term
     double gE_R_RT(double tau, const std::vector<double> &x, std::size_t itau) {

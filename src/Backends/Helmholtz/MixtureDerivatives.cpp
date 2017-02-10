@@ -1460,7 +1460,7 @@ TEST_CASE_METHOD(DerivativeFixture<SRKBackend>, "Check derivatives for SRK", "[m
     tol = 1e-4; // Relax the tolerance a bit
     run_checks();
 };
-// Make sure you set the VTPR UNIFAQ path with something like set_config_string(VTPR_UNIFAQ_PATH, "/Users/ian/Code/CUBAC/dev/unifaq/");
+// Make sure you set the VTPR UNIFAC path with something like set_config_string(VTPR_UNIFAC_PATH, "/Users/ian/Code/CUBAC/dev/unifaq/");
 //TEST_CASE_METHOD(DerivativeFixture<VTPRBackend>, "Check derivatives for VTPR", "[mixture_derivs2]")
 //{
 //    tol = 1e-4; // Relax the tolerance a bit
