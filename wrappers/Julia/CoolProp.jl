@@ -319,7 +319,7 @@ export CoolProp_parameters, CoolProp_fluids;
 """
 # CoolProp parameters table, to build run `CoolProp.buildparameters()`
 
-$(readstring(abspath(@__FILE__, "..", "parameters.table")))
+$(isfile(abspath(@__FILE__, "..", "parameters.table")) ? readstring(abspath(@__FILE__, "..", "parameters.table")) : "")
 """
 const CoolProp_parameters = "Type `?CoolProp_arameters` to get a list of all CoolProp parameters."
 buildparameters() = begin
@@ -351,7 +351,7 @@ end
 """
 # CoolProp fluids table, to build run `CoolProp.buildfluids()`
 
-$(readstring(abspath(@__FILE__, "..", "fluids.table")))
+$(isfile(abspath(@__FILE__, "..", "fluids.table")) ? readstring(abspath(@__FILE__, "..", "fluids.table")) : "")
 """
 const CoolProp_fluids = "Type `?CoolProp_fluids` to get a list of all CoolProp fluids."
 buildfluids() = begin
