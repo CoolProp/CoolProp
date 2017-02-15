@@ -67,13 +67,17 @@ public:
             case PT_INPUTS: _p = value1; _T = value2; break;
             case PQ_INPUTS: 
                 _p = value1; 
-                _Q = value2; 
+                _Q = value2;
+                if ((_Q < 0) || (_Q > 1)) 
+                    throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _T = IF97::Tsat97(_p);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
             case QT_INPUTS: 
                 _Q = value1; 
                 _T = value2; 
+                if ((_Q < 0) || (_Q > 1)) 
+                    throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _p = IF97::psat97(_T);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
@@ -132,7 +136,7 @@ public:
                 }
                 break;
             default:
-                throw ValueError("Bad input_pair");
+                throw ValueError("This pair of inputs is not yet supported");
         }
     };
 

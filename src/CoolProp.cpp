@@ -827,7 +827,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
         }
         else
         {
-            throw ValueError(format("reference state string is invalid: [%s]",reference_state.c_str()));
+            throw ValueError(format("Reference state string is invalid: [%s]",reference_state.c_str()));
         }
     }
 }
@@ -887,7 +887,7 @@ std::string get_global_param_string(const std::string &ParamName)
         return CoolProp::CubicLibrary::get_cubic_fluids_schema();
     }
     else{
-        throw ValueError(format("Input value [%s] is invalid",ParamName.c_str()));
+        throw ValueError(format("Input parameter [%s] is invalid",ParamName.c_str()));
     }
 };
 #if defined(ENABLE_CATCH)
