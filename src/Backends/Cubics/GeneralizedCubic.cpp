@@ -88,7 +88,7 @@ double TwuAlphaFunction::term(double tau, std::size_t itau){
     }
     else {
         // Calculate terms as needed
-        dam_dtau = a0*B1;
+        dam_dtau = am*B1;
         d2am_dtau2 = (itau < 2) ? 0 : B1*dam_dtau + am*dB1_dtau;
         d3am_dtau3 = (itau < 3) ? 0 : B1*d2am_dtau2 + am*d2B1_dtau2 + 2 * dB1_dtau*dam_dtau;
         d4am_dtau4 = (itau < 4) ? 0 : B1*d3am_dtau3 + am*d3B1_dtau3 + 3 * dB1_dtau*d2am_dtau2 + 3 * d2B1_dtau2*dam_dtau;
