@@ -22,8 +22,11 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings) {
     function("Props1SI", &CoolProp::Props1SI);
     function("PropsSI", &CoolProp::PropsSI);
     function("get_global_param_string", &CoolProp::get_global_param_string);
-}
 
+    enum_<CoolProp::input_pairs>("input_pairs")
+        .value("PT_INPUTS", CoolProp::PT_INPUTS)
+        ;
+}
 // Binding code
 EMSCRIPTEN_BINDINGS(humid_air_bindings) {
     function("HAPropsSI", &HumidAir::HAPropsSI);
@@ -53,6 +56,9 @@ EMSCRIPTEN_BINDINGS(abstract_state_bindings) {
     class_<CoolProp::AbstractState>("AbstractState")
         .function("gas_constant", &CoolProp::AbstractState::gas_constant)
         .function("update", &CoolProp::AbstractState::update)
+        .function("p", &CoolProp::AbstractState::p)
+        .function("rhomass", &CoolProp::AbstractState::rhomass)
+        .function("viscosity", &CoolProp::AbstractState::viscosity)
         .function("set_mole_fractions", &CoolProp::AbstractState::set_mole_fractions_double)
         .function("build_phase_envelope", &CoolProp::AbstractState::build_phase_envelope)
         .function("get_phase_envelope_data", &CoolProp::AbstractState::get_phase_envelope_data);
