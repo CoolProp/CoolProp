@@ -5,7 +5,7 @@
 #include "Exceptions.h"
 #include <algorithm>
 
-bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed, double step_relax)
+bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tstart, double tend, double hmin, double hmax, double eps_allowed, double step_relax)
 {
     // Get the starting array of variables of integration
     std::vector<double> xold = ode.get_initial_array();
@@ -13,9 +13,16 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
     
     // Start at an index of 0
     int Itheta = 0;
-    double t0 = tmin;
+    double t0 = tstart;
     double h = hmin;
-    
+
+    // Figure out if t is increasing or decreasing in the integration and set a flag
+    bool forwards_integration = ((tend - tstart) > 0);
+    // If backwards integration, flip the sign of the step
+    if (!forwards_integration){
+        h *= -1;
+    }
+
     double max_error;
     
     std::vector<double> xnew1(N), xnew2(N), xnew3(N), xnew4(N), xnew5(N),
@@ -23,8 +30,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
                         error(N), xnew(N);
     
     // t is the independent variable here, where t takes on values in the bounded range [tmin,tmax]
-    while (t0 < tmax - 1e-10)
-    {
+    do{
         
         // Check for termination
         bool abort = ode.premature_termination();
@@ -38,10 +44,15 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
             // reset the flag
             disableAdaptive = false;
             
-            if (t0 + h > tmax)
-            {
+            // If the step would go beyond the end of the region of integration, 
+            // just take a step to the end of the region of integration
+            if (forwards_integration && (t0 + h > tend)){
                 disableAdaptive = true;
-                h = tmax - t0;
+                h = tend - t0;
+            }
+            if (!forwards_integration && (t0 + h < tend)){
+                disableAdaptive = true;
+                h = t0 - tend;
             }
             
             ode.pre_step_callback();
@@ -53,9 +64,9 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
                 
                 Eigen::Map<Eigen::VectorXd> xold_w(&(xold[0]), N);
                 
-                if (h < hmin && !disableAdaptive){
+                if (std::abs(h) < hmin && !disableAdaptive){
                     // Step is too small, just use the minimum step size
-                    h = 1.0*hmin;
+                    h = (forwards_integration) ? hmin : -hmin;
                     disableAdaptive = true;
                 }
                 
@@ -112,6 +123,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
                         stepAccepted = true;
                     }
                 }
+                
             }
             else{
                 std::cout << format("accepted");
@@ -122,7 +134,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
         t0 += h;
         Itheta += 1;
         xold = xnew;
-        
+
         ode.post_step_callback(t0, h, xnew);
         
         // The error is already below the threshold
@@ -133,14 +145,26 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, doubl
         }
 
         // Constrain the step to not be too large
-        h = std::min(h, hmax);
+        if (forwards_integration) {
+            h = std::min(h, hmax);
+        }
+        else {
+            h = -std::min(std::abs(h), hmin);
+        }
         
         // Overshot the end, oops...  That's an error
-        if ((t0 - tmax) > 1e-3){
-            throw CoolProp::ValueError(format("t0 - tmax [%g] > 1e-3", t0 - tmax));
+        if (forwards_integration && (t0 - tend > + 1e-3)){
+            throw CoolProp::ValueError(format("t0 - tend [%g] > 1e-3", t0 - tend));
         }
-
+        if (!forwards_integration && (t0 - tend < - 1e-3)) {
+            throw CoolProp::ValueError(format("t0 - tend [%g] < -1e-3", t0 - tend));
+        }
     }
+    while (
+            ((forwards_integration) && t0 < tend - 1e-10) ||
+            ((!forwards_integration) && t0 > tend + 1e-10)  
+          );
+
     // No termination was requested
     return false;
 }
