@@ -149,7 +149,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tstart, dou
             h = std::min(h, hmax);
         }
         else {
-            h = -std::min(std::abs(h), hmin);
+            h = -std::min(std::abs(h), hmax);
         }
         
         // Overshot the end, oops...  That's an error
