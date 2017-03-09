@@ -17,8 +17,20 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
+/// *********************************************************************************
+/// *********************************************************************************
+///                     EMSCRIPTEN (for javascript)
+/// *********************************************************************************
+/// *********************************************************************************
+
+#ifdef EMSCRIPTEN
+
+#include <emscripten/bind.h>
+using namespace emscripten;
+
 // Binding code
 EMSCRIPTEN_BINDINGS(coolprop_bindings) {
+    function("F2K", &F2K);
     function("Props1SI", &CoolProp::Props1SI);
     function("PropsSI", &CoolProp::PropsSI);
     function("get_global_param_string", &CoolProp::get_global_param_string);
