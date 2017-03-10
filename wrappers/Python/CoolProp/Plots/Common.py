@@ -594,16 +594,13 @@ class IsoLine(Base2DObject):
         guesses = CoolProp.CoolProp.PyGuessesStructure()
         for index, _ in np.ndenumerate(vals[0]):
             try:
-                if not use_guesses:
-                    self.state.update(pair, vals[0][index], vals[1][index])
-                else:
-                    if index<1 or not np.isfinite(guesses.rhomolar):
-                        self.state.update(pair, vals[0][index], vals[1][index])
-                    else:
-                        self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
+                if use_guesses and np.isfinite(guesses.rhomolar):
+                    self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
                     guesses.rhomolar = self.state.rhomolar()
                     guesses.T = self.state.T()
-                vals[2][index] = self.state.keyed_output(idxs[2])
+                else:
+                    self.state.update(pair, vals[0][index], vals[1][index])
+                vals[2][index] = self.state.keyed_output(idxs[2])                       
             except Exception as e:
                 warnings.warn(
                   "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(vals[0][index],vals[1][index],str(index),str(e)),
