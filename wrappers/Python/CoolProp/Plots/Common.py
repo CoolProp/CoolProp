@@ -17,6 +17,7 @@ def get_critical_point(state):
     crit_state.T = np.nan
     crit_state.p = np.nan
     crit_state.rhomolar = np.nan
+    crit_state.rhomolar = np.nan
     crit_state.stable = False
     try:
         crit_state.T = state.T_critical()
@@ -39,13 +40,36 @@ def get_critical_point(state):
         new_state.set_mass_fractions(masses) # Uses mass fraction to work with incompressibles
         #try: new_state.build_phase_envelope("dummy")
         #except: pass
+    msg = ""
     if np.isfinite(crit_state.p) and np.isfinite(crit_state.T):
-        try: new_state.specify_phase(CoolProp.iphase_critical_point)
-        except: pass 
-        new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
-        #new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
-        return new_state
-    raise ValueError("Could not calculate the critical point data.")
+        try: 
+            new_state.specify_phase(CoolProp.iphase_critical_point)
+            new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass
+        try:
+            new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass 
+    if np.isfinite(crit_state.rhomolar) and np.isfinite(crit_state.T):
+        try:
+            new_state.specify_phase(CoolProp.iphase_critical_point)
+            new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass
+        try:
+            new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass
+    raise ValueError("Could not calculate the critical point data. "+msg)
 
 def interpolate_values_1d(x,y,x_points=None,kind='linear'):
     try: 
@@ -503,9 +527,11 @@ class IsoLine(Base2DObject):
         Pcrit = self.critical_state.keyed_output(CoolProp.iP)
         Dcrit = self.critical_state.keyed_output(CoolProp.iDmass)
         try:
-            self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
-            xcrit = self.state.keyed_output(self._x_index)
-            ycrit = self.state.keyed_output(self._y_index)
+            #self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
+            #xcrit = self.state.keyed_output(self._x_index)
+            #ycrit = self.state.keyed_output(self._y_index)
+            xcrit = self.critical_state.keyed_output(self._x_index)
+            ycrit = self.critical_state.keyed_output(self._y_index)
         except:
             warnings.warn(
               "An error occurred for the critical inputs, skipping it.",
@@ -541,7 +567,7 @@ class IsoLine(Base2DObject):
         self.x = X; self.y = Y
         return 
         
-    def calc_range(self,xvals=None,yvals=None,use_guesses=True):
+    def calc_range(self,xvals=None,yvals=None):
         
         if self.i_index == CoolProp.iQ:
             warnings.warn(
@@ -568,22 +594,37 @@ class IsoLine(Base2DObject):
         vals[2] = np.empty_like(vals[0])
         err = False
         guesses = CoolProp.CoolProp.PyGuessesStructure()
+        # Only use the guesses for selected inputs
+        if pair == CoolProp.HmolarP_INPUTS \
+          or pair == CoolProp.HmassP_INPUTS:
+            #or pair == CoolProp.HmassSmass_INPUTS \
+            #or pair == CoolProp.HmolarSmolar_INPUTS \
+            #or pair == CoolProp.PSmass_INPUTS \
+            #or pair == CoolProp.PSmolar_INPUTS:
+            use_guesses = True
+        else:
+            use_guesses = False
         for index, _ in np.ndenumerate(vals[0]):
             try:
-                if not use_guesses or index<1:
-                    self.state.update(pair, vals[0][index], vals[1][index])
-                else:
-                    self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
+                if use_guesses:
+                    if np.isfinite(guesses.rhomolar):
+                        self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
+                    else:
+                        self.state.update(pair, vals[0][index], vals[1][index])
                     guesses.rhomolar = self.state.rhomolar()
-                    guesses.T = self.state.T()                    
-                vals[2][index] = self.state.keyed_output(idxs[2])
+                    guesses.T = self.state.T()
+                else:
+                    self.state.update(pair, vals[0][index], vals[1][index])
+                vals[2][index] = self.state.keyed_output(idxs[2])                       
             except Exception as e:
                 warnings.warn(
                   "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(vals[0][index],vals[1][index],str(index),str(e)),
                   UserWarning)
                 vals[2][index] = np.NaN
+                guesses.rhomolar = np.NaN
+                guesses.T = np.NaN
                 err = True            
-        
+                
         for i,v in enumerate(idxs):
             if v == self.x_index: self.x = vals[i]
             if v == self.y_index: self.y = vals[i]
