@@ -228,7 +228,7 @@
      * @param T [K] good from 250K to 300K, no error bound checking is carried out.
      *
      * \note Equals partial derivative of enthalpy with respect to temperature at constant relative humidity of 100 percent and pressure of 1 atmosphere.
-
+     */
     EXPORT_CODE double CONVENTION cair_sat(double T);
 
     /** \brief FORTRAN 77 style wrapper of the HAPropsSI function
