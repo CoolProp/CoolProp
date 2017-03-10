@@ -541,7 +541,7 @@ class IsoLine(Base2DObject):
         self.x = X; self.y = Y
         return 
         
-    def calc_range(self,xvals=None,yvals=None):
+    def calc_range(self,xvals=None,yvals=None,use_guesses=True):
         
         if self.i_index == CoolProp.iQ:
             warnings.warn(
@@ -567,9 +567,15 @@ class IsoLine(Base2DObject):
 
         vals[2] = np.empty_like(vals[0])
         err = False
+        guesses = CoolProp.CoolProp.PyGuessesStructure()
         for index, _ in np.ndenumerate(vals[0]):
             try:
-                self.state.update(pair, vals[0][index], vals[1][index])
+                if not use_guesses or index<1:
+                    self.state.update(pair, vals[0][index], vals[1][index])
+                else:
+                    self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
+                    guesses.rhomolar = self.state.rhomolar()
+                    guesses.T = self.state.T()                    
                 vals[2][index] = self.state.keyed_output(idxs[2])
             except Exception as e:
                 warnings.warn(

@@ -39,7 +39,8 @@
     X(SPINODAL_MINIMUM_DELTA, "SPINODAL_MINIMUM_DELTA", 0.5, "The minimal delta to be used in tracing out the spinodal; make sure that the EOS has a spinodal at this value of delta=rho/rho_r") \
     X(OVERWRITE_FLUIDS, "OVERWRITE_FLUIDS", false, "If true, and a fluid is added to the fluids library that is already there, rather than not adding the fluid (and probably throwing an exception), overwrite it") \
     X(OVERWRITE_DEPARTURE_FUNCTION, "OVERWRITE_DEPARTURE_FUNCTION", false, "If true, and a departure function to be added is already there, rather than not adding the departure function (and probably throwing an exception), overwrite it") \
-    X(OVERWRITE_BINARY_INTERACTION, "OVERWRITE_BINARY_INTERACTION", false, "If true, and a pair of binary interaction pairs to be added is already there, rather than not adding the binary interaction pair (and probably throwing an exception), overwrite it")
+    X(OVERWRITE_BINARY_INTERACTION, "OVERWRITE_BINARY_INTERACTION", false, "If true, and a pair of binary interaction pairs to be added is already there, rather than not adding the binary interaction pair (and probably throwing an exception), overwrite it") \
+    X(USE_GUESSES_IN_PROPSSI, "USE_GUESSES_IN_PROPSSI", false, "If true, calls to the vectorized versions of PropsSI use the previous state as guess value while looping over the input vectors, only makes sense when working with a single fluid and with points that are not too far from each other.")
 
 
  // Use preprocessor to create the Enum
