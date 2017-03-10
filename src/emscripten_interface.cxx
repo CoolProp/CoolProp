@@ -26,7 +26,7 @@ using namespace emscripten;
 
 // Binding code
 EMSCRIPTEN_BINDINGS(coolprop_bindings) {
-    function("F2K", &CoolProp::F2K);
+    function("F2K", &F2K);
     function("Props1SI", &CoolProp::Props1SI);
     function("PropsSI", &CoolProp::PropsSI);
     function("get_global_param_string", &CoolProp::get_global_param_string);
