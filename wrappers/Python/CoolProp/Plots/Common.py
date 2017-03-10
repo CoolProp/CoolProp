@@ -527,9 +527,11 @@ class IsoLine(Base2DObject):
         Pcrit = self.critical_state.keyed_output(CoolProp.iP)
         Dcrit = self.critical_state.keyed_output(CoolProp.iDmass)
         try:
-            self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
-            xcrit = self.state.keyed_output(self._x_index)
-            ycrit = self.state.keyed_output(self._y_index)
+            #self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
+            #xcrit = self.state.keyed_output(self._x_index)
+            #ycrit = self.state.keyed_output(self._y_index)
+            xcrit = self.critical_state.keyed_output(self._x_index)
+            ycrit = self.critical_state.keyed_output(self._y_index)
         except:
             warnings.warn(
               "An error occurred for the critical inputs, skipping it.",
