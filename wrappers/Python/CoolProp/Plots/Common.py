@@ -565,7 +565,7 @@ class IsoLine(Base2DObject):
         self.x = X; self.y = Y
         return 
         
-    def calc_range(self,xvals=None,yvals=None,use_guesses=False):
+    def calc_range(self,xvals=None,yvals=None):
         
         if self.i_index == CoolProp.iQ:
             warnings.warn(
@@ -592,10 +592,23 @@ class IsoLine(Base2DObject):
         vals[2] = np.empty_like(vals[0])
         err = False
         guesses = CoolProp.CoolProp.PyGuessesStructure()
+        # Only use the guesses for selected inputs
+        if pair == CoolProp.HmolarP_INPUTS \
+          or pair == CoolProp.HmassP_INPUTS:
+            #or pair == CoolProp.HmassSmass_INPUTS \
+            #or pair == CoolProp.HmolarSmolar_INPUTS \
+            #or pair == CoolProp.PSmass_INPUTS \
+            #or pair == CoolProp.PSmolar_INPUTS:
+            use_guesses = True
+        else:
+            use_guesses = False
         for index, _ in np.ndenumerate(vals[0]):
             try:
-                if use_guesses and np.isfinite(guesses.rhomolar):
-                    self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
+                if use_guesses:
+                    if np.isfinite(guesses.rhomolar):
+                        self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
+                    else:
+                        self.state.update(pair, vals[0][index], vals[1][index])
                     guesses.rhomolar = self.state.rhomolar()
                     guesses.T = self.state.T()
                 else:
@@ -609,7 +622,7 @@ class IsoLine(Base2DObject):
                 guesses.rhomolar = np.NaN
                 guesses.T = np.NaN
                 err = True            
-        
+                
         for i,v in enumerate(idxs):
             if v == self.x_index: self.x = vals[i]
             if v == self.y_index: self.y = vals[i]
