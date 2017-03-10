@@ -268,10 +268,14 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str()); }
         if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str());
         long N = static_cast<long>(fluid_names.size());
+        if (N > ncmax)
+        {
+            throw ValueError(format("Size of fluid vector [%d] is larger than the maximum defined by REFPROP [%d]", fluid_names.size(), ncmax));
+        }
         this->Ncomp = N;
-        mole_fractions.resize(20);
-        mole_fractions_liq.resize(20);
-        mole_fractions_vap.resize(20);
+        mole_fractions.resize(ncmax);
+        mole_fractions_liq.resize(ncmax);
+        mole_fractions_vap.resize(ncmax);
         return;
     }
     else
@@ -329,9 +333,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                       255);
             if (static_cast<int>(ierr) <= 0){
                 this->Ncomp = N;
-                mole_fractions.resize(20);
-                mole_fractions_liq.resize(20);
-                mole_fractions_vap.resize(20);
+                mole_fractions.resize(ncmax);
+                mole_fractions_liq.resize(ncmax);
+                mole_fractions_vap.resize(ncmax);
                 LoadedREFPROPRef = mix;
                 cached_component_string = mix;
                 this->fluid_names.clear();
@@ -400,9 +404,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (static_cast<int>(ierr) <= 0) // Success (or a warning, which is silently squelched for now)
             {
                 this->Ncomp = N;
-                mole_fractions.resize(20);
-                mole_fractions_liq.resize(20);
-                mole_fractions_vap.resize(20);
+                mole_fractions.resize(ncmax);
+                mole_fractions_liq.resize(ncmax);
+                mole_fractions_vap.resize(ncmax);
                 LoadedREFPROPRef = _components_joined;
                 cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
@@ -605,11 +609,15 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
-    this->mole_fractions = std::vector<CoolPropDbl>(20, 0.0);
+    if (mole_fractions.size() != this->Ncomp)
+    {
+        throw ValueError(format("Size of mole fraction vector [%d] does not equal that of component vector [%d]", mole_fractions.size(), this->Ncomp));
+    }
+    this->mole_fractions = std::vector<CoolPropDbl>(ncmax, 0.0);
     for (std::size_t i = 0; i < mole_fractions.size(); ++i){
         this->mole_fractions[i] = static_cast<double>(mole_fractions[i]);
     }
-    this->mole_fractions_long_double = mole_fractions;
+    this->mole_fractions_long_double = mole_fractions; // same size as Ncomp
     _mole_fractions_set = true;
 }
 void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
@@ -626,16 +634,10 @@ void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &m
         moles[i-1] = static_cast<double>(mass_fractions[i-1])/(wmm/1000.0);
 		sum_moles += moles[i-1];
     }
-    this->mole_fractions.clear();
-	for(std::vector<double>::iterator it = moles.begin(); it != moles.end(); ++it) 
-    {
-		this->mole_fractions.push_back(*it/sum_moles);
-	}
-    while (this->mole_fractions.size() < 20) {
-        this->mole_fractions.push_back(0.0);
+    for (std::size_t i = 0; i < this->Ncomp; ++i){
+        moles[i] = moles[i] / sum_moles;
     }
-    this->mole_fractions_long_double = mole_fractions;
-    _mole_fractions_set = true;
+    this->set_mole_fractions(moles);
 };
 void REFPROPMixtureBackend::check_status(void)
 {
@@ -906,13 +908,13 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions()
     // mass fraction is mass_i/total_mass;
     // REFPROP yields mm in kg/kmol, CP uses base SI units of kg/mol; 
     CoolPropDbl mm = molar_mass();
-    std::vector<CoolPropDbl> mass_fractions(mole_fractions.size());
+    std::vector<CoolPropDbl> mass_fractions(mole_fractions_long_double.size());
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
     // FORTRAN is 1-based indexing!
-    for (long i = 1L; i <= static_cast<long>(mole_fractions.size()); ++i){
+    for (long i = 1L; i <= static_cast<long>(mole_fractions_long_double.size()); ++i){
         // Get value for first component
         INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
-        mass_fractions[i-1] = (wmm/1000.0)*mole_fractions[i-1]/mm; 
+        mass_fractions[i - 1] = (wmm / 1000.0)*mole_fractions_long_double[i - 1] / mm;
     }
     return mass_fractions;
 }
@@ -1773,7 +1775,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                 iFlsh = 3; // bubble point
                 if (!guesses.x.empty()){
                     mole_fractions = guesses.x;
-                    while(mole_fractions.size() < 20){ mole_fractions.push_back(0.0); }
+                    while(mole_fractions.size() < ncmax){ mole_fractions.push_back(0.0); }
                 }
                 else{
                     throw ValueError(format("x must be provided in guesses"));
@@ -1783,7 +1785,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                 iFlsh = 4; // dew point
                 if (!guesses.y.empty()){
                     mole_fractions = guesses.y;
-                    while (mole_fractions.size() < 20) { mole_fractions.push_back(0.0); }
+                    while (mole_fractions.size() < ncmax) { mole_fractions.push_back(0.0); }
                 }
                 else{
                     throw ValueError(format("y must be provided in guesses"));
