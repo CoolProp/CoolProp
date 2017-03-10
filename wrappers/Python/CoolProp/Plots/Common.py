@@ -39,13 +39,36 @@ def get_critical_point(state):
         new_state.set_mass_fractions(masses) # Uses mass fraction to work with incompressibles
         #try: new_state.build_phase_envelope("dummy")
         #except: pass
+    msg = ""
     if np.isfinite(crit_state.p) and np.isfinite(crit_state.T):
-        try: new_state.specify_phase(CoolProp.iphase_critical_point)
-        except: pass 
-        new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
-        #new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
-        return new_state
-    raise ValueError("Could not calculate the critical point data.")
+        try: 
+            new_state.specify_phase(CoolProp.iphase_critical_point)
+            new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass
+        try:
+            new_state.update(CoolProp.PT_INPUTS, crit_state.p, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass 
+    if np.isfinite(crit_state.rhomolar) and np.isfinite(crit_state.T):
+        try:
+            new_state.specify_phase(CoolProp.iphase_critical_point)
+            new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass
+        try:
+            new_state.update(CoolProp.DmolarT_INPUTS, crit_state.rhomolar, crit_state.T)
+            return new_state
+        except Exception as e:
+            msg += str(e)+" - "
+            pass
+    raise ValueError("Could not calculate the critical point data. "+msg)
 
 def interpolate_values_1d(x,y,x_points=None,kind='linear'):
     try: 
