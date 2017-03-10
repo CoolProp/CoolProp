@@ -17,6 +17,7 @@ def get_critical_point(state):
     crit_state.T = np.nan
     crit_state.p = np.nan
     crit_state.rhomolar = np.nan
+    crit_state.rhomolar = np.nan
     crit_state.stable = False
     try:
         crit_state.T = state.T_critical()
@@ -564,7 +565,7 @@ class IsoLine(Base2DObject):
         self.x = X; self.y = Y
         return 
         
-    def calc_range(self,xvals=None,yvals=None,use_guesses=True):
+    def calc_range(self,xvals=None,yvals=None,use_guesses=False):
         
         if self.i_index == CoolProp.iQ:
             warnings.warn(
@@ -593,18 +594,23 @@ class IsoLine(Base2DObject):
         guesses = CoolProp.CoolProp.PyGuessesStructure()
         for index, _ in np.ndenumerate(vals[0]):
             try:
-                if not use_guesses or index<1:
+                if not use_guesses:
                     self.state.update(pair, vals[0][index], vals[1][index])
                 else:
-                    self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
+                    if index<1 or not np.isfinite(guesses.rhomolar):
+                        self.state.update(pair, vals[0][index], vals[1][index])
+                    else:
+                        self.state.update_with_guesses(pair, vals[0][index], vals[1][index], guesses)
                     guesses.rhomolar = self.state.rhomolar()
-                    guesses.T = self.state.T()                    
+                    guesses.T = self.state.T()
                 vals[2][index] = self.state.keyed_output(idxs[2])
             except Exception as e:
                 warnings.warn(
                   "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(vals[0][index],vals[1][index],str(index),str(e)),
                   UserWarning)
                 vals[2][index] = np.NaN
+                guesses.rhomolar = np.NaN
+                guesses.T = np.NaN
                 err = True            
         
         for i,v in enumerate(idxs):
