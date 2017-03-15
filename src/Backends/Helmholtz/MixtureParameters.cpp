@@ -224,7 +224,7 @@ public:
         if (rule == "linear") {
             // Terms for linear mixing
             HEOS1.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1,name1)));
-            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(2,name2)));
+            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1,name2)));
 
             dict.add_number("gammaT", 0.5*(HEOS1->T_critical() + HEOS2->T_critical()) / sqrt(HEOS1->T_critical()*HEOS2->T_critical()));
             double rhoc1 = HEOS1->rhomolar_critical(), rhoc2 = HEOS2->rhomolar_critical();
