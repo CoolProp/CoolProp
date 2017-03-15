@@ -298,7 +298,7 @@
       "ODP": -1.0, 
       "PH": -1
     }, 
-    "FORMULA": "Cl_{1}H_{4}O_{1}", 
+    "FORMULA": "C_{2}H_{4}O_{1}", 
     "INCHI_KEY": "IAYPIBMASNFSPL-UHFFFAOYAX", 
     "INCHI_STRING": "InChI=1/C2H4O/c1-2-3-1/h1-2H2", 
     "NAME": "EthyleneOxide", 
