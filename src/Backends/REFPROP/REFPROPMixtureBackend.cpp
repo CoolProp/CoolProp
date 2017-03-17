@@ -549,6 +549,9 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
         throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
     }
     SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    if (ierr > 0L){
+        throw ValueError(format("Unable to set parameter[%s] to value[%s]: %s",parameter.c_str(),value.c_str(),herr));
+    }
 }
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
@@ -572,6 +575,9 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
             throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
         }
         SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+        if (ierr > 0L){
+            throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s",parameter.c_str(),value,herr));
+        }
     }
     else{
         throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
