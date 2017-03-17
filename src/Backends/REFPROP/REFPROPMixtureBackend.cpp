@@ -1621,10 +1621,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             p_kPa = 0.001*value1; q = value2; // Want p in [kPa] in REFPROP
 
             long iFlsh = 0, iGuess = 0, ierr = 0;
-            if (std::abs(value2) < 1e-10){
+            if (std::abs(q) < 1e-10){
                 iFlsh = 3; // bubble point
             }
-            else if (std::abs(value2-1) < 1e-10){
+            else if (std::abs(q-1) < 1e-10){
                 iFlsh = 4; // dew point
             }
             if (iFlsh != 0){
@@ -1671,10 +1671,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
 
             // Use flash routine to find properties
             long iFlsh = 0, iGuess = 0;
-            if (std::abs(value2) < 1e-10){
+            if (std::abs(q) < 1e-10){
                 iFlsh = 1; // bubble point with T given
             }
-            else if (std::abs(value2-1) < 1e-10){
+            else if (std::abs(q-1) < 1e-10){
                 iFlsh = 2; // dew point with T given
             }
             if (iFlsh != 0){
