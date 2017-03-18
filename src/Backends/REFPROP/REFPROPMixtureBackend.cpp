@@ -1591,12 +1591,6 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         }
         case PQ_INPUTS:
         {
-            // From REFPROP:
-            //additional input--only for TQFLSH and PQFLSH
-            //     kq--flag specifying units for input quality
-            //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
-            //         kq = 2 quality on MASS basis [mass vapor/total mass]
-            long kq = 1;
 
             // c  Estimate temperature, pressure, and compositions to be used
             // c  as initial guesses to SATTP
@@ -1639,12 +1633,33 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
-                if (static_cast<int>(ierr) == 0){
+                if (ierr > 0L) {
+                    ierr = 0;
+                    // SATPdll(p, z, kph, T, Dl, Dv, x, y, ierr, herr)
+                    // 
+                    //kph--Phase flag : 1 - Input x is liquid composition(bubble point)
+                    //                - 1 - Force calculation in the liquid phase even if T<Ttrp
+                    //                  2 - Input x is vapor composition(dew point)
+                    //                - 2 - Force calculation in the vapor phase even if T<Ttrp
+                    //                  3 - Input x is liquid composition along the freezing line(melting line)
+                    //                  4 - Input x is vapor composition along the sublimation line
+                    SATPdll(&_p, &(mole_fractions[0]), &iFlsh,
+                        &_T, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
+                        &ierr, herr, errormessagelength);
+                    rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
+                }
+                if (ierr <= 0L){
                     // Calculate everything else
                     THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
                 }
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
+                // From REFPROP:
+                //additional input--only for TQFLSH and PQFLSH
+                //     kq--flag specifying units for input quality
+                //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
+                //         kq = 2 quality on MASS basis [mass vapor/total mass]
+                long kq = 1;
                 ierr = 0;
                 // Use flash routine to find properties
                 PQFLSHdll(&p_kPa,&q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
@@ -1664,14 +1679,6 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         }
         case QT_INPUTS:
         {
-            /* From REFPROP:
-            additional input--only for TQFLSH and PQFLSH
-                 kq--flag specifying units for input quality
-                     kq = 1 quality on MOLAR basis [moles vapor/total moles]
-                     kq = 2 quality on MASS basis [mass vapor/total mass]
-            */
-            long kq = 1;
-
             // Unit conversion for REFPROP
             q = value1; _T = value2;
 
@@ -1689,13 +1696,36 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
-                if (static_cast<int>(ierr) == 0){
-                    // Calculate everything else
+                
+                if (ierr > 0L){
+                    ierr = 0;
+                    // SATTdll(T, z, kph, P, Dl, Dv, x, y, ierr, herr)
+                    // 
+                    //kph--Phase flag : 1 - Input x is liquid composition(bubble point)
+                    //                - 1 - Force calculation in the liquid phase even if T<Ttrp
+                    //                  2 - Input x is vapor composition(dew point)
+                    //                - 2 - Force calculation in the vapor phase even if T<Ttrp
+                    //                  3 - Input x is liquid composition along the freezing line(melting line)
+                    //                  4 - Input x is vapor composition along the sublimation line
+                    SATTdll(&_T, &(mole_fractions[0]), &iFlsh,
+                        &p_kPa, &rhoLmol_L, &rhoVmol_L,&(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
+                        &ierr, herr, errormessagelength);
+                    rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
+                }
+                if (ierr <= 0L){
+                    // Calculate everything else since we were able to carry out a flash call
                     THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
                 }
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
+                /* From REFPROP:
+                additional input--only for TQFLSH and PQFLSH
+                kq--flag specifying units for input quality
+                kq = 1 quality on MOLAR basis [moles vapor/total moles]
+                kq = 2 quality on MASS basis [mass vapor/total mass]
+                */
+                long kq = 1;
                 TQFLSHdll(&_T,&q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                     &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
