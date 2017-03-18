@@ -1262,6 +1262,10 @@ public:
                             double v_c_Lmol = 2.14107171795*(vals.Tc/vals.pc*1000)+0.00773144012514; // [L/mol]
                             ac->set_rhor(1/(v_c_Lmol/1000.0));
                         }
+                        if (vals.alpha_type == "Twu") {
+                            std::vector<double> &c = vals.alpha_coeffs;
+                            ac->set_C_Twu(0, c[0], c[1], c[2]);
+                        }
                         CoolPropFluid fluid;
                         fluid.CAS = vals.CAS;
                         EquationOfState E;
