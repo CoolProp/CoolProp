@@ -17,14 +17,6 @@ enum { MC_STRING = STRING };  // substitute enumeration variable MC_STRING for S
 #include "DataStructures.h"
 #include "HumidAirProp.h"
 
-/*
-#define MSGBOX(x) \
-{ \
-   std::ostringstream oss; \
-   oss << x; \
-   MessageBox(NULL,oss.str().c_str(), "CoolProp Error Message", MB_OK | MB_ICONINFORMATION); \
-}
-*/
 
 enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad Error Codes
           BAD_FLUID, BAD_PARAMETER, BAD_REF, NON_TRIVIAL,           // CoolProp Error Codes
@@ -80,7 +72,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                 return MAKELRESULT(UNKNOWN,1);
         }
 
-        char * c = new char [s.size()+1]; // create a c-string (pointer) c with the same size as s
+        // Must use MathcadAllocate(size) so Mathcad can track and release
+        char * c = MathcadAllocate(s.size()+1); // create a c-string (pointer) c with the same size as s
         // copy s into c, this process avoids the const-cast type which would result from instead
         // converting the string using s.c_str()
         std::copy(s.begin(), s.end(), c); 
@@ -116,7 +109,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                 return MAKELRESULT(UNKNOWN,1);
         }
 
-        char * c = new char [s.size()+1]; // create a c-string (pointer) c with the same size as s
+        // Must use MathcadAllocate(size) so Mathcad can track and release
+        char * c = MathcadAllocate(s.size()+1); // create a c-string (pointer) c with the same size as s
         // copy s into c, this process avoids the const-cast type which would result from instead
         // converting the string using s.c_str()
         std::copy(s.begin(), s.end(), c); 
