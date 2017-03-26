@@ -739,9 +739,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_acentric_factor(){
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
     long icomp = 1L;
     // Check if more than one
-    std::size_t size = mole_fractions.size();
-    if (size == 1)
-    {
+    if (Ncomp == 1){
         // Get value for first component
         INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
         return static_cast<CoolPropDbl>(acf);
@@ -772,9 +770,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
     long icomp = 1L;
     // Check if more than one
-    std::size_t size = mole_fractions.size();
-    if (size == 1)
-    {
+    if (Ncomp == 1){
         // Get value for first component
         INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
         return static_cast<CoolPropDbl>(ttrp);
@@ -824,9 +820,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
     long icomp = 1L;
     // Check if more than one
-    std::size_t size = mole_fractions.size();
-    if (size == 1)
-    {
+    if (Ncomp == 1){
         // Get value for first component
         INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
         return static_cast<CoolPropDbl>(dip*3.33564e-30);
