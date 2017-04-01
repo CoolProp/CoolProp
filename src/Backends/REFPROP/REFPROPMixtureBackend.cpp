@@ -1988,7 +1988,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters 
             return _rhoVmolar;
         }
         else if (key == iDmass) {
-            return static_cast<double>(_rhoVmolar)*calc_saturated_liquid_keyed_output(imolar_mass);
+            return static_cast<double>(_rhoVmolar)*calc_saturated_vapor_keyed_output(imolar_mass);
         }
         else if (key == imolar_mass){
             double wmm_kg_kmol = 0;
