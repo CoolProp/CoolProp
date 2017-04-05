@@ -238,6 +238,16 @@ bool path_exists(const std::string &path)
     #endif
 };
 
+std::string join_path(const std::string &one, const std::string &two) {
+    std::string result;
+    std::string separator = get_separator();
+    if (!endswith(one, separator) && !one.empty()) {
+        result = one + separator;
+    }
+    result.append(two);
+    return result;
+}
+
 std::string get_file_contents(const char *filename)
 {
     std::ifstream in(filename, std::ios::in | std::ios::binary);

@@ -13,6 +13,9 @@ std::string get_home_dir(void);
 /// Return true if path exists
 bool path_exists(const std::string &path);
 
+/// Return merged path, append separator if string two is empty
+std::string join_path(const std::string &one, const std::string &two);
+
 /// Make directory and all required intermediate directories
 void make_dirs(std::string file_path);
 

@@ -77,14 +77,14 @@ std::string get_REFPROP_fluid_path_prefix()
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
     std::string separator = get_separator();
     if (!alt_refprop_path.empty()){
-        if (!endswith(alt_refprop_path, separator)){
-            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
-        }
+        //if (!endswith(alt_refprop_path, separator)){
+        //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
+        //}
         if (!path_exists(alt_refprop_path)) {
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set, so we give all fluid paths as relative to this directory
-        return alt_refprop_path + "fluids" + separator;
+        return join_path(alt_refprop_path,"fluids");
     }
     #if defined(__ISWINDOWS__)
         return rpPath;
@@ -102,14 +102,14 @@ std::string get_REFPROP_mixtures_path_prefix()
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
     std::string separator = get_separator();
     if (!alt_refprop_path.empty()){
-        if (!endswith(alt_refprop_path, separator)) {
-            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
-        }
+        //if (!endswith(alt_refprop_path, separator)) {
+        //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
+        //}
         if (!path_exists(alt_refprop_path)) {
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set
-        return alt_refprop_path + "mixtures" + separator;
+        return join_path(alt_refprop_path, "mixtures");
     }
     #if defined(__ISWINDOWS__)
     return rpPath;
@@ -131,7 +131,7 @@ std::string get_REFPROP_HMX_BNC_path()
     }
     else{
         // Otherwise fall back to default paths; get_REFPROP_fluid_path_prefix will query ALTERNATIVE_REFPROP_PATH
-        return get_REFPROP_fluid_path_prefix() + "HMX.BNC";
+        return join_path(get_REFPROP_fluid_path_prefix(), "HMX.BNC");
     }
 }
 
