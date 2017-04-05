@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+/// Get directory separator
+std::string get_separator(void);
+
 /// Get the user's home directory;  It is believed that is is always a place that files can be written
 std::string get_home_dir(void);
 
