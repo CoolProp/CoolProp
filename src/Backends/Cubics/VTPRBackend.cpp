@@ -107,6 +107,10 @@ void CoolProp::VTPRBackend::set_binary_interaction_double(const std::size_t i, c
     }
 };
 
+void CoolProp::VTPRBackend::set_Q_k(const size_t sgi, const double value) {
+    cubic->set_Q_k(sgi, value);
+};
+
 const UNIFACLibrary::UNIFACParameterLibrary & CoolProp::VTPRBackend::LoadLibrary(){
     if (!lib.is_populated()){
         std::string UNIFAC_path = get_config_string(VTPR_UNIFAC_PATH);

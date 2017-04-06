@@ -229,6 +229,9 @@ public:
 	virtual double cm_term();
 	/// Set the volume translation parameter
 	void set_cm(double val) { cm = val; }
+    
+    /// Modify the surface parameter Q_k of the sub group sgi
+    virtual void set_Q_k(const size_t sgi, const double value){throw CoolProp::ValueError("set_Q_k not defined for AbstractCubic"); };
 
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$

@@ -90,6 +90,11 @@ namespace UNIFAC
         void set_components(const std::string &identifier_type, std::vector<std::string> identifiers);
         
         const std::vector<UNIFACLibrary::Component> & get_components() { return components; };
+        
+        void set_pure_data();
+        
+        /// Modify the surface parameter Q_k of the sub group sgi
+        void set_Q_k(const size_t sgi, const double value);
     };
 
 } /* namespace UNIFAC */
