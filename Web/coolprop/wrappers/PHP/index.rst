@@ -55,6 +55,36 @@ Pre-Compiled Binaries
      $T = PropsSI("T","P",$p,"Q",$Q,"Water");
      print "NBP of water is $T\n";
      ?>
+     
+ * And here is another example demonstrating how to call the low-level interface:
+ 
+   .. code-block:: php
+   
+     <?php
+        include_once "CoolProp.php";
+
+        // set the REFPROP path
+        set_config_string(ALTERNATIVE_REFPROP_PATH, "/opt/refprop/");
+
+        // extend the abstract class AbstractState
+        class ConcreteState extends AbstractState {
+            static function factory($backend, $fluid_names) {
+                $r = AbstractState_factory($backend, $fluid_names);
+                if (!is_resource($r)) return $r;
+                return new ConcreteState($r);
+            }
+        }
+
+        // instantiate the class
+        $water = ConcreteState::factory("REFPROP", "Water");
+
+        $p = 101325;
+        $Q = 1.0;
+        $water->update(PQ_INPUTS, $p, $Q);
+        $T = $water->T();
+
+        print "NBP of water is $T\n";
+    ?>
 
 User-Compiled Binaries
 ======================
