@@ -29,7 +29,11 @@ script:
 #  # Run your build commands next
 #  - git clone --recursive https://github.com/CoolProp/CoolProp.git
 #  - cd CoolProp
-  - mkdir build
-  - cd build
-  - cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
-  - cmake --build . --config Release
+#  - mkdir build
+#  - cd build
+#  - cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
+#  - cmake --build . --config Release
+  - cd wrappers/Python
+  - python setup.py install
+  - cd ../..
+  - python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
