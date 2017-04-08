@@ -27,8 +27,8 @@ script:
 #  # Check versions of gcc, g++ and cmake
 #  - gcc -v && g++ -v && cmake --version
 #  # Run your build commands next
-  - git clone --recursive https://github.com/CoolProp/CoolProp.git
-  - cd CoolProp
+#  - git clone --recursive https://github.com/CoolProp/CoolProp.git
+#  - cd CoolProp
   - mkdir build
   - cd build
   - cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
