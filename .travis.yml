@@ -1,10 +1,14 @@
 #See: http://stackoverflow.com/questions/41916656/how-to-use-travis-ci-to-build-modern-c-using-modern-cmake
 dist: trusty
 #sudo: required
-language:
-  - cpp
-compiler:
-  - gcc
+#language:
+#  - cpp
+#compiler:
+#  - gcc
+language: 
+  - python
+install: 
+  - "pip install cython"
 addons:
   apt:
     sources:
