@@ -47,10 +47,23 @@ matrix:
     - os: osx
       language: generic
       osx_image: xcode7.3 # Default 	Xcode 7.3.1 	OS X 10.11
-    - os: osx
-      language: generic
-      osx_image: xcode6.4 #	Xcode 6.4 	OS X 10.10 
-      
+# The old image does not have pip available ...
+#    - os: osx
+#      language: generic
+#      osx_image: xcode6.4 #	Xcode 6.4 	OS X 10.10 
+# Build the Linux wheels based on https://github.com/pypa/python-manylinux-demo
+    - os: linux
+      sudo: required
+      services:
+        - docker
+      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+    - os: linux 
+      sudo: required
+      services:
+        - docker
+      env: DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
+           PRE_CMD=linux32
+           
   
 #    - os: linux
 #      dist: trusty
@@ -79,7 +92,11 @@ matrix:
 #language: 
 #  - python
 install: 
+# Commands for building the Python packages
   - "pip install cython wheel"
+# Commands for building the Python wheel
+  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then docker pull $DOCKER_IMAGE; fi
+  
 #addons:
 #  apt:
 #    sources:
@@ -112,3 +129,6 @@ script:
   - python setup.py install
   - cd ../..
   - python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
+# Commands for building the Python wheel, fails for now
+  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build-wheels.sh; fi
+#  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then ls wheelhouse/; fi
