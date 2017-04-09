@@ -99,7 +99,7 @@ matrix:
 #  - python
 install: 
 # Commands for building the Python packages
-  - if [[ "$BUILD_TARGET" == *"PYTHON" ]]; then "pip install cython wheel"; fi
+  - if [[ "$BUILD_TARGET" == *"PYTHON" ]]; then pip install cython wheel; fi
 # Commands for building the Python wheel
 #  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then docker pull $DOCKER_IMAGE; fi
   - if [[ "$BUILD_TARGET" == "LINUX_WHEELS" ]]; then docker pull $DOCKER_IMAGE; fi
