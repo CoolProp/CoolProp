@@ -5,14 +5,17 @@ set -e -x
 # Install a system package required by our library
 #yum install -y atlas-devel
 
+mkdir /io/wheelhouse_tmp
+mkdir /io/wheelhouse
+
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/pip" install cython wheel
-    "${PYBIN}/pip" wheel /io/wrappers/Python -w wheelhouse/
+    "${PYBIN}/pip" wheel /io/wrappers/Python -w /io/wheelhouse_tmp/
 done
 
 # Bundle external shared libraries into the wheels
-for whl in wheelhouse/*.whl; do
+for whl in /io/wheelhouse_tmp/*.whl; do
     auditwheel repair "$whl" -w /io/wheelhouse/
 done
 
