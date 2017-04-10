@@ -1,4 +1,7 @@
 #!/bin/bash
+
+SETUP_PY_ARGS="$1"
+
 # https://github.com/pypa/python-manylinux-demo/blob/master/travis/build-wheels.sh
 set -e -x
 
@@ -11,7 +14,7 @@ mkdir /io/wheelhouse
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/pip" install cython wheel
-    "${PYBIN}/pip" wheel --wheel-dir /io/wheelhouse_tmp/ --build-option ${SETUP_PY_ARGS} /io/wrappers/Python
+    "${PYBIN}/pip" wheel /io/wrappers/Python --wheel-dir /io/wheelhouse_tmp/ --build-options ${SETUP_PY_ARGS}
     #"${PYBIN}/pip" wheel /io/wrappers/Python -w /io/wheelhouse_tmp/
 done
 
