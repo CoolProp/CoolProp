@@ -23,50 +23,55 @@ matrix:
     - os: linux
       dist: trusty
       sudo: required # false or required, use required to get docker
-      env: BUILD_TARGET="LINUX_PYTHON"
+      env: BUILD_TARGET="PYTHON_LINUX"
     - os: linux
       dist: precise
       sudo: required # false or required
-      env: BUILD_TARGET="LINUX_PYTHON"
+      env: BUILD_TARGET="PYTHON_LINUX"
     - os: linux
       dist: trusty
       sudo: false # false or required
-      env: BUILD_TARGET="LINUX_PYTHON"
+      env: BUILD_TARGET="PYTHON_LINUX"
     - os: linux
       dist: precise
       sudo: false # false or required
-      env: BUILD_TARGET="LINUX_PYTHON"
+      env: BUILD_TARGET="PYTHON_LINUX"
     - os: osx
       language: generic
-      osx_image: xcode8.3 #	Xcode 8.3 	OS X 10.12
+      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
+    env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
-      osx_image: xcode8.2 #	Xcode 8.2 	OS X 10.12
+      osx_image: xcode8.2 #  Xcode 8.2   OS X 10.12
+    env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
-      osx_image: xcode8.1 #	Xcode 8.1 	OS X 10.12
+      osx_image: xcode8.1 #  Xcode 8.1   OS X 10.12
+    env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
-      osx_image: xcode8 #	Xcode 8gm 	OS X 10.11
+      osx_image: xcode8 #  Xcode 8gm   OS X 10.11
+    env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
-      osx_image: xcode7.3 # Default 	Xcode 7.3.1 	OS X 10.11
+      osx_image: xcode7.3 # Default   Xcode 7.3.1   OS X 10.11
+    env: BUILD_TARGET="PYTHON_APPLE"
 # The old image does not have pip available ...
 #    - os: osx
 #      language: generic
-#      osx_image: xcode6.4 #	Xcode 6.4 	OS X 10.10 
+#      osx_image: xcode6.4 #  Xcode 6.4   OS X 10.10 
 # Build the Linux wheels based on https://github.com/pypa/python-manylinux-demo
     - os: linux
       sudo: required
       services:
         - docker
-      env: BUILD_TARGET="LINUX_WHEELS"
+      env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
            DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
     - os: linux 
       sudo: required
       services:
         - docker
-      env: BUILD_TARGET="LINUX_WHEELS"
+      env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
            DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
            PRE_CMD=linux32
            
@@ -99,10 +104,10 @@ matrix:
 #  - python
 install: 
 # Commands for building the Python packages
-  - if [[ "$BUILD_TARGET" == *"PYTHON" ]]; then pip install cython wheel; fi
+  - if [[ "$BUILD_TARGET" == "PYTHON_LINUX" ]]; then pip install cython wheel; fi
 # Commands for building the Python wheel
 #  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then docker pull $DOCKER_IMAGE; fi
-  - if [[ "$BUILD_TARGET" == "LINUX_WHEELS" ]]; then docker pull $DOCKER_IMAGE; fi
+  - if [[ "$BUILD_TARGET" == "PYTHON_LINUX_WHEELS" ]]; then docker pull $DOCKER_IMAGE; fi
   
 #addons:
 #  apt:
@@ -132,10 +137,10 @@ script:
 #  - cd build
 #  - cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
 #  - cmake --build . --config Release
-  - if [[ "$BUILD_TARGET" == *"PYTHON" ]]; then cd wrappers/Python; fi
-  - if [[ "$BUILD_TARGET" == *"PYTHON" ]]; then python setup.py install; fi
-  - if [[ "$BUILD_TARGET" == *"PYTHON" ]]; then ../..; fi
-  - if [[ "$BUILD_TARGET" == *"PYTHON" ]]; then python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'; fi
+  - if [[ "$BUILD_TARGET" == "PYTHON_LINUX" ]]; then cd wrappers/Python; fi
+  - if [[ "$BUILD_TARGET" == "PYTHON_LINUX" ]]; then python setup.py install; fi
+  - if [[ "$BUILD_TARGET" == "PYTHON_LINUX" ]]; then ../..; fi
+  - if [[ "$BUILD_TARGET" == "PYTHON_LINUX" ]]; then python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'; fi
 # Commands for building the Python wheel, fails for now
-  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build-wheels.sh; fi
-#  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then ls wheelhouse/; fi
+  - if [[ "$BUILD_TARGET" == "PYTHON_LINUX_WHEELS" ]]; then docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh; fi
+#  - if [[ "$BUILD_TARGET" == *"PYTHON_LINUX_WHEELS"* ]]; then ls wheelhouse/; fi

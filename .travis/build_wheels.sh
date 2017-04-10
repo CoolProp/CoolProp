@@ -1,4 +1,3 @@
-
 #!/bin/bash
 # https://github.com/pypa/python-manylinux-demo/blob/master/travis/build-wheels.sh
 set -e -x
