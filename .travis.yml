@@ -6,20 +6,6 @@ language: python
   
 matrix:
   include:
-#    - os: linux
-#      sudo: required
-#      python: 3.2
-#      env: TOXENV=py32
-#    - os: linux
-#      sudo: required
-#      python: 3.3
-#      env: TOXENV=py33
-#    - os: osx
-#      language: generic
-#      env: TOXENV=py32
-#    - os: osx
-#      language: generic
-#      env: TOXENV=py33  
     - os: linux
       dist: trusty
       sudo: required # false or required, use required to get docker
@@ -39,23 +25,23 @@ matrix:
     - os: osx
       language: generic
       osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
-    env: BUILD_TARGET="PYTHON_APPLE"
+      env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
       osx_image: xcode8.2 #  Xcode 8.2   OS X 10.12
-    env: BUILD_TARGET="PYTHON_APPLE"
+      env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
       osx_image: xcode8.1 #  Xcode 8.1   OS X 10.12
-    env: BUILD_TARGET="PYTHON_APPLE"
+      env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
       osx_image: xcode8 #  Xcode 8gm   OS X 10.11
-    env: BUILD_TARGET="PYTHON_APPLE"
+      env: BUILD_TARGET="PYTHON_APPLE"
     - os: osx
       language: generic
       osx_image: xcode7.3 # Default   Xcode 7.3.1   OS X 10.11
-    env: BUILD_TARGET="PYTHON_APPLE"
+      env: BUILD_TARGET="PYTHON_APPLE"
 # The old image does not have pip available ...
 #    - os: osx
 #      language: generic
