@@ -8,12 +8,14 @@ set -e -x
 # Install a system package required by our library
 #yum install -y atlas-devel
 
+yum install -y cmake
+
 mkdir /io/wheelhouse_tmp
 mkdir /io/wheelhouse
 
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
-    ls -lh "${PYBIN}"
+    #ls -lh "${PYBIN}"
     "${PYBIN}/pip" install cython wheel
     pushd /io/wrappers/Python
     "${PYBIN}/python" setup.py bdist_wheel ${SETUP_PY_ARGS}
