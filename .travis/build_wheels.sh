@@ -13,7 +13,8 @@ mkdir /io/wheelhouse
 
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
-    source ${PYBIN}/activate
+    ls -lh "${PYBIN}"
+    source "${PYBIN}/activate"
     pip install cython wheel
     pushd /io/wrappers/Python
     python setup.py bdist_wheel ${SETUP_PY_ARGS}
