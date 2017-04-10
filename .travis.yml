@@ -128,5 +128,5 @@ script:
   - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then cd ../..; fi
   - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'; fi
 # Commands for building the Python wheel, fails for now
-  - if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then chmod +x .travis/build_wheels.sh; docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh; fi
 #  - if [ "$BUILD_TARGET" = *"PYTHON_LINUX_WHEELS"* ]; then ls wheelhouse/; fi
