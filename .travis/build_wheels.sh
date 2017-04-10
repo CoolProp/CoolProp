@@ -11,7 +11,8 @@ mkdir /io/wheelhouse
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     "${PYBIN}/pip" install cython wheel
-    "${PYBIN}/pip" wheel /io/wrappers/Python -w /io/wheelhouse_tmp/
+    "${PYBIN}/pip" wheel --wheel-dir /io/wheelhouse_tmp/ --build-option ${SETUP_PY_ARGS} /io/wrappers/Python
+    #"${PYBIN}/pip" wheel /io/wrappers/Python -w /io/wheelhouse_tmp/
 done
 
 # Bundle external shared libraries into the wheels

@@ -54,6 +54,7 @@ matrix:
         - docker
       env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
            DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+           SETUP_PY_ARGS="cmake=default,64"
     - os: linux 
       dist: trusty
       sudo: required
@@ -62,6 +63,7 @@ matrix:
       env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
            DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
            PRE_CMD=linux32
+           SETUP_PY_ARGS="cmake=default,32"
            
   
 #    - os: linux
