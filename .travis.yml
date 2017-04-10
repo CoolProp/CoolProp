@@ -74,10 +74,10 @@ matrix:
 #      - cmake
 
 #before_install:
-#  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update       ; fi
-#  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake; fi
-#  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update       ; fi
-#  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install cmake; fi
+#  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update       ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew install cmake; fi
+#  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update       ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install cmake; fi
 
 #See: http://stackoverflow.com/questions/41916656/how-to-use-travis-ci-to-build-modern-c-using-modern-cmake
 #dist: trusty
@@ -90,10 +90,10 @@ matrix:
 #  - python
 install: 
 # Commands for building the Python packages
-  - if [[ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]]; then pip install cython wheel; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then pip install cython wheel; fi
 # Commands for building the Python wheel
-#  - if [[ "$DOCKER_IMAGE" == *"manylinux"* ]]; then docker pull $DOCKER_IMAGE; fi
-  - if [[ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]]; then docker pull $DOCKER_IMAGE; fi
+#  - if [ "$DOCKER_IMAGE" == *"manylinux"* ]; then docker pull $DOCKER_IMAGE; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then docker pull $DOCKER_IMAGE; fi
   
 #addons:
 #  apt:
@@ -123,10 +123,10 @@ script:
 #  - cd build
 #  - cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
 #  - cmake --build . --config Release
-  - if [[ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]]; then cd wrappers/Python; fi
-  - if [[ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]]; then python setup.py install; fi
-  - if [[ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]]; then cd ../..; fi
-  - if [[ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]]; then python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then cd wrappers/Python; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then python setup.py install; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then cd ../..; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'; fi
 # Commands for building the Python wheel, fails for now
-  - if [[ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]]; then docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh; fi
-#  - if [[ "$BUILD_TARGET" = *"PYTHON_LINUX_WHEELS"* ]]; then ls wheelhouse/; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh; fi
+#  - if [ "$BUILD_TARGET" = *"PYTHON_LINUX_WHEELS"* ]; then ls wheelhouse/; fi
