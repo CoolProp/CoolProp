@@ -59,7 +59,7 @@ matrix:
       services:
         - docker
       env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
-           #DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+           DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
            DOCKER_IMAGE=dockcross/manylinux-x64
            SETUP_PY_ARGS="cmake=default,64"
     - os: linux 
@@ -68,7 +68,7 @@ matrix:
       services:
         - docker
       env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
-           #DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
+           DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
            DOCKER_IMAGE=dockcross/manylinux-x86
            PRE_CMD=linux32
            SETUP_PY_ARGS="cmake=default,32"
