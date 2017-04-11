@@ -27,8 +27,8 @@ mkdir /io/wheelhouse
 
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do  
-    PYV_MAJOR=`python -c "import sys;print(list(sys.version_info[:2])[0])";`
-    PYV_MINOR=`python -c "import sys;print(list(sys.version_info[:2])[1])";`
+    PYV_MAJOR=`"${PYBIN}/python" -c "import sys;print(list(sys.version_info[:2])[0])";`
+    PYV_MINOR=`"${PYBIN}/python" -c "import sys;print(list(sys.version_info[:2])[1])";`
     echo Detected Python ${PYV_MAJOR}.${PYV_MINOR}
     if [ "${PYV_MAJOR}" -le "2" -a "${PYV_MINOR}" -lt "7" ]; then
         continue
