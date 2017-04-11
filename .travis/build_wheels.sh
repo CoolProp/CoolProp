@@ -28,7 +28,8 @@ mkdir /io/wheelhouse
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     #ls -lh "${PYBIN}"
-    "${PYBIN}/pip" install cython wheel cmake
+    "${PYBIN}/pip" install cython wheel
+    "${PYBIN}/pip" install scikit-build cmake
     pushd /io/wrappers/Python
     "${PYBIN}/python" setup.py bdist_wheel ${SETUP_PY_ARGS}
     cp dist/*.whl /io/wheelhouse_tmp/
