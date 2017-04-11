@@ -82,10 +82,25 @@ matrix:
            SETUP_PY_ARGS="cmake=default,32"
     - os: osx
       language: generic
-      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
       env: BUILD_TARGET="PYTHON_APPLE"
-           PYTHON_VERSION="2.7.9"
-           
+           PYTHON_VERSION="2.7.13"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.3.6"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.4.6"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.5.3"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.6.1"
+          
   
 #    - os: linux
 #      dist: trusty
@@ -156,6 +171,8 @@ script:
       cd wrappers/Python
       python setup.py bdist_wheel
       pip install dist/*.whl
+      mkdir -p dist_audit
+      auditwheel repair dist/*.whl -w dist_audit/
       cd ../..
       python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
     fi
