@@ -133,7 +133,7 @@ install:
   - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then git clone --recursive https://github.com/MacPython/terryfy.git; fi
   - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then source terryfy/travis_tools.sh; fi
   - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then get_python_environment macpython "${PYTHON_VERSION}" venv; fi
-  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then pip install cython wheel; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then pip install cython wheel auditwheel; fi
 # Commands for building the Python wheel
 #  - if [ "$DOCKER_IMAGE" == *"manylinux"* ]; then docker pull $DOCKER_IMAGE; fi
   - if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then docker pull $DOCKER_IMAGE; fi
