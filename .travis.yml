@@ -80,6 +80,11 @@ matrix:
            DOCKER_IMAGE=dockcross/manylinux-x86
            PRE_CMD=linux32
            SETUP_PY_ARGS="cmake=default,32"
+    - os: osx
+      language: generic
+      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="2.7.9"
            
   
 #    - os: linux
@@ -110,6 +115,9 @@ matrix:
 #  - python
 install: 
 # Commands for building the Python packages
+  - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then git clone --recursive https://github.com/MacPython/terryfy.git; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then source terryfy/travis_tools.sh; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then get_python_environment macpython "${PYTHON_VERSION}" venv; fi
   - if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then pip install cython wheel; fi
 # Commands for building the Python wheel
 #  - if [ "$DOCKER_IMAGE" == *"manylinux"* ]; then docker pull $DOCKER_IMAGE; fi
@@ -146,7 +154,8 @@ script:
   - |
     if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then 
       cd wrappers/Python
-      python setup.py install
+      python setup.py bdist_wheel
+      pip install dist/*.whl
       cd ../..
       python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
     fi
