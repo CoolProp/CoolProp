@@ -82,22 +82,27 @@ matrix:
            SETUP_PY_ARGS="cmake=default,32"
     - os: osx
       language: generic
+      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
       env: BUILD_TARGET="PYTHON_APPLE"
            PYTHON_VERSION="2.7.13"
     - os: osx
       language: generic
+      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
       env: BUILD_TARGET="PYTHON_APPLE"
            PYTHON_VERSION="3.3.6"
     - os: osx
       language: generic
+      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
       env: BUILD_TARGET="PYTHON_APPLE"
            PYTHON_VERSION="3.4.6"
     - os: osx
       language: generic
+      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
       env: BUILD_TARGET="PYTHON_APPLE"
            PYTHON_VERSION="3.5.3"
     - os: osx
       language: generic
+      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
       env: BUILD_TARGET="PYTHON_APPLE"
            PYTHON_VERSION="3.6.1"
           
