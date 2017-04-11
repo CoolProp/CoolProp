@@ -5,10 +5,22 @@ SETUP_PY_ARGS="$1"
 # https://github.com/pypa/python-manylinux-demo/blob/master/travis/build-wheels.sh
 set -e -x
 
+# Get the directory containing this script
+# see http://stackoverflow.com/a/246128/1360263
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # Install a system package required by our library
 #yum install -y atlas-devel
 
-yum install -y cmake
+#yum install -y cmake
+
+if [ "$SETUP_PY_ARGS" = *"32" ]; then
+    CMAKE_URL="https://cmake.org/files/v3.6/cmake-3.6.3-Linux-i386.tar.gz"
+else
+    CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz"
+fi
+mkdir cmake && wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
+export PATH=${DIR}/cmake/bin:${PATH}
 
 mkdir /io/wheelhouse_tmp
 mkdir /io/wheelhouse
