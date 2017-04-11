@@ -26,7 +26,13 @@ mkdir /io/wheelhouse_tmp
 mkdir /io/wheelhouse
 
 # Compile wheels
-for PYBIN in /opt/python/*/bin; do
+for PYBIN in /opt/python/*/bin; do  
+    PYV_MAJOR=`python -c "import sys;print(list(sys.version_info[:2])[0])";`
+    PYV_MINOR=`python -c "import sys;print(list(sys.version_info[:2])[1])";`
+    echo Detected Python ${PYV_MAJOR}.${PYV_MINOR}
+    if [ "${PYV_MAJOR}" -le "2" -a "${PYV_MINOR}" -lt "7" ]; then
+        continue
+    fi
     #ls -lh "${PYBIN}"
     "${PYBIN}/pip" install cython wheel
     #"${PYBIN}/pip" install scikit-build cmake
