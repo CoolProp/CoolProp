@@ -53,21 +53,33 @@ matrix:
 #      language: generic
 #      osx_image: xcode6.4 #  Xcode 6.4   OS X 10.10 
 # Build the Linux wheels based on https://github.com/pypa/python-manylinux-demo
-    - os: linux
-      dist: trusty
-      sudo: required
-      services:
-        - docker
-      env: BUILD_TARGET="PYTHON_LINUX_WHEELS_CUSTOM"
-           BITNESS="32"
+#    - os: linux
+#      dist: trusty
+#      sudo: required
+#      services:
+#        - docker
+#      env: BUILD_TARGET="PYTHON_LINUX_WHEELS_CUSTOM"
+#           BITNESS="32"
     - os: linux 
       dist: trusty
       sudo: required
       services:
         - docker
       env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
+           DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
            DOCKER_IMAGE=dockcross/manylinux-x64
+           PRE_CMD=""
            SETUP_PY_ARGS="cmake=default,64"
+    - os: linux 
+      dist: trusty
+      sudo: required
+      services:
+        - docker
+      env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
+           DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
+           DOCKER_IMAGE=dockcross/manylinux-x86
+           PRE_CMD=linux32
+           SETUP_PY_ARGS="cmake=default,32"
            
   
 #    - os: linux
