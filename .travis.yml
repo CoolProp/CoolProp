@@ -58,7 +58,7 @@ matrix:
       sudo: required
       services:
         - docker
-      env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
+      env: BUILD_TARGET="PYTHON_LINUX_WHEELS_CUSTOM"
            BITNESS="32"
     - os: linux 
       dist: trusty
@@ -66,7 +66,8 @@ matrix:
       services:
         - docker
       env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
-           BITNESS="64"
+           DOCKER_IMAGE=dockcross/manylinux-x64
+           SETUP_PY_ARGS="cmake=default,64"
            
   
 #    - os: linux
@@ -139,15 +140,15 @@ script:
     fi
 # Commands for building the Python wheels
   - |
-    if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then 
+    if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS_CUSTOM" ]; then 
       pushd wrappers/Python/manylinux/
       chmod +x 00_prepare_docker.sh
       ./00_prepare_docker.sh "${BITNESS}"
     fi
-#  - |
-#    if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then 
-#      chmod +x .travis/build_wheels.sh
-#      docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh "${SETUP_PY_ARGS}"
-#    fi
+  - |
+    if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then 
+      chmod +x .travis/build_wheels.sh
+      docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh "${SETUP_PY_ARGS}"
+    fi
     
 #  - if [ "$BUILD_TARGET" = *"PYTHON_LINUX_WHEELS"* ]; then ls wheelhouse/; fi
