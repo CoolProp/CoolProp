@@ -22,8 +22,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #mkdir cmake && wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
 #export PATH=${DIR}/cmake/bin:${PATH}
 
-mkdir /io/wheelhouse_tmp
-mkdir /io/wheelhouse
+mkdir -p /io/wheelhouse_tmp
+mkdir -p /io/wheelhouse
+
+OLD_PATH=${PATH}
 
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do  
@@ -33,11 +35,12 @@ for PYBIN in /opt/python/*/bin; do
     if [ "${PYV_MAJOR}" -le "2" -a "${PYV_MINOR}" -lt "7" ]; then
         continue
     fi
+    export PATH="${PYBIN}:$OLD_PATH"
     #ls -lh "${PYBIN}"
-    "${PYBIN}/pip" install cython wheel
+    pip install cython wheel
     #"${PYBIN}/pip" install scikit-build cmake
     pushd /io/wrappers/Python
-    "${PYBIN}/python" setup.py bdist_wheel ${SETUP_PY_ARGS}
+    python setup.py bdist_wheel ${SETUP_PY_ARGS}
     cp dist/*.whl /io/wheelhouse_tmp/
     popd
     #deactivate
@@ -45,6 +48,8 @@ for PYBIN in /opt/python/*/bin; do
     #"${PYBIN}/pip" wheel /io/wrappers/Python --wheel-dir /io/wheelhouse_tmp/ --build-options ${SETUP_PY_ARGS}
     #"${PYBIN}/pip" wheel /io/wrappers/Python -w /io/wheelhouse_tmp/
 done
+
+export PATH="$OLD_PATH"
 
 # Bundle external shared libraries into the wheels
 for whl in /io/wheelhouse_tmp/*.whl; do
