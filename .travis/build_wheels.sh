@@ -14,13 +14,13 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 #yum install -y cmake
 
-if [ "$SETUP_PY_ARGS" = *"32" ]; then
-    CMAKE_URL="https://cmake.org/files/v3.6/cmake-3.6.3-Linux-i386.tar.gz"
-else
-    CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz"
-fi
-mkdir cmake && wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
-export PATH=${DIR}/cmake/bin:${PATH}
+#if [ "$SETUP_PY_ARGS" = *"32" ]; then
+#    CMAKE_URL="https://cmake.org/files/v3.6/cmake-3.6.3-Linux-i386.tar.gz"
+#else
+#    CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz"
+#fi
+#mkdir cmake && wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
+#export PATH=${DIR}/cmake/bin:${PATH}
 
 mkdir /io/wheelhouse_tmp
 mkdir /io/wheelhouse
@@ -28,7 +28,7 @@ mkdir /io/wheelhouse
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     #ls -lh "${PYBIN}"
-    "${PYBIN}/pip" install cython wheel
+    "${PYBIN}/pip" install cython wheel cmake
     pushd /io/wrappers/Python
     "${PYBIN}/python" setup.py bdist_wheel ${SETUP_PY_ARGS}
     cp dist/*.whl /io/wheelhouse_tmp/
