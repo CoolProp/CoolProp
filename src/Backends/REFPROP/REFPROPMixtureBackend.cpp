@@ -384,10 +384,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             for (unsigned int j = 0; j < (unsigned int)N; j++)
             {
                 if (j == 0){
-                    components_joined = fdPath + upper(fluid_names[j]) + endings[k];
+                    components_joined = join_path(fdPath, upper(fluid_names[j]) + endings[k]);
                 }
                 else{
-                    components_joined += "|" + fdPath + upper(fluid_names[j]) + endings[k];
+                    components_joined += "|" + join_path(fdPath, upper(fluid_names[j]) + endings[k]);
                 }
             }
 
