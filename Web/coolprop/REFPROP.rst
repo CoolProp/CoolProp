@@ -89,6 +89,16 @@ The configuration key for setting the REFPROP path (see :ref:`configuration`) is
 
 If you do this, internally CoolProp will call the ``SETPATH`` function in REFPROP to tell REFPROP that it should find the ``fluids`` and ``mixtures`` directories within this directory.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
 
+If you wish to use a certain shared library, for example to try different REFPROP versions, you explicitly define it via ``ALTERNATIVE_REFPROP_LIBRARY_PATH``. This canfiguration variable makes CoolProp ignore the ``ALTERNATIVE_REFPROP_PATH`` when loading the shared library and you might have to provide the full path to your shared library here by doing something like this in python:
+
+.. ipython::
+
+    In [0]: import json, CoolProp.CoolProp as CP
+    
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_LIBRARY_PATH, 'c:\\Program Files\\REFPROP\\REFPRP64.v9.1.dll')
+
+If you use a combination of ``ALTERNATIVE_REFPROP_LIBRARY_PATH`` and ``ALTERNATIVE_REFPROP_PATH``, the shared library gets loaded directly from ``ALTERNATIVE_REFPROP_LIBRARY_PATH`` while the fluid files still will be accessed via ``ALTERNATIVE_REFPROP_PATH``. You can thus have one single folder with fluid files that is used with different shared libraries. Make sure that the fluid files are compatible with all the shared library versions you are using. 
+
 If you are playing around with mixture parameters, you might want to set a different path to the HMX.BNC file which contains the interaction parameters for the mixture.  You can do that by changing the configuration variable  (see :ref:`configuration`) ``ALTERNATIVE_REFPROP_HMX_BNC_PATH``
 
 .. ipython::
@@ -106,6 +116,8 @@ And now we set them back to their default values
     In [0]: import json, CoolProp.CoolProp as CP
     
     In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_HMX_BNC_PATH, '')
+    
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_LIBRARY_PATH, '')
 
     In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, '')
 
