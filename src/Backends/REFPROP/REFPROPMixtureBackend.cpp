@@ -27,11 +27,14 @@ surface tension                 N/m
 
 #include "CoolPropTools.h"
 #include "REFPROPMixtureBackend.h"
+#include "REFPROPBackend.h"
 #include "Exceptions.h"
 #include "Configuration.h"
 #include "CoolProp.h"
 #include "Solvers.h"
 #include "IdealCurves.h"
+#include "DataStructures.h"
+#include "AbstractState.h"
 
 #include <stdlib.h>
 #include <string>
@@ -127,6 +130,23 @@ std::string get_REFPROP_HMX_BNC_path()
 }
 
 namespace CoolProp {
+    
+// This static initialization will cause the generator to register
+static class REFPROPGenerator : public AbstractStateGenerator{
+public:
+    REFPROPGenerator(){
+        register_backend(REFPROP_BACKEND_FAMILY, shared_ptr<AbstractStateGenerator>(this));
+    }
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        bool REFPROP_is_supported = REFPROPMixtureBackend::REFPROP_supported ();
+        if (fluid_names.size() == 1){
+            return new REFPROPBackend(fluid_names[0]);
+        }
+        else{
+            return new REFPROPMixtureBackend(fluid_names);
+        }
+    };
+} refprop_gen;
 
     
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {

@@ -13,13 +13,6 @@
 #include "math.h"
 #include "AbstractState.h"
 #include "DataStructures.h"
-#include "Backends/REFPROP/REFPROPBackend.h"
-#include "Backends/Helmholtz/HelmholtzEOSBackend.h"
-#include "Backends/Incompressible/IncompressibleBackend.h"
-#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
-#include "Backends/IF97/IF97Backend.h"
-#include "Backends/Cubics/CubicBackend.h"
-#include "Backends/Cubics/VTPRBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -27,6 +20,30 @@
 #endif
 
 namespace CoolProp {
+
+/// This tiny class holds pointers to generators for the backends and can be used to look up
+/// generators at runtime.  This class should be populated through the use of static initialized
+/// classes that were passed to register_backend
+class BackendLibrary{
+private:
+    std::map<backend_families, shared_ptr<AbstractStateGenerator> > backends;
+public:
+    void add_backend(const backend_families &bg, const shared_ptr<AbstractStateGenerator> &asg){
+        backends[bg] = asg;
+    };
+    void get_generator_iterators(const backend_families &bg,
+                                 std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator &generator,
+                                 std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator &end){
+        generator = backends.find(bg);
+        end = backends.end();
+    };
+};
+static BackendLibrary backend_library;
+    
+/// Register the backend (should probably be done with static initialization)
+void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen){
+    backend_library.add_backend(bf, gen);
+};
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
@@ -37,32 +54,13 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     backend_families f1;
     std::string f2;
     extract_backend_families_string(backend, f1, f2);
-    if (f1==HEOS_BACKEND_FAMILY)
-    {
-        if (fluid_names.size() == 1){
-            return new HelmholtzEOSBackend(fluid_names[0]);
-        }
-        else{
-            return new HelmholtzEOSMixtureBackend(fluid_names);
-        }
-    }
-    else if (f1==REFPROP_BACKEND_FAMILY)
-    {
-        if (fluid_names.size() == 1){
-            return new REFPROPBackend(fluid_names[0]);
-        }
-        else{
-            return new REFPROPMixtureBackend(fluid_names);
-        }
-    }
-    else if (f1==INCOMP_BACKEND_FAMILY)
-    {
-        if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
-        return new IncompressibleBackend(fluid_names[0]);
-    }
-    else if (f1==IF97_BACKEND_FAMILY)
-    {
-        return new IF97Backend();
+    
+    std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator gen, end;
+    backend_library.get_generator_iterators(f1, gen, end);
+    
+    if (gen != end){
+        // One of the registered backends was able to match the given backend family
+        return gen->second->get_AbstractState(fluid_names);
     }
     #if !defined(NO_TABULAR_BACKENDS)
     else if (f1==TTSE_BACKEND_FAMILY)
@@ -78,22 +76,6 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
         return new BicubicBackend(AS);
     }
     #endif
-    else if (f1==TREND_BACKEND_FAMILY)
-    {
-        throw ValueError("TREND backend not yet implemented");
-    }
-    else if (f1 == SRK_BACKEND_FAMILY) 
-    {
-        return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
-    }
-    else if (f1==PR_BACKEND_FAMILY)
-    {
-        return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
-    }
-    else if (f1==VTPR_BACKEND_FAMILY)
-    {
-        return new VTPRBackend(fluid_names, get_config_double(R_U_CODATA));
-    }
     else if (!backend.compare("?") || backend.empty())
     {
         std::size_t idel = fluid_names[0].find("::");
