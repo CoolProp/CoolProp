@@ -1150,6 +1150,15 @@ public:
  *  publically accessible)
  */
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen);
+    
+template <backend_families bf, class T>
+class GeneratorInitializer{
+public:
+    GeneratorInitializer(){
+        register_backend(bf, shared_ptr<AbstractStateGenerator>(new T()));
+    };
+};
+
 
 } /* namespace CoolProp */
 #endif /* ABSTRACTSTATE_H_ */

@@ -22,8 +22,8 @@
 namespace CoolProp {
 
 /// This tiny class holds pointers to generators for the backends and can be used to look up
-/// generators at runtime.  This class should be populated through the use of static initialized
-/// classes that were passed to register_backend
+/// generators at runtime.  This class should be populated through the use of static initialized 
+
 class BackendLibrary{
 private:
     std::map<backend_families, shared_ptr<AbstractStateGenerator> > backends;
@@ -40,7 +40,6 @@ public:
 };
 static BackendLibrary backend_library;
     
-/// Register the backend (should probably be done with static initialization)
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen){
     backend_library.add_backend(bf, gen);
 };

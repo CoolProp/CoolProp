@@ -3,24 +3,22 @@
 #include "Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
 
-static class SRKGenerator : public CoolProp::AbstractStateGenerator{
+class SRKGenerator : public CoolProp::AbstractStateGenerator{
 public:
-    SRKGenerator(){
-        register_backend(CoolProp::SRK_BACKEND_FAMILY, shared_ptr<AbstractStateGenerator>(this));
-    }
     CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
         return new CoolProp::SRKBackend(fluid_names, CoolProp::get_config_double(R_U_CODATA));
     };
-} srk_gen;
-static class PRGenerator : public CoolProp::AbstractStateGenerator{
+};
+static CoolProp::GeneratorInitializer<CoolProp::SRK_BACKEND_FAMILY, SRKGenerator> srk_gen;
+
+class PRGenerator : public CoolProp::AbstractStateGenerator{
 public:
-    PRGenerator(){
-        register_backend(CoolProp::PR_BACKEND_FAMILY, shared_ptr<AbstractStateGenerator>(this));
-    }
     CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
         return new CoolProp::PengRobinsonBackend(fluid_names, CoolProp::get_config_double(R_U_CODATA));
     };
-} pr_gen;
+};
+static CoolProp::GeneratorInitializer<CoolProp::PR_BACKEND_FAMILY, PRGenerator> pr_gen;
+
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){
     N = cubic->get_Tc().size();

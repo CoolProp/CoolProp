@@ -131,12 +131,8 @@ std::string get_REFPROP_HMX_BNC_path()
 
 namespace CoolProp {
     
-// This static initialization will cause the generator to register
-static class REFPROPGenerator : public AbstractStateGenerator{
+class REFPROPGenerator : public AbstractStateGenerator{
 public:
-    REFPROPGenerator(){
-        register_backend(REFPROP_BACKEND_FAMILY, shared_ptr<AbstractStateGenerator>(this));
-    }
     AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
         bool REFPROP_is_supported = REFPROPMixtureBackend::REFPROP_supported ();
         if (fluid_names.size() == 1){
@@ -146,7 +142,9 @@ public:
             return new REFPROPMixtureBackend(fluid_names);
         }
     };
-} refprop_gen;
+};
+// This static initialization will cause the generator to register
+static GeneratorInitializer<REFPROP_BACKEND_FAMILY, REFPROPGenerator> refprop_gen;
 
     
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {

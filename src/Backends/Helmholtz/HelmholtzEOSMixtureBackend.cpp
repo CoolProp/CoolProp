@@ -41,12 +41,8 @@ static int deriv_counter = 0;
 
 namespace CoolProp {
     
-// This static initialization will cause the generator to register
-static class HEOSGenerator : public AbstractStateGenerator{
+class HEOSGenerator : public AbstractStateGenerator{
 public:
-    HEOSGenerator(){
-        register_backend(HEOS_BACKEND_FAMILY, shared_ptr<AbstractStateGenerator>(this));
-    }
     AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
         if (fluid_names.size() == 1){
             return new HelmholtzEOSBackend(fluid_names[0]);
@@ -55,7 +51,9 @@ public:
             return new HelmholtzEOSMixtureBackend(fluid_names);
         }
     };
-} heos_gen;
+};
+// This static initialization will cause the generator to register
+static CoolProp::GeneratorInitializer<CoolProp::HEOS_BACKEND_FAMILY, HEOSGenerator> heos_gen;
 
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(){
     imposed_phase_index = iphase_not_imposed;
