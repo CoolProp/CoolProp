@@ -35,6 +35,7 @@ matrix:
           - release
           - travis_integration  
     - os: linux 
+      dist: trusty
       env:
         - secure: "XGfICTnfFv9xpVDBbNwJIkXV0OZCAcOT46aeFYmODm3jl+ya60k0C91G9zlZ9fEYiQwAEBTO2Y/Ge0AMaoFqtu3H3vu7S5JjAbpMV3ZRDJqampScy550yPpziOuxvB6h23PZRfLOBVEsUGHnCO5rLb20iPM94XsHSBL3Smn2o9c="
       before_install:
