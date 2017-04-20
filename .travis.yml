@@ -14,16 +14,16 @@ compiler:
   - clang
   - gcc
 
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    - llvm-toolchain-trusty
-    packages:
-    - cmake
-    - gcc-6
-    - g++-6
-    - clang-3.7
+#addons:
+#  apt:
+#    sources:
+#    - ubuntu-toolchain-r-test
+#    - llvm-toolchain-trusty
+#    packages:
+#    - cmake
+#    - gcc-6
+#    - g++-6
+#    - clang-3.7
 
 branches:
   only:
@@ -34,9 +34,9 @@ branches:
   # Build all branches
   #  - /.*/ 
 
-install:
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
-  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
+#install:
+#  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
+#  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
 
 # command to run tests
 script:   
