@@ -21,6 +21,16 @@
 #include "MatrixMath.h"
 
 namespace CoolProp {
+    
+class IncompressibleBackendGenerator : public AbstractStateGenerator{
+public:
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
+        return new IncompressibleBackend(fluid_names[0]);
+    };
+};
+// This static initialization will cause the generator to register
+static GeneratorInitializer<INCOMP_BACKEND_FAMILY, IncompressibleBackendGenerator> incomp_gen;
 
 IncompressibleBackend::IncompressibleBackend() {
     throw NotImplementedError("Empty constructor is not implemented for incompressible fluids");
