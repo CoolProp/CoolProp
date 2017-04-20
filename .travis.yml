@@ -57,11 +57,8 @@ matrix:
           build_command_prepend: "cmake ."
           build_command: "cmake --build ."
           branch_pattern: coverity_scan
-      before_script:
-        # Run your build commands next
-        - cmake .
-      script:     
-        - cmake --build .
+      before_script: cmake .
+      script: cmake --build .
 
 #branches:
 #  only:
