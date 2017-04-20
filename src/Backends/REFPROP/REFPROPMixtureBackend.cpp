@@ -89,7 +89,7 @@ std::string get_REFPROP_fluid_path_prefix()
     #if defined(__ISWINDOWS__)
         return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-        return rpPath + std::string("/fluids/");
+        return join_path(rpPath,"fluids");
     #else
         throw CoolProp::NotImplementedError("This function should not be called.");
         return rpPath;
@@ -112,12 +112,12 @@ std::string get_REFPROP_mixtures_path_prefix()
         return join_path(alt_refprop_path, "mixtures");
     }
     #if defined(__ISWINDOWS__)
-    return rpPath;
+        return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-    return rpPath + std::string("/mixtures/");
+        return return join_path(rpPath,"mixtures");
     #else
-    throw CoolProp::NotImplementedError("This function should not be called.");
-    return rpPath;
+        throw CoolProp::NotImplementedError("This function should not be called.");
+        return rpPath;
     #endif
 }
 
