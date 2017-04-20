@@ -6,6 +6,9 @@ notifications:
     
 language: 
   - cpp
+  
+os: linux
+dist: trusty
 
 compiler:
   - clang
