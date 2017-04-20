@@ -34,16 +34,14 @@ matrix:
           - master
           - release
           - travis_integration
-      script:
+      before_script:
         # Check compiler and cmake versions
         - cmake --version; gcc -v; clang -v
         - echo "$CXX" && "$CXX" -v
         # Run your build commands next
-        - mkdir -p build && pushd build
-        - echo "${TRAVIS_BUILD_DIR}"
-        - cmake .. -DCMAKE_BUILD_TYPE=Release # Same as "${TRAVIS_BUILD_DIR}"    
+        - cmake . -DCMAKE_BUILD_TYPE=Release
+      script:     
         - cmake --build . --config Release
-        - popd
     - os: linux 
       dist: trusty
 #      before_install:
@@ -54,9 +52,11 @@ matrix:
             name: "CoolProp/CoolProp" 
             description: "Build submitted via Travis CI"
           notification_email: jowr@ipu.dk
-          build_command: "cmake .; cmake --build ."
+          build_command_prepend: "cmake ."
+          build_command: "cmake --build ."
           branch_pattern: coverity_scan
-      script: "cmake .; cmake --build ."
+      before_script: cmake .
+      script: cmake --build .
 
 #branches:
 #  only:
