@@ -39,7 +39,7 @@ matrix:
         - cmake --version; gcc -v; clang -v
         - echo "$CXX" && "$CXX" -v
         # Run your build commands next
-        - rm-rf build && mkdir -p build && pushd build
+        - rm -rf build && mkdir -p build && pushd build
         - echo "${TRAVIS_BUILD_DIR}"
         - cmake .. -DCMAKE_BUILD_TYPE=Release # Same as "${TRAVIS_BUILD_DIR}"
         - popd
