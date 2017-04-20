@@ -1,0 +1,192 @@
+
+notifications:
+  email:
+    on_success: never
+    on_failure: change
+
+language: python
+
+#os:
+#  - linux
+#  - osx
+  
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required # false or required, use required to get docker
+      env: BUILD_TARGET="PYTHON_LINUX"
+#    - os: linux
+#      dist: precise
+#      sudo: required # false or required
+#      env: BUILD_TARGET="PYTHON_LINUX"
+#    - os: linux
+#      dist: trusty
+#      sudo: false # false or required
+#      env: BUILD_TARGET="PYTHON_LINUX"
+#    - os: linux
+#      dist: precise
+#      sudo: false # false or required
+#      env: BUILD_TARGET="PYTHON_LINUX"
+#    - os: osx
+#      language: generic
+#      osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
+#      env: BUILD_TARGET="PYTHON_APPLE"
+#    - os: osx
+#      language: generic
+#      osx_image: xcode8.2 #  Xcode 8.2   OS X 10.12
+#      env: BUILD_TARGET="PYTHON_APPLE"
+#    - os: osx
+#      language: generic
+#      osx_image: xcode8.1 #  Xcode 8.1   OS X 10.12
+#      env: BUILD_TARGET="PYTHON_APPLE"
+#    - os: osx
+#      language: generic
+#      osx_image: xcode8 #  Xcode 8gm   OS X 10.11
+#      env: BUILD_TARGET="PYTHON_APPLE"
+#    - os: osx
+#      language: generic
+#      osx_image: xcode7.3 # Default   Xcode 7.3.1   OS X 10.11
+#      env: BUILD_TARGET="PYTHON_APPLE"
+# The old image does not have pip available ...
+#    - os: osx
+#      language: generic
+#      osx_image: xcode6.4 #  Xcode 6.4   OS X 10.10 
+# Build the Linux wheels based on https://github.com/pypa/python-manylinux-demo
+#    - os: linux
+#      dist: trusty
+#      sudo: required
+#      services:
+#        - docker
+#      env: BUILD_TARGET="PYTHON_LINUX_WHEELS_CUSTOM"
+#           BITNESS="32"
+    - os: linux 
+      dist: trusty
+      sudo: required
+      services:
+        - docker
+      env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
+           DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64
+           DOCKER_IMAGE=dockcross/manylinux-x64
+           PRE_CMD=""
+           SETUP_PY_ARGS="cmake=default,64"
+    - os: linux 
+      dist: trusty
+      sudo: required
+      services:
+        - docker
+      env: BUILD_TARGET="PYTHON_LINUX_WHEELS"
+           DOCKER_IMAGE=quay.io/pypa/manylinux1_i686
+           DOCKER_IMAGE=dockcross/manylinux-x86
+           PRE_CMD=linux32
+           SETUP_PY_ARGS="cmake=default,32"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="2.7.13"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.3.5"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.4.5"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.5.3"
+    - os: osx
+      language: generic
+      env: BUILD_TARGET="PYTHON_APPLE"
+           PYTHON_VERSION="3.6.1"
+          
+  
+#    - os: linux
+#      dist: trusty
+#      sudo: required
+#    - os: osx
+#      osx_image: xcode7.2
+
+#addons:
+#  apt:
+#    packages:
+#      - cmake
+
+#before_install:
+#  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update       ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew install cmake; fi
+#  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update       ; fi
+#  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install cmake; fi
+
+#See: http://stackoverflow.com/questions/41916656/how-to-use-travis-ci-to-build-modern-c-using-modern-cmake
+#dist: trusty
+#sudo: required
+#language:
+#  - cpp
+#compiler:
+#  - gcc
+#language: 
+#  - python
+install: 
+# Commands for building the Python packages
+  - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then git clone --recursive https://github.com/MacPython/terryfy.git; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then source terryfy/travis_tools.sh; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then get_python_environment macpython "${PYTHON_VERSION}" venv; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_APPLE" ]; then pip install cython wheel; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX" ]; then pip install cython wheel auditwheel; fi
+# Commands for building the Python wheel
+#  - if [ "$DOCKER_IMAGE" == *"manylinux"* ]; then docker pull $DOCKER_IMAGE; fi
+  - if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then docker pull $DOCKER_IMAGE; fi
+  
+#addons:
+#  apt:
+#    sources:
+#      - ubuntu-toolchain-r-test
+#    packages:
+#      - gcc-6
+#      - g++-6
+#      - cmake
+# Build all branches
+branches:
+  only:
+    - /.*/
+script:
+#  # Link gcc-6 and g++-6 to their standard commands
+#  - ln -s /usr/bin/gcc-6 /usr/local/bin/gcc
+#  - ln -s /usr/bin/g++-6 /usr/local/bin/g++
+#  # Export CC and CXX to tell cmake which compiler to use
+#  - export CC=/usr/bin/gcc-6
+#  - export CXX=/usr/bin/g++-6
+#  # Check versions of gcc, g++ and cmake
+#  - gcc -v && g++ -v && cmake --version
+#  # Run your build commands next
+#  - git clone --recursive https://github.com/CoolProp/CoolProp.git
+#  - cd CoolProp
+#  - mkdir build
+#  - cd build
+#  - cmake .. -DCOOLPROP_SHARED_LIBRARY=ON
+#  - cmake --build . --config Release
+  - |
+    if [ "$BUILD_TARGET" = "PYTHON_LINUX" -o "$BUILD_TARGET" = "PYTHON_APPLE" ]; then 
+      cd wrappers/Python
+      python setup.py bdist_wheel
+      pip install dist/*.whl
+      if [ "$BUILD_TARGET" = "PYTHON_LINUX" ]; then mkdir -p dist_audit; auditwheel repair dist/*.whl -w dist_audit/; fi
+      cd ../..
+      python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
+    fi
+# Commands for building the Python wheels
+  - |
+    if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS_CUSTOM" ]; then 
+      pushd wrappers/Python/manylinux/
+      chmod +x 00_prepare_docker.sh
+      ./00_prepare_docker.sh "${BITNESS}"
+    fi
+  - |
+    if [ "$BUILD_TARGET" = "PYTHON_LINUX_WHEELS" ]; then 
+      chmod +x .travis/build_wheels.sh
+      docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/.travis/build_wheels.sh "${SETUP_PY_ARGS}"
+    fi
+    
+#  - if [ "$BUILD_TARGET" = *"PYTHON_LINUX_WHEELS"* ]; then ls wheelhouse/; fi
