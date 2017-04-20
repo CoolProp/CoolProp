@@ -243,6 +243,8 @@ std::string join_path(const std::string &one, const std::string &two) {
     std::string separator = get_separator();
     if (!endswith(one, separator) && !one.empty()) {
         result = one + separator;
+    } else {
+        result = one;
     }
     result.append(two);
     return result;
