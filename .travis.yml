@@ -52,8 +52,9 @@ matrix:
       addons:
         coverity_scan:
           project:
-            name: "CoolProp/CoolProp"
+            name: "CoolProp/CoolProp" 
             description: "Build submitted via Travis CI"
+          notification_email: jowr@ipu.dk
           build_command_prepend: "cmake ."
           build_command: "cmake --build ."
           branch_pattern: coverity_scan
