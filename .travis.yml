@@ -54,9 +54,14 @@ matrix:
           project:
             name: "CoolProp/CoolProp"
             description: "Build submitted via Travis CI"
-          build_command_prepend: "mkdir build; pushd build; cmake .. -DCMAKE_BUILD_TYPE=Release; popd"
-          build_command: "cmake --build build --config Release"
+          build_command_prepend: "cmake ."
+          build_command: "cmake --build ."
           branch_pattern: coverity_scan
+      before_script:
+        # Run your build commands next
+        - cmake .
+      script:     
+        - cmake --build .
 
 #branches:
 #  only:
