@@ -47,9 +47,6 @@ matrix:
         - cmake --build build --config Release
     - os: linux 
       dist: trusty
-      env:
-        global:
-          - secure: "XGfICTnfFv9xpVDBbNwJIkXV0OZCAcOT46aeFYmODm3jl+ya60k0C91G9zlZ9fEYiQwAEBTO2Y/Ge0AMaoFqtu3H3vu7S5JjAbpMV3ZRDJqampScy550yPpziOuxvB6h23PZRfLOBVEsUGHnCO5rLb20iPM94XsHSBL3Smn2o9c="
       before_install:
         - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
       addons:
@@ -69,6 +66,10 @@ matrix:
 #    - travis_integration
 #  # Build all branches
 #  #  - /.*/ 
+
+env:
+  global:
+    - secure: "XGfICTnfFv9xpVDBbNwJIkXV0OZCAcOT46aeFYmODm3jl+ya60k0C91G9zlZ9fEYiQwAEBTO2Y/Ge0AMaoFqtu3H3vu7S5JjAbpMV3ZRDJqampScy550yPpziOuxvB6h23PZRfLOBVEsUGHnCO5rLb20iPM94XsHSBL3Smn2o9c="
 
 #install:
 #  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
