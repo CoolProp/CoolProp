@@ -33,11 +33,23 @@ matrix:
         only:
           - master
           - release
-          - travis_integration  
+          - travis_integration
+      before_script:
+        # Check compiler and cmake versions
+        - cmake --version; gcc -v; clang -v
+        - echo "$CXX" && "$CXX" -v
+        # Run your build commands next
+        - mkdir build && pushd build
+        - echo "${TRAVIS_BUILD_DIR}"
+        - cmake .. -DCMAKE_BUILD_TYPE=Release # Same as "${TRAVIS_BUILD_DIR}"
+        - popd
+      script:     
+        - cmake --build build --config Release
     - os: linux 
       dist: trusty
-      env:
-        - secure: "XGfICTnfFv9xpVDBbNwJIkXV0OZCAcOT46aeFYmODm3jl+ya60k0C91G9zlZ9fEYiQwAEBTO2Y/Ge0AMaoFqtu3H3vu7S5JjAbpMV3ZRDJqampScy550yPpziOuxvB6h23PZRfLOBVEsUGHnCO5rLb20iPM94XsHSBL3Smn2o9c="
+      global:
+        env:
+          - secure: "XGfICTnfFv9xpVDBbNwJIkXV0OZCAcOT46aeFYmODm3jl+ya60k0C91G9zlZ9fEYiQwAEBTO2Y/Ge0AMaoFqtu3H3vu7S5JjAbpMV3ZRDJqampScy550yPpziOuxvB6h23PZRfLOBVEsUGHnCO5rLb20iPM94XsHSBL3Smn2o9c="
       before_install:
         - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
       addons:
@@ -45,10 +57,9 @@ matrix:
           project:
             name: "CoolProp/CoolProp"
             description: "Build submitted via Travis CI"
+          build_command_prepend: "mkdir build; pushd build; cmake .. -DCMAKE_BUILD_TYPE=Release; popd"
           build_command: "cmake --build build --config Release"
           branch_pattern: coverity_scan
-
-
 
 #branches:
 #  only:
@@ -63,18 +74,18 @@ matrix:
 #  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
 #  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
 
-before_script:
-  # Check compiler and cmake versions
-  - cmake --version; gcc -v; clang -v
-  - echo "$CXX" && "$CXX" -v
-  # Run your build commands next
-  - mkdir build && pushd build
-  - echo "${TRAVIS_BUILD_DIR}"
-  - cmake .. -DCMAKE_BUILD_TYPE=Release # Same as "${TRAVIS_BUILD_DIR}"
-  - popd
+# before_script:
+  # # Check compiler and cmake versions
+  # - cmake --version; gcc -v; clang -v
+  # - echo "$CXX" && "$CXX" -v
+  # # Run your build commands next
+  # - mkdir build && pushd build
+  # - echo "${TRAVIS_BUILD_DIR}"
+  # - cmake .. -DCMAKE_BUILD_TYPE=Release # Same as "${TRAVIS_BUILD_DIR}"
+  # - popd
 
-script:     
-  - cmake --build build --config Release
+# script:     
+  # - cmake --build build --config Release
 
   
   
