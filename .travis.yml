@@ -56,10 +56,10 @@ matrix:
             description: "Build submitted via Travis CI"
           notification_email: jowr@ipu.dk
           build_command_prepend: "cmake ."
-          build_command: "cmake --build ."
+          build_command: "make -j2"
           branch_pattern: coverity_scan
       before_script: cmake .
-      script: cmake --build .
+      script: make -j2
 
 #branches:
 #  only:
