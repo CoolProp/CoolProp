@@ -7,13 +7,13 @@ notifications:
 language: 
   - cpp
   
-os: linux
-dist: trusty
-
-compiler:
-  - clang
-  - gcc
-
+#os: linux
+#dist: trusty
+#
+#compiler:
+#  - clang
+#  - gcc
+#
 #addons:
 #  apt:
 #    sources:
@@ -25,14 +25,37 @@ compiler:
 #    - g++-6
 #    - clang-3.7
 
-branches:
-  only:
-    - master
-    - release
-    - coverity_scan
-    - travis_integration
-  # Build all branches
-  #  - /.*/ 
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      branches:
+        only:
+          - master
+          - release
+          - travis_integration  
+    - os: linux 
+      env:
+        - secure: "XGfICTnfFv9xpVDBbNwJIkXV0OZCAcOT46aeFYmODm3jl+ya60k0C91G9zlZ9fEYiQwAEBTO2Y/Ge0AMaoFqtu3H3vu7S5JjAbpMV3ZRDJqampScy550yPpziOuxvB6h23PZRfLOBVEsUGHnCO5rLb20iPM94XsHSBL3Smn2o9c="
+      before_install:
+        - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+      addons:
+        coverity_scan:
+          project:
+            name: "CoolProp/CoolProp"
+            description: "Build submitted via Travis CI"
+          branch_pattern: coverity_scan
+
+
+
+#branches:
+#  only:
+#    - master
+#    - release
+#    - coverity_scan
+#    - travis_integration
+#  # Build all branches
+#  #  - /.*/ 
 
 #install:
 #  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
@@ -49,3 +72,6 @@ script:
   - cmake .. -DCMAKE_BUILD_TYPE=Release # Same as "${TRAVIS_BUILD_DIR}"
   - cmake --build . --config Release
   - popd 
+
+  
+  
