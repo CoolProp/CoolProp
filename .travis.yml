@@ -49,14 +49,14 @@ matrix:
       addons:
         coverity_scan:
           project:
-            name: "CoolProp/CoolProp" 
+            name: "CoolProp/CoolProp"
             description: "Build submitted via Travis CI"
           notification_email: jowr@ipu.dk
-          build_command_prepend: "cmake ."
-          build_command: "cmake --build ."
+          build_command_prepend: "cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx"
+          build_command: "cmake --build . --target Main"
           branch_pattern: coverity_scan
-      before_script: cmake .
-      script: cmake --build .
+      before_script: cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
+      script: cmake --build . --target Main
 
 #branches:
 #  only:
