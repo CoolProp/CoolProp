@@ -89,7 +89,7 @@ The configuration key for setting the REFPROP path (see :ref:`configuration`) is
 
 If you do this, internally CoolProp will construct the full path to the ``fluids`` and ``mixtures`` directories and use them to call REFPROP's `SETUP` function when loading fluids.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
 
-If you wish to use a certain shared library, for example to try different REFPROP versions, you explicitly define it via ``ALTERNATIVE_REFPROP_LIBRARY_PATH``. This canfiguration variable makes CoolProp ignore the ``ALTERNATIVE_REFPROP_PATH`` when loading the shared library and you might have to provide the full path to your shared library here by doing something like this in python:
+If you wish to use a certain shared library, for example to try different REFPROP versions, you explicitly define it via ``ALTERNATIVE_REFPROP_LIBRARY_PATH``. This configuration variable makes CoolProp ignore the ``ALTERNATIVE_REFPROP_PATH`` when loading the shared library and you might have to provide the full path to your shared library here by doing something like this in python:
 
 .. ipython::
 
