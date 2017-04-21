@@ -576,7 +576,7 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
 
     if (parameter == "model") {
-        if (value.length>4) { 
+        if (value.length()>4) { 
             throw ValueError(format("Model parameter (%s) is longer than 4 characters.", value)); 
         } else {
             strcpy(hmodij, value.c_str());
