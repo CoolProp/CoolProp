@@ -53,7 +53,7 @@ public:
     };
 };
 // This static initialization will cause the generator to register
-static CoolProp::GeneratorInitializer<CoolProp::HEOS_BACKEND_FAMILY, HEOSGenerator> heos_gen;
+static CoolProp::GeneratorInitializer<HEOSGenerator> heos_gen(CoolProp::HEOS_BACKEND_FAMILY);
 
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(){
     imposed_phase_index = iphase_not_imposed;

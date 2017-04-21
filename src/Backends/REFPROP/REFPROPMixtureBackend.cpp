@@ -30,6 +30,7 @@ surface tension                 N/m
 #include "REFPROPBackend.h"
 #include "Exceptions.h"
 #include "Configuration.h"
+#include "CPfilepaths.h"
 #include "CoolProp.h"
 #include "Solvers.h"
 #include "IdealCurves.h"
@@ -77,17 +78,21 @@ std::string get_REFPROP_fluid_path_prefix()
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+    std::string separator = get_separator();
     if (!alt_refprop_path.empty()){
-        if (!endswith(alt_refprop_path, "/") && !endswith(alt_refprop_path, "\\")){
-            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_refprop_path.c_str()));
+        //if (!endswith(alt_refprop_path, separator)){
+        //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
+        //}
+        if (!path_exists(alt_refprop_path)) {
+            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set, so we give all fluid paths as relative to this directory
-        return alt_refprop_path + "fluids/";
+        return join_path(alt_refprop_path,"fluids");
     }
     #if defined(__ISWINDOWS__)
         return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-        return rpPath + std::string("/fluids/");
+        return join_path(rpPath,"fluids");
     #else
         throw CoolProp::NotImplementedError("This function should not be called.");
         return rpPath;
@@ -98,20 +103,24 @@ std::string get_REFPROP_mixtures_path_prefix()
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+    std::string separator = get_separator();
     if (!alt_refprop_path.empty()){
-        if (!endswith(alt_refprop_path, "/") && !endswith(alt_refprop_path, "\\")){
-            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_refprop_path.c_str()));
+        //if (!endswith(alt_refprop_path, separator)) {
+        //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
+        //}
+        if (!path_exists(alt_refprop_path)) {
+            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set
-        return alt_refprop_path + "mixtures/";
+        return join_path(alt_refprop_path, "mixtures");
     }
     #if defined(__ISWINDOWS__)
-    return rpPath;
+        return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-    return rpPath + std::string("/mixtures/");
+        return join_path(rpPath,"mixtures");
     #else
-    throw CoolProp::NotImplementedError("This function should not be called.");
-    return rpPath;
+        throw CoolProp::NotImplementedError("This function should not be called.");
+        return rpPath;
     #endif
 }
 
@@ -125,9 +134,10 @@ std::string get_REFPROP_HMX_BNC_path()
     }
     else{
         // Otherwise fall back to default paths; get_REFPROP_fluid_path_prefix will query ALTERNATIVE_REFPROP_PATH
-        return get_REFPROP_fluid_path_prefix() + "HMX.BNC";
+        return join_path(get_REFPROP_fluid_path_prefix(), "HMX.BNC");
     }
 }
+
 
 namespace CoolProp {
     
@@ -144,8 +154,7 @@ public:
     };
 };
 // This static initialization will cause the generator to register
-static GeneratorInitializer<REFPROP_BACKEND_FAMILY, REFPROPGenerator> refprop_gen;
-
+static GeneratorInitializer<REFPROPGenerator> refprop_gen(REFPROP_BACKEND_FAMILY);
     
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
     // Do the REFPROP instantiation for this fluid
@@ -221,8 +230,14 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
             std::string err;
-            const std::string &alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
-            bool loaded_REFPROP = ::load_REFPROP(err, alt_rp_path);
+            const std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
+            const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
+            bool loaded_REFPROP = false;
+            if (!alt_rp_name.empty()) {
+                loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
+            } else {
+                loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+            }
                 
             if (loaded_REFPROP) {
                 return true;
@@ -386,10 +401,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             for (unsigned int j = 0; j < (unsigned int)N; j++)
             {
                 if (j == 0){
-                    components_joined = fdPath + upper(fluid_names[j]) + endings[k];
+                    components_joined = join_path(fdPath, upper(fluid_names[j]) + endings[k]);
                 }
                 else{
-                    components_joined += "|" + fdPath + upper(fluid_names[j]) + endings[k];
+                    components_joined += "|" + join_path(fdPath, upper(fluid_names[j]) + endings[k]);
                 }
             }
 
