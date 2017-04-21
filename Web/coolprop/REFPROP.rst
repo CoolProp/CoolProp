@@ -71,7 +71,7 @@ Path Issues
 
 .. warning::
 
-    In order for REFPROP to be able to be loaded by CoolProp, the default logic for each operating system is used to load the REFPROP shared library.  This means that on windows, the ``PATH`` environmental variable is searched for the ``REFPROP.dll`` (32-bit applications) or ``REFPRP64.dll`` (64-bit applications). On linux/OSX, the default shared library loading protocol is used.  If your REFPROP is installed in a non-standard location (not on the path), make sure that when you run code that uses REFPROP, that you add (temporarily) the location of the REFPROP shared library to your path.
+    In order for REFPROP to be able to be loaded by CoolProp, the default logic for each operating system is used to load the REFPROP shared library.  This means that on windows, the ``PATH`` environmental variable is searched for the ``REFPROP.dll`` (32-bit applications) or ``REFPRP64.dll`` (64-bit applications). On linux/OSX, the default shared library loading protocol is used.  If your REFPROP is installed in a non-standard location (not on the path), make sure that when you run code that uses REFPROP, that you add (temporarily) the location of the REFPROP shared library to your path or set one of the following configuration variables.
 
 REFPROP needs to be able to find the fluid and mixture files at runtime, at a location specified on your computer.  CoolProp allows you to avoid the pains of decoding REFPROP's internal logic for finding these files by explicitly specifying the path that it should tell REFPROP to look for the fluid files.  
 
@@ -87,7 +87,19 @@ The configuration key for setting the REFPROP path (see :ref:`configuration`) is
     
     In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, 'c:\\Program Files\\REFPROP\\')
 
-If you do this, internally CoolProp will call the ``SETPATH`` function in REFPROP to tell REFPROP that it should find the ``fluids`` and ``mixtures`` directories within this directory.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
+If you do this, internally CoolProp will construct the full path to the ``fluids`` and ``mixtures`` directories and use them to call REFPROP's `SETUP` function when loading fluids.  If you don't do this, CoolProp will use whatever default logic REFPROP uses to find the fluid files.
+
+If you wish to use a certain shared library, for example to try different REFPROP versions, you explicitly define it via ``ALTERNATIVE_REFPROP_LIBRARY_PATH``. This configuration variable makes CoolProp ignore the ``ALTERNATIVE_REFPROP_PATH`` when loading the shared library and you might have to provide the full path to your shared library here by doing something like this in python:
+
+.. ipython::
+
+    In [0]: import json, CoolProp.CoolProp as CP
+    
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_LIBRARY_PATH, 'c:\\Program Files\\REFPROP\\REFPRP64.v9.1.dll')
+
+.. warning::
+    
+    If you use a combination of ``ALTERNATIVE_REFPROP_LIBRARY_PATH`` and ``ALTERNATIVE_REFPROP_PATH``, the shared library gets loaded directly from ``ALTERNATIVE_REFPROP_LIBRARY_PATH`` while the fluid files still will be accessed via ``ALTERNATIVE_REFPROP_PATH``. You can thus have one single folder with fluid files that are used with different shared libraries. Make sure that the fluid files are compatible with all the shared library versions you are using. 
 
 If you are playing around with mixture parameters, you might want to set a different path to the HMX.BNC file which contains the interaction parameters for the mixture.  You can do that by changing the configuration variable  (see :ref:`configuration`) ``ALTERNATIVE_REFPROP_HMX_BNC_PATH``
 
@@ -106,6 +118,8 @@ And now we set them back to their default values
     In [0]: import json, CoolProp.CoolProp as CP
     
     In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_HMX_BNC_PATH, '')
+    
+    In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_LIBRARY_PATH, '')
 
     In [1]: CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, '')
 
