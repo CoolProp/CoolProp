@@ -1,0 +1,95 @@
+
+notifications:
+  email:
+    on_success: never
+    on_failure: change
+    
+language: 
+  - cpp
+  
+#os: linux
+#dist: trusty
+#
+#compiler:
+#  - clang
+#  - gcc
+#
+#addons:
+#  apt:
+#    sources:
+#    - ubuntu-toolchain-r-test
+#    - llvm-toolchain-trusty
+#    packages:
+#    - cmake
+#    - gcc-6
+#    - g++-6
+#    - clang-3.7
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      branches:
+        only:
+          - master
+          - release
+          - travis_integration
+      before_script:
+        # Check compiler and cmake versions
+        - cmake --version; gcc -v; clang -v
+        - echo "$CXX" && "$CXX" -v
+        # Run your build commands next
+        - cmake . -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+      script:     
+        - cmake --build . --config Release
+    - os: linux 
+      dist: trusty
+      branches:
+        only:
+          - coverity_scan
+#      before_install:
+#        - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+      addons:
+        coverity_scan:
+          project:
+            name: "CoolProp/CoolProp"
+            description: "Build submitted via Travis CI"
+          notification_email: jowr@ipu.dk
+          build_command_prepend: "cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx"
+          build_command: "cmake --build . --target Main"
+          branch_pattern: coverity_scan
+      before_script: cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
+      script: cmake --build . --target Main
+
+#branches:
+#  only:
+#    - master
+#    - release
+#    - coverity_scan
+#    - travis_integration
+#  # Build all branches
+#  #  - /.*/ 
+
+env:
+  global:
+    - secure: "XGfICTnfFv9xpVDBbNwJIkXV0OZCAcOT46aeFYmODm3jl+ya60k0C91G9zlZ9fEYiQwAEBTO2Y/Ge0AMaoFqtu3H3vu7S5JjAbpMV3ZRDJqampScy550yPpziOuxvB6h23PZRfLOBVEsUGHnCO5rLb20iPM94XsHSBL3Smn2o9c="
+
+#install:
+#  - if [ "$CXX" = "g++" ]; then export CXX="g++-6" CC="gcc-6"; fi
+#  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
+
+# before_script:
+  # # Check compiler and cmake versions
+  # - cmake --version; gcc -v; clang -v
+  # - echo "$CXX" && "$CXX" -v
+  # # Run your build commands next
+  # - mkdir build && pushd build
+  # - echo "${TRAVIS_BUILD_DIR}"
+  # - cmake .. -DCMAKE_BUILD_TYPE=Release # Same as "${TRAVIS_BUILD_DIR}"
+  # - popd
+
+# script:     
+  # - cmake --build build --config Release
+
+  
+  
