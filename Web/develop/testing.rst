@@ -3,6 +3,10 @@
 Diagnostics and Testing
 ***********************
 
+Travis Builds
+-------------
+
+
 Coverity Scan
 -------------
 
@@ -22,6 +26,11 @@ Coverity Scan
 3. Zip up the results
 
 4. Upload to coverity scan
+
+.. note::
+
+    In April 2017, the upload to Coverity Scan has been automated and all you have to do is to merge and push new code to the branch coverity_scan, Travis CI will do the rest.
+
 
 Address Sanitizer
 -----------------

@@ -39,11 +39,14 @@ matrix:
         - cmake --version; gcc -v; clang -v
         - echo "$CXX" && "$CXX" -v
         # Run your build commands next
-        - cmake . -DCMAKE_BUILD_TYPE=Release
+        - cmake . -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
       script:     
         - cmake --build . --config Release
     - os: linux 
       dist: trusty
+      branches:
+        only:
+          - coverity_scan
 #      before_install:
 #        - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
       addons:
