@@ -22,6 +22,7 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * Accelerate development of things you really need implemented by posting at `Bountysource <https://www.bountysource.com/teams/coolprop>`_ 
 
+* Check Travis CI for build failures |travisbuilds| and have a look at the coverity stats |coveritystatus|
 
 .. 
    Downloads and other stats
@@ -54,13 +55,20 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
     :target: https://github.com/CoolProp/CoolProp/blob/master/LICENSE
     :alt: license
 
+.. |travisbuilds| image:: https://travis-ci.org/CoolProp/CoolProp.svg?branch=master
+    :target: https://travis-ci.org/CoolProp/CoolProp
+    :alt: Travis CI builds
+
+.. |coveritystatus| image:: https://scan.coverity.com/projects/4375/badge.svg
+    :target: https://scan.coverity.com/projects/coolprop
+    :alt: Coverity Scan Build Status
+
 .. 
    image:: https://www.bountysource.com/badge/team?team_id=14160&style=raised
     
 .. |bounties| image:: https://img.shields.io/bountysource/team/coolprop/activity.svg
    :alt: Post a bounty at https://www.bountysource.com/teams/coolprop
    :target: https://www.bountysource.com/teams/coolprop?utm_source=CoolProp&utm_medium=shield&utm_campaign=raised
-
 
 .. 
    image:: https://badges.gitter.im/Join%20Chat.svg
