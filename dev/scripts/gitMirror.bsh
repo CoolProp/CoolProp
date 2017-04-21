@@ -48,6 +48,6 @@ createRepo " " "$ORIGIN_SRC" "$CURFOLDER"
 pushd $CURFOLDER
 git checkout -B master origin/master
 git pull
-git push origin +master:coverity_scan
+#git push origin +master:coverity_scan
 popd
 exit 0

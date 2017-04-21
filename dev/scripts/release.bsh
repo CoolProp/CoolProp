@@ -69,6 +69,7 @@ BASEDIR="$HOME/buildbot/server-master/public_html"
 REPODIR="$HOME/src/CoolPropFull.git"
 TMPSDIR="$HOME/src/CoolProp.sources"
 SRCSDIR="$BASEDIR/$BINFOLDER/source"
+COVEDIR="$HOME/src/CoolPropCoverity.git"
 #
 # Relative (!) paths -> XXXFOLDER
 DOCFOLDER="$BINFOLDER/docs"
@@ -132,6 +133,12 @@ else
         RSYNC_OPTS="-a --no-perms -z --stats --delete"
         #for i in {1..2}; do for j in $BINFOLDER/Python/*.tar.gz; do binstar upload --force -u coolprop -t pypi -c dev $j; done; done
         #for i in {1..5}; do for j in $BINFOLDER/Python_conda/*/*.tar.bz2; do binstar upload --force -u coolprop -t conda -c dev $j && rm $j; done; done
+        printMessage "Overwriting the coverity_scan branch with the master branch"
+        pushd "$COVEDIR"
+        git checkout -B master origin/master
+        git pull
+        git push origin +master:coverity_scan
+        popd
     else
 	    printMessage "Updating README.rst.txt with the full release information"
         echo    "Welcome to CoolProp's download directory v$CPVERSION"   >  "$BINFOLDER/README.rst.txt"
