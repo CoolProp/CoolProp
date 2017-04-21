@@ -94,6 +94,7 @@ else
     mkdir -p "$TMPSDIR" "$SRCSDIR" # Generating directories
     printMessage "Updating sources"
     pushd "$REPODIR"
+    git checkout -B master origin/master
     git pull
     git submodule init
     git submodule update

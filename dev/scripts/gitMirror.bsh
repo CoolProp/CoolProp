@@ -2,40 +2,52 @@
 #
 # This script relys on a modified ~/.ssh/config to specify the
 # correct identity files to be used with the host aliases
-# git.code.sf.net-ibell and git.code.sf.net-jorritw
+# git.code.sf.net-ibell, git.code.sf.net-jorritw and 
+# github.com-jowr.
 #
 # Work around for Cron:
 USER=coolprop
 source /home/$USER/.bash_profile
 #
 ORIGIN="https://github.com/CoolProp/CoolProp.git"
+ORIGIN_SRC="ssh://github.com-jowr/CoolProp/CoolProp.git"
 MIRROR="ssh://git.code.sf.net-jorritw/p/coolprop/git"
 #
 function createRepo {
     local GITOPT="$1"
-    local FOLDER="$2"
+    local SOURCE="$2"
+    local FOLDER="$3"
     if [ ! -d $FOLDER ]; then # repo does not exist, clone it
         local BASEFOLDER=${FOLDER%/*}
         local REPOFOLDER=${FOLDER##*/}
         mkdir -p $BASEFOLDER
         pushd $BASEFOLDER
-        git clone $GITOPT $ORIGIN $REPOFOLDER
+        git clone $GITOPT $SOURCE $REPOFOLDER
         popd
     fi
     return 0
 }
 #
 CURFOLDER="/home/$USER/src/CoolProp.git"
-createRepo "--mirror" "$CURFOLDER"
+createRepo "--mirror" "$ORIGIN" "$CURFOLDER"
 pushd $CURFOLDER
 git fetch --force --all # $ORIGIN
+git branch -D coverity_scan
 git push  --force --mirror $MIRROR
 popd
 #
 CURFOLDER="/home/$USER/src/CoolPropFull.git"
-createRepo "--recursive" "$CURFOLDER"
+createRepo "--recursive" "$ORIGIN" "$CURFOLDER"
 pushd $CURFOLDER
+git checkout -B master origin/master
 git pull
 popd
 #
+CURFOLDER="/home/$USER/src/CoolPropCoverity.git"
+createRepo " " "$ORIGIN_SRC" "$CURFOLDER"
+pushd $CURFOLDER
+git checkout -B master origin/master
+git pull
+git push origin +master:coverity_scan
+popd
 exit 0
