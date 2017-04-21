@@ -11,15 +11,6 @@
 
 static UNIFACLibrary::UNIFACParameterLibrary lib;
 
-class VTPRGenerator : public CoolProp::AbstractStateGenerator{
-public:
-    CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
-        return new CoolProp::VTPRBackend(fluid_names, CoolProp::get_config_double(R_U_CODATA));
-    };
-} ;
-// This static initialization will cause the generator to register
-static CoolProp::GeneratorInitializer<CoolProp::VTPR_BACKEND_FAMILY, VTPRGenerator> vtpr_gen;
-
 void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool generate_SatL_and_SatV){
 
     R = get_config_double(R_U_CODATA);

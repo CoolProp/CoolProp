@@ -1151,10 +1151,10 @@ public:
  */
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen);
     
-template <backend_families bf, class T>
+template <class T>
 class GeneratorInitializer{
 public:
-    GeneratorInitializer(){
+    GeneratorInitializer(backend_families bf){
         register_backend(bf, shared_ptr<AbstractStateGenerator>(new T()));
     };
 };

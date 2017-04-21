@@ -13,6 +13,10 @@
 #include "math.h"
 #include "AbstractState.h"
 #include "DataStructures.h"
+#include "Backends/IF97/IF97Backend.h"
+#include "Backends/Cubics/CubicBackend.h"
+#include "Backends/Cubics/VTPRBackend.h"
+#include "Backends/Incompressible/IncompressibleBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -37,12 +41,54 @@ public:
         generator = backends.find(bg);
         end = backends.end();
     };
+    std::size_t size(){ return backends.size(); };
 };
 static BackendLibrary backend_library;
     
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen){
     backend_library.add_backend(bf, gen);
 };
+
+class IF97BackendGenerator : public AbstractStateGenerator{
+public:
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        return new IF97Backend();
+    };
+} ;
+// This static initialization will cause the generator to register
+static GeneratorInitializer<IF97BackendGenerator> if97_gen(IF97_BACKEND_FAMILY);
+class SRKGenerator : public AbstractStateGenerator{
+public:
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
+    };
+};
+static GeneratorInitializer<SRKGenerator> srk_gen(CoolProp::SRK_BACKEND_FAMILY);
+class PRGenerator : public AbstractStateGenerator{
+public:
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
+    };
+};
+static GeneratorInitializer<PRGenerator> pr_gen(CoolProp::PR_BACKEND_FAMILY);
+class IncompressibleBackendGenerator : public AbstractStateGenerator{
+public:
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        if (fluid_names.size() != 1){throw ValueError(format("For INCOMP backend, name vector must be one element long"));}
+        return new IncompressibleBackend(fluid_names[0]);
+    };
+};
+// This static initialization will cause the generator to register
+static GeneratorInitializer<IncompressibleBackendGenerator> incomp_gen(INCOMP_BACKEND_FAMILY);
+class VTPRGenerator : public CoolProp::AbstractStateGenerator{
+public:
+    CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        return new CoolProp::VTPRBackend(fluid_names, CoolProp::get_config_double(R_U_CODATA));
+    };
+} ;
+// This static initialization will cause the generator to register
+static CoolProp::GeneratorInitializer<VTPRGenerator> vtpr_gen(CoolProp::VTPR_BACKEND_FAMILY);
+
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
@@ -56,6 +102,10 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     
     std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator gen, end;
     backend_library.get_generator_iterators(f1, gen, end);
+
+    if (get_debug_level() > 0){
+        std::cout << "AbstractState::factory backend_library size: " << backend_library.size() << std::endl;
+    }
     
     if (gen != end){
         // One of the registered backends was able to match the given backend family

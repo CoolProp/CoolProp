@@ -144,8 +144,7 @@ public:
     };
 };
 // This static initialization will cause the generator to register
-static GeneratorInitializer<REFPROP_BACKEND_FAMILY, REFPROPGenerator> refprop_gen;
-
+static GeneratorInitializer<REFPROPGenerator> refprop_gen(REFPROP_BACKEND_FAMILY);
     
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
     // Do the REFPROP instantiation for this fluid
