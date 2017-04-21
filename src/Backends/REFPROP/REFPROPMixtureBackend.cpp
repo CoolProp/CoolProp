@@ -117,7 +117,7 @@ std::string get_REFPROP_mixtures_path_prefix()
     #if defined(__ISWINDOWS__)
         return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-        return return join_path(rpPath,"mixtures");
+        return join_path(rpPath,"mixtures");
     #else
         throw CoolProp::NotImplementedError("This function should not be called.");
         return rpPath;
