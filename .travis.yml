@@ -29,19 +29,45 @@ matrix:
   include:
     - os: linux
       dist: trusty
+      compiler: gcc
       branches:
-        only:
-          - master
-          - release
-          - travis_integration
+        except:
+          - coverity_scan
       before_script:
-        # Check compiler and cmake versions
-        - cmake --version; gcc -v; clang -v
+        - cmake --version
         - echo "$CXX" && "$CXX" -v
-        # Run your build commands next
-        - cmake . -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+        - mkdir -p build && pushd build
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+        - popd
       script:     
-        - cmake --build . --config Release
+        - cmake --build build --config Release
+    - os: linux
+      dist: trusty
+      compiler: clang
+      branches:
+        except:
+          - coverity_scan
+      before_script:
+        - cmake --version
+        - echo "$CXX" && "$CXX" -v
+        - mkdir -p build && pushd build
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+        - popd
+      script:     
+        - cmake --build build --config Release
+    - os: osx
+      #osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
+      branches:
+        except:
+          - coverity_scan
+      before_script:
+        - cmake --version
+        - echo "$CXX" && "$CXX" -v
+        - mkdir -p build && pushd build
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+        - popd
+      script:     
+        - cmake --build build --config Release
     - os: linux 
       dist: trusty
       branches:
