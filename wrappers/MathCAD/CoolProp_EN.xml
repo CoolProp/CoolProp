@@ -45,5 +45,26 @@
         <category>CoolProp</category>
         <description>Sets the reference state for a specific fluid one of the standard reference states: "IIR", "ASHRAE", "NBP", or "DEF" (CoolProp default).</description>
     </function>
+    <function>
+        <name>get_mixture_binary_pair_data</name>
+        <local_name>get_mixture_binary_pair_data</local_name>
+        <params>"CAS1", "CAS2", "Parameter"</params>
+        <category>CoolProp</category>
+        <description>Gets the binary mixing parameter for a specified binary pair.  Fluid names MUST be the "CAS" string for each of the components.  Parameter must be one of ["name1", "name2", "function", "type", "F", "xi", "zeta", "gammaT", "gammaV", "betaT", "betaV"].</description>
+    </function>
+    <function>
+        <name>set_mixture_binary_pair_data</name>
+        <local_name>set_mixture_binary_pair_data</local_name>
+        <params>"CAS1", "CAS2", "Parameter", Value</params>
+        <category>CoolProp</category>
+        <description>Sets the binary mixing parameter for a specified binary pair.  Fluid names MUST be the "CAS" string for each of the components.  "Parameter" must be one of ["F", "xi", "zeta", "gammaT", "gammaV", "betaT", "betaV"].  Value, is the numeric value of the parameter being set.</description>
+    </function>
+    <function>
+        <name>apply_simple_mixing_rule</name>
+        <local_name>apply_simple_mixing_rule</local_name>
+        <params>"CAS1", "CAS2", "Parameter", Value</params>
+        <category>CoolProp</category>
+        <description>Sets the binary mixing rule for a specified binary pair.  Fluid names can be either the "CAS" string or one of the fluid alias strings for each of the components.  "Rule" must be either "linear" (to set a linear function of molar composition) or "Lorentz-Berthelot" (all interaction parameters set to 1.0).</description>
+    </function>
 
 </FUNCTIONS>
