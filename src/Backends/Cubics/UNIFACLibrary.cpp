@@ -1,4 +1,5 @@
 #include "UNIFACLibrary.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 namespace UNIFACLibrary{
 
@@ -60,7 +61,9 @@ namespace UNIFACLibrary{
             else{
                 c.alpha_type = "default";
             }
-            
+            if ((*itr).HasMember("alpha0") && (*itr)["alpha0"].IsArray()) {
+                c.alpha0 = CoolProp::JSONFluidLibrary::parse_alpha0((*itr)["alpha0"]);
+            }
             rapidjson::Value &groups = (*itr)["groups"];
             for (rapidjson::Value::ValueIterator itrg = groups.Begin(); itrg != groups.End(); ++itrg)
             {

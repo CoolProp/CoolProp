@@ -39,6 +39,9 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
     
     // Set the alpha function for the backend
     set_alpha_from_components();
+
+    // Set the ideal-gas helmholtz energy based on the components in use;
+    set_alpha0_from_components();
     
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
