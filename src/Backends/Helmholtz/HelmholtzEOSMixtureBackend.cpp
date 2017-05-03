@@ -3529,9 +3529,14 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         critical.stable = false;
     }
     else{
-        // Otherwise we try to check stability with TPD-based analysis
-        StabilityRoutines::StabilityEvaluationClass stability_tester(*this);
-        critical.stable = stability_tester.is_stable();
+        if (get_config_bool(ASSUME_CRITICAL_POINT_STABLE)) {
+            critical.stable = true;
+        }
+        else{
+            // Otherwise we try to check stability with TPD-based analysis
+            StabilityRoutines::StabilityEvaluationClass stability_tester(*this);
+            critical.stable = stability_tester.is_stable();
+        }
     }
     return critical;
 }
