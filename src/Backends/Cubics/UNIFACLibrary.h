@@ -5,6 +5,7 @@
 #include <exception>
 
 #include "rapidjson_include.h"
+#include "CoolPropFluid.h"
 
 namespace UNIFACLibrary{
 
@@ -60,6 +61,7 @@ namespace UNIFACLibrary{
         std::vector<ComponentGroup> groups;
         std::string alpha_type; ///< The type of alpha function
         std::vector<double> alpha_coeffs; ///< The vector of coefficients for the alpha function
+        CoolProp::IdealHelmholtzContainer alpha0; ///< The ideal Helmholtz energy
     };
 
     /**

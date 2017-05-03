@@ -11,15 +11,6 @@
 
 static UNIFACLibrary::UNIFACParameterLibrary lib;
 
-class VTPRGenerator : public CoolProp::AbstractStateGenerator{
-public:
-    CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
-        return new CoolProp::VTPRBackend(fluid_names, CoolProp::get_config_double(R_U_CODATA));
-    };
-} ;
-// This static initialization will cause the generator to register
-static CoolProp::GeneratorInitializer<CoolProp::VTPR_BACKEND_FAMILY, VTPRGenerator> vtpr_gen;
-
 void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool generate_SatL_and_SatV){
 
     R = get_config_double(R_U_CODATA);
@@ -48,6 +39,9 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
     
     // Set the alpha function for the backend
     set_alpha_from_components();
+
+    // Set the ideal-gas helmholtz energy based on the components in use;
+    set_alpha0_from_components();
     
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
