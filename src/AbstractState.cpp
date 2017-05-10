@@ -43,10 +43,13 @@ public:
     };
     std::size_t size(){ return backends.size(); };
 };
-static BackendLibrary backend_library;
+inline BackendLibrary & get_backend_library(){
+    static BackendLibrary the_library;
+    return the_library;
+}
     
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen){
-    backend_library.add_backend(bf, gen);
+    get_backend_library().add_backend(bf, gen);
 };
 
 class IF97BackendGenerator : public AbstractStateGenerator{
@@ -101,10 +104,10 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     extract_backend_families_string(backend, f1, f2);
     
     std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator gen, end;
-    backend_library.get_generator_iterators(f1, gen, end);
+    get_backend_library().get_generator_iterators(f1, gen, end);
 
     if (get_debug_level() > 0){
-        std::cout << "AbstractState::factory backend_library size: " << backend_library.size() << std::endl;
+        std::cout << "AbstractState::factory backend_library size: " << get_backend_library().size() << std::endl;
     }
     
     if (gen != end){
