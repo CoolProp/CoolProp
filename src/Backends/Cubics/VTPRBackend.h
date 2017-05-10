@@ -95,6 +95,8 @@ public:
     /// Allows to modify the interactions parameters aij, bij and cij
     double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
     
+    CoolPropDbl calc_fugacity_coefficient(std::size_t i);
+    
 };
     
 }; /* namespace CoolProp */

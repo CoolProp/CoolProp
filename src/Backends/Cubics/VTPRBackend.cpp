@@ -134,6 +134,13 @@ const UNIFACLibrary::UNIFACParameterLibrary & CoolProp::VTPRBackend::LoadLibrary
     return lib;
 }
 
+CoolPropDbl CoolProp::VTPRBackend::calc_fugacity_coefficient(std::size_t i){
+    //double slower = log(HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(i));
+    VTPRCubic * _cubic= static_cast<VTPRCubic *>(cubic.get());
+    std::vector<double> here = _cubic->ln_fugacity_coefficient(mole_fractions, rhomolar(), p(), T());
+    return exp(here[i]);
+}
+
 #ifdef ENABLE_CATCH
 #include "catch.hpp"
 
