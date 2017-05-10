@@ -83,6 +83,7 @@ namespace UNIFACLibrary{
         rapidjson::Document interaction_JSON; jsonize(interaction_data, interaction_JSON);
         rapidjson::Document decomp_JSON; jsonize(decomp_data, decomp_JSON);
         populate(group_JSON, interaction_JSON, decomp_JSON);
+        m_populated = true;
     }
     Group UNIFACParameterLibrary::get_group(int sgi) const {
         for (std::vector<Group>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
