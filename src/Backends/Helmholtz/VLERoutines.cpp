@@ -1408,11 +1408,13 @@ void SaturationSolvers::newton_raphson_saturation::call(HelmholtzEOSMixtureBacke
     IO.T = T;
     IO.rhomolar_liq = rhomolar_liq;
     IO.rhomolar_vap = rhomolar_vap;
-    if (!HEOS.get_components().empty()){
-        IO.hmolar_liq = HEOS.SatL.get()->hmolar();
-        IO.hmolar_vap = HEOS.SatV.get()->hmolar();
-        IO.smolar_liq = HEOS.SatL.get()->smolar();
-        IO.smolar_vap = HEOS.SatV.get()->smolar();
+    const std::vector<CoolPropFluid> & fluidsL = HEOS.SatL->get_components();
+	const std::vector<CoolPropFluid> & fluidsV = HEOS.SatV->get_components();
+    if (!fluidsL.empty() && !fluidsV.empty()){
+        IO.hmolar_liq = HEOS.SatL->hmolar();
+        IO.hmolar_vap = HEOS.SatV->hmolar();
+        IO.smolar_liq = HEOS.SatL->smolar();
+        IO.smolar_vap = HEOS.SatV->smolar();
     }
 }
 
