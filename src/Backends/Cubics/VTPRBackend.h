@@ -62,6 +62,9 @@ public:
         cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
+
+    std::string backend_name(void) { return get_backend_string(VTPR_BACKEND); }
+
     HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend * ACB = new VTPRBackend(calc_fluid_names(),cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
         ACB->copy_k(this); ACB->copy_all_alpha_functions(this);
