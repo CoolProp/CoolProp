@@ -644,6 +644,28 @@ class Syltherm800(PureData):
         self.reshapeAll()
         
 
-
+class DynaleneSF(PureData):
+    """
+    Dynalene SF is a fluid for high temperature heat transfer. 
+    """
+    def __init__(self):
+        PureData.__init__(self)
+        self.density.source           = self.density.SOURCE_DATA
+        self.viscosity.source         = self.viscosity.SOURCE_DATA
+        self.specific_heat.source     = self.specific_heat.SOURCE_DATA
+        self.conductivity.source      = self.conductivity.SOURCE_DATA
+        self.saturation_pressure.source = self.saturation_pressure.SOURCE_DATA
+        self.temperature.data         = np.array([ 0.000E+00,  1.000E+01,  2.000E+01,  3.000E+01,  4.000E+01,  5.000E+01,  6.000E+01,  7.000E+01,  8.000E+01,  9.000E+01,  1.000E+02,  1.100E+02,  1.200E+02,  1.300E+02,  1.400E+02,  1.500E+02,  1.600E+02,  1.700E+02,  1.800E+02,  1.900E+02,  2.000E+02,  2.100E+02,  2.200E+02,  2.300E+02,  2.400E+02,  2.500E+02,  2.600E+02,  2.700E+02,  2.800E+02,  2.900E+02,  3.000E+02,  3.100E+02,  3.150E+02])+273.15
+        self.density.data             = np.array([ 8.900E+02,  8.440E+02,  8.770E+02,  8.700E+02,  8.630E+02,  8.570E+02,  8.500E+02,  8.430E+02,  8.360E+02,  8.300E+02,  8.230E+02,  8.160E+02,  8.100E+02,  8.030E+02,  7.960E+02,  7.890E+02,  7.830E+02,  7.760E+02,  7.690E+02,  7.630E+02,  7.560E+02,  7.490E+02,  7.420E+02,  7.360E+02,  7.290E+02,  7.220E+02,  7.150E+02,  7.090E+02,  7.020E+02,  6.950E+02,  6.890E+02,  6.820E+02,  6.780E+02])
+        self.specific_heat.data       = np.array([ 1.894E+00,  1.930E+00,  1.967E+00,  2.003E+00,  2.040E+00,  2.076E+00,  2.113E+00,  2.150E+00,  2.186E+00,  2.223E+00,  2.259E+00,  2.296E+00,  2.332E+00,  2.369E+00,  2.405E+00,  2.442E+00,  2.478E+00,  2.515E+00,  2.552E+00,  2.588E+00,  2.625E+00,  2.661E+00,  2.698E+00,  2.734E+00,  2.771E+00,  2.807E+00,  2.844E+00,  2.880E+00,  2.917E+00,  2.954E+00,  2.990E+00,  3.027E+00,  3.045E+00])*1e3
+        self.conductivity.data        = np.array([ 1.361E-01,  1.354E-01,  1.347E-01,  1.340E-01,  1.332E-01,  1.325E-01,  1.318E-01,  1.310E-01,  1.303E-01,  1.295E-01,  1.287E-01,  1.280E-01,  1.272E-01,  1.264E-01,  1.256E-01,  1.248E-01,  1.240E-01,  1.232E-01,  1.224E-01,  1.216E-01,  1.208E-01,  1.200E-01,  1.191E-01,  1.183E-01,  1.174E-01,  1.166E-01,  1.157E-01,  1.149E-01,  1.140E-01,  1.131E-01,  1.123E-01,  1.114E-01,  1.109E-01])
+        self.viscosity.data           = np.array([ 1.600E+02,  7.000E+01,  3.700E+01,  2.300E+01,  1.500E+01,  1.100E+01,  8.100E+00,  6.300E+00,  5.000E+00,  4.100E+00,  3.400E+00,  2.900E+00,  2.400E+00,  2.200E+00,  1.900E+00,  1.700E+00,  1.500E+00,  1.300E+00,  1.200E+00,  1.100E+00,  1.000E+00,  8.800E-01,  8.100E-01,  7.500E-01,  6.900E-01,  6.400E-01,  5.900E-01,  5.500E-01,  5.100E-01,  4.800E-01,  4.500E-01,  4.200E-01,  4.100E-01])/1e3
+        self.Tmin        = np.min(self.temperature.data)
+        self.Tmax        = np.max(self.temperature.data)
+        self.TminPsat    = np.min(self.temperature.data[~np.isnan(self.saturation_pressure.data)])
+        self.name        = "DSF"
+        self.description = "Dynalene SF"
+        self.reference   = "Dynalene, Inc."
+        self.reshapeAll()
         
         
