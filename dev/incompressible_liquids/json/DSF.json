@@ -4,47 +4,47 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "Tbase": 4.521500e+02, 
-  "Tmax": 6.711500e+02, 
-  "Tmin": 2.331500e+02, 
-  "TminPsat": 3.071500e+02, 
+  "Tbase": 4.306500e+02, 
+  "Tmax": 5.881500e+02, 
+  "Tmin": 2.731500e+02, 
+  "TminPsat": null, 
   "conductivity": {
-    "NRMS": 3.511222e-03, 
+    "NRMS": 1.057417e-03, 
     "coeffs": [
       [
-        1.051015e-01
+        1.242271e-01
       ], 
       [
-        -1.880140e-04
+        -8.007266e-05
       ], 
       [
-        1.894103e-10
+        -2.820274e-08
       ], 
       [
-        -3.884097e-12
+        5.359448e-12
       ]
     ], 
     "type": "polynomial"
   }, 
   "density": {
-    "NRMS": 6.451330e-05, 
+    "NRMS": 2.812799e-02, 
     "coeffs": [
       [
-        7.938949e+02
+        7.854409e+02
       ], 
       [
-        -9.273680e-01
+        -6.916519e-01
       ], 
       [
-        -4.763441e-04
+        -2.639398e-04
       ], 
       [
-        -1.674039e-06
+        2.502503e-06
       ]
     ], 
     "type": "polynomial"
   }, 
-  "description": "Syltherm 800", 
+  "description": "Dynalene SF", 
   "mass2input": {
     "NRMS": null, 
     "coeffs": "null", 
@@ -55,52 +55,43 @@
     "coeffs": "null", 
     "type": "notdefined"
   }, 
-  "name": "S800", 
-  "reference": "Dow Chemical Company - FLUIDFILE Software accessed May 2017", 
+  "name": "DSF", 
+  "reference": "Dynalene, Inc.", 
   "saturation_pressure": {
-    "NRMS": 7.477874e-03, 
+    "NRMS": null, 
     "coeffs": [
-      -2.322952e+03, 
-      -1.469809e+02, 
-      -1.396011e+01
+      -5.000000e+03, 
+      6.000000e+01, 
+      -1.000000e+01
     ], 
     "type": "exponential"
   }, 
   "specific_heat": {
-    "NRMS": 3.912572e-03, 
+    "NRMS": 2.457411e-04, 
     "coeffs": [
       [
-        1.880183e+03
+        2.469301e+03
       ], 
       [
-        1.707853e+00
+        3.654100e+00
       ], 
       [
-        -5.711126e-06
+        2.637238e-06
       ], 
       [
-        -4.146361e-08
+        4.220296e-08
       ]
     ], 
     "type": "polynomial"
   }, 
   "viscosity": {
-    "NRMS": 8.195934e-03, 
+    "NRMS": 3.059097e-03, 
     "coeffs": [
-      [
-        -6.701381e+00
-      ], 
-      [
-        -9.157252e-03
-      ], 
-      [
-        1.925359e-05
-      ], 
-      [
-        -5.658791e-08
-      ]
+      -2.538312e+02, 
+      2.073714e+00, 
+      4.237850e+00
     ], 
-    "type": "exppolynomial"
+    "type": "logexponential"
   }, 
   "volume2input": {
     "NRMS": null, 
