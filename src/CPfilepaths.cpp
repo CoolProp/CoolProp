@@ -149,6 +149,18 @@ void make_dirs(std::string file_path)
     }
 };
 
+std::string get_separator(void) {
+#if defined(__ISLINUX__)
+    return std::string("/");
+#elif defined(__ISAPPLE__)
+    return std::string("/");
+#elif defined(__ISWINDOWS__)
+    return std::string("\\");
+#else
+    throw CoolProp::NotImplementedError("This function is not defined for your platform.");
+#endif
+}
+
 std::string get_home_dir(void)
 {
     // See http://stackoverflow.com/questions/2552416/how-can-i-find-the-users-home-dir-in-a-cross-platform-manner-using-c
@@ -196,17 +208,25 @@ std::string get_home_dir(void)
 
 bool path_exists(const std::string &path)
 {
+    std::string path_cpy;
+    if (endswith(path, get_separator())) {
+        path_cpy = path.substr(0, path.size() - 1);
+    } else {
+        path_cpy = path;
+    }
+
     #if defined(__ISWINDOWS__) // Defined for 32-bit and 64-bit windows
         struct _stat buf;
         // Get data associated with path using the windows libraries, 
         // and if you can (result == 0), the path exists
-        if ( _stat( path.c_str(), &buf) == 0)
+        if (_stat(path_cpy.c_str(), &buf) == 0) {
             return true;
-        else
+        } else {
             return false;
+        }
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
         struct stat st;
-        if(lstat(path.c_str(),&st) == 0) {
+        if(lstat(path_cpy.c_str(),&st) == 0) {
             if(S_ISDIR(st.st_mode)) return true;
             if(S_ISREG(st.st_mode)) return true;
             return false;
@@ -217,6 +237,18 @@ bool path_exists(const std::string &path)
         throw CoolProp::NotImplementedError("This function is not defined for your platform.");
     #endif
 };
+
+std::string join_path(const std::string &one, const std::string &two) {
+    std::string result;
+    std::string separator = get_separator();
+    if (!endswith(one, separator) && !one.empty()) {
+        result = one + separator;
+    } else {
+        result = one;
+    }
+    result.append(two);
+    return result;
+}
 
 std::string get_file_contents(const char *filename)
 {

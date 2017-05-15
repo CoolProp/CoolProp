@@ -102,7 +102,7 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
 {
     _is_empty = false;
     
-    std::size_t index;
+    std::size_t index = fluid_map.size();
     
     CoolPropFluid fluid;
     

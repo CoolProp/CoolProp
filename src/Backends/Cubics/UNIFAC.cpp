@@ -30,6 +30,26 @@ void UNIFAC::UNIFACMixture::set_interaction_parameter(const std::size_t mgi1, co
         throw CoolProp::ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
 }
+double UNIFAC::UNIFACMixture::get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter) {
+    std::map< std::pair<int,int>, UNIFACLibrary::InteractionParameters>::iterator it = this->interaction.find(std::pair<int,int>(mgi1,mgi2));
+    if (it == this->interaction.end()) {
+        throw CoolProp::ValueError(format("Unable to match mgi-mgi pair: [%d,%d]", static_cast<int>(mgi1), static_cast<int>(mgi1)));
+    }
+    else {
+        if (parameter == "aij") {
+            return it->second.a_ij;
+        }
+        else if (parameter == "bij") {
+            return it->second.b_ij;
+        }
+        else if (parameter == "cij") {
+            return it->second.c_ij;
+        }
+        else {
+            throw CoolProp::ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+        }
+    }
+}
 
 /// Set the mole fractions of the components in the mixtures (not the groups)
 void UNIFAC::UNIFACMixture::set_mole_fractions(const std::vector<double> &z) {

@@ -183,7 +183,7 @@ def gitrev_to_file(root_dir):
                              stdout=subprocess.PIPE, 
                              stderr=subprocess.PIPE,
                              shell = True,
-                             cwd = os.path.dirname(__file__))
+                             cwd = os.path.abspath(os.path.dirname(__file__)))
             stdout, stderr = p.communicate()
             stdout = stdout.decode('utf-8')
             
@@ -225,8 +225,8 @@ def gitrev_to_file(root_dir):
         else:
             print('gitrevision.h is up to date')
                 
-    except (subprocess.CalledProcessError,OSError):
-        pass
+    except (subprocess.CalledProcessError,OSError) as err:
+        print('err:', err)
         
 def combine_json(root_dir):
     

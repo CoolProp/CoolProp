@@ -1,7 +1,7 @@
 #!/bin/bash
 # A little script to build the JavaScript repository on the
 # web directory. Can be run to regenerate the repo in case
-# it case it gets deleted accidentally. 
+# it gets deleted accidentally. 
 #
 FILDIR="/home/frs/project/coolprop/CoolProp"
 WEBDIR="/home/project-web/coolprop/htdocs"

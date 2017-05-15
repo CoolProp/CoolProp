@@ -14,7 +14,7 @@ else
   exit 1
 fi 
 
-DOCKER_MACHINE_TAG="v1.4.4"
+DOCKER_MACHINE_TAG="v1.5.0"
 
 # Stop on errors
 set -ex

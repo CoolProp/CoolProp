@@ -17,20 +17,16 @@ enum { MC_STRING = STRING };  // substitute enumeration variable MC_STRING for S
 #include "DataStructures.h"
 #include "HumidAirProp.h"
 
-/*
-#define MSGBOX(x) \
-{ \
-   std::ostringstream oss; \
-   oss << x; \
-   MessageBox(NULL,oss.str().c_str(), "CoolProp Error Message", MB_OK | MB_ICONINFORMATION); \
+namespace CoolProp {
+    extern void apply_simple_mixing_rule(const std::string &identifier1, const std::string &identifier2, const std::string &rule);
 }
-*/
 
 enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad Error Codes
           BAD_FLUID, BAD_PARAMETER, BAD_REF, NON_TRIVIAL,           // CoolProp Error Codes
           NO_REFPROP, NOT_AVAIL, BAD_INPUT_PAIR, BAD_QUAL,
           TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
-          H_OUT_OF_RANGE, S_OUT_OF_RANGE, HA_INPUTS, UNKNOWN,
+          H_OUT_OF_RANGE, S_OUT_OF_RANGE, HA_INPUTS, 
+          BAD_BINARY_PAIR, BAD_RULE, PAIR_EXISTS, UNKNOWN, 
           NUMBER_OF_ERRORS };                                       // Dummy Code for Error Count
 
     // table of error messages
@@ -56,6 +52,9 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
         "Enthalpy out of range",
         "Entropy out of range",
         "At least one of the inputs must be [T], [R], [W], or [Tdp]",
+        "Could not match binary pair",
+        "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
+        "Specified binary pair already exists.",
         "ERROR: Use get_global_param_string(\"errstring\") for more info",
         "Error Count - Not Used"
     };
@@ -80,7 +79,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                 return MAKELRESULT(UNKNOWN,1);
         }
 
-        char * c = new char [s.size()+1]; // create a c-string (pointer) c with the same size as s
+        // Must use MathcadAllocate(size) so Mathcad can track and release
+        char * c = MathcadAllocate(static_cast<int>(s.size())+1); // create a c-string (pointer) c with the same size as s
         // copy s into c, this process avoids the const-cast type which would result from instead
         // converting the string using s.c_str()
         std::copy(s.begin(), s.end(), c); 
@@ -116,7 +116,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                 return MAKELRESULT(UNKNOWN,1);
         }
 
-        char * c = new char [s.size()+1]; // create a c-string (pointer) c with the same size as s
+        // Must use MathcadAllocate(size) so Mathcad can track and release
+        char * c = MathcadAllocate(static_cast<int>(s.size())+1); // create a c-string (pointer) c with the same size as s
         // copy s into c, this process avoids the const-cast type which would result from instead
         // converting the string using s.c_str()
         std::copy(s.begin(), s.end(), c); 
@@ -376,6 +377,138 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
         return 0;
     }
 
+    // this code executes the user function CP_get_mixture_binary_pair_data, which is a wrapper for
+    // the CoolProp.get_mixture_binary_pair_data() function, used to get the requested binary pair
+    // interaction parameter (always returned as a string).
+    LRESULT  CP_get_mixture_binary_pair_data(
+                            LPMCSTRING Value,   // output string (string contains value of parameter)
+                            LPCMCSTRING CAS1,   // FIrst component
+                            LPCMCSTRING CAS2,   // Second component
+                            LPCMCSTRING Key )   // name of the binary pair parameter (string) to retrieve
+    {  
+        std::string s;
+        // Invoke the std::string form of get_global_param_string() function, save result to a new string s
+        try {
+            s = CoolProp::get_mixture_binary_pair_data(CAS1->str, CAS2->str, Key->str);
+        }
+        catch (const CoolProp::ValueError& e) {
+            std::string emsg(e.what());
+            CoolProp::set_error_string(emsg);
+            if (emsg.find("parameter")!=std::string::npos)
+                return MAKELRESULT(BAD_PARAMETER,3);
+            else if (emsg.find("binary pair")!=std::string::npos)
+                return MAKELRESULT(BAD_BINARY_PAIR,1);
+            else
+                return MAKELRESULT(UNKNOWN,1);
+        }
+
+        // Must use MathcadAllocate(size) so Mathcad can track and release
+        char * c = MathcadAllocate(static_cast<int>(s.size())+1); // create a c-string (pointer) c with the same size as s
+        // copy s into c, this process avoids the const-cast type which would result from instead
+        // converting the string using s.c_str()
+        std::copy(s.begin(), s.end(), c); 
+        c[s.size()] = '\0';
+        // assign the string to the function's output parameter
+        Value->str = c;
+
+        // normal return
+        return 0;
+    }
+
+    // this code executes the user function CP_apply_simple_mixing_rule, which is a wrapper for
+    // the CoolProp.apply_simple_mixing_rule() function, used to set the mixing rule for a
+    // specific binary pair.
+    LRESULT  CP_apply_simple_mixing_rule(
+                            LPMCSTRING Msg,     // output string (verification message)
+                            LPCMCSTRING CAS1,   // First component
+                            LPCMCSTRING CAS2,   // Second component
+                            LPCMCSTRING Rule )  // Mixing rule, either 'linear' or 'Lorentz-Berthelot'
+    {  
+        std::string s = Rule->str;
+        s.append(" mixing rule set.");
+        // Invoke the std::string form of get_global_param_string() function, save result to a new string s
+        try {
+            CoolProp::apply_simple_mixing_rule(CAS1->str, CAS2->str, Rule->str);
+        }
+        catch (const CoolProp::ValueError& e) {
+            std::string emsg(e.what());
+            CoolProp::set_error_string(emsg);
+            if (emsg.find("simple mixing rule")!=std::string::npos) {
+                return MAKELRESULT(BAD_RULE,3);
+            } else if (emsg.find("already in")!=std::string::npos) {
+                return MAKELRESULT(PAIR_EXISTS,1);
+            } else if (emsg.find("key")!=std::string::npos) {
+                if (emsg.find(CAS1->str)!=std::string::npos) {
+                    return MAKELRESULT(BAD_FLUID,1);
+                } else if (emsg.find(CAS2->str)!=std::string::npos) {
+                    return MAKELRESULT(BAD_FLUID,2);
+                } else return MAKELRESULT(UNKNOWN,1);
+            } else
+                return MAKELRESULT(UNKNOWN,1);
+        }
+
+        // Must use MathcadAllocate(size) so Mathcad can track and release
+        char * c = MathcadAllocate(static_cast<int>(s.size())+1); // create a c-string (pointer) c with the same size as s
+        // copy s into c, this process avoids the const-cast type which would result from instead
+        // converting the string using s.c_str()
+        std::copy(s.begin(), s.end(), c); 
+        c[s.size()] = '\0';
+        // assign the string to the function's output parameter
+        Msg->str = c;
+
+        // normal return
+        return 0;
+    }
+
+    // this code executes the user function CP_set_mixture_binary_pair_data, which is a wrapper for
+    // the CoolProp.set_mixture_binary_pair_data() function, used to set the mixing rule for a
+    // specific binary pair.
+    LRESULT  CP_set_mixture_binary_pair_data(
+                            LPMCSTRING Msg,           // output string (verification message)
+                            LPCMCSTRING CAS1,         // First component
+                            LPCMCSTRING CAS2,         // Second component
+                            LPCMCSTRING Param,        // Parameter Name String to set
+                            LPCCOMPLEXSCALAR Value )  // Parameter Value
+    {  
+        std::string s = Param->str;
+        s.append(" parameter set.");
+
+        // check that the first scalar argument is real
+        if (Value->imag != 0.0)
+            return MAKELRESULT( MUST_BE_REAL, 4);  // if not, display "must be real" under scalar argument
+
+        // Invoke the std::string form of get_global_param_string() function, save result to a new string s
+        try {
+            CoolProp::set_mixture_binary_pair_data(CAS1->str, CAS2->str, Param->str, Value->real);
+        }
+        catch (const CoolProp::ValueError& e) {
+            std::string emsg(e.what());
+            CoolProp::set_error_string(emsg);
+            if (emsg.find("parameter")!=std::string::npos) {
+                return MAKELRESULT(BAD_PARAMETER,3);
+            } else if (emsg.find("key")!=std::string::npos){
+                if (emsg.find(CAS1->str)!=std::string::npos)
+                    return MAKELRESULT(BAD_FLUID,1);
+                else
+                    return MAKELRESULT(BAD_FLUID,2);
+            } else
+                return MAKELRESULT(UNKNOWN,1);
+        }
+
+        // Must use MathcadAllocate(size) so Mathcad can track and release
+        char * c = MathcadAllocate(static_cast<int>(s.size())+1); // create a c-string (pointer) c with the same size as s
+        // copy s into c, this process avoids the const-cast type which would result from instead
+        // converting the string using s.c_str()
+        std::copy(s.begin(), s.end(), c); 
+        c[s.size()] = '\0';
+        // assign the string to the function's output parameter
+        Msg->str = c;
+
+        // normal return
+        return 0;
+    }
+
+
     // fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
     FUNCTIONINFO PropsParam = 
     {
@@ -447,6 +580,40 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
     {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR} // Argument types 
     };
 
+    FUNCTIONINFO GetMixtureData = 
+    {
+    "get_mixture_binary_pair_data", // Name by which MathCAD will recognize the function   
+    "CAS 1, CAS 2, Name of the parameter to retrieve", // Description of input parameters
+    "Returns the value of the requested CoolProps parameter", // description of the function for the Insert Function dialog box       
+    (LPCFUNCTION)CP_get_mixture_binary_pair_data, // Pointer to the function code. 
+    MC_STRING, // Returns a MathCAD string
+    3, // Number of arguments
+    {MC_STRING, MC_STRING, MC_STRING} // Argument types 
+    };	
+
+    FUNCTIONINFO ApplyMixingRule = 
+    {
+    "apply_simple_mixing_rule", // Name by which MathCAD will recognize the function   
+    "CAS 1, CAS 2, Mixing Rule", // Description of input parameters
+    "Sets a simple mixing rule for binary pair", // description of the function for the Insert Function dialog box       
+    (LPCFUNCTION)CP_apply_simple_mixing_rule, // Pointer to the function code. 
+    MC_STRING, // Returns a MathCAD string
+    3, // Number of arguments
+    {MC_STRING, MC_STRING, MC_STRING} // Argument types 
+    };	
+
+    FUNCTIONINFO SetMixtureData = 
+    {
+    "set_mixture_binary_pair_data", // Name by which MathCAD will recognize the function   
+    "CAS 1, CAS 2, Parameter Name, Parameter value", // Description of input parameters
+    "Sets the value of the specified binary mixing parameter", // description of the function for the Insert Function dialog box       
+    (LPCFUNCTION)CP_set_mixture_binary_pair_data, // Pointer to the function code. 
+    MC_STRING, // Returns a MathCAD string
+    4, // Number of arguments
+    {MC_STRING, MC_STRING, MC_STRING, COMPLEX_SCALAR} // Argument types 
+    };	
+
+
     // ************************************************************************************
     // DLL entry point code.  
     // ************************************************************************************
@@ -483,6 +650,9 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                     CreateUserFunction( hDLL, &Props1SI );
                     CreateUserFunction( hDLL, &PropsSI );
                     CreateUserFunction( hDLL, &HAPropsSI );
+                    CreateUserFunction( hDLL, &GetMixtureData );
+                    CreateUserFunction( hDLL, &SetMixtureData );
+                    CreateUserFunction( hDLL, &ApplyMixingRule );
                     break;
 
                 case DLL_THREAD_ATTACH:

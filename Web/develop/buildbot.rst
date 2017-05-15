@@ -101,6 +101,7 @@ steps on a Windows machine::
     conda create -n CoolProp33 python=3.3 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
     conda create -n CoolProp34 python=3.4 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
     conda create -n CoolProp35 python=3.5 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
+    conda create -n CoolProp36 python=3.6 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
 
 Please repeat the steps above for **both 32bit and 64bit** Python environments.
 
@@ -110,6 +111,7 @@ On a Linux system, things only change a little bit::
     conda create -n CoolProp33 python=3.3 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp34 python=3.4 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp35 python=3.5 cython pip requests jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp36 python=3.6 cython pip requests jinja2 pyyaml pycrypto wheel
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
 bash or zsh. We make use of the ``source`` command, which is not part of the

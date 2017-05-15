@@ -12,6 +12,7 @@
 #include "Exceptions.h"
 #include "DataStructures.h"
 #include "PhaseEnvelope.h"
+#include "crossplatform_shared_ptr.h"
 
 #include <numeric>
 
@@ -39,8 +40,13 @@ public:
            rhomolar_vap; ///< molar density of the vapor phase in mol/m^3
     std::vector<double> x, ///< molar composition of the liquid phase
                         y; ///< molar composition of the vapor phase
-    GuessesStructure() : T(_HUGE), p(_HUGE), rhomolar(_HUGE), hmolar(_HUGE), smolar(_HUGE), 
-                         rhomolar_liq(_HUGE), rhomolar_vap(_HUGE), x(), y(){};
+    GuessesStructure() {
+        clear();
+    };
+    void clear() {
+        T = _HUGE; p = _HUGE; rhomolar = _HUGE; hmolar = _HUGE; smolar = _HUGE;
+        rhomolar_liq = _HUGE; rhomolar_vap = _HUGE; x.clear(), y.clear();
+    }
 };
 
 //! The mother of all state classes
@@ -1127,6 +1133,32 @@ public:
         return _d4alphar_dTau4;
     };
 };
+    
+/** An abstract AbstractState generator class
+ *
+ *  This class should be derived and statically initialized in a C++ file.  In the initializer, 
+ *  the register_backend function should be called.  This will register the backend family, and
+ *  when this generator is looked up in the map, the get_AbstractState function will be used 
+ *  to return an initialized instance
+ */
+class AbstractStateGenerator{
+public:
+    virtual AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names) = 0;
+};
+
+/** Register a backend in the backend library (statically defined in AbstractState.cpp and not
+ *  publically accessible)
+ */
+void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen);
+    
+template <class T>
+class GeneratorInitializer{
+public:
+    GeneratorInitializer(backend_families bf){
+        register_backend(bf, shared_ptr<AbstractStateGenerator>(new T()));
+    };
+};
+
 
 } /* namespace CoolProp */
 #endif /* ABSTRACTSTATE_H_ */

@@ -62,6 +62,9 @@ public:
         cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
+
+    std::string backend_name(void) { return get_backend_string(VTPR_BACKEND); }
+
     HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true){
         AbstractCubicBackend * ACB = new VTPRBackend(calc_fluid_names(),cubic->get_Tc(),cubic->get_pc(),cubic->get_acentric(),cubic->get_R_u(),generate_SatL_and_SatV);
         ACB->copy_k(this); ACB->copy_all_alpha_functions(this);
@@ -91,6 +94,11 @@ public:
 
     /// Allows to modify the interactions parameters aij, bij and cij
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
+
+    /// Allows to modify the interactions parameters aij, bij and cij
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
+    
+    CoolPropDbl calc_fugacity_coefficient(std::size_t i);
     
     /// Modify the surface parameter Q_k of the sub group sgi
     void set_Q_k(const size_t sgi, const double value);

@@ -61,6 +61,8 @@ namespace UNIFAC
         */
         void set_interaction_parameters();
         void set_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter, const double value);
+        /// Get one of the mgi-mgi interaction pairs
+        double get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter);
 
         /// Set the mole fractions of the components in the mixtures (not the groups)
         void set_mole_fractions(const std::vector<double> &z);

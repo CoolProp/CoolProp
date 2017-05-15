@@ -1,5 +1,6 @@
 #include "CubicBackend.h"
 #include "Solvers.h"
+#include "Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV){

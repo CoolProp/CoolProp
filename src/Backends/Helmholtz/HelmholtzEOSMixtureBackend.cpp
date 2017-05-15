@@ -40,6 +40,20 @@
 static int deriv_counter = 0;
 
 namespace CoolProp {
+    
+class HEOSGenerator : public AbstractStateGenerator{
+public:
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        if (fluid_names.size() == 1){
+            return new HelmholtzEOSBackend(fluid_names[0]);
+        }
+        else{
+            return new HelmholtzEOSMixtureBackend(fluid_names);
+        }
+    };
+};
+// This static initialization will cause the generator to register
+static CoolProp::GeneratorInitializer<HEOSGenerator> heos_gen(CoolProp::HEOS_BACKEND_FAMILY);
 
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(){
     imposed_phase_index = iphase_not_imposed;
@@ -3515,9 +3529,14 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         critical.stable = false;
     }
     else{
-        // Otherwise we try to check stability with TPD-based analysis
-        StabilityRoutines::StabilityEvaluationClass stability_tester(*this);
-        critical.stable = stability_tester.is_stable();
+        if (get_config_bool(ASSUME_CRITICAL_POINT_STABLE)) {
+            critical.stable = true;
+        }
+        else{
+            // Otherwise we try to check stability with TPD-based analysis
+            StabilityRoutines::StabilityEvaluationClass stability_tester(*this);
+            critical.stable = stability_tester.is_stable();
+        }
     }
     return critical;
 }

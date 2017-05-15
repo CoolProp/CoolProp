@@ -463,7 +463,7 @@
       "ODP": -1.0, 
       "PH": -1
     }, 
-    "FORMULA": "H_{2}", 
+    "FORMULA": "D_{2}", 
     "INCHI_KEY": "UFHFLCQGNIYNRP-VVKOMZTBEA", 
     "INCHI_STRING": "InChI=1/H2/h1H/i1+1D", 
     "NAME": "Deuterium", 

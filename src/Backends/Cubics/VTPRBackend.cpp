@@ -39,6 +39,9 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
     
     // Set the alpha function for the backend
     set_alpha_from_components();
+
+    // Set the ideal-gas helmholtz energy based on the components in use;
+    set_alpha0_from_components();
     
     // Top-level class can hold copies of the base saturation classes,
     // saturation classes cannot hold copies of the saturation classes
@@ -53,11 +56,11 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
         linked_states.push_back(SatV);
 
 		if (is_pure_or_pseudopure) {
-			std::vector<CoolPropDbl> z(1, 1.0);
-			set_mole_fractions(z);
-			SatL->set_mole_fractions(z);
-			SatV->set_mole_fractions(z);
-		}
+			  std::vector<CoolPropDbl> z(1, 1.0);
+		  	set_mole_fractions(z);
+			  SatL->set_mole_fractions(z);
+			  SatV->set_mole_fractions(z);
+		    }
     }
 
     // Resize the vectors (including linked states)
@@ -111,6 +114,10 @@ void CoolProp::VTPRBackend::set_Q_k(const size_t sgi, const double value) {
     cubic->set_Q_k(sgi, value);
 };
 
+double CoolProp::VTPRBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter) {
+    return cubic->get_interaction_parameter(i, j, parameter);
+};
+
 const UNIFACLibrary::UNIFACParameterLibrary & CoolProp::VTPRBackend::LoadLibrary(){
     if (!lib.is_populated()){
         std::string UNIFAC_path = get_config_string(VTPR_UNIFAC_PATH);
@@ -129,6 +136,13 @@ const UNIFACLibrary::UNIFACParameterLibrary & CoolProp::VTPRBackend::LoadLibrary
         lib.populate(groups, interaction, decomps);
     }
     return lib;
+}
+
+CoolPropDbl CoolProp::VTPRBackend::calc_fugacity_coefficient(std::size_t i){
+    //double slower = log(HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(i));
+    VTPRCubic * _cubic= static_cast<VTPRCubic *>(cubic.get());
+    std::vector<double> here = _cubic->ln_fugacity_coefficient(mole_fractions, rhomolar(), p(), T());
+    return exp(here[i]);
 }
 
 #ifdef ENABLE_CATCH

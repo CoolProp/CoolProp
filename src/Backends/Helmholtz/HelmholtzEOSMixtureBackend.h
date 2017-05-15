@@ -308,7 +308,7 @@ public:
 
     CoolPropDbl calc_phase_identification_parameter(void);
     CoolPropDbl calc_fugacity(std::size_t i); 
-    CoolPropDbl calc_fugacity_coefficient(std::size_t i); 
+    virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i);
     CoolPropDbl calc_chemical_potential(std::size_t i);
 
     /// Using this backend, calculate the flame hazard

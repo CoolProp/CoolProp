@@ -200,10 +200,38 @@ public:
     {
         unifaq.set_interaction_parameter(mgi1, mgi2, parameter, value);
     }
+
     // Allows to modify the surface parameter Q_k of the sub group sgi
     void set_Q_k(const size_t sgi, const double value)
     {
         unifaq.set_Q_k(sgi, value);
+    }
+
+    // Allows to modify the unifac interaction parameters aij, bij and cij
+    double get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter)
+    {
+        return unifaq.get_interaction_parameter(mgi1, mgi2, parameter);
+    }
+    std::vector<double> ln_fugacity_coefficient(const std::vector<double> &z, double rhomolar, double p, double T){
+        double v = 1/rhomolar;
+        // Common terms for all components
+        double tau = get_Tr()/T;
+        double b = bm_term(z);
+        double c = cm_term();
+        double R = get_R_u();
+        std::vector<double> ln_phi;
+        double bracket = log((v+c+(1+sqrt(2.0))*b)/(v+c+(1-sqrt(2.0))*b));
+        for (std::size_t i = 0; i < z.size(); ++i){
+            double summer1 = 0;
+            for (std::size_t j = 0; j < z.size(); ++j){
+                summer1 += z[j]*bij_term(i,j);
+            }
+            double a_i_over_b_i = aii_term(tau, i, 0) / b0_ii(i);
+            double c_i = 0; // TODO: fix this, allow for volume translation
+            double _ln_phi = (2/b*summer1-1)*(p*(v+c)/(R*T)-1) - p*c_i/(R*T)-log(p*(v+c-b)/(R*T))-1.0/(2.0*sqrt(2.0)*R*T)*(a_i_over_b_i+R*T*unifaq.ln_gamma_R(tau, i, 0)/-0.53087)*bracket;
+            ln_phi.push_back(_ln_phi);
+        }
+        return ln_phi;
     }
 };
 

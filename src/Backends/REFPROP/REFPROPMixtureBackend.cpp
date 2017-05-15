@@ -27,11 +27,15 @@ surface tension                 N/m
 
 #include "CoolPropTools.h"
 #include "REFPROPMixtureBackend.h"
+#include "REFPROPBackend.h"
 #include "Exceptions.h"
 #include "Configuration.h"
+#include "CPfilepaths.h"
 #include "CoolProp.h"
 #include "Solvers.h"
 #include "IdealCurves.h"
+#include "DataStructures.h"
+#include "AbstractState.h"
 
 #include <stdlib.h>
 #include <string>
@@ -74,17 +78,21 @@ std::string get_REFPROP_fluid_path_prefix()
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+    std::string separator = get_separator();
     if (!alt_refprop_path.empty()){
-        if (!endswith(alt_refprop_path, "/") && !endswith(alt_refprop_path, "\\")){
-            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_refprop_path.c_str()));
+        //if (!endswith(alt_refprop_path, separator)){
+        //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
+        //}
+        if (!path_exists(alt_refprop_path)) {
+            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set, so we give all fluid paths as relative to this directory
-        return alt_refprop_path + "fluids/";
+        return join_path(alt_refprop_path,"fluids");
     }
     #if defined(__ISWINDOWS__)
         return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-        return rpPath + std::string("/fluids/");
+        return join_path(rpPath,"fluids");
     #else
         throw CoolProp::NotImplementedError("This function should not be called.");
         return rpPath;
@@ -95,20 +103,24 @@ std::string get_REFPROP_mixtures_path_prefix()
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
+    std::string separator = get_separator();
     if (!alt_refprop_path.empty()){
-        if (!endswith(alt_refprop_path, "/") && !endswith(alt_refprop_path, "\\")){
-            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a slash character", alt_refprop_path.c_str()));
+        //if (!endswith(alt_refprop_path, separator)) {
+        //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
+        //}
+        if (!path_exists(alt_refprop_path)) {
+            throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
         // The alternative path has been set
-        return alt_refprop_path + "mixtures/";
+        return join_path(alt_refprop_path, "mixtures");
     }
     #if defined(__ISWINDOWS__)
-    return rpPath;
+        return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-    return rpPath + std::string("/mixtures/");
+        return join_path(rpPath,"mixtures");
     #else
-    throw CoolProp::NotImplementedError("This function should not be called.");
-    return rpPath;
+        throw CoolProp::NotImplementedError("This function should not be called.");
+        return rpPath;
     #endif
 }
 
@@ -122,12 +134,27 @@ std::string get_REFPROP_HMX_BNC_path()
     }
     else{
         // Otherwise fall back to default paths; get_REFPROP_fluid_path_prefix will query ALTERNATIVE_REFPROP_PATH
-        return get_REFPROP_fluid_path_prefix() + "HMX.BNC";
+        return join_path(get_REFPROP_fluid_path_prefix(), "HMX.BNC");
     }
 }
 
-namespace CoolProp {
 
+namespace CoolProp {
+    
+class REFPROPGenerator : public AbstractStateGenerator{
+public:
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        bool REFPROP_is_supported = REFPROPMixtureBackend::REFPROP_supported ();
+        if (fluid_names.size() == 1){
+            return new REFPROPBackend(fluid_names[0]);
+        }
+        else{
+            return new REFPROPMixtureBackend(fluid_names);
+        }
+    };
+};
+// This static initialization will cause the generator to register
+static GeneratorInitializer<REFPROPGenerator> refprop_gen(REFPROP_BACKEND_FAMILY);
     
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
     // Do the REFPROP instantiation for this fluid
@@ -203,8 +230,14 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
             std::string err;
-            const std::string &alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
-            bool loaded_REFPROP = ::load_REFPROP(err, alt_rp_path);
+            const std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
+            const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
+            bool loaded_REFPROP = false;
+            if (!alt_rp_name.empty()) {
+                loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
+            } else {
+                loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+            }
                 
             if (loaded_REFPROP) {
                 return true;
@@ -268,10 +301,14 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
         if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str()); }
         if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str());
         long N = static_cast<long>(fluid_names.size());
+        if (N > ncmax)
+        {
+            throw ValueError(format("Size of fluid vector [%d] is larger than the maximum defined by REFPROP [%d]", fluid_names.size(), ncmax));
+        }
         this->Ncomp = N;
-        mole_fractions.resize(20);
-        mole_fractions_liq.resize(20);
-        mole_fractions_vap.resize(20);
+        mole_fractions.resize(ncmax);
+        mole_fractions_liq.resize(ncmax);
+        mole_fractions_vap.resize(ncmax);
         return;
     }
     else
@@ -329,9 +366,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                       255);
             if (static_cast<int>(ierr) <= 0){
                 this->Ncomp = N;
-                mole_fractions.resize(20);
-                mole_fractions_liq.resize(20);
-                mole_fractions_vap.resize(20);
+                mole_fractions.resize(ncmax);
+                mole_fractions_liq.resize(ncmax);
+                mole_fractions_vap.resize(ncmax);
                 LoadedREFPROPRef = mix;
                 cached_component_string = mix;
                 this->fluid_names.clear();
@@ -364,10 +401,10 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             for (unsigned int j = 0; j < (unsigned int)N; j++)
             {
                 if (j == 0){
-                    components_joined = fdPath + upper(fluid_names[j]) + endings[k];
+                    components_joined = join_path(fdPath, upper(fluid_names[j]) + endings[k]);
                 }
                 else{
-                    components_joined += "|" + fdPath + upper(fluid_names[j]) + endings[k];
+                    components_joined += "|" + join_path(fdPath, upper(fluid_names[j]) + endings[k]);
                 }
             }
 
@@ -400,9 +437,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             if (static_cast<int>(ierr) <= 0) // Success (or a warning, which is silently squelched for now)
             {
                 this->Ncomp = N;
-                mole_fractions.resize(20);
-                mole_fractions_liq.resize(20);
-                mole_fractions_vap.resize(20);
+                mole_fractions.resize(ncmax);
+                mole_fractions_liq.resize(ncmax);
+                mole_fractions_vap.resize(ncmax);
                 LoadedREFPROPRef = _components_joined;
                 cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: Successfully loaded REFPROP fluid: %s\n",__FILE__,__LINE__, components_joined.c_str()); }
@@ -539,12 +576,19 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
 
     if (parameter == "model") {
-        strcpy(hmodij, value.c_str());
+        if (value.length()>4) { 
+            throw ValueError(format("Model parameter (%s) is longer than 4 characters.", value)); 
+        } else {
+            strcpy(hmodij, value.c_str());
+        }
     }
     else {
         throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
     }
     SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    if (ierr > 0L){
+        throw ValueError(format("Unable to set parameter[%s] to value[%s]: %s",parameter.c_str(),value.c_str(),herr));
+    }
 }
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
@@ -568,6 +612,9 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
             throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
         }
         SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+        if (ierr > 0L){
+            throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s",parameter.c_str(),value,herr));
+        }
     }
     else{
         throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
@@ -605,11 +652,15 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &mole_fractions)
 {
-    this->mole_fractions = std::vector<CoolPropDbl>(20, 0.0);
+    if (mole_fractions.size() != this->Ncomp)
+    {
+        throw ValueError(format("Size of mole fraction vector [%d] does not equal that of component vector [%d]", mole_fractions.size(), this->Ncomp));
+    }
+    this->mole_fractions = std::vector<CoolPropDbl>(ncmax, 0.0);
     for (std::size_t i = 0; i < mole_fractions.size(); ++i){
         this->mole_fractions[i] = static_cast<double>(mole_fractions[i]);
     }
-    this->mole_fractions_long_double = mole_fractions;
+    this->mole_fractions_long_double = mole_fractions; // same size as Ncomp
     _mole_fractions_set = true;
 }
 void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
@@ -626,16 +677,10 @@ void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &m
         moles[i-1] = static_cast<double>(mass_fractions[i-1])/(wmm/1000.0);
 		sum_moles += moles[i-1];
     }
-    this->mole_fractions.clear();
-	for(std::vector<double>::iterator it = moles.begin(); it != moles.end(); ++it) 
-    {
-		this->mole_fractions.push_back(*it/sum_moles);
-	}
-    while (this->mole_fractions.size() < 20) {
-        this->mole_fractions.push_back(0.0);
+    for (std::size_t i = 0; i < this->Ncomp; ++i){
+        moles[i] = moles[i] / sum_moles;
     }
-    this->mole_fractions_long_double = mole_fractions;
-    _mole_fractions_set = true;
+    this->set_mole_fractions(moles);
 };
 void REFPROPMixtureBackend::check_status(void)
 {
@@ -731,9 +776,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_acentric_factor(){
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
     long icomp = 1L;
     // Check if more than one
-    std::size_t size = mole_fractions.size();
-    if (size == 1)
-    {
+    if (Ncomp == 1){
         // Get value for first component
         INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
         return static_cast<CoolPropDbl>(acf);
@@ -764,9 +807,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple(){
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
     long icomp = 1L;
     // Check if more than one
-    std::size_t size = mole_fractions.size();
-    if (size == 1)
-    {
+    if (Ncomp == 1){
         // Get value for first component
         INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
         return static_cast<CoolPropDbl>(ttrp);
@@ -816,9 +857,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
     double wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas;
     long icomp = 1L;
     // Check if more than one
-    std::size_t size = mole_fractions.size();
-    if (size == 1)
-    {
+    if (Ncomp == 1){
         // Get value for first component
         INFOdll(&icomp,&wmm,&ttrp,&tnbpt,&tc,&pc,&Dc,&Zc,&acf,&dip,&Rgas);
         return static_cast<CoolPropDbl>(dip*3.33564e-30);
@@ -906,13 +945,13 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions()
     // mass fraction is mass_i/total_mass;
     // REFPROP yields mm in kg/kmol, CP uses base SI units of kg/mol; 
     CoolPropDbl mm = molar_mass();
-    std::vector<CoolPropDbl> mass_fractions(mole_fractions.size());
+    std::vector<CoolPropDbl> mass_fractions(mole_fractions_long_double.size());
     double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
     // FORTRAN is 1-based indexing!
-    for (long i = 1L; i <= static_cast<long>(mole_fractions.size()); ++i){
+    for (long i = 1L; i <= static_cast<long>(mole_fractions_long_double.size()); ++i){
         // Get value for first component
         INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
-        mass_fractions[i-1] = (wmm/1000.0)*mole_fractions[i-1]/mm; 
+        mass_fractions[i - 1] = (wmm / 1000.0)*mole_fractions_long_double[i - 1] / mm;
     }
     return mass_fractions;
 }
@@ -1583,12 +1622,6 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         }
         case PQ_INPUTS:
         {
-            // From REFPROP:
-            //additional input--only for TQFLSH and PQFLSH
-            //     kq--flag specifying units for input quality
-            //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
-            //         kq = 2 quality on MASS basis [mass vapor/total mass]
-            long kq = 1;
 
             // c  Estimate temperature, pressure, and compositions to be used
             // c  as initial guesses to SATTP
@@ -1619,10 +1652,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             p_kPa = 0.001*value1; q = value2; // Want p in [kPa] in REFPROP
 
             long iFlsh = 0, iGuess = 0, ierr = 0;
-            if (std::abs(value2) < 1e-10){
+            if (std::abs(q) < 1e-10){
                 iFlsh = 3; // bubble point
             }
-            else if (std::abs(value2-1) < 1e-10){
+            else if (std::abs(q-1) < 1e-10){
                 iFlsh = 4; // dew point
             }
             if (iFlsh != 0){
@@ -1631,12 +1664,33 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
-                if (static_cast<int>(ierr) == 0){
+                if (ierr > 0L) {
+                    ierr = 0;
+                    // SATPdll(p, z, kph, T, Dl, Dv, x, y, ierr, herr)
+                    // 
+                    //kph--Phase flag : 1 - Input x is liquid composition(bubble point)
+                    //                - 1 - Force calculation in the liquid phase even if T<Ttrp
+                    //                  2 - Input x is vapor composition(dew point)
+                    //                - 2 - Force calculation in the vapor phase even if T<Ttrp
+                    //                  3 - Input x is liquid composition along the freezing line(melting line)
+                    //                  4 - Input x is vapor composition along the sublimation line
+                    SATPdll(&_p, &(mole_fractions[0]), &iFlsh,
+                        &_T, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
+                        &ierr, herr, errormessagelength);
+                    rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
+                }
+                if (ierr <= 0L){
                     // Calculate everything else
                     THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
                 }
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
+                // From REFPROP:
+                //additional input--only for TQFLSH and PQFLSH
+                //     kq--flag specifying units for input quality
+                //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
+                //         kq = 2 quality on MASS basis [mass vapor/total mass]
+                long kq = 1;
                 ierr = 0;
                 // Use flash routine to find properties
                 PQFLSHdll(&p_kPa,&q,&(mole_fractions[0]),&kq,&_T,&rho_mol_L,
@@ -1656,23 +1710,15 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         }
         case QT_INPUTS:
         {
-            /* From REFPROP:
-            additional input--only for TQFLSH and PQFLSH
-                 kq--flag specifying units for input quality
-                     kq = 1 quality on MOLAR basis [moles vapor/total moles]
-                     kq = 2 quality on MASS basis [mass vapor/total mass]
-            */
-            long kq = 1;
-
             // Unit conversion for REFPROP
             q = value1; _T = value2;
 
             // Use flash routine to find properties
             long iFlsh = 0, iGuess = 0;
-            if (std::abs(value2) < 1e-10){
+            if (std::abs(q) < 1e-10){
                 iFlsh = 1; // bubble point with T given
             }
-            else if (std::abs(value2-1) < 1e-10){
+            else if (std::abs(q-1) < 1e-10){
                 iFlsh = 2; // dew point with T given
             }
             if (iFlsh != 0){
@@ -1681,13 +1727,36 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
-                if (static_cast<int>(ierr) == 0){
-                    // Calculate everything else
+                
+                if (ierr > 0L){
+                    ierr = 0;
+                    // SATTdll(T, z, kph, P, Dl, Dv, x, y, ierr, herr)
+                    // 
+                    //kph--Phase flag : 1 - Input x is liquid composition(bubble point)
+                    //                - 1 - Force calculation in the liquid phase even if T<Ttrp
+                    //                  2 - Input x is vapor composition(dew point)
+                    //                - 2 - Force calculation in the vapor phase even if T<Ttrp
+                    //                  3 - Input x is liquid composition along the freezing line(melting line)
+                    //                  4 - Input x is vapor composition along the sublimation line
+                    SATTdll(&_T, &(mole_fractions[0]), &iFlsh,
+                        &p_kPa, &rhoLmol_L, &rhoVmol_L,&(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
+                        &ierr, herr, errormessagelength);
+                    rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
+                }
+                if (ierr <= 0L){
+                    // Calculate everything else since we were able to carry out a flash call
                     THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
                 }
             }
             if (static_cast<int>(ierr) > 0 || iFlsh == 0){
                 ierr = 0;
+                /* From REFPROP:
+                additional input--only for TQFLSH and PQFLSH
+                kq--flag specifying units for input quality
+                kq = 1 quality on MOLAR basis [moles vapor/total moles]
+                kq = 2 quality on MASS basis [mass vapor/total mass]
+                */
+                long kq = 1;
                 TQFLSHdll(&_T,&q,&(mole_fractions[0]),&kq,&p_kPa,&rho_mol_L,
                      &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                     &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
@@ -1773,7 +1842,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                 iFlsh = 3; // bubble point
                 if (!guesses.x.empty()){
                     mole_fractions = guesses.x;
-                    while(mole_fractions.size() < 20){ mole_fractions.push_back(0.0); }
+                    while(mole_fractions.size() < ncmax){ mole_fractions.push_back(0.0); }
                 }
                 else{
                     throw ValueError(format("x must be provided in guesses"));
@@ -1783,7 +1852,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                 iFlsh = 4; // dew point
                 if (!guesses.y.empty()){
                     mole_fractions = guesses.y;
-                    while (mole_fractions.size() < 20) { mole_fractions.push_back(0.0); }
+                    while (mole_fractions.size() < ncmax) { mole_fractions.push_back(0.0); }
                 }
                 else{
                     throw ValueError(format("y must be provided in guesses"));
@@ -1956,7 +2025,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters 
             return _rhoVmolar;
         }
         else if (key == iDmass) {
-            return static_cast<double>(_rhoVmolar)*calc_saturated_liquid_keyed_output(imolar_mass);
+            return static_cast<double>(_rhoVmolar)*calc_saturated_vapor_keyed_output(imolar_mass);
         }
         else if (key == imolar_mass){
             double wmm_kg_kmol = 0;

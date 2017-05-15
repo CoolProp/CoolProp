@@ -327,6 +327,10 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
 	   std::cout << format("%s (%d): in2 = %s ",__FILE__,__LINE__, vec_to_string(in2).c_str()) << std::endl;
 	}
 
+    // Get configuration variable for line tracing, see #1443
+    const bool use_guesses = get_config_bool(USE_GUESSES_IN_PROPSSI);
+    GuessesStructure guesses;
+
 	// Resize the output matrix
     std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
     std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
@@ -334,6 +338,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
 
     // Throw an error if at the end, there were no successes
     bool success = false;
+    bool success_inner = false;
 
     if (get_debug_level() > 100)
     {
@@ -341,10 +346,17 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
     }
 	// Iterate over the state variable inputs
 	for (std::size_t i = 0; i < IO.size(); ++i){
+        // Reset the success indicator for the current state point
+        success_inner = false;
 		try{
             if (input_pair != INPUT_PAIR_INVALID && !all_trivial_outputs && !all_outputs_in_inputs){
                 // Update the state since it is a valid set of inputs
-                State->update(input_pair, in1[i], in2[i]);
+                if (!use_guesses || i == 0) {
+                    State->update(input_pair, in1[i], in2[i]);
+                } else {
+                    State->update_with_guesses(input_pair, in1[i], in2[i], guesses);
+                    guesses.clear();
+                }
             }
         }
         catch(...){
@@ -358,10 +370,10 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
             // If all the outputs are inputs, there is no need for a state input
             if (all_outputs_in_inputs){
                 if (p1 == output_parameters[j].Of1){
-                    IO[i][j] = in1[i]; success = true; continue;
+                    IO[i][j] = in1[i]; success_inner = true; continue;
                 }
                 else if (p2 == output_parameters[j].Of1){
-                    IO[i][j] = in2[i]; success = true; continue;
+                    IO[i][j] = in2[i]; success_inner = true; continue;
                 }
                 else{
                     throw ValueError();
@@ -372,7 +384,17 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                 switch (output.type){
                     case output_parameter::OUTPUT_TYPE_TRIVIAL:
                     case output_parameter::OUTPUT_TYPE_NORMAL:
-                        IO[i][j] = State->keyed_output(output.Of1); break;
+                        IO[i][j] = State->keyed_output(output.Of1); 
+                        if (use_guesses) {
+                            switch (output.Of1) {
+                            case iDmolar: guesses.rhomolar = IO[i][j]; break;
+                            case iT: guesses.T = IO[i][j]; break;
+                            case iP: guesses.p = IO[i][j]; break;
+                            case iHmolar: guesses.hmolar = IO[i][j]; break;
+                            case iSmolar: guesses.smolar = IO[i][j]; break;
+                            }
+                        }
+                        break;
                     case output_parameter::OUTPUT_TYPE_FIRST_DERIVATIVE:
                         IO[i][j] = State->first_partial_deriv(output.Of1, output.Wrt1, output.Constant1); break;
                     case output_parameter::OUTPUT_TYPE_FIRST_SATURATION_DERIVATIVE:
@@ -383,13 +405,26 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                         throw ValueError(format("")); break;
                 }
                 // At least one has succeeded
-                success = true;
+                success_inner = true;
             }
             catch(...){
                 if (one_input_one_output){IO.clear(); throw;} // Re-raise the exception since we want to bubble the error
                 IO[i][j] = _HUGE;
             }
         }
+        // We want to have at least rhomolar and T, but we do not raise errors here
+        if (use_guesses && success_inner) {
+            if (!ValidNumber(guesses.rhomolar)) {
+                try { guesses.rhomolar = State->rhomolar(); }
+                catch (...) { guesses.rhomolar = _HUGE; }
+            }
+            if (!ValidNumber(guesses.T)) {
+                try { guesses.T = State->T(); }
+                catch (...) { guesses.T = _HUGE; }
+            }
+        }
+        // Save the success indicator, just a single valid output is enough
+        success |= success_inner;
 	}
     if (success == false) { IO.clear(); throw ValueError(format("No outputs were able to be calculated"));}
 }

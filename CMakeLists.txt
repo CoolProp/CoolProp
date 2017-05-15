@@ -150,7 +150,17 @@ SET(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD") # order matters "/MXd" before "
 # headers and corresponding dirs.     #
 #######################################
 
-file(GLOB_RECURSE APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+# These backends will be compiled in
+set(COOLPROP_ENABLED_BACKENDS Cubics IF97 Helmholtz REFPROP Incompressible Tabular)
+
+# Get everything in the src/ directory (always), but not recursive
+file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+
+# For each enabled backend, grab its files
+foreach (backend ${COOLPROP_ENABLED_BACKENDS})
+  file(GLOB_RECURSE BACKEND_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Backends/${backend}/*.cpp")
+  list(APPEND APP_SOURCES ${BACKEND_SOURCES})
+endforeach()
 
 ## You can exclude this file, in case you want to run your own tests or use Catch
 list(REMOVE_ITEM  APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/Tests.cpp")

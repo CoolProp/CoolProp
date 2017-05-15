@@ -711,21 +711,3 @@ EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle,
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
-
-/// *********************************************************************************
-/// *********************************************************************************
-///                     EMSCRIPTEN (for javascript)
-/// *********************************************************************************
-/// *********************************************************************************
-
-#ifdef EMSCRIPTEN
-
-#include <emscripten/bind.h>
-using namespace emscripten;
-
-// Binding code
-EMSCRIPTEN_BINDINGS(coolprop_lib_bindings) {
-    function("F2K", &F2K);
-}
-
-#endif
