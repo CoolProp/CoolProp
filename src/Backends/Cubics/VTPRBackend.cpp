@@ -56,11 +56,11 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string> &names, bool ge
         linked_states.push_back(SatV);
 
 		if (is_pure_or_pseudopure) {
-			std::vector<CoolPropDbl> z(1, 1.0);
-			set_mole_fractions(z);
-			SatL->set_mole_fractions(z);
-			SatV->set_mole_fractions(z);
-		}
+			  std::vector<CoolPropDbl> z(1, 1.0);
+		  	set_mole_fractions(z);
+			  SatL->set_mole_fractions(z);
+			  SatV->set_mole_fractions(z);
+		    }
     }
 
     // Resize the vectors (including linked states)
@@ -108,6 +108,10 @@ void CoolProp::VTPRBackend::set_binary_interaction_double(const std::size_t i, c
     for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
         (*it)->set_binary_interaction_double(i, j, parameter, value);
     }
+};
+
+void CoolProp::VTPRBackend::set_Q_k(const size_t sgi, const double value) {
+    cubic->set_Q_k(sgi, value);
 };
 
 double CoolProp::VTPRBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter) {

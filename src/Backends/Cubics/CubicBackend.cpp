@@ -592,6 +592,13 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
     }
+    else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
+        get_cubic()->set_Q_k(i, value);
+        for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+            AbstractCubicBackend *ACB = static_cast<AbstractCubicBackend *>(it->get());
+            ACB->set_fluid_parameter_double(i, parameter, value);
+        }
+    }
     else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }

@@ -277,6 +277,11 @@ void UNIFAC::UNIFACMixture::set_components(const std::string &identifier_type, s
         throw CoolProp::ValueError("Cannot understand identifier_type");
     }
     /// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
+    set_pure_data();
+}
+
+/// Calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
+void UNIFAC::UNIFACMixture::set_pure_data() {
     pure_data.clear();
     for (std::size_t i = 0; i < N; ++i) {
         const UNIFACLibrary::Component &c = components[i];
@@ -304,4 +309,18 @@ void UNIFAC::UNIFACMixture::set_components(const std::string &identifier_type, s
         }
         pure_data.push_back(cd);
     }
+}
+
+/// Modify the surface parameter Q_k of the sub group sgi
+void UNIFAC::UNIFACMixture::set_Q_k(const size_t sgi, const double value) {
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < components[i].groups.size(); ++j) {
+            if (components[i].groups[j].group.sgi == sgi){
+                components[i].groups[j].group.Q_k = value;
+            }
+        }
+    }
+    
+    /// Re-calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
+    set_pure_data();
 }
