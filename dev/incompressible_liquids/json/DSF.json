@@ -7,7 +7,7 @@
   "Tbase": 4.306500e+02, 
   "Tmax": 5.881500e+02, 
   "Tmin": 2.731500e+02, 
-  "TminPsat": null, 
+  "TminPsat": 2.731500e+02, 
   "conductivity": {
     "NRMS": 1.057417e-03, 
     "coeffs": [

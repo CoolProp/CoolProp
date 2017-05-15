@@ -661,6 +661,7 @@ class DynaleneSF(PureData):
         self.viscosity.data           = np.array([ 1.600E+02,  7.000E+01,  3.700E+01,  2.300E+01,  1.500E+01,  1.100E+01,  8.100E+00,  6.300E+00,  5.000E+00,  4.100E+00,  3.400E+00,  2.900E+00,  2.400E+00,  2.200E+00,  1.900E+00,  1.700E+00,  1.500E+00,  1.300E+00,  1.200E+00,  1.100E+00,  1.000E+00,  8.800E-01,  8.100E-01,  7.500E-01,  6.900E-01,  6.400E-01,  5.900E-01,  5.500E-01,  5.100E-01,  4.800E-01,  4.500E-01,  4.200E-01,  4.100E-01])/1e3
         self.Tmin        = np.min(self.temperature.data)
         self.Tmax        = np.max(self.temperature.data)
+        self.TminPsat    = np.min(self.temperature.data)
         self.name        = "DSF"
         self.description = "Dynalene SF"
         self.reference   = "Dynalene, Inc."
