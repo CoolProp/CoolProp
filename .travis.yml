@@ -37,7 +37,7 @@ matrix:
         - cmake --version
         - echo "$CXX" && "$CXX" -v
         - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
         - popd
       script:     
         - cmake --build build --config Release
@@ -51,7 +51,7 @@ matrix:
         - cmake --version
         - echo "$CXX" && "$CXX" -v
         - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
         - popd
       script:     
         - cmake --build build --config Release
@@ -64,7 +64,7 @@ matrix:
         - cmake --version
         - echo "$CXX" && "$CXX" -v
         - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_STATIC_LIBRARY=ON
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
         - popd
       script:     
         - cmake --build build --config Release
@@ -81,11 +81,16 @@ matrix:
             name: "CoolProp/CoolProp"
             description: "Build submitted via Travis CI"
           notification_email: jowr@ipu.dk
-          build_command_prepend: "cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx"
-          build_command: "cmake --build . --target Main"
+          build_command_prepend: "cmake . -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON"
+          build_command: "cmake --build . --config Release"
           branch_pattern: coverity_scan
-      before_script: cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
-      script: cmake --build . --target Main
+      before_script: cmake . -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
+      script: cmake --build . --config Release
+#          build_command_prepend: "cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx"
+#          build_command: "cmake --build . --target Main"
+#          branch_pattern: coverity_scan
+#      before_script: cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
+#      script: cmake --build . --target Main
 
 #branches:
 #  only:
