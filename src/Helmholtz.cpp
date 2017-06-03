@@ -764,7 +764,7 @@ CoolPropDbl ResidualHelmholtzSAFTAssociating::eta(const CoolPropDbl &delta) cons
     return this->vbarn*delta;
 }
 
-void ResidualHelmholtzSAFTAssociating::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) const throw()
+void ResidualHelmholtzSAFTAssociating::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &deriv) throw()
 {
     if (disabled){return;}
     CoolPropDbl X = this->X(delta, this->Deltabar(tau, delta));
@@ -805,102 +805,190 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
     el.AddMember("Tc", static_cast<double>(Tc), doc.GetAllocator());
     el.AddMember("T0", static_cast<double>(T0), doc.GetAllocator());
 }
-CoolPropDbl IdealHelmholtzCP0PolyT::base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    double sum=0;
-    for (std::size_t i = 0; i < N; ++i){
-        if (std::abs(t[i])<10*DBL_EPSILON)
-        {
-            sum += c[i]-c[i]*tau/tau0+c[i]*log(tau/tau0);
-        }
-        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
-        {
-            sum += c[i]*tau/Tc*log(tau0/tau)+c[i]/Tc*(tau-tau0);
-        }
-        else
-        {
-            sum += -c[i]*pow(Tc,t[i])*pow(tau,-t[i])/(t[i]*(t[i]+1))-c[i]*pow(T0,t[i]+1)*tau/(Tc*(t[i]+1))+c[i]*pow(T0,t[i])/t[i];
-        }
-    }
-    return sum;
-}
-CoolPropDbl IdealHelmholtzCP0PolyT::dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    double sum=0;
-    for (std::size_t i = 0; i < N; ++i){
-        if (std::abs(t[i])<10*DBL_EPSILON)
-        {
-            sum += c[i]/tau-c[i]/tau0;
-        }
-        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
-        {
-            sum += c[i]/Tc*log(tau0/tau);
-        }
-        else
-        {
-            sum += c[i]*pow(Tc,t[i])*pow(tau,-t[i]-1)/(t[i]+1)-c[i]*pow(Tc,t[i])/(pow(tau0,t[i]+1)*(t[i]+1));
-        }
-    }
-    return sum;
-}
-CoolPropDbl IdealHelmholtzCP0PolyT::dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    double sum=0;
-    for (std::size_t i = 0; i < N; ++i){
-        if (std::abs(t[i])<10*DBL_EPSILON)
-        {
-            sum += -c[i]/(tau*tau);
-        }
-        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
-        {
-            sum += -c[i]/(tau*Tc);
-        }
-        else
-        {
-            sum += -c[i]*pow(Tc/tau,t[i])/(tau*tau);
-        }
-    }
-    return sum;
-}
-CoolPropDbl IdealHelmholtzCP0PolyT::dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    double sum=0;
-    for (std::size_t i = 0; i < N; ++i){
-        if (std::abs(t[i])<10*DBL_EPSILON)
-        {
-            sum += 2*c[i]/(tau*tau*tau);
-        }
-        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
-        {
-            sum += c[i]/(tau*tau*Tc);
-        }
-        else
-        {
-            sum += c[i]*pow(Tc/tau,t[i])*(t[i]+2)/(tau*tau*tau);
-        }
-    }
-    return sum;
-}
-CoolPropDbl IdealHelmholtzCP0PolyT::dTau4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw()
-{
-    double sum=0;
-    for (std::size_t i = 0; i < N; ++i){
-        if (std::abs(t[i])<10*DBL_EPSILON)
-        {
-            sum += -6*c[i]/POW4(tau);
-        }
-        else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
-        {
-            sum += -3*c[i]/(POW3(tau)*Tc);
-        }
-        else
-        {
-            sum += -c[i]*(t[i]+2)*(t[i]+3)*pow(Tc/tau,t[i])/(tau*tau*tau*tau);
-        }
-    }
-    return sum;
-}
 
+
+    void IdealHelmholtzLead::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+    {
+        if (!enabled){ return; }
+        derivs.alphar += log(delta)+a1+a2*tau;
+        derivs.dalphar_ddelta += 1.0/delta;
+        derivs.dalphar_dtau += a2;
+        derivs.d2alphar_ddelta2 += -1.0/delta/delta;
+        derivs.d3alphar_ddelta3 += 2/delta/delta/delta;
+        derivs.d4alphar_ddelta4 += -6/POW4(delta);
+    }
+    void IdealHelmholtzEnthalpyEntropyOffset::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+    {
+        if (!enabled){ return; }
+        derivs.alphar += a1+a2*tau;
+        derivs.dalphar_dtau += a2;
+    }
+    void IdealHelmholtzLogTau::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+    {
+        
+        if (!enabled){ return; }
+        derivs.alphar += a1*log(tau);
+        derivs.dalphar_dtau += a1/tau;
+        derivs.d2alphar_dtau2 += -a1/tau/tau;
+        derivs.d3alphar_dtau3 += 2*a1/tau/tau/tau;
+        derivs.d4alphar_dtau4 += -6*a1/POW4(tau);
+    }
+    void IdealHelmholtzPower::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+    {
+        if (!enabled){ return; }
+        {
+            CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*pow(tau, t[i]);}
+            derivs.alphar += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*pow(tau, t[i]-1);}
+            derivs.dalphar_dtau += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*(t[i]-1)*pow(tau, t[i]-2);}
+            derivs.d2alphar_dtau2 += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*(t[i]-1)*(t[i]-2)*pow(tau, t[i]-3);}
+            derivs.d3alphar_dtau3 += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i = 0; i<N; ++i){s += n[i]*t[i]*(t[i]-1)*(t[i]-2)*(t[i]-3)*pow(tau, t[i]-4);}
+            derivs.d4alphar_dtau4 += s;
+        }
+    }
+    void IdealHelmholtzPlanckEinsteinGeneralized::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+    {
+        if (!enabled){ return; }
+        {
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){ s += n[i]*log(c[i]+d[i]*exp(theta[i]*tau)); }
+            derivs.alphar += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*d[i]*exp(theta[i]*tau)/(c[i]+d[i]*exp(theta[i]*tau));}
+            derivs.dalphar_dtau += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*c[i]*d[i]*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),2);}
+            derivs.d2alphar_dtau2 += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],3)*c[i]*d[i]*(c[i]-d[i]*exp(theta[i]*tau))*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),3);}
+            derivs.d3alphar_dtau3 += s;
+        }
+        {
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){
+                const CoolPropDbl para = c[i]+d[i]*exp(theta[i]*tau);
+                const CoolPropDbl bracket = 6*POW3(d[i])*exp(3*tau*theta[i]) - 12*d[i]*d[i]*para*exp(2*tau*theta[i]) + 7*d[i]*POW2(para)*exp(tau*theta[i]) - POW3(para);
+                s += -n[i]*d[i]*pow(theta[i],4)*bracket*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),4);
+            }
+            derivs.d4alphar_dtau4 += s;
+        }
+    }
+    void IdealHelmholtzCP0Constant::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+    {
+        if (!enabled){ return; }
+        derivs.alphar += cp_over_R-cp_over_R*tau/tau0+cp_over_R*log(tau/tau0);
+        derivs.dalphar_dtau += cp_over_R/tau-cp_over_R/tau0;
+        derivs.d2alphar_dtau2 += -cp_over_R/(tau*tau);
+        derivs.d3alphar_dtau3 += 2*cp_over_R/(tau*tau*tau);
+        derivs.d4alphar_dtau4 += -6*cp_over_R/POW4(tau);
+    }
+    void IdealHelmholtzCP0PolyT::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+    {
+        if (!enabled){ return; }
+        {
+            double sum=0;
+            for (std::size_t i = 0; i < N; ++i){
+                if (std::abs(t[i])<10*DBL_EPSILON)
+                {
+                    sum += c[i]-c[i]*tau/tau0+c[i]*log(tau/tau0);
+                }
+                else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
+                {
+                    sum += c[i]*tau/Tc*log(tau0/tau)+c[i]/Tc*(tau-tau0);
+                }
+                else
+                {
+                    sum += -c[i]*pow(Tc,t[i])*pow(tau,-t[i])/(t[i]*(t[i]+1))-c[i]*pow(T0,t[i]+1)*tau/(Tc*(t[i]+1))+c[i]*pow(T0,t[i])/t[i];
+                }
+            }
+            derivs.alphar += sum;
+        }
+        {
+            double sum=0;
+            for (std::size_t i = 0; i < N; ++i){
+                if (std::abs(t[i])<10*DBL_EPSILON)
+                {
+                    sum += c[i]/tau-c[i]/tau0;
+                }
+                else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
+                {
+                    sum += c[i]/Tc*log(tau0/tau);
+                }
+                else
+                {
+                    sum += c[i]*pow(Tc,t[i])*pow(tau,-t[i]-1)/(t[i]+1)-c[i]*pow(Tc,t[i])/(pow(tau0,t[i]+1)*(t[i]+1));
+                }
+            }
+            derivs.dalphar_dtau += sum;
+        }
+        {
+            double sum=0;
+            for (std::size_t i = 0; i < N; ++i){
+                if (std::abs(t[i])<10*DBL_EPSILON)
+                {
+                    sum += -c[i]/(tau*tau);
+                }
+                else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
+                {
+                    sum += -c[i]/(tau*Tc);
+                }
+                else
+                {
+                    sum += -c[i]*pow(Tc/tau,t[i])/(tau*tau);
+                }
+            }
+            derivs.d2alphar_dtau2 += sum;
+        }
+        {
+            double sum=0;
+            for (std::size_t i = 0; i < N; ++i){
+                if (std::abs(t[i])<10*DBL_EPSILON)
+                {
+                    sum += 2*c[i]/(tau*tau*tau);
+                }
+                else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
+                {
+                    sum += c[i]/(tau*tau*Tc);
+                }
+                else
+                {
+                    sum += c[i]*pow(Tc/tau,t[i])*(t[i]+2)/(tau*tau*tau);
+                }
+            }
+            derivs.d3alphar_dtau3 += sum;
+        }
+        {
+            double sum=0;
+            for (std::size_t i = 0; i < N; ++i){
+                if (std::abs(t[i])<10*DBL_EPSILON)
+                {
+                    sum += -6*c[i]/POW4(tau);
+                }
+                else if (std::abs(t[i]+1) < 10*DBL_EPSILON)
+                {
+                    sum += -3*c[i]/(POW3(tau)*Tc);
+                }
+                else
+                {
+                    sum += -c[i]*(t[i]+2)*(t[i]+3)*pow(Tc/tau,t[i])/(tau*tau*tau*tau);
+                }
+            }
+            derivs.d4alphar_dtau4 += sum;
+        }
+    }
+    
 //void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
 //    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
 //    rapidjson::Value _n(rapidjson::kArrayType);
