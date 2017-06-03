@@ -74,10 +74,11 @@ public:
     SpinodalData spinodal_values;
 
     bool clear(){
-        // Clear the locally cached values for the derivatives of the residual Helmholtz energy
+        // Clear the locally cached values for the derivatives of the Helmholtz energy
         // in each component
         for (std::vector<CoolPropFluid>::iterator it = components.begin(); it != components.end(); ++it){
             (*it).EOS().alphar.clear();
+            (*it).EOS().alpha0.clear();
         }
         return AbstractState::clear();
     };
