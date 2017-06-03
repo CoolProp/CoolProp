@@ -127,11 +127,11 @@ const UNIFACLibrary::UNIFACParameterLibrary & CoolProp::VTPRBackend::LoadLibrary
         if (!(UNIFAC_path[UNIFAC_path.size()-1] == '\\' || UNIFAC_path[UNIFAC_path.size()-1] == '/')){
             throw ValueError("VTPR_UNIFAC_PATH must end with / or \\ character");
         }
-        std::string group_path = UNIFAC_path + "/group_data.json";
+        std::string group_path = UNIFAC_path + "group_data.json";
         std::string groups = get_file_contents(group_path.c_str());
-        std::string interaction_path = UNIFAC_path + "/interaction_parameters.json";
+        std::string interaction_path = UNIFAC_path + "interaction_parameters.json";
         std::string interaction = get_file_contents(interaction_path.c_str());
-        std::string decomps_path = UNIFAC_path + "/decompositions.json";
+        std::string decomps_path = UNIFAC_path + "decompositions.json";
         std::string decomps = get_file_contents(decomps_path.c_str());
         lib.populate(groups, interaction, decomps);
     }
