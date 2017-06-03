@@ -485,7 +485,10 @@ double AbstractState::T_critical(void){
     return calc_T_critical();
 }
 double AbstractState::T_reducing(void){
-    return calc_T_reducing();
+    if (!ValidNumber(_reducing.T)){
+        calc_reducing_state();
+    }
+    return _reducing.T;
 }
 double AbstractState::p_critical(void){
     return calc_p_critical();
@@ -500,10 +503,13 @@ double AbstractState::rhomass_critical(void){
     return calc_rhomolar_critical()*molar_mass();
 }
 double AbstractState::rhomolar_reducing(void){
-    return calc_rhomolar_reducing();
+    if (!ValidNumber(_reducing.rhomolar)){
+        calc_reducing_state();
+    }
+    return _reducing.rhomolar;
 }
 double AbstractState::rhomass_reducing(void){
-    return calc_rhomolar_reducing()*molar_mass();
+    return rhomolar_reducing()*molar_mass();
 }
 double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
