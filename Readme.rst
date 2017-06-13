@@ -16,9 +16,11 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.org/dev>`_  
 
-* Please, if there are any issues of any kind, file an issue `here <https://github.com/CoolProp/CoolProp/issues>`_ 
+* For any kind of question regarding CoolProp and its usage, you can ask the `CoolProp user group <https://goo.gl/Pa7FBT>`_ 
 
 * ... you might also find answers in our `FAQ <https://github.com/CoolProp/CoolProp/blob/master/FAQ.md>`_ 
+
+* If you found a bug or have an issue that requires the developers to become active, please file an issue in our `issue tracker <https://github.com/CoolProp/CoolProp/issues>`_ 
 
 * Accelerate development of things you really need implemented by posting at `Bountysource <https://www.bountysource.com/teams/coolprop>`_ 
 
