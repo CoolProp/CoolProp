@@ -16,9 +16,6 @@
 [submodule "externals/IF97"]
 	path = externals/IF97
 	url = https://github.com/CoolProp/IF97
-[submodule "externals/rapidjson"]
-	path = externals/rapidjson
-	url = https://github.com/miloyip/rapidjson.git
 [submodule "externals/cppformat"]
 	path = externals/cppformat
 	url = https://github.com/cppformat/cppformat.git
@@ -28,3 +25,6 @@
 [submodule "externals/pybind11"]
 	path = externals/pybind11
 	url = https://github.com/pybind/pybind11.git
+[submodule "externals/rapidjson"]
+	path = externals/rapidjson
+	url = https://github.com/miloyip/rapidjson.git
