@@ -18,21 +18,22 @@ namespace UNIFAC
     class UNIFACMixture
     {
     private:
+        /// A const reference to the library of group and interaction parameters
+        const UNIFACLibrary::UNIFACParameterLibrary &library;
+        
         CoolProp::CachedElement _T; ///< The cached temperature
 
         std::size_t N; ///< Number of components
 
         double m_T; ///< The temperature in K
-        double T_r; ///< Reduce temperature
+        double T_r; ///< Reducing temperature
 
         std::map<std::pair<std::size_t, std::size_t>, double> Psi_; /// < temporary storage for Psi
 
         std::map<std::size_t, double> m_Xg,  ///< Map from sgi to mole fraction of group in the mixture
                                       m_thetag, ///< Map from sgi to theta for the group in the mixture
-                                      m_lnGammag; ///< Map from sgi to ln(Gamma) for the group in the mixture
-
-        /// A const reference to the library of group and interaction parameters
-        const UNIFACLibrary::UNIFACParameterLibrary &library;
+                                      m_lnGammag, ///< Map from sgi to ln(Gamma) for the group in the mixture
+                                      m_Q; ///< Map from sgi to Q for the sgi
 
         /// A map from (i, j) indices for subgroup, subgroup indices to the interaction parameters for this pair
         std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters> interaction;
@@ -40,8 +41,8 @@ namespace UNIFAC
         /// A map from SGI to MGI
         std::map<std::size_t, std::size_t> m_sgi_to_mgi;
 
-        /// A vector of unique groups in this mixture
-        std::vector<UNIFACLibrary::Group> unique_groups;
+        /// The set of unique groups in this mixture
+        std::set<std::size_t> unique_groups;
     
         std::vector<double> mole_fractions;
 
