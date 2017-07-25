@@ -196,11 +196,13 @@ if __name__=='__main__':
         else:
             _profiling_enabled = False
 
-        if _profiling_enabled:
-            cython_directives = dict(profile = True,
-                                     embed_signature = True)
+        # use different compiler directives for Cython 0.26 or above
+        if parse_version(Cython.__version__) >= parse_version('0.26'):
+            cython_directives = dict(profile = _profiling_enabled,
+                                     embedsignature = True)
         else:
-            cython_directives = dict(embed_signature = True)
+            cython_directives = dict(profile = _profiling_enabled,
+                                     embed_signature = True)
     else:
         cython_directives = {}
 
