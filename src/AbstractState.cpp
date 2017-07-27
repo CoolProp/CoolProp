@@ -723,6 +723,38 @@ void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropD
         dT = 1/dT_dtau; drho = 0; break;
     case iDelta:
         dT = 0; drho = 1/rhor; break;
+    case iCvmolar:
+    case iCvmass:
+    {
+        // use the second order derivative of internal energy
+        // make it cleaner by using the function get_dT_drho_second_derivatives directly?
+        // dcvdT|rho = d2u/dT2|rho
+        dT = R/T*pow(tau, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3())+2*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // dcvdrho|T = d2u/dT/drho
+        drho = R/rho*(-pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2());
+        if (index == iUmass){
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iCpmolar:
+    case iCpmass:
+    {
+        // dcpdT|rho = d2h/dT2 + dh/drho * dP/dT * d2P/dTdrho / ( dp/drho )^2 - ( d2h/dTdrho * dP/dT + dh/drho * d2PdT2 ) / dp/drho
+        dT = R/T*pow(tau, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3()) + 2*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()) + delta*AS.d3alphar_dDelta_dTau2()); // d2hdT2
+        dT += (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) * (R*(1+2*delta*AS.dalphar_dDelta() +pow(delta,2)*AS.d2alphar_dDelta2() - 2*delta*tau*AS.d2alphar_dDelta_dTau() - tau*pow(delta, 2)*AS.d3alphar_dDelta2_dTau())) / pow(R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()), 2);
+        dT -= ((R/rho*delta*(delta*AS.d2alphar_dDelta2() - pow(tau,2)*AS.d3alphar_dDelta_dTau2() + AS.dalphar_dDelta() - tau*delta*AS.d3alphar_dDelta2_dTau() - tau*AS.d2alphar_dDelta_dTau())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) + (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (rho*R/T*(pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2()))) / (R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()))
+        // dcp/drho|T = d2h/dTdrho + dh/drho * dP/dT * d2P/drho2 / ( dp/drho )^2 - ( d2h/drho2 * dP/dT + dh/drho * d2P/dTdrho ) / ( dP/drho )
+        drho = R/rho*delta*(delta*AS.d2alphar_dDelta2() - pow(tau,2)*AS.d3alphar_dDelta_dTau2() + AS.dalphar_dDelta() - tau*delta*AS.d3alphar_dDelta2_dTau() - tau*AS.d2alphar_dDelta_dTau());
+        drho += (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2())) * (T*R/rho*(2*delta*AS.dalphar_dDelta()+4*pow(delta,2)*AS.d2alphar_dDelta2()+pow(delta,3)*AS.d3alphar_dDelta3())) / pow(R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()), 2);
+        drho -= ((R*T*pow(delta/rho,2)*(tau*AS.d3alphar_dDelta2_dTau() + 2*AS.d2alphar_dDelta2() + delta*AS.d3alphar_dDelta3())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) + (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (R*(1+2*delta*AS.dalphar_dDelta() +pow(delta,2)*AS.d2alphar_dDelta2() - 2*delta*tau*AS.d2alphar_dDelta_dTau() - tau*pow(delta, 2)*AS.d3alphar_dDelta2_dTau()))) / (R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()));
+        if (index == iHmass){
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
     default:
         throw ValueError(format("input to get_dT_drho[%s] is invalid",get_parameter_information(index,"short").c_str()));
     }
