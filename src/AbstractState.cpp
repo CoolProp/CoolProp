@@ -743,7 +743,7 @@ void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropD
     {
         // dcp/dT|rho = d2h/dT2 + dh/drho * dP/dT * d2P/drhodT / ( dp/drho )^2 - ( d2h/dTdrho * dP/dT + dh/drho * d2P/dT2 ) / ( dP/drho )
         dT = R/T*pow(tau, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3()) + 2*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()) + delta*AS.d3alphar_dDelta_dTau2());
-        dT += (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2())) * (R*(1+2*delta*AS.dalphar_dDelta() +pow(delta,2)*AS.d2alphar_dDelta2() - 2*delta*tau*AS.d2alphar_dDelta_dTau() - tau*pow(delta, 2)*AS.d3alphar_dDelta2_dTau())) / pow(R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()), 2);
+        dT += (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) * (R*(1+2*delta*AS.dalphar_dDelta() +pow(delta,2)*AS.d2alphar_dDelta2() - 2*delta*tau*AS.d2alphar_dDelta_dTau() - tau*pow(delta, 2)*AS.d3alphar_dDelta2_dTau())) / pow(R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()), 2);
         dT -= ((R/rho*delta*(delta*AS.d2alphar_dDelta2() - pow(tau,2)*AS.d3alphar_dDelta_dTau2() + AS.dalphar_dDelta() - tau*delta*AS.d3alphar_dDelta2_dTau() - tau*AS.d2alphar_dDelta_dTau())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) + (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (rho*R/T*(pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2()))) / (R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()));
         // dcpdrho|T = d2h/dTdrho + dh/drho * dP/dT * d2P/drho2 / ( dp/drho )^2 - ( d2h/drho2 * dP/dT + dh/drho * d2P/dTdrho ) / ( dP/drho )
         drho = R/rho*delta*(delta*AS.d2alphar_dDelta2() - pow(tau,2)*AS.d3alphar_dDelta_dTau2() + AS.dalphar_dDelta() - tau*delta*AS.d3alphar_dDelta2_dTau() - tau*AS.d2alphar_dDelta_dTau()); //d2h/dTdrho
@@ -761,7 +761,7 @@ void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropD
         double aa = 1.0+delta*AS.dalphar_dDelta()-delta*tau*AS.d2alphar_dDelta_dTau();
         double bb = pow(tau, 2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2());
         double daa_dTau = -delta*tau*AS.d3alphar_dDelta_dTau2();
-        double dbb_dTau = pow(tau, 2)*(AS.d3alpha0_dTau3()+AS.d3alphar_dDelta3())+2.0*tau*(AS.d2alpha0_dTau2()+AS.d2alphar_dDelta2());
+        double dbb_dTau = pow(tau, 2)*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3())+2.0*tau*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2());
         double w = AS.speed_sound();
         dT = 1.0/2.0/w/T*(pow(w, 2)-R*Tr/AS.molar_mass()*(2.0*delta*AS.d2alphar_dDelta_dTau()+pow(delta, 2)*AS.d3alphar_dDelta2_dTau()-(2*aa/bb*daa_dTau-pow(aa/bb, 2)*dbb_dTau)));
         //dwdrho
