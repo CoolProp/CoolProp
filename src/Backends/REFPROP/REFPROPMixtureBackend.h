@@ -178,6 +178,7 @@ public:
     double calc_melt_Tmax();
     CoolPropDbl calc_T_critical(void);
 	CoolPropDbl calc_T_reducing(void);
+    void calc_reducing_state(void);
     CoolPropDbl calc_p_critical(void);
     CoolPropDbl calc_p_triple(void);
     CoolPropDbl calc_p_min(void){return calc_p_triple();};

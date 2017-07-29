@@ -758,6 +758,13 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_critical(){
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(dcrit_mol_L*1000);
 };
+void REFPROPMixtureBackend::calc_reducing_state(){
+    this->check_loaded_fluid();
+    double rhored_mol_L = 0, Tr = 0;
+    REDXdll(&(mole_fractions[0]), &Tr, &rhored_mol_L);
+    _reducing.T = Tr;
+    _reducing.rhomolar = rhored_mol_L*1000;
+}
 CoolPropDbl REFPROPMixtureBackend::calc_T_reducing(){
     this->check_loaded_fluid();
     double rhored_mol_L = 0, Tr = 0;
