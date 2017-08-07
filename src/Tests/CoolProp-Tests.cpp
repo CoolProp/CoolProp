@@ -1682,7 +1682,7 @@ public:
         
         std::ostringstream name;
         name << "Check state for " << state << " for " << fluid << " for reference state " << ref_state;
-        CAPTURE(name);
+        CAPTURE(&name);
         
         std::vector<std::string> fl(1, fluid);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
