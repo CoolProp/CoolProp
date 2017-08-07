@@ -723,6 +723,53 @@ void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropD
         dT = 1/dT_dtau; drho = 0; break;
     case iDelta:
         dT = 0; drho = 1/rhor; break;
+    case iCvmolar:
+    case iCvmass:
+    {
+        // use the second order derivative of internal energy
+        // make it cleaner by using the function get_dT_drho_second_derivatives directly?
+        // dcvdT|rho = d2u/dT2|rho
+        dT = R/T*pow(tau, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3())+2*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()));
+        // dcvdrho|T = d2u/dT/drho
+        drho = R/rho*(-pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2());
+        if (index == iCvmass){
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case iCpmolar:
+    case iCpmass:
+    {
+        // dcp/dT|rho = d2h/dT2 + dh/drho * dP/dT * d2P/drhodT / ( dp/drho )^2 - ( d2h/dTdrho * dP/dT + dh/drho * d2P/dT2 ) / ( dP/drho )
+        dT = R/T*pow(tau, 2)*(tau*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3()) + 2*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2()) + delta*AS.d3alphar_dDelta_dTau2());
+        dT += (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) * (R*(1+2*delta*AS.dalphar_dDelta() +pow(delta,2)*AS.d2alphar_dDelta2() - 2*delta*tau*AS.d2alphar_dDelta_dTau() - tau*pow(delta, 2)*AS.d3alphar_dDelta2_dTau())) / pow(R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()), 2);
+        dT -= ((R/rho*delta*(delta*AS.d2alphar_dDelta2() - pow(tau,2)*AS.d3alphar_dDelta_dTau2() + AS.dalphar_dDelta() - tau*delta*AS.d3alphar_dDelta2_dTau() - tau*AS.d2alphar_dDelta_dTau())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) + (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (rho*R/T*(pow(tau,2)*delta*AS.d3alphar_dDelta_dTau2()))) / (R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()));
+        // dcpdrho|T = d2h/dTdrho + dh/drho * dP/dT * d2P/drho2 / ( dp/drho )^2 - ( d2h/drho2 * dP/dT + dh/drho * d2P/dTdrho ) / ( dP/drho )
+        drho = R/rho*delta*(delta*AS.d2alphar_dDelta2() - pow(tau,2)*AS.d3alphar_dDelta_dTau2() + AS.dalphar_dDelta() - tau*delta*AS.d3alphar_dDelta2_dTau() - tau*AS.d2alphar_dDelta_dTau()); //d2h/dTdrho
+        drho += (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) * (T*R/rho*(2*delta*AS.dalphar_dDelta()+4*pow(delta,2)*AS.d2alphar_dDelta2()+pow(delta,3)*AS.d3alphar_dDelta3())) / pow(R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()), 2);
+        drho -= ((R*T*pow(delta/rho,2)*(tau*AS.d3alphar_dDelta2_dTau() + 2*AS.d2alphar_dDelta2() + delta*AS.d3alphar_dDelta3())) * (rho*R*(1+delta*AS.dalphar_dDelta() - tau*delta*AS.d2alphar_dDelta_dTau())) + (T*R/rho*(tau*delta*AS.d2alphar_dDelta_dTau()+delta*AS.dalphar_dDelta()+pow(delta,2)*AS.d2alphar_dDelta2())) * (R*(1+2*delta*AS.dalphar_dDelta() +pow(delta,2)*AS.d2alphar_dDelta2() - 2*delta*tau*AS.d2alphar_dDelta_dTau() - tau*pow(delta, 2)*AS.d3alphar_dDelta2_dTau()))) / (R*T*(1+2*delta*AS.dalphar_dDelta()+pow(delta, 2)*AS.d2alphar_dDelta2()));
+        if (index == iCpmass){
+            drho /= AS.molar_mass();
+            dT /= AS.molar_mass();
+        }
+        break;
+    }
+    case ispeed_sound:
+    {
+        //dwdT
+        double aa = 1.0+delta*AS.dalphar_dDelta()-delta*tau*AS.d2alphar_dDelta_dTau();
+        double bb = pow(tau, 2)*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2());
+        double daa_dTau = -delta*tau*AS.d3alphar_dDelta_dTau2();
+        double dbb_dTau = pow(tau, 2)*(AS.d3alpha0_dTau3()+AS.d3alphar_dTau3())+2.0*tau*(AS.d2alpha0_dTau2()+AS.d2alphar_dTau2());
+        double w = AS.speed_sound();
+        dT = 1.0/2.0/w/T*(pow(w, 2)-R*Tr/AS.molar_mass()*(2.0*delta*AS.d2alphar_dDelta_dTau()+pow(delta, 2)*AS.d3alphar_dDelta2_dTau()-(2*aa/bb*daa_dTau-pow(aa/bb, 2)*dbb_dTau)));
+        //dwdrho
+        double daa_dDelta = AS.dalphar_dDelta()+delta*AS.d2alphar_dDelta2()-tau*(AS.d2alphar_dDelta_dTau()+delta*AS.d3alphar_dDelta2_dTau());
+        double dbb_dDelta = pow(tau, 2)*(AS.d3alpha0_dDelta_dTau2()+AS.d3alphar_dDelta_dTau2());
+        drho = R*T/2.0/AS.molar_mass()/w/rhor*(2.0*(AS.dalphar_dDelta()+delta*AS.d2alphar_dDelta2())+(2.0*delta*AS.d2alphar_dDelta2()+pow(delta, 2)*AS.d3alphar_dDelta3())-(2*aa/bb*daa_dDelta-pow(aa/bb, 2)*dbb_dDelta));
+        break;
+    }
     default:
         throw ValueError(format("input to get_dT_drho[%s] is invalid",get_parameter_information(index,"short").c_str()));
     }
@@ -946,6 +993,19 @@ TEST_CASE("Check derivatives in first_partial_deriv","[derivs_in_first_partial_d
     CoolPropDbl dGmass_dT_num = (WaterplusT->gibbsmass() - WaterminusT->gibbsmass())/(2*dT);
     CoolPropDbl dGmass_drho_num = (Waterplusrho->gibbsmass() - Waterminusrho->gibbsmass())/(2*drho);
 
+    CoolPropDbl dCvmolar_dT_num = (WaterplusT->cvmolar() - WaterminusT->cvmolar())/(2*dT);
+    CoolPropDbl dCvmolar_drho_num = (Waterplusrho->cvmolar() - Waterminusrho->cvmolar())/(2*drho);
+    CoolPropDbl dCvmass_dT_num = (WaterplusT->cvmass() - WaterminusT->cvmass())/(2*dT);
+    CoolPropDbl dCvmass_drho_num = (Waterplusrho->cvmass() - Waterminusrho->cvmass())/(2*drho);
+
+    CoolPropDbl dCpmolar_dT_num = (WaterplusT->cpmolar() - WaterminusT->cpmolar())/(2*dT);
+    CoolPropDbl dCpmolar_drho_num = (Waterplusrho->cpmolar() - Waterminusrho->cpmolar())/(2*drho);
+    CoolPropDbl dCpmass_dT_num = (WaterplusT->cpmass() - WaterminusT->cpmass())/(2*dT);
+    CoolPropDbl dCpmass_drho_num = (Waterplusrho->cpmass() - Waterminusrho->cpmass())/(2*drho);
+
+    CoolPropDbl dspeed_sound_dT_num = (WaterplusT->speed_sound() - WaterminusT->speed_sound())/(2*dT);
+    CoolPropDbl dspeed_sound_drho_num = (Waterplusrho->speed_sound() - Waterminusrho->speed_sound())/(2*drho);
+
     // Pressure
     CoolPropDbl dP_dT_analyt, dP_drho_analyt;
     CoolProp::get_dT_drho(*Water, CoolProp::iP, dP_dT_analyt, dP_drho_analyt);
@@ -969,6 +1029,19 @@ TEST_CASE("Check derivatives in first_partial_deriv","[derivs_in_first_partial_d
     CoolProp::get_dT_drho(*Water, CoolProp::iGmolar, dGmolar_dT_analyt, dGmolar_drho_analyt);
     CoolPropDbl dGmass_dT_analyt, dGmass_drho_analyt;
     CoolProp::get_dT_drho(*Water, CoolProp::iGmass, dGmass_dT_analyt, dGmass_drho_analyt);
+    // Isochoric heat capacity
+    CoolPropDbl dCvmolar_dT_analyt, dCvmolar_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iCvmolar, dCvmolar_dT_analyt, dCvmolar_drho_analyt);
+    CoolPropDbl dCvmass_dT_analyt, dCvmass_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iCvmass, dCvmass_dT_analyt, dCvmass_drho_analyt);
+    // Isobaric heat capacity
+    CoolPropDbl dCpmolar_dT_analyt, dCpmolar_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iCpmolar, dCpmolar_dT_analyt, dCpmolar_drho_analyt);
+    CoolPropDbl dCpmass_dT_analyt, dCpmass_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::iCpmass, dCpmass_dT_analyt, dCpmass_drho_analyt);
+    // Speed of sound
+    CoolPropDbl dspeed_sound_dT_analyt, dspeed_sound_drho_analyt;
+    CoolProp::get_dT_drho(*Water, CoolProp::ispeed_sound, dspeed_sound_dT_analyt, dspeed_sound_drho_analyt);
 
     double eps = 1e-3;
 
@@ -995,6 +1068,18 @@ TEST_CASE("Check derivatives in first_partial_deriv","[derivs_in_first_partial_d
     CHECK( std::abs(dGmass_dT_analyt/dGmass_dT_num-1) < eps);
     CHECK( std::abs(dGmass_drho_analyt/dGmass_drho_num-1) < eps);
 
+    CHECK( std::abs(dCvmolar_dT_analyt/dCvmolar_dT_num-1) < eps);
+    CHECK( std::abs(dCvmolar_drho_analyt/dCvmolar_drho_num-1) < eps);
+    CHECK( std::abs(dCvmass_dT_analyt/dCvmass_dT_num-1) < eps);
+    CHECK( std::abs(dCvmass_drho_analyt/dCvmass_drho_num-1) < eps);
+
+    CHECK( std::abs(dCpmolar_dT_analyt/dCpmolar_dT_num-1) < eps);
+    CHECK( std::abs(dCpmolar_drho_analyt/dCpmolar_drho_num-1) < eps);
+    CHECK( std::abs(dCpmass_dT_analyt/dCpmass_dT_num-1) < eps);
+    CHECK( std::abs(dCpmass_drho_analyt/dCpmass_drho_num-1) < eps);
+
+    CHECK( std::abs(dspeed_sound_dT_analyt/dspeed_sound_dT_num-1) < eps);
+    CHECK( std::abs(dspeed_sound_drho_analyt/dspeed_sound_drho_num-1) < eps);
 }
 
 #endif
