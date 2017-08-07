@@ -2972,40 +2972,48 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
     }
     if (is_pure_or_pseudopure)
     {
+        EquationOfState &E = components[0].EOS();
+        // In the case of cubics, we need to use the shifted tau^*=Tc/T and delta^*=rho/rhoc
+        // rather than tau=Tr/T and delta=rho/rhor
+        // For multiparameter EOS, this changes nothing because Tc/Tr = 1 and rhoc/rhor = 1
+        double Tc = get_fluid_constant(0, iT_reducing), rhomolarc = get_fluid_constant(0, irhomolar_reducing);
+        double taustar = Tc/Tr*tau, deltastar = rhor/rhomolarc*delta;
         if (nTau == 0 && nDelta == 0){
-			val = components[0].EOS().base0(tau, delta);
+			val = E.base0(taustar, deltastar);
         }
         else if (nTau == 0 && nDelta == 1){
-            val = components[0].EOS().dalpha0_dDelta(tau, delta);
+            val = E.dalpha0_dDelta(taustar, deltastar);
         }
         else if (nTau == 1 && nDelta == 0){
-            val = components[0].EOS().dalpha0_dTau(tau, delta);
+            val = E.dalpha0_dTau(taustar, deltastar);
         }
         else if (nTau == 0 && nDelta == 2){
-            val = components[0].EOS().d2alpha0_dDelta2(tau, delta);
+            val = E.d2alpha0_dDelta2(taustar, deltastar);
         }
         else if (nTau == 1 && nDelta == 1){
-            val = components[0].EOS().d2alpha0_dDelta_dTau(tau, delta);
+            val = E.d2alpha0_dDelta_dTau(taustar, deltastar);
         }
         else if (nTau == 2 && nDelta == 0){
-            val = components[0].EOS().d2alpha0_dTau2(tau, delta);
+            val = E.d2alpha0_dTau2(taustar, deltastar);
         }
         else if (nTau == 0 && nDelta == 3){
-            val = components[0].EOS().d3alpha0_dDelta3(tau, delta);
+            val = E.d3alpha0_dDelta3(taustar, deltastar);
         }
         else if (nTau == 1 && nDelta == 2){
-            val = components[0].EOS().d3alpha0_dDelta2_dTau(tau, delta);
+            val = E.d3alpha0_dDelta2_dTau(taustar, deltastar);
         }
         else if (nTau == 2 && nDelta == 1){
-            val = components[0].EOS().d3alpha0_dDelta_dTau2(tau, delta);
+            val = E.d3alpha0_dDelta_dTau2(taustar, deltastar);
         }
         else if (nTau == 3 && nDelta == 0){
-            val = components[0].EOS().d3alpha0_dTau3(tau, delta);
+            val = E.d3alpha0_dTau3(taustar, deltastar);
         }
         else
         {
             throw ValueError();
         }
+        val *= pow(rhor/rhomolarc, nDelta);
+        val /= pow(Tr/Tc, nTau);
         if (!ValidNumber(val)){
            //calc_alpha0_deriv_nocache(nTau,nDelta,mole_fractions,tau,delta,Tr,rhor);
            throw ValueError(format("calc_alpha0_deriv_nocache returned invalid number with inputs nTau: %d, nDelta: %d, tau: %Lg, delta: %Lg", nTau, nDelta, tau, delta));

@@ -59,13 +59,18 @@ public:
 
     const double get_fluid_constant(std::size_t i, parameters param) const{
         switch(param){
-            case iP_critical: return cubic->get_pc()[i];
-            case iT_critical: return cubic->get_Tc()[i];
+            case iP_critical:
+                return cubic->get_pc()[i];
+            case iT_reducing:
+            case iT_critical:
+                return cubic->get_Tc()[i];
             case iacentric_factor: return cubic->get_acentric()[i];
             case imolar_mass: return components[i].molemass;
             case iT_triple: return HelmholtzEOSMixtureBackend::get_components()[i].EOS().sat_min_liquid.T; // From the base class data structure
             case iP_triple: return HelmholtzEOSMixtureBackend::get_components()[i].EOS().sat_min_liquid.p; // From the base class data structure
-            case irhomolar_critical: return components[i].rhomolarc;
+            case irhomolar_reducing:
+            case irhomolar_critical:
+                    return components[i].rhomolarc;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         }

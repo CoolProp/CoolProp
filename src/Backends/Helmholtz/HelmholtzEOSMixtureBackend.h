@@ -186,6 +186,8 @@ public:
         switch(param){
             case iP_critical: return fld.crit.p;
             case iT_critical: return fld.crit.T;
+            case iT_reducing: return fld.EOS().reduce.T;
+            case irhomolar_reducing: return fld.EOS().reduce.rhomolar;
             case irhomolar_critical: return fld.crit.rhomolar;
             case iacentric_factor: return fld.EOS().acentric;
             case imolar_mass: return fld.EOS().molar_mass;
