@@ -13,7 +13,7 @@
 namespace CoolPropTesting {
 
 Eigen::MatrixXd makeMatrix(const std::vector<double> &coefficients);
-CoolProp::IncompressibleFluid incompressibleFluidObject();
+//CoolProp::IncompressibleFluid incompressibleFluidObject();
 //IncompressibleBackend incompressibleBackendObject();
 
 } // namespace CoolPropTesting

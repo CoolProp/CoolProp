@@ -1,6 +1,7 @@
 
 #include "DataStructures.h"
 #include "IncompressibleFluid.h"
+#include "IncompressibleLibrary.h"
 #include "math.h"
 #include "MatrixMath.h"
 #include "PolyMath.h"
@@ -611,7 +612,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
     SECTION("Test case for Methanol from SecCool") {
 
-        CoolProp::IncompressibleFluid CH3OH = CoolPropTesting::incompressibleFluidObject();
+        CoolProp::IncompressibleFluid CH3OH = CoolProp::get_incompressible_fluid("CH3OH");
 
         // Prepare the results and compare them to the calculated values
         double acc = 0.0001;
