@@ -4,13 +4,18 @@ the MATLAB⇒Python interface introduced in R2014b.
 Setup
 =====
 
-Several things are required: 1. A MATLAB release that is R2014b or
-newer. 2. A python release with the
-```numpy`` <https://pypi.python.org/pypi/numpy>`__ and
-```CoolProp`` <http://www.coolprop.org/coolprop/wrappers/Python/index.html>`__
-packages installed. It is not required to follow the `"supported python
+Several things are required: 
+
+1. A MATLAB release that is R2014b or newer. 
+2. A python release with the |numpy|_ and |CoolProp|_ packages installed. It is not required to follow the `"supported python
 versions" <https://www.mathworks.com/help/matlab/matlab_external/system-requirements-for-matlab-engine-for-python.html#buijfe8>`__
 (this tool was tested with R2015a & R2017a + python 3.6).
+
+.. |numpy| replace:: ``numpy``
+.. _numpy: https://pypi.python.org/pypi/numpy
+
+.. |CoolProp| replace:: ``CoolProp``
+.. _CoolProp: http://www.coolprop.org/coolprop/wrappers/Python/index.html
 
 If you have several python versions installed, make sure that your
 MATLAB recognizes the correct python executable by running
