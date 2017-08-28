@@ -1006,7 +1006,7 @@ end
 """
     AbstractState_set_binary_interaction_double(handle::Clong, i::Int, j::Int, parameter::AbstractString, value::Float64)
 
-Set binary interraction parrameter for diffrent mixtures model e.g.: "linear", "Lorentz-Berthelot"
+Set binary interraction parameter for diffrent mixtures model e.g.: "linear", "Lorentz-Berthelot"
 
 # Arguments
 * `handle`: The integer handle for the state class stored in memory
@@ -1041,7 +1041,7 @@ Set cubic's alpha function parameters.
 
 # Arguments
 * `handle`: The integer handle for the state class stored in memory
-* `i`: indice of the fluid the parramter should be applied too (for mixtures)
+* `i`: indice of the fluid the paramter should be applied too (for mixtures)
 * `parameter`: the string specifying the alpha function to use, e.g. "TWU" for the Twu or "MC" for Mathias-Copeman alpha function.
 * `c1`: the first parameter for the alpha function
 * `c2`: the second parameter for the alpha function
@@ -1060,8 +1060,8 @@ Set some fluid parameter (ie volume translation for cubic). Currently applied to
 
 # Arguments
 * `handle`: The integer handle for the state class stored in memory
-* `i`: indice of the fluid the parramter should be applied to (for mixtures)
-* `parameter`: string wit the name of the parameter, e.g. "c", "cm", "c_m" for volume translation parrameter.
+* `i`: indice of the fluid the paramter should be applied to (for mixtures)
+* `parameter`: string wit the name of the parameter, e.g. "c", "cm", "c_m" for volume translation parameter.
 * `value`: the value of the parameter
 """
 function AbstractState_set_fluid_parameter_double(handle::Clong, i::Integer, parameter::AbstractString, value::Real)
