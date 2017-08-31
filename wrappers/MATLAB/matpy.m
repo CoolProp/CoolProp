@@ -35,9 +35,13 @@ classdef matpy
       %nparray2mat Convert an nparray from numpy to a MATLAB array
       %   Convert an n-dimensional nparray into an equivalent MATLAB array
       data_size = cellfun(@int64, cell(npArr.shape));
+      if ~all(data_size) % Array with at least one zero dimension
+        result = zeros(data_size);
+        return
+      end
       switch numel(data_size)
         case {0,1}
-          % This is a simple operation
+          % Convert to a double scalar or vector (preserving shape)
           result = double(py.array.array('d', py.numpy.nditer(npArr)));
         case 2
           % order='F' is used to get data in column-major order (as in Fortran
