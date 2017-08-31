@@ -37,11 +37,11 @@ classdef CoolPropsWrapperTests < matlab.unittest.TestCase
     end % testPythonSetup
     
     %% Smoke tests:
-    function testInterfaceWithTwoInputs(testCase)
+    function testPythonInterfaceWithTwoInputs(testCase)
       py.CoolProp.CoolProp.PropsSI(testCase.TestInputs2{:});
     end
     
-    function testInterfaceWithSixInputs(testCase)
+    function testPythonInterfaceWithSixInputs(testCase)
       inputs = CoolPropsWrapperTests.cell2pyargs(testCase.TestInputs6);
       py.CoolProp.CoolProp.PropsSI(inputs{:});     
     end
@@ -62,7 +62,7 @@ classdef CoolPropsWrapperTests < matlab.unittest.TestCase
     end % testInterfaceEquivalence
   
     %% Unit tests:
-    function testWrapperWithTwoInputs(testCase)
+    function testHighLevelWrapperWithTwoInputs(testCase)
       tmp = testCase.TestInputs2;
       r{1} = PropsSI(tmp{:});
       r{2} = PropsSI(tmp{1},'',0,'',0,tmp{2});      
@@ -71,11 +71,33 @@ classdef CoolPropsWrapperTests < matlab.unittest.TestCase
       testCase.verifyNumElements(r{1},1);
     end
     
-    function testWrapperWithSixInputs(testCase)
+    function testHighLevelWrapperWithSixInputs(testCase)
       tmp = testCase.TestInputs6;
       testCase.verifyNumElements(PropsSI(tmp{:}), ...
         prod( cellfun(@numel,tmp([1,3,5])) )...
       );
+    end
+    
+    function testLowLevelWrapper(~)     
+      [HEOS,CoolProp] = AbstractState('HEOS', 'Water');
+      % Set a very low density state point
+      HEOS.update(CoolProp.DmolarT_INPUTS, 1e-6, 300);      
+      % Specify the phase:
+      HEOS.specify_phase(CoolProp.iphase_gas);
+      % Specify delimited fluid names:
+      HEOS = AbstractState('HEOS', 'Methane&Ethane');
+      % Set the mole fractions of the mixture:
+      HEOS.set_mole_fractions([0.2,0.8]);
+      % Do the dewpoint calculation:
+      HEOS.update(CoolProp.PQ_INPUTS, 101325, 1);
+      % Liquid phase molar density:
+      HEOS.saturated_liquid_keyed_output(CoolProp.iDmolar);
+      % Vapor phase molar density:
+      HEOS.saturated_vapor_keyed_output(CoolProp.iDmolar);
+      % Liquid phase mole fractions:
+      HEOS.mole_fractions_liquid();
+      % Vapor phase mole fractions:
+      HEOS.mole_fractions_vapor();
     end
     
   end % Test methods
