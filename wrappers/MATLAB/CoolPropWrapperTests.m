@@ -1,6 +1,6 @@
-classdef CoolPropsWrapperTests < matlab.unittest.TestCase
-% COOLPROPSWRAPPERTESTS a class for testing the local system configuration
-%   Please execute these tests to make sure using:  run(CoolPropsWrapperTests);
+classdef CoolPropWrapperTests < matlab.unittest.TestCase
+% COOLPROPWRAPPERTESTS a class for testing the local system configuration
+%   Please execute these tests to make sure using:  run(CoolPropWrapperTests);
 %   Requires MATLAB R2014b or newer.
 %   
 % Copyright (C) 2017 Iliya Romm, under the MIT license.
@@ -42,13 +42,13 @@ classdef CoolPropsWrapperTests < matlab.unittest.TestCase
     end
     
     function testPythonInterfaceWithSixInputs(testCase)
-      inputs = CoolPropsWrapperTests.cell2pyargs(testCase.TestInputs6);
+      inputs = CoolPropWrapperTests.cell2pyargs(testCase.TestInputs6);
       py.CoolProp.CoolProp.PropsSI(inputs{:});     
     end
         
     function testInterfaceEquivalence(testCase)
       SZ = [numel(testCase.TestInputs6{5}), numel(testCase.TestInputs6{3})];
-      inputs = CoolPropsWrapperTests.cell2pyargs(testCase.TestInputs6);      
+      inputs = CoolPropWrapperTests.cell2pyargs(testCase.TestInputs6);      
       %% Calling PropsSI, converting python output to MATLAB and reshaping: 
       % W/o importing the CP module:
       props_ni = reshape(...

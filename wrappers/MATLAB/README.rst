@@ -21,7 +21,7 @@ Several things are required:
 It is not required to follow the MATLAB's `supported python
 versions <https://www.mathworks.com/help/matlab/matlab_external/system-requirements-for-matlab-engine-for-python.html#buijfe8>`__ (this tool was tested with R2015a & R2017a + python 3.6). 
 
-To confirm that your system is configured correctly, please execute the provided tests file using ``run(CoolPropsWrapperTests);`` and verify that it completes with no errors.
+To confirm that your system is configured correctly, please execute the provided tests file using ``run(CoolPropWrapperTests);`` and verify that it completes with no errors.
 
 Usage
 =====
