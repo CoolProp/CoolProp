@@ -29,14 +29,14 @@ More information:
 
 All :ref:`the wrappers <wrappers>` wrap this function in exactly the same way.
 
-For pure and pseudo-pure fluids, two state points are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), and then comes inputs where neither :math:`T` nor :math:`\rho` are given, like :math:`p,h`.  They will be much slower.  If speed is an issue, you can look into table-based interpolation methods using TTSE or bicubic interpolation; or if you are only interested in Water properties, you can look into using the IF97 (industrial formulation) backend.  
+For pure and pseudo-pure fluids, two state variables are required to fix the state.  The equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs.  :math:`P,T` will be a bit slower (3-10 times), followed by input pairs where neither :math:`T` nor :math:`\rho` are specified, like :math:`P,H`; these will be much slower.  If speed is an issue, you can look into table-based interpolation methods using :ref:`TTSE or bicubic interpolation <Tabular_Interpolation>`; or if you are only interested in Water properties, you can look into using the :ref:`IF97 <IF97>` (industrial formulation) backend.  
 
 Vapor, Liquid, and Saturation States
 ------------------------------------
 
 If the input pair (say, :math:`P,T`) defines a state point that lies in the *vapor* region, then the vapor property at that state point will be returned.  Likewise, if the state point lies in the *liquid* region, then the liquid state property at that state point will be returned.  If the state point defined by the input pair lies within 1E-4 % of the saturation pressure, then CoolProp may return an error, because both *liquid* and *vapor* are defined along the saturation curve.  
 
-To retrieve either the *vapor* or *liquid* properties along the saturation curve, provide an input pair that includes either the saturation temperature, :math:`T`, or saturation pressure, :math:`P`, along with the vapor quality, :math:`Q`, as the input pair.  Use a value of :math:`Q=1` for the saturated *vapor* property or :math:`Q=0` for the saturated liquid property.  For example, at a saturation pressure of 1 atm, the *liquid* and *vapor* enthalpies can be returned as follows.
+To retrieve either the *vapor* or *liquid* properties along the saturation curve, provide an input pair that includes either the saturation temperature, :math:`T`, or saturation pressure, :math:`p`, along with the *vapor quality*, :math:`Q`.  Use a value of :math:`Q=1` for the saturated *vapor* property or :math:`Q=0` for the saturated *liquid* property.  For example, at a saturation pressure of 1 atm, the *liquid* and *vapor* enthalpies can be returned as follows.
 
 .. ipython::
 
@@ -44,12 +44,20 @@ To retrieve either the *vapor* or *liquid* properties along the saturation curve
     In [1]: from CoolProp.CoolProp import PropsSI
     
     # Saturated vapor enthalpy of Water at 1 atm in J/kg-K
-    In [2]: PropsSI('H','P',101325,'Q',1,'Water')
+    In [2]: H_V = PropsSI('H','P',101325,'Q',1,'Water')
+	
+    In [3]: H_V
 
     # Saturated liquid enthalpy of Water at 1 atm in J/kg-K
-    In [3]: PropsSI('H','P',101325,'Q',0,'Water')
+    In [3]: H_L = PropsSI('H','P',101325,'Q',0,'Water')
+	
+    In [5]: H_L
 
-Note that the latent heat of vaporization can be calculated using the difference between these two values.
+    # Latent heat of vaporization of Water at 1 atm in J/kg-K
+    In [6]: H_V - H_L
+
+.. note::
+   The *latent heat of vaporization* can be calculated using the difference between the vapor and liquid enthalpies at the same point on the saturation curve.
 
 Fluid information
 -----------------
@@ -433,12 +441,12 @@ Sample Code
     
     # Check that the same as using pseudo-pure
     In [2]: PropsSI('D','T',300,'P',101325,'R410A')
-	
-	# Using IF97 to get Water saturated vapor density at 100C
-	In [2]: PropsSI('D','T',400,'Q',1,'IF97::Water')
+    
+    # Using IF97 to get Water saturated vapor density at 100C
+    In [2]: PropsSI('D','T',400,'Q',1,'IF97::Water')
 
-	# Check the IF97 result using the default HEOS
-	In [2]: PropsSI('D','T',400,'Q',1,'Water')
+    # Check the IF97 result using the default HEOS
+    In [2]: PropsSI('D','T',400,'Q',1,'Water')
 
 .. _parameter_table:
 
