@@ -155,7 +155,7 @@ which can be expanded as (p can be expressed as a function of :math:`T` and :mat
 
 .. math::
 
-    \left.\frac{\partial Z}{\partial T}\right|_{v} = \frac{1}{R}\dfrac{Tv\left.\frac{\partial p}{\partial T}\right|_{v} - pv}{T}
+    \left.\frac{\partial Z}{\partial T}\right|_{v} = \frac{v}{R}\dfrac{T\left.\frac{\partial p}{\partial T}\right|_{v} - p}{T^2}
     
 Joule-Thomson Curve
 ^^^^^^^^^^^^^^^^^^^
