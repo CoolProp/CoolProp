@@ -49,9 +49,10 @@ Although IF97 is generally faster than the other backends, it is only applicable
     Tc = CP.PropsSI('Tcrit','IF97::Water')
     pt = CP.PropsSI('ptriple','IF97::Water')/1e6
     Tt = CP.PropsSI('Ttriple','IF97::Water')
-    Tmin = 273.15
+    # Tmin = 273.15
+    Tmin = CP.PropsSI('Tmin','IF97::Water')
     Tmax = CP.PropsSI('Tmax','IF97::Water')
-    pmax = 100
+    pmax = CP.PropsSI('pmax','IF97::Water')/1e6
     pmin = 0
     Tb = 623.15
     pb = 16.5291643

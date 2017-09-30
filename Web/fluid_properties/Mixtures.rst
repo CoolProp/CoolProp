@@ -40,9 +40,11 @@ Here is a sample of using this in python:
 .. ipython::
 
     In [1]: import CoolProp.CoolProp as CP
-    
+
+    # Create a simple linear mixing rule for the Helium and Xenon pair
     In [1]: CP.apply_simple_mixing_rule('Helium', 'Xenon', 'linear')
 
+    # Now evaluate the 50/50 mixture density at 300K and atmospheric pressure
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
     
 .. warning::
@@ -52,15 +54,22 @@ Here is a sample of using this in python:
 Using your own interaction parameters
 -------------------------------------
 
-If you have your own interaction parameters that you would like to use, you can set them using the ``set_mixture_binary_pair_data`` function.  (You can also retrieve them using the ``set_mixture_binary_pair_data`` function).  You must do this before you would like to call other functions.  Some sample code is below.
+If you have your own interaction parameters that you would like to use, you can set them using the ``set_mixture_binary_pair_data`` function.  (You can also retrieve them using the ``get_mixture_binary_pair_data`` function).  You must do this before you call any other functions that use them.  Also, you must set the boolean configuration variable ``OVERWRITE_BINARY_INTERACTION`` to ``true``.  This variable is ``false`` by default and will dis-allow overwrites of parameters that already exist.  Some sample code is below.
 
 .. ipython::
     :okexcept:
 
     In [1]: import CoolProp.CoolProp as CP
 
+    In [1]: CAS_He = CP.get_fluid_param_string('Helium','CAS')
+
+    In [1]: CAS_Xe = CP.get_fluid_param_string('Xenon','CAS')
+
+    @supress
+    In [1]: CP.set_config_bool(CP.OVERWRITE_BINARY_INTERACTION, True)
+
     # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
-    In [1]: CP.apply_simple_mixing_rule('Helium', 'Xenon', 'linear')
+    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
 
     # If the binary interaction pair is already there, set the configuration flag 
     # to allow binary interaction parameters to be over-written
@@ -80,14 +89,14 @@ If you have your own interaction parameters that you would like to use, you can 
     # This is after setting the interaction parameters
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
     
-Once you have constructed an instance of an AbstractState using the low-level interface, you can set the interaction parameters for only that instance by calling the ``set_binary_interaction_double`` and ``get_binary_interaction_double`` functions.
+Once you have constructed an instance of an AbstractState using the low-level interface, you can set the interaction parameters *for only that instance* by calling the ``set_binary_interaction_double`` and ``get_binary_interaction_double`` functions.  This will have no effect on other instances, including the high-level calls, as shown below.
 
 .. ipython::
 
     In [1]: import CoolProp.CoolProp as CP
 
     # This adds a dummy entry in the library of interaction parameters if the mixture is not already there
-    In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
+    # In [1]: CP.apply_simple_mixing_rule(CAS_He, CAS_Xe, 'linear')
     
     In [1]: AS = CP.AbstractState("HEOS","Helium&Xenon")
     
@@ -98,7 +107,7 @@ Once you have constructed an instance of an AbstractState using the low-level in
     # Here you can see that this call to the high-level interface is untouched (is the same as above)
     In [1]: CP.PropsSI('Dmass','T',300,'P',101325,'Helium[0.5]&Xenon[0.5]')
 
-And now, reset the configuration variable
+And now, reset the OVERWRITE_BINARY_INTERACTION configuration variable to dis-allow overwrites.
 
 .. ipython::
 

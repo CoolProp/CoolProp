@@ -107,7 +107,7 @@ Once installed, you can use CoolProp for various things:
 
 * Solve `thermodynamics exercices`_
 
-* Make you own `more complex graphs`_ if you feel the graphing interface is lacking something
+* Make your own `more complex graphs`_ if you feel the graphing interface is lacking something
 
 * Make even more complex graphs using `3D stuff`_
 
