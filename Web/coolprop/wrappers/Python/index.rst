@@ -52,6 +52,18 @@ script::
 
     sudo python2.7 setup.py install
 
+If you have multiple versions of Visual Studio installed and need to specify the version to use and choice of 32-bit or 64-bit compilation, you can use::
+
+    # 64-bit using VS2008 on Pytnon 2.7
+    sudo python setup.py install --cmake-compiler vc9 --cmake-bitness 64
+
+or, equivalently::
+
+    sudo python setup.py install cmake=vc9,64
+
+Omitting the cmake options will use the default (latest) compiler on the machine.
+
+
 Local installation
 ------------------
 
