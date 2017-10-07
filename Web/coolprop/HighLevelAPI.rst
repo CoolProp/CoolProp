@@ -69,7 +69,8 @@ You can obtain string-encoded information about the fluid from the ``get_fluid_p
     In [1]: import CoolProp.CoolProp as CP
     
     In [1]: for k in ['formula','CAS','aliases','ASHRAE34','REFPROP_name','pure','INCHI','INCHI_Key','CHEMSPIDER_ID']:
-       ...:     print k, '-->', CP.get_fluid_param_string("R125", k)
+       ...:     item = k + ' --> ' + CP.get_fluid_param_string("R125", k)
+       ...:     print(item)
        ...:
 
 .. _trivial_inputs:
@@ -411,9 +412,9 @@ Sample Code
 
     In [1]: import CoolProp as CP
     
-    In [1]: print CP.__version__
+    In [1]: print(CP.__version__)
     
-    In [1]: print CP.__gitrevision__
+    In [1]: print(CP.__gitrevision__)
     
     #Import the things you need 
     In [1]: from CoolProp.CoolProp import PropsSI
