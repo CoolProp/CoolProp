@@ -210,65 +210,41 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         // If the fluid is ok...
         
         // First check that none of the identifiers are already present
-        bool already_present = false;
+        // Remember that index is already initialized to fluid_map.size() = max index + 1
         
-        if (string_to_index_map.find(fluid.CAS) != string_to_index_map.end()
-            || string_to_index_map.find(fluid.name) != string_to_index_map.end()
-            || string_to_index_map.find(upper(fluid.name)) != string_to_index_map.end()
-            ){
-            already_present = true;
+        if (string_to_index_map.find(fluid.CAS) != string_to_index_map.end()){
+            index = string_to_index_map.find(fluid.CAS)->second;                 //if CAS found, grab index
+        }
+        if (string_to_index_map.find(fluid.name) != string_to_index_map.end()){
+            index = string_to_index_map.find(fluid.name)->second;                // if name found, grab index
+        }
+        if (string_to_index_map.find(upper(fluid.name)) != string_to_index_map.end()){
+            index = string_to_index_map.find(upper(fluid.name))->second;         // if uppercase name found, grab index
         }
         else{
             // Check the aliases
             for (std::size_t i = 0; i < fluid.aliases.size(); ++i)
             {
-                if (string_to_index_map.find(fluid.aliases[i]) != string_to_index_map.end()){ already_present = true; break; }
-                if (string_to_index_map.find(upper(fluid.aliases[i])) != string_to_index_map.end()){ already_present = true; break; }
+                if (string_to_index_map.find(fluid.aliases[i]) != string_to_index_map.end()){ 
+                    index = string_to_index_map.find(fluid.aliases[i])->second;                       // if alias found, grab index
+                    break; 
+                }
+                if (string_to_index_map.find(upper(fluid.aliases[i])) != string_to_index_map.end()){  // if ALIAS found, grab index
+                    index = string_to_index_map.find(upper(fluid.aliases[i]))->second; 
+                    break; 
+                }
             }
         }
         
-        if (already_present){
+        if (index != fluid_map.size()){        // Fluid already in list if index was reset to < fluid_map.size()
             if (!get_config_bool(OVERWRITE_FLUIDS)){
                 throw ValueError(format("Cannot load fluid [%s:%s] because it is already in library; consider enabling the config boolean variable OVERWRITE_FLUIDS", fluid.name.c_str(), fluid.CAS.c_str()));
             }
-            else{
-                // Remove the one(s) that are already there
-                
-                // Remove the actual fluid instance
-                std::size_t index = string_to_index_map.find(fluid.name)->second;
-                
-                if (JSONstring_map.find(index) != JSONstring_map.end()){
-                    JSONstring_map.erase(JSONstring_map.find(index));
-                }
-                
-                if (string_to_index_map.find(fluid.name) != string_to_index_map.end()){
-                    fluid_map.erase(fluid_map.find(index));
-                }
-                
-                // Remove the identifiers pointing to that instance
-                if(string_to_index_map.find(fluid.CAS) != string_to_index_map.end()){
-                    string_to_index_map.erase(string_to_index_map.find(fluid.CAS));
-                }
-                if(string_to_index_map.find(fluid.name) != string_to_index_map.end()){
-                    string_to_index_map.erase(string_to_index_map.find(fluid.name));
-                }
-                // Check the aliases
-                for (std::size_t i = 0; i < fluid.aliases.size(); ++i)
-                {
-                    if (string_to_index_map.find(fluid.aliases[i]) != string_to_index_map.end()){
-                        string_to_index_map.erase(string_to_index_map.find(fluid.aliases[i]));
-                    }
-                    if (string_to_index_map.find(upper(fluid.aliases[i])) != string_to_index_map.end()){
-                        string_to_index_map.erase(string_to_index_map.find(upper(fluid.aliases[i])));
-                    }
-                }
-            }
         }
         
-        // By now, the library has been cleared of remnants of this fluid; safe to add the fluid now.
-        
-        // Get the next index for this fluid
-        index = fluid_map.size();
+        // index now holds either 
+        //    1. the index of a fluid that's already present, in which case it will be overwritten, or
+        //    2. the fluid_map.size(), in which case a new entry will be added to the list
         
         // Add index->fluid mapping
         fluid_map[index] = fluid;
