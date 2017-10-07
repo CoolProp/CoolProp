@@ -84,7 +84,7 @@ Use these instructions to build the CoolProp documentation (html) on 64-bit wind
 
  - Use the ``Per User`` installation (vice installing for all users).  This will allow the installation of python packages without having to open a window with administrative privileges.  Windows (8, 8.1, and 10) does a "lock-down" of the ``Program Files`` directories such that they can only be modified with administrative privileges.
 
- - Choose Python version 2.7.x
+ - Choose Python version 2.7.x or 3.6.x
 
  - Add Anaconda to the path.  This will ensure that the Anaconda/python commands (like Conda) are available from any command window.  
 
@@ -101,37 +101,61 @@ Use these instructions to build the CoolProp documentation (html) on 64-bit wind
    
 **Setup a Virtual Python Environment**
 
-Set up a virtual python environment and name it something like CP27 (that's what is used in the examples below).  This virtual environment will contain all the modules needed to build the CoolProp documentation.  Setting up a virtual environment is a very simple thing to do in the Anaconda Navigator (Graphical Interface), but you can also set up the environment using the following commands in a command line window::
+Set up a virtual python environment and name it something like CP27 (that's what is used in the examples below) or CP36 if you are using Python 3.6.  This virtual environment will contain all the modules needed to build the CoolProp documentation.  Setting up a virtual environment is a very simple thing to do in the Anaconda Navigator (Graphical Interface), but you can also set up the environment using the following commands in a command line window::
 
     conda create --name CP27 python=2.7
     activate CP27 # Will cause command prompt to be prefixed with (CP27)
 	
 .. note::
 
-   Any instructions below that take place on the Windows are assumed to be in the virtual environment created here.  For example, when opening a Windows command prompt (cmd), *activate CP27* first before issing any other commands.
+   Any instructions below that take place on the Windows are assumed to be in the virtual environment created here.  For example, when opening a Windows command prompt (cmd), *activate CP27* (or CP36) first before issing any other commands.
 
 **Install Required Python Modules**
 
-Most of the following modules can be installed from the Anaconda Navigator, and it is much simpler to do so.  Even if the module is already in the Anaconda environment, it is best to update the packages listed, making sure to get the latest Windows 64-bit versions.  However, some of the requisite modules are not in the Conda library and have to be installed from the command line using `pip install`.  These will be designated as such.  The versions of each module that have been tested for generating the docs on Windows are shown in parentheses below. 
+Most of the following modules can be installed from the Anaconda Navigator, and it is much simpler to do so.  Even if the module is already in the Anaconda environment, it is best to update the packages listed, making sure to get the latest Windows 64-bit versions.  However, some of the requisite modules are not in the Conda library and have to be installed from the command line using `pip install`.  These will be designated as such.  The versions of each module that have been tested for generating the docs on Windows are shown in the table below. 
 
- - setuptools       (27.2.0)
- - cython           (0.25.2)
- - numpy            (1.12.1)
- - scipy            (0.19.0)
- - matplotlib       (2.0.2)
- - python-dateutil  (2.6.0)
- - pytz             (2017.2)
- - pandas           (0.20.1)
- - sphinx           (1.5.6)
- - ipython          (5.3.0)
- - wxpython         (3.0)  
++-------------------------+-------------+-------------+
+| Modules (Conda)         | Python 2.7  | Python 3.6  |
++=========================+=============+=============+
+| setuptools              | 27.2.0      | 36.4.0      |
++-------------------------+-------------+-------------+
+| cython                  | 0.25.2      | 0.26        |
++-------------------------+-------------+-------------+
+| numpy                   | 1.12.1      | 1.13.1      |
++-------------------------+-------------+-------------+
+| scipy                   | 0.19.0      | 0.19.1      |
++-------------------------+-------------+-------------+
+| matplotlib              | 2.0.2       | 2.0.2       |
++-------------------------+-------------+-------------+
+| python-dateutil         | 2.6.0       | 2.6.1       |
++-------------------------+-------------+-------------+
+| pytz                    | 2017.2      | 2017.2      |
++-------------------------+-------------+-------------+
+| pandas                  | 0.20.1      | 0.20.3      |
++-------------------------+-------------+-------------+
+| sphinx                  | 1.5.6       | 1.6.3       |
++-------------------------+-------------+-------------+
+| ipython                 | 5.3.0       | 6.1.0       |
++-------------------------+-------------+-------------+
+| wxpython                | 3.0         |     n/a     |
++-------------------------+-------------+-------------+
 
 The following modules will need to be installed using *pip install*.
 
- - sphinxcontrib-bibtex    (6.3.5)  
- - sphinxcontrib-doxylink  (1.3)    
- - sphinxcontrib-napoleon  (0.6.1)  
- - cloud-sptheme           (1.9.4)
++-------------------------+-------------+-------------+
+| Modules (pip)           | Python 2.7  | Python 3.6  |
++=========================+=============+=============+
+| sphinxcontrib-bibtex    | 0.3.5       | 0.3.5       |
++-------------------------+-------------+-------------+
+| sphinxcontrib-doxylink  | 1.3         | 1.3         |
++-------------------------+-------------+-------------+
+| sphinxcontrib-napoleon  | 0.6.1       | 0.6.1       |
++-------------------------+-------------+-------------+
+| cloud-sptheme           | 1.9.4       | 1.9.4       |
++-------------------------+-------------+-------------+
+| wxPython                |     n/a     | 4.0.0b1     |
++-------------------------+-------------+-------------+
+
 
 .. note::
 
@@ -163,7 +187,7 @@ There are a number of setup scripts that have to be run to generate dynamic cont
 
 .. note::
 
-   These scripts could be run from a single script to help with automation, however, they only need to be run once, and many may generate errors and warning messages that will be useful in debugging your python environment.  Once the dynamic content from these scripts has been generated, you're ready to build the documentation.
+   These scripts are normally run by the Python 2.x initialization script, ``CoolProp\\Web\\scripts\\__init__.py``.  This script could be run to help with automation, however, there is one additional linux shell script included that will not run on Windows for reasons already mentioned above.  Also, these scripts only need to be run once, and many may generate errors and warning messages that will be useful in debugging your python environment.  Once the dynamic content from these scripts has been generated, you're ready to build the documentation.
    
 **Build the Documentation**
 
