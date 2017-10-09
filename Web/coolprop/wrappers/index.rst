@@ -79,18 +79,18 @@ For python, you should be using `Anaconda/Miniconda <https://store.continuum.io/
 
 For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW, so you should obtain the `MinGW installer <http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download>`_ and run it.  You should install all the packages available, and you MUST(!!) install to a path without spaces. ``C:\MinGW`` is recommended as an installation path. Be sure to add the folder ``C:\MinGw`` to your PATH variable.
 
-If you want to build 64-bit extensions, you MUST install Professional or later Community versions of visual studio, which can be obtained for free if you have a student ID card from Microsoft Dreamspark or just download one of the later Community versions from Microsoft for personal and open-source use.  Python/Cython was built with Visual Studio, so depending on your Python version, you will require _**exactly**_ the Visual Studio versions listed in the table below.
+If you want to build 64-bit extensions, you MUST install Professional or later Community versions of visual studio, which can be obtained for free if you have a student ID card from Microsoft Dreamspark or just download one of the later Community versions from Microsoft for personal and open-source use.  Python/Cython was built with Visual Studio, so depending on your Python version, you will require **exactly** the Visual Studio versions listed in the table below.
 
-+-------------------+-------------+-------------------------+
-| Visual Studio     | Visual C++  | Python Versions         |
-+===================+=============+=========================+
-| 2008 Professional | 9.0         | 2.6, 2.7, 3.0, 3.1, 3.2 |
-+-------------------+-------------+-------------------------+
-| 2010 Professional | 10.0        | 3.3,3.4                 |
-+-------------------+-------------+-------------------------+
-| 2015 Professional | 14.0        | 3.5, 3.6                |
-| or Community      |             |                         |
-+-------------------+-------------+-------------------------+
++---------------------+-------------+-------------------------+
+| Visual Studio       | Visual C++  | Python Versions         |
++=====================+=============+=========================+
+| 2008 Professional   | 9.0         | 2.6, 2.7, 3.0, 3.1, 3.2 |
++---------------------+-------------+-------------------------+
+| 2010 Professional   | 10.0        | 3.3, 3.4                |
++---------------------+-------------+-------------------------+
+| 2015 Professional   | 14.0        | 3.5, 3.6                |
+| or Community        |             |                         |
++---------------------+-------------+-------------------------+
 
 Otherwise, for wrappers other than Python, you can select a Visual Studio version freely.
 
