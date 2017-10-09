@@ -23,6 +23,7 @@ Build Sphinx documentation
 1. Check out the sources in the CoolProp/Web folder::
 
     git clone https://github.com/CoolProp/CoolProp --recursive
+    cd CoolProp/Web
 
 2. Make a virtualenv::
 
@@ -37,11 +38,17 @@ Build Sphinx documentation
     pip install wxpython
 
 
-4. To build the documentation, go into the CoolProp/Web folder and run::
+4. Run setup script, `CoolProp\Web\scripts\__init__.py` to generate dynamic content::
+
+    cd scripts
+    python __init__.py
+    cd ..
+
+5. To build the documentation, go into the CoolProp/Web folder and run::
 
     make html
 
-5. Move the generated docs in ``_build`` to wherever you want
+6. Move the generated docs in ``_build`` to wherever you want
 
 
 Build Doxygen documentation
@@ -167,7 +174,7 @@ If updating the dev version of the documentation (i.e. the latest dev source fil
      --trusted-host www.coolprop.dreamhosters.com
      --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U 
      --force-reinstall CoolProp
-   
+
 
 **Run Setup Scripts**
 
@@ -187,7 +194,7 @@ There are a number of setup scripts that have to be run to generate dynamic cont
 
 .. note::
 
-   These scripts are normally run by the Python 2.x initialization script, ``CoolProp\\Web\\scripts\\__init__.py``.  This script could be run to help with automation, however, there is one additional linux shell script included that will not run on Windows for reasons already mentioned above.  Also, these scripts only need to be run once, and many may generate errors and warning messages that will be useful in debugging your python environment.  Once the dynamic content from these scripts has been generated, you're ready to build the documentation.
+   These scripts are normally run by the BuildBot using the Python 2.x initialization script, `CoolProp\\Web\\scripts\\__init__.py <https://github.com/CoolProp/CoolProp/blob/master/Web/scripts/__init__.py#L107>`_ (lines 107-122).  This script could be run to help with automation, however, there are linux and OSX shell scripts included that will not run on Windows.  Also, these scripts only need to be run once, and many may generate errors and warning messages that will be useful in debugging your python environment.  Once the dynamic content from these scripts has been generated, you're ready to build the documentation.
    
 **Build the Documentation**
 
