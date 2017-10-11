@@ -215,10 +215,10 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         if (string_to_index_map.find(fluid.CAS) != string_to_index_map.end()){
             index = string_to_index_map.find(fluid.CAS)->second;                 //if CAS found, grab index
         }
-        if (string_to_index_map.find(fluid.name) != string_to_index_map.end()){
+        else if (string_to_index_map.find(fluid.name) != string_to_index_map.end()){
             index = string_to_index_map.find(fluid.name)->second;                // if name found, grab index
         }
-        if (string_to_index_map.find(upper(fluid.name)) != string_to_index_map.end()){
+        else if (string_to_index_map.find(upper(fluid.name)) != string_to_index_map.end()){
             index = string_to_index_map.find(upper(fluid.name))->second;         // if uppercase name found, grab index
         }
         else{
@@ -237,8 +237,9 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         }
         
         if (index != fluid_map.size()){        // Fluid already in list if index was reset to < fluid_map.size()
+            name_vector.pop_back();            // Pop duplicate name off the back of the name vector; otherwise it keeps growing!
             if (!get_config_bool(OVERWRITE_FLUIDS)){
-                throw ValueError(format("Cannot load fluid [%s:%s] because it is already in library; consider enabling the config boolean variable OVERWRITE_FLUIDS", fluid.name.c_str(), fluid.CAS.c_str()));
+                throw ValueError(format("Cannot load fluid [%s:%s] because it is already in library; index = [%i] of [%i]; Consider enabling the config boolean variable OVERWRITE_FLUIDS", fluid.name.c_str(), fluid.CAS.c_str(), index, fluid_map.size()));
             }
         }
         
