@@ -26,7 +26,7 @@ Let us call the main directory where the Fluent case and the fluent wrapper is (
 
    a. If they are not, move your case/mesh and UDF files to CUSTOM_DIRECTORY. Do NOT move compile.sh.
    
-   b. By default, several UDF examples (CoolProp_Properties_of_Water.c OR CoolProp_Properties_of_Brine.c) has been included in CUSTOM_DIRECTORY, one and only must be choose
+   b. By default, several UDF examples (CoolProp_Properties_of_Water.c OR CoolProp_Properties_of_Brine.c) has been included in CUSTOM_DIRECTORY, one and only must be chosen
    
 3. Run the script compile.sh (sh compile.sh SOLVER FLUENT_BIN_PATH), this should generate the libudf folder.
 
