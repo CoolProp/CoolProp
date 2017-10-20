@@ -51,20 +51,20 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:CoolProp_Build_directory
    
 6. Open your case/mesh.
 
-7. By default the udf examples ( for instance CoolProp_Properties_of_water.c ) embeded EXECUTE_ON_DEMAND  
+7. By default the udf examples ( for instance CoolProp_Properties_of_water.c ) embed EXECUTE_ON_DEMAND  
 
    a. Using the Fluent interface to check if it is working: Define > User-defined > Execute on Demand
       
    b. Select "call_coolprop_water::libudf" and hit execute
    
-8. The default CoolProp_Properties_of_Water.c provided integrates thermal conductivity, density, viscosity and specific heat from Coolprop library with the Fluent solver.
+8. The default CoolProp_Properties_of_Water.c provided integrates thermal conductivity, density, viscosity and specific heat from CoolProp library with the Fluent solver.
 
    a. After loading , go to the Materials tab and change the model of each property listed above to user-defined and select the corresponding function (libudf::water_viscosity, libudf::water_density, libudf::water_specificHeat or libudf::water_thermalConductivity)
    
    b. The fluid is, by default, water. To change the working fluid, you have to change the FLUID[] variable in the CoolProp_Properties_of_Water.c UDF file BEFORE running compile.sh. A full list of fluids supported by Coolprop may be found here: http://www.coolprop.org/FluidInformation.html
    Another example is given in CoolProp_Properties_of_Brine.c, the FLUID[] is a mixture between chloride sodium with a 20% concentration
    
-   c. If the operating pressure in your Fluent case is different than atmospheric (101325 Pa), you will also have to change gauge variable in CoolProp_Properties_of_Water.c
+   c. If the operating pressure in your Fluent case is different than atmospheric (101325 Pa), you will also have to change gauge pressure variable in CoolProp_Properties_of_Water.c
    
    c. Specific heat is currently only a function of temperature in the Fluent wrapper.
 
