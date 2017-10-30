@@ -3,8 +3,8 @@
 Buildbot
 ********
 
-Buildbot masters and slaves
-===========================
+Buildbot masters and workers
+============================
 
 Master
 ------
@@ -18,7 +18,7 @@ From the root of the git checkout (this will use the master.cfg from CoolProp)::
     buildbot create-master master
     buildbot start master
 
-The file ``buildbot-private.py`` (which is a python module with the passwords for the slaves as well as
+The file ``buildbot-private.py`` (which is a python module with the passwords for the workers as well as
 the buildbot website), should also be placed in the master folder next to master.cfg.  Alternatively,
 you can put the ``buildbot_private.py`` in another folder on the master's computer and make a soft-link
 in the master folder to point to the buildbot_private.py file.
@@ -55,18 +55,18 @@ but here the latest version of the preferred work flow for editing the ``master.
 
 
 
-Slaves
-------
+Workers
+-------
 
-To start a slave connected to a buildbot master at IP address 10.0.0.2 (default for
-host for VirtualBox), with a slave named ``a-slave`` and passsword ``pass``,
+To start a worker connected to a buildbot master at IP address 10.0.0.2 (default for
+host for VirtualBox), with a worker named ``a-worker`` and passsword ``pass``,
 run the command::
 
-    virtualenv a-slave-sandbox
-    source a-slave-sandbox/bin/activate
-    pip install sqlalchemy==0.7.10 buildbot-slave
-    buildslave create-slave a-slave coolprop.dreamhosters.com:port a-slave pass
-    buildslave start a-slave
+    virtualenv a-worker-sandbox
+    source a-worker-sandbox/bin/activate
+    pip install sqlalchemy==0.7.10 buildbot-worker
+    buildbot-worker create-worker a-worker coolprop.dreamhosters.com:port a-worker pass
+    buildbot-worker start a-worker
 
 If the master is somewhere else, just change the IP address.  As of Sept, 2014, the
 master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master
@@ -90,8 +90,8 @@ You can refer to it by localhost and access other localhosted sites by adding th
 	10.0.2.2    subdomain.localhost
     
 
-Python slaves
--------------
+Python workers
+--------------
 
 Based on the miniconda Python ecosystem, you can create your own virtual
 environments for building the Python wheels. This requires the following
@@ -102,6 +102,7 @@ steps on a Windows machine::
     conda create -n CoolProp34 python=3.4 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
     conda create -n CoolProp35 python=3.5 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
     conda create -n CoolProp36 python=3.6 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
+    conda create -n CoolPropWorker pip && activate CoolPropWorker && pip install buildbot-worker && deactivate
 
 Please repeat the steps above for **both 32bit and 64bit** Python environments.
 
@@ -112,12 +113,13 @@ On a Linux system, things only change a little bit::
     conda create -n CoolProp34 python=3.4 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp35 python=3.5 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp36 python=3.6 cython pip requests jinja2 pyyaml pycrypto wheel
+    conda create -n CoolPropWorker pip && source activate CoolPropWorker && pip install buildbot-worker && source deactivate
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
 bash or zsh. We make use of the ``source`` command, which is not part of the
 POSIX specification. In Debian, ``dpkg-reconfigure dash`` can be used.
 
-At the moment, it is not possible to use several slaves for the same build job.
+At the moment, it is not possible to use several workers for the same build job.
 We have to find a new way to generate the configuration.
 
 Information on building the single wrappers can be found on
@@ -144,11 +146,11 @@ Buildbot as a service (Windows)
 -------------------------------
 
 On Windows, you create a batch script that activates your virtual environment
-and starts the buildslave::
+and starts the buildbot worker::
 
     @echo off
     call "C:\Program Files (x86)\Miniconda32_27\Scripts\activate.bat" Buildbot
-    buildslave start "C:\CoolProp-slave"
+    buildbot-worker start "C:\CoolProp-worker"
 
 This script can then be added to the system services via::
 
@@ -161,8 +163,8 @@ also use a service wrapper like `NSSM <http://nssm.cc/>`_ to start the script.
 Buildbot and launchd (Mac OS)
 -----------------------------
 As written in the `Buildbot Wiki <http://trac.buildbot.net/wiki/UsingLaunchd>`_,
-you can start your slaves automatically with a so called ``plist`` or property list.
-Place the example content below in a file called ``/Library/LaunchDaemons/org.coolprop.a-slave.plist``
+you can start your workers automatically with a so called ``plist`` or property list.
+Place the example content below in a file called ``/Library/LaunchDaemons/org.coolprop.a-worker.plist``
 and make sure it is owned by the user ``root`` and the group ``wheel``::
 
     <?xml version="1.0" encoding="UTF-8"?>
@@ -170,13 +172,13 @@ and make sure it is owned by the user ``root`` and the group ``wheel``::
     <plist version="1.0">
     <dict>
         <key>StandardOutPath</key>
-        <string>org.coolprop.a-slave.log</string>
+        <string>org.coolprop.a-worker.log</string>
         <key>StandardErrorPath</key>
-        <string>org.coolprop.a-slave-err.log</string>
+        <string>org.coolprop.a-worker-err.log</string>
         <key>Label</key>
-        <string>org.coolprop.a-slave</string>
+        <string>org.coolprop.a-worker</string>
         <key>Program</key>
-        <string>/Users/buildbot/bin/a-slave.command</string>
+        <string>/Users/buildbot/bin/a-worker.command</string>
         <key>RunAtLoad</key>
         <true/>
         <key>KeepAlive</key>
@@ -189,23 +191,23 @@ and make sure it is owned by the user ``root`` and the group ``wheel``::
         <key>UserName</key>
         <string>buildbot</string>
         <key>WorkingDirectory</key>
-        <string>/Users/buildbot/slave/logs</string>
+        <string>/Users/buildbot/worker/logs</string>
         <key>SessionCreate</key>
         <true/>
     </dict>
     </plist>
 
 Please change the file above according to your needs and pay special attention
-to username and path definitions. The script ``a-slave.command`` that is called
+to username and path definitions. The script ``a-worker.command`` that is called
 by ``launchd`` could look like this one::
 
     #!/bin/bash
     #
     # Description: This file call the control script to start and
-    #              stop the buildbot slave. It stays open when being
+    #              stop the buildbot worker. It stays open when being
     #              called and waits for a signal to terminate running
     #              and endless while-loop. After catching a signal
-    #              to terminate, it shuts down the build slave and
+    #              to terminate, it shuts down the build worker and
     #              returns. It is a wrapper for another Bash script
     #              allowing us to use launchd on MacOS.
     #
@@ -220,7 +222,7 @@ by ``launchd`` could look like this one::
       eval `/usr/libexec/path_helper -s`
     fi
     #
-    CTRLSCRI="/Users/username/a-slave.bsh"
+    CTRLSCRI="/Users/username/a-worker.bsh"
     #
     trap "$CTRLSCRI stop; exit 0; " TERM SIGINT SIGTERM
     #
@@ -236,9 +238,9 @@ by ``launchd`` could look like this one::
 
 Note that this script calls another Bash script that does the actual work. We hope
 to simplify maintenance by using a common control script for Linux and MacOS as
-shown in :ref:`slavescript`.
+shown in :ref:`workerscript`.
 
-Or alternatively, you can just launch buildslave directly if you do not use conda environment::
+Or alternatively, you can just launch buildbot worker directly if you do not use conda environment::
 
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -250,9 +252,9 @@ Or alternatively, you can just launch buildslave directly if you do not use cond
         <string>com.start.buildbot</string>
         <key>ProgramArguments</key>
         <array>
-            <string>/Users/Ian/anaconda/bin/buildslave</string>
+            <string>/Users/Ian/anaconda/bin/buildworker</string>
             <string>restart</string>
-            <string>slave</string>
+            <string>worker</string>
         </array>
         <key>RunAtLoad</key>
         <true/>
@@ -271,24 +273,24 @@ Buildbot as a daemon (Linux)
 ----------------------------
 
 On Linux, you can add the following lines to the end of your ``~/.profile`` file (similar
-ideas apply on other platforms) to start the slave automatically at user log in::
+ideas apply on other platforms) to start the worker automatically at user log in::
 
     # Connect to the buildbot master
-    buildslave start ~/slave
+    buildworker start ~/worker
 
 ... or even better, you install a service that gets started and shutdown together with
 your computer. For Debian/Ubuntu, we recommend a script like::
 
     #! /bin/sh
     ### BEGIN INIT INFO
-    # Provides:          buildslave
+    # Provides:          buildworker
     # Required-Start:    $remote_fs $syslog
     # Required-Stop:     $remote_fs $syslog
     # Default-Start:     2 3 4 5
     # Default-Stop:      0 1 6
-    # Short-Description: A script to start the buildbot slave at boot time
+    # Short-Description: A script to start the buildbot worker at boot time
     # Description:       This file activates the virtual environment and starts
-    #                    the buildbot slaves. It also shuts them down if the
+    #                    the buildbot workers. It also shuts them down if the
     #                    system is halted. Place it in /etc/init.d.
     ### END INIT INFO
 
@@ -298,7 +300,7 @@ your computer. For Debian/Ubuntu, we recommend a script like::
     # with your own name if you copy and modify this script.
 
     EXECUSER=username
-    NAME="a-slave"
+    NAME="a-worker"
     CTRLSCRI="/home/username/$NAME.bsh"
 
     # Load the VERBOSE setting and other rcS variables
@@ -350,23 +352,23 @@ your computer. For Debian/Ubuntu, we recommend a script like::
     esac
     exit 0
 
-Which then can be added to the scheduler with ``update-rc.d buildslave defaults``.
+Which then can be added to the scheduler with ``update-rc.d buildworker defaults``.
 This should gracefully terminate the bot at shutdown and restart it again after reboot.
-To disable the service, run ``update-rc.d -f buildslave remove``. You can enable and
-disable the daemon by runnning ``update-rc.d buildslave enable|disable``.
+To disable the service, run ``update-rc.d -f buildworker remove``. You can enable and
+disable the daemon by runnning ``update-rc.d buildworker enable|disable``.
 
-.. _slavescript:
+.. _workerscript:
 
-Buildbot slave management (Mac OS and Linux)
+Buildbot worker management (Mac OS and Linux)
 --------------------------------------------
 
 Note that the two examples above call a user-script to activate the virtual
-environment and start the buildslave. Such a script could look like this::
+environment and start the buildbot worker. Such a script could look like this::
 
     #!/bin/bash
     #
     # Description: This file activates the virtual environment and starts
-    #              the buildbot slaves. It is also used to shut them down
+    #              the buildbot workers. It is also used to shut them down
     #              during system shutdown.
     #
     # Author: Jorrit Wronski <jowr@ipu.dk>
@@ -374,8 +376,8 @@ environment and start the buildslave. Such a script could look like this::
     # Please remove the "Author" lines above and replace them
     # with your own name if you copy and modify this script.
     #
-    VIRTENV="a-slave-sandbox"
-    SLAVEDIR="/home/username/a-slave"
+    VIRTENV="a-worker-sandbox"
+    WORKERDIR="/home/username/a-worker"
     #
     ## For virtualenv
     #ACTICM="source $VIRTENV/bin/activate"
@@ -388,26 +390,30 @@ environment and start the buildslave. Such a script could look like this::
     #
     # Carry out specific functions when asked to by the system
     case "$1" in
+      create)
+        echo "Creating buildbot worker"
+        buildbot-worker create-worker $WORKERDIR coolprop.dreamhosters.com:port a-slave pass
+        #$DEACCM
       start)
-        echo "Starting script buildbotslave "
+        echo "Starting buildbot worker"
         $ACTICM
-        buildslave start $SLAVEDIR
+        buildbot-worker start $WORKERDIR
         #$DEACCM
         ;;
       stop)
-        echo "Stopping script buildbotslave"
+        echo "Stopping buildbot worker"
         $ACTICM
-        buildslave stop $SLAVEDIR
+        buildbot-worker stop $WORKERDIR
         #$DEACCM
         ;;
       restart)
-        echo "Restarting script buildbotslave"
+        echo "Restarting buildbot worker"
         $ACTICM
-        buildslave restart $SLAVEDIR
+        buildbot-worker restart $WORKERDIR
         #$DEACCM
         ;;
       *)
-        echo "Usage: $0 {start|stop|restart}"
+        echo "Usage: $0 {create|start|stop|restart}"
         exit 1
         ;;
     esac
@@ -500,10 +506,10 @@ build system:
 * Make sure to set the correct environment variables in an additional file before 
   you run a container, call it for example ``Dockerfile.slave.env.list``::
 
-    SLAVEDIR=/home/buildbot/slavedir
+    WORKERDIR=/home/buildbot/slavedir
     MASTERHOST=bots.coolprop.org:port
-    SLAVENAME=slavename
-    SLAVEPASSWORD=pass
+    WORKERNAME=slavename
+    WORKERPASSWORD=pass
     BOTADMIN=Author Name
     BOTEMAIL=noreply@coolprop.org
     BOTHOST=A short description of the host computer
@@ -520,10 +526,10 @@ build system:
   should copy your SSH configuration or other login information to the container to 
   make use of the automatic login that is required for rsync to work properly::
 
-    docker cp ${HOME}/.ssh ${SLAVENAME}:/home/buildbot/
-    docker cp ${HOME}/.pypirc ${SLAVENAME}:/home/buildbot/
-    docker exec --user root ${SLAVENAME} chown -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
-	docker exec --user root ${SLAVENAME} chgrp -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
+    docker cp ${HOME}/.ssh ${WORKERNAME}:/home/buildbot/
+    docker cp ${HOME}/.pypirc ${WORKERNAME}:/home/buildbot/
+    docker exec --user root ${WORKERNAME} chown -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
+	docker exec --user root ${WORKERNAME} chgrp -R buildbot /home/buildbot/.ssh /home/buildbot/.pypirc
 
 .. note::
   If you cannot copy the SSH keys, you can change the upload function in the 
