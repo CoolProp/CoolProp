@@ -43,13 +43,13 @@ To use the ``HAPropsSI`` function, import it and do some calls, do something lik
 
     # Enthalpy (J per kg dry air) as a function of temperature, pressure,
     #    and relative humidity at STP
-    In [2]: h = HAPropsSI('H','T',298.15,'P',101325,'R',0.5); print h
+    In [2]: h = HAPropsSI('H','T',298.15,'P',101325,'R',0.5); print(h)
 
     # Temperature of saturated air at the previous enthalpy
-    In [2]: T = HAPropsSI('T','P',101325,'H',h,'R',1.0); print T
+    In [2]: T = HAPropsSI('T','P',101325,'H',h,'R',1.0); print(T)
 
     # Temperature of saturated air - order of inputs doesn't matter
-    In [2]: T = HAPropsSI('T','H',h,'R',1.0,'P',101325); print T
+    In [2]: T = HAPropsSI('T','H',h,'R',1.0,'P',101325); print(T)
 
 Or go to the :ref:`Humid-Air` documentation.
 
