@@ -76,7 +76,7 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Make a build folder
     mkdir -p build &&  cd build
     # Build the makefile using CMake
-    cmake .. -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_CXX_STANDARD=11
     # Make the OCT files
     cmake --build .
     # Run the integration tests (optional)
@@ -84,10 +84,10 @@ Once the dependencies are installed, you can run the builder and tests using::
 
 On windows, you need to just slightly modify the building procedure::
 
-    # The folder containing the folders bin, mingw, include, etc. (or set a system variable in your windows installation)
-    set OCTAVE_ROOT=c:\path\to\octave\root
-    # Add the bin folder of your octave install to the system path
-    set PATH=c:\path\to\octave\bin;%PATH%
+    # The folder containing the folders bin, mingw, swigwin, include, etc...
+    # is required
+    set OCTAVE_ROOT=c:\octave-x.y.z
+    set PATH=c:\MinGW;c:\octave-x.y.z\bin;c:\swigwin-x.y.z;%PATH%
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
@@ -97,7 +97,7 @@ On windows, you need to just slightly modify the building procedure::
     # Move into that folder
     cd build
     # Build the makefile using CMake
-    cmake .. -G "MinGW Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON
+    cmake .. -G "MinGW Makefiles" -DCOOLPROP_OCTAVE_MODULE=ON -DBUILD_TESTING=ON -DCMAKE_CXX_STANDARD=11
     # Make the OCT files
     cmake --build .
     # Run the integration tests (optional)
