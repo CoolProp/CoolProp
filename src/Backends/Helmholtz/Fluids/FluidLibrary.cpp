@@ -102,12 +102,21 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
 {
     _is_empty = false;
     
+    // The variable index is initialized to the size of the fluid_map.
+    // Since the first fluid_map key equals zero (0), index is initialized to the key
+    // value for the next fluid to be added. (e.g. fluid_map[0..140]; index = 141 )
     std::size_t index = fluid_map.size();
     
-    CoolPropFluid fluid;
+    CoolPropFluid fluid;     // create a new CoolPropFluid object
     
-    // Fluid name
-    fluid.name = fluid_json["INFO"]["NAME"].GetString(); name_vector.push_back(fluid.name);
+    // Assign the fluid properties based on the passed in fluid_json
+    // =============================================================
+    // Parse out Fluid name   
+    fluid.name = fluid_json["INFO"]["NAME"].GetString(); 
+    
+    // Push the fluid name onto the name_vector used for returning the full list of library fluids
+    // If it is found that this fluid already exists in the library, it will be popped back off below.
+    name_vector.push_back(fluid.name);
     
     try{
         // CAS number
@@ -118,11 +127,13 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         if (!fluid_json["INFO"].HasMember("REFPROP_NAME")){ throw ValueError(format("fluid [%s] does not have \"REFPROP_NAME\" member",fluid.name.c_str())); }
         fluid.REFPROPname = fluid_json["INFO"]["REFPROP_NAME"].GetString();
         
+        // FORMULA
         if (fluid_json["INFO"].HasMember("FORMULA")){
             fluid.formula = cpjson::get_string(fluid_json["INFO"], "FORMULA");
         }
         else{ fluid.formula = "N/A"; }
         
+        // Abstract references
         if (fluid_json["INFO"].HasMember("INCHI_STRING")){
             fluid.InChI = cpjson::get_string(fluid_json["INFO"], "INCHI_STRING");
         }
@@ -199,7 +210,7 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
             parse_melting_line(fluid_json["ANCILLARIES"]["melting_line"], fluid);
         }
         
-        // Parse the environmental parameters
+        // Parse the transport property (viscosity and/or thermal conductivity) parameters
         if (!(fluid_json.HasMember("TRANSPORT"))){
             default_transport(fluid);
         }
@@ -210,7 +221,10 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         // If the fluid is ok...
         
         // First check that none of the identifiers are already present
-        // Remember that index is already initialized to fluid_map.size() = max index + 1
+        // ===============================================================
+        // Remember that index is already initialized to fluid_map.size() = max index + 1.
+        // If the new fluid name, CAS, or aliases are found in the string_to_index_map, then
+        // the fluid is already in the fluid_map, so reset index to it's key.
         
         if (string_to_index_map.find(fluid.CAS) != string_to_index_map.end()){
             index = string_to_index_map.find(fluid.CAS)->second;                 //if CAS found, grab index
@@ -236,8 +250,8 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
             }
         }
         
-        if (index != fluid_map.size()){        // Fluid already in list if index was reset to < fluid_map.size()
-            name_vector.pop_back();            // Pop duplicate name off the back of the name vector; otherwise it keeps growing!
+        if (index != fluid_map.size()){   // Fluid already in list if index was reset to something < fluid_map.size()
+            name_vector.pop_back();       // Pop duplicate name off the back of the name vector; otherwise it keeps growing!
             if (!get_config_bool(OVERWRITE_FLUIDS)){
                 throw ValueError(format("Cannot load fluid [%s:%s] because it is already in library; index = [%i] of [%i]; Consider enabling the config boolean variable OVERWRITE_FLUIDS", fluid.name.c_str(), fluid.CAS.c_str(), index, fluid_map.size()));
             }
@@ -247,18 +261,31 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         //    1. the index of a fluid that's already present, in which case it will be overwritten, or
         //    2. the fluid_map.size(), in which case a new entry will be added to the list
         
-        // Add index->fluid mapping
+        // Add/Replace index->fluid mapping
+        // If the fluid index exists, the [] operator replaces the existing entry with the new fluid;
+        // if not, it will add the (index,fluid) pair to the map using the new index value (fluid_map.size())
         fluid_map[index] = fluid;
         
+        // Add/Replace index->JSONstring mapping to easily pull out if the user wants it
+        // Convert fuid_json to a string and store it in the map at index.
+        // if the fluid index exists, the [] operator replaces the existing entry with the new JSONstring;
+        // if not, it will add the new (index,JSONstring) pair to the map.
         JSONstring_map[index] = cpjson::json2string(fluid_json);
         
-        // Add CAS->index mapping
+        // Add/Replace CAS->index mapping
+        // This map helps find the index of a fluid in the fluid_map given a CAS string
+        // If the CAS string exists, the [] operator will replace index with an updated index number;
+        // if not, it will add a new (CAS,index) pair to the map.
         string_to_index_map[fluid.CAS] = index;
         
-        // Add name->index mapping
+        // Add/Replace name->index mapping
+        // This map quickly finds the index of a fluid in the fluid_map given its name string
+        // Again, the map [] operator replaces if the alias is found, adds the new (name,index) pair if not
         string_to_index_map[fluid.name] = index;
         
-        // Add the aliases
+        // Add/Replace the aliases->index mapping
+        // This map quickly finds the index of a fluid in the fluid_map given an alias string
+        // Again, the map [] operator replaces if the alias is found, adds the new (alias,index) pair if not
         for (std::size_t i = 0; i < fluid.aliases.size(); ++i)
         {
             string_to_index_map[fluid.aliases[i]] = index;
