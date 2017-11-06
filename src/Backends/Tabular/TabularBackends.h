@@ -95,7 +95,7 @@ public:
     };
     void deserialize(msgpack::object &deserialized){       
         PackablePhaseEnvelopeData temp;
-        deserialized.convert(&temp);
+        auto temp = deserialized.convert(temp);
         temp.unpack();
         if (revision > temp.revision){
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
@@ -659,7 +659,7 @@ class LogPHTable : public SinglePhaseGriddedTableData
         }
         void deserialize(msgpack::object &deserialized){       
             LogPHTable temp;
-            deserialized.convert(&temp);
+            auto temp = deserialized.convert(temp);
             temp.unpack();
             if (Nx != temp.Nx || Ny != temp.Ny)
             {
@@ -699,7 +699,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
         }
         void deserialize(msgpack::object &deserialized){   
             LogPTTable temp;
-            deserialized.convert(&temp);
+            auto temp = deserialized.convert(temp);
             temp.unpack();
             if (Nx != temp.Nx || Ny != temp.Ny)
             {
