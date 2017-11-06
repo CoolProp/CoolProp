@@ -26,7 +26,7 @@ a rapidjson array of fluids to the add_many function.
 */
 class JSONFluidLibrary
 {
-    /// Map from CAS code to JSON instance.  For pseudo-pure fluids, use name in place of CAS code since no CASE number is defined for mixtures
+    /// Map from CAS code to JSON instance.  For pseudo-pure fluids, use name in place of CAS code since no CAS number is defined for mixtures
     std::map<std::size_t, CoolPropFluid> fluid_map;
     /// Map from index of fluid to a string
     std::map<std::size_t, std::string> JSONstring_map;
