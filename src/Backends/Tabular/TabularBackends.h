@@ -290,7 +290,7 @@ class PureFluidSaturationTableData{
 		};
         void deserialize(msgpack::object &deserialized){       
             PureFluidSaturationTableData temp;
-            deserialized.convert(&temp);
+            auto temp = deserialized.convert(temp);
             temp.unpack();
             if (N != temp.N)
             {
