@@ -74,7 +74,7 @@ template <typename T> void load_table(T &table, const std::string &path_to_table
     std::vector<char> charbuffer(newBuffer.begin(), newBuffer.begin() + newBufferSize);
     try{
         msgpack::unpacked msg;
-        msgpack::unpack(&msg, &(charbuffer[0]), charbuffer.size());
+        msgpack::unpack(msg, &(charbuffer[0]), charbuffer.size());
         msgpack::object deserialized = msg.get();
         
         // Call the class' deserialize function;  if it is an invalid table, it will cause an exception to be thrown
