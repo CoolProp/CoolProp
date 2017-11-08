@@ -14,6 +14,12 @@ PAPER         =
 PAPEROPT_a4     = -D latex_paper_size=a4
 PAPEROPT_letter = -D latex_paper_size=letter
 ALLSPHINXOPTS   = -d _build/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
+ifeq ($(OS),Windows_NT)
+	REMOVE_BUILD = rmdir /s /q _build
+else
+	REMOVE_BUILD = rm -rf _build/*
+endif
+
 
 .PHONY: help clean html dirhtml pickle json htmlhelp qthelp latex changes linkcheck doctest
 
@@ -31,9 +37,11 @@ help:
 	@echo "  doctest   to run all doctests embedded in the documentation (if enabled)"
 
 clean:
-	-rm -rf _build/*
+	$(info OS="$(OS)")
+	@echo "Removing existing _build directory."
+	$(REMOVE_BUILD)
 
-html: 
+html:
 	$(SPHINXBUILD) -j3 -b html $(ALLSPHINXOPTS) _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."

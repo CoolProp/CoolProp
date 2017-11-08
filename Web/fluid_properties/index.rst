@@ -9,4 +9,5 @@ Fluid Properties
     Mixtures
     HumidAir
     Incompressibles
+    IF97
     more_reading

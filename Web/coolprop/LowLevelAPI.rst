@@ -260,7 +260,7 @@ Here is an example showing how to change the reference state and demonstrating t
     
     # Note how the AS1 has its default value (change in reference state is not seen)
     # and AS2 does see the new reference state
-    In [1]: print AS1.hmass(), AS2.hmass()
+    In [1]: print('{0}, {1}'.format(AS1.hmass(), AS2.hmass()))
     
     # Back to the original value
     In [1]: CoolProp.CoolProp.set_reference_state('n-Propane','DEF')
