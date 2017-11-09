@@ -1,4 +1,7 @@
 /report/
+/fluids/
 *.pdf
+*.png
 *.csv
 *.bib.bak
+*.rst.in
