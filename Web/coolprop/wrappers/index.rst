@@ -18,7 +18,7 @@ Target                                                  Operating Systems       
 :ref:`Python <Python>`                                  linux, OSX, win              Wrapper is Cython based
 :ref:`Octave <Octave>`                                  linux, OSX, win              Wrapper is SWIG based
 :ref:`C# <Csharp>`                                      linux, OSX, win              Wrapper is SWIG based
-:ref:`VB.net <VBdotNet>`                                windows only                 Wrapper is SWIG based
+:ref:`VB.net <VBdotNet>`                                Windows only                 Wrapper is SWIG based
 :ref:`MATLAB <MATLAB>`                                  linux, OSX, win              Wrapper is SWIG based
 :ref:`Java <Java>`                                      linux, OSX, win              Wrapper is SWIG based
 :ref:`R <R>`                                            linux, OSX, win              Wrapper is SWIG based
@@ -27,15 +27,15 @@ Target                                                  Operating Systems       
 `Modelica <https://github.com/modelica/ExternalMedia>`_ linux, OSX, win
 :ref:`PHP <PHP>`                                        linux, OSX, win              Mostly used on linux
 :ref:`Javascript <Javascript>`                          cross-platform               Works in all internet browsers
-:ref:`Labview <Labview>`                                windows only
+:ref:`Labview <Labview>`                                Windows only
 :ref:`Maple <Maple>`                                    linux, OSX, win              CoolProp is included in Maple 2016
-:ref:`MathCAD <MathCAD>`                                windows only
+:ref:`Mathcad <MathCAD>`                                Windows only
 :ref:`SMath Studio <SMath>`                             linux, OSX, win
 :ref:`Mathematica <Mathematica>`
 :ref:`FORTRAN <FORTRAN>`                                linux, OSX, win
-:ref:`EES <EES>`                                        windows only                 Included in the Windows :ref:`installer <Installers>`
-:ref:`Microsoft Excel <Excel>`                          windows only                 Included in the Windows :ref:`installer <Installers>`
-:ref:`LibreOffice <LibreOffice>`                        windows, linux
+:ref:`EES <EES>`                                        Windows only                 Included in the Windows :ref:`installer <Installers>`
+:ref:`Microsoft Excel <Excel>`                          Windows only                 Included in the Windows :ref:`installer <Installers>`
+:ref:`LibreOffice <LibreOffice>`                        Windows, linux
 :ref:`Delphi & Lazarus <Delphi>`                        linux, OSX, win
 :ref:`iOS (iPhone) <ios>`                       
 :ref:`Android <Android>`                       
@@ -79,9 +79,22 @@ For python, you should be using `Anaconda/Miniconda <https://store.continuum.io/
 
 For the C++ compiler, the options are a bit more complicated.  There are multiple (binary incompatible) versions of Visual Studio, as well as G++ ports for windows (MinGW).  Unless you are compiling the python wrappers, you can compile with MinGW, so you should obtain the `MinGW installer <http://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download>`_ and run it.  You should install all the packages available, and you MUST(!!) install to a path without spaces. ``C:\MinGW`` is recommended as an installation path. Be sure to add the folder ``C:\MinGw`` to your PATH variable.
 
-If you want to build 64-bit extensions, you MUST install professional versions of visual studio, which can be obtained for free if you have a student ID card from Microsoft Dreamspark.  You will require Visual Studio 2008 Professional for python 2.x, and Visual Studio 2010 Professional for python 3.x.  Otherwise you can select Visual Studio version freely.
+If you want to build 64-bit extensions, you MUST install Professional or later Community versions of Visual Studio, which can be obtained for free if you have a student ID card from Microsoft Dreamspark or just download one of the later Community versions from Microsoft for personal and open-source use.  Python/Cython was built with Visual Studio, so depending on your Python version, you will require **exactly** the Visual Studio versions listed in the table below.
 
-All three compilers should co-exist happily on the path, so you should be fine installing all three, but they are rather sizeable installs.
++---------------------+-------------+-------------------------+
+| Visual Studio       | Visual C++  | Python Versions         |
++=====================+=============+=========================+
+| 2008 Professional   | 9.0         | 2.6, 2.7, 3.0, 3.1, 3.2 |
++---------------------+-------------+-------------------------+
+| 2010 Professional   | 10.0        | 3.3, 3.4                |
++---------------------+-------------+-------------------------+
+| 2015 Professional   | 14.0        | 3.5, 3.6                |
+| or Community        |             |                         |
++---------------------+-------------+-------------------------+
+
+Otherwise, for wrappers other than Python, you can select a Visual Studio version freely.
+
+All four compilers should co-exist happily on the path, so you should be fine installing all four, but they are rather sizable installs. Be aware that downloads of VS2008 and 2010 are getting harder and harder to find, so this may influence your Python version of choice.  See this `WindowsCompilers <https://wiki.python.org/moin/WindowsCompilers>`_ page at wiki.python.org for more info on the Windows C++ compilers needed for the various Python/Cython versions and where to download them (most for free).
 
 Linux
 -----
