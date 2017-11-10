@@ -116,6 +116,14 @@ if __name__=='__main__':
                 cmake_config_args += ['-G','"Visual Studio 10 2010 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'vc14':
+            cmake_build_args = ['--config','"Release"']
+            if cmake_bitness == '32':
+                cmake_config_args += ['-G','"Visual Studio 14 2015"']
+            elif cmake_bitness == '64':
+                cmake_config_args += ['-G','"Visual Studio 14 2015 Win64"']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'mingw':
             cmake_config_args = ['-G','"MinGW Makefiles"']
             if cmake_bitness == '32':
