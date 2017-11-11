@@ -16,7 +16,16 @@
 /dev/builder
 
 /wrappers/Python/build
+/wrappers/Python/cmake_build
+/wrappers/Python/CoolProp.egg-info
+/wrappers/Python/dist
 /wrappers/Python/CoolProp/*.o
+/wrappers/Python/CoolProp/AbstractState.html
+/wrappers/Python/CoolProp/CoolProp.cpp
+/wrappers/Python/CoolProp/CoolProp.html
+/wrappers/Python/CoolProp/_constants.*
+/wrappers/Python/CoolProp/constants*
+/wrappers/Python/CoolProp/HumidAirProp.html
 /wrappers/Excel/CoolProp_x64.dll
 /wrappers/Excel/CoolProp.dll
 
