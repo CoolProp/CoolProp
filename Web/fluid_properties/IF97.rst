@@ -1,0 +1,197 @@
+
+
+.. _IF97:
+
+IF97 Steam/Water Properties
+=================================
+
+
+General Introduction
+--------------------
+
+Steam/Water properties are of critical importance in industry and specifically the power industry.  The standard for water properties is maintained by the International Association for the Properties of Water and Steam (IAPWS_).  The most recent formulation for thermodynamic properties is the Helmholtz formulation in IAPWS-95_, which is exactly what the CoolProp HEOS backend uses when specifying the fluid as ``Water`` or ``HEOS::Water``.  The Helmholtz equations of state are based on :math:`T` and :math:`\rho` as state variables, so :math:`T, \rho` will always be the fastest inputs, while :math:`p,T` will be a bit slower (3-10 times). Inputs where neither :math:`T` nor :math:`\rho` are given, like :math:`P,H`, will be much slower.
+
+Realizing the need for fast numerical computation of water properties, the IAPWS_ created a committee to develop a faster formulation for the steam power industry.  In 1997, the IAPWS release the "*IAPWS Industrial Formulation 1997 for the Thermodynamic Properties of Water and Steam*" or IAPWS-IF97_.  This formulation replaced the older IFC-67 formulation. It is pressure based (rather than density based), and uses fundamental equations for the Gibbs free energy and its derivatives.  While IAPWS-IF97_ is faster, it is less accurate than the IAPWS-95_ formulation, but within 1% uncertainty for all properties (and in many areas within 0.1%) except very near the critical point. Details of this formulation can be found in IAPWS-IF97_, released in 2007 and updated in 2012.
+
+The IF97 backend in CoolProp is based on the latest `IAPWS Releases`_ for thermodynamic and transport properties.  It was originally coded as a fast water property calculation for the :ref:`Humid Air <Humid-Air>` backend.  It has matured to include most of the forward and backward formulations in all fluid phase regions as released by the IAPWS_ and can provide a much faster calculation of water properties than the default HEOS backend (or the :ref:`REFPROP <REFPROP>` backend, which is also based on IAPWS-95_).  
+
+.. _IAPWS: http://www.iapws.org  
+.. _IAPWS Releases: http://www.iapws.org/release.html  
+.. _IAPWS-95: http://www.iapws.org/relguide/IAPWS-95.html
+.. _IAPWS-IF97: http://www.iapws.org/relguide/IF97-Rev.html
+
+IF97 Backend
+------------
+
+The IF97 backend can be accessed the same way as the other backends, by prefixing the fluid name in calls to ``PropsSI`` and ``Props1SI``.  However, Water is the only fluid name that can be specified, as ``IF97::Water``.  Most output variables and input pairs are accepted as of CoolProp 6.1.1, with a few exceptions:
+
+1. Generic Partial Derivatives are not yet supported.
+2. Mixtures are obviously not supported since this is a Water-only backend.
+3. The Reference State cannot be modified for the IF97 formulation.  *The reference state is fixed such that the specific internal energy,* :math:`U` *, and the specific entropy,* :math:`S` *, of the saturated liquid at the triple point are identically zero.*
+4. Solid properties are not supported in any of the ICE regions.
+5. The melting-sublimation curve is not used; rather, the property equations are limited uniformly at :math:`T_{min}=273.15K`.
+
+IF97 Range of Validity
+----------------------
+
+Although IF97 is generally faster than the other backends, it is only applicable over a much smaller range of temperatures and pressures than the HEOS or REFPROP Water formulations.  The IF97 properties are divided into several regions.  The valid range of these regions is shown in the following plot.  Attempts to retrieve properties outside of these regions will result in an "Out of Range" error.
+
+.. plot::
+
+    import matplotlib
+    import numpy as np
+    import CoolProp.CoolProp as CP
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as ticker
+    import scipy.interpolate
+
+    pc = CP.PropsSI('pcrit','IF97::Water')/1e6
+    Tc = CP.PropsSI('Tcrit','IF97::Water')
+    pt = CP.PropsSI('ptriple','IF97::Water')/1e6
+    Tt = CP.PropsSI('Ttriple','IF97::Water')
+    # Tmin = 273.15
+    Tmin = CP.PropsSI('Tmin','IF97::Water')
+    Tmax = CP.PropsSI('Tmax','IF97::Water')
+    pmax = CP.PropsSI('pmax','IF97::Water')/1e6
+    pmin = 0
+    Tb = 623.15
+    pb = 16.5291643
+    fillcolor = 'g'
+
+    fig = plt.figure(figsize = (9,6))
+    ax = plt.subplot2grid((1,9), (0,0), colspan=7)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%0.2f'))
+    lw = 3
+
+    # ----------------
+    # Saturation curve
+    # ----------------
+    Ts = np.linspace(Tt, Tc, 1000)
+    ps = CP.PropsSI('P','T',Ts,'Q',0,'IF97::Water')/1e6
+    plt.plot(Ts,ps,'orange',lw = lw, solid_capstyle = 'round')
+
+    # ------
+    # Labels
+    # ------
+
+    # ----------------
+    # Boundary lines
+    # ----------------
+    # plt.axhline(pc, dashes = [2, 2])
+    plt.axvline(x = Tb, ymin = pb/100, ymax = 1, dashes = [2, 2])
+    plt.axvline(x = Tmax, ymin = 0, ymax = 1, linewidth = 1, color = 'black')
+    plt.axhline(y = pmax, xmin = 0, xmax = (Tmax-Tmin)/(Tmax-Tmin+300), linewidth = 2, color = 'black')
+    plt.axhline(y = 50, xmin = (Tmax-Tmin)/(Tmax-Tmin+300), xmax = 1, linewidth = 1, color = 'black')
+
+    # -----------------------------
+    # Region 2-3 Boundary
+    # -----------------------------
+    n3 = 0.10192970039326e-2
+    n4 = 0.57254459862746e3
+    n5 = 0.1391883776670e2
+    PI = 2.0*np.arcsin(1.0)
+    TT = []
+    PP = list(np.linspace(pb,pmax,1000))
+    for p in PP:
+        TT.append(n4+np.sqrt((p-n5)/n3))
+
+    plt.plot(TT,PP,lw=1, dashes = [2,2])
+
+    # Labels
+    plt.text(1300, 51, '50 MPa',ha= 'center')
+    plt.text(473, 80, 'Region 1', fontsize = 14, ha = 'center')
+    plt.text(973, 80, 'Region 2', fontsize = 14, ha = 'center')
+    plt.text(720, 80, 'Region 3', fontsize = 14, ha = 'center')
+    plt.text(1300, 25, 'Region 5', fontsize = 14, ha = 'center')
+    plt.annotate('Region 4', xy=(570, 8), xytext=(700, 5), arrowprops=dict(facecolor='black', shrink=0.05), fontsize = 14)
+    plt.title('Regions and equations of IAPWS-IF97', fontsize = 14)
+
+    plt.ylim(pmin-1,pmax)
+    ax.set_xticks([Tt, Tb, Tmax])
+    plt.gca().set_xlim(Tt, Tmax+300)
+    plt.ylabel('Pressure [MPa]', fontsize = 11)
+    plt.xlabel('Temperature [K]', fontsize = 11)
+    plt.tight_layout()
+
+    # -----------------------------
+    # Extended Temperature Region 5
+    # -----------------------------
+    bx = plt.subplot2grid((1,9), (0,7), colspan=2)
+    bx.spines['right'].set_visible(False)
+    bx.spines['top'].set_visible(False)
+    bx.spines['left'].set_visible(False)
+    bx.xaxis.set_ticks_position('bottom')
+    bx.yaxis.set_ticks_position('none')
+    bx.axes.get_yaxis().set_visible(False)
+    bx.set_xticks([2273.15])
+    bx.xaxis.set_major_formatter(ticker.FormatStrFormatter('%0.2f'))
+
+    # ----------------
+    # Boundary lines
+    # ----------------
+    plt.axhline(50, linewidth = 1, color = 'black')
+    plt.axvline(x = 2272, ymin = 0, ymax = 0.5, linewidth = 1, color = 'black')
+
+    # ----------------
+    # Plot Formatting
+    # ----------------
+    plt.ylim(pmin-1,pmax)
+    plt.gca().set_xlim(2173.15, 2273.15)
+    plt.tight_layout()
+
+
+
+
+IF97 Water Property Examples
+----------------------------
+
+A call to the top-level function ``PropsSI`` can provide: temperature, pressure, density, specific heat, internal energy, enthalpy, entropy, speed of sound, viscosity, thermal conductivity, surface tension, and Prandtl Number. Hence, the available output keys are: ``T``, ``P``, ``D``, ``C``, ``Cvmass``, ``U``, ``H``, ``S``, ``A``, ``V``, ``L``, ``I``, and ``Prandtl``.  Molar quantities can also be returned, but IF97 is mass based.  Trivial outputs, such as ``M``, ``Tmin``, ``Tmax``, ``Pmin``, ``Pmax``, ``Ttriple``, ``Tcrit``, ``ptriple``, and ``pcrit``, are also available.
+
+.. ipython::
+
+    In [1]: from CoolProp.CoolProp import PropsSI
+	
+    #Specific heat capacity of Water at 500 K and 1 atm
+    In [3]: PropsSI('C','T',500,'P',101325,'IF97::Water')
+
+    #Density of Water at 500 K and 1 atm.
+    In [4]: PropsSI('D','T',500,'P',101325,'IF97::Water')
+    
+    #Round trip in thermodynamic properties
+    In [5]: T_init = 500.0
+    
+    In [6]: P_init = 101325
+    
+    In [7]: S_init = PropsSI('S','T',T_init,'P',P_init,'IF97::Water')
+    
+    In [8]: H_init = PropsSI('H','S',S_init,'P',P_init,'IF97::Water')
+    
+    In [9]: T_final = PropsSI('T','H',H_init,'P',P_init,'IF97::Water')
+    
+    #Round trip complete.  T_final should match T_init
+    In [10]: T_final
+
+    #Saturation pressure of Water at 500 K (Q can be 0 or 1)
+    In [11]: PropsSI('P','T',500,'Q',0,'IF97::Water')
+
+    #Saturated LIQUID enthalpy of Water at 500 K (Q = 0)
+    In [12]: H_L = PropsSI('H','T',500,'Q',0,'IF97::Water'); print(H_L)
+
+    #Saturated VAPOR enthalpy of Water at 500 K (Q = 1)
+    In [14]: H_V = PropsSI('H','T',500,'Q',1,'IF97::Water'); print(H_V)
+
+    #Latent heat of vaporization of Water at 500 K
+    In [16]: H_V - H_L
+	
+    #Critical temperature for Water
+    In [17]: PropsSI('Tcrit','T',0,'P',0,'IF97::Water')
+	
+    #Triple Point pressure for Water
+    In [17]: PropsSI('ptriple','T',0,'P',0,'IF97::Water')
+
+
+
