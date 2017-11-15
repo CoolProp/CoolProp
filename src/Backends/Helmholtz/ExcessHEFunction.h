@@ -99,6 +99,48 @@ public:
     };
     ~GERG2008DepartureFunction(){};
 };
+    
+/** \brief A hybrid gaussian with temperature and density dependence along with
+ *
+ * This departure function has a form like
+ * \f[
+ * \alphar^r_{ij} = \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}}\exp(-\delta^{l_{ij,k}}) + \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}}\exp[-\eta_{ij,k}(\delta-\varepsilon_{ij,k})^2-\beta_{ij,k}(\tau-\gamma_{ij,k})^2]
+ * \f]
+ * It is symmetric so \f$\alphar^r_{ij} = \alphar^r_{ji}\f$
+ */
+class GaussianExponentialDepartureFunction : public DepartureFunction
+{
+public:
+    GaussianExponentialDepartureFunction(){};
+    GaussianExponentialDepartureFunction(const std::vector<double> &n,const std::vector<double> &d,const std::vector<double> &t,const std::vector<double> &l,
+                              const std::vector<double> &eta,const std::vector<double> &epsilon,
+                              const std::vector<double> &beta,const std::vector<double> &gamma, std::size_t Npower)
+    {
+        /// Break up into power and gaussian terms
+        {
+            std::vector<CoolPropDbl> _n(n.begin(), n.begin()+Npower);
+            std::vector<CoolPropDbl> _d(d.begin(), d.begin()+Npower);
+            std::vector<CoolPropDbl> _t(t.begin(), t.begin()+Npower);
+            std::vector<CoolPropDbl> _l(l.begin(), l.begin()+Npower);
+            phi.add_Power(_n, _d, _t, _l);
+        }
+        if (n.size() == Npower)
+        {
+        }
+        else
+        {
+            std::vector<CoolPropDbl> _n(n.begin()+Npower,                   n.end());
+            std::vector<CoolPropDbl> _d(d.begin()+Npower,                   d.end());
+            std::vector<CoolPropDbl> _t(t.begin()+Npower,                   t.end());
+            std::vector<CoolPropDbl> _eta(eta.begin()+Npower,             eta.end());
+            std::vector<CoolPropDbl> _epsilon(epsilon.begin()+Npower, epsilon.end());
+            std::vector<CoolPropDbl> _beta(beta.begin()+Npower,          beta.end());
+            std::vector<CoolPropDbl> _gamma(gamma.begin()+Npower,       gamma.end());
+            phi.add_Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
+        }
+    };
+    ~GaussianExponentialDepartureFunction(){};
+};
 
 /** \brief A polynomial/exponential departure function
  * 

@@ -428,6 +428,17 @@ public:
                 dict.add_double_vector("beta", cpjson::get_double_array(*itr, "beta"));
                 dict.add_double_vector("gamma", cpjson::get_double_array(*itr, "gamma"));
             }
+            else if (type == "Gaussian+Exponential"){
+                // Number of terms that are power terms
+                dict.add_number("Npower", cpjson::get_double(*itr, "Npower"));
+                // The decay strength parameters
+                dict.add_double_vector("l", cpjson::get_double_array(*itr, "l"));
+                // Terms for the gaussian part
+                dict.add_double_vector("eta", cpjson::get_double_array(*itr, "eta"));
+                dict.add_double_vector("epsilon", cpjson::get_double_array(*itr, "epsilon"));
+                dict.add_double_vector("beta", cpjson::get_double_array(*itr, "beta"));
+                dict.add_double_vector("gamma", cpjson::get_double_array(*itr, "gamma"));
+            }
             else if (!type.compare("Exponential")){
                 dict.add_double_vector("l", cpjson::get_double_array(*itr, "l"));
             }
@@ -512,6 +523,19 @@ DepartureFunction * get_departure_function(const std::string &Name){
         // Powers of the exponents inside the exponential term
         std::vector<double> l = dict_dep.get_double_vector("l");
         return new ExponentialDepartureFunction(n, d, t, l);
+    }
+    else if (!type_dep.compare("Gaussian+Exponential"))
+    {
+        // Number of power terms needed
+        int Npower = static_cast<int>(dict_dep.get_number("Npower"));
+        // Powers of the exponents inside the exponential term
+        std::vector<double> l = dict_dep.get_double_vector("l");
+        // Terms for the gaussian
+        std::vector<double> eta = dict_dep.get_double_vector("eta");
+        std::vector<double> epsilon = dict_dep.get_double_vector("epsilon");
+        std::vector<double> beta = dict_dep.get_double_vector("beta");
+        std::vector<double> gamma = dict_dep.get_double_vector("gamma");
+        return new GaussianExponentialDepartureFunction(n, d, t, l, eta, epsilon, beta, gamma, Npower);
     }
     else
     {
@@ -748,7 +772,7 @@ void parse_HMX_BNC(const std::string &s, std::vector<REFPROP_binary_element> &BI
     
 void set_departure_functions(const std::string &string_data)
 {
-    if (string_data.find("#MXM") > 0 ){
+    if (string_data.find("#MXM") != std::string::npos ){
         // REFPROP HMX.BNC file was provided
         std::vector<REFPROP_binary_element> BIP;
         std::vector<REFPROP_departure_function> functions;
