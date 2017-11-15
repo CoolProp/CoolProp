@@ -84,6 +84,7 @@ cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
     string _get_mixture_binary_pair_data "CoolProp::get_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key) except +
     void _set_mixture_binary_pair_data "CoolProp::set_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key, const double val) except +
     void _apply_simple_mixing_rule "CoolProp::apply_simple_mixing_rule"(const string &CAS1, const string &CAS2, const string &rule) except +
+    void _set_departure_functions "CoolProp::set_departure_functions"(const string &functions) except +
 
 from constants import *
 from constants_header cimport *
@@ -277,6 +278,12 @@ cpdef apply_simple_mixing_rule(CAS1, CAS2, rule):
     Apply simple mixing rule.  Currently linear or Lorentz-Berthelot.  Python wrapper of C++ function :cpapi:`CoolProp::apply_simple_mixing_rule`
     """
     _apply_simple_mixing_rule(CAS1, CAS2, rule)
+
+cpdef set_departure_functions(functions):
+    """
+    Specify the departure terms as JSON. Python wrapper of C++ function :cpapi:`CoolProp::set_departure_functions`
+    """
+    _set_departure_functions(functions)
     
 cpdef double saturation_ancillary(string name, string output, int Q, string input, double value):
     """
