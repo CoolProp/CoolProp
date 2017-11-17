@@ -250,9 +250,12 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
             }
         }
         
+        bool fluid_exists = false;     // Initialize flag for doing replace instead of add
+
         if (index != fluid_map.size()){   // Fluid already in list if index was reset to something < fluid_map.size()
-            name_vector.pop_back();       // Pop duplicate name off the back of the name vector; otherwise it keeps growing!
-            if (!get_config_bool(OVERWRITE_FLUIDS)){
+            fluid_exists = true;          //   Set the flag for replace
+            name_vector.pop_back();       //   Pop duplicate name off the back of the name vector; otherwise it keeps growing!
+            if (!get_config_bool(OVERWRITE_FLUIDS)){   // Throw exception if replacing fluids is not allowed
                 throw ValueError(format("Cannot load fluid [%s:%s] because it is already in library; index = [%i] of [%i]; Consider enabling the config boolean variable OVERWRITE_FLUIDS", fluid.name.c_str(), fluid.CAS.c_str(), index, fluid_map.size()));
             }
         }
@@ -263,12 +266,18 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
         
         // Add/Replace index->fluid mapping
         // If the fluid index exists, the [] operator replaces the existing entry with the new fluid;
+        //    However, since fluid is a custom type, the old entry must be erased first to properly
+        //    release the memory before adding in the new fluid object at the same location (index)
+        if (fluid_exists) fluid_map.erase(fluid_map.find(index));
         // if not, it will add the (index,fluid) pair to the map using the new index value (fluid_map.size())
         fluid_map[index] = fluid;
         
         // Add/Replace index->JSONstring mapping to easily pull out if the user wants it
         // Convert fuid_json to a string and store it in the map at index.
         // if the fluid index exists, the [] operator replaces the existing entry with the new JSONstring;
+        //    However, since fluid_json is a custom type, the old entry must be erased first to properly
+        //    release the memory before adding in the new fluid object at the same location (index)
+        if (fluid_exists) JSONstring_map.erase(JSONstring_map.find(index));
         // if not, it will add the new (index,JSONstring) pair to the map.
         JSONstring_map[index] = cpjson::json2string(fluid_json);
         
@@ -294,7 +303,9 @@ void JSONFluidLibrary::add_one(rapidjson::Value &fluid_json)
             string_to_index_map[upper(fluid.aliases[i])] = index;
         }
         
-        if (get_debug_level() > 5){ std::cout << format("Loaded.\n"); }
+        //If Debug level set >5 print fluid name and total size of fluid_map
+        if (get_debug_level() > 5){ std::cout << format("Loaded fluid: %s - Number of fluids = %d\n", fluid.name, fluid_map.size()); }
+
     }
     catch (const std::exception &e){
         throw ValueError(format("Unable to load fluid [%s] due to error: %s",fluid.name.c_str(),e.what()));
