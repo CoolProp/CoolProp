@@ -8,7 +8,11 @@ cmake_minimum_required(VERSION 3.0.0)
 #######################################
 
 project("CoolProp" VERSION 6.1.1)
-set( COOLPROP_VERSION ${PROJECT_VERSION})
+set(COOLPROP_VERSION ${PROJECT_VERSION})
+string(REPLACE "." ";" COOLPROP_VERSION_LIST ${PROJECT_VERSION})
+list(GET COOLPROP_VERSION_LIST 0 COOLPROP_VERSION_MAJOR)
+list(GET COOLPROP_VERSION_LIST 1 COOLPROP_VERSION_MINOR)
+list(GET COOLPROP_VERSION_LIST 2 COOLPROP_VERSION_PATCH)
 
 
 #######################################
@@ -52,8 +56,8 @@ include_directories(${APP_INCLUDE_DIRS})
 set(LIB_NAME coolprop)
 add_library(${LIB_NAME} STATIC ${COOLPROP_MAIN_SOURCES} ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
 if(MSVC)
-  # Add postfix for debugging
   set_property(TARGET ${LIB_NAME} PROPERTY DEBUG_POSTFIX d)
   set_property(TARGET ${LIB_NAME} PROPERTY RELEASE_POSTFIX )
-  #modify_msvc_flags("/MD") # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
 endif()
+set_property(TARGET ${LIB_NAME} PROPERTY VERSION ${COOLPROP_VERSION})
+set_property(TARGET ${LIB_NAME} PROPERTY SOVERSION ${COOLPROP_VERSION_MAJOR})
