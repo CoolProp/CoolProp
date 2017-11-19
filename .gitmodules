@@ -28,3 +28,6 @@
 [submodule "externals/rapidjson"]
 	path = externals/rapidjson
 	url = https://github.com/miloyip/rapidjson.git
+[submodule "externals/cmake-modules"]
+	path = externals/cmake-modules
+	url = https://github.com/rpavlik/cmake-modules.git
