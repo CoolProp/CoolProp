@@ -61,8 +61,7 @@ void set_debug_level(int level){debug_level = level;}
 int get_debug_level(void){return debug_level;}
 
 //// This is very hacky, but pull the git revision from the file
-#include "gitrevision.h" // Contents are like "std::string gitrevision = "aa121435436ggregrea4t43t433";"
-#include "cpversion.h" // Contents are like "char version [] = "2.5";"
+#include "cpversion.h" // Contents are like 'static char version [] = "2.5";\n "static char gitrevision [] = "aa121435436ggregrea4t43t433";'
 
 void set_warning_string(const std::string &warning){
     warning_string = warning;

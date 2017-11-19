@@ -15,6 +15,7 @@ list(GET COOLPROP_VERSION_LIST 0 COOLPROP_VERSION_MAJOR)
 list(GET COOLPROP_VERSION_LIST 1 COOLPROP_VERSION_MINOR)
 list(GET COOLPROP_VERSION_LIST 2 COOLPROP_VERSION_PATCH)
 set(COOLPROP_SOURCES_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+string(TIMESTAMP COOLPROP_CONFIGURE_TIMESTAMP "%Y-%m-%d %H:%M:%S")
 
 
 #######################################
@@ -67,16 +68,20 @@ include_directories(${APP_INCLUDE_DIRS})
 # Add CMake dependencies
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/externals/cmake-modules") #https://github.com/rpavlik/cmake-modules
 
-# Generate the version information headers
+# Generate the version information headers, forces CMake to rerun after git commit
 include(GetGitRevisionDescription)
-get_git_head_revision(COOLPROP_GIT_REF COOLPROP_GIT_HSH)
-message(STATUS "COOLPROP_GIT_REF: ${COOLPROP_GIT_REF}")
-message(STATUS "COOLPROP_GIT_HSH: ${COOLPROP_GIT_HSH}")
+get_git_head_revision(COOLPROP_GIT_REF COOLPROP_GIT_HASH)
 git_local_changes(COOLPROP_GIT_CHG)
-message(STATUS "COOLPROP_GIT_CHG: ${COOLPROP_GIT_CHG}")
-
-#add_custom_target(generate_version_headers
-#                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+#message(STATUS "COOLPROP_GIT_REF: ${COOLPROP_GIT_REF}")
+#message(STATUS "COOLPROP_GIT_HASH: ${COOLPROP_GIT_HASH}")
+#message(STATUS "COOLPROP_GIT_CHNG: ${COOLPROP_GIT_CHNG}")
+if(COOLPROP_GIT_HASH)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/cpversion.h.in"
+      "${CMAKE_CURRENT_SOURCE_DIR}/include/cpversion.h"
+      @ONLY)
+else()
+  message(STATUS "Could not get the git hash, leaving '${CMAKE_CURRENT_SOURCE_DIR}/include/cpversion.h' untouched.")
+endif()
 #
 ## Generate the fluid information headers
 #add_custom_target(generate_fluid_headers
