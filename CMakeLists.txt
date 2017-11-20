@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-
+option(COOLPROP_DEBUG_CMAKE ON)
 
 #######################################
 #         PROJECT INFORMATION         #
@@ -61,6 +61,7 @@ set(APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/cppformat")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch/single_include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories(${APP_INCLUDE_DIRS})
@@ -68,24 +69,32 @@ include_directories(${APP_INCLUDE_DIRS})
 # Add CMake dependencies
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/externals/cmake-modules") #https://github.com/rpavlik/cmake-modules
 
-# Generate the version information headers, forces CMake to rerun after git commit
-include(GetGitRevisionDescription)
-get_git_head_revision(COOLPROP_GIT_REF COOLPROP_GIT_HASH)
-git_local_changes(COOLPROP_GIT_CHG)
-#message(STATUS "COOLPROP_GIT_REF: ${COOLPROP_GIT_REF}")
-#message(STATUS "COOLPROP_GIT_HASH: ${COOLPROP_GIT_HASH}")
-#message(STATUS "COOLPROP_GIT_CHNG: ${COOLPROP_GIT_CHNG}")
-if(COOLPROP_GIT_HASH)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/cpversion.h.in"
-      "${CMAKE_CURRENT_SOURCE_DIR}/include/cpversion.h"
-      @ONLY)
-else()
-  message(STATUS "Could not get the git hash, leaving '${CMAKE_CURRENT_SOURCE_DIR}/include/cpversion.h' untouched.")
-endif()
-#
-## Generate the fluid information headers
-#add_custom_target(generate_fluid_headers
-#                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+# Generate the header files
+#add_custom_target(generate_headers ALL COMMENT "Generate header files with version information and fluid parameters.")
+#add_custom_command(
+#    OUTPUT "${COOLPROP_SOURCES_ROOT}/include/cpversion.h" 
+#    DEPENDS "${COOLPROP_SOURCES_ROOT}/dev/cmake/cpversion.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_version_headers.cmake"
+add_custom_target(generate_version_headers ALL
+    COMMAND ${CMAKE_COMMAND} 
+      -DCOOLPROP_DEBUG_CMAKE="${COOLPROP_DEBUG_CMAKE}"
+      -DCOOLPROP_SOURCES_ROOT="${COOLPROP_SOURCES_ROOT}" 
+      -DCOOLPROP_VERSION="${COOLPROP_VERSION}" 
+      -DCOOLPROP_INPUT_FILE="${COOLPROP_SOURCES_ROOT}/dev/cmake/cpversion.h.in" 
+      -DCOOLPROP_OUTPUT_FILE="${COOLPROP_SOURCES_ROOT}/include/cpversion.h" 
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_version_headers.cmake"
+    COMMENT "Generating ${COOLPROP_SOURCES_ROOT}/include/cpversion.h"
+)
+add_custom_target(generate_fluid_headers ALL
+    COMMAND ${CMAKE_COMMAND} 
+      -DCOOLPROP_DEBUG_CMAKE="${COOLPROP_DEBUG_CMAKE}"
+      -DCOOLPROP_SOURCES_ROOT="${COOLPROP_SOURCES_ROOT}" 
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_fluid_headers.cmake"
+    COMMENT "Generating fluid headers from ${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_fluid_headers.cmake"
+)
+add_custom_target(generate_headers ALL
+    DEPENDS generate_version_headers generate_fluid_headers
+  )
+
 
 #######################################
 #       CREATE DEFAULT TARGET         #
@@ -99,6 +108,7 @@ endif()
 
 set(TARGET_NAME coolprop)
 add_library(${TARGET_NAME} ${COOLPROP_MAIN_SOURCES} ${COOLPROP_BACKEND_SOURCES} ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_MAIN_HEADERS} ${COOLPROP_BACKEND_HEADERS} ${COOLPROP_LIBRARY_HEADERS} ${COOLPROP_LIBRARY_EXPORTS})
+add_dependencies(${TARGET_NAME} generate_headers)
 if(MSVC)
   # Add postfix for debugging
   set_property(TARGET ${TARGET_NAME} PROPERTY DEBUG_POSTFIX d)

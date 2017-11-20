@@ -34,15 +34,30 @@ else:
 # 0: Input file path relative to dev folder
 # 1: Output file path relative to include folder
 # 2: Name of variable
-values = [
-    ('all_fluids.json','all_fluids_JSON.h','all_fluids_JSON'),
-    ('all_incompressibles.json','all_incompressibles_JSON.h','all_incompressibles_JSON'),
-    ('mixtures/mixture_departure_functions.json', 'mixture_departure_functions_JSON.h', 'mixture_departure_functions_JSON'),
-    ('mixtures/mixture_binary_pairs.json', 'mixture_binary_pairs_JSON.h', 'mixture_binary_pairs_JSON'),
-    ('mixtures/predefined_mixtures.json', 'predefined_mixtures_JSON.h', 'predefined_mixtures_JSON'),
-    ('cubics/all_cubic_fluids.json', 'all_cubics_JSON.h', 'all_cubics_JSON'),
-    ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON')
-]
+#values = [
+#    ('all_fluids.json','all_fluids_JSON.h','all_fluids_JSON'),
+#    ('all_incompressibles.json','all_incompressibles_JSON.h','all_incompressibles_JSON'),
+#    ('mixtures/mixture_departure_functions.json', 'mixture_departure_functions_JSON.h', 'mixture_departure_functions_JSON'),
+#    ('mixtures/mixture_binary_pairs.json', 'mixture_binary_pairs_JSON.h', 'mixture_binary_pairs_JSON'),
+#    ('mixtures/predefined_mixtures.json', 'predefined_mixtures_JSON.h', 'predefined_mixtures_JSON'),
+#    ('cubics/all_cubic_fluids.json', 'all_cubics_JSON.h', 'all_cubics_JSON'),
+#    ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON')
+#]
+values = []
+DEBUG = True
+if (len(sys.argv) < 4):
+    print("ERROR: {0} - Wrong number of arguments: {1}".format(__file__, len(sys.argv)))
+    sys.exit(1)
+else:
+    if not os.path.isfile(sys.argv[1]): 
+        print("ERROR: {0} - File not found: {1}".format(__file__, sys.argv[1]))
+    values.append(tuple(sys.argv[1:4]))
+    if (len(sys.argv) > 4):
+        if str(sys.argv[4]) == "QUIET":
+            DEBUG = False
+        if str(sys.argv[4]) == "DEBUG":
+            DEBUG = True
+    
 
 def TO_CPP(root_dir, hashes):
     def to_chunks(l, n):
@@ -105,9 +120,9 @@ def TO_CPP(root_dir, hashes):
             # Store the hash of the data that was written to file (not including the header)
             hashes[variable] = get_hash(hex_string.encode('ascii'))
             
-            print(os.path.join(root_dir,'include',outfile)+ ' written to file')
+            if DEBUG: print(os.path.join(root_dir,'include',outfile)+ ' written to file')
         else:
-            print(outfile + ' is up to date')
+            if DEBUG: print(outfile + ' is up to date')
         
 def combine_json(root_dir):
     
@@ -163,12 +178,9 @@ def combine_json(root_dir):
     
 def generate():
     
-    import shutil
-    shutil.copy2(os.path.join(repo_root_path, 'externals','Catch','single_include','catch.hpp'),os.path.join(repo_root_path,'include','catch.hpp'))
+    #import shutil
+    #shutil.copy2(os.path.join(repo_root_path, 'externals','Catch','single_include','catch.hpp'),os.path.join(repo_root_path,'include','catch.hpp'))
     #shutil.copy2(os.path.join(repo_root_path, 'externals','REFPROP-headers','REFPROP_lib.h'),os.path.join(repo_root_path,'include','REFPROP_lib.h'))
-
-    version_to_file(root_dir = repo_root_path)
-    gitrev_to_file(root_dir = repo_root_path)
     
     TO_CPP(root_dir = repo_root_path, hashes = hashes)
 
