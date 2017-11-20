@@ -1,6 +1,7 @@
 
-option(COOLPROP_DEBUG_CMAKE OFF)
-
+#if(NOT COOLPROP_DEBUG_CMAKE)
+#  message(FATAL_ERROR "Debug option missing, aborting.")
+#else
 if(NOT COOLPROP_SOURCES_ROOT)
   message(FATAL_ERROR "Root directory missing, aborting.")
 endif()
@@ -8,7 +9,7 @@ endif()
 find_package(PythonInterp 2.7 REQUIRED QUIET)
 set(COOLPROP_HEADER_SOURCES_PREFIX "${COOLPROP_SOURCES_ROOT}/dev")
 set(COOLPROP_HEADER_TARGETS_PREFIX "${COOLPROP_SOURCES_ROOT}/include")
-if(COOLPROP_DEBUG_CMAKE)
+if(NOT COOLPROP_DEBUG_CMAKE)
   set(COOLPROP_VARIABLE_OPTIONS_TMP "QUIET")
 else()
   set(COOLPROP_VARIABLE_OPTIONS_TMP "DEBUG")

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0.0)
-option(COOLPROP_DEBUG_CMAKE ON)
+
+set(COOLPROP_DEBUG_CMAKE ON)
 
 #######################################
 #         PROJECT INFORMATION         #
@@ -70,28 +71,24 @@ include_directories(${APP_INCLUDE_DIRS})
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/externals/cmake-modules") #https://github.com/rpavlik/cmake-modules
 
 # Generate the header files
-#add_custom_target(generate_headers ALL COMMENT "Generate header files with version information and fluid parameters.")
-#add_custom_command(
-#    OUTPUT "${COOLPROP_SOURCES_ROOT}/include/cpversion.h" 
-#    DEPENDS "${COOLPROP_SOURCES_ROOT}/dev/cmake/cpversion.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_version_headers.cmake"
-add_custom_target(generate_version_headers ALL
+add_custom_target(generate_version_headers
     COMMAND ${CMAKE_COMMAND} 
-      -DCOOLPROP_DEBUG_CMAKE="${COOLPROP_DEBUG_CMAKE}"
+      -DCOOLPROP_DEBUG_CMAKE="${COOLPROP_DEBUG_CMAKE}" 
       -DCOOLPROP_SOURCES_ROOT="${COOLPROP_SOURCES_ROOT}" 
       -DCOOLPROP_VERSION="${COOLPROP_VERSION}" 
-      -DCOOLPROP_INPUT_FILE="${COOLPROP_SOURCES_ROOT}/dev/cmake/cpversion.h.in" 
+      -DCOOLPROP_INPUT_FILE=\"${COOLPROP_SOURCES_ROOT}/dev/cmake/cpversion.h.in\" 
       -DCOOLPROP_OUTPUT_FILE="${COOLPROP_SOURCES_ROOT}/include/cpversion.h" 
       -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_version_headers.cmake"
     COMMENT "Generating ${COOLPROP_SOURCES_ROOT}/include/cpversion.h"
 )
-add_custom_target(generate_fluid_headers ALL
+add_custom_target(generate_fluid_headers
     COMMAND ${CMAKE_COMMAND} 
-      -DCOOLPROP_DEBUG_CMAKE="${COOLPROP_DEBUG_CMAKE}"
+      -DCOOLPROP_DEBUG_CMAKE="${COOLPROP_DEBUG_CMAKE}" 
       -DCOOLPROP_SOURCES_ROOT="${COOLPROP_SOURCES_ROOT}" 
       -P "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_fluid_headers.cmake"
     COMMENT "Generating fluid headers from ${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/generate_fluid_headers.cmake"
 )
-add_custom_target(generate_headers ALL
+add_custom_target(generate_headers
     DEPENDS generate_version_headers generate_fluid_headers
   )
 
