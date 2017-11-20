@@ -295,7 +295,7 @@ void init_CoolProp(py::module &m){
         .def("fundamental_derivative_of_gas_dynamics", &AbstractState::fundamental_derivative_of_gas_dynamics)
         .def("PIP", &AbstractState::PIP)
         .def("true_critical_point", &AbstractState::true_critical_point)
-        .def("ideal_curve", &AbstractState::ideal_curve)
+        .def("ideal_curve", [](AbstractState &AS, const std::string &name) { std::vector<double> T, p; AS.ideal_curve(name, T, p); return py::make_tuple(T, p); }  )
         .def("first_partial_deriv", &AbstractState::first_partial_deriv)
         .def("second_partial_deriv", &AbstractState::second_partial_deriv)
         .def("first_saturation_deriv", &AbstractState::first_saturation_deriv)
