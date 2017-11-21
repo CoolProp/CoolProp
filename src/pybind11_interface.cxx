@@ -23,6 +23,20 @@ void init_CoolProp(py::module &m){
         .def_readwrite("T", &SimpleState::T)
         .def_readwrite("p", &SimpleState::p)
         .def_readwrite("rhomolar", &SimpleState::rhomolar);
+        
+    py::class_<GuessesStructure>(m, "GuessesStructure")
+        .def(py::init<>())
+        .def_readwrite("T", &GuessesStructure::T)
+        .def_readwrite("p", &GuessesStructure::p)
+        .def_readwrite("rhomolar", &GuessesStructure::rhomolar)
+        .def_readwrite("hmolar", &GuessesStructure::hmolar)
+        .def_readwrite("smolar", &GuessesStructure::smolar)
+        .def_readwrite("rhomolar_liq", &GuessesStructure::rhomolar_liq)
+        .def_readwrite("rhomolar_vap", &GuessesStructure::rhomolar_vap)
+        .def_readwrite("x", &GuessesStructure::x)
+        .def_readwrite("y", &GuessesStructure::y)
+        .def("clear", &GuessesStructure::clear)
+        ;
 
     py::class_<CriticalState, SimpleState>(m, "CriticalState")
         .def_readwrite("stable", &CriticalState::stable);
