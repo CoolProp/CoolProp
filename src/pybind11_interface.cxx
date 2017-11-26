@@ -23,6 +23,20 @@ void init_CoolProp(py::module &m){
         .def_readwrite("T", &SimpleState::T)
         .def_readwrite("p", &SimpleState::p)
         .def_readwrite("rhomolar", &SimpleState::rhomolar);
+        
+    py::class_<GuessesStructure>(m, "GuessesStructure")
+        .def(py::init<>())
+        .def_readwrite("T", &GuessesStructure::T)
+        .def_readwrite("p", &GuessesStructure::p)
+        .def_readwrite("rhomolar", &GuessesStructure::rhomolar)
+        .def_readwrite("hmolar", &GuessesStructure::hmolar)
+        .def_readwrite("smolar", &GuessesStructure::smolar)
+        .def_readwrite("rhomolar_liq", &GuessesStructure::rhomolar_liq)
+        .def_readwrite("rhomolar_vap", &GuessesStructure::rhomolar_vap)
+        .def_readwrite("x", &GuessesStructure::x)
+        .def_readwrite("y", &GuessesStructure::y)
+        .def("clear", &GuessesStructure::clear)
+        ;
 
     py::class_<CriticalState, SimpleState>(m, "CriticalState")
         .def_readwrite("stable", &CriticalState::stable);
@@ -295,7 +309,7 @@ void init_CoolProp(py::module &m){
         .def("fundamental_derivative_of_gas_dynamics", &AbstractState::fundamental_derivative_of_gas_dynamics)
         .def("PIP", &AbstractState::PIP)
         .def("true_critical_point", &AbstractState::true_critical_point)
-        .def("ideal_curve", &AbstractState::ideal_curve)
+        .def("ideal_curve", [](AbstractState &AS, const std::string &name) { std::vector<double> T, p; AS.ideal_curve(name, T, p); return py::make_tuple(T, p); }  )
         .def("first_partial_deriv", &AbstractState::first_partial_deriv)
         .def("second_partial_deriv", &AbstractState::second_partial_deriv)
         .def("first_saturation_deriv", &AbstractState::first_saturation_deriv)

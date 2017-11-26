@@ -201,7 +201,10 @@ void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase()
 std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &ParamName)
 {
     CoolProp::CoolPropFluid cpfluid = get_components()[0];
-    if (!ParamName.compare("aliases")){
+    if (!ParamName.compare("name")) {
+        return cpfluid.name;
+    }
+    else if (!ParamName.compare("aliases")){
         return strjoin(cpfluid.aliases, ", ");
     }
     else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
@@ -315,6 +318,7 @@ double HelmholtzEOSMixtureBackend::get_binary_interaction_double(const std::size
 void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string &parameter, const std::string & value){
     if (parameter == "function"){
         residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(get_departure_function(value));
+        residual_helmholtz->Excess.DepartureFunctionMatrix[j][i].reset(get_departure_function(value));
     }
     else{
         throw ValueError(format("Cannot process this string parameter [%s] in set_binary_interaction_string", parameter.c_str()));
