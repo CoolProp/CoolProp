@@ -1,7 +1,13 @@
+#######################################
+#        FLUID FILE GENERATOR         #
+#-------------------------------------#
+# This file calls the script that     #
+# generates header files from the     #
+# fluid information stored in JSON    #
+# format. It should only be used by   #
+# the main CoolProp target.           #
+#######################################
 
-#if(NOT COOLPROP_DEBUG_CMAKE)
-#  message(FATAL_ERROR "Debug option missing, aborting.")
-#else
 if(NOT COOLPROP_SOURCES_ROOT)
   message(FATAL_ERROR "Root directory missing, aborting.")
 endif()

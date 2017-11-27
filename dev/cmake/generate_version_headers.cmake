@@ -1,7 +1,14 @@
 
-#if(NOT COOLPROP_DEBUG_CMAKE)
-#  message(FATAL_ERROR "Debug option missing, aborting.")
-#else
+#######################################
+#     VERSION HEADER GENERATOR        #
+#-------------------------------------#
+# This file calls git to determine    #
+# hash of the latest commit, which is #
+# stored in a header file together    #
+# with the version number from the    #
+# main CMakeLists.txt                 #
+#######################################
+
 if(NOT COOLPROP_SOURCES_ROOT)
   message(FATAL_ERROR "Root directory missing, aborting.")
 elseif(NOT COOLPROP_VERSION)

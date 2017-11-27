@@ -99,14 +99,25 @@ add_custom_target(generate_headers
 # All targets should be placed in     #
 # subdirectories and they should also #
 # have unique names. However, we can  #
-# define one single default target to #
+# define one single default target    #
+# that contains the commons sources   #
+# for all flavours of CoolProp to     #
 # simplify integration.               #
 #######################################
 
-add_library(COOLPROP_OBJECT_LIBRARY OBJECT ${COOLPROP_MAIN_SOURCES} ${COOLPROP_BACKEND_SOURCES} ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_MAIN_HEADERS} ${COOLPROP_BACKEND_HEADERS} ${COOLPROP_LIBRARY_HEADERS} ${COOLPROP_LIBRARY_EXPORTS})
-add_dependencies(COOLPROP_OBJECT_LIBRARY generate_headers)
+add_library(coolprop_object_library OBJECT ${COOLPROP_MAIN_SOURCES} ${COOLPROP_BACKEND_SOURCES} ${COOLPROP_MAIN_HEADERS} ${COOLPROP_BACKEND_HEADERS})
+add_dependencies(coolprop_object_library generate_headers)
+set(coolprop_object_includes $<TARGET_PROPERTY:coolprop_object_library,INCLUDE_DIRECTORIES>)
 
 
+#######################################
+#        ADD WRAPPER TARGETS          #
+#-------------------------------------#
+# Add the CMakeLists.txt files for    #
+# wrappers. These subprojects may     #
+# include additional source files and #
+# dependencies not listed here.       #
+#######################################
 
 add_subdirectory(wrappers/library)
 
