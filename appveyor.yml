@@ -9,8 +9,6 @@ branches:
 
 environment:
   matrix:
-    - BUILD_ARGS: --config Debug
-    - BUILD_ARGS: --config Release
     #- APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     #  CMAKE_GENERATOR: Visual Studio 15 2017 Win64
     #- APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
@@ -23,6 +21,7 @@ environment:
     #  CMAKE_GENERATOR: Visual Studio 12 2013 Win64
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
       CMAKE_GENERATOR: Visual Studio 12 2013
+      BUILD_ARGS: --config Debug
 
 install:
   - cmd: git submodule update --init --recursive
