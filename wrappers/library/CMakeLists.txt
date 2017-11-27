@@ -71,6 +71,7 @@ target_link_libraries(coolprop_library ${CMAKE_DL_LIBS})
 
 if(BUILD_SHARED_LIBS)
   set_property(TARGET coolprop_library PROPERTY POSITION_INDEPENDENT_CODE ON)
+  set_property(TARGET coolprop_object_library PROPERTY POSITION_INDEPENDENT_CODE ON)
   target_compile_definitions(coolprop_library PUBLIC "-DCOOLPROP_LIB")
   target_include_directories(coolprop_library PRIVATE ${coolprop_object_includes}) # PRIVATE is only respected for shared libraries!
   target_include_directories(coolprop_library PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})  # for CoolPropLib.h
