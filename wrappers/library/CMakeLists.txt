@@ -36,9 +36,9 @@ source_group("Library Sources" FILES ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_LIBR
 # libraries for various purposes.     #
 #######################################
 
-if(CMAKE_DL_LIBS)
-  find_package (${CMAKE_DL_LIBS} REQUIRED)
-endif()
+#if(CMAKE_DL_LIBS)
+#  find_package (${CMAKE_DL_LIBS} REQUIRED)
+#endif()
 
 
 #######################################
