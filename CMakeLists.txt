@@ -109,7 +109,7 @@ add_custom_target(generate_headers
 add_library(coolprop_object_library OBJECT ${COOLPROP_MAIN_SOURCES} ${COOLPROP_BACKEND_SOURCES} ${COOLPROP_MAIN_HEADERS} ${COOLPROP_BACKEND_HEADERS})
 add_dependencies(coolprop_object_library generate_headers)
 
-# Manually inlcude these variables in you CMakeLists.txt, if you have to rely on custom compiler settings.
+# Manually inlcude these variables in your CMakeLists.txt, if you have to rely on custom compiler settings.
 set(COOLPROP_OBJECT_DEPENDS generate_headers)
 set(COOLPROP_OBJECT_SOURCES $<TARGET_PROPERTY:coolprop_object_library,SOURCES>)
 set(COOLPROP_OBJECT_INCLUDES $<TARGET_PROPERTY:coolprop_object_library,INCLUDE_DIRECTORIES>)
