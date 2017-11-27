@@ -109,6 +109,9 @@ add_library(coolprop_object_library OBJECT ${COOLPROP_MAIN_SOURCES} ${COOLPROP_B
 add_dependencies(coolprop_object_library generate_headers)
 set(coolprop_object_includes $<TARGET_PROPERTY:coolprop_object_library,INCLUDE_DIRECTORIES>)
 
+if(BUILD_SHARED_LIBS)
+  set_property(TARGET coolprop_object_library PROPERTY POSITION_INDEPENDENT_CODE ON)
+endif()
 
 #######################################
 #        ADD WRAPPER TARGETS          #
