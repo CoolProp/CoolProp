@@ -21,7 +21,7 @@ environment:
     #  CMAKE_GENERATOR: Visual Studio 12 2013 Win64
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
       CMAKE_GENERATOR: Visual Studio 12 2013
-      BUILD_ARGS: --config Debug
+      BUILD_ARGS: --target coolprop_library --config Debug
 
 install:
   - cmd: git submodule update --init --recursive
@@ -33,4 +33,5 @@ before_build:
 #  - project: $(APPVEYOR_BUILD_FOLDER)\build\$(APPVEYOR_PROJECT_NAME).sln
 
 build_script: 
-  - cmd: cd build && cmake --build . --target coolprop_library %BUILD_ARGS%
+  #- cmd: cd %APPVEYOR_BUILD_FOLDER%\build && cmake --build . %BUILD_ARGS%
+  - cmd: cmake --build . %BUILD_ARGS%
