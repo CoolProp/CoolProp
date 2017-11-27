@@ -30,6 +30,8 @@ install:
 before_build:
   - cmd: mkdir build && cd build && cmake .. -G %CMAKE_GENERATOR%
 
-build:
-  #project: $(APPVEYOR_BUILD_FOLDER)\build\$(APPVEYOR_PROJECT_NAME).sln
+#build:
+#  - project: $(APPVEYOR_BUILD_FOLDER)\build\$(APPVEYOR_PROJECT_NAME).sln
+
+build_script: 
   - cmd: cd build && cmake --build . --target coolprop_library %BUILD_ARGS%
