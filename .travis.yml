@@ -37,10 +37,10 @@ matrix:
         - cmake --version
         - echo "$CXX" && "$CXX" -v
         - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
         - popd
       script:     
-        - cmake --build build --config Release
+        - cmake --build build --target coolprop_library --config Release
     - os: linux
       dist: trusty
       compiler: clang
@@ -51,10 +51,10 @@ matrix:
         - cmake --version
         - echo "$CXX" && "$CXX" -v
         - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
         - popd
       script:     
-        - cmake --build build --config Release
+        - cmake --build build --target coolprop_library --config Release
     - os: osx
       #osx_image: xcode8.3 #  Xcode 8.3   OS X 10.12
       branches:
@@ -64,10 +64,10 @@ matrix:
         - cmake --version
         - echo "$CXX" && "$CXX" -v
         - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
         - popd
       script:     
-        - cmake --build build --config Release
+        - cmake --build build --target coolprop_library --config Release
     - os: linux 
       dist: trusty
       branches:
@@ -81,11 +81,11 @@ matrix:
             name: "CoolProp/CoolProp"
             description: "Build submitted via Travis CI"
           notification_email: jowr@ipu.dk
-          build_command_prepend: "cmake . -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON"
-          build_command: "cmake --build . --config Release"
+          build_command_prepend: "cmake . -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON"
+          build_command: "cmake --build . --target coolprop_library --config Release"
           branch_pattern: coverity_scan
-      before_script: cmake . -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_SHARED_LIBRARY=ON
-      script: cmake --build . --config Release
+      before_script: cmake . -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+      script: cmake --build . --target coolprop_library --config Release
 #          build_command_prepend: "cmake . -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx"
 #          build_command: "cmake --build . --target Main"
 #          branch_pattern: coverity_scan

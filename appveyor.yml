@@ -18,20 +18,20 @@ environment:
     #- APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     #  CMAKE_GENERATOR: Visual Studio 14 2015
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      CMAKE_GENERATOR: Visual Studio 12 2013 ARM
-      BUILD_ARGS: --target coolprop_library --config Debug
+      CMAKE_ARGS: -DBUILD_SHARED_LIBS=ON -G"Visual Studio 12 2013 ARM"
+      BUILD_ARGS: --target coolprop_library --config Release
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      CMAKE_GENERATOR: Visual Studio 12 2013 Win64
-      BUILD_ARGS: --target coolprop_library --config Debug
+      CMAKE_ARGS: -DBUILD_SHARED_LIBS=ON -G"Visual Studio 12 2013 Win64"
+      BUILD_ARGS: --target coolprop_library --config Release
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-      CMAKE_GENERATOR: Visual Studio 12 2013
-      BUILD_ARGS: --target coolprop_library --config Debug
+      CMAKE_ARGS: -DBUILD_SHARED_LIBS=ON -G"Visual Studio 12 2013"
+      BUILD_ARGS: --target coolprop_library --config Release
 
 install:
   - cmd: git submodule update --init --recursive
     
 before_build:
-  - cmd: mkdir build && cd build && cmake .. -G"%CMAKE_GENERATOR%"
+  - cmd: mkdir build && cd build && cmake .. %CMAKE_ARGS%
 
 #build:
 #  - project: $(APPVEYOR_BUILD_FOLDER)\build\$(APPVEYOR_PROJECT_NAME).sln
