@@ -23,7 +23,11 @@ project("CoolProp Library" VERSION ${COOLPROP_VERSION})
 # This file is only needed for the library, normal builds do not need it.
 set(COOLPROP_LIBRARY_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/CoolPropLib.cpp")
 set(COOLPROP_LIBRARY_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/CoolPropLib.h")
-set(COOLPROP_LIBRARY_EXPORTS "${CMAKE_CURRENT_SOURCE_DIR}/CoolPropLib.def")
+if(WIN32 AND "${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+  set(COOLPROP_LIBRARY_EXPORTS "${CMAKE_CURRENT_SOURCE_DIR}/CoolPropLib.def")
+else()
+  set(COOLPROP_LIBRARY_EXPORTS "")
+endif()
 
 # Create source groups, mainly for Visual Studio
 source_group("Library Sources" FILES ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_LIBRARY_HEADERS} ${COOLPROP_LIBRARY_EXPORTS})
