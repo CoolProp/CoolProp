@@ -31,45 +31,12 @@ if os.path.exists(hashes_fname):
 else:
     hashes = dict()
 
-# 0: Input file path relative to dev folder
-# 1: Output file path relative to include folder
-# 2: Name of variable
-#values = [
-#    ('all_fluids.json','all_fluids_JSON.h','all_fluids_JSON'),
-#    ('all_incompressibles.json','all_incompressibles_JSON.h','all_incompressibles_JSON'),
-#    ('mixtures/mixture_departure_functions.json', 'mixture_departure_functions_JSON.h', 'mixture_departure_functions_JSON'),
-#    ('mixtures/mixture_binary_pairs.json', 'mixture_binary_pairs_JSON.h', 'mixture_binary_pairs_JSON'),
-#    ('mixtures/predefined_mixtures.json', 'predefined_mixtures_JSON.h', 'predefined_mixtures_JSON'),
-#    ('cubics/all_cubic_fluids.json', 'all_cubics_JSON.h', 'all_cubics_JSON'),
-#    ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON')
-#]
-values = []
-DEBUG = True
-if (len(sys.argv) < 4):
-    print("ERROR: {0} - Wrong number of arguments: {1}".format(__file__, len(sys.argv)))
-    sys.exit(1)
-else:
-    if not os.path.isfile(sys.argv[1]): 
-        print("ERROR: {0} - File not found: {1}".format(__file__, sys.argv[1]))
-    values.append(tuple(sys.argv[1:4]))
-    if (len(sys.argv) > 4):
-        if str(sys.argv[4]) == "QUIET":
-            DEBUG = False
-        if str(sys.argv[4]) == "DEBUG":
-            DEBUG = True
-    
 
-def TO_CPP(root_dir, hashes):
+def to_cpp(root_dir, hashes, values):
     def to_chunks(l, n):
         if n<1:
             n=1
         return [l[i:i+n] for i in range(0, len(l), n)]
-    
-    # Normalise path name
-    root_dir = os.path.normpath(root_dir)
-    
-    # First we package up the JSON files
-    combine_json(root_dir)
     
     for infile,outfile,variable in values:
         
@@ -176,20 +143,50 @@ def combine_json(root_dir):
     fp.write(json.dumps(master))
     fp.close()        
     
-def generate():
-    
-    #import shutil
-    #shutil.copy2(os.path.join(repo_root_path, 'externals','Catch','single_include','catch.hpp'),os.path.join(repo_root_path,'include','catch.hpp'))
-    #shutil.copy2(os.path.join(repo_root_path, 'externals','REFPROP-headers','REFPROP_lib.h'),os.path.join(repo_root_path,'include','REFPROP_lib.h'))
-    
-    TO_CPP(root_dir = repo_root_path, hashes = hashes)
 
-    # Write the hashes to a hashes JSON file
-    if hashes:
-        fp = open(hashes_fname,'w')
-        fp.write(json.dumps(hashes))
-        fp.close()
-        
 if __name__=='__main__':
-	generate()
+
+    # 0: Input file path relative to dev folder
+    # 1: Output file path relative to include folder
+    # 2: Name of variable
+    #values = [
+    #    ('all_fluids.json','all_fluids_JSON.h','all_fluids_JSON'),
+    #]
+    
+    values = []
+    DEBUG = True
+    root_dir = os.path.normpath(repo_root_path)
+    
+    if(len(sys.argv) < 4):
+        if str(sys.argv[1]) == "combine_json":
+            if (len(sys.argv) > 2):
+                if str(sys.argv[2]) == "QUIET":
+                    DEBUG = False
+                if str(sys.argv[2]) == "DEBUG":
+                    DEBUG = True
+            combine_json(root_dir)
+            sys.exit(0)
+        else:
+            print("ERROR: {0} - Unknown argument: {1}".format(__file__, sys.argv[1]))
+            sys.exit(1)
+    elif(len(sys.argv) >= 4):
+        if not os.path.isfile(sys.argv[1]): 
+            print("ERROR: {0} - File not found: {1}".format(__file__, sys.argv[1]))
+        values.append(tuple(sys.argv[1:4]))
+        if (len(sys.argv) > 4):
+            if str(sys.argv[4]) == "QUIET":
+                DEBUG = False
+            if str(sys.argv[4]) == "DEBUG":
+                DEBUG = True
+        to_cpp(root_dir, hashes, values)
+        # Write the hashes to a hashes JSON file
+        if hashes:
+            fp = open(hashes_fname,'w')
+            fp.write(json.dumps(hashes))
+            fp.close()
+        sys.exit(0)
+    else:
+        print("ERROR: {0} - Wrong number of arguments: {1}".format(__file__, len(sys.argv)))
+        sys.exit(1)
+        
 
