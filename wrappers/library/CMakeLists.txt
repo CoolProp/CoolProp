@@ -23,7 +23,8 @@ project("CoolProp Library" VERSION ${COOLPROP_VERSION})
 # This file is only needed for the library, normal builds do not need it.
 set(COOLPROP_LIBRARY_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/CoolPropLib.cpp")
 set(COOLPROP_LIBRARY_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/CoolPropLib.h")
-if(NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64|ARM)")
+# Add export definitions only on Windows, only for 32bit, but not for ARM
+if(WIN32 AND "${CMAKE_SIZEOF_VOID_P}" STREQUAL "4" AND NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64|ARM)")
   set(COOLPROP_LIBRARY_EXPORTS "${CMAKE_CURRENT_SOURCE_DIR}/CoolPropLib.def")
 else()
   set(COOLPROP_LIBRARY_EXPORTS "")
