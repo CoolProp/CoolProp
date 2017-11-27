@@ -66,17 +66,18 @@ source_group("Library Sources" FILES ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_LIBR
 # [library-examples]> cmake -Hright-way -B_builds/shared -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="`pwd`/_install/configuration-A"
 # [library-examples]> cmake --build _builds/shared --target install
 
-add_library(coolprop_library $<TARGET_OBJECTS:coolprop_object_library> ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_LIBRARY_HEADERS} ${COOLPROP_LIBRARY_EXPORTS})
+add_library(coolprop_library ${COOLPROP_OBJECT_SOURCES} ${COOLPROP_LIBRARY_SOURCES} ${COOLPROP_LIBRARY_HEADERS} ${COOLPROP_LIBRARY_EXPORTS})
 set_target_properties(coolprop_library PROPERTIES OUTPUT_NAME "CoolProp")
 target_link_libraries(coolprop_library ${CMAKE_DL_LIBS})
+add_dependencies(coolprop_library generate_headers)
 
 if(BUILD_SHARED_LIBS)
   set_property(TARGET coolprop_library PROPERTY POSITION_INDEPENDENT_CODE ON)
   target_compile_definitions(coolprop_library PUBLIC "-DCOOLPROP_LIB")
-  target_include_directories(coolprop_library PRIVATE ${coolprop_object_includes}) # PRIVATE is only respected for shared libraries!
+  target_include_directories(coolprop_library PRIVATE ${COOLPROP_OBJECT_INCLUDES}) # PRIVATE is only respected for shared libraries!
   target_include_directories(coolprop_library PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})  # for CoolPropLib.h
 else()
-  target_include_directories(coolprop_library PUBLIC ${coolprop_object_includes})
+  target_include_directories(coolprop_library PUBLIC ${COOLPROP_OBJECT_INCLUDES})
   target_include_directories(coolprop_library PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
