@@ -859,28 +859,31 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
     }
     void IdealHelmholtzPlanckEinsteinGeneralized::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
     {
+        // First pre-calculate exp(theta[i]*tau) for each contribution; used in each term
+        std::vector<double> expthetatau(N); for (std::size_t i=0; i < N; ++i){ expthetatau[i] = exp(theta[i]*tau); }
+        
         if (!enabled){ return; }
         {
-            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){ s += n[i]*log(c[i]+d[i]*exp(theta[i]*tau)); }
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){ s += n[i]*log(c[i]+d[i]*expthetatau[i]); }
             derivs.alphar += s;
         }
         {
-            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*d[i]*exp(theta[i]*tau)/(c[i]+d[i]*exp(theta[i]*tau));}
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*theta[i]*d[i]*expthetatau[i]/(c[i]+d[i]*expthetatau[i]);}
             derivs.dalphar_dtau += s;
         }
         {
-            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],2)*c[i]*d[i]*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),2);}
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*POW2(theta[i])*c[i]*d[i]*expthetatau[i]/pow(c[i]+d[i]*expthetatau[i],2);}
             derivs.d2alphar_dtau2 += s;
         }
         {
-            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*pow(theta[i],3)*c[i]*d[i]*(c[i]-d[i]*exp(theta[i]*tau))*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),3);}
+            CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){s += n[i]*POW3(theta[i])*c[i]*d[i]*(c[i]-d[i]*expthetatau[i])*expthetatau[i]/pow(c[i]+d[i]*expthetatau[i],3);}
             derivs.d3alphar_dtau3 += s;
         }
         {
             CoolPropDbl s=0; for (std::size_t i=0; i < N; ++i){
-                const CoolPropDbl para = c[i]+d[i]*exp(theta[i]*tau);
-                const CoolPropDbl bracket = 6*POW3(d[i])*exp(3*tau*theta[i]) - 12*d[i]*d[i]*para*exp(2*tau*theta[i]) + 7*d[i]*POW2(para)*exp(tau*theta[i]) - POW3(para);
-                s += -n[i]*d[i]*pow(theta[i],4)*bracket*exp(theta[i]*tau)/pow(c[i]+d[i]*exp(theta[i]*tau),4);
+                const CoolPropDbl para = c[i]+d[i]*expthetatau[i];
+                const CoolPropDbl bracket = 6*POW3(d[i])*POW3(expthetatau[i]) - 12*d[i]*d[i]*para*POW2(expthetatau[i]) + 7*d[i]*POW2(para)*expthetatau[i] - POW3(para);
+                s += -n[i]*d[i]*pow(theta[i],4)*bracket*expthetatau[i]/pow(c[i]+d[i]*expthetatau[i],4);
             }
             derivs.d4alphar_dtau4 += s;
         }
