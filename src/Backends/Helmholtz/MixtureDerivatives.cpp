@@ -754,7 +754,8 @@ CoolPropDbl MixtureDerivatives::dalpha0_dxi(HelmholtzEOSMixtureBackend &HEOS, st
         double ddeltaok_dxi = delta_ok / rhor*HEOS.Reducing->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag); // (Gernert, supp. B.20)
         
         double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
-        double dalpha0_ok_dxi = HEOS.components[k].EOS().alpha0.dTau(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta(tau_ok, delta_ok)*ddeltaok_dxi;
+        HelmholtzDerivatives alpha0kterms = HEOS.components[k].EOS().alpha0.all(tau_ok, delta_ok);
+        double dalpha0_ok_dxi = alpha0kterms.dalphar_dtau*dtauok_dxi + alpha0kterms.dalphar_ddelta*ddeltaok_dxi;
         term += xk*(Rratiok*dalpha0_ok_dxi);
     }
     return term;
@@ -788,9 +789,10 @@ CoolPropDbl MixtureDerivatives::d2alpha0_dxi_dDelta(HelmholtzEOSMixtureBackend &
         double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
         
         //double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
-        double dalpha0ok_ddeltaok = HEOS.components[k].EOS().alpha0.dDelta(tau_ok, delta_ok);
+        HelmholtzDerivatives alpha0kterms = HEOS.components[k].EOS().alpha0.all(tau_ok, delta_ok);
+        double dalpha0ok_ddeltaok = alpha0kterms.dalphar_ddelta;
 
-        double d_dalpha0ok_ddeltaok_dxi = HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta2(tau_ok, delta_ok)*ddeltaok_dxi;
+        double d_dalpha0ok_ddeltaok_dxi = alpha0kterms.d2alphar_ddelta_dtau*dtauok_dxi + alpha0kterms.d2alphar_ddelta2*ddeltaok_dxi;
         term += xk/rhock*(rhor*d_dalpha0ok_ddeltaok_dxi + drhor_dxi*dalpha0ok_ddeltaok);
     }
     return term;
@@ -825,9 +827,9 @@ CoolPropDbl MixtureDerivatives::d2alpha0_dxi_dTau(HelmholtzEOSMixtureBackend &HE
         double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
         
         //double Rratiok = 1;//HEOS.gas_constant()/HEOS.components[k].EOS().R_u;
-        double dalpha0ok_dtauok = HEOS.components[k].EOS().alpha0.dTau(tau_ok, delta_ok);
-        
-        double d_dalpha0ok_dTauok_dxi = HEOS.components[k].EOS().alpha0.dTau2(tau_ok, delta_ok)*dtauok_dxi + HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*ddeltaok_dxi;
+        HelmholtzDerivatives alpha0kterms = HEOS.components[k].EOS().alpha0.all(tau_ok, delta_ok);
+        double dalpha0ok_dtauok = alpha0kterms.dalphar_dtau;
+        double d_dalpha0ok_dTauok_dxi = alpha0kterms.d2alphar_dtau2*dtauok_dxi + alpha0kterms.d2alphar_ddelta_dtau*ddeltaok_dxi;
         term += xk*Tck*(1/Tr*d_dalpha0ok_dTauok_dxi + -1/POW2(Tr)*dTr_dxi*dalpha0ok_dtauok);
     }
     return term;
@@ -864,9 +866,11 @@ CoolPropDbl MixtureDerivatives::d2alpha0dxidxj(HelmholtzEOSMixtureBackend &HEOS,
     double d2rhor_dxidxj = HEOS.Reducing->d2rhormolardxidxj(HEOS.mole_fractions, i, j, xN_flag);
     
     //double Rratioi = 1;//HEOS.gas_constant()/HEOS.components[i].EOS().R_u;
-    
-    double d_dalpha0oi_dxj = HEOS.components[i].EOS().alpha0.dTau(tau_oi, delta_oi)*dtauoi_dxj + HEOS.components[i].EOS().alpha0.dDelta(tau_oi, delta_oi)*ddeltaoi_dxj;
-    double d_dalpha0oj_dxi = HEOS.components[j].EOS().alpha0.dTau(tau_oj, delta_oj)*dtauoj_dxi + HEOS.components[j].EOS().alpha0.dDelta(tau_oj, delta_oj)*ddeltaoj_dxi;
+    HelmholtzDerivatives alpha0iterms = HEOS.components[i].EOS().alpha0.all(tau_oi, delta_oi),
+                         alpha0jterms = HEOS.components[j].EOS().alpha0.all(tau_oj, delta_oj);
+
+    double d_dalpha0oi_dxj = alpha0iterms.dalphar_dtau*dtauoi_dxj + alpha0iterms.dalphar_ddelta*ddeltaoi_dxj;
+    double d_dalpha0oj_dxi = alpha0jterms.dalphar_dtau*dtauoj_dxi + alpha0jterms.dalphar_ddelta*ddeltaoj_dxi;
     
     double xi = HEOS.mole_fractions[i], xj = HEOS.mole_fractions[j];
     double Kronecker_delta_over_xi = (xj > DBL_EPSILON && xi > DBL_EPSILON) ? Kronecker_delta(i, j)/xi : 0;
@@ -887,13 +891,14 @@ CoolPropDbl MixtureDerivatives::d2alpha0dxidxj(HelmholtzEOSMixtureBackend &HEOS,
         double dtauok_dxi = -tau_ok/Tr*dTr_dxi; // (Gernert, supp, B.19)
         double ddeltaok_dxi = delta_ok/rhor*drhor_dxi; // (Gernert, supp. B.20)
         
-        double dalpha0ok_dtauok = HEOS.components[k].EOS().alpha0.dTau(tau_ok, delta_ok);
+        HelmholtzDerivatives alpha0kterms = HEOS.components[k].EOS().alpha0.all(tau_ok, delta_ok);
+        double dalpha0ok_dtauok = alpha0kterms.dalphar_dtau;
         double d2tauok_dxidxj = -Tck*HEOS.tau()*(POW2(Tr)*d2Tr_dxidxj-dTr_dxi*(2*Tr*dTr_dxj))/POW4(Tr);
-        double d_dalpha0ok_dtauok_dxj = HEOS.components[k].EOS().alpha0.dTau2(tau_ok, delta_ok)*dtauok_dxj + HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*ddeltaok_dxj;
+        double d_dalpha0ok_dtauok_dxj = alpha0kterms.d2alphar_dtau2*dtauok_dxj + alpha0kterms.d2alphar_ddelta_dtau*ddeltaok_dxj;
 
-        double dalpha0ok_ddeltaok = HEOS.components[k].EOS().alpha0.dDelta(tau_ok, delta_ok);
+        double dalpha0ok_ddeltaok = alpha0kterms.dalphar_ddelta;
         double d2deltaok_dxidxj = HEOS.delta()/rhock*d2rhor_dxidxj;
-        double d_dalpha0ok_ddeltaok_dxj = HEOS.components[k].EOS().alpha0.dDelta_dTau(tau_ok, delta_ok)*dtauok_dxj + HEOS.components[k].EOS().alpha0.dDelta2(tau_ok, delta_ok)*ddeltaok_dxj;
+        double d_dalpha0ok_ddeltaok_dxj = alpha0kterms.d2alphar_ddelta_dtau*dtauok_dxj + alpha0kterms.d2alphar_ddelta2*ddeltaok_dxj;
         
         term += xk*(dalpha0ok_dtauok*d2tauok_dxidxj + d_dalpha0ok_dtauok_dxj*dtauok_dxi
                     +dalpha0ok_ddeltaok*d2deltaok_dxidxj + d_dalpha0ok_ddeltaok_dxj*ddeltaok_dxi);
