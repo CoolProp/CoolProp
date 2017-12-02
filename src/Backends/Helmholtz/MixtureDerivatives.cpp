@@ -920,6 +920,10 @@ CoolPropDbl MixtureDerivatives::dpsi_dxi(HelmholtzEOSMixtureBackend &HEOS, std::
     return HEOS.delta()*HEOS.gas_constant()/HEOS.tau()*(alpha(HEOS, xN_flag)*d_rhorTr_dxi(HEOS, i, xN_flag) + HEOS.rhomolar_reducing()*HEOS.T_reducing()*dalpha_dxi(HEOS, i, xN_flag));
 }
 
+CoolPropDbl MixtureDerivatives::dpsir_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag) {
+    return HEOS.delta()*HEOS.gas_constant() / HEOS.tau()*(alphar(HEOS, xN_flag)*d_rhorTr_dxi(HEOS, i, xN_flag) + HEOS.rhomolar_reducing()*HEOS.T_reducing()*dalphar_dxi(HEOS, i, xN_flag));
+}
+
 CoolPropDbl MixtureDerivatives::d_rhorTr_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag){
     GERG2008ReducingFunction *GERG = static_cast<GERG2008ReducingFunction *>(HEOS.Reducing.get());
     return HEOS.rhomolar_reducing()*GERG->dTrdxi__constxj(HEOS.mole_fractions, i, xN_flag) + HEOS.T_reducing()*GERG->drhormolardxi__constxj(HEOS.mole_fractions, i, xN_flag);
@@ -957,6 +961,13 @@ CoolPropDbl MixtureDerivatives::d2psi_dxi_dxj(HelmholtzEOSMixtureBackend &HEOS, 
             + dalpha_dxi(HEOS, i, xN_flag)*d_rhorTr_dxi(HEOS, j, xN_flag)
             + dalpha_dxi(HEOS, j, xN_flag)*d_rhorTr_dxi(HEOS, i, xN_flag)
             + HEOS.rhomolar_reducing()*HEOS.T_reducing()*d2alphadxidxj(HEOS, i, j, xN_flag));
+}
+CoolPropDbl MixtureDerivatives::d2psir_dxi_dxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag) {
+    return HEOS.delta()*HEOS.gas_constant() / HEOS.tau()*(
+        alphar(HEOS)*d2_rhorTr_dxidxj(HEOS, i, j, xN_flag)
+        + dalphar_dxi(HEOS, i, xN_flag)*d_rhorTr_dxi(HEOS, j, xN_flag)
+        + dalphar_dxi(HEOS, j, xN_flag)*d_rhorTr_dxi(HEOS, i, xN_flag)
+        + HEOS.rhomolar_reducing()*HEOS.T_reducing()*d2alphardxidxj(HEOS, i, j, xN_flag));
 }
 
 
