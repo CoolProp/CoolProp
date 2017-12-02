@@ -684,6 +684,9 @@ class MixtureDerivatives{
     
     /// Return the first partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$x_i\f$
     static CoolPropDbl dpsi_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
+
+    /// Return the first partial of Helmholtz energy density \f$\psi^{\rm r} = \rho a^{\rm r}\f$ with respect to \f$x_i\f$
+    static CoolPropDbl dpsir_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
     
     /// Return the first partial of the product \f$\rho_{\rm r}T_{\rm r}\f$ with respect to \f$x_i\f$
     static CoolPropDbl d_rhorTr_dxi(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, x_N_dependency_flag xN_flag);
@@ -708,6 +711,9 @@ class MixtureDerivatives{
     
     /// Return the second partial of Helmholtz energy density \f$\psi = \rho a\f$ with respect to \f$x_i\f$ and \f$x_j\f$
     static CoolPropDbl d2psi_dxi_dxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
+
+    /// Return the second partial of residual Helmholtz energy density \f$\psi^{\rm r} = \rho a^{\rm r}\f$ with respect to \f$x_i\f$ and \f$x_j\f$
+    static CoolPropDbl d2psir_dxi_dxj(HelmholtzEOSMixtureBackend &HEOS, std::size_t i, std::size_t j, x_N_dependency_flag xN_flag = XN_INDEPENDENT);
     
     /// ****************************************************************************
     /// ****************************************************************************
