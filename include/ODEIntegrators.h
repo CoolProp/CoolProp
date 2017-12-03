@@ -1,3 +1,6 @@
+#ifndef ODEINTEGRATORS_H
+#define ODEINTEGRATORS_H
+
 #include <vector>
 
 namespace ODEIntegrators{
@@ -6,7 +9,7 @@ namespace ODEIntegrators{
     class AbstractODEIntegrator{
     public:
 
-        virtual std::vector<double> get_initial_array()  = 0;
+        virtual std::vector<double> get_initial_array() const = 0;
 
         virtual void pre_step_callback() = 0;
 
@@ -20,9 +23,7 @@ namespace ODEIntegrators{
     };
 
     /**
-     * \brief Use the adaptive Runge-Kutta integrator to integrate a system of differential equations
-     *
-
+     @brief Use the adaptive Runge-Kutta integrator to integrate a system of differential equations
 
      @param tmin Starting value of the independent variable.  ``t`` is in the closed range [``tmin``, ``tmax``]
      @param tmax Ending value for the independent variable.  ``t`` is in the closed range [``tmin``, ``tmax``]
@@ -35,3 +36,5 @@ namespace ODEIntegrators{
     bool AdaptiveRK54(AbstractODEIntegrator &ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed, double step_relax);
 
 }
+
+#endif
