@@ -115,6 +115,11 @@ void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend &HEOS)
                 throw ValueError("twophase not implemented yet");
             }
         }
+        else
+        {
+            // Phase is imposed.  Update _phase in case it was reset elsewhere by another call
+            HEOS._phase = HEOS.imposed_phase_index;
+        }
         // Find density
         HEOS._rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
         HEOS._Q = -1;
