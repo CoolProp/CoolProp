@@ -7,11 +7,10 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 # settings per extension
-[*.bat]
-
-[*.cmd]
-
 [*.{cpp,h}]
+charset = utf-8
+indent_size = 4
+indent_style = space
 
 [*.md]
 charset = utf-8
@@ -21,9 +20,3 @@ trim_trailing_whitespace = false
 charset = utf-8
 indent_size = 4
 indent_style = space
-
-[*.sh]
-
-[*.yml]
-indent_style = space
-indent_size = 2
