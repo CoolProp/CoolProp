@@ -7,7 +7,7 @@ import CoolProp
 import timeit
 
 def get_speed_data():
-    
+
     H_TP = 350e3
     P_TP = 400e3
 
@@ -21,7 +21,7 @@ def get_speed_data():
     number = 50000
     repeat = 3
     version = CoolProp.__version__
-    
+
     if int(CoolProp.__version__[0])>4:
         loaded = 5
         print("Loaded CoolProp version 5")
@@ -38,7 +38,7 @@ def get_speed_data():
         def single_phase_pT_TTSE():
             TTSE.update(CoolProp.PT_INPUTS, P_PT, T_PT)
             TTSE.rhomolar()
-            
+
         def two_phase_BICUBIC():
             BICUBIC.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
             BICUBIC.rhomolar()
@@ -48,7 +48,7 @@ def get_speed_data():
         def single_phase_pT_BICUBIC():
             BICUBIC.update(CoolProp.PT_INPUTS, P_PT, T_PT)
             BICUBIC.rhomolar()
-            
+
         def two_phase_HEOS():
             HEOS.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
             HEOS.rhomolar()
@@ -58,7 +58,7 @@ def get_speed_data():
         def single_phase_pT_HEOS():
             HEOS.update(CoolProp.PT_INPUTS, P_PT, T_PT)
             HEOS.rhomolar()
-        
+
     else:
         loaded = 4
         print("Loaded CoolProp version 4")
@@ -97,9 +97,9 @@ def get_speed_data():
         single_phase_pt_bicubic = min(timeit.Timer(single_phase_pT_BICUBIC).repeat(repeat=repeat, number=number))/number*1e6
     else:
         raise ValueError("Unknown CoolProp version.")
-        
+
     return locals()
-    
+
 table = """.. csv-table:: Execution speed in :math:`\mu` s/call
    :header: Backend, 2-Phase p-h inputs, 1-phase p-h inputs, 1-phase p-T inputs
    :widths: 30, 30, 30, 40
@@ -114,7 +114,7 @@ def generate_rst():
     s = "{fluid:s} : {number:6d} calls, best of {repeat:2d} repetitions\n\n".format(**d)
     s += table.format(**d)
     return s
-    
+
 if __name__ == '__main__':
     print(generate_rst())
     d = get_speed_data()

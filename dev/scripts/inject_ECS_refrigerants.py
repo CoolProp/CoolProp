@@ -29,7 +29,7 @@ McLinden_psi_cond_data = {
 'R125': [1.0369,-0.0030368],
 'R142b': [1.6808,-0.8395440,0.321957,-0.039706],
 'R143a': [1.1779,-0.2054100,0.064870,-0.006473]}
-    
+
 # From Klein, 1997
 Klein_psi_visc_data = {
 'R11': [1.171,-0.0592],
@@ -44,49 +44,49 @@ Klein_psi_visc_data = {
 
 template = {
 "conductivity": {
-      "BibTeX": "McLinden-IJR-2000", 
+      "BibTeX": "McLinden-IJR-2000",
       "f_int": {
-        "T_reducing": 1.0, 
-        "T_reducing_units": "K", 
+        "T_reducing": 1.0,
+        "T_reducing_units": "K",
         "a": [
           XXX
-        ], 
+        ],
         "t": [
           XXX
         ]
-      }, 
+      },
       "psi": {
         "a": [
           XXX
-        ], 
-        "rhomolar_reducing": XXX, 
-        "rhomolar_reducing_units": "mol/m^3", 
+        ],
+        "rhomolar_reducing": XXX,
+        "rhomolar_reducing_units": "mol/m^3",
         "t": [
           XXX
         ]
-      }, 
-      "q_D": 1999999999.9999998, 
-      "q_D_units": "m", 
-      "reference_fluid": "R134a", 
+      },
+      "q_D": 1999999999.9999998,
+      "q_D_units": "m",
+      "reference_fluid": "R134a",
       "type": "ECS"
-    }, 
+    },
     "viscosity": {
       "BibTeX": "Klein-IJR-1997",
-      "epsilon_over_k": XXX, 
-      "epsilon_over_k_units": "K", 
+      "epsilon_over_k": XXX,
+      "epsilon_over_k_units": "K",
       "psi": {
         "a": [
           XXX
-        ], 
-        "rhomolar_reducing": XXX, 
-        "rhomolar_reducing_units": "mol/m^3", 
+        ],
+        "rhomolar_reducing": XXX,
+        "rhomolar_reducing_units": "mol/m^3",
         "t": [
           XXX
         ]
-      }, 
-      "reference_fluid": "R134a", 
-      "sigma_eta": XXX, 
-      "sigma_eta_units": "m", 
+      },
+      "reference_fluid": "R134a",
+      "sigma_eta": XXX,
+      "sigma_eta_units": "m",
       "type": "ECS"
     }
 }
@@ -102,9 +102,9 @@ for fluid in fluids:
         l = CoolProp.CoolProp.PropsSI('L','T',300,'Q',0,fluid)
         #print 'GOOD', fluid, v, l
     except ValueError:
-        
+
         print 'BAD', fluid
-        
+
         new = template.copy()
         new['viscosity']['sigma_eta'] = McLinden_sigma_ek_f_data[fluid][0]/1e9
         new['viscosity']['epsilon_over_k'] = McLinden_sigma_ek_f_data[fluid][1]
@@ -112,7 +112,7 @@ for fluid in fluids:
         new['viscosity']['psi']['a'] = a
         new['viscosity']['psi']['t'] = range(len(a))
         new['viscosity']['psi']['rhomolar_reducing'] = CoolProp.CoolProp.PropsSI(fluid,'rhomolar_reducing')
-        
+
         a = McLinden_sigma_ek_f_data[fluid][2::]
         new['conductivity']['f_int']['a'] = a
         new['conductivity']['f_int']['t'] = range(len(a))
@@ -120,7 +120,7 @@ for fluid in fluids:
         new['conductivity']['psi']['a'] = a
         new['conductivity']['psi']['t'] = range(len(a))
         new['conductivity']['psi']['rhomolar_reducing'] = CoolProp.CoolProp.PropsSI(fluid,'rhomolar_reducing')
-        
+
         fname = '../fluids/'+fluid+'.json'
         with open(fname, 'r') as fp:
             jj = json.load(fp)

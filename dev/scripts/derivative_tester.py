@@ -7,7 +7,7 @@ def finite_diff(Output,Input1,Val1,Input2,Val2,Fluid,  index,deriv,order,type = 
             return Props(Output,Input1,Val1+dx,Input2,Val2,Fluid)
         else:
             return Props(Output,Input1,Val1,Input2,Val2+dx,Fluid)
-        
+
     if deriv == 1:
         if order == 1:
             return (f(index,dx)-f(index,0))/(dx)
@@ -181,7 +181,7 @@ print ds_dp
 print ds_dp_num
 
 
-print 
+print
 print '*******************************************'
 print 'CHECKING SECOND DERIVATIVES OF PROPERTIES'
 print '*******************************************'

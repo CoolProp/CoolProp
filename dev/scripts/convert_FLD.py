@@ -57,12 +57,12 @@ def extract_active_EOS(file_name):
             break
 
         if i == len(lines) -1:
-            raise KeyError("Could not find empty line at end of EOS block") 
+            raise KeyError("Could not find empty line at end of EOS block")
 
     iEOS_start = iEOS
     for i in range(iEOS, iEOS_end +1):
         if lines[i].startswith('!'):
-            iEOS_start = i 
+            iEOS_start = i
             break
 
     for i in range(iEOS_start+1, iEOS_end +1):

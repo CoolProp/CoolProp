@@ -34,7 +34,7 @@ for T in np.linspace(Ttriple,Tcrit+30,400):
     for rho in np.linspace(1e-10,rhomax,400):
         muval = CP.Props('V','T',T,'D',rho,Rfluid)
         mudilute = CP.viscosity_dilute(fluid,T,rho,e_k,sigma)
-        
+
         #Want positive value, and single-phase
         if (muval > 0 and T > Tcrit or rho > CP.rhosatL_anc(fluid,T) or rho < CP.rhosatV_anc(fluid,T)):
             mu << muval
@@ -58,7 +58,7 @@ def OBJECTIVE_fit(c,x):
     delta = x[1,:]
     #Unpack the inputs into e matrix and f vector
     e = np.zeros((n+1,m+1))
-    
+
     sum = 0
     k = 0
     for i in range(2,n+1):
@@ -66,16 +66,16 @@ def OBJECTIVE_fit(c,x):
             e[i][j] = c[k]
             sum += e[i][j]*delta**i/tau**j
             k += 1
-            
+
     for o in range(0,NP):
         f1 = c[k+o*3]
         g1 = c[k+1+o*3]
         g2 = c[k+2+o*3]
-    
+
     delta_0 = g1*(1+g2*tau**0.5)
     sum += f1*(delta/(delta_0-delta)-delta/delta_0)
     return sum + np.array(mu_dilute.vec)
-    
+
 print 'starting fit'
 XXX = np.r_[np.array(tau,ndmin = 2), np.array(delta,ndmin=2)]
 mod = Model(OBJECTIVE_fit)
@@ -108,7 +108,7 @@ def write_output(c):
     f1 = c[k]
     g1 = c[k+1]
     g2 = c[k+2]
-        
+
     template = textwrap.dedent(
     """
     double {name:s}Class::viscosity_Trho(double T, double rho)
@@ -151,7 +151,7 @@ def write_output(c):
     }} 
     """
     )
-    
+
     values = dict(f1 = f1,
                   g1 = g1,
                   g2 = g2,
@@ -160,7 +160,7 @@ def write_output(c):
                   name = fluid,
                   edata = edata,
                   MAE = MAE)
-    
+
     print template.format(**values)
 
 write_output(myoutput.beta)

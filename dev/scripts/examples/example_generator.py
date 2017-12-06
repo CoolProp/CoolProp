@@ -183,12 +183,12 @@ high_level_interface = [
                 "type": "function",
                 "function": "HAPropsSI",
                 "arguments": [
-                    "'R'", "'T'", "300", "'P'", "101325", "'W'", 
+                    "'R'", "'T'", "300", "'P'", "101325", "'W'",
                     {
                         "type": "function",
                         "function": "HAPropsSI",
                         "arguments": [
-                            "'W'", "'T'", "300", "'P'", "101325", "'R'", "0.5" 
+                            "'W'", "'T'", "300", "'P'", "101325", "'R'", "0.5"
                         ]
                     }
                 ]
@@ -372,7 +372,7 @@ low_level_interface_with_mixtures = [
         "arguments": [
             "'Normal boiling point temperature of water and ethanol:'",
             {
-                
+
                 "type": "class_dereference",
                 "name": "AS",
                 "RHS": {
@@ -456,7 +456,7 @@ low_level_interface_with_mixtures = [
         "arguments": [
             "'Vapor molar density:'",
             {
-                
+
                 "type": "class_dereference",
                 "name": "AS2",
                 "RHS": {
@@ -519,7 +519,7 @@ low_level_interface = [
         "arguments": [
             "'Mass density of refrigerant R245fa at 300 K, 101325 Pa:'",
             {
-                
+
                 "type": "class_dereference",
                 "name": "TAB",
                 "RHS": {
@@ -572,7 +572,7 @@ low_level_interface = [
         "arguments": [
             "'First saturation derivative:'",
             {
-                
+
                 "type": "class_dereference",
                 "name": "AS_SAT",
                 "RHS": {
@@ -599,7 +599,7 @@ low_level_interface = [
 ]
 
 class BaseParser(object):
-    
+
     def __init__(self):
         self.pieces = high_level_interface + low_level_interface + low_level_interface_with_mixtures
 
@@ -678,7 +678,7 @@ class Python(BaseParser):
                           'import CoolProp.CoolProp as CoolProp',
                           'from CoolProp.HumidAirProp import HAPropsSI',
                           'from math import sin\n'])
-                          
+
 class Octave(BaseParser):
 
     function_name_mapping = dict(Props1SI = 'CoolProp.Props1SI',
@@ -725,25 +725,25 @@ class Octave(BaseParser):
                 LHS = type_name + ' ' + d['variable_name']
             else:
                 LHS = d['variable_name']
-            
+
             if d['RHS']['type'] != 'vector':
                 RHS = self.dict2string(d['RHS'])
             else: # Custom processing for vector assignment
                 pushes = [d['variable_name']+'.push_back(' + arg +');' for arg in d['RHS']['arguments']]
                 RHS = 'DoubleVector(); ' + ' '.join(pushes)
-                
+
             l = ' '.join([LHS, '=', RHS])
         else:
             l = '??????????????????????????????'
-            
+
         if 'EOL' in d and d['EOL']:
             l += ';'
         return l
 
     def header(self):
         return '\n'.join(['CoolProp\n'])
-        
-        
+
+
 class R(BaseParser):
 
     function_name_mapping = dict(factory = 'AbstractState_factory')
@@ -784,17 +784,17 @@ class R(BaseParser):
                 LHS = type_name + ' ' + d['variable_name']
             else:
                 LHS = d['variable_name']
-            
+
             if d['RHS']['type'] != 'vector':
                 RHS = self.dict2string(d['RHS'])
             else: # Custom processing for vector assignment
                 pushes = [d['variable_name']+' <- ' + arg +';' for arg in d['RHS']['arguments']]
                 RHS = 'c(' + ', '.join([arg for arg in d['RHS']['arguments']]) + ')'
-                
+
             l = ' '.join([LHS, '=', RHS])
         else:
             l = '??????????????????????????????'
-            
+
         if 'EOL' in d and d['EOL']:
             l += ''
         return l
@@ -854,11 +854,11 @@ class MATLAB(BaseParser):
             else: #vector
                 pushes = [d['variable_name']+'.push_back(' + arg +');' for arg in d['RHS']['arguments']]
                 RHS = 'CoolProp.DoubleVector(); ' + ' '.join(pushes)
-                
+
             l = ' '.join([LHS, '=', RHS])
         else:
             l = '??????????????????????????????'
-            
+
         if 'EOL' in d and d['EOL']:
             l += ';'
         return l
@@ -875,7 +875,7 @@ class Java(BaseParser):
                                  get_global_param_string = 'CoolProp.get_global_param_string',
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': 'DoubleVector',
-                         'AbstractState': 'AbstractState'}   
+                         'AbstractState': 'AbstractState'}
     enum_name_mapping = {'input_pairs': "input_pairs", 'parameters': "parameters"}
     indentation = ' '*8
 
@@ -909,13 +909,13 @@ class Java(BaseParser):
                 LHS = type_name + ' ' + d['variable_name']
             else:
                 LHS = d['variable_name']
-            
+
             if d['RHS']['type'] != 'vector':
                 RHS = self.dict2string(d['RHS'])
             else: # Custom processing for vector assignment
                 pushes = [d['variable_name']+'.add(' + arg +');' for arg in d['RHS']['arguments']]
                 RHS = 'new DoubleVector(); ' + ' '.join(pushes)
-                
+
             l = ' '.join([LHS, '=', RHS])
         else:
             raise ValueError
@@ -940,7 +940,7 @@ class Csharp(BaseParser):
                                  get_global_param_string = 'CoolProp.get_global_param_string',
                                  factory = 'AbstractState.factory')
     type_name_mapping = {'vector': "DoubleVector",
-                         'AbstractState': 'AbstractState'} 
+                         'AbstractState': 'AbstractState'}
     enum_name_mapping = {'input_pairs': "input_pairs", 'parameters': "parameters"}
     indentation = ' '*12
 
@@ -988,10 +988,10 @@ class Csharp(BaseParser):
 
     def footer(self):
         return '\n        }\n    }\n}'
-        
-        
+
+
 if __name__=='__main__':
-    
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("language", help="The target language (Python, Java, Csharp, etc.)")

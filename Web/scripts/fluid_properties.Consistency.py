@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
+root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 fluids_path = os.path.join(web_dir,'fluid_properties','fluids')
 plots_path = os.path.join(web_dir,'fluid_properties','fluids','Consistencyplots')
 
@@ -24,7 +24,7 @@ del ff
 """
 if not os.path.exists(plots_path):
     os.makedirs(plots_path)
-    
+
 for fluid in CoolProp.__fluids__:
     print('fluid:', fluid)
     file_string = template.format(fluid = fluid)

@@ -20,4 +20,4 @@ for fluid in CoolProp.__fluids__:
 
 with open('all_cubic_fluids.json','w') as fp:
     json.dump(data, fp, indent = 2, sort_keys = True)
-    
+

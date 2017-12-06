@@ -13,7 +13,7 @@ def test_input_types():
 
 def check_type(fluid, Tvals):
     PropsSI('P','T',Tvals,'Q',0,fluid)
-    
+
 class PropsFailures(unittest.TestCase):
     def testUnmatchedLengths(self):
         self.assertRaises(TypeError,PropsSI,'P','T',[280,290,300],'Q',[0,1],'R134a')
