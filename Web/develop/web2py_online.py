@@ -27,7 +27,7 @@ Running application locally
 ---------------------------
 
 .. warning::
-
+    
     Make sure you install ``mpld3``!
 
 Same basic protocol...
