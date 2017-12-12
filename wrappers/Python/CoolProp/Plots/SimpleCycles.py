@@ -2,7 +2,7 @@
 from __future__ import print_function, division, absolute_import
 
 
-import matplotlib, warnings 
+import matplotlib, warnings
 import numpy as np
 
 
@@ -30,9 +30,9 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',**kwargs):
     * axis : An axis to use instead of the active axis
     * skipPlot : If True, won't actually plot anything, just print COP
 
-    """    
+    """
     warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
-    
+
     for i in kwargs:
         warnings.warn("This function has been deprecated, your input \"{0}: {1}\" will be ignored".format(i,kwargs[i]),DeprecationWarning)
 
@@ -40,7 +40,7 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',**kwargs):
     cycle = SimpleCompressionCycle(fluid_ref=Ref, graph_type=Ts_Ph)
     cycle.simple_solve_dt(Te, Tc, DTsh, DTsc, eta_a, SI=True)
     print(cycle.COP_cooling(),cycle.COP_heating())
-    
+
 
 
 def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=False,skipPlot=False,axis=None,**kwargs):
@@ -68,7 +68,7 @@ def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=
     * skipPlot : If True, won't actually plot anything, just print COP
 
     """
-    
+
     warnings.warn("This function has been deprecated. PLease consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
 
     T=np.zeros((8))
@@ -208,7 +208,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     * skipPlot : If True, won't actually plot anything, just print COP
 
     """
-    
+
     warnings.warn("This function has been deprecated. Please consider converting it to an object inheriting from \"BaseCycle\".",DeprecationWarning)
     from scipy.optimize import newton
 
@@ -236,8 +236,8 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     p[2]=pi
     #T[2]=T_hp(Ref,h[2],pi,T2s)
     T[2]=PropsSI('T','H',h[2],'P',pi,Ref)
-    
-    
+
+
     s[2]=PropsSI('S','T',T[2],'P',pi,Ref)
     rho[2]=PropsSI('D','T',T[2],'P',pi,Ref)
 
@@ -348,7 +348,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
     COP=m*(h[1]-h[9])/(m*(h[2]-h[1])+(m+x)*(h[4]-h[3]))
     for i in range(1,len(T)-1):
-            print('%d & %g & %g & %g & %g & %g \\\\' %(i,T[i]-273.15,p[i],h[i],s[i],rho[i]))
+        print('%d & %g & %g & %g & %g & %g \\\\' %(i,T[i]-273.15,p[i],h[i],s[i],rho[i]))
     print(x,m*(h[1]-h[9]),(m*(h[2]-h[1])+(m+x)*(h[4]-h[3])),COP)
     mdot=Qin/(h[1]-h[9])
     mdot_inj=x*mdot
@@ -367,15 +367,15 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     #    def __init__(self, *args, **kwargs):
     #        object.__init__(self, *args, **kwargs)
     # (states, steps, fluid):
-    
+
 #             Parameters
-#         ----------        
+#         ----------
 #         x_type : int, str
 #             Either a letter or an integer that specifies the property type for the x-axis
 #         y_type : int, str
 #             Either a letter or an integer that specifies the property type for the y-axis
-#         states : list 
-#             A collection of state points that follows a fixed scheme defined 
+#         states : list
+#             A collection of state points that follows a fixed scheme defined
 #             in the implementing subclass.
 #         fluid_ref : str, CoolProp.AbstractState
 #             The fluid property provider, either a subclass of CoolProp.AbstractState
@@ -383,8 +383,8 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 #             via :func:`Common.process_fluid_state`.
 #         steps : int
 #             The number of steps used for going from one state to another
-#         
-#         for more properties, see :class:`CoolProp.Plots.Common.Base2DObject`.  
+#
+#         for more properties, see :class:`CoolProp.Plots.Common.Base2DObject`.
 
 # # See http://stackoverflow.com/questions/1061283/lt-instead-of-cmp
 # class ComparableMixin:
@@ -403,7 +403,7 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
 class StatePoint(PropertyDict):
     """A simple fixed dimension dict represented by an object with attributes"""
-    
+
     # Significant digits in SI units
     ROUND_DECIMALS = {
       CoolProp.iDmass : 5,
@@ -414,16 +414,16 @@ class StatePoint(PropertyDict):
       CoolProp.iUmass : 5,
       CoolProp.iQ     : 5
     }
-    
+
     def __iter__(self):
         """Make sure we always iterate in the same order"""
         keys = [CoolProp.iDmass,CoolProp.iHmass,CoolProp.iP,CoolProp.iSmass,CoolProp.iT]
         for key in sorted(keys):
             yield key
-    
-    def __str__(self):        
+
+    def __str__(self):
         return str(self.__dict__)
-    
+
     def __prop_compare(self,other,typ):
         # TODO
         if   self[typ] is None and other[typ] is None: return 0
@@ -440,21 +440,21 @@ class StatePoint(PropertyDict):
     def __eq__(self, other):
         for i in self:
             if not self.__prop_compare(other,i) == 0:
-                return False 
+                return False
         return True
-    
+
     def __hash__(self):
         return hash(repr(self))
-    
+
 
 class StateContainer(object):
     """A collection of values for the main properties, built to mixin with :class:`CoolProp.Plots.Common.PropertyDict`
-    
+
     Examples
     --------
     This container has overloaded accessor methods. Just pick your own flavour 
     or mix the styles as you like:
-    
+
     >>> from __future__ import print_function
     >>> import CoolProp
     >>> from CoolProp.Plots.SimpleCycles import StateContainer
@@ -470,37 +470,37 @@ class StateContainer(object):
     state        T (K)       p (Pa)    d (kg/m3)     h (J/kg)   s (J/kg/K)
         0      300.000   200000.000            -   112745.749      393.035
         1      300.064            -            -            -            -
-    
+
     """
-    
+
     def __init__(self,unit_system=SIunits()):
         self._points = {}
         self._units  = unit_system
-    
+
     @property
     def points(self): return self._points
     @points.setter
     def points(self, value): self._points = value
-    
+
     @property
     def units(self): return self._units
     @units.setter
     def units(self, value): self._units = value
-    
+
     def get_point(self, index, SI=True):
-        if SI: 
+        if SI:
             state = self[index]
         else:
             state = self[index]
-            for i in state: 
+            for i in state:
                 state[i] = self.units[i].from_SI(state[i])
-        return state 
-    
+        return state
+
     def set_point(self, index, value, SI=True):
-        if SI: 
+        if SI:
             self._points[index] = value
         else:
-            for i in value: 
+            for i in value:
                 self._points[index][i] = self.units[i].to_SI(value[i])
 
     def _list_like(self, value):
@@ -509,51 +509,51 @@ class StateContainer(object):
             (hasattr(value, "__getitem__") or
             hasattr(value, "__iter__")))
         # return is_sequence(value) # use from pandas.core.common import is_sequence
-    
+
     def __len__(self):
         """Some cheating to get the correct behaviour"""
         return len(self._points)
-    
+
     def __iter__(self):
         """Make sure we iterate in the righ order"""
         for key in sorted(self._points):
             yield key
-    
+
     def __getitem__(self, index):
         """Another tweak that changes the default access path"""
         if self._list_like(index):
             len_var = len(index)
-            if len_var==0: 
+            if len_var==0:
                 raise IndexError("Received empty index.")
-            elif len_var==1: 
+            elif len_var==1:
                 return self._points[index[0]]
-            elif len_var==2: 
+            elif len_var==2:
                 return self._points[index[0]][index[1]]
-            else: 
+            else:
                 raise IndexError("Received too long index.")
         return self._points[index]
-    
+
     def __setitem__(self, index, value):
         """Another tweak that changes the default access path"""
         if self._list_like(index):
             len_var = len(index)
-            if len_var==0: 
+            if len_var==0:
                 raise IndexError("Received empty index.")
-            elif len_var==1: 
+            elif len_var==1:
                 self._points[index[0]]           = value
             elif len_var==2:
                 # safeguard against empty entries
                 if index[0] not in self._points:
-                    self._points[index[0]] = StatePoint() 
+                    self._points[index[0]] = StatePoint()
                 self._points[index[0]][index[1]] = value
-            else: 
+            else:
                 raise IndexError("Received too long index.")
         else:
-            self._points[index] = value 
-        
+            self._points[index] = value
+
     def __str__(self):
         out = "Stored State Points:\n"
-        keys = True 
+        keys = True
         for i in self._points:
             if keys:
                 row = ["{0:>5s}".format("state")]
@@ -570,21 +570,21 @@ class StateContainer(object):
                     row.append(u"{0:>11s}".format("-"))
             out = out + "  ".join(row) + "\n"
         return out.encode('utf8', 'replace')
-    
+
     def append(self,new):
         i = 0 + self.__len__()
         for j in new:
             self[i,j] = new[j]
         return self
-    
+
     def extend(self,new):
         i = 0 + self.__len__()
         for j in new:
             for k in new[j]:
                 self[i,k] = new[j][k]
             i = i +1
-        return self 
-            
+        return self
+
     @property
     def D(self): return np.array([self._points[k].D for k in self])
     @property
@@ -599,31 +599,31 @@ class StateContainer(object):
     def U(self): return np.array([self._points[k].U for k in self])
     @property
     def Q(self): return np.array([self._points[k].Q for k in self])
-        
-    
+
+
 
 class BaseCycle(BasePlot):
     """A simple thermodynamic cycle, should not be used on its own."""
-    
+
     # Define the iteration keys
     PROPERTIES = {
-      CoolProp.iDmass : 'density', 
-      CoolProp.iHmass : 'specific enthalpy', 
-      CoolProp.iP     : 'pressure', 
-      CoolProp.iSmass : 'specific entropy', 
+      CoolProp.iDmass : 'density',
+      CoolProp.iHmass : 'specific enthalpy',
+      CoolProp.iP     : 'pressure',
+      CoolProp.iSmass : 'specific entropy',
       CoolProp.iT     : 'temperature'
     }
-    
+
     STATECOUNT=0
     """A list of accepted numbers of states"""
-    
+
     STATECHANGE=None
     """A list of lists of tuples that defines how the state transitions 
     behave for the corresponding entry in BaseCycle.STATECOUNT"""
-    
+
     def __init__(self, fluid_ref, graph_type, unit_system='EUR', **kwargs):
         """Initialises a simple cycle calculator
-        
+
         Parameters
         ----------        
         fluid_ref : str, CoolProp.AbstractState
@@ -634,14 +634,14 @@ class BaseCycle(BasePlot):
             The graph type to be plotted, like \"PH\" or \"TS\"
         unit_system : string, ['EUR','KSI','SI']
             Select the units used for the plotting.  'EUR' is bar, kJ, C; 'KSI' is kPa, kJ, K; 'SI' is Pa, J, K
-                
+
         for more properties, see :class:`CoolProp.Plots.Common.BasePlot`.        
         """
         self._cycle_states = StateContainer()
         self._steps = 2
         BasePlot.__init__(self, fluid_ref, graph_type, unit_system, **kwargs)
-        
-    
+
+
     @property
     def cycle_states(self): return self._cycle_states
     @cycle_states.setter
@@ -649,14 +649,14 @@ class BaseCycle(BasePlot):
         if len(value) != self.STATECOUNT:
             raise ValueError("Your number of states ({0:d}) is not in the list of allowed state counts: {1:s}.".format(len(value),str(self.STATECOUNT)))
         self._cycle_states = value
-    
+
     @property
     def steps(self): return self._steps
     @steps.setter
     def steps(self, value): self._steps = int(max([value,2]))
 
     @BasePlot.system.setter
-    def system(self, value): 
+    def system(self, value):
         if value in self.UNIT_SYSTEMS:
             self._system = self.UNIT_SYSTEMS[value]
         elif isinstance(value, PropertyDict):
@@ -664,36 +664,36 @@ class BaseCycle(BasePlot):
         else:
             raise ValueError("Invalid unit_system input \"{0:s}\", expected a string from {1:s}".format(str(value),str(self.UNIT_SYSTEMS.keys())))
         self._cycle_states.units = self._system
-    
-    
+
+
     def valid_states(self):
         """Check the formats of BaseCycle.STATECOUNT and BaseCycle.STATECHANGE"""
-        if len(self.STATECHANGE) != self.STATECOUNT: 
+        if len(self.STATECHANGE) != self.STATECOUNT:
             raise ValueError("Invalid number of states and or state change operations")
-        return True 
-    
+        return True
+
     def fill_states(self,objs=None):
         """Try to populate all fields in the state objects"""
-        
-        if objs is None: 
+
+        if objs is None:
             objs = self._cycle_states
             local = True
-        else: 
+        else:
             local = False
-        
+
         for i in objs:
             full = True
             for j in objs[i]:
                 if objs[i][j] is None:
                     full = False
             if full: continue
-            if (objs[i][CoolProp.iDmass] is not None and 
+            if (objs[i][CoolProp.iDmass] is not None and
               objs[i][CoolProp.iT] is not None):
                 self._state.update(CoolProp.DmassT_INPUTS, objs[i][CoolProp.iDmass], objs[i][CoolProp.iT])
-            elif (objs[i][CoolProp.iP] is not None and 
+            elif (objs[i][CoolProp.iP] is not None and
               objs[i][CoolProp.iHmass] is not None):
                 self._state.update(CoolProp.HmassP_INPUTS, objs[i][CoolProp.iHmass], objs[i][CoolProp.iP])
-            elif (objs[i][CoolProp.iP] is not None and 
+            elif (objs[i][CoolProp.iP] is not None and
               objs[i][CoolProp.iSmass] is not None):
                 self._state.update(CoolProp.PSmass_INPUTS, objs[i][CoolProp.iP], objs[i][CoolProp.iSmass])
             else:
@@ -702,18 +702,18 @@ class BaseCycle(BasePlot):
             for j in objs[i]:
                 if objs[i][j] is None:
                     objs[i][j] = self._state.keyed_output(j)
-        
+
         if local: self._cycle_states = objs
         return objs
 
-    
-    
+
+
     def state_change(self,in1,in2,start,ty1='lin',ty2='lin'):
         """Calculates a state change defined by the properties in1 and in2
-        
+
         Uses self.states[start] and self.states[start+1] (or self.states[0]) to define 
         the process and interpolates between the values. 
-        
+
         Parameters
         ----------
         in1 : int 
@@ -726,7 +726,7 @@ class BaseCycle(BasePlot):
             The key that defines the type of state change for in1, lin or log.
         ty2 : str 
             The key that defines the type of state change for in2, lin or log.
-            
+
         Returns
         -------
         scalar or array_like 
@@ -734,7 +734,7 @@ class BaseCycle(BasePlot):
         """
         self.fill_states()
         end = start + 1
-        if end >= len(self.cycle_states): end -= len(self.cycle_states) 
+        if end >= len(self.cycle_states): end -= len(self.cycle_states)
         start = self.cycle_states[start]
         end = self.cycle_states[end]
         #
@@ -748,19 +748,19 @@ class BaseCycle(BasePlot):
                 val.append(np.logspace(np.log10(start[v]), np.log10(end[v]), self.steps))
             else:
                 raise ValueError("Unknow range generator {0:s}".format(str(typ[i])))
-        
+
         sc = StateContainer(self._system)
         for i,_ in enumerate(val[0]):
             sc[i,inv[0]] = val[0][i]
             sc[i,inv[1]] = val[1][i]
-            
-        return self.fill_states(sc)     
-        
+
+        return self.fill_states(sc)
+
     def get_state_change(self, index):
         return self.STATECHANGE[index](self)
-    
+
     def get_state_changes(self):
         sc = self.get_state_change(0)
         for i in range(1,self.STATECOUNT):
             sc.extend(self.get_state_change(i))
-        return sc 
+        return sc

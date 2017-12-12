@@ -616,7 +616,7 @@ class Pirobloc(PureData):
         self.description = "Pirobloc HTF-BASIC"
         self.reference   = "http://www.fluidotermico.com"
         self.reshapeAll()
-        
+
 
 class Syltherm800(PureData):
     """
@@ -642,7 +642,7 @@ class Syltherm800(PureData):
         self.description = "Syltherm 800"
         self.reference   = "Dow Chemical Company - FLUIDFILE Software accessed May 2017"
         self.reshapeAll()
-        
+
 
 class DynaleneSF(PureData):
     """
@@ -666,5 +666,5 @@ class DynaleneSF(PureData):
         self.description = "Dynalene SF"
         self.reference   = "Dynalene, Inc."
         self.reshapeAll()
-        
-        
+
+

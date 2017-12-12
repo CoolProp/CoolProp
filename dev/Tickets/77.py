@@ -1,7 +1,7 @@
 import matplotlib
 matplotlib.use('Qt4Agg')
 
-import numpy 
+import numpy
 import CoolProp
 import CoolProp.CoolProp as CP
 
@@ -28,14 +28,14 @@ for key in keys:
     print '{:<25}: {:>10.5f}; {:>10.5f}; {:>10.5f}; {:>10.5f}'.format(key,liquid,twophase,gaseous,supercrit)
 
 for key in keys:
-    liquid    = CP.DerivTermsU(key,T[0],D[0],fluid,'SI')    
+    liquid    = CP.DerivTermsU(key,T[0],D[0],fluid,'SI')
     twophase  = CP.DerivTermsU(key,T[1],D[1],fluid,'SI')
-    gaseous   = CP.DerivTermsU(key,T[2],D[2],fluid,'SI')    
+    gaseous   = CP.DerivTermsU(key,T[2],D[2],fluid,'SI')
     supercrit = CP.DerivTermsU(key,T[3],D[3],fluid,'SI')
     print '{:<25}: {:>10.5f}; {:>10.5f}; {:>10.5f}; {:>10.5f}'.format(key,liquid,twophase,gaseous,supercrit)
 
 
-print 
+print
 print "Testing Props: "
 for key in keys:
     liquid    = CP.Props(key,"T",float(T[0]),"D",float(D[0]),fluid)
@@ -45,8 +45,8 @@ for key in keys:
     print '{:<25}: {:>10.5f}; {:>10.5f}; {:>10.5f}; {:>10.5f}'.format(key,liquid,twophase,gaseous,supercrit)
 
 for key in keys:
-    liquid    = CP.PropsU(key,"T",float(T[0]),"D",float(D[0]),fluid,'SI')   
-    twophase  = CP.PropsU(key,"T",float(T[1]),"D",float(D[1]),fluid,'SI')   
+    liquid    = CP.PropsU(key,"T",float(T[0]),"D",float(D[0]),fluid,'SI')
+    twophase  = CP.PropsU(key,"T",float(T[1]),"D",float(D[1]),fluid,'SI')
     gaseous   = CP.PropsU(key,"T",float(T[2]),"D",float(D[2]),fluid,'SI')
     supercrit = CP.PropsU(key,"T",float(T[3]),"D",float(D[3]),fluid,'SI')
     print '{:<25}: {:>10.5f}; {:>10.5f}; {:>10.5f}; {:>10.5f}'.format(key,liquid,twophase,gaseous,supercrit)

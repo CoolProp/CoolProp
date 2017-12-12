@@ -39,7 +39,7 @@ class PropertyPlot(BasePlot):
         >>> plot = PropertyPlot('HEOS::Water', 'TS')
         >>> plot.calc_isolines()
         >>> plot.show()
-        
+
         >>> import CoolProp
         >>> from CoolProp.Plots import PropertyPlot
         >>> plot = PropertyPlot('HEOS::R134a', 'PH', unit_system='EUR', tp_limits='ACHP')
@@ -66,27 +66,27 @@ class PropertyPlot(BasePlot):
             graph types
         """
         super(PropertyPlot, self).__init__(fluid_name, graph_type, **kwargs)
-        self._isolines = {} 
+        self._isolines = {}
         #self._plines = {}
         #self._ppoints = {}
         self.get_axis_limits()
         self._plot_default_annotations()
-        
+
     @property
     def isolines(self): return self._isolines
     #@property
     #def plines(self): return self._plines
     #@property
     #def ppoints(self): return self._ppoints
-    
+
     def show(self):
         self.draw()
         super(PropertyPlot, self).show()
-        
+
     def savefig(self, *args, **kwargs):
         self.draw()
         super(PropertyPlot, self).savefig(*args, **kwargs)
-    
+
     def _plotRound(self, values):
         """
         A function round an array-like object while maintaining the
@@ -113,30 +113,30 @@ class PropertyPlot(BasePlot):
                 output[i] = np.around(inVal[i],decimals=int(val[i]))
             output = np.unique(output)
         return output
-        
+
     def calc_isolines(self, iso_type=None, iso_range=None, num=15, rounding=False, points=250):
         """Calculate lines with constant values of type 'iso_type' in terms of x and y as
         defined by the plot object. 'iso_range' either is a collection of values or 
         simply the minimum and maximum value between which 'num' lines get calculated.
         The 'rounding' parameter can be used to generate prettier labels if needed.
         """
-                
+
         if iso_type is None or iso_type == 'all':
             for i_type in IsoLine.XY_SWITCH:
                 if IsoLine.XY_SWITCH[i_type].get(self.y_index*10+self.x_index,None) is not None:
                     self.calc_isolines(i_type, None, num, rounding, points)
             return
-                        
+
         if iso_range is None:
-            if iso_type is CoolProp.iQ: 
+            if iso_type is CoolProp.iQ:
                 iso_range = [0.0,1.0]
             else:
-                limits = self.get_axis_limits(iso_type, CoolProp.iT) 
+                limits = self.get_axis_limits(iso_type, CoolProp.iT)
                 iso_range = [limits[0],limits[1]]
-        
+
         if len(iso_range) <= 1 and num != 1:
             raise ValueError('You have to provide two values for the iso_range, {0} is not valid.'.format(iso_range))
- 
+
         if len(iso_range) == 2 and (num is None or num < 2):
             raise ValueError('Please specify the number of isoline you want e.g. num=10.')
 
@@ -146,34 +146,34 @@ class PropertyPlot(BasePlot):
             iso_range = self.generate_ranges(iso_type, iso_range[0], iso_range[1], num)
         if rounding:
             iso_range = self._plotRound(iso_range)
-        
+
         # Limits are already in SI units
         limits = self._get_axis_limits()
-        
+
         ixrange = self.generate_ranges(self._x_index,limits[0],limits[1],points)
         iyrange = self.generate_ranges(self._y_index,limits[2],limits[3],points)
-        
+
         dim = self._system[iso_type]
-        
+
         lines  = self.isolines.get(iso_type, [])
         for i in range(num):
             lines.append(IsoLine(iso_type,self._x_index,self._y_index, value=dim.to_SI(iso_range[i]), state=self._state))
             lines[-1].calc_range(ixrange,iyrange)
             lines[-1].sanitize_data()
-        self.isolines[iso_type] = lines 
-        return 
-    
-    
+        self.isolines[iso_type] = lines
+        return
+
+
     def draw_isolines(self):
         dimx = self._system[self._x_index]
         dimy = self._system[self._y_index]
-        
+
         sat_props = self.props[CoolProp.iQ].copy()
         if 'lw' in sat_props: sat_props['lw'] *= 2.0
         else: sat_props['lw'] = 1.0
         if 'alpha' in sat_props: min([sat_props['alpha']*2.0,1.0])
         else: sat_props['alpha'] = 1.0
-        
+
         for i in self.isolines:
             props = self.props[i]
             dew = None; bub = None
@@ -193,10 +193,10 @@ class PropertyPlot(BasePlot):
                     dew_filter = np.logical_and(np.isfinite(dew.x),np.isfinite(dew.y))
                     #dew_filter = np.logical_and(dew_filter,dew.x>dew.x[-1])
                     stp = min([dew_filter.size,10])
-                    dew_filter[0:-stp] = False 
+                    dew_filter[0:-stp] = False
                     bub_filter = np.logical_and(np.isfinite(bub.x),np.isfinite(bub.y))
-                    
-                    
+
+
                     if self._x_index == CoolProp.iP or self._x_index == CoolProp.iDmass:
                         filter_x = lambda x: np.log10(x)
                     else:
@@ -204,15 +204,15 @@ class PropertyPlot(BasePlot):
                     if self._y_index == CoolProp.iP or self._y_index == CoolProp.iDmass:
                         filter_y = lambda y: np.log10(y)
                     else:
-                        filter_y = lambda y: y    
-                    
-                    if (#(filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) > 0.010*filter_x(dx) and 
+                        filter_y = lambda y: y
+
+                    if (#(filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) > 0.010*filter_x(dx) and
                         (filter_x(dew.x[dew_filter][-1])-filter_x(bub.x[bub_filter][-1])) < 0.050*filter_x(dx) or
                         (filter_y(dew.y[dew_filter][-1])-filter_y(bub.y[bub_filter][-1])) < 0.010*filter_y(dy)):
-                        x = np.linspace(bub.x[bub_filter][-1], dew.x[dew_filter][-1], 11)                        
+                        x = np.linspace(bub.x[bub_filter][-1], dew.x[dew_filter][-1], 11)
                         y = interpolate_values_1d(
-                          np.append(bub.x[bub_filter],dew.x[dew_filter][::-1]), 
-                          np.append(bub.y[bub_filter],dew.y[dew_filter][::-1]), 
+                          np.append(bub.x[bub_filter],dew.x[dew_filter][::-1]),
+                          np.append(bub.y[bub_filter],dew.y[dew_filter][::-1]),
                           x_points=x,
                           kind='cubic')
                         self.axis.plot(dimx.from_SI(x),dimy.from_SI(y),**sat_props)
@@ -224,7 +224,7 @@ class PropertyPlot(BasePlot):
                         #    self.state.update(CoolProp.DmassT_INPUTS, Dcrit, Tcrit)
                         #    xcrit = self.state.keyed_output(self._x_index)
                         #    ycrit = self.state.keyed_output(self._y_index)
-                        #except: 
+                        #except:
                         #    xcrit = x[5]; ycrit = y[5]
                         #    pass
                         #self.axis.plot(dimx.from_SI(np.array([bub.x[bub_filter][-1], dew.x[dew_filter][-1]])),dimy.from_SI(np.array([bub.y[bub_filter][-1], dew.y[dew_filter][-1]])),'o')
@@ -248,23 +248,23 @@ class PropertyPlot(BasePlot):
                             #    self.axis.plot(dimx.from_SI(np.append(line.x,x)),dimy.from_SI(np.append(line.y,y)),**props)
                             #except:
                             #    self.axis.plot(dimx.from_SI(np.append(line.x,xcrit)),dimy.from_SI(np.append(line.y,ycrit)),**props)
-                            #    pass 
+                            #    pass
                 else:
                     self.axis.plot(dimx.from_SI(line.x),dimy.from_SI(line.y),**props)
-    
+
     def draw(self):
         self.get_axis_limits()
         self.draw_isolines()
-        
+
     #def label_isolines(self, dx=0.075, dy=0.100):
     #    [xmin, xmax, ymin, ymax] = self.get_axis_limits()
     #    for i in self.isolines:
     #         for line in self.isolines[i]:
     #             if self.get_x_y_dydx(xv, yv, x)
-             
-         
-                
-                
+
+
+
+
     def draw_process(self, statecontainer, points=None, line_opts=None):
         """ Draw process or cycle from x and y values in axis units
 
@@ -276,7 +276,7 @@ class PropertyPlot(BasePlot):
         line_opts : dict
             Line options (please see :func:`matplotlib.pyplot.plot`), optional
             Use this parameter to pass a label for the legend.
-            
+
         Examples
         --------
         >>> import CoolProp
@@ -301,28 +301,28 @@ class PropertyPlot(BasePlot):
         >>> sc2 = cycle.get_state_changes()
         >>> pp.draw_process(sc2, line_opts={'color':'blue', 'lw':1.5})
         >>> pp.show()
-        
+
         """
         warnings.warn("You called the function \"draw_process\", which is not tested.",UserWarning)
-        
+
         # Default values
         line_opts = line_opts or {'color' : 'r', 'lw' : 1.5}
 
         dimx = self.system[self.x_index]
         dimy = self.system[self.y_index]
-        
+
         marker = line_opts.pop('marker','o')
         style  = line_opts.pop('linestyle','solid')
         style  = line_opts.pop('ls',style)
-        
+
         if points is None: points = StateContainer()
-        
+
         xdata = []
-        ydata = []        
+        ydata = []
         old = statecontainer[len(statecontainer)-1]
         for i in statecontainer:
             point = statecontainer[i]
-            if point == old: 
+            if point == old:
                 points.append(point)
                 old = point
                 continue
@@ -332,7 +332,7 @@ class PropertyPlot(BasePlot):
         xdata = dimx.from_SI(np.asarray(xdata))
         ydata = dimy.from_SI(np.asarray(ydata))
         self.axis.plot(xdata,ydata,marker='None',linestyle=style,**line_opts)
-        
+
         xdata = np.empty(len(points))
         ydata = np.empty(len(points))
         for i in points:
@@ -343,7 +343,7 @@ class PropertyPlot(BasePlot):
         ydata = dimy.from_SI(np.asarray(ydata))
         line_opts['label'] = ''
         self.axis.plot(xdata,ydata,marker=marker,linestyle='None',**line_opts)
-        
+
 
 def InlineLabel(xv,yv,x=None,y=None,axis=None,fig=None):
     warnings.warn("You called the deprecated function \"InlineLabel\", use \"BasePlot.inline_label\".",DeprecationWarning)
@@ -363,4 +363,4 @@ if __name__ == "__main__":
     #plot.calc_isolines(CoolProp.iSmass)
     #plot.calc_isolines(CoolProp.iHmass)
     plot.show()
-    
+

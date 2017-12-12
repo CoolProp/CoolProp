@@ -10,5 +10,5 @@ for fluid in glob.glob('fluids/*.json'):
     fp = open(fluid,'w')
     fp.write(json.dumps(j,**json_options))
     fp.close()
-    
-    
+
+

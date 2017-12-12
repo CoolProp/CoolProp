@@ -2,7 +2,7 @@ from __future__ import print_function
 import subprocess, os
 from example_generator import *
 import shutil
-            
+
 def tee_call(call, file, **kwargs):
     callee = subprocess.Popen(call,
                            stdout = subprocess.PIPE,
@@ -14,18 +14,18 @@ def tee_call(call, file, **kwargs):
     file.write(stderr)
     if callee.poll() != 0:
         raise ValueError('Return code is non-zero')
-            
+
 def copyfiles(lang, ext):
     shutil.copy2(lang+'/Example.'+ext,'../../../Web/coolprop/wrappers/'+lang+'/Example.'+ext)
     shutil.copy2(lang+'/Example.out','../../../Web/coolprop/wrappers/'+lang+'/Example.out')
-    
+
 if __name__=='__main__':
 
     #C++
     #kwargs = dict(stdout = sys.stdout, stderr = sys.stderr, shell = True)
     #subprocess.check_call('cmake ../../../.. -DCOOLPROP_MY_MAIN=Example.cpp -DCMAKE_VERBOSE_MAKEFILE=ON', **kwargs)
     #subprocess.check_call('cmake --build .', **kwargs)
-    
+
     if not os.path.exists('Python'): os.mkdir('Python')
     P = Python()
     code = P.parse()
@@ -43,7 +43,7 @@ if __name__=='__main__':
     with open('Octave/Example.out','w') as fp:
         tee_call(r'octave Example.m', fp, shell = True, cwd = 'Octave')
     copyfiles('Octave','m')
-    
+
     if not os.path.exists('Java'): os.mkdir('Java')
     J = Java()
     J.write('Java/Example.java', J.parse())
@@ -54,7 +54,7 @@ if __name__=='__main__':
     with open('Java/Example.out','w') as fp:
         tee_call(r'java Example', fp, shell = True, cwd = 'Java')
     copyfiles('Java','java')
-    
+
     if not os.path.exists('Csharp'): os.mkdir('Csharp')
     C = Csharp()
     C.write('Csharp/Example.cs', C.parse())
@@ -65,7 +65,7 @@ if __name__=='__main__':
     with open('Csharp/Example.out','w') as fp:
         tee_call(r'mono Example', fp, shell = True, cwd = 'Csharp')
     copyfiles('Csharp','cs')
-    
+
     if not os.path.exists('R'): os.mkdir('R')
     RR = R()
     RR.write('R/Example.R', RR.parse())
@@ -75,7 +75,7 @@ if __name__=='__main__':
     with open('R/Example.out','w') as fp:
         tee_call(r'DYLD_LIBRARY_PATH=/opt/refprop Rscript Example.R', fp, shell = True, cwd = 'R')
     copyfiles('R','R')
-    
+
     #if not os.path.exists('MATLAB'): os.mkdir('MATLAB')
     #M = MATLAB()
     #M.write('MATLAB/Example.m', M.parse())

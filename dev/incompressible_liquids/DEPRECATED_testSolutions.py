@@ -17,7 +17,7 @@ T = float(sys.argv[1])+273.15
 P = float(sys.argv[2])*1e5
 print "Temperature: "+str(T-273.15)+" C"
 print "Pressure:    "+str(P/1e5)+" bar"
-print 
+print
 Melinder = ["MEG", "MPG", "MEA", "MMA", "MGL", "MAM", "MKC", "MCA", "MMG", "MNA", "MKA", "MKF", "MLI"]
 SecCool  = ["ZiAC", "IceEA", "IcePG", "IceNA", "PK2000"]
 Other    = ["LiBr"]
@@ -29,7 +29,7 @@ fluids.extend(Other)
 
 for fluid in fluids:
     print "Fluid: "+str(fluid)
-    try: 
+    try:
         print "Density:    "+"{0:14.8f} kg/m3  ".format(props('D','T',T,'P',P,fluid+'-20%'))
         print "Heat cap.:  "+"{0:14.8f} kJ/kg/K".format(props('C','T',T,'P',P,fluid+'-20%')/1e3)
         print "Th. cond.:  "+"{0:14.8f} W/m/K  ".format(props('L','T',T,'P',P,fluid+'-20%'))
@@ -42,4 +42,4 @@ for fluid in fluids:
     except ValueError as ve:
         print "Error in CoolProp, try adjusting T and p:"
         print ve
-    print 
+    print

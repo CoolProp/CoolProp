@@ -29,6 +29,6 @@ CASpairs = [(p['CAS1'], p['CAS2']) for p in jj]
 dupes = {}
 for unique in set(CASpairs):
     if CASpairs.count(unique) > 1:
-        dupes[unique] = CASpairs.count(unique)-1 # number to remove    
+        dupes[unique] = CASpairs.count(unique)-1 # number to remove
 
 print dupes

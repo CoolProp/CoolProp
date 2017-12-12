@@ -32,21 +32,21 @@ cNorm  = colors.LogNorm(vmin=1e-12, vmax=10)
 scalarMap = cmx.ScalarMappable(norm = cNorm, cmap = plt.get_cmap('jet'))
 
 for a_useless_counter in range(40000):
-        
+
     h = random.uniform(150000*MM,590000*MM)
     p = 10**random.uniform(np.log10(100000),np.log10(7000000))
     CP.set_debug_level(0)
     try:
-        
+
         EOS.update(CoolProp.HmolarP_INPUTS, h, p)
         rhoEOS = EOS.rhomolar(); TEOS = EOS.T()
-        
+
         TTSE.update(CoolProp.HmolarP_INPUTS, h, p)
         rhoTTSE = TTSE.rhomolar(); TTTSE = TTSE.T()
-        
+
         BICUBIC.update(CoolProp.HmolarP_INPUTS, h, p)
         rhoBICUBIC = BICUBIC.rhomolar(); TBICUBIC = BICUBIC.T()
-        
+
         errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
         errorBICUBIC = abs(rhoBICUBIC/rhoEOS-1)*100
         if errorTTSE > 100 or errorTTSE < 1e-12:
@@ -55,15 +55,15 @@ for a_useless_counter in range(40000):
         HHH1.append(h)
         PPP1.append(p)
         EEE1.append(errorTTSE)
-        
+
         HHH2.append(h)
         PPP2.append(p)
         EEE2.append(errorBICUBIC)
-        
+
     except ValueError as VE:
         print 'ERROR', VE
         pass
-    
+
 print 'done'
 SC1 = ax1.scatter(HHH1, PPP1, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
 SC2 = ax2.scatter(HHH2, PPP2, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
@@ -72,18 +72,18 @@ ax1.set_title('Error in Density from TTSE')
 ax2.set_title('Error in Density from Bicubic')
 
 for ax in [ax1, ax2]:
-    
+
     ax.set_xlim(250000*MM, 550000*MM)
     ax.set_ylim(100000, 7000000)
 
     ax.set_yscale('log')
-    
+
     ticks = [100000,200000,400000,600000,800000,1000000,2000000, 4000000, 6000000]
     labels = [str(tick) for tick in ticks]
     ax.set_yticks(ticks)
     ax.set_yticklabels(labels)
     ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    
+
     ticks = [150000*MM, 250000*MM,350000*MM,450000*MM,550000*MM]
     labels = [str(tick) for tick in ticks]
     ax.set_xticks(ticks)
