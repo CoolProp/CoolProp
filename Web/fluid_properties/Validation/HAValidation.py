@@ -119,7 +119,7 @@ def HotAir(num):
     print("{W:10s}{Twb:10s}{v:10s}{h:10s}{s:10s}{R:10s}".format(W=s5+' W',Twb=s5+'Twb',v=s5+'  v',h=s5+'h',s=s5+' s',R=s5+'RH'))
     print("{W:10s}{Twb:10s}{v:10s}{h:10s}{s:10s}{R:10s}".format(W='  kgw/kg_da',Twb='      C',v='   m3/kgda',h='  kJ/kgda',s=' kJ/kgda/K',R='    %'))
     print('----------------------------------------------------------------')
-    
+
     if Temp=='200':
         Wrange = [0.0,0.05,0.1]
     else:
@@ -143,7 +143,7 @@ HotAir('9')
 def Virials(variables):
     from CoolProp.HumidAirProp import HAProps_Aux
     import numpy as np
-    
+
     varString="%-10s"%('T')
     units="%-10s"%('C')
     #Build the header
@@ -189,7 +189,7 @@ for T in Tv:
     values="%-10.2f" %(T-273.15)
     values+="%-20.10e" %(HAProps_Aux('p_ws',T,100,0.0)[0])
     print(values)
-    
+
 ##############################
 ####### Henry Constant #######
 ##############################
@@ -227,7 +227,7 @@ for T in Tv:
     for p in Pv:
         values+="%-20.10e" %(HAProps_Aux('kT',T,p,0.0)[0])
     print(values)
-    
+
 ##########################################
 ####### Saturated Molar Volume Water #####
 ##########################################
@@ -248,7 +248,7 @@ for T in Tv:
     for p in Pv:
         values+="%-20.10e" %(HAProps_Aux('vbar_ws',T,p,0.0)[0])
     print(values)
-    
+
 ##########################################
 ########### Enhancement Factor ###########
 ##########################################

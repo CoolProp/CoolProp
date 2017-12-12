@@ -34,7 +34,7 @@ def get_issues_JSON(milestone, number):
         return json.load(fp)
 
 def generate_issues(milestone):
-    
+
     milestones_json = get_milestones(milestone)
 
     # Map between name and number
@@ -44,18 +44,18 @@ def generate_issues(milestone):
     number = title_to_number_map[milestone]
 
     # Get the issues associated with the milestone
-    issues = get_issues_JSON(milestone,     number) 
+    issues = get_issues_JSON(milestone,     number)
 
     # Make sure all issues are closed in this milestone
     for issue in issues:
         if issue['state'] != 'closed': raise ValueError('This issue is still open: ' + issue['title'])
-        
+
     rst = 'Issues Closed:\n\n'+'\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/issues/{n:d}>`_ : {t:s}'.format(n = issue['number'], t = issue['title']) for issue in issues])
-    
+
     return rst
 
 def generate_PR(milestone):
-    
+
     # Find the milestone number for the given name
     milestones_json = get_milestones(milestone)
 
@@ -71,13 +71,13 @@ def generate_PR(milestone):
     for issue in PR:
         if issue['milestone'] is not None and issue['milestone']['title'] == milestone:
             rst += '* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}\n'.format(n = issue['number'], t = issue['title'].encode('utf-8'))
-    
+
     return rst
 
 if __name__=='__main__':
     if len(sys.argv) != 2:
         raise ValueError('This script should be called like this: python milestone2rst.py v5')
-        
+
     print(generate_issues(sys.argv[1]))
     print('')
     print(generate_PR(sys.argv[1]))

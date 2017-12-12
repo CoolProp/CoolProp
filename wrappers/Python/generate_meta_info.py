@@ -12,7 +12,7 @@ first_line = "# CAUTION: This file is generated automatically, any customisation
 python_dir = os.path.abspath(os.path.dirname(__file__))
 target_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 
-pypi = False 
+pypi = False
 local = not pypi
 
 run_pkgs = ["numpy", "scipy", "matplotlib", "pandas"]
@@ -20,7 +20,7 @@ dev_pkgs = run_pkgs + ["cython"]
 tst_pkgs = dev_pkgs + ["nose"]
 
 if pypi:
-    # Get the additional information from PyPI 
+    # Get the additional information from PyPI
     r = requests.get('https://pypi.python.org/pypi/CoolProp/json')
     if(r.ok):
         item = json.loads(r.text or r.content)
@@ -29,15 +29,15 @@ if pypi:
         home = item['info']['home_page']
         license = 'MIT'
         summary = item['info']['summary']
-        
+
         for u in item['urls']:
             if u['python_version'] != 'source': continue
             fil = u['filename']
             url = u['url']
             md5 = u['md5_digest']
             continue
-        
-        
+
+
 
 if local:
     coolprop_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
@@ -170,7 +170,7 @@ f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
 f.write(":: "+first_line)
 f.write(template)
 f.close()
- 
+
 template = """
 pushd wrappers/Python
 $PYTHON setup.py install

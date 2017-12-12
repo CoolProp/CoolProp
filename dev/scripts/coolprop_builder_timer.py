@@ -10,5 +10,5 @@ for key in jj.keys():
     builder = json.loads(filehandle.read())
     elapsed_time = builder['times'][1] - builder['times'][0]
     times.append((elapsed_time, key))
-    
+
 print(sorted(times)[::-1])

@@ -92,12 +92,12 @@ class LiBrData(SolutionData):
         self.xmin = np.min(self.concentration.data)
         self.xid      = self.ifrac_mass
         self.TminPsat = self.Tmin
-        
-        # Additional properties from 
+
+        # Additional properties from
         # Thermal conductivity: DiGuilio, R.M., Lee, R.J., Jeter, S.M., and Teja, A.S., "Properties of Lithium Bromide-Water Solutions at High Temperatures and Concentrations - I Thermal Conductivity", ASHRAE Transactions, Paper 3380, RP-527, pp. 702-708, 1990
         # Viscosity: Lee, R.J., DiGuilio, R.M., Jeter, S.M., and Teja, A.S., "Properties of Lithium Bromide-Water Solutions at High Temperatures and Concentrations - II Density and Viscosity", ASHRAE Transactions, Paper 3381, RP-527, pp. 709-714, 1990
-        
-        
+
+
 class MITSeaWater(SolutionData):
     """
     Seawater formulation based on the tables from http://web.mit.edu/seawater/

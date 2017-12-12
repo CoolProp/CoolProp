@@ -1,16 +1,16 @@
 
 from distutils.core import setup, Extension
 import subprocess,shutil,os,sys
-    
+
 sys.argv += ['build_ext','--inplace','--reswig']
 
 if '--reswig' in sys.argv:
     import subprocess
     subprocess.check_output(['swig','-python','-outcurrentdir','-c++','-I../../../CoolProp','Helmholtz.i'])
     sys.argv.remove('--reswig')
-                         
+
 commons = dict()
-               
+
 helm_module = Extension('_helmholtz',
                         sources=['Helmholtz_wrap.cxx', '../../../CoolProp/Helmholtz.cpp', '../../../CoolProp/CoolPropTools.cpp'],
                         **commons

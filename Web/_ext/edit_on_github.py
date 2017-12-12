@@ -29,7 +29,7 @@ def html_page_context(app, pagename, templatename, context, doctree):
     if not app.config.edit_on_github_project:
         warnings.warn("edit_on_github_project not specified")
         return
-    
+
     path = os.path.relpath(doctree.get('source'), app.builder.srcdir).replace('\\','/')
     path_prefix = app.config.edit_on_github_path_prefix
     show_url = get_github_url(app, 'blob', path_prefix + '/' + path)

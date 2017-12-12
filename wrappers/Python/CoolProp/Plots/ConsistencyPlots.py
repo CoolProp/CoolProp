@@ -94,7 +94,7 @@ class ConsistencyFigure(object):
 
         self.calc_Tmax_curve()
         self.plot_Tmax_curve()
-        
+
         self.calc_melting_curve()
         self.plot_melting_curve()
 
@@ -102,7 +102,7 @@ class ConsistencyFigure(object):
 
         self.fig.subplots_adjust(top=0.95)
         self.fig.suptitle('Consistency plots for '+self.fluid,size = 14)
-        
+
         for i, (ax, pair) in enumerate(zip(self.axes_list, self.pairs)):
             if pair not in not_implemented_solvers and pair not in additional_skips:
                 ax.consistency_check_singlephase()
@@ -125,7 +125,7 @@ class ConsistencyFigure(object):
                     if (HEOS.p() < 0): raise ValueError('P is negative:'+str(HEOS.p()))
                     HEOS.T(), HEOS.p(), HEOS.rhomolar(), HEOS.hmolar(), HEOS.smolar()
                     HEOS.umolar()
-                    
+
                     T.append(HEOS.T())
                     p.append(HEOS.p())
                     rhomolar.append(HEOS.rhomolar())
@@ -157,7 +157,7 @@ class ConsistencyFigure(object):
             except ValueError as VE:
                 print('Tmax',_p, VE)
                 continue
-                
+
             try:
                 T.append(HEOS.T())
                 p.append(HEOS.p())
@@ -223,7 +223,7 @@ class ConsistencyFigure(object):
         self.fig.savefig(fname, **kwargs)
 
 class ConsistencyAxis(object):
-    def __init__(self, axis, fig, pair, fluid, backend, state1, state2,  state3, 
+    def __init__(self, axis, fig, pair, fluid, backend, state1, state2,  state3,
                  p_limits_1phase = None, T_limits_1phase = None, NT_1phase = 40, Np_1phase = 40,
                  NT_2phase = 20, NQ_2phase = 20
                  ):
@@ -302,7 +302,7 @@ class ConsistencyAxis(object):
         xgood, ygood = [], []
         xbad, ybad = [], []
         xexcep, yexcep = [], []
-        xbadphase, ybadphase = [], []        
+        xbadphase, ybadphase = [], []
 
         if self.p_limits_1phase is not None:
             # User-specified limits were provided, use them
@@ -335,7 +335,7 @@ class ConsistencyAxis(object):
                 Tvec = np.linspace(self.T_limits_1phase[0], self.T_limits_1phase[1], self.NT_1phase)
 
             for T in Tvec:
-                
+
                 try:
                     # Update the state using PT inputs in order to calculate all the remaining inputs
                     self.state_PT.update(CP.PT_INPUTS, p, T)
@@ -357,7 +357,7 @@ class ConsistencyAxis(object):
                     xexcep.append(x)
                     yexcep.append(y)
                 else:
-                    
+
                     # Check the error on the density
                     if abs(self.state_PT.rhomolar()/self.state.rhomolar()-1) < 1e-3 and abs(self.state_PT.p()/self.state.p()-1) < 1e-3 and abs(self.state_PT.T() - self.state.T()) < 1e-3:
                         xgood.append(x)

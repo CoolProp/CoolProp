@@ -9,32 +9,32 @@ from .SimpleCycles import BaseCycle, StateContainer
 
 class BasePowerCycle(BaseCycle):
     """A thermodynamic cycle for power producing processes.
-    
+
     Defines the basic properties and methods to unify access to 
     power cycle-related quantities. 
     """
-    
+
     def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
         """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details."""
         BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
-    
+
     def eta_carnot(self):
         """Carnot efficiency
-         
+
         Calculates the Carnot efficiency for the specified process, :math:`\eta_c = 1 - \frac{T_c}{T_h}`.
-         
+
         Returns
         -------
         float
         """
         Tvector = self._cycle_states.T
         return 1. - np.min(Tvector) / np.max(Tvector)
-    
+
     def eta_thermal(self):
         """Thermal efficiency
-         
+
         The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
-         
+
         Returns
         -------
         float
@@ -51,15 +51,15 @@ class SimpleRankineCycle(BasePowerCycle):
       lambda inp: BaseCycle.state_change(inp,'H','P',2,ty1='log',ty2='log'), # Expansion
       lambda inp: BaseCycle.state_change(inp,'H','P',3,ty1='lin',ty2='lin')  # Heat removal
       ]
-    
+
     def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
         """see :class:`CoolProp.Plots.SimpleCycles.BasePowerCycle` for details."""
         BasePowerCycle.__init__(self, fluid_ref, graph_type, **kwargs)
-    
+
     def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None, SI=True):
         """" 
         A simple Rankine cycle calculation
-        
+
         Parameters
         ----------
         T0 : float
@@ -74,7 +74,7 @@ class SimpleRankineCycle(BasePowerCycle):
             Isentropic expander efficiency 
         eta_pum : float
             Isentropic pump efficiency
-        
+
         Examples
         --------
         >>> import CoolProp
@@ -95,14 +95,14 @@ class SimpleRankineCycle(BasePowerCycle):
         >>> import matplotlib.pyplot as plt
         >>> plt.close(cycle.figure)
         >>> pp.draw_process(sc)
-        
+
         """
         if fluid is not None: self.state = process_fluid_state(fluid)
-        if self._state is None: 
+        if self._state is None:
             raise ValueError("You have to specify a fluid before you can calculate.")
-        
+
         cycle_states = StateContainer(unit_system=self._system)
-        
+
         if not SI:
             Tc = self._system[CoolProp.iT].to_SI
             pc = self._system[CoolProp.iP].to_SI
@@ -110,7 +110,7 @@ class SimpleRankineCycle(BasePowerCycle):
             p0 = pc(p0)
             T2 = Tc(T2)
             p2 = pc(p2)
-        
+
         # Subcooled liquid
         self.state.update(CoolProp.PT_INPUTS,p0,T0)
         h0 = self.state.hmass()
@@ -120,7 +120,7 @@ class SimpleRankineCycle(BasePowerCycle):
         cycle_states[0]['S'] = s0
         cycle_states[0][CoolProp.iP] = p0
         cycle_states[0,CoolProp.iT] = T0
-        
+
         # Pressurised liquid
         p1 = p2
         self.state.update(CoolProp.PSmass_INPUTS,p1,s0)
@@ -132,8 +132,8 @@ class SimpleRankineCycle(BasePowerCycle):
         cycle_states[1,'S'] = s1
         cycle_states[1,'P'] = p1
         cycle_states[1,'T'] = T1
-        
-        # Evaporated vapour    
+
+        # Evaporated vapour
         self.state.update(CoolProp.PT_INPUTS,p2,T2)
         h2 = self.state.hmass()
         s2 = self.state.smass()
@@ -141,7 +141,7 @@ class SimpleRankineCycle(BasePowerCycle):
         cycle_states[2,'S'] = s2
         cycle_states[2,'P'] = p2
         cycle_states[2,'T'] = T2
-        
+
         # Expanded gas
         p3 = p0
         self.state.update(CoolProp.PSmass_INPUTS,p3,s2)
@@ -153,26 +153,26 @@ class SimpleRankineCycle(BasePowerCycle):
         cycle_states[3,'S'] = s3
         cycle_states[3,'P'] = p3
         cycle_states[3,'T'] = T3
-    
+
         w_net = h2 - h3
         q_boiler = h2 - h1
         eta_th = w_net / q_boiler
-        
+
         self.cycle_states = cycle_states
         self.fill_states()
-        
-        
+
+
     def eta_thermal(self):
         """Thermal efficiency
-         
+
         The thermal efficiency for the specified process(es), :math:`\eta_{th} = \frac{\dot{W}_{exp} - \dot{W}_{pum}}{\dot{Q}_{in}}`.
-         
+
         Returns
         -------
         float
-        """    
-        w_net = self.cycle_states[2].H - self.cycle_states[3].H - (self.cycle_states[1].H - self.cycle_states[0].H) 
+        """
+        w_net = self.cycle_states[2].H - self.cycle_states[3].H - (self.cycle_states[1].H - self.cycle_states[0].H)
         q_boiler = self.cycle_states[2].H - self.cycle_states[1].H
         return w_net / q_boiler
-        
+
 
