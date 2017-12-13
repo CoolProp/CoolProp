@@ -79,6 +79,10 @@ option (FORCE_BITNESS_64
        "Force a 64bit build regardless of the host"
        OFF)
 
+option (FORCE_BITNESS_NATIVE
+       "Force a native bitness build regardless of the host"
+       OFF)
+
 option (COOLPROP_RELEASE
        "Optimize the builds with the release specs"
        OFF)
@@ -269,6 +273,8 @@ IF(FORCE_BITNESS_32)
   SET(BITNESS "32")
 ELSEIF(FORCE_BITNESS_64)
   SET(BITNESS "64")
+ELSEIF(FORCE_BITNESS_NATIVE)
+  SET(BITNESS "NATIVE")
 ENDIF()
 
 #######################################
@@ -336,6 +342,8 @@ ELSEIF ("${BITNESS}" STREQUAL "64")
   ELSEIF (COOLPROP_STDCALL_LIBRARY)
     MESSAGE(WARNING "You cannot use stdcall conventions in a 64-bit library.")
   ENDIF()
+  SET(CONVENTION "")
+ELSEIF ("${BITNESS}" STREQUAL "NATIVE")
   SET(CONVENTION "")
 ELSE()
   MESSAGE(FATAL_ERROR "Bitness is not defined. Set it and run cmake again.")
@@ -430,9 +438,11 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
 
   # Set the bitness
   IF (NOT MSVC)
-    MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
-    SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -m${BITNESS}")
-    SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -m${BITNESS}")
+    IF (NOT "${BITNESS}" STREQUAL "NATIVE")
+      MESSAGE(STATUS "Setting bitness flag -m${BITNESS}")
+      SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -m${BITNESS}")
+      SET_PROPERTY (TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -m${BITNESS}")
+    ENDIF()
   ENDIF()
 
   # ADD -fPIC flag if needed
