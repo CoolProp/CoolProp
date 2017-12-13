@@ -27,4 +27,4 @@
 	url = https://github.com/pybind/pybind11.git
 [submodule "externals/rapidjson"]
 	path = externals/rapidjson
-	url = https://github.com/miloyip/rapidjson.git
+	url = https://github.com/Tencent/rapidjson.git
