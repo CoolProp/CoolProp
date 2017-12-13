@@ -126,7 +126,7 @@ class GeneticAncillaryFitter(object):
             self.LHS *= self.T/self.Tc
 
     def generate_random_chromosomes(self,):
-        ''' 
+        '''
         Create a list of random chromosomes to seed our alogrithm.
         '''
         chromos = []
@@ -135,7 +135,7 @@ class GeneticAncillaryFitter(object):
         return chromos
 
     def fitness(self, chromo):
-        ''' 
+        '''
         Fitness of a chromo is the sum of the squares of the error of the correlation
         '''
 
@@ -184,7 +184,7 @@ class GeneticAncillaryFitter(object):
         return chromo.fitness
 
     def tourny_select_chromo(self, samples):
-        ''' 
+        '''
         Randomly select two chromosomes from the samples, then return the one
         with the best fitness.
         '''
@@ -196,7 +196,7 @@ class GeneticAncillaryFitter(object):
             return b
 
     def breed(self, a, b):
-        ''' 
+        '''
         Breed two chromosomes by splicing them in a random spot and combining
         them together to form two new chromos.
         '''
@@ -206,7 +206,7 @@ class GeneticAncillaryFitter(object):
         return Sample(sorted(new_a)), Sample(sorted(new_b))
 
     def mutate(self, chromo):
-        ''' 
+        '''
         Mutate a chromosome by changing one of the parameters, but only if it improves the fitness
         '''
         v = chromo.v

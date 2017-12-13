@@ -448,7 +448,7 @@ class StateContainer(object):
 
     Examples
     --------
-    This container has overloaded accessor methods. Just pick your own flavour 
+    This container has overloaded accessor methods. Just pick your own flavour
     or mix the styles as you like:
 
     >>> from __future__ import print_function
@@ -621,14 +621,14 @@ class BaseCycle(BasePlot):
     """A list of accepted numbers of states"""
 
     STATECHANGE=None
-    """A list of lists of tuples that defines how the state transitions 
+    """A list of lists of tuples that defines how the state transitions
     behave for the corresponding entry in BaseCycle.STATECOUNT"""
 
     def __init__(self, fluid_ref, graph_type, unit_system='EUR', **kwargs):
         """Initialises a simple cycle calculator
 
         Parameters
-        ----------        
+        ----------
         fluid_ref : str, CoolProp.AbstractState
             The fluid property provider, either a subclass of CoolProp.AbstractState
             or a string that can be used to generate a CoolProp.AbstractState instance
@@ -638,7 +638,7 @@ class BaseCycle(BasePlot):
         unit_system : string, ['EUR','KSI','SI']
             Select the units used for the plotting.  'EUR' is bar, kJ, C; 'KSI' is kPa, kJ, K; 'SI' is Pa, J, K
 
-        for more properties, see :class:`CoolProp.Plots.Common.BasePlot`.        
+        for more properties, see :class:`CoolProp.Plots.Common.BasePlot`.
         """
         self._cycle_states = StateContainer()
         self._steps = 2
@@ -712,25 +712,25 @@ class BaseCycle(BasePlot):
     def state_change(self,in1,in2,start,ty1='lin',ty2='lin'):
         """Calculates a state change defined by the properties in1 and in2
 
-        Uses self.states[start] and self.states[start+1] (or self.states[0]) to define 
-        the process and interpolates between the values. 
+        Uses self.states[start] and self.states[start+1] (or self.states[0]) to define
+        the process and interpolates between the values.
 
         Parameters
         ----------
-        in1 : int 
+        in1 : int
             The index of the first defined property.
-        in2 : int 
+        in2 : int
             The index of the second defined property.
-        start : int 
-            The index of the start state. 
+        start : int
+            The index of the start state.
         ty1 : str
             The key that defines the type of state change for in1, lin or log.
-        ty2 : str 
+        ty2 : str
             The key that defines the type of state change for in2, lin or log.
 
         Returns
         -------
-        scalar or array_like 
+        scalar or array_like
             a list of the length of self.steps+1 that describes the process. It includes start and end state.
         """
         self.fill_states()

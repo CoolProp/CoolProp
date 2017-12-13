@@ -605,9 +605,9 @@ class Water(PureData):
 
 class Pirobloc(PureData):
     """
-    Pirobloc HTF-BASIC is a fluid for heat transmission specially 
-    formulated from synthetic oils and additives. It allows to work 
-    till 330C in a close circuit. 
+    Pirobloc HTF-BASIC is a fluid for heat transmission specially
+    formulated from synthetic oils and additives. It allows to work
+    till 330C in a close circuit.
     """
 
     def __init__(self):
@@ -633,7 +633,7 @@ class Pirobloc(PureData):
 
 class Syltherm800(PureData):
     """
-    Syltherm800 is a fluid for high temperature heat transfer. 
+    Syltherm800 is a fluid for high temperature heat transfer.
     """
 
     def __init__(self):
@@ -660,7 +660,7 @@ class Syltherm800(PureData):
 
 class DynaleneSF(PureData):
     """
-    Dynalene SF is a fluid for high temperature heat transfer. 
+    Dynalene SF is a fluid for high temperature heat transfer.
     """
 
     def __init__(self):

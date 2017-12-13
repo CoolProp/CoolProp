@@ -1,6 +1,6 @@
 """
 In this module, we do some of the preparatory work that is needed to get
-CoolProp ready to build.  This includes setting the correct versions in the 
+CoolProp ready to build.  This includes setting the correct versions in the
 headers, generating the fluid files, etc.
 """
 from __future__ import division, print_function, unicode_literals
@@ -174,7 +174,7 @@ def version_to_file(root_dir):
 
 def gitrev_to_file(root_dir):
     """
-    If a git repo, use git to update the gitrevision.  If not a git repo, read 
+    If a git repo, use git to update the gitrevision.  If not a git repo, read
     the gitrevision from the gitrevision.txt file.  Otherwise, fail.
     """
 

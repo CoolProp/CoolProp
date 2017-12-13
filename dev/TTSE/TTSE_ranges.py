@@ -76,8 +76,8 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     A simple wrapper around the plotting routines
 
     invert: which axes to invert could be 'X' or 'YZ' or ...
-    draw: which lines to draw could be 'C' or 'YZ' or ... 
-          C for curve and the rest are projections in the different dimensions 
+    draw: which lines to draw could be 'C' or 'YZ' or ...
+          C for curve and the rest are projections in the different dimensions
     '''
 
     if Z == None: Z = fill_Z(X, Y)

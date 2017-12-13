@@ -8,10 +8,10 @@ import numpy as np
 
 
 class IncompLiquidFit(object):
-    """ 
-    A class for fitting data sheet data to predefined functions. 
+    """
+    A class for fitting data sheet data to predefined functions.
     Some functions are only used during the fitting procedure.
-    Note that the order in which you fit the different properties 
+    Note that the order in which you fit the different properties
     might impact the coefficients. Usually, the fitting order should be:
     1) Density
     2) Heat capacity
@@ -103,7 +103,7 @@ class IncompLiquidFit(object):
         #self._checkP(T=T, P=P)
 
     def _basePolynomial(self,coefficients,x):
-        """ Base function to produce polynomials of 
+        """ Base function to produce polynomials of
         order len(coefficients) with the coefficients
         """
         result = 0.
@@ -123,7 +123,7 @@ class IncompLiquidFit(object):
         return result
 
     def _baseExponential(self,coefficients,x,num):
-        """ Base function to produce exponential 
+        """ Base function to produce exponential
         with defined coefficients
         """
         # Determine limits:
@@ -169,7 +169,7 @@ class IncompLiquidFit(object):
 
     def _PropsFit(self,coefficients,inVal,T=0):
         """
-        Calculates a property from a given set of 
+        Calculates a property from a given set of
         coefficents for a certain temperature. Is used
         to obtain data to feed to the optimisation
         procedures.

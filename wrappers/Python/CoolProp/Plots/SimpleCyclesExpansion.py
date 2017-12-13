@@ -11,8 +11,8 @@ from .SimpleCycles import BaseCycle, StateContainer
 class BasePowerCycle(BaseCycle):
     """A thermodynamic cycle for power producing processes.
 
-    Defines the basic properties and methods to unify access to 
-    power cycle-related quantities. 
+    Defines the basic properties and methods to unify access to
+    power cycle-related quantities.
     """
 
     def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
@@ -58,7 +58,7 @@ class SimpleRankineCycle(BasePowerCycle):
         BasePowerCycle.__init__(self, fluid_ref, graph_type, **kwargs)
 
     def simple_solve(self, T0, p0, T2, p2, eta_exp, eta_pum, fluid=None, SI=True):
-        """" 
+        """"
         A simple Rankine cycle calculation
 
         Parameters
@@ -72,7 +72,7 @@ class SimpleRankineCycle(BasePowerCycle):
         p2 : float
             The highest pressure, before the expander
         eta_exp : float
-            Isentropic expander efficiency 
+            Isentropic expander efficiency
         eta_pum : float
             Isentropic pump efficiency
 

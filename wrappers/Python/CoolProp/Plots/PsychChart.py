@@ -16,7 +16,7 @@ import_template=(
 if __name__=='__main__':
     import numpy, matplotlib
     from CoolProp.HumidAirProp import HAPropsSI
-    from CoolProp.Plots.Plots import InlineLabel 
+    from CoolProp.Plots.Plots import InlineLabel
 
     p = 101325
     Tdb = numpy.linspace(-10,60,100)+273.15

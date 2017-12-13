@@ -11,8 +11,8 @@ from .SimpleCycles import BaseCycle, StateContainer
 class BaseCompressionCycle(BaseCycle):
     """A thermodynamic cycle for vapour compression processes.
 
-    Defines the basic properties and methods to unify access to 
-    compression cycle-related quantities. 
+    Defines the basic properties and methods to unify access to
+    compression cycle-related quantities.
     """
 
     def __init__(self, fluid_ref='HEOS::Water', graph_type='PH', **kwargs):
@@ -59,7 +59,7 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         BaseCompressionCycle.__init__(self, fluid_ref, graph_type, **kwargs)
 
     def simple_solve(self, T0, p0, T2, p2, eta_com, fluid=None, SI=True):
-        """" 
+        """"
         A simple vapour compression cycle calculation
 
         Parameters
@@ -73,7 +73,7 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         p2 : float
             The condensed fluid, before the expansion valve
         eta_com : float
-            Isentropic compressor efficiency 
+            Isentropic compressor efficiency
 
         Examples
         --------
@@ -161,8 +161,8 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         self.fill_states()
 
     def simple_solve_dt(self, Te, Tc, dT_sh, dT_sc, eta_com, fluid=None, SI=True):
-        """" 
-        A simple vapour compression cycle calculation based on 
+        """"
+        A simple vapour compression cycle calculation based on
         superheat, subcooling and temperatures.
 
         Parameters
@@ -176,7 +176,7 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         dT_sc : float
             The subcooling after the condenser
         eta_com : float
-            Isentropic compressor efficiency 
+            Isentropic compressor efficiency
 
         Examples
         --------

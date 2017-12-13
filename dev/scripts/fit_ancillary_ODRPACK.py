@@ -9,7 +9,7 @@ from CoolProp.CoolProp import Props, get_REFPROPname
 
 
 def rsquared(x, y):
-    """ 
+    """
     Return R^2 where x and y are array-like.
 
     from http://stackoverflow.com/questions/893657/how-do-i-calculate-r-squared-using-python-and-numpy
@@ -28,7 +28,7 @@ def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed 
         The fluid name for the fluid that will be used to generate the saturation data
     ClassName : The name of the class that will be used in the C++ code
     form : string
-        If ``'A'``, use a term of the form 
+        If ``'A'``, use a term of the form
     """
 
     if fName is None:
