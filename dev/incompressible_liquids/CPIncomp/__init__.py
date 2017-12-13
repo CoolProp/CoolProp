@@ -162,6 +162,7 @@ def getSecCoolFluids():
 def get_version():
     return 0.5
 
+
 if __name__ == "__main__":
     print('You are using version %s of the Python package for incompressible liquids in CoolProp.'%(get_version()))
     print()

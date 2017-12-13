@@ -42,7 +42,6 @@ def SimpleCycle(Ref,Te,Tc,DTsh,DTsc,eta_a,Ts_Ph='Ph',**kwargs):
     print(cycle.COP_cooling(),cycle.COP_heating())
 
 
-
 def TwoStage(Ref,Q,Te,Tc,DTsh,DTsc,eta_oi,f_p,Tsat_ic,DTsh_ic,Ts_Ph='Ph',prints=False,skipPlot=False,axis=None,**kwargs):
     """
     This function plots a two-stage cycle, on the current axis, or that given by the optional parameter *axis*
@@ -237,7 +236,6 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     #T[2]=T_hp(Ref,h[2],pi,T2s)
     T[2]=PropsSI('T','H',h[2],'P',pi,Ref)
 
-
     s[2]=PropsSI('S','T',T[2],'P',pi,Ref)
     rho[2]=PropsSI('D','T',T[2],'P',pi,Ref)
 
@@ -268,7 +266,6 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
 
     #Injection mass flow rate
     x=m*(h[6]-h[8])/(h[7]-h[6])
-
 
     p[3]=pi
     h[3]=(m*h[2]+x*h[7])/(m+x)
@@ -360,7 +357,6 @@ def EconomizedCycle(Ref,Qin,Te,Tc,DTsh,DTsc,eta_oi,f_p,Ti,Ts_Ph='Ts',skipPlot=Fa
     print('Vdisp1: ',mdot/(rho[1]*f*eta_v)*1e6,'cm^3')
     print('Vdisp2: ',(mdot+mdot_inj)/(rho[1]*f*eta_v)*1e6,'cm^3')
     return COP
-
 
     #class SimpleCycle(object):
     #    """A class that calculates a simple thermodynamic cycle"""
@@ -479,11 +475,13 @@ class StateContainer(object):
 
     @property
     def points(self): return self._points
+
     @points.setter
     def points(self, value): self._points = value
 
     @property
     def units(self): return self._units
+
     @units.setter
     def units(self, value): self._units = value
 
@@ -587,19 +585,24 @@ class StateContainer(object):
 
     @property
     def D(self): return np.array([self._points[k].D for k in self])
+
     @property
     def H(self): return np.array([self._points[k].H for k in self])
+
     @property
     def P(self): return np.array([self._points[k].P for k in self])
+
     @property
     def S(self): return np.array([self._points[k].S for k in self])
+
     @property
     def T(self): return np.array([self._points[k].T for k in self])
+
     @property
     def U(self): return np.array([self._points[k].U for k in self])
+
     @property
     def Q(self): return np.array([self._points[k].Q for k in self])
-
 
 
 class BaseCycle(BasePlot):
@@ -641,9 +644,9 @@ class BaseCycle(BasePlot):
         self._steps = 2
         BasePlot.__init__(self, fluid_ref, graph_type, unit_system, **kwargs)
 
-
     @property
     def cycle_states(self): return self._cycle_states
+
     @cycle_states.setter
     def cycle_states(self, value):
         if len(value) != self.STATECOUNT:
@@ -652,6 +655,7 @@ class BaseCycle(BasePlot):
 
     @property
     def steps(self): return self._steps
+
     @steps.setter
     def steps(self, value): self._steps = int(max([value,2]))
 
@@ -664,7 +668,6 @@ class BaseCycle(BasePlot):
         else:
             raise ValueError("Invalid unit_system input \"{0:s}\", expected a string from {1:s}".format(str(value),str(self.UNIT_SYSTEMS.keys())))
         self._cycle_states.units = self._system
-
 
     def valid_states(self):
         """Check the formats of BaseCycle.STATECOUNT and BaseCycle.STATECHANGE"""
@@ -705,8 +708,6 @@ class BaseCycle(BasePlot):
 
         if local: self._cycle_states = objs
         return objs
-
-
 
     def state_change(self,in1,in2,start,ty1='lin',ty2='lin'):
         """Calculates a state change defined by the properties in1 and in2

@@ -163,7 +163,6 @@ class PropertyPlot(BasePlot):
         self.isolines[iso_type] = lines
         return
 
-
     def draw_isolines(self):
         dimx = self._system[self._x_index]
         dimy = self._system[self._y_index]
@@ -195,7 +194,6 @@ class PropertyPlot(BasePlot):
                     stp = min([dew_filter.size,10])
                     dew_filter[0:-stp] = False
                     bub_filter = np.logical_and(np.isfinite(bub.x),np.isfinite(bub.y))
-
 
                     if self._x_index == CoolProp.iP or self._x_index == CoolProp.iDmass:
                         filter_x = lambda x: np.log10(x)
@@ -261,9 +259,6 @@ class PropertyPlot(BasePlot):
     #    for i in self.isolines:
     #         for line in self.isolines[i]:
     #             if self.get_x_y_dydx(xv, yv, x)
-
-
-
 
     def draw_process(self, statecontainer, points=None, line_opts=None):
         """ Draw process or cycle from x and y values in axis units
@@ -349,6 +344,7 @@ def InlineLabel(xv,yv,x=None,y=None,axis=None,fig=None):
     warnings.warn("You called the deprecated function \"InlineLabel\", use \"BasePlot.inline_label\".",DeprecationWarning)
     plot = PropertyPlot("water","TS",figure=fig,axis=axis)
     return plot.inline_label(xv,yv,x,y)
+
 
 class PropsPlot(PropertyPlot):
     def __init__(self, fluid_name, graph_type, units = 'KSI', reciprocal_density = False, **kwargs):

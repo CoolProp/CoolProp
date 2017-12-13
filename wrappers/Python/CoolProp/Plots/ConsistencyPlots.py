@@ -25,10 +25,12 @@ param_labels = dict(Hmolar = 'Enthalpy [J/mol]/1000',
                     Dmolar = 'Density [mol/m3]/1000',
                     P = 'Pressure [Pa]/1000')
 
+
 def split_pair(pair):
     for key in ['Dmolar','Hmolar','Smolar','P','T','Umolar']:
         if pair.startswith(key):
             return key, pair.replace(key, '')
+
 
 def split_pair_xy(pair):
     if pair == 'HmolarP':
@@ -63,6 +65,7 @@ def split_pair_xy(pair):
         return 'Hmolar','Umolar'
     else:
         raise ValueError(pair)
+
 
 class ConsistencyFigure(object):
     def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = [], mole_fractions = None, p_limits_1phase = None, T_limits_1phase = None, NT_1phase = 40, Np_1phase = 40, NT_2phase = 20, NQ_2phase = 20):
@@ -222,6 +225,7 @@ class ConsistencyFigure(object):
     def savefig(self, fname, **kwargs):
         self.fig.savefig(fname, **kwargs)
 
+
 class ConsistencyAxis(object):
     def __init__(self, axis, fig, pair, fluid, backend, state1, state2,  state3,
                  p_limits_1phase = None, T_limits_1phase = None, NT_1phase = 40, Np_1phase = 40,
@@ -380,7 +384,6 @@ class ConsistencyAxis(object):
 
         print('1-phase took '+str(toc-tic)+' s for '+self.pair)
 
-
     def consistency_check_twophase(self):
 
         tic = time.time()
@@ -474,6 +477,7 @@ class ConsistencyAxis(object):
             y = (ylims[0]*ylims[1])**0.5
 
         self.ax.text(x,y,'Not\nImplemented',ha='center',va ='center',bbox = dict(fc = 'white'))
+
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')

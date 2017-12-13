@@ -38,6 +38,7 @@ def html_page_context(app, pagename, templatename, context, doctree):
     context['show_on_github_url'] = show_url
     context['edit_on_github_url'] = edit_url
 
+
 def setup(app):
     app.add_config_value('edit_on_github_project', '', True)
     app.add_config_value('edit_on_github_branch', 'master', True)

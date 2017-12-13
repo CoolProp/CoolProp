@@ -11,6 +11,7 @@ import scipy.interpolate
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib._pylab_helpers
 
+
 def fill_nan(A):
     '''
     interpolate to fill nan values
@@ -87,7 +88,6 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     Yr = scipy.ndimage.zoom(Y, resFactor, order=1)
     Zr = scipy.ndimage.zoom(Z, resFactor, order=1)
 
-
     ## Make the plot
     if ax==None:
         fig  = plt.figure()
@@ -98,7 +98,6 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     if 'X' in invert: ax.invert_xaxis()
     if 'Y' in invert: ax.invert_yaxis()
     if 'Z' in invert: ax.invert_zaxis()
-
 
     ## Reduce data again and call the plotting wrapper
     stride=np.round(len(Xr)/3.0)
@@ -135,7 +134,6 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     #
     #fig.colorbar(surf, shrink=0.5, aspect=5)
 
-
     ## Alternative plotting solution
     #cmap = plt.get_cmap('jet')
     #
@@ -161,7 +159,6 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     #      #antialiased=False
     #      )
 
-
     ### Make the plot
     #fig  = plt.figure()
     #ax   = fig.gca(projection='3d')
@@ -177,7 +174,6 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
     #  #linewidth=0,
     #  #antialiased=False
     #  )
-
 
     ## Plot the two-phase dome and its projections
     #ax.plot(X_TP,Y_TP,Z_TP,color='black')
@@ -219,10 +215,10 @@ def getlim(key,dicts,fac=1):
     return [np.floor(min)*fac, np.ceil(max)*fac]
 
 
-
 #########################################################################
 # Here starts the real script
 #########################################################################
+
 
 fluid = 'water'
 CP.enable_TTSE_LUT(fluid)
@@ -279,7 +275,6 @@ Dmin = CP.PropsSI('D','H',Hmin,'P',Pmax,fluid)
 Dmax = CP.PropsSI('D','H',Hmax,'P',Pmin,fluid)
 
 
-
 #########################################################################
 # Start with the first diagram, hps
 #########################################################################
@@ -297,6 +292,7 @@ X = np.linspace(Xmin, Xmax, points) # Enthalpy
 Y = np.linspace(Ymin, Ymax, points) # Pressure
 X, Y = np.meshgrid(X, Y)
 
+
 def get_Z(X_in,Y_in,fluid,out='S'):
     '''
     Just a wrapper to call CoolProp
@@ -311,20 +307,26 @@ def get_Z(X_in,Y_in,fluid,out='S'):
         Z = np.NAN
     return Z
 
+
 ## Now we also need the variables
 Z = fill_Z(X,Y)
 get_Z_old = get_Z
 
+
 def get_Z(X_in,Y_in,fluid):
     return get_Z_old(X_in,Y_in,fluid,out='D')
+
+
 logVdata = np.log10(1.0/fill_Z(X,Y))
+
 
 def get_Z(X_in,Y_in,fluid):
     return get_Z_old(X_in,Y_in,fluid,out='T')
+
+
 Tdata = fill_Z(X,Y)
 
 HPSdict = {'H': X, 'P': Y, 'S': Z, 'V': logVdata, 'T': Tdata, 'H_TP': X_TP, 'P_TP': Y_TP, 'S_TP': Z_TP}
-
 
 
 #########################################################################
@@ -347,6 +349,7 @@ X = np.linspace(Xmin, Xmax, points) # Volume
 Y = np.linspace(Ymin, Ymax, points) # Temperature
 X, Y = np.meshgrid(X, Y)
 
+
 def get_Z(X_in,Y_in,fluid,out='P'):
     '''
     Just a wrapper to call CoolProp
@@ -361,20 +364,26 @@ def get_Z(X_in,Y_in,fluid,out='P'):
         Z = np.NAN
     return Z
 
+
 ## Now we also need the variables
 Z = fill_Z(X,Y)
 get_Z_old = get_Z
 
+
 def get_Z(X_in,Y_in,fluid):
     return np.power(10.0,get_Z_old(X_in,Y_in,fluid,out='H'))
+
+
 Hdata = fill_Z(X,Y)
+
 
 def get_Z(X_in,Y_in,fluid):
     return np.power(10.0,get_Z_old(X_in,Y_in,fluid,out='S'))
+
+
 Sdata = fill_Z(X,Y)
 
 VTPdict = {'V': X, 'T': Y, 'P': Z, 'H': Hdata, 'S': Sdata, 'V_TP': X_TP, 'T_TP': Y_TP, 'P_TP': Z_TP}
-
 
 
 #########################################################################
@@ -401,7 +410,6 @@ axHPS.set_ylabel(r'log $p$')
 axHPS.set_zlabel(r'$s$')
 
 
-
 figVTP, axVTP, Z = make3Dlpot(VTPdict['V'],VTPdict['T'],Z=VTPdict['P'],draw='XYZ',color='red',xlim=Vlim,ylim=Tlim,zlim=Plim)
 ## Plot the two-phase dome and its projections
 plotLineAndProjection(axVTP,VTPdict['V_TP'],VTPdict['T_TP'],VTPdict['P_TP'])
@@ -411,7 +419,6 @@ make3Dlpot(HPSdict['V'],HPSdict['T'],Z=HPSdict['P'],ax=axVTP,draw='XYZ',color='b
 axVTP.set_xlabel(r'log $v$')
 axVTP.set_ylabel(r'$T$')
 axVTP.set_zlabel(r'log $p$')
-
 
 
 if toFile:

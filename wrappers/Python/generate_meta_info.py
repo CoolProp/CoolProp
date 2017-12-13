@@ -38,7 +38,6 @@ if pypi:
             continue
 
 
-
 if local:
     coolprop_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
     sys.path.append(os.path.join(coolprop_dir, 'dev'))
@@ -81,7 +80,6 @@ f = codecs.open(os.path.join(python_dir,target),mode='wb',encoding='utf-8')
 f.write(first_line)
 f.write(template.render(**local_info))
 f.close()
-
 
 
 template = """
@@ -187,8 +185,6 @@ f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
 f.write("#!/bin/bash\n"+first_line)
 f.write(template)
 f.close()
-
-
 
 
 template = """

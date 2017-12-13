@@ -24,6 +24,7 @@ def makeGrid(x, y, z, resX=200, resY=200):
     X, Y = meshgrid(xi, yi)
     return X, Y, Z
 
+
 def getErrors(p, h, out='D', Ref=''):
     "Get the relative errors from table-based interpolation"
     errorTTSE    = 1e3
@@ -102,7 +103,6 @@ for colourmap in ['cubehelix']:
         ones = np.ones(isoP.shape)
         isoH = [ CP.PropsSI('H','T',T*ones,'P',isoP,Ref) for T in isoT ]
 
-
         print "Lower left and upper right coordinates: ({0},{1}), ({2},{3})".format(h_min,p_min,h_max,p_max)
 
         CP.set_TTSESinglePhase_LUT_range(Ref,h_min,h_max*1.05,p_min,p_max*1.05)
@@ -169,7 +169,6 @@ for colourmap in ['cubehelix']:
         PPP2 = np.array(PPP2)
         SC2 = ax2.scatter(HHH2/1e3, PPP2/1e5, s=8, c=EEE2, edgecolors = 'none', cmap = plt.get_cmap(colourmap), norm = cNorm, rasterized=True)
 
-
         if out == 'D':
             ax1.set_title('rel. density error, TTSE')
             ax2.set_title('rel. density error, bicubic')
@@ -219,7 +218,6 @@ for colourmap in ['cubehelix']:
             for i,T in enumerate(isoT):
                 ax.plot(isoH[i]/1e3,isoP/1e5,'k',lw = 1)
 
-
         #CB = fig.colorbar(SC1)
         #cbar_ax = fig.add_axes([0.80, 0.075, 0.05, 0.875])
         CB = fig.colorbar(SC1, cax=cbar_ax)
@@ -229,7 +227,6 @@ for colourmap in ['cubehelix']:
             CB.set_label(r'$\|T/T\mathdefault{_{EOS}-1\|\times 100}$ [%]')
         elif out  == 'C':
             CB.set_label(r'$\|c\mathdefault{_p}/c\mathdefault{_{p,EOS}-1\|\times 100}$ [%]')
-
 
         # The plot is finished, now we add an ellipse
         #circle=plt.Circle((5,5),.5,color='b',fill=False)
@@ -264,7 +261,6 @@ for colourmap in ['cubehelix']:
 #        for a in fig.axes:
 #            for label in [a.get_xticklabels(), a.get_yticklabels()]:
 #                label.set_fontproperties(ticks_font
-
 
         #plt.savefig(out+'_'+colourmap+'_TTSE_BICUBIC.png', dpi = 300, transparent = True)
         #plt.savefig(out+'_'+colourmap+'_TTSE_BICUBIC.eps')

@@ -7,6 +7,7 @@ class NitrateSalt(PureData,CoefficientData):
     """
     Heat transfer fluid based on 60% NaNO3 and 40% KNO3
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)

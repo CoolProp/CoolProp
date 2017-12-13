@@ -87,6 +87,7 @@ Mulero2012_data = """67-64-1 Acetone 0.0633 1.160
 7732-18-5 Water -0.1306 2.471 0.2151 1.233
 7440-63-3 Xenon -0.11538 1.0512 0.16598 1.098"""
 
+
 def inject_surface_tension_2012(root_dir):
     print("*** Injecting surface tension curves from Mulero")
     Tc_dict = {'Argon':150.687,
@@ -247,6 +248,7 @@ Tetradecamethylhexasiloxane 653.2 0.040798 1.3323
 trans-2-butene 428.61 0.0001859 0.07485 0.05539 1.224
 Undecane 638.8 0.0556 1.32"""
 
+
 def inject_surface_tension_2014(root_dir):
     rename = {'Undecane': 'n-Undecane',
               'm-xylene (1,3-dimethylbenzene)': 'm-Xylene',
@@ -311,6 +313,7 @@ def inject_surface_tension_2014(root_dir):
         fp.write(json.dumps(j, **json_options))
         fp.close()
 
+
 def inject_environmental_data(root_dir):
     print('*** Injecting environmental data from DTU')
     j = json.load(open(os.path.join(root_dir,'dev','environmental_data_from_DTU','DTU_environmental.json'),'r'))
@@ -325,6 +328,7 @@ def inject_environmental_data(root_dir):
             fp.write(json.dumps(fluid, **json_options))
         else:
             print('Could not inject environmental data for',data['Name'])
+
 
 def inject_ancillaries(root_dir):
     print('*** Injecting saturation ancillary curves')
@@ -344,11 +348,13 @@ def inject_ancillaries(root_dir):
         fp = open(os.path.join(root_dir,'dev','fluids', fluid_name+'.json'),'w')
         fp.write(json.dumps(fluid, **json_options))
 
+
 def inject(root_dir):
     inject_surface_tension_2014(root_dir)
     inject_ancillaries(root_dir)
     inject_surface_tension_2012(root_dir)
     inject_environmental_data(root_dir)
+
 
 def combine_json(root_dir):
 
@@ -393,6 +399,7 @@ def combine_json(root_dir):
     fp = open(os.path.join(root_dir,'dev','all_incompressibles.json'),'w')
     fp.write(json.dumps(master))
     fp.close()
+
 
 if __name__=='__main__':
     inject_surface_tension_2014(root_dir = '..')

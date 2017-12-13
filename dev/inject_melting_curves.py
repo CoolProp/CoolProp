@@ -109,6 +109,7 @@ Nrow,Ncol = 5,5
 figp = plt.figure(figsize = (20,20))
 figrho = plt.figure(figsize = (20,20))
 
+
 def plot_rho(T, rho, fit = False):
     x, y = (T-T[0])/(T[len(T)-1]-T[0]), (rho-rho[0])/(rho[len(rho)-1]-rho[0])
 
@@ -122,6 +123,7 @@ def plot_rho(T, rho, fit = False):
         return T, (rhofit/rho-1)*100
     else:
         return x, y
+
 
 def simon():
     global ip, irho
@@ -192,6 +194,7 @@ def simon():
 #                 T = np.array([326.2,345.1,362.8,385.1,419.4,459,499,535.7,570,608])
 #                 p = p_0 + a*((T/T_0)**c - 1)
 #                 print p
+
 
 def Tr():
     global ip, irho
@@ -332,6 +335,7 @@ def theta():
             axp.plot(T,pp,'--')
 
             print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
+
 
 if __name__=='__main__':
     simon()

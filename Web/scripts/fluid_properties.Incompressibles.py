@@ -83,7 +83,6 @@ for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solu
                     error = e.message
                     pass
 
-
     Tmin = 0.0
     try:
         Tmin = state.keyed_output(CoolProp.iT_freeze)

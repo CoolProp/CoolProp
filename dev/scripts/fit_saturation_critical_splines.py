@@ -10,6 +10,7 @@ CoolProp.CoolProp.set_config_as_json_string(json.dumps(jj)) # Set the values usi
 # Double check that it was set properly
 jj = json.loads(CoolProp.CoolProp.get_config_as_json_string()); print(jj)
 
+
 class LinearFitter(object):
     def __init__(self):
         self.Nconstraints = 0
@@ -44,6 +45,7 @@ class LinearFitter(object):
 
     def evaluate(self, x):
         return np.polyval(self.a, x)
+
 
 class QuadraticFitter(object):
     def __init__(self):
@@ -91,6 +93,7 @@ class QuadraticFitter(object):
 
     def evaluate(self, x):
         return np.polyval(self.a, x)
+
 
 class CubicFitter(object):
     def __init__(self):
@@ -142,6 +145,7 @@ class CubicFitter(object):
     def evaluate(self, x):
         return np.polyval(self.a, x)
 
+
 class QuarticFitter(object):
     def __init__(self):
         self.Nconstraints = 0
@@ -192,6 +196,7 @@ class QuarticFitter(object):
 
     def evaluate(self, x):
         return np.polyval(self.a,x)
+
 
 CoolProp.CoolProp.set_debug_level(0)
 

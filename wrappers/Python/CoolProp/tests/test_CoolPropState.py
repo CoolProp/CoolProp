@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import CoolProp.CoolProp as CP
 from CoolProp.State import State
 
+
 def first_derivative(S, func, iVal, Val, iConstant, Constant, epsilon = 1e-3):
 
     S.update({iVal:Val,iConstant:Constant})
@@ -13,6 +14,7 @@ def first_derivative(S, func, iVal, Val, iConstant, Constant, epsilon = 1e-3):
     S.update({iVal:Val,iConstant:Constant})
 
     return (val2-val1)/epsilon
+
 
 def second_derivative(S, func, iVal, Val, iConstant, Constant, epsilon = 2):
 
@@ -30,12 +32,6 @@ def second_derivative(S, func, iVal, Val, iConstant, Constant, epsilon = 2):
     print(val1, val2, val3, S.T, S.p, S.rho, (val1-2*val2+val3))
 
     return (val1-2*val2+val3)/(epsilon*epsilon)
-
-
-
-
-
-
 
 
 def teest_1phase_first_derivatives():
@@ -66,25 +62,13 @@ def teest_1phase_first_derivatives():
         for args in l:
             yield (check_1phase_first_derivatives,)+(S,)+args
 
+
 def check_1phase_first_derivatives(S, func, iVal, Val, iConstant, Constant, deriv_func):
 
     Deriv_val = first_derivative(S, func, iVal, Val, iConstant, Constant)
     EOS_val = deriv_func()
     if abs(EOS_val/Deriv_val-1) > 1e-2:
         raise ValueError('Finite Diff: ' + str(Deriv_val) + ' EOS: ' +str(EOS_val))
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def teest_sat_first_derivatives():
@@ -107,14 +91,13 @@ def teest_sat_first_derivatives():
         for args in l:
             yield (check_sat_first_derivatives,)+(S,)+args
 
+
 def check_sat_first_derivatives(S, func, iVal, Val, iConstant, Constant, deriv_func):
 
     Deriv_val = first_derivative(S, func, iVal, Val, iConstant, Constant)
     EOS_val = deriv_func()
     if abs(EOS_val/Deriv_val-1) > 1e-2:
         raise ValueError('Finite Diff: ' + str(Deriv_val) + ' EOS: ' +str(EOS_val))
-
-
 
 
 def teest_sat_second_derivatives():
@@ -134,12 +117,14 @@ def teest_sat_second_derivatives():
         for args in l:
             yield (check_sat_second_derivatives,)+(S,)+args
 
+
 def check_sat_second_derivatives(S, func, iVal, Val, iConstant, Constant, deriv_func):
 
     Deriv_val = second_derivative(S, func, iVal, Val, iConstant, Constant)
     EOS_val = deriv_func()
     if abs(EOS_val/Deriv_val-1) > 1e-2:
         raise ValueError('Finite Diff: ' + str(Deriv_val) + ' EOS: ' +str(EOS_val))
+
 
 if __name__=='__main__':
     import nose

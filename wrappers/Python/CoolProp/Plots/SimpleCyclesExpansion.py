@@ -7,6 +7,7 @@ import CoolProp
 from .Common import process_fluid_state
 from .SimpleCycles import BaseCycle, StateContainer
 
+
 class BasePowerCycle(BaseCycle):
     """A thermodynamic cycle for power producing processes.
 
@@ -160,7 +161,6 @@ class SimpleRankineCycle(BasePowerCycle):
 
         self.cycle_states = cycle_states
         self.fill_states()
-
 
     def eta_thermal(self):
         """Thermal efficiency

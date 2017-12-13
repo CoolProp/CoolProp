@@ -53,6 +53,8 @@ delta = np.array(RHO.vec)/rhocrit
 Tstar = np.array(TTT.vec)/e_k
 
 #Define the objective function
+
+
 def OBJECTIVE_fit(c,x):
     tau = x[0,:]
     delta = x[1,:]
@@ -76,6 +78,7 @@ def OBJECTIVE_fit(c,x):
     sum += f1*(delta/(delta_0-delta)-delta/delta_0)
     return sum + np.array(mu_dilute.vec)
 
+
 print 'starting fit'
 XXX = np.r_[np.array(tau,ndmin = 2), np.array(delta,ndmin=2)]
 mod = Model(OBJECTIVE_fit)
@@ -93,6 +96,7 @@ rel_error = (YFIT)/np.array(mu.vec)-1
 MAE = np.mean(np.abs(rel_error))*100
 SSE = np.sum(np.power(YFIT-np.array(mu.vec),2))
 print SSE
+
 
 def write_output(c):
     e = np.zeros((n+1,m+1))
@@ -162,5 +166,6 @@ def write_output(c):
                   MAE = MAE)
 
     print template.format(**values)
+
 
 write_output(myoutput.beta)

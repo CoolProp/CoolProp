@@ -7,6 +7,7 @@ A little module to wrap the params enum for use in Cython code
 Ian Bell, May 2014
 """
 
+
 def params_constants(enum_key):
     fName = os.path.join('..','..','include','DataStructures.h')
 
@@ -35,6 +36,7 @@ def params_constants(enum_key):
 
     return keys
 
+
 def config_constants():
     fName = os.path.join('..','..','include','Configuration.h')
     contents = open(fName,'r').readlines()
@@ -49,6 +51,7 @@ def config_constants():
         keys.append(key)
         iline += 1
     return ('configuration_keys',keys)
+
 
 def generate_cython(data, config_data):
 
@@ -97,9 +100,11 @@ def generate_cython(data, config_data):
         py_output_file.write(param+' = '+'_constants.'+param+'\n')
     py_output_file.close()
 
+
 def generate():
     data = [(enum,params_constants(enum)) for enum in ['parameters', 'input_pairs', 'fluid_types', 'phases']]
     generate_cython(data,config_constants())
+
 
 if __name__=='__main__':
     generate()

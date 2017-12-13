@@ -6,6 +6,7 @@ from matplotlib.ticker import MaxNLocator
 import os
 import numpy as np
 
+
 class IncompLiquidFit(object):
     """ 
     A class for fitting data sheet data to predefined functions. 
@@ -42,9 +43,6 @@ class IncompLiquidFit(object):
         self._minPoints = 3
 
         self._expPoly = False # Fit exponential as polynomial
-
-
-
 
     def setParams(self,fluid):
         if fluid=='init':
@@ -85,7 +83,6 @@ class IncompLiquidFit(object):
         else:
             raise (ValueError("No coefficients available for "+str(fluid)))
 
-
     def _checkT(self,T=0):
         Tmin = self.Props('Tmin')
         Tmax = self.Props('Tmax')
@@ -104,7 +101,6 @@ class IncompLiquidFit(object):
     def _checkTP(self,T=0,P=0):
         self._checkT(T=T)
         #self._checkP(T=T, P=P)
-
 
     def _basePolynomial(self,coefficients,x):
         """ Base function to produce polynomials of 
@@ -139,7 +135,6 @@ class IncompLiquidFit(object):
         #else:
         #    print "Error!"
 
-
     def Props(self,out,T=0,P=0):
         if out=='D':
             self._checkTP(T=T,P=P)
@@ -171,7 +166,6 @@ class IncompLiquidFit(object):
             return self._Tmax
         else:
             raise (ValueError("Error: You used an unknown output qualifier."))
-
 
     def _PropsFit(self,coefficients,inVal,T=0):
         """
@@ -219,7 +213,6 @@ class IncompLiquidFit(object):
             except ValueError as e:
                 print e
                 return False
-
 
     def getCoefficients(self,inVal):
         """
@@ -300,7 +293,6 @@ class IncompLiquidFit(object):
         initValues = self.getCoefficients(xName)[:]
         # Fit logarithms for viscosity and saturation pressure
         if xName=='V' or xName=='Psat':
-
 
             #fit = "MIN" # use a home-made minimisation with Powell and Broyden-Fletcher-Goldfarb-Shanno
             #fit = "LMA" # use the Levenberg-Marquardt algorithm from curve_fit
@@ -406,12 +398,14 @@ containerList += [HC50(), HC40(), HC30(), HC20(), HC10()]
 containerList += [AS10(), AS20(), AS30(), AS40(), AS55()]
 containerList += [ZS10(), ZS25(), ZS40(), ZS45(), ZS55()]
 
+
 def relError(A=[],B=[],PCT=False):
     result = (numpy.array(A)-numpy.array(B))/numpy.array(B);
     if PCT:
         return result * 100.
     else:
         return result
+
 
 j = {}
 for data in containerList:
@@ -446,8 +440,6 @@ for data in containerList:
     #liqObj.setExpPoly(True)
     print "T base:"+str(liqObj._Tbase)
     print
-
-
 
     # row and column sharing for test plots
     #matplotlib.pyplot.subplots_adjust(top=0.85)

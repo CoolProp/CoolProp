@@ -39,6 +39,7 @@ def viscosity_dilute(fluid,T,e_k,sigma):
     eta_star = 26.692e-3*sqrt(molemass*T)/(pow(sigma,2)*OMEGA_2_2)/1e6
     return eta_star
 
+
 def viscosity_linear(fluid, T, rho, e_k, sigma):
     """
     Implements the method of Vogel 1998 (Propane) for the linear part
@@ -52,6 +53,7 @@ def viscosity_linear(fluid, T, rho, e_k, sigma):
     B_eta_star = s+b[7]*pow(Tstar,-2.5)+b[8]*pow(Tstar,-5.5) #//[no units]
     B_eta = N_A*pow(sigma/1e9,3)*B_eta_star #[m3/mol]
     return viscosity_dilute(fluid,T,e_k,sigma)*B_eta*rho/molemass*1000
+
 
 from PDSim.misc.datatypes import Collector
 RHO = Collector()
@@ -84,6 +86,7 @@ for T in np.linspace(290,Props(fluid,'Tcrit')-0.1,100):
         DELTA << rho/rhoc
         TAU << Tc/T
 
+
 def f_RHS(E, DELTA_TAU, VV):
     k = 0
     sum = 0
@@ -98,6 +101,7 @@ def f_RHS(E, DELTA_TAU, VV):
 #    sum += (f1+f2/TAU+f3/TAU/TAU)*(DELTA/(DELTA0-DELTA)-DELTA/DELTA0)
     print np.mean(np.abs(((sum/VV-1)*100))),'%'
     return sum
+
 
 log_muH = np.log(VVH.v().T)
 

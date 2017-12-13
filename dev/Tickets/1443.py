@@ -18,6 +18,7 @@ CONF_CPP_GUE = "Call PropsSI_multi, guesses enabled"
 CONF_PYT_DIR = "Call AbstractState.update"
 CONF_PYT_GUE = "Call AbstractState.update_with_guesses"
 
+
 class ResClass(object):
     def __init__(self):
         self.time = None
@@ -72,7 +73,6 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
         # vector_in1 contains the first set of inputs and
         # vector_in2 contains the second set of inputs
 
-
         #CONF_CPP_DIR = "Call PropsSI_multi"
         #CONF_CPP_GUE = "Call PropsSI_multi, guesses enabled"
         #CONF_PYT_DIR = "Call AbstractState.update"
@@ -82,8 +82,6 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
         err_count = 0
         single_result = ResClass()
         guesses = CoolProp.CoolProp.PyGuessesStructure()
-
-
 
         if CUR_CONF==CONF_CPP_DIR:
             set_config_bool(CoolProp.USE_GUESSES_IN_PROPSSI, False)
@@ -134,7 +132,6 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
                     pass
             end = timer()
 
-
         single_result.time = (end - start)*1e6/(1.0*range_two.size)
         single_result.err_count = err_count
         single_result.size = range_two.size
@@ -149,8 +146,6 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
     return result
 
 
-
-
 #if __name__ == "__main__":
 #    print("two.py is being run directly")
 #else:
@@ -160,13 +155,8 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
 #    CoolProp.CoolProp.set_config_bool(configuration_keys key, bool value)
 
 
-
-
-
-
-
-
 import numpy as np
+
 
 def get_fluid_strings(mix=False):
     if mix:
@@ -182,6 +172,7 @@ def get_fluid_strings(mix=False):
                 fluids.append(bac+"::"+fld)
     return fluids
 
+
 def get_state_objects(fluids=None):
     if fluids is None:
         fluids = get_fluid_strings()
@@ -190,18 +181,23 @@ def get_state_objects(fluids=None):
         states.append(process_fluid_state(fld))
     return states
 
+
 steps = 250
+
+
 def get_p_range(state=AS("HEOS","Water")):
     p_max = 100.0e5
     p_min = 0.001e5
     p_range = np.logspace(np.log10(p_min),np.log10(p_max),steps,base=10)
     return p_range
 
+
 def get_T_range(state=AS("HEOS","Water")):
     T_max = 100.0+273.15
     T_min = -50.0+273.15
     T_range = np.linspace(T_min,T_max,steps)
     return T_range
+
 
 def get_T_iso(state=AS("HEOS","Water")):
     try:
@@ -218,6 +214,7 @@ def get_T_iso(state=AS("HEOS","Water")):
     T_min = state.Tmin()
     T_max = state.Tmax()
     return np.array([(T_c+T_min)/2.0, T_c, (T_c+T_max)/2.0])
+
 
 def get_h_iso(state=AS("HEOS","Water")):
     res = []
@@ -243,6 +240,7 @@ def get_h_iso(state=AS("HEOS","Water")):
         state.update(CoolProp.PQ_INPUTS, p_c*0.75, 1.0)
         res.append(state.hmass())
         return np.array(res)
+
 
 results = {}
 mix = True

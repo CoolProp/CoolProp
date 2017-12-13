@@ -8,6 +8,7 @@ class DEBLiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -42,6 +43,7 @@ class HCMLiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -76,6 +78,7 @@ class HFELiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -110,6 +113,7 @@ class PMS1LiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -144,6 +148,7 @@ class PMS2LiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -178,6 +183,7 @@ class SABLiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -212,6 +218,7 @@ class HCBLiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -246,6 +253,7 @@ class TCOLiquidClass(CoefficientData,PureData):
     """
     Pure fluid according to Melinder's book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -274,15 +282,6 @@ class TCOLiquidClass(CoefficientData,PureData):
         self.specific_heat.source     = self.specific_heat.SOURCE_COEFFS
         self.conductivity.source      = self.conductivity.SOURCE_COEFFS
         self.viscosity.source         = self.viscosity.SOURCE_COEFFS
-
-
-
-
-
-
-
-
-
 
 
 class EGSolution(CoefficientData):

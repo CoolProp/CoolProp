@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import CoolProp, scipy.optimize
 
+
 class CurveTracer(object):
 
     def __init__(self, backend, fluid, p0, T0):
@@ -55,6 +56,7 @@ class CurveTracer(object):
 
         return self.T, self.P
 
+
 class IdealCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
         CurveTracer.__init__(self, *args, **kwargs)
@@ -66,6 +68,7 @@ class IdealCurveTracer(CurveTracer):
     def starting_direction(self):
         """ Start searching directly up ( or calculate as orthogonal to gradient ) """
         return np.pi/2.0
+
 
 class BoyleCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
@@ -81,6 +84,7 @@ class BoyleCurveTracer(CurveTracer):
         """ Start searching directly up """
         return np.pi/2.0
 
+
 class JouleInversionCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
         CurveTracer.__init__(self, *args, **kwargs)
@@ -94,6 +98,7 @@ class JouleInversionCurveTracer(CurveTracer):
     def starting_direction(self):
         """ Start searching directly up """
         return np.pi/2.0
+
 
 class JouleThomsonCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
@@ -109,6 +114,7 @@ class JouleThomsonCurveTracer(CurveTracer):
     def starting_direction(self):
         """ Start searching directly up """
         return np.pi/2.0
+
 
 backend = 'HEOS'
 fluid = 'R125'

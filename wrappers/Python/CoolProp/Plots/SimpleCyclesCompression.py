@@ -7,6 +7,7 @@ import CoolProp
 from .Common import process_fluid_state
 from .SimpleCycles import BaseCycle, StateContainer
 
+
 class BaseCompressionCycle(BaseCycle):
     """A thermodynamic cycle for vapour compression processes.
 
@@ -158,7 +159,6 @@ class SimpleCompressionCycle(BaseCompressionCycle):
 
         self.cycle_states = cycle_states
         self.fill_states()
-
 
     def simple_solve_dt(self, Te, Tc, dT_sh, dT_sc, eta_com, fluid=None, SI=True):
         """" 

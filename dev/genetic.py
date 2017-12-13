@@ -13,9 +13,11 @@ import CoolProp.CoolProp as CP
 LIBRARY = [i/6.0 for i in range(1,151)]+[0.35+i/2000 for i in range(1,100)]+[0.05+0.001*i for i in range(1,100)]+[i+0.5 for i in range(10)]
 #LIBRARY = [i/1000 for i in range(1,20000)]
 
+
 class Sample(object):
     def __init__(self,v):
         self.v = v
+
 
 class GeneticAncillaryFitter(object):
     def __init__(self,
@@ -308,6 +310,7 @@ class GeneticAncillaryFitter(object):
 
         return j
 
+
 def build_ancillaries(name, **kwargs):
 
     j = dict()
@@ -325,6 +328,7 @@ def build_ancillaries(name, **kwargs):
     print >> fp, json.dumps(j, indent = 2)
     fp.close()
 
+
 def build_all_ancillaries():
     for fluid in sorted(CoolProp.__fluids__):
         print fluid
@@ -336,6 +340,7 @@ def build_all_ancillaries():
             build_ancillaries(fluid, Tlims = [CP.Props(fluid,'Ttriple'), CP.Props(fluid, 'Tcrit')-2])
         else:
             build_ancillaries(fluid)
+
 
 if __name__ == "__main__":
 

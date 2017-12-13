@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def test_back_compatibility():
     fluid_ref = 'R290'
 
@@ -155,6 +156,7 @@ def test_new_code():
     Isolines_plot_tests()
     Graph_annotations()
     Mixture()
+
 
 if __name__=='__main__':
     import nose

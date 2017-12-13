@@ -15,11 +15,13 @@ import glob
 
 json_options = {'indent' : 2, 'sort_keys' : True}
 
+
 def get_hash(data):
     try:
         return hashlib.sha224(data).hexdigest()
     except TypeError:
         return hashlib.sha224(data.encode('ascii')).hexdigest()
+
 
 # unicode
 repo_root_path = os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..'))
@@ -43,6 +45,7 @@ values = [
     ('cubics/all_cubic_fluids.json', 'all_cubics_JSON.h', 'all_cubics_JSON'),
     ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON')
 ]
+
 
 def TO_CPP(root_dir, hashes):
     def to_chunks(l, n):
@@ -109,6 +112,7 @@ def TO_CPP(root_dir, hashes):
         else:
             print(outfile + ' is up to date')
 
+
 def version_to_file(root_dir):
 
     # Parse the CMakeLists.txt file to generate the version
@@ -166,6 +170,7 @@ def version_to_file(root_dir):
     f.close()
 
     print('version written to hidden file: ' + hidden_file_name + " for use in builders that don't use git repo")
+
 
 def gitrev_to_file(root_dir):
     """
@@ -228,6 +233,7 @@ def gitrev_to_file(root_dir):
     except (subprocess.CalledProcessError,OSError) as err:
         print('err:', err)
 
+
 def combine_json(root_dir):
 
     master = []
@@ -280,6 +286,7 @@ def combine_json(root_dir):
     fp.write(json.dumps(master))
     fp.close()
 
+
 def generate():
 
     import shutil
@@ -296,6 +303,7 @@ def generate():
         fp = open(hashes_fname,'w')
         fp.write(json.dumps(hashes))
         fp.close()
+
 
 if __name__=='__main__':
     generate()
