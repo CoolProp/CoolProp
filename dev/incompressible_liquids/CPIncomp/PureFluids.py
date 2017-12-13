@@ -2,10 +2,12 @@ from __future__ import division, print_function
 import numpy as np
 from .DataObjects import PureData
 
+
 class TherminolD12(PureData):
     """
     Heat transfer fluid Therminol D12 by Solutia
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -27,10 +29,12 @@ class TherminolD12(PureData):
         self.reference   = "Therminol2014"
         self.reshapeAll()
 
+
 class TherminolVP1(PureData):
     """
     Heat transfer fluid Therminol VP-1 by Solutia
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -57,6 +61,7 @@ class Therminol66(PureData):
     """
     Heat transfer fluid Therminol 66 by Solutia
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -83,6 +88,7 @@ class Therminol72(PureData):
     """
     Heat transfer fluid Therminol 72 by Solutia
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -105,11 +111,11 @@ class Therminol72(PureData):
         self.reshapeAll()
 
 
-
 class DowthermJ(PureData):
     """
     Heat transfer fluid Dowtherm J by Dow Chemicals
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -131,10 +137,12 @@ class DowthermJ(PureData):
         self.reference   = "Dow1997"
         self.reshapeAll()
 
+
 class DowthermQ(PureData):
     """
     Heat transfer fluid Dowtherm Q by Dow Chemicals
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -161,6 +169,7 @@ class Texatherm22(PureData):
     """
     Heat transfer fluid Texatherm 22 by Texaco
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -187,6 +196,7 @@ class SylthermXLT(PureData):
     """
     Heat transfer fluid Syltherm XLT by Dow Chemicals
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -211,6 +221,7 @@ class HC50(PureData):
     """
     Heat transfer fluid Dynalene HC-50
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -237,6 +248,7 @@ class HC40(PureData):
     """
     Heat transfer fluid Dynalene HC-40
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -263,6 +275,7 @@ class HC30(PureData):
     """
     Heat transfer fluid Dynalene HC-30
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -289,6 +302,7 @@ class HC20(PureData):
     """
     Heat transfer fluid Dynalene HC-20
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -315,6 +329,7 @@ class HC10(PureData):
     """
     Heat transfer fluid Dynalene HC-10
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -337,7 +352,6 @@ class HC10(PureData):
         self.reshapeAll()
 
 
-
 ## Paratherm, see http://paracalc.paratherm.com
 class PCR(PureData):
     """
@@ -349,6 +363,7 @@ class PCR(PureData):
     system design and component specification, and eliminate contamination and
     costly clean-up.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -371,8 +386,6 @@ class PCR(PureData):
         self.reshapeAll()
 
 
-
-
 class PGLT(PureData):
     """
     Heat transfer fluid Paratherm GLT The Paratherm GLT heat transfer fluid is
@@ -380,6 +393,7 @@ class PGLT(PureData):
     liquid-phase heating systems to 550 F using fired heaters and to 575 F in
     waste-heat recovery systems.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -402,7 +416,6 @@ class PGLT(PureData):
         self.reshapeAll()
 
 
-
 class PHE(PureData):
     """
     The Paratherm HE high flash and fire point heat transfer fluid is rated for
@@ -414,6 +427,7 @@ class PHE(PureData):
     Non-toxic, the HE fluid is safe to use and easy to dispose. It can be
     safely combined with spent lubricating oils and recycled locally.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -436,13 +450,13 @@ class PHE(PureData):
         self.reshapeAll()
 
 
-
 class PHR(PureData):
     """
     The Paratherm HR Heat Transfer Fluid is an alkylated-aromatic based heat
     transfer fluid formulated for closed loop liquid phase heating to 650 F in
     fired heaters and 675 F in waste heat recovery and full convection heaters.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -465,8 +479,6 @@ class PHR(PureData):
         self.reshapeAll()
 
 
-
-
 class PLR(PureData):
     """
     The Paratherm LR low-range heat transfer fluid is rated for service from
@@ -476,6 +488,7 @@ class PLR(PureData):
     engineered to provide extended performance under rugged operating
     conditions, yet is easy and safe to handle.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -498,8 +511,6 @@ class PLR(PureData):
         self.reshapeAll()
 
 
-
-
 class PMR(PureData):
     """
     Paratherm MR is a food grade (NSF Certified) single fluid heating and
@@ -507,6 +518,7 @@ class PMR(PureData):
     caused by steam/chilled water temperature control systems. Quick low-
     temperature start-ups.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -529,8 +541,6 @@ class PMR(PureData):
         self.reshapeAll()
 
 
-
-
 class PNF(PureData):
     """
     The Paratherm NF heat transfer fluid is highly efficient, thermally stable
@@ -541,6 +551,7 @@ class PNF(PureData):
     tough and durable with a proven record of success under demanding
     conditions, yet is easy and safe to handle.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -567,6 +578,7 @@ class Water(PureData):
     """
     This is just a fit of the full EOS from Wagner and Pruss
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -593,10 +605,11 @@ class Water(PureData):
 
 class Pirobloc(PureData):
     """
-    Pirobloc HTF-BASIC is a fluid for heat transmission specially 
-    formulated from synthetic oils and additives. It allows to work 
-    till 330C in a close circuit. 
+    Pirobloc HTF-BASIC is a fluid for heat transmission specially
+    formulated from synthetic oils and additives. It allows to work
+    till 330C in a close circuit.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -620,8 +633,9 @@ class Pirobloc(PureData):
 
 class Syltherm800(PureData):
     """
-    Syltherm800 is a fluid for high temperature heat transfer. 
+    Syltherm800 is a fluid for high temperature heat transfer.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -646,8 +660,9 @@ class Syltherm800(PureData):
 
 class DynaleneSF(PureData):
     """
-    Dynalene SF is a fluid for high temperature heat transfer. 
+    Dynalene SF is a fluid for high temperature heat transfer.
     """
+
     def __init__(self):
         PureData.__init__(self)
         self.density.source           = self.density.SOURCE_DATA
@@ -666,5 +681,3 @@ class DynaleneSF(PureData):
         self.description = "Dynalene SF"
         self.reference   = "Dynalene, Inc."
         self.reshapeAll()
-
-

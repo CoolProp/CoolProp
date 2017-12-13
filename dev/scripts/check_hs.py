@@ -42,7 +42,6 @@ for Fluid in CoolProp.__fluids__:
                 print T, Q , '|||', '"T","S",',s,',"H",',h,',"'+Fluid+'"', '|||', VE
                 ax.plot(s,h,'o',mfc='none')
 
-
     for h in np.linspace(hL_Tmin, hV_Tmin + 1500,100):
         for s in np.linspace(sL_Tmin+0.01,sV_Tmin,100):
             try:

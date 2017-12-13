@@ -11,6 +11,7 @@ import scipy.optimize
 import xalglib
 import os,sys
 
+
 def fit_rational_polynomial(x, y, xfine, n, d):
 
     def obj(x, *AB):
@@ -68,6 +69,7 @@ def fit_rational_polynomial(x, y, xfine, n, d):
                 B = list(AB[n+1::]) + [1]
                 )
 
+
 class SplineFitter(object):
     def __init__(self):
         self.Nconstraints = 0
@@ -110,11 +112,15 @@ class SplineFitter(object):
         return self.a*x**3 + self.b*x**2 + self.c*x + self.d;
 
 # See http://stackoverflow.com/a/4983359
+
+
 def strictly_increasing(L):
     return all(x<y for x, y in zip(L, L[1:]))
 
+
 def strictly_decreasing(L):
     return all(x>y for x, y in zip(L, L[1:]))
+
 
 if not os.path.exists('hsancillaries.json'):
     from matplotlib.backends.backend_pdf import PdfPages
@@ -239,4 +245,3 @@ else:
         fp.close()
 
         print('writing '+ fluid)
-

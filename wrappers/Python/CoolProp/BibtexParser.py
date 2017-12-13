@@ -14,11 +14,16 @@ import os
 import pybtex.style.formatting as formatting
 from pybtex.style.template import node, join
 # Create our new function
+
+
 @node
 def toplevel(children, data):
     return join(sep=' ') [children].format_data(data)
+
+
 # And now, we over-write the function with our desired function.  Et voila! It works!
 formatting.toplevel = toplevel
+
 
 class BibTeXerClass(object):
     """
@@ -28,7 +33,6 @@ class BibTeXerClass(object):
 
     def __init__(self, fName = u'../../../CoolPropBibTeXLibrary.bib'):
         self.loadLibrary(fName)
-
 
     def loadLibrary(self, path, keys=[], encoding="latex"):
         """Open a BibTex file and do some initial parsing.
@@ -89,7 +93,6 @@ class BibTeXerClass(object):
                         entry.persons[key][i]._last = self.stripCurls(entry.persons[key][i].last())
                         entry.persons[key][i]._lineage = self.stripCurls(entry.persons[key][i].lineage())
 
-
     def stripCurls(self, text):
         """Remove curly brackets from processed Latex code
 
@@ -117,7 +120,6 @@ class BibTeXerClass(object):
 
         stripped = text.translate(table)
         return stripped
-
 
     def getBibliography(self, keys=None, fmt="plaintext", style="unsrtalpha", enc=None, objects=False):
         """This function creates a formatted bibliography according to the
@@ -150,7 +152,6 @@ class BibTeXerClass(object):
         contents = stream.getvalue()
         stream.close()
         return contents
-
 
     def getEntry(self, key, label=False, fmt="plaintext", style="unsrtalpha", enc=None):
         """If you only want a single entry from your bibliography and not the
@@ -202,8 +203,8 @@ class BibTeXerClass(object):
         return contents
 
 
-
 #getEntry(self, key, label=False, fmt="markdown", style="unsrtalpha", enc=None):
+
 
 if __name__=='__main__':
     B = BibTeXerClass('../../../CoolPropBibTeXLibrary.bib')
@@ -215,9 +216,3 @@ if __name__=='__main__':
     print(B.getEntry(key='Mulero-JPCRD-2012', fmt='markdown'))
     print("\nText:")
     print(B.getEntry(key='Mulero-JPCRD-2012', fmt='plaintext'))
-
-
-
-
-
-

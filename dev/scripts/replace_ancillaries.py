@@ -22,6 +22,3 @@ for fluid in glob.glob('../fluids/*.json'):
         jj['ANCILLARIES']['pS'] = pS
         with open(fluid, 'w') as fp:
             json.dump(jj, fp)
-
-
-

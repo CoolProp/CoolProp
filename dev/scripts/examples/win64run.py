@@ -2,6 +2,7 @@ import subprocess, os
 from example_generator import *
 import requests
 
+
 def DownloadFile(url, outdir):
     fname = url.rsplit('/',1)[1]
     r = requests.get(url)
@@ -11,6 +12,7 @@ def DownloadFile(url, outdir):
             f.write(chunk)
     f.close()
     return
+
 
 if __name__=='__main__':
 

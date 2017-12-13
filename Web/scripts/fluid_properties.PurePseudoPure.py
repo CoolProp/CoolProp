@@ -8,13 +8,16 @@ root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 csvfile = os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')
 indexfile = os.path.join(web_dir,'fluid_properties', 'fluidstoc.rst.in')
 
+
 class Dossier:
     def __init__(self):
         self.data = {}
+
     def add(self, key, value):
         if key not in self.data:
             self.data[key] = []
         self.data[key].append(value)
+
 
 d = Dossier()
 
@@ -59,14 +62,17 @@ import pandas
 df = pandas.DataFrame(d.data)
 df = df.sort_values(by=['name'], ascending = [1])
 
+
 def build_citation(key):
     if not key:
         return ''
     else:
         return ':cite:`'+key+'`'
 
+
 def fluid_reference(fluid):
     return ':ref:`{fluid:s} <fluid_{fluid:s}>`'.format(fluid = fluid)
+
 
 # Write the table
 with open(csvfile,'w') as fp:

@@ -22,10 +22,12 @@ from warnings import warn
 # See: https://docs.python.org/2/library/csv.html#csv-examples
 import csv, codecs, cStringIO
 
+
 class UTF8Recoder:
     """
     Iterator that reads an encoded stream and reencodes the input to UTF-8
     """
+
     def __init__(self, f, encoding):
         self.reader = codecs.getreader(encoding)(f)
 
@@ -34,6 +36,7 @@ class UTF8Recoder:
 
     def next(self):
         return self.reader.next().encode("utf-8")
+
 
 class UnicodeReader:
     """
@@ -51,6 +54,7 @@ class UnicodeReader:
 
     def __iter__(self):
         return self
+
 
 class UnicodeWriter:
     """
@@ -82,7 +86,6 @@ class UnicodeWriter:
             self.writerow(row)
 
 
-
 class SolutionDataWriter(object):
     """
     A base class that defines all the variables needed
@@ -90,6 +93,7 @@ class SolutionDataWriter(object):
     put in your data and add some documentation for where the
     information came from.
     """
+
     def __init__(self):
         bibFile = os.path.join(os.path.dirname(__file__),'../../../CoolPropBibTeXLibrary.bib')
         self.bibtexer = BibTeXerClass(bibFile)
@@ -168,7 +172,6 @@ class SolutionDataWriter(object):
             self.primaryColour = 'blue'
             self.secondaryColour = 'red'
 
-
         baseSize = 297.0 * f # A4 in mm
         ratio = 210.0/297.0  # A4 in mm
         mm_to_inch = 3.93700787401575/100.0 # factor mm to inch
@@ -184,7 +187,6 @@ class SolutionDataWriter(object):
 
         if self.isportrait: self.figsize=(shortSide*mm_to_inch,longSide*mm_to_inch)
         else: self.figsize=(longSide*mm_to_inch,shortSide*mm_to_inch)
-
 
     def fitAll(self, fluidObject=SolutionData()):
 
@@ -312,7 +314,6 @@ class SolutionDataWriter(object):
 #            else:
 #                raise ValueError("Unknown xid specified.")
 
-
     def get_hash(self,data):
         return hashlib.sha224(data).hexdigest()
 
@@ -334,13 +335,11 @@ class SolutionDataWriter(object):
         fp.close()
         return True
 
-
     def get_json_file(self,name):
         return os.path.join("json","{0}.json".format(name))
 
     def get_report_file(self,name):
         return os.path.join("report","{0}_fitreport.{1}".format(name,self.ext))
-
 
     def toJSON(self,data,quiet=False):
         jobj = {}
@@ -402,10 +401,8 @@ class SolutionDataWriter(object):
         else:
             if not quiet: print(" ({0})".format("i"), end="")
 
-
         # Update the object:
         self.fromJSON(data=data)
-
 
     def fromJSON(self,data=SolutionData()):
 
@@ -444,7 +441,6 @@ class SolutionDataWriter(object):
 
             return data
 
-
     def printStatusID(self, fluidObjs, obj):
         #obj = fluidObjs[num]
         if obj==fluidObjs[0]:
@@ -456,7 +452,6 @@ class SolutionDataWriter(object):
 
         sys.stdout.flush()
         return
-
 
     def fitFluidList(self, fluidObjs):
         print("Fitting normal fluids:", end="")
@@ -472,7 +467,6 @@ class SolutionDataWriter(object):
         print(" ... done")
         return
 
-
     def readFluidList(self, fluidObjs):
         print("Reading fluids:", end="")
         for obj in fluidObjs:
@@ -487,7 +481,6 @@ class SolutionDataWriter(object):
         print(" ... done")
         return
 
-
     def fitSecCoolList(self, fluidObjs):
         print("Fitting SecCool fluids:", end="")
         for obj in fluidObjs:
@@ -501,7 +494,6 @@ class SolutionDataWriter(object):
                 pass
         print(" ... done")
         return
-
 
     def writeFluidList(self, fluidObjs):
         print("Writing fluids to JSON:", end="")
@@ -554,7 +546,6 @@ class SolutionDataWriter(object):
 
         print(" ... done")
         return
-
 
     #####################################
     # Plotting routines
@@ -626,7 +617,6 @@ class SolutionDataWriter(object):
             ax.plot(x_toPlot[i],y_toPlot[i],color=color)
         return x_toPlot,y_toPlot
 
-
     def plotValues(self,axVal,axErr,solObj=SolutionData(),dataObj=IncompressibleData(),func=None,old=None):
         """
         Plots two data series using the same axis. You can
@@ -668,7 +658,6 @@ class SolutionDataWriter(object):
             dataFormatter['marker'] = 'o'
             dataFormatter['ls']     = 'none'
 
-
             dataObj.setxyData(solObj.temperature.data,solObj.concentration.data)
 
             tData = dataObj.xData
@@ -684,7 +673,6 @@ class SolutionDataWriter(object):
                         zError[i,j]= func(tData[i],pData,xData[j])
 
                 zError = self.relError(zData, zError) * 1e2
-
 
                 ## Find the column with the largest single error
                 #maxVal = np.amax(zError, axis=0) # largest error per column
@@ -735,7 +723,6 @@ class SolutionDataWriter(object):
             #    zData = np.array(zData.flat)
             #else:
             #    raise ValueError("Cannot plot non-flat arrays!")
-
 
         # Copy the arrays
         tFunc = tData
@@ -845,14 +832,9 @@ class SolutionDataWriter(object):
             #axErr.yaxis.set_visible(False)
             #axErr.plot(pData, zFunc, label='function' , **fitFormatter)
 
-
-
-
-
         #else:
         #    plt.setp(axErr.get_yticklabels(), visible=False)
         #    plt.setp(axErr.yaxis.get_label(), visible=False)
-
 
     def printFluidInfo(self,ax,solObj=SolutionData()):
         """
@@ -888,7 +870,6 @@ class SolutionDataWriter(object):
         annotateSettingsText['fontsize']   = 'small'
         annotateSettingsText['fontweight'] = 'medium'
 
-
         #ax.set_title('Fitting Report for {0}'.format(solObj.name))
         yHead = 0.0
         if self.ispage:
@@ -915,8 +896,6 @@ class SolutionDataWriter(object):
             myAnnotate('Description: ',solObj.description.encode("latex"),x=x,y=y); x += .0; y -= dy
         else:
             myAnnotate('Description: ',solObj.description,x=x,y=y); x += .0; y -= dy
-
-
 
         # TODO: Debug bibtexer
         refs = solObj.reference.split(",")
@@ -1001,7 +980,6 @@ class SolutionDataWriter(object):
             myAnnotate('Tfreeze: ','no information',x=x,y=y)
         x += .0; y -= dy
 
-
         #ax5.set_xlabel(ur'$\mathregular{Temperature\/(\u00B0C)}$')
 
         #x += dx; y = yStart
@@ -1021,8 +999,6 @@ class SolutionDataWriter(object):
 
     def printFitDetails(self):
         pass
-
-
 
     def makeFitReportPage(self, solObj=SolutionData(), pdfObj=None, quiet=False):
         """
@@ -1173,8 +1149,6 @@ class SolutionDataWriter(object):
             a.xaxis.set_major_locator(MaxNLocator(5))
             #a.yaxis.set_major_locator(MaxNLocator(7))
 
-
-
         # print headlines etc.
         lims = self.printFluidInfo(table_axis, solObj)
         # Prepare the legend
@@ -1228,7 +1202,6 @@ class SolutionDataWriter(object):
 
         plt.close(fig)
         pass
-
 
     def makeSolutionPlots(self, solObjs=[SolutionData()], pdfObj=None):
         """
@@ -1321,8 +1294,6 @@ class SolutionDataWriter(object):
         plt.savefig("all_solutions_00.pdf")
         return 0
 
-
-
     #####################################
     # Table generation routines
     #####################################
@@ -1388,15 +1359,12 @@ class SolutionDataWriter(object):
         #self.writeTxtTableToFile(path,table)
         return True
 
-
-
     def getReportLink(self, name):
         reportFile = os.path.join("..","_static","fluid_properties","Incompressibles_reports","{0}_fitreport.{1}".format(name,self.ext))
         return self.d(name,reportFile)
 
     def getCitation(self, keys):
         return u":cite:`{0}`".format(keys)
-
 
     def checkForNumber(self, number):
         try:
@@ -1441,8 +1409,6 @@ class SolutionDataWriter(object):
         # TODO: This is a dirty hack!
         if np.any(xmin>0.0) and np.any(xmax<1.0): use_x = True
         else: use_x = False
-
-
 
         header = [r'Name', r'Description', r'Reference', r'{$T_\text{min}$ (\si{\celsius})}', r'{$T_\text{max}$ (\si{\celsius})}', r'{$T_\text{base}$ (\si{\kelvin})}']
         if use_x: header.extend([r'{$x_\text{min}$}', r'{$x_\text{max}$}'])
@@ -1524,7 +1490,6 @@ class SolutionDataWriter(object):
 
         if len(objLists)!=len(labelList):
             raise ValueError("Wrong length")
-
 
         header = [u'Property']
         header.extend(labelList)
@@ -1644,7 +1609,6 @@ class SolutionDataWriter(object):
                 typTable.append(expPLine)
                 typTable.append([r"\midrule"])
 
-
         errString = ""
         for lin in errTable:
             errString += " & ".join(lin) + "\\\\ \n"
@@ -1756,8 +1720,3 @@ class SolutionDataWriter(object):
 
         self.writeTableToFile(path, testTable)
         return True
-
-
-
-
-

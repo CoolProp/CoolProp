@@ -76,4 +76,3 @@ for line in lines:
                           betaT = betaT,
                           gammaT = gammaT,
                           F = F)
-

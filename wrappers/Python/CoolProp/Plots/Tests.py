@@ -3,6 +3,7 @@ from __future__ import print_function, division, absolute_import
 
 from CoolProp.Plots import PropertyPlot #TODO: Change to absolute import
 
+
 def main():
     fluid_ref = 'n-Pentane'
     for plot_type in ['Ts']: #['pt', 'ph', 'ps', 'ts', 'pt', 'prho', 'trho']:
@@ -12,6 +13,7 @@ def main():
         plt.draw_isolines('P', [100*1e3, 2000*1e3])
         plt.draw_isolines('D', [2, 600])
         plt.show()
+
 
 if __name__ == "__main__":
     main()

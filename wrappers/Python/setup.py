@@ -2,10 +2,12 @@ from __future__ import print_function
 import platform
 import subprocess, shutil, os, sys, glob
 
+
 def copy_files():
     def copytree(old,new):
         print(old,'-->',new)
         shutil.copytree(old, new)
+
     def copy2(old, new):
         print(old,'-->',new)
         shutil.copy2(old, new)
@@ -20,15 +22,18 @@ def copy_files():
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 
+
 def remove_files():
     import shutil
     shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
     os.remove(os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files removed.')
 
+
 def touch(fname):
     open(fname, 'a').close()
     os.utime(fname, None)
+
 
 def recursive_collect_includes():
     thefiles = []
@@ -36,6 +41,7 @@ def recursive_collect_includes():
     for root, dirs, files in os.walk(include_path):
         thefiles += [os.path.relpath(os.path.join(root,_f), 'CoolProp') for _f in files]
     return thefiles
+
 
 if __name__=='__main__':
 
@@ -49,8 +55,6 @@ if __name__=='__main__':
             print('switching compiler to g++ for OSX')
     except:
         pass
-
-
 
     # ******************************
     #       CMAKE OPTIONS

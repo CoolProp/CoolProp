@@ -3,6 +3,7 @@ import json, CoolProp, sys
 
 CP = CoolProp.CoolProp
 
+
 def inject_hsanchor(fluid, i, json_data):
 
     Tanchor = 1.1*CoolProp.CoolProp.PropsSI('Tcrit',fluid)
@@ -23,6 +24,7 @@ def inject_hsanchor(fluid, i, json_data):
           "smolar": sanchor_molar,
           "smolar_units": "J/mol/K"
     }
+
 
 def inject_triples(fluid, i, json_data):
 
@@ -78,6 +80,7 @@ def inject_critical(fluid, json_data):
           "smolar_units": "J/mol/K"
     }
 
+
 def inject_reducing(fluid, i, json_data):
     """
     Inject values for pressure, enthalpy, entropy for reducing point
@@ -98,6 +101,7 @@ def inject_reducing(fluid, i, json_data):
           "smolar_units": "J/mol/K"
     }
 
+
 def inject_acentric(fluid, i, json_data):
     """
     Inject values for acentric factor for i-th EOS
@@ -107,6 +111,7 @@ def inject_acentric(fluid, i, json_data):
     p = CoolProp.CoolProp.PropsSI('P','T',Tc*0.7,"Q",0,fluid)
     import math
     json_data['EOS'][i]['acentric'] = -math.log10(p/pc)-1
+
 
 def inject_states(fluid):
     fluid_path = '../fluids/'+fluid+'.json'
@@ -127,6 +132,7 @@ def inject_states(fluid):
     from package_json import json_options
     with open(fluid_path, 'w') as fp:
         fp.write(json.dumps(json_data, **json_options))
+
 
 if __name__=='__main__':
     #jj = json.loads(CP.get_config_as_json_string())

@@ -13,9 +13,11 @@ import CoolProp.CoolProp as CP
 LIBRARY = [i/6.0 for i in range(1,151)]+[0.35+i/2000 for i in range(1,100)]+[0.05+0.001*i for i in range(1,100)]+[i+0.5 for i in range(10)]
 #LIBRARY = [i/1000 for i in range(1,20000)]
 
+
 class Sample(object):
     def __init__(self,v):
         self.v = v
+
 
 class GeneticAncillaryFitter(object):
     def __init__(self,
@@ -124,7 +126,7 @@ class GeneticAncillaryFitter(object):
             self.LHS *= self.T/self.Tc
 
     def generate_random_chromosomes(self,):
-        ''' 
+        '''
         Create a list of random chromosomes to seed our alogrithm.
         '''
         chromos = []
@@ -133,7 +135,7 @@ class GeneticAncillaryFitter(object):
         return chromos
 
     def fitness(self, chromo):
-        ''' 
+        '''
         Fitness of a chromo is the sum of the squares of the error of the correlation
         '''
 
@@ -182,7 +184,7 @@ class GeneticAncillaryFitter(object):
         return chromo.fitness
 
     def tourny_select_chromo(self, samples):
-        ''' 
+        '''
         Randomly select two chromosomes from the samples, then return the one
         with the best fitness.
         '''
@@ -194,7 +196,7 @@ class GeneticAncillaryFitter(object):
             return b
 
     def breed(self, a, b):
-        ''' 
+        '''
         Breed two chromosomes by splicing them in a random spot and combining
         them together to form two new chromos.
         '''
@@ -204,7 +206,7 @@ class GeneticAncillaryFitter(object):
         return Sample(sorted(new_a)), Sample(sorted(new_b))
 
     def mutate(self, chromo):
-        ''' 
+        '''
         Mutate a chromosome by changing one of the parameters, but only if it improves the fitness
         '''
         v = chromo.v
@@ -308,6 +310,7 @@ class GeneticAncillaryFitter(object):
 
         return j
 
+
 def build_ancillaries(name, **kwargs):
 
     j = dict()
@@ -325,6 +328,7 @@ def build_ancillaries(name, **kwargs):
     print >> fp, json.dumps(j, indent = 2)
     fp.close()
 
+
 def build_all_ancillaries():
     for fluid in sorted(CoolProp.__fluids__):
         print fluid
@@ -336,6 +340,7 @@ def build_all_ancillaries():
             build_ancillaries(fluid, Tlims = [CP.Props(fluid,'Ttriple'), CP.Props(fluid, 'Tcrit')-2])
         else:
             build_ancillaries(fluid)
+
 
 if __name__ == "__main__":
 

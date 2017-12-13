@@ -1,5 +1,6 @@
 import CoolProp, json
 
+
 def extract_coeffs(lines):
     N_normal, C_normal, N_critical, C_critical, N_spare, C_spare = [int(el) for el in lines[0].split('!')[0].strip().split(' ') if el]
 
@@ -35,6 +36,7 @@ def extract_coeffs(lines):
             )
 
     return terms
+
 
 def extract_active_EOS(file_name):
     with open(file_name, 'r') as fp:
@@ -84,14 +86,18 @@ def extract_active_EOS(file_name):
     del file_name, iEOS, iEOS_start, iEOS_end, unpack, lines, line, i
     return locals().copy()
 
+
 def build_states():
     return []
+
 
 def build_alpha0(ALPHA0):
     return []
 
+
 def build_alphar(EOS):
     return []
+
 
 def write(EOS, ALPHA0, json_file):
 
@@ -117,6 +123,7 @@ def write(EOS, ALPHA0, json_file):
 
     with open(json_file, 'w') as fp:
         json.dump(base, fp, indent = 2, sort_keys = True)
+
 
 if __name__=='__main__':
     EOS = extract_active_EOS('/Users/ian/Downloads/MDM.FLD')

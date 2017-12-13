@@ -598,6 +598,7 @@ low_level_interface = [
     }
 ]
 
+
 class BaseParser(object):
 
     def __init__(self):
@@ -627,6 +628,7 @@ class BaseParser(object):
             return self.function_name_mapping[name]
         else:
             return name
+
 
 class Python(BaseParser):
 
@@ -678,6 +680,7 @@ class Python(BaseParser):
                           'import CoolProp.CoolProp as CoolProp',
                           'from CoolProp.HumidAirProp import HAPropsSI',
                           'from math import sin\n'])
+
 
 class Octave(BaseParser):
 
@@ -802,6 +805,7 @@ class R(BaseParser):
     def header(self):
         return 'dyn.load(paste("CoolProp", .Platform$dynlib.ext, sep=""))\nlibrary(methods) # See http://stackoverflow.com/a/19468533\nsource("CoolProp.R")\ncacheMetaData(1)\n'
 
+
 class MATLAB(BaseParser):
 
     function_name_mapping = dict(Props1SI = 'CoolProp.Props1SI',
@@ -865,6 +869,7 @@ class MATLAB(BaseParser):
 
     def header(self):
         return ''
+
 
 class Java(BaseParser):
 
@@ -930,6 +935,7 @@ class Java(BaseParser):
 
     def footer(self):
         return '\n    }\n}'
+
 
 class Csharp(BaseParser):
 

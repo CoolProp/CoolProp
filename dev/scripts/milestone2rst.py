@@ -1,6 +1,7 @@
 from __future__ import print_function
 import urllib, json, sys, os
 
+
 def get_milestones(milestone):
     fname = milestone+'-milestones.json'
     if not os.path.exists(fname):
@@ -10,6 +11,7 @@ def get_milestones(milestone):
             fp.write(json.dumps(milestones_json, indent = 2))
     with open(fname,'r') as fp:
         return json.load(fp)
+
 
 def get_PR_JSON(milestone, number):
     # Get the merged pull requests associated with the milestone
@@ -22,6 +24,7 @@ def get_PR_JSON(milestone, number):
     with open(fname,'r') as fp:
         return json.load(fp)
 
+
 def get_issues_JSON(milestone, number):
     # Get the merged pull requests associated with the milestone
     fname = milestone+'-issues.json'
@@ -32,6 +35,7 @@ def get_issues_JSON(milestone, number):
             fp.write(json.dumps(issues, indent = 2))
     with open(fname,'r') as fp:
         return json.load(fp)
+
 
 def generate_issues(milestone):
 
@@ -54,6 +58,7 @@ def generate_issues(milestone):
 
     return rst
 
+
 def generate_PR(milestone):
 
     # Find the milestone number for the given name
@@ -73,6 +78,7 @@ def generate_PR(milestone):
             rst += '* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}\n'.format(n = issue['number'], t = issue['title'].encode('utf-8'))
 
     return rst
+
 
 if __name__=='__main__':
     if len(sys.argv) != 2:

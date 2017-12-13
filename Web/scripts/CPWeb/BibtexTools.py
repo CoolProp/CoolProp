@@ -6,6 +6,7 @@ Created on 26 Sep 2014
 import os
 from CoolProp.BibtexParser import BibTeXerClass
 
+
 def getPath(filename, search=True):
     # Path to root
     coolprop_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))

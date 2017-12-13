@@ -7,6 +7,7 @@ import sys
 # Here we define the types. This is done to keep the definitions at one
 # central place instead of hiding them somewhere in the data.
 
+
 class IncompressibleData(object):
     """
     The work horse of the incompressible classes.
@@ -94,7 +95,6 @@ class IncompressibleData(object):
         offset = coeffs[0][0]
         coeffs = np.array(coeffs.flat)[1:]
         return np.polynomial.polynomial.polyval(x-offset, coeffs)
-
 
         ### Base functions that handle the custom data type, just a place holder to show the structure.
     def baseFunction(self, x, y=0.0, xbase=0.0, ybase=0.0, c=None):
@@ -199,7 +199,6 @@ class IncompressibleData(object):
         else:
             if self.DEBUG: print("Cannot update xData, value is set already.")
 
-
     def setyData(self, yData):
         if self.yData is None:
             self.yData = yData
@@ -209,7 +208,6 @@ class IncompressibleData(object):
     def setxyData(self, xData, yData):
         self.setxData(xData)
         self.setyData(yData)
-
 
     def toJSON(self):
         j = {}
@@ -368,7 +366,6 @@ class IncompressibleFitter(object):
             if DEBUG: print("Sum of squared errors: {0}".format(np.square(sErr).sum()))
             if DEBUG: print("Root mean squared errors: {0}".format(np.sqrt(np.square(sErr).mean()).sum()))
             return coeffs,sErr
-
 
         # Select if 1D or 2D fitting
         if yc==1 or xr==1: # 1D fitting, only one input
@@ -618,7 +615,3 @@ class IncompressibleFitter(object):
                 if DEBUG: print("Fit failed for {0}. ".format(fit))
                 if DEBUG: print("--------------------------------------------------------------")
                 return coeffs,1
-
-
-
-

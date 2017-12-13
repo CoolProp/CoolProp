@@ -12,6 +12,7 @@ import numpy as np
 # for packaging using cx_Freeze)
 #if os.path.exists('lib') and os.path.abspath(os.path.join(os.curdir,'lib')) not in os.:
 
+
 class PlotPanel(wx.Panel):
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent, **kwargs)
@@ -25,6 +26,7 @@ class PlotPanel(wx.Panel):
         #sizer.Add(self.toolbar)
         self.SetSizer(sizer)
         sizer.Layout()
+
 
 class TSPlotFrame(wx.Frame):
     def __init__(self, Fluid):
@@ -54,6 +56,7 @@ class TSPlotFrame(wx.Frame):
 
         self.SetMenuBar(self.MenuBar)
 
+
 class PsychOptions(wx.Dialog):
     def __init__(self,parent):
         wx.Dialog.__init__(self,parent)
@@ -80,6 +83,7 @@ class PsychOptions(wx.Dialog):
         sizer.Add(self.GoButton)
         sizer.Layout()
         self.Fit()
+
 
 class PsychPlotFrame(wx.Frame):
     def __init__(self,Tmin = 263.15,Tmax=333.15,p = 101.325, **kwargs):
@@ -132,6 +136,7 @@ class PsychPlotFrame(wx.Frame):
 
         self.SetMenuBar(self.MenuBar)
 
+
 class PHPlotFrame(wx.Frame):
     def __init__(self, Fluid):
         wx.Frame.__init__(self, None,title='p-h plot: '+Fluid)
@@ -166,12 +171,14 @@ class PHPlotFrame(wx.Frame):
     def overlay_cycle(self):
         pass
 
+
 class SimpleGrid(wx.grid.Grid):
     def __init__(self, parent, ncol = 20, nrow = 8):
         wx.grid.Grid.__init__(self, parent)
 
         self.CreateGrid(ncol, nrow)
         [self.SetCellValue(i,j,'0.0') for i in range(20) for j in range(8)]
+
 
 class SaturationTableDialog(wx.Dialog):
     def __init__(self, parent):
@@ -256,6 +263,7 @@ class SaturationTableDialog(wx.Dialog):
             self.TminValue.SetValue(str(Ttriple + 0.01))
             self.TmaxValue.SetValue(str(Tcrit - 0.01))
 
+
 class SaturationTable(wx.Frame):
     def __init__(self, parent):
         wx.Frame.__init__(self, parent)
@@ -272,7 +280,6 @@ class SaturationTable(wx.Frame):
             self.add_menu()
         else:
             self.Destroy()
-
 
     def OnSelect(self, event = None):
         dlg = SaturationTableDialog(None)
@@ -316,7 +323,6 @@ class SaturationTable(wx.Frame):
         mnuItem0  = wx.MenuItem(self.File, -1, "Select All \tCtrl+A", "", wx.ITEM_NORMAL)
         mnuItem1  = wx.MenuItem(self.File, -1, "Copy selected data \tCtrl+C", "", wx.ITEM_NORMAL)
         mnuItem2  = wx.MenuItem(self.File, -1, "Copy table w/ headers \tCtrl+H", "", wx.ITEM_NORMAL)
-
 
         self.File.AppendItem(mnuItem0)
         self.File.AppendItem(mnuItem1)
@@ -392,6 +398,7 @@ class SaturationTable(wx.Frame):
             wx.MessageBox("Can't open the clipboard", "Error")
         event.Skip()
 
+
 class MainFrame(wx.Frame):
 
     def __init__(self):
@@ -442,7 +449,6 @@ class MainFrame(wx.Frame):
             PPF.Show()
         dlg.Destroy()
 
-
     def OnSatTable(self,event):
         TBL = SaturationTable(None)
         TBL.Show()
@@ -460,6 +466,7 @@ class MainFrame(wx.Frame):
         Fluid = self.TSPlot.FindItemById(event.Id).Label
         TS = TSPlotFrame(Fluid)
         TS.Show()
+
 
 if __name__=='__main__':
     app = wx.App(False)

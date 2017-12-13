@@ -7,6 +7,7 @@ class NitrateSalt(PureData,CoefficientData):
     """
     Heat transfer fluid based on 60% NaNO3 and 40% KNO3
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         PureData.__init__(self)
@@ -38,4 +39,3 @@ class NitrateSalt(PureData,CoefficientData):
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
         self.viscosity.source = self.viscosity.SOURCE_COEFFS
         self.viscosity.coeffs = np.array([[22.714],[-0.120],[2.281  * 1e-4],[-1.474 * 1e-7]])/1e3
-
