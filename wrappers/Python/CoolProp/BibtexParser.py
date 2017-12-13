@@ -215,9 +215,3 @@ if __name__=='__main__':
     print(B.getEntry(key='Mulero-JPCRD-2012', fmt='markdown'))
     print("\nText:")
     print(B.getEntry(key='Mulero-JPCRD-2012', fmt='plaintext'))
-
-
-
-
-
-

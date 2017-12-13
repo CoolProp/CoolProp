@@ -47,4 +47,3 @@ for line in grouping2:
     fp.write(' '.join([h.ljust(n) for h,n in zip(line,N)]) + '\n')
 fp.write(top_line + '\n')
 fp.close()
-

@@ -239,4 +239,3 @@ else:
         fp.close()
 
         print('writing '+ fluid)
-

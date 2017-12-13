@@ -1756,8 +1756,3 @@ class SolutionDataWriter(object):
 
         self.writeTableToFile(path, testTable)
         return True
-
-
-
-
-

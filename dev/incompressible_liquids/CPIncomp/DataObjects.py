@@ -583,14 +583,3 @@ class CoefficientData(SolutionData):
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_EXPPOLYNOMIAL
         self.viscosity.coeffs = self.convertMelinderArray(coeffs[4])
         self.viscosity.coeffs[0,0] -= math.log(1000) # Fixes the units mPa s -> Pa s
-
-
-
-
-
-
-
-
-
-
-

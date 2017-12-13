@@ -894,17 +894,3 @@ class AS55(PureData,DigitalData):
             if self.viscosity.DEBUG: print("{0}: Could not fit polynomial {1} coefficients: {2}".format(self.name,'viscosity',e))
             pass
         funcMu = None
-
-
-
-
-
-
-
-
-
-
-
-
-
-

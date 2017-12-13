@@ -39,4 +39,3 @@ for (tdb_,twb_) in zip(tdb,twb):
     s=0
     print "{Tdb:10.2f}{Twb:10.2f}{Tdp:10.2f}{R:10.1f}{W:10.5f}{h:10.2f}{v:10.3f}".format(W=W,Twb=twb_,Tdp=tdp,Tdb=tdb_,v=v,h=h,s=s,R=R)
 print "------------------------------------------------------------------------"
-

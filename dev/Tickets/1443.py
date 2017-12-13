@@ -1,11 +1,11 @@
-﻿from __future__ import print_function, division 
+﻿from __future__ import print_function, division
 
 import sys, threading
 
 from timeit import default_timer as timer
 from tqdm import tqdm
 
-import numpy as np 
+import numpy as np
 
 import CoolProp
 from CoolProp.CoolProp import AbstractState as AS
@@ -39,11 +39,11 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
     kind_o_index = [get_parameter_index(kind_o_single) for kind_o_single in kind_o]
 
     (input_pair, one, two) =generate_update_pair(kind_a_index,0,kind_b_index,1)
-    if one == 0: 
+    if one == 0:
         swap = False
-    else: 
+    else:
         swap = True
-    
+
     range_one = np.asanyarray(range_b)
     range_two = np.asanyarray(range_a)
 
@@ -55,7 +55,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
 
     progress_bar = tqdm(total=range_two.size*range_one.size, desc="{0:40s}".format(fluid))
     progress_bar.clear()
-    
+
     for cnt,one in np.ndenumerate(range_one):
         if not swap:
             kind_in1 = kind_b
@@ -70,7 +70,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
 
         # At this point, everything is prepared for the loop
         # vector_in1 contains the first set of inputs and
-        # vector_in2 contains the second set of inputs 
+        # vector_in2 contains the second set of inputs
 
 
         #CONF_CPP_DIR = "Call PropsSI_multi"
@@ -83,13 +83,13 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
         single_result = ResClass()
         guesses = CoolProp.CoolProp.PyGuessesStructure()
 
-        
+
 
         if CUR_CONF==CONF_CPP_DIR:
             set_config_bool(CoolProp.USE_GUESSES_IN_PROPSSI, False)
             start = timer()
-            try: 
-                tmp_result = PS(kind_o, kind_in1, vector_in1, kind_in2, vector_in2, fluid)	
+            try:
+                tmp_result = PS(kind_o, kind_in1, vector_in1, kind_in2, vector_in2, fluid)
             except:
                 ++err_count
                 pass
@@ -98,8 +98,8 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
         elif CUR_CONF==CONF_CPP_GUE:
             set_config_bool(CoolProp.USE_GUESSES_IN_PROPSSI, True)
             start = timer()
-            try: 
-                tmp_result = PS(kind_o, kind_in1, vector_in1, kind_in2, vector_in2, fluid)	
+            try:
+                tmp_result = PS(kind_o, kind_in1, vector_in1, kind_in2, vector_in2, fluid)
             except:
                 ++err_count
                 pass
@@ -108,7 +108,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
         elif CUR_CONF==CONF_PYT_DIR:
             start = timer()
             for i,two in np.ndenumerate(vector_in1):
-                try: 
+                try:
                     state.update(input_pair, two, one)
                     for kind_o_single in kind_o_index:
                         tmp_result = state.keyed_output(kind_o_single)
@@ -116,11 +116,11 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
                     ++err_count
                     pass
             end = timer()
- 
+
         elif CUR_CONF==CONF_PYT_GUE:
             start = timer()
             for i,two in np.ndenumerate(vector_in1):
-                try: 
+                try:
                     if i<1: state.update(input_pair, two, one)
                     else: state.update_with_guesses(input_pair, two, one, guess)
                     guesses.rhomolar = state.rhomolar()
@@ -145,7 +145,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
         progress_bar.update(range_two.size)
 
     progress_bar.close()
-    
+
     return result
 
 
@@ -241,7 +241,7 @@ def get_h_iso(state=AS("HEOS","Water")):
         state.update(CoolProp.PQ_INPUTS, p_c*0.75, 0.0)
         res.append(state.hmass())
         state.update(CoolProp.PQ_INPUTS, p_c*0.75, 1.0)
-        res.append(state.hmass())   
+        res.append(state.hmass())
         return np.array(res)
 
 results = {}
@@ -261,7 +261,7 @@ for fluid,state in zip(get_fluid_strings(mix),get_state_objects(get_fluid_string
         results[fluid][CNF]["HP"] = calc_isolines(fluid=fluid, kind_a="P", range_a=p_range, kind_b="Hmass", range_b=h_range, kind_o=["Hmass","Dmass","T","P"], CUR_CONF=CNF)
         #for result in results:
         #    print(str(result) + "h,p-inputs")
-    
+
 for FLD in sorted(results.keys()):
     for CNF in sorted(results[FLD].keys()):
         for INP in sorted(results[FLD][CNF].keys()):
@@ -273,7 +273,7 @@ for FLD in sorted(results.keys()):
             cur_res.time = 0
             for res in results[FLD][CNF][INP]:
                 cur_res.err_count += res.err_count
-                if cur_res.time == 0: 
+                if cur_res.time == 0:
                     cur_res.time = res.time
                 else:
                     cur_res.time = (cur_res.time*cur_res.size + res.time*res.size)/(cur_res.size + res.size)

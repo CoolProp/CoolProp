@@ -666,5 +666,3 @@ class DynaleneSF(PureData):
         self.description = "Dynalene SF"
         self.reference   = "Dynalene, Inc."
         self.reshapeAll()
-
-

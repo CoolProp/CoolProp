@@ -237,4 +237,3 @@ class SimpleCompressionCycle(BaseCompressionCycle):
         float
         """
         return (self.cycle_states[0,'H'] - self.cycle_states[3,'H']) / (self.cycle_states[1,'H'] - self.cycle_states[0,'H'])
-

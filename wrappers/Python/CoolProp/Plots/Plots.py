@@ -363,4 +363,3 @@ if __name__ == "__main__":
     #plot.calc_isolines(CoolProp.iSmass)
     #plot.calc_isolines(CoolProp.iHmass)
     plot.show()
-

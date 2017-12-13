@@ -618,7 +618,3 @@ class IncompressibleFitter(object):
                 if DEBUG: print("Fit failed for {0}. ".format(fit))
                 if DEBUG: print("--------------------------------------------------------------")
                 return coeffs,1
-
-
-
-

@@ -302,4 +302,3 @@ class MelinderExample(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-

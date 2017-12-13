@@ -38,4 +38,3 @@ class NitrateSalt(PureData,CoefficientData):
         self.viscosity.type = self.viscosity.INCOMPRESSIBLE_POLYNOMIAL
         self.viscosity.source = self.viscosity.SOURCE_COEFFS
         self.viscosity.coeffs = np.array([[22.714],[-0.120],[2.281  * 1e-4],[-1.474 * 1e-7]])/1e3
-

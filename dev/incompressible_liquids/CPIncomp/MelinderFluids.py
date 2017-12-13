@@ -830,4 +830,3 @@ class LISolution(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-

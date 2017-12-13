@@ -210,4 +210,3 @@ class HyCool50(PureData,DigitalData):
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
-

@@ -60,4 +60,3 @@ for chunk in chunks:
                           beta = str(BETA),
                           gamma = str(GAMMA)
                           )
-

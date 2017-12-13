@@ -174,5 +174,3 @@ class SimpleRankineCycle(BasePowerCycle):
         w_net = self.cycle_states[2].H - self.cycle_states[3].H - (self.cycle_states[1].H - self.cycle_states[0].H)
         q_boiler = self.cycle_states[2].H - self.cycle_states[1].H
         return w_net / q_boiler
-
-

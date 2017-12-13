@@ -546,12 +546,3 @@ if __name__=='__main__':
     Ref = 'R407F'
 
     PPFFitterClass(Ref)
-
-
-
-
-
-
-
-
-
