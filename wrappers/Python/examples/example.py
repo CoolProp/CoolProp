@@ -114,4 +114,3 @@ print('Relative humidity from last calculation:',
        CP.HAProps('R', 'T', 300, 'P', 101.325, 'W',
                    CP.HAProps('W', 'T', 300, 'P', 101.325, 'R', 0.5)),
        '(fractional)')
-

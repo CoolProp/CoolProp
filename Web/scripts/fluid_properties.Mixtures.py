@@ -7,8 +7,10 @@ import os.path
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 csvfile = os.path.join(web_dir,'fluid_properties','Mixtures.csv')
 
+
 def merge_args(*args):
     return " :raw-html:`<br/>` ".join(list(args))
+
 
 def printCoeff(number):
     if number is None or \
@@ -19,13 +21,16 @@ def printCoeff(number):
     long  = "{0:.14e}".format(number)
     return u':raw-html:`<span title="{1}">{0}</span>`'.format(short,long)
 
+
 class Dossier:
     def __init__(self):
         self.data = {}
+
     def add(self, key, value):
         if key not in self.data:
             self.data[key] = []
         self.data[key].append(value)
+
 
 d = Dossier()
 

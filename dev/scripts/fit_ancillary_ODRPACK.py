@@ -7,8 +7,9 @@ import textwrap
 import random
 from CoolProp.CoolProp import Props, get_REFPROPname
 
+
 def rsquared(x, y):
-    """ 
+    """
     Return R^2 where x and y are array-like.
 
     from http://stackoverflow.com/questions/893657/how-do-i-calculate-r-squared-using-python-and-numpy
@@ -16,6 +17,7 @@ def rsquared(x, y):
     import scipy.stats
     slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(x, y)
     return r_value**2
+
 
 def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed = 0.3, fName = None, add_critical = True):
     """
@@ -26,7 +28,7 @@ def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed 
         The fluid name for the fluid that will be used to generate the saturation data
     ClassName : The name of the class that will be used in the C++ code
     form : string
-        If ``'A'``, use a term of the form 
+        If ``'A'``, use a term of the form
     """
 
     if fName is None:
@@ -178,6 +180,7 @@ def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed 
     f.close()
     return the_string
 
+
 def saturation_pressure_brute(Ref, ClassName):
 
     Tc = Props(Ref,'Tcrit')
@@ -234,6 +237,7 @@ def saturation_pressure_brute(Ref, ClassName):
             bbest = b
             betabest = myoutput.beta
             print abserror, myoutput.sum_square, myoutput.sd_beta/myoutput.beta
+
 
 def saturation_pressure(Ref, ClassName, fName = None, LV = None):
 
@@ -348,6 +352,7 @@ def saturation_pressure(Ref, ClassName, fName = None, LV = None):
     f.write(the_string)
     f.close()
     return the_string
+
 
 if __name__ == '__main__':
     for RPFluid,Fluid in [('REFPROP-MIX:R32[0.47319469]&R125[0.2051091]&R134a[0.32169621]','R407F'),

@@ -44,20 +44,20 @@ PPF_cpp_template = """
     static double t[]={{{tcoeffs:s}}};
     static double d[]={{{dcoeffs:s}}};
     static double l[]={{{Lcoeffs:s}}};
-    
+
     // Other fluid parameters
     params.molemass = {molemass:g}; //[kg/kmol]
     params.Ttriple = {Ttriple:g}; //[K]
     params.accentricfactor = {accentric:g}; //[-]
     params.R_u = 8.314472;
     isPure = false;
-    
+
     // Critical parameters
     crit.rho = {rhocrit:g};
     crit.p = PressureUnit({pcrit:g},UNIT_KPA);
     crit.T = {Tcrit:g};
     crit.v = 1.0/crit.rho;
-    
+
     phirlist.push_back(new phir_power(N,d,t,l,1,{N_phir:d}-1,{N_phir:d}));
 
     phi0list.push_back(new phi0_lead(0, 0));
@@ -78,4 +78,3 @@ PPF_cpp_template = """
 {rhoL:s}
 {rhoV:s}
 """
-

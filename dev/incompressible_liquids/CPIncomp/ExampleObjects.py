@@ -3,6 +3,7 @@ import numpy as np
 from .DataObjects import PureData, SolutionData, DigitalData,\
     CoefficientData
 
+
 class PureExample(PureData):
     def __init__(self):
         PureData.__init__(self)
@@ -89,6 +90,7 @@ class DigitalExample(DigitalData):
         self.specific_heat.xData,self.specific_heat.yData,self.specific_heat.data = self.getArray(dataID="C", func=funcCp, x_in=self.temperature.data, y_in=self.concentration.data,DEBUG=self.specific_heat.DEBUG)
         self.specific_heat.source     = self.specific_heat.SOURCE_EQUATION
 
+
 class DigitalExamplePure(PureData,DigitalData):
     def __init__(self):
         DigitalData.__init__(self)
@@ -110,12 +112,16 @@ class DigitalExamplePure(PureData,DigitalData):
 
         def funcD(T,x):
             return CP.PropsSI('D','T',T,'P',1e7,'water')
+
         def funcC(T,x):
             return CP.PropsSI('C','T',T,'P',1e7,'water')
+
         def funcL(T,x):
             return CP.PropsSI('L','T',T,'P',1e7,'water')
+
         def funcV(T,x):
             return CP.PropsSI('V','T',T,'P',1e7,'water')
+
         def funcP(T,x):
             return CP.PropsSI('P','T',T,'Q',0.0,'water')
 
@@ -135,15 +141,12 @@ class DigitalExamplePure(PureData,DigitalData):
         self.saturation_pressure.source           = self.saturation_pressure.SOURCE_EQUATION
 
 
-
-
-
-
 class SecCoolExample(CoefficientData):
     """
     Ethanol-Water mixture according to Melinder book
     Source: SecCool Software
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "ExampleSecCool"
@@ -179,8 +182,6 @@ class SecCoolExample(CoefficientData):
            9.937483E-06,
           -1.346886E-06,
            4.141999E-08]))
-
-
 
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
         self.specific_heat.coeffs = self.convertSecCoolArray(np.array([
@@ -265,6 +266,7 @@ class MelinderExample(CoefficientData):
     Methanol-Water mixture according to Melinder book
     Source: Book
     """
+
     def __init__(self):
         CoefficientData.__init__(self)
         self.name = "ExampleMelinder"
@@ -302,4 +304,3 @@ class MelinderExample(CoefficientData):
         ])
 
         self.setMelinderMatrix(coeffs)
-

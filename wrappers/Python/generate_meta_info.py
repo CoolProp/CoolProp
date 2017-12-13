@@ -38,7 +38,6 @@ if pypi:
             continue
 
 
-
 if local:
     coolprop_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
     sys.path.append(os.path.join(coolprop_dir, 'dev'))
@@ -81,7 +80,6 @@ f = codecs.open(os.path.join(python_dir,target),mode='wb',encoding='utf-8')
 f.write(first_line)
 f.write(template.render(**local_info))
 f.close()
-
 
 
 template = """
@@ -157,10 +155,10 @@ template = """
 pushd wrappers\Python
 "%PYTHON%" setup.py install
 if errorlevel 1 exit 1
-popd 
- 
+popd
+
 :: Add more build steps here, if they are necessary.
- 
+
 :: See
 :: http://docs.continuum.io/conda/build.html
 :: for a list of environment variables that are set during the build process.
@@ -174,10 +172,10 @@ f.close()
 template = """
 pushd wrappers/Python
 $PYTHON setup.py install
-popd 
- 
+popd
+
 # Add more build steps here, if they are necessary.
- 
+
 # See
 # http://docs.continuum.io/conda/build.html
 # for a list of environment variables that are set during the build process.
@@ -189,8 +187,6 @@ f.write(template)
 f.close()
 
 
-
-
 template = """
 from __future__ import print_function
 import sys, shutil, subprocess, os, stat
@@ -198,9 +194,9 @@ import sys, shutil, subprocess, os, stat
 def run_command(cmd):
     '''given shell command, returns communication tuple of stdout and stderr'''
     print(str(__file__)+": "+' '.join(cmd))
-    return subprocess.Popen(cmd, 
-      stdout=subprocess.PIPE, 
-      stderr=subprocess.PIPE, 
+    return subprocess.Popen(cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
       stdin=subprocess.PIPE).communicate()
 #
 tar = os.path.abspath(os.path.join(os.path.dirname(__file__),'install_root')).strip()
@@ -209,7 +205,7 @@ cmd = ['conda','build','--python',str(ver[0])+'.'+str(ver[1])]
 print(run_command(['conda', 'clean', '-y', '-lts'])[0].decode("utf-8").strip())
 filename = os.path.abspath(run_command(cmd+['--output','.'])[0].decode("utf-8").strip())
 tar = os.path.join(tar,'Python_conda',os.path.basename(os.path.dirname(filename))).strip()
-try: 
+try:
     subprocess.check_call(cmd+['.'], stdout=sys.stdout, stderr=sys.stderr)
 except Exception as e:
     print("conda build failed: "+str(e))
@@ -220,7 +216,7 @@ except Exception as e:
     if os.path.isdir(tar): pass
     else: raise
 try:
-    print("Copying: "+str(filename)+" to "+str(tar)) 
+    print("Copying: "+str(filename)+" to "+str(tar))
     shutil.copy(filename,tar)
 except Exception as e:
     print("Copy operation failed: "+str(e))

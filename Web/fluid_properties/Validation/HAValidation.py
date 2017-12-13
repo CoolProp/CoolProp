@@ -37,6 +37,8 @@ for T in np.linspace(0,90,19)+273.15:
     print("{T:8.0f}{W:10.7f}{v:10.3f}{h:10.2f}{s:10.4f}".format(W=W,T=T-273.15,v=v,h=h,s=s))
 print('====================================================')
 print(' ')
+
+
 def HotAir(num):
     from CoolProp.HumidAirProp import HAPropsSI
     if num=='8':
@@ -133,12 +135,14 @@ def HotAir(num):
         print("{W:10.2f}{Twb:10.2f}{v:10.3f}{h:10.2f}{s:10.4f}{R:10.4f}".format(W=W,Twb=Twb,v=v,h=h,s=s,R=R))
     print('================================================================')
 
+
 HotAir('8')
 print(' ')
 HotAir('9')
 ##############################
 #### Virial Coefficients #####
 ##############################
+
 
 def Virials(variables):
     from CoolProp.HumidAirProp import HAProps_Aux
@@ -159,6 +163,7 @@ def Virials(variables):
         for var in variables:
             values+="%-20.10e" %(HAProps_Aux(var,T,100,0.0)[0])
         print(values)
+
 
 print("")
 print("Pure fluid Virial Coefficients")

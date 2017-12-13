@@ -10,6 +10,7 @@ T_max = 550 + 273.15
 p_max = 13000.e3
 p_cd = 5.e3
 
+
 def SimpleRankineCycle(T3, p3, p1, epsilon_e, epsilon_p, fluid='water'):
     h1 = PropsSI('H', 'P', p1, 'Q', 0., fluid)
     s1 = PropsSI('S', 'P', p1, 'Q', 0., fluid)
@@ -48,7 +49,6 @@ def SimpleRankineCycle(T3, p3, p1, epsilon_e, epsilon_p, fluid='water'):
       ]
     Ts.draw_process(states, iso_types=isot, line_opts={'color':'green', 'lw':1.5})
 
-
     ax = Ts.axis
     ax.text(Ts.system.S.from_SI(s1), Ts.system.T.from_SI(T1), ' 1', fontsize=10, rotation=0, color='r')
     ax.text(Ts.system.S.from_SI(s2), Ts.system.T.from_SI(T2), ' 2', fontsize=10, rotation=0, color='r')
@@ -58,6 +58,7 @@ def SimpleRankineCycle(T3, p3, p1, epsilon_e, epsilon_p, fluid='water'):
     ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(800),"Net work: %d kJ/kg" %(w_net/1000))
     ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(750),"Heat input: %d kJ/kg" %(q_boiler/1000))
     return Ts
+
 
 Ts = SimpleRankineCycle(T_max, p_max, p_cd, eta_e_s, eta_p_s, fluid="water")
 Ts.savefig('ticket-351.pdf')

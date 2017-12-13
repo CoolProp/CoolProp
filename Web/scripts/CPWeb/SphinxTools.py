@@ -100,9 +100,11 @@ style = pybtex.plugin.find_plugin('pybtex.style.formatting', 'plain')()
 backend = pybtex.plugin.find_plugin('pybtex.backends', 'html')()
 parser = pybtex.database.input.bibtex.Parser()
 
+
 def entry2html(entry):
     for e in entry:
         return e.text.render(backend).replace('{','').replace('}','').replace('\n', ' ')
+
 
 def generate_bibtex_string(fluid):
     string = ''
@@ -123,6 +125,7 @@ def generate_bibtex_string(fluid):
             print 'error:', E
         string += header_string + '\n\n.. raw:: html\n\n    <br><br> \n\n'.join(sect_strings)
     return string
+
 
 class FluidInfoTableGenerator(object):
 
@@ -197,6 +200,7 @@ class FluidInfoTableGenerator(object):
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
             print 'writing', os.path.join(path, self.name+'-info.csv')
             fp.write(out)
+
 
 class FluidGenerator(object):
     def __init__(self, fluid):

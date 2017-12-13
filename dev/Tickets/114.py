@@ -9,6 +9,7 @@ from CoolProp.CoolProp import FluidsList
 
 print "Testing TTSE for revision "+CoolProp.__gitrevision__
 
+
 def compareProperty(fluid="",p=0,what=""):
     global c_diff, c_unit, c_exce
 

@@ -12,13 +12,19 @@ if len(sys.argv) > 2:
     full_rebuild = False
     print "Cannot process more than one parameter: {0}".format(str(sys.argv))
 #
+
+
 def touch(fname):
     if os.path.exists(fname): os.utime(fname, None)
     else: open(fname, 'a').close()
 #
+
+
 def get_ftime(fname):
     if os.path.isfile(fname): return os.path.getctime(fname)
     else: return 0
+
+
 #
 web_dir      = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 script_dir   = os.path.abspath(os.path.join(web_dir,'scripts'))
@@ -80,6 +86,8 @@ if fil_time < lim_time and not full_rebuild:
 #     print "Executing {0}".format(script)
 #     subprocess.call('python {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
 #
+
+
 def run_script(path):
     if os.path.exists(path):
         file_path = os.path.dirname(path)
@@ -96,6 +104,7 @@ def run_script(path):
             print "Unknown file extension in {0}".format(path)
     else:
         print "Could not find the file {0}".format(path)
+
 
 # Inject the version of CoolProp into the doxygen configuration files
 # Put it at the end, overwrites prior value

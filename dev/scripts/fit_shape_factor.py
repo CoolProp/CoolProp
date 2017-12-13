@@ -70,6 +70,8 @@ plt.close('all')
 print 'rhomin = ',np.min(RHO.vec)
 
 #Define the objective function
+
+
 def OBJECTIVE_theta(c,x):
     tau = x[0,:]
     delta = x[1,:]
@@ -83,6 +85,8 @@ def OBJECTIVE_theta(c,x):
     return 1+(omega-omega_REF)*(A1+A2*np.exp(-delta**2)+A3*np.exp(-delta**c[10])+A4*np.exp(-delta**c[11])+PSI_theta)
 
 #Define the objective function
+
+
 def OBJECTIVE_phi(c,x):
     tau = x[0,:]
     delta = x[1,:]
@@ -95,8 +99,10 @@ def OBJECTIVE_phi(c,x):
     PSI_theta = c[8]*delta*np.exp(-c[9]*DELTA**2)
     return Zcrit_REF/Zcrit*(1+(omega-omega_REF)*(A1+A2*np.exp(-delta**2)+A3*np.exp(-delta**c[10])+A4*np.exp(-delta**c[11])+PSI_theta))
 
+
 print 'starting fit for theta'
 XXX = np.r_[np.array(tau,ndmin = 2), np.array(delta,ndmin=2)]
+
 
 def fit_theta():
     mod = Model(OBJECTIVE_theta)
@@ -118,6 +124,7 @@ def fit_theta():
 
     return myoutput.beta,MAE
 
+
 def fit_phi():
     mod = Model(OBJECTIVE_phi)
     mydata = Data(XXX.copy(), PHI)
@@ -138,8 +145,10 @@ def fit_phi():
 
     return myoutput.beta,MAE
 
+
 c,theta_MAE = fit_theta()
 d,phi_MAE = fit_phi()
+
 
 def write_output(c,d, theta_MAE, phi_MAE):
     import time
@@ -231,5 +240,6 @@ def write_output(c,d, theta_MAE, phi_MAE):
     )
 
     print template.format(**locals())
+
 
 write_output(c,d,theta_MAE,phi_MAE)

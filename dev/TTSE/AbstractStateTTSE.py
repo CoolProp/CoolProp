@@ -6,6 +6,7 @@ import CoolProp
 
 import timeit
 
+
 def get_speed_data():
 
     H_TP = 350e3
@@ -29,12 +30,15 @@ def get_speed_data():
         TTSE = CoolProp.AbstractState('TTSE&HEOS',fluid)
         BICUBIC = CoolProp.AbstractState('BICUBIC&HEOS',fluid)
         HEOS = CoolProp.AbstractState('HEOS',fluid)
+
         def two_phase_TTSE():
             TTSE.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
             TTSE.rhomolar()
+
         def single_phase_TTSE():
             TTSE.update(CoolProp.HmassP_INPUTS, H_SP, P_SP)
             TTSE.rhomolar()
+
         def single_phase_pT_TTSE():
             TTSE.update(CoolProp.PT_INPUTS, P_PT, T_PT)
             TTSE.rhomolar()
@@ -42,9 +46,11 @@ def get_speed_data():
         def two_phase_BICUBIC():
             BICUBIC.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
             BICUBIC.rhomolar()
+
         def single_phase_BICUBIC():
             BICUBIC.update(CoolProp.HmassP_INPUTS, H_SP, P_SP)
             BICUBIC.rhomolar()
+
         def single_phase_pT_BICUBIC():
             BICUBIC.update(CoolProp.PT_INPUTS, P_PT, T_PT)
             BICUBIC.rhomolar()
@@ -52,9 +58,11 @@ def get_speed_data():
         def two_phase_HEOS():
             HEOS.update(CoolProp.HmassP_INPUTS, H_TP, P_TP)
             HEOS.rhomolar()
+
         def single_phase_HEOS():
             HEOS.update(CoolProp.HmassP_INPUTS, H_SP, P_SP)
             HEOS.rhomolar()
+
         def single_phase_pT_HEOS():
             HEOS.update(CoolProp.PT_INPUTS, P_PT, T_PT)
             HEOS.rhomolar()
@@ -65,12 +73,15 @@ def get_speed_data():
         #from CoolProp.CoolProp import set_debug_level,set_standard_unit_system,enable_TTSE_LUT,disable_TTSE_LUT
         CoolProp.CoolProp.set_standard_unit_system(CoolProp.UNIT_SYSTEM_SI)
         state = CoolProp.State.State(fluid,{"H":H_TP*2,"P":P_TP})
+
         def two_phase_HP():
             state.update({"H":H_TP,"P":P_TP})
             state.get_rho()
+
         def single_phase_HP():
             state.update({"H":H_SP,"P":P_SP})
             state.get_rho()
+
         def single_phase_PT():
             state.update({"P":P_PT,"T":T_PT})
             state.get_rho()
@@ -100,6 +111,7 @@ def get_speed_data():
 
     return locals()
 
+
 table = """.. csv-table:: Execution speed in :math:`\mu` s/call
    :header: Backend, 2-Phase p-h inputs, 1-phase p-h inputs, 1-phase p-T inputs
    :widths: 30, 30, 30, 40
@@ -109,11 +121,13 @@ table = """.. csv-table:: Execution speed in :math:`\mu` s/call
    ``BICUBIC&HEOS``, {two_phase_hp_bicubic:6.2f},{single_phase_hp_bicubic:6.2f},{single_phase_pt_bicubic:6.2f}
 """
 
+
 def generate_rst():
     d = get_speed_data()
     s = "{fluid:s} : {number:6d} calls, best of {repeat:2d} repetitions\n\n".format(**d)
     s += table.format(**d)
     return s
+
 
 if __name__ == '__main__':
     print(generate_rst())

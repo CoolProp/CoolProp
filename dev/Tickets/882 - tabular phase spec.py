@@ -70,8 +70,3 @@ for p in np.logspace(np.log10(pt*1.05),np.log10(pc*0.95)):
                 if specify_phase: print '   Gas error:', BE
                 else:             print '   Gas issue:', BE
         if verbose: print p, Ts, rhoL
-
-
-
-
-

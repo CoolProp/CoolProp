@@ -11,6 +11,7 @@ import numpy as np
 from math import log,exp
 random.seed()
 
+
 def check_Trho(N=5000,param='P',fluid='R245fa'):
     values = []
     CP.enable_TTSE_LUT(fluid)
@@ -68,6 +69,7 @@ plt.show()
 
 quit()
 
+
 def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
     values = []
     CP.enable_TTSE_LUT(fluid)
@@ -110,6 +112,7 @@ def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
             pass
     return values
 
+
 fluid = 'R245fa'
 for other in ['D','T','S']:
     if other == 'D':
@@ -140,6 +143,7 @@ for other in ['D','T','S']:
 
 quit()
 
+
 def check(N=5000,param='D',fluid = 'R245fa'):
     values = []
     CP.enable_TTSE_LUT(fluid)
@@ -166,6 +170,7 @@ def check(N=5000,param='D',fluid = 'R245fa'):
             pass
 
     return values
+
 
 Ncols = 10
 Nrows = 10

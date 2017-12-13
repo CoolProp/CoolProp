@@ -19,6 +19,7 @@ def collect(tmp):
     print('touching .use_this_directory_as_root')
     fp = open(os.path.join(tmp,'.use_this_directory_as_root'), 'w'); fp.close()
 
+
 if __name__=='__main__':
 
     import shutil, os, sys, subprocess, glob

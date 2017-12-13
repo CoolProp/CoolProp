@@ -1,6 +1,6 @@
 """
 In this module, we do some of the preparatory work that is needed to get
-CoolProp ready to build.  This includes setting the correct versions in the 
+CoolProp ready to build.  This includes setting the correct versions in the
 headers, generating the fluid files, etc.
 """
 from __future__ import division, print_function, unicode_literals
@@ -15,11 +15,13 @@ import glob
 
 json_options = {'indent' : 2, 'sort_keys' : True}
 
+
 def get_hash(data):
     try:
         return hashlib.sha224(data).hexdigest()
     except TypeError:
         return hashlib.sha224(data.encode('ascii')).hexdigest()
+
 
 # unicode
 repo_root_path = os.path.normpath(os.path.join(os.path.abspath(__file__), '..', '..'))
@@ -43,6 +45,7 @@ values = [
     ('cubics/all_cubic_fluids.json', 'all_cubics_JSON.h', 'all_cubics_JSON'),
     ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON')
 ]
+
 
 def TO_CPP(root_dir, hashes):
     def to_chunks(l, n):
@@ -109,6 +112,7 @@ def TO_CPP(root_dir, hashes):
         else:
             print(outfile + ' is up to date')
 
+
 def version_to_file(root_dir):
 
     # Parse the CMakeLists.txt file to generate the version
@@ -167,9 +171,10 @@ def version_to_file(root_dir):
 
     print('version written to hidden file: ' + hidden_file_name + " for use in builders that don't use git repo")
 
+
 def gitrev_to_file(root_dir):
     """
-    If a git repo, use git to update the gitrevision.  If not a git repo, read 
+    If a git repo, use git to update the gitrevision.  If not a git repo, read
     the gitrevision from the gitrevision.txt file.  Otherwise, fail.
     """
 
@@ -228,6 +233,7 @@ def gitrev_to_file(root_dir):
     except (subprocess.CalledProcessError,OSError) as err:
         print('err:', err)
 
+
 def combine_json(root_dir):
 
     master = []
@@ -280,6 +286,7 @@ def combine_json(root_dir):
     fp.write(json.dumps(master))
     fp.close()
 
+
 def generate():
 
     import shutil
@@ -297,6 +304,6 @@ def generate():
         fp.write(json.dumps(hashes))
         fp.close()
 
+
 if __name__=='__main__':
     generate()
-

@@ -25,18 +25,22 @@ __incompressibles_solution__ = CoolProp.get_global_param_string('incompressible_
 __version__ = CoolProp.get_global_param_string('version')
 __gitrevision__ = CoolProp.get_global_param_string('gitrevision')
 
+
 def get(s):
     """
     This is just a shorthand function for getting a parameter from
     ``CoolProp.get_global_param_string``
     """
     return CoolProp.get_global_param_string(s)
+
+
 def test():
     """
     Run the tests in the test folder
     """
     from .tests import runner
     runner.run()
+
 
 def get_include_directory():
     """
@@ -50,6 +54,7 @@ def get_include_directory():
     import os
     head, file = os.path.split(__file__)
     return os.path.join(head, 'include')
+
 
 def copy_BibTeX_library(file = None, folder = None):
     """
@@ -76,5 +81,3 @@ def copy_BibTeX_library(file = None, folder = None):
         shutil.copy2(path_to_bib,os.path.join(folder,file))
     else:
         raise ValueError('can only provide one of file or folder')
-
-

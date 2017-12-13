@@ -12,6 +12,7 @@ from CoolProp import AbstractState
 from CoolProp import CoolProp as CP
 from CoolProp.CoolProp import PropsSI, extract_backend, extract_fractions, PyCriticalState
 
+
 def get_critical_point(state):
     crit_state = PyCriticalState()
     crit_state.T = np.nan
@@ -71,6 +72,7 @@ def get_critical_point(state):
             pass
     raise ValueError("Could not calculate the critical point data. "+msg)
 
+
 def interpolate_values_1d(x,y,x_points=None,kind='linear'):
     try:
         from scipy.interpolate.interpolate import interp1d
@@ -96,6 +98,7 @@ def is_string(in_obj):
         return isinstance(in_obj, str)
     #except:
     #    return False
+
 
 def process_fluid_state(fluid_ref, fractions='mole'):
     """Check input for state object or fluid string
@@ -132,6 +135,7 @@ def _get_index(prop):
     else:
         raise ValueError("Invalid input, expected a string or an int, not {0:s}.".format(str(prop)))
 
+
 class BaseQuantity(object):
     """A very basic property that can convert an input to and from a 
     given unit system, note that the conversion from SI units starts 
@@ -144,6 +148,7 @@ class BaseQuantity(object):
     bar = BaseQuantity(mul_SI=1e-5)
     psi = BaseQuantity(mul_SI=0.000145037738)    
     """
+
     def __init__(self, add_SI=0.0, mul_SI=1.0, off_SI=0.0):
         self._add_SI = add_SI
         self._mul_SI = mul_SI
@@ -151,23 +156,30 @@ class BaseQuantity(object):
 
     @property
     def add_SI(self): return self._add_SI
+
     @add_SI.setter
     def add_SI(self, value): self._add_SI = value
+
     @property
     def mul_SI(self): return self._mul_SI
+
     @mul_SI.setter
     def mul_SI(self, value): self._mul_SI = value
+
     @property
     def off_SI(self): return self._off_SI
+
     @off_SI.setter
     def off_SI(self, value): self._off_SI = value
 
     def from_SI(self, value): return ((value+self.off_SI)*self.mul_SI)+self.add_SI
+
     def to_SI(self, value): return (value-self.add_SI)/self.mul_SI-self.off_SI
 
 
 class BaseDimension(BaseQuantity):
     """A dimension is a class that extends the BaseQuantity and adds a label, a symbol and a unit label"""
+
     def __init__(self, add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='', symbol='', unit=''):
         self._label = label
         self._symbol = symbol
@@ -176,14 +188,19 @@ class BaseDimension(BaseQuantity):
 
     @property
     def label(self): return self._label
+
     @label.setter
     def label(self, value): self._label = value
+
     @property
     def symbol(self): return self._symbol
+
     @symbol.setter
     def symbol(self, value): self._symbol = value
+
     @property
     def unit(self): return self._unit
+
     @unit.setter
     def unit(self, value): self._unit = value
 
@@ -202,30 +219,43 @@ class PropertyDict(with_metaclass(ABCMeta),object):
 
     @property
     def D(self): return self._D
+
     @D.setter
     def D(self, value): self._D = value
+
     @property
     def H(self): return self._H
+
     @H.setter
     def H(self, value): self._H = value
+
     @property
     def P(self): return self._P
+
     @P.setter
     def P(self, value): self._P = value
+
     @property
     def S(self): return self._S
+
     @S.setter
     def S(self, value): self._S = value
+
     @property
     def T(self): return self._T
+
     @T.setter
     def T(self, value): self._T = value
+
     @property
     def U(self): return self._U
+
     @U.setter
     def U(self, value): self._U = value
+
     @property
     def Q(self): return self._Q
+
     @Q.setter
     def Q(self, value): self._Q = value
 
@@ -253,7 +283,6 @@ class PropertyDict(with_metaclass(ABCMeta),object):
         elif idx == CoolProp.iQ     : return self.Q
         else: raise IndexError("Unknown index \"{0:s}\".".format(str(index)))
 
-
     def __setitem__(self, index, value):
         """Allow for property access via square brackets"""
         idx = _get_index(index)
@@ -267,9 +296,6 @@ class PropertyDict(with_metaclass(ABCMeta),object):
         else: raise IndexError("Unknown index \"{0:s}\".".format(str(index)))
 
 
-
-
-
 class SIunits(PropertyDict):
     def __init__(self):
         self._D = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Density',                  symbol=u'd', unit=u'kg/m3')
@@ -279,6 +305,7 @@ class SIunits(PropertyDict):
         self._T = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Temperature',              symbol=u'T', unit=u'K')
         self._U = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Specific Internal Energy', symbol=u'u', unit=u'J/kg')
         self._Q = BaseDimension(add_SI=0.0, mul_SI=1.0, off_SI=0.0, label='Vapour Quality',           symbol=u'x', unit=u'')
+
 
 class KSIunits(SIunits):
     def __init__(self):
@@ -291,6 +318,7 @@ class KSIunits(SIunits):
         self.S.unit=u'kJ/kg/K'
         self.U.mul_SI=1e-3
         self.U.unit=u'kJ/kg'
+
 
 class EURunits(KSIunits):
     def __init__(self):
@@ -357,15 +385,19 @@ class Base2DObject(with_metaclass(ABCMeta),object):
     # A list of supported plot
     @property
     def x_index(self): return self._x_index
+
     @property
     def y_index(self): return self._y_index
+
     @property
     def critical_state(self):
         if self._critical_state is None and self._state is not None:
             self._critical_state = get_critical_point(self._state)
         return self._critical_state
+
     @property
     def state(self): return self._state
+
     @state.setter
     def state(self, value):
         self._state = process_fluid_state(value)
@@ -376,8 +408,6 @@ class Base2DObject(with_metaclass(ABCMeta),object):
         #self._P_small = self._state.trivial_keyed_output(CoolProp.iP_critical)*self._small
         self._T_small = self.critical_state.keyed_output(CoolProp.iT)*self._small
         self._P_small = self.critical_state.keyed_output(CoolProp.iP)*self._small
-
-
 
     def _get_sat_bounds(self, kind, smin=None, smax=None):
         """Generates limits for the saturation line in either T or p determined
@@ -427,7 +457,6 @@ class Base2DObject(with_metaclass(ABCMeta),object):
         return sat_min, sat_max
 
 
-
 class IsoLine(Base2DObject):
     """An object that holds the functions to calculate a line of 
     a constant property in the dimensions of a property plot. This 
@@ -458,16 +487,22 @@ class IsoLine(Base2DObject):
 
     @property
     def i_index(self): return self._i_index
+
     @property
     def value(self): return self._value
+
     @value.setter
     def value(self, value): self._value = float(value)
+
     @property
     def x(self): return self._x
+
     @x.setter
     def x(self, value): self._x = np.array(value)
+
     @property
     def y(self): return self._y
+
     @y.setter
     def y(self, value): self._y = np.array(value)
 
@@ -629,7 +664,6 @@ class IsoLine(Base2DObject):
             if v == self.x_index: self.x = vals[i]
             if v == self.y_index: self.y = vals[i]
 
-
     def sanitize_data(self):
         """Fill the series via interpolation"""
         validx = None; validy = None
@@ -723,6 +757,7 @@ class BasePlot(Base2DObject):
 
     @property
     def system(self): return self._system
+
     @system.setter
     def system(self, value):
         value = value.upper()
@@ -733,6 +768,7 @@ class BasePlot(Base2DObject):
     def limits(self):
         """Returns [Tmin,Tmax,pmin,pmax] as value or factors"""
         return self._limits
+
     @limits.setter
     def limits(self, value):
         if is_string(value):
@@ -746,16 +782,19 @@ class BasePlot(Base2DObject):
 
     @property
     def figure(self): return self._figure
+
     @figure.setter
     def figure(self, value): self._figure = value
 
     @property
     def axis(self): return self._axis
+
     @axis.setter
     def axis(self, value): self._axis = value
 
     @property
     def props(self): return self._props
+
     @props.setter
     def props(self, value):
         self._props = self.LINE_PROPS.copy()
@@ -768,7 +807,6 @@ class BasePlot(Base2DObject):
 consider replacing it with \"_get_sat_bounds\".",
           DeprecationWarning)
         return self._get_sat_bounds(kind, smin, smax)
-
 
     def _get_iso_label(self, isoline, unit=True):
         if self._system is not None:
@@ -783,7 +821,6 @@ consider replacing it with \"_get_sat_bounds\".",
     #PED = HEOS.get_phase_envelope_data()
     #plt.plot(PED.T, np.log(PED.p))
     #plt.show()
-
 
     def _plot_default_annotations(self):
 #         def filter_fluid_ref(fluid_ref):
@@ -843,7 +880,6 @@ consider replacing it with \"_get_sat_bounds\".",
         else:
             self.axis.grid(kwargs)
 
-
     def set_Tp_limits(self, limits):
         """Set the limits for the graphs in temperature and pressure, based on 
         the active units: [Tmin, Tmax, pmin, pmax]"""
@@ -894,7 +930,6 @@ consider replacing it with \"_get_sat_bounds\".",
 
         return [T_lo,T_hi,P_lo,P_hi]
 
-
     def set_axis_limits(self, limits):
         """Set the limits of the internal axis object based on the active units,
         takes [xmin, xmax, ymin, ymax]"""
@@ -908,7 +943,6 @@ consider replacing it with \"_get_sat_bounds\".",
         self.axis.set_xlim([dim.from_SI(limits[0]), dim.from_SI(limits[1])])
         dim = self._system[self._y_index]
         self.axis.set_ylim([dim.from_SI(limits[2]), dim.from_SI(limits[3])])
-
 
     def get_axis_limits(self,x_index=None,y_index=None):
         """Returns the previously set limits or generates them and 
@@ -1076,7 +1110,6 @@ consider replacing it with \"_get_sat_bounds\".",
         (x,y)=self._to_data_coords(x,y)
         return (x,y,rot)
 
-
     def inline_label(self,xv,yv,x=None,y=None):
         """
         This will give the coordinates and rotation required to align a label with
@@ -1093,13 +1126,11 @@ consider replacing it with \"_get_sat_bounds\".",
         y  = dimx.from_SI(y)
         return (x,y,rot)
 
-
     def show(self):
         plt.show()
 
     def savefig(self, *args, **kwargs):
         self.figure.savefig(*args, **kwargs)
-
 
 
 if __name__ == "__main__":
@@ -1125,14 +1156,11 @@ if __name__ == "__main__":
     iso = IsoLine('Q','H','P', 1.0, state)
     iso.calc_range(hr,pr); print(iso.x,iso.y)
 
-
     #bp = BasePlot(fluid_ref, graph_type, unit_system = 'KSI', **kwargs):
     bp = BasePlot('n-Pentane', 'PH', unit_system='EUR')
     #print(bp._get_sat_bounds('P'))
     #print(bp._get_iso_label(iso))
     print(bp.get_axis_limits())
-
-
 
         # get_update_pair(CoolProp.iP,CoolProp.iSmass,CoolProp.iT) -> (0,1,2,CoolProp.PSmass_INPUTS)
         #other values require switching and swapping

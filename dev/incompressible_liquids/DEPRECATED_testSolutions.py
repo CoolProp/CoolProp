@@ -3,6 +3,7 @@ import sys
 import CoolProp.CoolProp as cp
 import numpy as np
 
+
 def props(in1=None, in2=None, in3=None, in4=None, in5=None, in6=None):
     try:
         return cp.PropsU(in1=in1,in2=in2,in3=in3,in4=in4,in5=in5,in6=in6,in7="SI")
@@ -10,6 +11,8 @@ def props(in1=None, in2=None, in3=None, in4=None, in5=None, in6=None):
         #print "Error in CoolProp, try adjusting the fluid or T and p:"
         print ve
         return -1.0*np.NAN
+
+
 #print "{0:14.8f}".format(CP.Props('V','D',13,'P',500,'n-Pentane'))
 #print "{0:14.8f}".format(CP.Props('V','H',158,'P',1000,'TX22'))
 #T = 300

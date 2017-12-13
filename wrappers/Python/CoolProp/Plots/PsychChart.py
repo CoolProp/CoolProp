@@ -16,7 +16,7 @@ import_template=(
 if __name__=='__main__':
     import numpy, matplotlib
     from CoolProp.HumidAirProp import HAPropsSI
-    from CoolProp.Plots.Plots import InlineLabel 
+    from CoolProp.Plots.Plots import InlineLabel
 
     p = 101325
     Tdb = numpy.linspace(-10,60,100)+273.15
@@ -36,8 +36,10 @@ closure_template=(
 Tdb = numpy.linspace(-10,60,100)+273.15
 p = 101325
 
+
 def indented_segment(s):
     return '\n'.join(['    '+line for line in textwrap.dedent(s).split('\n')])
+
 
 class PlotFormatting(object):
 
@@ -55,6 +57,7 @@ class PlotFormatting(object):
             ax.set_ylabel(r"$W$ ($m_{w}/m_{da}$) [-]")
             """)
 
+
 class SaturationLine(object):
 
     def plot(self,ax):
@@ -68,6 +71,7 @@ class SaturationLine(object):
                ax.plot(Tdb-273.15,w,lw=2)
                """
                )
+
 
 class HumidityLabels(object):
     def __init__(self,RH_values,h):
@@ -98,6 +102,7 @@ class HumidityLabels(object):
                 """.format(h=self.h, RHValues=str(self.RH_values), s="'{s:0.0f}'.format(s=RH*100)")
                 )
 
+
 class HumidityLines(object):
 
     def __init__(self,RH_values):
@@ -117,6 +122,7 @@ class HumidityLines(object):
                    ax.plot(Tdb-273.15,w,'r',lw=1)
                """.format(RHValues=str(self.RH_values))
                )
+
 
 class EnthalpyLines(object):
 
@@ -144,6 +150,7 @@ class EnthalpyLines(object):
                    ax.plot(numpy.r_[T1,T0],numpy.r_[w1,w0],'r',lw=1)
                """.format(HValues=str(self.H_values))
                )
+
 
 if __name__=='__main__':
 

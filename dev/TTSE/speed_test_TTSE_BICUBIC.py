@@ -1,6 +1,7 @@
 import timeit
 import CoolProp.CoolProp as CP
 
+
 def time_check(N, h, p, TTSE = False, mode = 'TTSE'):
 
     if TTSE:
@@ -17,6 +18,7 @@ def time_check(N, h, p, TTSE = False, mode = 'TTSE'):
     value = CP.Props('D','H',h,'P',p,'Water')
 
     return time, value
+
 
 values = dict(subcooled = (500,10000), twophase = (2000,10000), superheated = (3000,10000), supercritical = (2000,30000))
 

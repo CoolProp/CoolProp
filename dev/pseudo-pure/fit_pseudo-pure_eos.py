@@ -11,10 +11,13 @@ import h5py
 from templates import *
 
 indices = []
+
+
 class TermLibrary():
     """
     Build a term library using the coefficients from Wagner and Pruss (IAPWS95)
     """
+
     def __init__(self):
         L,D,T = [],[],[]
 
@@ -48,13 +51,16 @@ class TermLibrary():
         self.D = D
         self.L = L
 
+
 from Helmholtz import helmholtz
+
 
 def rsquared(x, y):
     """ Return R^2 where x and y are array-like."""
 
     slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(x, y)
     return r_value**2
+
 
 def get_fluid_constants(Ref):
     if Ref == 'R407F':
@@ -103,7 +109,6 @@ def get_fluid_constants(Ref):
     L0 = np.append(L0, [LIBRARY.L[i] for i in indices])
     N0 = np.append(N0, [LIBRARY.N[i] for i in indices])
 
-
     # values from R407C
 #    N0 = np.array([0.0, 1.0588,-1.12018, 0.629064,-0.351953, 0.00455978,-1.75725,-1.12009, 0.0277353, 0.898881,-1.17591, 0.0818591,-0.0794097,-0.0000104047, 0.233779,-0.291790, 0.0154776,-0.0314579,-0.00442552,-0.0101254, 0.00915953,-0.003615])
 #    T0 = np.array([0.0,0.241,0.69,2.58,1.15,0.248,2.15,2.43,5.3,0.76,1.48,0.24,2.86,8.0,3.3,4.7,0.45,8.4,16.2,26.0,16.0,8.7])
@@ -111,6 +116,7 @@ def get_fluid_constants(Ref):
 #    L0 = np.array([0.0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,3,3,3,3])
 
     return RefString, N0, T0, D0, L0
+
 
 class IdealPartFitter(object):
     def __init__(self, Ref):
@@ -164,6 +170,7 @@ class IdealPartFitter(object):
                     + helmholtz.phi0_Planck_Einstein(self.a,self.e/self.Tc,1,len(self.a)-1).dTau2(_tau, _tau)
                     )
         return np.array(d)
+
 
 class ResidualPartFitter(object):
 
@@ -438,6 +445,7 @@ class ResidualPartFitter(object):
 ##         plt.plot(self.T,PPF.cv/self.cv,'.'); plt.show()
 ##         plt.plot(self.T,PPF.w/self.speed_sound,'.'); plt.show()
 
+
 class PPFFitterClass(object):
 
     def __init__(self, Ref, regenerate_data = True, fit = True):
@@ -542,16 +550,8 @@ class PPFFitterClass(object):
         f.write(code)
         f.close()
 
+
 if __name__=='__main__':
     Ref = 'R407F'
 
     PPFFitterClass(Ref)
-
-
-
-
-
-
-
-
-
