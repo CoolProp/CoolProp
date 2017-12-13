@@ -89,7 +89,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
             try:
                 tmp_result = PS(kind_o, kind_in1, vector_in1, kind_in2, vector_in2, fluid)
             except:
-                ++err_count
+                err_count += 1
                 pass
             end = timer()
 
@@ -99,7 +99,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
             try:
                 tmp_result = PS(kind_o, kind_in1, vector_in1, kind_in2, vector_in2, fluid)
             except:
-                ++err_count
+                err_count += 1
                 pass
             end = timer()
 
@@ -111,7 +111,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
                     for kind_o_single in kind_o_index:
                         tmp_result = state.keyed_output(kind_o_single)
                 except:
-                    ++err_count
+                    err_count += 1
                     pass
             end = timer()
 
@@ -126,7 +126,7 @@ def calc_isolines(fluid="HEOS::water", kind_a="P", range_a=[1e6,10e6], kind_b="T
                     for kind_o_single in kind_o_index:
                         tmp_result = state.keyed_output(kind_o_single)
                 except:
-                    ++err_count
+                    err_count += 1
                     guesses.rhomolar = np.NaN
                     guesses.T = np.NaN
                     pass
