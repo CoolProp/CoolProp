@@ -57,3 +57,7 @@
 /build.sh
 /bld.bat
 /conda/
+
+/.idea/
+/.vs/
+/.vscode/
