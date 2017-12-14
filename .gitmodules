@@ -1,27 +1,31 @@
 [submodule "externals/Catch"]
 	path = externals/Catch
 	url = https://github.com/philsquared/Catch
+	branch = master
 [submodule "externals/Eigen"]
 	path = externals/Eigen
 	url = https://github.com/RLovelett/eigen.git
-[submodule "externals/REFPROP-headers"]
-	path = externals/REFPROP-headers
-	url = https://github.com/CoolProp/REFPROP-headers.git
-[submodule "externals/FindMathematica"]
-	path = externals/FindMathematica
-	url = https://github.com/sakra/FindMathematica
-[submodule "externals/msgpack-c"]
-	path = externals/msgpack-c
-	url = https://github.com/msgpack/msgpack-c
-[submodule "externals/IF97"]
-	path = externals/IF97
-	url = https://github.com/CoolProp/IF97
-[submodule "externals/cppformat"]
-	path = externals/cppformat
-	url = https://github.com/cppformat/cppformat.git
+	branch = master
 [submodule "externals/ExcelAddinInstaller"]
 	path = externals/ExcelAddinInstaller
 	url = https://github.com/CoolProp/ExcelAddinInstaller.git
+[submodule "externals/FindMathematica"]
+	path = externals/FindMathematica
+	url = https://github.com/sakra/FindMathematica
+[submodule "externals/IF97"]
+	path = externals/IF97
+	url = https://github.com/CoolProp/IF97
+[submodule "externals/REFPROP-headers"]
+	path = externals/REFPROP-headers
+	url = https://github.com/CoolProp/REFPROP-headers.git
+[submodule "externals/cppformat"]
+	path = externals/cppformat
+	url = https://github.com/cppformat/cppformat.git
+	branch = master
+[submodule "externals/msgpack-c"]
+	path = externals/msgpack-c
+	url = https://github.com/msgpack/msgpack-c
+	branch = master
 [submodule "externals/pybind11"]
 	path = externals/pybind11
 	url = https://github.com/pybind/pybind11.git
@@ -29,3 +33,4 @@
 [submodule "externals/rapidjson"]
 	path = externals/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
+	branch = master
