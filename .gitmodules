@@ -9,15 +9,19 @@
 [submodule "externals/ExcelAddinInstaller"]
 	path = externals/ExcelAddinInstaller
 	url = https://github.com/CoolProp/ExcelAddinInstaller.git
+	branch = master
 [submodule "externals/FindMathematica"]
 	path = externals/FindMathematica
 	url = https://github.com/sakra/FindMathematica
+	branch = master
 [submodule "externals/IF97"]
 	path = externals/IF97
 	url = https://github.com/CoolProp/IF97
+	branch = master
 [submodule "externals/REFPROP-headers"]
 	path = externals/REFPROP-headers
 	url = https://github.com/CoolProp/REFPROP-headers.git
+	branch = master
 [submodule "externals/cppformat"]
 	path = externals/cppformat
 	url = https://github.com/cppformat/cppformat.git
