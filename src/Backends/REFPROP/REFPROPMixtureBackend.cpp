@@ -946,6 +946,18 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
                         );
     }
 }
+bool REFPROPMixtureBackend::has_melting_line(){
+    this->check_loaded_fluid();
+    
+    long ierr = 0;
+    char herr[255];
+    double _T = 300, p_kPa;
+    MELTTdll(&_T, &(mole_fractions[0]),
+             &p_kPa,
+             &ierr,herr,errormessagelength);      // Error message
+    if (static_cast<int>(ierr) == 1) { return false; }
+    else{ return true; }
+}
 
 const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions()
 {
