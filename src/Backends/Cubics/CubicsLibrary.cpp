@@ -56,6 +56,9 @@ public:
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 fluid_map.erase(ret.first);
                 ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val));
+                if (get_debug_level() > 0){
+                    std::cout << "added the cubic fluid: "+val.name << std::endl;
+                }
                 assert(ret.second == true);
             }
 
@@ -87,6 +90,13 @@ public:
             }
         }
     };
+    std::string get_fluids_list(){
+        std::vector<std::string> out;
+        for (std::map<std::string, CubicsValues>::const_iterator it = fluid_map.begin(); it != fluid_map.end(); ++it){
+            out.push_back(it->first);
+        }
+        return strjoin(out, ",");
+    }
 };
 static CubicsLibraryClass library;
 
@@ -120,6 +130,9 @@ CubicLibrary::CubicsValues get_cubic_values(const std::string &identifier){
 std::string get_cubic_fluids_schema(){
     return cubic_fluids_schema_JSON;
 }
+std::string get_cubic_fluids_list(){
+    return library.get_fluids_list();
+}
 
-} /* namepace CriticalLibrary */
+} /* namepace CubicsLibrary */
 } /* namepace CoolProp */
