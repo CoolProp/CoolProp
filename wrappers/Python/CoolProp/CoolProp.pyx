@@ -625,7 +625,7 @@ cdef class State:
     sets the internal variables in the most computationally efficient way possible
     """
 
-    def __init__(self, object Fluid, dict StateDict, object phase = None, backend = None):
+    def __init__(self, object _Fluid, dict StateDict, object phase = None, backend = None):
         """
         Parameters
         ----------
@@ -637,26 +637,28 @@ cdef class State:
         backend : string
             The CoolProp backend that should be used, one of "HEOS" (default), "REFPROP", "INCOMP", "BRINE", etc.
         """
-        cdef string _Fluid = Fluid
+        cdef string Fluid = _Fluid
+        
 
-        if _Fluid == <string>'none':
+        if Fluid == b'none':
             return
         else:
-            if '::' in Fluid:
-                backend, Fluid = Fluid.split(u'::',1)
+            if b'::' in <bytes>Fluid:
+                backend, Fluid = (<bytes>Fluid).split(b'::')
             elif backend is None:
                 backend = u'?'
 
             self.set_Fluid(Fluid, backend)
-        self.Fluid = _Fluid
+        self.Fluid = Fluid
 
         # Parse the inputs provided
         if StateDict is not None:
             self.update(StateDict)
 
-        self.phase = phase
         if phase is None:
-            self.phase = u'??'.encode('ascii')
+            self.phase = b'??'
+        else:
+            self.phase = phase.encode('ascii')
 
         # Set the phase flag
         if self.phase.lower() == 'gas':
