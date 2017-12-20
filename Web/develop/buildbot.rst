@@ -371,6 +371,8 @@ or in ``~/.config/systemd/user/coolpropworker.service``::
     StandardOutput=syslog
     StandardError=syslog
     SyslogIdentifier=CoolPropBuilder
+    ExecStartPre=/bin/bash --login -c 'env > /tmp/buildbot-environment-file'
+    EnvironmentFile=-/tmp/buildbot-environment-file
     ExecStart=/home/buildbot/buildbot.bsh start
     ExecStop=/home/buildbot/buildbot.bsh stop
     ExecReload=/home/buildbot/buildbot.bsh restart
