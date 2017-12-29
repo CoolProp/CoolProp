@@ -8,6 +8,7 @@ class LiBrData(SolutionData):
     Lithium Bromide solution from CoolProp 4
     Source: Patek et al.
     """
+
     def __init__(self):
         SolutionData.__init__(self)
         self.name = "LiBr"
@@ -92,17 +93,18 @@ class LiBrData(SolutionData):
         self.xmin = np.min(self.concentration.data)
         self.xid      = self.ifrac_mass
         self.TminPsat = self.Tmin
-        
-        # Additional properties from 
+
+        # Additional properties from
         # Thermal conductivity: DiGuilio, R.M., Lee, R.J., Jeter, S.M., and Teja, A.S., "Properties of Lithium Bromide-Water Solutions at High Temperatures and Concentrations - I Thermal Conductivity", ASHRAE Transactions, Paper 3380, RP-527, pp. 702-708, 1990
         # Viscosity: Lee, R.J., DiGuilio, R.M., Jeter, S.M., and Teja, A.S., "Properties of Lithium Bromide-Water Solutions at High Temperatures and Concentrations - II Density and Viscosity", ASHRAE Transactions, Paper 3381, RP-527, pp. 709-714, 1990
-        
-        
+
+
 class MITSeaWater(SolutionData):
     """
     Seawater formulation based on the tables from http://web.mit.edu/seawater/
     Source: Mostafa H. Sharqawy, John H. Lienhard V, and Syed M. Zubair, "Thermophysical properties of seawater: A review of existing correlations and data", Desalination and Water Treatment, Vol. 16, pp.354-380, April 2010.
     """
+
     def __init__(self):
         SolutionData.__init__(self)
         self.name = "MITSW"
@@ -175,7 +177,6 @@ class MITSeaWater(SolutionData):
           [0.676, 0.675, 0.675, 0.675, 0.674, 0.674, 0.674, 0.673, 0.673, 0.673, 0.672, 0.672, 0.672],
           [0.679, 0.679, 0.679, 0.678, 0.678, 0.678, 0.677, 0.677, 0.677, 0.676, 0.676, 0.676, 0.675],
           [0.682, 0.681, 0.681, 0.681, 0.680, 0.680, 0.680, 0.679, 0.679, 0.679, 0.679, 0.678, 0.678]])  #, W/m-K
-
 
         self.saturation_pressure.source = self.saturation_pressure.SOURCE_EQUATION
         self.saturation_pressure.data   = np.array([

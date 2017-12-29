@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def test_back_compatibility():
     fluid_ref = 'R290'
 
@@ -75,7 +76,7 @@ def test_back_compatibility():
         plt.close()
         Trho(fluid_ref, show=False, Tmin=200, Tmax=300)
         plt.close()
-        
+
     def hs_plot_tests():
         from CoolProp.Plots import hs
         hs(fluid_ref, show=False)
@@ -87,7 +88,7 @@ def test_back_compatibility():
         plt.close()
         hs(fluid_ref, show=False, Tmin=200, Tmax=300)
         plt.close()
-        
+
     def Isolines_plot_tests():
         from matplotlib import pyplot
         from CoolProp.Plots import Ts, drawIsoLines
@@ -155,6 +156,7 @@ def test_new_code():
     Isolines_plot_tests()
     Graph_annotations()
     Mixture()
+
 
 if __name__=='__main__':
     import nose

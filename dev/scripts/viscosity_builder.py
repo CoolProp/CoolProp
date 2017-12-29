@@ -24,7 +24,7 @@ def viscosity_dilute(fluid,T,e_k,sigma):
     T in [K], e_k in [K], sigma in [nm]
     viscosity returned is in [Pa-s]
     """
-    
+
     Tstar = T/e_k
     molemass = Props(fluid,'molemass')
     if fluid == 'Propane' or fluid == 'REFPROP-Propane':
@@ -32,12 +32,13 @@ def viscosity_dilute(fluid,T,e_k,sigma):
         theta_star = exp(a[0]*pow(log(Tstar),0)+a[1]*pow(log(Tstar),1)+a[3]*pow(log(Tstar),3));
         eta_star = 0.021357*sqrt(molemass*T)/(pow(sigma,2)*theta_star)/1e6;
         return eta_star
-    
+
     # From Neufeld, 1972, Journal of Chemical Physics - checked coefficients
     OMEGA_2_2 = 1.16145*pow(Tstar,-0.14874)+ 0.52487*exp(-0.77320*Tstar)+2.16178*exp(-2.43787*Tstar)
     # Using the leading constant from McLinden, 2000 since the leading term from Huber 2003 gives crazy values
     eta_star = 26.692e-3*sqrt(molemass*T)/(pow(sigma,2)*OMEGA_2_2)/1e6
     return eta_star
+
 
 def viscosity_linear(fluid, T, rho, e_k, sigma):
     """
@@ -48,10 +49,11 @@ def viscosity_linear(fluid, T, rho, e_k, sigma):
     Tstar = T/e_k
     b= [-19.572881,219.73999,-1015.3226,2471.01251,-3375.1717,2491.6597,-787.26086,14.085455,-0.34664158]
     s = sum([b[i]*pow(Tstar,-0.25*i) for i in range(7)])
-    
+
     B_eta_star = s+b[7]*pow(Tstar,-2.5)+b[8]*pow(Tstar,-5.5) #//[no units]
     B_eta = N_A*pow(sigma/1e9,3)*B_eta_star #[m3/mol]
     return viscosity_dilute(fluid,T,e_k,sigma)*B_eta*rho/molemass*1000
+
 
 from PDSim.misc.datatypes import Collector
 RHO = Collector()
@@ -83,7 +85,8 @@ for T in np.linspace(290,Props(fluid,'Tcrit')-0.1,100):
         RHO << rho
         DELTA << rho/rhoc
         TAU << Tc/T
-        
+
+
 def f_RHS(E, DELTA_TAU, VV):
     k = 0
     sum = 0
@@ -98,6 +101,7 @@ def f_RHS(E, DELTA_TAU, VV):
 #    sum += (f1+f2/TAU+f3/TAU/TAU)*(DELTA/(DELTA0-DELTA)-DELTA/DELTA0)
     print np.mean(np.abs(((sum/VV-1)*100))),'%'
     return sum
+
 
 log_muH = np.log(VVH.v().T)
 

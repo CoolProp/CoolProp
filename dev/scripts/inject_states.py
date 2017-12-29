@@ -3,53 +3,55 @@ import json, CoolProp, sys
 
 CP = CoolProp.CoolProp
 
+
 def inject_hsanchor(fluid, i, json_data):
-    
+
     Tanchor = 1.1*CoolProp.CoolProp.PropsSI('Tcrit',fluid)
     rhoanchor = 0.9*CoolProp.CoolProp.PropsSI('rhomolar_critical',fluid)
     hanchor_molar = CP.PropsSI('Hmolar','T',Tanchor,'Dmolar',rhoanchor,fluid)
     sanchor_molar = CP.PropsSI('Smolar','T',Tanchor,'Dmolar',rhoanchor,fluid)
     p = CP.PropsSI('P','T',Tanchor,'Dmolar',rhoanchor,fluid)
-    
+
     json_data['EOS'][i]['STATES']['hs_anchor'] = {
-          "T": Tanchor, 
-          "T_units": "K", 
-          "hmolar": hanchor_molar, 
-          "hmolar_units": "J/mol", 
-          "p": p, 
-          "p_units": "Pa", 
-          "rhomolar": rhoanchor, 
-          "rhomolar_units": "mol/m^3", 
-          "smolar": sanchor_molar, 
+          "T": Tanchor,
+          "T_units": "K",
+          "hmolar": hanchor_molar,
+          "hmolar_units": "J/mol",
+          "p": p,
+          "p_units": "Pa",
+          "rhomolar": rhoanchor,
+          "rhomolar_units": "mol/m^3",
+          "smolar": sanchor_molar,
           "smolar_units": "J/mol/K"
     }
 
+
 def inject_triples(fluid, i, json_data):
-    
+
     Ttriple = json_data['STATES']['triple_liquid']['T']
 
     triple_liquid = {
-          "T": Ttriple, 
-          "T_units": "K", 
+          "T": Ttriple,
+          "T_units": "K",
           "hmolar": CP.PropsSI('Hmolar','T',Ttriple,'Q',0,fluid),
-          "hmolar_units": "J/mol", 
+          "hmolar_units": "J/mol",
           "p": CP.PropsSI('P','T',Ttriple,'Q',0,fluid),
-          "p_units": "Pa", 
-          "rhomolar": CP.PropsSI('Dmolar','T',Ttriple,'Q',0,fluid), 
-          "rhomolar_units": "mol/m^3", 
-          "smolar": CP.PropsSI('Smolar','T',Ttriple,'Q',0,fluid), 
+          "p_units": "Pa",
+          "rhomolar": CP.PropsSI('Dmolar','T',Ttriple,'Q',0,fluid),
+          "rhomolar_units": "mol/m^3",
+          "smolar": CP.PropsSI('Smolar','T',Ttriple,'Q',0,fluid),
           "smolar_units": "J/mol/K"
     }
     triple_vapor = {
-          "T": Ttriple, 
-          "T_units": "K", 
+          "T": Ttriple,
+          "T_units": "K",
           "hmolar": CP.PropsSI('Hmolar','T',Ttriple,'Q',1,fluid),
-          "hmolar_units": "J/mol", 
+          "hmolar_units": "J/mol",
           "p": CP.PropsSI('P','T',Ttriple,'Q',1,fluid),
-          "p_units": "Pa", 
-          "rhomolar": CP.PropsSI('Dmolar','T',Ttriple,'Q',1,fluid), 
-          "rhomolar_units": "mol/m^3", 
-          "smolar": CP.PropsSI('Smolar','T',Ttriple,'Q',1,fluid), 
+          "p_units": "Pa",
+          "rhomolar": CP.PropsSI('Dmolar','T',Ttriple,'Q',1,fluid),
+          "rhomolar_units": "mol/m^3",
+          "smolar": CP.PropsSI('Smolar','T',Ttriple,'Q',1,fluid),
           "smolar_units": "J/mol/K"
     }
     json_data['STATES']['triple_vapor'] = triple_vapor
@@ -66,17 +68,18 @@ def inject_critical(fluid, json_data):
     D = json_data['STATES']['critical']['rhomolar']
 
     json_data['STATES']['critical'] = {
-          "T": T, 
-          "T_units": "K", 
+          "T": T,
+          "T_units": "K",
           "hmolar": CP.PropsSI('Hmolar','T',T,'Dmolar',D,fluid),
-          "hmolar_units": "J/mol", 
+          "hmolar_units": "J/mol",
           "p": CP.PropsSI('P','T',T,'Dmolar',D,fluid),
-          "p_units": "Pa", 
-          "rhomolar": D, 
-          "rhomolar_units": "mol/m^3", 
-          "smolar": CP.PropsSI('Smolar','T',T,'Dmolar',D,fluid), 
+          "p_units": "Pa",
+          "rhomolar": D,
+          "rhomolar_units": "mol/m^3",
+          "smolar": CP.PropsSI('Smolar','T',T,'Dmolar',D,fluid),
           "smolar_units": "J/mol/K"
     }
+
 
 def inject_reducing(fluid, i, json_data):
     """
@@ -86,17 +89,18 @@ def inject_reducing(fluid, i, json_data):
     D = json_data['EOS'][i]['STATES']['reducing']['rhomolar']
 
     json_data['EOS'][i]['STATES']['reducing'] = {
-          "T": T, 
-          "T_units": "K", 
+          "T": T,
+          "T_units": "K",
           "hmolar": CP.PropsSI('Hmolar','T',T,'Dmolar',D,fluid),
-          "hmolar_units": "J/mol", 
+          "hmolar_units": "J/mol",
           "p": CP.PropsSI('P','T',T,'Dmolar',D,fluid),
-          "p_units": "Pa", 
-          "rhomolar": D, 
-          "rhomolar_units": "mol/m^3", 
-          "smolar": CP.PropsSI('Smolar','T',T,'Dmolar',D,fluid), 
+          "p_units": "Pa",
+          "rhomolar": D,
+          "rhomolar_units": "mol/m^3",
+          "smolar": CP.PropsSI('Smolar','T',T,'Dmolar',D,fluid),
           "smolar_units": "J/mol/K"
     }
+
 
 def inject_acentric(fluid, i, json_data):
     """
@@ -108,9 +112,10 @@ def inject_acentric(fluid, i, json_data):
     import math
     json_data['EOS'][i]['acentric'] = -math.log10(p/pc)-1
 
+
 def inject_states(fluid):
     fluid_path = '../fluids/'+fluid+'.json'
-    
+
     # Open the fluid JSON file
     with open(fluid_path, 'r') as fp:
         json_data = json.load(fp)
@@ -126,11 +131,12 @@ def inject_states(fluid):
     sys.path.append('..')
     from package_json import json_options
     with open(fluid_path, 'w') as fp:
-      fp.write(json.dumps(json_data, **json_options))
+        fp.write(json.dumps(json_data, **json_options))
+
 
 if __name__=='__main__':
-  #jj = json.loads(CP.get_config_as_json_string())
-  #jj['DONT_CHECK_PROPERTY_LIMITS'] = True
-  #CP.set_config_as_json_string(json.dumps(jj))  
+    #jj = json.loads(CP.get_config_as_json_string())
+    #jj['DONT_CHECK_PROPERTY_LIMITS'] = True
+    #CP.set_config_as_json_string(json.dumps(jj))
 
-  inject_states('R40')
+    inject_states('R40')

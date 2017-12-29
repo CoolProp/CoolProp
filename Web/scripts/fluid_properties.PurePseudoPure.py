@@ -4,20 +4,23 @@ import os.path
 import CoolProp
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
-root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
+root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 csvfile = os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')
 indexfile = os.path.join(web_dir,'fluid_properties', 'fluidstoc.rst.in')
+
 
 class Dossier:
     def __init__(self):
         self.data = {}
+
     def add(self, key, value):
         if key not in self.data:
             self.data[key] = []
         self.data[key].append(value)
 
+
 d = Dossier()
-        
+
 from pybtex.database.input import bibtex
 parser = bibtex.Parser()
 bibdata = parser.parse_file(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
@@ -35,12 +38,12 @@ bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE','SURFACE_TE
 fluids_path = os.path.join(web_dir,'fluid_properties','fluids')
 if not os.path.exists(fluids_path):
     os.makedirs(fluids_path)
-    
+
 for fluid in CoolProp.__fluids__:
-    
+
     FG = FluidGenerator(fluid)
     FG.write(fluids_path)
-        
+
     d.add('name', fluid)
     for key in bibtex_keys:
         try:
@@ -54,10 +57,11 @@ for fluid in CoolProp.__fluids__:
                 d.add(key, s)
         except ValueError as E:
             d.add(key, '')
-            
+
 import pandas
 df = pandas.DataFrame(d.data)
 df = df.sort_values(by=['name'], ascending = [1])
+
 
 def build_citation(key):
     if not key:
@@ -65,8 +69,10 @@ def build_citation(key):
     else:
         return ':cite:`'+key+'`'
 
+
 def fluid_reference(fluid):
     return ':ref:`{fluid:s} <fluid_{fluid:s}>`'.format(fluid = fluid)
+
 
 # Write the table
 with open(csvfile,'w') as fp:
@@ -75,7 +81,7 @@ with open(csvfile,'w') as fp:
     for index, row in df.iterrows():
         rowdata = [fluid_reference(row['name'])] + [build_citation(row[key]) for key in bibtex_keys]
         fp.write(';'.join(rowdata)+'\n')
-        
+
 # Write the hidden table to make sphinx happy
 with open(indexfile,'w') as fp:
     fp.write('.. toctree::\n    :hidden:\n\n')

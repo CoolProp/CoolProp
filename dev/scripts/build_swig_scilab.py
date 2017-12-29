@@ -1,9 +1,9 @@
 import subprocess, wget, os, shutil, sys, glob
 
 if not os.path.exists('swig-scilab'):
-	subprocess.call('git clone https://github.com/swig/swig.git -b gsoc2012-scilab swig-scilab', shell = True, stdout = sys.stdout, stderr = sys.stderr)
+    subprocess.call('git clone https://github.com/swig/swig.git -b gsoc2012-scilab swig-scilab', shell = True, stdout = sys.stdout, stderr = sys.stderr)
 else:
-	subprocess.call('git pull', shell = True, cwd = 'swig-scilab', stdout = sys.stdout, stderr = sys.stderr)
+    subprocess.call('git pull', shell = True, cwd = 'swig-scilab', stdout = sys.stdout, stderr = sys.stderr)
 os.chdir('swig-scilab')
 if not glob.glob('pcre-*.tar.gz'):
     for rev in ['8.34','8.35','8.36']:

@@ -357,6 +357,34 @@ This should gracefully terminate the bot at shutdown and restart it again after 
 To disable the service, run ``update-rc.d -f buildworker remove``. You can enable and
 disable the daemon by runnning ``update-rc.d buildworker enable|disable``.
 
+If you run a distribution that uses systemd, like CentOS, you might find the
+following unit file helpful, which can be placed in ``/etc/systemd/system/coolpropworker.service``
+or in ``~/.config/systemd/user/coolpropworker.service``::
+
+    [Unit]
+    Description=CoolProp Linux buildbot
+    
+    [Service]
+    User=buildbot
+    Type=forking
+    WorkingDirectory=/home/buildbot
+    StandardOutput=syslog
+    StandardError=syslog
+    SyslogIdentifier=CoolPropBuilder
+    ExecStartPre=/bin/bash --login -c 'env > /tmp/buildbot-environment-file'
+    EnvironmentFile=-/tmp/buildbot-environment-file
+    ExecStart=/home/buildbot/buildbot.bsh start
+    ExecStop=/home/buildbot/buildbot.bsh stop
+    ExecReload=/home/buildbot/buildbot.bsh restart
+    Restart=on-abnormal
+    
+    [Install]
+    WantedBy=multi-user.target
+
+Install the service with ``sudo systemctl enable coolpropworker.service`` and
+activate it using ``sudo systemctl start coolpropworker.service``.
+
+
 .. _workerscript:
 
 Buildbot worker management (Mac OS and Linux)

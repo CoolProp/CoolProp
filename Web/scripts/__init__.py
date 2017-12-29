@@ -12,13 +12,19 @@ if len(sys.argv) > 2:
     full_rebuild = False
     print "Cannot process more than one parameter: {0}".format(str(sys.argv))
 #
+
+
 def touch(fname):
     if os.path.exists(fname): os.utime(fname, None)
     else: open(fname, 'a').close()
 #
+
+
 def get_ftime(fname):
     if os.path.isfile(fname): return os.path.getctime(fname)
     else: return 0
+
+
 #
 web_dir      = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 script_dir   = os.path.abspath(os.path.join(web_dir,'scripts'))
@@ -80,6 +86,8 @@ if fil_time < lim_time and not full_rebuild:
 #     print "Executing {0}".format(script)
 #     subprocess.call('python {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
 #
+
+
 def run_script(path):
     if os.path.exists(path):
         file_path = os.path.dirname(path)
@@ -97,12 +105,13 @@ def run_script(path):
     else:
         print "Could not find the file {0}".format(path)
 
+
 # Inject the version of CoolProp into the doxygen configuration files
 # Put it at the end, overwrites prior value
 import CoolProp
 with open(os.path.join(root_dir,'Doxyfile'),'a+') as fp:
     fp.write('\n\n PROJECT_NUMBER         = ' + CoolProp.__version__ + '\n')
-    
+
 # The normal tasks that are carried out each time the script runs
 normal_tasks = ["../../dev/scripts/examples/OSXRun.py","coolprop.tabular.speed.py", "fluid_properties.phase_envelope.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py","coolprop.configuration.py"]
 # The expensive tasks that are fired when full_rebuild is True

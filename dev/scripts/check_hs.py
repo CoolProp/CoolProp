@@ -10,26 +10,26 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 
 for Fluid in CoolProp.__fluids__:
-    
+
     if Fluid == 'SES36':
         continue
-        
+
     ax.cla()
-    
+
     h_crit = Props('H','T',Props(Fluid,"Tcrit"),'D',Props(Fluid,"rhocrit"),Fluid)
     s_crit = Props('S','T',Props(Fluid,"Tcrit"),'D',Props(Fluid,"rhocrit"),Fluid)
-   
+
     hL_Tmin = Props('H','T',Props(Fluid,"Tmin"),'Q',0,Fluid)
     hV_Tmin = Props('H','T',Props(Fluid,"Tmin"),'Q',1,Fluid)
     sL_Tmin = Props('S','T',Props(Fluid,"Tmin"),'Q',0,Fluid)
     sV_Tmin = Props('S','T',Props(Fluid,"Tmin"),'Q',1,Fluid)
-    
+
     hs(Fluid, axis = ax)
     plt.plot(s_crit,h_crit,'rd')
     plt.plot([sL_Tmin,sV_Tmin],[hL_Tmin,hV_Tmin],'--')
     plt.gca().axhline(h_crit)
     plt.gca().axhline(hV_Tmin)
-    
+
     # Two-Phase
     for T in np.linspace(Props(Fluid,"Tmin")+0.1,Props(Fluid,"Tcrit")-1e-3,30):
         for Q in np.linspace(0, 1, 30):
@@ -41,8 +41,7 @@ for Fluid in CoolProp.__fluids__:
             except ValueError as VE:
                 print T, Q , '|||', '"T","S",',s,',"H",',h,',"'+Fluid+'"', '|||', VE
                 ax.plot(s,h,'o',mfc='none')
-                
-        
+
     for h in np.linspace(hL_Tmin, hV_Tmin + 1500,100):
         for s in np.linspace(sL_Tmin+0.01,sV_Tmin,100):
             try:
@@ -56,7 +55,7 @@ for Fluid in CoolProp.__fluids__:
                 #ax.plot(s,h,'o',mfc='none',ms=6)
             except ValueError:
                 ax.plot(s,h,'s',mfc='none')
-   
+
 
 ##     if Fluid =='Propane':
 ##         ps = Props("P",'T',300,'Q',0,Fluid);
@@ -69,6 +68,6 @@ for Fluid in CoolProp.__fluids__:
 ##         plt.plot(sL,hL,'d')
 ##         plt.gca().axvline(s)
 ##         plt.gca().axhline(268.75968916316691)
-    
+
     fig.savefig('figs/'+Fluid+'.png',dpi=200)
     fig.savefig('figs/'+Fluid+'.pdf')

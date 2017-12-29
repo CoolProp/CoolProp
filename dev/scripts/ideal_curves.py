@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import CoolProp, scipy.optimize
 
+
 class CurveTracer(object):
-    
+
     def __init__(self, backend, fluid, p0, T0):
         """
         p0 : Initial pressure [Pa]
@@ -12,12 +13,12 @@ class CurveTracer(object):
         self.P = [p0]
         self.T = []
         self.AS = CoolProp.AbstractState(backend, fluid)
-        
+
         # Solve for Temperature for first point
         T = scipy.optimize.newton(self.objective_T, T0, args = (p0, -1))
-        
+
         self.T.append(T)
-        
+
     def objective_T(self, T, p, rho_guess):
         """ Base class function """
         if rho_guess < 0:
@@ -27,10 +28,10 @@ class CurveTracer(object):
             guesses.rhomolar = rho_guess
             self.AS.update_with_guesses(CoolProp.PT_INPUTS, p, T, guesses)
         return self.objective()
-        
+
     def TPcoords(self, t, lnT, lnp, rlnT = 0.1, rlnp = 0.1):
         return np.exp(lnT + rlnT*np.cos(t)), np.exp(lnp + rlnp*np.sin(t))
-        
+
     def obj_circle(self, t, lnT, lnp):
         T2, P2 = self.TPcoords(t, lnT, lnp)
         self.AS.update(CoolProp.PT_INPUTS, P2, T2)
@@ -52,9 +53,10 @@ class CurveTracer(object):
             except ValueError as VE:
                 print(VE)
                 break
-                
+
         return self.T, self.P
-        
+
+
 class IdealCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
         CurveTracer.__init__(self, *args, **kwargs)
@@ -62,11 +64,12 @@ class IdealCurveTracer(CurveTracer):
     def objective(self):
         """ Z = 1 """
         return self.AS.keyed_output(CoolProp.iZ) - 1
-        
+
     def starting_direction(self):
         """ Start searching directly up ( or calculate as orthogonal to gradient ) """
         return np.pi/2.0
-        
+
+
 class BoyleCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
         CurveTracer.__init__(self, *args, **kwargs)
@@ -76,11 +79,12 @@ class BoyleCurveTracer(CurveTracer):
         r = (self.AS.p() - self.AS.rhomolar()*self.AS.first_partial_deriv(CoolProp.iP, CoolProp.iDmolar, CoolProp.iT))/(self.AS.gas_constant()*self.AS.T())
         #print self.AS.T(), self.AS.p(), r
         return r
-        
+
     def starting_direction(self):
         """ Start searching directly up """
         return np.pi/2.0
-        
+
+
 class JouleInversionCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
         CurveTracer.__init__(self, *args, **kwargs)
@@ -90,11 +94,12 @@ class JouleInversionCurveTracer(CurveTracer):
         r = (self.AS.gas_constant()*self.AS.T()*1/self.AS.rhomolar()*self.AS.first_partial_deriv(CoolProp.iP, CoolProp.iT, CoolProp.iDmolar)-self.AS.p()*self.AS.gas_constant()/self.AS.rhomolar())/(self.AS.gas_constant()*self.AS.T())**2
         #print self.AS.T(), self.AS.p(), r
         return r
-        
+
     def starting_direction(self):
         """ Start searching directly up """
         return np.pi/2.0
-        
+
+
 class JouleThomsonCurveTracer(CurveTracer):
     def __init__(self, *args, **kwargs):
         CurveTracer.__init__(self, *args, **kwargs)
@@ -105,10 +110,11 @@ class JouleThomsonCurveTracer(CurveTracer):
         r = self.AS.p()/(self.AS.gas_constant()*self.AS.T()**2)*(self.AS.T()*dvdT__constp - 1/self.AS.rhomolar())
         #print self.AS.T(), self.AS.p(), r
         return r
-        
+
     def starting_direction(self):
         """ Start searching directly up """
         return np.pi/2.0
+
 
 backend = 'HEOS'
 fluid = 'R125'

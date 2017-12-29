@@ -84,7 +84,7 @@ if not os.path.exists(plots_path):
     os.makedirs(plots_path)
 
 with open(os.path.join(plots_path, 'matplotlibrc'), 'w') as fp:
-        fp.write("backend : agg\n")
+    fp.write("backend : agg\n")
 
 for fluid in CoolProp.__fluids__:
     print('fluid:', fluid)

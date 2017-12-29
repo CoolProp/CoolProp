@@ -23,15 +23,15 @@ for line in lines:
     CAS2 = name2CAS[Name2]
     if ((CAS1,CAS2)) not in CAS_pairs and ((CAS2,CAS1)) not in CAS_pairs:
         entry = {
-            "BibTeX": "Bell-JCED-2016", 
-            "CAS1": CAS1, 
-            "CAS2": CAS2, 
-            "F": 0.0, 
-            "Name1": Name1, 
-            "Name2": Name2, 
-            "betaT": float(betaT), 
-            "gammaT": float(gammaT), 
-            "betaV": 1.0, 
+            "BibTeX": "Bell-JCED-2016",
+            "CAS1": CAS1,
+            "CAS2": CAS2,
+            "F": 0.0,
+            "Name1": Name1,
+            "Name2": Name2,
+            "betaT": float(betaT),
+            "gammaT": float(gammaT),
+            "betaV": 1.0,
             "gammaV": 1.0
             }
         jj.append(entry)

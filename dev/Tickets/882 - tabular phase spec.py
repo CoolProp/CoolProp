@@ -14,15 +14,15 @@ with open(user_paths[1]+r'\.CoolProp\Tables\HelmholtzEOSBackend(Water[1.00000000
     Tc = CoolProp.CoolProp.PropsSI('Tcrit','Water')
     Ts = np.linspace(Tt, Tc)
     ps = CoolProp.CoolProp.PropsSI('P','T',Ts,'Q',0,'Water')
-    
+
     plt.plot(T, p, '.', color='gray')
     plt.plot(Ts, ps, 'k', lw = 2)
     plt.yscale('log')
     plt.xlabel('Temperature / K')
     plt.ylabel('Pressure / Pa')
     plt.show()
-    
-    
+
+
 # coding: utf-8
 
 # In[ ]:
@@ -39,7 +39,7 @@ dTs = np.power(10.0,-np.arange(-1,4))
 for p in np.logspace(np.log10(pt*1.05),np.log10(pc*0.95)):
     AS.update(CoolProp.PQ_INPUTS, p, 0)
     rhoL = AS.rhomolar()
-    Ts = AS.T()    
+    Ts = AS.T()
     # Liquid side
     for specify_phase in [False,True]:
         if specify_phase:
@@ -70,8 +70,3 @@ for p in np.logspace(np.log10(pt*1.05),np.log10(pc*0.95)):
                 if specify_phase: print '   Gas error:', BE
                 else:             print '   Gas issue:', BE
         if verbose: print p, Ts, rhoL
-    
-    
-    
-    
-    

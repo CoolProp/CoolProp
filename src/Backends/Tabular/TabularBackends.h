@@ -865,6 +865,9 @@ class TabularBackend : public AbstractState
 
         // None of the tabular methods are available from the high-level interface
         bool available_in_high_level(void){return false;}
+    
+        std::string calc_name(void){ return AS->name(); }
+        std::vector<std::string> calc_fluid_names(void){ return AS->fluid_names(); }
 
         void connect_pointers(parameters output, const SinglePhaseGriddedTableData &table)
 		{

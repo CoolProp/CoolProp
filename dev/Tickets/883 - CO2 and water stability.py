@@ -3,7 +3,7 @@
 
 from __future__ import print_function, division
 import numpy as np
-import CoolProp 
+import CoolProp
 from CoolProp.CoolProp import PropsSI, AbstractState
 import sys
 
@@ -16,7 +16,7 @@ num_h = 500
 msgs = ""
 
 for fluid in fluids:
-    state = AbstractState(back, fluid)    
+    state = AbstractState(back, fluid)
     fluid = back+"::"+fluid
     p_lo = 1.05*PropsSI("pmin","",0,"",0,fluid)
     p_hi = 0.95*PropsSI("pcrit","",0,"",0,fluid)
@@ -29,8 +29,8 @@ for fluid in fluids:
             dT = 0.0
             while dT < 2.0 and not np.isfinite(h_m):
                 dT += 0.1
-                T_t = T_m + dT 
-                try: 
+                T_t = T_m + dT
+                try:
                     h_m = PropsSI("H", "P", p, "T", T_t, fluid)
                 except:
                     pass
@@ -38,12 +38,12 @@ for fluid in fluids:
             h_m = -np.Inf
         h1 = PropsSI("H", "P", p, "Q", 0, fluid)
         dh = 0.15*(PropsSI("H", "P", p, "Q", 1, fluid)-h1)
-        h0 = np.maximum(h1 - dh,h_m) 
+        h0 = np.maximum(h1 - dh,h_m)
         h = np.linspace(h0,h1,num=num_h)
         err = [""]*h.size
         d = np.empty_like(h)
         for i,h_i in enumerate(h):
-            try: 
+            try:
                 d[i] = PropsSI("D", "P", p, "H", h_i, fluid)
                 err[i] = ""
             except Exception as e:

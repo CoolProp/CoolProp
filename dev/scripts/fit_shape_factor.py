@@ -33,16 +33,16 @@ for T in np.linspace(Ttriple,Tcrit+50,80):
         T0,rho0 = CP.conformal_Trho(fluid, fluid_REF, T, rho)
 
         p = CP.Props('P', 'T', T, 'D', rho, fluid)
-        
+
         ar = CP.DerivTerms("phir",T,rho,fluid)
         ar_REF = CP.DerivTerms("phir",T0,rho0,fluid_REF)
         Z = CP.DerivTerms("Z",T,rho,fluid)
         Z_REF = CP.DerivTerms("Z",T0,rho0,fluid_REF)
-        
+
         #goodstate = ((T > Tcrit and p > pcrit) or (T<Tcrit and rho > CP.rhosatL_anc(fluid,T) ))
         goodstate = (T > Tcrit or rho > CP.rhosatL_anc(fluid,T) or rho < CP.rhosatV_anc(fluid,T) )
         #goodstate = True
-        
+
         #Want positive value, and single-phase
         if ((T0/T)>0.1 and T/T0*Tcrit_REF/Tcrit < 3 and T0/T < 1e6 and goodstate):
             if abs((ar-ar_REF)*2+(Z-Z_REF)**2) > 1e-5:
@@ -70,10 +70,12 @@ plt.close('all')
 print 'rhomin = ',np.min(RHO.vec)
 
 #Define the objective function
+
+
 def OBJECTIVE_theta(c,x):
     tau = x[0,:]
     delta = x[1,:]
-    
+
     A1 = c[0]-c[1]*np.log(tau)
     A2 = c[2]-c[3]*np.log(tau)
     A3 = c[4]-c[5]*np.log(tau)
@@ -83,10 +85,12 @@ def OBJECTIVE_theta(c,x):
     return 1+(omega-omega_REF)*(A1+A2*np.exp(-delta**2)+A3*np.exp(-delta**c[10])+A4*np.exp(-delta**c[11])+PSI_theta)
 
 #Define the objective function
+
+
 def OBJECTIVE_phi(c,x):
     tau = x[0,:]
     delta = x[1,:]
-    
+
     A1 = c[0]-c[1]*np.log(tau)
     A2 = c[2]-c[3]*np.log(tau)
     A3 = c[4]-c[5]*np.log(tau)
@@ -94,9 +98,11 @@ def OBJECTIVE_phi(c,x):
     DELTA = (delta-1)**2+(tau-1)**2
     PSI_theta = c[8]*delta*np.exp(-c[9]*DELTA**2)
     return Zcrit_REF/Zcrit*(1+(omega-omega_REF)*(A1+A2*np.exp(-delta**2)+A3*np.exp(-delta**c[10])+A4*np.exp(-delta**c[11])+PSI_theta))
-    
+
+
 print 'starting fit for theta'
 XXX = np.r_[np.array(tau,ndmin = 2), np.array(delta,ndmin=2)]
+
 
 def fit_theta():
     mod = Model(OBJECTIVE_theta)
@@ -115,8 +121,9 @@ def fit_theta():
     Trho(fluid)
     plt.plot(np.array(RHO.vec)[np.abs(ERR)<5e-2],np.array(TTT.vec)[np.abs(ERR)<5e-2],'.')
     plt.show()
-    
+
     return myoutput.beta,MAE
+
 
 def fit_phi():
     mod = Model(OBJECTIVE_phi)
@@ -135,12 +142,14 @@ def fit_phi():
     plt.plot(np.array(RHO.vec)[np.abs(ERR)<5e-2],np.array(TTT.vec)[np.abs(ERR)<5e-2],'.')
     MAE = np.mean(np.abs(YFIT/PHI-1))*100
     plt.show()
-    
+
     return myoutput.beta,MAE
+
 
 c,theta_MAE = fit_theta()
 d,phi_MAE = fit_phi()
-    
+
+
 def write_output(c,d, theta_MAE, phi_MAE):
     import time
     from datetime import date
@@ -229,7 +238,8 @@ def write_output(c,d, theta_MAE, phi_MAE):
     }} 
     """
     )
-    
+
     print template.format(**locals())
+
 
 write_output(c,d,theta_MAE,phi_MAE)

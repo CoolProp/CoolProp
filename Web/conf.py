@@ -25,11 +25,11 @@ version = ver.rsplit('.',1)[0]
 release = ver
 
 # Some hacking to determine release or nightly build
-if ver[-2]=="." and ver[-1].isdigit()>=0 and ver[-3].isdigit()>=0: 
+if ver[-2]=="." and ver[-1].isdigit()>=0 and ver[-3].isdigit()>=0:
     isRelease = True
 else:
     isRelease = False
-    
+
 print("------------ Project information ------------")
 print("Detected version: "+version)
 print("Detected release: "+release)

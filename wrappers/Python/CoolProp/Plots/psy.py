@@ -20,6 +20,7 @@ config_path = os.path.join(os.path.dirname(__file__), "psyrc")
 Preferences.read(config_path)
 P = Preferences.getfloat("General", "P")
 
+
 def _Pbar(Z):
     """
     ASHRAE Fundamentals Handbook pag 1.1 eq. 3
@@ -37,6 +38,7 @@ class PsychroPlot(FigureCanvasQTAgg):
         Add custom margins
         Define a pointer to text state properties, to remove and redraw
     """
+
     def __init__(self, parent=None, width=15, height=5, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         FigureCanvasQTAgg.__init__(self, self.fig)
@@ -327,6 +329,7 @@ class PsyCoolprop(object):
 
 class UI_Psychrometry(QDialog):
     """Psychrometric charts tool"""
+
     def __init__(self, parent=None):
         super(UI_Psychrometry, self).__init__(parent)
         self.showMaximized()
@@ -357,7 +360,6 @@ class UI_Psychrometry(QDialog):
             self, "Save chart to file",
             "./", "Portable Network Graphics (*.png)"))
         self.diagrama2D.fig.savefig(fname, facecolor='#eeeeee')
-
 
     def drawlabel(self, name, Preferences, t, W, label, unit):
         """

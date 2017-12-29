@@ -920,6 +920,9 @@ std::string get_global_param_string(const std::string &ParamName)
     else if (ParamName == "cubic_fluids_schema"){
         return CoolProp::CubicLibrary::get_cubic_fluids_schema();
     }
+    else if (ParamName == "cubic_fluids_list"){
+        return CoolProp::CubicLibrary::get_cubic_fluids_list();
+    }
     else{
         throw ValueError(format("Input parameter [%s] is invalid",ParamName.c_str()));
     }

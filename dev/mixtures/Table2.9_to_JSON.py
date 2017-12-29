@@ -28,18 +28,18 @@ out = []
 for line in data.split('\n'):
     pair,betaT,betaV, gammaT,gammaV, F = line.split('  ')
     n1, n2 = pair.split('-')
-    
+
     out.append(dict(BibTeX = 'Gernert-Thesis-2013',
                     F = float(F),
-                    betaT = float(betaT), 
-                    betaV = float(betaV), 
-                    gammaT = float(gammaT), 
-                    gammaV = float(gammaV), 
-                    Name1 = namedict[n1], 
-                    Name2 = namedict[n2], 
-                    CAS1 = CASdict[namedict[n1]], 
+                    betaT = float(betaT),
+                    betaV = float(betaV),
+                    gammaT = float(gammaT),
+                    gammaV = float(gammaV),
+                    Name1 = namedict[n1],
+                    Name2 = namedict[n2],
+                    CAS1 = CASdict[namedict[n1]],
                     CAS2 = CASdict[namedict[n2]]))
-                    
+
     if F != '0':
         out[-1]['function'] = functiondict[pair]
 

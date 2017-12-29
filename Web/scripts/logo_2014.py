@@ -149,5 +149,3 @@ plt.close()
 # 	#im.resize(size, Image.ANTIALIAS).save(tar_fil_long)
 # except IOError:
 # 	print "Error resizing '%s'" % tar_fil_long_large
-
-        

@@ -56,7 +56,7 @@ polynomial_in_Tr = {
         "BibTeX" : "deReuck-BOOK-1990", "T_m": 53.15, "parts": [{"T_0" : 53.4811, "a" : [988043.478261], "t" : [2.1845], "p_0" : 252, "T_max" : 55.4}]
     },
     "Nitrogen" : {
-        "BibTeX" : "Span-JPCRD-2000", "T_m": 77.34, "parts": [{"T_0" : 63.151, "a" : [12798.61], "t" : [1.78963], "p_0" : 12523, "T_max" : 283.8}] 
+        "BibTeX" : "Span-JPCRD-2000", "T_m": 77.34, "parts": [{"T_0" : 63.151, "a" : [12798.61], "t" : [1.78963], "p_0" : 12523, "T_max" : 283.8}]
     },
     "Ethane" : {
         "BibTeX" : "Buecker-JCRD-2006", "T_m": 90.4, "parts": [{"T_0" : 90.368, "a" : [2.23626315e8, 1.05262374e8], "t" : [1.0, 2.55], "p_0" : 1.14, "T_max" : 110.2}]
@@ -109,9 +109,10 @@ Nrow,Ncol = 5,5
 figp = plt.figure(figsize = (20,20))
 figrho = plt.figure(figsize = (20,20))
 
+
 def plot_rho(T, rho, fit = False):
     x, y = (T-T[0])/(T[len(T)-1]-T[0]), (rho-rho[0])/(rho[len(rho)-1]-rho[0])
-    
+
     c = np.polyfit(x, y, 3)
     yfit = np.polyval(c, x)
     err = yfit - y
@@ -122,10 +123,11 @@ def plot_rho(T, rho, fit = False):
         return T, (rhofit/rho-1)*100
     else:
         return x, y
-    
+
+
 def simon():
     global ip, irho
-    
+
     for fluid, values in Simon_curves.iteritems():
         axp = figp.add_subplot(Nrow, Ncol, ip); ip += 1
         axrho = figrho.add_subplot(Nrow, Ncol, irho); irho += 1
@@ -135,21 +137,21 @@ def simon():
         axrho.set_ylabel('rho [mol/m$^3$]')
         axp.set_title(fluid+' - '+str(round(CP.Props(fluid,"molemass"),2)))
         axrho.set_title(fluid)
-        
+
         fname = os.path.join('fluids',fluid+'.json')
         j = json.load(open(fname,'r'))
         for part in values['parts']:
             if 'T_min' not in part:
                 part['T_min'] = round(CP.Props(fluid,"Tmin"),4)
         values['type'] = 'Simon'
-                
+
         j['ANCILLARIES']['melting_line'] = values
-        
+
         fp = open(fname,'w')
         from package_json import json_options
         fp.write(json.dumps(j,**json_options))
         fp.close()
-        
+
 #         if not isinstance(values, list):
 #             values = [values]
 #             df = pandas.read_csv('melting_curves/'+fluid+'.mlt',names=['T','p','rho'])
@@ -162,41 +164,42 @@ def simon():
 #                 axp.plot(df['T'], df['p'], 'o', mfc='none')
 #                 x,y = plot_rho(df['T'],df['rho'],fit = True)
 #                 axrho.plot(x,y, 'o', mfc='none')
-        
+
         T_m = values['T_m']
         for i, value in enumerate(values['parts']):
-            
+
             Tmin = value.get('T_min',CP.Props(fluid,"Tmin"))
             Tmax = value['T_max']
-            
+
             T = np.linspace(Tmin, Tmax, 200)
             T_0 = value['T_0']
             p_0 = value['p_0']
             a = value['a']
             c = value['c']
-            
+
             p = p_0 + a*((T/T_0)**c - 1)
-            
+
             axp.plot(T, p)
-            
+
             cc = 1.75
             aa = 3e8#(101325-p_0)/((T_m/T_0)**cc-1)
             pt = CP.Props(fluid,'ptriple')
             pp = pt + aa*((T/Tmin)**cc - 1)
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
-            
+
             print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
-            
+
 #             if fluid == 'Helium':
 #                 T = np.array([326.2,345.1,362.8,385.1,419.4,459,499,535.7,570,608])
 #                 p = p_0 + a*((T/T_0)**c - 1)
 #                 print p
 
+
 def Tr():
     global ip, irho
     for fluid, values in polynomial_in_Tr.iteritems():
-        
+
         axp = figp.add_subplot(Nrow, Ncol, ip); ip += 1
         axrho = figrho.add_subplot(Nrow, Ncol, irho); irho += 1
         axp.set_xlabel('T [K]')
@@ -205,75 +208,75 @@ def Tr():
         axrho.set_ylabel('rho [mol/m$^3$]')
         axp.set_title(fluid+' - '+str(round(CP.Props(fluid,"molemass"),2)))
         axrho.set_title(fluid)
-        
+
         fname = os.path.join('fluids',fluid+'.json')
         j = json.load(open(fname,'r'))
         for part in values['parts']:
             if 'T_min' not in part:
                 part['T_min'] = round(CP.Props(fluid,"Tmin"),4)
         values['type'] = 'polynomial_in_Tr'
-                
+
         j['ANCILLARIES']['melting_line'] = values
-        
+
         fp = open(fname,'w')
         from package_json import json_options
         fp.write(json.dumps(j,**json_options))
         fp.close()
-        
+
         if fluid == 'Ethylene':
             T = [104.003, 104.059, 104.13, 104.2, 104.27, 104.41, 104.55, 104.69, 104.83, 104.969, 105.108, 105.386, 106.077, 106.764, 107.446, 111.384, 119.283, 127.136, 158.146, 188.621]
             p = np.array([0.1, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 10, 15, 20, 25, 50, 75, 100, 200, 300])*1e6
-            
+
             axp.plot(T,p,'*')
-            
+
 #         if not isinstance(values, list):
 #             values = [values]
 #             df = pandas.read_csv('melting_curves/'+fluid+'.mlt',names=['T','p','rho'])
 #             axp.plot(df['T'], df['p'], 'o', mfc='none')
 #             x,y = plot_rho(df['T'],df['rho'],fit = True)
 #             axrho.plot(x,y, 'o', mfc='none')
-#         
+#
 #         else:
 #             for i in ['I','II']:
 #                 df = pandas.read_csv('melting_curves/'+fluid+'-'+i+'.mlt',names=['T','p','rho'])
 #                 axp.plot(df['T'], df['p'], 'o', mfc='none')
 #                 x,y = plot_rho(df['T'],df['rho'],fit = True)
 #                 axrho.plot(x,y, 'o', mfc='none')
-                
+
         T_m = values['T_m']
         for i,value in enumerate(values['parts']):
-            
+
             Tmin = value.get('T_min',CP.Props(fluid,"Tmin"))
             Tmax = value['T_max']
             T = np.linspace(Tmin, Tmax, 200)
-                
+
             a = value['a']
             t = value['t']
             T_t = value['T_0']
             p_t = value['p_0']
-            
+
             RHS = 0
             for i in range(len(a)):
                 RHS += a[i]*((T/T_t)**t[i] - 1)
-        
+
             p = p_t*(RHS + 1)
-            
+
             axp.plot(T, p)
-            
+
             cc = 1.75
             aa = 3e8#(101325-p_0)/((T_m/T_0)**cc-1)
             pt = CP.Props(fluid,'ptriple')
             pp = pt + aa*((T/Tmin)**cc - 1)
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
-            
+
             print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
-        
-    
+
+
 def theta():
     global ip, irho
     for fluid, values in polynomial_in_theta.iteritems():
-        
+
         axp = figp.add_subplot(Nrow, Ncol, ip); ip += 1
         axrho = figrho.add_subplot(Nrow, Ncol, irho); irho += 1
         axp.set_xlabel('T [K]')
@@ -282,57 +285,58 @@ def theta():
         axrho.set_ylabel('rho [mol/m$^3$]')
         axp.set_title(fluid+' - '+str(round(CP.Props(fluid,"molemass"),2)))
         axrho.set_title(fluid)
-        
+
         fname = os.path.join('fluids',fluid+'.json')
         j = json.load(open(fname,'r'))
         for part in values['parts']:
             if 'T_min' not in part:
                 part['T_min'] = round(CP.Props(fluid,"Tmin"),4)
         values['type'] = 'polynomial_in_Theta'
-                
+
         j['ANCILLARIES']['melting_line'] = values
-        
+
         fp = open(fname,'w')
         from package_json import json_options
         fp.write(json.dumps(j,**json_options))
         fp.close()
-        
+
         T_m = values['T_m']
         for value in values['parts']:
-            
+
             a = value['a']
             t = value['t']
             T_t = value['T_0']
             p_t = value['p_0']
-            
+
             Tmin = T_t
             Tmax = value['T_max']
             T = np.linspace(Tmin, Tmax, 200)
-            
+
             RHS = 0
             for i in range(len(a)):
                 RHS += a[i]*(T/T_t - 1)**t[i]
-            
+
             p = p_t*(RHS + 1)
-            
+
             #df = pandas.read_csv('melting_curves/' + fluid + '.mlt', names=['T','p','rho'])
-            
+
             #axp.plot(df['T'], df['p'], 'o', mfc='none')
-            
+
             axp.plot(T, p)
-        
+
             #x,y = plot_rho(df['T'],df['rho'],fit = True)
             #axrho.plot(x,y, 'o', mfc='none')
-            
+
             cc = 1.75
             aa = 3e8#(101325-p_0)/((T_m/T_0)**cc-1)
             pt = CP.Props(fluid,'ptriple')
             pp = pt + aa*((T/Tmin)**cc - 1)
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
-            
+
             print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
-        
+
+
 if __name__=='__main__':
     simon()
     Tr()
@@ -340,8 +344,8 @@ if __name__=='__main__':
 
     figp.tight_layout()
     figrho.tight_layout()
-    
+
     figp.savefig('p.pdf')
     figrho.savefig('rho.pdf')
-    
+
     plt.close()

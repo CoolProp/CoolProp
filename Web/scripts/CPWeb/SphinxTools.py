@@ -2,7 +2,7 @@ import CoolProp
 import os
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
-root_dir = os.path.abspath(os.path.join(web_dir, '..')) 
+root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 
 fluid_template = u""".. _fluid_{fluid:s}:
 
@@ -98,11 +98,13 @@ BTC = BibTeXerClass(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
 import pybtex
 style = pybtex.plugin.find_plugin('pybtex.style.formatting', 'plain')()
 backend = pybtex.plugin.find_plugin('pybtex.backends', 'html')()
-parser = pybtex.database.input.bibtex.Parser()    
+parser = pybtex.database.input.bibtex.Parser()
+
 
 def entry2html(entry):
     for e in entry:
         return e.text.render(backend).replace('{','').replace('}','').replace('\n', ' ')
+
 
 def generate_bibtex_string(fluid):
     string = ''
@@ -124,12 +126,13 @@ def generate_bibtex_string(fluid):
         string += header_string + '\n\n.. raw:: html\n\n    <br><br> \n\n'.join(sect_strings)
     return string
 
+
 class FluidInfoTableGenerator(object):
-    
+
     def __init__(self, name):
-    
+
         self.name = name
-        
+
     def write(self, path):
         def tos(n):
             ''' convert number to nicely formatted string '''
@@ -151,7 +154,7 @@ class FluidInfoTableGenerator(object):
         rhoc_mass = CoolProp.CoolProp.PropsSI(self.name,'rhomass_critical')
         rhoc_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_critical')
         rhor_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_reducing')
-        
+
         CAS = CoolProp.CoolProp.get_fluid_param_string(self.name, "CAS")
         ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE34")
         formula = CoolProp.CoolProp.get_fluid_param_string(self.name, "formula")
@@ -165,13 +168,13 @@ class FluidInfoTableGenerator(object):
         smiles = CoolProp.CoolProp.get_fluid_param_string(self.name, "SMILES")
         ChemSpider_id = CoolProp.CoolProp.get_fluid_param_string(self.name, "CHEMSPIDER_ID")
         twoDurl = CoolProp.CoolProp.get_fluid_param_string(self.name, "2DPNG_URL")
-        
+
         # Generate (or not) the reducing data
         reducing_data = ''
         if abs(Tr - Tc) > 1e-3:
-            reducing_data = reducing_template.format(Tr = tos(Tr), 
+            reducing_data = reducing_template.format(Tr = tos(Tr),
                                                      rhor_molar = tos(rhor_molar))
-            
+
         args = dict(mm = tos(molar_mass),
                     Tt = tos(Tt),
                     pt = tos(pt),
@@ -193,25 +196,26 @@ class FluidInfoTableGenerator(object):
                     twoDurl = twoDurl
                     )
         out = table_template.format(**args)
-        
+
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
             print 'writing', os.path.join(path, self.name+'-info.csv')
             fp.write(out)
-            
+
+
 class FluidGenerator(object):
     def __init__(self, fluid):
         self.fluid = fluid
-        
+
     def write(self, path):
-        
+
         # Write CSV table data for fluid information
         ITG = FluidInfoTableGenerator(self.fluid)
         ITG.write(path)
-        
+
         aliases = ', '.join(['``' + a.strip() + '``' for a in CoolProp.CoolProp.get_fluid_param_string(self.fluid, 'aliases').strip().split(',') if a])
         if aliases:
             aliases = 'Aliases\n=======\n\n'+aliases + '\n'
-        
+
         references = generate_bibtex_string(self.fluid)
         if references:
             references = 'References\n==========\n'+references+'\n'
@@ -222,7 +226,7 @@ class FluidGenerator(object):
                                     fluid_stars = '*'*len(self.fluid),
                                     references = references
                                     )
-        
+
         with open(os.path.join(path, self.fluid+'.rst'), 'w') as fp:
             print 'writing', os.path.join(path, self.fluid+'.rst')
             fp.write(out.encode('utf8'))

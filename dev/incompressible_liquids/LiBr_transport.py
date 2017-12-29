@@ -14,8 +14,8 @@ from numpy.random import uniform, seed
 #yi = np.linspace(-2.1,2.1,100)
 # grid the data.
 
-Ti = np.linspace(300,500) 
-xi = np.linspace(0.4,0.7) 
+Ti = np.linspace(300,500)
+xi = np.linspace(0.4,0.7)
 
 Tv  = [312.9, 333.0, 353.2, 373.9, 393.3, 413.2, 433.0, 453.2, 472.5]
 xv  = [ 0.45,  0.45,  0.45,  0.45,  0.45,  0.45,  0.45,  0.45,  0.45]
@@ -51,7 +51,7 @@ y = xv
 z = zv
 
 yi = xi
-xi = Ti 
+xi = Ti
 
 zi = griddata((x, y), z, (xi[None,:], yi[:,None]), method='cubic')
 # contour the gridded data, plotting dots at the randomly spaced data points.

@@ -55,35 +55,34 @@ for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solu
 #for fluid in CoolProp.__incompressibles_pure__:
     skip_fluid = False
     for ignored in ["example","iceea","icena","icepg"]:
-        if ignored in fluid.lower(): 
+        if ignored in fluid.lower():
             skip_fluid = True
-    if skip_fluid: 
+    if skip_fluid:
         continue
     state = CoolProp.AbstractState("INCOMP",fluid)
     error = ""
     for frac in [0.5,0.2,0.8,0.1,0.9]:
         error = ""
-        try: 
+        try:
             state.set_mass_fractions([frac])
             state.update(CoolProp.PT_INPUTS,p,state.Tmax())
             break
-        except Exception as e: 
+        except Exception as e:
             error = e.message
             try:
                 state.set_volu_fractions([frac])
                 state.update(CoolProp.PT_INPUTS,p,state.Tmax())
                 break
-            except Exception as e: 
+            except Exception as e:
                 error = e.message
                 try:
                     state.set_mole_fractions([frac])
                     state.update(CoolProp.PT_INPUTS,p,state.Tmax())
                     break
-                except Exception as e: 
+                except Exception as e:
                     error = e.message
                     pass
-                
-    
+
     Tmin = 0.0
     try:
         Tmin = state.keyed_output(CoolProp.iT_freeze)
@@ -103,38 +102,38 @@ for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solu
     la_axis.plot(T-273.15,la)
     mu_axis.plot(T-273.15,mu)
     cp_axis.plot(T-273.15,cp)
-    
+
     if np.max(Pr)>10000:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very high Prandtl number for {0:s} of {1:f}".format(fluid,np.max(Pr)))
     if np.min(Pr)<0.0:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very low Prandtl number for {0:s} of {1:f}".format(fluid,np.min(Pr)))
     if np.max(la)>0.8:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very high thermal conductivity for {0:s} of {1:f}".format(fluid,np.max(la)))
     if np.min(la)<0.3:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very low thermal conductivity for {0:s} of {1:f}".format(fluid,np.min(la)))
     if np.max(mu)>0.2:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very high viscosity for {0:s} of {1:f}".format(fluid,np.max(mu)))
     if np.min(mu)<1e-8:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very low viscosity for {0:s} of {1:f}".format(fluid,np.min(mu)))
     if np.max(cp)>5000:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very high heat capacity for {0:s} of {1:f}".format(fluid,np.max(cp)))
     if np.min(cp)<1000:
-        if fluid not in checked: 
+        if fluid not in checked:
             print("Very low heat capacity for {0:s} of {1:f}".format(fluid,np.min(cp)))
-    
+
 #for fluid in CoolProp.__fluids__:
 for fluid in ["Water"]:
     state = CoolProp.AbstractState("HEOS",fluid)
     Tmin = max(state.Tmin(), Pr_axis.get_xlim()[0]+273.15)
     Tmax = min(state.Tmax(), Pr_axis.get_xlim()[1]+273.15)
-    
+
     T = np.linspace(Tmin, Tmax, N)
     for i, Ti in enumerate(T):
         try:
@@ -145,50 +144,50 @@ for fluid in ["Water"]:
         Pr[i] = np.nan
         la[i] = np.nan
         mu[i] = np.nan
-        cp[i] = np.nan 
+        cp[i] = np.nan
         try:
             state.update(CoolProp.PT_INPUTS, p, Ti)
-            try: 
+            try:
                 Pr[i] = state.Prandtl()
             except Exception as e:
                 print(e.message)
-            try: 
+            try:
                 la[i] = state.conductivity()
             except Exception as e:
                 print(e.message)
-            try: 
+            try:
                 mu[i] = state.viscosity()
             except Exception as e:
                 print(e.message)
-            try: 
+            try:
                 cp[i] = state.cpmass()
             except Exception as e:
                 print(e.message)
         except:
-            pass    
+            pass
     #print(np.min(Pr), np.max(Pr))
-    if np.sum(np.isnan(Pr)) == 0: 
+    if np.sum(np.isnan(Pr)) == 0:
         Pr_axis.plot(T-273.15,Pr,alpha=0.5,ls=":")
-    else: 
+    else:
         #print("Error: Prandtl undefined for "+fluid)
         pass
-    if np.sum(np.isnan(la)) == 0: 
+    if np.sum(np.isnan(la)) == 0:
         la_axis.plot(T-273.15,la,alpha=0.5,ls=":")
-    else: 
+    else:
         #print("Error: Conductivuty undefined for "+fluid)
         pass
-    if np.sum(np.isnan(mu)) == 0: 
+    if np.sum(np.isnan(mu)) == 0:
         mu_axis.plot(T-273.15,mu,alpha=0.5,ls=":")
-    else: 
+    else:
         #print("Error: Viscosity undefined for "+fluid)
         pass
-    if np.sum(np.isnan(cp)) == 0: 
+    if np.sum(np.isnan(cp)) == 0:
         cp_axis.plot(T-273.15,cp,alpha=0.5,ls=":")
-    else: 
+    else:
         #print("Error: Heat capacity undefined for "+fluid)
         pass
-    
-    
+
+
 fig.tight_layout()
 fig.savefig(plots_path+'.pdf')
 #fig.savefig(plots_path+'.png')

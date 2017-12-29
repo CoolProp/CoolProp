@@ -1,7 +1,6 @@
 from CoolProp.HumidAirProp import HAProps
 
 
-    
 print "Validation against H.F. Nelson and H.J. Sauer,\"Formulation for High-Temperature Properties for Moist Air\", HVAC&R Research v.8 #3, 2002"
 print "Note: More accurate formulation employed than in Nelson.  Just for sanity checking"
 print "Yields a negative relative humidity for Tdb=5C,Twb=-3C, point omitted"
@@ -39,4 +38,3 @@ for (tdb_,twb_) in zip(tdb,twb):
     s=0
     print "{Tdb:10.2f}{Twb:10.2f}{Tdp:10.2f}{R:10.1f}{W:10.5f}{h:10.2f}{v:10.3f}".format(W=W,Twb=twb_,Tdp=tdp,Tdb=tdb_,v=v,h=h,s=s,R=R)
 print "------------------------------------------------------------------------"
-

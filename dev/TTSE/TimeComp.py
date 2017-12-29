@@ -22,6 +22,7 @@ from itertools import cycle
 from matplotlib import gridspec, ticker
 #from jopy.dataPlotters import roundList, range_brace
 
+
 def range_brace(x_min, x_max, mid=0.5,
                 beta1=50.0, beta2=100.0, height=1,
                 initial_divisions=11, resolution_factor=1.5):
@@ -55,6 +56,7 @@ def range_brace(x_min, x_max, mid=0.5,
     #bp = BasePlotter()
 #except:
     #bp = None
+
 
 bp = None
 
@@ -98,12 +100,15 @@ backends = ["HEOS"]
 
 pStr = path.dirname(path.abspath(__file__))
 fStr = path.splitext(path.basename(__file__))[0]
+
+
 def getFolderName():
     folderName = path.join(pStr,folder)
     if not path.isdir(folderName):
         print("Creating data directory "+folderName)
         os.makedirs(folderName)
     return folderName
+
 
 def getFigureFolder():
     folderName = path.join(pStr,figures)
@@ -112,14 +117,18 @@ def getFigureFolder():
         os.makedirs(folderName)
     return folderName
 
+
 repList.append("TimeComp-")
 repList.append("chapters/FluidProperties/"+path.basename(getFigureFolder())+"/TimeComp-")
+
 
 def getFileName(qualifiers=[]):
     fileName = path.join(getFolderName(),"-".join(qualifiers))
     return fileName
 
 # Some file handling
+
+
 def loadNpzData(backend,fluid):
     dicts = {}
     globber = getFileName([backend,fluid])+'_[0-9][0-9][0-9].npz'
@@ -132,6 +141,7 @@ def loadNpzData(backend,fluid):
     #    dicts[str(dataDict["name"])] = dataDict
     return dicts
 
+
 def saveNpzData(backend,fluid,dicts,start=0,stop=-1):
     keys = dicts.keys()
     keys.sort()
@@ -140,6 +150,7 @@ def saveNpzData(backend,fluid,dicts,start=0,stop=-1):
         fname = getFileName([backend,fluid])+'_{0}.npz'.format(str(data['name']).zfill(3))
         np.savez(fname, **data)
     return True
+
 
 def splitFluid(propsfluid):
     fld = propsfluid.split("::")
@@ -158,11 +169,13 @@ def splitFluid(propsfluid):
         fld = fld[0]
     return backend,fld,conc
 
+
 def getInpList(backend):
     if backend=="HEOS": return ["DT","HP"]
     elif backend=="REFPROP": return ["DT","HP"]
     elif backend=="INCOMP": return ["PT","HP"]
     else: raise ValueError("Unknown backend.")
+
 
 def getOutList(inp=None):
     if inp == "HP":
@@ -189,19 +202,25 @@ def getOutList(inp=None):
 #     elif iPhase==9: return "not_imposed"
 #     else: raise ValueError("Couldn't find phase.")
 
+
 def getPhaseNum(sPhase):
     return get_phase_index(sPhase)
 #     for i in range(11):
 #         if getPhaseString(i)==sPhase:
 #             return i
 
+
 def getOutKey(out): return "".join(out)
+
 
 def getOutLabel(out): return ",".join(out)
 
+
 def getTimeKey(inp,out): return "_".join([inp,getOutKey(out)])
 
+
 def getVectorKey(inp,out): return getTimeKey(inp, out)+"_V"
+
 
 def getCriticalProps(propsfluid):
     backend,_,_ = splitFluid(propsfluid)
@@ -307,12 +326,14 @@ def getLists(propsfluid):
             loop = False
             raise ValueError("{0}: Could not fill the lists in {0} runs, aborting.".format(propsfluid,maxTries))
 
+
 def getInpValues(inp,dataDict):
     in1 = inp[0]
     in2 = dataDict[in1]
     in3 = inp[1]
     in4 = dataDict[in3]
     return in1,in2,in3,in4
+
 
 def getStateObj(propsfluid):
     backend,fld,conc = splitFluid(propsfluid)
@@ -330,6 +351,7 @@ def getStateObj(propsfluid):
         except:
             pass
     return state
+
 
 def getSpeedMeas(out,in1,in2,in3,in4,propsfluid,vector=False):
     pair, out1, _ = generate_update_pair(get_parameter_index(in1),in2[0],get_parameter_index(in3),in4[0])
@@ -518,11 +540,15 @@ def checkDataSet(propsfluid,dataDict,fill=True,quiet=False):
 #        if not quiet: print("")
 
 # All data is loaded and checked, we can calculate more now
+
+
 def getEntryCount(dicts,backend,fld):
     return len(fluidData[fld][backend].keys())
 
+
 def getUKey(fld,bck,inp,out):
     return "-".join([fld,bck,inp,"".join(out)])
+
 
 def getData(fld,backend,inp,out,fluidData):
     inputs1 = []
@@ -546,6 +572,7 @@ def getData(fld,backend,inp,out,fluidData):
         ret[vkey]  = np.concatenate(values )
         ret[tkey]  = np.concatenate(times  )
     return ret
+
 
 def getSingleData(fld,backend,key,fluidData):
     #print("Getting: "+fld+", "+backend+", "+key)
@@ -571,6 +598,7 @@ def getSingleData(fld,backend,key,fluidData):
             return np.array(values)
     return None
 
+
 def fillDict(fld,backend,fluidData,curDict,curKeys):
     if curDict is None: curDict = {}
     for key in curKeys:
@@ -579,6 +607,7 @@ def fillDict(fld,backend,fluidData,curDict,curKeys):
     return curDict
 
 ################################################
+
 
 fluidData = {}
 
@@ -875,7 +904,6 @@ for fluidstr in fluids[:-1]:
     col2 = ccycle.next()
     col3 = ccycle.next()
 
-
     numBackends = len(backendsLst)
 
     step   = 1
@@ -960,7 +988,6 @@ for fluidstr in fluids[:-1]:
             except:
                 pass
 
-
     #ax1.set_xlim([ids.min()-2.5*width,ids.max()+2.5*width])
     ax1.spines['top'].set_visible(False)
     ax2.spines['top'].set_visible(False)
@@ -1044,7 +1071,6 @@ for fluidstr in fluids[:-1]:
           bbox_to_anchor=(0.5, 1.05),
           ncol=3)
 
-
     ax1.set_ylabel(r'Time per explicit call (us)')
     ax2.set_ylabel(r'Time per implicit call (us)')
     fg.savefig(path.join(getFigureFolder(),"TimeComp-"+fld.lower()+".pdf"))
@@ -1061,7 +1087,6 @@ for fluidstr in fluids[:-1]:
         for lab in ax1.xaxis.get_ticklabels():
             lab.set_verticalalignment("baseline")
             #lab.set_pad(1.5*lab.get_pad())
-
 
         #ax1.set_xticklabels(labels)
         #
@@ -1523,11 +1548,6 @@ for fluidstr in fluids:
                         for k in I:
                             I[k] = I[k][mask]
 
-
-
-
-
-
             for inp in getInpList(backend):
                 if bp is not None:
                     bp.figure = None
@@ -1582,9 +1602,6 @@ for fluidstr in fluids:
                     #minHP = 100
                     #maxHP = 20000
 
-
-
-
                 #cx1_r = reverse_colourmap(cx1)
                 cNorm  = mpl.colors.LogNorm(vmin=minHP, vmax=maxHP)
                 #cNorm  = mpl.colors.LogNorm(vmin=ceil(minHP/1e1)*1e1, vmax=floor(maxHP/1e2)*1e2)
@@ -1604,7 +1621,6 @@ for fluidstr in fluids:
                 for I in [IP,IT,ID,IS,IH]:
                     if I is not None:
                         ax1.plot(I["H"]/1e6,I["P"]/1e5,lw=1.0,c='k',alpha=1)
-
 
                 #ax1.set_xlim([0e+0,6e1])
                 #ax1.set_ylim([5e-1,2e4])
@@ -1646,23 +1662,3 @@ for fluidstr in fluids:
         print(e)
         pass
     plt.close('all')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

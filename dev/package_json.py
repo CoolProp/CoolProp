@@ -86,8 +86,9 @@ Mulero2012_data = """67-64-1 Acetone 0.0633 1.160
 2314-97-8 Trifluoroiodomethane 0.05767 1.298
 7732-18-5 Water -0.1306 2.471 0.2151 1.233
 7440-63-3 Xenon -0.11538 1.0512 0.16598 1.098"""
-    
-def inject_surface_tension_2012(root_dir):  
+
+
+def inject_surface_tension_2012(root_dir):
     print("*** Injecting surface tension curves from Mulero")
     Tc_dict = {'Argon':150.687,
     'Benzene':562.02,
@@ -186,29 +187,29 @@ def inject_surface_tension_2012(root_dir):
             raise ValueError( 'could not find Tc for ' + name)
             continue
         Tc = Tc_dict[name]
-        
+
         # The dictionary of values for the surface tension
-        j_st = dict(Tc = Tc, 
-                    a = a, 
+        j_st = dict(Tc = Tc,
+                    a = a,
                     n = n,
                     BibTeX = 'Mulero-JPCRD-2012',
                     description = 'sigma = sum(a_i*(1-T/Tc)^n_i)'
                     )
-        
+
         fname = os.path.join(root_dir,'dev','fluids',name+'.json')
         if not os.path.exists(fname):
             print(fname+' does not exist')
             continue
-            
+
         j = json.load(open(fname,'r'))
-        
+
         j['ANCILLARIES']['surface_tension'] = j_st
-        
+
         fp = open(fname, 'w')
         fp.write(json.dumps(j, **json_options))
         fp.close()
-        
-        
+
+
 Mulero2014_data = """cis-2-butene 435.75 0.05903 1.246
 Cyclopentane 511.72 0.07348 1.388
 Cyclopropane 398.3 0.06812 1.314
@@ -247,7 +248,8 @@ Tetradecamethylhexasiloxane 653.2 0.040798 1.3323
 trans-2-butene 428.61 0.0001859 0.07485 0.05539 1.224
 Undecane 638.8 0.0556 1.32"""
 
-def inject_surface_tension_2014(root_dir):  
+
+def inject_surface_tension_2014(root_dir):
     rename = {'Undecane': 'n-Undecane',
               'm-xylene (1,3-dimethylbenzene)': 'm-Xylene',
               'o-xylene (1,2-dimethylbenzene)': 'o-Xylene',
@@ -271,7 +273,7 @@ def inject_surface_tension_2014(root_dir):
               }
     import glob, json, os
     for line in Mulero2014_data.split('\n'):
-        
+
         row = line.split(' ')
         #print(row)
         values = []
@@ -281,40 +283,41 @@ def inject_surface_tension_2014(root_dir):
                 values.append(float(row[i]))
             except:
                 j = i
-                
+
         name = ' '.join(row[0:j+1])
-        
+
         Tc = values.pop(0)
         a = values[0:len(row):2]
         n = values[1:len(row):2]
-        
+
         # The dictionary of values for the surface tension
-        j_st = dict(Tc = Tc, 
-                    a = a, 
+        j_st = dict(Tc = Tc,
+                    a = a,
                     n = n,
                     BibTeX = 'Mulero-JPCRD-2014',
                     description = 'sigma = sum(a_i*(1-T/Tc)^n_i)'
                     )
-        
+
         if name in rename:
             name = rename[name]
         fname = os.path.join(root_dir,'dev','fluids',name+'.json')
         if not os.path.exists(fname):
             print(fname + ' does not exist')
             continue
-            
+
         j = json.load(open(fname,'r'))
-        
+
         j['ANCILLARIES']['surface_tension'] = j_st
-        
+
         fp = open(fname, 'w')
         fp.write(json.dumps(j, **json_options))
         fp.close()
 
+
 def inject_environmental_data(root_dir):
     print('*** Injecting environmental data from DTU')
     j = json.load(open(os.path.join(root_dir,'dev','environmental_data_from_DTU','DTU_environmental.json'),'r'))
-    
+
     for CAS in j:
         data = j[CAS]
         fname = os.path.join(root_dir,'dev','fluids',data['Name']+'.json')
@@ -325,7 +328,8 @@ def inject_environmental_data(root_dir):
             fp.write(json.dumps(fluid, **json_options))
         else:
             print('Could not inject environmental data for',data['Name'])
-    
+
+
 def inject_ancillaries(root_dir):
     print('*** Injecting saturation ancillary curves')
     master = []
@@ -335,7 +339,7 @@ def inject_ancillaries(root_dir):
         fluid_name = file_name.split('.')[0]
         # Load the fluid file
         fluid = json.load(open(os.path.join(root_dir,'dev','fluids', fluid_name+'.json'), 'r'))
-        
+
         # Load the ancillary
         anc = json.load(open(os.path.join(root_dir,'dev','ancillaries',fluid_name+'_anc.json'),'r'))
         # Apply the ancillary by merging dictionaries
@@ -344,56 +348,59 @@ def inject_ancillaries(root_dir):
         fp = open(os.path.join(root_dir,'dev','fluids', fluid_name+'.json'),'w')
         fp.write(json.dumps(fluid, **json_options))
 
+
 def inject(root_dir):
     inject_surface_tension_2014(root_dir)
     inject_ancillaries(root_dir)
     inject_surface_tension_2012(root_dir)
     inject_environmental_data(root_dir)
 
+
 def combine_json(root_dir):
-    
+
     master = []
-    
+
     print('*** Combining fluid JSON files in JSON format in dev folder...')
     for file in glob.glob(os.path.join(root_dir,'dev','fluids','*.json')):
-        
+
         path, file_name = os.path.split(file)
         fluid_name = file_name.split('.')[0]
-        
+
         # Load the fluid file
         fluid = json.load(open(file, 'r'))
-        
+
         master += [fluid]
 
     fp = open(os.path.join(root_dir,'dev','all_fluids_verbose.json'),'w')
     fp.write(json.dumps(master, **json_options))
     fp.close()
-    
+
     fp = open(os.path.join(root_dir,'dev','all_fluids.json'),'w')
     fp.write(json.dumps(master))
     fp.close()
-    
+
     master = []
-    
+
     print('*** Combining incompressible JSON files in JSON format in dev folder...')
     for file in glob.glob(os.path.join(root_dir,'dev','IncompressibleLiquids','*.json')):
-        
+
         path, file_name = os.path.split(file)
         fluid_name = file_name.split('.')[0]
-        
+
         # Load the fluid file
         fluid = json.load(open(file, 'r'))
-        
+
         master += [fluid]
 
     fp = open(os.path.join(root_dir,'dev','all_incompressibles_verbose.json'),'w')
     fp.write(json.dumps(master, **json_options))
     fp.close()
-    
+
     fp = open(os.path.join(root_dir,'dev','all_incompressibles.json'),'w')
     fp.write(json.dumps(master))
     fp.close()
-    
+
+
 if __name__=='__main__':
     inject_surface_tension_2014(root_dir = '..')
     combine_json(root_dir = '..')

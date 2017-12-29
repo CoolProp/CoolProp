@@ -625,7 +625,7 @@ cdef class State:
     sets the internal variables in the most computationally efficient way possible
     """
 
-    def __init__(self, object Fluid, dict StateDict, object phase = None, backend = None):
+    def __init__(self, object _Fluid, dict StateDict, object phase = None, backend = None):
         """
         Parameters
         ----------
@@ -637,26 +637,28 @@ cdef class State:
         backend : string
             The CoolProp backend that should be used, one of "HEOS" (default), "REFPROP", "INCOMP", "BRINE", etc.
         """
-        cdef string _Fluid = Fluid
+        cdef string Fluid = _Fluid
+        
 
-        if _Fluid == <string>'none':
+        if Fluid == b'none':
             return
         else:
-            if '::' in Fluid:
-                backend, Fluid = Fluid.split(u'::',1)
+            if b'::' in <bytes>Fluid:
+                backend, Fluid = (<bytes>Fluid).split(b'::')
             elif backend is None:
                 backend = u'?'
 
             self.set_Fluid(Fluid, backend)
-        self.Fluid = _Fluid
+        self.Fluid = Fluid
 
         # Parse the inputs provided
         if StateDict is not None:
             self.update(StateDict)
 
-        self.phase = phase
         if phase is None:
-            self.phase = u'??'.encode('ascii')
+            self.phase = b'??'
+        else:
+            self.phase = phase.encode('ascii')
 
         # Set the phase flag
         if self.phase.lower() == 'gas':
@@ -773,7 +775,7 @@ cdef class State:
 
     cpdef double get_Q(self) except *:
         """ Get the quality [-] """
-        return self.Props(iQ)
+        return self.pAS.Q()
     property Q:
         """ The quality [-] """
         def __get__(self):
@@ -781,7 +783,7 @@ cdef class State:
 
     cpdef double get_MM(self) except *:
         """ Get the mole mass [kg/kmol] or [g/mol] """
-        return self.Props(imolar_mass)*1000
+        return self.pAS.molar_mass()*1000
     property MM:
         """ The molar mass [kg/kmol] or [g/mol] """
         def __get__(self):
@@ -789,7 +791,7 @@ cdef class State:
 
     cpdef double get_rho(self) except *:
         """ Get the density [kg/m^3] """
-        return self.Props(iDmass)
+        return self.pAS.rhomass()
     property rho:
         """ The density [kg/m^3] """
         def __get__(self):
@@ -797,7 +799,7 @@ cdef class State:
 
     cpdef double get_p(self) except *:
         """ Get the pressure [kPa] """
-        return self.Props(iP)/1000
+        return self.pAS.p()/1000
     property p:
         """ The pressure [kPa] """
         def __get__(self):
@@ -805,7 +807,7 @@ cdef class State:
 
     cpdef double get_T(self) except *:
         """ Get the temperature [K] """
-        return self.Props(iT)
+        return self.pAS.T()
     property T:
         """ The temperature [K] """
         def __get__(self):
@@ -813,7 +815,7 @@ cdef class State:
 
     cpdef double get_h(self) except *:
         """ Get the specific enthalpy [kJ/kg] """
-        return self.Props(iHmass)/1000
+        return self.pAS.hmass()/1000
     property h:
         """ The specific enthalpy [kJ/kg] """
         def __get__(self):
@@ -821,7 +823,7 @@ cdef class State:
 
     cpdef double get_u(self) except *:
         """ Get the specific internal energy [kJ/kg] """
-        return self.Props(iUmass)/1000
+        return self.pAS.umass()/1000
     property u:
         """ The internal energy [kJ/kg] """
         def __get__(self):
@@ -829,7 +831,7 @@ cdef class State:
 
     cpdef double get_s(self) except *:
         """ Get the specific enthalpy [kJ/kg/K] """
-        return self.Props(iSmass)/1000
+        return self.pAS.smass()/1000
     property s:
         """ The specific enthalpy [kJ/kg/K] """
         def __get__(self):
@@ -845,7 +847,7 @@ cdef class State:
 
     cpdef double get_cp(self) except *:
         """ Get the specific heat at constant pressure  [kJ/kg/K] """
-        return self.Props(iCpmass)/1000
+        return self.pAS.cpmass()/1000
     property cp:
         """ The specific heat at constant pressure  [kJ/kg/K] """
         def __get__(self):
@@ -853,7 +855,7 @@ cdef class State:
 
     cpdef double get_cv(self) except *:
         """ Get the specific heat at constant volume  [kJ/kg/K] """
-        return self.Props(iCvmass)/1000
+        return self.pAS.cvmass()/1000
     property cv:
         """ The specific heat at constant volume  [kJ/kg/K] """
         def __get__(self):
@@ -865,7 +867,7 @@ cdef class State:
 
     cpdef double get_visc(self) except *:
         """ Get the viscosity, in [Pa-s]"""
-        return self.Props(iviscosity)
+        return self.pAS.viscosity()
     property visc:
         """ The viscosity, in [Pa-s]"""
         def __get__(self):
@@ -873,7 +875,7 @@ cdef class State:
 
     cpdef double get_cond(self) except *:
         """ Get the thermal conductivity, in [kW/m/K]"""
-        return self.Props(iconductivity)/1000
+        return self.pAS.conductivity()/1000
     property k:
         """ The thermal conductivity, in [kW/m/K]"""
         def __get__(self):

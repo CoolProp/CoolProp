@@ -23,7 +23,7 @@ name_map = {'CH4':'Methane',
             'nC9H20': 'n-Nonane',
             'nC10H22': 'n-Decane',
             }
-     
+
 F_factors = {}
 lines = open('KunzWagner2012_TableA6.txt','r').readlines()
 for line in lines:
@@ -49,24 +49,24 @@ template = """{{"Name1" : "{Name1:s}",
 
 for line in lines:
     vals = line.strip().split(' ')
-    
+
     if len(vals) == 6:
         names, a, betav,gammav,betaT,gammaT = vals
     else:
         names, betav,gammav,betaT,gammaT = vals
-        
+
     name1,name2 = names.split('-')
     name1 = name_map[name1]
     name2 = name_map[name2]
-    
+
     CAS1 = get_fluid_param_string(name1,'CAS')
     CAS2 = get_fluid_param_string(name2,'CAS')
-    
+
     if (CAS1,CAS2) in F_factors:
         F = F_factors[(CAS1,CAS2)]
     else:
         F = '0.0'
-        
+
     print template.format(Name1 = name1,
                           Name2 = name2,
                           CAS1 = CAS1,
@@ -76,4 +76,3 @@ for line in lines:
                           betaT = betaT,
                           gammaT = gammaT,
                           F = F)
-    

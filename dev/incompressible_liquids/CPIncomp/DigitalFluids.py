@@ -13,6 +13,7 @@ from __future__ import division, print_function
 import numpy as np
 from .DataObjects import DigitalData, PureData
 
+
 class HyCool20(PureData,DigitalData):
     def __init__(self):
         DigitalData.__init__(self)
@@ -37,6 +38,7 @@ class HyCool20(PureData,DigitalData):
         self.specific_heat.coeffs = np.array([[2.955],[0.0023]])*1e3
 
         key = 'Cond'
+
         def funcCond(T,x):
             T = (T-self.Tbase)
             if T <= 20: return 0.001978*T+0.5172
@@ -46,6 +48,7 @@ class HyCool20(PureData,DigitalData):
         funcCond = None
 
         key = 'Mu'
+
         def funcMu(T,x):
             T = (T-self.Tbase)
             if T <= 20: mPas = 0.07190*np.exp(524.75/(T+142.05))
@@ -80,6 +83,7 @@ class HyCool30(PureData,DigitalData):
         self.specific_heat.coeffs = np.array([[2.783],[0.0023]])*1e3
 
         key = 'Cond'
+
         def funcCond(T,x):
             T = (T-self.Tbase)
             if T <= 20: return 0.001840*T+0.4980
@@ -89,6 +93,7 @@ class HyCool30(PureData,DigitalData):
         funcCond = None
 
         key = 'Mu'
+
         def funcMu(T,x):
             T = (T-self.Tbase)
             if T <= 20: mPas = 0.11100*np.exp(408.17/(T+123.15))
@@ -127,6 +132,7 @@ class HyCool40(PureData,DigitalData):
         self.conductivity.coeffs = np.array([[0.4826],[0.001730]])
 
         key = 'Mu'
+
         def funcMu(T,x):
             T = (T-self.Tbase)
             mPas = 0.07830*np.exp(498.13/(T+130.25))
@@ -164,6 +170,7 @@ class HyCool45(PureData,DigitalData):
         self.conductivity.coeffs = np.array([[0.4750],[0.001674]])
 
         key = 'Mu'
+
         def funcMu(T,x):
             T = (T-self.Tbase)
             mPas = 0.08990*np.exp(479.09/(T+126.55))
@@ -201,6 +208,7 @@ class HyCool50(PureData,DigitalData):
         self.conductivity.coeffs = np.array([[0.4660],[0.001610]])
 
         key = 'Mu'
+
         def funcMu(T,x):
             T = (T-self.Tbase)
             res = 0.0491*np.exp(581.12/(T+129.05))
@@ -210,4 +218,3 @@ class HyCool50(PureData,DigitalData):
         self.viscosity.xData,self.viscosity.yData,self.viscosity.data = self.getArray(dataID=key,func=funcMu,x_in=self.temperature.data,y_in=self.concentration.data,DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
-

@@ -18,6 +18,7 @@ You might want to start by looking at CoolProp.h
 
     #include <string>
     #include <vector>
+    #include "DataStructures.h"
 
     namespace CoolProp {
 
@@ -179,6 +180,11 @@ You might want to start by looking at CoolProp.h
      * @return The fluids, as a '&' delimited string
      */
     std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions);
+
+    /// An internal function to extract the phase string, given the phase index;
+    /// Handy for printing the actual phase string in debug, warning, and error messages.
+    /// @param Phase The enumerated phase index to be looked up
+    std::string phase_lookup_string(phases Phase);
     
     } /* namespace CoolProp */
 #endif

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.optimize
 from math import log
 
+
 def viscosity_dilute(fluid,T,e_k,sigma):
     """
     T in [K], e_K in [K], sigma in [nm]
@@ -14,12 +15,13 @@ def viscosity_dilute(fluid,T,e_k,sigma):
     """
     Tstar = T/e_k
     molemass = CoolProp.CoolProp.PropsSI(fluid,'molemass')*1000
-    
+
     # From Neufeld, 1972, Journal of Chemical Physics - checked coefficients
     OMEGA_2_2 = 1.16145*pow(Tstar,-0.14874)+ 0.52487*exp(-0.77320*Tstar)+2.16178*exp(-2.43787*Tstar)
     # Using the leading constant from McLinden, 2000 since the leading term from Huber 2003 gives crazy values
     eta_star = 26.692e-3*sqrt(molemass*T)/(pow(sigma,2)*OMEGA_2_2)/1e6
     return eta_star
+
 
 def get_psi(fluid, ref_fluid, eta, T, rhomolar, e_k, sigma_nm):
 
@@ -35,13 +37,13 @@ def get_psi(fluid, ref_fluid, eta, T, rhomolar, e_k, sigma_nm):
         # Calculate ESRR (which are based on the CONFORMAL state values)
         f = THIS.T()/conformal_state['T'];
         h = conformal_state['rhomolar']/THIS.rhomolar(); ## Must be the ratio of MOLAR densities!!
-        
+
         # The F factor
         F_eta = sqrt(f)*pow(h, -2.0/3.0)*sqrt(THIS.molar_mass()/REF.molar_mass());
 
         # Dilute viscosity of fluid of interest
         eta_dilute = viscosity_dilute(fluid, T, e_k, sigma_nm)
-        
+
         # Required background contribution from reference fluid
         viscosity_background_required = (eta - eta_dilute)/F_eta
 
@@ -53,8 +55,10 @@ def get_psi(fluid, ref_fluid, eta, T, rhomolar, e_k, sigma_nm):
     psi = scipy.optimize.newton(residual_for_psi, 1.0, args = (REF,))
     return psi
 
+
 def arrayize(*args):
-        return [np.array(a) for a in args]
+    return [np.array(a) for a in args]
+
 
 def HFO():
     # Data from Zhao et al. dx.doi.org/10.1021/je5001457 | J. Chem. Eng. Data 2014, 59, 1366-1371
@@ -79,8 +83,6 @@ def HFO():
     353.00 924.0 119.7 15.80 0.1051 2.26 
     363.12 866.8 160.4 17.28 0.0924 1.35 
     373.14 776.9 225.2 19.89 0.0817 0.54"""
-
-    
 
     for fluid, data, e_k, sigma_nm in zip(['R1234yf', 'R1234ze(E)'],[data_R1234yf, data_R1234zeE],[281.14, 292.11], [0.5328, 0.5017]):
         xx, yy, RHO, ETA, ETACP, ETARP = [], [], [], [], [], []
@@ -120,6 +122,7 @@ def HFO():
         plt.savefig(fluid + '_deviation.pdf')
         plt.show()
 
+
 def pentanes():
     # from doi 10.1021/je0202174 | J. Chem. Eng. Data 2003, 48, 1418-1421
     # T (K), rhoL (kg/m^3), rhoV (kg/m^3), eta (mPa-s)
@@ -136,6 +139,7 @@ def pentanes():
     0.3893 0.3661 0.3439 0.3201 0.3023 0.2859 0.2703 0.2547 0.2399 0.2289 0.2144 0.2023 0.1910 0.1813 0.1724 0.1611 0.1543 0.1480 0.1411 0.1332 0.1287"""
 
     fluid = ''
+
     def undelimit(args, delim = ''):
         return [np.array([float(_) for _ in a.strip().split(delim)]) for a in args]
 
@@ -179,6 +183,7 @@ def pentanes():
         plt.legend(loc='best')
         plt.savefig(fluid + '_deviation.pdf')
         plt.show()
+
 
 HFO()
 pentanes()

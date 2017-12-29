@@ -7,11 +7,13 @@ import argparse
 import os
 import numpy as np
 
+
 def getTime(path):
     if os.path.isfile(path):
         return os.path.getctime(path)
     else:
         return 0
+
 
 def mergePdfIfNewer(singlePdfs, combined):
     from PyPDF2 import PdfFileMerger, PdfFileReader
@@ -102,7 +104,6 @@ if __name__ == '__main__':
         #singleNames = [writer.get_report_file(fl.name) for fl in doneObjs]
         #mergePdfIfNewer(singleNames, "all_examples.pdf")
 
-
     # If the examples did not cause any errors,
     # we can proceed to the real data.
     doneObjs = []
@@ -150,8 +151,6 @@ if __name__ == '__main__':
     solVolu    = []
     errors     = []
 
-
-
     for i in range(0,len(doneObjs)):
 
         curObj = doneObjs[i]
@@ -183,7 +182,6 @@ if __name__ == '__main__':
                 #print("added to errors ({0})".format(curObj.xid))
 
 
-
 #         def printNames(lstObj,pre):
 #             print(pre,end="")
 #             for f in lstObj: print(f.name,end=", ")
@@ -193,8 +191,6 @@ if __name__ == '__main__':
 #         printNames(solMole,   "Mole-based  : ")
 #         printNames(solVolu,   "Volume-based: ")
 #         printNames(purefluids,"Pure fluids : ")
-
-
 
     if len(errors)>0:
         raise ValueError("There was a problem processing the fluid(s): {0}".format([error.name for error in errors]))
@@ -220,13 +216,11 @@ if __name__ == '__main__':
         for fl in doneObjs:
             singles_time = np.append(singles_time, [getTime(writer.get_json_file(fl.name))])
 
-
         if np.any(singles_time>combined_time):
             print("Processing {0:2d} fluids - ".format(len(doneObjs)), end="")
             writer.writeReportList(doneObjs, pdfFile=combined_name)
         else:
             print("No newer file found, aborting.")
-
 
     if runSummary:
         writer.makeSolutionPlots(solObjs=doneObjs, pdfObj=None)
@@ -245,7 +239,6 @@ if __name__ == '__main__':
         FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_mole-based-fluids")
         FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_volume-based-fluids")
         FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_pure-fluids")
-
 
         # After all the list got populated, we can process the entries
         # and generate some tables
@@ -269,9 +262,5 @@ if __name__ == '__main__':
 
         writer.generateStatsTable(lists, labels)
 
-
-
-
     print("All done, bye")
     sys.exit(0)
-

@@ -41,6 +41,9 @@ namespace CoolProp{
         /// Get the schema used to validate the cubic fluids
         std::string get_cubic_fluids_schema();
         
+        /// Get a csv separated list of fluid names that are loaded
+        std::string get_cubic_fluids_list();
+        
     } /* namespace CubicLibrary */
 
 } /* namespace CoolProp */

@@ -7,7 +7,7 @@ RP2CAS = {}
 for file in glob.glob('C:\\Program Files (x86)\\REFPROP\\fluids\\*.fld'):
     lines = open(file,'r').readlines()
     root,RPFluid = os.path.split(file)
-            
+
     for line in lines:
         if line.find('CAS number') > -1:
             CAS_number = line.split('!')[0].strip()
@@ -141,13 +141,13 @@ for row in fluid_lookup.split('\n'):
 
     #  CAS number for this fluid
     CAS = RP2CAS[RPName]
-    
+
     name_dict[CAS] = a[2].strip()
     ODP_dict[CAS] = a[10].strip()
     GWP20_dict[CAS] = a[5].strip()
     GWP100_dict[CAS] = a[6].strip()
     GWP500_dict[CAS] = a[7].strip()
-    
+
 ASHRAE34data = """R11	A1
 R12	A1
 R13	A1
@@ -204,7 +204,7 @@ for row in ASHRAE34data.split('\n'):
         ASHRAE34_dict[RP2CAS[a[0]]] = a[1]
     else:
         print 'Missing CAS number for ' + a[0]
-    
+
 fluids = """:'1BUTENE.FLD','ACETONE.FLD','AIR.PPF','AMMONIA.FLD','ARGON.FLD',
 :'BENZENE.FLD','BUTANE.FLD','C1CC6.FLD','C2BUTENE.FLD','C3CC6.FLD',
 :'C4F10.FLD','C5F12.FLD','C12.FLD','CF3I.FLD','CO.FLD','CO2.FLD',
@@ -306,6 +306,7 @@ HH_dict = {RP2CAS[k]:v for k,v in zip(pp_fluids,pp_HH)}
 FH_dict = {RP2CAS[k]:v for k,v in zip(pp_fluids,pp_FH)}
 PH_dict = {RP2CAS[k]:v for k,v in zip(pp_fluids,pp_PH)}
 
+
 def get_env_data(fluid):
     a = dict(
         HH = HH_dict[fluid],
@@ -316,31 +317,32 @@ def get_env_data(fluid):
         GWP100 = GWP100_dict[fluid],
         GWP500 = GWP500_dict[fluid]
         )
-        
+
     for k,v in a.iteritems():
         try:
             a[k] = int(v)
         except ValueError:
             try:
                 a[k] = float(v)
-            except ValueError: 
+            except ValueError:
                 a[k] = -1
-                
+
     for term in ['GWP100','GWP20','GWP500','ODP']:
         try:
             a[term] = float(a[term])
         except TypeError:
             a[term] = -1
-        
+
     if fluid in ASHRAE34_dict:
         a['ASHRAE34'] = ASHRAE34_dict[fluid]
     else:
         a['ASHRAE34'] = 'UNKNOWN'
-        
+
     a['Name'] = name_dict[fluid]
-    
+
     return a
-        
+
+
 import json
 
 code = {}

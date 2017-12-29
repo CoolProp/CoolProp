@@ -11,6 +11,7 @@ import numpy as np
 from math import log,exp
 random.seed()
 
+
 def check_Trho(N=5000,param='P',fluid='R245fa'):
     values = []
     CP.enable_TTSE_LUT(fluid)
@@ -30,7 +31,7 @@ def check_Trho(N=5000,param='P',fluid='R245fa'):
             try:
                 #Get the T,rho from the EOS directly without the LUT
                 CP.disable_TTSE_LUT(fluid)
-                s = CP.Props('S','P',p,'H',h,fluid)   
+                s = CP.Props('S','P',p,'H',h,fluid)
                 T = CP.Props('T','P',p,'H',h,fluid)
                 rho = CP.Props('D','P',p,'H',h,fluid)
             except:
@@ -57,7 +58,7 @@ if len(values) == 0:
     print 'good'
 
 T,rho,values_withTTSE,values_noTTSE = zip(*values)
-    
+
 CP.disable_TTSE_LUT(fluid)
 Trho(fluid)
 
@@ -65,8 +66,9 @@ plt.plot(rho,T,'.',mfc='none')
 plt.savefig('Trho_TTSE_Validation.png',dpi=300)
 plt.gca().set_xscale('log')
 plt.show()
-    
+
 quit()
+
 
 def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
     values = []
@@ -87,7 +89,7 @@ def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
             try:
                 #Get the T,rho from the EOS directly without the LUT
                 CP.disable_TTSE_LUT(fluid)
-                s = CP.Props('S','P',p,'H',h,fluid)   
+                s = CP.Props('S','P',p,'H',h,fluid)
                 T = CP.Props('T','P',p,'H',h,fluid)
                 rho = CP.Props('D','P',p,'H',h,fluid)
             except:
@@ -110,6 +112,7 @@ def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
             pass
     return values
 
+
 fluid = 'R245fa'
 for other in ['D','T','S']:
     if other == 'D':
@@ -122,9 +125,9 @@ for other in ['D','T','S']:
     if len(values) == 0:
         print 'good: ',other
         continue
-    
+
     p,othervals,values_withTTSE,values_noTTSE = zip(*values)
-    
+
     CP.disable_TTSE_LUT(fluid)
     if other =='D':
         Prho(fluid)
@@ -132,7 +135,7 @@ for other in ['D','T','S']:
         Ps(fluid)
     elif other =='T':
         PT(fluid)
-    
+
     plt.plot(othervals,p,'.',mfc='none')
     plt.gca().set_yscale('log')
     plt.savefig('P'+other+'_TTSE_Validation.png',dpi=300)
@@ -140,10 +143,11 @@ for other in ['D','T','S']:
 
 quit()
 
+
 def check(N=5000,param='D',fluid = 'R245fa'):
     values = []
     CP.enable_TTSE_LUT(fluid)
-    
+
     try:
         CP.Props('D','P',CP.Props(fluid,'ptriple')+1,'Q',1,fluid)
     except:
@@ -164,13 +168,14 @@ def check(N=5000,param='D',fluid = 'R245fa'):
             values.append((h,p,value_withTTSE,value_noTTSE))
         except ValueError:
             pass
-        
+
     return values
+
 
 Ncols = 10
 Nrows = 10
 for parameter in ['D','T','S','C']:
-    fig = plt.figure(figsize=(40,40))  
+    fig = plt.figure(figsize=(40,40))
     for Index,fluid in enumerate(sorted(CoolProp.__fluids__)):
         print fluid
         ax = fig.add_subplot(Ncols,Nrows,Index+1)
@@ -187,7 +192,7 @@ for parameter in ['D','T','S','C']:
         plt.scatter(h,p,s=8,c=np.abs(error),norm = LogNorm(),edgecolor='none',vmin = 1e-16, vmax = 10)
         plt.gca().set_yscale('log')
         plt.colorbar()
-    
+
     plt.savefig(parameter+'_TTSE.png',dpi=200)
     plt.tight_layout()
     plt.close()
