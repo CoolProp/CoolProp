@@ -198,8 +198,11 @@ double FlashRoutines::T_DP_PengRobinson(HelmholtzEOSMixtureBackend &HEOS, double
 
 void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend &HEOS)
 {
-    if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
-    {
+// Comment out the check for an imposed phase.  There's no code to handle if it is!
+// Solver below and flash calculations (if two phase) have to be called anyway.
+//
+//  if (HEOS.imposed_phase_index == iphase_not_imposed) // If no phase index is imposed (see set_components function)
+//  {
         if (HEOS.is_pure_or_pseudopure)
         {
             // Find the phase, while updating all internal variables possible using the pressure
@@ -238,7 +241,9 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend &HEOS)
         else{
             throw NotImplementedError("DP_flash not ready for mixtures");
         }
-    }
+//  }
+//  TO DO:  Put the imposed phase check back in
+//          and provide the else code here if it is imposed.
 }
 
 class DQ_flash_residual : public FuncWrapper1DWithTwoDerivs
@@ -1667,7 +1672,7 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend 
         }
     }
     // Subcritical temperature liquid
-    else if (HEOS._phase == iphase_liquid)
+    else if ((HEOS._phase == iphase_liquid) || (HEOS._phase == iphase_supercritical_liquid))
     {
         CoolPropDbl ymelt, yL, y;
         CoolPropDbl rhomelt = HEOS.components[0].triple_liquid.rhomolar;
@@ -1732,6 +1737,77 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend &HEOS, parameters ot
     {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;
+        // The remaining code in this branch was added to set some needed parameters if phase is imposed,
+        // since HEOS.T_phase_determination_pure_or_pseudopure() is not being called.
+        if (HEOS._T < HEOS._crit.T) //
+        {
+            HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
+            HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
+            if (HEOS._phase == iphase_liquid)
+            {
+                HEOS._Q = -1000;
+            }
+            else if (HEOS._phase == iphase_gas)
+            {
+                HEOS._Q = 1000;
+            }
+            else if (HEOS._phase == iphase_twophase)
+            {
+                // Actually have to use saturation information sadly
+                // For the given temperature, find the saturation state
+                // Run the saturation routines to determine the saturation densities and pressures
+                HelmholtzEOSMixtureBackend HEOS1(HEOS.components);
+                SaturationSolvers::saturation_T_pure_options options;
+                SaturationSolvers::saturation_T_pure(HEOS1, HEOS._T, options);
+
+                if (other != iDmolar)
+                {
+                    // Update the states
+                    if (HEOS.SatL) HEOS.SatL->update(DmolarT_INPUTS, HEOS._rhoLanc, HEOS._T);
+                    if (HEOS.SatV) HEOS.SatV->update(DmolarT_INPUTS, HEOS._rhoVanc, HEOS._T);
+                    // Update the two-Phase variables
+                    HEOS._rhoLmolar = HEOS.SatL->rhomolar();
+                    HEOS._rhoVmolar = HEOS.SatV->rhomolar();
+                }
+
+                CoolPropDbl Q;
+
+                switch (other)
+                {
+                    case iDmolar:
+                        Q = (1 / HEOS.rhomolar() - 1 / HEOS1.SatL->rhomolar()) / (1 / HEOS1.SatV->rhomolar() - 1 / HEOS1.SatL->rhomolar()); break;
+                    case iSmolar:
+                        Q = (HEOS.smolar() - HEOS1.SatL->smolar()) / (HEOS1.SatV->smolar() - HEOS1.SatL->smolar()); break;
+                    case iHmolar:
+                        Q = (HEOS.hmolar() - HEOS1.SatL->hmolar()) / (HEOS1.SatV->hmolar() - HEOS1.SatL->hmolar()); break;
+                    case iUmolar:
+                        Q = (HEOS.umolar() - HEOS1.SatL->umolar()) / (HEOS1.SatV->umolar() - HEOS1.SatL->umolar()); break;
+                    default:
+                        throw ValueError(format("bad input for other"));
+                }
+                if (Q < 0) {
+                    HEOS._Q = -1;
+                }
+                else if (Q > 1) {
+                    HEOS._Q = 1;
+                }
+                else {
+                    HEOS._Q = Q;
+                    // Load the outputs
+                    HEOS._p = HEOS._Q*HEOS1.SatV->p() + (1 - HEOS._Q)*HEOS1.SatL->p();
+                    HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+                }
+            }
+            else if (HEOS._phase == iphase_supercritical_liquid)
+            {
+                HEOS._Q = -1000;
+            }
+            else throw ValueError(format("Temperature specified is not the imposed phase region."));
+        }
+        else if (HEOS._T > HEOS._crit.T && HEOS._T > HEOS.components[0].EOS().Ttriple)
+        {
+            HEOS._Q = 1e9;
+        }
     }
     else
     {
