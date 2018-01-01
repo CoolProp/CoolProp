@@ -179,7 +179,7 @@ TEST_CASE("Integrate y'=y","[ODEIntegrator]")
     public:
         std::vector<double> t, h, y;
         
-        virtual std::vector<double> get_initial_array(){ return std::vector<double>(1,1); }
+        virtual std::vector<double> get_initial_array() const{ return std::vector<double>(1,1); }
         
         virtual void pre_step_callback(){};
         
