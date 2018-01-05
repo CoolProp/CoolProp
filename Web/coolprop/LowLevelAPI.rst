@@ -57,7 +57,7 @@ A simple example of this would be
     
     In [0]: CoolProp.DmolarT_INPUTS
 
-Keyed output versus acccessor functions
+Keyed output versus accessor functions
 ---------------------------------------
 
 The simple output functions like :cpapi:`AbstractState::rhomolar` that are mapped to keys in :cpapi:`CoolProp::parameters` can be either obtained using the accessor function or by calling :cpapi:`AbstractState::keyed_output`.  The advantage of the ``keyed_output`` function is that you could in principle iterate over several keys, rather than having to hard-code calls to several accessor functions.  For instance:
@@ -96,7 +96,7 @@ You might reasonably ask at this point why we would want to use the low-level in
     In [0]: %timeit HEOS.update(CoolProp.DmolarT_INPUTS, 1e-6, 300)
     
     # Reset the specification of phase
-    In [0]: HEOS.specify_phase(CoolProp.iphase_unknown)
+    In [0]: HEOS.specify_phase(CoolProp.iphase_not_imposed)
     
     # A mixture of methane and ethane
     In [0]: HEOS = CoolProp.AbstractState("HEOS", "Methane&Ethane")
@@ -119,6 +119,56 @@ You might reasonably ask at this point why we would want to use the low-level in
     # Vapor phase mole fractions - 
     # Should be the bulk composition back since we are doing a dewpoint calculation
     In [0]: HEOS.mole_fractions_vapor()
+
+Imposing the Phase (Optional)
+-----------------------------
+
+Each call to ``update()`` requires the phase to be determined based on the provided input pair, and may require a non-trivial flash calculation to determine if the state point is in the single-phase or two-phase region. For computational efficiency, CoolProp provide a facility to manually impose the phase before updating the state point. As demonstrated above, specifying the phase of a state point can result in a speed-up of ~10%, depending on the input pair provided and the phase region specified. If unspecified, CoolProp will determine the phase.  
+
+Depending on the input pair, there may or may not be a speed benefit to imposing a phase, like the one demonstrated above for **DmolarT_INPUTS**.  If, for a given input pair, there is little or no speed benefit, or if the flash calculation has to be performed anyway to determine saturation values, the imposed phase may simply be ignored internally.
+
+To specify the phase to be used, the AbstractState provides the following function:
+
+.. ipython::
+
+    # Imposing the single-phase gas region
+    In [0]: HEOS.specify_phase(CoolProp.iphase_gas)
+
+The specified phase parameter can be one of the CoolProp constants in the table below. 
+
++---------------------------------+----------------------------------------------------+
+| Phase Constant                  | Phase Region                                       |
++=================================+====================================================+
+| iphase_liquid                   | p < pcrit & T < Tcrit ; above saturation           |
++---------------------------------+----------------------------------------------------+
+| iphase_gas                      | p < pcrit & T < Tcrit ; below saturation           |
++---------------------------------+----------------------------------------------------+
+| iphase_twophase                 | p < pcrit & T < Tcrit ; mixed liquid/gas           |
++---------------------------------+----------------------------------------------------+
+| iphase_supercritical_liquid     | p > pcrit & T < Tcrit                              |
++---------------------------------+----------------------------------------------------+
+| iphase_supercritical_gas        | p < pcrit & T > Tcrit                              |
++---------------------------------+----------------------------------------------------+
+| iphase_supercritical            | p > pcrit & T > Tcrit                              |
++---------------------------------+----------------------------------------------------+
+| iphase_not_imposed              | (Default) CoolProp to determine phase              |
++---------------------------------+----------------------------------------------------+
+
+To remove an imposed phase and allow CoolProp to determine the phase again, one of the following calls can be made.
+    
+.. ipython::
+
+    # Reset the specification of phase
+    In [0]: HEOS.specify_phase(CoolProp.iphase_not_imposed)
+
+    # Or, more simply
+    In [0]: HEOS.unspecify_phase()
+
+Phase specification in the low-level interface should be performed right before the call to ``update()``.
+
+.. warning::
+
+   When specifying an imposed phase, it is absolutely **critical** that the input pair actually lie within the imposed phase region.  If an incorrect phase is imposed for the given input pair, ``update()`` may throw unexpected errors or incorrect results may possibly be returned from the property functions.  If the state point phase is not absolutely known, it is best to let CoolProp determine the phase at the cost of some computational efficiency.
 
 .. _partial_derivatives_low_level:
 
