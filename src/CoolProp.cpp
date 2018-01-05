@@ -148,11 +148,14 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             // If pEnd points to the last character in the string, it wasn't able to do the conversion
             if (pEnd == &(fraction[fraction.size()-1])){throw ValueError(format("Could not convert [%s] into number", fraction.c_str()));}
 
-            // And add to vector
-            fractions.push_back(f);
+            if (f > 0)  // Only push component if fraction is positive and non-zero
+            {
+                // And add to vector
+                fractions.push_back(f);
 
-            // Add name
-            names.push_back(name);
+                // Add name
+                names.push_back(name);
+            }
         }
 
         if (get_debug_level()>10) std::cout << format("%s:%d: Detected fractions of %s for %s.",__FILE__,__LINE__,vec_to_string(fractions).c_str(), (strjoin(names, "&")).c_str());
