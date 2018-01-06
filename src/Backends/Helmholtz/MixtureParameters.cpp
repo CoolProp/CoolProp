@@ -31,8 +31,10 @@ class PredefinedMixturesLibrary{
             dict.add_string_vector("fluids", cpjson::get_string_array(*itr, "fluids"));
             // Get the mole fractions
             dict.add_double_vector("mole_fractions", cpjson::get_double_array(*itr,"mole_fractions"));
-
+            // Add to the map
             predefined_mixture_map.insert(std::pair<std::string, Dictionary >(name, dict));
+            // Also add the uppercase version to the map
+            predefined_mixture_map.insert(std::pair<std::string, Dictionary >(upper(name), dict));
         }
     }
 };
