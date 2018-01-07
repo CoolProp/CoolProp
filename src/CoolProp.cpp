@@ -148,7 +148,7 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             // If pEnd points to the last character in the string, it wasn't able to do the conversion
             if (pEnd == &(fraction[fraction.size()-1])){throw ValueError(format("Could not convert [%s] into number", fraction.c_str()));}
 
-            if (f > 0)  // Only push component if fraction is positive and non-zero
+            if (f > 10*DBL_EPSILON)  // Only push component if fraction is positive and non-zero
             {
                 // And add to vector
                 fractions.push_back(f);
