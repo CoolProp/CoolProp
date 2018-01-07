@@ -300,12 +300,11 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
     {
         if (CoolProp::get_debug_level() > 5){ std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str()); }
         if (dbg_refprop) std::cout << format("%s:%d: The current fluid can be reused; %s and %s match \n",__FILE__,__LINE__,cached_component_string.c_str(),LoadedREFPROPRef.c_str());
-        long N = static_cast<long>(fluid_names.size());
-        if (N > ncmax)
-        {
+        long N = static_cast<long>(this->fluid_names.size());
+        if (N > ncmax){
             throw ValueError(format("Size of fluid vector [%d] is larger than the maximum defined by REFPROP [%d]", fluid_names.size(), ncmax));
         }
-        this->Ncomp = N;
+        // this->Ncomp = N; ( this should not get set because it is already set and is always 1 for predefined mixtures )
         mole_fractions.resize(ncmax);
         mole_fractions_liq.resize(ncmax);
         mole_fractions_vap.resize(ncmax);
@@ -346,7 +345,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
             std::vector<double> x(ncmax);
             char mix[255], reference_state[4] = "DEF";
             
-            std::string path_to_MIX_file = get_REFPROP_mixtures_path_prefix() + components_joined_raw;
+            std::string path_to_MIX_file = join_path(get_REFPROP_mixtures_path_prefix(), components_joined_raw);
             const char * _components_joined_raw  = path_to_MIX_file.c_str();
             if (strlen(_components_joined_raw) > 255){ throw ValueError(format("components (%s) is too long", components_joined_raw.c_str())); }
             strcpy(mix, _components_joined_raw);
