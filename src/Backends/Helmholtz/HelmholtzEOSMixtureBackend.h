@@ -64,6 +64,10 @@ public:
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid> &components, bool generate_SatL_and_SatV = true);
     HelmholtzEOSMixtureBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
     virtual HelmholtzEOSMixtureBackend * get_copy(bool generate_SatL_and_SatV = true);
+    
+    // Copy over the reducing and departure terms to all linked states (recursively)
+    void sync_linked_states(const HelmholtzEOSMixtureBackend * const);
+    
     virtual ~HelmholtzEOSMixtureBackend(){};
     std::string backend_name(void) { return get_backend_string(HEOS_BACKEND_MIX); }
     shared_ptr<ReducingFunction> Reducing;

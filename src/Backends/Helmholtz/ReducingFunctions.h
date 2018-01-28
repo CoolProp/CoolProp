@@ -33,6 +33,8 @@ protected:
 public:
     ReducingFunction():N(0){};
     virtual ~ReducingFunction(){};
+    
+    virtual ReducingFunction *copy() = 0;
 
     virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value) = 0;
     
@@ -152,6 +154,10 @@ public:
             Yc_T[i] = pFluids[i].EOS().reduce.T;
             Yc_v[i] = 1/pFluids[i].EOS().reduce.rhomolar;
         }
+    };
+    
+    ReducingFunction * copy(){
+        return new GERG2008ReducingFunction(pFluids, beta_v, gamma_v, beta_T, gamma_T);
     };
 
     /// Default destructor
@@ -493,6 +499,10 @@ private:
 
 public:
 	ConstantReducingFunction(const double T_c, const double rhomolar_c) : T_c(T_c), rhomolar_c(rhomolar_c) {};
+    
+    ReducingFunction * copy(){
+        return new ConstantReducingFunction(T_c, rhomolar_c);
+    };
 
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, double value){return;}
     double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter) const{return _HUGE; }
