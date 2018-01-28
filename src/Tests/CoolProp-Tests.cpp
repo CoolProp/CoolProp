@@ -1958,6 +1958,22 @@ TEST_CASE("Check the phase flags", "[phase]")
     }
 }
 
+TEST_CASE("Check the changing of reducing function constants", "[reducing]")
+{
+    double z0 = 0.2;
+    std::vector<double> z(2); z[0] = z0; z[1] = 1-z[0];
+    shared_ptr<CoolProp::AbstractState> AS1(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+    shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+    AS1->set_mole_fractions(z);
+    AS2->set_mole_fractions(z);
+    std::vector<CoolProp::CriticalState> pts1 = AS1->all_critical_points();
+    double gammaT = AS2->get_binary_interaction_double(0,1,"gammaT");
+    AS2->set_binary_interaction_double(0,1,"gammaT",gammaT*0.7);
+    std::vector<CoolProp::CriticalState> pts2 = AS2->all_critical_points();
+    double Tdiff = abs(pts2[0].T - pts1[0].T);
+    CHECK(Tdiff > 1e-3); // Make sure that it actually got the change to the interaction parameters
+}
+
 /*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 {

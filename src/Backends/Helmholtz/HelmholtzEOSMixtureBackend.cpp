@@ -132,12 +132,22 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     _reducing.fill(_HUGE);
     
 };
-HelmholtzEOSMixtureBackend * HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV){
-    HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
-    *(ptr->residual_helmholtz.get()) = *(residual_helmholtz.get());
-    if (Reducing.get() != NULL){
-        *(ptr->Reducing.get()) = *(Reducing.get());
+void HelmholtzEOSMixtureBackend::sync_linked_states(const HelmholtzEOSMixtureBackend * const source){
+    *(residual_helmholtz) = *source->residual_helmholtz;
+    if (source->Reducing){
+        Reducing.reset(source->Reducing->copy());
     }
+    // Recurse into linked states of the class
+    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
+        it->get()->sync_linked_states(source);
+    }
+}
+HelmholtzEOSMixtureBackend * HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV){
+    // Set up the class with these components
+    HelmholtzEOSMixtureBackend * ptr = new HelmholtzEOSMixtureBackend(components, generate_SatL_and_SatV);
+    // Recursively walk into linked states, setting the departure and reducing terms
+    // to be equal to the parent (this instance)
+    ptr->sync_linked_states(this);
     return ptr;
 };
 void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
