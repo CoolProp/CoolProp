@@ -1000,10 +1000,17 @@ std::string phase_lookup_string(phases Phase)
 }
 std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName)
 {
-    double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName);
-    if (!ValidNumber(Phase_double)){ return "";}
-    std::size_t Phase_int = static_cast<std::size_t>(Phase_double);
-    return phase_lookup_string(static_cast<phases>(Phase_int));
+    double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName);   // Attempt to get "Phase" from PropsSI()
+    if (!ValidNumber(Phase_double)){                                            // if the returned phase is invalid...
+        std::string strPhase = phase_lookup_string(iphase_unknown);             //     phase is unknown.
+        std::string strError = get_global_param_string("errstring").c_str();    //     fetch waiting error string
+        if (strError != "") {                                                   //     if error string is not empty,
+            strPhase.append(": " + strError);                                   //        append it to the phase string.
+        }
+        return strPhase;                                                        //     return the "unknown" phase string
+    }                                                                           // else
+    std::size_t Phase_int = static_cast<std::size_t>(Phase_double);             //     convert returned phase to int
+    return phase_lookup_string(static_cast<phases>(Phase_int));                 //     return phase as a string
 }
 
 /*
