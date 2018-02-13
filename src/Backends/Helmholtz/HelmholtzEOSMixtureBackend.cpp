@@ -1641,7 +1641,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             }
         }
 
-        if (!is_pure_or_pseudopure){throw ValueError("possibly two-phase inputs not supported for pseudo-pure for now");}
+        if (!is_pure_or_pseudopure){throw ValueError("possibly two-phase inputs not supported for mixtures for now");}
 
         // Actually have to use saturation information sadly
         // For the given pressure, find the saturation state
@@ -1801,9 +1801,10 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     
     // T is known, another input P, T, H, S, U is given (all molar)
     if (_T < _crit.T && _p > _crit.p){
+        // Only ever true if (other = iP); otherwise _p = -HUGE
         _phase = iphase_supercritical_liquid;
     }
-    else if (std::abs(_T - _crit.T) < 10*DBL_EPSILON)
+    else if (std::abs(_T - _crit.T) < 10*DBL_EPSILON)   // Exactly at Tcrit
     {
         switch (other)
         {
@@ -1833,7 +1834,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 throw ValueError(format("T=Tcrit; invalid input for other to T_phase_determination_pure_or_pseudopure"));
         }
     }
-    else if (_T < _crit.T)
+    else if (_T < _crit.T)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
         // Start to think about the saturation stuff
         // First try to use the ancillary equations if you are far enough away
@@ -2021,7 +2022,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         _rhomolar = 1/(_Q/HEOS.SatV->rhomolar() + (1-_Q)/HEOS.SatL->rhomolar());
         return;
     }
-    else if (_T > _crit.T && _T > components[0].EOS().Ttriple)
+    else if (_T > _crit.T && _T > components[0].EOS().Ttriple)  // Supercritical or Supercritical Gas Region
     {
         _Q = 1e9;
         switch (other)
