@@ -875,11 +875,10 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             CoolPropDbl hL = 0, hV = 0;
             SimpleState closest_state;
             bool is_two_phase = false;
-            // Phase is imposed, use it
-            if (imposed_phase_index != iphase_not_imposed){
-                is_two_phase = (imposed_phase_index == iphase_twophase);
-            }
-            else{
+            // If phase is imposed, use it, but only if it's single phase:
+            //   - Imposed two phase still needs to determine saturation limits by calling pure_saturation.is_inside().
+            //   - There's no speed increase to be gained by imposing two phase.
+            if ((imposed_phase_index == iphase_not_imposed) || (imposed_phase_index == iphase_twophase)) {
                 if (is_mixture){
                     is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, iHmolar, _hmolar, iclosest, closest_state);
                 }
@@ -887,6 +886,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     is_two_phase = pure_saturation.is_inside(iP, _p, iHmolar, _hmolar, iL, iV, hL, hV);
                 }
             }
+            // Phase determined or imposed, now interpolate results
             if (is_two_phase){
                 using_single_phase_table = false;
                 _Q = (static_cast<double>(_hmolar)-hL)/(hV-hL);
@@ -1040,11 +1040,10 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         std::size_t iclosest = 0;
         SimpleState closest_state;
         bool is_two_phase = false;
-        // Phase is imposed, use it
-        if (imposed_phase_index != iphase_not_imposed){
-            is_two_phase = (imposed_phase_index == iphase_twophase);
-        }
-        else{
+        // If phase is imposed, use it, but only if it's single phase:
+        //   - Imposed two phase still needs to determine saturation limits by calling is_inside().
+        //   - There's no speed increase to be gained by imposing two phase.
+        if ((imposed_phase_index == iphase_not_imposed) || (imposed_phase_index == iphase_twophase)) {
             if (is_mixture){
                 is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iP, _p, otherkey, otherval, iclosest, closest_state);
                 if (is_two_phase){
@@ -1059,6 +1058,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 is_two_phase = pure_saturation.is_inside(iP, _p, otherkey, otherval, iL, iV, zL, zV);
             }
         }
+        // Phase determined or imposed, now interpolate results
         if (is_two_phase){
             using_single_phase_table = false;
             if (otherkey == iDmolar){
@@ -1102,11 +1102,10 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         std::size_t iclosest = 0;
         SimpleState closest_state;
         bool is_two_phase = false;
-        // Phase is imposed, use it
-        if (imposed_phase_index != iphase_not_imposed){
-            is_two_phase = (imposed_phase_index == iphase_twophase);
-        }
-        else{
+        // If phase is imposed, use it, but only if it's single phase:
+        //   - Imposed two phase still needs to determine saturation limits by calling is_inside().
+        //   - There's no speed increase to be gained by imposing two phase.
+        if ((imposed_phase_index == iphase_not_imposed) || (imposed_phase_index == iphase_twophase)) {
             if (is_mixture){
                 is_two_phase = PhaseEnvelopeRoutines::is_inside(phase_envelope, iT, _T, otherkey, otherval, iclosest, closest_state);
                 if (is_two_phase){
