@@ -119,7 +119,7 @@ double CoolProp::VTPRBackend::get_binary_interaction_double(const std::size_t i,
 };
 
 const UNIFACLibrary::UNIFACParameterLibrary & CoolProp::VTPRBackend::LoadLibrary(){
-    if (!lib.is_populated()){
+    if (!lib.is_populated() || get_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY)){
         std::string UNIFAC_path = get_config_string(VTPR_UNIFAC_PATH);
         if (UNIFAC_path.empty()){
             throw ValueError("You must provide the path to the UNIFAC library files as VTPR_UNIFAC_PATH");

@@ -1,5 +1,6 @@
 #include "UNIFACLibrary.h"
 #include "Backends/Helmholtz/Fluids/FluidLibrary.h"
+#include "Configuration.h"
 
 namespace UNIFACLibrary{
 
@@ -15,6 +16,11 @@ namespace UNIFACLibrary{
     }
     void UNIFACParameterLibrary::populate(rapidjson::Value &group_data, rapidjson::Value &interaction_data, rapidjson::Value &comp_data)
     {
+        if (CoolProp::get_config_bool(VTPR_ALWAYS_RELOAD_LIBRARY)){
+            groups.clear();
+            interaction_parameters.clear();
+            components.clear();
+        }
         // Schema should have been used to validate the data already, so by this point we are can safely consume the data without checking ...
         for (rapidjson::Value::ValueIterator itr = group_data.Begin(); itr != group_data.End(); ++itr)
         {
