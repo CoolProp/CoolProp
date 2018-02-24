@@ -1,6 +1,6 @@
 # This file is embedded directly in CoolProp.pyx
 
-cimport constants_header
+from . cimport constants_header
         
 cdef class PyPhaseEnvelopeData:
     pass

@@ -4,7 +4,7 @@ cimport cython
 
 from libcpp.vector cimport vector
 
-from typedefs cimport *
+from .typedefs cimport *
 
 include "AbstractState.pxd"
        

@@ -2,9 +2,9 @@ from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
-cimport constants_header
+from . cimport constants_header
 
-from typedefs cimport CoolPropDbl
+from .typedefs cimport CoolPropDbl
 
 cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
     cdef cppclass PhaseEnvelopeData:
