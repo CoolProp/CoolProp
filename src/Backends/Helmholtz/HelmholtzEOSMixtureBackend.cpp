@@ -2948,6 +2948,9 @@ SimpleState HelmholtzEOSMixtureBackend::calc_reducing_state_nocache(const std::v
 }
 void HelmholtzEOSMixtureBackend::calc_reducing_state(void)
 {
+    if (get_mole_fractions_ref().empty()){
+        throw ValueError("Mole fractions must be set before calling calc_reducing_state");
+    }
     /// \todo set critical independently
     _reducing = calc_reducing_state_nocache(mole_fractions);
     _crit = _reducing;
