@@ -132,7 +132,7 @@ protected:
     std::vector<CoolPropFluid> pFluids; ///< List of fluids
 
 public:
-    GERG2008ReducingFunction(std::vector<CoolPropFluid> &pFluids, const STLMatrix &beta_v, const STLMatrix &gamma_v, STLMatrix beta_T, const STLMatrix &gamma_T)
+    GERG2008ReducingFunction(const std::vector<CoolPropFluid> &pFluids, const STLMatrix &beta_v, const STLMatrix &gamma_v, STLMatrix beta_T, const STLMatrix &gamma_T)
     {
         this->pFluids = pFluids;
         this->beta_v = beta_v;
