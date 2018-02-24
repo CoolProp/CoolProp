@@ -2,10 +2,10 @@ from libcpp cimport bool
 from libcpp.string cimport string
 
 # A header defining the AbstractState class
-cimport cAbstractState
+from . cimport cAbstractState
 
-from typedefs cimport *
-cimport constants_header
+from .typedefs cimport *
+from . cimport constants_header
 
 #ctypedef fused string_t:
 #    cython.p_char

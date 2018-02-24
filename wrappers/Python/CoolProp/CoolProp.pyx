@@ -12,7 +12,7 @@ cimport cython
 import math
 import warnings
 
-from typedefs cimport CoolPropDbl
+from .typedefs cimport CoolPropDbl
 
 try:
     import numpy as np
@@ -87,8 +87,8 @@ cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
     void _set_departure_functions "CoolProp::set_departure_functions"(const string &functions) except +
 
 from constants import *
-from constants_header cimport *
-cimport constants_header
+from .constants_header cimport *
+from . cimport constants_header
 
 cdef bint iterable(object a):
     """
