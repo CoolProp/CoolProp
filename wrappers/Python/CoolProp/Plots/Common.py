@@ -1120,10 +1120,10 @@ consider replacing it with \"_get_sat_bounds\".",
         if x is not None: x  = dimx.to_SI(x)
         dimy = self._system[self._y_index]
         yv = dimy.to_SI(yv)
-        if y is not None: y  = dimx.to_SI(y)
+        if y is not None: y  = dimy.to_SI(y)
         (x,y,rot) = self._inline_label(xv,yv,x,y)
         x  = dimx.from_SI(x)
-        y  = dimx.from_SI(y)
+        y  = dimy.from_SI(y)
         return (x,y,rot)
 
     def show(self):
