@@ -220,7 +220,7 @@ struct ResidualHelmholtzGeneralizedExponentialElement
         l_double = 0; omega = 0; m_double = 0; 
         eta1 = 0; epsilon1 = 0; eta2 = 0; epsilon2 = 0;
         beta1 = 0; gamma1 = 0; beta2 = 0; gamma2 = 0;
-        l_int = 0; m_int = 0;
+        l_int = 0; m_int = 0; l_is_int = false; m_is_int = true;
     };
 };
 /** \brief A generalized residual helmholtz energy container that can deal with a wide range of terms which can be converted to this general form
