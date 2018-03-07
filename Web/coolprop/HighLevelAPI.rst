@@ -55,6 +55,55 @@ To retrieve either the *vapor* or *liquid* properties along the saturation curve
 .. note::
    The *latent heat of vaporization* can be calculated using the difference between the vapor and liquid enthalpies at the same point on the saturation curve.
 
+Imposing the Phase (Optional)
+-----------------------------
+
+Each call to ``PropsSI()`` requires the phase to be determined based on the provided input pair, and may require a non-trivial flash calculation to determine if the state point is in the single-phase or two-phase region and to generate a sensible initial guess for the solver. For computational efficiency, ``PropsSI()`` allows the phase to be manually imposed through the input key parameters.  If unspecified, PropsSI will attempt to determine the phase automatically. 
+
+Depending on the input pair, there may or may not be a speed benefit to imposing a phase.  However, some state points may not be able to find a suitable initial guess for the solver and being able to impose the phase manually may offer a solution if the solver is failing.  Additionally,  with an input pair in the two-phase region, it can be useful to impose a liquid or gas phase to instruct ``PropsSI()`` to return the saturated liquid or saturated gas properties.  
+
+To specify the phase to be used, add the "|" delimiter to one (and only one) of the input key strings followed by one of the phase strings in the table below:
+
++---------------------------------+----------------------------------------------------+
+| Phase String                    | Phase Region                                       |
++=================================+====================================================+
+| "liquid"                        | p < pcrit & T < Tcrit ; above saturation           |
++---------------------------------+----------------------------------------------------+
+| "gas"                           | p < pcrit & T < Tcrit ; below saturation           |
++---------------------------------+----------------------------------------------------+
+| "twophase"                      | p < pcrit & T < Tcrit ; mixed liquid/gas           |
++---------------------------------+----------------------------------------------------+
+| "supercritical_liquid"          | p > pcrit & T < Tcrit                              |
++---------------------------------+----------------------------------------------------+
+| "supercritical_gas"             | p < pcrit & T > Tcrit                              |
++---------------------------------+----------------------------------------------------+
+| "supercritical"                 | p > pcrit & T > Tcrit                              |
++---------------------------------+----------------------------------------------------+
+| "not_imposed"                   | (Default) CoolProp to determine phase              |
++---------------------------------+----------------------------------------------------+
+
+For example:
+    
+.. ipython::
+
+    # Get the density of Water at T = 461.1 K and P = 5.0e6 Pa, imposing the liquid phase
+    In [0]: PropsSI('D','T|liquid',461.1,'P',5e6,'Water')
+
+    # Get the density of Water at T = 597.9 K and P = 5.0e6 Pa, imposing the gas phase
+    In [0]: PropsSI('D','T',597.9,'P|gas',5e6,'Water')
+
+On each call to ``PropsSI()``, the imposed phase is reset to "not_imposed" as long as no imposed phase strings are used.  A phase string must be appended to an Input key string on each and every call to ``PropsSI()`` to impose the phase.  ``PropsSI()`` will return an error for any of the following syntax conditions:
+
+* If anything other than the pipe, "|", symbol is used as the delimiter
+* If the phase string is not one of the valid phase strings in the table above
+* If the phase string is applied to more than one of the Input key parameters
+
+In addition, for consistency with the low-level interface, the valid phase strings in the table above may be prefixed with either "phase_" or "iphase_" and still be recognized as a valid phase string.
+
+.. warning::
+
+   When specifying an imposed phase, it is absolutely **critical** that the input pair actually lie within the imposed phase region.  If an incorrect phase is imposed for the given input pair, ``PropsSI()`` may throw unexpected errors or incorrect results may possibly be returned from the property functions.  If the state point phase is not absolutely known, it is best to let CoolProp determine the phase.
+
 Fluid information
 -----------------
 
