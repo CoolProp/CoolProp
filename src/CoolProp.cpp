@@ -432,6 +432,35 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
     if (success == false) { IO.clear(); throw ValueError(format("No outputs were able to be calculated"));}
 }
 
+
+bool StripPhase(std::string &Name, shared_ptr<AbstractState> &State)
+// Parses an imposed phase out of the Input Name string using the "|" delimiter
+{
+    phases imposed = State->phase();                          // Initialize imposed phase
+    std::vector<std::string> strVec = strsplit(Name, '|');    // Split input key string in to vector containing input key [0] and phase string [1]
+    if (strVec.size() > 1) {                                  // If there is a phase string (contains "|" character)
+        if (strVec.size() > 2)                                //    If there's more than on phase separator, throw error
+        {
+            throw ValueError(format("Invalid phase format: \"%s\"", Name));
+        }
+        // Handle prefixes of iphase_, phase_, or <none>
+        std::basic_string <char>::iterator str_Iter;
+        std::string strPhase = strVec[1];                     //    Create a temp string so we can modify the prefix
+        if (strPhase.find("iphase_") != strPhase.npos) { str_Iter = strPhase.erase(strPhase.begin()); }  // Change "iphase_" to "phase_"
+        if (strPhase.find("phase_") == strPhase.npos) { strPhase.insert(0, "phase_"); }                  // Prefix with "phase_" if missing
+        // See if phase is a valid phase string, updating imposed while we're at it...
+        if ( !is_valid_phase(strPhase, imposed) )
+        {
+            throw ValueError(format("Phase string \"%s\" is not a valid phase", strVec[1]));    // throw error with original string if not valid
+        }
+        // Parsed phase string was valid
+        Name = strVec[0];                                     //     Update input name to just the key string part
+        State->specify_phase(imposed);                        //     Update the specified phase on the backend State
+        return true;                                          //     Return true because a valid phase string was found
+    }
+    return false;                                             // Return false if there was no phase string on this key.
+}
+
 void _PropsSImulti(const std::vector<std::string> &Outputs,
                    const std::string &Name1,
                    const std::vector<double> &Prop1,
@@ -443,8 +472,8 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
                    std::vector<std::vector<double> > &IO)
 {
     shared_ptr<AbstractState> State;
-    CoolProp::parameters key1, key2;
-    CoolProp::input_pairs input_pair;
+    CoolProp::parameters key1 = INVALID_PARAMETER, key2 = INVALID_PARAMETER;   // Initialize to invalid parameter values
+    CoolProp::input_pairs input_pair = INPUT_PAIR_INVALID;                     // Initialize to invalid input pair
     std::vector<output_parameter> output_parameters;
     std::vector<double> v1, v2;
 
@@ -457,11 +486,18 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
         throw ValueError(format("Initialize failed for backend: \"%s\", fluid: \"%s\" fractions \"%s\"; error: %s",backend.c_str(), strjoin(fluids,"&").c_str(), vec_to_string(fractions, "%0.10f").c_str(), e.what()) );
     }
 
+    //strip any imposed phase from input key strings here
+    std::string N1 = Name1;                  // Make Non-constant copy of Name1 that we can modify
+    std::string N2 = Name2;                  // Make Non-constant copy of Name2 that we can modify
+    bool HasPhase1 = StripPhase(N1, State);  // strip phase string from first name if needed
+    bool HasPhase2 = StripPhase(N2, State);  // strip phase string from second name if needed
+    if (HasPhase1 && HasPhase2)              // if both Names have a phase string, don't allow it.
+            throw ValueError("Phase can only be specified on one of the input key strings");
+
     try{
         // Get update pair
-        is_valid_parameter(Name1, key1);
-        is_valid_parameter(Name2, key2);
-        input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
+        if (is_valid_parameter(N1, key1) && is_valid_parameter(N2, key2))
+            input_pair = generate_update_pair(key1, Prop1, key2, Prop2, v1, v2);
     }
     catch (std::exception &e){
         // Input parameter parsing failed.  Stop

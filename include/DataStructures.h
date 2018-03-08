@@ -149,6 +149,7 @@ enum parameters{
     
 };
 // !! If you add a parameter, update the map in the corresponding CPP file !!
+// !! Also update phase_lookup_string() in CoolProp.cpp                    !!
 
 /// These are constants for the phases of the fluid
 enum phases{iphase_liquid, ///< Subcritical liquid 
@@ -168,6 +169,11 @@ std::string get_parameter_information(int key, const std::string &info);
 
 /// Return the enum key corresponding to the parameter name ("Dmolar" for instance)
 parameters get_parameter_index(const std::string &param_name);
+
+/// Return true if passed phase name is valid, otherwise false
+/// @param phase_name The phase name string to be checked ("phase_liquid" for instance)
+/// @param iOutput Gets updated with the phases enum value if phase_name is found
+bool is_valid_phase(const std::string &phase_name, phases &iOutput);
 
 /// Return the enum key corresponding to the phase name ("phase_liquid" for instance)
 phases get_phase_index(const std::string &param_name);
