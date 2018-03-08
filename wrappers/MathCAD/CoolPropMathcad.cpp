@@ -22,7 +22,8 @@ namespace CoolProp {
 }
 
 enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad Error Codes
-          BAD_FLUID, BAD_PARAMETER, BAD_REF, NON_TRIVIAL,           // CoolProp Error Codes
+          BAD_FLUID, BAD_PARAMETER, BAD_PHASE,                      // CoolProp Error Codes
+          ONLY_ONE_PHASE_SPEC, BAD_REF, NON_TRIVIAL,
           NO_REFPROP, NOT_AVAIL, BAD_INPUT_PAIR, BAD_QUAL,
           TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
           H_OUT_OF_RANGE, S_OUT_OF_RANGE, HA_INPUTS, 
@@ -40,6 +41,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
         "Argument must be real",
         "Invalid Fluid String",
         "Invalid Parameter String",
+        "Invalid Phase String",
+        "Only one input key phase specification allowed",
         "Cannot use this REF State with this fluid",
         "Input Parameter is Non-Trivial",
         "REFPROP not installed correctly",
@@ -264,7 +267,24 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                 else  // must be the second input parameter that's bad
                     errPos = 4;  // Second input parameter string; position 4.
                 return MAKELRESULT(BAD_PARAMETER,errPos);
-            } else if (emsg.find("This pair of inputs")!=std::string::npos) {
+            }
+            else if (emsg.find("Input Name1") != std::string::npos) {
+                return MAKELRESULT(BAD_PARAMETER, 2);  // first position input parameter
+            }
+            else if (emsg.find("Input Name2") != std::string::npos) {
+                return MAKELRESULT(BAD_PARAMETER, 4);  // second position input parameter
+            }
+            else if (emsg.find("Phase can only be specified on one") != std::string::npos) {
+                return MAKELRESULT(ONLY_ONE_PHASE_SPEC, 4);  // second position parameter
+            }
+            else if (emsg.find("valid phase") != std::string::npos) {
+                if (!is_valid_parameter(Prop1Name, key1))
+                    errPos = 2;  // First input parameter string; position 2.
+                else  // must be the second input parameter that's bad
+                    errPos = 4;  // Second input parameter string; position 4.
+                return MAKELRESULT(BAD_PHASE, errPos);  // second position parameter
+            }
+            else if (emsg.find("This pair of inputs") != std::string::npos) {
                 return MAKELRESULT(BAD_INPUT_PAIR,2);  // second position parameter
             } else if (emsg.find("Input vapor quality")!=std::string::npos) {
                 if (Prop1Name == "Q")
