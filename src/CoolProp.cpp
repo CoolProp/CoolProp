@@ -436,10 +436,23 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
 bool StripPhase(std::string &Name, shared_ptr<AbstractState> &State)
 // Parses an imposed phase out of the Input Name string using the "|" delimiter
 {
-    phases imposed = State->phase();                          // Initialize imposed phase
     std::vector<std::string> strVec = strsplit(Name, '|');    // Split input key string in to vector containing input key [0] and phase string [1]
     if (strVec.size() > 1) {                                  // If there is a phase string (contains "|" character)
-        if (strVec.size() > 2)                                //    If there's more than on phase separator, throw error
+        // Check for invalid backends for setting phase in PropsSI
+        std::string strBackend = State->backend_name();
+        if (strBackend == get_backend_string(INCOMP_BACKEND))
+            throw ValueError("Cannot set phase on Incompressible Fluid; always liquid phase");   // incompressible fluids are always "liquid".
+        if (strBackend == get_backend_string(IF97_BACKEND))
+            throw ValueError("Can't set phase on IF97 Backend");                                 // IF97 has to calculate it's own phase region
+        if (strBackend == get_backend_string(TTSE_BACKEND))
+            throw ValueError("Can't set phase on TTSE Backend in PropsSI");                      // Shouldn't be calling from High-Level anyway
+        if (strBackend == get_backend_string(BICUBIC_BACKEND))
+            throw ValueError("Can't set phase on BICUBIC Backend in PropsSI");                   // Shouldn't be calling from High-Level anyway
+        if (strBackend == get_backend_string(VTPR_BACKEND))
+            throw ValueError("Can't set phase on VTPR Backend in PropsSI");                      // VTPR has no phase functions to call
+
+        phases imposed = iphase_not_imposed;                  // Initialize imposed phase
+        if (strVec.size() > 2)                                // If there's more than on phase separator, throw error
         {
             throw ValueError(format("Invalid phase format: \"%s\"", Name));
         }
