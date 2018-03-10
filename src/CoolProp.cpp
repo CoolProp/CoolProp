@@ -34,6 +34,7 @@
 #include <exception>
 #include <stdio.h>
 #include <string>
+#include <locale>
 #include "CoolPropTools.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
