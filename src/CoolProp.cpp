@@ -34,6 +34,7 @@
 #include <exception>
 #include <stdio.h>
 #include <string>
+#include <locale>
 #include "CoolPropTools.h"
 #include "Solvers.h"
 #include "MatrixMath.h"
@@ -141,12 +142,23 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             if (name_fraction.size() != 2){throw ValueError(format("Could not break [%s] into name/fraction", fluid.substr(0, fluid.size()-1).c_str()));}
 
             // Convert fraction to a double
-            char *pEnd;
             const std::string &name = name_fraction[0], &fraction = name_fraction[1];
-            double f = strtod(fraction.c_str(), &pEnd);
-
-            // If pEnd points to the last character in the string, it wasn't able to do the conversion
-            if (pEnd == &(fraction[fraction.size()-1])){throw ValueError(format("Could not convert [%s] into number", fraction.c_str()));}
+            // The default locale for conversion from string to double is en_US with . as the deliminter
+            // Good: 0.1234 Bad: 0,1234
+            // But you can change the locale with the configuration variable FLOAT_LOCALE_NAME to change the locale
+            // to something more convenient for you
+            std::stringstream ssfraction(fraction);
+            std::string localename = get_config_string(FLOAT_LOCALE_NAME);
+            ssfraction.imbue(std::locale(localename.c_str()));
+            double f;
+            ssfraction >> f;
+            if (ssfraction.rdbuf()->in_avail() != 0){
+                throw ValueError(format("fraction [%s] was not converted fully", fraction.c_str()));
+            }
+            
+            if (f > 1 || f < 0){
+                throw ValueError(format("fraction [%s] was not converted to a value between 0 and 1 inclusive", fraction.c_str()));
+            }
 
             if (f > 10*DBL_EPSILON)  // Only push component if fraction is positive and non-zero
             {
