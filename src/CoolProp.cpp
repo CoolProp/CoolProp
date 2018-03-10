@@ -149,7 +149,7 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             // to something more convenient for you
             std::stringstream ssfraction(fraction);
             std::string localename = get_config_string(FLOAT_LOCALE_NAME);
-            ssfraction.imbue(std::locale(localename));
+            ssfraction.imbue(std::locale(localename.c_str()));
             double f;
             ssfraction >> f;
             if (ssfraction.rdbuf()->in_avail() != 0){
