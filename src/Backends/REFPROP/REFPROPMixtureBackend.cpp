@@ -661,6 +661,7 @@ void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl> &m
     }
     this->mole_fractions_long_double = mole_fractions; // same size as Ncomp
     _mole_fractions_set = true;
+    _reducing.fill(_HUGE);
 }
 void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions)
 {
