@@ -57,7 +57,6 @@ pushd ${CUR_DIR}/../../..
 chmod +x ${CUR_DIR}/01_build_wheels.sh
 docker rm -f manylinux
 # docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
-docker run -itd --name manylinux ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} bash ls /py*
 docker run -itd --name manylinux ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} bash
 docker cp . manylinux:/io
 docker exec manylinux /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
