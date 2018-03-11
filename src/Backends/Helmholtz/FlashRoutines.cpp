@@ -276,11 +276,14 @@ void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         // Bump the temperatures to hopefully yield more reliable results
         double Tmax = HEOS.T_critical() - 0.1;
         double Tmin = HEOS.Tmin() + 0.1;
-        DQ_flash_residual resid(HEOS, HEOS._rhomolar, HEOS._Q);
+        double rhomolar = HEOS._rhomolar;
+        double Q = HEOS._Q;
+        DQ_flash_residual resid(HEOS, rhomolar, Q);
         Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
         HEOS._p = HEOS.SatV->p();
         HEOS._T = HEOS.SatV->T();
-        HEOS._rhomolar = HEOS.SatV->rhomolar();
+        HEOS._rhomolar = rhomolar;
+        HEOS._Q = Q;
         HEOS._phase = iphase_twophase;
     }
     else{
