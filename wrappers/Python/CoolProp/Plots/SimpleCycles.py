@@ -554,20 +554,20 @@ class StateContainer(object):
         keys = True
         for i in self._points:
             if keys:
-                row = ["{0:>5s}".format("state")]
+                row = [u"{0:>5s}".format("state")]
                 for j in self._points[i]:
                     label = u"{0:s} ({1:s})".format(self.units[j].symbol,self.units[j].unit)
                     row.append(u"{0:>11s}".format(label))
-                out = out + "  ".join(row) + "\n"
+                out = out + u"  ".join(row) + "\n"
                 keys = False
-            row = ["{0:>5s}".format(str(i))]
+            row = [u"{0:>5s}".format(str(i))]
             for j in self._points[i]:
                 try:
                     row.append(u"{0:11.3f}".format(self.units[j].from_SI(self._points[i][j])))
                 except:
                     row.append(u"{0:>11s}".format("-"))
-            out = out + "  ".join(row) + "\n"
-        return out.encode('utf8', 'replace')
+            out = out + u"  ".join(row) + "\n"
+        return out
 
     def append(self,new):
         i = 0 + self.__len__()
