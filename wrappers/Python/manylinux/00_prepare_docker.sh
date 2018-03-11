@@ -14,7 +14,7 @@ else
   exit 1
 fi 
 
-DOCKER_MACHINE_TAG="v1.5.0"
+DOCKER_MACHINE_TAG="v1.5.2"
 
 # Stop on errors
 set -ex
@@ -55,6 +55,7 @@ pushd ${CUR_DIR}/../../..
 
 # Run the build script
 chmod +x ${CUR_DIR}/01_build_wheels.sh
+docker rm -f manylinux
 # docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
 docker run -itd --name manylinux ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} bash ls /py*
 docker run -itd --name manylinux ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} bash
