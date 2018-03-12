@@ -55,7 +55,8 @@ pushd ${CUR_DIR}/../../..
 
 # Run the build script
 chmod +x ${CUR_DIR}/01_build_wheels.sh
-# docker rm -f manylinux
+# Rewmove the manylinux container if it didn't complete properly last time (see also https://stackoverflow.com/a/38225298/1360263)
+docker stop manylinux || true && docker rm manylinux || true
 # docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
 docker run -itd --name manylinux ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} bash
 docker cp . manylinux:/io
