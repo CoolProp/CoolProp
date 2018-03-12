@@ -118,6 +118,12 @@ bool has_solution_concentration(const std::string &fluid_string)
     return (fluid_string.find('-') != std::string::npos && fluid_string.find('%') != std::string::npos);
 }
 
+struct delim : std::numpunct<char> {
+    char m_c;
+    delim(char c): m_c(c) {};
+    char do_decimal_point() const { return m_c; }
+};
+
 std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions)
 {
 
@@ -150,10 +156,8 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             // with the configuration variable FLOAT_PUNCTUATION to change the locale to something more convenient for you (e.g., a ',')
             // See also http://en.cppreference.com/w/cpp/locale/numpunct/decimal_point
             std::stringstream ssfraction(fraction);
-            struct delim : std::numpunct<char> {
-                char do_decimal_point()   const { return get_config_string(FLOAT_PUNCTUATION)[0]; }  
-            };
-            ssfraction.imbue(std::locale(ssfraction.getloc(), new delim));
+            char c = get_config_string(FLOAT_PUNCTUATION)[0];
+            ssfraction.imbue(std::locale(ssfraction.getloc(), new delim(c)));
             double f;
             ssfraction >> f;
             if (ssfraction.rdbuf()->in_avail() != 0){
