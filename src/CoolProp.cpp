@@ -120,6 +120,7 @@ bool has_solution_concentration(const std::string &fluid_string)
 
 std::string extract_fractions(const std::string &fluid_string, std::vector<double> &fractions)
 {
+
     if (has_fractions_in_string(fluid_string))
     {
         fractions.clear();
@@ -145,11 +146,14 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             const std::string &name = name_fraction[0], &fraction = name_fraction[1];
             // The default locale for conversion from string to double is en_US with . as the deliminter
             // Good: 0.1234 Bad: 0,1234
-            // But you can change the locale with the configuration variable FLOAT_LOCALE_NAME to change the locale
-            // to something more convenient for you
+            // But you can change the punctuation character for fraction parsing 
+            // with the configuration variable FLOAT_PUNCTUATION to change the locale to something more convenient for you (e.g., a ',')
+            // See also http://en.cppreference.com/w/cpp/locale/numpunct/decimal_point
             std::stringstream ssfraction(fraction);
-            std::string localename = get_config_string(FLOAT_LOCALE_NAME);
-            ssfraction.imbue(std::locale(localename.c_str()));
+            struct delim : std::numpunct<char> {
+                char do_decimal_point()   const { return get_config_string(FLOAT_PUNCTUATION)[0]; }  
+            };
+            ssfraction.imbue(std::locale(ssfraction.getloc(), new delim));
             double f;
             ssfraction >> f;
             if (ssfraction.rdbuf()->in_avail() != 0){
