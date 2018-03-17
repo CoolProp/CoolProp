@@ -284,6 +284,23 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl &tau, const 
     
     return;
 };
+    
+void ResidualHelmholtzGeneralizedExponential::to_json(rapidjson::Value &el, rapidjson::Document &doc){
+    el.AddMember("type","GeneralizedExponential",doc.GetAllocator());
+    cpjson::set_double_array("n", n, el, doc);
+    cpjson::set_double_array("t", t, el, doc);
+    cpjson::set_double_array("d", d, el, doc);
+    cpjson::set_double_array("eta1", eta1, el, doc);
+    cpjson::set_double_array("eta2", eta2, el, doc);
+    cpjson::set_double_array("beta1", beta1, el, doc);
+    cpjson::set_double_array("beta2", beta2, el, doc);
+    cpjson::set_double_array("gamma1", gamma1, el, doc);
+    cpjson::set_double_array("gamma2", gamma2, el, doc);
+    cpjson::set_double_array("epsilon1", epsilon1, el, doc);
+    cpjson::set_double_array("epsilon2", epsilon2, el, doc);
+    cpjson::set_double_array("l_double", l_double, el, doc);
+    cpjson::set_int_array("l_int", l_int, el, doc);
+}
 
 void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value &el, rapidjson::Document &doc)
 {

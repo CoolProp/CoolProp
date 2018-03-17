@@ -21,9 +21,14 @@ class DepartureFunction
 {
 public:
     DepartureFunction(){};
+    DepartureFunction(const ResidualHelmholtzGeneralizedExponential &_phi) : phi(_phi) {};
     virtual ~DepartureFunction(){};
     ResidualHelmholtzGeneralizedExponential phi;
     HelmholtzDerivatives derivs;
+    
+    DepartureFunction *copy_ptr(){
+        return new DepartureFunction(phi);
+    }
 
     virtual void update(double tau, double delta){
         derivs.reset(0.0);
@@ -138,6 +143,7 @@ public:
             std::vector<CoolPropDbl> _gamma(gamma.begin()+Npower,       gamma.end());
             phi.add_Gaussian(_n, _d, _t, _eta, _epsilon, _beta, _gamma);
         }
+        phi.finish();
     };
     ~GaussianExponentialDepartureFunction(){};
 };
@@ -188,6 +194,19 @@ public:
             }
         }
         return *this;
+    }
+    
+    ExcessTerm copy()
+    {
+        ExcessTerm _term; _term.resize(N);
+        for (std::size_t i=0; i < N; ++i){
+            for(std::size_t j=0; j< N; ++j){
+                if (i != j){
+                    _term.DepartureFunctionMatrix[i][j].reset(DepartureFunctionMatrix[i][j].get()->copy_ptr());
+                }
+            }
+        }
+        return _term;
     }
 
     /// Resize the parts of this term

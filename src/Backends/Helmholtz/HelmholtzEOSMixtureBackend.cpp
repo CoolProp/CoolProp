@@ -135,7 +135,7 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     
 };
 void HelmholtzEOSMixtureBackend::sync_linked_states(const HelmholtzEOSMixtureBackend * const source){
-    *(residual_helmholtz) = *source->residual_helmholtz;
+    residual_helmholtz.reset(source->residual_helmholtz->copy_ptr());
     if (source->Reducing){
         Reducing.reset(source->Reducing->copy());
     }
@@ -3768,6 +3768,15 @@ std::vector<CoolProp::CriticalState> HelmholtzEOSMixtureBackend::_calc_all_criti
 {
     // Populate the temporary class used to calculate the critical point(s)
     add_critical_state();
+    if (get_debug_level() > 10){
+        rapidjson::Document doc; doc.SetObject();
+        rapidjson::Value &val = doc;
+        std::vector<std::vector<DepartureFunctionPointer> > &mat = critical_state->residual_helmholtz->Excess.DepartureFunctionMatrix;
+        if (mat.size() > 0){
+            mat[0][1]->phi.to_json(val, doc);
+            std::cout << cpjson::to_string(doc);
+        }
+    }
     critical_state->set_mole_fractions(this->get_mole_fractions_ref());
 
     // Specify state to be something homogeneous to shortcut phase evaluation

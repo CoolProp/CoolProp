@@ -666,6 +666,17 @@ class ResidualHelmholtz
 public:
     ExcessTerm Excess;
     CorrespondingStatesTerm CS;
+    
+    ResidualHelmholtz() {} ;
+    ResidualHelmholtz(const ExcessTerm &E, const CorrespondingStatesTerm &C) :Excess(E), CS(C) {} ;
+    
+    ResidualHelmholtz copy(){
+        return ResidualHelmholtz(Excess.copy(), CS);
+    }
+    ResidualHelmholtz *copy_ptr(){
+        return new ResidualHelmholtz(Excess.copy(), CS);
+    }
+    
 
     virtual HelmholtzDerivatives all(HelmholtzEOSMixtureBackend &HEOS, const std::vector<CoolPropDbl> &mole_fractions, double tau, double delta, bool cache_values = false)
     {

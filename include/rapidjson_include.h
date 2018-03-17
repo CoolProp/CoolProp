@@ -270,6 +270,19 @@ namespace cpjson
                         doc.GetAllocator());
     };
 
+    /// A convenience function to set an integer array compactly
+    inline void set_int_array(const char *key, const std::vector<int> &vec, rapidjson::Value &value, rapidjson::Document &doc)
+    {
+        rapidjson::Value _v(rapidjson::kArrayType);
+        for (unsigned int i = 0; i < vec.size(); ++i)
+        {
+            _v.PushBack(vec[i],doc.GetAllocator());
+        }
+        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(),
+                        _v,
+                        doc.GetAllocator());
+    };
+    
     /// A convenience function to set a double array compactly
     inline void set_double_array(const char *key, const std::vector<double> &vec, rapidjson::Value &value, rapidjson::Document &doc)
     {
