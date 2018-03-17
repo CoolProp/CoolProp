@@ -206,6 +206,7 @@ public:
                 }
             }
         }
+        _term.F = F;
         return _term;
     }
 
