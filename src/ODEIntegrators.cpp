@@ -52,7 +52,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tstart, dou
             }
             if (!forwards_integration && (t0 + h < tend)){
                 disableAdaptive = true;
-                h = t0 - tend;
+                h = tend - t0;
             }
             
             ode.pre_step_callback();
