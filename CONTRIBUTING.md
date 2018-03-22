@@ -16,10 +16,7 @@ The following is a set of guidelines for contributing to CoolProp and its submod
 
 [Styleguides](#styleguides)
   * [Git Commit Messages](#git-commit-messages)
-  * [C++ Code](#C++-Code-Style-Guidance)
-
-[Additional Notes](#additional-notes)
-  * [Issue and Pull Request Labels](#issue-and-pull-request-labels)
+  * [C++ Code](https://github.com/CoolProp/CoolProp/wiki/Coding-Guidelines)
 
 ## I don't want to read this whole thing I just have a question!!!
 
@@ -42,7 +39,7 @@ Before creating bug reports, please check [this list](#before-submitting-a-bug-r
 
 #### Before Submitting A Bug Report
 
-* **Check the [FAQs file](https://github.com/CoolProp/CoolProp/FAQ.md)** for a list of common questions and problems.
+* **Check the [FAQs file](https://github.com/CoolProp/CoolProp/blob/master/FAQ.md)** for a list of common questions and problems.
 * **Check the [release](http://www.CoolProp.org) and [development](http://www.CoolProp.org) CoolProp documentation**.
 * **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+user%3ACoolProp)** to see if the problem has already been reported. If it has **and the issue is still open**, add a comment to the existing issue instead of opening a new one.
 
@@ -130,7 +127,6 @@ CoolProp can be developed locally on your machine.  Once code changes are comple
 * Reference issues and pull requests liberally after the first line
 * When only changing documentation (i.e. no actual code), include `[ci skip]` in the commit title
 
-## Additional Notes
 
 [beginner]:https://github.com/search?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3Abeginner+user%3Acoolprop
 [help-wanted]:https://github.com/search?q=is%3Aopen+is%3Aissue+label%3Ahelp-wanted+user%3Acoolprop  
