@@ -1498,9 +1498,15 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         // First try the ancillaries, use them to determine the state if you can
         
         // Calculate dew and bubble temps from the ancillaries (everything needs them)
-        _TLanc = components[0].ancillaries.pL.invert(_p);
-        _TVanc = components[0].ancillaries.pV.invert(_p);
-        
+        if ( (psat_max-_p) < 10*DBL_EPSILON ) {                 // However, if right at the critical pressure...
+            _TLanc = components[0].ancillaries.pL.get_Tmax();   //     Secant method in ancillaries::invert(_p) will fail,
+            _TVanc = components[0].ancillaries.pV.get_Tmax();   //     so just set T to Tmax = Tcrit = "tip" of the curve.
+        }
+        else {                                                  // Otherwise, invert the ancillary with no problems
+            _TLanc = components[0].ancillaries.pL.invert(_p);   //     Find T on liquid saturation line
+            _TVanc = components[0].ancillaries.pV.invert(_p);   //     Find T on vapor saturation line
+        }
+
         bool definitely_two_phase = false;
         
         // Try using the ancillaries for P,H,S if they are there
