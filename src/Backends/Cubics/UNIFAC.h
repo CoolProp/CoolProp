@@ -98,6 +98,9 @@ namespace UNIFAC
         
         /// Modify the surface parameter Q_k of the sub group sgi
         void set_Q_k(const size_t sgi, const double value);
+        
+        /// Get the surface parameter Q_k of the sub group sgi
+        double get_Q_k(const size_t sgi) const ;
     };
 
 } /* namespace UNIFAC */

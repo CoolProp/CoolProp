@@ -571,6 +571,8 @@ public:
     virtual void set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3) { throw ValueError("set_cubic_alpha_C only defined for cubic backends"); };
     /// Set fluid parameter (currently the volume translation parameter for cubic)
 	virtual void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
+    /// Double fluid parameter (currently the volume translation parameter for cubic)
+    virtual double get_fluid_parameter_double(const size_t i, const std::string &parameter) { throw ValueError("get_fluid_parameter_double only defined for cubic backends"); };
 
     /// Clear all the cached values
     virtual bool clear();

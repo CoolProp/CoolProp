@@ -603,3 +603,16 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
 }
+double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i, const std::string &parameter)
+{
+    // Get the volume translation parrameter, currently applied to the whole fluid, not to components.
+    if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
+        return get_cubic()->get_cm();
+    }
+    else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
+        return get_cubic()->get_Q_k(i);
+    }
+    else {
+        throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
+    }
+}

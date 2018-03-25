@@ -91,6 +91,14 @@ cdef class AbstractState:
         """ Get a string interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_string` """
         return self.thisptr.get_binary_interaction_string(CAS1, CAS2, parameter)
 
+    cpdef set_fluid_parameter_double(self, size_t i, string parameter, double val):
+        """ Set a fluid parameter that is a double-precision number - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_fluid_parameter_double` """
+        self.thisptr.set_fluid_parameter_double(i, parameter, val)
+
+    cpdef double get_fluid_parameter_double(self, size_t i, string parameter) except *:
+        """ Get a fluid parameter that is a double-precision number - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_fluid_parameter_double` """
+        return self.thisptr.get_fluid_parameter_double(i, parameter)
+
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)

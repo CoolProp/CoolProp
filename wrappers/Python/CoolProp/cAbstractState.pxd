@@ -66,6 +66,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         string backend_name() except +ValueError
         vector[string] fluid_names() except +ValueError
         string fluid_param_string(const string &) except +ValueError
+        void set_fluid_parameter_double(const size_t, const string&, const double) except +ValueError
+        double get_fluid_parameter_double(const size_t, const string&) except +ValueError
         
         bool clear()
         

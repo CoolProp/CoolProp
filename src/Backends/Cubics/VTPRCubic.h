@@ -206,6 +206,12 @@ public:
     {
         unifaq.set_Q_k(sgi, value);
     }
+    
+    // Get the surface parameter Q_k of the sub group sgi
+    double get_Q_k(const size_t sgi, const double value) const
+    {
+        return unifaq.get_Q_k(sgi);
+    }
 
     // Allows to modify the unifac interaction parameters aij, bij and cij
     double get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string &parameter)

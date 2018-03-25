@@ -320,3 +320,15 @@ void UNIFAC::UNIFACMixture::set_Q_k(const size_t sgi, const double value) {
     /// Re-calculate the parameters X and theta for the pure components, which does not depend on temperature nor molar fraction
     set_pure_data();
 }
+
+/// Modify the surface parameter Q_k of the sub group sgi
+double UNIFAC::UNIFACMixture::get_Q_k(const size_t sgi) const {
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < components[i].groups.size(); ++j) {
+            if (components[i].groups[j].group.sgi == sgi){
+                return components[i].groups[j].group.Q_k;
+            }
+        }
+    }
+    throw CoolProp::ValueError("Could not get Q_k");
+}
