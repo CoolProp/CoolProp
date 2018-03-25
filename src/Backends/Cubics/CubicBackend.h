@@ -220,6 +220,9 @@ public:
     // Set fluid parameter (currently the volume translation parameter)
     void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value);
     
+    // Get fluid parameter (currently the volume translation parameter)
+    double get_fluid_parameter_double(const size_t i, const std::string &parameter);
+    
 };
 
 
