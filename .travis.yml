@@ -6,6 +6,7 @@ notifications:
 
 git:
   depth: 5
+  #submodules_depth: 100
 
 language:
   - cpp
