@@ -152,6 +152,9 @@ On Linux, installation could be done by::
 Using
 =====
 
+Windows
+-------
+
 Here is a small example for calling the shared library from C on windows, as contributed by Philipp Rollmann, Guentner::
 
     #include "windows.h"
@@ -207,5 +210,26 @@ Here is another snippet of using the shared library in windows when (for your ap
         std::cout << PropsSI("T","P",101325,"Q",0,"Water") << std::endl;
         return 1;
     }
+
+    
+Linux
+-----
+
+Based on the discussion on `GitHub <https://github.com/CoolProp/CoolProp/issues/1600>`_, you can use the following steps to link against the CoolProp libraries::
+
+    cat <<EOF > main.cpp
+    #include <iostream>
+    #include "CoolPropLib.h"
+    int main(){
+        double T{293.15};
+        double P{1e5};
+        //double res{0.0};
+        double res{PropsSI("D", "T", T, "P", P, "Water")};
+        std::cout << "Density: " << res << std::endl;
+    }
+
+    EOF
+    g++ -std=c++11 -Wall -O2 -o main -DCOOLPROP_LIB -I../include main.cpp ../libCoolProp.so -ldl
+    LD_LIBRARY_PATH=`pwd` ./main
 
 
