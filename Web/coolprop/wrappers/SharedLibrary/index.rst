@@ -229,7 +229,7 @@ Based on the discussion on `GitHub <https://github.com/CoolProp/CoolProp/issues/
     }
 
     EOF
-    g++ -std=c++11 -Wall -O2 -o main -DCOOLPROP_LIB -I../include main.cpp ../libCoolProp.so -ldl
+    g++ -std=c++11 -Wall -O2 -o main -DCOOLPROP_LIB -I../include main.cpp libCoolProp.so -ldl
     LD_LIBRARY_PATH=`pwd` ./main
 
 
