@@ -22,7 +22,7 @@ It was originally developed by Ian Bell, currently a post-doc at the University 
 
 * If you found a bug or have an issue that requires the developers to become active, please file an issue in our `issue tracker <https://github.com/CoolProp/CoolProp/issues>`_ 
 
-* `Contributions <https://github.com/CoolProp/CoolProp/blob/master/CONTRIBUTING.md>`_ to this project are welcomed and encouraged!  If you wish to `contribute <https://github.com/CoolProp/CoolProp/blob/master/CONTRIBUTING.md>`_ bug fixes, patches, or new features, wrappers, or material properties, please submit a Pull Request with your code.
+* `Contributions <https://github.com/CoolProp/CoolProp/blob/master/.github/CONTRIBUTING.md>`_ to this project are welcomed and encouraged!  If you wish to `contribute <https://github.com/CoolProp/CoolProp/blob/master/.github/CONTRIBUTING.md>`_ bug fixes, patches, or new features, wrappers, or material properties, please submit a Pull Request with your code.
 
 * If you are new to Git and Github, please see the `CoolProp Wiki <https://github.com/CoolProp/CoolProp/wiki>`_ for guidance on becoming a contributor to the project.
 
