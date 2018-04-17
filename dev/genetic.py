@@ -233,8 +233,7 @@ class GeneticAncillaryFitter(object):
             self.fitness(chromo)
 #         print '#'
 
-        decorated = [(sample.fitness,sample) for sample in samples]
-        decorated.sort()
+        decorated = sorted([(sample.fitness,sample) for sample in samples])
         samples = [s for sv,s in decorated]
         values = [sv for sv,s in decorated]
         plt.plot(values[0:len(values)//2])
@@ -268,8 +267,7 @@ class GeneticAncillaryFitter(object):
                 self.fitness(chromo)
 #             print '#'
 
-            decorated = [(sample.fitness,sample) for sample in solution]
-            decorated.sort()
+            decorated = sorted([(sample.fitness,sample) for sample in solution])
             samples = [s for sv,s in decorated]
 
 #             print '------------------  Top 10 values  ---------------'
