@@ -112,7 +112,7 @@ class BibTeXerClass(object):
             except AttributeError:
                 pass
             # Check for list
-            if type(text)==type([]):
+            if isinstance(text, type([])):
                 for i in range(len(text)):
                     text[i] = self.stripCurls(text[i])
             # return the plain object
