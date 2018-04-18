@@ -208,7 +208,7 @@ public:
     }
     
     // Get the surface parameter Q_k of the sub group sgi
-    double get_Q_k(const size_t sgi, const double value) const
+    double get_Q_k(const size_t sgi) const
     {
         return unifaq.get_Q_k(sgi);
     }

@@ -235,7 +235,7 @@ public:
     /// Modify the surface parameter Q_k of the sub group sgi
     virtual void set_Q_k(const size_t sgi, const double value){throw CoolProp::ValueError("set_Q_k not defined for AbstractCubic"); };
     /// Retrieve the surface parameter Q_k of the sub group sgi
-    virtual double get_Q_k(const size_t sgi){throw CoolProp::ValueError("get_Q_k not defined for AbstractCubic"); };
+    virtual double get_Q_k(const size_t sgi) const {throw CoolProp::ValueError("get_Q_k not defined for AbstractCubic"); };
 
     /**
      * \brief The n-th \f$\tau\f$ derivative of \f$a_{ij}(\tau)\f$
