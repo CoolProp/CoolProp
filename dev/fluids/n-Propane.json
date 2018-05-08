@@ -440,7 +440,8 @@
       "R290", 
       "C3H8", 
       "PROPANE", 
-      "N-PROPANE"
+      "N-PROPANE",
+      "NC3H8"
     ], 
     "CAS": "74-98-6", 
     "CHEMSPIDER_ID": 6094, 
