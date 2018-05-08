@@ -460,7 +460,8 @@
       "butane", 
       "BUTANE", 
       "N-BUTANE", 
-      "R600"
+      "R600",
+      "NC4H10"
     ], 
     "CAS": "106-97-8", 
     "CHEMSPIDER_ID": 7555, 
