@@ -543,8 +543,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{1}H_{4}", 
-    "INCHI_KEY": "VNWKTOKETHGBQD-UHFFFAOYAM", 
-    "INCHI_STRING": "InChI=1/CH4/h1H4", 
+    "INCHI_KEY": "VNWKTOKETHGBQD-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CH4/h1H4", 
     "NAME": "Methane", 
     "REFPROP_NAME": "METHANE", 
     "SMILES": "C"
