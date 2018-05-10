@@ -356,8 +356,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{4}H_{8}", 
-    "INCHI_KEY": "VXNZUUAINFGPBY-UHFFFAOYAZ", 
-    "INCHI_STRING": "InChI=1/C4H8/c1-3-4-2/h3H,1,4H2,2H3", 
+    "INCHI_KEY": "VXNZUUAINFGPBY-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C4H8/c1-3-4-2/h3H,1,4H2,2H3", 
     "NAME": "1-Butene", 
     "REFPROP_NAME": "1BUTENE", 
     "SMILES": "CCC=C"
