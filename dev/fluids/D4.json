@@ -582,8 +582,8 @@
       "PH": -1
     }, 
     "FORMULA": "C_{8}H_{24}O_{4}Si_{4}", 
-    "INCHI_KEY": "HMMGMWAXVFQUOA-UHFFFAOYAZ", 
-    "INCHI_STRING": "InChI=1/C8H24O4Si4/c1-13(2)9-14(3,4)11-16(7,8)12-15(5,6)10-13/h1-8H3", 
+    "INCHI_KEY": "HMMGMWAXVFQUOA-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C8H24O4Si4/c1-13(2)9-14(3,4)11-16(7,8)12-15(5,6)10-13/h1-8H3", 
     "NAME": "D4", 
     "REFPROP_NAME": "D4", 
     "SMILES": "C[Si]1(O[Si](O[Si](O[Si](O1)(C)C)(C)C)(C)C)C"
