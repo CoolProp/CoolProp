@@ -359,8 +359,8 @@
       "PH": 0
     }, 
     "FORMULA": "H_{2}S_{1}", 
-    "INCHI_KEY": "RWSOTUBLDIXVET-UHFFFAOYAJ", 
-    "INCHI_STRING": "InChI=1/H2S/h1H2", 
+    "INCHI_KEY": "RWSOTUBLDIXVET-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/H2S/h1H2", 
     "NAME": "HydrogenSulfide", 
     "REFPROP_NAME": "H2S", 
     "SMILES": "S"
