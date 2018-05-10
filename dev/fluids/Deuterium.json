@@ -464,8 +464,8 @@
       "PH": -1
     }, 
     "FORMULA": "D_{2}", 
-    "INCHI_KEY": "UFHFLCQGNIYNRP-VVKOMZTBEA", 
-    "INCHI_STRING": "InChI=1/H2/h1H/i1+1D", 
+    "INCHI_KEY": "UFHFLCQGNIYNRP-VVKOMZTBSA-N", 
+    "INCHI_STRING": "InChI=1S/H2/h1H/i1+1D", 
     "NAME": "Deuterium", 
     "REFPROP_NAME": "D2", 
     "SMILES": "[2H][2H]"
