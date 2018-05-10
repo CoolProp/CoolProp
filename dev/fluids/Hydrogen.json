@@ -436,8 +436,8 @@
       "PH": 0
     }, 
     "FORMULA": "H_{2}", 
-    "INCHI_KEY": "UFHFLCQGNIYNRP-UHFFFAOYAN", 
-    "INCHI_STRING": "InChI=1/H2/h1H", 
+    "INCHI_KEY": "UFHFLCQGNIYNRP-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/H2/h1H", 
     "NAME": "Hydrogen", 
     "REFPROP_NAME": "HYDROGEN", 
     "SMILES": "[HH]"
