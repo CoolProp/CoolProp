@@ -544,8 +544,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{2}H_{6}", 
-    "INCHI_KEY": "OTMSDBZUPAUEDD-UHFFFAOYAK", 
-    "INCHI_STRING": "InChI=1/C2H6/c1-2/h1-2H3", 
+    "INCHI_KEY": "OTMSDBZUPAUEDD-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H6/c1-2/h1-2H3", 
     "NAME": "Ethane", 
     "REFPROP_NAME": "ETHANE", 
     "SMILES": "CC"
