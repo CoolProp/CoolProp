@@ -366,8 +366,8 @@
       "PH": 0
     }, 
     "FORMULA": "D_{2}O_{1}", 
-    "INCHI_KEY": "XLYOFNOQVPJJNP-ZSJDYOACEI", 
-    "INCHI_STRING": "InChI=1/H2O/h1H2/i/hD2", 
+    "INCHI_KEY": "XLYOFNOQVPJJNP-ZSJDYOACSA-N", 
+    "INCHI_STRING": "InChI=1S/H2O/h1H2/i/hD2", 
     "NAME": "HeavyWater", 
     "REFPROP_NAME": "D2O", 
     "SMILES": "[2H]O[2H]"
