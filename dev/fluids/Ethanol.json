@@ -492,8 +492,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{2}H_{6}O_{1}", 
-    "INCHI_KEY": "LFQSCWFLJHTTHZ-UHFFFAOYAB", 
-    "INCHI_STRING": "InChI=1/C2H6O/c1-2-3/h3H,2H2,1H3", 
+    "INCHI_KEY": "LFQSCWFLJHTTHZ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3", 
     "NAME": "Ethanol", 
     "REFPROP_NAME": "ETHANOL", 
     "SMILES": "CCO"
