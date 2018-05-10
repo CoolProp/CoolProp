@@ -296,8 +296,8 @@
       "PH": -1
     }, 
     "FORMULA": "C_{2}Cl_{2}H_{4}", 
-    "INCHI_KEY": "WSLDOOZREJYCGB-UHFFFAOYAL", 
-    "INCHI_STRING": "InChI=1/C2H4Cl2/c3-1-2-4/h1-2H2", 
+    "INCHI_KEY": "WSLDOOZREJYCGB-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H4Cl2/c3-1-2-4/h1-2H2", 
     "NAME": "Dichloroethane", 
     "REFPROP_NAME": "N/A", 
     "SMILES": "C(CCl)Cl"
