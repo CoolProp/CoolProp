@@ -553,8 +553,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{8}H_{24}O_{2}Si_{3}", 
-    "INCHI_KEY": "CXQXSVUQTKDNFP-UHFFFAOYAT", 
-    "INCHI_STRING": "InChI=1/C8H24O2Si3/c1-11(2,3)9-13(7,8)10-12(4,5)6/h1-8H3", 
+    "INCHI_KEY": "CXQXSVUQTKDNFP-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C8H24O2Si3/c1-11(2,3)9-13(7,8)10-12(4,5)6/h1-8H3", 
     "NAME": "MDM", 
     "REFPROP_NAME": "MDM", 
     "SMILES": "C[Si](C)(C)O[Si](C)(C)O[Si](C)(C)C"
