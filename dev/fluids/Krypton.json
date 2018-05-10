@@ -373,8 +373,8 @@
       "PH": 0
     }, 
     "FORMULA": "Kr_{1}", 
-    "INCHI_KEY": "DNNSSWSSYDEUBZ-UHFFFAOYAX", 
-    "INCHI_STRING": "InChI=1/Kr", 
+    "INCHI_KEY": "DNNSSWSSYDEUBZ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/Kr", 
     "NAME": "Krypton", 
     "REFPROP_NAME": "KRYPTON", 
     "SMILES": "[Kr]"
