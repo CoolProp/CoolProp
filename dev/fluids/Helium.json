@@ -446,8 +446,8 @@
       "PH": 0
     }, 
     "FORMULA": "He_{1}", 
-    "INCHI_KEY": "SWQJXJOGLNCZEY-UHFFFAOYAJ", 
-    "INCHI_STRING": "InChI=1/He", 
+    "INCHI_KEY": "SWQJXJOGLNCZEY-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/He", 
     "NAME": "Helium", 
     "REFPROP_NAME": "HELIUM", 
     "SMILES": "[He]"
