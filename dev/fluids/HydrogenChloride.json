@@ -293,8 +293,8 @@
       "PH": -1
     }, 
     "FORMULA": "Cl_{1}H_{1}", 
-    "INCHI_KEY": "VEXZGXHMUGYJMC-UHFFFAOYAT", 
-    "INCHI_STRING": "InChI=1/ClH/h1H", 
+    "INCHI_KEY": "VEXZGXHMUGYJMC-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/ClH/h1H", 
     "NAME": "HydrogenChloride", 
     "REFPROP_NAME": "HCL", 
     "SMILES": "Cl"
