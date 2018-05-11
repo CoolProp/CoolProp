@@ -668,8 +668,8 @@
       "PH": 0
     }, 
     "FORMULA": "H_{2}O_{1}", 
-    "INCHI_KEY": "XLYOFNOQVPJJNP-UHFFFAOYAF", 
-    "INCHI_STRING": "InChI=1/H2O/h1H2", 
+    "INCHI_KEY": "XLYOFNOQVPJJNP-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/H2O/h1H2", 
     "NAME": "Water", 
     "REFPROP_NAME": "WATER", 
     "SMILES": "O"
