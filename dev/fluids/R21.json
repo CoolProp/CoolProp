@@ -420,8 +420,8 @@
       "PH": -1
     }, 
     "FORMULA": "C_{1}Cl_{2}F_{1}H_{1}", 
-    "INCHI_KEY": "UMNKXPULIDJLSU-UHFFFAOYAU", 
-    "INCHI_STRING": "InChI=1/CHCl2F/c2-1(3)4/h1H", 
+    "INCHI_KEY": "UMNKXPULIDJLSU-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CHCl2F/c2-1(3)4/h1H", 
     "NAME": "R21", 
     "REFPROP_NAME": "R21", 
     "SMILES": "C(F)(Cl)Cl"
