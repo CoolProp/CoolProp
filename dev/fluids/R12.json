@@ -418,8 +418,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{1}Cl_{2}F_{2}", 
-    "INCHI_KEY": "PXBRQCKWGAHEHS-UHFFFAOYAX", 
-    "INCHI_STRING": "InChI=1/CCl2F2/c2-1(3,4)5", 
+    "INCHI_KEY": "PXBRQCKWGAHEHS-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CCl2F2/c2-1(3,4)5", 
     "NAME": "R12", 
     "REFPROP_NAME": "R12", 
     "SMILES": "C(F)(F)(Cl)Cl"
