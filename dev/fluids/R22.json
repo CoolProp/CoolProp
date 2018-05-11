@@ -497,8 +497,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{1}Cl_{1}F_{2}H_{1}", 
-    "INCHI_KEY": "VOPWNXZWBYDODV-UHFFFAOYAQ", 
-    "INCHI_STRING": "InChI=1/CHClF2/c2-1(3)4/h1H", 
+    "INCHI_KEY": "VOPWNXZWBYDODV-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CHClF2/c2-1(3)4/h1H", 
     "NAME": "R22", 
     "REFPROP_NAME": "R22", 
     "SMILES": "C(F)(F)Cl"
