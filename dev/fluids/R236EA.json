@@ -418,8 +418,8 @@
       "PH": -1
     }, 
     "FORMULA": "C_{3}F_{6}H_{2}", 
-    "INCHI_KEY": "FYIRUPZTYPILDH-UHFFFAOYAA", 
-    "INCHI_STRING": "InChI=1/C3H2F6/c4-1(2(5)6)3(7,8)9/h1-2H", 
+    "INCHI_KEY": "FYIRUPZTYPILDH-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H2F6/c4-1(2(5)6)3(7,8)9/h1-2H", 
     "NAME": "R236EA", 
     "REFPROP_NAME": "R236EA", 
     "SMILES": "C(C(F)F)(C(F)(F)F)F"
