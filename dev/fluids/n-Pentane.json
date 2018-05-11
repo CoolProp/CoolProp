@@ -411,8 +411,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{5}H_{12}", 
-    "INCHI_KEY": "OFBQJSOFQDEBGM-UHFFFAOYAN", 
-    "INCHI_STRING": "InChI=1/C5H12/c1-3-5-4-2/h3-5H2,1-2H3", 
+    "INCHI_KEY": "OFBQJSOFQDEBGM-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C5H12/c1-3-5-4-2/h3-5H2,1-2H3", 
     "NAME": "n-Pentane", 
     "REFPROP_NAME": "PENTANE", 
     "SMILES": "CCCCC"
