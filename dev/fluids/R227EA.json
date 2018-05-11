@@ -434,8 +434,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{3}F_{7}H_{1}", 
-    "INCHI_KEY": "YFMFNYKEUDLDTL-UHFFFAOYAL", 
-    "INCHI_STRING": "InChI=1/C3HF7/c4-1(2(5,6)7)3(8,9)10/h1H", 
+    "INCHI_KEY": "YFMFNYKEUDLDTL-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3HF7/c4-1(2(5,6)7)3(8,9)10/h1H", 
     "NAME": "R227EA", 
     "REFPROP_NAME": "R227EA", 
     "SMILES": "C(C(F)(F)F)(C(F)(F)F)F"
