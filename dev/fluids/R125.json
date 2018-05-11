@@ -402,8 +402,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{2}F_{5}H_{1}", 
-    "INCHI_KEY": "GTLACDSXYULKMZ-UHFFFAOYAX", 
-    "INCHI_STRING": "InChI=1/C2HF5/c3-1(4)2(5,6)7/h1H", 
+    "INCHI_KEY": "GTLACDSXYULKMZ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2HF5/c3-1(4)2(5,6)7/h1H", 
     "NAME": "R125", 
     "REFPROP_NAME": "R125", 
     "SMILES": "C(C(F)(F)F)(F)F"
