@@ -353,8 +353,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{2}Cl_{2}F_{1}H_{3}", 
-    "INCHI_KEY": "FRCHKSNAZZFGCA-UHFFFAOYAI", 
-    "INCHI_STRING": "InChI=1/C2H3Cl2F/c1-2(3,4)5/h1H3", 
+    "INCHI_KEY": "FRCHKSNAZZFGCA-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H3Cl2F/c1-2(3,4)5/h1H3", 
     "NAME": "R141b", 
     "REFPROP_NAME": "R141B", 
     "SMILES": "CC(F)(Cl)Cl"
