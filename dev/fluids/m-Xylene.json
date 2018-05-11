@@ -410,8 +410,8 @@
     "CAS": "108-38-3", 
     "CHEMSPIDER_ID": 7641, 
     "FORMULA": "C_{8}H_{10}", 
-    "INCHI_KEY": "IVSZLXZYQVIEFR-UHFFFAOYAX", 
-    "INCHI_STRING": "InChI=1/C8H10/c1-7-4-3-5-8(2)6-7/h3-6H,1-2H3", 
+    "INCHI_KEY": "IVSZLXZYQVIEFR-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C8H10/c1-7-4-3-5-8(2)6-7/h3-6H,1-2H3", 
     "NAME": "m-Xylene", 
     "REFPROP_NAME": "MXYLENE", 
     "SMILES": "Cc1cccc(c1)C"
