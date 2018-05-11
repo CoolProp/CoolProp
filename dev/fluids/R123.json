@@ -640,8 +640,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{2}Cl_{2}F_{3}H_{1}", 
-    "INCHI_KEY": "OHMHBGPWCHTMQE-UHFFFAOYAP", 
-    "INCHI_STRING": "InChI=1/C2HCl2F3/c3-1(4)2(5,6)7/h1H", 
+    "INCHI_KEY": "OHMHBGPWCHTMQE-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2HCl2F3/c3-1(4)2(5,6)7/h1H", 
     "NAME": "R123", 
     "REFPROP_NAME": "R123", 
     "SMILES": "C(C(F)(F)F)(Cl)Cl"
