@@ -569,8 +569,8 @@
       "PH": 0
     }, 
     "FORMULA": "O_{2}S_{1}", 
-    "INCHI_KEY": "RAHZWNYVWXNFOC-UHFFFAOYAT", 
-    "INCHI_STRING": "InChI=1/O2S/c1-3-2", 
+    "INCHI_KEY": "RAHZWNYVWXNFOC-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/O2S/c1-3-2", 
     "NAME": "SulfurDioxide", 
     "REFPROP_NAME": "SO2", 
     "SMILES": "O=S=O"
