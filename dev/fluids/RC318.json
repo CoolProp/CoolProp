@@ -437,8 +437,8 @@
       "PH": 2
     }, 
     "FORMULA": "C_{4}F_{8}", 
-    "INCHI_KEY": "BCCOBQSFUDVTJQ-UHFFFAOYAW", 
-    "INCHI_STRING": "InChI=1/C4F8/c5-1(6)2(7,8)4(11,12)3(1,9)10", 
+    "INCHI_KEY": "BCCOBQSFUDVTJQ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C4F8/c5-1(6)2(7,8)4(11,12)3(1,9)10", 
     "NAME": "RC318", 
     "REFPROP_NAME": "RC318", 
     "SMILES": "C1(C(C(C1(F)F)(F)F)(F)F)(F)F"
