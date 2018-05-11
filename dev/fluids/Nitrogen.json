@@ -526,8 +526,8 @@
       "PH": 0
     }, 
     "FORMULA": "N_{2}", 
-    "INCHI_KEY": "IJGRMHOSHXDMSA-UHFFFAOYAF", 
-    "INCHI_STRING": "InChI=1/N2/c1-2", 
+    "INCHI_KEY": "IJGRMHOSHXDMSA-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/N2/c1-2", 
     "NAME": "Nitrogen", 
     "REFPROP_NAME": "NITROGEN", 
     "SMILES": "N#N"
