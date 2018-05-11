@@ -630,8 +630,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{2}F_{2}H_{4}", 
-    "INCHI_KEY": "NPNPZTNLOVBDOC-UHFFFAOYAM", 
-    "INCHI_STRING": "InChI=1/C2H4F2/c1-2(3)4/h2H,1H3", 
+    "INCHI_KEY": "NPNPZTNLOVBDOC-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H4F2/c1-2(3)4/h2H,1H3", 
     "NAME": "R152A", 
     "REFPROP_NAME": "R152A", 
     "SMILES": "CC(F)F"
