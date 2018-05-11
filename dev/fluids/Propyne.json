@@ -423,8 +423,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{3}H_{4}", 
-    "INCHI_KEY": "MWWATHDPGQKSAR-UHFFFAOYAI", 
-    "INCHI_STRING": "InChI=1/C3H4/c1-3-2/h1H,2H3", 
+    "INCHI_KEY": "MWWATHDPGQKSAR-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H4/c1-3-2/h1H,2H3", 
     "NAME": "Propyne", 
     "REFPROP_NAME": "PROPYNE", 
     "SMILES": "CC#C"
