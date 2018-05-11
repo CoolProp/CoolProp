@@ -361,8 +361,8 @@
       "PH": 3
     }, 
     "FORMULA": "Xe_{1}", 
-    "INCHI_KEY": "FHNFHKCVQCLJFQ-UHFFFAOYAS", 
-    "INCHI_STRING": "InChI=1/Xe", 
+    "INCHI_KEY": "FHNFHKCVQCLJFQ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/Xe", 
     "NAME": "Xenon", 
     "REFPROP_NAME": "XENON", 
     "SMILES": "[Xe]"
