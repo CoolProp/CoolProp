@@ -476,8 +476,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{4}H_{10}", 
-    "INCHI_KEY": "IJDNQMDRQITEOD-UHFFFAOYAE", 
-    "INCHI_STRING": "InChI=1/C4H10/c1-3-4-2/h3-4H2,1-2H3", 
+    "INCHI_KEY": "IJDNQMDRQITEOD-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C4H10/c1-3-4-2/h3-4H2,1-2H3", 
     "NAME": "n-Butane", 
     "REFPROP_NAME": "BUTANE", 
     "SMILES": "CCCC"
