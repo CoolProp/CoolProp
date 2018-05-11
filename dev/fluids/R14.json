@@ -439,8 +439,8 @@
       "PH": -1
     }, 
     "FORMULA": "C_{1}F_{4}", 
-    "INCHI_KEY": "TXEYQDLBPFQVAA-UHFFFAOYAJ", 
-    "INCHI_STRING": "InChI=1/CF4/c2-1(3,4)5", 
+    "INCHI_KEY": "TXEYQDLBPFQVAA-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CF4/c2-1(3,4)5", 
     "NAME": "R14", 
     "REFPROP_NAME": "R14", 
     "SMILES": "C(F)(F)(F)F"
