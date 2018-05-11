@@ -357,8 +357,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{4}H_{8}", 
-    "INCHI_KEY": "IAQRGUVFOMOMEM-ONEGZZNKBD", 
-    "INCHI_STRING": "InChI=1/C4H8/c1-3-4-2/h3-4H,1-2H3/b4-3+", 
+    "INCHI_KEY": "IAQRGUVFOMOMEM-ONEGZZNKSA-N", 
+    "INCHI_STRING": "InChI=1S/C4H8/c1-3-4-2/h3-4H,1-2H3/b4-3+", 
     "NAME": "trans-2-Butene", 
     "REFPROP_NAME": "T2BUTENE", 
     "SMILES": "C/C=C/C"
