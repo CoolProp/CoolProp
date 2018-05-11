@@ -485,8 +485,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{3}H_{6}", 
-    "INCHI_KEY": "QQONPFPTGQHPMA-UHFFFAOYAA", 
-    "INCHI_STRING": "InChI=1/C3H6/c1-3-2/h3H,1H2,2H3", 
+    "INCHI_KEY": "QQONPFPTGQHPMA-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H6/c1-3-2/h3H,1H2,2H3", 
     "NAME": "Propylene", 
     "REFPROP_NAME": "PROPYLEN", 
     "SMILES": "CC=C"
