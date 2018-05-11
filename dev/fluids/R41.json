@@ -381,8 +381,8 @@
       "PH": 2
     }, 
     "FORMULA": "C_{1}F_{1}H_{3}", 
-    "INCHI_KEY": "NBVXSUQYWXRMNV-UHFFFAOYAF", 
-    "INCHI_STRING": "InChI=1/CH3F/c1-2/h1H3", 
+    "INCHI_KEY": "NBVXSUQYWXRMNV-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CH3F/c1-2/h1H3", 
     "NAME": "R41", 
     "REFPROP_NAME": "R41", 
     "SMILES": "CF"
