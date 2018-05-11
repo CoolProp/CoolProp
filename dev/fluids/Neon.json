@@ -452,8 +452,8 @@
       "PH": 0
     }, 
     "FORMULA": "Ne_{1}", 
-    "INCHI_KEY": "GKAOGPIIYCISHV-UHFFFAOYAG", 
-    "INCHI_STRING": "InChI=1/Ne", 
+    "INCHI_KEY": "GKAOGPIIYCISHV-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/Ne", 
     "NAME": "Neon", 
     "REFPROP_NAME": "NEON", 
     "SMILES": "[Ne]"
