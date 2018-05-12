@@ -535,8 +535,8 @@
       "PH": 2
     }, 
     "FORMULA": "C_{2}H_{4}", 
-    "INCHI_KEY": "VGGSQFUCUMXWEO-UHFFFAOYAE", 
-    "INCHI_STRING": "InChI=1/C2H4/c1-2/h1-2H2", 
+    "INCHI_KEY": "VGGSQFUCUMXWEO-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H4/c1-2/h1-2H2", 
     "NAME": "Ethylene", 
     "REFPROP_NAME": "ETHYLENE", 
     "SMILES": "C=C"

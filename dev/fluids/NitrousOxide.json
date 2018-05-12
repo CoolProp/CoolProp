@@ -352,8 +352,8 @@
       "PH": 0
     }, 
     "FORMULA": "N_{2}O_{1}", 
-    "INCHI_KEY": "GQPLMRYTRLFLPF-UHFFFAOYAP", 
-    "INCHI_STRING": "InChI=1/N2O/c1-2-3", 
+    "INCHI_KEY": "GQPLMRYTRLFLPF-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/N2O/c1-2-3", 
     "NAME": "NitrousOxide", 
     "REFPROP_NAME": "N2O", 
     "SMILES": "[N-]=[N+]=O"

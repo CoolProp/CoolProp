@@ -390,8 +390,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{5}H_{12}", 
-    "INCHI_KEY": "QWTDNUCVQCZILF-UHFFFAOYAE", 
-    "INCHI_STRING": "InChI=1/C5H12/c1-4-5(2)3/h5H,4H2,1-3H3", 
+    "INCHI_KEY": "QWTDNUCVQCZILF-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C5H12/c1-4-5(2)3/h5H,4H2,1-3H3", 
     "NAME": "Isopentane", 
     "REFPROP_NAME": "IPENTANE", 
     "SMILES": "CCC(C)C"

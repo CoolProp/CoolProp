@@ -250,8 +250,8 @@
       "PH": -1
     }, 
     "FORMULA": "C_{2}F_{5}Cl_{1}", 
-    "INCHI_KEY": "RFCAUADVODFSLZ-UHFFFAOYAH", 
-    "INCHI_STRING": "InChI=1/C2ClF5/c3-1(4,5)2(6,7)8", 
+    "INCHI_KEY": "RFCAUADVODFSLZ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2ClF5/c3-1(4,5)2(6,7)8", 
     "NAME": "R115", 
     "REFPROP_NAME": "R115", 
     "SMILES": "C(C(F)(F)Cl)(F)(F)F"

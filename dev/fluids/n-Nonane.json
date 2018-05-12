@@ -375,8 +375,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{9}H_{20}", 
-    "INCHI_KEY": "BKIMMITUMNQMOS-UHFFFAOYAS", 
-    "INCHI_STRING": "InChI=1/C9H20/c1-3-5-7-9-8-6-4-2/h3-9H2,1-2H3", 
+    "INCHI_KEY": "BKIMMITUMNQMOS-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C9H20/c1-3-5-7-9-8-6-4-2/h3-9H2,1-2H3", 
     "NAME": "n-Nonane", 
     "REFPROP_NAME": "NONANE", 
     "SMILES": "CCCCCCCCC"

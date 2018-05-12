@@ -391,8 +391,8 @@
       "PH": 3
     }, 
     "FORMULA": "C_{1}O_{1}", 
-    "INCHI_KEY": "UGFAIRIUMAVXCW-UHFFFAOYAT", 
-    "INCHI_STRING": "InChI=1/CO/c1-2", 
+    "INCHI_KEY": "UGFAIRIUMAVXCW-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CO/c1-2", 
     "NAME": "CarbonMonoxide", 
     "REFPROP_NAME": "CO", 
     "SMILES": "[C-]#[O+]"

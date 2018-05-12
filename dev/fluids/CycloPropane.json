@@ -406,8 +406,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{3}H_{6}", 
-    "INCHI_KEY": "LVZWSLJZHVFIQJ-UHFFFAOYAL", 
-    "INCHI_STRING": "InChI=1/C3H6/c1-2-3-1/h1-3H2", 
+    "INCHI_KEY": "LVZWSLJZHVFIQJ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H6/c1-2-3-1/h1-3H2", 
     "NAME": "CycloPropane", 
     "REFPROP_NAME": "CYCLOPRO", 
     "SMILES": "C1CC1"

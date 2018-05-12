@@ -409,8 +409,8 @@
     "CAS": "106-42-3", 
     "CHEMSPIDER_ID": 7521, 
     "FORMULA": "C_{8}H_{10}", 
-    "INCHI_KEY": "URLKBWYHVLBVBO-UHFFFAOYAE", 
-    "INCHI_STRING": "InChI=1/C8H10/c1-7-3-5-8(2)6-4-7/h3-6H,1-2H3", 
+    "INCHI_KEY": "URLKBWYHVLBVBO-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C8H10/c1-7-3-5-8(2)6-4-7/h3-6H,1-2H3", 
     "NAME": "p-Xylene", 
     "REFPROP_NAME": "PXYLENE", 
     "SMILES": "Cc1ccc(cc1)C"

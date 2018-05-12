@@ -374,8 +374,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{7}H_{16}", 
-    "INCHI_KEY": "IMNFDUFMRHMDMM-UHFFFAOYAU", 
-    "INCHI_STRING": "InChI=1/C7H16/c1-3-5-7-6-4-2/h3-7H2,1-2H3", 
+    "INCHI_KEY": "IMNFDUFMRHMDMM-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C7H16/c1-3-5-7-6-4-2/h3-7H2,1-2H3", 
     "NAME": "n-Heptane", 
     "REFPROP_NAME": "HEPTANE", 
     "SMILES": "CCCCCCC"

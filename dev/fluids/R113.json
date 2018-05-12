@@ -400,8 +400,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{2}Cl_{3}F_{3}", 
-    "INCHI_KEY": "AJDIZQLSFPQPEY-UHFFFAOYAE", 
-    "INCHI_STRING": "InChI=1/C2Cl3F3/c3-1(4,6)2(5,7)8", 
+    "INCHI_KEY": "AJDIZQLSFPQPEY-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2Cl3F3/c3-1(4,6)2(5,7)8", 
     "NAME": "R113", 
     "REFPROP_NAME": "R113", 
     "SMILES": "C(C(F)(Cl)Cl)(F)(F)Cl"

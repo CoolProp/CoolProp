@@ -433,8 +433,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{3}H_{6}O_{3}", 
-    "INCHI_KEY": "IEJIGPNLZYLLBP-UHFFFAOYAC", 
-    "INCHI_STRING": "InChI=1/C3H6O3/c1-5-3(4)6-2/h1-2H3", 
+    "INCHI_KEY": "IEJIGPNLZYLLBP-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H6O3/c1-5-3(4)6-2/h1-2H3", 
     "NAME": "DimethylCarbonate", 
     "REFPROP_NAME": "DMC", 
     "SMILES": "COC(=O)OC"

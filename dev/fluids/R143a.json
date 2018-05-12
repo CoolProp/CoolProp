@@ -405,8 +405,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{2}F_{3}H_{3}", 
-    "INCHI_KEY": "UJPMYEOUBPIPHQ-UHFFFAOYAD", 
-    "INCHI_STRING": "InChI=1/C2H3F3/c1-2(3,4)5/h1H3", 
+    "INCHI_KEY": "UJPMYEOUBPIPHQ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H3F3/c1-2(3,4)5/h1H3", 
     "NAME": "R143a", 
     "REFPROP_NAME": "R143A", 
     "SMILES": "CC(F)(F)F"

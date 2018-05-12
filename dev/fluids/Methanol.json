@@ -426,8 +426,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{1}H_{4}O_{1}", 
-    "INCHI_KEY": "OKKJLVBELUTLKV-UHFFFAOYAX", 
-    "INCHI_STRING": "InChI=1/CH4O/c1-2/h2H,1H3", 
+    "INCHI_KEY": "OKKJLVBELUTLKV-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CH4O/c1-2/h2H,1H3", 
     "NAME": "Methanol", 
     "REFPROP_NAME": "METHANOL", 
     "SMILES": "CO"

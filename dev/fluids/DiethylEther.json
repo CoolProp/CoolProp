@@ -282,8 +282,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{4}H_{10}O_{1}", 
-    "INCHI_KEY": "RTZKZFJDLAIYFH-UHFFFAOYAB", 
-    "INCHI_STRING": "InChI=1/C4H10O/c1-3-5-4-2/h3-4H2,1-2H3", 
+    "INCHI_KEY": "RTZKZFJDLAIYFH-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C4H10O/c1-3-5-4-2/h3-4H2,1-2H3", 
     "NAME": "DiethylEther", 
     "REFPROP_NAME": "DEE", 
     "SMILES": "CCOCC"
