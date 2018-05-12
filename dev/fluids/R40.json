@@ -286,8 +286,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{1}Cl_{1}H_{3}", 
-    "INCHI_KEY": "NEHMKBQYUWJMIP-UHFFFAOYAW", 
-    "INCHI_STRING": "InChI=1/CH3Cl/c1-2/h1H3", 
+    "INCHI_KEY": "NEHMKBQYUWJMIP-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/CH3Cl/c1-2/h1H3", 
     "NAME": "R40", 
     "REFPROP_NAME": "R40", 
     "SMILES": "CCl"

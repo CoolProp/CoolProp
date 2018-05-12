@@ -555,8 +555,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{3}F_{5}H_{3}", 
-    "INCHI_KEY": "MSSNHSVIGIHOJA-UHFFFAOYAI", 
-    "INCHI_STRING": "InChI=1/C3H3F5/c4-2(5)1-3(6,7)8/h2H,1H2", 
+    "INCHI_KEY": "MSSNHSVIGIHOJA-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H3F5/c4-2(5)1-3(6,7)8/h2H,1H2", 
     "NAME": "R245fa", 
     "REFPROP_NAME": "R245FA", 
     "SMILES": "C(C(F)F)C(F)(F)F"

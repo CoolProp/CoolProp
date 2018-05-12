@@ -374,8 +374,8 @@
       "PH": 2
     }, 
     "FORMULA": "C_{4}H_{8}", 
-    "INCHI_KEY": "VQTUBCCKSQIDNK-UHFFFAOYAW", 
-    "INCHI_STRING": "InChI=1/C4H8/c1-4(2)3/h1H2,2-3H3", 
+    "INCHI_KEY": "VQTUBCCKSQIDNK-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C4H8/c1-4(2)3/h1H2,2-3H3", 
     "NAME": "IsoButene", 
     "REFPROP_NAME": "IBUTENE", 
     "SMILES": "CC(=C)C"

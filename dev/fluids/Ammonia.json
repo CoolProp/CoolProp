@@ -398,8 +398,8 @@
       "PH": 0
     }, 
     "FORMULA": "H_{3}N_{1}", 
-    "INCHI_KEY": "QGZKDVFQNNGYKY-UHFFFAOYAF", 
-    "INCHI_STRING": "InChI=1/H3N/h1H3", 
+    "INCHI_KEY": "QGZKDVFQNNGYKY-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/H3N/h1H3", 
     "NAME": "Ammonia", 
     "REFPROP_NAME": "AMMONIA", 
     "SMILES": "N"

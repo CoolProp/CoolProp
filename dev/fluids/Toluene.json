@@ -375,8 +375,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{7}H_{8}", 
-    "INCHI_KEY": "YXFVVABEGXRONW-UHFFFAOYAT", 
-    "INCHI_STRING": "InChI=1/C7H8/c1-7-5-3-2-4-6-7/h2-6H,1H3", 
+    "INCHI_KEY": "YXFVVABEGXRONW-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C7H8/c1-7-5-3-2-4-6-7/h2-6H,1H3", 
     "NAME": "Toluene", 
     "REFPROP_NAME": "TOLUENE", 
     "SMILES": "Cc1ccccc1"

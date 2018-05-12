@@ -503,8 +503,8 @@
       "PH": 0
     }, 
     "FORMULA": "F_{2}", 
-    "INCHI_KEY": "PXGOKWXKJXAPGV-UHFFFAOYAO", 
-    "INCHI_STRING": "InChI=1/F2/c1-2", 
+    "INCHI_KEY": "PXGOKWXKJXAPGV-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/F2/c1-2", 
     "NAME": "Fluorine", 
     "REFPROP_NAME": "FLUORINE", 
     "SMILES": "FF"

@@ -376,8 +376,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{8}H_{18}", 
-    "INCHI_KEY": "TVMXDCGIABBOFY-UHFFFAOYAY", 
-    "INCHI_STRING": "InChI=1/C8H18/c1-3-5-7-8-6-4-2/h3-8H2,1-2H3", 
+    "INCHI_KEY": "TVMXDCGIABBOFY-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C8H18/c1-3-5-7-8-6-4-2/h3-8H2,1-2H3", 
     "NAME": "n-Octane", 
     "REFPROP_NAME": "OCTANE", 
     "SMILES": "CCCCCCCC"

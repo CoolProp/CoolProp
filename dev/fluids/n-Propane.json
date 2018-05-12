@@ -457,8 +457,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{3}H_{8}", 
-    "INCHI_KEY": "ATUOYWHBWRKTHZ-UHFFFAOYAU", 
-    "INCHI_STRING": "InChI=1/C3H8/c1-3-2/h3H2,1-2H3", 
+    "INCHI_KEY": "ATUOYWHBWRKTHZ-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H8/c1-3-2/h3H2,1-2H3", 
     "NAME": "n-Propane", 
     "REFPROP_NAME": "PROPANE", 
     "SMILES": "CCC"

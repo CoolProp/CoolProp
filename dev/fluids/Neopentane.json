@@ -373,8 +373,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{5}H_{12}", 
-    "INCHI_KEY": "CRSOQBOWXPBRES-UHFFFAOYAR", 
-    "INCHI_STRING": "InChI=1/C5H12/c1-5(2,3)4/h1-4H3", 
+    "INCHI_KEY": "CRSOQBOWXPBRES-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C5H12/c1-5(2,3)4/h1-4H3", 
     "NAME": "Neopentane", 
     "REFPROP_NAME": "NEOPENTN", 
     "SMILES": "CC(C)(C)C"

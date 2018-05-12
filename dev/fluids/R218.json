@@ -368,8 +368,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{3}F_{8}", 
-    "INCHI_KEY": "QYSGYZVSCZSLHT-UHFFFAOYAL", 
-    "INCHI_STRING": "InChI=1/C3F8/c4-1(5,2(6,7)8)3(9,10)11", 
+    "INCHI_KEY": "QYSGYZVSCZSLHT-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3F8/c4-1(5,2(6,7)8)3(9,10)11", 
     "NAME": "R218", 
     "REFPROP_NAME": "R218", 
     "SMILES": "C(C(F)(F)F)(C(F)(F)F)(F)F"

@@ -412,8 +412,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{5}H_{10}", 
-    "INCHI_KEY": "RGSFGYAAUTVSQA-UHFFFAOYAL", 
-    "INCHI_STRING": "InChI=1/C5H10/c1-2-4-5-3-1/h1-5H2", 
+    "INCHI_KEY": "RGSFGYAAUTVSQA-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C5H10/c1-2-4-5-3-1/h1-5H2", 
     "NAME": "Cyclopentane", 
     "REFPROP_NAME": "CYCLOPEN", 
     "SMILES": "C1CCCC1"

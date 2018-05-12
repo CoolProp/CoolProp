@@ -354,8 +354,8 @@
       "PH": 1
     }, 
     "FORMULA": "C_{6}H_{14}", 
-    "INCHI_KEY": "AFABGHUZZDYHJO-UHFFFAOYAZ", 
-    "INCHI_STRING": "InChI=1/C6H14/c1-4-5-6(2)3/h6H,4-5H2,1-3H3", 
+    "INCHI_KEY": "AFABGHUZZDYHJO-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C6H14/c1-4-5-6(2)3/h6H,4-5H2,1-3H3", 
     "NAME": "Isohexane", 
     "REFPROP_NAME": "IHEXANE", 
     "SMILES": "CCCC(C)C"

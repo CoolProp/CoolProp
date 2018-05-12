@@ -421,8 +421,8 @@
       "PH": -1
     }, 
     "FORMULA": "C_{2}F_{1}H_{5}", 
-    "INCHI_KEY": "UHCBBWUQDAVSMS-UHFFFAOYAC", 
-    "INCHI_STRING": "InChI=1/C2H5F/c1-2-3/h2H2,1H3", 
+    "INCHI_KEY": "UHCBBWUQDAVSMS-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C2H5F/c1-2-3/h2H2,1H3", 
     "NAME": "R161", 
     "REFPROP_NAME": "R161", 
     "SMILES": "CCF"

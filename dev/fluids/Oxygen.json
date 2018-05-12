@@ -459,8 +459,8 @@
       "PH": 0
     }, 
     "FORMULA": "O_{2}", 
-    "INCHI_KEY": "MYMOFIZGZYHOMD-UHFFFAOYAM", 
-    "INCHI_STRING": "InChI=1/O2/c1-2", 
+    "INCHI_KEY": "MYMOFIZGZYHOMD-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/O2/c1-2", 
     "NAME": "Oxygen", 
     "REFPROP_NAME": "OXYGEN", 
     "SMILES": "O=O"

@@ -377,8 +377,8 @@
       "PH": 0
     }, 
     "FORMULA": "C_{3}H_{6}O_{1}", 
-    "INCHI_KEY": "CSCPPACGZOOCGX-UHFFFAOYAF", 
-    "INCHI_STRING": "InChI=1/C3H6O/c1-3(2)4/h1-2H3", 
+    "INCHI_KEY": "CSCPPACGZOOCGX-UHFFFAOYSA-N", 
+    "INCHI_STRING": "InChI=1S/C3H6O/c1-3(2)4/h1-2H3", 
     "NAME": "Acetone", 
     "REFPROP_NAME": "ACETONE", 
     "SMILES": "CC(=O)C"
