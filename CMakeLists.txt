@@ -125,6 +125,7 @@ set(COOLPROP_OBJECT_INCLUDES $<TARGET_PROPERTY:coolprop_object_library,INCLUDE_D
 #######################################
 
 add_subdirectory(wrappers/library)
+add_subdirectory(wrappers/ees)
 
 
 
