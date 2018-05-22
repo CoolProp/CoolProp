@@ -4,7 +4,7 @@
 	branch = master
 [submodule "externals/Eigen"]
 	path = externals/Eigen
-	url = https://github.com/RLovelett/eigen.git
+	url = https://github.com/eigenteam/eigen-git-mirror.git
 	branch = master
 [submodule "externals/ExcelAddinInstaller"]
 	path = externals/ExcelAddinInstaller
