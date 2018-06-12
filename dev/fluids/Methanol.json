@@ -265,6 +265,8 @@
       "Ttriple_units": "K", 
       "acentric": 0.5720322, 
       "acentric_units": "-", 
+      "dipole_moment": 5.671e-30, 
+      "dipole_moment_units": "C*m", 
       "alpha0": [
         {
           "a1": 13.9864114647, 
