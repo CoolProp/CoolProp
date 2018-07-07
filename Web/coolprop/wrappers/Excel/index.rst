@@ -50,6 +50,11 @@ For a manual installation,
 
 .. [#] If you are having problems with the path to the XLAM in your worksheet appearing as the complete path to the xlam (but not the correct path), you might need to go into ``Data->Update Links`` in Excel, select CoolProp.xlam, and select ``Change Source...`` and select the location of your xlam file.  That should update all the links.
 
+ One possible cause of this problem is the security feature of Windows. You can avoid it by manually giving the permission for ordinary access to the xlam file as follows:
+  1. Right-click the xlam file and open Properties.
+  2. There might be a security message "This file came from another computer and ...".
+  3. Check the **Unblock** checkbox (or button other than Windows 10) and click **Apply** at the bottom.
+  4. After confirming the security message has disappeared, click **OK** to exit from Properties.
     
 Pre-compiled Binaries for OSX
 =============================
