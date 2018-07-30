@@ -83,6 +83,12 @@ You can build the static library using::
         cmake .. -G "Visual Studio 12 2013 Win64" -DCOOLPROP_STATIC_LIBRARY=ON
         
     which is a 64-bit build for Microsoft Visual Studio 2013 (even express version) for instance.  You can get the full list of supported generators on your machine by doing `cmake --help`.
+    
+.. note::
+    
+    If you use gcc with libstdc++ (like on ubuntu) and want to build the debug library, you should add the proper cxx flags to link to the correct debug libstdc++ librariries::
+    
+        cmake .. -DCOOLPROP_DEBUG=ON -DCMAKE_CXX_FLAGS_DEBUG='-g -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC'
 
 Usage
 -----
