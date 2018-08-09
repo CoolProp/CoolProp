@@ -9,6 +9,8 @@ BUGFIX: Updated submodule URLs to work with latest repositories
 Contributors to this release:
 jowr
 
+Issues Closed:
+
 * `#1697 <https://github.com/CoolProp/CoolProp/issues/1697>`_ : recent problem cloning Eigen
 
 
