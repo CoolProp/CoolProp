@@ -1,6 +1,17 @@
 Changelog for CoolProp
 ======================
 
+6.1.1
+-----
+
+BUGFIX: Updated submodule URLs to work with latest repositories
+
+Contributors to this release:
+jowr
+
+* `#1697 <https://github.com/CoolProp/CoolProp/issues/1697>`_ : recent problem cloning Eigen
+
+
 6.1.0
 -----
 
