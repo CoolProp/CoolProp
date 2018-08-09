@@ -14,7 +14,7 @@ else
   exit 1
 fi 
 
-DOCKER_MACHINE_TAG="v1.4.3"
+DOCKER_MACHINE_TAG="v2.0.0"
 
 # Stop on errors
 set -ex
@@ -55,7 +55,15 @@ pushd ${CUR_DIR}/../../..
 
 # Run the build script
 chmod +x ${CUR_DIR}/01_build_wheels.sh
-docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
+# Rewmove the manylinux container if it didn't complete properly last time (see also https://stackoverflow.com/a/38225298/1360263)
+docker stop manylinux || true && docker rm manylinux || true
+# docker run --rm -v `pwd`:/io ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
+docker run -itd --name manylinux ${DOCKER_IMG_NAME}:${DOCKER_MACHINE_TAG} bash
+docker cp . manylinux:/io
+docker exec manylinux /io/wrappers/Python/manylinux/01_build_wheels.sh ${SETUP_PY_ARGS}
+docker cp manylinux:/io/install_root install_root
+docker stop manylinux 
+docker rm manylinux
 
 popd 
 

@@ -1,0 +1,39 @@
+# see editorconfig.org
+root = true
+
+# default settings for all file types
+[*]
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# settings per extension (alphabetically)
+[{*.cmake,CMakeLists.txt}]
+indent_size = 2
+indent_style = space
+
+[*.{cpp,h}]
+charset = utf-8
+indent_size = 4
+indent_style = space
+
+[*.json]
+charset = utf-8
+indent_size = 2
+indent_style = space
+
+[Makefile]
+indent_size = 4
+indent_style = tab
+
+[*.md]
+charset = utf-8
+trim_trailing_whitespace = false
+
+[*.py]
+charset = utf-8
+indent_size = 4
+indent_style = space
+
+[.travis.yml]
+indent_size = 2
+indent_style = space
