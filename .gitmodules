@@ -1,6 +1,6 @@
 [submodule "externals/Catch"]
 	path = externals/Catch
-	url = https://github.com/philsquared/Catch
+	url = https://github.com/catchorg/Catch2
 	branch = master
 [submodule "externals/Eigen"]
 	path = externals/Eigen
