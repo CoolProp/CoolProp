@@ -189,6 +189,9 @@ if __name__=='__main__':
         if parse_version(Cython.__version__) < parse_version('0.20'):
             raise ImportError('Your version of Cython (%s) must be >= 0.20 .  Please update your version of cython' % (Cython.__version__,))
 
+        # Print out the version
+        print('Cython version: ', Cython.__version__)
+
         if parse_version(Cython.__version__) >= parse_version('0.20'):
             _profiling_enabled = True
         else:
@@ -196,9 +199,9 @@ if __name__=='__main__':
 
         if _profiling_enabled:
             cython_directives = dict(profile = True,
-                                     embedsignature = True)
+                                     embedsignature = False)
         else:
-            cython_directives = dict(embedsignature = True)
+            cython_directives = dict(embedsignature = False)
     else:
         cython_directives = {}
 
