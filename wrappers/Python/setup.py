@@ -196,9 +196,9 @@ if __name__=='__main__':
 
         if _profiling_enabled:
             cython_directives = dict(profile = True,
-                                     embed_signature = True)
+                                     embedsignature = True)
         else:
-            cython_directives = dict(embed_signature = True)
+            cython_directives = dict(embedsignature = True)
     else:
         cython_directives = {}
 
