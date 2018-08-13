@@ -199,6 +199,9 @@ if __name__=='__main__':
         except ImportError:
             raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
 
+        # Print out the version
+        print('Cython version: ', Cython.__version__)
+
         from pkg_resources import parse_version
         if parse_version(Cython.__version__) < parse_version('0.20'):
             raise ImportError('Your version of Cython (%s) must be >= 0.20 .  Please update your version of cython' % (Cython.__version__,))
@@ -214,7 +217,7 @@ if __name__=='__main__':
                                      embedsignature = True)
         else:
             cython_directives = dict(profile = _profiling_enabled,
-                                     embed_signature = True)
+                                     embedsignature = True)
     else:
         cython_directives = {}
 
