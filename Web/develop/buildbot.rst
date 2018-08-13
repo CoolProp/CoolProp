@@ -420,7 +420,7 @@ environment and start the buildbot worker. Such a script could look like this::
     case "$1" in
       create)
         echo "Creating buildbot worker"
-        buildbot-worker create-worker $WORKERDIR coolprop.dreamhosters.com:port a-slave pass
+        buildbot-worker create-worker $WORKERDIR coolprop.dreamhosters.com:port a-worker pass
         #$DEACCM
       start)
         echo "Starting buildbot worker"
@@ -532,22 +532,24 @@ To make it short, here is what you need to know if you trust us and the docker
 build system: 
 
 * Make sure to set the correct environment variables in an additional file before 
-  you run a container, call it for example ``Dockerfile.slave.env.list``::
+  you run a container, call it for example ``Dockerfile.worker.env.list``::
 
-    WORKERDIR=/home/buildbot/slavedir
-    MASTERHOST=bots.coolprop.org:port
-    WORKERNAME=slavename
-    WORKERPASSWORD=pass
+    WORKERDIR=/home/buildbot/workerdir
+    BUILDMASTER=bots.coolprop.org
+    BUILDMASTER_PORT=port
+    WORKERNAME=workername
+    WORKERPASS=pass
+    WORKER_ENVIRONMENT_BLACKLIST=notused
     BOTADMIN=Author Name
     BOTEMAIL=noreply@coolprop.org
     BOTHOST=A short description of the host computer
 
 * You can then run the official coolprop buildbot configuration with::
 
-    docker run -d --env-file ./Dockerfile64.slave.env.list --name=CoolProp64-slave coolprop/slavepython 
-    docker run -d --env-file ./Dockerfile32.slave.env.list --name=CoolProp32-slave coolprop/slavepython32
+    docker run -d --env-file ./Dockerfile64.worker.env.list --name=CoolProp64-worker coolprop/workerpython 
+    docker run -d --env-file ./Dockerfile32.worker.env.list --name=CoolProp32-worker coolprop/workerpython32
     
-  The above commands launch background processes using the docker containes for the Python buildslaves in 
+  The above commands launch background processes using the docker containes for the Python buildworkers in 
   64bit and 32bit, respectively. 
 
 * Some steps require the upload of files to different servers. In such cases, you 
@@ -563,14 +565,14 @@ build system:
   If you cannot copy the SSH keys, you can change the upload function in the 
   master configuration to employ the built-in upload framework of buildbot. 
 
-Why the containers? In 2015, some of the buildbot slaves did not perform as expected. 
+Why the containers? In 2015, some of the buildbot workers did not perform as expected. 
 Especially the Python builds on the 64bit Linux machine took ages to complete and we 
 could not find any obvious reason for this behaviour. 
 
 To make sure that there are no hidden flaws in the configuration of the buildbots 
 or the virtual machines. Special configuration files can be used to build 
 docker containers. Storing all configuration tasks in a structured ``Dockerfile`` 
-reduces the risk of data loss and allows us to move the slaves between different 
+reduces the risk of data loss and allows us to move the workers between different 
 machines. 
 
 .. warning::
@@ -590,9 +592,9 @@ The workflow to generate the images locally could look like::
 
     git clone --recursive https://github.com/CoolProp/Dockerfiles.git CoolProp.Dockerfiles.git
     cd CoolProp.Dockerfiles.git
-    cd slavebase/64bit      ; docker build -t coolprop/slavebase      -f Dockerfile . ; cd ..
-    cd slavepython/64bit    ; docker build -t coolprop/slavepython    -f Dockerfile . ; cd ..
-    cd slavelinuxopen/64bit ; docker build -t coolprop/slavelinuxopen -f Dockerfile . ; cd ..
+    cd workerbase/64bit      ; docker build -t coolprop/workerbase      -f Dockerfile . ; cd ..
+    cd workerpython/64bit    ; docker build -t coolprop/workerpython    -f Dockerfile . ; cd ..
+    cd workerlinuxopen/64bit ; docker build -t coolprop/workerlinuxopen -f Dockerfile . ; cd ..
 
 Please also have a look at the CoolProp repository on Docker Hub to see which 
 images are available for download https://hub.docker.com/r/coolprop/ and do not hesitate to 
