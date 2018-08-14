@@ -1149,7 +1149,7 @@ public:
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not
- *  publically accessible)
+ *  publicly accessible)
  */
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen);
     

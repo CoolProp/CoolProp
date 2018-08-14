@@ -1,5 +1,5 @@
 #!/bin/bash
-# This Script only links the udf with the coolprop library, usefull if the coolprop library is already compiled
+# This Script only links the udf with the coolprop library, useful if the coolprop library is already compiled
 
 # Warning: this script deletes directory libudf before creating a new one
 

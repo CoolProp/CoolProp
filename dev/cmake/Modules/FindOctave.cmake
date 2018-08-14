@@ -6,7 +6,7 @@
 # OCTAVE_CXXFLAGS - extra flags
 # OCTAVE_INCLUDE_DIRS - include directories
 # OCTAVE_LINK_DIRS - link directories
-# OCTAVE_LIBRARY_RELEASE - the relase version
+# OCTAVE_LIBRARY_RELEASE - the release version
 # OCTAVE_LIBRARY_DEBUG - the debug version
 # OCTAVE_LIBRARY - a default library, with priority debug.
 

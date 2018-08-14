@@ -84,7 +84,7 @@ try:
     print('P,H -> T,D', p, ',', h, '-->', T, ',', D)
 except:
     print(' ')
-    print('************ CANT USE REFPROP ************')
+    print('************ CAN'T USE REFPROP ************')
     print(' ')
 
 print(' ')

@@ -571,7 +571,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
             CAS[1] = components[j].CAS;
             std::sort(CAS.begin(), CAS.end());
 
-            // The variable swapped is true if a swap occured.
+            // The variable swapped is true if a swap occurred.
             bool swapped = (CAS1.compare(CAS[0]) != 0);
 
             // ***************************************************

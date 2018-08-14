@@ -62,7 +62,7 @@ http://en.smath.info/forum/yaf_postst2568_CoolProp.aspx#post13310
 
 Notes :
 - In October 2014 SMath Studio with CoolProp worked on Windows only. 
-- The portable SMath Studio distribution is provided on the SMath Studio site, however so far it's indicated as inofficial (October 2014) 
+- The portable SMath Studio distribution is provided on the SMath Studio site, however so far it's indicated as unofficial (October 2014) 
 
 More information on SMath Studio is given under :
 http://en.wikipedia.org/wiki/SMath_Studio

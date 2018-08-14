@@ -134,7 +134,7 @@ Methane
 NF3:
     MBWR
     
----------------------------------------------------------- CANT BE DONE YET
+---------------------------------------------------------- CAN'T BE DONE YET
 D2
     Deuterium preprint en route at some point
 D2O

@@ -68,7 +68,7 @@ outputs=zeros(5,1);
 [outputs(4,1), so4] = calllib('coolprop','get_param_index','Hmolar');
 [outputs(5,1), so5] = calllib('coolprop','get_param_index','Smolar');
 
-%Creating ouput pointers
+%Creating output pointers
 out1Ptr = libpointer('doublePtr',zeros(length,1));
 out2Ptr = libpointer('doublePtr',zeros(length,1));
 out3Ptr = libpointer('doublePtr',zeros(length,1));

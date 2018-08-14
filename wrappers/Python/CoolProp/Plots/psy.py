@@ -242,7 +242,7 @@ class PsyCoolprop(object):
 
     @classmethod
     def calculatePlot(cls, parent):
-        """Funtion to calculate points in chart"""
+        """Function to calculate points in chart"""
 
         data = {}
         P = Preferences.getfloat("General", "P")

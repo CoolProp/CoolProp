@@ -390,7 +390,7 @@ double BaseSolver::isentropicEnthalpy(double &p, ExternalThermodynamicState *con
 //! Set saturation properties from p
 /*!
   This function sets the saturation properties for the given pressure p.
-  The computed values are written to the ExternalSaturationProperties propery struct.
+  The computed values are written to the ExternalSaturationProperties property struct.
 
   Must be re-implemented in the specific solver
   @param p Pressure
@@ -404,7 +404,7 @@ void BaseSolver::setSat_p(double &p, ExternalSaturationProperties *const propert
 //! Set saturation properties from T
 /*!
   This function sets the saturation properties for the given temperature T.
-  The computed values are written to the ExternalSaturationProperties propery struct.
+  The computed values are written to the ExternalSaturationProperties property struct.
 
   Must be re-implemented in the specific solver
   @param T Temperature

@@ -22,7 +22,7 @@
 // Define struct
 //! ExternalThermodynamicState property struct
 /*!
-  The ExternalThermodynamicState propery struct defines all the properties that
+  The ExternalThermodynamicState property struct defines all the properties that
   are computed by external Modelica medium models extending from
   PartialExternalTwoPhaseMedium.
 */
@@ -64,7 +64,7 @@ typedef struct {
 
 //! ExternalSaturationProperties property struct
 /*!
-  The ExternalSaturationProperties propery struct defines all the saturation properties
+  The ExternalSaturationProperties property struct defines all the saturation properties
   for the dew and the bubble line that are computed by external Modelica medium models
   extending from PartialExternalTwoPhaseMedium.
 */

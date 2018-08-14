@@ -111,7 +111,7 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend &HEOS, const std::s
 //        };
     
         std::size_t failure_count = 0;
-        // Set some imput options
+        // Set some input options
         SaturationSolvers::mixture_VLE_IO io;
         io.sstype = SaturationSolvers::imposed_p;
         io.Nstep_max = 20;

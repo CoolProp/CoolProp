@@ -45,7 +45,7 @@ isentropic lines.  If anyone has the urge to add these I would like to get
 an update.
 
 
-Just to hilight some of the other features, I have added a few simpler command line
+Just to highlight some of the other features, I have added a few simpler command line
 versions.
 
 
