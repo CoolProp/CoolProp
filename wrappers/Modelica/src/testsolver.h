@@ -19,7 +19,7 @@
       300 K  < T < 350 K ;
   results returned with inputs outside that range (possibly corresponding 
   to two-phase or vapour points) are not reliable.
-  Saturation properies are computed in the range 
+  Saturation properties are computed in the range 
       1e5 Pa < psat < 2e5 Pa ;
   results obtained outside that range might be unrealistic.
 

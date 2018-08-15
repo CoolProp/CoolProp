@@ -44,7 +44,7 @@ For a manual installation,
      - Go to **File | Options** on the main menu and select Cusomize Ribbon
      - Make sure that the Developer main tab is checked (ON)
      
-  5. Open the Visual Basic editor and use **Edit | Replace** to replace all occurances of **CoolProp_stdcall.dll** with the full path to the alternate location for your DLL files, making sure to press the save button (disk image) or **File | Save** before exiting the VBA editor.
+  5. Open the Visual Basic editor and use **Edit | Replace** to replace all occurrences of **CoolProp_stdcall.dll** with the full path to the alternate location for your DLL files, making sure to press the save button (disk image) or **File | Save** before exiting the VBA editor.
   6. Save the CoolProp.xlam file.
 
 

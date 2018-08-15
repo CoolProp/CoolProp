@@ -694,19 +694,19 @@ double AbstractCubic::d3_alphar_dxidxjdxk(double tau, double delta, const std::v
 
 double SRK::a0_ii(std::size_t i)
 {
-    // Values from Soave, 1972 (Equilibium constants from a ..)
+    // Values from Soave, 1972 (Equilibrium constants from a ..)
     double a = 0.42747*R_u*R_u*Tc[i]*Tc[i]/pc[i];
     return a;
 }
 double SRK::b0_ii(std::size_t i)
 {
-    // Values from Soave, 1972 (Equilibium constants from a ..)
+    // Values from Soave, 1972 (Equilibrium constants from a ..)
     double b = 0.08664*R_u*Tc[i]/pc[i];
     return b;
 }
 double SRK::m_ii(std::size_t i)
 {
-    // Values from Soave, 1972 (Equilibium constants from a ..)
+    // Values from Soave, 1972 (Equilibrium constants from a ..)
     double omega = acentric[i];
     double m = 0.480 + 1.574*omega - 0.176*omega*omega;
     return m;

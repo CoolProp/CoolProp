@@ -150,7 +150,7 @@ If you want to use the GERG-2008 model, you can do this at the beginning of your
     
     In [1]: CP.set_config_bool(CP.REFPROP_USE_GERG, True)
 
-Subsquently, all calculations will be done with the simplified EOS from the GERG-2008 model
+Subsequently, all calculations will be done with the simplified EOS from the GERG-2008 model
 
 And now we set them back to their default values
 

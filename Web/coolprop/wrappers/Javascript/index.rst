@@ -12,7 +12,7 @@ Pre-Compiled Binaries
 
 * You can load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/Web/coolprop/wrappers/Javascript/index.html>`_, which is also included at the above download. 
 
-* Alternatively, you can link to our server directly to make sure that you always have the latest version of CoolProp. To do so, include the address ``<script src="http://www.coolprop.sourceforge.net/jscript/coolprop.js"></script>`` in your HTML header instad of the relative path ``<script src="coolprop.js"></script>``.
+* Alternatively, you can link to our server directly to make sure that you always have the latest version of CoolProp. To do so, include the address ``<script src="http://www.coolprop.sourceforge.net/jscript/coolprop.js"></script>`` in your HTML header instead of the relative path ``<script src="coolprop.js"></script>``.
 
 * A live demo of the Javascript library in action can also be found `online <http://www.coolprop.sourceforge.net/jscript/index.html>`_.
 

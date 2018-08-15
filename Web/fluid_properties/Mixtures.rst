@@ -65,7 +65,7 @@ If you have your own interaction parameters that you would like to use, you can 
 
     In [1]: CAS_Xe = CP.get_fluid_param_string('Xenon','CAS')
 
-    @supress
+    @suppress
     In [1]: CP.set_config_bool(CP.OVERWRITE_BINARY_INTERACTION, True)
 
     # This adds a dummy entry in the library of interaction parameters if the mixture is not already there

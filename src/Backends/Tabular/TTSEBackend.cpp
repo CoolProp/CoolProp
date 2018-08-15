@@ -54,7 +54,7 @@ void CoolProp::TTSEBackend::invert_single_phase_x(const SinglePhaseGriddedTableD
     double deltax1 = (-b + sqrt(b*b - 4*a*c))/(2*a);
     double deltax2 = (-b - sqrt(b*b - 4*a*c))/(2*a);
 
-    // If only one is less than a multiple of x spacing, thats your solution
+    // If only one is less than a multiple of x spacing, that's your solution
     double xspacing, xratio, val;
     if (!table.logx){
         xspacing = table.xvec[1] - table.xvec[0];
@@ -112,7 +112,7 @@ void CoolProp::TTSEBackend::invert_single_phase_y(const SinglePhaseGriddedTableD
     double deltay1 = (-b + sqrt(b*b - 4*a*c))/(2*a);
     double deltay2 = (-b - sqrt(b*b - 4*a*c))/(2*a);
 
-    // If only one is less than a multiple of x spacing, thats your solution
+    // If only one is less than a multiple of x spacing, that's your solution
     double yspacing, yratio, val;
     if (!table.logy){
         yspacing = table.yvec[1] - table.yvec[0];

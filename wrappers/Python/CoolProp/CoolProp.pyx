@@ -92,7 +92,7 @@ from . cimport constants_header
 
 cdef bint iterable(object a):
     """
-    If numpy is supported, this function retuns true if the argument is a
+    If numpy is supported, this function returns true if the argument is a
     numpy array or another iterable, otherwise just checks if list or tuple
     """
     if _numpy_supported:

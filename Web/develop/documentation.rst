@@ -198,7 +198,7 @@ There are a number of setup scripts that have to be run to generate dynamic cont
    
 **Build the Documentation**
 
-There is a Makefile that will build the entire site.  This can take a while, especially the first time.  Open a Windows command prompt, activate your virtural environment, cd to the *CoolProp\\Web* directory and type::
+There is a Makefile that will build the entire site.  This can take a while, especially the first time.  Open a Windows command prompt, activate your virtual environment, cd to the *CoolProp\\Web* directory and type::
 
     make html
 

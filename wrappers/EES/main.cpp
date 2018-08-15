@@ -4,9 +4,9 @@
 //                                  -------------------------                                 //
 //                                                                                            //
 //  This dll is an interface between EES and CoolProp.                                        //
-//  In EES, external functions need to be implemented in dynamic librairies.  The first       //
+//  In EES, external functions need to be implemented in dynamic libraries.  The first       //
 //  argument sent by EES is a 256 characters char variable. The second argument is pointer    //
-//  structure conaining "double" values.  The third argument is a linked list for the         //
+//  structure containing "double" values.  The third argument is a linked list for the         //
 //  input data                                                                                //
 //                                                                                            //
 //  The arguments are defined as follows :                                                    //

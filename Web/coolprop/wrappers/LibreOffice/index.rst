@@ -24,7 +24,7 @@ Linux using python
 
     # Install python script provider (uses python 3)
     sudo apt-get install libreoffice-script-provider-python
-    # pyton scripting in LibreOffice uses python3, make sure we populate the right python site-packages folder
+    # python scripting in LibreOffice uses python3, make sure we populate the right python site-packages folder
     sudo apt-get install python3-pip
     sudo pip3 install Cython
     # Compile CoolProp v5+ manually

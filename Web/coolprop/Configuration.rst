@@ -8,7 +8,7 @@ At runtime, there are a several configuration variables that can be used to chan
 
 .. warning:: The adjustment of the internal configuration variables might have side effects that you are not expecting, use with caution!!
 
-From C++ and the SWIG wrappers, the values can be directly set/changed by using the type-specified getter/setter functions :cpapi:`get_config_bool`, :cpapi:`set_config_bool`, :cpapi:`get_config_string`, :cpapi:`set_config_string`, etc., as in sonething like:
+From C++ and the SWIG wrappers, the values can be directly set/changed by using the type-specified getter/setter functions :cpapi:`get_config_bool`, :cpapi:`set_config_bool`, :cpapi:`get_config_string`, :cpapi:`set_config_string`, etc., as in something like:
 
 .. ipython::
 

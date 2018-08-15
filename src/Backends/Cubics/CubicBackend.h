@@ -26,7 +26,7 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 
 namespace CoolProp {
 
-// Forward declaration for use in initalization of AbstractCubicBackend
+// Forward declaration for use in initialization of AbstractCubicBackend
 class CubicResidualHelmholtz;
 
 class AbstractCubicBackend : public HelmholtzEOSMixtureBackend  {

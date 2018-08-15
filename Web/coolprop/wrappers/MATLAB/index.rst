@@ -136,7 +136,7 @@ Once the dependencies are installed, you can run the builder and tests using::
     # Build the makefile using CMake with the path hacked to use our swig
     PATH=swig-matlab-bin/bin:%{PATH} cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DSWIG_DIR=swig-matlab-bin/bin
     # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
-    # Setting the SWIG_LIB explictly is dangerous, but for now it doesn't seem there is a better solution
+    # Setting the SWIG_LIB explicitly is dangerous, but for now it doesn't seem there is a better solution
     SWIG_LIB=swig-matlab-bin/share/swig/3.0.3 make install
 
 Windows (32-bit and 64-bit)
@@ -157,7 +157,7 @@ You need to just slightly modify the building procedure::
     # Build the makefile using CMake with the path hacked to use our swig
     set "PATH=swig-matlab-bin\bin:%{PATH}" && cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DSWIG_DIR=swig-matlab-bin\bin
     # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
-    # Setting the SWIG_LIB explictly is dangerous, but for now it doesn't seem there is a better solution
+    # Setting the SWIG_LIB explicitly is dangerous, but for now it doesn't seem there is a better solution
     set "SWIG_LIB=swig-matlab-bin\share\swig\3.0.3" && make install
     
 Example Code

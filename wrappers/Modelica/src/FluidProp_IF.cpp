@@ -64,7 +64,7 @@ TFluidProp::~TFluidProp()
    // Free FluidProp object
    FluidProp_COM->Release();
 
-   // Unitialize OLE
+   // Uninitialize OLE
    CoUninitialize();
 }
 
