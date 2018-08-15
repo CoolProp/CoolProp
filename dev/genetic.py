@@ -127,7 +127,7 @@ class GeneticAncillaryFitter(object):
 
     def generate_random_chromosomes(self,):
         '''
-        Create a list of random chromosomes to seed our alogrithm.
+        Create a list of random chromosomes to seed our algorithm.
         '''
         chromos = []
         while len(chromos) < self.num_samples:

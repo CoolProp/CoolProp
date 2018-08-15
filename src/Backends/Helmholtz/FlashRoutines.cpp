@@ -399,7 +399,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
         else if (!(HEOS.components[0].EOS().pseudo_pure))
         {
-            // Set some imput options
+            // Set some input options
             SaturationSolvers::saturation_T_pure_Akasaka_options options(false);
 
             // Actually call the solver
@@ -582,7 +582,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
             // It is a pure fluid
             // ------------------
 
-            // Set some imput options
+            // Set some input options
             SaturationSolvers::saturation_PHSU_pure_options options;
             // Specified variable is pressure
             options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_PL;
@@ -629,7 +629,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend &HEOS)
         }
         else{
 			
-			// Set some imput options
+			// Set some input options
 			SaturationSolvers::mixture_VLE_IO io;
 			io.sstype = SaturationSolvers::imposed_p;
 			io.Nstep_max = 10;

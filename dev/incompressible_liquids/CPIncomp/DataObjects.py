@@ -308,7 +308,7 @@ class DigitalData(SolutionData):
     def getArray(self, dataID=None, func=None, x_in=None, y_in=None, DEBUG=False):
         """ Tries to read a data file, overwrites it if x or y do not match
 
-        :param dataID  : ID to contruct the path to the data file
+        :param dataID  : ID to construct the path to the data file
         :param func    : Callable object that can take x_in and y_in
         :param x_in    : a 1D array in x direction or 2D with one column, most likely temperature
         :param y_in    : a 1D array in y direction or 2D with one row, most likely cocentration
@@ -401,7 +401,7 @@ class CoefficientData(SolutionData):
 
     def convertSecCoolArray(self, array):
         if len(array)!=18:
-            raise ValueError("The lenght is not equal to 18!")
+            raise ValueError("The length is not equal to 18!")
 
         self.reference = "SecCool software"
         array = np.array(array)
@@ -455,7 +455,7 @@ class CoefficientData(SolutionData):
         That is why the implementation is in a transposed form..."""
 
         if len(array)!=18:
-            raise ValueError("The lenght is not equal to 18!")
+            raise ValueError("The length is not equal to 18!")
 
         #self.reference = "Melinder Book"
         array = np.array(array)
@@ -496,9 +496,9 @@ class CoefficientData(SolutionData):
         from the very first CoolProp implementation
         based on the book by Melinder"""
         if len(array)!=18:
-            raise ValueError("The lenght is not equal to 18!")
+            raise ValueError("The length is not equal to 18!")
         if len(array[0])!=5:
-            raise ValueError("The lenght is not equal to 5!")
+            raise ValueError("The length is not equal to 5!")
         array = np.array(array)
         tmp = np.zeros((18,5))
 

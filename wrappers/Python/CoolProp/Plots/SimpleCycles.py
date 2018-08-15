@@ -748,7 +748,7 @@ class BaseCycle(BasePlot):
             elif typ[i] == 'log':
                 val.append(np.logspace(np.log10(start[v]), np.log10(end[v]), self.steps))
             else:
-                raise ValueError("Unknow range generator {0:s}".format(str(typ[i])))
+                raise ValueError("Unknown range generator {0:s}".format(str(typ[i])))
 
         sc = StateContainer(self._system)
         for i,_ in enumerate(val[0]):

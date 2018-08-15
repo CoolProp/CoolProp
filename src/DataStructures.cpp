@@ -636,7 +636,7 @@ std::string get_backend_string(backends backend) {
 #ifdef ENABLE_CATCH
 #include "catch.hpp"
 
-TEST_CASE("Check that all parameters are descibed","")
+TEST_CASE("Check that all parameters are described","")
 {
     for (int i = 1; i < CoolProp::iundefined_parameter; ++i){
         std::ostringstream ss;
@@ -653,7 +653,7 @@ TEST_CASE("Check that all parameters are descibed","")
     }
 }
 
-TEST_CASE("Check that all phases are descibed","[phase_index]")
+TEST_CASE("Check that all phases are described","[phase_index]")
 {
     for (int i = 0; i < CoolProp::iphase_not_imposed; ++i){
         std::ostringstream ss;

@@ -32,7 +32,7 @@ def range_brace(x_min, x_max, mid=0.5,
     ax.plot(x, y,'-')
     ax.plot(y, x,'-')
     """
-    # determine x0 adaptively values using second derivitive
+    # determine x0 adaptively values using second derivative
     # could be replaced with less snazzy:
     #   x0 = NP.arange(0, 0.5, .001)
     x0 = np.array(())

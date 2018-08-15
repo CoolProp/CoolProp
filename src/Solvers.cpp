@@ -106,7 +106,7 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector
 In the newton function, a 1-D Newton-Raphson solver is implemented using exact solutions.  An initial guess for the solution is provided.
 
 @param f A pointer to an instance of the FuncWrapper1D class that implements the call() function
-@param x0 The inital guess for the solution
+@param x0 The initial guess for the solution
 @param ftol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
@@ -151,7 +151,7 @@ x_{n+1} = x_n - \frac {2 f(x_n) f'(x_n)} {2 {[f'(x_n)]}^2 - f(x_n) f''(x_n)}
 http://en.wikipedia.org/wiki/Halley%27s_method
 
 @param f A pointer to an instance of the FuncWrapper1DWithTwoDerivs class that implements the call() and two derivatives
-@param x0 The inital guess for the solution
+@param x0 The initial guess for the solution
 @param ftol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
 @param xtol_rel The minimum allowable (relative) step size
@@ -213,7 +213,7 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
 http://numbers.computation.free.fr/Constants/Algorithms/newton.ps
  
  @param f A pointer to an instance of the FuncWrapper1DWithThreeDerivs class that implements the call() and three derivatives
- @param x0 The inital guess for the solution
+ @param x0 The initial guess for the solution
  @param ftol The absolute value of the tolerance accepted for the objective function
  @param maxiter Maximum number of iterations
  @param xtol_rel The minimum allowable (relative) step size
@@ -276,7 +276,7 @@ double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int
 In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial guess for the solution is provided.
 
 @param f A pointer to an instance of the FuncWrapper1D class that implements the call() function
-@param x0 The inital guess for the solutionh
+@param x0 The initial guess for the solutionh
 @param dx The initial amount that is added to x in order to build the numerical derivative
 @param tol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
@@ -348,7 +348,7 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
 In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial guess for the solution is provided.
 
 @param f A pointer to an instance of the FuncWrapper1D class that implements the call() function
-@param x0 The inital guess for the solution
+@param x0 The initial guess for the solution
 @param xmax The upper bound for the solution
 @param xmin The lower bound for the solution
 @param dx The initial amount that is added to x in order to build the numerical derivative
@@ -408,7 +408,7 @@ at least one solution in the interval [a,b].
 @param b The maximum bound for the solution of f=0
 @param macheps The machine precision
 @param t Tolerance (absolute)
-@param maxiter Maximum numer of steps allowed.  Will throw a SolutionError if the solution cannot be found
+@param maxiter Maximum number of steps allowed.  Will throw a SolutionError if the solution cannot be found
 */
 double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter)
 {

@@ -63,9 +63,9 @@ namespace coolprop_wrapper
                      "FRACTION_MAX", "fraction_max",                               //           O  Fraction (mole, mass, volume) maximum value for incompressible solutions
                      "FRACTION_MIN", "fraction_min",                               //           O  Fraction (mole, mass, volume) minimum value for incompressible solutions
                      "FUNDAMENTAL_DERIVATIVE_OF_GAS_DYNAMICS", "fundamental_derivative_of_gas_dynamics", // O Fundamental_derivative_of_gas_dynamics
-                     "GWP100",                                                     //           O  100-year gobal warming potential
-                     "GWP20",                                                      //           O  20-year gobal warming potential
-                     "GWP500",                                                     //           O  500-year gobal warming potential
+                     "GWP100",                                                     //           O  100-year global warming potential
+                     "GWP20",                                                      //           O  20-year global warming potential
+                     "GWP500",                                                     //           O  500-year global warming potential
                      "HH",                                                         //           O  Health hazard
                      "ODP",                                                        //           O  Ozone depletion potential
                      "PHASE", "Phase",                                             //           O  Phase index as a float

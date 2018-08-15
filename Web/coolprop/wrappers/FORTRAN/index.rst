@@ -150,7 +150,7 @@ On OSX, you must do the linking stage with true gcc so that it finds the right s
 
 .. warning::
 
-    You MUST(!!!) put the -lstdc++ standard libary *after* libCoolProp.a.  Same thing if you compile the fortran to object file, static library must always be at the end.
+    You MUST(!!!) put the -lstdc++ standard library *after* libCoolProp.a.  Same thing if you compile the fortran to object file, static library must always be at the end.
 
 .. _FORTRAN77:
 

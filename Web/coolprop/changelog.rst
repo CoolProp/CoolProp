@@ -243,7 +243,7 @@ Issues Closed:
 * `#926 <http://github.com/CoolProp/CoolProp/issues/926>`_ : hydrogen formula is wrong
 * `#925 <http://github.com/CoolProp/CoolProp/issues/925>`_ : Fix HS inputs 
 * `#921 <http://github.com/CoolProp/CoolProp/issues/921>`_ : Tabular calcs with mixtures often return Dew T< Bubble T using PQ input pair
-* `#920 <http://github.com/CoolProp/CoolProp/issues/920>`_ : Cant find temperature at pressure and entropy
+* `#920 <http://github.com/CoolProp/CoolProp/issues/920>`_ : Can't find temperature at pressure and entropy
 * `#917 <http://github.com/CoolProp/CoolProp/issues/917>`_ : Fix errors in docs
 * `#907 <http://github.com/CoolProp/CoolProp/issues/907>`_ : Replace string formatting with C++ format library
 * `#905 <http://github.com/CoolProp/CoolProp/issues/905>`_ : Using conda recipes

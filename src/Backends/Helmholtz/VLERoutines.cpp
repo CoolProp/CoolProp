@@ -716,7 +716,7 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, Cool
 }
 void SaturationSolvers::saturation_T_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl T, saturation_T_pure_options &options)
 {
-    // Set some imput options
+    // Set some input options
     SaturationSolvers::saturation_T_pure_Akasaka_options _options(false);
     _options.omega = 1.0;
     try{

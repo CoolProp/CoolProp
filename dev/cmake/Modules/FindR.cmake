@@ -23,7 +23,7 @@ find_program(R_EXEC
              NO_CMAKE_PATH
              )
 MESSAGE(STATUS "R_EXEC= ${R_EXEC}")
-# Parse the output of the R path commmand, removing whitespace
+# Parse the output of the R path command, removing whitespace
 FUNCTION(chomp arg1 arg2)
     string(REPLACE "\n" ";" arg1list ${arg1})
     list(GET arg1list 1 arg1line)

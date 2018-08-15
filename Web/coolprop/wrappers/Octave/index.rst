@@ -15,7 +15,7 @@ On Linux systems you can put the generated .oct file in
 privileges to do this.
 
 If you place .oct file somewhere outside octave path, you have to use
-"addpath" function at begining of your code.
+"addpath" function at beginning of your code.
 
 Example: adding the folder that contains CoolProp.oct file to the Octave path::
 

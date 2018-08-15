@@ -840,7 +840,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
     mass_to_molar_inputs(input_pair, ld_value1, ld_value2);
     val1 = ld_value1; val2 = ld_value2;
 
-    // Check the tables, build if neccessary
+    // Check the tables, build if necessary
     check_tables();
 
     // Flush the cached indices (set to large number)

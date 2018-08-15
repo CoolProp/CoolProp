@@ -27,12 +27,12 @@ To build FORTRAN example
     
 .. warning::
 
-    You MUST(!!!) put the -lstdc++ standard libary *after* the cool_fortran_bind.f90  Same thing if you compile the fortran to object file, static library must always be at the end.
+    You MUST(!!!) put the -lstdc++ standard library *after* the cool_fortran_bind.f90  Same thing if you compile the fortran to object file, static library must always be at the end.
 
 Compiling on Windows
 --------------------
 
-At the moment, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  Theese are the versions used as of June 20, 2014::
+At the moment, the most reliable mixed compilation seems to be using the mingw-provided gfortran/gcc combination from mingw-get.  These are the versions used as of June 20, 2014::
 
     >gfortran --version
     GNU Fortran (GCC) 4.8.1

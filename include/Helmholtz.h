@@ -71,7 +71,7 @@ struct HelmholtzDerivatives
         return _new;
     }
     HelmholtzDerivatives(){reset(0.0);};
-    /// Retrive a single value based on the number of derivatives with respect to tau and delta
+    /// Retrieve a single value based on the number of derivatives with respect to tau and delta
     double get(std::size_t itau, std::size_t idelta){
         if (itau == 0){
             if (idelta == 0){ return alphar; }

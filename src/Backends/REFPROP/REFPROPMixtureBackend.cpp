@@ -1936,7 +1936,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(long itau, long idel)
     double val = 0, tau = _tau, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
-    return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multplied by delta^idel
+    return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multiplied by delta^idel
 }
 /// Calculate excess properties
 void REFPROPMixtureBackend::calc_excess_properties(){

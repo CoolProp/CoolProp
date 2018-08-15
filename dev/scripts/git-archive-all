@@ -320,7 +320,7 @@ class GitArchiver(object):
             raise ValueError("repo_abspath MUST be absolute path.")
 
         if not path.isabs(abspath):
-            raise ValueError("abspath MUST be absoulte path.")
+            raise ValueError("abspath MUST be absolute path.")
 
         if not path.commonprefix([repo_abspath, abspath]):
             raise ValueError("abspath (\"{0}\") MUST have common prefix with repo_abspath (\"{1}\")".format(abspath, repo_abspath))

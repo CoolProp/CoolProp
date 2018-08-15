@@ -170,7 +170,7 @@ class IncompLiquidFit(object):
     def _PropsFit(self,coefficients,inVal,T=0):
         """
         Calculates a property from a given set of
-        coefficents for a certain temperature. Is used
+        coefficients for a certain temperature. Is used
         to obtain data to feed to the optimisation
         procedures.
         """

@@ -90,7 +90,7 @@ private:
         struct{                    // For TYPE_NOT_EXPONENTIAL & TYPE_EXPONENTIAL
             bool using_tau_r; ///< Whether the term \f$ \frac{T_c}{T} \f$ is included in the 
             CoolPropDbl reducing_value, ///< The value used to reduce the output variable
-                        T_r; ///< The temperature in K used to reduce the temperature (ususally the critical temperature)
+                        T_r; ///< The temperature in K used to reduce the temperature (usually the critical temperature)
             std::size_t N; ///< The number of values in the arrays
         };
     };

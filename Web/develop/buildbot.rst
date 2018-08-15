@@ -355,7 +355,7 @@ your computer. For Debian/Ubuntu, we recommend a script like::
 Which then can be added to the scheduler with ``update-rc.d buildworker defaults``.
 This should gracefully terminate the bot at shutdown and restart it again after reboot.
 To disable the service, run ``update-rc.d -f buildworker remove``. You can enable and
-disable the daemon by runnning ``update-rc.d buildworker enable|disable``.
+disable the daemon by running ``update-rc.d buildworker enable|disable``.
 
 If you run a distribution that uses systemd, like CentOS, you might find the
 following unit file helpful, which can be placed in ``/etc/systemd/system/coolpropworker.service``
@@ -475,7 +475,7 @@ Starting VirtualBox images at boot
 ==================================
 
 You can use the built-in functionality https://www.virtualbox.org/manual/ch09.html#autostart on Linux and Mac or use
-your own configuration and create a daemon entry in Libray/LaunchDaemons.  Make sure you use full paths to VBoxManage::
+your own configuration and create a daemon entry in Library/LaunchDaemons.  Make sure you use full paths to VBoxManage::
 
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -549,7 +549,7 @@ build system:
     docker run -d --env-file ./Dockerfile64.worker.env.list --name=CoolProp64-worker coolprop/workerpython 
     docker run -d --env-file ./Dockerfile32.worker.env.list --name=CoolProp32-worker coolprop/workerpython32
     
-  The above commands launch background processes using the docker containes for the Python buildworkers in 
+  The above commands launch background processes using the docker contains for the Python buildworkers in 
   64bit and 32bit, respectively. 
 
 * Some steps require the upload of files to different servers. In such cases, you 

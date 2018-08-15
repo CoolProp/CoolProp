@@ -83,7 +83,7 @@ def getDigitalFluids():
     fluid data can be accessed from python in the
     form of another library.
     c) There are data files that contain the experimental
-    data. The fit has to be done after laoding the fluids.
+    data. The fit has to be done after loading the fluids.
     """
     classes = []
     ignList = getIgnoreNames()
