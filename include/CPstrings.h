@@ -6,11 +6,11 @@
     #include <algorithm>
     #include <functional>
 
-#if !defined(NO_CPPFORMAT)
+#if !defined(NO_FMTLIB)
     #ifndef FMT_HEADER_ONLY
     #define FMT_HEADER_ONLY
     #endif
-    #include "fmt/format.h" // For addition of the string formatting functions and macros from cppformat
+    #include "fmt/format.h" // For addition of the string formatting functions and macros from fmtlib
     #include "fmt/printf.h" // For sprintf
     #undef FMT_HEADER_ONLY
 #else
@@ -22,7 +22,7 @@
 
     #if !defined(__powerpc__)
     /// Copy string to wstring
-    /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263 
+    /// Dangerous if the string has non-ASCII characters; from http://stackoverflow.com/a/8969776/1360263
     inline void StringToWString(const std::string &s, std::wstring &ws)
     {
         ws = std::wstring(s.begin(), s.end());
@@ -53,15 +53,20 @@
         return lhs == rhs;
     }
 
-#if defined(NO_CPPFORMAT)
+#if defined(NO_FMTLIB)
     // Missing string formatting function, this old guy is needed for ancient gcc compilers on PowerPC for VxWorks
     inline std::string format(const char* fmt, ...);
 #else
-    // Missing std::string formatting function - provided by the cppformat library
+    // Missing std::string formatting function - provided by the fmtlib library
     inline std::string format(const char *format, fmt::ArgList args) {
       return fmt::sprintf(format, args);
     }
     FMT_VARIADIC(std::string, format, const char *)
+    // For latest FMTLIB
+    /*template <typename... Args>
+    inline std::string format(const char *format_str, const Args & ... args) {
+        return fmt::sprintf(format_str, args);
+    }*/
 #endif
 
     // Missing string split - like in Python
@@ -72,7 +77,7 @@
         std::transform(str.begin(), str.end(), str.begin(), ::toupper);
         return str;
     }
-	
+
 	inline std::string lower(std::string str)
     {
         std::transform(str.begin(), str.end(), str.begin(), ::tolower);
@@ -88,7 +93,7 @@
      * @brief Convert a number encoded as a string to a double
      * @param s The string to be converted
      *
-     * @note 
+     * @note
      */
     inline double string2double(const std::string &s){
         std::string mys = s; //copy
@@ -96,7 +101,7 @@
         if (mys.find("D") != std::string::npos){ std::size_t pos = mys.find("D"), len = 1; mys.replace(pos,len,"e"); }
         // replace d with e (FORTRAN style scientific definition)
         if (mys.find("d") != std::string::npos){ std::size_t pos = mys.find("d"), len = 1; mys.replace(pos,len,"e"); }
-        
+
         const char * cs = mys.c_str();
         char* pEnd;
         double val = strtod(cs, &pEnd);

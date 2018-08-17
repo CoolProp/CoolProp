@@ -18,7 +18,8 @@ def copy_files():
     for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
-    copytree(os.path.join(CProot, 'externals/cppformat/fmt'), os.path.join('CoolProp','include','fmt'))
+    copytree(os.path.join(CProot, 'externals/fmtlib/fmt'), os.path.join('CoolProp','include','fmt')) # Should be deprecated
+    #copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp','include','fmt'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
 
@@ -281,7 +282,8 @@ if __name__=='__main__':
         os.path.join(CProot, 'include'),
         os.path.join(CProot, 'src'),
         os.path.join(CProot, 'externals', 'Eigen'),
-        os.path.join(CProot, 'externals', 'cppformat'),
+        os.path.join(CProot, 'externals', 'fmtlib'), # should be deprecated
+        #os.path.join(CProot, 'externals', 'fmtlib','include'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     ## If the file is run directly without any parameters, clean, build and install
