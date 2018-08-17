@@ -38,3 +38,6 @@
 	path = externals/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
 	branch = master
+[submodule "externals/fmtlib"]
+	path = externals/fmtlib
+	url = https://github.com/fmtlib/fmt.git
