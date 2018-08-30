@@ -22,9 +22,9 @@
 	path = externals/REFPROP-headers
 	url = https://github.com/CoolProp/REFPROP-headers.git
 	branch = master
-[submodule "externals/cppformat"]
-	path = externals/cppformat
-	url = https://github.com/cppformat/cppformat.git
+[submodule "externals/fmtlib"]
+	path = externals/fmtlib
+	url = https://github.com/fmtlib/fmt.git
 	branch = master
 [submodule "externals/msgpack-c"]
 	path = externals/msgpack-c
