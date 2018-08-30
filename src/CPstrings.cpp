@@ -1,6 +1,8 @@
 #include "CPstrings.h"
 #include "crossplatform_shared_ptr.h"
 #include <cstdio>
+#include <vector>
+#include <string>
 
 std::string strjoin(const std::vector<std::string> &strings, const std::string &delim)
 {
@@ -29,7 +31,7 @@ std::vector<std::string> strsplit(const std::string &s, char del)
     return v;
 }
 
-#if defined(NO_CPPFORMAT)
+#if defined(NO_FMTLIB)
 std::string format(const char* fmt, ...)
 {
     const int size = 512;
