@@ -72,7 +72,7 @@ Compilation
 2. **Building Python wrapper on Windows fails with an error similar to**
 
     ```
-    error: Microsoft Visual C++ 14.0 is required. Get it with "Microsoft Visual C++ Build Tools": http://landinghub.visualstudio.com/visual-cpp-build-tools
+    error: Microsoft Visual C++ 14.0 is required. Get it with "Microsoft Visual C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
     ```
     
     Different versions of Python (2.7, 3.6, etc.) are built with and require specific versions of the Microsoft Visual C++ compiler.  Please see the [common wrapper prerequisites](http://www.coolprop.org/dev/coolprop/wrappers/index.html#wrapper-common-prereqs) specifically for Windows build requirements.
