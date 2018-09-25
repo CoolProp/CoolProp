@@ -658,7 +658,7 @@ CoolPropDbl TransportRoutines::viscosity_Chung(HelmholtzEOSMixtureBackend &HEOS)
         double acentric = data.acentric; // [-]
         double M_gmol = data.molar_mass*1000.0; // [g/mol]
         double Tc = data.T_critical; // [K]
-        double mu_D = data.dipole_moment_D; // [D]
+        double mu_D = data.dipole_moment; // [D]
         double kappa = 0;
 
         double mu_r = 131.3*mu_D/sqrt(Vc_cm3mol*Tc); // [-]

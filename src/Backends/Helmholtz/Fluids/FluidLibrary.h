@@ -653,7 +653,7 @@ protected:
         fluid.transport.viscosity_Chung.rhomolar_critical = cpjson::get_double(viscosity, "rhomolar_critical");
         fluid.transport.viscosity_Chung.T_critical = cpjson::get_double(viscosity, "T_critical");
         fluid.transport.viscosity_Chung.molar_mass = cpjson::get_double(viscosity, "molar_mass");
-        fluid.transport.viscosity_Chung.dipole_moment_D = cpjson::get_double(viscosity, "dipole_moment_D");
+        fluid.transport.viscosity_Chung.dipole_moment = cpjson::get_double(viscosity, "dipole_moment");
         fluid.transport.viscosity_Chung.acentric = cpjson::get_double(viscosity, "acentric");
         fluid.transport.viscosity_using_Chung = true;
     }
