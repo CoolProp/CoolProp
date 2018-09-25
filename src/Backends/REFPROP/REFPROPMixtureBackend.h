@@ -22,7 +22,7 @@ class REFPROPMixtureBackend : public AbstractState  {
 protected:
     std::size_t Ncomp;
     bool _mole_fractions_set;
-    
+
     static std::size_t instance_counter;
     static bool _REFPROP_supported;
     std::vector<CoolPropDbl> mole_fractions_long_double; // read-only
@@ -30,30 +30,30 @@ protected:
     std::vector<double> mole_fractions_liq, mole_fractions_vap;
 	std::vector<std::string> fluid_names;
 
-	
+
 	/// Call the PHIXdll function in the dll
 	CoolPropDbl call_phixdll(long itau, long idelta);
 	/// Call the PHI0dll function in the dll
 	CoolPropDbl call_phi0dll(long itau, long idelta);
-	
+
 public:
     REFPROPMixtureBackend():Ncomp(0),_mole_fractions_set(false) {instance_counter++;}
 
     /// The instantiator
     /// @param fluid_names The vector of strings of the fluid components, without file ending
     REFPROPMixtureBackend(const std::vector<std::string>& fluid_names) {construct(fluid_names);};
-    
+
     /// A function to actually do the initialization to allow it to be called in derived classes
     void construct(const std::vector<std::string>& fluid_names);
-    
+
     std::string backend_name(void) { return get_backend_string(REFPROP_BACKEND_MIX); }
     virtual ~REFPROPMixtureBackend();
 
 	static std::string version();
-	
+
 	std::vector<std::string> calc_fluid_names(){return fluid_names;};
     PhaseEnvelopeData PhaseEnvelope;
-    
+
     /// Set binary mixture floating point parameter
     void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value);
     /// Get binary mixture double value
@@ -63,7 +63,7 @@ public:
     std::string get_binary_interaction_string(const std::string &CAS1, const std::string &CAS2, const std::string &parameter);
     /// Set binary mixture string value
     void set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string &parameter, const std::string &value);
-    
+
     /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
     /// Get binary mixture double value (EXPERT USE ONLY!!!)
@@ -76,7 +76,7 @@ public:
     bool using_mole_fractions(){return true;}
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
-    
+
     /** \brief Specify the phase - this phase will always be used in calculations
      *
      * @param phase_index The index from CoolProp::phases
@@ -111,14 +111,14 @@ public:
                 const GuessesStructure &guesses);
 
     CoolPropDbl calc_molar_mass(void);
-    
+
     void check_loaded_fluid(void);
 
     void calc_excess_properties();
 
     /// Returns true if REFPROP is supported on this platform
     static bool REFPROP_supported(void);
-    
+
     std::string fluid_param_string(const std::string &ParamName);
 
     CoolPropDbl calc_PIP(void);
@@ -142,7 +142,7 @@ public:
     @param mass_fractions The vector of mass fractions of the components
     */
     void set_mass_fractions(const std::vector<CoolPropDbl> &mass_fractions);
-    
+
     const std::vector<CoolPropDbl> &get_mole_fractions(){return mole_fractions_long_double;};
 
     const std::vector<CoolPropDbl> calc_mass_fractions();
@@ -207,7 +207,7 @@ public:
     CoolPropDbl calc_Tmax(void);
     /// Calculate the minimum temperature
     CoolPropDbl calc_Tmin(void);
-	
+
 	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
 	CoolPropDbl calc_alphar(void){return call_phixdll(0,0);};
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
@@ -241,7 +241,8 @@ public:
     CoolPropDbl calc_d3alpha0_dTau3(void){ return call_phi0dll(3,0); };
 };
 
-bool load_REFPROP();
+bool force_load_REFPROP();
+bool force_unload_REFPROP();
 void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2);
 
 } /* namespace CoolProp */
