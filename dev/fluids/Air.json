@@ -271,9 +271,9 @@
       "acentric": 0.0335, 
       "acentric_note": "The acentric factor for pseudo-pure fluids is undefined, but given value is approximate", 
       "acentric_units": "-", 
-      "dipole_moment": -1, 
+      "dipole_moment":  -1,  
       "dipole_note": "The dipole moment for a mixture is undefined", 
-      "dipole_moment_units": "C*m",
+      "dipole_moment_units": "Debye",  
       "alpha0": [
         {
           "a1": 0, 
