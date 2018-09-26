@@ -474,6 +474,20 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_acentric_factor(void)
         throw ValueError("acentric factor cannot be calculated for mixtures");
     }
 }
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_dipole_moment(void)
+{
+    if (is_pure_or_pseudopure){
+        if (components[0].EOS().dipole_moment >= 0){
+            return components[0].EOS().dipole_moment;
+        }
+        else{
+            throw ValueError("dipole moment not defined in fluid JSON file");
+        }
+    }
+    else{
+        throw ValueError("dipole moment cannot be calculated for mixtures");
+    }
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_gas_constant(void)
 {
     if (is_pure_or_pseudopure){
