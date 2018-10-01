@@ -194,6 +194,7 @@ public:
             case irhomolar_reducing: return fld.EOS().reduce.rhomolar;
             case irhomolar_critical: return fld.crit.rhomolar;
             case iacentric_factor: return fld.EOS().acentric;
+            case idipole_moment: return fld.EOS().dipole_moment;
             case imolar_mass: return fld.EOS().molar_mass;
             case iT_triple: return fld.EOS().sat_min_liquid.T;
             case iP_triple: return fld.EOS().sat_min_liquid.p;
