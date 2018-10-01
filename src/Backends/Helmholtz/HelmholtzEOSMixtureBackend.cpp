@@ -478,7 +478,19 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_dipole_moment(void)
 {
     if (is_pure_or_pseudopure){
         if (components[0].EOS().dipole_moment >= 0){
-            return components[0].EOS().dipole_moment;
+            double dipoleMoment = 0;
+            if (components[0].EOS().dipole_moment_units == "Debye"){
+                double debyeToSI = 3.33564e-30;
+                dipoleMoment = components[0].EOS().dipole_moment * debyeToSI;
+            }
+            else if (components[0].EOS().dipole_moment_units == "C*m"){
+                dipoleMoment = components[0].EOS().dipole_moment;
+            }
+            else{
+                throw ValueError("Invalid dipole moment units. Valid values are: Debye, and C*m ");
+            }
+
+            return dipoleMoment;
         }
         else{
             throw ValueError("dipole moment not defined in fluid JSON file");
