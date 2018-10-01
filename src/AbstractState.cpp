@@ -584,6 +584,9 @@ double AbstractState::melting_line(int param, int given, double value){
 double AbstractState::acentric_factor(){
     return calc_acentric_factor();
 }
+double AbstractState::dipole_moment(){
+    return calc_dipole_moment();
+}
 double AbstractState::saturation_ancillary(parameters param, int Q, parameters given, double value){
     return calc_saturation_ancillary(param, Q, given, value);
 }
