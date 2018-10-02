@@ -365,6 +365,7 @@ public:
     double R_u, ///< The universal gas constant used for this EOS (usually, but not always, 8.314472 J/mol/K)
            molar_mass, ///< The molar mass in kg/mol (note NOT kg/kmol)
            acentric, ///< The acentric factor \f$ \omega = -log_{10}\left(\frac{p_s(T/T_c=0.7)}{p_c}\right)-1\f$
+           dipole_moment, ///< The dipole moment (C*m) 
            Ttriple, ///< Triple point temperature (K)
            ptriple; ///< Triple point pressure (Pa)
     bool pseudo_pure; ///< Is a pseudo-pure fluid (true) or pure fluid (false)
