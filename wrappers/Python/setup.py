@@ -247,7 +247,9 @@ if __name__=='__main__':
     # Read the version from a bare string stored in file in root directory
     version = open(os.path.join(CProot,'.version'),'r').read().strip()
 
-    setup_kwargs = {}
+    setup_kwargs = {
+        'zip_safe': False # no compressed egg; see http://stackoverflow.com/a/29124937/1360263
+    }
     from setuptools import setup, Extension, find_packages
     if USE_CYTHON:
         import Cython.Compiler
