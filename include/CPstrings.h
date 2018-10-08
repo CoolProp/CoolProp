@@ -105,7 +105,7 @@
         const char * cs = mys.c_str();
         char* pEnd;
         double val = strtod(cs, &pEnd);
-        if ((pEnd - &(cs[0])) != s.size() ){
+        if ((pEnd - &(cs[0])) != static_cast<int>(s.size()) ){
             // Found a character that is not able to be converted to number
             throw CoolProp::ValueError(format("Unable to convert this string to a number:%s",cs));
         }
