@@ -934,23 +934,23 @@ TEST_CASE("Check AbstractState","[AbstractState]")
 {
     SECTION("bad backend")
     {
-        CHECK_THROWS(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("DEFINITELY_A_BAD_BACKEND", "Water")));
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("DEFINITELY_A_BAD_BACKEND", "Water")));
     }
     SECTION("good backend - bad fluid")
     {
-        CHECK_THROWS(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("HEOS", "DEFINITELY_A_BAD_FLUID")));
+        CHECK_THROWS(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "DEFINITELY_A_BAD_FLUID")));
     }
     SECTION("good backend - helmholtz")
     {
-        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("HEOS", "Water")));
+        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water")));
     }
     SECTION("good backend - incomp")
     {
-        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("INCOMP", "DEB")));
+        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("INCOMP", "DEB")));
     }
     SECTION("good backend - REFPROP")
     {
-        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState> Water(CoolProp::AbstractState::factory("REFPROP", "Water")));
+        CHECK_NOTHROW(shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water")));
     }
 }
 

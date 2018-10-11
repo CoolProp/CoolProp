@@ -2105,11 +2105,11 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
             shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
-            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9););
+            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, Tr*0.9));
             double rho_CP = S1->rhomolar();
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
-            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9););
+            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, Tr*0.9));
             double rho_RP = S2->rhomolar();
 
             CAPTURE(Name);
@@ -2166,12 +2166,12 @@ TEST_CASE("Check REFPROP and CoolProp values agree","[REFPROP]")
 
             shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
-            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr););
+            CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, 0.9*Tr));
             double h_CP = S1->hmass();
             double s_CP = S1->smass();
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
-            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr););
+            CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, 0.9*Tr));
             double h_RP = S2->hmass();
             double s_RP = S2->smass();
 

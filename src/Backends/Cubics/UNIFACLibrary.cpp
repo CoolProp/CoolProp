@@ -153,7 +153,7 @@ TEST_CASE("Check Poling example for UNIFAC", "[UNIFAC]")
 
     SECTION("Validate AC for acetone + n-pentane") {
         UNIFACLibrary::UNIFACParameterLibrary lib;
-        CHECK_NOTHROW(lib.populate(groups, interactions, acetone_pentane_groups););
+        CHECK_NOTHROW(lib.populate(groups, interactions, acetone_pentane_groups));
         UNIFAC::UNIFACMixture mix(lib,1.0);
         std::vector<std::string> names; names.push_back("Acetone"); names.push_back("n-Pentane");
         mix.set_components("name",names);
@@ -161,7 +161,7 @@ TEST_CASE("Check Poling example for UNIFAC", "[UNIFAC]")
        
         std::vector<double> z(2,0.047); z[1] = 1-z[0];
         mix.set_mole_fractions(z);
-        CHECK_NOTHROW(mix.set_temperature(307););
+        CHECK_NOTHROW(mix.set_temperature(307));
         
         double lngammaR0 = mix.ln_gamma_R(1.0/307,0,0);
         double lngammaR1 = mix.ln_gamma_R(1.0/307,1,0);

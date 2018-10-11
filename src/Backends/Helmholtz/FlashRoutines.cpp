@@ -2092,7 +2092,7 @@ TEST_CASE("Test critical points for nitrogen + ethane with HEOS","[critical_poin
         HEOS->set_mole_fractions(z);
         CAPTURE(z0);
         std::vector<CriticalState> pts;
-        CHECK_NOTHROW(pts = HEOS->all_critical_points(););
+        CHECK_NOTHROW(pts = HEOS->all_critical_points());
     }
 }
     
@@ -2107,7 +2107,7 @@ TEST_CASE("Test critical points for nitrogen + ethane with PR","[critical_points
         HEOS->set_mole_fractions(z);
         CAPTURE(z0);
         std::vector<CriticalState> pts;
-        CHECK_NOTHROW(pts = HEOS->all_critical_points(););
+        CHECK_NOTHROW(pts = HEOS->all_critical_points());
     }
 }
     

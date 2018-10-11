@@ -635,6 +635,7 @@ std::string get_backend_string(backends backend) {
 
 #ifdef ENABLE_CATCH
 #include "catch.hpp"
+#include <sstream>
 
 TEST_CASE("Check that all parameters are described","")
 {

@@ -1426,7 +1426,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
         ss1 << "Minimum saturation temperature state matches for liquid " << fluids[i];
         SECTION(ss1.str(), "")
         {            
-            REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()););
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()));
             double p_EOS = HEOS->p();
             double p_sat_min_liquid = HEOS->get_components()[0].EOS().sat_min_liquid.p;
             double err_sat_min_liquid = std::abs(p_EOS-p_sat_min_liquid)/p_sat_min_liquid;
@@ -1440,7 +1440,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
         ss2 << "Minimum saturation temperature state matches for vapor " << fluids[i];
         SECTION(ss2.str(), "")
         {            
-            REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 1, HEOS->Ttriple()););
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 1, HEOS->Ttriple()));
             
             double p_EOS = HEOS->p();
             double p_sat_min_vapor = HEOS->get_components()[0].EOS().sat_min_vapor.p;
@@ -1455,7 +1455,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
         ss3 << "Minimum saturation temperature state matches for vapor " << fluids[i];
         SECTION(ss3.str(), "")
         {
-            REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 1););
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 1));
             
             double T_EOS = HEOS->T();
             double T_sat_min_vapor = HEOS->get_components()[0].EOS().sat_min_vapor.T;
@@ -1469,7 +1469,7 @@ TEST_CASE("Triple point checks", "[triple_point]")
         ss4 << "Minimum saturation temperature state matches for liquid " << fluids[i];
         SECTION(ss4.str(), "")
         {
-            REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 0););
+            REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 0));
             double T_EOS = HEOS->T();
             double T_sat_min_vapor = HEOS->get_components()[0].EOS().sat_min_vapor.T;
             double err_sat_min_vapor = std::abs(T_EOS-T_sat_min_vapor);
@@ -1531,14 +1531,14 @@ public:
     void check_at_Tc(const shared_ptr<CoolProp::AbstractState> &AS){
         CAPTURE("Check @ Tc");
         CAPTURE(name);
-        CHECK_NOTHROW(AS->update(QT_INPUTS, 0, Tc););
+        CHECK_NOTHROW(AS->update(QT_INPUTS, 0, Tc));
     }
     void check_QT(const shared_ptr<CoolProp::AbstractState> &AS, double T){
         std::string test_name = "Check --> Tc";
         CAPTURE(test_name);
         CAPTURE(name);
         CAPTURE(T);
-        CHECK_NOTHROW(AS->update(QT_INPUTS, 0, T););
+        CHECK_NOTHROW(AS->update(QT_INPUTS, 0, T));
     }
 };
 TEST_CASE_METHOD(SatTFixture, "Test that saturation solvers solve all the way to T = Tc", "[sat_T_to_Tc]"){
