@@ -1162,18 +1162,18 @@ public:
     void one_comp(const std::string &name, one_mole_fraction_pointer f, zero_mole_fraction_pointer g, derivative wrt = CONST_TAU_DELTA){
         for (int i = 0; i < 4; ++i){
             double analytic;
-            CHECK_NOTHROW(analytic = f(*HEOS, i, xN););
+            CHECK_NOTHROW(analytic = f(*HEOS, i, xN));
             double numeric = -10000;
             if (wrt == CONST_TAU_DELTA){
                 if (HEOS->get_mole_fractions()[i] > dz){
-                    CHECK_NOTHROW(numeric = (g(*HEOS_plus_z[i], xN) - g(*HEOS_minus_z[i], xN))/(2*dz););
+                    CHECK_NOTHROW(numeric = (g(*HEOS_plus_z[i], xN) - g(*HEOS_minus_z[i], xN))/(2*dz));
                 }
                 else{
-                    CHECK_NOTHROW(numeric = (-3*g(*HEOS, xN) + 4*g(*HEOS_plus_z[i], xN) - g(*HEOS_plus_2z[i], xN))/(2*dz););
+                    CHECK_NOTHROW(numeric = (-3*g(*HEOS, xN) + 4*g(*HEOS_plus_z[i], xN) - g(*HEOS_plus_2z[i], xN))/(2*dz));
                 }
             }
             else if (wrt == CONST_TRHO){
-                CHECK_NOTHROW(numeric = (g(*HEOS_plus_z__constTrho[i], xN) - g(*HEOS_minus_z__constTrho[i], xN))/(2*dz););
+                CHECK_NOTHROW(numeric = (g(*HEOS_plus_z__constTrho[i], xN) - g(*HEOS_minus_z__constTrho[i], xN))/(2*dz));
             }
         
             CAPTURE(name);
@@ -1219,11 +1219,11 @@ public:
                 double numeric = 500;
                 if (HEOS->get_mole_fractions()[j] > 2*dz){
                     // Second order centered difference in composition
-                    CHECK_NOTHROW(numeric = (g(*HEOS_plus_z[j], i, xN) - g(*HEOS_minus_z[j], i, xN))/(2*dz););
+                    CHECK_NOTHROW(numeric = (g(*HEOS_plus_z[j], i, xN) - g(*HEOS_minus_z[j], i, xN))/(2*dz));
                 }
                 else{
                     // Forward difference in composition
-                    CHECK_NOTHROW(numeric = (-3*g(*HEOS, i, xN) + 4*g(*HEOS_plus_z[j], i, xN) - g(*HEOS_plus_2z[j], i, xN))/(2*dz););
+                    CHECK_NOTHROW(numeric = (-3*g(*HEOS, i, xN) + 4*g(*HEOS_plus_z[j], i, xN) - g(*HEOS_plus_2z[j], i, xN))/(2*dz));
                 }
                 CAPTURE(name);
                 CAPTURE(i);
@@ -1269,10 +1269,10 @@ public:
                     double analytic = f(*HEOS, i, j, k, xN);
                     double numeric;
                     if (HEOS->get_mole_fractions()[i] > 2*dz){
-                        CHECK_NOTHROW(numeric = (g(*HEOS_plus_z[k], i, j, xN) - g(*HEOS_minus_z[k], i, j, xN))/(2*dz););
+                        CHECK_NOTHROW(numeric = (g(*HEOS_plus_z[k], i, j, xN) - g(*HEOS_minus_z[k], i, j, xN))/(2*dz));
                     }
                     else{
-                        CHECK_NOTHROW(numeric = (-3*g(*HEOS, i, j, xN) + 4*g(*HEOS_plus_z[k], i, j, xN) - g(*HEOS_plus_2z[k], i, j, xN))/(2*dz););
+                        CHECK_NOTHROW(numeric = (-3*g(*HEOS, i, j, xN) + 4*g(*HEOS_plus_z[k], i, j, xN) - g(*HEOS_plus_2z[k], i, j, xN))/(2*dz));
                     }
                     CAPTURE(name);
                     CAPTURE(i);

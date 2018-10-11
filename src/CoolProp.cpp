@@ -680,40 +680,40 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<std::string> outputs(1,"T"); outputs.push_back("Dmolar");
         std::vector<std::vector<double> > IO;
         std::vector<std::string> fluids(1, "R410A.mix");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
     };
     SECTION("Single state, two outputs"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1,"T"); outputs.push_back("Dmolar");
         std::vector<std::string> fluids(1, "Water");
-        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
     };
     SECTION("Single state, two bad outputs"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"???????"); outputs.push_back("?????????");
         std::vector<std::string> fluids(1, "Water");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
         CHECK(IO.size() == 0);
     };
     SECTION("Two states, one output"){
         std::vector<double> p(2, 101325), Q(2, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1,"T");
         std::vector<std::string> fluids(1, "Water");
-        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
     };
     SECTION("Two states, two outputs"){
         std::vector<double> p(2, 101325), Q(2, 1.0), z(1, 1.0);
         std::vector<std::string> outputs(1,"T"); outputs.push_back("Dmolar");
         std::vector<std::string> fluids(1, "Water");
-        CHECK_NOTHROW(std::vector<std::vector<double> > IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
     };
     SECTION("cp and its derivative representation"){
         std::vector<double> p(1, 101325), Q(1, 1.0), z(1, 1.0);
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "Water");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(!IO.empty());
@@ -726,7 +726,7 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "????????");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
@@ -736,7 +736,7 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"T");
         std::vector<std::string> fluids(1, "Water&Ethanol");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
@@ -746,7 +746,7 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "Water");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"P",p,"Q",Q,"HEOS",fluids,z));
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
@@ -756,7 +756,7 @@ TEST_CASE("Check inputs to PropsSI","[PropsSI]")
         std::vector<std::vector<double> > IO;
         std::vector<std::string> outputs(1,"Cpmolar"); outputs.push_back("d(Hmolar)/d(T)|P");
         std::vector<std::string> fluids(1, "Water");
-        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"Q",Q,"Q",Q,"HEOS",fluids,z););
+        CHECK_NOTHROW(IO = CoolProp::PropsSImulti(outputs,"Q",Q,"Q",Q,"HEOS",fluids,z));
         std::string errstring = get_global_param_string("errstring");
         CAPTURE(errstring);
         REQUIRE(IO.empty());
