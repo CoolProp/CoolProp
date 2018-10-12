@@ -548,6 +548,8 @@
       "T_critical_units": "K", 
       "acentric": 0.1521, 
       "acentric_units": "-", 
+      "dipole_moment_D": 0.0,
+      "dipole_moment_D_units": "Debye",
       "kappa": 0.0, 
       "kappa_units": "-", 
       "molar_mass": 0.0701329, 
