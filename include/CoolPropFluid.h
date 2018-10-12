@@ -277,7 +277,7 @@ struct ViscosityECSVariables{
     std::vector<CoolPropDbl> psi_a, psi_t;
 };
 struct ViscosityChungData{
-    CoolPropDbl rhomolar_critical, acentric, T_critical, molar_mass, dipole_moment;
+    CoolPropDbl rhomolar_critical, acentric, T_critical, molar_mass, dipole_moment_D;
 };
 
 class TransportPropertyData
