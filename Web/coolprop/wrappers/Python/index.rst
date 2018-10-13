@@ -140,6 +140,58 @@ Example Code Output
 
 .. literalinclude:: Example.out
 
+Code Warnings
+=============
+
+Messages may be issued from the Python CoolProp wrapper via the Python `warnings` module.  This module allows 
+non-fatal warning messages to be issued to the calling program and stdout to warn of 
+improper function usage or deprecation of features.  These warnings will, by 
+default, be issued each and every time a suspect call is made to CoolProp.  While, the best 
+solution is to correct the calling code according to the message received, sometimes this is 
+difficult to do in a legacy or third party code and can result in many, many warning messages that obscure
+the output and hinder debugging.
+
+Suppressing warning messages
+----------------------------
+
+The calling code can suppress or ignore these warning messages by overriding the default 
+warnings filter and changing the behavior of the warnings module.  As an example, the 
+following script will result in a `DeprecationWarning` on each call to the deprecated function 
+Props():: 
+
+    from CoolProp.CoolProp import Props
+    Rho = Props('D','T',298.15,'P',10000,'R744')
+    print("R744 Density at {} K and {} kPa      = {} kg/m³".format(298.15, 10000, Rho))
+    H = Props('H','T',298.15,'Q',1,'R134a');
+    print("R134a Saturated Liquid Enthalpy at {} K = {} kJ/kg".format(298.15, H))
+
+Example output::
+
+    TestProps.py:14: DeprecationWarning: Props() function is deprecated; Use the PropsSI() function
+    Rho = Props('D','T',298.15,'P',10000,'R744')
+    R744 Density at 298.15 K and 10000 kPa      = 817.6273812375758 kg/m³
+    TestProps.py:16: DeprecationWarning: Props() function is deprecated; Use the PropsSI() function
+    H = Props('H','T',298.15,'Q',1,'R134a');
+    R134a Saturated Liquid Enthalpy at 298.15 K = 412.33395323186807 kJ/kg
+
+Legacy applications can create a filter override to ignore *all* deprecation warnings by including
+the following code just *after* the last import from CoolProp, but *before* any calls to CoolProp::
+
+    import warnings
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+To suppress, for example, *only* deprecation warning messages that contain the string "Props()",
+the second parameter to filterwarnings() can be a pattern matching regular expression::
+
+    import warnings
+    warnings.filterwarnings('ignore', '.*Props()*.', category=DeprecationWarning)
+
+This filter will suppress any `DeprecationWarning` messages that contain the string "Props()" but will
+allow all other warning messages to be displayed.  The first parameter, `ignore`, can also be set to
+`once`, which will result in a given message to be issued only once and then ignored on further instances.
+
+See `Python >>> Module Warnings <https://docs.python.org/3/library/warnings.html#module-warnings>`_ for more information on using `filterwarnings()`
+
 
 Module Documentation
 ====================
