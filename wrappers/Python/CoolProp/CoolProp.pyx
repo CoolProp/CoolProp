@@ -12,6 +12,17 @@ cimport cython
 import math
 import warnings
 
+#
+# Ensure that all deprecation warnings triggered in __main__ are displayed by default
+# Note: Python deprecation warning behavior varies by version
+#       3.7+       - Show all deprecation warnings
+#       3.2 to 3.6 - Hide all deprecation warnings
+#       before 3.2 - Show all deprecation warnings
+#       The filter below will ensure that all dep. warnings show
+#       in all versions of Python 
+#
+warnings.filterwarnings('default', category=DeprecationWarning, module='__main__')
+
 from .typedefs cimport CoolPropDbl
 
 try:
@@ -310,8 +321,10 @@ cpdef Props(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None):
     This function is deprecated, use PropsSI instead
     """
     import warnings
+    # Issue deprecation warning....
     dep_warning = "Props() function is deprecated; Use the PropsSI() function"
-    warnings.warn_explicit(dep_warning, category=UserWarning, filename='CoolProp.pyx', lineno = -1)
+    warnings.warn(dep_warning, DeprecationWarning)
+    # ...but process Props() function anyway...
     if len(in2) != 1:
         raise ValueError('Length of input name #1 must be 1 character')
     if len(in4) != 1:
