@@ -30,4 +30,4 @@ for k in ['subcooled','twophase','superheated','supercritical']:
     time_TTSE, value_TTSE = time_check(N, h, p, TTSE = True)
     time_BICUBIC, value_BICUBIC = time_check(N, h, p, TTSE = True, mode='BICUBIC')
 
-    print(k, h, p, (value_TTSE/value_EOS-1.0)*100, (value_BICUBIC/value_EOS-1.0)*100, time_EOS/time_TTSE, time_EOS/time_BICUBIC)
+    print("%s %s %s %s %s %s %s" % (k, h, p, (value_TTSE/value_EOS-1.0)*100, (value_BICUBIC/value_EOS-1.0)*100, time_EOS/time_TTSE, time_EOS/time_BICUBIC))

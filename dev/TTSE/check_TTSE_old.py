@@ -50,7 +50,7 @@ for a_useless_counter in range(40000):
         errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
         errorBICUBIC = abs(rhoBICUBIC/rhoEOS-1)*100
         if errorTTSE > 100 or errorTTSE < 1e-12:
-            print(h, p, errorTTSE)
+            print("%s %s %s" % (h, p, errorTTSE))
 
         HHH1.append(h)
         PPP1.append(p)
@@ -61,7 +61,7 @@ for a_useless_counter in range(40000):
         EEE2.append(errorBICUBIC)
 
     except ValueError as VE:
-        print('ERROR', VE)
+        print('ERROR %s' % VE)
         pass
 
 print('done')

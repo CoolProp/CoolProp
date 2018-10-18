@@ -53,7 +53,7 @@ for fname in glob.glob('../fluids/*.json'):
             assert(len(results) == 1)
             doset(results[0])
         else:
-            print(fluid, CAS, '!!failure!!', len(results))
+            print('%s %s !!failure!! %s' % (fluid, CAS, len(results)))
             for result in results:
                 spectra = cs.get_compound_spectra(result.csid)
                 if spectra and '##CAS REGISTRY NO='+CAS in spectra[0].data:

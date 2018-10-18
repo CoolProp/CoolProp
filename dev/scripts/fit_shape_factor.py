@@ -46,7 +46,7 @@ for T in np.linspace(Ttriple,Tcrit+50,80):
         #Want positive value, and single-phase
         if ((T0/T)>0.1 and T/T0*Tcrit_REF/Tcrit < 3 and T0/T < 1e6 and goodstate):
             if abs((ar-ar_REF)*2+(Z-Z_REF)**2) > 1e-5:
-                print(ar-ar_REF,Z-Z_REF)
+                print("%s %s" %(ar-ar_REF,Z-Z_REF))
             TTT << T
             RHO << rho
             TTT0 << T0
@@ -67,7 +67,7 @@ ax = fig.add_subplot(111, projection='3d')
 ax.scatter(np.array(RHO.vec),np.array(TTT.vec),THETA)
 plt.close('all')
 
-print('rhomin = ',np.min(RHO.vec))
+print('rhomin = %s' % np.min(RHO.vec))
 
 #Define the objective function
 

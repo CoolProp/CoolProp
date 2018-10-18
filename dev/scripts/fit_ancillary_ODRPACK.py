@@ -36,7 +36,7 @@ def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed 
         pc = Props(Ref,'pcrit')
         rhoc = Props(Ref,'rhocrit')
         Tmin = Props(Ref,'Tmin')
-        print(Ref,Tmin,Props(Ref,'Ttriple'))
+        print("%s %s %s" % (Ref,Tmin,Props(Ref,'Ttriple')))
 
         TT = np.linspace(Tmin, Tc-1, 1000)
         TT = list(TT)
@@ -86,7 +86,7 @@ def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed 
 
     max_abserror = 0
     while len(n) > 3:
-        print(max_abserror, len(n))
+        print("%s %s" % (max_abserror, len(n)))
 
         def f_p(B, x):
             # B is a vector of the parameters.
@@ -108,7 +108,7 @@ def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed 
         else:
             raise ValueError
 
-        print('first,last',TT[0],TT[-1],rho_fit[0],rho_fit[-1], rho_EOS[0], rho_EOS[-1])
+        print('first,last %s %s %s %s %s %s' % (TT[0], TT[-1], rho_fit[0], rho_fit[-1], rho_EOS[0], rho_EOS[-1]))
 
         max_abserror = np.max(np.abs(rho_fit/rho_EOS-1))*100
 
@@ -116,7 +116,7 @@ def saturation_density(Ref, ClassName, form = 'A', LV = 'L', perc_error_allowed 
         if dropped_indices:
             for i in reversed(sorted(dropped_indices)):
                 n.pop(i)
-            print('popping...', len(n), 'terms remaining')
+            print('popping... %s terms remaining' % len(n))
             continue
 
         if max_abserror > perc_error_allowed:
@@ -236,7 +236,7 @@ def saturation_pressure_brute(Ref, ClassName):
             max_abserror = abserror
             bbest = b
             betabest = myoutput.beta
-            print(abserror, myoutput.sum_square, myoutput.sd_beta/myoutput.beta)
+            print("%s %s %s" % (abserror, myoutput.sum_square, myoutput.sd_beta/myoutput.beta))
 
 
 def saturation_pressure(Ref, ClassName, fName = None, LV = None):

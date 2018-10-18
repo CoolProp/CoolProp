@@ -188,7 +188,7 @@ def simon():
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
 
-            print(fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1)
+            print("%s %s %s %s" % (fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1))
 
 #             if fluid == 'Helium':
 #                 T = np.array([326.2,345.1,362.8,385.1,419.4,459,499,535.7,570,608])
@@ -270,7 +270,7 @@ def Tr():
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
 
-            print(fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1)
+            print("%s %s %s %s" % (fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1))
 
 
 def theta():
@@ -334,7 +334,7 @@ def theta():
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
 
-            print(fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1)
+            print("%s %s %s %s" % (fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1))
 
 
 if __name__=='__main__':

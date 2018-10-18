@@ -35,7 +35,7 @@ for key in keys:
     print('{:<25}: {:>10.5f}; {:>10.5f}; {:>10.5f}; {:>10.5f}'.format(key,liquid,twophase,gaseous,supercrit))
 
 
-print()
+print("")
 print("Testing Props: ")
 for key in keys:
     liquid    = CP.Props(key,"T",float(T[0]),"D",float(D[0]),fluid)

@@ -80,7 +80,7 @@ def get_fluid_constants(Ref):
     indices = set()
     while len(indices) < 23:
         indices.add(random.randint(0, len(LIBRARY.T)-1))
-    print(indices, len(LIBRARY.T))
+    print("%s %s" % (indices, len(LIBRARY.T)))
 
     T0 = np.array([LIBRARY.T[i] for i in indices])
     D0 = np.array([LIBRARY.D[i] for i in indices])
@@ -102,7 +102,7 @@ def get_fluid_constants(Ref):
     indices = set()
     while len(indices) < 5:
         indices.add(random.randint(0, len(LIBRARY.T)-1))
-    print(indices, len(LIBRARY.T))
+    print("%s %s" % (indices, len(LIBRARY.T)))
 
     T0 = np.append(T0, [LIBRARY.T[i] for i in indices])
     D0 = np.append(D0, [LIBRARY.D[i] for i in indices])
@@ -187,7 +187,7 @@ class ResidualPartFitter(object):
 
         keepers = []
         values = []
-        print(len(self.N0), 'terms at start')
+        print('%s terms at start' % len(self.N0))
         for i in range(len(self.N0)):
 
             n = helmholtz.vectord([float(1)])
@@ -214,7 +214,7 @@ class ResidualPartFitter(object):
         self.D0 = self.D0[keepers]
         self.L0 = self.L0[keepers]
 
-        print(len(self.N0), 'terms at end')
+        print('%s terms at end' % len(self.N0))
 
     def generate_1phase_data(self):
 
@@ -358,7 +358,7 @@ class ResidualPartFitter(object):
         residuals = np.r_[(PPF.p/self.p-1),(PPF.cv/self.cv-1),(PPF.cp/self.cp-1)]#,(PPF.w**2/self.speed_sound**2-1)]
         RMS = np.sqrt(np.mean(np.power(residuals, 2)))
 
-        print('RMS:',RMS*100, '% Max',np.max(np.abs(residuals))*100,'%')
+        print('RMS: %s %% Max %s %%' % (RMS*100, np.max(np.abs(residuals))*100))
         self.RMS = RMS
         self.MaxError = np.max(np.abs(residuals))
         return RMS
@@ -424,7 +424,7 @@ class ResidualPartFitter(object):
         PPF = self.evaluate_EOS(np.array(list(n)))
         self.OBJECTIVE(np.array(list(n)))
 
-        print('max error (p)',np.max(np.abs(PPF.p/self.p-1)*100),'%')
+        print('max error (p) %s %%' % np.max(np.abs(PPF.p/self.p-1)*100))
         SC1 = plt.scatter(self.rho, self.T, s = 8, c = np.abs(PPF.p/self.p-1)*100, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
         plt.gca().set_xscale('log')
         cb = plt.colorbar()
@@ -432,7 +432,7 @@ class ResidualPartFitter(object):
         plt.savefig('pressure.png')
         plt.show()
 
-        print('max error (cp)',np.max(np.abs(PPF.cp/self.cp-1)*100),'%')
+        print('max error (cp) %s %%' % np.max(np.abs(PPF.cp/self.cp-1)*100))
         SC1 = plt.scatter(self.rho, self.T, s = 8, c = np.abs(PPF.cp/self.cp-1)*100, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
         plt.gca().set_xscale('log')
         cb  = plt.colorbar()
@@ -466,7 +466,7 @@ class PPFFitterClass(object):
                 self.RPF.fit()
 
             f = open('results.txt','a+')
-            print(indices, self.RPF.RMS, self.RPF.MaxError, file=f)
+            print("%s %s %s" % (indices, self.RPF.RMS, self.RPF.MaxError), file=f)
             f.close()
 
         self.RPF.check()

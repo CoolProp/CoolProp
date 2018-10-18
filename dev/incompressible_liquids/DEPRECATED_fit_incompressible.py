@@ -428,18 +428,18 @@ for data in containerList:
 
     #numpy.set_printoptions(formatter={'float': lambda x: format(x, '+1.10E')})
 
-    print()
+    print("")
     print("------------------------------------------------------")
     print("Fitting "+str(data.Name))
     print("------------------------------------------------------")
-    print()
+    print("")
     print("minimum T: "+str(data.Tmin))
     print("maximum T: "+str(data.Tmax))
     print("min T pSat:"+str(data.TminPsat))
     #liqObj.setTbase((data.Tmax-data.Tmin) / 2.0 + data.Tmin)
     #liqObj.setExpPoly(True)
     print("T base:"+str(liqObj._Tbase))
-    print()
+    print("")
 
     # row and column sharing for test plots
     #matplotlib.pyplot.subplots_adjust(top=0.85)
@@ -453,7 +453,7 @@ for data in containerList:
     Pin = 1e20 # Dummy pressure
     inCP =liqObj.inCoolProp(data.Name)
     print("Fluid in CoolProp: "+str(inCP))
-    print()
+    print("")
 
     inVal = 'D'
     xData = data.rho

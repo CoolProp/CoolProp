@@ -288,7 +288,7 @@ class GeneticAncillaryFitter(object):
         self.fitness(samples[0])
 
         print(self.value)
-        print('// Max error is ',samples[0].max_abserror,'% between',np.min(self.T),'and',np.max(self.T),'K')
+        print('// Max error is ' + str(samples[0].max_abserror) + ' % between ' + str(np.min(self.T)) + ' and ' + str(np.max(self.T)) + ' K')
 
         self.fit_value = samples[0].fit_value
 

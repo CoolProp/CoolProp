@@ -103,7 +103,7 @@ for fluid in fluids:
         #print 'GOOD', fluid, v, l
     except ValueError:
 
-        print('BAD', fluid)
+        print('BAD %s' % fluid)
 
         new = template.copy()
         new['viscosity']['sigma_eta'] = McLinden_sigma_ek_f_data[fluid][0]/1e9

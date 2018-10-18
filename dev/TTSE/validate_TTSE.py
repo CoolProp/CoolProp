@@ -35,7 +35,7 @@ def check_Trho(N=5000,param='P',fluid='R245fa'):
                 T = CP.Props('T','P',p,'H',h,fluid)
                 rho = CP.Props('D','P',p,'H',h,fluid)
             except:
-                print('EOS failed: ', p,h)
+                print('EOS failed: %s %s' % (p,h))
                 raise
             #Now get p,h from the T,rho
             CP.enable_TTSE_LUT(fluid)
@@ -46,7 +46,7 @@ def check_Trho(N=5000,param='P',fluid='R245fa'):
             if abs(val-valREFPROP)>0.00001:
                 raise ValueError
         except ValueError:
-            print('TTSE failed: ', T,rho)
+            print('TTSE failed: %s %s' % (T,rho))
             values.append((T,rho,0,0))
             pass
     return values
@@ -93,7 +93,7 @@ def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
                 T = CP.Props('T','P',p,'H',h,fluid)
                 rho = CP.Props('D','P',p,'H',h,fluid)
             except:
-                print('EOS failed: ', p,h)
+                print('EOS failed: %s %s' % (p, h))
                 raise
             #Now get p,h from the T,rho
             CP.enable_TTSE_LUT(fluid)
@@ -107,7 +107,7 @@ def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
                 raise ValueError
             val = CP.Props(param,'P',p,other,other_val,fluid)
         except ValueError:
-            print('TTSE failed: ', p,other_val)
+            print('TTSE failed: %s %s' % (p, other_val))
             values.append((p,other_val,0,0))
             pass
     return values
@@ -123,7 +123,7 @@ for other in ['D','T','S']:
         param = 'T'
     values = check_Pother(other=other)
     if len(values) == 0:
-        print('good: ',other)
+        print('good: %s' % other)
         continue
 
     p,othervals,values_withTTSE,values_noTTSE = zip(*values)
