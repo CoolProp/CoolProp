@@ -67,7 +67,7 @@ for line in lines:
     else:
         F = '0.0'
 
-    print template.format(Name1 = name1,
+    print(template.format(Name1 = name1,
                           Name2 = name2,
                           CAS1 = CAS1,
                           CAS2 = CAS2,
@@ -75,4 +75,4 @@ for line in lines:
                           gammaV = gammav,
                           betaT = betaT,
                           gammaT = gammaT,
-                          F = F)
+                          F = F))

@@ -203,7 +203,7 @@ for row in ASHRAE34data.split('\n'):
     if a[0] in RP2CAS:
         ASHRAE34_dict[RP2CAS[a[0]]] = a[1]
     else:
-        print 'Missing CAS number for ' + a[0]
+        print('Missing CAS number for ' + a[0])
 
 fluids = """:'1BUTENE.FLD','ACETONE.FLD','AIR.PPF','AMMONIA.FLD','ARGON.FLD',
 :'BENZENE.FLD','BUTANE.FLD','C1CC6.FLD','C2BUTENE.FLD','C3CC6.FLD',

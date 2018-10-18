@@ -24,11 +24,11 @@ if ref:
     hlb = h_A/1000.
     hrb = h_B/1000.
     h200 = h_C/1000.
-    print "Refprop: ", hlb, hrb, h200
+    print("Refprop: ", hlb, hrb, h200)
 else:
     R407F='REFPROP-MIX:R32[0.473194694453358]&R125[0.205109095413331]&R134a[0.321696210133311]'
     #R407F='REFPROP-MIX:R32[0.651669604033581]&R125[0.122438378639971]&R134a[0.225892017326446]'
     hlb=cp.Props('H','P',30,'Q',0,R407F) # 30 kPa saturated liquid
     hrb=cp.Props('H','P',30,'Q',1,R407F) # 30 kPa saturated vapour
     h200=cp.Props('H','T',273.15,'Q',0,R407F) # saturated liquid at 0C IIR
-    print "CoolProp: ", hlb, hrb, h200
+    print("CoolProp: ", hlb, hrb, h200)

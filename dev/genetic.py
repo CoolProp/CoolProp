@@ -287,8 +287,8 @@ class GeneticAncillaryFitter(object):
 
         self.fitness(samples[0])
 
-        print self.value
-        print '// Max error is ',samples[0].max_abserror,'% between',np.min(self.T),'and',np.max(self.T),'K'
+        print(self.value)
+        print('// Max error is ',samples[0].max_abserror,'% between',np.min(self.T),'and',np.max(self.T),'K')
 
         self.fit_value = samples[0].fit_value
 
@@ -323,13 +323,13 @@ def build_ancillaries(name, **kwargs):
     j['ANCILLARIES']['rhoV'] = gaf.run()
 
     fp = open(os.path.join('ancillaries',name+'_anc.json'),'w')
-    print >> fp, json.dumps(j, indent = 2)
+    print(json.dumps(j, indent = 2), file=fp)
     fp.close()
 
 
 def build_all_ancillaries():
     for fluid in sorted(CoolProp.__fluids__):
-        print fluid
+        print(fluid)
         if fluid in ['SES36']:
             build_ancillaries(fluid, Tlims = [CP.Props(fluid,'Ttriple'), CP.Props(fluid, 'Tcrit')-1])
         elif fluid == 'R507A':

@@ -39,7 +39,7 @@ for Fluid in CoolProp.__fluids__:
                 T = Props("T",'S',s,'H',h,Fluid)
                 #ax.plot(s,h,'o',mfc='none')
             except ValueError as VE:
-                print T, Q , '|||', '"T","S",',s,',"H",',h,',"'+Fluid+'"', '|||', VE
+                print(T, Q , '|||', '"T","S",',s,',"H",',h,',"'+Fluid+'"', '|||', VE)
                 ax.plot(s,h,'o',mfc='none')
 
     for h in np.linspace(hL_Tmin, hV_Tmin + 1500,100):

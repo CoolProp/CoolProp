@@ -99,7 +99,7 @@ def f_RHS(E, DELTA_TAU, VV):
 #    f1,f2,f3,g1,g2 = E[k],E[k+1],E[k+2],E[k+3],E[k+4]
 #    DELTA0 = g1*(1+g2*np.sqrt(TAU))
 #    sum += (f1+f2/TAU+f3/TAU/TAU)*(DELTA/(DELTA0-DELTA)-DELTA/DELTA0)
-    print np.mean(np.abs(((sum/VV-1)*100))),'%'
+    print(np.mean(np.abs(((sum/VV-1)*100))),'%')
     return sum
 
 
@@ -113,7 +113,7 @@ mydata = Data(x, y)
 myodr = ODR(mydata, linear, beta0=np.array([0.1]*17),)
 myoutput = myodr.run()
 E = myoutput.beta
-print E
+print(E)
 
 #plt.plot(TT.vec, y,'b.',TT.vec, f_RHS(E, x, y),'r.')
 #plt.show()

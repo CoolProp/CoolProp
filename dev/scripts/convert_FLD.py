@@ -68,7 +68,7 @@ def extract_active_EOS(file_name):
             break
 
     for i in range(iEOS_start+1, iEOS_end +1):
-        print lines[i].strip()
+        print(lines[i].strip())
 
     def unpack(line):
         s = line.split('!')[0].strip()

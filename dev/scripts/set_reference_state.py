@@ -17,4 +17,4 @@ def get_offset_NBP(name):
 
 if __name__=='__main__':
     name = 'MM'
-    print get_offset_NBP(name)
+    print(get_offset_NBP(name))

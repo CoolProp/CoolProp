@@ -36,6 +36,6 @@ for line in lines:
             }
         jj.append(entry)
     else:
-        print('Skipping', Name1, Name2)
+        print(('Skipping', Name1, Name2))
 with open('mixture_binary_pairs.json','w') as fp:
     json.dump(jj, fp, indent = 2, sort_keys = True)

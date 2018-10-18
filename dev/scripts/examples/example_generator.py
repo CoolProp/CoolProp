@@ -1005,4 +1005,4 @@ if __name__=='__main__':
     args = parser.parse_args()
     writer = locals()[args.language]()
     writer.write(args.destination, writer.parse())
-    print('written to', args.destination)
+    print(('written to', args.destination))

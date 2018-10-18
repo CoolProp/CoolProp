@@ -18,7 +18,7 @@ BICUBIC = CoolProp.AbstractState('BICUBIC&HEOS',Ref)
 TTSE = CoolProp.AbstractState('TTSE&HEOS',Ref)
 EOS = CoolProp.AbstractState('HEOS',Ref)
 MM = EOS.molar_mass()
-print MM
+print(MM)
 
 T = np.linspace(CP.PropsSI(Ref,'Tmin')+0.1, CP.PropsSI(Ref,'Tcrit')-0.01, 300)
 pV = CP.PropsSI('P','T',T,'Q',1,Ref)
@@ -50,7 +50,7 @@ for a_useless_counter in range(40000):
         errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
         errorBICUBIC = abs(rhoBICUBIC/rhoEOS-1)*100
         if errorTTSE > 100 or errorTTSE < 1e-12:
-            print h, p, errorTTSE
+            print(h, p, errorTTSE)
 
         HHH1.append(h)
         PPP1.append(p)
@@ -61,10 +61,10 @@ for a_useless_counter in range(40000):
         EEE2.append(errorBICUBIC)
 
     except ValueError as VE:
-        print 'ERROR', VE
+        print('ERROR', VE)
         pass
 
-print 'done'
+print('done')
 SC1 = ax1.scatter(HHH1, PPP1, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
 SC2 = ax2.scatter(HHH2, PPP2, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
 

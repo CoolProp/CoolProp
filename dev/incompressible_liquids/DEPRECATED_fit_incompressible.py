@@ -211,7 +211,7 @@ class IncompLiquidFit(object):
                 CP.PropsU('Tmin','T',0,'P',0,name,"SI")
                 return True
             except ValueError as e:
-                print e
+                print(e)
                 return False
 
     def getCoefficients(self,inVal):
@@ -332,12 +332,12 @@ class IncompLiquidFit(object):
                         return popt
 
                     except RuntimeError as e:
-                        print "Exception: "+str(e)
-                        print "Using: "+str(fit[counter+1])+" as a fall-back."
+                        print("Exception: "+str(e))
+                        print("Using: "+str(fit[counter+1])+" as a fall-back.")
                         success = False
 
                 elif fit[counter]=="MIN":
-                    print "Fitting exponential with "+str(len(initValues))+" coefficients."
+                    print("Fitting exponential with "+str(len(initValues))+" coefficients.")
                     arguments  = (xName,T,numpy.exp(xData))
                     #options    = {'maxiter': 1e2, 'maxfev': 1e5}
                     if xName=='V':
@@ -351,7 +351,7 @@ class IncompLiquidFit(object):
 
                     while ((not res.success) and tol<1e-2):
                         tol *= 1e2
-                        print "Fit did not succeed, reducing tolerance to "+str(tol)
+                        print("Fit did not succeed, reducing tolerance to "+str(tol))
                         res = minimize(fun, initValues, method=method, args=arguments, tol=tol)
 
                     # Include these lines for an additional fit with new guess values.
@@ -363,12 +363,12 @@ class IncompLiquidFit(object):
                         success = True
                         return res.x
                     else:
-                        print "Fit failed: "
-                        print res
+                        print("Fit failed: ")
+                        print(res)
                         success = False
 
                 elif fit[counter]=="POL":
-                    print "Fitting exponential polynomial with "+str(len(initValues))+" coefficients."
+                    print("Fitting exponential polynomial with "+str(len(initValues))+" coefficients.")
                     z = numpy.polyfit(T-self._Tbase, numpy.log(xData)[:], len(initValues)-1)
                     return z[::-1]
 
@@ -376,7 +376,7 @@ class IncompLiquidFit(object):
                     raise (ValueError("Error: You used an unknown fit method."))
 
         else: # just a polynomial
-            print "Fitting polynomial with "+str(len(initValues))+" coefficients."
+            print("Fitting polynomial with "+str(len(initValues))+" coefficients.")
             z = numpy.polyfit(T-self._Tbase, xData, len(initValues)-1)
             return z[::-1]
 
@@ -428,18 +428,18 @@ for data in containerList:
 
     #numpy.set_printoptions(formatter={'float': lambda x: format(x, '+1.10E')})
 
-    print
-    print "------------------------------------------------------"
-    print "Fitting "+str(data.Name)
-    print "------------------------------------------------------"
-    print
-    print "minimum T: "+str(data.Tmin)
-    print "maximum T: "+str(data.Tmax)
-    print "min T pSat:"+str(data.TminPsat)
+    print()
+    print("------------------------------------------------------")
+    print("Fitting "+str(data.Name))
+    print("------------------------------------------------------")
+    print()
+    print("minimum T: "+str(data.Tmin))
+    print("maximum T: "+str(data.Tmax))
+    print("min T pSat:"+str(data.TminPsat))
     #liqObj.setTbase((data.Tmax-data.Tmin) / 2.0 + data.Tmin)
     #liqObj.setExpPoly(True)
-    print "T base:"+str(liqObj._Tbase)
-    print
+    print("T base:"+str(liqObj._Tbase))
+    print()
 
     # row and column sharing for test plots
     #matplotlib.pyplot.subplots_adjust(top=0.85)
@@ -452,15 +452,15 @@ for data in containerList:
     tDat1 = numpy.linspace(numpy.min(tData)+1, numpy.max(tData)-1, 10)
     Pin = 1e20 # Dummy pressure
     inCP =liqObj.inCoolProp(data.Name)
-    print "Fluid in CoolProp: "+str(inCP)
-    print
+    print("Fluid in CoolProp: "+str(inCP))
+    print()
 
     inVal = 'D'
     xData = data.rho
     oldCoeffs = liqObj.getCoefficients(inVal)
     newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
 #     print "Density, old: "+str(oldCoeffs)
-    print "Density, new: "+str(newCoeffs)
+    print("Density, new: "+str(newCoeffs))
 #     print
     liqObj.setCoefficients(inVal,newCoeffs)
 #     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
@@ -663,7 +663,7 @@ for data in containerList:
 #     raw_input("Finished with "+data.Name+", press Enter to continue...")
 
     import json
-    print json.dumps(j, indent = 2)
+    print(json.dumps(j, indent = 2))
 
     fp = open(j['name']+'.json', 'w')
     fp.write(json.dumps(j, indent = 2, sort_keys = True))

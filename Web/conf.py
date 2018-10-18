@@ -31,9 +31,9 @@ else:
     isRelease = False
 
 print("------------ Project information ------------")
-print("Detected version: "+version)
-print("Detected release: "+release)
-print("Public release  : "+ ("True" if isRelease else "False") )
+print(("Detected version: "+version))
+print(("Detected release: "+release))
+print(("Public release  : "+ ("True" if isRelease else "False") ))
 print(" ")
 
 if isRelease:

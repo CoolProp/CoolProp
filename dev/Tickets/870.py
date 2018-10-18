@@ -46,7 +46,7 @@ for Q in np.linspace(0, 0.3, steps):
     try:
         y1.append(AS.first_two_phase_deriv_splined(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, 0.3))
     except Exception as e:
-        print e
+        print(e)
         y1.append(np.NAN)
         break
 plt.plot(x, y1, label = 'Two-phase (splined, tabular)', ls = '--', lw = 3)
@@ -59,7 +59,7 @@ for Q in np.linspace(0.0, 0.6, steps):
     try:
         y1.append(AS.first_two_phase_deriv(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP))
     except Exception as e:
-        print e
+        print(e)
         y1.append(np.NAN)
         break
 plt.plot(x, y1, label = 'Two-phase (normal, tabular)', ls = '--', lw = 3)

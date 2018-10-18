@@ -29,7 +29,7 @@ with open(user_paths[1]+r'\.CoolProp\Tables\HelmholtzEOSBackend(Water[1.00000000
 
 import CoolProp, numpy as np
 AS = CoolProp.AbstractState('BICUBIC&HEOS','CO2')
-print AS.rhomolar_critical()
+print(AS.rhomolar_critical())
 pt = AS.keyed_output(CoolProp.iP_triple)
 pc = AS.p_critical()
 
@@ -47,14 +47,14 @@ for p in np.logspace(np.log10(pt*1.05),np.log10(pc*0.95)):
         else:
             AS.unspecify_phase()
         for dT in dTs:
-            if verbose: print p, Ts-dT
+            if verbose: print(p, Ts-dT)
             try:
                 AS.update(CoolProp.PT_INPUTS, p, Ts-dT)
-                if verbose: print p, Ts-dT, AS.rhomolar()
+                if verbose: print(p, Ts-dT, AS.rhomolar())
             except BaseException as BE:
-                if specify_phase: print 'Liquid error:', BE
-                else:             print 'Liquid issue:', BE
-        if verbose: print p, Ts, rhoL
+                if specify_phase: print('Liquid error:', BE)
+                else:             print('Liquid issue:', BE)
+        if verbose: print(p, Ts, rhoL)
     # Gaseous side
     for specify_phase in [False,True]:
         if specify_phase:
@@ -62,11 +62,11 @@ for p in np.logspace(np.log10(pt*1.05),np.log10(pc*0.95)):
         else:
             AS.unspecify_phase()
         for dT in dTs:
-            if verbose: print p, Ts+dT
+            if verbose: print(p, Ts+dT)
             try:
                 AS.update(CoolProp.PT_INPUTS, p, Ts+dT)
-                if verbose: print p, Ts+dT, AS.rhomolar()
+                if verbose: print(p, Ts+dT, AS.rhomolar())
             except BaseException as BE:
-                if specify_phase: print '   Gas error:', BE
-                else:             print '   Gas issue:', BE
-        if verbose: print p, Ts, rhoL
+                if specify_phase: print('   Gas error:', BE)
+                else:             print('   Gas issue:', BE)
+        if verbose: print(p, Ts, rhoL)

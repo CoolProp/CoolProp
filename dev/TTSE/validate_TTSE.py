@@ -35,7 +35,7 @@ def check_Trho(N=5000,param='P',fluid='R245fa'):
                 T = CP.Props('T','P',p,'H',h,fluid)
                 rho = CP.Props('D','P',p,'H',h,fluid)
             except:
-                print 'EOS failed: ', p,h
+                print('EOS failed: ', p,h)
                 raise
             #Now get p,h from the T,rho
             CP.enable_TTSE_LUT(fluid)
@@ -46,7 +46,7 @@ def check_Trho(N=5000,param='P',fluid='R245fa'):
             if abs(val-valREFPROP)>0.00001:
                 raise ValueError
         except ValueError:
-            print 'TTSE failed: ', T,rho
+            print('TTSE failed: ', T,rho)
             values.append((T,rho,0,0))
             pass
     return values
@@ -55,7 +55,7 @@ def check_Trho(N=5000,param='P',fluid='R245fa'):
 fluid = 'R245fa'
 values = check_Trho(param='P',fluid=fluid)
 if len(values) == 0:
-    print 'good'
+    print('good')
 
 T,rho,values_withTTSE,values_noTTSE = zip(*values)
 
@@ -93,7 +93,7 @@ def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
                 T = CP.Props('T','P',p,'H',h,fluid)
                 rho = CP.Props('D','P',p,'H',h,fluid)
             except:
-                print 'EOS failed: ', p,h
+                print('EOS failed: ', p,h)
                 raise
             #Now get p,h from the T,rho
             CP.enable_TTSE_LUT(fluid)
@@ -107,7 +107,7 @@ def check_Pother(N=5000,param='T',other='S',fluid='R245fa'):
                 raise ValueError
             val = CP.Props(param,'P',p,other,other_val,fluid)
         except ValueError:
-            print 'TTSE failed: ', p,other_val
+            print('TTSE failed: ', p,other_val)
             values.append((p,other_val,0,0))
             pass
     return values
@@ -123,7 +123,7 @@ for other in ['D','T','S']:
         param = 'T'
     values = check_Pother(other=other)
     if len(values) == 0:
-        print 'good: ',other
+        print('good: ',other)
         continue
 
     p,othervals,values_withTTSE,values_noTTSE = zip(*values)
@@ -177,7 +177,7 @@ Nrows = 10
 for parameter in ['D','T','S','C']:
     fig = plt.figure(figsize=(40,40))
     for Index,fluid in enumerate(sorted(CoolProp.__fluids__)):
-        print fluid
+        print(fluid)
         ax = fig.add_subplot(Ncols,Nrows,Index+1)
         ax.set_title(fluid)
         values = check(fluid = fluid, param = parameter)

@@ -29,8 +29,8 @@ def getPath(filename, search=True):
         if len(result)==1:
             return os.path.abspath(result[0])
         elif len(result)>1:
-            print "Found multiple files with the name {0}. Try to specify the path as well.".format(fname)
-            print result
+            print("Found multiple files with the name {0}. Try to specify the path as well.".format(fname))
+            print(result)
             return os.path.abspath(result[0])
 
     raise ValueError("Found no file with the name {0}. Try to specify the path as well.".format(fname))

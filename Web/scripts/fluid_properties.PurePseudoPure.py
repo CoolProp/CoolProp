@@ -51,7 +51,7 @@ for fluid in CoolProp.__fluids__:
             s = CoolProp.CoolProp.get_BibTeXKey(fluid,key)
             s = s.strip()
             if s and any([_s not in bibdata.entries.keys() for _s in s.split(',')]):
-                print 'problem', fluid, key, '\t\t\t\t', "|"+s+'|'
+                print('problem', fluid, key, '\t\t\t\t', "|"+s+'|')
                 d.add(key, '')
             else:
                 d.add(key, s)

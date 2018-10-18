@@ -48,7 +48,7 @@ for chunk in chunks:
     CAS1 = get_fluid_param_string(name1,'CAS')
     CAS2 = get_fluid_param_string(name2,'CAS')
 
-    print template.format(Name1 = name1,
+    print(template.format(Name1 = name1,
                           Name2 = name2,
                           CAS1 = CAS1,
                           CAS2 = CAS2,
@@ -59,4 +59,4 @@ for chunk in chunks:
                           epsilon= str(EPSILON),
                           beta = str(BETA),
                           gamma = str(GAMMA)
-                          )
+                          ))

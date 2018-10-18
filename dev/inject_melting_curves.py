@@ -93,11 +93,11 @@ import CoolProp
 __ = 0
 for fluid in CoolProp.__fluids__:
     if fluid not in Simon_curves and fluid not in polynomial_in_Tr and fluid not in polynomial_in_theta:
-        print fluid
+        print(fluid)
         __ += 1
     else:
-        print ' '*30, fluid
-print __
+        print(' '*30, fluid)
+print(__)
 
 import CoolProp.CoolProp as CP
 import json, numpy as np, matplotlib.pyplot as plt, pandas
@@ -188,7 +188,7 @@ def simon():
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
 
-            print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
+            print(fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1)
 
 #             if fluid == 'Helium':
 #                 T = np.array([326.2,345.1,362.8,385.1,419.4,459,499,535.7,570,608])
@@ -270,7 +270,7 @@ def Tr():
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
 
-            print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
+            print(fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1)
 
 
 def theta():
@@ -334,7 +334,7 @@ def theta():
             axp.plot(T_m,101325,'*')
             axp.plot(T,pp,'--')
 
-            print fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1
+            print(fluid, CP.Props(fluid,"molemass"), CP.Props(fluid, 'accentric'), pp[-1]/p[-1]-1)
 
 
 if __name__=='__main__':

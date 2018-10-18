@@ -4,7 +4,7 @@ from package_json import json_options
 
 for fluid in glob.glob('fluids/*.json'):
 
-    print fluid
+    print(fluid)
     j = json.load(open(fluid,'r'))
 
     fp = open(fluid,'w')
