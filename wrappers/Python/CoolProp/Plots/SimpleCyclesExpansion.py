@@ -15,7 +15,7 @@ class BasePowerCycle(BaseCycle):
     power cycle-related quantities.
     """
 
-    def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
+    def __init__(self, fluid_ref="HEOS::Water", graph_type="TS", **kwargs):
         """see :class:`CoolProp.Plots.SimpleCycles.BaseCycle` for details."""
         BaseCycle.__init__(self, fluid_ref, graph_type, **kwargs)
 
@@ -45,15 +45,24 @@ class BasePowerCycle(BaseCycle):
 
 class SimpleRankineCycle(BasePowerCycle):
     """A simple Rankine cycle *without* regeneration"""
-    STATECOUNT=4
-    STATECHANGE=[
-      lambda inp: BaseCycle.state_change(inp,'S','P',0,ty1='log',ty2='log'), # Pumping process
-      lambda inp: BaseCycle.state_change(inp,'H','P',1,ty1='lin',ty2='lin'), # Heat addition
-      lambda inp: BaseCycle.state_change(inp,'H','P',2,ty1='log',ty2='log'), # Expansion
-      lambda inp: BaseCycle.state_change(inp,'H','P',3,ty1='lin',ty2='lin')  # Heat removal
-      ]
 
-    def __init__(self, fluid_ref='HEOS::Water', graph_type='TS', **kwargs):
+    STATECOUNT = 4
+    STATECHANGE = [
+        lambda inp: BaseCycle.state_change(
+            inp, "S", "P", 0, ty1="log", ty2="log"
+        ),  # Pumping process
+        lambda inp: BaseCycle.state_change(
+            inp, "H", "P", 1, ty1="lin", ty2="lin"
+        ),  # Heat addition
+        lambda inp: BaseCycle.state_change(
+            inp, "H", "P", 2, ty1="log", ty2="log"
+        ),  # Expansion
+        lambda inp: BaseCycle.state_change(
+            inp, "H", "P", 3, ty1="lin", ty2="lin"
+        ),  # Heat removal
+    ]
+
+    def __init__(self, fluid_ref="HEOS::Water", graph_type="TS", **kwargs):
         """see :class:`CoolProp.Plots.SimpleCycles.BasePowerCycle` for details."""
         BasePowerCycle.__init__(self, fluid_ref, graph_type, **kwargs)
 
@@ -98,7 +107,8 @@ class SimpleRankineCycle(BasePowerCycle):
         >>> pp.draw_process(sc)
 
         """
-        if fluid is not None: self.state = process_fluid_state(fluid)
+        if fluid is not None:
+            self.state = process_fluid_state(fluid)
         if self._state is None:
             raise ValueError("You have to specify a fluid before you can calculate.")
 
@@ -113,47 +123,47 @@ class SimpleRankineCycle(BasePowerCycle):
             p2 = pc(p2)
 
         # Subcooled liquid
-        self.state.update(CoolProp.PT_INPUTS,p0,T0)
+        self.state.update(CoolProp.PT_INPUTS, p0, T0)
         h0 = self.state.hmass()
         s0 = self.state.smass()
         # Just a showcase for the different accessor methods
-        cycle_states[0,'H'] = h0
-        cycle_states[0]['S'] = s0
+        cycle_states[0, "H"] = h0
+        cycle_states[0]["S"] = s0
         cycle_states[0][CoolProp.iP] = p0
-        cycle_states[0,CoolProp.iT] = T0
+        cycle_states[0, CoolProp.iT] = T0
 
         # Pressurised liquid
         p1 = p2
-        self.state.update(CoolProp.PSmass_INPUTS,p1,s0)
+        self.state.update(CoolProp.PSmass_INPUTS, p1, s0)
         h1 = h0 + (self.state.hmass() - h0) / eta_pum
-        self.state.update(CoolProp.HmassP_INPUTS,h1,p1)
+        self.state.update(CoolProp.HmassP_INPUTS, h1, p1)
         s1 = self.state.smass()
         T1 = self.state.T()
-        cycle_states[1,'H'] = h1
-        cycle_states[1,'S'] = s1
-        cycle_states[1,'P'] = p1
-        cycle_states[1,'T'] = T1
+        cycle_states[1, "H"] = h1
+        cycle_states[1, "S"] = s1
+        cycle_states[1, "P"] = p1
+        cycle_states[1, "T"] = T1
 
         # Evaporated vapour
-        self.state.update(CoolProp.PT_INPUTS,p2,T2)
+        self.state.update(CoolProp.PT_INPUTS, p2, T2)
         h2 = self.state.hmass()
         s2 = self.state.smass()
-        cycle_states[2,'H'] = h2
-        cycle_states[2,'S'] = s2
-        cycle_states[2,'P'] = p2
-        cycle_states[2,'T'] = T2
+        cycle_states[2, "H"] = h2
+        cycle_states[2, "S"] = s2
+        cycle_states[2, "P"] = p2
+        cycle_states[2, "T"] = T2
 
         # Expanded gas
         p3 = p0
-        self.state.update(CoolProp.PSmass_INPUTS,p3,s2)
+        self.state.update(CoolProp.PSmass_INPUTS, p3, s2)
         h3 = h2 - eta_exp * (h2 - self.state.hmass())
-        self.state.update(CoolProp.HmassP_INPUTS,h3,p3)
+        self.state.update(CoolProp.HmassP_INPUTS, h3, p3)
         s3 = self.state.smass()
         T3 = self.state.T()
-        cycle_states[3,'H'] = h3
-        cycle_states[3,'S'] = s3
-        cycle_states[3,'P'] = p3
-        cycle_states[3,'T'] = T3
+        cycle_states[3, "H"] = h3
+        cycle_states[3, "S"] = s3
+        cycle_states[3, "P"] = p3
+        cycle_states[3, "T"] = T3
 
         w_net = h2 - h3
         q_boiler = h2 - h1
@@ -171,6 +181,10 @@ class SimpleRankineCycle(BasePowerCycle):
         -------
         float
         """
-        w_net = self.cycle_states[2].H - self.cycle_states[3].H - (self.cycle_states[1].H - self.cycle_states[0].H)
+        w_net = (
+            self.cycle_states[2].H
+            - self.cycle_states[3].H
+            - (self.cycle_states[1].H - self.cycle_states[0].H)
+        )
         q_boiler = self.cycle_states[2].H - self.cycle_states[1].H
         return w_net / q_boiler
