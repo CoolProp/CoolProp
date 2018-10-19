@@ -7,7 +7,7 @@ import CoolProp.CoolProp as CP
 import matplotlib.pyplot as plt
 from CoolProp.CoolProp import FluidsList
 
-print "Testing TTSE for revision "+CoolProp.__gitrevision__
+print("Testing TTSE for revision "+CoolProp.__gitrevision__)
 
 
 def compareProperty(fluid="",p=0,what=""):
@@ -45,12 +45,12 @@ def compareProperty(fluid="",p=0,what=""):
 
     if numpy.max([X_liq_STDV/X_liq_TTSE,X_vap_STDV/X_vap_TTSE])>1.25 or numpy.min([X_liq_STDV/X_liq_TTSE,X_vap_STDV/X_vap_TTSE])<0.75:
         c_diff += 1
-        print ""
-        print "There were problems with "+what+" for "+fluid
-        print "Relative difference liquid: "+str(numpy.mean((X_liq_STDV-X_liq_TTSE)/X_liq_STDV))
-        print "Relative difference vapour: "+str(numpy.mean((X_vap_STDV-X_vap_TTSE)/X_vap_STDV))
-        print "Average factor liquid: "+str(numpy.mean(X_liq_STDV/X_liq_TTSE))
-        print "Average factor vapour: "+str(numpy.mean(X_vap_STDV/X_vap_TTSE))
+        print("")
+        print("There were problems with "+what+" for "+fluid)
+        print("Relative difference liquid: "+str(numpy.mean((X_liq_STDV-X_liq_TTSE)/X_liq_STDV)))
+        print("Relative difference vapour: "+str(numpy.mean((X_vap_STDV-X_vap_TTSE)/X_vap_STDV)))
+        print("Average factor liquid: "+str(numpy.mean(X_liq_STDV/X_liq_TTSE)))
+        print("Average factor vapour: "+str(numpy.mean(X_vap_STDV/X_vap_TTSE)))
         #plt.plot(numpy.append(T_liq,T_vap),numpy.append(X_liq_STDV,X_vap_STDV),label=what+", standard")
         #plt.plot(numpy.append(T_liq,T_vap),numpy.append(X_liq_TTSE,X_vap_TTSE),label=what+", TTSE")
         ##plt.show(block=True)
@@ -71,8 +71,8 @@ for fluid in fluids:
         compareProperty(fluid=fluid,what=toTest)
     except ValueError:
         c_exce += 1
-        print "An exception occurred for "+toTest+" with "+fluid
+        print("An exception occurred for "+toTest+" with "+fluid)
 
-print "Finished testing TTSE:"
-print "Errors occurred in "+str(c_exce)+" out of "+str(len(fluids))+" fluids"
-print "and differences occurred in "+str(c_diff)+" fluids."
+print("Finished testing TTSE:")
+print("Errors occurred in "+str(c_exce)+" out of "+str(len(fluids))+" fluids")
+print("and differences occurred in "+str(c_diff)+" fluids.")

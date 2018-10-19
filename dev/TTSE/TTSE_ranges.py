@@ -303,7 +303,7 @@ def get_Z(X_in,Y_in,fluid,out='S'):
     try:
         Z = CP.PropsSI(out,'H',X,'P',Y,fluid)
     except(ValueError):
-        print "CoolProp failed, returning NAN"
+        print("CoolProp failed, returning NAN")
         Z = np.NAN
     return Z
 
@@ -360,7 +360,7 @@ def get_Z(X_in,Y_in,fluid,out='P'):
     try:
         Z = np.log10(CP.PropsSI(out,'D',X,'T',Y,fluid))
     except(ValueError):
-        print "CoolProp failed, returning NAN"
+        print("CoolProp failed, returning NAN")
         Z = np.NAN
     return Z
 

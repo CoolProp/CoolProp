@@ -120,27 +120,27 @@ backend = 'HEOS'
 fluid = 'R125'
 
 kwargs = dict(lw = 2)
-print 'Ideal'
+print('Ideal')
 ICT = IdealCurveTracer(backend, fluid, p0 = 1e5, T0 = 900)
 T, p = ICT.trace()
 plt.plot(T, p, '-', label = 'Ideal Curve', **kwargs)
 
-print 'Boyle'
+print('Boyle')
 BCT = BoyleCurveTracer(backend, fluid, p0 = 1e5, T0 = 800)
 T, p = BCT.trace()
 plt.plot(T, p, '-', label = 'Boyle Curve', **kwargs)
 
-print 'Joule Inversion'
+print('Joule Inversion')
 JIT = JouleInversionCurveTracer(backend, fluid, p0 = 1e5, T0 = 1800)
 T, p = JIT.trace()
 plt.plot(T, p, '-', label = 'Joule Inversion Curve', **kwargs)
 
-print 'Joule-Thomson'
+print('Joule-Thomson')
 JTCT = JouleThomsonCurveTracer(backend, fluid, p0 = 1e5, T0 = 1800)
 T, p = JTCT.trace()
 plt.plot(T, p, '-', label = 'Joule-Thomson Curve', **kwargs)
 
-print 'Saturation Curve'
+print('Saturation Curve')
 Tt = ICT.AS.keyed_output(CoolProp.iT_triple)
 Tc = ICT.AS.keyed_output(CoolProp.iT_critical)
 Ts = np.linspace(Tt, Tc - 1.e-6)

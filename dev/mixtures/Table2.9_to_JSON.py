@@ -46,4 +46,4 @@ for line in data.split('\n'):
 import json, sys
 sys.path.append('..')
 from package_json import json_options
-print json.dumps(out, **json_options)
+print(json.dumps(out, **json_options))

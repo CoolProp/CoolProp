@@ -44,7 +44,7 @@ def getErrors(p, h, out='D', Ref=''):
         errorTTSE    = abs(TTSE   /EOS-1.0)*100.0
         errorBICUBIC = abs(BICUBIC/EOS-1.0)*100.0
     except ValueError as VE:
-        print VE
+        print(VE)
         pass
 
     return errorTTSE,errorBICUBIC
@@ -103,7 +103,7 @@ for colourmap in ['cubehelix']:
         ones = np.ones(isoP.shape)
         isoH = [ CP.PropsSI('H','T',T*ones,'P',isoP,Ref) for T in isoT ]
 
-        print "Lower left and upper right coordinates: ({0},{1}), ({2},{3})".format(h_min,p_min,h_max,p_max)
+        print("Lower left and upper right coordinates: ({0},{1}), ({2},{3})".format(h_min,p_min,h_max,p_max))
 
         CP.set_TTSESinglePhase_LUT_range(Ref,h_min,h_max*1.05,p_min,p_max*1.05)
 

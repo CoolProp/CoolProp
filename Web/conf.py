@@ -31,10 +31,10 @@ else:
     isRelease = False
 
 print("------------ Project information ------------")
-print("Detected version: "+version)
-print("Detected release: "+release)
-print("Public release  : "+ ("True" if isRelease else "False") )
-print(" ")
+print("Detected version: %s" % version)
+print("Detected release: %s" % release)
+print("Public release  : %s" % "True" if isRelease else "False")
+print("")
 
 if isRelease:
     extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/'+release+'/%s',''),

@@ -10,4 +10,4 @@ for fluid in CoolProp.__fluids__:
         m += masses[el]*int(c)/1000.0
     err = m/CoolProp.CoolProp.PropsSI(fluid,"M")-1
     if abs(err) > 1e-3:
-        print(fluid, m/CoolProp.CoolProp.PropsSI(fluid,"M")-1)
+        print("%s %s" % (fluid, m/CoolProp.CoolProp.PropsSI(fluid,"M")-1))

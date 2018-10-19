@@ -80,7 +80,7 @@ def get_fluid_constants(Ref):
     indices = set()
     while len(indices) < 23:
         indices.add(random.randint(0, len(LIBRARY.T)-1))
-    print indices, len(LIBRARY.T)
+    print("%s %s" % (indices, len(LIBRARY.T)))
 
     T0 = np.array([LIBRARY.T[i] for i in indices])
     D0 = np.array([LIBRARY.D[i] for i in indices])
@@ -102,7 +102,7 @@ def get_fluid_constants(Ref):
     indices = set()
     while len(indices) < 5:
         indices.add(random.randint(0, len(LIBRARY.T)-1))
-    print indices, len(LIBRARY.T)
+    print("%s %s" % (indices, len(LIBRARY.T)))
 
     T0 = np.append(T0, [LIBRARY.T[i] for i in indices])
     D0 = np.append(D0, [LIBRARY.D[i] for i in indices])
@@ -187,7 +187,7 @@ class ResidualPartFitter(object):
 
         keepers = []
         values = []
-        print len(self.N0), 'terms at start'
+        print('%s terms at start' % len(self.N0))
         for i in range(len(self.N0)):
 
             n = helmholtz.vectord([float(1)])
@@ -214,7 +214,7 @@ class ResidualPartFitter(object):
         self.D0 = self.D0[keepers]
         self.L0 = self.L0[keepers]
 
-        print len(self.N0), 'terms at end'
+        print('%s terms at end' % len(self.N0))
 
     def generate_1phase_data(self):
 
@@ -223,7 +223,7 @@ class ResidualPartFitter(object):
         TTT, RHO, PPP, CPP, CVV, AAA = [], [], [], [], [], []
 
         for _T in np.linspace(220, 450, 100):
-            print _T
+            print(_T)
             for _rho in np.logspace(np.log10(1e-2), np.log10(rhoc), 100):
                 try:
                     if _T > Tc:
@@ -250,7 +250,7 @@ class ResidualPartFitter(object):
                         AAA.append(a)
 
                 except ValueError as VE:
-                    print VE
+                    print(VE)
                     pass
 
             for _rho in np.linspace(rhoc, 3.36*rhoc, 50):
@@ -279,7 +279,7 @@ class ResidualPartFitter(object):
                         AAA.append(a)
 
                 except ValueError as VE:
-                    print VE
+                    print(VE)
                     pass
 
         h = h5py.File('T_rho_p.h5','w')
@@ -358,7 +358,7 @@ class ResidualPartFitter(object):
         residuals = np.r_[(PPF.p/self.p-1),(PPF.cv/self.cv-1),(PPF.cp/self.cp-1)]#,(PPF.w**2/self.speed_sound**2-1)]
         RMS = np.sqrt(np.mean(np.power(residuals, 2)))
 
-        print 'RMS:',RMS*100, '% Max',np.max(np.abs(residuals))*100,'%'
+        print('RMS: %s %% Max %s %%' % (RMS*100, np.max(np.abs(residuals))*100))
         self.RMS = RMS
         self.MaxError = np.max(np.abs(residuals))
         return RMS
@@ -378,7 +378,7 @@ class ResidualPartFitter(object):
         # Solve for the coefficients
         Nbounds = [(-10,10) for _ in range(len(self.N0))]
         tbounds = [(-1,30) for _ in range(len(self.T0))]
-        print self.OBJECTIVE(np.array(list(self.N0)))
+        print(self.OBJECTIVE(np.array(list(self.N0))))
         #self.N = self.N0
         #self.N = scipy.optimize.minimize(self.OBJECTIVE, np.array(list(self.N0)), bounds = Nbounds, options = dict(maxiter = 5)).x
         self.N = scipy.optimize.minimize(self.OBJECTIVE, np.array(list(self.N0)), method = 'L-BFGS-B', bounds = Nbounds, options = dict(maxiter = 100)).x
@@ -387,7 +387,7 @@ class ResidualPartFitter(object):
         h = h5py.File('fit_coeffs.h5','w')
         grp = h.create_group(self.Ref)
         grp.create_dataset("n", data = np.array(self.N), compression = "gzip")
-        print self.N
+        print(self.N)
         #grp.create_dataset("t", data = np.array(self.N[len(self.N)//2::]), compression = "gzip")
         h.close()
 
@@ -417,14 +417,14 @@ class ResidualPartFitter(object):
         n = grp.get('n').value
         h.close()
 
-        print n
+        print(n)
 
         import matplotlib.colors as colors
         cNorm  = colors.LogNorm(vmin=1e-3, vmax=50)
         PPF = self.evaluate_EOS(np.array(list(n)))
         self.OBJECTIVE(np.array(list(n)))
 
-        print 'max error (p)',np.max(np.abs(PPF.p/self.p-1)*100),'%'
+        print('max error (p) %s %%' % np.max(np.abs(PPF.p/self.p-1)*100))
         SC1 = plt.scatter(self.rho, self.T, s = 8, c = np.abs(PPF.p/self.p-1)*100, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
         plt.gca().set_xscale('log')
         cb = plt.colorbar()
@@ -432,7 +432,7 @@ class ResidualPartFitter(object):
         plt.savefig('pressure.png')
         plt.show()
 
-        print 'max error (cp)',np.max(np.abs(PPF.cp/self.cp-1)*100),'%'
+        print('max error (cp) %s %%' % np.max(np.abs(PPF.cp/self.cp-1)*100))
         SC1 = plt.scatter(self.rho, self.T, s = 8, c = np.abs(PPF.cp/self.cp-1)*100, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
         plt.gca().set_xscale('log')
         cb  = plt.colorbar()
@@ -466,7 +466,7 @@ class PPFFitterClass(object):
                 self.RPF.fit()
 
             f = open('results.txt','a+')
-            print >> f, indices, self.RPF.RMS, self.RPF.MaxError
+            print("%s %s %s" % (indices, self.RPF.RMS, self.RPF.MaxError), file=f)
             f.close()
 
         self.RPF.check()
