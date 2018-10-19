@@ -79,7 +79,7 @@ def OBJECTIVE_fit(c,x):
     return sum + np.array(mu_dilute.vec)
 
 
-print 'starting fit'
+print('starting fit')
 XXX = np.r_[np.array(tau,ndmin = 2), np.array(delta,ndmin=2)]
 mod = Model(OBJECTIVE_fit)
 mydata = Data(XXX.copy(), np.array(mu.vec))
@@ -87,7 +87,7 @@ beta0  = [1 for _ in range(N)]
 myodr = ODR(mydata, mod, beta0=beta0)
 myoutput = myodr.run()
 myoutput.pprint()
-print myoutput.sum_square
+print(myoutput.sum_square)
 YFIT = OBJECTIVE_fit(myoutput.beta,XXX)
 plt.plot(np.array(mu.vec),YFIT/np.array(mu.vec),'o')
 plt.show()
@@ -95,7 +95,7 @@ plt.show()
 rel_error = (YFIT)/np.array(mu.vec)-1
 MAE = np.mean(np.abs(rel_error))*100
 SSE = np.sum(np.power(YFIT-np.array(mu.vec),2))
-print SSE
+print(SSE)
 
 
 def write_output(c):
@@ -165,7 +165,7 @@ def write_output(c):
                   edata = edata,
                   MAE = MAE)
 
-    print template.format(**values)
+    print(template.format(**values))
 
 
 write_output(myoutput.beta)

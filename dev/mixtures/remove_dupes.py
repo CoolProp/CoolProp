@@ -31,4 +31,4 @@ for unique in set(CASpairs):
     if CASpairs.count(unique) > 1:
         dupes[unique] = CASpairs.count(unique)-1 # number to remove
 
-print dupes
+print(dupes)

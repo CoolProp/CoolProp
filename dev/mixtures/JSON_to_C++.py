@@ -29,4 +29,4 @@ for infile,outfile,variable in values:
 
     f = open(outfile,'w')
 
-    print>>f, json
+    print(json, file=f)

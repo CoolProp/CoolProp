@@ -10,7 +10,7 @@ if len(sys.argv)== 2:
     else: full_rebuild = False
 if len(sys.argv) > 2:
     full_rebuild = False
-    print "Cannot process more than one parameter: {0}".format(str(sys.argv))
+    print("Cannot process more than one parameter: {0}".format(str(sys.argv)))
 #
 
 
@@ -56,14 +56,14 @@ lim_time = cur_time - 60*60*24*lim_days # seconds
 if now_master >= run_master     and \
    now_master <= run_master_end and \
    not full_rebuild:
-    print "This is a scheduled rebuild at {0}.".format(run_master)
+    print("This is a scheduled rebuild at {0}.".format(run_master))
     if fil_time < lim_time: full_rebuild = True
-    else: print "It looks like the files have been rebuilt during the last day."
+    else: print("It looks like the files have been rebuilt during the last day.")
 #
 lim_days = 3
 lim_time = cur_time - 60*60*24*lim_days # seconds
 if fil_time < lim_time and not full_rebuild:
-    print "The static files have not been updated in {0} days, forcing an update now.".format(lim_days)
+    print("The static files have not been updated in {0} days, forcing an update now.".format(lim_days))
     full_rebuild = True
 
 #req_dir = [os.path.abspath(os.path.join(web_dir,'_static','fluid_properties','Incompressibles_reports'))]
@@ -101,9 +101,9 @@ def run_script(path):
             subprocess.check_call('chmod +x {0}'.format(file_name), cwd=file_path, shell=True)
             subprocess.check_call('./{0}'.format(file_name), cwd=file_path, shell=True)
         else:
-            print "Unknown file extension in {0}".format(path)
+            print("Unknown file extension in {0}".format(path))
     else:
-        print "Could not find the file {0}".format(path)
+        print("Could not find the file {0}".format(path))
 
 
 # Inject the version of CoolProp into the doxygen configuration files
@@ -116,16 +116,16 @@ with open(os.path.join(root_dir,'Doxyfile'),'a+') as fp:
 normal_tasks = ["../../dev/scripts/examples/OSXRun.py","coolprop.tabular.speed.py", "fluid_properties.phase_envelope.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py","coolprop.parametric_table.py","coolprop.configuration.py"]
 # The expensive tasks that are fired when full_rebuild is True
 expensive_tasks = ["fluid_properties.Consistency.py", "fluid_properties.Incompressibles.sh", "logo_2014.py", "fluid_properties.REFPROPcomparison.py"]
-print "Executing the normal scripts for generating static files."
+print("Executing the normal scripts for generating static files.")
 for script in normal_tasks:
-    print "Executing {0}".format(script)
+    print("Executing {0}".format(script))
     run_script(os.path.normpath(os.path.join(script_dir,script)))
 #
 if full_rebuild:
-    print "Executing the computationally expensive scripts for generating the static files."
+    print("Executing the computationally expensive scripts for generating the static files.")
     for script in expensive_tasks:
-        print "Executing {0}".format(script)
+        print("Executing {0}".format(script))
         run_script(os.path.join(script_dir,script))
     touch(touch_file)
 else:
-    print "Skipping the computationally expensive scripts for generating the static files."
+    print("Skipping the computationally expensive scripts for generating the static files.")

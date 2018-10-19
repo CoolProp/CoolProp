@@ -16,9 +16,9 @@ for fluid in glob.glob('../fluids/*.json'):
 
     pseudo_pure = jj['EOS'][0]['pseudo_pure']
     if pseudo_pure:
-        print '-----------------PSEUDO (SKIPPING !!!)', fluid
+        print('-----------------PSEUDO (SKIPPING !!!) %s' % fluid)
     else:
-        print fluid
+        print(fluid)
         jj['ANCILLARIES']['pS'] = pS
         with open(fluid, 'w') as fp:
             json.dump(jj, fp)

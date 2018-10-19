@@ -122,7 +122,7 @@ def generate_bibtex_string(fluid):
                         header_string = sect+'\n'+'-'*len(sect)+'\n\n'
                     sect_strings.append('.. raw:: html\n\n   '+html+'\n\n')
         except ValueError as E:
-            print 'error:', E
+            print("error: %s" % E)
         string += header_string + '\n\n.. raw:: html\n\n    <br><br> \n\n'.join(sect_strings)
     return string
 
@@ -198,7 +198,7 @@ class FluidInfoTableGenerator(object):
         out = table_template.format(**args)
 
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
-            print 'writing', os.path.join(path, self.name+'-info.csv')
+            print("writing %s" % os.path.join(path, self.name+'-info.csv'))
             fp.write(out)
 
 
@@ -228,5 +228,5 @@ class FluidGenerator(object):
                                     )
 
         with open(os.path.join(path, self.fluid+'.rst'), 'w') as fp:
-            print 'writing', os.path.join(path, self.fluid+'.rst')
+            print("writing %s" % os.path.join(path, self.fluid+'.rst'))
             fp.write(out.encode('utf8'))

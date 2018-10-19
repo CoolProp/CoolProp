@@ -19,4 +19,4 @@ Tr = T/Tc
 alpha = (1+kappa*(1-Tr**0.5))**2
 
 p = R*T/(v-b)-a*alpha/(v**2+2*b*v-b**2)
-print p, CP.Props('P', 'T', T, 'D', rho, Fluid)
+print("%s %s" % (p, CP.Props('P', 'T', T, 'D', rho, Fluid)))
