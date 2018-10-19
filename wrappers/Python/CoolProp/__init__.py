@@ -10,7 +10,7 @@ if constants.__file__.rsplit('.', 1)[1] not in ['pyc','pyo','py']:
         os.remove(constants.__file__)
         print("constants shared library has been removed.  Please restart your python code")
     except:
-        print("Unable to remove  %s. Please manually remove it" % constants.__file__ )
+        print("Unable to remove" + constants.__file__ + ". Please manually remove it")
     quit()
 
 from .CoolProp import AbstractState
