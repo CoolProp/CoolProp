@@ -657,11 +657,11 @@ cdef class State:
             return
         else:
             if b'::' in <bytes>Fluid:
-                backend, Fluid = (<bytes>Fluid).split(b'::')
+                backend, _Fluid = (<bytes>Fluid).split(b'::')
             elif backend is None:
                 backend = u'?'
 
-            self.set_Fluid(Fluid, backend)
+            self.set_Fluid(_Fluid, backend)
         self.Fluid = Fluid
 
         # Parse the inputs provided
