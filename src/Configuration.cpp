@@ -1,8 +1,9 @@
 #include "Configuration.h"
+#include "src/Backends/REFPROP/REFPROPMixtureBackend.h"
 
 namespace CoolProp
 {
-    
+
 std::string config_key_to_string(configuration_keys keys)
 {
     switch (keys)
@@ -17,7 +18,7 @@ std::string config_key_to_string(configuration_keys keys)
          #undef X
     }
     return ""; // will never get here, just to make compiler happy
-}; 
+};
 
 
 std::string config_key_description(configuration_keys keys)
@@ -61,27 +62,32 @@ configuration_keys config_string_to_key(const std::string &s)
     // Nothing else has fired
     throw ValueError();
 };
-    
+
 static Configuration config;
 
-void set_config_bool(configuration_keys key, bool val){ 
+void set_config_bool(configuration_keys key, bool val){
     config.get_item(key).set_bool(val);
 }
-void set_config_double(configuration_keys key, double val){ 
-	config.get_item(key).set_double(val); 
+void set_config_double(configuration_keys key, double val){
+	config.get_item(key).set_double(val);
 }
-void set_config_string(configuration_keys key, const std::string &val){ 
-    config.get_item(key).set_string(val); 
+void set_config_string(configuration_keys key, const std::string &val){
+    config.get_item(key).set_string(val);
+    if (key == ALTERNATIVE_REFPROP_PATH |
+        key == ALTERNATIVE_REFPROP_HMX_BNC_PATH |
+        key == ALTERNATIVE_REFPROP_LIBRARY_PATH) {
+        bool success = CoolProp::force_unload_REFPROP();
+    }
 }
 
-bool get_config_bool(configuration_keys key){ 
-    return static_cast<bool>(config.get_item(key)); 
+bool get_config_bool(configuration_keys key){
+    return static_cast<bool>(config.get_item(key));
 }
-double get_config_double(configuration_keys key){ 
-    return static_cast<double>(config.get_item(key)); 
+double get_config_double(configuration_keys key){
+    return static_cast<double>(config.get_item(key));
 }
-std::string get_config_string(configuration_keys key){ 
-    return static_cast<std::string>(config.get_item(key)); 
+std::string get_config_string(configuration_keys key){
+    return static_cast<std::string>(config.get_item(key));
 }
 void get_config_as_json(rapidjson::Document &doc){
     // Get the items
@@ -97,7 +103,7 @@ std::string get_config_as_json_string(){
     return cpjson::to_string(doc);
 }
 void set_config_as_json(rapidjson::Value &val){
-    
+
     // First check that all keys are valid
     for (rapidjson::Value::MemberIterator it = val.MemberBegin(); it != val.MemberEnd(); ++it){
         try{
@@ -112,7 +118,7 @@ void set_config_as_json(rapidjson::Value &val){
             throw ValueError(format("Unable to parse json file with error: %s", e.what()));
         }
     }
-    
+
     // Now we actually set the values
     for (rapidjson::Value::MemberIterator it = val.MemberBegin(); it != val.MemberEnd(); ++it){
         // Try to get the key for the string
