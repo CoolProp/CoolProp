@@ -238,6 +238,8 @@
       "Ttriple_units": "K", 
       "acentric": 0.5981248267987835, 
       "acentric_units": "-", 
+      "dipole_moment": 1.091e+00,  
+      "dipole_moment_units": "Debye",  
       "alpha0": [
         {
           "_note": "a1 and a2 calculated by IB.  Values in Thol thesis incorrect", 
@@ -435,6 +437,8 @@
       "Ttriple_units": "K", 
       "acentric": 0.592, 
       "acentric_units": "-", 
+      "dipole_moment": 1.091e+00,  
+      "dipole_moment_units": "Debye",  
       "alpha0": [
         {
           "a1": 29.18574340067077, 

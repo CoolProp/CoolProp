@@ -313,6 +313,18 @@ protected:
         EOS.R_u = cpjson::get_double(EOS_json,"gas_constant");
         EOS.molar_mass = cpjson::get_double(EOS_json,"molar_mass");
         EOS.acentric = cpjson::get_double(EOS_json,"acentric");
+        double dpm = cpjson::get_double(EOS_json,"dipole_moment");
+        std::string dpm_units = cpjson::get_string(EOS_json, "dipole_moment_units");
+        if ((dpm_units == "Debye") || (dpm_units == "debye")) {
+            EOS.dipole_moment = dpm * 3.33564e-30;  // Convert units from Debye to SI (C*m)
+        }
+        else if (dpm_units == "C*m") {
+            EOS.dipole_moment = dpm;                // dipole_moment already in SI (C*m) units
+        }
+        else {
+            throw ValueError(format("Invalid dipole moment units [%s]. Valid units are : Debye or C*m\n", dpm_units));
+        }
+
 
         EOS.pseudo_pure = cpjson::get_bool(EOS_json, "pseudo_pure");
         EOS.limits.Tmax = cpjson::get_double(EOS_json, "T_max");

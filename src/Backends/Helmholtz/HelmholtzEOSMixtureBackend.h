@@ -194,6 +194,7 @@ public:
             case irhomolar_reducing: return fld.EOS().reduce.rhomolar;
             case irhomolar_critical: return fld.crit.rhomolar;
             case iacentric_factor: return fld.EOS().acentric;
+            case idipole_moment: return fld.EOS().dipole_moment;
             case imolar_mass: return fld.EOS().molar_mass;
             case iT_triple: return fld.EOS().sat_min_liquid.T;
             case iP_triple: return fld.EOS().sat_min_liquid.p;
@@ -280,6 +281,7 @@ public:
     CoolPropDbl calc_molar_mass(void);
     CoolPropDbl calc_gas_constant(void);
     CoolPropDbl calc_acentric_factor(void);
+    CoolPropDbl calc_dipole_moment(void);
 
     CoolPropDbl calc_Bvirial(void);
     CoolPropDbl calc_Cvirial(void);

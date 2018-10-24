@@ -238,6 +238,8 @@
       "Ttriple_units": "K", 
       "acentric": 0.201112573380599, 
       "acentric_units": "-", 
+      "dipole_moment": 0.000e+00,  
+      "dipole_moment_units": "Debye",  
       "alpha0": [
         {
           "a1": 3.2489131288, 
@@ -546,8 +548,8 @@
       "T_critical_units": "K", 
       "acentric": 0.1521, 
       "acentric_units": "-", 
-      "dipole_moment_D": 0.0, 
-      "dipole_moment_D_units": "Debye", 
+      "dipole_moment_D": 0.0,
+      "dipole_moment_D_units": "Debye",
       "kappa": 0.0, 
       "kappa_units": "-", 
       "molar_mass": 0.0701329, 
