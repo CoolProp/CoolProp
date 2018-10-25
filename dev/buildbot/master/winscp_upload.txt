@@ -1,11 +1,4 @@
-# winscp.com /ini=nul /script=C:\script_file.txt /parameter=localFolder /parameter=remoteFolder
-# Connect with private key
-open coolprop@coolprop.host.com -privatekey=C:\CoolProp-slave\key.ppk
-# Sync directories from parameters
-synchronize remote -mirror "%1%" "%2%"
-# Disconnect
+# winscp.com /ini=nul /script=C:\script_file.txt /parameter localFolder remoteFolder
+open coolprop@prop.host.com -privatekey=rsakey.ppk -hostkey="ssh-ed25519 256 XXXX"
+synchronize remote -mirror -preview "%1%" "%2%"
 close
-# https://winscp.net/eng/docs/scripting#example
-# synchronize remote -delete d:\www /home/martin/public_html
-# winscp.com /script=script_file.txt /parameter=MyFolderName
-# "%1%"
