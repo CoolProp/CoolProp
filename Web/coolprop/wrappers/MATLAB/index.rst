@@ -6,170 +6,57 @@ MATLAB Wrapper
 
 .. contents:: :depth: 2
 
-Pre-compiled Binaries
-=====================
-Release versions of the MATLAB wrapper can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB`.  Whichever one you pick, make sure all the files come from the same place.
+The only interface for MATLAB that is supported as of version 6.2 is via Python (you can also call the DLL directly, see below). The maintenance hurdles of supporting the old SWIG MATLAB wrapper proved to be too difficult to surmount.
 
-.. warning:: 
+Via Python
+==========
 
-    For users on Mac OSX 10.10+, you should use the release binaries from :sfdownloads:`MATLAB/10.10+/MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB/10.10+/MATLAB`.
+You will need to acquire a Python interpreter, the easiest method to do so if you do not already have Python installed on your computer is to download the installer from python.org: `link to downloads <https://www.python.org/downloads/>`_. There is also information on the Mathworks website. The Python wrapper only uses methods that are in the Python standard library, so the standard installation of Python would work fine. If you would like to have a more full-featured Python installation, you can install a full-fledged Python installation from Anaconda: `Anaconda download <https://www.anaconda.com/download/>`_.
 
-Download the +CoolProp.7z file and extract it using the `7-zip <http://www.7-zip.org/download.html>`_ program.  Make sure that when you expand it, there are no +CoolProp intermediate folders generated.  Place the mex file that is appropriate to the version of MATLAB in the directory that contains the directory +CoolProp.  You can determine what version of matlab you have by running the command ``computer('arch')`` at the MATLAB command prompt.  Depending on the output, you will need to download one of the following mex files:
+In your MATLAB shell, you can inquire about what Python version MATLAB intends to use with a command like:
 
-* ``computer('arch')`` yields ``win32``: CoolPropMATLAB_wrap.mexw32
-* ``computer('arch')`` yields ``win64``: CoolPropMATLAB_wrap.mexw64
-* ``computer('arch')`` yields ``glnxa64``: CoolPropMATLAB_wrap.mexa64
-* ``computer('arch')`` yields ``maci64``: CoolPropMATLAB_wrap.mexmaci64
+    >> pyversion
 
-Also, download the ``SwigRef.m`` and ``CoolPropsetup.m`` files.
+           version: '2.7'
+        executable: 'D:\Anaconda\python.exe'
+           library: 'D:\Anaconda\python27.dll'
+              home: 'D:\Anaconda'
+          isloaded: 0
 
-When you are finished, you should have a folder layout like::
+Good. It found Python, and has not loaded it yet. You are ready!
 
-    main
-     |- SwigRef.m
-     |- CoolPropsetup.m
-     |- CoolPropMATLAB_wrap.mexw64
-     |- +CoolProp
-        |- AbstractState.m
-        |- DmassHmass_INPUTS.m
-        |- ...
+If you have multiple copies of Python on your computer already, then you can tell MATLAB which one you want it to use by passing the absolute path to the python executable to pyversion. For instance:
 
-Then you need to add the main that contains the +CoolProp folder to the path in MATLAB. This command adds the folder ``main`` that contains CoolProp files to the MATLAB path::
 
-    addpath('/home/USERNAME/Some_folder/main')
+    >> pyversion d:\Anaconda\envs\py36\python.exe
+    >> pyversion
 
-Usage
------
+           version: '3.6'
+        executable: 'd:\Anaconda\envs\py36\python.exe'
+           library: 'd:\Anaconda\envs\py36\python36.dll'
+              home: 'd:\Anaconda\envs\py36'
+          isloaded: 0
 
-To calculate the normal boiling temperature of water at one atmosphere::
+Finally, you need to install CoolProp into your given copy of python. This one-liner calls the pip program of Python to install the CoolProp package from the PYPI package index. Watch out for the spaces in the arguments, they are important!:
 
-    >> CoolProp.PropsSI('T','P',101325,'Q',0,'Water')
-    
-Faster Properties
-=================
-    
-The interface for CoolProp for MATLAB is quite slow due to the internal structure of MATLAB that is not amenable for easy wrapping of C++ code.  For that reason it can be advantageous to call the low-level interface through the DLL (shared library on linux and OSX) and obtain a few properties at a time.  There is an example :ref:`below <low_level_high_level_matlab>` that demonstrates how to do this.  It mirrors the code that is used to call these functions from C++ as seen in the :ref:`low-level interface <low_level_high_level>`.  This method of retrieving properties is almost as fast as C++, and much faster than using the SWIG-based wrappers.
-    
-User-Compiled Binaries
-======================
+    >> [v,e] = pyversion; system([e,' -m pip install --user -U CoolProp'])
 
-Pre-generated wrapper code
---------------------------
-
-For windows users, you can almost certainly use the pre-compiled binaries described above.  For some other platforms (OSX and linux primarily), there are various problems that make the use of the precompiled binaries impossible. So you would need to build it yourself on your computer to make sure that everything works properly.
-
-Until support for MATLAB makes it into the master branch of SWIG, using swig for users (though documented below), will not be very straightforward.  For that reason, a zip file has been generated with the MATLAB interface code already packaged.  You will simply need to download the 7z archive, extract it, use CMake to generate a makefile, and build.
-
-The pre-generated versions of the MATLAB wrapper source code can be downloaded from :sfdownloads:`MATLAB` for your architecture, or from the development snapshots at :sfnightly:`MATLAB`.  You want the file ``swigged_MATLAB_src.7z``.  Once you have downloaded this file, you should run these steps at the command line::
-
-    # Change this path to be the root directory for MATLAB if needed
-    export MATLAB_ROOT=/package/matlab/R2014a
-    7z x swigged_MATLAB_src.7z
-    cd coolprop/build
-    cmake .. -DCOOLPROP_MATLAB_SWIGAUTOGENERATED=ON
-    cmake --build .
-    
-You should end up with a folder layout like described above within the coolprop/build directory.
-
-.. _swig_matlab:
-
-Swig+Matlab
------------
-
-As of version 5 of CoolProp, the MATLAB wrapper has been greatly improved in capabilities thanks to the work of the SWIG team.  The MATLAB wrapper will now automatically include complete wrappers of the high-level and low-level code, bringing it in line with the other SWIG-based wrappers (scilab, C#, octave, etc).
-
-The bad part of this is that swig+matlab support has not been integrated into the main codebase of swig (as of October 2014).  Thus it is necessary to compile (or obtain) swig+matlab.
-
-The code below assumes that the swig-matlab-bin folder sits in the build directory.
-
-Precompiled
-^^^^^^^^^^^
-You can download the pre-compiled nightly versions from :sfnightly:`MATLAB`. 
-
-Do-it-yourself (masochistic)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-On linux and OSX, you can simply run the script dev/scripts/build_swig_matlab.py which will check out the code for swig, obtain PCRE, and build the correct architecture's binary.  The resulting code will reside in the folder dev/scripts/swig-matlab/swig-matlab-bin.
-
-For windows, its pretty much the same story, except that swig has to be cross-compiled from a linux (debian-based OS are good) host.  Install all the mingw packages in Synaptic, and then run the build script like::
-
-    python build_swig_matlab.py --windows
-
-which should hopefully yield the binaries in dev/scripts/swig-matlab/swig-matlab-bin.
-
-Common Requirements
--------------------
-Compilation of the MATLAB wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
-
-Linux
------
-
-Install MATLAB using installer downloaded from www.mathworks.com.  As of version R2014a, only 64-bit MATLAB is available
-
-OSX
+Use
 ---
 
-Install MATLAB using installer downloaded from www.mathworks.com.  As of version R2014a, only 64-bit MATLAB is available
+At the beginning of your code you should add the import statement (similar to what you would do in Python):
 
-Windows
--------
+    >> import py.CoolProp.CoolProp.PropsSI
 
-Install MATLAB using installer downloaded from www.mathworks.com.  As of version R2014a, both of 32-bit and 64-bit MATLAB are available
+And then you can calculate the normal boiling point temperature of water:
 
-Build
------
+    >> PropsSI('T','P',101325,'Q',0,'Water')
 
-Linux and OSX
-^^^^^^^^^^^^^
+    ans = 
 
-Once the dependencies are installed, you can run the builder and tests using::
+      373.1243
 
-    # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
-    # Move into the folder you just created
-    cd CoolProp
-    # Make a build folder
-    mkdir build && cd build
-    # Copy the swig-matlab-bin folder here (fix path as necessary) (see above for Swig discussion)
-    cp ../../dev/scripts/swig-matlab/swig-matlab-bin .
-    # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
-    export MATLAB_ROOT=/usr/local/MATLAB/R2014a # or /Applications/MATLAB_R2014a.app
-    # Build the makefile using CMake with the path hacked to use our swig
-    PATH=swig-matlab-bin/bin:%{PATH} cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DSWIG_DIR=swig-matlab-bin/bin
-    # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
-    # Setting the SWIG_LIB explicitly is dangerous, but for now it doesn't seem there is a better solution
-    SWIG_LIB=swig-matlab-bin/share/swig/3.0.3 make install
-
-Windows (32-bit and 64-bit)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-You need to just slightly modify the building procedure::
-
-    # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
-    # Move into the folder you just created
-    cd CoolProp
-    # Make a build folder
-    mkdir build && cd build
-    # Copy the swig-matlab-bin folder here (fix path as necessary) (see above for Swig discussion)
-    cp ../../dev/scripts/swig-matlab/swig-matlab-bin .
-    # Set an environmental variable that points to your MATLAB installation for use in CMake (adjust if needed)
-    set "MATLAB_ROOT=c:\Program Files\MATLAB\R2014a"
-    # Build the makefile using CMake with the path hacked to use our swig
-    set "PATH=swig-matlab-bin\bin:%{PATH}" && cmake .. -DCOOLPROP_MATLAB_MODULE=ON -DSWIG_DIR=swig-matlab-bin\bin
-    # Make the MEX files (by default files will be generated in folder install_root/MATLAB relative to CMakeLists.txt file)
-    # Setting the SWIG_LIB explicitly is dangerous, but for now it doesn't seem there is a better solution
-    set "SWIG_LIB=swig-matlab-bin\share\swig\3.0.3" && make install
-    
-Example Code
-============
-
-.. literalinclude:: Example.m
-   :language: matlab
-
-Example Code Output
-===================
-
-.. literalinclude:: Example.out
+Similar approaches are possible for the low-level interface. Addition of docs documenting how to use the low-level interface in MATLAB would be welcome.  Also, more advanced wrapper for MATLAB are available, and are stored on github: https://github.com/CoolProp/CoolProp/tree/master/wrappers/MATLAB
 
 .. _low_level_high_level_matlab: 
 
