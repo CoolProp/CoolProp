@@ -13,7 +13,7 @@ Via Python
 
 You will need to acquire a Python interpreter, the easiest method to do so if you do not already have Python installed on your computer is to download the installer from python.org: `link to downloads <https://www.python.org/downloads/>`_. There is also information on the Mathworks website. The Python wrapper only uses methods that are in the Python standard library, so the standard installation of Python would work fine. If you would like to have a more full-featured Python installation, you can install a full-fledged Python installation from Anaconda: `Anaconda download <https://www.anaconda.com/download/>`_.
 
-In your MATLAB shell, you can inquire about what Python version MATLAB intends to use with a command like:
+In your MATLAB shell, you can inquire about what Python version MATLAB intends to use with a command like::
 
     >> pyversion
 
@@ -25,7 +25,7 @@ In your MATLAB shell, you can inquire about what Python version MATLAB intends t
 
 Good. It found Python, and has not loaded it yet. You are ready!
 
-If you have multiple copies of Python on your computer already, then you can tell MATLAB which one you want it to use by passing the absolute path to the python executable to pyversion. For instance:
+If you have multiple copies of Python on your computer already, then you can tell MATLAB which one you want it to use by passing the absolute path to the python executable to pyversion. For instance::
 
 
     >> pyversion d:\Anaconda\envs\py36\python.exe
@@ -37,18 +37,18 @@ If you have multiple copies of Python on your computer already, then you can tel
               home: 'd:\Anaconda\envs\py36'
           isloaded: 0
 
-Finally, you need to install CoolProp into your given copy of python. This one-liner calls the pip program of Python to install the CoolProp package from the PYPI package index. Watch out for the spaces in the arguments, they are important!:
+Finally, you need to install CoolProp into your given copy of python. This one-liner calls the pip program of Python to install the CoolProp package from the PYPI package index. Watch out for the spaces in the arguments, they are important!::
 
     >> [v,e] = pyversion; system([e,' -m pip install --user -U CoolProp'])
 
 Use
 ---
 
-At the beginning of your code you should add the import statement (similar to what you would do in Python):
+At the beginning of your code you should add the import statement (similar to what you would do in Python)::
 
     >> import py.CoolProp.CoolProp.PropsSI
 
-And then you can calculate the normal boiling point temperature of water:
+And then you can calculate the normal boiling point temperature of water::
 
     >> PropsSI('T','P',101325,'Q',0,'Water')
 
