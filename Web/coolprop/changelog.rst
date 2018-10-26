@@ -1,6 +1,123 @@
 Changelog for CoolProp
 ======================
 
+6.2.0
+-----
+
+New Features:
+
+* Added a new EoS for heavy water
+* Added pre-built wheels for Python 3.6 and Python 3.7
+* The MATLAB wrappers have been abandoned in favour of Python-based calls
+* Add phase specification to high-level interface
+* LabVIEW VIs can now call PropsSI and Props1SI
+* Added a wrapper for Android
+* ... and a lot of little bugfixes (see issues)
+
+Issues Closed:
+
+* `#1699 <https://github.com/CoolProp/CoolProp/issues/1699>`_ : Pip Install problem with Ubuntu 18.04 and Python 3.6.3
+* `#1682 <https://github.com/CoolProp/CoolProp/issues/1682>`_ : Coolprop.Coolprop module does not exist
+* `#1672 <https://github.com/CoolProp/CoolProp/issues/1672>`_ : In ODEintegrator, limits are wrong for backwards
+* `#1662 <https://github.com/CoolProp/CoolProp/issues/1662>`_ : Wrong results when using INCOMP (incompressible) fluids using high-level interface after importing matplotlib.pyplot
+* `#1661 <https://github.com/CoolProp/CoolProp/issues/1661>`_ : install fail with python 3.6 in anaconda for win10
+* `#1659 <https://github.com/CoolProp/CoolProp/issues/1659>`_ : More reducing state resetting needed when fractions set
+* `#1654 <https://github.com/CoolProp/CoolProp/issues/1654>`_ : Version 6.1 with Python 3.6.1 Anaconda (64-bit)
+* `#1652 <https://github.com/CoolProp/CoolProp/issues/1652>`_ : Problem with saturated vapor internal energy calculations with quality/density inputs
+* `#1649 <https://github.com/CoolProp/CoolProp/issues/1649>`_ : Cannot cimport CoolProp into cython in python 3.6
+* `#1647 <https://github.com/CoolProp/CoolProp/issues/1647>`_ : Parsing of Mixtures depends on LOCALE
+* `#1630 <https://github.com/CoolProp/CoolProp/issues/1630>`_ : Predefined mixture cannot have uppercase .MIX
+* `#1629 <https://github.com/CoolProp/CoolProp/issues/1629>`_ : Phase envelopes fail for predefined mixtures with REFPROP backend
+* `#1607 <https://github.com/CoolProp/CoolProp/issues/1607>`_ : Tabular Backend Fails with HmassP_INPUTS when iphase_twophase Imposed
+* `#1604 <https://github.com/CoolProp/CoolProp/issues/1604>`_ : v6.2?
+* `#1603 <https://github.com/CoolProp/CoolProp/issues/1603>`_ : Parse out Zero Mass Fraction Components in High-Level Interface
+* `#1602 <https://github.com/CoolProp/CoolProp/issues/1602>`_ : hmass() gives strange result after calling update() with PQ_INPUTS in specific case
+* `#1582 <https://github.com/CoolProp/CoolProp/issues/1582>`_ : Buildbot update
+* `#1563 <https://github.com/CoolProp/CoolProp/issues/1563>`_ : Unify AbstractState's behavior when using HEOS or the tabular interpolations schemes
+* `#1551 <https://github.com/CoolProp/CoolProp/issues/1551>`_ : Import of matplotlib.pyplot results in error for mixtures
+* `#1530 <https://github.com/CoolProp/CoolProp/issues/1530>`_ : Catch tests failing
+* `#1455 <https://github.com/CoolProp/CoolProp/issues/1455>`_ : apply_simple_mixing_rule broken
+* `#1439 <https://github.com/CoolProp/CoolProp/issues/1439>`_ : Wrong dam_dtau for Twu
+* `#1426 <https://github.com/CoolProp/CoolProp/issues/1426>`_ : UNIFAQ compile errors
+* `#1422 <https://github.com/CoolProp/CoolProp/issues/1422>`_ : Ttriple wrong for REFPROP for water
+* `#1406 <https://github.com/CoolProp/CoolProp/issues/1406>`_ : StateContainer print fails
+* `#1396 <https://github.com/CoolProp/CoolProp/issues/1396>`_ : Formulas are wrong for dichloroethane and ethylene oxide
+* `#1393 <https://github.com/CoolProp/CoolProp/issues/1393>`_ : Crash when set_mole_fractions() not called
+* `#1381 <https://github.com/CoolProp/CoolProp/issues/1381>`_ : Calling acentric factor with cubic equation
+* `#1372 <https://github.com/CoolProp/CoolProp/issues/1372>`_ : inconsistent result with mixture of "Ethylbenzene[0.5]&P-XYLENE[0.5]"<>"ethylbenzene[0.5]&P-XYLENE[0.5]"
+* `#1371 <https://github.com/CoolProp/CoolProp/issues/1371>`_ : Get JSON string for fluid at runtime
+* `#1369 <https://github.com/CoolProp/CoolProp/issues/1369>`_ : Return 'n/a'  REFPROP version when not loaded or supported.
+* `#1368 <https://github.com/CoolProp/CoolProp/issues/1368>`_ : segmentation fault when calling get_global_param_string("REFPROP_version") from Python
+* `#1366 <https://github.com/CoolProp/CoolProp/issues/1366>`_ : Allow fluids to be provided (and overwritten) at runtime; closes #1345
+* `#1365 <https://github.com/CoolProp/CoolProp/issues/1365>`_ : SMath Wrapper refactoring
+* `#1362 <https://github.com/CoolProp/CoolProp/issues/1362>`_ : LabVIEW VIs to call PropsSI and Props1SI
+* `#1361 <https://github.com/CoolProp/CoolProp/issues/1361>`_ : Re-enable alpha0 mixture derivative tests for cubics
+* `#1359 <https://github.com/CoolProp/CoolProp/issues/1359>`_ : Allow for cubic transformations in HEOS multi-fluid model
+* `#1355 <https://github.com/CoolProp/CoolProp/issues/1355>`_ : SMath Wrapper refactoring
+* `#1354 <https://github.com/CoolProp/CoolProp/issues/1354>`_ : splined properties, _fluid_type and _phase not cleared in AbstractState.h
+* `#1352 <https://github.com/CoolProp/CoolProp/issues/1352>`_ : Faulty state update with DmassT_inputs in HEOS backend with specified phase
+* `#1350 <https://github.com/CoolProp/CoolProp/issues/1350>`_ : Simulation error when using ExternalMedia in Dymola
+* `#1348 <https://github.com/CoolProp/CoolProp/issues/1348>`_ : Allow alpha0 to be provided for cubic EOS
+* `#1347 <https://github.com/CoolProp/CoolProp/issues/1347>`_ : Add ability to ignore setup errors for REFPROP mixtures
+* `#1343 <https://github.com/CoolProp/CoolProp/issues/1343>`_ : Call git in the dev folder
+* `#1339 <https://github.com/CoolProp/CoolProp/issues/1339>`_ : Set a standard departure function through the AbstractState
+* `#1333 <https://github.com/CoolProp/CoolProp/issues/1333>`_ : Make it possible to use x[i]=0 in some alpha0 derivatives
+* `#1329 <https://github.com/CoolProp/CoolProp/issues/1329>`_ : DO NOT allow for over-writing of departure functions when loading defaults
+* `#1328 <https://github.com/CoolProp/CoolProp/issues/1328>`_ : Dmass wrong for saturated states for REFPROP
+* `#1325 <https://github.com/CoolProp/CoolProp/issues/1325>`_ : Also export HAProps_Aux to pybind11 interface
+* `#1324 <https://github.com/CoolProp/CoolProp/issues/1324>`_ : Figure out problem with linux wheels
+* `#1323 <https://github.com/CoolProp/CoolProp/issues/1323>`_ : Added PQ and QT Input Pairs to provide Saturation Values to IF97 Backend
+* `#1322 <https://github.com/CoolProp/CoolProp/issues/1322>`_ : Bigger buffer size for Julia wrapper
+* `#1321 <https://github.com/CoolProp/CoolProp/issues/1321>`_ : Finally fix phase envelopes again
+* `#1320 <https://github.com/CoolProp/CoolProp/issues/1320>`_ : Figure out why catch runs take forever on *nix
+* `#1319 <https://github.com/CoolProp/CoolProp/issues/1319>`_ : Fix python windows builds
+* `#1318 <https://github.com/CoolProp/CoolProp/issues/1318>`_ : Move entire Emscripten interface into its own file that is included separately
+* `#1317 <https://github.com/CoolProp/CoolProp/issues/1317>`_ : Loading HMX.BNC through the DLL yields weird behavior
+* `#1316 <https://github.com/CoolProp/CoolProp/issues/1316>`_ : Added configuration options for MSVCRT linking, changed the output di…
+* `#1314 <https://github.com/CoolProp/CoolProp/issues/1314>`_ : Android Wrapper
+* `#1312 <https://github.com/CoolProp/CoolProp/issues/1312>`_ : First step toward #1310
+* `#1309 <https://github.com/CoolProp/CoolProp/issues/1309>`_ : version 6.1.0 not available from pypi
+* `#1308 <https://github.com/CoolProp/CoolProp/issues/1308>`_ : Add Trivial Parameter calls to IF97 Backend
+* `#1307 <https://github.com/CoolProp/CoolProp/issues/1307>`_ : get_config_string returns nothing in python
+* `#1306 <https://github.com/CoolProp/CoolProp/issues/1306>`_ : Typo in CO2+Argon coefficients
+* `#1305 <https://github.com/CoolProp/CoolProp/issues/1305>`_ : Fix some warnings in MSVC 2015
+* `#1304 <https://github.com/CoolProp/CoolProp/issues/1304>`_ : Parse refprop HMX.BNC file and load coefficients
+* `#1303 <https://github.com/CoolProp/CoolProp/issues/1303>`_ : call refprop from coolprop in scilab on linux
+* `#1302 <https://github.com/CoolProp/CoolProp/issues/1302>`_ : Export cubic's alpha functions
+* `#1300 <https://github.com/CoolProp/CoolProp/issues/1300>`_ : Add criticality_contour_values to pybind11 interface
+* `#1299 <https://github.com/CoolProp/CoolProp/issues/1299>`_ : Add config keys to pybind11 interface
+* `#1298 <https://github.com/CoolProp/CoolProp/issues/1298>`_ : HAPropsSI H, p, W lookups not working past 5.0.0
+* `#1296 <https://github.com/CoolProp/CoolProp/issues/1296>`_ : Add phases enum to pybind11 interface
+* `#1295 <https://github.com/CoolProp/CoolProp/issues/1295>`_ : Specify the minimum delta for spinodal tracer as config variable
+* `#1294 <https://github.com/CoolProp/CoolProp/issues/1294>`_ : Add parser for HMX.BNC from REFPROP
+* `#1292 <https://github.com/CoolProp/CoolProp/issues/1292>`_ : Source zip file on SourceForge is not correct again...
+* `#1289 <https://github.com/CoolProp/CoolProp/issues/1289>`_ : Make triple point accessible in HEOS::get_fluid_constant
+* `#1285 <https://github.com/CoolProp/CoolProp/issues/1285>`_ : Allow fluids to be overwritten
+* `#1279 <https://github.com/CoolProp/CoolProp/issues/1279>`_ : Add phase specification to high-level interface
+* `#1253 <https://github.com/CoolProp/CoolProp/issues/1253>`_ : Implement derivatives of alpha0 w.r.t. tau, delta
+* `#1249 <https://github.com/CoolProp/CoolProp/issues/1249>`_ : IF97 Error in CoolProp Wrapping for SMath
+* `#969 <https://github.com/CoolProp/CoolProp/issues/969>`_ : Support mixtures with component mole fractions of zero
+
+Pull Requests merged:
+
+* `#1675 <https://github.com/CoolProp/CoolProp/pull/1675>`_ : Let DARWIN build with libc++
+* `#1666 <https://github.com/CoolProp/CoolProp/pull/1666>`_ : Make string->float conversion aware of the locale
+* `#1665 <https://github.com/CoolProp/CoolProp/pull/1665>`_ : Patches PropsSI imposed phase for backends other than HEOS
+* `#1660 <https://github.com/CoolProp/CoolProp/pull/1660>`_ : Update PropsSI() to Parse Imposed Phase Strings on Input Keys
+* `#1656 <https://github.com/CoolProp/CoolProp/pull/1656>`_ : Mistake in function 'inline_label' in CoolProp/Plots/Common.py
+* `#1645 <https://github.com/CoolProp/CoolProp/pull/1645>`_ : Provide return string from PhaseSI() if phase can't be determined.
+* `#1609 <https://github.com/CoolProp/CoolProp/pull/1609>`_ : editorconfig
+* `#1606 <https://github.com/CoolProp/CoolProp/pull/1606>`_ : Patch PT_flash() to update _phase with imposed phase, in case it changed
+* `#1464 <https://github.com/CoolProp/CoolProp/pull/1464>`_ : Fix a few REFPROP functions; closes #1422
+* `#1460 <https://github.com/CoolProp/CoolProp/pull/1460>`_ : Greatly improve the stability of REFPROP mixture calls at saturation …
+* `#1459 <https://github.com/CoolProp/CoolProp/pull/1459>`_ : Call SATTP properly when QT inputs are given for REFPROP
+* `#1458 <https://github.com/CoolProp/CoolProp/pull/1458>`_ : Actually set the Twu parameters if provided
+* `#1457 <https://github.com/CoolProp/CoolProp/pull/1457>`_ : Add ierr checks to calls to SETKTV
+* `#1450 <https://github.com/CoolProp/CoolProp/pull/1450>`_ : Fix typo in CoolPropLib.h
+* `#1449 <https://github.com/CoolProp/CoolProp/pull/1449>`_ : Move F2K into emscripten_interface.cxx
+* `#1448 <https://github.com/CoolProp/CoolProp/pull/1448>`_ : Update the ODE integrator to allow it to integrate backwards
+* `#1376 <https://github.com/CoolProp/CoolProp/pull/1376>`_ : Update HumidAirProp.cpp
+
 6.1.0
 -----
 
