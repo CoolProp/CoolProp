@@ -1,0 +1,4 @@
+# winscp.com /ini=nul /script=C:\script_file.txt /parameter localFolder remoteFolder
+open coolprop@prop.host.com -privatekey=rsakey.ppk -hostkey="ssh-ed25519 256 XXXX"
+synchronize remote -mirror -preview "%1%" "%2%"
+close
