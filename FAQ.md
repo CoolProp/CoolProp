@@ -44,6 +44,10 @@ Usage
     Mixture calculations require binary interaction parameters for each pair in the mixture.  While many binary interaction parameters are available in the CoolProp library, sadly, many are not.  If you get this error message, then the binary interaction parameters for the CAS fluids listed are not available in CoolProp.  
     
     If you have data for the binary interaction parameters, you can enter them interactively using the [set_mixture_binary_pair_data](http://www.coolprop.org/dev/fluid_properties/Mixtures.html#id826) function in CoolProp.  Otherwise, a more sophisticated mixing model is needed, like the ones in NIST RefProp.
+    
+5. **Where is the MATLAB wrapper?**
+
+    We retired the MATLAB wrapper in favour of a Python-based approach, read more in the [docs](http://www.coolprop.org/coolprop/wrappers/MATLAB/index.html#matlab-wrapper).
 
 Compilation
 -----------
