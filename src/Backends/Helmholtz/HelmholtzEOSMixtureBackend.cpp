@@ -578,7 +578,12 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_surface_tension(void)
 {
     if (is_pure_or_pseudopure){
-		return components[0].ancillaries.surface_tension.evaluate(T());
+        if ((_phase == iphase_twophase) || (_phase == iphase_critical_point)){  // if within the two phase region or at critical point
+            return components[0].ancillaries.surface_tension.evaluate(T());     //    calculate surface tension and return
+        }
+        else {                                                                  // else state point not in the two phase region
+            throw ValueError(format("surface tension is only defined within the two-phase region; Try PQ or QT inputs"));   // throw error
+        }
     }
     else{
         throw NotImplementedError(format("surface tension not implemented for mixtures"));
