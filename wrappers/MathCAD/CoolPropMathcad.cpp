@@ -25,7 +25,7 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
           BAD_FLUID, BAD_PARAMETER, BAD_PHASE,                      // CoolProp Error Codes
           ONLY_ONE_PHASE_SPEC, BAD_REF, NON_TRIVIAL,
           NO_REFPROP, NOT_AVAIL, BAD_INPUT_PAIR, BAD_QUAL,
-          TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
+          TWO_PHASE, NON_TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
           H_OUT_OF_RANGE, S_OUT_OF_RANGE, HA_INPUTS, 
           BAD_BINARY_PAIR, BAD_RULE, PAIR_EXISTS, UNKNOWN, 
           NUMBER_OF_ERRORS };                                       // Dummy Code for Error Count
@@ -50,6 +50,7 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
         "This Input Pair is not yet support for this Fluid",
         "Input vapor quality must be between 0 and 1",
         "Output variable not valid in two phase region",
+        "Output variable only valid in two phase region",
         "Temperature out of range",
         "Pressure out of range",
         "Enthalpy out of range",
@@ -295,6 +296,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                 return MAKELRESULT(BAD_PARAMETER,1);  // first position parameter
             } else if (emsg.find("not valid in two phase region")!=std::string::npos) {
                 return MAKELRESULT(TWO_PHASE,1);  // first position parameter
+            } else if (emsg.find("only defined within the two-phase") != std::string::npos) {
+                return MAKELRESULT(NON_TWO_PHASE, 1);  // first position parameter
             } else if (emsg.find("not implemented")!=std::string::npos) {
                 return MAKELRESULT(NOT_AVAIL,1);      // first position parameter
             } else if (emsg.find("Initialize failed")!=std::string::npos) {

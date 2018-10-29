@@ -47,6 +47,7 @@ public:
     CoolPropDbl evaluate(CoolPropDbl T)
     {
         if (a.empty()){ throw NotImplementedError(format("surface tension curve not provided"));}
+        if (T > Tc) { throw ValueError(format("Must be saturated state : T <= Tc")); }
         CoolPropDbl THETA = 1-T/Tc;
         for (std::size_t i = 0; i < N; ++i)
         {
