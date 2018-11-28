@@ -19,6 +19,16 @@ extern "C" DLLEXPORT void WolframLibrary_uninitialize( WolframLibraryData libDat
 	return;
 }
 
+
+/* Adds one to the input, returning the result */
+extern "C" DLLEXPORT int plus_one( WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res) {
+    if (Argc != 1) return LIBRARY_FUNCTION_ERROR;
+	double x = MArgument_getReal(Args[0]);
+	MArgument_setReal(Res, x + 1.0);
+	return LIBRARY_NO_ERROR;
+}
+
+
 extern "C" DLLEXPORT int PropsSI( WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res) {
     if (Argc != 6) return LIBRARY_FUNCTION_ERROR;
 
@@ -40,6 +50,7 @@ extern "C" DLLEXPORT int PropsSI( WolframLibraryData libData, mint Argc, MArgume
 	
     return LIBRARY_NO_ERROR;
 }
+
 
 extern "C" DLLEXPORT int HAPropsSI( WolframLibraryData libData, mint Argc, MArgument *Args, MArgument Res) {
     if (Argc != 7) return LIBRARY_FUNCTION_ERROR;
