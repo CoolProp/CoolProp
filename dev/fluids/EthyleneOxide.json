@@ -137,6 +137,7 @@
       "acentric_units": "-", 
       "dipole_moment": 1.940e+00,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Haynes, William M., ed. (2011). CRC Handbook of Chemistry and Physics (92nd ed.). Boca Raton, FL: CRC Press. ISBN 1439855110.",
       "alpha0": [
         {
           "a1": -3.90644775, 

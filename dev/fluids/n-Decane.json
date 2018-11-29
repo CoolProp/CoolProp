@@ -238,8 +238,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.4884, 
       "acentric_units": "-", 
-      "dipole_moment": 4.881e-01,  
+      "dipole_moment": 0.07,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "http://www.stenutz.eu/chem/solv6.php?name=decane",
       "alpha0": [
         {
           "a1": 13.9361966549, 

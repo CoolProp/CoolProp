@@ -256,6 +256,7 @@
       "acentric_units": "-", 
       "dipole_moment": 0.000e+00,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Symmetric Molecule",
       "alpha0": [
         {
           "a1": 0.9891140602, 

@@ -282,6 +282,7 @@
       "acentric_units": "-", 
       "dipole_moment":  -1,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Undefined for Mixtures",
       "alpha0": [
         {
           "a1": 2.13194, 

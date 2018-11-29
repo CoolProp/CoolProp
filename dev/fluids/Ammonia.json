@@ -242,6 +242,7 @@
       "acentric_units": "-", 
       "dipole_moment": 1.470e+00,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "https://cccbdb.nist.gov/diplistx.asp",
       "alpha0": [
         {
           "a1": -15.81502, 

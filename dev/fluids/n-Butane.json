@@ -257,8 +257,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.200810094644, 
       "acentric_units": "-", 
-      "dipole_moment": 2.004e-01,  
+      "dipole_moment": 0.05,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "NSRDS-NBS10; https://nvlpubs.nist.gov/nistpubs/Legacy/NSRDS/nbsnsrds10.pdf",
       "alpha0": [
         {
           "a1": 12.54882924, 

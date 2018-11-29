@@ -238,8 +238,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.346, 
       "acentric_units": "-", 
-      "dipole_moment": 9.294e-01,  
+      "dipole_moment": 9.3e-01,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "http://www.stenutz.eu/chem/solv6.php?name=dimethyl%20carbonate",
       "alpha0": [
         {
           "a1": 4.9916462, 

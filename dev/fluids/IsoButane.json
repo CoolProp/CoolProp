@@ -259,8 +259,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.183531783208, 
       "acentric_units": "-", 
-      "dipole_moment": 1.000e-01,  
+      "dipole_moment": 0.132,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "NIST; https://cccbdb.nist.gov/diplistx.asp",
       "alpha0": [
         {
           "a1": 11.60865546, 
