@@ -301,6 +301,7 @@
       "acentric_units": "-", 
       "dipole_moment": 1.855e+00,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "http://www.ethermo.us/ShowDetail1.htm; https://cccbdb.nist.gov/diplistx.asp",
       "alpha0": [
         {
           "a1": -8.3204464837497, 

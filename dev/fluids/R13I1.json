@@ -135,8 +135,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.17618111777018552, 
       "acentric_units": "-", 
-      "dipole_moment": 9.201e-01,  
+      "dipole_moment": 9.20e-01,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "http://www.ethermo.us/ShowDetail30.htm",
       "alpha0": [
         {
           "a1": 0, 

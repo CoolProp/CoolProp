@@ -240,6 +240,7 @@
       "acentric_units": "-", 
       "dipole_moment": 1.560e+00,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "https://www.gelest.com/product/dodecamethylcyclohexasiloxane/",
       "alpha0": [
         {
           "a1": -7.938561730464921, 

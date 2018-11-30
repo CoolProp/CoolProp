@@ -240,6 +240,7 @@
       "acentric_units": "-", 
       "dipole_moment": 1.851e+00,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "http://www.ethermo.us/ShowDetail39.htm",
       "alpha0": [
         {
           "a1": -4.867644116, 

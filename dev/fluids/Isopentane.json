@@ -255,6 +255,7 @@
       "acentric_units": "-", 
       "dipole_moment": 0.11,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "\"The Properties of Gases and Liquids\" 5th edition, Poling, Prausnitz, and O'Connell.",
       "alpha0": [
         {
           "a1": 2.5822330405, 

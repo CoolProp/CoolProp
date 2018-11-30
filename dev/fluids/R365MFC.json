@@ -240,6 +240,7 @@
       "acentric_units": "-", 
       "dipole_moment":  -1,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "No Reference Found",
       "alpha0": [
         {
           "a1": -16.3423704513, 

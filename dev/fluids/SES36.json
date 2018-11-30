@@ -279,6 +279,7 @@
       "acentric_units": "-", 
       "dipole_moment":  -1,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Undefined for mixtures; Mixture of R365mfc (1,1,1,3,3-Pentafluorobutane) and Galden HT 55 (Perfluoropolyether)",
       "alpha0": [
         {
           "a1": 0, 

@@ -240,6 +240,7 @@
       "acentric_units": "-", 
       "dipole_moment": 7.801e-01,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Commercial Gelest site: https://www.gelest.com/product/hexamethyldisiloxane-98/",
       "alpha0": [
         {
           "a1": 0, 
@@ -484,8 +485,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.418, 
       "acentric_units": "-", 
-      "dipole_moment": 7.801e-01,  
+      "dipole_moment": 0.78,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Commercial Gelest site: https://www.gelest.com/product/hexamethyldisiloxane-98/",
       "alpha0": [
         {
           "a1": 8.673203925289393, 

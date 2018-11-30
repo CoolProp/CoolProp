@@ -240,6 +240,7 @@
       "acentric_units": "-", 
       "dipole_moment": 8.001e-01,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Commercial Gelest site: https://www.gelest.com/product/octamethyltrisiloxane/",
       "alpha0": [
         {
           "a1": 117.9946064218, 
@@ -436,8 +437,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.5297, 
       "acentric_units": "-", 
-      "dipole_moment": 8.001e-01,  
+      "dipole_moment": 8.00e-01,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "Commercial Gelest site: https://www.gelest.com/product/octamethyltrisiloxane/",
       "alpha0": [
         {
           "a1": -7.468857958439935, 

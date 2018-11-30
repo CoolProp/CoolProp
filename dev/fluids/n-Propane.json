@@ -255,8 +255,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.1521, 
       "acentric_units": "-", 
-      "dipole_moment": 1.524e-01,  
+      "dipole_moment": 0.083,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "J. Chem. Phys. 33, 1514 (1960); https://doi.org/10.1063/1.1731434",
       "alpha0": [
         {
           "a1": -4.970583, 

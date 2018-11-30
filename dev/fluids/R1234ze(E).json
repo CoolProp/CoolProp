@@ -240,8 +240,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.313, 
       "acentric_units": "-", 
-      "dipole_moment":  -1,  
+      "dipole_moment":  1.27,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "https://nvlpubs.nist.gov/nistpubs/jres/117/jres.117.014.pdf",
       "alpha0": [
         {
           "a1": 0, 
@@ -460,8 +461,9 @@
       "Ttriple_units": "K", 
       "acentric": 0.313, 
       "acentric_units": "-", 
-      "dipole_moment":  -1,  
+      "dipole_moment":  1.27,  
       "dipole_moment_units": "Debye",  
+      "dipole_moment_ref": "https://nvlpubs.nist.gov/nistpubs/jres/117/jres.117.014.pdf",
       "alpha0": [
         {
           "a1": 0, 
