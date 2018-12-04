@@ -111,6 +111,11 @@ option (DARWIN_USE_LIBCPP
         "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
         OFF)
 
+# Add definitions to silence warnings in MSVC2017 related to shared ptr code.
+if (MSVC_VERSION GREATER_EQUAL 1910 AND MSVC_VERSION LESS_EQUAL 1919) # OR MSVC_TOOLSET_VERSION EQUAL 141)
+  add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING)
+endif (MSVC_VERSION GREATER_EQUAL 1910 AND MSVC_VERSION LESS_EQUAL 1919)
+
 IF ( COOLPROP_RELEASE AND COOLPROP_DEBUG )
   MESSAGE(FATAL_ERROR "You can only make a release OR and debug build.")
 ENDIF()
