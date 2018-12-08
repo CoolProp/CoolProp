@@ -168,7 +168,8 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
                 throw ValueError(format("fraction [%s] was not converted to a value between 0 and 1 inclusive", fraction.c_str()));
             }
 
-            if (f > 10*DBL_EPSILON)  // Only push component if fraction is positive and non-zero
+            if ((f > 10*DBL_EPSILON) ||  // Only push component if fraction is positive and non-zero
+                (pairs.size() == 1))     // ..or if there is only one fluid (i.e. INCOMP backend )
             {
                 // And add to vector
                 fractions.push_back(f);
