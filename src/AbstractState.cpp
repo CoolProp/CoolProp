@@ -54,8 +54,20 @@ void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenera
 
 class IF97BackendGenerator : public AbstractStateGenerator{
 public:
-    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
-        return new IF97Backend();
+    AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names) {
+        if (fluid_names.size() == 1) {           // Check that fluid_names[0] has only one component
+            std::string str = fluid_names[0];    // Check that the fluid name is an alias for "Water"
+            if ((upper(str) == "WATER") ||
+                (upper(str) == "H2O")) {
+                return new IF97Backend();
+            }
+            else {
+                throw ValueError(format("The IF97 backend returns Water props only; fluid name [%s] not allowed", fluid_names[0].c_str()));
+            }
+        }
+        else {
+            throw ValueError(format("The IF97 backend does not support mixtures, only Water"));
+        };
     };
 } ;
 // This static initialization will cause the generator to register
