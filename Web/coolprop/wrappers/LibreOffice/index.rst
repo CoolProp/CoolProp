@@ -8,26 +8,47 @@ LibreOffice Wrapper
 General Information
 -------------------
 
-The wrapper for LibreOffice uses the CoolProp python package on Linux and Windows systems. The template spreadsheet file :download:`LibreOffice_coolprop.ods` includes a python script and Basic macros to create the cell functions ``=PropsSI()`` and ``=PhaseSI()`` that wraps the appropriate functions from the underlying CoolProp python package.
+This is a LibreOffice extension, that makes the CoolProp High-Level Interface functions available in LibreOffice Calc. All functions and their parameters contains descriptions, that are available in the function wizard.
 
-In LibreOffice the macro security level must be changed to medium to allow the unsigned macros to run. At the medium security level a confirmation is required before executing macros from an opened file.
+The LibreOffice extension itself is platform-independent. In the background the extension uses the Python CoolProp package for all calculations. Thus, the CoolProp Python package must be installed for the Python interpreter that is used by LibreOffice.
 
-The Basic macros can be directly changed with the LibreOffice Basic editor. To change the included python script (e.g. to add more functions), unzip the ods-file, edit the file ``Scripts/python/coolprop.py``, compress the changed contents to a zip archive and change the file extension to ods.
+The extension contains a helper function to automate the installation of the Python package. This function installs the package inside the LibreOffice extension directory, e.g.::
 
+    # on Windows
+    C:\Users\user\AppData\Roaming\LibreOffice\4\user\uno_packages\cache\uno_packages\lu376486is.tmp_\CoolProp.oxt\pythonpath
 
-Linux
------
+    # on Linux
+    /home/user/.config/libreoffice/4/user/uno_packages/cache/uno_packages/lu18931y72pq5.tmp_/CoolProp.oxt/pythonpath
 
-1. On systems that split the LibreOffice package, install the necessary python script provider. On Ubuntu this can be done by::
+    # on macOS
+    /Users/user/Library/Application Support/LibreOffice/4/user/uno_packages/cache/uno_packages/lu104274oq0.tmp_/CoolProp.oxt/pythonpath
+
+Installation
+------------
+
+1. Download the CoolProp.oxt Extension for LibreOffice (don't rename the file) and the example spreadsheet file ``TestLibreOffice.ods`` from :sfdownloads:`LibreOffice`
+
+2. On Linux systems that split the LibreOffice package, install the necessary python script provider. On Ubuntu this can be done by::
 
     sudo apt-get install libreoffice-script-provider-python
 
-2. If the python package manager pip is not already installed on the system, then install it with the package manager, e.g.::
+3. Install the CoolProp Extension by double-clicking the oxt-file (install only for user)
 
-    # on Ubuntu LibreOffice uses python 3
-    sudo apt-get install python3-pip
+4. Test the installation with the ``TestLibreOffice.ods`` file
 
-3. Install CoolProp python package with pip:: 
+5. If the CoolProp functions don't work, install the CoolProp Python package:
+
+   a. In LibreOffice go to the menu Tools | Options | CoolProp | Installation
+   b. Click the „Install CoolProp“ button
+   c. The helper function checks if the CoolProp package is already installed. Otherwise it tries to download and install the Python package.
+
+6. Open the file ``TestLibreOffice.ods``. All CoolProp formulas should be working.
+
+
+Manual installation of the CoolProp Python package
+--------------------------------------------------
+
+Alternatively, you can also install the CoolProp Python package by yourself. If your LibreOffice installation uses the system Python (e.g. on Linux) then you can easily install the CoolProp Python package with pip::
 
     # system wide installation
     sudo pip3 install coolprop
@@ -35,27 +56,14 @@ Linux
     # install in user directory
     pip3 install coolprop --user
 
-4. Open the example file :download:`LibreOffice_coolprop.ods`
 
-
-Windows
--------
-
-1. Install LibreOffice from official installer (that already includes a bundled python)
-
-2. Check the python version bundled with Libreoffice from the install directory::
+Another options is to download the CoolProp Python package at pypi.org. First check which Python version is used be LibreOffice. On Windows LibreOffice contains a bundled Python interpreter::
  
     # e.g. c:\programs\LibreOffice\program\python-core-3.5.5 --> python 3.5
 
-3. Download coolprop wheel file for that python version from::
 
-    # choose win32 or amd64 depending on the used LibreOffice installer
-    # e.g. CoolProp-6.1.0-cp35-cp35m-win_amd64.whl for python 3.5 and 64bit LibreOffice
+Download the CoolProp wheel file for that python version from and unzip it to the ``pythonpath`` folder in the extension directory (please see above)::
+
+    # choose win32 or amd64 depending on your Python interpreter
+    # e.g. CoolProp-6.2.1-cp35-cp35m-win_amd64.whl for python 3.5 and 64bit LibreOffice
     https://pypi.org/project/CoolProp/#files
-
-4. Unzip that wheel file into the LibreOffice python site-packages directory::
-
-    # e.g. c:\programs\LibreOffice\program\python-core-3.5.5\lib\site-packages
-
-5. Open the example file :download:`LibreOffice_coolprop.ods`
-
