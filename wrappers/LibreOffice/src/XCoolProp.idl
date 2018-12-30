@@ -1,0 +1,15 @@
+#include <com/sun/star/uno/XInterface.idl>
+
+module org { module coolprop { module wrappers { module libreoffice { module CalcAddIn {
+
+    interface XCoolProp : com::sun::star::uno::XInterface
+    {
+        any PropsSI( [in] string Output, [in] string Name1, [in] double Prop1, [in] string Name2, [in] double Prop2, [in] string FluidName );
+        any Props1SI( [in] string FluidName, [in] string Output );
+        any PhaseSI( [in] string Name1, [in] double Prop1, [in] string Name2, [in] double Prop2, [in] string FluidName );
+        any HAPropsSI( [in] string Output, [in] string Name1, [in] double Prop1, [in] string Name2, [in] double Prop2, [in] string Name3, [in] double Prop3 );
+        any get_fluid_param_string( [in] string FluidName, [in] string ParamName );
+        sequence< sequence< any > > get_global_param_string( [in] string ParamName, [in] any Split );
+    };
+
+}; }; }; }; };

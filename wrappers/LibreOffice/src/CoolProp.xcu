@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="CalcAddIns" oor:package="org.openoffice.Office">
+  <node oor:name="AddInInfo">
+    <node oor:name="org.coolprop.wrappers.libreoffice.CalcAddIn" oor:op="replace">
+      <node oor:name="AddInFunctions">
+
+        <!-- BEGIN DESCRIPTION OF PROPSSI FUNCTION -->
+        <node oor:name="PropsSI" oor:op="replace">
+          <prop oor:name="DisplayName">
+            <value xml:lang="en">PropsSI</value>
+          </prop>
+
+          <prop oor:name="Description">
+            <value xml:lang="en">Calculate fluid properties for a given state from SI inputs</value>
+          </prop>
+
+          <node oor:name="Parameters">
+            <node oor:name="Output" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Output</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of output property (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Name1" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Name1</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of input property 1 (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Prop1" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Prop1</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Input property 1</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Name2" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Name2</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of input property 2 (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Prop2" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Prop2</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Input property 2</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="FluidName" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">FluidName</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of the fluid</value>
+              </prop>
+            </node>
+          </node>
+
+        </node>
+        <!-- END DESCRIPTION OF PROPSSI FUNCTION -->
+
+
+        <!-- BEGIN DESCRIPTION OF PROPS1SI FUNCTION -->
+        <node oor:name="Props1SI" oor:op="replace">
+          <prop oor:name="DisplayName">
+            <value xml:lang="en">Props1SI</value>
+          </prop>
+
+          <prop oor:name="Description">
+            <value xml:lang="en">Get trivial fluid properties (e.g. critical temperature)</value>
+          </prop>
+
+          <node oor:name="Parameters">
+            <node oor:name="FluidName" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">FluidName</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of the fluid</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Output" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Output</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of output property (string)</value>
+              </prop>
+            </node>
+          </node>
+
+        </node>
+        <!-- END DESCRIPTION OF PROPS1SI FUNCTION -->
+
+
+        <!-- BEGIN DESCRIPTION OF PHASESI FUNCTION -->
+        <node oor:name="PhaseSI" oor:op="replace">
+          <prop oor:name="DisplayName">
+            <value xml:lang="en">PhaseSI</value>
+          </prop>
+
+          <prop oor:name="Description">
+            <value xml:lang="en">Return the phase of a given state from SI inputs</value>
+          </prop>
+
+          <node oor:name="Parameters">
+            <node oor:name="Name1" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Name1</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of input property 1 (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Prop1" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Prop1</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Input property 1</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Name2" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Name2</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of input property 2 (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Prop2" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Prop2</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Input property 2</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="FluidName" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">FluidName</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of the fluid</value>
+              </prop>
+            </node>
+          </node>
+
+        </node>
+        <!-- END DESCRIPTION OF PHASESI FUNCTION -->
+
+
+        <!-- BEGIN DESCRIPTION OF HAPROPSSI FUNCTION -->
+        <node oor:name="HAPropsSI" oor:op="replace">
+          <prop oor:name="DisplayName">
+            <value xml:lang="en">HAPropsSI</value>
+          </prop>
+
+          <prop oor:name="Description">
+            <value xml:lang="en">Calculate properties of humid air from SI inputs</value>
+          </prop>
+
+          <node oor:name="Parameters">
+            <node oor:name="Output" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Output</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of output property (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Name1" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Name1</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of input property 1 (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Prop1" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Prop1</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Input property 1</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Name2" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Name2</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of input property 2 (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Prop2" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Prop2</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Input property 2</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Name3" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Name3</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of input property 3 (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Prop3" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Prop3</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Input property 3</value>
+              </prop>
+            </node>
+          </node>
+
+        </node>
+        <!-- END DESCRIPTION OF HAPROPSSI FUNCTION -->
+
+
+        <!-- BEGIN DESCRIPTION OF GET_FLUID_PARAM_STRING FUNCTION -->
+        <node oor:name="get_fluid_param_string" oor:op="replace">
+          <prop oor:name="DisplayName">
+            <value xml:lang="en">get_fluid_param_string</value>
+          </prop>
+
+          <prop oor:name="Description">
+            <value xml:lang="en">Get information about the fluid (e.g. CAS number)</value>
+          </prop>
+
+          <node oor:name="Parameters">
+            <node oor:name="FluidName" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">FluidName</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of the fluid</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="ParamName" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">ParamName</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of output parameter (string)</value>
+              </prop>
+            </node>
+          </node>
+
+        </node>
+        <!-- END DESCRIPTION OF GET_FLUID_PARAM_STRING FUNCTION -->
+
+
+        <!-- BEGIN DESCRIPTION OF GET_GLOBAL_PARAM_STRING FUNCTION -->
+        <node oor:name="get_global_param_string" oor:op="replace">
+          <prop oor:name="DisplayName">
+            <value xml:lang="en">get_global_param_string</value>
+          </prop>
+
+          <prop oor:name="Description">
+            <value xml:lang="en">Get global CoolProp information (e.g. list of all fluids)</value>
+          </prop>
+
+          <node oor:name="Parameters">
+            <node oor:name="ParamName" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">ParamName</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Name of output parameter (string)</value>
+              </prop>
+            </node>
+          </node>
+
+          <node oor:name="Parameters">
+            <node oor:name="Split" oor:op="replace">
+              <prop oor:name="DisplayName">
+                <value xml:lang="en">Split</value>
+              </prop>
+              <prop oor:name="Description">
+                <value xml:lang="en">Set to 1 to split string into column vector (use with array formula)</value>
+              </prop>
+            </node>
+          </node>
+
+        </node>
+        <!-- END DESCRIPTION OF GET_GLOBAL_PARAM_STRING FUNCTION -->
+
+      </node>
+    </node>
+  </node>
+</oor:component-data>
