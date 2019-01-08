@@ -2,6 +2,7 @@ from __future__ import print_function
 import platform
 import subprocess, shutil, os, sys, glob
 from distutils.version import LooseVersion
+from distutils.sysconfig import get_config_var
 
 
 def copy_files():
