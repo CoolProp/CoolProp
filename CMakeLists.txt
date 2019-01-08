@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-
 if (DEFINED COOLPROP_INSTALL_PREFIX)
     #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
@@ -11,32 +10,6 @@ endif()
 
 set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
 
-#######################################
-#         PROJECT INFORMATION         #
-#-------------------------------------#
-# This CMakeLists.txt file is for the #
-# CoolProp thermodynamic library      #
-# written by Ian Bell. The following  #
-# section contains project and        #
-# version information.                #
-#######################################
-
-# Project name
-set(project_name "CoolProp")
-set(app_name ${project_name})
-project(${project_name})
-
-# Project version
-set (COOLPROP_VERSION_MAJOR 6)
-set (COOLPROP_VERSION_MINOR 2)
-set (COOLPROP_VERSION_PATCH 2dev)
-set (COOLPROP_VERSION_REVISION)
-set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
-message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
-
-string ( TIMESTAMP COOLPROP_YEAR 2010-%Y )
-#set ( COOLPROP_YEAR "2010-2016" )
-set ( COOLPROP_PUBLISHER "The CoolProp developers")
 
 #######################################
 #           BUILD OPTIONS             #
@@ -110,6 +83,64 @@ option (COOLPROP_MSVC_DEBUG
 option (DARWIN_USE_LIBCPP
         "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
         ON)
+
+# see 
+# https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
+# https://github.com/pandas-dev/pandas/pull/24274/files
+# https://github.com/explosion/thinc/pull/84/files
+# https://github.com/jlfaucher/builder/commit/d144d3a695949f90c5e2acff4dfd94fdcf8dcdfa
+# https://github.com/CoolProp/CoolProp/issues/1778
+# https://gitlab.kitware.com/cmake/cmake/issues/18396
+
+if(DARWIN_USE_LIBCPP)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
+  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libc++")
+  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.9")
+  set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lc++")
+  set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -nodefaultlibs")
+  set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+else(DARWIN_USE_LIBCPP)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.5" CACHE STRING "Minimum OS X deployment version") # Default is 10.7
+  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libstdc++")
+  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.5")
+  set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lstdc++")
+  set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
+endif(DARWIN_USE_LIBCPP)
+
+#if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+#  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${OSX_COMPILE_FLAGS}")
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}${OSX_COMPILE_FLAGS}")
+#endif()
+# Alternatively you could use 
+# set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
+# set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
+
+#######################################
+#         PROJECT INFORMATION         #
+#-------------------------------------#
+# This CMakeLists.txt file is for the #
+# CoolProp thermodynamic library      #
+# written by Ian Bell. The following  #
+# section contains project and        #
+# version information.                #
+#######################################
+
+# Project name
+set(project_name "CoolProp")
+set(app_name ${project_name})
+project(${project_name})
+
+# Project version
+set (COOLPROP_VERSION_MAJOR 6)
+set (COOLPROP_VERSION_MINOR 2)
+set (COOLPROP_VERSION_PATCH 2dev)
+set (COOLPROP_VERSION_REVISION)
+set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
+message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
+
+string ( TIMESTAMP COOLPROP_YEAR 2010-%Y )
+#set ( COOLPROP_YEAR "2010-2016" )
+set ( COOLPROP_PUBLISHER "The CoolProp developers")
 
 # Add definitions to silence warnings in MSVC2017 related to shared ptr code.
 #if (MSVC_VERSION GREATER_EQUAL 1910 AND MSVC_VERSION LESS_EQUAL 1919) # OR MSVC_TOOLSET_VERSION EQUAL 141) # This requuires CMake >= 3.7
@@ -416,35 +447,19 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
   ENDIF()
 
-  # For Mac systems
-  IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-      IF (DARWIN_USE_LIBCPP)
-        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.9")
-        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -lc++ -nodefaultlibs")
-      ELSE()
-        # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libstdc++ -mmacosx-version-min=10.6")
-        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -lstdc++")
-      ENDIF()
-  ENDIF()
-
   target_link_libraries (${LIB_NAME} ${CMAKE_DL_LIBS})
 
-  # For windows systems
-
-  # Bug workaround for Eigen
+  # For windows systems, bug workaround for Eigen
   IF (MSVC90)
     MESSAGE(STATUS "EIGEN WORKAROUND ACTIVE!!")
     SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEIGEN_DONT_VECTORIZE")
   ENDIF()
-  #
-  # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-  if (${COOLPROP_OSX_105_COMPATIBILITY})
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
-      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
-    endif()
-  endif()
+
+  # For mac systems, explicitly set the c++ libraries
+  #if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  #  set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${OSX_COMPILE_FLAGS}")
+  #  set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${OSX_LINK_FLAGS}")
+  #endif()
 
   # Name mangling settings
   IF(COOLPROP_EXTERNC_LIBRARY)
@@ -844,10 +859,10 @@ if (COOLPROP_OCTAVE_MODULE)
     string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     STRING(LENGTH "${COOLPROP_OCTAVE_USING_CLANG}" LEN)
     if (${LEN} GREATER 0)
-      message(STATUS "Using -stdlib=libc++")
+      message(STATUS "Using -stdlib=libc++, this might override the settings based on DARWIN_USE_LIBCPP")
       SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
     else()
-      message(STATUS "Using -stdlib=libstdc++")
+      message(STATUS "Using -stdlib=libstdc++, this might override the settings based on DARWIN_USE_LIBCPP")
       SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
     endif()
   endif()
@@ -1336,12 +1351,6 @@ if (COOLPROP_MATLAB_SWIG_MODULE)
             SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
         endif()
     endif()
-  endif()
-
-  # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -DEXTERNC -DCONVENTION= -m32")
-    #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32")
   endif()
 
   if (UNIX AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
