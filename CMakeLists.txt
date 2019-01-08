@@ -109,7 +109,7 @@ option (COOLPROP_MSVC_DEBUG
        
 option (DARWIN_USE_LIBCPP
         "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
-        OFF)
+        ON)
 
 # Add definitions to silence warnings in MSVC2017 related to shared ptr code.
 #if (MSVC_VERSION GREATER_EQUAL 1910 AND MSVC_VERSION LESS_EQUAL 1919) # OR MSVC_TOOLSET_VERSION EQUAL 141) # This requuires CMake >= 3.7
@@ -415,8 +415,8 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
     # For Mac systems
     IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
         IF (DARWIN_USE_LIBCPP)
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.6")
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.6")
+          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.9")
+          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.9")
         ELSE()
           # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
           SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libstdc++ -mmacosx-version-min=10.6")
