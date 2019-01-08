@@ -412,19 +412,20 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
       SET_PROPERTY (TARGET ${LIB_NAME} PROPERTY VERSION ${COOLPROP_VERSION})
       SET_PROPERTY (TARGET ${LIB_NAME} PROPERTY SOVERSION ${COOLPROP_VERSION_MAJOR})
     ENDIF()
-    # For Mac systems
-    IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-        IF (DARWIN_USE_LIBCPP)
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.9")
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.9")
-        ELSE()
-          # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libstdc++ -mmacosx-version-min=10.6")
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -stdlib=libstdc++ -mmacosx-version-min=10.6")
-        ENDIF()
-    ENDIF()
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
+  ENDIF()
+
+  # For Mac systems
+  IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+      IF (DARWIN_USE_LIBCPP)
+        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.9")
+        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -lc++ -nodefaultlibs")
+      ELSE()
+        # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
+        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libstdc++ -mmacosx-version-min=10.6")
+        SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -lstdc++")
+      ENDIF()
   ENDIF()
 
   target_link_libraries (${LIB_NAME} ${CMAKE_DL_LIBS})
