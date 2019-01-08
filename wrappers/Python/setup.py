@@ -1,6 +1,7 @@
 from __future__ import print_function
 import platform
 import subprocess, shutil, os, sys, glob
+from distutils.version import LooseVersion
 
 
 def copy_files():
@@ -149,7 +150,19 @@ if __name__=='__main__':
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
 
         if 'darwin' in sys.platform:
-            cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+            #cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+            #
+            # see: https://github.com/pandas-dev/pandas/pull/24274/files
+            # For mac, ensure extensions are built for macos 10.9 when compiling on a
+            # 10.9 system or above, overriding distuitls behaviour which is to target
+            # the version that python was built for. This may be overridden by setting
+            # MACOSX_DEPLOYMENT_TARGET before calling setup.py
+            if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+                current_system = LooseVersion(platform.mac_ver()[0])
+                python_target = LooseVersion(
+                    get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+                if python_target < '10.9' and current_system >= '10.9':
+                    os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
         if 'linux' in sys.platform:
             cmake_config_args += ['-DCOOLPROP_FPIC=ON']
         #if sys.platform.startswith('win'):
