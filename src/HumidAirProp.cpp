@@ -1507,7 +1507,7 @@ void convert_from_SI(const std::string &Name, double &val)
         case GIVEN_COMPRESSIBILITY_FACTOR:
             return;
         case GIVEN_INVALID:
-            throw CoolProp::ValueError(format("invalid input to convert_to_SI"));
+            throw CoolProp::ValueError(format("invalid input to convert_from_SI"));
     }
 }
 double HAProps(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, const std::string &Input3Name, double Input3)
@@ -1637,7 +1637,7 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                        psi_w_sat = MoleFractionWater(T_dummy, p, GIVEN_HUMRAT, MainInputValue);
                 // Partial pressure of water, which is equal to f*p_{w_s}
                 double pp_water_sat = psi_w_sat*p;
-                // Assume unity enhancement factor, calculate guess for dewpoint temperature
+                // Assume unity enhancement factor, calculate guess for drybulb temperature
                 // for given water phase composition
                 if (pp_water_sat > Water->p_triple()){
                     T_min = IF97::Tsat97(pp_water_sat);
