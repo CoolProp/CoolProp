@@ -345,7 +345,15 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
     
     BrentSolverResids Resids(psi_w, p);
     
-    T = CoolProp::Secant(Resids, T_guess, 0.001*T_guess, 1e-7, 100);
+    try{
+        T = CoolProp::Secant(Resids, T_guess, 0.1, 1e-7, 100);
+        if (!ValidNumber(T)){
+            throw CoolProp::ValueError("Intermediate value for Tdb is invalid");
+        }
+    }
+    catch(std::exception &e){
+        T = CoolProp::Brent(Resids, 100, 640, 1e-15, 1e-10, 100);
+    }
     
     return T;
 }
@@ -1563,6 +1571,9 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                     // Find the value for W
                     double W_guess = 0.0001;
                     W = Secant_HAProps_W(p, T, othergiven, input_vals[other], W_guess);
+                    if (!ValidNumber(W)){
+                        throw CoolProp::ValueError("Iterative value for W is invalid");
+                    }
                 }
                 catch(...){
                     // Use the Brent's method solver to find W.  Slow but reliable
@@ -1614,10 +1625,13 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
         
         if (MainInputKey == GIVEN_RH){
             if (MainInputValue < 1e-10){
-                T_max = 1000;
+                T_max = 640;
                 // For wetbulb, has to be below critical temp
                 if (SecondaryInputKey == GIVEN_TWB || SecondaryInputKey == GIVEN_ENTHALPY){
-                    T_max = 600;
+                    T_max = 640;
+                }
+                if (SecondaryInputKey == GIVEN_TDP){
+                    throw CoolProp::ValueError("For dry air, dewpoint is an invalid input variable\n");
                 }
             }
             else{
