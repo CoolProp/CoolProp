@@ -208,7 +208,7 @@ if __name__=='__main__':
             STATIC_LIBRARY_BUILT = True
             static_library_path = os.path.dirname(static_libs[0])
 
-    else: #NOT USING_CMAKE
+    #else: #NOT USING_CMAKE
         #if 'darwin' in sys.platform:
         #    current_system = LooseVersion(platform.mac_ver()[0])
         #    print("OSX build detected for system {0}".format(current_system))
