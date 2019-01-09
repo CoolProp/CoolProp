@@ -1587,7 +1587,12 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
         else if ((key = get_input_key(input_keys, GIVEN_RH)) >= 0){} // Relative humidity is given
         else if ((key = get_input_key(input_keys, GIVEN_TDP)) >= 0){} // Dewpoint temperature is given
         else{
-            throw CoolProp::ValueError("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now\n");
+            throw CoolProp::ValueError("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now");
+        }
+        // Don't allow inputs that have two water inputs
+        int number_of_water_content_inputs = (get_input_key(input_keys, GIVEN_HUMRAT) >= 0) + (get_input_key(input_keys, GIVEN_RH) >= 0) + (get_input_key(input_keys, GIVEN_TDP) >= 0);
+        if (number_of_water_content_inputs > 1){
+            throw CoolProp::ValueError("Sorry, but cannot provide two inputs that are both water-content (humidity ratio, relative humidity, absolute humidity");
         }
         // 2-element vector
         long other = 1 - key;
