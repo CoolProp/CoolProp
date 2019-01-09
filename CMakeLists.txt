@@ -79,10 +79,10 @@ option (COOLPROP_MSVC_DYNAMIC
 option (COOLPROP_MSVC_DEBUG
        "Link the debug version of Microsoft Standard library to the debug builds."
        ON)
-       
-option (DARWIN_USE_LIBCPP
-        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
-        ON)
+
+#option (DARWIN_USE_LIBCPP
+#        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
+#        ON)
 
 # see 
 # https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
@@ -91,21 +91,22 @@ option (DARWIN_USE_LIBCPP
 # https://github.com/jlfaucher/builder/commit/d144d3a695949f90c5e2acff4dfd94fdcf8dcdfa
 # https://github.com/CoolProp/CoolProp/issues/1778
 # https://gitlab.kitware.com/cmake/cmake/issues/18396
-
-if(DARWIN_USE_LIBCPP)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
-  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libc++")
-  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.9")
-  set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lc++")
-  set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -nodefaultlibs")
-  set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
-else(DARWIN_USE_LIBCPP)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.5" CACHE STRING "Minimum OS X deployment version") # Default is 10.7
-  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libstdc++")
-  set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.5")
-  set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lstdc++")
-  set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
-endif(DARWIN_USE_LIBCPP)
+if (DEFINED DARWIN_USE_LIBCPP)
+  if(DARWIN_USE_LIBCPP)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libc++")
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.9")
+    set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lc++")
+    set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -nodefaultlibs")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+  else(DARWIN_USE_LIBCPP)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.5" CACHE STRING "Minimum OS X deployment version") # Default is 10.7
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libstdc++")
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.5")
+    set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lstdc++")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
+  endif(DARWIN_USE_LIBCPP)
+endif (DEFINED DARWIN_USE_LIBCPP)
 
 #if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 #  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${OSX_COMPILE_FLAGS}")
@@ -114,6 +115,7 @@ endif(DARWIN_USE_LIBCPP)
 # Alternatively you could use 
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
+
 
 #######################################
 #         PROJECT INFORMATION         #
@@ -457,8 +459,12 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
 
   # For mac systems, explicitly set the c++ libraries
   if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${OSX_COMPILE_FLAGS}")
-    set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${OSX_LINK_FLAGS}")
+    if(DEFINED OSX_COMPILE_FLAGS)
+      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${OSX_COMPILE_FLAGS}")
+    endif(DEFINED OSX_COMPILE_FLAGS)
+    if(DEFINED OSX_COMPILE_FLAGS)
+      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${OSX_LINK_FLAGS}")
+    endif(DEFINED OSX_COMPILE_FLAGS)
   endif()
 
   # Name mangling settings
