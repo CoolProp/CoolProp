@@ -216,7 +216,7 @@ if __name__=='__main__':
                 python_target = LooseVersion(
                     get_config_var('MACOSX_DEPLOYMENT_TARGET'))
                 if python_target < '10.9' and current_system >= '10.9':
-                    print("Cannot build for {0} on {0}, resetting target to 10.9".format(python_target, current_system))
+                    print("Cannot build for {0} on {1}, resetting target to 10.9".format(python_target, current_system))
                     os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
     # Check if a sdist build for pypi
