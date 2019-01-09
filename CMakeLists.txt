@@ -85,6 +85,7 @@ option (COOLPROP_MSVC_DEBUG
 #        ON)
 
 # see 
+# https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
 # https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
 # https://github.com/pandas-dev/pandas/pull/24274/files
 # https://github.com/explosion/thinc/pull/84/files
@@ -109,6 +110,13 @@ if (DEFINED DARWIN_USE_LIBCPP)
   message(STATUS "DARWIN_USE_LIBCPP was set added some flags:")
   message(STATUS "  OSX_COMPILE_FLAGS: ${OSX_COMPILE_FLAGS}")
   message(STATUS "     OSX_LINK_FLAGS: ${OSX_LINK_FLAGS}")
+else (DEFINED DARWIN_USE_LIBCPP)
+  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    message(STATUS "OSX build detected:")
+    message(STATUS "  You might want to pass the -DDARWIN_USE_LIBCPP=ON/OFF parameter")
+    message(STATUS "  to enable or disable different C++ standard libraries.")
+    message(STATUS "  You can also specify the environment variable MACOSX_DEPLOYMENT_TARGET=10.9 to force clang builds.")
+  endif ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 endif (DEFINED DARWIN_USE_LIBCPP)
 
 #if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")

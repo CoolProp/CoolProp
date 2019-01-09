@@ -209,15 +209,15 @@ if __name__=='__main__':
             static_library_path = os.path.dirname(static_libs[0])
 
     else: #NOT USING_CMAKE
-        if 'darwin' in sys.platform:
-            current_system = LooseVersion(platform.mac_ver()[0])
-            print("OSX build detected for system {0}".format(current_system))
-            if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-                python_target = LooseVersion(
-                    get_config_var('MACOSX_DEPLOYMENT_TARGET'))
-                if python_target < '10.9' and current_system >= '10.9':
-                    print("Cannot build for {0} on {1}, resetting target to 10.9".format(python_target, current_system))
-                    os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
+        #if 'darwin' in sys.platform:
+        #    current_system = LooseVersion(platform.mac_ver()[0])
+        #    print("OSX build detected for system {0}".format(current_system))
+        #    if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+        #        python_target = LooseVersion(
+        #            get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        #        if python_target < '10.9' and current_system >= '10.14':
+        #            print("Cannot build for {0} on {1}, resetting target to 10.9".format(python_target, current_system))
+        #            os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
 
     # Check if a sdist build for pypi
     pypi = os.path.exists('.use_this_directory_as_root')
