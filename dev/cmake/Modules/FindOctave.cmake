@@ -201,6 +201,8 @@ if (OCTAVE_CRUFT_LIBRARY)
 endif()
 				  
 message(STATUS "OCTAVE_VERSION=${OCTAVE_VERSION}" )
+message(STATUS "OCTAVE_OCTAVE_LIBRARY=${OCTAVE_OCTAVE_LIBRARY}")
+message(STATUS "OCTAVE_OCTINTERP_LIBRARY=${OCTAVE_OCTINTERP_LIBRARY}")
 message(STATUS "OCTAVE_CXXFLAGS=${_mkoctfile_cppflags}" )
 message(STATUS "OCTAVE_LINK_FLAGS=${_mkoctfile_ldflags}" )
 message(STATUS "OCTAVE_INCLUDE_DIRS=${_mkoctfile_includedir}")
