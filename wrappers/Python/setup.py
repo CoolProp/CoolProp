@@ -48,16 +48,21 @@ def recursive_collect_includes():
 
 if __name__=='__main__':
 
-    # Trying to change the standard library for C++
-    import platform
-    try:
-        macVersion = platform.mac_ver()[0].split('.')
-        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
-            os.environ["CC"] = "gcc"
-            os.environ["CXX"] = "g++"
-            print('switching compiler to g++ for OSX')
-    except:
-        pass
+    # Trying to change the standard library for C++ on OSX
+    #import sys
+    #if sys.platform == 'darwin':
+    #    import platform
+    #    try:
+    #        macVersion = platform.mac_ver()[0].split('.')
+    #        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 13:
+    #            # os.environ["CC"] = "gcc"
+    #            # os.environ["CXX"] = "g++"
+    #            os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
+    #            print('switching compiler to g++ for OSX')
+    #    except BaseException as BE:
+    #        print('Error setting OSX MACOSX_DEPLOYMENT_TARGET', str(BE))
+    #        pass
+    
 
     # ******************************
     #       CMAKE OPTIONS
@@ -175,10 +180,10 @@ if __name__=='__main__':
             #    #    cmake_config_args += ['-DCMAKE_OSX_DEPLOYMENT_TARGET=10.9']
             current_system = LooseVersion(platform.mac_ver()[0])
             print("OSX build detected for system {0}".format(current_system))
-            if current_system >= '10.9':
-                cmake_config_args += ["-DDARWIN_USE_LIBCPP=ON"]
-            else:
-                cmake_config_args += ["-DDARWIN_USE_LIBCPP=OFF"]
+            #if current_system >= '10.9':
+            #    cmake_config_args += ["-DDARWIN_USE_LIBCPP=ON"]
+            #else:
+            #    cmake_config_args += ["-DDARWIN_USE_LIBCPP=OFF"]
 
         if 'linux' in sys.platform:
             cmake_config_args += ['-DCOOLPROP_FPIC=ON']

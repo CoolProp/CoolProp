@@ -215,7 +215,12 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
             if (!alt_rp_name.empty()) {
                 loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
             } else {
-                loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                if (alt_rp_path.empty()){
+                    loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                }
+                else{
+                    loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                }
             }
 
             if (loaded_REFPROP) {
@@ -230,6 +235,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
                 printf("In case you do not use Windows, have a look at https://github.com/jowr/librefprop.so \n");
                 printf("to find instructions on how to compile your own version of the REFPROP library.\n\n");
                 printf("ALTERNATIVE_REFPROP_PATH: %s\n", alt_rp_path.c_str());
+                printf("ERROR: %s\n", err.c_str());
                 _REFPROP_supported = false;
                 return false;
             }

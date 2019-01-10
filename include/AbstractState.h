@@ -1146,6 +1146,7 @@ public:
 class AbstractStateGenerator{
 public:
     virtual AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names) = 0;
+    virtual ~AbstractStateGenerator() {};
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not
