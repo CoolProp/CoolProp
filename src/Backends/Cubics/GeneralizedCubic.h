@@ -94,6 +94,7 @@ public:
                   std::vector<double> C1 = std::vector<double>(),
                   std::vector<double> C2 = std::vector<double>(),
                   std::vector<double> C3 = std::vector<double>());
+    virtual ~AbstractCubic() {};
     /// Set the constants for the Mathias-Copeman alpha function, or if C1,C2,C3 are all empty, set the default alpha model
     void set_alpha(const std::vector<double> &C1, const std::vector<double> &C2, const std::vector<double> &C3);
     /// Set the alpha function for the i-th component
