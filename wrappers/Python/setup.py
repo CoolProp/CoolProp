@@ -58,7 +58,7 @@ if __name__=='__main__':
                 os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
                 print('switching compiler to g++ for OSX')
         except BaseException as BE:
-            print('Error setting OSX MACOSX_DEPLOYMENT_TARGET': str(BE))
+            print('Error setting OSX MACOSX_DEPLOYMENT_TARGET', str(BE))
             pass
 
     # ******************************
