@@ -216,7 +216,7 @@ bool REFPROPMixtureBackend::REFPROP_supported () {
                 loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
             } else {
                 if (alt_rp_path.empty()){
-                    load_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                    loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
                 }
                 else{
                     loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
