@@ -148,8 +148,8 @@ if __name__=='__main__':
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
 
-        if 'darwin' in sys.platform:
-            cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+        # if 'darwin' in sys.platform:
+        #     cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
         if 'linux' in sys.platform:
             cmake_config_args += ['-DCOOLPROP_FPIC=ON']
         #if sys.platform.startswith('win'):
