@@ -24,6 +24,7 @@ protected:
            sqrt_Tr_Tci;  ///< The sqrt of the (constant) reducing temperature divided by the critical temperature of the pure component
     std::vector<double> c; ///< The vector of constants
 public:
+    virtual AbstractCubicAlphaFunction() {};
     virtual double term(double tau, std::size_t itau) = 0;
     void set_Tr_over_Tci(double Tr_over_Tci){ this->Tr_over_Tci = Tr_over_Tci; this->sqrt_Tr_Tci = sqrt(Tr_over_Tci); };
     AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
