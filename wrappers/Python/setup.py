@@ -68,6 +68,7 @@ if __name__=='__main__':
             import subprocess
             cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "[[:digit:]].[[:digit:]].[[:digit:]]" | uniq | sort -r', shell=True, stdout=subprocess.PIPE)
             for line in cmd.stdout:
+                print(line)
                 if line.startswith("Configure with:"): continue
                 try:
                     osx_compiler = LooseVersion(line)
