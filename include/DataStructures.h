@@ -8,7 +8,7 @@
 #ifndef DATASTRUCTURES_H_
 #define DATASTRUCTURES_H_
 
-#include "CoolPropTools.h"
+#include "CPnumerics.h"
 #include "Exceptions.h"
 #include <map>
 namespace CoolProp {

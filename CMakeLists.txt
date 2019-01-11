@@ -957,6 +957,9 @@ if (COOLPROP_CSHARP_MODULE)
       modify_msvc_flags("/MT") # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
     endif()
   endif()
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(CoolProp PROPERTIES PREFIX "lib")
+  endif()
 
   add_dependencies (${app_name} generate_headers)
 
