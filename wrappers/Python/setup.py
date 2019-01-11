@@ -51,19 +51,30 @@ if __name__=='__main__':
     # #Handling the standard library for C++ on OSX
     #
     # This is mostly related to the compiler version, but since it is much
-    # easier to check the OSX version, we are going to use that as an
+    # easier to check the OSX version, we are may also use that as an
     # indicator. OSX 10.14 and XCode 10 completely dropped support for
     # libstdc++ which forces is to manipulate the minimum OSX target 
     # version when compiling the Cython extensions.
     if sys.platform == 'darwin':
-        osx_current = LooseVersion(platform.mac_ver()[0])
-        osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
-        print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_current))
-        # allow to override things manually
-        if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-            if python_target < "10.9" and current_system >= "10.14":
-                os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
-                print("Assuming that we cannot build for {0} on {1}, resetting target to {2}".format(osx_target, osx_current, os.environ['MACOSX_DEPLOYMENT_TARGET']))
+        USE_OSX_VERSION = False
+        if USE_OSX_VERSION:
+            osx_current = LooseVersion(platform.mac_ver()[0])
+            osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+            print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_current))
+            # allow to override things manually
+            if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+                if python_target < "10.9" and current_system >= "10.14":
+                    os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
+                    print("Assuming that we cannot build for {0} on {1}, resetting target to {2}".format(osx_target, osx_current, os.environ['MACOSX_DEPLOYMENT_TARGET']))
+        else:
+            import subprocess
+            cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "[[:digit:]].[[:digit:]].[[:digit:]]" | uniq | sort', shell=True, stdout=subprocess.PIPE)
+            for line in cmd.stdout:
+                try:
+                    osx_compiler = LooseVersion(line)
+                except BaseException as be:
+                    print('Error getting OSX compile version: ', str(be))
+                    pass
 
     # ******************************
     #       CMAKE OPTIONS
@@ -353,6 +364,7 @@ if __name__=='__main__':
                description = """Open-source thermodynamic and transport properties database""",
                packages = find_packages(),
                ext_modules = ext_modules,
+               cmdclass = {'build_ext': build_ext_subclass },
                package_dir = {'CoolProp':'CoolProp',},
                package_data = {'CoolProp':['*.pxd',
                                            'CoolPropBibTeXLibrary.bib',
