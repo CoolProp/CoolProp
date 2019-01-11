@@ -1520,7 +1520,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         _phase = iphase_liquid;
                     }
                     else{
-                        if (_T < Tm){
+                        if (_T < Tm-0.001){
                             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
                         }
                     }
@@ -1530,7 +1530,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         _phase = iphase_liquid;
                     }
                     else{
-                        if (_T < Tmin()){
+                        if (_T < Tmin()-0.001){
                             throw ValueError(format("For now, we don't support T [%g K] below Tmin(saturation) [%g K]", _T, Tmin()));
                         }
                     }
