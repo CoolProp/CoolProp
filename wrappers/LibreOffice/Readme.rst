@@ -1,12 +1,5 @@
-
-.. _LibreOffice:
-
-*******************
-LibreOffice Wrapper
-*******************
-
-General Information
--------------------
+CoolProp wrapper for LibreOffice
+================================
 
 This is a LibreOffice extension, that makes the CoolProp High-Level Interface functions available in LibreOffice Calc. All functions and their parameters contains descriptions, that are available in the function wizard.
 
@@ -23,10 +16,29 @@ The extension contains a helper function to automate the installation of the Pyt
     # on macOS
     /Users/user/Library/Application Support/LibreOffice/4/user/uno_packages/cache/uno_packages/lu104274oq0.tmp_/CoolProp.oxt/pythonpath
 
+
+Building the extension
+----------------------
+
+To build the extension, the LibreOffice SDK must be installed. The tools from the SDK are needed to rebuild the registry database file (rdb) after changing Interface functions. Besides this, building the extension mainly means packing all files into a zip archive.
+
+Run these commands from the CoolProp repository root directory with the correct paths set::
+
+    cmake -DCOOLPROP_LIBREOFFICE_MODULE=ON -DLO_PROGRAM_PATH=/usr/lib/libreoffice/program -DLO_SDK_PATH=/usr/lib/libreoffice/sdk
+    make CoolPropLibreOfficeAddin
+
+
+Dependencies (build only):
+
+* LibreOffice SDK
+* 7zip
+* pip (for downloading dependencies)
+
+
 Installation
 ------------
 
-1. Download the CoolProp.oxt Extension for LibreOffice (don't rename the file) and the example spreadsheet file ``TestLibreOffice.ods`` from :sfdownloads:`LibreOffice`
+1. Download the CoolProp.oxt Extension for LibreOffice (don't rename the file) and the example spreadsheet file ``TestLibreOffice.ods``
 
 2. On Linux systems that split the LibreOffice package, install the necessary python script provider. On Ubuntu this can be done by::
 
@@ -58,7 +70,7 @@ Alternatively, you can also install the CoolProp Python package by yourself. If 
 
 
 Another options is to download the CoolProp Python package at pypi.org. First check which Python version is used be LibreOffice. On Windows LibreOffice contains a bundled Python interpreter::
- 
+
     # e.g. c:\programs\LibreOffice\program\python-core-3.5.5 --> python 3.5
 
 
