@@ -247,8 +247,8 @@ if __name__=='__main__':
             profile = _profiling_enabled,
             embedsignature = True,
             language_level = 2,
-            c_string_type = unicode,
-            c_string_encoding = ascii
+            c_string_type = 'unicode',
+            c_string_encoding = 'ascii'
             )
 
     else:
