@@ -66,8 +66,9 @@ if __name__=='__main__':
             print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_version))
         else:
             import subprocess
-            cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "[[:digit:]].[[:digit:]].[[:digit:]]" | uniq | sort', shell=True, stdout=subprocess.PIPE)
+            cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "[[:digit:]].[[:digit:]].[[:digit:]]" | uniq | sort -r', shell=True, stdout=subprocess.PIPE)
             for line in cmd.stdout:
+                if line.startswith("Configure with:"): continue
                 try:
                     osx_compiler = LooseVersion(line)
                     if osx_compiler > "1" and osx_compiler < "100": break
