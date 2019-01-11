@@ -56,25 +56,34 @@ if __name__=='__main__':
     # libstdc++ which forces is to manipulate the minimum OSX target 
     # version when compiling the Cython extensions.
     if sys.platform == 'darwin':
+        osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        osx_compiler = LooseVersion('0.0')
+        osx_version = LooseVersion('0.0')
+        FORCE_TARGET = None
         USE_OSX_VERSION = False
         if USE_OSX_VERSION:
-            osx_current = LooseVersion(platform.mac_ver()[0])
-            osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
-            print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_current))
-            # allow to override things manually
-            if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-                if python_target < "10.9" and current_system >= "10.14":
-                    os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
-                    print("Assuming that we cannot build for {0} on {1}, resetting target to {2}".format(osx_target, osx_current, os.environ['MACOSX_DEPLOYMENT_TARGET']))
+            osx_version = LooseVersion(platform.mac_ver()[0])
+            print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_version))
         else:
             import subprocess
             cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "[[:digit:]].[[:digit:]].[[:digit:]]" | uniq | sort', shell=True, stdout=subprocess.PIPE)
             for line in cmd.stdout:
                 try:
                     osx_compiler = LooseVersion(line)
+                    if osx_compiler > "1" and osx_compiler < "100" break
                 except BaseException as be:
                     print('Error getting OSX compile version: ', str(be))
                     pass
+            print("OSX build detected, targetting {0} using clang/gcc v{1}.".format(osx_target, osx_compiler))
+
+        # allow to override things manually
+        if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+            if osx_version >= "10.14":
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
+                print("Assuming that we cannot build for {0} on {1}, resetting target to {2}".format(osx_target, osx_version, os.environ['MACOSX_DEPLOYMENT_TARGET']))
+            if osx_compiler >= "10":
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
+                print("Assuming that we cannot build for {0} using clang/gcc {1}, resetting target to {2}".format(osx_target, osx_compiler, os.environ['MACOSX_DEPLOYMENT_TARGET']))
 
     # ******************************
     #       CMAKE OPTIONS
