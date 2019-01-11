@@ -1546,6 +1546,56 @@ if (COOLPROP_PYTHON_PYPI)
                     )
 endif()
 
+if (COOLPROP_LIBREOFFICE_MODULE)
+
+  IF( "${LO_PROGRAM_PATH}" STREQUAL "")
+        message(FATAL_ERROR "You must provide the path to LibreOffice programs, something like -DLO_PROGRAM_PATH=/usr/lib/libreoffice/program")
+  else()
+        message(STATUS "LO_PROGRAM_PATH: ${LO_PROGRAM_PATH}")
+  endif()
+
+  IF( "${LO_SDK_PATH}" STREQUAL "")
+        message(FATAL_ERROR "You must provide the path to LibreOffice SDK, something like -DLO_SDK_PATH=/usr/lib/libreoffice/sdk")
+  else()
+        message(STATUS "LO_SDK_PATH: ${LO_SDK_PATH}")
+  endif()
+
+  add_custom_target(CoolPropLibreOfficeAddin)
+
+  # set paths for LibreOffice tools
+  set(LO_IDLC "${LO_SDK_PATH}/bin/idlc")
+  set(LO_REGMERGE "${LO_PROGRAM_PATH}/regmerge")
+  set(COOLPROP_LIBREOFFICE_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/LibreOffice")
+
+  # set version strings for LibreOffice extension
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/src/description.xml.in" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/description.xml")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/src/scripts/scripts.py.in" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/scripts/scripts.py")
+
+  add_custom_command(
+    TARGET CoolPropLibreOfficeAddin
+    # copy source files to build directory
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/src" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/description.xml.in" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/scripts/scripts.py.in"
+    # rebuild the registry database file (rdb)
+    COMMAND ${LO_IDLC} XCoolProp.idl -I. -I${LO_SDK_PATH}/idl -O. XCoolProp.idl
+		COMMAND ${LO_REGMERGE} XCoolProp.rdb /UCR XCoolProp.urd
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove" XCoolProp.urd
+    # download and bundle latest Python certifi package (py2.py3, platform independent)
+    COMMAND pip download certifi -d pythonpath
+    COMMAND 7z x "./pythonpath/certifi-*.whl" -y -opythonpath
+    # add license file
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/license"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/license/."
+    # package complete folder to extension
+    COMMAND 7z a -tzip "../CoolProp.oxt"
+    # copy example spreadsheet file
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/TestLibreOffice.ods" "${COOLPROP_LIBREOFFICE_TMP_DIR}/."
+    WORKING_DIRECTORY ${COOLPROP_LIBREOFFICE_TMP_DIR}/src
+    COMMENT "Building LibreOffice wrapper"
+    VERBATIM
+  )
+endif()
+
 if (COOLPROP_JAVASCRIPT_MODULE)
   # cmake -DCOOLPROP_JAVASCRIPT_MODULE=ON
   #       -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake

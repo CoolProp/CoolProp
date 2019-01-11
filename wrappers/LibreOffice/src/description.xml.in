@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<description
+ xmlns="http://openoffice.org/extensions/description/2006"
+ xmlns:d="http://openoffice.org/extensions/description/2006"
+ xmlns:l="http://libreoffice.org/extensions/description/2011"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <identifier value="org.coolprop.wrappers.libreoffice"/>
+  <version value="${COOLPROP_VERSION}"/>
+
+  <dependencies>
+    <l:LibreOffice-minimal-version value="4.0" d:name="LibreOffice 4.0"/>
+  </dependencies>
+
+  <display-name>
+    <name lang="en">CoolProp wrapper for LibreOffice</name>
+  </display-name>
+
+  <publisher>
+    <name lang="en">http://www.coolprop.org/</name>
+  </publisher>
+
+  <extension-description>
+    <src lang="en" xlink:href="pkg-desc/pkg-desc_en.txt"/>
+  </extension-description>
+
+  <registration>
+    <simple-license accept-by="admin" default-license-id="en" suppress-on-update="true">
+	  <license-text lang="en" license-id="en" xlink:href="license/LICENSE"/>
+    </simple-license>
+  </registration>
+
+</description>

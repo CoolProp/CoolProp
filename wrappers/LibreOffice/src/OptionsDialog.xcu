@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<oor:component-data oor:name="OptionsDialog" oor:package="org.openoffice.Office"
+  xmlns:oor="http://openoffice.org/2001/registry"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <!-- SHOW COOLPROP OPTIONS DIALOG IN CALC MODULE ONLY -->
+  <node oor:name="Modules">
+    <node oor:name="com.sun.star.sheet.SpreadsheetDocument" oor:op="fuse">
+      <node oor:name="Nodes">
+        <node oor:name="org.coolprop.wrappers.libreoffice.configuration" oor:op="fuse">
+        </node>
+      </node>
+    </node>
+  </node>
+
+  <!-- BEGIN OPTIONS DIALOG NODES -->
+  <node oor:name="Nodes">
+
+    <!-- MAIN COOLPROP OPTIONS ENTRY -->
+    <node oor:name="org.coolprop.wrappers.libreoffice.configuration" oor:op="fuse">
+      <prop oor:name="Id">
+        <value>org.coolprop.wrappers.libreoffice.configuration</value>
+      </prop>
+      <prop oor:name="Label">
+        <value xml:lang="en-US">CoolProp</value>
+      </prop>
+      <prop oor:name="OptionsPage">
+        <value>%origin%/dialogs/Configuration.xdl</value>
+      </prop>
+
+      <!-- BEGIN SUBMENU ENTRIES -->
+      <node oor:name="Leaves">
+
+        <!-- INSTALLATION SUBMENU -->
+        <node oor:name="org.coolprop.wrappers.libreoffice.configuration.installation" oor:op="fuse">
+          <prop oor:name="Id">
+            <value>org.coolprop.wrappers.libreoffice.configuration.installation</value>
+          </prop>
+          <prop oor:name="GroupId">
+            <value>org.coolprop.wrappers.libreoffice.configuration</value>
+          </prop>
+          <prop oor:name="GroupIndex">
+            <value>0</value>
+          </prop>
+          <prop oor:name="Label">
+            <value xml:lang="en-US">Installation</value>
+          </prop>
+          <prop oor:name="OptionsPage">
+            <value>%origin%/dialogs/InstallCoolProp.xdl</value>
+          </prop>
+        </node>
+
+      </node>
+      <!-- END SUBMENU ENTRIES -->
+
+    </node>
+  </node>
+  <!-- END OPTIONS DIALOG NODES -->
+
+</oor:component-data>
