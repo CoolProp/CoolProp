@@ -2474,7 +2474,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
 
     try{
-        double rhomolar = rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 20);
+        double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 20);
         if (!ValidNumber(rhomolar) || rhomolar < 0) {
             throw ValueError();
         }
