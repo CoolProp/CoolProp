@@ -2,7 +2,7 @@ from __future__ import print_function
 import subprocess, os
 from example_generator import *
 import shutil
-
+import codecs
 
 def tee_call(call, file, **kwargs):
     callee = subprocess.Popen(call,
@@ -11,16 +11,14 @@ def tee_call(call, file, **kwargs):
                            **kwargs)
     stdout, stderr = callee.communicate()
     print(stdout, stderr)
-    file.write(stdout)
-    file.write(stderr)
-    if callee.poll() != 0:
-        raise ValueError('Return code is non-zero')
-
+    file.write(stdout.decode('utf-8'))
+    file.write(stderr.decode('utf-8'))
+    #if callee.poll() != 0:
+    #    raise ValueError('Return code is non-zero')
 
 def copyfiles(lang, ext):
     shutil.copy2(lang+'/Example.'+ext,'../../../Web/coolprop/wrappers/'+lang+'/Example.'+ext)
     shutil.copy2(lang+'/Example.out','../../../Web/coolprop/wrappers/'+lang+'/Example.out')
-
 
 if __name__=='__main__':
 
@@ -33,8 +31,8 @@ if __name__=='__main__':
     P = Python()
     code = P.parse()
     P.write('Python/Example.py', code)
-    with open('Python/Example.out','w') as fp:
-        tee_call(r'python Example.py', fp, shell = True, cwd = 'Python')
+    with codecs.open('Python/Example.out','w',encoding='utf-8') as fp:
+        tee_call('python Example.py', fp, shell = True, cwd = 'Python')
     copyfiles('Python','py')
 
     if not os.path.exists('Octave'): os.mkdir('Octave')
@@ -43,7 +41,7 @@ if __name__=='__main__':
     kwargs = dict(stdout = sys.stdout, stderr = sys.stderr, shell = True, cwd = 'Octave')
     subprocess.check_call('cmake ../../../.. -DCOOLPROP_OCTAVE_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
-    with open('Octave/Example.out','w') as fp:
+    with codecs.open('Octave/Example.out','w',encoding='utf-8') as fp:
         tee_call(r'octave Example.m', fp, shell = True, cwd = 'Octave')
     copyfiles('Octave','m')
 
@@ -54,7 +52,7 @@ if __name__=='__main__':
     subprocess.check_call('cmake ../../../.. -DCOOLPROP_JAVA_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
     subprocess.check_call(r'javac *.java', **kwargs)
-    with open('Java/Example.out','w') as fp:
+    with codecs.open('Java/Example.out','w',encoding='utf-8') as fp:
         tee_call(r'java Example', fp, shell = True, cwd = 'Java')
     copyfiles('Java','java')
 
@@ -65,7 +63,7 @@ if __name__=='__main__':
     subprocess.check_call('cmake ../../../.. -DCOOLPROP_CSHARP_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
     subprocess.check_call(r'mcs -out:Example *.cs', **kwargs)
-    with open('Csharp/Example.out','w') as fp:
+    with codecs.open('Csharp/Example.out','w',encoding='utf-8') as fp:
         tee_call(r'mono Example', fp, shell = True, cwd = 'Csharp')
     copyfiles('Csharp','cs')
 
@@ -75,7 +73,7 @@ if __name__=='__main__':
     kwargs = dict(stdout = sys.stdout, stderr = sys.stderr, shell = True, cwd = 'R')
     subprocess.check_call('cmake ../../../.. -DCOOLPROP_R_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DR_BIN=/usr/local/bin', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
-    with open('R/Example.out','w') as fp:
+    with codecs.open('R/Example.out','w',encoding='utf-8') as fp:
         tee_call(r'DYLD_LIBRARY_PATH=/opt/refprop Rscript Example.R', fp, shell = True, cwd = 'R')
     copyfiles('R','R')
 
