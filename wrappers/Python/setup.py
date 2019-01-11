@@ -66,7 +66,7 @@ if __name__=='__main__':
             print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_version))
         else:
             import subprocess
-            cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "(\d+\.)+\d+" | uniq | sort', shell=True, stdout=subprocess.PIPE)
+            cmd = subprocess.Popen('gcc --version | grep clang | grep -o -E "(\d+\.)+\d+" | uniq | sort', shell=True, stdout=subprocess.PIPE)
             for line in cmd.stdout:
                 #print(line)
                 try: line = line.decode()
