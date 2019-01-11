@@ -1,6 +1,8 @@
 from __future__ import print_function
 import platform
 import subprocess, shutil, os, sys, glob
+from distutils.version import LooseVersion
+from distutils.sysconfig import get_config_var
 
 
 def copy_files():
@@ -46,20 +48,46 @@ def recursive_collect_includes():
 
 if __name__=='__main__':
 
-    # Trying to change the standard library for C++ on OSX
-    import sys
+    # #Handling the standard library for C++ on OSX
+    #
+    # This is mostly related to the compiler version, but since it is much
+    # easier to check the OSX version, we are may also use that as an
+    # indicator. OSX 10.14 and XCode 10 completely dropped support for
+    # libstdc++ which forces is to manipulate the minimum OSX target 
+    # version when compiling the Cython extensions.
     if sys.platform == 'darwin':
-        import platform
-        try:
-            macVersion = platform.mac_ver()[0].split('.')
-            if int(macVersion[0]) >= 10 and int(macVersion[1]) > 13:
-                # os.environ["CC"] = "gcc"
-                # os.environ["CXX"] = "g++"
+        osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        osx_compiler = LooseVersion('0.0')
+        osx_version = LooseVersion('0.0')
+        FORCE_TARGET = None
+        USE_OSX_VERSION = False
+        if USE_OSX_VERSION:
+            osx_version = LooseVersion(platform.mac_ver()[0])
+            print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_version))
+        else:
+            import subprocess
+            cmd = subprocess.Popen('gcc --version | grep clang | grep -o -E "(\d+\.)+\d+" | uniq | sort', shell=True, stdout=subprocess.PIPE)
+            for line in cmd.stdout:
+                #print(line)
+                try: line = line.decode()
+                except AttributeError: pass
+                line = line.strip()
+                try:
+                    osx_compiler = LooseVersion(line)
+                    if osx_compiler > "1.0" and osx_compiler < "100.0": break
+                except BaseException as be:
+                    print('Error getting OSX compile version: ', str(be))
+                    pass
+            print("OSX build detected, targetting {0} using clang/gcc v{1}.".format(osx_target, osx_compiler))
+
+        # allow to override things manually
+        if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+            if osx_version >= "10.14":
                 os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
-                print('switching compiler to g++ for OSX')
-        except BaseException as BE:
-            print('Error setting OSX MACOSX_DEPLOYMENT_TARGET', str(BE))
-            pass
+                print("Assuming that we cannot build for {0} on {1}, resetting target to {2}".format(osx_target, osx_version, os.environ['MACOSX_DEPLOYMENT_TARGET']))
+            if osx_compiler >= "10":
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
+                print("Assuming that we cannot build for {0} using clang/gcc {1}, resetting target to {2}".format(osx_target, osx_compiler, os.environ['MACOSX_DEPLOYMENT_TARGET']))
 
     # ******************************
     #       CMAKE OPTIONS
@@ -133,6 +161,14 @@ if __name__=='__main__':
                 cmake_config_args += ['-G','"Visual Studio 14 2015 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'vc15':
+            cmake_build_args = ['--config','"Release"']
+            if cmake_bitness == '32':
+                cmake_config_args += ['-G','"Visual Studio 15 2017"']
+            elif cmake_bitness == '64':
+                cmake_config_args += ['-G','"Visual Studio 15 2017 Win64"']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'mingw':
             cmake_config_args = ['-G','"MinGW Makefiles"']
             if cmake_bitness == '32':
@@ -152,8 +188,14 @@ if __name__=='__main__':
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
 
-        # if 'darwin' in sys.platform:
-        #     cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+        #if 'darwin' in sys.platform:
+        #    current_system = LooseVersion(platform.mac_ver()[0])
+        #    print("OSX build detected for system {0}".format(current_system))
+        #    #if current_system >= '10.9':
+        #    #    cmake_config_args += ["-DDARWIN_USE_LIBCPP=ON"]
+        #    #else:
+        #    #    cmake_config_args += ["-DDARWIN_USE_LIBCPP=OFF"]
+
         if 'linux' in sys.platform:
             cmake_config_args += ['-DCOOLPROP_FPIC=ON']
         #if sys.platform.startswith('win'):
@@ -204,25 +246,24 @@ if __name__=='__main__':
         except ImportError:
             raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
 
-        # Print out the version
-        print('Cython version: ', Cython.__version__)
+        # Handle different Cython versions
+        cython_version = LooseVersion(Cython.__version__)
+        print('Cython version: ', cython_version)
 
-        from pkg_resources import parse_version
-        if parse_version(Cython.__version__) < parse_version('0.20'):
-            raise ImportError('Your version of Cython (%s) must be >= 0.20 .  Please update your version of cython' % (Cython.__version__,))
-
-        if parse_version(Cython.__version__) >= parse_version('0.20'):
-            _profiling_enabled = True
-        else:
+        if cython_version < '0.20':
             _profiling_enabled = False
-
-        # use different compiler directives for Cython 0.26 or above
-        if parse_version(Cython.__version__) >= parse_version('0.26'):
-            cython_directives = dict(profile = _profiling_enabled,
-                                     embedsignature = True)
+            raise ImportError('Your version of Cython (%s) must be >= 0.20 .  Please update your version of cython' % (cython_version,))
         else:
-            cython_directives = dict(profile = _profiling_enabled,
-                                     embedsignature = True)
+            _profiling_enabled = True
+
+        cython_directives = dict(
+            profile = _profiling_enabled,
+            embedsignature = True,
+            language_level = 2,
+            c_string_type = 'unicode',
+            c_string_encoding = 'ascii'
+            )
+
     else:
         cython_directives = {}
 
