@@ -364,7 +364,6 @@ if __name__=='__main__':
                description = """Open-source thermodynamic and transport properties database""",
                packages = find_packages(),
                ext_modules = ext_modules,
-               cmdclass = {'build_ext': build_ext_subclass },
                package_dir = {'CoolProp':'CoolProp',},
                package_data = {'CoolProp':['*.pxd',
                                            'CoolPropBibTeXLibrary.bib',
