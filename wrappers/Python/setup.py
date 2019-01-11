@@ -68,9 +68,10 @@ if __name__=='__main__':
             import subprocess
             cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "(\d+\.)+\d+" | uniq | sort', shell=True, stdout=subprocess.PIPE)
             for line in cmd.stdout:
-                print(line)
+                #print(line)
                 try: line = line.decode()
                 except AttributeError: pass
+                line = line.strip()
                 try:
                     osx_compiler = LooseVersion(line)
                     if osx_compiler > "1.0" and osx_compiler < "100.0": break
