@@ -69,6 +69,8 @@ if __name__=='__main__':
             cmd = subprocess.Popen('gcc --version | head -n 1 | grep -o -E "[[:digit:]].[[:digit:]].[[:digit:]]" | uniq | sort', shell=True, stdout=subprocess.PIPE)
             for line in cmd.stdout:
                 print(line)
+                try: line = line.decode()
+                except AttributeError: pass
                 try:
                     osx_compiler = LooseVersion(line)
                     if osx_compiler > "1.0" and osx_compiler < "100.0": break
