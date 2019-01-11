@@ -70,7 +70,7 @@ if __name__=='__main__':
             for line in cmd.stdout:
                 try:
                     osx_compiler = LooseVersion(line)
-                    if osx_compiler > "1" and osx_compiler < "100" break
+                    if osx_compiler > "1" and osx_compiler < "100": break
                 except BaseException as be:
                     print('Error getting OSX compile version: ', str(be))
                     pass
