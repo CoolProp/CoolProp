@@ -7,7 +7,7 @@ RUN apt-get -y -m update && \
         r-base-dev \
         default-jre default-jdk \
         texlive-extra-utils \
-        imagemagick \
+        imagemagick
 ADD conda_environment.yml /environment.yml
 RUN conda env create -f /environment.yml
 
