@@ -4,8 +4,10 @@ RUN apt-get -y -m update && \
         g++ make cmake swig doxygen p7zip-full \
         mono-mcs \
         octave liboctave-dev \
-        r-base-dev\
-        default-jre default-jdk
+        r-base-dev \
+        default-jre default-jdk \
+        texlive-extra-utils \
+        imagemagick \
 ADD conda_environment.yml /environment.yml
 RUN conda env create -f /environment.yml
 
