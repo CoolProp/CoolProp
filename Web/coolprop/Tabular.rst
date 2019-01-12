@@ -151,7 +151,7 @@ A more complete comparison of the accuracy of these methods can be obtained by s
             errorTTSE = abs(rhoTTSE/rhoEOS-1)*100
             errorBICUBIC = abs(rhoBICUBIC/rhoEOS-1)*100
             if errorTTSE > 100 or errorTTSE < 1e-12:
-                print h, p, errorTTSE
+                print(h, p, errorTTSE)
 
             HHH1.append(h)
             PPP1.append(p)
@@ -162,7 +162,7 @@ A more complete comparison of the accuracy of these methods can be obtained by s
             EEE2.append(errorBICUBIC)
             
         except ValueError as VE:
-            print 'ERROR', VE
+            print('ERROR', VE)
             pass
         
     SC1 = ax1.scatter(HHH1, PPP1, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
