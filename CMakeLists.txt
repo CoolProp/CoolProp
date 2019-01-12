@@ -259,12 +259,6 @@ set(COOLPROP_INCLUDE_DIRECTORIES ${APP_INCLUDE_DIRS} CACHE LIST "List of include
 #######################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib" EXCLUDE_FROM_ALL)
-macro(add_fmt target)
-  target_link_libraries(${target} fmt::fmt)
-  set_property(TARGET fmt PROPERTY POSITION_INDEPENDENT_CODE ON) # https://stackoverflow.com/a/38297422
-endmacro()
-
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
 find_package (PythonInterp 2.7 REQUIRED)
 if(CMAKE_DL_LIBS)
@@ -467,7 +461,6 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   ENDIF()
 
   target_link_libraries (${LIB_NAME} ${CMAKE_DL_LIBS})
-  add_fmt(${LIB_NAME})
 
   # For windows systems, bug workaround for Eigen
   IF (MSVC90)
@@ -614,7 +607,6 @@ if (COOLPROP_PRIME_MODULE)
     add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
     include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
     target_link_libraries(CoolPropMathcadWrapper "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser.lib")
-    add_fmt(CoolPropMathcadWrapper)
     SET_TARGET_PROPERTIES(CoolPropMathcadWrapper PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
     add_dependencies (CoolPropMathcadWrapper generate_headers)
     set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
@@ -636,7 +628,6 @@ if (COOLPROP_MATHCAD15_MODULE)
     add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
     include_directories("${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/include")
     target_link_libraries(CoolPropMathcadWrapper "${COOLPROP_MATHCAD15_ROOT}/userefi/microsft/lib/mcaduser.lib")
-    add_fmt(CoolPropMathcadWrapper)
     SET_TARGET_PROPERTIES(CoolPropMathcadWrapper PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
     add_dependencies (CoolPropMathcadWrapper generate_headers)
     set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX "")
@@ -919,7 +910,6 @@ if (COOLPROP_OCTAVE_MODULE)
   else()
     SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIBRARIES})
   endif()
-  add_fmt(CoolProp)
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies (${app_name} generate_headers)
@@ -970,7 +960,6 @@ if (COOLPROP_CSHARP_MODULE)
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set_target_properties(CoolProp PROPERTIES PREFIX "lib")
   endif()
-  add_fmt(CoolProp)
 
   add_dependencies (${app_name} generate_headers)
 
@@ -1091,7 +1080,6 @@ if (COOLPROP_R_MODULE)
 
     SWIG_ADD_MODULE(CoolProp r ${I_FILE} ${APP_SOURCES})
     SWIG_LINK_LIBRARIES(CoolProp "${R_LIBRARY}")
-    add_fmt(CoolProp)
 
     # No lib prefix for the shared library
     set_target_properties(CoolProp PROPERTIES PREFIX "")
@@ -1150,7 +1138,6 @@ if (COOLPROP_JAVA_MODULE)
   if (NOT MSVC)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
   endif()
-  add_fmt(CoolProp)
 
   add_dependencies (${app_name} generate_headers)
 
@@ -1457,7 +1444,6 @@ if (COOLPROP_MY_MAIN)
   if(UNIX)
     target_link_libraries (Main ${CMAKE_DL_LIBS})
   endif()
-  add_fmt(Main)
 endif()
 
 
@@ -1486,7 +1472,6 @@ if (COOLPROP_MAIN_MODULE)
   if(UNIX)
     target_link_libraries (Main ${CMAKE_DL_LIBS})
   endif()
-  add_fmt(Main)
 endif()
 
 ###      COOLPROP TESTING APP       ###
@@ -1503,7 +1488,6 @@ if (COOLPROP_CATCH_MODULE)
   if(UNIX)
     target_link_libraries (CatchTestRunner ${CMAKE_DL_LIBS})
   endif()
-  add_fmt(CatchTestRunner)
   add_test(ProcedureTests CatchTestRunner)
 
   if (COOLPROP_IWYU)
@@ -1523,7 +1507,6 @@ if (COOLPROP_CPP_EXAMPLE_TEST)
   if(UNIX)
     target_link_libraries (docuTest.exe ${CMAKE_DL_LIBS})
   endif()
-  add_fmt(docuTest.exe)
   add_test(DocumentationTest docuTest.exe)
 endif()
 
@@ -1550,7 +1533,6 @@ if (COOLPROP_SNIPPETS)
     if(UNIX)
       target_link_libraries (${snippet_exe} ${CMAKE_DL_LIBS})
     endif()
-    add_fmt(${snippet_exe})
 
     if ( MSVC )
         set_target_properties( ${snippet_exe} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
@@ -1585,7 +1567,6 @@ if (COOLPROP_CLANG_ADDRESS_SANITIZER)
   if(UNIX)
     target_link_libraries (CatchTestRunner ${CMAKE_DL_LIBS})
   endif()
-  add_fmt(CatchTestRunner)
   add_custom_command(TARGET CatchTestRunner
                      POST_BUILD
                      COMMAND ${CMAKE_CURRENT_BINARY_DIR}/CatchTestRunner)
