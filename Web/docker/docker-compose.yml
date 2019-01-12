@@ -8,5 +8,5 @@ services:
     command: /coolprop/Web/docker/build_docs.sh
     volumes:
       - type: bind
-        source: ../
+        source: ../..
         target: /coolprop
