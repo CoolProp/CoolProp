@@ -1,0 +1,14 @@
+name: docs
+dependencies:
+  - python=3.6
+  - scipy
+  - numpy
+  - matplotlib
+  - ipython
+  - pip:
+    - cython
+    - sphinx
+    - sphinxcontrib-napoleon
+    - sphinxcontrib-doxylink
+    - sphinxcontrib-bibtex
+    - cloud_sptheme
