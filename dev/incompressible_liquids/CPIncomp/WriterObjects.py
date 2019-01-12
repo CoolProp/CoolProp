@@ -20,7 +20,7 @@ from CoolProp.BibtexParser import BibTeXerClass
 from warnings import warn
 
 # See: https://docs.python.org/2/library/csv.html#csv-examples
-import csv, codecs, cStringIO
+import csv, codecs, io
 
 
 class UTF8Recoder:
@@ -64,7 +64,7 @@ class UnicodeWriter:
 
     def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
         # Redirect output to a queue
-        self.queue = cStringIO.StringIO()
+        self.queue = io.StringIO()
         self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
         self.stream = f
         self.encoder = codecs.getincrementalencoder(encoding)()
