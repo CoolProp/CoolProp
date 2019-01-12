@@ -69,7 +69,7 @@ Issues Closed:
 * `#1323 <https://github.com/CoolProp/CoolProp/issues/1323>`_ : Added PQ and QT Input Pairs to provide Saturation Values to IF97 Backend
 * `#1322 <https://github.com/CoolProp/CoolProp/issues/1322>`_ : Bigger buffer size for Julia wrapper
 * `#1321 <https://github.com/CoolProp/CoolProp/issues/1321>`_ : Finally fix phase envelopes again
-* `#1320 <https://github.com/CoolProp/CoolProp/issues/1320>`_ : Figure out why catch runs take forever on *nix
+* `#1320 <https://github.com/CoolProp/CoolProp/issues/1320>`_ : Figure out why catch runs take forever on "*"nix
 * `#1319 <https://github.com/CoolProp/CoolProp/issues/1319>`_ : Fix python windows builds
 * `#1318 <https://github.com/CoolProp/CoolProp/issues/1318>`_ : Move entire Emscripten interface into its own file that is included separately
 * `#1317 <https://github.com/CoolProp/CoolProp/issues/1317>`_ : Loading HMX.BNC through the DLL yields weird behavior

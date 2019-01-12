@@ -33,4 +33,4 @@ for fluid in CoolProp.__fluids__:
     with open(file_path, 'w') as fp:
         fp.write(file_string)
     print('calling:', 'python "' + fluid + '.py"', 'in',plots_path)
-    subprocess.check_call('python "' + fluid + '.py"', cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr, shell = True)
+    subprocess.check_call('python -u "' + fluid + '.py"', cwd = plots_path, stdout = sys.stdout, stderr = sys.stderr, shell = True)
