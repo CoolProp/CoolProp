@@ -7,12 +7,12 @@
     #include <functional>
 
 #if !defined(NO_FMTLIB)
-    #ifndef FMT_HEADER_ONLY
-    #define FMT_HEADER_ONLY
-    #endif
+    //#ifndef FMT_HEADER_ONLY
+    //#define FMT_HEADER_ONLY
+    //#endif
     #include "fmt/format.h" // For addition of the string formatting functions and macros from fmtlib
     #include "fmt/printf.h" // For sprintf
-    #undef FMT_HEADER_ONLY
+    //#undef FMT_HEADER_ONLY
 #else
     #include <vector>
     #include <string>
