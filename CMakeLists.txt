@@ -970,6 +970,7 @@ if (COOLPROP_CSHARP_MODULE)
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set_target_properties(CoolProp PROPERTIES PREFIX "lib")
   endif()
+  add_fmt(CoolProp)
 
   add_dependencies (${app_name} generate_headers)
 
@@ -1149,6 +1150,7 @@ if (COOLPROP_JAVA_MODULE)
   if (NOT MSVC)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
   endif()
+  add_fmt(CoolProp)
 
   add_dependencies (${app_name} generate_headers)
 
