@@ -103,7 +103,7 @@ class BibTeXerClass(object):
         table = { ord(u'{'): None, ord(u'}'): None }
 
         if isinstance(text, str): # ordinary string
-            text = unicode(text)
+            pass
         elif isinstance(text, unicode): # unicode string
             pass
         else:
