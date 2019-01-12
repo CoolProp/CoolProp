@@ -5,11 +5,6 @@ CPWeb - A collection of commonly used routines to produce CoolProp's online docu
 """
 from __future__ import division, absolute_import, print_function
 
-import codecs
-import csv
-import cStringIO
-
-
 def get_version():
     return 5.0
 
