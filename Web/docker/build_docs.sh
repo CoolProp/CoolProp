@@ -18,9 +18,9 @@ cd /coolprop
 python -c "import CoolProp; print(CoolProp.__gitrevision__)"
 python -c "import CoolProp; print(CoolProp.__file__)"
 
-# Run the slow stuff
+# Run the slow stuff, if needed, or demanded
 cd /coolprop/Web/scripts
-python -u __init__.py False
+python -u __init__.py $1
 
 # Doxygen
 cd /coolprop
