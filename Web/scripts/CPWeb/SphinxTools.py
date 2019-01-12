@@ -151,7 +151,6 @@ class FluidInfoTableGenerator(object):
         pc = CoolProp.CoolProp.PropsSI(self.name,'pcrit')
         pt = CoolProp.CoolProp.PropsSI(self.name,'ptriple')
         if pt is None:
-            print(self.name)
             pt = "Unknown"
         Tmax = CoolProp.CoolProp.PropsSI(self.name,'Tmax')
         pmax = CoolProp.CoolProp.PropsSI(self.name,'pmax')
@@ -200,7 +199,6 @@ class FluidInfoTableGenerator(object):
                     ChemSpider_id = ChemSpider_id,
                     twoDurl = twoDurl
                     )
-        print(args)
         out = table_template.format(**args)
 
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
