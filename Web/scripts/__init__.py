@@ -96,7 +96,7 @@ def run_script(path):
         #file_name, file_extension = os.path.splitext(path)
 
         if file_extension.lower()=="py":
-            subprocess.check_call('python {0}'.format(file_name), cwd=file_path, shell=True)
+            subprocess.check_call('python -u {0}'.format(file_name), cwd=file_path, shell=True)
         elif file_extension.lower()=="sh" or file_extension.lower()=="bsh":
             subprocess.check_call('chmod +x {0}'.format(file_name), cwd=file_path, shell=True)
             subprocess.check_call('./{0}'.format(file_name), cwd=file_path, shell=True)
