@@ -1,5 +1,6 @@
 import CoolProp
 import os
+import codecs
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..'))
@@ -142,12 +143,16 @@ class FluidInfoTableGenerator(object):
                 n += '}`'
             else:
                 return n
+            return n
         molar_mass = CoolProp.CoolProp.PropsSI(self.name,'molemass')
         Tt = CoolProp.CoolProp.PropsSI(self.name,'Ttriple')
         Tc = CoolProp.CoolProp.PropsSI(self.name,'Tcrit')
         Tr = CoolProp.CoolProp.PropsSI(self.name,'T_reducing')
         pc = CoolProp.CoolProp.PropsSI(self.name,'pcrit')
         pt = CoolProp.CoolProp.PropsSI(self.name,'ptriple')
+        if pt is None:
+            print(self.name)
+            pt = "Unknown"
         Tmax = CoolProp.CoolProp.PropsSI(self.name,'Tmax')
         pmax = CoolProp.CoolProp.PropsSI(self.name,'pmax')
         acentric = CoolProp.CoolProp.PropsSI(self.name,'acentric')
@@ -195,6 +200,7 @@ class FluidInfoTableGenerator(object):
                     ChemSpider_id = ChemSpider_id,
                     twoDurl = twoDurl
                     )
+        print(args)
         out = table_template.format(**args)
 
         with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
@@ -227,6 +233,6 @@ class FluidGenerator(object):
                                     references = references
                                     )
 
-        with open(os.path.join(path, self.fluid+'.rst'), 'w') as fp:
+        with codecs.open(os.path.join(path, self.fluid+'.rst'), 'w', encoding='utf-8') as fp:
             print("writing %s" % os.path.join(path, self.fluid+'.rst'))
-            fp.write(out.encode('utf8'))
+            fp.write(out)
