@@ -342,7 +342,8 @@ if __name__=='__main__':
 
     if USE_CYTHON:
         common_args.update(dict(cython_c_in_temp = True,
-                                cython_directives = cython_directives
+                                cython_directives = cython_directives,
+                                define_macros = [('FMT_HEADER_ONLY', '1')] # For Python, rather than compiling FMT and linking in, just make FMT header only
                                 )
                            )
 
