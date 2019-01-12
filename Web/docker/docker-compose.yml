@@ -5,7 +5,7 @@ services:
     build:
       context: ./
       dockerfile: docworker.Dockerfile
-    command: /coolprop/Web/build_docs.sh
+    command: /coolprop/Web/docker/build_docs.sh
     volumes:
       - type: bind
         source: ../
