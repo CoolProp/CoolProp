@@ -1,5 +1,6 @@
 #!/bin/bash
 set -v
+set -e 
 
 # This script is intended to be run INSIDE the docker container, and
 # if all goes to plan, the _build/html folder should contain the contents
