@@ -13,3 +13,4 @@ dependencies:
     - sphinxcontrib-doxylink
     - sphinxcontrib-bibtex
     - cloud_sptheme
+    - openpyxl
