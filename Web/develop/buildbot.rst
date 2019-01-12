@@ -388,7 +388,7 @@ activate it using ``sudo systemctl start coolpropworker.service``.
 .. _workerscript:
 
 Buildbot worker management (Mac OS and Linux)
---------------------------------------------
+---------------------------------------------
 
 Note that the two examples above call a user-script to activate the virtual
 environment and start the buildbot worker. Such a script could look like this::
