@@ -1,5 +1,5 @@
 set -v
-set -e 
+set -e
 
 cat build_docs.sh
 
@@ -7,4 +7,4 @@ cat build_docs.sh
 cp -r ${HOME}/REFPROP_sources .
 
 # Run the build of the docs
-docker-compose up --build --exit-code-from worker
+docker-compose run worker bash /coolprop/Web/docker/build_docs.sh $1
