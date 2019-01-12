@@ -81,7 +81,7 @@ class BibTeXerClass(object):
         if encoding=="latex":
             for tag in self.library.entries:
                 entry = self.library.entries[tag]
-                for key, value in entry.fields.iteritems():
+                for key, value in six.iteritems(entry.fields):
                     entry.fields[key] = self.stripCurls(value)
                     if key == 'Title':
                         entry.fields[key] = u'{' + entry.fields[key] + '}'
