@@ -1,4 +1,5 @@
 set -v
+set -e 
 
 cat build_docs.sh
 
