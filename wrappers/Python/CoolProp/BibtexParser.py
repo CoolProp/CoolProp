@@ -104,8 +104,6 @@ class BibTeXerClass(object):
 
         if isinstance(text, str): # ordinary string
             pass
-        elif isinstance(text, unicode): # unicode string
-            pass
         else:
             try:
                 for k in text.keys():
