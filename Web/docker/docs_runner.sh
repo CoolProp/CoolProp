@@ -7,4 +7,4 @@ cat build_docs.sh
 cp -r ${HOME}/REFPROP_sources .
 
 # Run the build of the docs
-docker-compose up --build
+docker-compose up --build --exit-code-from worker
