@@ -50,7 +50,6 @@ def getErrors(p, h, out='D', Ref=''):
     return errorTTSE,errorBICUBIC
 
 
-
 #['YlOrRd', 'PuBuGn', 'hot', 'cubehelix', 'gnuplot', 'gnuplot2']:
 for colourmap in ['cubehelix']:
 

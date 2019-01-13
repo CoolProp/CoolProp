@@ -121,6 +121,7 @@ class SecCoolSolutionData(DigitalData):
 #            data = f(xOld,tOld)
 #        return data
 
+
     def fitFluid(self):
 
         if self.Tbase==None:
@@ -478,6 +479,7 @@ class SecCoolIceData(SecCoolSolutionData):
 #            pass
 
     # Redefine some functions to avoid data loss
+
     def getFile(self, data):
         return os.path.join(os.path.dirname(__file__), 'data','SecCool','xTables', self.sFolder, self.sFile+"_"+data+".csv")
 

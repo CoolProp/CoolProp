@@ -66,11 +66,14 @@ def split_pair_xy(pair):
     else:
         raise ValueError(pair)
 
+
 DEBUG_LEVEL = 1
+
 
 def myprint(level,*args,**kwargs):
     if level > DEBUG_LEVEL:
         print(*args, **kwargs)
+
 
 class ConsistencyFigure(object):
     def __init__(self, fluid, figsize = (15, 23), backend = 'HEOS', additional_skips = [], mole_fractions = None, p_limits_1phase = None, T_limits_1phase = None, NT_1phase = 40, Np_1phase = 40, NT_2phase = 20, NQ_2phase = 20):
@@ -311,7 +314,6 @@ class ConsistencyAxis(object):
         xkey = getattr(CP, 'i' + xparam)
         ykey = getattr(CP, 'i' + yparam)
 
-
         data = []
 
         if self.p_limits_1phase is not None:
@@ -496,6 +498,7 @@ class ConsistencyAxis(object):
             y = (ylims[0]*ylims[1])**0.5
 
         self.ax.text(x,y,'Not\nImplemented',ha='center',va ='center',bbox = dict(fc = 'white'))
+
 
 if __name__=='__main__':
     PVT = PdfPages('Consistency.pdf')

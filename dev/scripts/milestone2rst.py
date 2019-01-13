@@ -6,6 +6,7 @@ try:
 except ImportError:
     from urllib import urlopen
 
+
 def get_milestones(milestone):
     fname = milestone+'-milestones.json'
     if not os.path.exists(fname):
