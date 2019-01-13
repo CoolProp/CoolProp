@@ -15,7 +15,7 @@ with open('mixture_binary_pairs.json','r') as fp:
 
 CAS_pairs = []
 for pair in jj:
-    CAS_pairs.append( (pair['CAS1'],pair['CAS2']) )
+    CAS_pairs.append((pair['CAS1'],pair['CAS2']))
 
 for line in lines:
     Name1,Name2,betaT,gammaT,MARE,N = line.strip().split(' ')

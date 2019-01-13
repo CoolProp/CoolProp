@@ -2,7 +2,7 @@ import CoolProp
 import os
 import codecs
 
-web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
+web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 
 fluid_template = u""".. _fluid_{fluid:s}:
@@ -80,7 +80,7 @@ Reducing point temperature [K]; {Tr:s}
 Reducing point density [mol/m3]; {rhor_molar:s}
 """
 
-bibtex_keys = ['EOS','CP0','CONDUCTIVITY','VISCOSITY','MELTING_LINE','SURFACE_TENSION']
+bibtex_keys = ['EOS', 'CP0', 'CONDUCTIVITY', 'VISCOSITY', 'MELTING_LINE', 'SURFACE_TENSION']
 bibtex_map = {'EOS': 'Equation of State',
               'CP0': 'Ideal gas specific heat',
               'CONDUCTIVITY': 'Thermal Conductivity',
@@ -90,10 +90,10 @@ bibtex_map = {'EOS': 'Equation of State',
 
 from pybtex.database.input import bibtex
 parser = bibtex.Parser()
-bibdata = parser.parse_file(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
+bibdata = parser.parse_file(os.path.join(root_dir, "CoolPropBibTeXLibrary.bib"))
 
 from CoolProp.BibtexParser import BibTeXerClass
-BTC = BibTeXerClass(os.path.join(root_dir,"CoolPropBibTeXLibrary.bib"))
+BTC = BibTeXerClass(os.path.join(root_dir, "CoolPropBibTeXLibrary.bib"))
 
 # See http://stackoverflow.com/questions/19751402/does-pybtex-support-accent-special-characters-in-bib-file/19754245#19754245
 import pybtex
@@ -104,7 +104,7 @@ parser = pybtex.database.input.bibtex.Parser()
 
 def entry2html(entry):
     for e in entry:
-        return e.text.render(backend).replace('{','').replace('}','').replace('\n', ' ')
+        return e.text.render(backend).replace('{', '').replace('}', '').replace('\n', ' ')
 
 
 def generate_bibtex_string(fluid):
@@ -114,14 +114,14 @@ def generate_bibtex_string(fluid):
         sect_strings = []
         try:
             # get the item
-            bibtex_key = CoolProp.CoolProp.get_BibTeXKey(fluid,key).strip()
+            bibtex_key = CoolProp.CoolProp.get_BibTeXKey(fluid, key).strip()
             for thekey in bibtex_key.split(','):
                 if thekey.strip() in bibdata.entries.keys():
                     html = BTC.getEntry(key=thekey.strip(), fmt='html')
                     if len(sect_strings) == 0:
                         sect = bibtex_map[key]
-                        header_string = sect+'\n'+'-'*len(sect)+'\n\n'
-                    sect_strings.append('.. raw:: html\n\n   '+html+'\n\n')
+                        header_string = sect + '\n' + '-' * len(sect) + '\n\n'
+                    sect_strings.append('.. raw:: html\n\n   ' + html + '\n\n')
         except ValueError as E:
             print("error: %s" % E)
         string += header_string + '\n\n.. raw:: html\n\n    <br><br> \n\n'.join(sect_strings)
@@ -139,25 +139,25 @@ class FluidInfoTableGenerator(object):
             ''' convert number to nicely formatted string '''
             n = str(n)
             if 'e' in n:
-                n = n.replace('e',':math:`\times 10^{')
+                n = n.replace('e', ':math:`\times 10^{')
                 n += '}`'
             else:
                 return n
             return n
-        molar_mass = CoolProp.CoolProp.PropsSI(self.name,'molemass')
-        Tt = CoolProp.CoolProp.PropsSI(self.name,'Ttriple')
-        Tc = CoolProp.CoolProp.PropsSI(self.name,'Tcrit')
-        Tr = CoolProp.CoolProp.PropsSI(self.name,'T_reducing')
-        pc = CoolProp.CoolProp.PropsSI(self.name,'pcrit')
-        pt = CoolProp.CoolProp.PropsSI(self.name,'ptriple')
+        molar_mass = CoolProp.CoolProp.PropsSI(self.name, 'molemass')
+        Tt = CoolProp.CoolProp.PropsSI(self.name, 'Ttriple')
+        Tc = CoolProp.CoolProp.PropsSI(self.name, 'Tcrit')
+        Tr = CoolProp.CoolProp.PropsSI(self.name, 'T_reducing')
+        pc = CoolProp.CoolProp.PropsSI(self.name, 'pcrit')
+        pt = CoolProp.CoolProp.PropsSI(self.name, 'ptriple')
         if pt is None:
             pt = "Unknown"
-        Tmax = CoolProp.CoolProp.PropsSI(self.name,'Tmax')
-        pmax = CoolProp.CoolProp.PropsSI(self.name,'pmax')
-        acentric = CoolProp.CoolProp.PropsSI(self.name,'acentric')
-        rhoc_mass = CoolProp.CoolProp.PropsSI(self.name,'rhomass_critical')
-        rhoc_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_critical')
-        rhor_molar = CoolProp.CoolProp.PropsSI(self.name,'rhomolar_reducing')
+        Tmax = CoolProp.CoolProp.PropsSI(self.name, 'Tmax')
+        pmax = CoolProp.CoolProp.PropsSI(self.name, 'pmax')
+        acentric = CoolProp.CoolProp.PropsSI(self.name, 'acentric')
+        rhoc_mass = CoolProp.CoolProp.PropsSI(self.name, 'rhomass_critical')
+        rhoc_molar = CoolProp.CoolProp.PropsSI(self.name, 'rhomolar_critical')
+        rhor_molar = CoolProp.CoolProp.PropsSI(self.name, 'rhomolar_reducing')
 
         CAS = CoolProp.CoolProp.get_fluid_param_string(self.name, "CAS")
         ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE34")
@@ -166,7 +166,7 @@ class FluidInfoTableGenerator(object):
             formula = ':math:`' + formula + '`'
         else:
             formula = 'Not applicable'
-        formula = formula.replace('_{1}','')
+        formula = formula.replace('_{1}', '')
         InChI = CoolProp.CoolProp.get_fluid_param_string(self.name, "INCHI")
         InChiKey = CoolProp.CoolProp.get_fluid_param_string(self.name, "INCHIKEY")
         smiles = CoolProp.CoolProp.get_fluid_param_string(self.name, "SMILES")
@@ -176,33 +176,33 @@ class FluidInfoTableGenerator(object):
         # Generate (or not) the reducing data
         reducing_data = ''
         if abs(Tr - Tc) > 1e-3:
-            reducing_data = reducing_template.format(Tr = tos(Tr),
-                                                     rhor_molar = tos(rhor_molar))
+            reducing_data = reducing_template.format(Tr=tos(Tr),
+                                                     rhor_molar=tos(rhor_molar))
 
-        args = dict(mm = tos(molar_mass),
-                    Tt = tos(Tt),
-                    pt = tos(pt),
-                    Tc = tos(Tc),
-                    rhoc_mass = tos(rhoc_mass),
-                    rhoc_molar = tos(rhoc_molar),
-                    pc = tos(pc),
-                    acentric = tos(acentric),
-                    CAS = tos(CAS),
-                    ASHRAE = tos(ASHRAE),
-                    Tmax = tos(Tmax),
-                    pmax = tos(pmax),
-                    reducing_string = reducing_data,
-                    formula = formula,
-                    inchi = InChI,
-                    inchikey = InChiKey,
-                    smiles = smiles,
-                    ChemSpider_id = ChemSpider_id,
-                    twoDurl = twoDurl
+        args = dict(mm=tos(molar_mass),
+                    Tt=tos(Tt),
+                    pt=tos(pt),
+                    Tc=tos(Tc),
+                    rhoc_mass=tos(rhoc_mass),
+                    rhoc_molar=tos(rhoc_molar),
+                    pc=tos(pc),
+                    acentric=tos(acentric),
+                    CAS=tos(CAS),
+                    ASHRAE=tos(ASHRAE),
+                    Tmax=tos(Tmax),
+                    pmax=tos(pmax),
+                    reducing_string=reducing_data,
+                    formula=formula,
+                    inchi=InChI,
+                    inchikey=InChiKey,
+                    smiles=smiles,
+                    ChemSpider_id=ChemSpider_id,
+                    twoDurl=twoDurl
                     )
         out = table_template.format(**args)
 
-        with open(os.path.join(path, self.name+'-info.csv'),'w') as fp:
-            print("writing %s" % os.path.join(path, self.name+'-info.csv'))
+        with open(os.path.join(path, self.name + '-info.csv'), 'w') as fp:
+            print("writing %s" % os.path.join(path, self.name + '-info.csv'))
             fp.write(out)
 
 
@@ -218,19 +218,19 @@ class FluidGenerator(object):
 
         aliases = ', '.join(['``' + a.strip() + '``' for a in CoolProp.CoolProp.get_fluid_param_string(self.fluid, 'aliases').strip().split(',') if a])
         if aliases:
-            aliases = 'Aliases\n=======\n\n'+aliases + '\n'
+            aliases = 'Aliases\n=======\n\n' + aliases + '\n'
 
         references = generate_bibtex_string(self.fluid)
         if references:
-            references = 'References\n==========\n'+references+'\n'
+            references = 'References\n==========\n' + references + '\n'
 
         # Write RST file for fluid
-        out = fluid_template.format(aliases = aliases,
-                                    fluid = self.fluid,
-                                    fluid_stars = '*'*len(self.fluid),
-                                    references = references
+        out = fluid_template.format(aliases=aliases,
+                                    fluid=self.fluid,
+                                    fluid_stars='*' * len(self.fluid),
+                                    references=references
                                     )
 
-        with codecs.open(os.path.join(path, self.fluid+'.rst'), 'w', encoding='utf-8') as fp:
-            print("writing %s" % os.path.join(path, self.fluid+'.rst'))
+        with codecs.open(os.path.join(path, self.fluid + '.rst'), 'w', encoding='utf-8') as fp:
+            print("writing %s" % os.path.join(path, self.fluid + '.rst'))
             fp.write(out)

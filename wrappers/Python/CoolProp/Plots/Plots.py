@@ -105,7 +105,7 @@ class PropertyPlot(BasePlot):
         # make sense, does it?
         while len(inVal) > len(output) and digits < limit:
             digits += 1
-            val     = ( np.around(np.log10(np.abs(inVal))) * -1) + digits + 1
+            val     = (np.around(np.log10(np.abs(inVal))) * -1) + digits + 1
             val     = np.where(val < lim, val,  lim)
             val     = np.where(val >-lim, val, -lim)
             output  = np.zeros(inVal.shape)

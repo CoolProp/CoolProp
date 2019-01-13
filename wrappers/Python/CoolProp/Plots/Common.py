@@ -465,12 +465,12 @@ class IsoLine(Base2DObject):
     # Normally we calculate a sweep in x-dimensions, but
     # sometimes a sweep in y-dimensions is better.
     XY_SWITCH = {
-      CoolProp.iDmass: { Base2DObject.TS:True , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:True , Base2DObject.PD:None , Base2DObject.TD:None , Base2DObject.PT:False},
-      CoolProp.iHmass: { Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:None , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:False},
-      CoolProp.iP    : { Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:False, Base2DObject.PS:None , Base2DObject.PD:None , Base2DObject.TD:False, Base2DObject.PT:None },
-      CoolProp.iSmass: { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:None , Base2DObject.PS:None , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:True },
-      CoolProp.iT    : { Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:False, Base2DObject.PD:False, Base2DObject.TD:None , Base2DObject.PT:None },
-      CoolProp.iQ    : { Base2DObject.TS:True , Base2DObject.PH:True , Base2DObject.HS:True , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:True , Base2DObject.PT:False}
+      CoolProp.iDmass: {Base2DObject.TS:True , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:True , Base2DObject.PD:None , Base2DObject.TD:None , Base2DObject.PT:False},
+      CoolProp.iHmass: {Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:None , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:False},
+      CoolProp.iP    : {Base2DObject.TS:False, Base2DObject.PH:None , Base2DObject.HS:False, Base2DObject.PS:None , Base2DObject.PD:None , Base2DObject.TD:False, Base2DObject.PT:None},
+      CoolProp.iSmass: {Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:None , Base2DObject.PS:None , Base2DObject.PD:True , Base2DObject.TD:False, Base2DObject.PT:True},
+      CoolProp.iT    : {Base2DObject.TS:None , Base2DObject.PH:True , Base2DObject.HS:False, Base2DObject.PS:False, Base2DObject.PD:False, Base2DObject.TD:None , Base2DObject.PT:None},
+      CoolProp.iQ    : {Base2DObject.TS:True , Base2DObject.PH:True , Base2DObject.HS:True , Base2DObject.PS:True , Base2DObject.PD:True , Base2DObject.TD:True , Base2DObject.PT:False}
     }
 
     # Abort interpolation if there are not enough
@@ -616,8 +616,8 @@ class IsoLine(Base2DObject):
         ipos,xpos,ypos,pair = self.get_update_pair()
 
         order = [ipos,xpos,ypos]
-        idxs  = [v for (_,v) in sorted(zip(order,[self.i_index        , self.x_index , self.y_index ]))]
-        vals  = [v for (_,v) in sorted(zip(order,[np.array(self.value), xvals        , yvals        ]))]
+        idxs  = [v for (_,v) in sorted(zip(order,[self.i_index        , self.x_index , self.y_index]))]
+        vals  = [v for (_,v) in sorted(zip(order,[np.array(self.value), xvals        , yvals]))]
         if vals[0] is None or vals[1] is None:
             raise ValueError("One required input is missing, make sure to supply the correct xvals ({0:s}) or yvals ({1:s}).".format(str(xvals),str(yvals)))
 

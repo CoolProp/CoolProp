@@ -374,7 +374,7 @@ class SaturationTable(wx.Frame):
 
         #Add the headers
         for c in range(cols):
-            data += str(self.tbl.GetColLabelValue(c).replace('\n',' ') )
+            data += str(self.tbl.GetColLabelValue(c).replace('\n',' '))
             if c < cols - 1:
                 data += '\t'
         data = data + '\n'

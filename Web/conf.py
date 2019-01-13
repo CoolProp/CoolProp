@@ -20,12 +20,12 @@
 import CoolProp
 ver = CoolProp.__version__
 # The short X.Y version.
-version = ver.rsplit('.',1)[0]
+version = ver.rsplit('.', 1)[0]
 # The full version, including alpha/beta/rc tags.
 release = ver
 
 # Some hacking to determine release or nightly build
-if ver[-2]=="." and ver[-1].isdigit()>=0 and ver[-3].isdigit()>=0:
+if ver[-2] == "." and ver[-1].isdigit() >= 0 and ver[-3].isdigit() >= 0:
     isRelease = True
 else:
     isRelease = False
@@ -37,23 +37,23 @@ print("Public release  : %s" % "True" if isRelease else "False")
 print("")
 
 if isRelease:
-    extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/'+release+'/%s',''),
-                'sfnightly'  : ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s',''),
-                #'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
-                #'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
+    extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/' + release + '/%s', ''),
+                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', ''),
+                # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
+                # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
 else:
-    extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/'+release+'/%s',''),
-                'sfnightly'  : ('http://www.coolprop.dreamhosters.com/binaries/%s',''),
-                #'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
-                #'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
+    extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/' + release + '/%s', ''),
+                'sfnightly': ('http://www.coolprop.dreamhosters.com/binaries/%s', ''),
+                # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
+                # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
 
 import sys, os, datetime
 
-#~ # If your extensions are in another directory, add it here. If the directory
-#~ # is relative to the documentation root, use os.path.abspath to make it
-#~ # absolute, like shown here.
+# ~ # If your extensions are in another directory, add it here. If the directory
+# ~ # is relative to the documentation root, use os.path.abspath to make it
+# ~ # absolute, like shown here.
 #~ sys.path.append(os.path.abspath('sphinxext'))
 
 sys.path.insert(0, os.path.abspath('_ext'))
@@ -65,11 +65,11 @@ except ImportError:
 
 if isRelease:
     doxylink = {
-        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/_static/doxygen/html')
+        'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/_static/doxygen/html')
     }
 else:
     doxylink = {
-        'cpapi' : ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com/binaries/sphinx/_static/doxygen/html')
+        'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com/binaries/sphinx/_static/doxygen/html')
     }
 
 # -- General configuration -----------------------------------------------------
@@ -89,22 +89,22 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               'edit_on_github',  # see https://gist.github.com/mgedmin/6052926#file-edit_on_github-pyb
 
               # cloud's extensions
-            #'cloud_sptheme.ext.autodoc_sections',
+            # 'cloud_sptheme.ext.autodoc_sections',
             'cloud_sptheme.ext.index_styling',
             'cloud_sptheme.ext.relbar_toc',
-            #'cloud_sptheme.ext.escaped_samp_literals',
+            # 'cloud_sptheme.ext.escaped_samp_literals',
             'cloud_sptheme.ext.issue_tracker',
-            #'cloud_sptheme.ext.table_styling',
+            # 'cloud_sptheme.ext.table_styling',
 
-              #'inheritance_diagram',
-              #'numpydoc',
-              #'breathe'
+              # 'inheritance_diagram',
+              # 'numpydoc',
+              # 'breathe'
               ]
 
 # set path to issue tracker:
 issue_tracker_url = "gh:CoolProp/CoolProp"
 
-plot_formats = [('png',80),('.pdf')]
+plot_formats = [('png', 80), ('.pdf')]
 
 index_doc = "index"
 
@@ -144,7 +144,7 @@ copyright = u'2010-{0}, Ian H. Bell and the CoolProp Team'.format(d.year)
 
 # List of directories, relative to source directory, that shouldn't be searched
 # for source files.
-exclude_trees = ['_build','sphinxext']
+exclude_trees = ['_build', 'sphinxext']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -166,10 +166,10 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
-#This value selects what content will be inserted into the main body of an autoclass directive.
-#'class' - Only the class’ docstring is inserted. This is the default.
-#'init' - Only the __init__ method’s docstring is inserted.
-#'both' - Both the class’ and the __init__ method’s docstring are concatenated and inserted
+# This value selects what content will be inserted into the main body of an autoclass directive.
+# 'class' - Only the class’ docstring is inserted. This is the default.
+# 'init' - Only the __init__ method’s docstring is inserted.
+# 'both' - Both the class’ and the __init__ method’s docstring are concatenated and inserted
 autoclass_content = 'both'
 
 
@@ -195,8 +195,8 @@ html_theme = "cloud"
 html_theme_path = [csp.get_theme_dir()]
 
 # [optional] set some of the options listed above...
-html_theme_options = { "roottarget": "index",
-                       "max_width" : "13in",
+html_theme_options = {"roottarget": "index",
+                       "max_width": "13in",
                        "logotarget": "index",
                        "googleanalytics_id": "UA-53205480-2",
                        "default_layout_text_size": "85%"
@@ -210,7 +210,7 @@ edit_on_github_path_prefix = 'Web'
 # Sphinx are currently 'default' and 'sphinxdoc'.
 ## html_theme = 'sphinxdoc'
 
-## html_theme='nature'
+# html_theme='nature'
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths

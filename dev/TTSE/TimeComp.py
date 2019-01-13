@@ -247,8 +247,8 @@ def getPTRanges(propsfluid):
 
     if backend == "REFPROP":
         T_min = max(T_min,PropsSI('Ttriple',"T",0,"D",0,propsfluid))+1
-        p_min = PropsSI(  'P',"T",T_min,"Q",0,propsfluid)+1
-        p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)-1
+        p_min = PropsSI('P',"T",T_min,"Q",0,propsfluid)+1
+        p_max = PropsSI('pmax',"T",0,"D",0,propsfluid)-1
     elif backend == "INCOMP":
         p_min =   1.5*1e5
         p_max = 200.0*1e5
@@ -256,7 +256,7 @@ def getPTRanges(propsfluid):
         T_min = max(T_min,PropsSI('Ttriple',"T",0,"D",0,propsfluid))+1
         p_min = PropsSI('ptriple',"T",0,"D",0,propsfluid)
         p_min = max(p_min,PropsSI('pmin',"T",0,"D",0,propsfluid))+1
-        p_max = PropsSI(   'pmax',"T",0,"D",0,propsfluid)-1
+        p_max = PropsSI('pmax',"T",0,"D",0,propsfluid)-1
 
     # One more check to debug things:
     #p_min = max(p_min,0.01e5)
@@ -296,7 +296,7 @@ def getLists(propsfluid):
     while loop:
         count += 1
 
-        h_list = np.random.uniform(          h_min,          h_max,int(xypoints*2.0))
+        h_list = np.random.uniform(h_min,          h_max,int(xypoints*2.0))
         p_list = np.random.uniform(np.log10(p_min),np.log10(p_max),int(xypoints*2.0))
         p_list = np.power(10,p_list)
 
@@ -563,14 +563,14 @@ def getData(fld,backend,inp,out,fluidData):
         cData = fluidData[fld][backend][dkey]
         inputs1.append(cData[i1key])
         inputs2.append(cData[i2key])
-        values.append( cData[vkey] )
-        times.append(  cData[tkey] )
+        values.append(cData[vkey])
+        times.append(cData[tkey])
     ret = {}
     if len(inputs1)>0:
         ret[i1key] = np.concatenate(inputs1)
         ret[i2key] = np.concatenate(inputs2)
-        ret[vkey]  = np.concatenate(values )
-        ret[tkey]  = np.concatenate(times  )
+        ret[vkey]  = np.concatenate(values)
+        ret[tkey]  = np.concatenate(times)
     return ret
 
 
@@ -584,13 +584,13 @@ def getSingleData(fld,backend,key,fluidData):
                 #mask = fluidData[fld][backend][dkey]["P"]>0.3e5
                 mask = fluidData[fld][backend][dkey]["P"]>0.0e5
                 try:
-                    values.append( fluidData[fld][backend][dkey][key][mask] )
+                    values.append(fluidData[fld][backend][dkey][key][mask])
                 except Exception as e:
-                    values.append( fluidData[fld][backend][dkey][key] )
+                    values.append(fluidData[fld][backend][dkey][key])
                     print(e)
                     pass
             else:
-                values.append( fluidData[fld][backend][dkey][key] )
+                values.append(fluidData[fld][backend][dkey][key])
     if len(values)>0:
         if np.size(values[0])>1:
             return np.concatenate(values)
@@ -833,7 +833,7 @@ def axislabel(txt,ax,xPos,yPos=-1):
 #############################################################
 # The first plot contains the time data, this is averaged and
 # plotted as a bar graph with the standard deviation.
-hatchLst    = ["", "///"  ,"\\\\\\" ]
+hatchLst    = ["", "///"  ,"\\\\\\"]
 backendsLst = ["INCOMP","HEOS","REFPROP"]
 for fluidstr in fluids[:-1]:
     _,fld,_ = splitFluid(fluidstr)
@@ -1023,7 +1023,7 @@ for fluidstr in fluids[:-1]:
 
     ratio = 10.0/4.0 * y_max / 250.0 # height of 10 for 4 points if y_max==250
 
-    x_min = rects1[ 0].get_x()
+    x_min = rects1[0].get_x()
     x_max = rects1[-1].get_x() + dx
     x,y = range_brace(x_min, x_max)
     dy  = np.ceil(y_max_c/10.0)*10.0
@@ -1031,7 +1031,7 @@ for fluidstr in fluids[:-1]:
     ax1.plot(x, y, ls='-',color='k')
     ax1.text(np.mean(x), np.max(y), "const.", rotation=0, ha='center', va='bottom', fontsize='medium')
 
-    x_min = rects2[ 0].get_x()
+    x_min = rects2[0].get_x()
     x_max = rects2[-1].get_x() + dx
     x,y = range_brace(x_min, x_max)
     dy  = np.ceil(y_max_e/10.0)*10.0
@@ -1039,7 +1039,7 @@ for fluidstr in fluids[:-1]:
     ax1.plot(x, y, ls='-',color='k')
     ax1.text(np.mean(x), np.max(y), "explicit", rotation=0, ha='center', va='bottom', fontsize='medium')
 
-    x_min = rects3[ 0].get_x()
+    x_min = rects3[0].get_x()
     x_max = rects3[-1].get_x() + dx
     x,y = range_brace(x_min, x_max)
     dy  = np.ceil(y_max_i/100.0)*10
@@ -1344,8 +1344,8 @@ else:
     fg2 = plt.figure()
     ccycle = cycle(["b","g","r"])
 
-fg1.set_size_inches( (fg1.get_size_inches()[0]*1, fg1.get_size_inches()[1]*0.75) )
-fg2.set_size_inches( (fg2.get_size_inches()[0]*1, fg2.get_size_inches()[1]*0.75) )
+fg1.set_size_inches((fg1.get_size_inches()[0]*1, fg1.get_size_inches()[1]*0.75))
+fg2.set_size_inches((fg2.get_size_inches()[0]*1, fg2.get_size_inches()[1]*0.75))
 ccycle.next() # No incomp
 #
 #ax1 = fg.add_subplot(111)
@@ -1434,7 +1434,7 @@ for fluidstr in fluids:
             if backend!="INCOMP":
                 TP = {}
                 points = max(int(xypoints/2),250)
-                T_range_TP = np.linspace(PropsSI('Ttriple',"T",0,"D",0,propsfluid)+1,PropsSI(  'Tcrit',"T",0,"D",0,propsfluid)-0.1,points)
+                T_range_TP = np.linspace(PropsSI('Ttriple',"T",0,"D",0,propsfluid)+1,PropsSI('Tcrit',"T",0,"D",0,propsfluid)-0.1,points)
                 T_TP = np.append(T_range_TP,T_range_TP[::-1])
                 Q_TP = np.zeros_like(T_TP)
                 Q_TP[points:] = 1

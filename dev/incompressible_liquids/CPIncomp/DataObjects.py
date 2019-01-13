@@ -112,7 +112,7 @@ class SolutionData(object):
         if ((self.Tmin > T) or (T > self.Tmax)): raise ValueError("Your temperature {0} is not between {1} and {2}.".format(T, self.Tmin, self.Tmax))
         TF = 0.0
         if (self.T_freeze.type!=IncompressibleData.INCOMPRESSIBLE_NOT_SET): TF = self.Tfreeze(T, p, x)
-        if ( T<TF ): raise ValueError("Your temperature {0} is below the freezing point of {1}.".format(T, TF))
+        if (T<TF): raise ValueError("Your temperature {0} is below the freezing point of {1}.".format(T, TF))
         else: return True
         return False
 
@@ -242,7 +242,7 @@ class PureData(SolutionData):
         SolutionData.__init__(self)
         self.xbase = 0.0
         self.xid         = self.ifrac_pure
-        self.concentration.data       = np.array([     0 ]) # mass fraction
+        self.concentration.data       = np.array([0]) # mass fraction
 
     def reshapeData(self, dataArray, length):
         """
@@ -324,7 +324,7 @@ class DigitalData(SolutionData):
         # First we try to read the file
         if (not dataID is None and os.path.isfile(self.getFile(dataID))): # File found
             fileArray = self.getFromFile(dataID)
-            x = np.copy(fileArray[1:,0 ])
+            x = np.copy(fileArray[1:,0])
             y = np.copy(fileArray[0 ,1:])
             z = np.copy(fileArray[1:,1:])
         else:
@@ -369,7 +369,7 @@ class DigitalData(SolutionData):
         # Overwrite inputs
         x = x_in
         y = y_in
-        z = np.zeros( (len(x)+1,len(y)+1) )
+        z = np.zeros((len(x)+1,len(y)+1))
         r,c = z.shape
 
         if func is None: raise ValueError("Need a function to update the data file.")
@@ -377,7 +377,7 @@ class DigitalData(SolutionData):
         for i in range(r-1):
             for j in range(c-1):
                 z[i+1,j+1] = func(x[i],y[j])
-        z[0,0 ] = np.NaN
+        z[0,0] = np.NaN
         z[1:,0] = x
         z[0,1:] = y
 
@@ -503,23 +503,23 @@ class CoefficientData(SolutionData):
         tmp = np.zeros((18,5))
 
         for j in range(5):
-            tmp[ 0][j] = array[ 0][j]
-            tmp[ 1][j] = array[ 4][j]
-            tmp[ 2][j] = array[ 8][j]
-            tmp[ 3][j] = array[12][j]
-            tmp[ 4][j] = array[15][j]
-            tmp[ 5][j] = array[17][j]
-            tmp[ 6][j] = array[ 1][j]
-            tmp[ 7][j] = array[ 5][j]
-            tmp[ 8][j] = array[ 9][j]
-            tmp[ 9][j] = array[13][j]
+            tmp[0][j] = array[0][j]
+            tmp[1][j] = array[4][j]
+            tmp[2][j] = array[8][j]
+            tmp[3][j] = array[12][j]
+            tmp[4][j] = array[15][j]
+            tmp[5][j] = array[17][j]
+            tmp[6][j] = array[1][j]
+            tmp[7][j] = array[5][j]
+            tmp[8][j] = array[9][j]
+            tmp[9][j] = array[13][j]
             tmp[10][j] = array[16][j]
-            tmp[11][j] = array[ 2][j]
-            tmp[12][j] = array[ 6][j]
+            tmp[11][j] = array[2][j]
+            tmp[12][j] = array[6][j]
             tmp[13][j] = array[10][j]
             tmp[14][j] = array[14][j]
-            tmp[15][j] = array[ 3][j]
-            tmp[16][j] = array[ 7][j]
+            tmp[15][j] = array[3][j]
+            tmp[16][j] = array[7][j]
             tmp[17][j] = array[11][j]
 
         return tmp

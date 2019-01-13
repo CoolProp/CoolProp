@@ -113,7 +113,7 @@ for colourmap in ['jorrithelix']:
         isoT = np.array([0,100,200,300,400])+273.15
         isoP = np.logspace(np.log10(p_min),np.log10(p_max),base=10)
         ones = np.ones(isoP.shape)
-        isoH = [ CP.PropsSI('H','T',T*ones,'P',isoP,Ref) for T in isoT ]
+        isoH = [CP.PropsSI('H','T',T*ones,'P',isoP,Ref) for T in isoT]
 
         print("Lower left and upper right coordinates: ({0},{1}), ({2},{3})".format(h_min,p_min,h_max,p_max))
 
@@ -310,7 +310,7 @@ for colourmap in ['jorrithelix']:
         #plt.savefig(out+'_'+colourmap+'_TTSE_BICUBIC.eps')
         #    plt.savefig(out+'_'+colourmap+'_TTSE_BICUBIC.pdf')
         plt.tight_layout()
-        plt.savefig('check_TTSE_'+colourmap+'.pdf' )
+        plt.savefig('check_TTSE_'+colourmap+'.pdf')
         #tikz_save(  'check_TTSE.tikz')
         #plt.savefig(out+'_'+colourmap+'_TTSE_BICUBIC.jpg', dpi = 1200)
         plt.close()

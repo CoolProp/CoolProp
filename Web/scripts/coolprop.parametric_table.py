@@ -7,7 +7,7 @@ grouping2 = []
 for parameter in CoolProp.get('parameter_list').split(','):
 
     index = CoolProp.CoolProp.get_parameter_index(parameter)
-    units = CoolProp.CoolProp.get_parameter_information(index, 'units').replace('-',' ')
+    units = CoolProp.CoolProp.get_parameter_information(index, 'units').replace('-', ' ')
     IO = CoolProp.CoolProp.get_parameter_information(index, 'IO')
     long = CoolProp.CoolProp.get_parameter_information(index, 'long')
     short = CoolProp.CoolProp.get_parameter_information(index, 'short')
@@ -20,12 +20,12 @@ for parameter in CoolProp.get('parameter_list').split(','):
         grouping[RHS].append(parameter)
 
 for k, v in six.iteritems(grouping):
-    grouping2.append([', '.join(['``'+_+'``' for _ in v])] + list(k))
+    grouping2.append([', '.join(['``' + _ + '``' for _ in v])] + list(k))
 
-headers = ['Parameter','Units','Input/Output','Trivial','Description']
+headers = ['Parameter', 'Units', 'Input/Output', 'Trivial', 'Description']
 
-df3 = pandas.DataFrame(grouping2, columns = headers)
-df4 = df3.sort_values(by = ['Input/Output', 'Parameter'])
+df3 = pandas.DataFrame(grouping2, columns=headers)
+df4 = df3.sort_values(by=['Input/Output', 'Parameter'])
 grouping2 = [row for row in df4.values]
 
 N = []
@@ -36,8 +36,8 @@ for i in range(len(N)):
     if N[i] < len(headers[i]):
         N[i] = len(headers[i])
 
-top_line = '='*N[0] + ' ' + '='*N[1] + ' ' + '='*N[2] + ' ' + '='*N[3] + ' ' + '='*N[4]
-header = ' '.join([h.ljust(n) for h,n in zip(headers,N)])
+top_line = '=' * N[0] + ' ' + '=' * N[1] + ' ' + '=' * N[2] + ' ' + '=' * N[3] + ' ' + '=' * N[4]
+header = ' '.join([h.ljust(n) for h, n in zip(headers, N)])
 
 fp = open('../coolprop/parameter_table.rst.in', 'w')
 fp.write('.. constructed with the coolprop.parameter_table.py script in the web/scripts folder \n\n')
@@ -45,6 +45,6 @@ fp.write(top_line + '\n')
 fp.write(header + '\n')
 fp.write(top_line + '\n')
 for line in grouping2:
-    fp.write(' '.join([h.ljust(n) for h,n in zip(line,N)]) + '\n')
+    fp.write(' '.join([h.ljust(n) for h, n in zip(line, N)]) + '\n')
 fp.write(top_line + '\n')
 fp.close()

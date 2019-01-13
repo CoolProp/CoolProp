@@ -930,7 +930,7 @@ class SolutionDataWriter(object):
             if i==0:
                 myAnnotate('Source: ',refs[i],x=x,y=y); x += .0 #; y -= 2*dy
             elif i==1:
-                myAnnotate(   '     ',refs[i],x=x,y=y-dy); x += .0 #; y -= 2*dy
+                myAnnotate('     ',refs[i],x=x,y=y-dy); x += .0 #; y -= 2*dy
             else:
                 warn("Discarding all reference after the second line")
 
@@ -1145,7 +1145,7 @@ class SolutionDataWriter(object):
             if a.get_ylabel()==self.errLabel:
                 mi,ma = a.get_ylim()
                 if mi>-minAbsErrorScale: a.set_ylim(bottom=-minAbsErrorScale)
-                if ma< minAbsErrorScale: a.set_ylim(   top= minAbsErrorScale)
+                if ma< minAbsErrorScale: a.set_ylim(top= minAbsErrorScale)
             a.xaxis.set_major_locator(MaxNLocator(5))
             #a.yaxis.set_major_locator(MaxNLocator(7))
 
@@ -1305,7 +1305,7 @@ class SolutionDataWriter(object):
             header_flag = False
             if i == 0 or i == len(grid)-1: header_flag = True
             rst += self.normalize_row(row,max_cols)
-            rst += self.table_div(max_cols, header_flag )
+            rst += self.table_div(max_cols, header_flag)
         return rst
 
     def table_div(self, max_cols, header_flag=1, indent=2):
@@ -1588,7 +1588,7 @@ class SolutionDataWriter(object):
                     except: av = 0.0
                     #print("min: {0}({1}), avg: {2}, max: {3}({4})".format(c[k][mi],c["name"][mi],av,c[k][ma],c["name"][ma]),end="")
                     minLine.append("{0:5.3f} ({1:5s})".format(e[k][mi]*100.0,e["name"][mi]))
-                    avgLine.append("{0:5.3f}  {1:5s} ".format(      av*100.0,""))
+                    avgLine.append("{0:5.3f}  {1:5s} ".format(av*100.0,""))
                     maxLine.append("{0:5.3f} ({1:5s})".format(e[k][ma]*100.0,e["name"][ma]))
 
                     polyLine.append("{0:3d}".format(t[k].count(IncompressibleData.INCOMPRESSIBLE_POLYNOMIAL)))
