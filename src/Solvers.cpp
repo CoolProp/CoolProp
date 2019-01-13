@@ -290,7 +290,7 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
     #endif
 
     // Initialization
-    double x1=0,x2=0,x3=0,y1=0,y2=0,x,fval=999;
+    double x1=0,x2=0,x3=0,y1=0,y2=0,x=x0,fval=999;
     f->iter=1;
     f->errstring.clear();
     

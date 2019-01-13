@@ -76,7 +76,7 @@ void set_config_string(configuration_keys key, const std::string &val){
     if (key == ALTERNATIVE_REFPROP_PATH ||
         key == ALTERNATIVE_REFPROP_HMX_BNC_PATH ||
         key == ALTERNATIVE_REFPROP_LIBRARY_PATH) {
-        bool success = CoolProp::force_unload_REFPROP();
+        CoolProp::force_unload_REFPROP();
     }
 }
 

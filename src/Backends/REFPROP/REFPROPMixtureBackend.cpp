@@ -144,7 +144,7 @@ namespace CoolProp {
 class REFPROPGenerator : public AbstractStateGenerator{
 public:
     AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
-        bool REFPROP_is_supported = REFPROPMixtureBackend::REFPROP_supported ();
+        REFPROPMixtureBackend::REFPROP_supported ();
         if (fluid_names.size() == 1){
             return new REFPROPBackend(fluid_names[0]);
         }

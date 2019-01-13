@@ -416,6 +416,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                             case iP: guesses.p = IO[i][j]; break;
                             case iHmolar: guesses.hmolar = IO[i][j]; break;
                             case iSmolar: guesses.smolar = IO[i][j]; break;
+                            default: throw ValueError("Don't understand this parameter");
                             }
                         }
                         break;
