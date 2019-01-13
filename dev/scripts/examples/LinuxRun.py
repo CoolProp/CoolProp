@@ -4,6 +4,7 @@ from example_generator import *
 import shutil
 import codecs
 
+
 def tee_call(call, file, **kwargs):
     callee = subprocess.Popen(call,
                            stdout = subprocess.PIPE,
@@ -16,9 +17,11 @@ def tee_call(call, file, **kwargs):
     #if callee.poll() != 0:
     #    raise ValueError('Return code is non-zero')
 
+
 def copyfiles(lang, ext):
     shutil.copy2(lang+'/Example.'+ext,'../../../Web/coolprop/wrappers/'+lang+'/Example.'+ext)
     shutil.copy2(lang+'/Example.out','../../../Web/coolprop/wrappers/'+lang+'/Example.out')
+
 
 if __name__=='__main__':
 
