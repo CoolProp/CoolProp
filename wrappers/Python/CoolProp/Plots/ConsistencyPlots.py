@@ -462,7 +462,7 @@ class ConsistencyAxis(object):
                         if 'REFPROP' not in self.backend:
                             if self.state_QT.phase() != self.state.phase():
                                 myprint(1,'bad phase (2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_QT.phase())
-                                
+
                     else:
                         myprint(1,'Q',q)
                         myprint(1,'bad(2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), 'pnew:', self.state.p(), 'pold:',self.state_QT.p(),'Tnew:', self.state.T(),'T:', self.state_QT.T(), 'Drho:', abs(self.state_QT.rhomolar()/self.state.rhomolar()-1), 'DP', abs(self.state_QT.p()/self.state.p()-1), 'DT:', abs(self.state_QT.T() - self.state.T()))
