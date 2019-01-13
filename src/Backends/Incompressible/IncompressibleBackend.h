@@ -243,7 +243,8 @@ public:
     CoolPropDbl calc_Tmin(void){return fluid->getTmin();};
     CoolPropDbl calc_fraction_min(void){return fluid->getxmin();};
     CoolPropDbl calc_fraction_max(void){return fluid->getxmax();};
-    std::string calc_name(void){return fluid->getDescription();};
+    std::string calc_name(void){return fluid->getName();};
+    std::string calc_description(void){return fluid->getDescription();};
 };
 
 } /* namespace CoolProp */
