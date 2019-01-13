@@ -53,7 +53,7 @@ if __name__=='__main__':
     # This is mostly related to the compiler version, but since it is much
     # easier to check the OSX version, we are may also use that as an
     # indicator. OSX 10.14 and XCode 10 completely dropped support for
-    # libstdc++ which forces is to manipulate the minimum OSX target 
+    # libstdc++ which forces is to manipulate the minimum OSX target
     # version when compiling the Cython extensions.
     if sys.platform == 'darwin':
         osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
