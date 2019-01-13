@@ -11,5 +11,5 @@ def get_version():
 
 
 if __name__ == "__main__":
-    print('You are using version %s of the Python package for creating CoolProp\' online documentation.'%(get_version()))
+    print('You are using version %s of the Python package for creating CoolProp\' online documentation.' % (get_version()))
     print()

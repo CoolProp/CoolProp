@@ -21,42 +21,42 @@ def mergePdfIfNewer(singlePdfs, combined):
     for fi in singlePdfs:
         singles_time = np.append(singles_time, [getTime(fi)])
     combined_time = getTime(combined)
-    if np.any(singles_time>combined_time):
+    if np.any(singles_time > combined_time):
         allcombined = PdfFileMerger()
         for fl in singlePdfs:
-            allcombined.append(PdfFileReader(fl,"rb"))
+            allcombined.append(PdfFileReader(fl, "rb"))
         allcombined.write(combined)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t","--test", action='store_true', help="only run a subset of fluid")
-    parser.add_argument("-nf","--nofit", action='store_true', help="Do not fit the data, but read the JSON files")
-    parser.add_argument("-nr","--noreports", action='store_true', help="Do not write the fitting reports")
-    parser.add_argument("-ns","--nosummary", action='store_true', help="Do not generate the summary figures")
-    parser.add_argument("-nt","--notables", action='store_true', help="Do not write the fluid tables")
-    parser.add_argument("-nst","--nostats", action='store_true', help="Do not process statistical parameters")
+    parser.add_argument("-t", "--test", action='store_true', help="only run a subset of fluid")
+    parser.add_argument("-nf", "--nofit", action='store_true', help="Do not fit the data, but read the JSON files")
+    parser.add_argument("-nr", "--noreports", action='store_true', help="Do not write the fitting reports")
+    parser.add_argument("-ns", "--nosummary", action='store_true', help="Do not generate the summary figures")
+    parser.add_argument("-nt", "--notables", action='store_true', help="Do not write the fluid tables")
+    parser.add_argument("-nst", "--nostats", action='store_true', help="Do not process statistical parameters")
     #parser.add_argument("-f","--fluid", help="Only process the fluid FLUID")
 
     args = parser.parse_args()
 #    if args.verbosity:
 #     print "verbosity turned on"
 
-    if args.test:      runTest    = True
-    else:              runTest    = False
-    if args.nofit:     runFitting = False
-    else:              runFitting = True
+    if args.test: runTest = True
+    else: runTest = False
+    if args.nofit: runFitting = False
+    else: runFitting = True
     if args.noreports: runReports = False
-    else:              runReports = True
+    else: runReports = True
     if args.nosummary: runSummary = False
-    else:              runSummary = True
-    if args.notables:  runTables  = False
-    else:              runTables  = True
-    if args.nostats:   runStats   = False
-    else:              runStats   = True
+    else: runSummary = True
+    if args.notables: runTables = False
+    else: runTables = True
+    if args.nostats: runStats = False
+    else: runStats = True
     #if args.fluid:     onlyFluid  = args.fluid
-    #else:              onlyFluid  = None
+    # else:              onlyFluid  = None
 
     #runReports = False
     #runFitting = False
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # To debug single fluids
     if runTest:
         solObjs = []
-        from CPIncomp.SecCoolFluids import SecCoolSolutionData,SecCoolIceData,ThermogenVP1869
+        from CPIncomp.SecCoolFluids import SecCoolSolutionData, SecCoolIceData, ThermogenVP1869
         from CPIncomp.PureFluids import PMR
         #from CPIncomp.PureFluids import Texatherm22
         #solObjs += [SecCoolSolutionData(sFile='Melinder, Ethanol'            ,sFolder='xMass',name='MEA2',desc='Melinder, Ethanol'            ,ref='Melinder2010,Skovrup2013')]
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     # treat the examples first
     fluidObjs = getExampleNames(obj=True)
-    examplesToFit = ["ExamplePure","ExampleSolution","ExampleDigital","ExampleDigitalPure"]
+    examplesToFit = ["ExamplePure", "ExampleSolution", "ExampleDigital", "ExampleDigitalPure"]
 
     print("\nProcessing example fluids")
     for obj in fluidObjs:
@@ -98,8 +98,8 @@ if __name__ == '__main__':
     if runFitting: writer.writeFluidList(doneObjs)
     if runReports:
         # TODO: The new method for multipage PDFs produces larger files, why?
-        if writer.usetex: combined_name=None
-        else: combined_name = os.path.join(os.path.abspath("report"),"all_examples.pdf")
+        if writer.usetex: combined_name = None
+        else: combined_name = os.path.join(os.path.abspath("report"), "all_examples.pdf")
         writer.writeReportList(doneObjs, pdfFile=combined_name)
         #singleNames = [writer.get_report_file(fl.name) for fl in doneObjs]
         #mergePdfIfNewer(singleNames, "all_examples.pdf")
@@ -146,35 +146,35 @@ if __name__ == '__main__':
     doneObjs = sorted(doneObjs, key=lambda x: x.name)
 
     purefluids = []
-    solMass    = []
-    solMole    = []
-    solVolu    = []
-    errors     = []
+    solMass = []
+    solMole = []
+    solVolu = []
+    errors = []
 
-    for i in range(0,len(doneObjs)):
+    for i in range(0, len(doneObjs)):
 
         curObj = doneObjs[i]
 
-        if i < len(doneObjs)-2:
-            nexObj = doneObjs[i+1]
+        if i < len(doneObjs) - 2:
+            nexObj = doneObjs[i + 1]
         else:
             nexObj = doneObjs[0]
 
-        if curObj.name==nexObj.name:
-            print("Conflict between {0} and {1}, aborting".format(curObj,nexObj))
+        if curObj.name == nexObj.name:
+            print("Conflict between {0} and {1}, aborting".format(curObj, nexObj))
             raise ValueError("Two elements have the same name, that does not work: {0}".format(curObj.name))
         else:
             #print("Processing {0}: ".format(curObj.name), end="")
-            if curObj.xid==SolutionData.ifrac_mass:
+            if curObj.xid == SolutionData.ifrac_mass:
                 solMass.append(curObj)
                 #print("added to mass-based fluids ({0})".format(curObj.xid))
-            elif curObj.xid==SolutionData.ifrac_mole:
+            elif curObj.xid == SolutionData.ifrac_mole:
                 solMole.append(curObj)
                 #print("added to mole-based fluids ({0})".format(curObj.xid))
-            elif curObj.xid==SolutionData.ifrac_volume:
+            elif curObj.xid == SolutionData.ifrac_volume:
                 solVolu.append(curObj)
                 #print("added to volume-based fluids ({0})".format(curObj.xid))
-            elif curObj.xid==SolutionData.ifrac_pure:
+            elif curObj.xid == SolutionData.ifrac_pure:
                 purefluids.append(curObj)
                 #print("added to pure fluids ({0})".format(curObj.xid))
             else:
@@ -192,7 +192,7 @@ if __name__ == '__main__':
 #         printNames(solVolu,   "Volume-based: ")
 #         printNames(purefluids,"Pure fluids : ")
 
-    if len(errors)>0:
+    if len(errors) > 0:
         raise ValueError("There was a problem processing the fluid(s): {0}".format([error.name for error in errors]))
 
     #solutions  = solMass
@@ -209,14 +209,14 @@ if __name__ == '__main__':
             combined_time = 0
         else:
             combined_name = "all_incompressibles.pdf"
-            combined_name = os.path.join(os.path.abspath("report"),combined_name)
+            combined_name = os.path.join(os.path.abspath("report"), combined_name)
             combined_time = getTime(combined_name)
 
         singles_time = np.array([])
         for fl in doneObjs:
             singles_time = np.append(singles_time, [getTime(writer.get_json_file(fl.name))])
 
-        if np.any(singles_time>combined_time):
+        if np.any(singles_time > combined_time):
             print("Processing {0:2d} fluids - ".format(len(doneObjs)), end="")
             writer.writeReportList(doneObjs, pdfFile=combined_name)
         else:
@@ -229,23 +229,23 @@ if __name__ == '__main__':
         #####################################
         # Table generation routines
         #####################################
-        #FLUID_INFO_FOLDER=os.path.abspath("table")
-        #FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"mass-based-fluids")
-        #FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"mole-based-fluids")
-        #FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"volume-based-fluids")
-        #FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"pure-fluids")
-        FLUID_INFO_FOLDER=os.path.abspath("tables")
-        FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_mass-based-fluids")
-        FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_mole-based-fluids")
-        FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_volume-based-fluids")
-        FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"Incompressibles_pure-fluids")
+        # FLUID_INFO_FOLDER=os.path.abspath("table")
+        # FLUID_INFO_MASS_LIST=os.path.join(FLUID_INFO_FOLDER,"mass-based-fluids")
+        # FLUID_INFO_MOLE_LIST=os.path.join(FLUID_INFO_FOLDER,"mole-based-fluids")
+        # FLUID_INFO_VOLU_LIST=os.path.join(FLUID_INFO_FOLDER,"volume-based-fluids")
+        # FLUID_INFO_PURE_LIST=os.path.join(FLUID_INFO_FOLDER,"pure-fluids")
+        FLUID_INFO_FOLDER = os.path.abspath("tables")
+        FLUID_INFO_MASS_LIST = os.path.join(FLUID_INFO_FOLDER, "Incompressibles_mass-based-fluids")
+        FLUID_INFO_MOLE_LIST = os.path.join(FLUID_INFO_FOLDER, "Incompressibles_mole-based-fluids")
+        FLUID_INFO_VOLU_LIST = os.path.join(FLUID_INFO_FOLDER, "Incompressibles_volume-based-fluids")
+        FLUID_INFO_PURE_LIST = os.path.join(FLUID_INFO_FOLDER, "Incompressibles_pure-fluids")
 
         # After all the list got populated, we can process the entries
         # and generate some tables
         #
-        objLists = [purefluids,solMass,solMole,solVolu]
-        filLists = [FLUID_INFO_PURE_LIST,FLUID_INFO_MASS_LIST]
-        filLists +=[FLUID_INFO_MOLE_LIST,FLUID_INFO_VOLU_LIST]
+        objLists = [purefluids, solMass, solMole, solVolu]
+        filLists = [FLUID_INFO_PURE_LIST, FLUID_INFO_MASS_LIST]
+        filLists += [FLUID_INFO_MOLE_LIST, FLUID_INFO_VOLU_LIST]
         #
         for i in range(len(objLists)):
             #print("Processing fluid list: ", end="")
@@ -255,10 +255,10 @@ if __name__ == '__main__':
             writer.generateTexTable(objLists[i], filLists[i])
 
     if runStats:
-        lists  = [purefluids, solMass, solVolu]#, solMole, errors]
-        labels = ["Pure", "Mass", "Volume"]#, "Mole", "Error"]
+        lists = [purefluids, solMass, solVolu]  # , solMole, errors]
+        labels = ["Pure", "Mass", "Volume"]  # , "Mole", "Error"]
 
-        fits   = ["rho", "cp", "visc", "cond", "psat", "Tfreeze"]
+        fits = ["rho", "cp", "visc", "cond", "psat", "Tfreeze"]
 
         writer.generateStatsTable(lists, labels)
 

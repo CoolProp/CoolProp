@@ -7,154 +7,154 @@ from scipy.odr import *
 import textwrap
 
 fluid_REF = 'Propane'
-Tcrit_REF = CP.Props(fluid_REF,'Tcrit')
-omega_REF = CP.Props(fluid_REF,"accentric")
-molemass_REF = CP.Props(fluid_REF,'molemass')
-rhocrit_REF = CP.Props(fluid_REF,'rhocrit')
-Zcrit_REF = CP.DerivTerms('Z',Tcrit_REF,rhocrit_REF,fluid_REF)
+Tcrit_REF = CP.Props(fluid_REF, 'Tcrit')
+omega_REF = CP.Props(fluid_REF, "accentric")
+molemass_REF = CP.Props(fluid_REF, 'molemass')
+rhocrit_REF = CP.Props(fluid_REF, 'rhocrit')
+Zcrit_REF = CP.DerivTerms('Z', Tcrit_REF, rhocrit_REF, fluid_REF)
 
 fluid = 'DimethylEther'
-molemass = CP.Props(fluid,'molemass')
-Ttriple = CP.Props(fluid,'Ttriple')
-Tcrit = CP.Props(fluid,'Tcrit')
-omega = CP.Props(fluid,"accentric")
-rhocrit = CP.Props(fluid,'rhocrit')
-pcrit = CP.Props(fluid,'pcrit')
-Zcrit = CP.DerivTerms('Z',Tcrit,rhocrit,fluid)
+molemass = CP.Props(fluid, 'molemass')
+Ttriple = CP.Props(fluid, 'Ttriple')
+Tcrit = CP.Props(fluid, 'Tcrit')
+omega = CP.Props(fluid, "accentric")
+rhocrit = CP.Props(fluid, 'rhocrit')
+pcrit = CP.Props(fluid, 'pcrit')
+Zcrit = CP.DerivTerms('Z', Tcrit, rhocrit, fluid)
 
 N = 12
 
-RHO,TTT,RHO0,TTT0 = Collector(),Collector(),Collector(),Collector()
+RHO, TTT, RHO0, TTT0 = Collector(), Collector(), Collector(), Collector()
 
-rhomax = CP.Props('D','T',Ttriple,'Q',0,fluid)
-#Build a database of "experimental" data
-for T in np.linspace(Ttriple,Tcrit+50,80):
-    for rho in np.linspace(1e-10,rhomax,80):
-        T0,rho0 = CP.conformal_Trho(fluid, fluid_REF, T, rho)
+rhomax = CP.Props('D', 'T', Ttriple, 'Q', 0, fluid)
+# Build a database of "experimental" data
+for T in np.linspace(Ttriple, Tcrit + 50, 80):
+    for rho in np.linspace(1e-10, rhomax, 80):
+        T0, rho0 = CP.conformal_Trho(fluid, fluid_REF, T, rho)
 
         p = CP.Props('P', 'T', T, 'D', rho, fluid)
 
-        ar = CP.DerivTerms("phir",T,rho,fluid)
-        ar_REF = CP.DerivTerms("phir",T0,rho0,fluid_REF)
-        Z = CP.DerivTerms("Z",T,rho,fluid)
-        Z_REF = CP.DerivTerms("Z",T0,rho0,fluid_REF)
+        ar = CP.DerivTerms("phir", T, rho, fluid)
+        ar_REF = CP.DerivTerms("phir", T0, rho0, fluid_REF)
+        Z = CP.DerivTerms("Z", T, rho, fluid)
+        Z_REF = CP.DerivTerms("Z", T0, rho0, fluid_REF)
 
         #goodstate = ((T > Tcrit and p > pcrit) or (T<Tcrit and rho > CP.rhosatL_anc(fluid,T) ))
-        goodstate = (T > Tcrit or rho > CP.rhosatL_anc(fluid,T) or rho < CP.rhosatV_anc(fluid,T) )
+        goodstate = (T > Tcrit or rho > CP.rhosatL_anc(fluid, T) or rho < CP.rhosatV_anc(fluid, T))
         #goodstate = True
 
-        #Want positive value, and single-phase
-        if ((T0/T)>0.1 and T/T0*Tcrit_REF/Tcrit < 3 and T0/T < 1e6 and goodstate):
-            if abs((ar-ar_REF)*2+(Z-Z_REF)**2) > 1e-5:
-                print("%s %s" %(ar-ar_REF,Z-Z_REF))
+        # Want positive value, and single-phase
+        if ((T0 / T) > 0.1 and T / T0 * Tcrit_REF / Tcrit < 3 and T0 / T < 1e6 and goodstate):
+            if abs((ar - ar_REF) * 2 + (Z - Z_REF)**2) > 1e-5:
+                print("%s %s" % (ar - ar_REF, Z - Z_REF))
             TTT << T
             RHO << rho
             TTT0 << T0
             RHO0 << rho0
 
-tau = Tcrit/np.array(TTT.vec)
-delta = np.array(RHO.vec)/rhocrit
-THETA = np.array(TTT.vec)/np.array(TTT0.vec)*Tcrit_REF/Tcrit
-PHI = np.array(RHO0.vec)/np.array(RHO.vec)*rhocrit/rhocrit_REF #Ratio of MOLAR densities - here the molar masses cancel out to make phi non-dimensional
+tau = Tcrit / np.array(TTT.vec)
+delta = np.array(RHO.vec) / rhocrit
+THETA = np.array(TTT.vec) / np.array(TTT0.vec) * Tcrit_REF / Tcrit
+PHI = np.array(RHO0.vec) / np.array(RHO.vec) * rhocrit / rhocrit_REF  # Ratio of MOLAR densities - here the molar masses cancel out to make phi non-dimensional
 
 from CoolProp.Plots.Plots import Trho
 Trho(fluid)
-#plt.plot(RHO.vec,TTT.vec,'.')
-#plt.show()
+# plt.plot(RHO.vec,TTT.vec,'.')
+# plt.show()
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(np.array(RHO.vec),np.array(TTT.vec),THETA)
+ax.scatter(np.array(RHO.vec), np.array(TTT.vec), THETA)
 plt.close('all')
 
 print('rhomin = %s' % np.min(RHO.vec))
 
-#Define the objective function
+# Define the objective function
 
 
-def OBJECTIVE_theta(c,x):
-    tau = x[0,:]
-    delta = x[1,:]
+def OBJECTIVE_theta(c, x):
+    tau = x[0, :]
+    delta = x[1, :]
 
-    A1 = c[0]-c[1]*np.log(tau)
-    A2 = c[2]-c[3]*np.log(tau)
-    A3 = c[4]-c[5]*np.log(tau)
-    A4 = c[6]-c[7]*np.log(tau)**2
-    DELTA = (delta-1)**2+(tau-1)**2
-    PSI_theta = c[8]*delta*np.exp(-c[9]*DELTA**2)
-    return 1+(omega-omega_REF)*(A1+A2*np.exp(-delta**2)+A3*np.exp(-delta**c[10])+A4*np.exp(-delta**c[11])+PSI_theta)
+    A1 = c[0] - c[1] * np.log(tau)
+    A2 = c[2] - c[3] * np.log(tau)
+    A3 = c[4] - c[5] * np.log(tau)
+    A4 = c[6] - c[7] * np.log(tau)**2
+    DELTA = (delta - 1)**2 + (tau - 1)**2
+    PSI_theta = c[8] * delta * np.exp(-c[9] * DELTA**2)
+    return 1 + (omega - omega_REF) * (A1 + A2 * np.exp(-delta**2) + A3 * np.exp(-delta**c[10]) + A4 * np.exp(-delta**c[11]) + PSI_theta)
 
-#Define the objective function
+# Define the objective function
 
 
-def OBJECTIVE_phi(c,x):
-    tau = x[0,:]
-    delta = x[1,:]
+def OBJECTIVE_phi(c, x):
+    tau = x[0, :]
+    delta = x[1, :]
 
-    A1 = c[0]-c[1]*np.log(tau)
-    A2 = c[2]-c[3]*np.log(tau)
-    A3 = c[4]-c[5]*np.log(tau)
-    A4 = c[6]-c[7]*np.log(tau)**2
-    DELTA = (delta-1)**2+(tau-1)**2
-    PSI_theta = c[8]*delta*np.exp(-c[9]*DELTA**2)
-    return Zcrit_REF/Zcrit*(1+(omega-omega_REF)*(A1+A2*np.exp(-delta**2)+A3*np.exp(-delta**c[10])+A4*np.exp(-delta**c[11])+PSI_theta))
+    A1 = c[0] - c[1] * np.log(tau)
+    A2 = c[2] - c[3] * np.log(tau)
+    A3 = c[4] - c[5] * np.log(tau)
+    A4 = c[6] - c[7] * np.log(tau)**2
+    DELTA = (delta - 1)**2 + (tau - 1)**2
+    PSI_theta = c[8] * delta * np.exp(-c[9] * DELTA**2)
+    return Zcrit_REF / Zcrit * (1 + (omega - omega_REF) * (A1 + A2 * np.exp(-delta**2) + A3 * np.exp(-delta**c[10]) + A4 * np.exp(-delta**c[11]) + PSI_theta))
 
 
 print('starting fit for theta')
-XXX = np.r_[np.array(tau,ndmin = 2), np.array(delta,ndmin=2)]
+XXX = np.r_[np.array(tau, ndmin=2), np.array(delta, ndmin=2)]
 
 
 def fit_theta():
     mod = Model(OBJECTIVE_theta)
     mydata = Data(XXX.copy(), THETA)
-    beta0  = [100 for _ in range(N)]
+    beta0 = [100 for _ in range(N)]
     myodr = ODR(mydata, mod, beta0=beta0)
     myoutput = myodr.run()
     myoutput.pprint()
     print(myoutput.sum_square)
-    YFIT = OBJECTIVE_theta(myoutput.beta,XXX)
-    plt.plot(THETA,YFIT,'o',mfc='none')
+    YFIT = OBJECTIVE_theta(myoutput.beta, XXX)
+    plt.plot(THETA, YFIT, 'o', mfc='none')
     plt.show()
-    ERR = YFIT-THETA
-    MAE = np.mean(np.abs(YFIT/THETA-1))*100
+    ERR = YFIT - THETA
+    MAE = np.mean(np.abs(YFIT / THETA - 1)) * 100
     from CoolProp.Plots.Plots import Trho
     Trho(fluid)
-    plt.plot(np.array(RHO.vec)[np.abs(ERR)<5e-2],np.array(TTT.vec)[np.abs(ERR)<5e-2],'.')
+    plt.plot(np.array(RHO.vec)[np.abs(ERR) < 5e-2], np.array(TTT.vec)[np.abs(ERR) < 5e-2], '.')
     plt.show()
 
-    return myoutput.beta,MAE
+    return myoutput.beta, MAE
 
 
 def fit_phi():
     mod = Model(OBJECTIVE_phi)
     mydata = Data(XXX.copy(), PHI)
-    beta0  = [100 for _ in range(N)]
+    beta0 = [100 for _ in range(N)]
     myodr = ODR(mydata, mod, beta0=beta0)
     myoutput = myodr.run()
     myoutput.pprint()
     print(myoutput.sum_square)
-    YFIT = OBJECTIVE_theta(myoutput.beta,XXX)
-    plt.plot(PHI,YFIT,'o',mfc='none')
+    YFIT = OBJECTIVE_theta(myoutput.beta, XXX)
+    plt.plot(PHI, YFIT, 'o', mfc='none')
     plt.show()
-    ERR = YFIT-PHI
+    ERR = YFIT - PHI
     from CoolProp.Plots.Plots import Trho
     Trho(fluid)
-    plt.plot(np.array(RHO.vec)[np.abs(ERR)<5e-2],np.array(TTT.vec)[np.abs(ERR)<5e-2],'.')
-    MAE = np.mean(np.abs(YFIT/PHI-1))*100
+    plt.plot(np.array(RHO.vec)[np.abs(ERR) < 5e-2], np.array(TTT.vec)[np.abs(ERR) < 5e-2], '.')
+    MAE = np.mean(np.abs(YFIT / PHI - 1)) * 100
     plt.show()
 
-    return myoutput.beta,MAE
+    return myoutput.beta, MAE
 
 
-c,theta_MAE = fit_theta()
-d,phi_MAE = fit_phi()
+c, theta_MAE = fit_theta()
+d, phi_MAE = fit_phi()
 
 
-def write_output(c,d, theta_MAE, phi_MAE):
+def write_output(c, d, theta_MAE, phi_MAE):
     import time
     from datetime import date
-    cdata = ', '.join(['{val:0.16g}'.format(val = v) for v in c])
-    ddata = ', '.join(['{val:0.16g}'.format(val = v) for v in d])
+    cdata = ', '.join(['{val:0.16g}'.format(val=v) for v in c])
+    ddata = ', '.join(['{val:0.16g}'.format(val=v) for v in d])
     name = fluid
     rhomin = np.min(RHO.vec)
     timestamp = date.fromtimestamp(time.time()).strftime("%A, %d. %B %Y")
@@ -242,4 +242,4 @@ def write_output(c,d, theta_MAE, phi_MAE):
     print(template.format(**locals()))
 
 
-write_output(c,d,theta_MAE,phi_MAE)
+write_output(c, d, theta_MAE, phi_MAE)

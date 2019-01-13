@@ -100,7 +100,7 @@ class BibTeXerClass(object):
         A function that always returns unicode. It also tries to recurse into
         lists and dicts, but be careful this is not thoroughly tested.
         """
-        table = { ord(u'{'): None, ord(u'}'): None }
+        table = {ord(u'{'): None, ord(u'}'): None}
 
         if isinstance(text, str): # ordinary string
             pass

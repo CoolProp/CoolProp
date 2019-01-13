@@ -210,8 +210,8 @@ def make3Dlpot(X,Y,Z=None,ax=None,invert='',draw='CXYZ',color='blue',xlim=None,y
 
 
 def getlim(key,dicts,fac=1):
-    min = np.min([ dict[key]/fac for dict in dicts ])
-    max = np.max([ dict[key]/fac for dict in dicts ])
+    min = np.min([dict[key]/fac for dict in dicts])
+    max = np.max([dict[key]/fac for dict in dicts])
     return [np.floor(min)*fac, np.ceil(max)*fac]
 
 

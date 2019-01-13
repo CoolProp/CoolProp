@@ -8,37 +8,37 @@ except ImportError:
 
 
 def get_milestones(milestone):
-    fname = milestone+'-milestones.json'
+    fname = milestone + '-milestones.json'
     if not os.path.exists(fname):
         # Find the milestone number for the given name
         milestones_json = json.loads(urlopen('https://api.github.com/repos/CoolProp/CoolProp/milestones').read())
-        with open(fname,'w') as fp:
-            fp.write(json.dumps(milestones_json, indent = 2))
-    with open(fname,'r') as fp:
+        with open(fname, 'w') as fp:
+            fp.write(json.dumps(milestones_json, indent=2))
+    with open(fname, 'r') as fp:
         return json.load(fp)
 
 
 def get_PR_JSON(milestone, number):
     # Get the merged pull requests associated with the milestone
-    fname = milestone+'-PR.json'
+    fname = milestone + '-PR.json'
     if not os.path.exists(fname):
         # Find the milestone number for the given name
-        PR = json.loads(urlopen('https://api.github.com/repos/CoolProp/CoolProp/pulls?state=closed&per_page=1000&milestone='+str(number)).read())
-        with open(fname,'w') as fp:
-            fp.write(json.dumps(PR, indent = 2))
-    with open(fname,'r') as fp:
+        PR = json.loads(urlopen('https://api.github.com/repos/CoolProp/CoolProp/pulls?state=closed&per_page=1000&milestone=' + str(number)).read())
+        with open(fname, 'w') as fp:
+            fp.write(json.dumps(PR, indent=2))
+    with open(fname, 'r') as fp:
         return json.load(fp)
 
 
 def get_issues_JSON(milestone, number):
     # Get the merged pull requests associated with the milestone
-    fname = milestone+'-issues.json'
+    fname = milestone + '-issues.json'
     if not os.path.exists(fname):
         # Find the milestone number for the given name
-        issues = json.loads(urlopen('https://api.github.com/repos/CoolProp/CoolProp/issues?state=all&per_page=1000&milestone='+str(number)).read())
-        with open(fname,'w') as fp:
-            fp.write(json.dumps(issues, indent = 2))
-    with open(fname,'r') as fp:
+        issues = json.loads(urlopen('https://api.github.com/repos/CoolProp/CoolProp/issues?state=all&per_page=1000&milestone=' + str(number)).read())
+        with open(fname, 'w') as fp:
+            fp.write(json.dumps(issues, indent=2))
+    with open(fname, 'r') as fp:
         return json.load(fp)
 
 
@@ -56,7 +56,7 @@ def generate_issues(milestone):
     pr_numbers = [issue['number'] for issue in PR]
 
     # Get the issues associated with the milestone
-    issues = get_issues_JSON(milestone,     number)
+    issues = get_issues_JSON(milestone, number)
 
     # Make sure all issues are closed in this milestone
     l = 0
@@ -68,7 +68,7 @@ def generate_issues(milestone):
         if issues[i]['number'] in pr_numbers:
             issues.pop(i)
 
-    rst = 'Issues Closed:\n\n'+'\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/issues/{n:d}>`_ : {t:s}'.format(n = issue['number'], t = issue['title']) for issue in issues])
+    rst = 'Issues Closed:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/issues/{n:d}>`_ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
 
     return rst
 
@@ -89,12 +89,12 @@ def generate_PR(milestone):
     rst = 'Pull Requests merged:\n\n'
     for issue in PR:
         if issue['milestone'] is not None and issue['milestone']['title'] == milestone:
-            rst += '* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}\n'.format(n = issue['number'], t = issue['title'])
+            rst += '* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}\n'.format(n=issue['number'], t=issue['title'])
 
     return rst
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     if len(sys.argv) != 2:
         raise ValueError('This script should be called like this: python milestone2rst.py v5')
 

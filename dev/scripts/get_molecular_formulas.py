@@ -1,4 +1,4 @@
-import urllib, sys,CoolProp, json
+import urllib, sys, CoolProp, json
 
 sys.path.append('C:\RDKit_2014_09_2')
 from rdkit import Chem
@@ -12,9 +12,9 @@ for fluid in CoolProp.__fluids__:
         print('')
         continue
 
-    txt = urllib.urlretrieve('http://cactus.nci.nih.gov/chemical/structure/'+CAS+'/file?format=mol')
+    txt = urllib.urlretrieve('http://cactus.nci.nih.gov/chemical/structure/' + CAS + '/file?format=mol')
 
-    with open(txt[0],'r') as fp:
+    with open(txt[0], 'r') as fp:
         contents = fp.read()
 
     if '<h1>Page not found (404)</h1>' in contents:
@@ -27,7 +27,7 @@ for fluid in CoolProp.__fluids__:
     c = dict(Counter(atom.GetSymbol() for atom in mol.GetAtoms()))
     formula = ''.join([k + '_{' + str(c[k]) + '}' for k in sorted(c.keys())])
 
-    fname = '../fluids/'+fluid+'.json'
+    fname = '../fluids/' + fluid + '.json'
     with open(fname, 'r') as fp:
         jj = json.load(fp)
     jj['FORMULA'] = formula

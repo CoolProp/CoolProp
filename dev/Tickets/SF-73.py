@@ -12,8 +12,8 @@ drawIsoLines(fluid, 'Ts', 'Q', iValues=[0.0, 1.0], axis=ax1) # for predefined st
 drawIsoLines(fluid, 'Ts', 'Q', iValues=[0.3, 0.7], axis=ax1) # for predefined styles
 
 # Get the data points
-saturation = getIsoLines(fluid, 'Ts', 'Q', [0.0,  1.0 ], axis=ax2)
-quality    = getIsoLines(fluid, 'Ts', 'Q', [0.3,  0.7 ], axis=ax2)
+saturation = getIsoLines(fluid, 'Ts', 'Q', [0.0,  1.0], axis=ax2)
+quality    = getIsoLines(fluid, 'Ts', 'Q', [0.3,  0.7], axis=ax2)
 # define custom styles
 plt_kwargs = {"color": "green","linewidth": 1.5}
 drawLines(fluid,saturation,ax2,plt_kwargs=plt_kwargs)

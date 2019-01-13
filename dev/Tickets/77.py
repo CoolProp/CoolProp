@@ -17,7 +17,7 @@ keys = multiply[:]
 
 fluid = "n-Pentane"
 
-T = numpy.array([ 30,100,150,210])+273.15
+T = numpy.array([30,100,150,210])+273.15
 D = numpy.array([710, 20, 20,210])
 
 for key in keys:
