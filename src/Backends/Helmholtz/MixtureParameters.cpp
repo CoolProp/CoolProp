@@ -643,7 +643,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend &HEOS)
 void parse_HMX_BNC(const std::string &s, std::vector<REFPROP_binary_element> &BIP, std::vector<REFPROP_departure_function> &functions)
 {
     // Capture the betas, gammas, Fij, models
-    bool block_started = false, block_ended = false;
+    bool block_started = false;
     std::size_t i_started = 0, i_ended = 0, i = 0;
     std::vector<std::string> lines = strsplit(s, '\n');
     for(std::vector<std::string>::iterator it = lines.begin(); it != lines.end(); ++it){
@@ -652,13 +652,11 @@ void parse_HMX_BNC(const std::string &s, std::vector<REFPROP_binary_element> &BI
             i_started = i+1;
         }
         if (block_started && strstrip(*it).empty()){
-            block_ended = true;
             i_ended = i-1;
             break;
         }
         i++;
     }
-    i = 0;
     // Find the first line with a !
     for (i = i_started; i < i_ended; ++i){
         if (strstrip(lines[i]) == "!" ){ i_started = i; break; }
@@ -714,7 +712,7 @@ void parse_HMX_BNC(const std::string &s, std::vector<REFPROP_binary_element> &BI
     //      Parse the departure functions
     // ****************************************
     for (std::size_t i = i_ended+1; i < lines.size(); ++i){
-        std::size_t j_end = i;
+        std::size_t j_end;
         // Find the end of this block
         for (j_end = i+1; j_end < lines.size(); ++j_end){ if (strstrip(lines[j_end]).empty()) { j_end -= 1; break; } }
         

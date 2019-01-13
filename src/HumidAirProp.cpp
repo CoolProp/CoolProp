@@ -358,40 +358,40 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess)
     return T;
 }
     
-static double Brent_Tdb_at_saturated_W(double psi_w, double p, double T_min, double T_max)
-{
-    double T;
-    class BrentSolverResids : public CoolProp::FuncWrapper1D
-    {
-    private:
-        double pp_water, psi_w, p;
-    public:
-        BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
-        ~BrentSolverResids(){};
-
-        double call(double T){
-            double p_ws;
-            if (T>=273.16){
-                // Saturation pressure [Pa] using IF97 formulation
-                p_ws= IF97::psat97(T);
-            }
-            else{
-                // Sublimation pressure [Pa]
-                p_ws=psub_Ice(T);
-            }
-            double f = f_factor(T, p);
-            double pp_water_calc = f*p_ws;
-            double psi_w_calc = pp_water_calc/p;
-            return (psi_w_calc - psi_w)/psi_w;
-        }
-    };
-
-    BrentSolverResids Resids(psi_w, p);
-
-    T = CoolProp::Brent(Resids, 150, 350, 1e-16, 1e-7, 100);
-
-    return T;
-}
+//static double Brent_Tdb_at_saturated_W(double psi_w, double p, double T_min, double T_max)
+//{
+//    double T;
+//    class BrentSolverResids : public CoolProp::FuncWrapper1D
+//    {
+//    private:
+//        double pp_water, psi_w, p;
+//    public:
+//        BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) { pp_water = psi_w*p; };
+//        ~BrentSolverResids(){};
+//
+//        double call(double T){
+//            double p_ws;
+//            if (T>=273.16){
+//                // Saturation pressure [Pa] using IF97 formulation
+//                p_ws= IF97::psat97(T);
+//            }
+//            else{
+//                // Sublimation pressure [Pa]
+//                p_ws=psub_Ice(T);
+//            }
+//            double f = f_factor(T, p);
+//            double pp_water_calc = f*p_ws;
+//            double psi_w_calc = pp_water_calc/p;
+//            return (psi_w_calc - psi_w)/psi_w;
+//        }
+//    };
+//
+//    BrentSolverResids Resids(psi_w, p);
+//
+//    T = CoolProp::Brent(Resids, 150, 350, 1e-16, 1e-7, 100);
+//
+//    return T;
+//}
 
 /*
 static double Secant_HAProps_T(const std::string &OutputName, const std::string &Input1Name, double Input1, const std::string &Input2Name, double Input2, double TargetVal, double T_guess)
