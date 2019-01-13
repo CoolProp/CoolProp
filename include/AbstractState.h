@@ -289,6 +289,8 @@ protected:
 
     /// Using this backend, get the name of the fluid
     virtual std::string calc_name(void){ throw NotImplementedError("calc_name is not implemented for this backend"); };
+    /// Using this backend, get the description of the fluid
+    virtual std::string calc_description(void){ throw NotImplementedError("calc_description is not implemented for this backend"); };
 
     /// Using this backend, get the triple point temperature in K
     virtual CoolPropDbl calc_Ttriple(void){ throw NotImplementedError("calc_Ttriple is not implemented for this backend"); };
@@ -659,6 +661,9 @@ public:
 
     /// Return the name - backend dependent
     std::string name(){ return calc_name(); };
+    /// Return the description - backend dependent
+    std::string description(){ return calc_description(); };
+
     /// Return the dipole moment in C-m (1 D = 3.33564e-30 C-m)
     double dipole_moment(){ return calc_dipole_moment(); }
 
