@@ -15,6 +15,7 @@ CoolProp is a C++ library that implements:
 - :ref:`Pure and pseudo-pure fluid equations of state and transport properties for 122 components <list_of_fluids>`
 - :ref:`Mixture properties using high-accuracy Helmholtz energy formulations <mixtures>`
 - :ref:`Correlations of properties of incompressible fluids and brines <Pure>`
+- :ref:`Computationally efficient tabular interpolation <tabular_interpolation>`
 - :ref:`Highest accuracy psychrometric routines <Humid-Air>`
 - :ref:`User-friendly interface around the full capabilities of NIST REFPROP <REFPROP>`
 - :ref:`Fast IAPWS-IF97 (Industrial Formulation) for Water/Steam <IF97>`
