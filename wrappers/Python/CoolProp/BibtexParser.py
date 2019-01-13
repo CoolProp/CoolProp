@@ -19,7 +19,7 @@ from pybtex.style.template import node, join
 
 @node
 def toplevel(children, data):
-    return join(sep=' ') [children].format_data(data)
+    return join(sep=' ')[children].format_data(data)
 
 
 # And now, we over-write the function with our desired function.  Et voila! It works!
@@ -32,7 +32,7 @@ class BibTeXerClass(object):
     to print a very basic bibliography.
     """
 
-    def __init__(self, fName = u'../../../CoolPropBibTeXLibrary.bib'):
+    def __init__(self, fName=u'../../../CoolPropBibTeXLibrary.bib'):
         self.loadLibrary(fName)
 
     def loadLibrary(self, path, keys=[], encoding="latex"):
@@ -52,7 +52,7 @@ class BibTeXerClass(object):
             raise ValueError("You have to provide a path to a bibtex file.")
 
         # Create the parser object
-        if len(keys)>0:
+        if len(keys) > 0:
             bib_parser = pybtex.database.input.bibtex.Parser(wanted_entries=keys)
         else:
             bib_parser = pybtex.database.input.bibtex.Parser()
@@ -68,7 +68,7 @@ class BibTeXerClass(object):
                 lines = f.readlines()
                 cleaned = [l.strip() for l in lines if l.strip()]
 
-            path = path+".filtered.bib"
+            path = path + ".filtered.bib"
             with open(path, "w") as f:
                 f.writelines('\n'.join(cleaned))
 
@@ -76,10 +76,10 @@ class BibTeXerClass(object):
         with codecs.open(path, encoding=encoding) as stream:
             self.library = bib_parser.parse_stream(stream)
 
-        #os.remove(path)
+        # os.remove(path)
 
         # Do some post-processing if encoding was latex
-        if encoding=="latex":
+        if encoding == "latex":
             for tag in self.library.entries:
                 entry = self.library.entries[tag]
                 for key, value in six.iteritems(entry.fields):
@@ -102,7 +102,7 @@ class BibTeXerClass(object):
         """
         table = {ord(u'{'): None, ord(u'}'): None}
 
-        if isinstance(text, str): # ordinary string
+        if isinstance(text, str):  # ordinary string
             pass
         else:
             try:
@@ -135,16 +135,16 @@ class BibTeXerClass(object):
         if self.library is None:
             raise ValueError("No library has been loaded, yet.")
 
-        style_cls   = pybtex.plugin.find_plugin('pybtex.style.formatting', style)
+        style_cls = pybtex.plugin.find_plugin('pybtex.style.formatting', style)
         style = style_cls()
         data = self.library
-        biblio = style.format_bibliography(data,citations=keys)
+        biblio = style.format_bibliography(data, citations=keys)
 
         backend_cls = pybtex.plugin.find_plugin('pybtex.backends', fmt)
         backend = backend_cls(encoding=enc)
 
         if objects:
-            return biblio,backend
+            return biblio, backend
 
         stream = io.StringIO()
         backend.write_to_stream(biblio, stream)
@@ -163,11 +163,11 @@ class BibTeXerClass(object):
         if key.startswith('__'):
             return None
 
-        biblio,backend = self.getBibliography(keys=[key], fmt=fmt, style=style, enc=enc, objects=True)
+        biblio, backend = self.getBibliography(keys=[key], fmt=fmt, style=style, enc=enc, objects=True)
 
         # Disable prologue and the epilogue
-        backend.write_prologue = lambda : None
-        backend.write_epilogue = lambda : None
+        backend.write_prologue = lambda: None
+        backend.write_epilogue = lambda: None
 
         stream = io.StringIO()
         backend.write_to_stream(biblio, stream)
@@ -178,34 +178,34 @@ class BibTeXerClass(object):
             return contents
 
         label_table = {
-            'latex'     : '}',
-            'html'      : '</dt>',
-            'markdown'  : ']',
-            'plaintext' : ']',
-            } # How do we find the end of the label?
+            'latex': '}',
+            'html': '</dt>',
+            'markdown': ']',
+            'plaintext': ']',
+            }  # How do we find the end of the label?
 
         end_of_label = contents.index(label_table[fmt])
-        contents = contents[end_of_label+len(label_table[fmt]):].strip()
+        contents = contents[end_of_label + len(label_table[fmt]):].strip()
 
         # {} are needed to preserve capitalization, but we don't want them in the final output, so remove them
-        contents = contents.replace('{','').replace('}','')
+        contents = contents.replace('{', '').replace('}', '')
 
-        if fmt=="latex":
-            contents = contents.replace(u"\\newblock ","")
+        if fmt == "latex":
+            contents = contents.replace(u"\\newblock ", "")
             contents = codecs.encode(contents, "latex")
-        elif fmt=="html":
-            contents = contents.replace(u"<dd>","")
-            contents = contents.replace(u"</dd>","")
+        elif fmt == "html":
+            contents = contents.replace(u"<dd>", "")
+            contents = contents.replace(u"</dd>", "")
 
-        contents = contents.replace(u"\n","")
+        contents = contents.replace(u"\n", "")
 
         return contents
 
 
-#getEntry(self, key, label=False, fmt="markdown", style="unsrtalpha", enc=None):
+# getEntry(self, key, label=False, fmt="markdown", style="unsrtalpha", enc=None):
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     B = BibTeXerClass('../../../CoolPropBibTeXLibrary.bib')
     print("\nLatex:")
     print(B.getEntry(key='Mulero-JPCRD-2012', fmt='latex'))

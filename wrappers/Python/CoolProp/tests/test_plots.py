@@ -158,6 +158,6 @@ def test_new_code():
     Mixture()
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     import nose
     nose.runmodule()

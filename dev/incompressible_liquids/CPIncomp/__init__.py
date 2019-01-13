@@ -7,7 +7,7 @@ readme.md       - General instructions and copyright information / credits.
 """
 from __future__ import division, absolute_import, print_function
 import inspect
-from . import DataObjects,ExampleObjects,PureFluids,CoefficientFluids,DigitalFluids,MelinderFluids,SolutionFluids
+from . import DataObjects, ExampleObjects, PureFluids, CoefficientFluids, DigitalFluids, MelinderFluids, SolutionFluids
 from .SecCoolFluids import SecCoolSolutionData
 
 
@@ -64,8 +64,8 @@ def getCoefficientFluids():
     ignList = getIgnoreNames()
     for name, obj in inspect.getmembers(CoefficientFluids):
         if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
+            # print(name)
+            if not name in ignList:  # Ignore the base classes
                 classes.append(obj())
     return classes
 
@@ -89,8 +89,8 @@ def getDigitalFluids():
     ignList = getIgnoreNames()
     for name, obj in inspect.getmembers(DigitalFluids):
         if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
+            # print(name)
+            if not name in ignList:  # Ignore the base classes
                 classes.append(obj())
     return classes
 
@@ -108,8 +108,8 @@ def getMelinderFluids():
     ignList = getIgnoreNames()
     for name, obj in inspect.getmembers(MelinderFluids):
         if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
+            # print(name)
+            if not name in ignList:  # Ignore the base classes
                 classes.append(obj())
     return classes
 
@@ -125,8 +125,8 @@ def getPureFluids():
     ignList = getIgnoreNames()
     for name, obj in inspect.getmembers(PureFluids):
         if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
+            # print(name)
+            if not name in ignList:  # Ignore the base classes
                 classes.append(obj())
     return classes
 
@@ -142,8 +142,8 @@ def getSolutionFluids():
     ignList = getIgnoreNames()
     for name, obj in inspect.getmembers(SolutionFluids):
         if inspect.isclass(obj):
-            #print(name)
-            if not name in ignList: # Ignore the base classes
+            # print(name)
+            if not name in ignList:  # Ignore the base classes
                 classes.append(obj())
     return classes
 
@@ -164,5 +164,5 @@ def get_version():
 
 
 if __name__ == "__main__":
-    print('You are using version %s of the Python package for incompressible liquids in CoolProp.'%(get_version()))
+    print('You are using version %s of the Python package for incompressible liquids in CoolProp.' % (get_version()))
     print()
