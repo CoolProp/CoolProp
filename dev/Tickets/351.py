@@ -39,24 +39,24 @@ def SimpleRankineCycle(T3, p3, p1, epsilon_e, epsilon_p, fluid='water'):
     Ts.calc_isolines(CoolProp.iQ, [Ts.system.Q.from_SI(0.), Ts.system.Q.from_SI(1.)], num=11)
     Ts.draw_isolines()
 
-    states = zip(Ts.system.S.from_SI(array([s1,s2,s3,s4,s1])),Ts.system.T.from_SI(array([T1,T2,T3,T4,T1])))
-    Ts.draw_process(states, iso_types=None, line_opts={'color':'red', 'lw':1.5})
+    states = zip(Ts.system.S.from_SI(array([s1, s2, s3, s4, s1])), Ts.system.T.from_SI(array([T1, T2, T3, T4, T1])))
+    Ts.draw_process(states, iso_types=None, line_opts={'color': 'red', 'lw': 1.5})
     isot = [
-      None, # non-isentropic pumping from 1 to 2
-      CoolProp.iP, # p2=p3
+      None,  # non-isentropic pumping from 1 to 2
+      CoolProp.iP,  # p2=p3
       None,
-      CoolProp.iP, # p4=p1
+      CoolProp.iP,  # p4=p1
       ]
-    Ts.draw_process(states, iso_types=isot, line_opts={'color':'green', 'lw':1.5})
+    Ts.draw_process(states, iso_types=isot, line_opts={'color': 'green', 'lw': 1.5})
 
     ax = Ts.axis
     ax.text(Ts.system.S.from_SI(s1), Ts.system.T.from_SI(T1), ' 1', fontsize=10, rotation=0, color='r')
     ax.text(Ts.system.S.from_SI(s2), Ts.system.T.from_SI(T2), ' 2', fontsize=10, rotation=0, color='r')
     ax.text(Ts.system.S.from_SI(s3), Ts.system.T.from_SI(T3), ' 3', fontsize=10, rotation=0, color='r')
     ax.text(Ts.system.S.from_SI(s4), Ts.system.T.from_SI(T4), ' 4', fontsize=10, rotation=0, color='r')
-    ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(850),"Efficiency: %.1f%%" %(eta_c*100.))
-    ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(800),"Net work: %d kJ/kg" %(w_net/1000))
-    ax.text(Ts.system.S.from_SI(8e3),Ts.system.T.from_SI(750),"Heat input: %d kJ/kg" %(q_boiler/1000))
+    ax.text(Ts.system.S.from_SI(8e3), Ts.system.T.from_SI(850), "Efficiency: %.1f%%" % (eta_c * 100.))
+    ax.text(Ts.system.S.from_SI(8e3), Ts.system.T.from_SI(800), "Net work: %d kJ/kg" % (w_net / 1000))
+    ax.text(Ts.system.S.from_SI(8e3), Ts.system.T.from_SI(750), "Heat input: %d kJ/kg" % (q_boiler / 1000))
     return Ts
 
 

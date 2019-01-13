@@ -3,7 +3,7 @@ from __future__ import absolute_import
 # If there is a constants.[pyd|so|dylib] in the main directory, it will be imported instead of the constants.py file.
 # It should be removed as it is from the older version of CoolProp
 from . import constants
-if constants.__file__.rsplit('.', 1)[1] not in ['pyc','pyo','py']:
+if constants.__file__.rsplit('.', 1)[1] not in ['pyc', 'pyo', 'py']:
 
     import os
     try:
@@ -56,7 +56,7 @@ def get_include_directory():
     return os.path.join(head, 'include')
 
 
-def copy_BibTeX_library(file = None, folder = None):
+def copy_BibTeX_library(file=None, folder=None):
     """
     Copy the CoolProp BibTeX library file to the file given by ``file``, or the folder given by ``folder``
 
@@ -72,12 +72,12 @@ def copy_BibTeX_library(file = None, folder = None):
 
     """
     import os, shutil
-    path_to_bib = os.path.join(os.path.split(__file__)[0],'CoolPropBibTeXLibrary.bib')
+    path_to_bib = os.path.join(os.path.split(__file__)[0], 'CoolPropBibTeXLibrary.bib')
     if file is None and folder is None:
-        shutil.copy2(path_to_bib,os.path.abspath(os.curdir))
+        shutil.copy2(path_to_bib, os.path.abspath(os.curdir))
     elif file and folder is None:
-        shutil.copy2(path_to_bib,file)
+        shutil.copy2(path_to_bib, file)
     elif folder and file is None:
-        shutil.copy2(path_to_bib,os.path.join(folder,file))
+        shutil.copy2(path_to_bib, os.path.join(folder, file))
     else:
         raise ValueError('can only provide one of file or folder')

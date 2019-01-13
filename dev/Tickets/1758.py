@@ -4,8 +4,8 @@ import CoolProp.CoolProp as CP
 import time
 
 random.seed("coolprop_test")
-p = 101325 # 1 atmosphere
-T = np.random.uniform(120,400,10000) + 273.15 # Random points from 120 to 400 deg C, gas phase only
+p = 101325  # 1 atmosphere
+T = np.random.uniform(120, 400, 10000) + 273.15  # Random points from 120 to 400 deg C, gas phase only
 
 # Make sure the objects exist and create tables if needed
 normal_state = CP.AbstractState("HEOS", "H2O")
@@ -31,7 +31,7 @@ for Ti in T:
     rho = tabular_state.keyed_output(CP.iDmass)
 results["3. Tables"] = time.time() - tmp
 
-#for k in sorted(results):
+# for k in sorted(results):
 #    print("{0} : {1} ms".format(k, results[k]*1e3))
 #print("\nDo NOT do this!")
 tmp = time.time()
@@ -49,4 +49,4 @@ for Ti in T:
 results["5. Tables (create state)"] = time.time() - tmp
 
 for k in sorted(results):
-    print("{0} : {1} ms".format(k, results[k]*1e3))
+    print("{0} : {1} ms".format(k, results[k] * 1e3))

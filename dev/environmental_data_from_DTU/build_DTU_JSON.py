@@ -1,24 +1,24 @@
 
 
-import glob,os
+import glob, os
 
 #  Build a map from REFPROP name to CAS code
 RP2CAS = {}
 for file in glob.glob('C:\\Program Files (x86)\\REFPROP\\fluids\\*.fld'):
-    lines = open(file,'r').readlines()
-    root,RPFluid = os.path.split(file)
+    lines = open(file, 'r').readlines()
+    root, RPFluid = os.path.split(file)
 
     for line in lines:
         if line.find('CAS number') > -1:
             CAS_number = line.split('!')[0].strip()
             if not CAS_number:
-                raise ValueError(file+line)
+                raise ValueError(file + line)
             RP2CAS[RPFluid.split('.')[0]] = CAS_number
             break
 
 #  Handle pseudo-pure fluids
 for file in glob.glob('C:\\Program Files (x86)\\REFPROP\\fluids\\*.ppf'):
-    root,RPFluid = os.path.split(file)
+    root, RPFluid = os.path.split(file)
     RP2CAS[RPFluid.split('.')[0]] = RPFluid
 
 fluid_lookup = """1BUTENE	butene	1-Butene	419.29		*	*	*	-	-	-	2.59	0.5	1	0.983	1.079	-	-	-	-	-	-	-	-	-
@@ -132,7 +132,7 @@ TOLUENE	methylbenzane	Toluene	591.75		N/A	3.3	N/A	-	-	-	1.95	0.5	0.6	0.565	6.4E-
 WATER		Water	647.096		***	***	***	-	-	-	N/A	-	-	-	-	-	-	-	-	-	-	-	-	-
 XENON		Xenon	289.733		-	-	-	-	-	-	N/A	-	-	-	-	-	-	-	-	-	-	-	-	-"""
 
-name_dict,ODP_dict,GWP20_dict,GWP100_dict,GWP500_dict = {},{},{},{},{}
+name_dict, ODP_dict, GWP20_dict, GWP100_dict, GWP500_dict = {}, {}, {}, {}, {}
 
 for row in fluid_lookup.split('\n'):
     a = row.split('\t')
@@ -297,28 +297,28 @@ PH = """:'0','0','0','0','0',
 :'0','0','0','0','0','1',
 :'0','0','0','2'"""
 
-pp_fluids = fluids.replace(':','').replace('\n','').replace('.FLD','').replace('.PPF','').replace("'",'').split(",")
-pp_HH = HH.replace(':','').replace('\n','').replace("'",'').split(",")
-pp_FH = FH.replace(':','').replace('\n','').replace("'",'').split(",")
-pp_PH = PH.replace(':','').replace('\n','').replace("'",'').split(",")
+pp_fluids = fluids.replace(':', '').replace('\n', '').replace('.FLD', '').replace('.PPF', '').replace("'", '').split(",")
+pp_HH = HH.replace(':', '').replace('\n', '').replace("'", '').split(",")
+pp_FH = FH.replace(':', '').replace('\n', '').replace("'", '').split(",")
+pp_PH = PH.replace(':', '').replace('\n', '').replace("'", '').split(",")
 
-HH_dict = {RP2CAS[k]:v for k,v in zip(pp_fluids,pp_HH)}
-FH_dict = {RP2CAS[k]:v for k,v in zip(pp_fluids,pp_FH)}
-PH_dict = {RP2CAS[k]:v for k,v in zip(pp_fluids,pp_PH)}
+HH_dict = {RP2CAS[k]: v for k, v in zip(pp_fluids, pp_HH)}
+FH_dict = {RP2CAS[k]: v for k, v in zip(pp_fluids, pp_FH)}
+PH_dict = {RP2CAS[k]: v for k, v in zip(pp_fluids, pp_PH)}
 
 
 def get_env_data(fluid):
     a = dict(
-        HH = HH_dict[fluid],
-        FH = FH_dict[fluid],
-        PH = PH_dict[fluid],
-        ODP = ODP_dict[fluid],
-        GWP20 = GWP20_dict[fluid],
-        GWP100 = GWP100_dict[fluid],
-        GWP500 = GWP500_dict[fluid]
+        HH=HH_dict[fluid],
+        FH=FH_dict[fluid],
+        PH=PH_dict[fluid],
+        ODP=ODP_dict[fluid],
+        GWP20=GWP20_dict[fluid],
+        GWP100=GWP100_dict[fluid],
+        GWP500=GWP500_dict[fluid]
         )
 
-    for k,v in a.iteritems():
+    for k, v in a.iteritems():
         try:
             a[k] = int(v)
         except ValueError:
@@ -327,7 +327,7 @@ def get_env_data(fluid):
             except ValueError:
                 a[k] = -1
 
-    for term in ['GWP100','GWP20','GWP500','ODP']:
+    for term in ['GWP100', 'GWP20', 'GWP500', 'ODP']:
         try:
             a[term] = float(a[term])
         except TypeError:
@@ -353,6 +353,6 @@ for fluid in pp_fluids:
     else:
         continue
 
-f = open('DTU_environmental.json','w')
+f = open('DTU_environmental.json', 'w')
 f.write(json.dumps(code, sort_keys=True, indent=2, separators=(',', ': ')))
 f.close()
