@@ -22,12 +22,12 @@ struct SimpleState
     }
     bool is_valid(){return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);}
 };
-    
+
 struct CriticalState : SimpleState
 {
     bool stable;
     CriticalState() :stable(false){ fill(_HUGE); }
-    
+
 };
 
 /// A modified class for the state point at the maximum saturation entropy on the vapor curve
@@ -48,7 +48,7 @@ struct SsatSimpleState : public SimpleState
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 enum parameters{
     INVALID_PARAMETER = 0,
-    
+
     // General parameters
     igas_constant, ///< Ideal-gas constant
     imolar_mass, ///< Molar mass
@@ -109,18 +109,19 @@ enum parameters{
     ispeed_sound, ///< Speed of sound
     iisothermal_compressibility, ///< Isothermal compressibility
     iisobaric_expansion_coefficient, ///< Isobaric expansion coefficient
+    iisentropic_expansion_coefficient, ///< Isentropic expansion coefficient
 
     // Fundamental derivative of gas dynamics
     ifundamental_derivative_of_gas_dynamics, ///< The fundamental derivative of gas dynamics
 
     // Derivatives of the residual non-dimensionalized Helmholtz energy with respect to the EOS variables
-    ialphar, 
-    idalphar_dtau_constdelta, 
+    ialphar,
+    idalphar_dtau_constdelta,
     idalphar_ddelta_consttau,
 
     // Derivatives of the ideal-gas non-dimensionalized Helmholtz energy with respect to the EOS variables
-    ialpha0, 
-    idalpha0_dtau_constdelta, 
+    ialpha0,
+    idalpha0_dtau_constdelta,
     idalpha0_ddelta_consttau,
 
     // Other functions and derivatives
@@ -130,7 +131,7 @@ enum parameters{
     idCvirial_dT, ///< Derivative of third virial coefficient with temperature
     iZ, ///< The compressibility factor Z = p*v/(R*T)
     iPIP, ///< The phase identification parameter of Venkatarathnam and Oellrich
-    
+
     // Accessors for incompressibles
     ifraction_min, ///< The minimum fraction (mole, mass, volume) for incompressibles
     ifraction_max, ///< The maximum fraction (mole,mass,volume) for incompressibles
@@ -146,13 +147,13 @@ enum parameters{
     iODP, ///< Ozone depletion potential (R-11 = 1.0)
     iPhase, ///< The phase index of the given state
     iundefined_parameter ///< The last parameter, so we can check that all parameters are described in DataStructures.cpp
-    
+
 };
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 // !! Also update phase_lookup_string() in CoolProp.cpp                    !!
 
 /// These are constants for the phases of the fluid
-enum phases{iphase_liquid, ///< Subcritical liquid 
+enum phases{iphase_liquid, ///< Subcritical liquid
             iphase_supercritical, ///< Supercritical (p > pc, T > Tc)
             iphase_supercritical_gas, ///< Supercritical gas (p < pc, T > Tc)
             iphase_supercritical_liquid, ///< Supercritical liquid (p > pc, T < Tc)
@@ -260,11 +261,11 @@ inline bool match_pair(parameters key1, parameters key2, parameters x1, paramete
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
-/** 
+/**
  * @brief Generate an update pair from key, value pairs
- * 
+ *
  * If the input pair is valid, v1 and v2 will correspond to the returned output pair
- * 
+ *
  * @param key1 The first input key
  * @param value1 The first input value
  * @param key2 The second input key
