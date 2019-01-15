@@ -26,7 +26,7 @@
 namespace CoolProp {
 
 /// This tiny class holds pointers to generators for the backends and can be used to look up
-/// generators at runtime.  This class should be populated through the use of static initialized 
+/// generators at runtime.  This class should be populated through the use of static initialized
 
 class BackendLibrary{
 private:
@@ -47,7 +47,7 @@ inline BackendLibrary & get_backend_library(){
     static BackendLibrary the_library;
     return the_library;
 }
-    
+
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen){
     get_backend_library().add_backend(bf, gen);
 };
@@ -114,14 +114,14 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
     backend_families f1;
     std::string f2;
     extract_backend_families_string(backend, f1, f2);
-    
+
     std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator gen, end;
     get_backend_library().get_generator_iterators(f1, gen, end);
 
     if (get_debug_level() > 0){
         std::cout << "AbstractState::factory backend_library size: " << get_backend_library().size() << std::endl;
     }
-    
+
     if (gen != end){
         // One of the registered backends was able to match the given backend family
         return gen->second->get_AbstractState(fluid_names);
@@ -429,7 +429,7 @@ double AbstractState::keyed_output(parameters key)
     case ispeed_sound:
         return speed_sound();
     case ialphar:
-        return alphar(); 
+        return alphar();
     case ialpha0:
         return alpha0();
     case idalpha0_ddelta_consttau:
@@ -452,6 +452,8 @@ double AbstractState::keyed_output(parameters key)
         return isothermal_compressibility();
     case iisobaric_expansion_coefficient:
         return isobaric_expansion_coefficient();
+    case iisentropic_expansion_coefficient:
+        return isentropic_expansion_coefficient();
     case iviscosity:
         return viscosity();
     case iconductivity:
@@ -633,12 +635,15 @@ double AbstractState::isothermal_compressibility(void){
 double AbstractState::isobaric_expansion_coefficient(void){
     return -1.0/_rhomolar*first_partial_deriv(iDmolar, iT, iP);
 }
+double AbstractState::isentropic_expansion_coefficient(void) {
+    return _rhomolar/_p*first_partial_deriv(iP, iDmolar, iSmolar);
+}
 double AbstractState::Bvirial(void){ return calc_Bvirial(); }
 double AbstractState::Cvirial(void){ return calc_Cvirial(); }
 double AbstractState::dBvirial_dT(void){ return calc_dBvirial_dT(); }
 double AbstractState::dCvirial_dT(void){ return calc_dCvirial_dT(); }
 double AbstractState::compressibility_factor(void){ return calc_compressibility_factor(); }
-    
+
 double AbstractState::fundamental_derivative_of_gas_dynamics()
 {
     // See Colonna, FPE, 2010, Eq. 1
@@ -984,7 +989,7 @@ TEST_CASE("Check derivatives in first_partial_deriv","[derivs_in_first_partial_d
     // Numerical derivatives
     CoolPropDbl dP_dT_num = (WaterplusT->p() - WaterminusT->p())/(2*dT);
     CoolPropDbl dP_drho_num = (Waterplusrho->p() - Waterminusrho->p())/(2*drho);
-    
+
     CoolPropDbl dHmolar_dT_num = (WaterplusT->hmolar() - WaterminusT->hmolar())/(2*dT);
     CoolPropDbl dHmolar_drho_num = (Waterplusrho->hmolar() - Waterminusrho->hmolar())/(2*drho);
     CoolPropDbl dHmass_dT_num = (WaterplusT->hmass() - WaterminusT->hmass())/(2*dT);
@@ -1059,7 +1064,7 @@ TEST_CASE("Check derivatives in first_partial_deriv","[derivs_in_first_partial_d
 
     CHECK( std::abs(dP_dT_analyt/dP_dT_num-1) < eps);
     CHECK( std::abs(dP_drho_analyt/dP_drho_num-1) < eps);
-    
+
     CHECK( std::abs(dHmolar_dT_analyt/dHmolar_dT_num-1) < eps);
     CHECK( std::abs(dHmolar_drho_analyt/dHmolar_drho_num-1) < eps);
     CHECK( std::abs(dHmass_dT_analyt/dHmass_dT_num-1) < eps);
