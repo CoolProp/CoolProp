@@ -2,7 +2,7 @@ import sys, os
 import json, CoolProp, sys
 
 CP = CoolProp.CoolProp
-
+CP.set_config_bool(CP.DONT_CHECK_PROPERTY_LIMITS, True)
 
 def inject_hsanchor(fluid, i, json_data):
 
@@ -28,7 +28,8 @@ def inject_hsanchor(fluid, i, json_data):
 
 def inject_triples(fluid, i, json_data):
 
-    Ttriple = json_data['STATES']['triple_liquid']['T']
+    # Ttriple = json_data['STATES']['triple_liquid']['T']
+    Ttriple = json_data['EOS'][i]['STATES']['sat_min_vapor']['T']
 
     triple_liquid = {
           "T": Ttriple,
@@ -116,6 +117,8 @@ def inject_acentric(fluid, i, json_data):
 def inject_states(fluid):
     fluid_path = '../fluids/' + fluid + '.json'
 
+    # AS = 
+
     # Open the fluid JSON file
     with open(fluid_path, 'r') as fp:
         json_data = json.load(fp)
@@ -133,10 +136,8 @@ def inject_states(fluid):
     with open(fluid_path, 'w') as fp:
         fp.write(json.dumps(json_data, **json_options))
 
-
 if __name__ == '__main__':
-    #jj = json.loads(CP.get_config_as_json_string())
-    #jj['DONT_CHECK_PROPERTY_LIMITS'] = True
-    # CP.set_config_as_json_string(json.dumps(jj))
-
-    inject_states('R40')
+    
+    
+    for fld in ['MD2M','MD3M','MD4M','R1243zf','R1234ze(Z)','Neon','HydrogenChloride','HeavyWater']:
+      inject_states(fld)
