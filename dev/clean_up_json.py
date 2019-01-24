@@ -1,8 +1,9 @@
-import json, sys, glob
-sys.path.append('..')
+import json, sys, glob, os
+here = os.path.dirname(__file__)
+sys.path.append(here+'/..')
 from package_json import json_options
 
-for fluid in glob.glob('fluids/*.json'):
+for fluid in glob.glob(here+'/fluids/*.json'):
 
     print(fluid)
     j = json.load(open(fluid, 'r'))
