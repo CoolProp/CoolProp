@@ -56,7 +56,7 @@
       "T_r": 643.847,
       "Tmax": 643.837,
       "Tmin": 276.969,
-      "description": "rho'' = rhoc*exp(Tc/T*sum(n_i*theta^t_i))",
+      "description": "rho'' = rhoc*exp(sum(n_i*theta^t_i))",
       "max_abserror_percentage": 0.09658060167783145,
       "n": [
         -2.4714,
