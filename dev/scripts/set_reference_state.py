@@ -16,5 +16,11 @@ def get_offset_NBP(name):
 
 
 if __name__ == '__main__':
-    name = 'MM'
-    print(get_offset_NBP(name))
+    name = 'PENTANE'
+    import json
+    a1, a2 = get_offset_NBP(name)
+    print(json.dumps({
+      "a1": a1, 
+      "a2": a2, 
+      "type": "IdealGasHelmholtzLead"
+    }, indent=2))
