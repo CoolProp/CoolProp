@@ -1048,29 +1048,30 @@ std::string phase_lookup_string(phases Phase)
 {
     switch (Phase)
     {
-        case iphase_liquid: ///< Liquid
-            return "liquid";
-        case iphase_supercritical: ///< Supercritical (p > pc, T > Tc)
-            return "supercritical";
-        case iphase_supercritical_gas: ///< Supercritical gas (p < pc, T > Tc)
-            return "supercritical_gas";
-        case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
-            return "supercritical_liquid";
-        case iphase_critical_point: ///< At the critical point
-            return "critical_point";
-        case iphase_gas: ///< Subcritical gas
-            return "gas";
-        case iphase_twophase: ///< Twophase
-            return "twophase";
-        case iphase_unknown: ///< Unknown phase
-            return "unknown";
-        case iphase_not_imposed:
-            return "not_imposed";
+    case iphase_liquid: ///< Liquid
+        return "liquid";
+    case iphase_supercritical: ///< Supercritical (p > pc, T > Tc)
+        return "supercritical";
+    case iphase_supercritical_gas: ///< Supercritical gas (p < pc, T > Tc)
+        return "supercritical_gas";
+    case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
+        return "supercritical_liquid";
+    case iphase_critical_point: ///< At the critical point
+        return "critical_point";
+    case iphase_gas: ///< Subcritical gas
+        return "gas";
+    case iphase_twophase: ///< Twophase
+        return "twophase";                    /// between saturation curves.
+    case iphase_unknown: ///< Unknown phase
+        return "unknown";
+    case iphase_not_imposed:
+        return "not_imposed";
     }
     throw ValueError("I should never be thrown");
 }
 std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &FluidName)
 {
+    double Q_val = -1;
     double Phase_double = PropsSI("Phase",Name1,Prop1,Name2,Prop2,FluidName);   // Attempt to get "Phase" from PropsSI()
     if (!ValidNumber(Phase_double)){                                            // if the returned phase is invalid...
         std::string strPhase = phase_lookup_string(iphase_unknown);             //     phase is unknown.

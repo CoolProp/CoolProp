@@ -1794,7 +1794,42 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     _tau = calc_T_reducing()/_T;
     _delta = _rhomolar/calc_rhomolar_reducing();
     _gibbsmolar = hmol-_T*smol;
-    _Q = q;
+    _Q = q;  // Set the CoolProp _phase variable based on RefProp's quality value (q)
+    if (imposed_phase_index == iphase_not_imposed)   // If phase is imposed, _phase will already be set.
+    {
+        if (ValidNumber(_Q))
+        {
+            if ((_Q >= 0.00) && (_Q <= 1.00)) {      // CoolProp includes Q = 1 or 0 in the two phase region,
+                _phase = iphase_twophase;            // whereas RefProp designates saturated liquid and saturated vapor.
+            }
+            else if (_Q > 1.00) {                    // Above saturation curve
+                _phase = iphase_gas;
+                if (_T >= calc_T_critical()) {       //     ....AND T >= Tcrit
+                    _phase = iphase_supercritical_gas;
+                }
+            }
+            else if (_Q < 0.00) {                    // Below saturation curve
+                _phase = iphase_liquid;
+                if (_p >= calc_p_critical()) {       //     ....AND P >= Pcrit
+                    _phase = iphase_supercritical_liquid;
+                }
+            }
+            else {                                   // RefProp might return Q = 920 for Metastable
+                _phase = iphase_unknown;             // but CoolProp doesn't have an enumerator for this state,
+            }                                        // so it's unknown as well.
+
+            if ((_Q == 999) || (_Q == -997)) {       // One last check for _Q == 999||-997 (Supercritical)
+                _phase = iphase_supercritical;       // T >= Tcrit AND P >= Pcrit
+                if ((std::abs(_T - calc_T_critical()) < 10 * DBL_EPSILON) &&   // IF (T == Tcrit) AND
+                    (std::abs(_p - calc_p_critical()) < 10 * DBL_EPSILON)) {   //    (P == Pcrit) THEN
+                    _phase = iphase_critical_point;                            //    at critical point. 
+                };
+            }
+        }
+        else {
+            _phase = iphase_unknown;
+        }
+    }
 }
 
 void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair,

@@ -77,6 +77,8 @@ public:
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
 
+    phases calc_phase(void) { return _phase; };
+
     /** \brief Specify the phase - this phase will always be used in calculations
      *
      * @param phase_index The index from CoolProp::phases
