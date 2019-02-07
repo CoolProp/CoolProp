@@ -17,9 +17,9 @@ In your MATLAB shell, you can inquire about what Python version MATLAB intends t
 
     >> pyversion
 
-           version: '2.7'
+           version: '3.6'
         executable: 'D:\Anaconda\python.exe'
-           library: 'D:\Anaconda\python27.dll'
+           library: 'D:\Anaconda\python36.dll'
               home: 'D:\Anaconda'
           isloaded: 0
 
@@ -37,26 +37,22 @@ If you have multiple copies of Python on your computer already, then you can tel
               home: 'd:\Anaconda\envs\py36'
           isloaded: 0
 
-Finally, you need to install CoolProp into your given copy of python. This one-liner calls the pip program of Python to install the CoolProp package from the PYPI package index. Watch out for the spaces in the arguments, they are important!::
+Finally, you need to install CoolProp into your given copy of python. This one-liner calls the ``pip`` program of Python to install the CoolProp package from the PYPI package index. Watch out for the spaces in the arguments, they are important!::
 
     >> [v,e] = pyversion; system([e,' -m pip install --user -U CoolProp'])
 
 Use
 ---
 
-At the beginning of your code you should add the import statement (similar to what you would do in Python)::
+Then you can calculate the normal boiling point temperature of water::
 
-    >> import py.CoolProp.CoolProp.PropsSI
-
-And then you can calculate the normal boiling point temperature of water::
-
-    >> PropsSI('T','P',101325,'Q',0,'Water')
+    >> py.CoolProp.CoolProp.PropsSI('T','P',101325,'Q',0,'Water')
 
     ans = 
 
       373.1243
 
-Similar approaches are possible for the low-level interface. Addition of docs documenting how to use the low-level interface in MATLAB would be welcome.  Also, more advanced wrapper for MATLAB are available, and are stored on github: https://github.com/CoolProp/CoolProp/tree/master/wrappers/MATLAB
+Similar approaches are possible for the low-level interface. Addition of docs documenting how to use the low-level interface in MATLAB would be welcome.  Also, more advanced wrappers for MATLAB are available, and are stored on github: https://github.com/CoolProp/CoolProp/tree/master/wrappers/MATLAB
 
 .. _low_level_high_level_matlab: 
 
