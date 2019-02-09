@@ -77,7 +77,16 @@ public:
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
 
-    phases calc_phase(void) { return _phase; };
+    phases calc_phase(void) { 
+        if (this->Ncomp > 1) {
+            throw NotImplementedError("The REFPROP backend does not implement calc_phase function for mixtures.");
+        }
+        else {
+            return _phase;
+        }
+    };
+
+    phases REFPROPMixtureBackend::GetRPphase();
 
     /** \brief Specify the phase - this phase will always be used in calculations
      *
