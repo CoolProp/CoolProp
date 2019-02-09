@@ -77,6 +77,7 @@ public:
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
 
+    // Get _phase for pure fluids only
     phases calc_phase(void) { 
         if (this->Ncomp > 1) {
             throw NotImplementedError("The REFPROP backend does not implement calc_phase function for mixtures.");
@@ -86,7 +87,8 @@ public:
         }
     };
 
-    phases REFPROPMixtureBackend::GetRPphase();
+    // Utility function to determine the phase from quality value return from REFPROP
+    phases GetRPphase();
 
     /** \brief Specify the phase - this phase will always be used in calculations
      *
