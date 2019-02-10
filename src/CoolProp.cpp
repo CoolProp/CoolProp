@@ -1048,24 +1048,24 @@ std::string phase_lookup_string(phases Phase)
 {
     switch (Phase)
     {
-        case iphase_liquid: ///< Liquid
-            return "liquid";
-        case iphase_supercritical: ///< Supercritical (p > pc, T > Tc)
-            return "supercritical";
-        case iphase_supercritical_gas: ///< Supercritical gas (p < pc, T > Tc)
-            return "supercritical_gas";
-        case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
-            return "supercritical_liquid";
-        case iphase_critical_point: ///< At the critical point
-            return "critical_point";
-        case iphase_gas: ///< Subcritical gas
-            return "gas";
-        case iphase_twophase: ///< Twophase
-            return "twophase";
-        case iphase_unknown: ///< Unknown phase
-            return "unknown";
-        case iphase_not_imposed:
-            return "not_imposed";
+    case iphase_liquid: ///< Liquid
+        return "liquid";
+    case iphase_supercritical: ///< Supercritical (p > pc, T > Tc)
+        return "supercritical";
+    case iphase_supercritical_gas: ///< Supercritical gas (p < pc, T > Tc)
+        return "supercritical_gas";
+    case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
+        return "supercritical_liquid";
+    case iphase_critical_point: ///< At the critical point
+        return "critical_point";
+    case iphase_gas: ///< Subcritical gas
+        return "gas";
+    case iphase_twophase: ///< Twophase (between saturation curves - inclusive)
+        return "twophase";
+    case iphase_unknown: ///< Unknown phase
+        return "unknown";
+    case iphase_not_imposed:
+        return "not_imposed";
     }
     throw ValueError("I should never be thrown");
 }
