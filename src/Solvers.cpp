@@ -47,9 +47,10 @@ functions, each of which take the vector x. The data is managed using std::vecto
 @param tol The root-sum-square of the errors from each of the components
 @param maxiter The maximum number of iterations
 @param errstring  A string with the returned error.  If the length of errstring is zero, no errors were found
+@param w A relaxation multiplier on the step size, multiplying the normal step size
 @returns If no errors are found, the solution.  Otherwise, _HUGE, the value for infinity
 */
-std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector<double> &x, double tol, int maxiter)
+std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector<double> &x, double tol, int maxiter, double w)
 {
     int iter=0;
     f->errstring.clear();
@@ -77,7 +78,7 @@ std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND *f, const std::vector
         // Update the guess
         double max_relchange = -1;
         for (std::size_t i = 0; i<x0.size(); i++){
-            x0[i] += v(i);
+            x0[i] += w*v(i);
             double relchange = std::abs(v(i)/x0[i]);
             if (std::abs(x0[i]) > 1e-16 && relchange > max_relchange ){
                 max_relchange = relchange;
