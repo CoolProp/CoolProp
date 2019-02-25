@@ -116,7 +116,8 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator &ode, double tstart, dou
                     if (max_error > eps_allowed){
                         // Take a smaller step next time, try again on this step
                         // But only if adaptive mode is on
-                        h *= step_relax*pow(eps_allowed/max_error, 0.3);
+                        // If eps_allowed == max_error (approximately), force the step to change to avoid infinite loop
+                        h *= std::min(step_relax*pow(eps_allowed/max_error, 0.3), 0.999);
                         stepAccepted = false;
                     }
                     else{
