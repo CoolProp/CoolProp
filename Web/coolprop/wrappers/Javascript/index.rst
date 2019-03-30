@@ -16,6 +16,28 @@ Pre-Compiled Binaries
 
 * A live demo of the Javascript library in action can also be found `online <http://www.coolprop.sourceforge.net/jscript/index.html>`_.
 
+* There is a bug in emscripten causing problems when a ``Release`` build of CMake is used.  Switching to ``RelWithDebInfo`` config seems to solve it, just delete the generated .wast file.
+
+Serving the JS
+==============
+
+The .wasm file can cause some problems for hosting emscripten-compiled JS files.  When locally hosting, you need to ensure that the .wasm file extension is served with MIME type ``application/wasm``.  A simple webserver config in Python 3 for testing CoolProp (with proper hosting of the WASM) could read::
+
+    import http.server
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    port=8000
+    print("Running on port %d" % port)
+
+    http.server.SimpleHTTPRequestHandler.extensions_map['.wasm'] = 'application/wasm'
+    httpd = HTTPServer(('localhost', port), http.server.SimpleHTTPRequestHandler)
+
+    print("Mapping \".wasm\" to \"%s\"" %
+    http.server.SimpleHTTPRequestHandler.extensions_map['.wasm'])
+    httpd.serve_forever()
+
+On Apache, you need to `setup the server appropriately <https://emscripten.org/docs/compiling/WebAssembly.html?highlight=apache#web-server-setup>`_.
+
 User-Compiled Binaries
 ======================
 
