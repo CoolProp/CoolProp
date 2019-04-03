@@ -369,15 +369,28 @@ class SolutionDataWriter(object):
         jobj['volume2input'] = data.volume2input.toJSON()  # dd
         jobj['mole2input'] = data.mole2input.toJSON()  # dd
 
-        original_float_repr = json.encoder.FLOAT_REPR
-        # print json.dumps(1.0001)
-        stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
-        #pr = np.finfo(float64).eps * 10.0
-        # pr = np.finfo(float64).precision - 2 # stay away from numerical precision
-        #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt)
-        json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt)
-        dump = json.dumps(jobj, indent=2, sort_keys=True)
-        json.encoder.FLOAT_REPR = original_float_repr
+        # Quickfix to allow building the docs with Python 3, see #1786
+        try:
+            original_float_repr = json.encoder.FLOAT_REPR
+            # print json.dumps(1.0001)
+            stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
+            #pr = np.finfo(float64).eps * 10.0
+            # pr = np.finfo(float64).precision - 2 # stay away from numerical precision
+            #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt)
+            json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt)
+            dump = json.dumps(jobj, indent=2, sort_keys=True)
+            json.encoder.FLOAT_REPR = original_float_repr
+        except:
+            # Assume Python3
+            stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
+            class RoundingEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if isinstance(obj, float):
+                        return format(o, stdFmt)
+                    # Let the base class default method raise the TypeError
+                    return json.JSONEncoder.default(self, obj)
+            dump = json.dumps(jobj, indent=2, sort_keys=True, cls=RoundingEncoder)
+        
 
         # print dump
         hashes = self.load_hashes()
