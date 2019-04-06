@@ -580,6 +580,9 @@ public:
 
     /// Clear all the cached values
     virtual bool clear();
+    /// When the composition changes, clear all cached values that are only dependent on composition, but not the thermodynamic state
+    virtual bool clear_comp_change();
+    
 
     /// Get the state that is used in the equation of state or mixture model
     /// to reduce the state.  For pure fluids this is usually, but not always,
