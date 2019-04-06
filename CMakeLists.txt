@@ -1440,6 +1440,7 @@ if (COOLPROP_SMATH_MODULE)
 
 endif()
 
+# Use like cmake ..\CoolProp.git -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
 if (COOLPROP_MY_MAIN)
   list(APPEND APP_SOURCES "${COOLPROP_MY_MAIN}")
   add_executable        (Main ${APP_SOURCES})
