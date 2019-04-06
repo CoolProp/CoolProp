@@ -68,19 +68,19 @@ for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solu
             state.update(CoolProp.PT_INPUTS, p, state.Tmax())
             break
         except Exception as e:
-            error = e.message
+            error = str(e)
             try:
                 state.set_volu_fractions([frac])
                 state.update(CoolProp.PT_INPUTS, p, state.Tmax())
                 break
             except Exception as e:
-                error = e.message
+                error = str(e)
                 try:
                     state.set_mole_fractions([frac])
                     state.update(CoolProp.PT_INPUTS, p, state.Tmax())
                     break
                 except Exception as e:
-                    error = e.message
+                    error = str(e)
                     pass
 
     Tmin = 0.0
@@ -150,19 +150,19 @@ for fluid in ["Water"]:
             try:
                 Pr[i] = state.Prandtl()
             except Exception as e:
-                print(e.message)
+                print(str(e))
             try:
                 la[i] = state.conductivity()
             except Exception as e:
-                print(e.message)
+                print(str(e))
             try:
                 mu[i] = state.viscosity()
             except Exception as e:
-                print(e.message)
+                print(str(e))
             try:
                 cp[i] = state.cpmass()
             except Exception as e:
-                print(e.message)
+                print(str(e))
         except:
             pass
     #print(np.min(Pr), np.max(Pr))

@@ -457,7 +457,7 @@ class IncompressibleFitter(object):
         if (len(A) < cols):
             raise ValueError("Your matrix has only {0} valid rows and you try to fit {1} coefficients, please reduce the order.".format(len(A), cols))
 
-        coeffs, resids, rank, singulars = np.linalg.lstsq(A, zz)
+        coeffs, resids, rank, singulars = np.linalg.lstsq(A, zz, rcond=None)
         if DEBUG: print("Linear algebra solver returned:")
         if DEBUG: print(coeffs)
         if DEBUG: print(resids)
