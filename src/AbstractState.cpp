@@ -172,6 +172,7 @@ bool AbstractState::clear_comp_change(){
     this->_molar_mass.clear();
     this->_critical.fill(_HUGE);
     this->_reducing.fill(_HUGE);
+    return true;
 }
 bool AbstractState::clear() {
     // Reset all instances of CachedElement and overwrite
