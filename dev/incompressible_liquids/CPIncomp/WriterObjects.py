@@ -35,7 +35,7 @@ class UTF8Recoder:
         return self
 
     def next(self):
-        return self.reader.next().encode("utf-8")
+        return next(self.reader).encode("utf-8")
 
 
 class UnicodeReader:
@@ -49,7 +49,7 @@ class UnicodeReader:
         self.reader = csv.reader(f, dialect=dialect, **kwds)
 
     def next(self):
-        row = self.reader.next()
+        row = next(self.reader)
         return [unicode(s, "utf-8") for s in row]
 
     def __iter__(self):
@@ -70,10 +70,13 @@ class UnicodeWriter:
         self.encoder = codecs.getincrementalencoder(encoding)()
 
     def writerow(self, row):
-        self.writer.writerow([s.encode("utf-8") for s in row])
+        self.writer.writerow(row)
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
-        data = data.decode("utf-8")
+        try: data = data.decode("utf-8")
+        except: pass
+        try: data = str(data, encoding ="utf-8")
+        except: pass
         # ... and re-encode it into the target encoding
         data = self.encoder.encode(data)
         # write to the target stream
@@ -166,8 +169,8 @@ class SolutionDataWriter(object):
             ccycle = self.bp.getColourCycle(length=2)
             # ccycle.next() # skip the first one
             # ccycle.next() # skip the first one
-            self.secondaryColour = ccycle.next()
-            self.primaryColour = ccycle.next()
+            self.secondaryColour = next(ccycle)
+            self.primaryColour = next(ccycle)
         else:
             self.primaryColour = 'blue'
             self.secondaryColour = 'red'
@@ -315,7 +318,7 @@ class SolutionDataWriter(object):
 #                raise ValueError("Unknown xid specified.")
 
     def get_hash(self, data):
-        return hashlib.sha224(data).hexdigest()
+        return hashlib.sha224(data.encode()).hexdigest()
 
     def get_hash_file(self):
         return os.path.join(os.path.dirname(__file__), 'data', "hashes.json")
@@ -369,15 +372,28 @@ class SolutionDataWriter(object):
         jobj['volume2input'] = data.volume2input.toJSON()  # dd
         jobj['mole2input'] = data.mole2input.toJSON()  # dd
 
-        original_float_repr = json.encoder.FLOAT_REPR
-        # print json.dumps(1.0001)
-        stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
-        #pr = np.finfo(float64).eps * 10.0
-        # pr = np.finfo(float64).precision - 2 # stay away from numerical precision
-        #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt)
-        json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt)
-        dump = json.dumps(jobj, indent=2, sort_keys=True)
-        json.encoder.FLOAT_REPR = original_float_repr
+        # Quickfix to allow building the docs with Python 3, see #1786
+        try:
+            original_float_repr = json.encoder.FLOAT_REPR
+            # print json.dumps(1.0001)
+            stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
+            #pr = np.finfo(float64).eps * 10.0
+            # pr = np.finfo(float64).precision - 2 # stay away from numerical precision
+            #json.encoder.FLOAT_REPR = lambda o: format(np.around(o,decimals=pr), stdFmt)
+            json.encoder.FLOAT_REPR = lambda o: format(o, stdFmt)
+            dump = json.dumps(jobj, indent=2, sort_keys=True)
+            json.encoder.FLOAT_REPR = original_float_repr
+        except:
+            # Assume Python3
+            stdFmt = "1.{0}e".format(int(data.significantDigits - 1))
+            class RoundingEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if isinstance(obj, float):
+                        return format(o, stdFmt)
+                    # Let the base class default method raise the TypeError
+                    return json.JSONEncoder.default(self, obj)
+            dump = json.dumps(jobj, indent=2, sort_keys=True, cls=RoundingEncoder)
+        
 
         # print dump
         hashes = self.load_hashes()
@@ -504,7 +520,7 @@ class SolutionDataWriter(object):
             except (TypeError, ValueError) as e:
                 print("An error occurred for fluid: {0}".format(obj.name))
                 print(obj)
-                print(e)
+                print(str(e))
                 pass
         print(" ... done")
         return
@@ -1286,8 +1302,9 @@ class SolutionDataWriter(object):
                 # if not np.any(np.isfinite(obj["D"])):
                 #    print("Name: {0}, Dmin: {1}, Dmax: {1}".format(obj["name"],np.min(obj["D"]),np.max(obj["D"])))
 
-        obj = (item for item in dataList if item["name"] == "NBS").next()
-        ax.plot(obj["T"], obj["D"], label="{0}: {1}".format(obj["name"], obj["desc"]), ls='-', color='black')
+        # Skip pure water
+        #obj = (item for item in dataList if item["name"] == "NBS").next()
+        #ax.plot(obj["T"], obj["D"], label="{0}: {1}".format(obj["name"], obj["desc"]), ls='-', color='black')
 
         ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., ncol=1)  # , prop={'size':'smaller'})
         plt.tight_layout(rect=(0, 0, 1, 0.95))
@@ -1335,7 +1352,7 @@ class SolutionDataWriter(object):
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
         with open(path, 'w') as f:
-            f.write(text.encode('utf-8'))
+            f.write(text)
 
         return True
 
@@ -1458,6 +1475,9 @@ class SolutionDataWriter(object):
         text = "\\cr \\topcrule \n"
         i = -1
         for row in testTable:
+            for i__ in range(len(row)):
+                try: row[i__] = str(row[i__], encoding ="utf-8")
+                except: pass
             i += 1
             if i < 1:
                 tmp = r"\headcol " + " & ".join(row)
@@ -1474,15 +1494,19 @@ class SolutionDataWriter(object):
             text += "\\bottomrule \\cr \n"
 
         with open(path + ".tex", 'w') as f:
-            f.write(text.encode('utf-8'))
+            f.write(text)
+
 
         text = "\n"
         for i, row in enumerate(testSection):
+            for i__ in range(len(row)):
+                try: row[i__] = str(row[i__], encoding ="utf-8")
+                except: pass
             tmp = "\n".join(row)
             text += tmp + " \n\n"
 
         with open(path + "-section.tex", 'w') as f:
-            f.write(text.encode('utf-8'))
+            f.write(text)
 
         return True
 

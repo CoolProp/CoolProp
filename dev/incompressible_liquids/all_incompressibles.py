@@ -31,7 +31,7 @@ def mergePdfIfNewer(singlePdfs, combined):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--test", action='store_true', help="only run a subset of fluid")
+    parser.add_argument("-t", "--test", action='store_true', help="Only run a subset of fluid files")
     parser.add_argument("-nf", "--nofit", action='store_true', help="Do not fit the data, but read the JSON files")
     parser.add_argument("-nr", "--noreports", action='store_true', help="Do not write the fitting reports")
     parser.add_argument("-ns", "--nosummary", action='store_true', help="Do not generate the summary figures")
@@ -263,4 +263,4 @@ if __name__ == '__main__':
         writer.generateStatsTable(lists, labels)
 
     print("All done, bye")
-    sys.exit(0)
+    #sys.exit(0)
