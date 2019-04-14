@@ -51,7 +51,7 @@ jobs:
   - task: CMake@1
     inputs:
       workingDirectory: 'build'
-      cmakeArgs: '-DCOOLPROP_SHARED_LIBRARY'
+      cmakeArgs: '-DCOOLPROP_SHARED_LIBRARY=ON'
   - task: MSBuild@1
     inputs:
       solution: 'build/ALL_BUILD.vcxproj'
@@ -62,5 +62,5 @@ jobs:
   steps:
   - script: echo hello from Windows
   - script: mkdir build
-  - script: cd build && cmake .. -DCOOLPROP_SHARED_LIBRARY && cd ..
+  - script: cd build && cmake .. -DCOOLPROP_SHARED_LIBRARY=ON && cd ..
   - script: cd build && cmake --build .  && cd ..
