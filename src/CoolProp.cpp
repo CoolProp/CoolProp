@@ -852,7 +852,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
     extract_backend(fluid_string, backend, fluid);
     if (backend == "REFPROP"){
         
-        long ierr = 0, ixflag = 1;
+        int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
         char herr[255], hrf[4];
         double x0[1] = {1};
