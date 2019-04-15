@@ -32,9 +32,9 @@ protected:
 
 
 	/// Call the PHIXdll function in the dll
-	CoolPropDbl call_phixdll(long itau, long idelta);
+	CoolPropDbl call_phixdll(int itau, int idelta);
 	/// Call the PHI0dll function in the dll
-	CoolPropDbl call_phi0dll(long itau, long idelta);
+	CoolPropDbl call_phi0dll(int itau, int idelta);
 
 public:
     REFPROPMixtureBackend():Ncomp(0),_mole_fractions_set(false) {instance_counter++;}
@@ -70,7 +70,7 @@ public:
     double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
 
     /// Find the index (1-based for FORTRAN) of the fluid with the given CAS number
-    long match_CAS(const std::string &CAS);
+    int match_CAS(const std::string &CAS);
 
     // REFPROP backend uses mole fractions
     bool using_mole_fractions(){return true;}
@@ -256,7 +256,7 @@ public:
 
 bool force_load_REFPROP();
 bool force_unload_REFPROP();
-void REFPROP_SETREF(char hrf[3], long ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, long &ierr, char herr[255], long l1, long l2);
+void REFPROP_SETREF(char hrf[3], int ixflag, double x0[1], double &h0, double &s0, double &T0, double &p0, int &ierr, char herr[255], int l1, int l2);
 
 } /* namespace CoolProp */
 #endif /* REFPROPMIXTUREBACKEND_H_ */
