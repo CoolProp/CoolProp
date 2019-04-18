@@ -71,6 +71,7 @@ double f_factor(double T, double p);
 // A central place to check bounds, should be used much more frequently
 static inline bool check_bounds(const givens prop, const double& value, double& min_val, double& max_val) {
     if (!ValidNumber(value)) return false;
+
     switch (prop)
     {
     case GIVEN_P:
@@ -96,11 +97,12 @@ static inline bool check_bounds(const givens prop, const double& value, double& 
         max_val = 1.0;
         break;
     default:
-        min_val = _HUGE;
-        max_val = -_HUGE;
+        min_val = -_HUGE;
+        max_val = _HUGE;
         break;
     }
-    return !((value < min_val) || (value > max_val));
+    bool ret = !((value < min_val) || (value > max_val));
+    return ret;
 }
 
 // A couple of convenience functions that are needed quite a lot
@@ -1584,12 +1586,7 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
 {
     if (CoolProp::get_debug_level() > 0){ std::cout << format("length of input_keys is %d\n", input_keys.size()); }
     if (input_keys.size() != input_vals.size()){ throw CoolProp::ValueError(format("Length of input_keys (%d) does not equal that of input_vals (%d)", input_keys.size(), input_vals.size())); }
-    for (std::size_t i = 0; i < input_keys.size(); i++) {
-        double min_val = _HUGE, max_val = -_HUGE; // Initialize with invalid values
-        if (!check_bounds(input_keys[i], input_vals[i], min_val, max_val)) {
-            throw CoolProp::ValueError(format("The input for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", input_keys[i], input_vals[i], min_val, max_val));
-        }
-    }
+    
     long key = get_input_key(input_keys, GIVEN_T);
     if (key >= 0) // Found T (or alias) as an input
     {
@@ -1665,7 +1662,6 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
 
         double T_min = 200;
         double T_max = 450;
-
         check_bounds(GIVEN_T, 273.15, T_min, T_max);
 
         if (MainInputKey == GIVEN_RH){
@@ -1730,17 +1726,6 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
 double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
 {
     if (CoolProp::get_debug_level() > 0){ std::cout << format("_HAPropsSI_outputs :: T: %g K, psi_w: %g\n", T, psi_w); }
-
-    double min_val = _HUGE, max_val = -_HUGE; // Initialize with invalid values
-    if (!check_bounds(GIVEN_P, p, min_val, max_val)) {
-        throw CoolProp::ValueError(format("The pressure value (%g) is outside the range of validity: (%g) to (%g)", p, min_val, max_val));
-    }
-    if (!check_bounds(GIVEN_T, T, min_val, max_val)) {
-        throw CoolProp::ValueError(format("The temperature value (%g) is outside the range of validity: (%g) to (%g)", T, min_val, max_val));
-    }
-    if (!check_bounds(GIVEN_PSIW, psi_w, min_val, max_val)) {
-        throw CoolProp::ValueError(format("The water mole fraction value (%g) is outside the range of validity: (%g) to (%g)", psi_w, min_val, max_val));
-    }
 
     double M_ha=(1-psi_w)*0.028966+MM_Water()*psi_w; //[kg_ha/mol_ha]
     // -----------------------------------------------------------------
@@ -1913,13 +1898,49 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
             throw CoolProp::ValueError("Other two inputs to HAPropsSI aside from pressure cannot be the same");
         }
 
+        // Check the input values
+        double min_val = _HUGE, max_val = -_HUGE; // Initialize with invalid values
+        for (std::size_t i = 0; i < input_keys.size(); i++) {
+            if (!check_bounds(input_keys[i], input_vals[i], min_val, max_val)) {
+                //throw CoolProp::ValueError(format("The input for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", input_keys[i], input_vals[i], min_val, max_val));
+                if (CoolProp::get_debug_level() > 0) {
+                    std::cout << format("The input for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", input_keys[i], input_vals[i], min_val, max_val);
+                }
+            }
+        }
         // Parse the inputs to get to set of p, T, psi_w
         _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
 
         if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI input conversion yields T: %g, psi_w: %g\n", T, psi_w); }
 
+        // Check the standardized input values
+        if (!check_bounds(GIVEN_P, p, min_val, max_val)) {
+            //throw CoolProp::ValueError(format("The pressure value (%g) is outside the range of validity: (%g) to (%g)", p, min_val, max_val));
+            if (CoolProp::get_debug_level() > 0) {
+                std::cout << format("The pressure value (%g) is outside the range of validity: (%g) to (%g)", p, min_val, max_val);
+            }
+        }
+        if (!check_bounds(GIVEN_T, T, min_val, max_val)) {
+            //throw CoolProp::ValueError(format("The temperature value (%g) is outside the range of validity: (%g) to (%g)", T, min_val, max_val));
+            if (CoolProp::get_debug_level() > 0) {
+                std::cout << format("The temperature value (%g) is outside the range of validity: (%g) to (%g)", T, min_val, max_val);
+            }
+        }
+        if (!check_bounds(GIVEN_PSIW, psi_w, min_val, max_val)) {
+            //throw CoolProp::ValueError(format("The water mole fraction value (%g) is outside the range of validity: (%g) to (%g)", psi_w, min_val, max_val));
+            if (CoolProp::get_debug_level() > 0) {
+                std::cout << format("The water mole fraction value (%g) is outside the range of validity: (%g) to (%g)", psi_w, min_val, max_val);
+            }
+        }
         // Calculate the output value desired
         double val = _HAPropsSI_outputs(OutputType, p, T, psi_w);
+        // Check the output value
+        if (!check_bounds(OutputType, val, min_val, max_val)) {
+            //throw CoolProp::ValueError(format("The output for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", OutputType, val, min_val, max_val));
+            if (CoolProp::get_debug_level() > 0) {
+                std::cout << format("The output for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", OutputType, val, min_val, max_val);
+            }
+        }
 
         if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI is about to return %g\n", val); }
         return val;
