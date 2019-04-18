@@ -1286,7 +1286,14 @@ public:
     WetBulbTminSolver(double p, double hair_dry):p(p),hair_dry(hair_dry){}
     double call(double Ts)
     {
-        double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
+        //double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
+
+        double psi_w, T;
+        std::vector<givens> inp = { HumidAir::GIVEN_TWB, HumidAir::GIVEN_RH };
+        std::vector<double> val = { Ts, 1.0 };
+        _HAPropsSI_inputs(p, inp, val, T, psi_w);
+        double RHS = _HAPropsSI_outputs(GIVEN_ENTHALPY, p, T, psi_w);
+
         if (!ValidNumber(RHS)){throw CoolProp::ValueError();}
         return RHS - this->hair_dry;
     }
