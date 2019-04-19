@@ -61,15 +61,15 @@ std::vector<std::pair<std::string, std::string>> get_supported_input_pairs() {
                     "P", p);
                 good_ones.push_back(std::pair<std::string, std::string>(k1, k2));
             }
-            catch (...) {
-                double _nu = -_HUGE;
+            catch (std::exception & e) {
+                std::cout << e.what();
             }
         }
     }
     return good_ones;
 }
 
-void calculate(std::vector<std::pair<std::string, double>> inputs) {
+void calculate(std::vector<std::pair<std::string, double>> inputs, double &clc_count, double &err_count, double& acc_count) {
     //auto errors = []
 
     auto supported_pairs = get_supported_input_pairs();
@@ -99,15 +99,26 @@ void calculate(std::vector<std::pair<std::string, double>> inputs) {
             }
         }
 
+        clc_count += 1;
         try {
             double psi_w_new = HumidAir::HAPropsSI(
                 "psi_w",
                 k1, v1,
                 k2, v2,
                 "P", P_input);
+            double delta = std::abs(psi_w_input - psi_w_new);
+            if (delta > 1e-8) {
+                acc_count += 1;
+                /*std::cout << "\n-------------- Error --------------\n";
+                std::cout << "delta = " << delta << "\n";
+                std::cout << k1 << " = " << v1 << "\n";
+                std::cout << k2 << " = " << v2 << "\n";
+                std::cout << "P" << " = " << P_input << "\n";*/
+            }
         }
-        catch (...) {
-            double _nu = -_HUGE;
+        catch (std::exception &e) {
+            err_count += 1;
+            std::cout << e.what();
         }
     }
 }
@@ -119,7 +130,9 @@ int main(int argc, const char* argv[]) {
     //double h = HumidAir::HAPropsSI("H", "T", 298.15, "P", 101325, "R", 0.5);
     //double T = HumidAir::HAPropsSI("T", "P", 101325, "H", h, "R", 1.0);
     //T = HumidAir::HAPropsSI("T", "H", h, "R", 1.0, "P", 101325);
-
+    double err_count = 0;
+    double clc_count = 0;
+    double acc_count = 0;
     std::size_t num = 31;
     std::vector<double> T(num), R(num);
     for (std::size_t i = 0; i < num; i++) {
@@ -131,9 +144,15 @@ int main(int argc, const char* argv[]) {
             double Tv = T[i];
             double Rv = R[j];
             auto input_values = generate_values(Tv, Rv);
-            calculate(input_values);
+            calculate(input_values, clc_count, err_count, acc_count);
         }
+        std::cout << "----- Errors ----- \n";
+        std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count / clc_count * 100.0 << "% \n";
+        std::cout << "Accuracy: " << acc_count << " / " << clc_count << " = " << acc_count / clc_count * 100.0 << "% \n";
     }
+    std::cout << "----- Final Errors ----- \n";
+    std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count / clc_count * 100.0 << "% \n";
+    std::cout << "Accuracy: " << acc_count << " / " << clc_count << " = " << acc_count / clc_count * 100.0 << "% \n";
 }
 
 
