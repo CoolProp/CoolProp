@@ -14,6 +14,7 @@
 #include "CoolProp.h"
 #include "crossplatform_shared_ptr.h"
 #include "Exceptions.h"
+#include "Configuration.h"
 
 #include <algorithm>    // std::next_permutation
 #include <stdlib.h>
@@ -70,6 +71,8 @@ double f_factor(double T, double p);
 
 // A central place to check bounds, should be used much more frequently
 static inline bool check_bounds(const givens prop, const double& value, double& min_val, double& max_val) {
+    // If limit checking is disabled, just accept the inputs, return true
+    if (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS)){ return true; }
     if (!ValidNumber(value)) return false;
     switch (prop)
     {
@@ -96,8 +99,8 @@ static inline bool check_bounds(const givens prop, const double& value, double& 
         max_val = 1.0;
         break;
     default:
-        min_val = _HUGE;
-        max_val = -_HUGE;
+        min_val = -1e50;
+        max_val = 1e50;
         break;
     }
     return !((value < min_val) || (value > max_val));
@@ -1920,6 +1923,11 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
 
         // Calculate the output value desired
         double val = _HAPropsSI_outputs(OutputType, p, T, psi_w);
+
+        if (!ValidNumber(val)){
+            if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI is about to return invalid number"); }
+            throw CoolProp::ValueError("Invalid value about to be returned");
+        }
 
         if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI is about to return %g\n", val); }
         return val;
