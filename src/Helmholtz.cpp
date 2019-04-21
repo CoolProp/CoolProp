@@ -8,8 +8,49 @@
   #undef _D
 #endif
 
-namespace CoolProp{
+#include <boost/multiprecision/cpp_bin_float.hpp>
 
+namespace CoolProp{
+    
+// https://en.wikipedia.org/wiki/Pairwise_summation
+CoolPropDbl pairwise_sum(const std::vector<CoolPropDbl> &x){
+    CoolPropDbl s = 0;
+    int n = x.size();
+    if (n <= 3){                   // base case: naive summation for a sufficiently small array
+        s = x[0];
+        for (int i = 1; i < n;++i){
+            s += x[i];
+        }
+        return s;
+    }
+    else{                          // divide and conquer: recursively sum two halves of the array
+        int m = floor(n/2);
+        return pairwise_sum(std::vector<CoolPropDbl>(x.begin(),x.begin()+m)) + pairwise_sum(std::vector<CoolPropDbl>(x.begin()+m,x.end()));
+    }
+}
+    
+using namespace boost::multiprecision;
+    
+typedef cpp_bin_float_100 my_float;
+//typedef double my_float;
+
+// https://en.wikipedia.org/wiki/Kahan_summation_algorithm#Further_enhancements
+template<typename T>
+T NeumaierSum(const std::vector<T> &x){
+    T sum = x[0];
+    T c = 0.0;                 // A running compensation for lost low-order bits.
+    for (int i = 1; i < x.size(); ++i){
+        T t = sum + x[i];
+        if (abs(sum) >= abs(x[i])){
+            c += (sum - t) + x[i]; // If sum is bigger, low-order digits of input[i] are lost.
+        }
+        else{
+            c += (x[i] - t) + sum; // Else low-order digits of sum are lost
+        }
+        sum = t;
+    }
+    return sum + c;              // Correction only applied once in the very end
+}
 CoolPropDbl kahanSum(const std::vector<CoolPropDbl> &x)
 {
     CoolPropDbl sum = x[0], y, t;
@@ -137,36 +178,39 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
 */
 void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
 {
-    CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu, 
+    my_float alphar=0, dalphar_ddelta=0, dalphar_dtau=0, d2alphar_ddelta2 = 0, d2alphar_dtau2 =0, d2alphar_ddelta_dtau=0,
+    d3alphar_ddelta3,d3alphar_ddelta2_dtau,d3alphar_ddelta_dtau2,d3alphar_dtau3,d4alphar_ddelta4,d4alphar_ddelta3_dtau,d4alphar_ddelta2_dtau2,d4alphar_ddelta_dtau3, d4alphar_dtau4;
+    my_float _delta=delta, _tau = tau, log_tau = log(_tau), log_delta = log(_delta), ndteu,
                 one_over_delta = 1/delta, one_over_tau = 1/tau; // division is much slower than multiplication, so do one division here
     
     // Maybe split the construction of u and other parts into two separate loops?  
     // If both loops can get vectorized, could be worth it.
+    std::vector<my_float> A00_increments, A01_increments, A02_increments;
     const std::size_t N = elements.size();
     for (std::size_t i = 0; i < N; ++i)
     {
         ResidualHelmholtzGeneralizedExponentialElement &el = elements[i];
-        CoolPropDbl ni = el.n, di = el.d, ti = el.t;
+        my_float ni = el.n, di = el.d, ti = el.t;
         
         // Set the u part of exp(u) to zero
-        CoolPropDbl u = 0;
-        CoolPropDbl du_ddelta = 0;
-        CoolPropDbl du_dtau = 0;
-        CoolPropDbl d2u_ddelta2 = 0;
-        CoolPropDbl d2u_dtau2 = 0;
-        CoolPropDbl d3u_ddelta3 = 0;
-        CoolPropDbl d3u_dtau3 = 0;
-        CoolPropDbl d4u_ddelta4 = 0;
-        CoolPropDbl d4u_dtau4 = 0;
+        my_float u = 0;
+        my_float du_ddelta = 0;
+        my_float du_dtau = 0;
+        my_float d2u_ddelta2 = 0;
+        my_float d2u_dtau2 = 0;
+        my_float d3u_ddelta3 = 0;
+        my_float d3u_dtau3 = 0;
+        my_float d4u_ddelta4 = 0;
+        my_float d4u_dtau4 = 0;
         
         if (delta_li_in_u){
-            CoolPropDbl  ci = el.c, l_double = el.l_double;
-            if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON){
-                const CoolPropDbl u_increment = (el.l_is_int) ? -ci*powInt(delta, el.l_int) : -ci*pow(delta, l_double);
-                const CoolPropDbl du_ddelta_increment = l_double*u_increment*one_over_delta;
-                const CoolPropDbl d2u_ddelta2_increment = (l_double-1)*du_ddelta_increment*one_over_delta;
-                const CoolPropDbl d3u_ddelta3_increment = (l_double-2)*d2u_ddelta2_increment*one_over_delta;
-                const CoolPropDbl d4u_ddelta4_increment = (l_double-3)*d3u_ddelta3_increment*one_over_delta;
+            my_float  ci = el.c, l_double = el.l_double;
+            if (ValidNumber(l_double.convert_to<double>()) && l_double > 0 && abs(ci) > DBL_EPSILON){
+                const my_float u_increment = (el.l_is_int) ? -ci*pow(delta, el.l_int) : -ci*pow(delta, l_double);
+                const my_float du_ddelta_increment = l_double*u_increment*one_over_delta;
+                const my_float d2u_ddelta2_increment = (l_double-1)*du_ddelta_increment*one_over_delta;
+                const my_float d3u_ddelta3_increment = (l_double-2)*d2u_ddelta2_increment*one_over_delta;
+                const my_float d4u_ddelta4_increment = (l_double-3)*d3u_ddelta3_increment*one_over_delta;
                 u += u_increment;
                 du_ddelta += du_ddelta_increment;
                 d2u_ddelta2 += d2u_ddelta2_increment;
@@ -175,13 +219,13 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl &tau, const 
             }
         }
         if (tau_mi_in_u){
-            CoolPropDbl omegai = el.omega, m_double = el.m_double;
-            if (std::abs(m_double) > 0){
-                const CoolPropDbl u_increment = -omegai*pow(tau, m_double);
-                const CoolPropDbl du_dtau_increment = m_double*u_increment*one_over_tau;
-                const CoolPropDbl d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
-                const CoolPropDbl d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
-                const CoolPropDbl d4u_dtau4_increment = (m_double-3)*d3u_dtau3_increment*one_over_tau;
+            my_float omegai = el.omega, m_double = el.m_double;
+            if (abs(m_double) > 0){
+                const my_float u_increment = -omegai*pow(tau, m_double);
+                const my_float du_dtau_increment = m_double*u_increment*one_over_tau;
+                const my_float d2u_dtau2_increment = (m_double-1)*du_dtau_increment*one_over_tau;
+                const my_float d3u_dtau3_increment = (m_double-2)*d2u_dtau2_increment*one_over_tau;
+                const my_float d4u_dtau4_increment = (m_double-3)*d3u_dtau3_increment*one_over_tau;
                 u += u_increment;
                 du_dtau += du_dtau_increment;
                 d2u_dtau2 += d2u_dtau2_increment;
@@ -190,30 +234,30 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl &tau, const 
             }
         }
         if (eta1_in_u){
-            CoolPropDbl eta1 = el.eta1, epsilon1 = el.epsilon1;
-            if (ValidNumber(eta1)){
+            my_float eta1 = el.eta1, epsilon1 = el.epsilon1;
+            if (ValidNumber(eta1.convert_to<double>())){
                 u += -eta1*(delta-epsilon1);
                 du_ddelta += -eta1;
             }
         }
         if (eta2_in_u){
-            CoolPropDbl eta2 = el.eta2, epsilon2 = el.epsilon2;
-            if (ValidNumber(eta2)){
+            my_float eta2 = el.eta2, epsilon2 = el.epsilon2;
+            if (ValidNumber(eta2.convert_to<double>())){
                 u += -eta2*POW2(delta-epsilon2);
                 du_ddelta += -2*eta2*(delta-epsilon2);
                 d2u_ddelta2 += -2*eta2;
             }
         }
         if (beta1_in_u){
-            CoolPropDbl beta1 = el.beta1, gamma1 = el.gamma1;
-            if (ValidNumber(beta1)){
+            my_float beta1 = el.beta1, gamma1 = el.gamma1;
+            if (ValidNumber(beta1.convert_to<double>())){
                 u += -beta1*(tau-gamma1);
                 du_dtau += -beta1;
             }
         }
         if (beta2_in_u){
-            CoolPropDbl beta2 = el.beta2, gamma2 = el.gamma2;
-            if (ValidNumber(beta2)){
+            my_float beta2 = el.beta2, gamma2 = el.gamma2;
+            if (ValidNumber(beta2.convert_to<double>())){
                 u += -beta2*POW2(tau-gamma2);
                 du_dtau += -2*beta2*(tau-gamma2);
                 d2u_dtau2 += -2*beta2;
@@ -221,66 +265,81 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl &tau, const 
         }
         
         ndteu = ni*exp(ti*log_tau + di*log_delta + u);
+        //ndteu = ni*pow(tau,ti)*pow(delta,di)*exp(u);
         
-        const CoolPropDbl dB_delta_ddelta = delta*d2u_ddelta2 + du_ddelta;
-        const CoolPropDbl d2B_delta_ddelta2 = delta*d3u_ddelta3 + 2*d2u_ddelta2;
-        const CoolPropDbl d3B_delta_ddelta3 = delta*d4u_ddelta4 + 3*d3u_ddelta3;
+        const my_float dB_delta_ddelta = delta*d2u_ddelta2 + du_ddelta;
+        const my_float d2B_delta_ddelta2 = delta*d3u_ddelta3 + 2*d2u_ddelta2;
+        const my_float d3B_delta_ddelta3 = delta*d4u_ddelta4 + 3*d3u_ddelta3;
 		
-		const CoolPropDbl B_delta = (delta*du_ddelta + di);
-        const CoolPropDbl B_delta2 = delta*dB_delta_ddelta + (B_delta - 1)*B_delta;
-        const CoolPropDbl dB_delta2_ddelta = delta*d2B_delta_ddelta2 + 2*B_delta*dB_delta_ddelta;
-        const CoolPropDbl B_delta3 = delta*dB_delta2_ddelta + (B_delta -  2)*B_delta2;
-        const CoolPropDbl dB_delta3_ddelta = delta*delta*d3B_delta_ddelta3 + 3*delta*B_delta*d2B_delta_ddelta2 + 3*delta*POW2(dB_delta_ddelta)+3*B_delta*(B_delta-1)*dB_delta_ddelta;
-        const CoolPropDbl B_delta4 = delta*dB_delta3_ddelta + (B_delta -  3)*B_delta3;
+		const my_float B_delta = (delta*du_ddelta + di);
+        const my_float B_delta2 = delta*dB_delta_ddelta + (B_delta - 1)*B_delta;
+        const my_float dB_delta2_ddelta = delta*d2B_delta_ddelta2 + 2*B_delta*dB_delta_ddelta;
+        const my_float B_delta3 = delta*dB_delta2_ddelta + (B_delta -  2)*B_delta2;
+        const my_float dB_delta3_ddelta = delta*delta*d3B_delta_ddelta3 + 3*delta*B_delta*d2B_delta_ddelta2 + 3*delta*POW2(dB_delta_ddelta)+3*B_delta*(B_delta-1)*dB_delta_ddelta;
+        const my_float B_delta4 = delta*dB_delta3_ddelta + (B_delta -  3)*B_delta3;
         
-		const CoolPropDbl dB_tau_dtau = tau*d2u_dtau2 + du_dtau;
-        const CoolPropDbl d2B_tau_dtau2 = tau*d3u_dtau3 + 2*d2u_dtau2;
-        const CoolPropDbl d3B_tau_dtau3 = tau*d4u_dtau4 + 3*d3u_dtau3;
+		const my_float dB_tau_dtau = tau*d2u_dtau2 + du_dtau;
+        const my_float d2B_tau_dtau2 = tau*d3u_dtau3 + 2*d2u_dtau2;
+        const my_float d3B_tau_dtau3 = tau*d4u_dtau4 + 3*d3u_dtau3;
         
-		const CoolPropDbl B_tau = (tau*du_dtau + ti);
-		const CoolPropDbl B_tau2 = tau*dB_tau_dtau + (B_tau - 1)*B_tau;
-        const CoolPropDbl dB_tau2_dtau = tau*d2B_tau_dtau2 + 2*B_tau*dB_tau_dtau;
-        const CoolPropDbl B_tau3 = tau*dB_tau2_dtau + (B_tau -  2)*B_tau2;
-        const CoolPropDbl dB_tau3_dtau = tau*tau*d3B_tau_dtau3 + 3*tau*B_tau*d2B_tau_dtau2 + 3*tau*POW2(dB_tau_dtau)+3*B_tau*(B_tau-1)*dB_tau_dtau;
-        const CoolPropDbl B_tau4 = tau*dB_tau3_dtau + (B_tau -  3)*B_tau3;
+		const my_float B_tau = (tau*du_dtau + ti);
+		const my_float B_tau2 = tau*dB_tau_dtau + (B_tau - 1)*B_tau;
+        const my_float dB_tau2_dtau = tau*d2B_tau_dtau2 + 2*B_tau*dB_tau_dtau;
+        const my_float B_tau3 = tau*dB_tau2_dtau + (B_tau -  2)*B_tau2;
+        const my_float dB_tau3_dtau = tau*tau*d3B_tau_dtau3 + 3*tau*B_tau*d2B_tau_dtau2 + 3*tau*POW2(dB_tau_dtau)+3*B_tau*(B_tau-1)*dB_tau_dtau;
+        const my_float B_tau4 = tau*dB_tau3_dtau + (B_tau -  3)*B_tau3;
 
-        derivs.alphar += ndteu;
+        alphar += ndteu;
+        A00_increments.push_back(ndteu);
+        A01_increments.push_back(ndteu*B_delta);
+        A02_increments.push_back(ndteu*B_delta2);
+        dalphar_ddelta += ndteu*B_delta;
+        dalphar_dtau += ndteu*B_tau;
         
-        derivs.dalphar_ddelta += ndteu*B_delta;
-        derivs.dalphar_dtau += ndteu*B_tau;
+        d2alphar_ddelta2 += ndteu*B_delta2;
+        d2alphar_ddelta_dtau += ndteu*B_delta*B_tau;
+        d2alphar_dtau2 += ndteu*B_tau2;
         
-        derivs.d2alphar_ddelta2 += ndteu*B_delta2;
-        derivs.d2alphar_ddelta_dtau += ndteu*B_delta*B_tau;
-        derivs.d2alphar_dtau2 += ndteu*B_tau2;
-        
-        derivs.d3alphar_ddelta3 += ndteu*B_delta3;
-        derivs.d3alphar_ddelta2_dtau += ndteu*B_delta2*B_tau;
-        derivs.d3alphar_ddelta_dtau2 += ndteu*B_delta*B_tau2;
-        derivs.d3alphar_dtau3 += ndteu*B_tau3;
+        d3alphar_ddelta3 += ndteu*B_delta3;
+        d3alphar_ddelta2_dtau += ndteu*B_delta2*B_tau;
+        d3alphar_ddelta_dtau2 += ndteu*B_delta*B_tau2;
+        d3alphar_dtau3 += ndteu*B_tau3;
 
-        derivs.d4alphar_ddelta4 += ndteu*B_delta4;
-        derivs.d4alphar_ddelta3_dtau += ndteu*B_delta3*B_tau;
-        derivs.d4alphar_ddelta2_dtau2 += ndteu*B_delta2*B_tau2;
-        derivs.d4alphar_ddelta_dtau3 += ndteu*B_delta*B_tau3;
-        derivs.d4alphar_dtau4 += ndteu*B_tau4;
+        d4alphar_ddelta4 += ndteu*B_delta4;
+        d4alphar_ddelta3_dtau += ndteu*B_delta3*B_tau;
+        d4alphar_ddelta2_dtau2 += ndteu*B_delta2*B_tau2;
+        d4alphar_ddelta_dtau3 += ndteu*B_delta*B_tau3;
+        d4alphar_dtau4 += ndteu*B_tau4;
 
     }
-    derivs.dalphar_ddelta         *= one_over_delta;
-    derivs.dalphar_dtau           *= one_over_tau;
-    derivs.d2alphar_ddelta2       *= POW2(one_over_delta);
-    derivs.d2alphar_dtau2         *= POW2(one_over_tau);
-    derivs.d2alphar_ddelta_dtau   *= one_over_delta*one_over_tau;
+//    double ks = kahanSum(increments);
+//    double pairs = pairwise_sum(increments);
+//    double ps = pairwise_sum(A01_increments);
+//    double diff01 = (NeumaierSum(A01_increments) - dalphar_ddelta).convert_to<double>();
+//    double diff00 = (NeumaierSum(A00_increments) - alphar).convert_to<double>();
+//    double diff02 = (NeumaierSum(A02_increments) - d2alphar_ddelta2).convert_to<double>();
+//    derivs.alphar = NeumaierSum(A00_increments).convert_to<double>();
+//    derivs.dalphar_ddelta = NeumaierSum(A01_increments).convert_to<double>();
+//    derivs.d2alphar_ddelta2 = NeumaierSum(A02_increments).convert_to<double>();
     
-    derivs.d3alphar_ddelta3       *= POW3(one_over_delta);
-    derivs.d3alphar_dtau3         *= POW3(one_over_tau);
-    derivs.d3alphar_ddelta2_dtau  *= POW2(one_over_delta)*one_over_tau;
-    derivs.d3alphar_ddelta_dtau2  *= one_over_delta*POW2(one_over_tau);
     
-    derivs.d4alphar_ddelta4       *= POW4(one_over_delta);
-    derivs.d4alphar_dtau4         *= POW4(one_over_tau);
-    derivs.d4alphar_ddelta3_dtau  *= POW3(one_over_delta)*one_over_tau;
-    derivs.d4alphar_ddelta2_dtau2 *= POW2(one_over_delta)*POW2(one_over_tau);
-    derivs.d4alphar_ddelta_dtau3  *= one_over_delta*POW3(one_over_tau);
+    derivs.alphar                 = (alphar).convert_to<double>();
+    derivs.dalphar_ddelta         = (dalphar_ddelta*one_over_delta).convert_to<double>();
+    derivs.dalphar_dtau           = (dalphar_dtau*one_over_tau).convert_to<double>();
+    derivs.d2alphar_ddelta2       = (d2alphar_ddelta2*POW2(one_over_delta)).convert_to<double>();
+    derivs.d2alphar_dtau2         = (d2alphar_dtau2*POW2(one_over_tau)).convert_to<double>();
+    derivs.d2alphar_ddelta_dtau   = (d2alphar_ddelta_dtau*one_over_delta*one_over_tau).convert_to<double>();
+    
+    derivs.d3alphar_ddelta3       = (d3alphar_ddelta3*POW3(one_over_delta)).convert_to<double>();
+    derivs.d3alphar_dtau3         = (d3alphar_dtau3*POW3(one_over_tau)).convert_to<double>();
+    derivs.d3alphar_ddelta2_dtau  = (d3alphar_ddelta2_dtau*POW2(one_over_delta)*one_over_tau).convert_to<double>();
+    derivs.d3alphar_ddelta_dtau2  = (d3alphar_ddelta_dtau2*one_over_delta*POW2(one_over_tau)).convert_to<double>();
+    
+    derivs.d4alphar_ddelta4       = (d4alphar_ddelta4*POW4(one_over_delta)).convert_to<double>();
+    derivs.d4alphar_dtau4         = (d4alphar_dtau4*POW4(one_over_tau)).convert_to<double>();
+    derivs.d4alphar_ddelta3_dtau  = (d4alphar_ddelta3_dtau*POW3(one_over_delta)*one_over_tau).convert_to<double>();
+    derivs.d4alphar_ddelta2_dtau2 = (d4alphar_ddelta2_dtau2*POW2(one_over_delta)*POW2(one_over_tau)).convert_to<double>();
+    derivs.d4alphar_ddelta_dtau3  = (d4alphar_ddelta_dtau3*one_over_delta*POW3(one_over_tau)).convert_to<double>();
     
     return;
 };

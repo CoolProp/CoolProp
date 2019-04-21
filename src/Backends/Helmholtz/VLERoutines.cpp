@@ -6,6 +6,8 @@
 #include "Configuration.h"
 #include "FlashRoutines.h"
 
+#include <boost/multiprecision/cpp_bin_float.hpp>
+
 namespace CoolProp {
     
 void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend &HEOS, parameters ykey, CoolPropDbl y){
@@ -759,9 +761,9 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL,
                                            SatV = HEOS.SatV;
 
-    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE,JL,JV,KL,KV,dJL,dJV,dKL,dKV;
-    CoolPropDbl DELTA, deltaL=0, deltaV=0, error, PL, PV, stepL, stepV;
+    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, error = 999, errorp = 999, PL, PV;
     int iter=0;
+    int small_step_counter = 0;
     
     try
     {
@@ -788,8 +790,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
                 // based on the error between the gas pressure (which is usually very close already)
                 // and the liquid pressure, which can sometimes (especially at low pressure),
                 // be way off, and often times negative
-                SatL->update(DmolarT_INPUTS, rhoL, T);
-                SatV->update(DmolarT_INPUTS, rhoV, T);
+                SatL->update_DmolarT_direct(rhoL, T);
+                SatV->update_DmolarT_direct(rhoV, T);
                 
                 // Update the guess for liquid density using density solver with vapor pressure 
                 // and liquid density guess from ancillaries
@@ -799,8 +801,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
             }
         }
 
-        deltaL = rhoL/reduce.rhomolar;
-        deltaV = rhoV/reduce.rhomolar;
+        //deltaL = rhoL/reduce.rhomolar;
+        //deltaV = rhoV/reduce.rhomolar;
     }
     catch(NotImplementedError &)
     {
@@ -820,47 +822,62 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
     //        std::cout << format("%s:%d: Akasaka guess values deltaL = %g deltaV = %g tau = %g\n",__FILE__,__LINE__,deltaL, deltaV, tau).c_str();
     //    }
 
+    
+    if (!ValidNumber(options.omega)){ options.omega = 1.0; }
     do{
         /*if (get_debug_level()>8){
             std::cout << format("%s:%d: right before the derivs with deltaL = %g deltaV = %g tau = %g\n",__FILE__,__LINE__,deltaL, deltaV, tau).c_str();
         }*/
 
         // Calculate once to save on calls to EOS
-        SatL->update(DmolarT_INPUTS, rhoL, T);
-        SatV->update(DmolarT_INPUTS, rhoV, T);
-        CoolPropDbl alpharL = SatL->alphar();
-        CoolPropDbl alpharV = SatV->alphar();
-        CoolPropDbl dalphar_ddeltaL = SatL->dalphar_dDelta();
-        CoolPropDbl dalphar_ddeltaV = SatV->dalphar_dDelta();
-        CoolPropDbl d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
-        CoolPropDbl d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
+        SatL->update_DmolarT_direct(rhoL, T);
+        SatV->update_DmolarT_direct(rhoV, T);
+        
+        using namespace boost::multiprecision;
+        typedef cpp_bin_float_50 my_float;
+        my_float deltaL = my_float(rhoL)/my_float(reduce.rhomolar);
+        my_float deltaV = my_float(rhoV)/my_float(reduce.rhomolar);
+        my_float alpharL = SatL->alphar();
+        my_float alpharV = SatV->alphar();
+        my_float dalphar_ddeltaL = SatL->dalphar_dDelta();
+        my_float dalphar_ddeltaV = SatV->dalphar_dDelta();
+        my_float d2alphar_ddelta2L = SatL->d2alphar_dDelta2();
+        my_float d2alphar_ddelta2V = SatV->d2alphar_dDelta2();
 
-        JL = deltaL * (1 + deltaL*dalphar_ddeltaL);
-        JV = deltaV * (1 + deltaV*dalphar_ddeltaV);
-        KL = deltaL*dalphar_ddeltaL + alpharL + log(deltaL);
-        KV = deltaV*dalphar_ddeltaV + alpharV + log(deltaV);
+        my_float JL = deltaL * (1 + deltaL*dalphar_ddeltaL);
+        my_float JV = deltaV * (1 + deltaV*dalphar_ddeltaV);
+        my_float KL = deltaL*dalphar_ddeltaL + alpharL + log(deltaL);
+        my_float KV = deltaV*dalphar_ddeltaV + alpharV + log(deltaV);
 
-        PL = R_u*reduce.rhomolar*T*JL;
-        PV = R_u*reduce.rhomolar*T*JV;
+        my_float rhocRT = my_float(R_u)*my_float(reduce.rhomolar)*my_float(T);
+        PL = (rhocRT*JL).convert_to<double>();
+        PV = (rhocRT*JV).convert_to<double>();
 
         // At low pressure, the magnitude of d2alphar_ddelta2L and d2alphar_ddelta2V are enormous, truncation problems arise for all the partials
-        dJL = 1 + 2*deltaL*dalphar_ddeltaL + deltaL*deltaL*d2alphar_ddelta2L;
-        dJV = 1 + 2*deltaV*dalphar_ddeltaV + deltaV*deltaV*d2alphar_ddelta2V;
-        dKL = 2*dalphar_ddeltaL + deltaL*d2alphar_ddelta2L + 1/deltaL;
-        dKV = 2*dalphar_ddeltaV + deltaV*d2alphar_ddelta2V + 1/deltaV;
+        my_float dJL = 1 + 2*deltaL*dalphar_ddeltaL + deltaL*deltaL*d2alphar_ddelta2L;
+        my_float dJV = 1 + 2*deltaV*dalphar_ddeltaV + deltaV*deltaV*d2alphar_ddelta2V;
+        my_float dKL = 2*dalphar_ddeltaL + deltaL*d2alphar_ddelta2L + 1/deltaL;
+        my_float dKV = 2*dalphar_ddeltaV + deltaV*d2alphar_ddelta2V + 1/deltaV;
 
-        DELTA = dJV*dKL-dJL*dKV;
+        my_float DELTA = dJV*dKL-dJL*dKV;
 
-        error = sqrt((KL-KV)*(KL-KV)+(JL-JV)*(JL-JV));
+        error = sqrt((KL-KV)*(KL-KV)+(JL-JV)*(JL-JV)).convert_to<double>();
+        errorp = (PL-PV)/PV;
+        
+//        Eigen::VectorXd r(2);
+//        Eigen::MatrixXd J(2,2);
+//        J(0,0) = dJV; J(0,1) = -dJL; J(1,0) = dKV; J(1,1) = -dKL; r(0) = JV-JL; r(1) = KV-KL;
+//        Eigen::VectorXd v = J.colPivHouseholderQr().solve(-r);
+//        double stepV1 = v(0), stepL1 = v(1);
 
         //  Get the predicted step
-        stepL = options.omega/DELTA*( (KV-KL)*dJV-(JV-JL)*dKV);
-        stepV = options.omega/DELTA*( (KV-KL)*dJL-(JV-JL)*dKL);
+        my_float stepL = options.omega/DELTA*( (KV-KL)*dJV-(JV-JL)*dKV);
+        my_float stepV = options.omega/DELTA*( (KV-KL)*dJL-(JV-JL)*dKL);
 
-        CoolPropDbl deltaL0 = deltaL, deltaV0 = deltaV;
+        my_float deltaL0 = deltaL, deltaV0 = deltaV;
         // Conditions for an acceptable step are:
         // a) rhoL > rhoV or deltaL > deltaV
-        for (double omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1)
+        for (my_float omega_local = 1.0; omega_local > 0.1; omega_local /= 1.1)
         {
             deltaL = deltaL0 + omega_local*stepL;
             deltaV = deltaV0 + omega_local*stepV;
@@ -870,20 +887,24 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend &HE
             }
         }
         
-        rhoL = deltaL*reduce.rhomolar;
-        rhoV = deltaV*reduce.rhomolar;
+        rhoL = (deltaL*reduce.rhomolar).convert_to<double>();
+        rhoV = (deltaV*reduce.rhomolar).convert_to<double>();
         iter++;
         if (iter > 100){
             throw SolutionError(format("Akasaka solver did not converge after 100 iterations"));
         }
+        if (abs(stepL) > 10*DBL_EPSILON*abs(stepL) || abs(stepV) > 10*DBL_EPSILON*abs(stepV)){
+            small_step_counter++;
+        }
+    
     }
-    while (error > 1e-10 && std::abs(stepL) > 10*DBL_EPSILON*std::abs(stepL) && std::abs(stepV) > 10*DBL_EPSILON*std::abs(stepV));
+    while (error > 1e-16 && small_step_counter < 10);
     
     CoolPropDbl p_error_limit = 1e-3;
     CoolPropDbl p_error = (PL - PV)/PL;
     if (std::abs(p_error) > p_error_limit){
-        options.pL = PL;
-        options.pV = PV;
+//        options.pL = PL;
+//        options.pV = PV;
         options.rhoL = rhoL;
         options.rhoV = rhoV;
         throw SolutionError(format("saturation_T_pure_Akasaka solver abs error on p [%g] > limit [%g]", std::abs(p_error), p_error_limit));
@@ -1021,8 +1042,8 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         
         // Total helmholtz energy for liquid and vapor
         CoolPropDbl RT = SatL->gas_constant()*T;
-        CoolPropDbl helmholtzL = (SatL->calc_alpha0() + SatL->calc_alphar())*RT;
-        CoolPropDbl helmholtzV = (SatV->calc_alpha0() + SatV->calc_alphar())*RT;
+        CoolPropDbl helmholtzL = (log(SatL->delta()) + SatL->calc_alphar())*RT;
+        CoolPropDbl helmholtzV = (log(SatV->delta()) + SatV->calc_alphar())*RT;
         
         // Calculate the mean pressure
         CoolPropDbl pM = (helmholtzL - helmholtzV)/(vV - vL);
@@ -1042,7 +1063,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         }
         else{
             // Scale the argument to sqrt() function to make it about 1.0, and divide by sqrt(factor) to yield a factor of 1
-            CoolPropDbl powerfactor = -log10(sqrt_arg);
+            CoolPropDbl powerfactor = -log10(sqrt_arg)*100000;
             DeltavL = -0.5*B/A + sign((alphaL - alphaV)/alphaV)*sqrt(sqrt_arg*powerfactor)/sqrt(powerfactor);
         }
         DeltavV = (pL - pV + alphaL*DeltavL)/alphaV;
@@ -1080,8 +1101,11 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
         if (iter > 30){
             throw SolutionError(format("Maxwell solver did not converge after 30 iterations;  rhoL: %0.16Lg rhoV: %0.16Lg error: %Lg dvL/vL: %Lg dvV/vV: %Lg pL: %Lg pV: %Lg\n", rhoL, rhoV, error, DeltavL/vL, DeltavV/vV, pL, pV));
         }
+        if (small_step_count == 7){
+            throw SolutionError("too many small steps");
+        }
     }
-    while ((SatL->p() < 0) || (error > 1e-10 && small_step_count < 4 && backwards_step_count < 6));
+    while ((SatL->p() < 0) || (error > 1e-10 && small_step_count < 8 && backwards_step_count < 6));
     if (get_debug_level() > 5){ std::cout << format("[Maxwell] pL: %g pV: %g\n", SatL->p(), SatV->p());}
 }
 

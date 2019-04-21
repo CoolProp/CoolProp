@@ -38,3 +38,6 @@
 	path = externals/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
 	branch = master
+[submodule "externals/boost-cmake"]
+	path = externals/boost-cmake
+	url = https://github.com/Orphis/boost-cmake
