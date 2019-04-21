@@ -19,10 +19,10 @@
 //    return outputs;
 //}
 
-std::vector<std::pair<std::string, double>> generate_values(double T, double R, double P = 101325) {
+std::vector<std::pair<std::string, double> > generate_values(double T, double R, double P = 101325) {
     double psi_w = HumidAir::HAPropsSI("psi_w", "T", T, "R", R, "P", P);
     std::vector<std::string> other_output_keys = { "T_wb","T_dp","Hda","Sda","Vda","Omega" };
-    std::vector<std::pair<std::string, double>> outputs;
+    std::vector<std::pair<std::string, double> > outputs;
     outputs.push_back(std::pair<std::string, double>("psi_w", psi_w));
     outputs.push_back(std::pair<std::string, double>("T", T));
     outputs.push_back(std::pair<std::string, double>("P", P));
@@ -33,8 +33,8 @@ std::vector<std::pair<std::string, double>> generate_values(double T, double R, 
     return outputs;
 }
 
-std::vector<std::pair<std::string, std::string>> get_supported_input_pairs() {
-    std::vector<std::pair<std::string, std::string>> good_ones;
+std::vector<std::pair<std::string, std::string> > get_supported_input_pairs() {
+    std::vector<std::pair<std::string, std::string> > good_ones;
     auto inputs = generate_values(300, 0.5);
     std::string k1, k2;
     double v1 = -_HUGE, v2 = -_HUGE, p = -_HUGE;
@@ -59,7 +59,9 @@ std::vector<std::pair<std::string, std::string>> get_supported_input_pairs() {
                     k1, v1,
                     k2, v2,
                     "P", p);
-                good_ones.push_back(std::pair<std::string, std::string>(k1, k2));
+                if (ValidNumber(psi_w_new)){
+                    good_ones.push_back(std::pair<std::string, std::string>(k1, k2));
+                }
             }
             catch (std::exception & e) {
                 std::cout << e.what();
@@ -69,20 +71,20 @@ std::vector<std::pair<std::string, std::string>> get_supported_input_pairs() {
     return good_ones;
 }
 
-void calculate(std::vector<std::pair<std::string, double>> inputs, double &clc_count, double &err_count, double& acc_count) {
+void calculate(std::vector<std::pair<std::string, double> > inputs, double &clc_count, double &err_count, double& acc_count, const std::vector<std::pair<std::string, std::string> > &supported_pairs) {
     //auto errors = []
 
-    auto supported_pairs = get_supported_input_pairs();
     std::string k1, k2;
     double psi_w_input = -_HUGE, P_input = -_HUGE, v1 = -_HUGE, v2 = -_HUGE;
 
-    for (std::size_t i = 0; i < inputs.size(); i++) {
-        k1 = inputs[i].first;
-        if (k1.compare("psi_w") == 0) {
-            psi_w_input = inputs[i].second;
+    for (const auto &kv : inputs){
+        if (kv.first == "psi_w"){
+            psi_w_input = kv.second; break;
         }
-        if (k1.compare("P") == 0) {
-            P_input = inputs[i].second;
+    }
+    for (const auto &kv : inputs){
+        if (kv.first == "P"){
+            P_input = kv.second; break;
         }
     }
 
@@ -130,6 +132,7 @@ int main(int argc, const char* argv[]) {
     //double h = HumidAir::HAPropsSI("H", "T", 298.15, "P", 101325, "R", 0.5);
     //double T = HumidAir::HAPropsSI("T", "P", 101325, "H", h, "R", 1.0);
     //T = HumidAir::HAPropsSI("T", "H", h, "R", 1.0, "P", 101325);
+    auto supported_pairs = get_supported_input_pairs();
     double err_count = 0;
     double clc_count = 0;
     double acc_count = 0;
@@ -144,7 +147,7 @@ int main(int argc, const char* argv[]) {
             double Tv = T[i];
             double Rv = R[j];
             auto input_values = generate_values(Tv, Rv);
-            calculate(input_values, clc_count, err_count, acc_count);
+            calculate(input_values, clc_count, err_count, acc_count, supported_pairs);
         }
         std::cout << "----- Errors ----- \n";
         std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count / clc_count * 100.0 << "% \n";
