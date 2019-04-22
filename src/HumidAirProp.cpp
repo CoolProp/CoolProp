@@ -283,7 +283,7 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
         }
     }
     else{
-        W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-4, 50);
+        W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-7, 50);
     }
     return W;
 }
@@ -1137,7 +1137,7 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar)
         sbar = sbar_0+(1-psi_w)*sbar_a+psi_w*sbar_w-R_bar*( (B+T*dBdT)/v_bar+(C+T*dCdT)/(2*pow(v_bar,2))+(1-psi_w)*log(1-psi_w)+psi_w*log(psi_w));
     }
     else{
-        sbar = sbar_0+sbar_a;
+        sbar = sbar_0+sbar_a-R_bar*((B+T*dBdT)/v_bar+(C+T*dCdT)/(2*pow(v_bar,2)));
     }
     return sbar; //[J/mol_ha/K]
 }
@@ -1625,15 +1625,22 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                     }
                 }
                 catch(...){
-                    // Use the Brent's method solver to find W.  Slow but reliable
-                    double W_min = 0.001, W_max = 1;
-                    check_bounds(GIVEN_HUMRAT, 0, W_min, W_max);
+                    // Use the Brent's method solver to find W.  Slow but reliable...
+                    //
+                    // Find the saturation value for the humidity ratio for given dry bulb T
+                    // This is this highest possible water content for the humidity ratio
+                    double psi_w_sat = MoleFractionWater(T, p, GIVEN_RH, 1.0);
+                    double W_max = HumidityRatio(psi_w_sat);
+                    double W_min = 0;
                     givens MainInputKey = GIVEN_T;
                     double MainInputValue = T;
                     // Secondary input is the one that you are trying to match
                     double SecondaryInputValue = input_vals[other];
                     givens SecondaryInputKey = input_keys[other];
                     W = Brent_HAProps_W(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, W_min, W_max);
+                    if (!ValidNumber(W)){
+                        throw CoolProp::ValueError("Iterative value for W is invalid");
+                    }
                 }
                 // Mole fraction of water
                 psi_w = MoleFractionWater(T, p, GIVEN_HUMRAT, W);
