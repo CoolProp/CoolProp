@@ -39,7 +39,7 @@ matrix:
         - cmake --version
         - echo "$CXX" && "$CXX" -v
         - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_MY_MAIN=dev/Tickets/1820.cpp
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_MY_MAIN=dev/Tickets/1820.cpp -DCMAKE_CXX_STANDARD=11
         - popd
       script:     
         - cmake --build build --config Release
