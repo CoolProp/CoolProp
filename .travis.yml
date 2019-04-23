@@ -31,19 +31,20 @@ language:
 
 matrix:
   include:
-    - compiler: clang
-      branches:
-        only:
-          - issues/1820
-      before_script:
-        - cmake --version
-        - echo "$CXX" && "$CXX" -v
-        - mkdir -p build && pushd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_MY_MAIN=dev/Tickets/1820.cpp -DCMAKE_CXX_STANDARD=11
-        - popd
-      script:     
-        - cmake --build build --config Release
-        - ./build/Main
+    # Use this code to enable certain debug builds - for example for pull requests
+    #- compiler: clang
+    #  branches:
+    #    only:
+    #      - issues/1820
+    #  before_script:
+    #    - cmake --version
+    #    - echo "$CXX" && "$CXX" -v
+    #    - mkdir -p build && pushd build
+    #    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_MY_MAIN=dev/Tickets/1820.cpp -DCMAKE_CXX_STANDARD=11
+    #    - popd
+    #  script:     
+    #    - cmake --build build --config Release
+    #    - ./build/Main
     - os: linux
       dist: trusty
       compiler: gcc
