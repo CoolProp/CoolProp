@@ -112,7 +112,9 @@ void calculate(std::vector<std::pair<std::string, double> > inputs, double &clc_
             if (delta > 1e-6) {
                 acc_count += 1;
                 HumidAir::HAPropsSI("psi_w",k1, v1,k2, v2,"P", P_input);
-                std::cout << "HAPropsSI(\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2 << ",\"P\",101325)\n";
+                std::cout << "deviation: " << delta << " @" <<std::endl;
+                std::cout << "HAPropsSI(\"psi_w\",\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2 << ",\"P\",101325); error: "+CoolProp::get_global_param_string("errstring");
+                
 //                std::cout << "\n-------------- Error --------------\n";
 //                std::cout << "delta = " << delta << "\n";
 //                std::cout << k1 << " = " << v1 << "\n";
@@ -134,8 +136,8 @@ int main(int argc, const char* argv[]) {
 //        for (auto R = 0.0; R < 1.0; R += 0.01){
 //            std::cout << R << " " << HumidAir::HAPropsSI("Hda", "T", 240, "R", R, "P", 101325) << "\n";
 //        }
-//        auto hh = HumidAir::HAPropsSI("R","T",240,"Hda",-33252.2,"P",101325);
-//        double h = HumidAir::HAPropsSI("S", "T", 240, "P", 101325, "R", 0);
+        auto hh = HumidAir::HAPropsSI("psi_w","R",0.0333333,"Vda",0.958997,"P",101325);;
+        double h = HumidAir::HAPropsSI("S", "T", 240, "P", 101325, "R", 0);
 //        double T = HumidAir::HAPropsSI("W", "P", 101325, "S", h, "T", 240);
 //        T = HumidAir::HAPropsSI("T", "H", h, "R", 1.0, "P", 101325);
     }
@@ -152,14 +154,15 @@ int main(int argc, const char* argv[]) {
     }
     for (std::size_t i = 0; i < num; i++) {
         auto tic = std::chrono::high_resolution_clock::now();
+        double Tdb = T[i];
         for (std::size_t j = 0; j < num; j++) {
-            double Tv = T[i];
+            
             double Rv = R[j];
-            auto input_values = generate_values(Tv, Rv);
+            auto input_values = generate_values(Tdb, Rv);
             calculate(input_values, clc_count, err_count, acc_count, supported_pairs);
         }
         auto toc = std::chrono::high_resolution_clock::now();
-        std::cout << "----- Errors ----- \n";
+        std::cout << "----- Errors @ T_drybulb=" << T[i] <<  "----- \n";
         std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count / clc_count * 100.0 << "% \n";
         std::cout << "Bad Accuracy: " << acc_count << " / " << clc_count << " = " << acc_count / clc_count * 100.0 << "% \n";
         std::cout << "Time: " << std::chrono::duration<double>(toc-tic).count() << " s \n";

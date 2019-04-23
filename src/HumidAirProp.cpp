@@ -51,6 +51,7 @@ namespace HumidAir
 
     void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
+    double MoleFractionWater(double, double, int, double);
 
 void check_fluid_instantiation()
 {
@@ -306,11 +307,11 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             input_vals.resize(2); input_vals[0] = Input1;
         };
 
-        double call(double T){
-            input_vals[1] = T;
+        double call(double T_drybulb){
             double psi_w;
-            _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
-            return _HAPropsSI_outputs(OutputKey, p, T, psi_w) - TargetVal;
+            psi_w = MoleFractionWater(T_drybulb, p, input_keys[0], input_vals[0]);
+            double val = _HAPropsSI_outputs(OutputKey, p, T_drybulb, psi_w);
+            return val - TargetVal;
         }
     };
 
@@ -1292,7 +1293,7 @@ public:
         //double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
 
         double psi_w, T;
-        std::vector<givens> inp = { HumidAir::GIVEN_TWB, HumidAir::GIVEN_RH };
+        std::vector<givens> inp = { HumidAir::GIVEN_T, HumidAir::GIVEN_RH };
         std::vector<double> val = { Ts, 1.0 };
         _HAPropsSI_inputs(p, inp, val, T, psi_w);
         double RHS = _HAPropsSI_outputs(GIVEN_ENTHALPY, p, T, psi_w);
@@ -1721,10 +1722,18 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                 T_min = Secant_Tdb_at_saturated_W(psi_w_sat, p, T_min);
             }
         }
+        else if (MainInputKey == GIVEN_TDP){
+            // By specifying the dewpoint, the water mole fraction is known directly
+            // Otherwise, find psi_w for further calculations in the following section
+            double psi_w = MoleFractionWater(-1, p, GIVEN_TDP, MainInputValue);
+            
+            // Minimum drybulb temperature is saturated humid air at specified water mole fraction
+            T_min = DewpointTemperature(T, p, psi_w);
+        }
 
         try{
-            // Use the Brent's method solver to find T.  Slow but reliable
-            T = Brent_HAProps_T(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, T_min,T_max);
+            // Use the Brent's method solver to find T_drybulb.  Slow but reliable
+            T = Brent_HAProps_T(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, T_min, T_max);
         }
         catch(std::exception &e){
             if (CoolProp::get_debug_level() > 0){ std::cout << "ERROR: " << e.what() << std::endl; }
