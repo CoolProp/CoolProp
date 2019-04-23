@@ -1,6 +1,7 @@
 
 #include <vector>
 #include <string>
+#include <chrono>
 
 #include "CoolProp.h"
 #include "HumidAirProp.h"
@@ -59,7 +60,7 @@ std::vector<std::pair<std::string, std::string> > get_supported_input_pairs() {
                     k1, v1,
                     k2, v2,
                     "P", p);
-                if (ValidNumber(psi_w_new)){
+                if (ValidNumber(psi_w_new)) {
                     good_ones.push_back(std::pair<std::string, std::string>(k1, k2));
                 }
             }
@@ -71,19 +72,19 @@ std::vector<std::pair<std::string, std::string> > get_supported_input_pairs() {
     return good_ones;
 }
 
-void calculate(std::vector<std::pair<std::string, double> > inputs, double &clc_count, double &err_count, double& acc_count, const std::vector<std::pair<std::string, std::string> > &supported_pairs) {
+void calculate(std::vector<std::pair<std::string, double> > inputs, std::size_t& clc_count, std::size_t& err_count, std::size_t& acc_count, const std::vector<std::pair<std::string, std::string> >& supported_pairs) {
     //auto errors = []
 
     std::string k1, k2;
     double psi_w_input = -_HUGE, P_input = -_HUGE, v1 = -_HUGE, v2 = -_HUGE;
 
-    for (const auto &kv : inputs){
-        if (kv.first == "psi_w"){
+    for (const auto& kv : inputs) {
+        if (kv.first == "psi_w") {
             psi_w_input = kv.second; break;
         }
     }
-    for (const auto &kv : inputs){
-        if (kv.first == "P"){
+    for (const auto& kv : inputs) {
+        if (kv.first == "P") {
             P_input = kv.second; break;
         }
     }
@@ -111,18 +112,18 @@ void calculate(std::vector<std::pair<std::string, double> > inputs, double &clc_
             double delta = std::abs(psi_w_input - psi_w_new);
             if (delta > 1e-6) {
                 acc_count += 1;
-                HumidAir::HAPropsSI("psi_w",k1, v1,k2, v2,"P", P_input);
-                std::cout << "deviation: " << delta << " @" <<std::endl;
-                std::cout << "HAPropsSI(\"psi_w\",\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2 << ",\"P\",101325); error: "+CoolProp::get_global_param_string("errstring");
-                
-//                std::cout << "\n-------------- Error --------------\n";
-//                std::cout << "delta = " << delta << "\n";
-//                std::cout << k1 << " = " << v1 << "\n";
-//                std::cout << k2 << " = " << v2 << "\n";
-//                std::cout << "P" << " = " << P_input << "\n";
+                HumidAir::HAPropsSI("psi_w", k1, v1, k2, v2, "P", P_input);
+                std::cout << "\ndeviation: " << delta << " @" << std::endl;
+                std::cout << "HAPropsSI(\"psi_w\",\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2 << ",\"P\",101325); error: " + CoolProp::get_global_param_string("errstring");
+
+                //                std::cout << "\n-------------- Error --------------\n";
+                //                std::cout << "delta = " << delta << "\n";
+                //                std::cout << k1 << " = " << v1 << "\n";
+                //                std::cout << k2 << " = " << v2 << "\n";
+                //                std::cout << "P" << " = " << P_input << "\n";
             }
         }
-        catch (std::exception &e) {
+        catch (std::exception & e) {
             err_count += 1;
             std::cout << e.what();
         }
@@ -133,43 +134,55 @@ int main(int argc, const char* argv[]) {
 
     //CoolProp::set_debug_level(1);
     {
-//        for (auto R = 0.0; R < 1.0; R += 0.01){
-//            std::cout << R << " " << HumidAir::HAPropsSI("Hda", "T", 240, "R", R, "P", 101325) << "\n";
-//        }
-        auto hh = HumidAir::HAPropsSI("psi_w","R",0.0333333,"Vda",0.958997,"P",101325);;
+        //        for (auto R = 0.0; R < 1.0; R += 0.01){
+        //            std::cout << R << " " << HumidAir::HAPropsSI("Hda", "T", 240, "R", R, "P", 101325) << "\n";
+        //        }
+        auto hh = HumidAir::HAPropsSI("psi_w", "R", 0.0333333, "Vda", 0.958997, "P", 101325);;
         double h = HumidAir::HAPropsSI("S", "T", 240, "P", 101325, "R", 0);
-//        double T = HumidAir::HAPropsSI("W", "P", 101325, "S", h, "T", 240);
-//        T = HumidAir::HAPropsSI("T", "H", h, "R", 1.0, "P", 101325);
+        //        double T = HumidAir::HAPropsSI("W", "P", 101325, "S", h, "T", 240);
+        //        T = HumidAir::HAPropsSI("T", "H", h, "R", 1.0, "P", 101325);
     }
-    
+
     auto supported_pairs = get_supported_input_pairs();
-    double err_count = 0;
-    double clc_count = 0;
-    double acc_count = 0;
+    double time = 0, _time = 0;
+    std::size_t err_count = 0, clc_count = 0, acc_count = 0;
+    std::size_t _err_count = 0, _clc_count = 0, _acc_count = 0;
     std::size_t num = 31;
     std::vector<double> T(num), R(num);
     for (std::size_t i = 0; i < num; i++) {
-        T[i] = ((360.0 - 240.0) * i / double(num-1) + 240.0);
-        R[i] = ((1.0 - 0.0) * i / double(num-1) + 0.0);
+        T[i] = ((360.0 - 240.0) * i / double(num - 1) + 240.0);
+        R[i] = ((1.0 - 0.0) * i / double(num - 1) + 0.0);
     }
     for (std::size_t i = 0; i < num; i++) {
+        _err_count = 0;
+        _clc_count = 0;
+        _acc_count = 0;
+        _time = 0;
         auto tic = std::chrono::high_resolution_clock::now();
         double Tdb = T[i];
         for (std::size_t j = 0; j < num; j++) {
-            
+
             double Rv = R[j];
             auto input_values = generate_values(Tdb, Rv);
-            calculate(input_values, clc_count, err_count, acc_count, supported_pairs);
+            calculate(input_values, _clc_count, _err_count, _acc_count, supported_pairs);
         }
         auto toc = std::chrono::high_resolution_clock::now();
-        std::cout << "----- Errors @ T_drybulb = " << T[i] <<  " K ----- \n";
-        std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count / clc_count * 100.0 << "% \n";
-        std::cout << "Bad Accuracy: " << acc_count << " / " << clc_count << " = " << acc_count / clc_count * 100.0 << "% \n";
-        std::cout << "Time: " << std::chrono::duration<double>(toc-tic).count() << " s \n";
+        _time = std::chrono::duration<double>(toc - tic).count();
+        std::cout << "----- Errors @ T_drybulb = " << T[i] << " K ----- \n";
+        std::cout << "Exceptions: " << _err_count << " / " << _clc_count << " = " << _err_count * 100.0 / _clc_count << "% \n";
+        std::cout << "Bad accuracy: " << _acc_count << " / " << _clc_count << " = " << _acc_count * 100.0 / _clc_count << "% \n";
+        if (_clc_count != (R.size() * supported_pairs.size())) return 1;
+        std::cout << "Time: " << _time << " s / " << _clc_count << " = " << _time / _clc_count * 1e3 << " ms per call \n";
+        err_count += _err_count;
+        clc_count += _clc_count;
+        acc_count += _acc_count;
+        time += _time;
     }
     std::cout << "----- Final Errors ----- \n";
-    std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count / clc_count * 100.0 << "% \n";
-    std::cout << "Bad Accuracy: " << acc_count << " / " << clc_count << " = " << acc_count / clc_count * 100.0 << "% \n";
+    std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count * 100.0 / clc_count << "% \n";
+    std::cout << "Bad accuracy: " << acc_count << " / " << clc_count << " = " << acc_count * 100.0 / clc_count << "% \n";
+    if (clc_count != (T.size() * R.size() * supported_pairs.size())) return 1;
+    std::cout << "Time: " << time << " s / " << clc_count << " = " << time / clc_count * 1e3 << " ms per call \n";
 }
 
 
