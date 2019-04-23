@@ -1294,8 +1294,14 @@ public:
         //double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
 
         double psi_w, T;
-        std::vector<givens> inp = { HumidAir::GIVEN_T, HumidAir::GIVEN_RH };
-        std::vector<double> val = { Ts, 1.0 };
+        //std::vector<givens> inp = { HumidAir::GIVEN_T, HumidAir::GIVEN_RH }; // C++11
+        std::vector<givens> inp(2);
+        inp[0] = HumidAir::GIVEN_T;
+        inp[1] = HumidAir::GIVEN_RH;
+        //std::vector<double> val = { Ts, 1.0 }; // C++11
+        std::vector<double> val(2);
+        val[0] = Ts;
+        val[1] = 1.0;
         _HAPropsSI_inputs(p, inp, val, T, psi_w);
         double RHS = _HAPropsSI_outputs(GIVEN_ENTHALPY, p, T, psi_w);
 
@@ -1580,7 +1586,7 @@ double HAProps(const std::string &OutputName, const std::string &Input1Name, dou
 
     return out;
 }
-long get_input_key(const std::vector<givens> &input_keys, givens key)
+long get_input_key(const std::vector<const givens> &input_keys, givens key)
 {
     if (input_keys.size() != 2){throw CoolProp::ValueError("input_keys is not 2-element vector");}
 
@@ -1588,13 +1594,13 @@ long get_input_key(const std::vector<givens> &input_keys, givens key)
     else if (input_keys[1] == key){ return 1; }
     else{ return -1; }
 }
-bool match_input_key(const std::vector<givens> &input_keys, givens key)
+bool match_input_key(const std::vector<const givens> &input_keys, givens key)
 {
     return get_input_key(input_keys, key) >= 0;
 }
 
 /// Calculate T (dry bulb temp) and psi_w (water mole fraction) given the pair of inputs
-void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w)
+void _HAPropsSI_inputs(double p, const std::vector<const givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w)
 {
     if (CoolProp::get_debug_level() > 0){ std::cout << format("length of input_keys is %d\n", input_keys.size()); }
     if (input_keys.size() != input_vals.size()){ throw CoolProp::ValueError(format("Length of input_keys (%d) does not equal that of input_vals (%d)", input_keys.size(), input_vals.size())); }
