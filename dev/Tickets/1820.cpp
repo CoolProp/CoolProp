@@ -151,7 +151,7 @@ int main(int argc, const char* argv[]) {
     std::vector<double> T(num), R(num);
     for (std::size_t i = 0; i < num; i++) {
         //T[i] = ((360.0 - 240.0) * i / double(num - 1) + 240.0);
-        T[i] = ((350.0 + 143.15) * i / double(num - 1) + 273.15 - 143.15);
+        T[i] = ((349.0 + 142.0) * i / double(num - 1) + 273.15 - 142.0);
         R[i] = ((1.0 - 0.0) * i / double(num - 1) + 0.0);
     }
     for (std::size_t i = 0; i < num; i++) {
