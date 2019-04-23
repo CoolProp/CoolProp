@@ -43,7 +43,7 @@ matrix:
         - popd
       script:     
         - cmake --build build --config Release
-        - ./Main
+        - ./build/Main
     - os: linux
       dist: trusty
       compiler: gcc
