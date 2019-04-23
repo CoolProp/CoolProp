@@ -31,6 +31,19 @@ language:
 
 matrix:
   include:
+    - compiler: clang
+      branches:
+        only:
+          - issues/1820
+      before_script:
+        - cmake --version
+        - echo "$CXX" && "$CXX" -v
+        - mkdir -p build && pushd build
+        - cmake .. -DCMAKE_BUILD_TYPE=Release -DCOOLPROP_MY_MAIN=dev/Tickets/1820.cpp
+        - popd
+      script:     
+        - cmake --build build --config Release
+        - ./Main
     - os: linux
       dist: trusty
       compiler: gcc
