@@ -113,8 +113,7 @@ void calculate(std::vector<std::pair<std::string, double> > inputs, std::size_t&
             if (delta > 1e-6) {
                 acc_count += 1;
                 HumidAir::HAPropsSI("psi_w", k1, v1, k2, v2, "P", P_input);
-                std::cout << "\ndeviation: " << delta << " @" << std::endl;
-                std::cout << "HAPropsSI(\"psi_w\",\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2 << ",\"P\",101325); error: " + CoolProp::get_global_param_string("errstring");
+                std::cout << "deviation: " << delta << " @ HAPropsSI(\"psi_w\",\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2 << ",\"P\",101325); error: " + CoolProp::get_global_param_string("errstring") << std::endl;
 
                 //                std::cout << "\n-------------- Error --------------\n";
                 //                std::cout << "delta = " << delta << "\n";
@@ -149,10 +148,15 @@ int main(int argc, const char* argv[]) {
     std::size_t _err_count = 0, _clc_count = 0, _acc_count = 0;
     std::size_t num = 31;
     std::vector<double> T(num), R(num);
+    // Full range : -143.15 C to 350.0 C
+    double T_lo = (-143.15 + 273.15) * 1.001;
+    double T_hi = ( 350.00 + 273.15) * 0.999;
+    // Full range : 0.0 to 1.0
+    double R_lo = 0.0 * 1.001;
+    double R_hi = 1.0 * 0.999;
     for (std::size_t i = 0; i < num; i++) {
-        //T[i] = ((360.0 - 240.0) * i / double(num - 1) + 240.0);
-        T[i] = ((349.0 + 142.0) * i / double(num - 1) + 273.15 - 142.0);
-        R[i] = ((1.0 - 0.0) * i / double(num - 1) + 0.0);
+        T[i] = ((T_hi - T_lo) * i / double(num - 1) + T_lo);
+        R[i] = ((R_hi - R_lo) * i / double(num - 1) + R_lo);
     }
     for (std::size_t i = 0; i < num; i++) {
         _err_count = 0;
@@ -169,7 +173,7 @@ int main(int argc, const char* argv[]) {
         }
         auto toc = std::chrono::high_resolution_clock::now();
         _time = std::chrono::duration<double>(toc - tic).count();
-        std::cout << "----- Errors @ T_drybulb = " << T[i] << " K ----- \n";
+        std::cout << "\n----- Errors for run " << i << " @ T_drybulb = " << T[i] << " K ----- \n";
         std::cout << "Exceptions: " << _err_count << " / " << _clc_count << " = " << _err_count * 100.0 / _clc_count << "% \n";
         std::cout << "Bad accuracy: " << _acc_count << " / " << _clc_count << " = " << _acc_count * 100.0 / _clc_count << "% \n";
         if (_clc_count != (R.size() * supported_pairs.size())) return 1;
@@ -179,7 +183,7 @@ int main(int argc, const char* argv[]) {
         acc_count += _acc_count;
         time += _time;
     }
-    std::cout << "----- Final Errors ----- \n";
+    std::cout << "\n----- Final Errors ----- \n";
     std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count * 100.0 / clc_count << "% \n";
     std::cout << "Bad accuracy: " << acc_count << " / " << clc_count << " = " << acc_count * 100.0 / clc_count << "% \n";
     if (clc_count != (T.size() * R.size() * supported_pairs.size())) return 1;
