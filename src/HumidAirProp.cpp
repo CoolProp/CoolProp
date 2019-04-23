@@ -51,6 +51,7 @@ namespace HumidAir
 
     void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const std::vector<double> &input_vals, double &T, double &psi_w);
     double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
+    double MoleFractionWater(double, double, int, double);
 
 void check_fluid_instantiation()
 {
@@ -74,6 +75,7 @@ static inline bool check_bounds(const givens prop, const double& value, double& 
     // If limit checking is disabled, just accept the inputs, return true
     if (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS)){ return true; }
     if (!ValidNumber(value)) return false;
+
     switch (prop)
     {
     case GIVEN_P:
@@ -99,11 +101,12 @@ static inline bool check_bounds(const givens prop, const double& value, double& 
         max_val = 1.0;
         break;
     default:
-        min_val = -1e50;
-        max_val = 1e50;
+        min_val = -_HUGE;
+        max_val = _HUGE;
         break;
     }
-    return !((value < min_val) || (value > max_val));
+    bool ret = !((value < min_val) || (value > max_val));
+    return ret;
 }
 
 // A couple of convenience functions that are needed quite a lot
@@ -281,7 +284,7 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
         }
     }
     else{
-        W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-4, 50);
+        W = CoolProp::Brent(BSR, W_min, W_max, 1e-7, 1e-7, 50);
     }
     return W;
 }
@@ -304,11 +307,11 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             input_vals.resize(2); input_vals[0] = Input1;
         };
 
-        double call(double T){
-            input_vals[1] = T;
+        double call(double T_drybulb){
             double psi_w;
-            _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
-            return _HAPropsSI_outputs(OutputKey, p, T, psi_w) - TargetVal;
+            psi_w = MoleFractionWater(T_drybulb, p, input_keys[0], input_vals[0]);
+            double val = _HAPropsSI_outputs(OutputKey, p, T_drybulb, psi_w);
+            return val - TargetVal;
         }
     };
 
@@ -349,7 +352,8 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
         }
     }
     else{
-        T = CoolProp::Brent(BSR, T_min, T_max, 1e-7, 1e-4, 50);
+        double mach_eps = 1e-15, tol = 1e-10;
+        T = CoolProp::Brent(BSR, T_min, T_max, mach_eps,tol, 50);
     }
     return T;
 }
@@ -1135,7 +1139,7 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar)
         sbar = sbar_0+(1-psi_w)*sbar_a+psi_w*sbar_w-R_bar*( (B+T*dBdT)/v_bar+(C+T*dCdT)/(2*pow(v_bar,2))+(1-psi_w)*log(1-psi_w)+psi_w*log(psi_w));
     }
     else{
-        sbar = sbar_0+sbar_a;
+        sbar = sbar_0+sbar_a-R_bar*((B+T*dBdT)/v_bar+(C+T*dCdT)/(2*pow(v_bar,2)));
     }
     return sbar; //[J/mol_ha/K]
 }
@@ -1287,7 +1291,20 @@ public:
     WetBulbTminSolver(double p, double hair_dry):p(p),hair_dry(hair_dry){}
     double call(double Ts)
     {
-        double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
+        //double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
+
+        double psi_w, T;
+        //std::vector<givens> inp = { HumidAir::GIVEN_T, HumidAir::GIVEN_RH }; // C++11
+        std::vector<givens> inp(2);
+        inp[0] = HumidAir::GIVEN_T;
+        inp[1] = HumidAir::GIVEN_RH;
+        //std::vector<double> val = { Ts, 1.0 }; // C++11
+        std::vector<double> val(2);
+        val[0] = Ts;
+        val[1] = 1.0;
+        _HAPropsSI_inputs(p, inp, val, T, psi_w);
+        double RHS = _HAPropsSI_outputs(GIVEN_ENTHALPY, p, T, psi_w);
+
         if (!ValidNumber(RHS)){throw CoolProp::ValueError();}
         return RHS - this->hair_dry;
     }
@@ -1587,12 +1604,7 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
 {
     if (CoolProp::get_debug_level() > 0){ std::cout << format("length of input_keys is %d\n", input_keys.size()); }
     if (input_keys.size() != input_vals.size()){ throw CoolProp::ValueError(format("Length of input_keys (%d) does not equal that of input_vals (%d)", input_keys.size(), input_vals.size())); }
-    for (std::size_t i = 0; i < input_keys.size(); i++) {
-        double min_val = _HUGE, max_val = -_HUGE; // Initialize with invalid values
-        if (!check_bounds(input_keys[i], input_vals[i], min_val, max_val)) {
-            throw CoolProp::ValueError(format("The input for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", input_keys[i], input_vals[i], min_val, max_val));
-        }
-    }
+    
     long key = get_input_key(input_keys, GIVEN_T);
     if (key >= 0) // Found T (or alias) as an input
     {
@@ -1621,15 +1633,22 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                     }
                 }
                 catch(...){
-                    // Use the Brent's method solver to find W.  Slow but reliable
-                    double W_min = 0.001, W_max = 1;
-                    check_bounds(GIVEN_HUMRAT, 0, W_min, W_max);
+                    // Use the Brent's method solver to find W.  Slow but reliable...
+                    //
+                    // Find the saturation value for the humidity ratio for given dry bulb T
+                    // This is this highest possible water content for the humidity ratio
+                    double psi_w_sat = MoleFractionWater(T, p, GIVEN_RH, 1.0);
+                    double W_max = HumidityRatio(psi_w_sat);
+                    double W_min = 0;
                     givens MainInputKey = GIVEN_T;
                     double MainInputValue = T;
                     // Secondary input is the one that you are trying to match
                     double SecondaryInputValue = input_vals[other];
                     givens SecondaryInputKey = input_keys[other];
                     W = Brent_HAProps_W(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, W_min, W_max);
+                    if (!ValidNumber(W)){
+                        throw CoolProp::ValueError("Iterative value for W is invalid");
+                    }
                 }
                 // Mole fraction of water
                 psi_w = MoleFractionWater(T, p, GIVEN_HUMRAT, W);
@@ -1668,7 +1687,6 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
 
         double T_min = 200;
         double T_max = 450;
-
         check_bounds(GIVEN_T, 273.15, T_min, T_max);
 
         if (MainInputKey == GIVEN_RH){
@@ -1711,10 +1729,18 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
                 T_min = Secant_Tdb_at_saturated_W(psi_w_sat, p, T_min);
             }
         }
+        else if (MainInputKey == GIVEN_TDP){
+            // By specifying the dewpoint, the water mole fraction is known directly
+            // Otherwise, find psi_w for further calculations in the following section
+            double psi_w = MoleFractionWater(-1, p, GIVEN_TDP, MainInputValue);
+            
+            // Minimum drybulb temperature is saturated humid air at specified water mole fraction
+            T_min = DewpointTemperature(T, p, psi_w);
+        }
 
         try{
-            // Use the Brent's method solver to find T.  Slow but reliable
-            T = Brent_HAProps_T(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, T_min,T_max);
+            // Use the Brent's method solver to find T_drybulb.  Slow but reliable
+            T = Brent_HAProps_T(SecondaryInputKey, p, MainInputKey, MainInputValue, SecondaryInputValue, T_min, T_max);
         }
         catch(std::exception &e){
             if (CoolProp::get_debug_level() > 0){ std::cout << "ERROR: " << e.what() << std::endl; }
@@ -1733,17 +1759,6 @@ void _HAPropsSI_inputs(double p, const std::vector<givens> &input_keys, const st
 double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w)
 {
     if (CoolProp::get_debug_level() > 0){ std::cout << format("_HAPropsSI_outputs :: T: %g K, psi_w: %g\n", T, psi_w); }
-
-    double min_val = _HUGE, max_val = -_HUGE; // Initialize with invalid values
-    if (!check_bounds(GIVEN_P, p, min_val, max_val)) {
-        throw CoolProp::ValueError(format("The pressure value (%g) is outside the range of validity: (%g) to (%g)", p, min_val, max_val));
-    }
-    if (!check_bounds(GIVEN_T, T, min_val, max_val)) {
-        throw CoolProp::ValueError(format("The temperature value (%g) is outside the range of validity: (%g) to (%g)", T, min_val, max_val));
-    }
-    if (!check_bounds(GIVEN_PSIW, psi_w, min_val, max_val)) {
-        throw CoolProp::ValueError(format("The water mole fraction value (%g) is outside the range of validity: (%g) to (%g)", psi_w, min_val, max_val));
-    }
 
     double M_ha=(1-psi_w)*0.028966+MM_Water()*psi_w; //[kg_ha/mol_ha]
     // -----------------------------------------------------------------
@@ -1916,13 +1931,49 @@ double HAPropsSI(const std::string &OutputName, const std::string &Input1Name, d
             throw CoolProp::ValueError("Other two inputs to HAPropsSI aside from pressure cannot be the same");
         }
 
+        // Check the input values
+        double min_val = _HUGE, max_val = -_HUGE; // Initialize with invalid values
+        for (std::size_t i = 0; i < input_keys.size(); i++) {
+            if (!check_bounds(input_keys[i], input_vals[i], min_val, max_val)) {
+                throw CoolProp::ValueError(format("The input for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", input_keys[i], input_vals[i], min_val, max_val));
+                //if (CoolProp::get_debug_level() > 0) {
+                //    std::cout << format("The input for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", input_keys[i], input_vals[i], min_val, max_val);
+                //}
+            }
+        }
         // Parse the inputs to get to set of p, T, psi_w
         _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
 
         if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI input conversion yields T: %g, psi_w: %g\n", T, psi_w); }
 
+        // Check the standardized input values
+        if (!check_bounds(GIVEN_P, p, min_val, max_val)) {
+            throw CoolProp::ValueError(format("The pressure value (%g) is outside the range of validity: (%g) to (%g)", p, min_val, max_val));
+            //if (CoolProp::get_debug_level() > 0) {
+            //    std::cout << format("The pressure value (%g) is outside the range of validity: (%g) to (%g)", p, min_val, max_val);
+            //}
+        }
+        if (!check_bounds(GIVEN_T, T, min_val, max_val)) {
+            throw CoolProp::ValueError(format("The temperature value (%g) is outside the range of validity: (%g) to (%g)", T, min_val, max_val));
+            //if (CoolProp::get_debug_level() > 0) {
+            //    std::cout << format("The temperature value (%g) is outside the range of validity: (%g) to (%g)", T, min_val, max_val);
+            //}
+        }
+        if (!check_bounds(GIVEN_PSIW, psi_w, min_val, max_val)) {
+            throw CoolProp::ValueError(format("The water mole fraction value (%g) is outside the range of validity: (%g) to (%g)", psi_w, min_val, max_val));
+            //if (CoolProp::get_debug_level() > 0) {
+            //    std::cout << format("The water mole fraction value (%g) is outside the range of validity: (%g) to (%g)", psi_w, min_val, max_val);
+            //}
+        }
         // Calculate the output value desired
         double val = _HAPropsSI_outputs(OutputType, p, T, psi_w);
+        // Check the output value
+        if (!check_bounds(OutputType, val, min_val, max_val)) {
+            throw CoolProp::ValueError(format("The output for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", OutputType, val, min_val, max_val));
+            //if (CoolProp::get_debug_level() > 0) {
+            //    std::cout << format("The output for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)", OutputType, val, min_val, max_val);
+            //}
+        }
 
         if (!ValidNumber(val)){
             if (CoolProp::get_debug_level() > 0){ std::cout << format("HAPropsSI is about to return invalid number"); }
