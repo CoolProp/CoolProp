@@ -162,7 +162,7 @@ int main(int argc, const char* argv[]) {
             calculate(input_values, clc_count, err_count, acc_count, supported_pairs);
         }
         auto toc = std::chrono::high_resolution_clock::now();
-        std::cout << "----- Errors @ T_drybulb=" << T[i] <<  "----- \n";
+        std::cout << "----- Errors @ T_drybulb = " << T[i] <<  " K ----- \n";
         std::cout << "Exceptions: " << err_count << " / " << clc_count << " = " << err_count / clc_count * 100.0 << "% \n";
         std::cout << "Bad Accuracy: " << acc_count << " / " << clc_count << " = " << acc_count / clc_count * 100.0 << "% \n";
         std::cout << "Time: " << std::chrono::duration<double>(toc-tic).count() << " s \n";

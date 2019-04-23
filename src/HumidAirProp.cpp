@@ -352,7 +352,8 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
         }
     }
     else{
-        T = CoolProp::Brent(BSR, T_min, T_max, 1e-7, 1e-4, 50);
+        double mach_eps = 1e-15, tol = 1e-10;
+        T = CoolProp::Brent(BSR, T_min, T_max, mach_eps,tol, 50);
     }
     return T;
 }
