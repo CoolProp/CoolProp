@@ -96,7 +96,7 @@ def check_issues_for_labels_and_milestone(ms: str, _issues_dict: dict):
     _wrong_milestone = []
     for _i in _issues_dict["items"]:
         _num = _i["number"]
-        _labels = _i["labels"]
+        _labels = [_l["name"] for _l in _i["labels"]]
         _milestone = _i["milestone"]
 
         if "duplicate" in _labels:
