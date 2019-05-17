@@ -115,7 +115,7 @@ def check_issues_for_labels_and_milestone(ms: str, _issues_dict: dict):
 
     if (len(_no_label_or_ms) + len(_wrong_milestone)) > 0:
         _log_msg("The following issues seem to have missing information:\n")
-        _log_msg(' - No "duplicate" or "invalid" label and no milestone information ({0}): \n'.format(len(_no_label_or_ms)))
+        _log_msg(' - No excluded label and no milestone information ({0}): \n'.format(len(_no_label_or_ms)))
         for _num in _no_label_or_ms:
             _log_msg('     #{0} - https://github.com/CoolProp/CoolProp/issues/{0} \n'.format(_num))
         _log_msg(' - Closed issues that belong to a different milestone ({0}): \n'.format(len(_wrong_milestone)))
@@ -223,6 +223,11 @@ if __name__ == '__main__':
         release_json = get_latest_tag_and_date()
         issues_json = get_issues_closed_since(release_json["tag_date"])
         succ = check_issues_for_labels_and_milestone(sys.argv[2], issues_json)
+        if succ:
+             _log_msg("All issues seem to have the correct labels and milestones, congrats!\n")
+        #else:
+        #    _log_msg("There are some issues that seem to have incorrect label and milestone information.\n")
+
     elif sys.argv[1] == "changelog":
         print(generate_issues(sys.argv[2]))
         print('')

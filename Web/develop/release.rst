@@ -26,21 +26,40 @@ the CoolProp library.
               have been closed since then. It reports problems such as
               missing labels - you should take the time to fix all
               problems.
+* **Version**: Edit CMakeLists.txt and remove all qualifiers (alpha, dev,
+               ...) from the version number and update the number for the
+               upcoming release.
+* **Changelog**: Update the changelog and generate a list of closed GitHub
+                 issues: 
 
-* **Version**: Edit CMakeLists.txt and remove all qualifiers (alpha, dev, ...) from the version number.
-* **Changelog**: Update the changelog and generate a list of closed GitHub issues: 
-
-    - Move into the ``dev/scripts`` folder and do ``python milestone2rst.py vX.X.X`` where ``vX.X.X`` is the version number of the milestone on github.
-    - Copy the generated text (goes to stdout) into the changelog file in ``Web/coolprop/changelog.rst``
+    - Move into the ``dev/scripts`` folder and do ``python milestone2rst.py
+      changelog vX.X.X`` where ``vX.X.X`` is the version number of the
+      milestone on GitHub.
+    - Copy the generated text (goes to stdout) into the changelog file in
+      ``Web/coolprop/changelog.rst``. You might also use the same text for
+      the annotated tag / release on GitHub.
     
-* **release branch**: Merge all code from *master* into *release* branch
-* **build bots**: Force all buildbots to run on the *release* branch, this will also change the upload folder from *binaries* to *release*.
-* **script**: Wait for all bots to finish and run the release script by launching the ``release version`` bot with dry run disabled and the correct version number. This uploads binaries to pypi and sourceforge. Ignore the warning ``failed to set times on "/home/project-web/coolprop/htdocs/jscript/coolprop-latest.js"``, it is a symlink and will be overwritten... 
-* **clean up**: If everything went well, you can proceed: 
+* **Merge Code**: Close issues and merge pull requests where appropriate.
+                  Merge all relevant changes from your feature branches
+                  into the *master* branch and merge *master* into
+                  *release* branch. 
+* **Build Bots**: Force all buildbots to run on the *release* branch, this
+                  will also change the upload folder from *binaries* to
+                  *release*.
+* **Release**: Wait for all bots to finish and run the release script by
+               launching the ``release version`` bot with dry run disabled
+               and the correct version number. This uploads binaries to
+               pypi and sourceforge. Ignore the warning ``failed to set
+               times on "/home/project-web/coolprop/htdocs/jscript/coolprop-latest.js"``,
+               it is a symlink and will be overwritten... 
+* **Clean and Tag**: If everything went well, you can proceed: 
 
-    - Tag the release branch in your git software. It is a good idea to make an annotated tag and include the information on the closed issues here as well. 
-    - Change the default download file on sourceforge to point to the new zipped sources.
-    - Bump the version number in the CMake file and commit. 
+    - Tag the release branch in your git software. It is a good idea to
+      make an annotated tag and include the information on the closed
+      issues here as well. 
+    - Change the default download file on sourceforge to point to the new
+      zipped sources.
+    - Bump the version number in the CMake file and commit.
     - Announce the new features if you like...
-  
+
 That's all folks.
