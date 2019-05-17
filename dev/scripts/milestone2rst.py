@@ -128,8 +128,9 @@ def check_issues_for_labels_and_milestone(ms: str, _issues_dict: dict):
 def get_milestones(milestone):
     fname = milestone + '-milestones.json'
     if not os.path.exists(fname):
+        _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'milestones'])
         # Find the milestone number for the given name
-        milestones_json = json.loads(urlopen(REPO_URL + '/milestones').read())
+        milestones_json = json.loads(urlopen(_REQUEST_URL).read())
         with open(fname, 'w') as fp:
             fp.write(json.dumps(milestones_json, indent=2))
     with open(fname, 'r') as fp:
@@ -140,8 +141,9 @@ def get_PR_JSON(milestone, number):
     # Get the merged pull requests associated with the milestone
     fname = milestone + '-PR.json'
     if not os.path.exists(fname):
+        _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'pulls'])
         # Find the milestone number for the given name
-        PR = json.loads(urlopen(REPO_URL + '/pulls?state=closed&per_page=1000&milestone=' + str(number)).read())
+        PR = json.loads(urlopen(_REQUEST_URL + '?state=closed&per_page=1000&milestone=' + str(number)).read())
         with open(fname, 'w') as fp:
             fp.write(json.dumps(PR, indent=2))
     with open(fname, 'r') as fp:
@@ -153,7 +155,8 @@ def get_issues_JSON(milestone, number):
     fname = milestone + '-issues.json'
     if not os.path.exists(fname):
         # Find the milestone number for the given name
-        issues = json.loads(urlopen(REPO_URL + '/issues?state=all&per_page=1000&milestone=' + str(number)).read())
+        _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'issues'])
+        issues = json.loads(urlopen(_REQUEST_URL + '?state=all&per_page=1000&milestone=' + str(number)).read())
         with open(fname, 'w') as fp:
             fp.write(json.dumps(issues, indent=2))
     with open(fname, 'r') as fp:
