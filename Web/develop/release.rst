@@ -4,11 +4,28 @@
 Release Checklist
 ******************
 
-We have made a serious effort to automate the release of new binaries. Even 
-though things have become easier, there are still many things to remember. 
-Here is your new best friend, a checklist that helps you to keep track of all
-the small things that have to be done when releasing a new version of the CoolProp 
-library. 
+We have made a serious effort to automate the release of new binaries. Even
+though things have become easier, there are still many things to remember.
+Here is your new best friend, a checklist that helps you to keep track of
+all the small things that have to be done when releasing a new version of
+the CoolProp library. 
+
+* **Issues**: Make sure that all issues that were closed since the last
+              release have either been tagged / labelled as described below
+              or have a milestone attached to them. The label "invalid"
+              means that the reported issue was not related to CoolProp,
+              whereas "duplicate" means that the issue has been reported
+              earlier. Finally, the label "wontfix" means that we do not
+              consider the issue for future work and closed it. The latter
+              could also apply to real bugs that we cannot fix. All of
+              these issues should not be mentioned in the changelog. We
+              have created a script that check the issues for you: Move
+              into the ``dev/scripts`` folder and run
+              ``python milestone2rst.py check v6.3.0``. This command finds
+              the date of the latest release and looks at all issues that
+              have been closed since then. It reports problems such as
+              missing labels - you should take the time to fix all
+              problems.
 
 * **Version**: Edit CMakeLists.txt and remove all qualifiers (alpha, dev, ...) from the version number.
 * **Changelog**: Update the changelog and generate a list of closed GitHub issues: 
