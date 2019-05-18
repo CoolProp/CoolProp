@@ -1,7 +1,7 @@
 from CoolProp.CoolProp import get_fluid_param_string
 
 # Map from chemical formula to name
-name_map = {'CH4':'Methane',
+name_map = {'CH4': 'Methane',
             'N2': 'Nitrogen',
             'O2': 'Oxygen',
             'CO2': 'CarbonDioxide',
@@ -25,16 +25,16 @@ name_map = {'CH4':'Methane',
             }
 
 F_factors = {}
-lines = open('KunzWagner2012_TableA6.txt','r').readlines()
+lines = open('KunzWagner2012_TableA6.txt', 'r').readlines()
 for line in lines:
-    names,F = line.strip().split(' ')
-    name1,name2 = names.split('/')
-    CAS1 = get_fluid_param_string(name1,'CAS')
-    CAS2 = get_fluid_param_string(name2,'CAS')
-    F_factors[(CAS1,CAS2)] = F
-    F_factors[(CAS2,CAS1)] = F
+    names, F = line.strip().split(' ')
+    name1, name2 = names.split('/')
+    CAS1 = get_fluid_param_string(name1, 'CAS')
+    CAS2 = get_fluid_param_string(name2, 'CAS')
+    F_factors[(CAS1, CAS2)] = F
+    F_factors[(CAS2, CAS1)] = F
 
-lines = open('KunzWagner2012_TableA8.txt','r').readlines()
+lines = open('KunzWagner2012_TableA8.txt', 'r').readlines()
 
 template = """{{"Name1" : "{Name1:s}",
 "Name2" : "{Name2:s}",
@@ -51,28 +51,28 @@ for line in lines:
     vals = line.strip().split(' ')
 
     if len(vals) == 6:
-        names, a, betav,gammav,betaT,gammaT = vals
+        names, a, betav, gammav, betaT, gammaT = vals
     else:
-        names, betav,gammav,betaT,gammaT = vals
+        names, betav, gammav, betaT, gammaT = vals
 
-    name1,name2 = names.split('-')
+    name1, name2 = names.split('-')
     name1 = name_map[name1]
     name2 = name_map[name2]
 
-    CAS1 = get_fluid_param_string(name1,'CAS')
-    CAS2 = get_fluid_param_string(name2,'CAS')
+    CAS1 = get_fluid_param_string(name1, 'CAS')
+    CAS2 = get_fluid_param_string(name2, 'CAS')
 
-    if (CAS1,CAS2) in F_factors:
-        F = F_factors[(CAS1,CAS2)]
+    if (CAS1, CAS2) in F_factors:
+        F = F_factors[(CAS1, CAS2)]
     else:
         F = '0.0'
 
-    print(template.format(Name1 = name1,
-                          Name2 = name2,
-                          CAS1 = CAS1,
-                          CAS2 = CAS2,
-                          betaV = betav,
-                          gammaV = gammav,
-                          betaT = betaT,
-                          gammaT = gammaT,
-                          F = F))
+    print(template.format(Name1=name1,
+                          Name2=name2,
+                          CAS1=CAS1,
+                          CAS2=CAS2,
+                          betaV=betav,
+                          gammaV=gammav,
+                          betaT=betaT,
+                          gammaT=gammaT,
+                          F=F))

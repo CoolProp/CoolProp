@@ -1,24 +1,26 @@
 from __future__ import print_function
 import platform
 import subprocess, shutil, os, sys, glob
+from distutils.version import LooseVersion
+from distutils.sysconfig import get_config_var
 
 
 def copy_files():
-    def copytree(old,new):
-        print(old,'-->',new)
+    def copytree(old, new):
+        print(old, '-->', new)
         shutil.copytree(old, new)
 
     def copy2(old, new):
-        print(old,'-->',new)
+        print(old, '-->', new)
         shutil.copy2(old, new)
 
     import shutil
-    shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
-    copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp','include'))
-    for jsonfile in glob.glob(os.path.join('CoolProp','include','*_JSON.h')):
+    shutil.rmtree(os.path.join('CoolProp', 'include'), ignore_errors=True)
+    copytree(os.path.join(CProot, 'include'), os.path.join('CoolProp', 'include'))
+    for jsonfile in glob.glob(os.path.join('CoolProp', 'include', '*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
-    copytree(os.path.join(CProot, 'externals/fmtlib/fmt'), os.path.join('CoolProp','include','fmt')) # Should be deprecated
+    copytree(os.path.join(CProot, 'externals/fmtlib/fmt'), os.path.join('CoolProp', 'include', 'fmt'))  # Should be deprecated
     #copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp','include','fmt'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
@@ -26,7 +28,7 @@ def copy_files():
 
 def remove_files():
     import shutil
-    shutil.rmtree(os.path.join('CoolProp','include'), ignore_errors = True)
+    shutil.rmtree(os.path.join('CoolProp', 'include'), ignore_errors=True)
     os.remove(os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files removed.')
 
@@ -38,24 +40,54 @@ def touch(fname):
 
 def recursive_collect_includes():
     thefiles = []
-    include_path = os.path.join('CoolProp','include')
+    include_path = os.path.join('CoolProp', 'include')
     for root, dirs, files in os.walk(include_path):
-        thefiles += [os.path.relpath(os.path.join(root,_f), 'CoolProp') for _f in files]
+        thefiles += [os.path.relpath(os.path.join(root, _f), 'CoolProp') for _f in files]
     return thefiles
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
-    # Trying to change the standard library for C++
-    import platform
-    try:
-        macVersion = platform.mac_ver()[0].split('.')
-        if int(macVersion[0]) >= 10 and int(macVersion[1]) > 8:
-            os.environ["CC"] = "gcc"
-            os.environ["CXX"] = "g++"
-            print('switching compiler to g++ for OSX')
-    except:
-        pass
+    # #Handling the standard library for C++ on OSX
+    #
+    # This is mostly related to the compiler version, but since it is much
+    # easier to check the OSX version, we are may also use that as an
+    # indicator. OSX 10.14 and XCode 10 completely dropped support for
+    # libstdc++ which forces is to manipulate the minimum OSX target
+    # version when compiling the Cython extensions.
+    if sys.platform == 'darwin':
+        osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        osx_compiler = LooseVersion('0.0')
+        osx_version = LooseVersion('0.0')
+        FORCE_TARGET = None
+        USE_OSX_VERSION = False
+        if USE_OSX_VERSION:
+            osx_version = LooseVersion(platform.mac_ver()[0])
+            print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_version))
+        else:
+            import subprocess
+            cmd = subprocess.Popen('gcc --version | grep clang | grep -o -E "(\d+\.)+\d+" | uniq | sort', shell=True, stdout=subprocess.PIPE)
+            for line in cmd.stdout:
+                # print(line)
+                try: line = line.decode()
+                except AttributeError: pass
+                line = line.strip()
+                try:
+                    osx_compiler = LooseVersion(line)
+                    if osx_compiler > "1.0" and osx_compiler < "100.0": break
+                except BaseException as be:
+                    print('Error getting OSX compile version: ', str(be))
+                    pass
+            print("OSX build detected, targetting {0} using clang/gcc v{1}.".format(osx_target, osx_compiler))
+
+        # allow to override things manually
+        if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+            if osx_version >= "10.14":
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
+                print("Assuming that we cannot build for {0} on {1}, resetting target to {2}".format(osx_target, osx_version, os.environ['MACOSX_DEPLOYMENT_TARGET']))
+            if osx_compiler >= "10":
+                os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
+                print("Assuming that we cannot build for {0} using clang/gcc {1}, resetting target to {2}".format(osx_target, osx_compiler, os.environ['MACOSX_DEPLOYMENT_TARGET']))
 
     # ******************************
     #       CMAKE OPTIONS
@@ -106,31 +138,39 @@ if __name__=='__main__':
 
         cmake_config_args, cmake_build_args = [], []
         if cmake_compiler == 'vc9':
-            cmake_build_args = ['--config','"Release"']
+            cmake_build_args = ['--config', '"Release"']
             if cmake_bitness == '32':
-                cmake_config_args += ['-G','"Visual Studio 9 2008"']
+                cmake_config_args += ['-G', '"Visual Studio 9 2008"']
             elif cmake_bitness == '64':
-                cmake_config_args += ['-G','"Visual Studio 9 2008 Win64"']
+                cmake_config_args += ['-G', '"Visual Studio 9 2008 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'vc10':
-            cmake_build_args = ['--config','"Release"']
+            cmake_build_args = ['--config', '"Release"']
             if cmake_bitness == '32':
-                cmake_config_args += ['-G','"Visual Studio 10 2010"']
+                cmake_config_args += ['-G', '"Visual Studio 10 2010"']
             elif cmake_bitness == '64':
-                cmake_config_args += ['-G','"Visual Studio 10 2010 Win64"']
+                cmake_config_args += ['-G', '"Visual Studio 10 2010 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'vc14':
-            cmake_build_args = ['--config','"Release"']
+            cmake_build_args = ['--config', '"Release"']
             if cmake_bitness == '32':
-                cmake_config_args += ['-G','"Visual Studio 14 2015"']
+                cmake_config_args += ['-G', '"Visual Studio 14 2015"']
             elif cmake_bitness == '64':
-                cmake_config_args += ['-G','"Visual Studio 14 2015 Win64"']
+                cmake_config_args += ['-G', '"Visual Studio 14 2015 Win64"']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'vc15':
+            cmake_build_args = ['--config', '"Release"']
+            if cmake_bitness == '32':
+                cmake_config_args += ['-G', '"Visual Studio 15 2017"']
+            elif cmake_bitness == '64':
+                cmake_config_args += ['-G', '"Visual Studio 15 2017 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'mingw':
-            cmake_config_args = ['-G','"MinGW Makefiles"']
+            cmake_config_args = ['-G', '"MinGW Makefiles"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-DFORCE_BITNESS_32=ON']
             elif cmake_bitness == '64':
@@ -148,32 +188,38 @@ if __name__=='__main__':
         else:
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
 
-        if 'darwin' in sys.platform:
-            cmake_config_args += ['-DCOOLPROP_OSX_105_COMPATIBILITY=ON']
+        # if 'darwin' in sys.platform:
+        #    current_system = LooseVersion(platform.mac_ver()[0])
+        #    print("OSX build detected for system {0}".format(current_system))
+        #    #if current_system >= '10.9':
+        #    #    cmake_config_args += ["-DDARWIN_USE_LIBCPP=ON"]
+        #    #else:
+        #    #    cmake_config_args += ["-DDARWIN_USE_LIBCPP=OFF"]
+
         if 'linux' in sys.platform:
             cmake_config_args += ['-DCOOLPROP_FPIC=ON']
-        #if sys.platform.startswith('win'):
+        # if sys.platform.startswith('win'):
         #    cmake_config_args += ['-DCOOLPROP_MSVC_STATIC=OFF']
 
         cmake_build_dir = os.path.join('cmake_build', '{compiler}-{bitness}bit'.format(compiler=cmake_compiler, bitness=cmake_bitness))
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
 
-        cmake_call_string = ' '.join(['cmake','../../../..','-DCOOLPROP_STATIC_LIBRARY=ON','-DCMAKE_VERBOSE_MAKEFILE=ON','-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
+        cmake_call_string = ' '.join(['cmake', '../../../..', '-DCOOLPROP_STATIC_LIBRARY=ON', '-DCMAKE_VERBOSE_MAKEFILE=ON', '-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
-        subprocess.check_call(cmake_call_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
+        subprocess.check_call(cmake_call_string, shell=True, stdout=sys.stdout, stderr=sys.stderr, cwd=cmake_build_dir)
 
-        cmake_build_string = ' '.join(['cmake','--build', '.'] + cmake_build_args)
+        cmake_build_string = ' '.join(['cmake', '--build', '.'] + cmake_build_args)
         print('calling: ' + cmake_build_string)
-        subprocess.check_call(cmake_build_string, shell = True, stdout = sys.stdout, stderr = sys.stderr, cwd = cmake_build_dir)
+        subprocess.check_call(cmake_build_string, shell=True, stdout=sys.stdout, stderr=sys.stderr, cwd=cmake_build_dir)
 
         # Now find the static library that we just built
         static_libs = []
-        for search_suffix in ['Release/*.lib','Release/*.a', 'Debug/*.lib', 'Debug/*.a','*.a']:
-            static_libs += glob.glob(os.path.join(cmake_build_dir,search_suffix))
+        for search_suffix in ['Release/*.lib', 'Release/*.a', 'Debug/*.lib', 'Debug/*.a', '*.a']:
+            static_libs += glob.glob(os.path.join(cmake_build_dir, search_suffix))
 
         if len(static_libs) != 1:
-            raise ValueError("Found more than one static library using CMake build.  Found: "+str(static_libs))
+            raise ValueError("Found more than one static library using CMake build.  Found: " + str(static_libs))
         else:
             STATIC_LIBRARY_BUILT = True
             static_library_path = os.path.dirname(static_libs[0])
@@ -200,25 +246,24 @@ if __name__=='__main__':
         except ImportError:
             raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
 
-        # Print out the version
-        print('Cython version: ', Cython.__version__)
+        # Handle different Cython versions
+        cython_version = LooseVersion(Cython.__version__)
+        print('Cython version: ', cython_version)
 
-        from pkg_resources import parse_version
-        if parse_version(Cython.__version__) < parse_version('0.20'):
-            raise ImportError('Your version of Cython (%s) must be >= 0.20 .  Please update your version of cython' % (Cython.__version__,))
-
-        if parse_version(Cython.__version__) >= parse_version('0.20'):
-            _profiling_enabled = True
-        else:
+        if cython_version < '0.20':
             _profiling_enabled = False
-
-        # use different compiler directives for Cython 0.26 or above
-        if parse_version(Cython.__version__) >= parse_version('0.26'):
-            cython_directives = dict(profile = _profiling_enabled,
-                                     embedsignature = True)
+            raise ImportError('Your version of Cython (%s) must be >= 0.20 .  Please update your version of cython' % (cython_version,))
         else:
-            cython_directives = dict(profile = _profiling_enabled,
-                                     embedsignature = True)
+            _profiling_enabled = True
+
+        cython_directives = dict(
+            profile=_profiling_enabled,
+            embedsignature=True,
+            language_level=2,
+            c_string_type='unicode',
+            c_string_encoding='ascii'
+            )
+
     else:
         cython_directives = {}
 
@@ -227,9 +272,9 @@ if __name__=='__main__':
     if pypi:
         CProot = '.'
     else:
-        if os.path.exists(os.path.join('..','..','CMakeLists.txt')):
+        if os.path.exists(os.path.join('..', '..', 'CMakeLists.txt')):
             # Good working directory
-            CProot = os.path.join('..','..')
+            CProot = os.path.join('..', '..')
         else:
             raise ValueError('Could not run script from this folder(' + os.path.abspath(os.path.curdir) + '). Run from wrappers/Python folder')
 
@@ -245,10 +290,10 @@ if __name__=='__main__':
         del generate_constants_module
 
     # Read the version from a bare string stored in file in root directory
-    version = open(os.path.join(CProot,'.version'),'r').read().strip()
+    version = open(os.path.join(CProot, '.version'), 'r').read().strip()
 
     setup_kwargs = {
-        'zip_safe': False # no compressed egg; see http://stackoverflow.com/a/29124937/1360263
+        'zip_safe': False  # no compressed egg; see http://stackoverflow.com/a/29124937/1360263
     }
     from setuptools import setup, Extension, find_packages
     if USE_CYTHON:
@@ -260,17 +305,17 @@ if __name__=='__main__':
         # This will always generate HTML to show where there are still pythonic bits hiding out
         Cython.Compiler.Options.annotate = True
 
-        setup_kwargs['cmdclass'] = dict(build_ext = build_ext)
+        setup_kwargs['cmdclass'] = dict(build_ext=build_ext)
 
         print('Cython will be used; cy_ext is ' + cy_ext)
     else:
         print('Cython will not be used; cy_ext is ' + cy_ext)
 
-    def find_cpp_sources(root = os.path.join('..','..','src'), extensions = ['.cpp'], skip_files = None):
+    def find_cpp_sources(root=os.path.join('..', '..', 'src'), extensions=['.cpp'], skip_files=None):
         file_listing = []
         for path, dirs, files in os.walk(root):
             for file in files:
-                n,ext = os.path.splitext(file)
+                n, ext = os.path.splitext(file)
                 fname = os.path.relpath(os.path.join(path, file))
                 if skip_files is not None and fname in skip_files: continue
                 if ext in extensions:
@@ -278,41 +323,41 @@ if __name__=='__main__':
         return file_listing
 
     # Set variables for C++ sources and include directories
-    sources = find_cpp_sources(os.path.join(CProot,'src'), '*.cpp')
-    include_dirs  = [
+    sources = find_cpp_sources(os.path.join(CProot, 'src'), '*.cpp')
+    include_dirs = [
         os.path.join(CProot),
         os.path.join(CProot, 'include'),
         os.path.join(CProot, 'src'),
         os.path.join(CProot, 'externals', 'Eigen'),
-        os.path.join(CProot, 'externals', 'fmtlib'), # should be deprecated
+        os.path.join(CProot, 'externals', 'fmtlib'),  # should be deprecated
         #os.path.join(CProot, 'externals', 'fmtlib','include'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
-    ## If the file is run directly without any parameters, clean, build and install
-    if len(sys.argv)==1:
+    # If the file is run directly without any parameters, clean, build and install
+    if len(sys.argv) == 1:
         sys.argv += ['clean', 'install']
 
-    common_args = dict(include_dirs = include_dirs,
+    common_args = dict(include_dirs=include_dirs,
                        language='c++')
 
     if USE_CYTHON:
-        common_args.update(dict(cython_c_in_temp = True,
-                                cython_directives = cython_directives
+        common_args.update(dict(cython_c_in_temp=True,
+                                cython_directives=cython_directives
                                 )
                            )
 
     if STATIC_LIBRARY_BUILT == True:
         CoolProp_module = Extension('CoolProp.CoolProp',
-                            [os.path.join('CoolProp','CoolProp.' + cy_ext)],
-                            libraries = ['CoolProp'],
-                            library_dirs = [static_library_path],
+                            [os.path.join('CoolProp', 'CoolProp.' + cy_ext)],
+                            libraries=['CoolProp'],
+                            library_dirs=[static_library_path],
                             **common_args)
     else:
         CoolProp_module = Extension('CoolProp.CoolProp',
-                            [os.path.join('CoolProp','CoolProp.' + cy_ext)] + sources,
+                            [os.path.join('CoolProp', 'CoolProp.' + cy_ext)] + sources,
                             **common_args)
     constants_module = Extension('CoolProp._constants',
-                        [os.path.join('CoolProp','_constants.' + cy_ext)],
+                        [os.path.join('CoolProp', '_constants.' + cy_ext)],
                         **common_args)
 
     if not pypi:
@@ -321,22 +366,22 @@ if __name__=='__main__':
     ext_modules = [CoolProp_module, constants_module]
 
     if USE_CYTHON:
-        ext_modules = cythonize(ext_modules, compiler_directives = cython_directives)
+        ext_modules = cythonize(ext_modules, compiler_directives=cython_directives)
 
     try:
-        setup (name = 'CoolProp',
-               version = version, # look above for the definition of version variable - don't modify it here
-               author = "Ian Bell",
+        setup(name='CoolProp',
+               version=version,  # look above for the definition of version variable - don't modify it here
+               author="Ian Bell",
                author_email='ian.h.bell@gmail.com',
                url='http://www.coolprop.org',
-               description = """Open-source thermodynamic and transport properties database""",
-               packages = find_packages(),
-               ext_modules = ext_modules,
-               package_dir = {'CoolProp':'CoolProp',},
-               package_data = {'CoolProp':['*.pxd',
+               description="""Open-source thermodynamic and transport properties database""",
+               packages=find_packages(),
+               ext_modules=ext_modules,
+               package_dir={'CoolProp': 'CoolProp', },
+               package_data={'CoolProp': ['*.pxd',
                                            'CoolPropBibTeXLibrary.bib',
                                            'Plots/psyrc'] + recursive_collect_includes()},
-               classifiers = [
+               classifiers=[
                 "Programming Language :: Python",
                 "Development Status :: 4 - Beta",
                 "Environment :: Other Environment",

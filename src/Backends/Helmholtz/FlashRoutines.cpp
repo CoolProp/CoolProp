@@ -385,7 +385,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend &HEOS)
              HEOS._rhomolar = HEOS.rhomolar_critical();
              HEOS._p = 0.5*HEOS.SatV->p() + 0.5*HEOS.SatL->p();
         }
-        else if (!is_in_closed_range(Tmin_sat-0.1, Tmax_sat, T)){
+        else if (!is_in_closed_range(Tmin_sat-0.1, Tmax_sat, T) && (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS) == false)){
             throw ValueError(format("Temperature to QT_flash [%0.8Lg K] must be in range [%0.8Lg K, %0.8Lg K]", T, Tmin_sat-0.1, Tmax_sat));
         }
         else if (get_config_bool(CRITICAL_SPLINES_ENABLED) && splines.enabled && HEOS._T > splines.T_min){
@@ -1635,10 +1635,9 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend 
             default:
                 throw ValueError();
         }
-        CoolPropDbl rhomolar;
         if (is_in_closed_range(yc, ymin, y))
         {
-            rhomolar = Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-9, 100);
+             Brent(resid, rhoc, rhomin, LDBL_EPSILON, 1e-9, 100);
         }
         else if (y < yc){
             // Increase rhomelt until it bounds the solution
@@ -1660,7 +1659,7 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend 
                 }
                 step_count++;
             }
-            rhomolar = Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-9, 100);
+            Brent(resid, rhomin, rhoc, LDBL_EPSILON, 1e-9, 100);
         }
         else
         {

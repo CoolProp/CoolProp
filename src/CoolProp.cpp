@@ -168,7 +168,8 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
                 throw ValueError(format("fraction [%s] was not converted to a value between 0 and 1 inclusive", fraction.c_str()));
             }
 
-            if (f > 10*DBL_EPSILON)  // Only push component if fraction is positive and non-zero
+            if ((f > 10*DBL_EPSILON) ||  // Only push component if fraction is positive and non-zero
+                (pairs.size() == 1))     // ..or if there is only one fluid (i.e. INCOMP backend )
             {
                 // And add to vector
                 fractions.push_back(f);
@@ -415,6 +416,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                             case iP: guesses.p = IO[i][j]; break;
                             case iHmolar: guesses.hmolar = IO[i][j]; break;
                             case iSmolar: guesses.smolar = IO[i][j]; break;
+                            default: throw ValueError("Don't understand this parameter");
                             }
                         }
                         break;
@@ -850,7 +852,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
     extract_backend(fluid_string, backend, fluid);
     if (backend == "REFPROP"){
         
-        long ierr = 0, ixflag = 1;
+        int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
         char herr[255], hrf[4];
         double x0[1] = {1};
@@ -1046,24 +1048,24 @@ std::string phase_lookup_string(phases Phase)
 {
     switch (Phase)
     {
-        case iphase_liquid: ///< Liquid
-            return "liquid";
-        case iphase_supercritical: ///< Supercritical (p > pc, T > Tc)
-            return "supercritical";
-        case iphase_supercritical_gas: ///< Supercritical gas (p < pc, T > Tc)
-            return "supercritical_gas";
-        case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
-            return "supercritical_liquid";
-        case iphase_critical_point: ///< At the critical point
-            return "critical_point";
-        case iphase_gas: ///< Subcritical gas
-            return "gas";
-        case iphase_twophase: ///< Twophase
-            return "twophase";
-        case iphase_unknown: ///< Unknown phase
-            return "unknown";
-        case iphase_not_imposed:
-            return "not_imposed";
+    case iphase_liquid: ///< Liquid
+        return "liquid";
+    case iphase_supercritical: ///< Supercritical (p > pc, T > Tc)
+        return "supercritical";
+    case iphase_supercritical_gas: ///< Supercritical gas (p < pc, T > Tc)
+        return "supercritical_gas";
+    case iphase_supercritical_liquid: ///< Supercritical liquid (p > pc, T < Tc)
+        return "supercritical_liquid";
+    case iphase_critical_point: ///< At the critical point
+        return "critical_point";
+    case iphase_gas: ///< Subcritical gas
+        return "gas";
+    case iphase_twophase: ///< Twophase (between saturation curves - inclusive)
+        return "twophase";
+    case iphase_unknown: ///< Unknown phase
+        return "unknown";
+    case iphase_not_imposed:
+        return "not_imposed";
     }
     throw ValueError("I should never be thrown");
 }

@@ -17,7 +17,7 @@
 #include <numeric>
 
 namespace CoolProp {
-    
+
 /// This structure holds values obtained while tracing the spinodal curve
 /// (most often in the process of finding critical points, but not only)
 class SpinodalData{
@@ -158,6 +158,8 @@ protected:
     virtual CoolPropDbl calc_isothermal_compressibility(void){ throw NotImplementedError("calc_isothermal_compressibility is not implemented for this backend"); };
     /// Using this backend, calculate the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
     virtual CoolPropDbl calc_isobaric_expansion_coefficient(void){ throw NotImplementedError("calc_isobaric_expansion_coefficient is not implemented for this backend"); };
+    /// Using this backend, calculate the isentropic expansion coefficient \f$ \kappa_s = -\frac{c_p}{c_v}\frac{v}{p}\left.\frac{\partial p}{\partial v}\right|_T = \frac{\rho}{p}\left.\frac{\partial p}{\partial \rho}\right|_s\f$
+    virtual CoolPropDbl calc_isentropic_expansion_coefficient(void) { throw NotImplementedError("calc_isentropic_expansion_coefficient is not implemented for this backend"); };
     /// Using this backend, calculate the viscosity in Pa-s
     virtual CoolPropDbl calc_viscosity(void){ throw NotImplementedError("calc_viscosity is not implemented for this backend"); };
     /// Using this backend, calculate the thermal conductivity in W/m/K
@@ -289,6 +291,8 @@ protected:
 
     /// Using this backend, get the name of the fluid
     virtual std::string calc_name(void){ throw NotImplementedError("calc_name is not implemented for this backend"); };
+    /// Using this backend, get the description of the fluid
+    virtual std::string calc_description(void){ throw NotImplementedError("calc_description is not implemented for this backend"); };
 
     /// Using this backend, get the triple point temperature in K
     virtual CoolPropDbl calc_Ttriple(void){ throw NotImplementedError("calc_Ttriple is not implemented for this backend"); };
@@ -311,7 +315,7 @@ protected:
     virtual CoolPropDbl calc_rhomolar_reducing(void){ throw NotImplementedError("calc_rhomolar_reducing is not implemented for this backend"); };
     /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
     virtual void calc_phase_envelope(const std::string &type){ throw NotImplementedError("calc_phase_envelope is not implemented for this backend"); };
-    /// 
+    ///
     virtual CoolPropDbl calc_rhomass(void){ return rhomolar()*molar_mass(); }
     virtual CoolPropDbl calc_hmass(void){ return hmolar() / molar_mass(); }
     virtual CoolPropDbl calc_hmass_excess(void) { return hmolar_excess() / molar_mass(); }
@@ -383,16 +387,16 @@ protected:
 
     /// Using this backend, return true critical point where dp/drho|T = 0 and d2p/drho^2|T = 0
     virtual void calc_true_critical_point(double &T, double &rho){ throw NotImplementedError("calc_true_critical_point is not implemented for this backend"); };
-    
+
     virtual void calc_conformal_state(const std::string &reference_fluid, CoolPropDbl &T, CoolPropDbl &rhomolar){ throw NotImplementedError("calc_conformal_state is not implemented for this backend"); };
-    
+
     virtual void calc_viscosity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_viscosity_contributions is not implemented for this backend"); };
     virtual void calc_conductivity_contributions(CoolPropDbl &dilute, CoolPropDbl &initial_density, CoolPropDbl &residual, CoolPropDbl &critical){ throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend"); };
     virtual std::vector<CriticalState> calc_all_critical_points(void){ throw NotImplementedError("calc_all_critical_points is not implemented for this backend"); };
     virtual void calc_build_spinodal(){ throw NotImplementedError("calc_build_spinodal is not implemented for this backend"); };
     virtual SpinodalData calc_get_spinodal_data(){ throw NotImplementedError("calc_get_spinodal_data is not implemented for this backend"); };
     virtual void calc_criticality_contour_values(double &L1star, double &M1star){ throw NotImplementedError("calc_criticality_contour_values is not implemented for this backend"); };
-    
+
     /// Convert mass-based input pair to molar-based input pair;  If molar-based, do nothing
     virtual void mass_to_molar_inputs(CoolProp::input_pairs &input_pair, CoolPropDbl &value1, CoolPropDbl &value2);
 
@@ -443,9 +447,9 @@ public:
     /// Set the internal variable T without a flash call (expert use only!)
     void set_T(CoolPropDbl T){ _T = T; }
 
-    /// Get a string representation of the backend - for instance "HelmholtzEOSMixtureBackend" 
+    /// Get a string representation of the backend - for instance "HelmholtzEOSMixtureBackend"
     /// for the core mixture model in CoolProp
-    /// 
+    ///
     /// Must be overloaded by the backend to provide the backend's name
     virtual std::string backend_name(void) = 0;
 
@@ -501,7 +505,7 @@ public:
 
     #ifdef EMSCRIPTEN
     void set_mole_fractions_double(const std::vector<double> &mole_fractions){ set_mole_fractions(std::vector<CoolPropDbl>(mole_fractions.begin(), mole_fractions.end())); };
-    #endif 
+    #endif
 
     /// Get the mole fractions of the equilibrium liquid phase
     std::vector<CoolPropDbl> mole_fractions_liquid(void){ return calc_mole_fractions_liquid(); };
@@ -510,7 +514,7 @@ public:
         std::vector<CoolPropDbl> x = calc_mole_fractions_liquid();
         return std::vector<double>(x.begin(), x.end());
     };
-    
+
     /// Get the mole fractions of the equilibrium vapor phase
     std::vector<CoolPropDbl> mole_fractions_vapor(void){ return calc_mole_fractions_vapor(); };
     /// Get the mole fractions of the equilibrium vapor phase (but as a double for use in SWIG wrapper)
@@ -518,15 +522,15 @@ public:
         std::vector<CoolPropDbl> y = calc_mole_fractions_vapor();
         return std::vector<double>(y.begin(), y.end());
     };
-    
+
     /// Get the mole fractions of the fluid
     virtual const std::vector<CoolPropDbl> & get_mole_fractions(void) = 0;
     /// Get the mass fractions of the fluid
     virtual const std::vector<CoolPropDbl> get_mass_fractions(void){
         return this->calc_mass_fractions();
     };
-    
-    /// Update the state using two state variables 
+
+    /// Update the state using two state variables
     virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
 
     /// Update the state using two state variables and providing guess values
@@ -537,20 +541,20 @@ public:
     /// In general this should be true, except for some other backends (especially the tabular backends)
     /// To disable use in high-level interface, implement this function and return false
     virtual bool available_in_high_level(void){ return true; }
-    
+
     /// Return a string from the backend for the mixture/fluid - backend dependent - could be CAS #, name, etc.
     virtual std::string fluid_param_string(const std::string &){ throw NotImplementedError("fluid_param_string has not been implemented for this backend"); }
 
     /// Return a vector of strings of the fluid names that are in use
     std::vector<std::string> fluid_names(void);
-    
+
     /** Get a constant for one of the fluids forming this mixture
      *  @param i Index (0-based) of the fluid
      *  @param param parameter you want to obtain (probably one that is a trivial parameter)
      */
     virtual const double get_fluid_constant(std::size_t i, parameters param) const{ throw NotImplementedError("get_fluid_constant is not implemented for this backend"); };
 ;
-    
+
     /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
     virtual void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){ throw NotImplementedError("set_binary_interaction_double is not implemented for this backend"); };
     /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
@@ -576,8 +580,11 @@ public:
 
     /// Clear all the cached values
     virtual bool clear();
+    /// When the composition changes, clear all cached values that are only dependent on composition, but not the thermodynamic state
+    virtual bool clear_comp_change();
+    
 
-    /// Get the state that is used in the equation of state or mixture model 
+    /// Get the state that is used in the equation of state or mixture model
     /// to reduce the state.  For pure fluids this is usually, but not always,
     /// the critical point.  For mixture models, it is usually composition dependent
     virtual const CoolProp::SimpleState & get_reducing_state(){ return _reducing; };
@@ -609,13 +616,13 @@ public:
     double rhomolar_critical(void);
     /// Return the critical mass density in kg/m^3
     double rhomass_critical(void);
-    
+
     /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
     std::vector<CriticalState> all_critical_points(void){ return calc_all_critical_points(); };
-    
+
     /// Construct the spinodal curve for the mixture (or pure fluid)
     void build_spinodal(){ calc_build_spinodal(); };
-    
+
     /// Get the data from the spinodal curve constructed in the call to build_spinodal()
     SpinodalData get_spinodal_data(){ return calc_get_spinodal_data(); };
 
@@ -627,15 +634,15 @@ public:
 	/// @param p Pressure (Pa)
 	/// @param w The trial composition
 	/// @param rhomolar_guess (mol/m^3) The molar density guess value (if <0 (default), not used; if >0, guess value will be used in flash evaluation)
-	/// 
+	///
 	/// \f[
 	/// tpd(w) = \sum_i w_i(\ln w_i + \ln \phi_i(w) - d_i)
 	/// \f]
 	/// with
 	/// \f[ d_i = \ln z_i + \ln \phi_i(z) \f]
-	/// Or you can express the \f$ tpd \f$ in terms of fugacity (See Table 7.3 from GERG 2004 monograph) 
+	/// Or you can express the \f$ tpd \f$ in terms of fugacity (See Table 7.3 from GERG 2004 monograph)
 	/// since \f$ \ln \phi_i = \ln f_i - \ln p -\ln z_i\f$
-	/// thus 
+	/// thus
 	/// \f[ d_i = \ln f_i(z) - \ln p\f]
 	/// and
 	/// \f[
@@ -659,6 +666,9 @@ public:
 
     /// Return the name - backend dependent
     std::string name(){ return calc_name(); };
+    /// Return the description - backend dependent
+    std::string description(){ return calc_description(); };
+
     /// Return the dipole moment in C-m (1 D = 3.33564e-30 C-m)
     double dipole_moment(){ return calc_dipole_moment(); }
 
@@ -767,6 +777,8 @@ public:
     double isothermal_compressibility(void);
     /// Return the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
     double isobaric_expansion_coefficient(void);
+    /// Return the isentropic expansion coefficient \f$ \kappa_s = -\frac{c_p}{c_v}\frac{v}{p}\left.\frac{\partial p}{\partial v}\right|_T = \frac{\rho}{p}\left.\frac{\partial p}{\partial \rho}\right|_s\f$
+    double isentropic_expansion_coefficient(void);
     /// Return the fugacity coefficient of the i-th component of the mixture
     double fugacity_coefficient(std::size_t i);
     /// Return the fugacity of the i-th component of the mixture
@@ -774,11 +786,11 @@ public:
     /// Return the chemical potential of the i-th component of the mixture
     double chemical_potential(std::size_t i);
     /** \brief Return the fundamental derivative of gas dynamics \f$ \Gamma \f$
-     * 
+     *
      * see also Colonna et al, FPE, 2010
      *
      * \f[ \Gamma = 1+\frac{\rho}{c}\left(\frac{partial c}{\partial \rho}\right)_{s} = 1+\frac{\rho}{2c^2}\left(\frac{partial^2 p}{\partial \rho^2}\right)_{s} = 1+\frac{v^3}{2c^2}\left(\frac{partial^2 p}{\partial v^2}\right)_{s}\f]
-     * 
+     *
      * Note: densities are mass-based densities, not mole-based densities
      */
     double fundamental_derivative_of_gas_dynamics(void);
@@ -788,115 +800,115 @@ public:
     /// Calculate the "true" critical point for pure fluids where dpdrho|T and d2p/drho2|T are equal to zero
     void true_critical_point(double &T, double &rho){ calc_true_critical_point(T, rho); }
 
-    /** 
+    /**
      * \brief Calculate an ideal curve for a pure fluid
-     * 
+     *
      * @param type The type of ideal curve you would like to calculate - "Ideal", "Boyle", "Joule-Thomson", "Joule Inversion", etc.
      * @param T The temperatures along the curve in K
      * @param p The pressures along the curve in Pa
     */
     void ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p){ calc_ideal_curve(type, T, p); };
-    
+
     // ----------------------------------------
     //    Partial derivatives
     // ----------------------------------------
-    
+
     /** \brief The first partial derivative in homogeneous phases
-     * 
+     *
      * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial A}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta}{\left(\frac{\partial B}{\partial \tau}\right)_\delta\left(\frac{\partial C}{\partial \delta}\right)_\tau-\left(\frac{\partial B}{\partial \delta}\right)_\tau\left(\frac{\partial C}{\partial \tau}\right)_\delta} = \frac{N}{D}\f]
      */
     CoolPropDbl first_partial_deriv(parameters Of, parameters Wrt, parameters Constant){return calc_first_partial_deriv(Of, Wrt, Constant);};
-    
+
     /** \brief The second partial derivative in homogeneous phases
-     * 
+     *
      * The first partial derivative (\ref CoolProp::AbstractState::first_partial_deriv) can be expressed as
-     * 
+     *
      * \f[ \left(\frac{\partial A}{\partial B}\right)_C = \frac{\left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho}{\left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_T-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial C}{\partial T}\right)_\rho} = \frac{N}{D}\f]
-     * 
+     *
      * and the second derivative can be expressed as
-     * 
+     *
      * \f[
      * \frac{\partial}{\partial D}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_E = \frac{\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\frac{\partial}{\partial \rho}\left(\left(\frac{\partial A}{\partial B}\right)_C\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}{\left(\frac{\partial D}{\partial T}\right)_\rho\left(\frac{\partial E}{\partial \rho}\right)_T-\left(\frac{\partial D}{\partial \rho}\right)_T\left(\frac{\partial E}{\partial T}\right)_\rho}
      * \f]
-     * 
+     *
      * which can be expressed in parts as
-     * 
+     *
      * \f[\left(\frac{\partial N}{\partial \rho}\right)_{T} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 A}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 A}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
      * \f[\left(\frac{\partial D}{\partial \rho}\right)_{T} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho^2}\right)_{T}+\left(\frac{\partial^2 B}{\partial T\partial\rho}\right)\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T\partial\rho}\right)-\left(\frac{\partial^2 B}{\partial \rho^2}\right)_{T}\left(\frac{\partial C}{\partial T}\right)_\rho\f]
      * \f[\left(\frac{\partial N}{\partial T}\right)_{\rho} = \left(\frac{\partial A}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 A}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial A}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 A}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
      * \f[\left(\frac{\partial D}{\partial T}\right)_{\rho} = \left(\frac{\partial B}{\partial T}\right)_\rho\left(\frac{\partial^2 C}{\partial \rho\partial T}\right)+\left(\frac{\partial^2 B}{\partial T^2}\right)_\rho\left(\frac{\partial C}{\partial \rho}\right)_{T}-\left(\frac{\partial B}{\partial \rho}\right)_T\left(\frac{\partial^2 C}{\partial T^2}\right)_\rho-\left(\frac{\partial^2 B}{\partial \rho\partial T}\right)\left(\frac{\partial C}{\partial T}\right)_\rho\f]
      * \f[\frac{\partial}{\partial \rho}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_T = \frac{D\left(\frac{\partial N}{\partial \rho}\right)_{T}-N\left(\frac{\partial D}{\partial \rho}\right)_{\tau}}{D^2}\f]
      * \f[\frac{\partial}{\partial T}\left( \left(\frac{\partial A}{\partial B}\right)_C \right)_\rho = \frac{D\left(\frac{\partial N}{\partial T}\right)_{\rho}-N\left(\frac{\partial D}{\partial T}\right)_{\rho}}{D^2}\f]
-     * 
+     *
      * The terms \f$ N \f$ and \f$ D \f$ are the numerator and denominator from \ref CoolProp::AbstractState::first_partial_deriv respectively
      */
     CoolPropDbl second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){return calc_second_partial_deriv(Of1,Wrt1,Constant1,Wrt2,Constant2);};
-    
+
     /** \brief The first partial derivative along the saturation curve
-     * 
+     *
      * Implementing the algorithms and ideas of:
-     * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation", 
+     * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation",
      * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
-     * 
+     *
      * Basically the idea is that the p-T derivative is given by Clapeyron relations:
-     * 
+     *
      * \f[ \left(\frac{\partial T}{\partial p}\right)_{\sigma} = T\left(\frac{v'' - v'}{h'' - h'}\right)_{\sigma} \f]
-     * 
+     *
      * and then other derivatives can be obtained along the saturation curve from
-     * 
+     *
      * \f[ \left(\frac{\partial y}{\partial p}\right)_{\sigma} = \left(\frac{\partial y}{\partial p}\right)+\left(\frac{\partial y}{\partial T}\right)\left(\frac{\partial T}{\partial p}\right)_{\sigma} \f]
      *
      * \f[ \left(\frac{\partial y}{\partial T}\right)_{\sigma} = \left(\frac{\partial y}{\partial T}\right)+\left(\frac{\partial y}{\partial p}\right)\left(\frac{\partial p}{\partial T}\right)_{\sigma} \f]
-     * 
+     *
      * where derivatives without the \f$ \sigma \f$ are homogeneous (conventional) derivatives.
-     * 
+     *
      * @param Of1 The parameter that the derivative is taken of
      * @param Wrt1 The parameter that the derivative is taken with respect to
      */
     CoolPropDbl first_saturation_deriv(parameters Of1, parameters Wrt1){return calc_first_saturation_deriv(Of1,Wrt1);};
-    
+
     /** \brief The second partial derivative along the saturation curve
-     * 
+     *
      * Implementing the algorithms and ideas of:
-     * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation", 
+     * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation",
      * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
-     * 
+     *
      * Like with \ref first_saturation_deriv, we can express the derivative as
      * \f[ \left(\frac{\partial y}{\partial T}\right)_{\sigma} = \left(\frac{\partial y}{\partial T}\right)+\left(\frac{\partial y}{\partial p}\right)\left(\frac{\partial p}{\partial T}\right)_{\sigma} \f]
      *
-     * where \f$ y \f$ is already a saturation derivative. So you might end up with something like 
-     * 
+     * where \f$ y \f$ is already a saturation derivative. So you might end up with something like
+     *
      * \f[ \left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial T}\right)_{\sigma} = \left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial T}\right)+\left(\frac{\partial \left(\frac{\partial T}{\partial p}\right)_{\sigma}}{\partial p}\right)\left(\frac{\partial p}{\partial T}\right)_{\sigma} \f]
-     * 
+     *
      * @param Of1 The parameter that the first derivative is taken of
      * @param Wrt1 The parameter that the first derivative is taken with respect to
      * @param Wrt2 The parameter that the second derivative is taken with respect to
      * */
     CoolPropDbl second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2){return calc_second_saturation_deriv(Of1,Wrt1,Wrt2);};
-    
+
     /**
      * @brief Calculate the first "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013
-     * 
+     *
      * Implementing the algorithms and ideas of:
-     * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation", 
+     * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation",
      * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
-     * 
+     *
      * Spline evaluation is as described in:
      * S Quoilin, I Bell, A Desideri, P Dewallef, V Lemort,
      * "Methods to increase the robustness of finite-volume flow models in thermodynamic systems",
      * Energies 7 (3), 1621-1640
-     * 
+     *
      * \note Not all derivatives are supported!
-     * 
+     *
      * @param Of The parameter to be derived
      * @param Wrt The parameter that the derivative is taken with respect to
      * @param Constant The parameter that is held constant
-     * @return 
+     * @return
      */
     double first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant){
         return calc_first_two_phase_deriv(Of, Wrt, Constant);
     };
-    
+
     /**
     * @brief Calculate the second "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013
     *
@@ -916,7 +928,7 @@ public:
     double second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){
         return calc_second_two_phase_deriv(Of, Wrt1, Constant1, Wrt2, Constant2);
     };
-    
+
     /**
     * @brief Calculate the first "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013
     *
@@ -940,11 +952,11 @@ public:
     double first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, double x_end){
         return calc_first_two_phase_deriv_splined(Of, Wrt, Constant, x_end);
     };
-    
+
     // ----------------------------------------
     //    Phase envelope for mixtures
     // ----------------------------------------
-    
+
     /**
      * \brief Construct the phase envelope for a mixture
      *
@@ -955,11 +967,11 @@ public:
      * \brief After having calculated the phase envelope, return the phase envelope data
      */
     const CoolProp::PhaseEnvelopeData &get_phase_envelope_data(){return calc_phase_envelope_data();};
-    
+
     // ----------------------------------------
     //    Ancillary equations
     // ----------------------------------------
-    
+
     /// Return true if the fluid has a melting line - default is false, but can be re-implemented by derived class
     virtual bool has_melting_line(void){return false;};
     /// Return a value from the melting line
@@ -989,7 +1001,7 @@ public:
     double surface_tension(void);
     /// Return the Prandtl number (dimensionless)
     double Prandtl(void){return cpmass()*viscosity()/conductivity();};
-    /** 
+    /**
      * @brief Find the conformal state needed for ECS
      * @param reference_fluid The reference fluid for which the conformal state will be calculated
      * @param T Temperature (initial guess must be provided, or < 0 to start with unity shape factors)
@@ -1135,24 +1147,25 @@ public:
         return _d4alphar_dTau4;
     };
 };
-    
+
 /** An abstract AbstractState generator class
  *
- *  This class should be derived and statically initialized in a C++ file.  In the initializer, 
+ *  This class should be derived and statically initialized in a C++ file.  In the initializer,
  *  the register_backend function should be called.  This will register the backend family, and
- *  when this generator is looked up in the map, the get_AbstractState function will be used 
+ *  when this generator is looked up in the map, the get_AbstractState function will be used
  *  to return an initialized instance
  */
 class AbstractStateGenerator{
 public:
     virtual AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names) = 0;
+    virtual ~AbstractStateGenerator() {};
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not
  *  publicly accessible)
  */
 void register_backend(const backend_families &bf, shared_ptr<AbstractStateGenerator> gen);
-    
+
 template <class T>
 class GeneratorInitializer{
 public:

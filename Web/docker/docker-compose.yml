@@ -1,0 +1,12 @@
+version: '3.2'
+
+services:   
+  worker:
+    build:
+      context: ./
+      dockerfile: docworker.Dockerfile
+    command: /coolprop/Web/docker/build_docs.sh
+    volumes:
+      - type: bind
+        source: ../..
+        target: /coolprop

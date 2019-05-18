@@ -1,0 +1,29 @@
+<manifest:manifest>
+  <manifest:file-entry
+   manifest:full-path="CoolProp.xcu"
+   manifest:media-type="application/vnd.sun.star.configuration-data"/>
+
+  <manifest:file-entry
+   manifest:full-path="OptionsDialog.xcu"
+   manifest:media-type="application/vnd.sun.star.configuration-data"/>
+
+  <manifest:file-entry
+   manifest:full-path="descriptions/desc_en.txt"
+   manifest:media-type="application/vnd.sun.star.package-bundle-description"/>
+
+  <manifest:file-entry
+   manifest:full-path="coolprop.py"
+   manifest:media-type="application/vnd.sun.star.uno-component;type=Python"/>
+
+  <manifest:file-entry
+   manifest:full-path="scripts/"
+   manifest:media-type="application/vnd.sun.star.framework-script"/>
+
+  <manifest:file-entry
+   manifest:full-path="dialogs/"
+   manifest:media-type="application/vnd.sun.star.basic-library"/>
+
+  <manifest:file-entry
+   manifest:full-path="XCoolProp.rdb"
+   manifest:media-type="application/vnd.sun.star.uno-typelibrary;type=RDB"/>
+</manifest:manifest>

@@ -8,7 +8,7 @@
 namespace CoolProp{
 
 struct parameter_info
-{    
+{
     int key;
     const char *short_desc, *IO, *units, *description;
     bool trivial; ///< True if the input is trivial, and can be directly calculated (constants like critical properties, etc.)
@@ -73,29 +73,30 @@ const parameter_info parameter_info_list[] = {
     {ifraction_min,      "fraction_min",      "O", "-",       "Fraction (mole, mass, volume) minimum value for incompressible solutions",true},
     {ifraction_max,      "fraction_max",      "O", "-",       "Fraction (mole, mass, volume) maximum value for incompressible solutions",true},
     {iT_freeze,          "T_freeze",          "O", "K",       "Freezing temperature for incompressible solutions",true},
-    
+
     {ispeed_sound,     "speed_of_sound",  "O", "m/s",   "Speed of sound",       false},
     {iviscosity,       "viscosity",       "O", "Pa-s",  "Viscosity",            false},
     {iconductivity,    "conductivity",    "O", "W/m/K", "Thermal conductivity", false},
     {isurface_tension, "surface_tension", "O", "N/m",   "Surface tension",      false},
     {iPrandtl,         "Prandtl",         "O", "-",     "Prandtl number",       false},
-    
+
     {iisothermal_compressibility,             "isothermal_compressibility",             "O", "1/Pa", "Isothermal compressibility",false},
     {iisobaric_expansion_coefficient,         "isobaric_expansion_coefficient",         "O", "1/K",  "Isobaric expansion coefficient",false},
+    {iisentropic_expansion_coefficient,       "isentropic_expansion_coefficient",       "O", "-",    "Isentropic expansion coefficient",false},
     {iZ,                                      "Z",                                      "O", "-",    "Compressibility factor",false},
     {ifundamental_derivative_of_gas_dynamics, "fundamental_derivative_of_gas_dynamics", "O", "-",    "Fundamental derivative of gas dynamics",false},
     {iPIP,                                    "PIP",                                    "O", "-",    "Phase identification parameter", false},
-    
+
     {ialphar,                  "alphar",                  "O", "-", "Residual Helmholtz energy", false},
     {idalphar_dtau_constdelta, "dalphar_dtau_constdelta", "O", "-", "Derivative of residual Helmholtz energy with tau",false},
     {idalphar_ddelta_consttau, "dalphar_ddelta_consttau", "O", "-", "Derivative of residual Helmholtz energy with delta",false},
-    
+
     {ialpha0,                  "alpha0",                  "O", "-", "Ideal Helmholtz energy", false},
     {idalpha0_dtau_constdelta, "dalpha0_dtau_constdelta", "O", "-", "Derivative of ideal Helmholtz energy with tau",false},
     {idalpha0_ddelta_consttau, "dalpha0_ddelta_consttau", "O", "-", "Derivative of ideal Helmholtz energy with delta",false},
-    
+
     {iPhase, "Phase", "O", "-", "Phase index as a float", false},
-    
+
 };
 
 class ParameterInformation
@@ -231,24 +232,24 @@ bool is_valid_first_derivative(const std::string &name, parameters &iOf, paramet
     if (get_debug_level() > 5){std::cout << format("is_valid_first_derivative(%s)",name.c_str());}
     // There should be exactly one /
     // There should be exactly one |
-    
+
     // Suppose we start with "d(P)/d(T)|Dmolar"
     std::vector<std::string> split_at_bar = strsplit(name, '|'); // "d(P)/d(T)"  and "Dmolar"
     if (split_at_bar.size() != 2){return false;}
-    
+
     std::vector<std::string> split_at_slash = strsplit(split_at_bar[0], '/'); // "d(P)" and "d(T)"
     if (split_at_slash.size() != 2){return false;}
-    
+
     std::size_t i0 = split_at_slash[0].find("(");
     std::size_t i1 = split_at_slash[0].find(")", i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0+1)) && (i1 != std::string::npos))){return false;}
     std::string num = split_at_slash[0].substr(i0+1, i1-i0-1);
-    
+
     i0 = split_at_slash[1].find("(");
     i1 = split_at_slash[1].find(")", i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0+1)) && (i1 != std::string::npos))){return false;}
     std::string den = split_at_slash[1].substr(i0+1, i1-i0-1);
-    
+
     parameters Of, Wrt, Constant;
     if (is_valid_parameter(num, Of) && is_valid_parameter(den, Wrt) && is_valid_parameter(split_at_bar[1], Constant)){
         iOf = Of; iWrt = Wrt; iConstant = Constant; return true;
@@ -293,14 +294,14 @@ bool is_valid_first_saturation_derivative(const std::string &name, parameters &i
 bool is_valid_second_derivative(const std::string &name, parameters &iOf1, parameters &iWrt1, parameters &iConstant1, parameters &iWrt2, parameters &iConstant2)
 {
     if (get_debug_level() > 5){std::cout << format("is_valid_second_derivative(%s)",name.c_str());}
-    
+
     // Suppose we start with "d(d(P)/d(Dmolar)|T)/d(Dmolar)|T"
     std::size_t i = name.rfind('|');
     if ((i == 0) || (i == std::string::npos)){return false;}
     std::string constant2 = name.substr(i+1); // "T"
     if (!is_valid_parameter(constant2, iConstant2)){return false;};
     std::string left_of_bar = name.substr(0, i); // "d(d(P)/d(Dmolar)|T)/d(Dmolar)"
-    
+
     i = left_of_bar.rfind('/');
     if ((i == 0) || (i == std::string::npos)){return false;}
     std::string left_of_slash = left_of_bar.substr(0, i); // "d(d(P)/d(Dmolar)|T)"
@@ -311,23 +312,23 @@ bool is_valid_second_derivative(const std::string &name, parameters &iOf1, param
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i+1)) && (i1 != std::string::npos))){return false;}
     std::string num = left_of_slash.substr(i+1, i1-i-1); // "d(P)/d(Dmolar)|T"
     if (!is_valid_first_derivative(num, iOf1, iWrt1, iConstant1)){return false;}
-    
+
     i = right_of_slash.find("(");
     i1 = right_of_slash.rfind(")");
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i+1)) && (i1 != std::string::npos))){return false;}
     std::string den = right_of_slash.substr(i+1, i1-i-1); // "Dmolar"
     if (!is_valid_parameter(den, iWrt2)){return false;}
-    
+
     // If we haven't quit yet, all is well
     return true;
 }
 
 struct phase_info
-{    
+{
     phases key;
     const char *short_desc, *long_desc;
 };
-            
+
 const phase_info phase_info_list[] = {
     { iphase_liquid,               "phase_liquid",               ""               },
     { iphase_gas,                  "phase_gas",                  ""               },
@@ -414,9 +415,9 @@ const input_pair_info input_pair_list[] = {
     { DmolarQ_INPUTS,      "DmolarQ_INPUTS",      "Molar density in mol/m^3, Molar quality"            },
 
     { PQ_INPUTS,           "PQ_INPUTS",           "Pressure in Pa, Molar quality"                      },
-    
+
     { PT_INPUTS,           "PT_INPUTS",           "Pressure in Pa, Temperature in K"                   },
-    
+
 
     { DmassT_INPUTS,       "DmassT_INPUTS",       "Mass density in kg/m^3, Temperature in K"           },
     { DmolarT_INPUTS,      "DmolarT_INPUTS",      "Molar density in mol/m^3, Temperature in K"         },
@@ -643,7 +644,7 @@ TEST_CASE("Check that all parameters are described","")
         std::ostringstream ss;
         ss << "Parameter index," << i << "last index:" << CoolProp::iundefined_parameter;
         SECTION(ss.str(), "")
-        {   
+        {
             std::string prior;
             if (i > 1){
                 CHECK_NOTHROW(prior = CoolProp::get_parameter_information(i-1,"short"));
@@ -660,7 +661,7 @@ TEST_CASE("Check that all phases are described","[phase_index]")
         std::ostringstream ss;
         ss << "Parameter index," << i << "last index:" << CoolProp::iundefined_parameter;
         SECTION(ss.str(), "")
-        {   
+        {
             std::string stringrepr;
             int key;
             CHECK_NOTHROW(stringrepr = CoolProp::get_phase_short_desc(static_cast<CoolProp::phases>(i)));

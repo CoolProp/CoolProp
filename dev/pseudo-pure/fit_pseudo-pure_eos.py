@@ -19,32 +19,32 @@ class TermLibrary():
     """
 
     def __init__(self):
-        L,D,T = [],[],[]
+        L, D, T = [], [], []
 
-        for i in range(1,6):
-            for j in range(-4,9):
-                T.append(float(j)/8.0)
+        for i in range(1, 6):
+            for j in range(-4, 9):
+                T.append(float(j) / 8.0)
                 D.append(float(i))
                 L.append(float(0))
-        for i in range(1,16):
-            for j in range(1,16):
+        for i in range(1, 16):
+            for j in range(1, 16):
                 T.append(float(j))
                 D.append(float(i))
                 L.append(float(1))
-        for i in range(1,13):
-            for j in range(1,11):
+        for i in range(1, 13):
+            for j in range(1, 11):
                 T.append(float(j))
                 D.append(float(i))
                 L.append(float(2))
-        for i in range(1,6):
-            for j in range(10,24):
+        for i in range(1, 6):
+            for j in range(10, 24):
                 T.append(float(j))
                 D.append(float(i))
                 L.append(float(3))
-        for i in range(1,10):
-            for j in range(10,21):
+        for i in range(1, 10):
+            for j in range(10, 21):
                 T.append(float(j))
-                D.append(float(i)*2)
+                D.append(float(i) * 2)
                 L.append(float(4))
 
         self.T = T
@@ -79,7 +79,7 @@ def get_fluid_constants(Ref):
     global indices
     indices = set()
     while len(indices) < 23:
-        indices.add(random.randint(0, len(LIBRARY.T)-1))
+        indices.add(random.randint(0, len(LIBRARY.T) - 1))
     print("%s %s" % (indices, len(LIBRARY.T)))
 
     T0 = np.array([LIBRARY.T[i] for i in indices])
@@ -95,13 +95,13 @@ def get_fluid_constants(Ref):
 
     # values from R410A
     N0 = np.array([0.0, 0.987252, -1.03017, 1.17666, -0.138991, 0.00302373, -2.53639, -1.96680, -0.830480, 0.172477, -0.261116, -0.0745473, 0.679757, -0.652431, 0.0553849, -0.0710970, -0.000875332, 0.0200760, -0.0139761, -0.0185110, 0.0171939, -0.00482049])
-    T0 = np.array([0.0,0.44,1.2,2.97,2.95,0.2,1.93,1.78,3.0,0.2,0.74,3.0,2.1,4.3,0.25,7.0,4.7,13.0,16.0,25.0,17.0,7.4])
-    D0 = np.array([0,1.0,1,1,2,5,1,2,3,5,5,5,1,1,4,4,9,2,2,4,5,6])
-    L0 = np.array([0,0.0,0,0,0,0,1,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3])
+    T0 = np.array([0.0, 0.44, 1.2, 2.97, 2.95, 0.2, 1.93, 1.78, 3.0, 0.2, 0.74, 3.0, 2.1, 4.3, 0.25, 7.0, 4.7, 13.0, 16.0, 25.0, 17.0, 7.4])
+    D0 = np.array([0, 1.0, 1, 1, 2, 5, 1, 2, 3, 5, 5, 5, 1, 1, 4, 4, 9, 2, 2, 4, 5, 6])
+    L0 = np.array([0, 0.0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3])
 
     indices = set()
     while len(indices) < 5:
-        indices.add(random.randint(0, len(LIBRARY.T)-1))
+        indices.add(random.randint(0, len(LIBRARY.T) - 1))
     print("%s %s" % (indices, len(LIBRARY.T)))
 
     T0 = np.append(T0, [LIBRARY.T[i] for i in indices])
@@ -122,27 +122,27 @@ class IdealPartFitter(object):
     def __init__(self, Ref):
         self.Ref = Ref
         self.RefString, N0, T0, D0, L0 = get_fluid_constants(Ref)
-        self.molemass = Props(self.RefString,'molemass')
+        self.molemass = Props(self.RefString, 'molemass')
         self.Tc = Props(self.RefString, 'Tcrit')
         self.rhoc = Props(self.RefString, 'rhocrit')
         self.pc = Props(self.RefString, 'pcrit')
         self.T = np.linspace(100, 450, 200)
-        self.tau = self.Tc/self.T
+        self.tau = self.Tc / self.T
         self.C = Props('C', 'T', self.T, 'D', 1e-15, self.RefString)
-        R = 8.314472/self.molemass
-        self.cp0_R = self.C/R
+        R = 8.314472 / self.molemass
+        self.cp0_R = self.C / R
 
     def cp0_R_from_fit(self, a_e):
-        a = a_e[0:len(a_e)//2]
-        e = a_e[len(a_e)//2::]
-        u1 = e[1]/self.T
-        u2 = e[2]/self.T
-        u3 = e[3]/self.T
-        return a[0]*self.T**e[0]+a[1]*u1**2*np.exp(u1)/(np.exp(u1)-1)**2+a[2]*u2**2*np.exp(u2)/(np.exp(u2)-1)**2+a[3]*u3**2*np.exp(u3)/(np.exp(u3)-1)**2
+        a = a_e[0:len(a_e) // 2]
+        e = a_e[len(a_e) // 2::]
+        u1 = e[1] / self.T
+        u2 = e[2] / self.T
+        u3 = e[3] / self.T
+        return a[0] * self.T**e[0] + a[1] * u1**2 * np.exp(u1) / (np.exp(u1) - 1)**2 + a[2] * u2**2 * np.exp(u2) / (np.exp(u2) - 1)**2 + a[3] * u3**2 * np.exp(u3) / (np.exp(u3) - 1)**2
 
     def OBJECTIVE_cp0_R(self, a_e):
         cp0_R_fit = self.cp0_R_from_fit(a_e)
-        RMS = np.sqrt(np.mean(np.power((self.cp0_R-cp0_R_fit)/self.cp0_R, 2)))
+        RMS = np.sqrt(np.mean(np.power((self.cp0_R - cp0_R_fit) / self.cp0_R, 2)))
         return RMS
 
     def fit(self):
@@ -150,12 +150,12 @@ class IdealPartFitter(object):
 
         a_e = scipy.optimize.minimize(self.OBJECTIVE_cp0_R, a_e).x
 
-        self.a = a_e[0:len(a_e)//2]
-        self.e = a_e[len(a_e)//2::]
+        self.a = a_e[0:len(a_e) // 2]
+        self.e = a_e[len(a_e) // 2::]
 
-        cp0_over_R_check = 1-self.tau**2*self.d2phi0_dTau2(self.tau)
+        cp0_over_R_check = 1 - self.tau**2 * self.d2phi0_dTau2(self.tau)
 
-        plt.plot(self.T, (self.cp0_R_from_fit(a_e)/self.cp0_R-1)*100, '-', self.T, (cp0_over_R_check/self.cp0_R-1)*100, '^')
+        plt.plot(self.T, (self.cp0_R_from_fit(a_e) / self.cp0_R - 1) * 100, '-', self.T, (cp0_over_R_check / self.cp0_R - 1) * 100, '^')
         plt.xlabel('Temperature [K]')
         plt.ylabel('($c_{p0}/R$ (fit) / $c_{p0}/R$ (REFPROP) -1)*100 [%]')
         plt.savefig('cp0.pdf')
@@ -164,10 +164,10 @@ class IdealPartFitter(object):
     def d2phi0_dTau2(self, tau):
         d = []
         for _tau in tau:
-            #lead term is killed
+            # lead term is killed
             d.append(helmholtz.phi0_logtau(-1.0).dTau2(_tau, _tau)
-                    + helmholtz.phi0_cp0_poly(self.a[0],self.e[0],self.Tc,298.15).dTau2(_tau, _tau)
-                    + helmholtz.phi0_Planck_Einstein(self.a,self.e/self.Tc,1,len(self.a)-1).dTau2(_tau, _tau)
+                    + helmholtz.phi0_cp0_poly(self.a[0], self.e[0], self.Tc, 298.15).dTau2(_tau, _tau)
+                    + helmholtz.phi0_Planck_Einstein(self.a, self.e / self.Tc, 1, len(self.a) - 1).dTau2(_tau, _tau)
                     )
         return np.array(d)
 
@@ -178,10 +178,10 @@ class ResidualPartFitter(object):
         self.Ref = Ref
         self.IPF = IPF
         self.RefString, self.N0, self.T0, self.D0, self.L0 = get_fluid_constants(Ref)
-        self.Tc = Props(self.RefString,'Tcrit')
-        self.rhoc = Props(self.RefString,'rhocrit')
-        molemass = Props(self.RefString,'molemass')
-        self.R = 8.314472/ molemass
+        self.Tc = Props(self.RefString, 'Tcrit')
+        self.rhoc = Props(self.RefString, 'rhocrit')
+        molemass = Props(self.RefString, 'molemass')
+        self.R = 8.314472 / molemass
 
     def termwise_Rsquared(self):
 
@@ -199,13 +199,13 @@ class ResidualPartFitter(object):
 
             PPF = self.evaluate_EOS(np.array(list(n)))
 
-            R2 = rsquared(PPF.p,self.phir.dDeltaV(self.tauV,self.deltaV))
+            R2 = rsquared(PPF.p, self.phir.dDeltaV(self.tauV, self.deltaV))
 
-            values.append((R2,i))
+            values.append((R2, i))
             if R2 > 0.9:
                 keepers.append(i)
 
-        values,indices = zip(*reversed(sorted(values)))
+        values, indices = zip(*reversed(sorted(values)))
 
         keepers = list(indices[0:30])
 
@@ -253,7 +253,7 @@ class ResidualPartFitter(object):
                     print(VE)
                     pass
 
-            for _rho in np.linspace(rhoc, 3.36*rhoc, 50):
+            for _rho in np.linspace(rhoc, 3.36 * rhoc, 50):
                 try:
                     if _T > Tc:
                         p = Props('P', 'T', _T, 'D', _rho, self.RefString)
@@ -282,18 +282,18 @@ class ResidualPartFitter(object):
                     print(VE)
                     pass
 
-        h = h5py.File('T_rho_p.h5','w')
+        h = h5py.File('T_rho_p.h5', 'w')
         grp = h.create_group(self.Ref)
-        grp.create_dataset("T",data = np.array(TTT),compression = "gzip")
-        grp.create_dataset("rho", data = np.array(RHO),compression = "gzip")
-        grp.create_dataset("p", data = np.array(PPP),compression = "gzip")
-        grp.create_dataset("cp", data = np.array(CPP),compression = "gzip")
-        grp.create_dataset("cv", data = np.array(CVV),compression = "gzip")
-        grp.create_dataset("speed_sound", data = np.array(AAA),compression = "gzip")
+        grp.create_dataset("T", data=np.array(TTT), compression="gzip")
+        grp.create_dataset("rho", data=np.array(RHO), compression="gzip")
+        grp.create_dataset("p", data=np.array(PPP), compression="gzip")
+        grp.create_dataset("cp", data=np.array(CPP), compression="gzip")
+        grp.create_dataset("cv", data=np.array(CVV), compression="gzip")
+        grp.create_dataset("speed_sound", data=np.array(AAA), compression="gzip")
         h.close()
 
     def load_data(self):
-        h = h5py.File('T_rho_p.h5','r')
+        h = h5py.File('T_rho_p.h5', 'r')
         self.T = h.get(self.Ref + '/T').value
         self.rho = h.get(self.Ref + '/rho').value
         self.p = h.get(self.Ref + '/p').value
@@ -301,8 +301,8 @@ class ResidualPartFitter(object):
         self.cv = h.get(self.Ref + '/cv').value
         self.speed_sound = h.get(self.Ref + '/speed_sound').value
 
-        self.tau = self.Tc/self.T
-        self.delta = self.rho/self.rhoc
+        self.tau = self.Tc / self.T
+        self.delta = self.rho / self.rhoc
         self.tauV = helmholtz.vectord(self.tau)
         self.deltaV = helmholtz.vectord(self.delta)
 
@@ -319,22 +319,22 @@ class ResidualPartFitter(object):
         dDelta_dTau = self.phir.dDelta_dTauV(self.tauV, self.deltaV)
 
         # Evaluate the pressure
-        p = (self.rho*self.R*self.T)*(1 + self.delta*dDelta)
+        p = (self.rho * self.R * self.T) * (1 + self.delta * dDelta)
         # Evaluate the specific heat at constant volume
-        cv_over_R = -self.tau**2*(self.d2phi0_dTau2 + dTau2)
-        cv = cv_over_R*self.R
+        cv_over_R = -self.tau**2 * (self.d2phi0_dTau2 + dTau2)
+        cv = cv_over_R * self.R
         # Evaluate the specific heat at constant pressure
-        cp_over_R = cv_over_R+(1.0+self.delta*dDelta-self.delta*self.tau*dDelta_dTau)**2/(1+2*self.delta*dDelta+self.delta**2*dDelta2)
-        cp = cp_over_R*self.R
+        cp_over_R = cv_over_R + (1.0 + self.delta * dDelta - self.delta * self.tau * dDelta_dTau)**2 / (1 + 2 * self.delta * dDelta + self.delta**2 * dDelta2)
+        cp = cp_over_R * self.R
         # Evaluate the speed of sound
-        w = np.sqrt(1000*self.R*self.T*cp_over_R/cv_over_R*(1+2*self.delta*dDelta+self.delta**2*dDelta2))
+        w = np.sqrt(1000 * self.R * self.T * cp_over_R / cv_over_R * (1 + 2 * self.delta * dDelta + self.delta**2 * dDelta2))
 
         class stub: pass
         PPF = stub()
-        PPF.p = np.array(p, ndmin = 1).T
-        PPF.cp = np.array(cp, ndmin = 1).T
-        PPF.cv = np.array(cv, ndmin = 1).T
-        PPF.w = np.array(w, ndmin = 1).T
+        PPF.p = np.array(p, ndmin=1).T
+        PPF.cp = np.array(cp, ndmin=1).T
+        PPF.cv = np.array(cv, ndmin=1).T
+        PPF.w = np.array(w, ndmin=1).T
 
         return PPF
 
@@ -349,16 +349,16 @@ class ResidualPartFitter(object):
         w_cv = 1.0
         w_w = 1.0
         w_cp = 1.0
-        w_total = (w_p+w_cv+w_w+w_cp)/4
+        w_total = (w_p + w_cv + w_w + w_cp) / 4
 
-        w_p_norm = w_p/w_total
-        w_cv_norm = w_cv/w_total
-        w_cp_norm = w_cp/w_total
-        w_w_norm = w_w/w_total
-        residuals = np.r_[(PPF.p/self.p-1),(PPF.cv/self.cv-1),(PPF.cp/self.cp-1)]#,(PPF.w**2/self.speed_sound**2-1)]
+        w_p_norm = w_p / w_total
+        w_cv_norm = w_cv / w_total
+        w_cp_norm = w_cp / w_total
+        w_w_norm = w_w / w_total
+        residuals = np.r_[(PPF.p / self.p - 1), (PPF.cv / self.cv - 1), (PPF.cp / self.cp - 1)]  # ,(PPF.w**2/self.speed_sound**2-1)]
         RMS = np.sqrt(np.mean(np.power(residuals, 2)))
 
-        print('RMS: %s %% Max %s %%' % (RMS*100, np.max(np.abs(residuals))*100))
+        print('RMS: %s %% Max %s %%' % (RMS * 100, np.max(np.abs(residuals)) * 100))
         self.RMS = RMS
         self.MaxError = np.max(np.abs(residuals))
         return RMS
@@ -366,53 +366,53 @@ class ResidualPartFitter(object):
     def fit(self):
 
         # Kill off some not as good terms
-        #self.termwise_Rsquared()
+        # self.termwise_Rsquared()
 
         # Load up the residual Helmholtz term with parameters
         n = helmholtz.vectord(self.N0)
         d = helmholtz.vectord(self.D0)
         t = helmholtz.vectord(self.T0)
         l = helmholtz.vectord(self.L0)
-        self.phir = helmholtz.phir_power(n, d, t, l, 1, len(self.N0)-1)
+        self.phir = helmholtz.phir_power(n, d, t, l, 1, len(self.N0) - 1)
 
         # Solve for the coefficients
-        Nbounds = [(-10,10) for _ in range(len(self.N0))]
-        tbounds = [(-1,30) for _ in range(len(self.T0))]
+        Nbounds = [(-10, 10) for _ in range(len(self.N0))]
+        tbounds = [(-1, 30) for _ in range(len(self.T0))]
         print(self.OBJECTIVE(np.array(list(self.N0))))
         #self.N = self.N0
         #self.N = scipy.optimize.minimize(self.OBJECTIVE, np.array(list(self.N0)), bounds = Nbounds, options = dict(maxiter = 5)).x
-        self.N = scipy.optimize.minimize(self.OBJECTIVE, np.array(list(self.N0)), method = 'L-BFGS-B', bounds = Nbounds, options = dict(maxiter = 100)).x
+        self.N = scipy.optimize.minimize(self.OBJECTIVE, np.array(list(self.N0)), method='L-BFGS-B', bounds=Nbounds, options=dict(maxiter=100)).x
 
         # Write the coefficients to HDF5 file
-        h = h5py.File('fit_coeffs.h5','w')
+        h = h5py.File('fit_coeffs.h5', 'w')
         grp = h.create_group(self.Ref)
-        grp.create_dataset("n", data = np.array(self.N), compression = "gzip")
+        grp.create_dataset("n", data=np.array(self.N), compression="gzip")
         print(self.N)
         #grp.create_dataset("t", data = np.array(self.N[len(self.N)//2::]), compression = "gzip")
         h.close()
 
     def evaluate_REFPROP(self, Ref, T, rho):
 
-        p,cp,cv,w = [],[],[],[]
-        R = 8.314472/Props(Ref,'molemass')
-        for _T,_rho in zip(T, rho):
-            p.append(Props("P",'T',_T,'D',_rho,Ref))
-            cp.append(Props("C",'T',_T,'D',_rho,Ref))
-            cv.append(Props("O",'T',_T,'D',_rho,Ref))
-            w.append(Props("A",'T',_T,'D',_rho,Ref))
+        p, cp, cv, w = [], [], [], []
+        R = 8.314472 / Props(Ref, 'molemass')
+        for _T, _rho in zip(T, rho):
+            p.append(Props("P", 'T', _T, 'D', _rho, Ref))
+            cp.append(Props("C", 'T', _T, 'D', _rho, Ref))
+            cv.append(Props("O", 'T', _T, 'D', _rho, Ref))
+            w.append(Props("A", 'T', _T, 'D', _rho, Ref))
 
         class stub: pass
         PPF = stub()
-        PPF.p = np.array(p, ndmin = 1).T
-        PPF.cp = np.array(cp, ndmin = 1).T
-        PPF.cv = np.array(cv, ndmin = 1).T
-        PPF.w = np.array(w, ndmin = 1).T
+        PPF.p = np.array(p, ndmin=1).T
+        PPF.cp = np.array(cp, ndmin=1).T
+        PPF.cv = np.array(cv, ndmin=1).T
+        PPF.w = np.array(w, ndmin=1).T
 
         return PPF
 
     def check(self):
         # Load the coefficients from file
-        h = h5py.File('fit_coeffs.h5','r')
+        h = h5py.File('fit_coeffs.h5', 'r')
         grp = h.get(self.Ref)
         n = grp.get('n').value
         h.close()
@@ -420,22 +420,22 @@ class ResidualPartFitter(object):
         print(n)
 
         import matplotlib.colors as colors
-        cNorm  = colors.LogNorm(vmin=1e-3, vmax=50)
+        cNorm = colors.LogNorm(vmin=1e-3, vmax=50)
         PPF = self.evaluate_EOS(np.array(list(n)))
         self.OBJECTIVE(np.array(list(n)))
 
-        print('max error (p) %s %%' % np.max(np.abs(PPF.p/self.p-1)*100))
-        SC1 = plt.scatter(self.rho, self.T, s = 8, c = np.abs(PPF.p/self.p-1)*100, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
+        print('max error (p) %s %%' % np.max(np.abs(PPF.p / self.p - 1) * 100))
+        SC1 = plt.scatter(self.rho, self.T, s=8, c=np.abs(PPF.p / self.p - 1) * 100, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
         plt.gca().set_xscale('log')
         cb = plt.colorbar()
         cb.set_label('abs(PPF.p/self.p-1)*100')
         plt.savefig('pressure.png')
         plt.show()
 
-        print('max error (cp) %s %%' % np.max(np.abs(PPF.cp/self.cp-1)*100))
-        SC1 = plt.scatter(self.rho, self.T, s = 8, c = np.abs(PPF.cp/self.cp-1)*100, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
+        print('max error (cp) %s %%' % np.max(np.abs(PPF.cp / self.cp - 1) * 100))
+        SC1 = plt.scatter(self.rho, self.T, s=8, c=np.abs(PPF.cp / self.cp - 1) * 100, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
         plt.gca().set_xscale('log')
-        cb  = plt.colorbar()
+        cb = plt.colorbar()
         cb.set_label('abs(PPF.cp/self.cp-1)*100')
         plt.savefig('cp.png')
         plt.show()
@@ -448,7 +448,7 @@ class ResidualPartFitter(object):
 
 class PPFFitterClass(object):
 
-    def __init__(self, Ref, regenerate_data = True, fit = True):
+    def __init__(self, Ref, regenerate_data=True, fit=True):
 
         self.Ref = Ref
 
@@ -456,7 +456,7 @@ class PPFFitterClass(object):
         self.IPF.fit()
         for i in range(1):
 
-            self.RPF = ResidualPartFitter(Ref, IPF = self.IPF)
+            self.RPF = ResidualPartFitter(Ref, IPF=self.IPF)
             if regenerate_data:
                 self.RPF.generate_1phase_data()
 
@@ -465,7 +465,7 @@ class PPFFitterClass(object):
             if fit:
                 self.RPF.fit()
 
-            f = open('results.txt','a+')
+            f = open('results.txt', 'a+')
             print("%s %s %s" % (indices, self.RPF.RMS, self.RPF.MaxError), file=f)
             f.close()
 
@@ -480,7 +480,7 @@ class PPFFitterClass(object):
         values : iterable, same size as T and rho
         """
 
-        plt.semilogx(self.RPF.rho,self.RPF.T,'o')
+        plt.semilogx(self.RPF.rho, self.RPF.T, 'o')
         plt.show()
 
         # Generate a regular grid to interpolate the data.
@@ -488,24 +488,24 @@ class PPFFitterClass(object):
         yi = np.linspace(min(self.RPF.rho), max(self.RPF.rho), 100)
         xi, yi = np.meshgrid(xi, yi)
         # Interpolate using delaunay triangularization
-        zi = mlab.griddata(np.array(self.RPF.T),np.array(self.RPF.rho),np.array(values),xi,yi)
-        cont = plt.contourf(yi,xi,zi,30)
+        zi = mlab.griddata(np.array(self.RPF.T), np.array(self.RPF.rho), np.array(values), xi, yi)
+        cont = plt.contourf(yi, xi, zi, 30)
         plt.colorbar()
         plt.show()
 
     def output_files(self):
-        h = h5py.File('fit_coeffs.h5','r')
-        n = h.get(self.Ref+'/n').value
+        h = h5py.File('fit_coeffs.h5', 'r')
+        n = h.get(self.Ref + '/n').value
         #t = h.get(self.Ref+'/t').value
 
         # Output the header file
-        header = PPF_h_template.format(Ref = self.Ref, RefUpper = self.Ref.upper())
+        header = PPF_h_template.format(Ref=self.Ref, RefUpper=self.Ref.upper())
 
-        acoeffs = '0, '+', '.join(['{a:0.6f}'.format(a=_) for _ in self.IPF.a])
+        acoeffs = '0, ' + ', '.join(['{a:0.6f}'.format(a=_) for _ in self.IPF.a])
         # First one doesn't get divided by critical temperature, later ones do
         bcoeffs = '0, '
-        bcoeffs += str(self.IPF.e[0])+', '
-        bcoeffs += ', '.join(['{b:0.4f}/{Tcrit:g}'.format(b=_,Tcrit = self.IPF.Tc) for _ in self.IPF.e[1::]])
+        bcoeffs += str(self.IPF.e[0]) + ', '
+        bcoeffs += ', '.join(['{b:0.4f}/{Tcrit:g}'.format(b=_, Tcrit=self.IPF.Tc) for _ in self.IPF.e[1::]])
 
         ncoeffs = ', '.join(['{a:0.6g}'.format(a=_) for _ in n])
         tcoeffs = ', '.join(['{a:0.6g}'.format(a=_) for _ in self.RPF.T0])
@@ -515,43 +515,43 @@ class PPFFitterClass(object):
         import sys
         sys.path.append('..')
         from fit_ancillary_ODRPACK import saturation_pressure, saturation_density
-        pL = saturation_pressure(self.IPF.RefString, self.IPF.Ref, LV = 'L')
-        pV = saturation_pressure(self.IPF.RefString, self.IPF.Ref, LV = 'V')
-        rhoL = saturation_density(self.IPF.RefString, self.IPF.Ref, form='A', LV='L', add_critical = False)
-        rhoV = saturation_density(self.IPF.RefString, self.IPF.Ref, form='B', LV='V', add_critical = False)
+        pL = saturation_pressure(self.IPF.RefString, self.IPF.Ref, LV='L')
+        pV = saturation_pressure(self.IPF.RefString, self.IPF.Ref, LV='V')
+        rhoL = saturation_density(self.IPF.RefString, self.IPF.Ref, form='A', LV='L', add_critical=False)
+        rhoV = saturation_density(self.IPF.RefString, self.IPF.Ref, form='B', LV='V', add_critical=False)
 
-        code = PPF_cpp_template.format(Ref = self.Ref,
-                                      RefUpper = self.Ref.upper(),
-                                      acoeffs = acoeffs,
-                                      bcoeffs = bcoeffs,
-                                      Ncoeffs = ncoeffs,
-                                      tcoeffs = tcoeffs,
-                                      dcoeffs = dcoeffs,
-                                      Lcoeffs = lcoeffs,
-                                      N_phir = len(n),
-                                      N_cp0 = len(self.IPF.a),
-                                      molemass = self.IPF.molemass,
-                                      Ttriple = 200,
-                                      accentric = 0.7,
-                                      pcrit = self.IPF.pc,
-                                      Tcrit = self.IPF.Tc,
-                                      rhocrit = self.IPF.rhoc,
-                                      pL = pL,
-                                      pV = pV,
-                                      rhoL = rhoL,
-                                      rhoV = rhoV
+        code = PPF_cpp_template.format(Ref=self.Ref,
+                                      RefUpper=self.Ref.upper(),
+                                      acoeffs=acoeffs,
+                                      bcoeffs=bcoeffs,
+                                      Ncoeffs=ncoeffs,
+                                      tcoeffs=tcoeffs,
+                                      dcoeffs=dcoeffs,
+                                      Lcoeffs=lcoeffs,
+                                      N_phir=len(n),
+                                      N_cp0=len(self.IPF.a),
+                                      molemass=self.IPF.molemass,
+                                      Ttriple=200,
+                                      accentric=0.7,
+                                      pcrit=self.IPF.pc,
+                                      Tcrit=self.IPF.Tc,
+                                      rhocrit=self.IPF.rhoc,
+                                      pL=pL,
+                                      pV=pV,
+                                      rhoL=rhoL,
+                                      rhoV=rhoV
                                       )
 
-        f = open(self.IPF.Ref+'.h','w')
+        f = open(self.IPF.Ref + '.h', 'w')
         f.write(header)
         f.close()
 
-        f = open(self.IPF.Ref+'.cpp','w')
+        f = open(self.IPF.Ref + '.cpp', 'w')
         f.write(code)
         f.close()
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     Ref = 'R407F'
 
     PPFFitterClass(Ref)

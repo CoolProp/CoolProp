@@ -178,7 +178,7 @@ cdef class AbstractState:
         return collection
     cpdef tuple criticality_contour_values(self):
         """ 
-        Gets the criticality matrix values L1* and M1* - wrapper of c++ function :cpapi:`CoolProp::AbstractState::criticality_values` 
+        Gets the criticality matrix values L1* and M1* - wrapper of c++ function :cpapi:`CoolProp::AbstractState::criticality_contour_values` 
         Returns a tuple of (L1*, M1*)
         """
         cdef CoolPropDbl L1star = 0, M1star = 0
@@ -337,7 +337,7 @@ cdef class AbstractState:
         """ Get the fundamental derivative of gas dynamics - wrapper of c++ function :cpapi:`CoolProp::AbstractState::fundamental_derivative_of_gas_dynamics(void)` """
         return self.thisptr.fundamental_derivative_of_gas_dynamics()
     cpdef double PIP(self) except *: 
-        """ Get the phase identification parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::PIP(void)` """
+        """ Get the phase identification parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::PIP` """
         return self.thisptr.PIP()
     cpdef double isobaric_expansion_coefficient(self) except *: 
         """ Get the isobaric expansion coefficient - wrapper of c++ function :cpapi:`CoolProp::AbstractState::isobaric_expansion_coefficient(void)` """
@@ -363,7 +363,7 @@ cdef class AbstractState:
         return self.thisptr.mole_fractions_vapor()
     
     cpdef tuple true_critical_point(self):
-        """ Get the "true" critical point where dp/drho|T = 0 & d2p/drho^2|T = 0 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::true_critical_point(void)` """
+        """ Get the "true" critical point where dp/drho|T = 0 & d2p/drho^2|T = 0 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::true_critical_point` """
         cdef double T = 1e99, rho = 1e99
         self.thisptr.true_critical_point(T, rho)
         return T, rho

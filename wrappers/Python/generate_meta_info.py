@@ -1,8 +1,8 @@
 from jinja2 import Environment
-import os,sys
+import os, sys
 import requests
 import json
-from distutils.version import LooseVersion #, StrictVersion
+from distutils.version import LooseVersion  # , StrictVersion
 import codecs
 
 """ A simple script to create a conda recipe and the infrastructure files for PyPI"""
@@ -10,7 +10,7 @@ import codecs
 first_line = "# CAUTION: This file is generated automatically, any customisation will be lost.\n"
 
 python_dir = os.path.abspath(os.path.dirname(__file__))
-target_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
+target_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 pypi = False
 local = not pypi
@@ -39,13 +39,13 @@ if pypi:
 
 
 if local:
-    coolprop_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
+    coolprop_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     sys.path.append(os.path.join(coolprop_dir, 'dev'))
     import generate_headers
     # Generate the headers - does nothing if up to date - but only if not pypi
     generate_headers.generate()
     del generate_headers
-    version = open(os.path.join(coolprop_dir,'.version'),'r').read().strip()
+    version = open(os.path.join(coolprop_dir, '.version'), 'r').read().strip()
     home = "http://www.coolprop.org"
     license = "MIT"
     summary = "Open-source thermodynamic and transport properties database"
@@ -63,9 +63,9 @@ local_info = dict(
   run_pkgs=run_pkgs,
   dev_pkgs=dev_pkgs,
   tst_pkgs=tst_pkgs,
-  home = home,
-  license = license,
-  summary = summary
+  home=home,
+  license=license,
+  summary=summary
 )
 
 #######################
@@ -75,8 +75,8 @@ template = """{% for pkg in run_pkgs %}{{ pkg }}
 {% endfor %}
 """
 target = "requirements.txt"
-template =Environment().from_string(template)
-f = codecs.open(os.path.join(python_dir,target),mode='wb',encoding='utf-8')
+template = Environment().from_string(template)
+f = codecs.open(os.path.join(python_dir, target), mode='wb', encoding='utf-8')
 f.write(first_line)
 f.write(template.render(**local_info))
 f.close()
@@ -145,8 +145,8 @@ about:
 
 """
 target = 'meta.yaml'
-template =Environment().from_string(template)
-f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
+template = Environment().from_string(template)
+f = codecs.open(os.path.join(target_dir, target), mode='wb', encoding='utf-8')
 f.write(first_line)
 f.write(template.render(**local_info))
 f.close()
@@ -164,8 +164,8 @@ popd
 :: for a list of environment variables that are set during the build process.
 """
 target = "bld.bat"
-f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write(":: "+first_line)
+f = codecs.open(os.path.join(target_dir, target), mode='wb', encoding='utf-8')
+f.write(":: " + first_line)
 f.write(template)
 f.close()
 
@@ -181,8 +181,8 @@ popd
 # for a list of environment variables that are set during the build process.
 """
 target = "build.sh"
-f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
-f.write("#!/bin/bash\n"+first_line)
+f = codecs.open(os.path.join(target_dir, target), mode='wb', encoding='utf-8')
+f.write("#!/bin/bash\n" + first_line)
 f.write(template)
 f.close()
 
@@ -224,7 +224,7 @@ except Exception as e:
 sys.exit(0)
 """
 target = "runner.py"
-f = codecs.open(os.path.join(target_dir,target),mode='wb',encoding='utf-8')
+f = codecs.open(os.path.join(target_dir, target), mode='wb', encoding='utf-8')
 f.write(template)
 f.close()
 sys.exit(0)

@@ -2,7 +2,7 @@ import numpy as np
 import CoolProp
 import matplotlib.pyplot as plt
 
-AS = CoolProp.AbstractState('HEOS','Water')
+AS = CoolProp.AbstractState('HEOS', 'Water')
 
 steps = 100
 
@@ -16,9 +16,9 @@ cl = AS.cpmass()
 x, y = [], []
 for T in np.linspace(Ts - 30, Ts - 0.1, steps):
     AS.update(CoolProp.PT_INPUTS, 101325, T)
-    x.append(-cl*(Ts-T)/h_fg)
+    x.append(-cl * (Ts - T) / h_fg)
     y.append(AS.first_partial_deriv(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP))
-plt.plot(x, y, label = 'Subcooled', color = 'gray')
+plt.plot(x, y, label='Subcooled', color='gray')
 
 # Two-phase derivatives (splined)
 x, y1 = [], []
@@ -26,7 +26,7 @@ for Q in np.linspace(0, 0.3, steps):
     AS.update(CoolProp.PQ_INPUTS, 101325, Q)
     x.append(AS.Q())
     y1.append(AS.first_two_phase_deriv_splined(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, 0.3))
-plt.plot(x, y1, label = 'Two-phase (splined)')
+plt.plot(x, y1, label='Two-phase (splined)')
 
 # Two-phase derivatives (normal)
 x, y1 = [], []
@@ -34,9 +34,9 @@ for Q in np.linspace(0.0, 0.6, steps):
     AS.update(CoolProp.PQ_INPUTS, 101325, Q)
     x.append(AS.Q())
     y1.append(AS.first_two_phase_deriv(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP))
-plt.plot(x, y1, label = 'Two-phase (normal)')
+plt.plot(x, y1, label='Two-phase (normal)')
 
-AS = CoolProp.AbstractState('TTSE&HEOS','Water')
+AS = CoolProp.AbstractState('TTSE&HEOS', 'Water')
 
 # Two-phase derivatives (splined, tabular)
 x, y1 = [], []
@@ -49,7 +49,7 @@ for Q in np.linspace(0, 0.3, steps):
         print(e)
         y1.append(np.NAN)
         break
-plt.plot(x, y1, label = 'Two-phase (splined, tabular)', ls = '--', lw = 3)
+plt.plot(x, y1, label='Two-phase (splined, tabular)', ls='--', lw=3)
 
 # Two-phase derivatives (normal, tabular)
 x, y1 = [], []
@@ -62,7 +62,7 @@ for Q in np.linspace(0.0, 0.6, steps):
         print(e)
         y1.append(np.NAN)
         break
-plt.plot(x, y1, label = 'Two-phase (normal, tabular)', ls = '--', lw = 3)
+plt.plot(x, y1, label='Two-phase (normal, tabular)', ls='--', lw=3)
 
 plt.title(r'$d\rho/dh|p$')
 plt.xlabel('vapor quality (-)')

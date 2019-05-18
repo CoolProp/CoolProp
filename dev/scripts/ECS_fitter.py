@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from math import sqrt,exp
+from math import sqrt, exp
 import CoolProp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,18 +8,18 @@ import scipy.optimize
 from math import log
 
 
-def viscosity_dilute(fluid,T,e_k,sigma):
+def viscosity_dilute(fluid, T, e_k, sigma):
     """
     T in [K], e_K in [K], sigma in [nm]
     viscosity returned is in [Pa-s]
     """
-    Tstar = T/e_k
-    molemass = CoolProp.CoolProp.PropsSI(fluid,'molemass')*1000
+    Tstar = T / e_k
+    molemass = CoolProp.CoolProp.PropsSI(fluid, 'molemass') * 1000
 
     # From Neufeld, 1972, Journal of Chemical Physics - checked coefficients
-    OMEGA_2_2 = 1.16145*pow(Tstar,-0.14874)+ 0.52487*exp(-0.77320*Tstar)+2.16178*exp(-2.43787*Tstar)
+    OMEGA_2_2 = 1.16145 * pow(Tstar, -0.14874) + 0.52487 * exp(-0.77320 * Tstar) + 2.16178 * exp(-2.43787 * Tstar)
     # Using the leading constant from McLinden, 2000 since the leading term from Huber 2003 gives crazy values
-    eta_star = 26.692e-3*sqrt(molemass*T)/(pow(sigma,2)*OMEGA_2_2)/1e6
+    eta_star = 26.692e-3 * sqrt(molemass * T) / (pow(sigma, 2) * OMEGA_2_2) / 1e6
     return eta_star
 
 
@@ -35,24 +35,24 @@ def get_psi(fluid, ref_fluid, eta, T, rhomolar, e_k, sigma_nm):
         # Calculate the conformal state
         conformal_state = THIS.conformal_state(ref_fluid, -1, -1)
         # Calculate ESRR (which are based on the CONFORMAL state values)
-        f = THIS.T()/conformal_state['T'];
-        h = conformal_state['rhomolar']/THIS.rhomolar(); ## Must be the ratio of MOLAR densities!!
+        f = THIS.T() / conformal_state['T'];
+        h = conformal_state['rhomolar'] / THIS.rhomolar();  # Must be the ratio of MOLAR densities!!
 
         # The F factor
-        F_eta = sqrt(f)*pow(h, -2.0/3.0)*sqrt(THIS.molar_mass()/REF.molar_mass());
+        F_eta = sqrt(f) * pow(h, -2.0 / 3.0) * sqrt(THIS.molar_mass() / REF.molar_mass());
 
         # Dilute viscosity of fluid of interest
         eta_dilute = viscosity_dilute(fluid, T, e_k, sigma_nm)
 
         # Required background contribution from reference fluid
-        viscosity_background_required = (eta - eta_dilute)/F_eta
+        viscosity_background_required = (eta - eta_dilute) / F_eta
 
-        REF.update(CoolProp.DmolarT_INPUTS, conformal_state['rhomolar']*psi, conformal_state['T'])
+        REF.update(CoolProp.DmolarT_INPUTS, conformal_state['rhomolar'] * psi, conformal_state['T'])
         visc_ref = REF.viscosity_contributions()
         residual = visc_ref['initial_density'] + visc_ref['residual']
         return residual - viscosity_background_required
 
-    psi = scipy.optimize.newton(residual_for_psi, 1.0, args = (REF,))
+    psi = scipy.optimize.newton(residual_for_psi, 1.0, args=(REF,))
     return psi
 
 
@@ -84,38 +84,38 @@ def HFO():
     363.12 866.8 160.4 17.28 0.0924 1.35 
     373.14 776.9 225.2 19.89 0.0817 0.54"""
 
-    for fluid, data, e_k, sigma_nm in zip(['R1234yf', 'R1234ze(E)'],[data_R1234yf, data_R1234zeE],[281.14, 292.11], [0.5328, 0.5017]):
+    for fluid, data, e_k, sigma_nm in zip(['R1234yf', 'R1234ze(E)'], [data_R1234yf, data_R1234zeE], [281.14, 292.11], [0.5328, 0.5017]):
         xx, yy, RHO, ETA, ETACP, ETARP = [], [], [], [], [], []
         for line in data.split('\n'):
             T, rhoL, rhoV, etaV, nuL, sigma = line.strip().split(' ')
             rhoL = float(rhoL)
             T = float(T)
             nuL = float(nuL)
-            rhomolar = rhoL/CoolProp.CoolProp.PropsSI(fluid,'molemass')
-            eta = nuL/1000**2*rhoL
+            rhomolar = rhoL / CoolProp.CoolProp.PropsSI(fluid, 'molemass')
+            eta = nuL / 1000**2 * rhoL
             psi = get_psi(fluid, 'Propane', eta, T, rhomolar, e_k, sigma_nm)
             xx.append(T)
             yy.append(psi)
             RHO.append(rhomolar)
             ETA.append(eta)
-            ETACP.append(CoolProp.CoolProp.PropsSI('V','T',T,'Q',0,fluid))
-            ETARP.append(CoolProp.CoolProp.PropsSI('V','T',T,'Q',0,'REFPROP::' + CoolProp.CoolProp.get_fluid_param_string(fluid, 'REFPROP_name')))
+            ETACP.append(CoolProp.CoolProp.PropsSI('V', 'T', T, 'Q', 0, fluid))
+            ETARP.append(CoolProp.CoolProp.PropsSI('V', 'T', T, 'Q', 0, 'REFPROP::' + CoolProp.CoolProp.get_fluid_param_string(fluid, 'REFPROP_name')))
 
         RHO, xx, ETA, ETACP, ETARP = arrayize(RHO, xx, ETA, ETACP, ETARP)
-        rhor = RHO/CoolProp.CoolProp.PropsSI(fluid, 'rhomolar_critical')
+        rhor = RHO / CoolProp.CoolProp.PropsSI(fluid, 'rhomolar_critical')
 
-        plt.plot(rhor, yy, 'o-',label='from experimental data')
+        plt.plot(rhor, yy, 'o-', label='from experimental data')
         p = np.polyfit(rhor, yy, 2)
         print(p[::-1])
-        plt.plot(rhor, np.polyval(p, rhor), 'o-',label = 'from correlation')
+        plt.plot(rhor, np.polyval(p, rhor), 'o-', label='from correlation')
         plt.xlabel(r'$\rho_r$')
         plt.ylabel('$\psi$')
         plt.legend(loc='best')
         plt.show()
 
         plt.title(fluid)
-        plt.plot(xx, (ETACP/ETA-1)*100,'^', label = 'CoolProp')
-        plt.plot(xx, (ETARP/ETA-1)*100,'o', label = 'REFPROP')
+        plt.plot(xx, (ETACP / ETA - 1) * 100, '^', label='CoolProp')
+        plt.plot(xx, (ETARP / ETA - 1) * 100, 'o', label='REFPROP')
         plt.xlabel('Temperature (K)')
         plt.ylabel('$100\\times(\eta_{calc}/\eta_{exp}-1)$ (%)')
         plt.legend(loc='best')
@@ -140,44 +140,44 @@ def pentanes():
 
     fluid = ''
 
-    def undelimit(args, delim = ''):
+    def undelimit(args, delim=''):
         return [np.array([float(_) for _ in a.strip().split(delim)]) for a in args]
 
     from CoolProp.CoolProp import PropsSI
-    for fluid,e_k,sigma_nm in zip(['CycloPentane','Isopentane'],[406.33,341.06],[0.518,0.56232]):
+    for fluid, e_k, sigma_nm in zip(['CycloPentane', 'Isopentane'], [406.33, 341.06], [0.518, 0.56232]):
         xx, yy, RHO, ETA, ETACP, ETARP = [], [], [], [], [], []
-        for _T, _rhoLmass, _rhoVmass, _eta_mPas in zip(*undelimit(data_cyclopentane.split('\n'), delim = ' ')):
+        for _T, _rhoLmass, _rhoVmass, _eta_mPas in zip(*undelimit(data_cyclopentane.split('\n'), delim=' ')):
             MM = PropsSI('molemass', fluid)
-            rhomolar = _rhoLmass/MM
-            eta = _eta_mPas/1000
+            rhomolar = _rhoLmass / MM
+            eta = _eta_mPas / 1000
             psi = get_psi(fluid, 'Propane', eta, _T, rhomolar, e_k, sigma_nm)
             xx.append(_T)
             yy.append(psi)
             RHO.append(rhomolar)
             try:
-                ETACP.append(CoolProp.CoolProp.PropsSI('V','T',_T,'Q',0,fluid))
+                ETACP.append(CoolProp.CoolProp.PropsSI('V', 'T', _T, 'Q', 0, fluid))
             except:
                 ETACP.append(np.nan)
             ETA.append(eta)
-            ETARP.append(CoolProp.CoolProp.PropsSI('V','T',_T,'Q',0,'REFPROP::' + CoolProp.CoolProp.get_fluid_param_string(fluid, 'REFPROP_name')))
-        xx,yy,ETACP,ETARP, RHO, = arrayize(xx,yy,ETACP,ETARP,RHO)
+            ETARP.append(CoolProp.CoolProp.PropsSI('V', 'T', _T, 'Q', 0, 'REFPROP::' + CoolProp.CoolProp.get_fluid_param_string(fluid, 'REFPROP_name')))
+        xx, yy, ETACP, ETARP, RHO, = arrayize(xx, yy, ETACP, ETARP, RHO)
         rhored = CoolProp.CoolProp.PropsSI(fluid, 'rhomolar_critical')
-        print('rhored',rhored)
-        rhor = np.array(RHO)/rhored
+        print('rhored', rhored)
+        rhor = np.array(RHO) / rhored
 
         plt.title(fluid)
-        plt.plot(rhor, yy, 'o-',label='from experimental data')
+        plt.plot(rhor, yy, 'o-', label='from experimental data')
         p = np.polyfit(rhor, yy, 2)
         print(p[::-1])
-        plt.plot(rhor, np.polyval(p, rhor), 'o-',label = 'from correlation')
+        plt.plot(rhor, np.polyval(p, rhor), 'o-', label='from correlation')
         plt.xlabel(r'$\rho_r$')
         plt.ylabel('$\psi$')
         plt.legend(loc='best')
         plt.show()
 
         plt.title(fluid)
-        plt.plot(xx, (ETACP/ETA-1)*100,'^', label = 'CoolProp')
-        plt.plot(xx, (ETARP/ETA-1)*100,'o', label = 'REFPROP')
+        plt.plot(xx, (ETACP / ETA - 1) * 100, '^', label='CoolProp')
+        plt.plot(xx, (ETARP / ETA - 1) * 100, 'o', label='REFPROP')
         plt.xlabel('Temperature (K)')
         plt.ylabel('$100\\times(\eta_{calc}/\eta_{exp}-1)$ (%)')
         plt.legend(loc='best')

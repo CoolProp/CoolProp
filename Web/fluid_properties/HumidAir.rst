@@ -217,6 +217,50 @@ Table of Inputs/Outputs to HAPropsSI
     ``W``, ``Omega``, ``HumRat``; kg water/kg dry air; Input/Output; Humidity Ratio
     ``Z``; ; Output; Compressibility factor (:math:`Z = pv/(RT)`)
     
+Psychrometric Chart
+-------------------
+
+.. plot::
+
+    import numpy as np
+    import CoolProp.CoolProp as CP
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(1,1,figsize=(10, 8))
+    Tdbvec = np.linspace(-30, 55)+273.15
+
+    # Lines of constant relative humidity
+    for RH in np.arange(0.1, 1, 0.1):
+        W = CP.HAPropsSI("W","R",RH,"P",101325,"T",Tdbvec)
+        plt.plot(Tdbvec-273.15, W, color='k', lw = 0.5)
+
+    # Saturation curve
+    W = CP.HAPropsSI("W","R",1,"P",101325,"T",Tdbvec)
+    plt.plot(Tdbvec-273.15, W, color='k', lw=1.5)
+
+    # Lines of constant Vda
+    for Vda in np.arange(0.69, 0.961, 0.01):
+        R = np.linspace(0,1)
+        W = CP.HAPropsSI("W","R",R,"P",101325,"Vda",Vda)
+        Tdb = CP.HAPropsSI("Tdb","R",R,"P",101325,"Vda",Vda)
+        plt.plot(Tdb-273.15, W, color='b', lw=1.5 if abs(Vda % 0.05) < 0.001 else 0.5)
+
+    # Lines of constant wetbulb
+    for Twb_C in np.arange(-16, 33, 2):
+        if Twb_C == 0:
+            continue
+        R = np.linspace(0.0, 1)
+        print(Twb_C)
+        Tdb = CP.HAPropsSI("Tdb","R",R,"P",101325,"Twb",Twb_C+273.15)
+        W = CP.HAPropsSI("W","R",R,"P",101325,"Tdb",Tdb)
+        plt.plot(Tdb-273.15, W, color='r', lw=1.5 if abs(Twb_C % 10) < 0.001 else 0.5)
+
+    plt.xlabel(r'Dry bulb temperature $T_{\rm db}$ ($^{\circ}$ C)')
+    plt.ylabel(r'Humidity Ratio $W$ (kg/kg)')
+    plt.ylim(0, 0.030)
+    plt.xlim(-30, 55)
+    # plt.show()
+
 .. _HA-Validation:
 
 Humid Air Validation
@@ -225,8 +269,75 @@ Values here are obtained at documentation build-time using the Humid Air Propert
  
 .. ipython::
 
-    In [1]: execfile('fluid_properties/Validation/HAValidation.py')
+    In [1]: %run 'fluid_properties/Validation/HAValidation.py'
     
+
+Verification Script
+-------------------
+This script, written in Python, should yield no failures::
+
+    import CoolProp.CoolProp as CP
+    import numpy as np
+    import itertools
+    from multiprocessing import Pool
+    CP.set_config_bool(CP.DONT_CHECK_PROPERTY_LIMITS, True)
+
+    def generate_values(TR,P=101325):
+        """ Starting with T,R as inputs, generate all other values """
+        T,R = TR
+        psi_w = CP.HAPropsSI('psi_w','T',T,'R',R,'P',P)
+        other_output_keys = ['T_wb','T_dp','Hda','Sda','Vda','Omega']
+        outputs = {'psi_w':psi_w,'T':T,'P':P,'R':R}
+        for k in other_output_keys:
+            outputs[k] = CP.HAPropsSI(k,'T',T,'R',R,'P',P)
+        return outputs
+
+    def get_supported_input_pairs():
+        """ Determine which input pairs are supported """
+        good_ones = []
+        inputs = generate_values((300, 0.5))
+        for k1, k2 in itertools.product(inputs.keys(), inputs.keys()):
+            if 'P' in [k1,k2] or k1==k2:
+                continue
+            args = ('psi_w', k1, inputs[k1], k2, inputs[k2], 'P', inputs['P'])
+            try:
+                psi_w_new = CP.HAPropsSI(*args)
+                if not np.isfinite(psi_w_new):
+                    raise ValueError('Returned NaN; not ok')
+                good_ones.append((k1,k2))
+            except BaseException as BE:
+                pass
+                if 'currently at least one of' in str(BE) or 'cannot provide two inputs' in str(BE):
+                    pass
+                else:
+                    print(BE)
+                    good_ones.append((k1,k2))
+        return good_ones
+    supported_pairs = get_supported_input_pairs()
+
+    def calculate(inputs):
+        """ For a given input, try all possible input pairs """
+        errors = []
+        for k1, k2 in supported_pairs:
+            psi_w_input = inputs['psi_w']
+            args = 'psi_w',k1,inputs[k1],k2,inputs[k2],'P',inputs['P']
+            try:
+                psi_w_new = CP.HAPropsSI(*args)
+                if not np.isfinite(psi_w_new):
+                    raise ValueError('Returned NaN; not ok')
+            except BaseException as BE:
+                errors.append((str(BE),args, inputs))
+        return errors
+
+    if __name__ == '__main__':
+        import CoolProp
+        print(CoolProp.__version__)
+        TR = itertools.product(np.linspace(240, 345, 11), np.linspace(0, 1, 11))
+        with Pool(processes=2) as pool:
+            input_values = pool.map(generate_values, TR)
+            errors = pool.map(calculate, input_values)
+            for err in itertools.chain.from_iterable(errors):
+                print(err)
     
 ..  Appendices
 

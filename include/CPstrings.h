@@ -5,6 +5,7 @@
     #include <iterator>
     #include <algorithm>
     #include <functional>
+    #include <cctype>
 
 #if !defined(NO_FMTLIB)
     #ifndef FMT_HEADER_ONLY
