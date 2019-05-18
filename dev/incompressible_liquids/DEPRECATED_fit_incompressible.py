@@ -26,38 +26,38 @@ class IncompLiquidFit(object):
         # parameters for the different fits
         self._cDensity = numpy.ones(4)       # Typically 4 parameters
         self._cHeatCapacity = numpy.ones(4)  # Typically 4 parameters
-        self._cTConductivity = numpy.ones(3) # Typically 3 parameters
+        self._cTConductivity = numpy.ones(3)  # Typically 3 parameters
         self._cViscosity = numpy.ones(3)     # Typically 3 parameters
         self._cPsat = numpy.ones(3)          # Typically 3 parameters
 
         # bounds for fit
-        self._Tmin     = None
+        self._Tmin = None
         self._TminPsat = None
-        self._Tmax     = None
-        self._Tref     = 273.15 + 25.
-        self._Tbase    =   0.0
+        self._Tmax = None
+        self._Tref = 273.15 + 25.
+        self._Tbase = 0.0
 
         # some flags to set
         self._TinC = False   # Temperature in Celsius
-        self._DynVisc = True # Data for dynamic viscosity
+        self._DynVisc = True  # Data for dynamic viscosity
         self._minPoints = 3
 
-        self._expPoly = False # Fit exponential as polynomial
+        self._expPoly = False  # Fit exponential as polynomial
 
-    def setParams(self,fluid):
-        if fluid=='init':
+    def setParams(self, fluid):
+        if fluid == 'init':
             # initial parameters for the different fits
 #            self._cDensity =        [+9.2e+2, -0.5e+0, +2.8e-4, -1.1e-6]
 #            self._cHeatCapacity =   [+1.0e+0, +3.6e-3, -2.9e-7, +1.7e-9]
 #            self._cTConductivity =  [+1.1e-1, +7.8e-5, +3.5e-7]
 #            self._cViscosity =      [+7.1e+2, +2.3e+2, +3.4e+1]
 #            self._cPsat =           [-5.3e+3, +3.2e+1, -1.6e+1]
-            self._cDensity =        [1, 1, 1, 1]
-            self._cHeatCapacity =   [1, 1, 1, 1]
-            self._cTConductivity =  [1, 1, 1]
+            self._cDensity = [1, 1, 1, 1]
+            self._cHeatCapacity = [1, 1, 1, 1]
+            self._cTConductivity = [1, 1, 1]
             #self._cViscosity =      [+8e+2, -2e+2, +3e+1]
-            self._cViscosity =      [+7e+2, -6e+1, +1e+1]
-            self._cPsat =           [-5e+3, +3e+1, -1e+1]
+            self._cViscosity = [+7e+2, -6e+1, +1e+1]
+            self._cPsat = [-5e+3, +3e+1, -1e+1]
             return True
 
 
@@ -81,28 +81,28 @@ class IncompLiquidFit(object):
 #            self._Tmax =     260.0 + 273.15
 
         else:
-            raise (ValueError("No coefficients available for "+str(fluid)))
+            raise (ValueError("No coefficients available for " + str(fluid)))
 
-    def _checkT(self,T=0):
+    def _checkT(self, T=0):
         Tmin = self.Props('Tmin')
         Tmax = self.Props('Tmax')
         if Tmin is None:
             raise (ValueError("Please specify the minimum temperature."))
         if Tmax is None:
             raise (ValueError("Please specify the maximum temperature."))
-        if not (Tmin<=T<=Tmax):
-            raise (ValueError("Temperature out of range: "+str(T)+" not in "+str(Tmin)+"-"+str(Tmax)+". "))
+        if not (Tmin <= T <= Tmax):
+            raise (ValueError("Temperature out of range: " + str(T) + " not in " + str(Tmin) + "-" + str(Tmax) + ". "))
 
-    def _checkP(self,T=0,P=0):
-        Psat = self.Props('Psat',T=T)
-        if P<Psat:
-            raise (ValueError("Equations are valid for liquid phase only: "+str(P)+" < "+str(Psat)+". "))
+    def _checkP(self, T=0, P=0):
+        Psat = self.Props('Psat', T=T)
+        if P < Psat:
+            raise (ValueError("Equations are valid for liquid phase only: " + str(P) + " < " + str(Psat) + ". "))
 
-    def _checkTP(self,T=0,P=0):
+    def _checkTP(self, T=0, P=0):
         self._checkT(T=T)
         #self._checkP(T=T, P=P)
 
-    def _basePolynomial(self,coefficients,x):
+    def _basePolynomial(self, coefficients, x):
         """ Base function to produce polynomials of
         order len(coefficients) with the coefficients
         """
@@ -111,196 +111,196 @@ class IncompLiquidFit(object):
             result += coefficients[i] * x**i
         return result
 
-    def _basePolynomialInt(self,coefficients,x1,x0=-1):
+    def _basePolynomialInt(self, coefficients, x1, x0=-1):
         """ Base function to produce the integral of
         order len(coefficients) with coefficients from
         x0 to x1.
         """
-        if x0==-1: x0 = self._Tref-self._Tbase
+        if x0 == -1: x0 = self._Tref - self._Tbase
         result = 0.
         for i in range(len(coefficients)):
-            result += 1./(i+1.) * coefficients[i] * (x1**(i+1.) - x0**(i+1.))
+            result += 1. / (i + 1.) * coefficients[i] * (x1**(i + 1.) - x0**(i + 1.))
         return result
 
-    def _baseExponential(self,coefficients,x,num):
+    def _baseExponential(self, coefficients, x, num):
         """ Base function to produce exponential
         with defined coefficients
         """
         # Determine limits:
-        maxVal = numpy.log(numpy.finfo(numpy.float64).max-1)
-        minVal = -maxVal#numpy.log(numpy.finfo(numpy.float64).min+1)
-        #if len(coefficients)==num:
-        if num==1: return numpy.exp(numpy.clip((coefficients[0]/(x+coefficients[1]) - coefficients[2]),minVal,maxVal))
-        if num==2: return numpy.exp(numpy.clip(self._basePolynomial(coefficients, x),minVal,maxVal))
-        #else:
+        maxVal = numpy.log(numpy.finfo(numpy.float64).max - 1)
+        minVal = -maxVal  # numpy.log(numpy.finfo(numpy.float64).min+1)
+        # if len(coefficients)==num:
+        if num == 1: return numpy.exp(numpy.clip((coefficients[0] / (x + coefficients[1]) - coefficients[2]), minVal, maxVal))
+        if num == 2: return numpy.exp(numpy.clip(self._basePolynomial(coefficients, x), minVal, maxVal))
+        # else:
         #    print "Error!"
 
-    def Props(self,out,T=0,P=0):
-        if out=='D':
-            self._checkTP(T=T,P=P)
-            return self._basePolynomial(self._cDensity,T-self._Tbase)
-        elif out=='C':
-            self._checkTP(T=T,P=P)
-            return self._basePolynomial(self._cHeatCapacity,T-self._Tbase)
-        elif out=='L':
-            self._checkTP(T=T,P=P)
-            return self._basePolynomial(self._cTConductivity,T-self._Tbase)
-        elif out=='V':
-            self._checkTP(T=T,P=P)
+    def Props(self, out, T=0, P=0):
+        if out == 'D':
+            self._checkTP(T=T, P=P)
+            return self._basePolynomial(self._cDensity, T - self._Tbase)
+        elif out == 'C':
+            self._checkTP(T=T, P=P)
+            return self._basePolynomial(self._cHeatCapacity, T - self._Tbase)
+        elif out == 'L':
+            self._checkTP(T=T, P=P)
+            return self._basePolynomial(self._cTConductivity, T - self._Tbase)
+        elif out == 'V':
+            self._checkTP(T=T, P=P)
             if self._expPoly:
-                return numpy.exp(self._basePolynomial(self._cViscosity,T-self._Tbase))
+                return numpy.exp(self._basePolynomial(self._cViscosity, T - self._Tbase))
             else:
-                return self._baseExponential(self._cViscosity,T-self._Tbase,1)
+                return self._baseExponential(self._cViscosity, T - self._Tbase, 1)
 
-        elif out=='Psat':
+        elif out == 'Psat':
             self._checkT(T=T)
-            if T<self._TminPsat:
+            if T < self._TminPsat:
                 return 1e-14
             if self._expPoly:
-                return numpy.exp(self._basePolynomial(self._cPsat,T-self._Tbase))
+                return numpy.exp(self._basePolynomial(self._cPsat, T - self._Tbase))
             else:
-                return self._baseExponential(self._cPsat,T-self._Tbase,1)
-        elif out=='Tmin':
+                return self._baseExponential(self._cPsat, T - self._Tbase, 1)
+        elif out == 'Tmin':
             return self._Tmin
-        elif out=='Tmax':
+        elif out == 'Tmax':
             return self._Tmax
         else:
             raise (ValueError("Error: You used an unknown output qualifier."))
 
-    def _PropsFit(self,coefficients,inVal,T=0):
+    def _PropsFit(self, coefficients, inVal, T=0):
         """
         Calculates a property from a given set of
         coefficients for a certain temperature. Is used
         to obtain data to feed to the optimisation
         procedures.
         """
-        if inVal=='D':
+        if inVal == 'D':
             self._checkT(T=T)
-            return self._basePolynomial(coefficients,T-self._Tbase)
-        elif inVal=='C':
+            return self._basePolynomial(coefficients, T - self._Tbase)
+        elif inVal == 'C':
             self._checkT(T=T)
-            return self._basePolynomial(coefficients,T-self._Tbase)
-        elif inVal=='L':
+            return self._basePolynomial(coefficients, T - self._Tbase)
+        elif inVal == 'L':
             self._checkT(T=T)
-            return self._basePolynomial(coefficients,T-self._Tbase)
-        elif inVal=='V':
+            return self._basePolynomial(coefficients, T - self._Tbase)
+        elif inVal == 'V':
             self._checkT(T=T)
             if self._expPoly:
-                return numpy.exp(self._basePolynomial(coefficients,T-self._Tbase))
+                return numpy.exp(self._basePolynomial(coefficients, T - self._Tbase))
             else:
-                return self._baseExponential(coefficients,T-self._Tbase,1)
+                return self._baseExponential(coefficients, T - self._Tbase, 1)
 
-        elif inVal=='Psat':
+        elif inVal == 'Psat':
             self._checkT(T=T)
-            if T<self._TminPsat:
+            if T < self._TminPsat:
                 return 1e-14
             if self._expPoly:
-                return numpy.exp(self._basePolynomial(coefficients,T-self._Tbase))
+                return numpy.exp(self._basePolynomial(coefficients, T - self._Tbase))
             else:
-                return self._baseExponential(coefficients,T-self._Tbase,1)
+                return self._baseExponential(coefficients, T - self._Tbase, 1)
 
         else:
             raise (ValueError("Error: You used an unknown property qualifier."))
 
-    def inCoolProp(self,name):
+    def inCoolProp(self, name):
         from CoolProp.CoolProp import FluidsList
-        #print FluidsList()
+        # print FluidsList()
         result = name in FluidsList()
         if not result:
             try:
-                CP.PropsU('Tmin','T',0,'P',0,name,"SI")
+                CP.PropsU('Tmin', 'T', 0, 'P', 0, name, "SI")
                 return True
             except ValueError as e:
                 print(e)
                 return False
 
-    def getCoefficients(self,inVal):
+    def getCoefficients(self, inVal):
         """
         Get the array with coefficients.
         """
-        if inVal=='D':
+        if inVal == 'D':
             return self._cDensity
-        elif inVal=='C':
+        elif inVal == 'C':
             return self._cHeatCapacity
-        elif inVal=='L':
+        elif inVal == 'L':
             return self._cTConductivity
-        elif inVal=='V':
+        elif inVal == 'V':
             return self._cViscosity
-        elif inVal=='Psat':
+        elif inVal == 'Psat':
             return self._cPsat
         else:
             raise (ValueError("Error: You used an unknown property qualifier."))
 
-    def setCoefficients(self,inVal,coeffs):
+    def setCoefficients(self, inVal, coeffs):
         """
         Set the array of coefficients.
         """
-        if inVal=='D':
+        if inVal == 'D':
             self._cDensity = coeffs
-        elif inVal=='C':
+        elif inVal == 'C':
             self._cHeatCapacity = coeffs
-        elif inVal=='L':
+        elif inVal == 'L':
             self._cTConductivity = coeffs
-        elif inVal=='V':
+        elif inVal == 'V':
             self._cViscosity = coeffs
-        elif inVal=='Psat':
+        elif inVal == 'Psat':
             self._cPsat = coeffs
         else:
             raise (ValueError("Error: You used an unknown property qualifier."))
 
-    def setTmin(self,T):
+    def setTmin(self, T):
         self._Tmin = T
 
-    def setTmax(self,T):
+    def setTmax(self, T):
         self._Tmax = T
 
-    def setTminPsat(self,T):
+    def setTminPsat(self, T):
         self._TminPsat = T
 
-    def setTref(self,T):
+    def setTref(self, T):
         self._Tref = T
 
-    def setTbase(self,T):
+    def setTbase(self, T):
         self._Tbase = T
 
-    def setExpPoly(self,bo):
+    def setExpPoly(self, bo):
         self._expPoly = bo
 
-    def fitCoefficients(self,xName,T=[],xData=[]):
+    def fitCoefficients(self, xName, T=[], xData=[]):
 
-        if (len(T)!=len(xData)):
+        if (len(T) != len(xData)):
             raise (ValueError("Error: There has to be the same number of temperature and data points."))
-        if len(T)<self._minPoints:
-            raise (ValueError("Error: You should use at least "+str(self._minPoints)+" points."))
+        if len(T) < self._minPoints:
+            raise (ValueError("Error: You should use at least " + str(self._minPoints) + " points."))
 
-        def fun(coefficients,xName,T,xData):
+        def fun(coefficients, xName, T, xData):
             # Values for conductivity are very small,
             # algorithms prefer larger values
-            if xName=='L':
-                calculated = numpy.array([self._PropsFit(coefficients,xName,T=Ti) for Ti in T])
-                data       = numpy.array(xData)
+            if xName == 'L':
+                calculated = numpy.array([self._PropsFit(coefficients, xName, T=Ti) for Ti in T])
+                data = numpy.array(xData)
             # Fit logarithms for viscosity and saturation pressure
-            elif xName=='V' or xName=='Psat':
-                calculated = numpy.log(numpy.array([self._PropsFit(coefficients,xName,T=Ti) for Ti in T]))
-                data       = numpy.log(numpy.array(xData))
+            elif xName == 'V' or xName == 'Psat':
+                calculated = numpy.log(numpy.array([self._PropsFit(coefficients, xName, T=Ti) for Ti in T]))
+                data = numpy.log(numpy.array(xData))
             else:
-                calculated = numpy.array([self._PropsFit(coefficients,xName,T=Ti) for Ti in T])
-                data       = numpy.array(xData)
+                calculated = numpy.array([self._PropsFit(coefficients, xName, T=Ti) for Ti in T])
+                data = numpy.array(xData)
 
-            res = numpy.sum((calculated-data)**2.)
+            res = numpy.sum((calculated - data)**2.)
             return res
 
         initValues = self.getCoefficients(xName)[:]
         # Fit logarithms for viscosity and saturation pressure
-        if xName=='V' or xName=='Psat':
+        if xName == 'V' or xName == 'Psat':
 
-            #fit = "MIN" # use a home-made minimisation with Powell and Broyden-Fletcher-Goldfarb-Shanno
-            #fit = "LMA" # use the Levenberg-Marquardt algorithm from curve_fit
-            #fit = "POL" # use a polynomial in an exponential function
+            # fit = "MIN" # use a home-made minimisation with Powell and Broyden-Fletcher-Goldfarb-Shanno
+            # fit = "LMA" # use the Levenberg-Marquardt algorithm from curve_fit
+            # fit = "POL" # use a polynomial in an exponential function
 
-            fit     = ["LMA","MIN"] # First try LMA, use MIN as a fall-back solver
+            fit = ["LMA", "MIN"]  # First try LMA, use MIN as a fall-back solver
             if self._expPoly:
-                fit     = ["POL"] # Overwrite preferences for polynomial
+                fit = ["POL"]  # Overwrite preferences for polynomial
 
             success = False
             counter = -1
@@ -308,13 +308,13 @@ class IncompLiquidFit(object):
             while (not success):
                 counter += 1
 
-                if fit[counter]=="LMA":
+                if fit[counter] == "LMA":
                     xData = numpy.array(xData)
 
                     fit_log = True
 
                     def func(T, *coefficients):
-                        result = numpy.array([self._PropsFit(coefficients,xName,T=Ti) for Ti in T])
+                        result = numpy.array([self._PropsFit(coefficients, xName, T=Ti) for Ti in T])
                         if fit_log:
                             return numpy.log(result)
                         else:
@@ -326,36 +326,36 @@ class IncompLiquidFit(object):
                     try:
                         # Do the actual fitting
                         popt, pcov = curve_fit(func, T, xData, p0=initValues, maxfev=1000)
-                        #print popt
-                        #print pcov
+                        # print popt
+                        # print pcov
                         success = True
                         return popt
 
                     except RuntimeError as e:
-                        print("Exception: "+str(e))
-                        print("Using: "+str(fit[counter+1])+" as a fall-back.")
+                        print("Exception: " + str(e))
+                        print("Using: " + str(fit[counter + 1]) + " as a fall-back.")
                         success = False
 
-                elif fit[counter]=="MIN":
-                    print("Fitting exponential with "+str(len(initValues))+" coefficients.")
-                    arguments  = (xName,T,numpy.exp(xData))
+                elif fit[counter] == "MIN":
+                    print("Fitting exponential with " + str(len(initValues)) + " coefficients.")
+                    arguments = (xName, T, numpy.exp(xData))
                     #options    = {'maxiter': 1e2, 'maxfev': 1e5}
-                    if xName=='V':
-                        method     = "Powell"
-                    elif xName=='Psat':
-                        method     = "BFGS"
+                    if xName == 'V':
+                        method = "Powell"
+                    elif xName == 'Psat':
+                        method = "BFGS"
 
-                    tolStart   = 1e-13
-                    tol        = tolStart
+                    tolStart = 1e-13
+                    tol = tolStart
                     res = minimize(fun, initValues, method=method, args=arguments, tol=tol)
 
-                    while ((not res.success) and tol<1e-2):
+                    while ((not res.success) and tol < 1e-2):
                         tol *= 1e2
-                        print("Fit did not succeed, reducing tolerance to "+str(tol))
+                        print("Fit did not succeed, reducing tolerance to " + str(tol))
                         res = minimize(fun, initValues, method=method, args=arguments, tol=tol)
 
                     # Include these lines for an additional fit with new guess values.
-                    #if res.success and tol>tolStart:
+                    # if res.success and tol>tolStart:
                     #    print "Refitting with new guesses and original tolerance of "+str(tolStart)
                     #    res = minimize(fun, res.x, method=method, args=arguments, tol=tolStart)
 
@@ -367,17 +367,17 @@ class IncompLiquidFit(object):
                         print(res)
                         success = False
 
-                elif fit[counter]=="POL":
-                    print("Fitting exponential polynomial with "+str(len(initValues))+" coefficients.")
-                    z = numpy.polyfit(T-self._Tbase, numpy.log(xData)[:], len(initValues)-1)
+                elif fit[counter] == "POL":
+                    print("Fitting exponential polynomial with " + str(len(initValues)) + " coefficients.")
+                    z = numpy.polyfit(T - self._Tbase, numpy.log(xData)[:], len(initValues) - 1)
                     return z[::-1]
 
                 else:
                     raise (ValueError("Error: You used an unknown fit method."))
 
-        else: # just a polynomial
-            print("Fitting polynomial with "+str(len(initValues))+" coefficients.")
-            z = numpy.polyfit(T-self._Tbase, xData, len(initValues)-1)
+        else:  # just a polynomial
+            print("Fitting polynomial with " + str(len(initValues)) + " coefficients.")
+            z = numpy.polyfit(T - self._Tbase, xData, len(initValues) - 1)
             return z[::-1]
 
 #    def fitCoefficientsCentered(self,xName,T=[],xData=[]):
@@ -386,21 +386,21 @@ class IncompLiquidFit(object):
 #        return self.fitCoefficients(xName,T=T,xData=xData)
 
 
-### Load the data
+# Load the data
 from data_incompressible import *
 
 containerList = []
 containerList += [TherminolD12()]
 containerList += [TherminolVP1(), Therminol66(), Therminol72()]
 containerList += [DowthermJ(), DowthermQ()]
-containerList += [Texatherm22(),  NitrateSalt(), SylthermXLT()]
+containerList += [Texatherm22(), NitrateSalt(), SylthermXLT()]
 containerList += [HC50(), HC40(), HC30(), HC20(), HC10()]
 containerList += [AS10(), AS20(), AS30(), AS40(), AS55()]
 containerList += [ZS10(), ZS25(), ZS40(), ZS45(), ZS55()]
 
 
-def relError(A=[],B=[],PCT=False):
-    result = (numpy.array(A)-numpy.array(B))/numpy.array(B);
+def relError(A=[], B=[], PCT=False):
+    result = (numpy.array(A) - numpy.array(B)) / numpy.array(B);
     if PCT:
         return result * 100.
     else:
@@ -409,7 +409,7 @@ def relError(A=[],B=[],PCT=False):
 
 j = {}
 for data in containerList:
-    ### Some test case
+    # Some test case
     liqObj = IncompLiquidFit()
     liqObj.setParams("init")
     liqObj.setTmin(data.Tmin)
@@ -430,39 +430,39 @@ for data in containerList:
 
     print("")
     print("------------------------------------------------------")
-    print("Fitting "+str(data.Name))
+    print("Fitting " + str(data.Name))
     print("------------------------------------------------------")
     print("")
-    print("minimum T: "+str(data.Tmin))
-    print("maximum T: "+str(data.Tmax))
-    print("min T pSat:"+str(data.TminPsat))
+    print("minimum T: " + str(data.Tmin))
+    print("maximum T: " + str(data.Tmax))
+    print("min T pSat:" + str(data.TminPsat))
     #liqObj.setTbase((data.Tmax-data.Tmin) / 2.0 + data.Tmin)
-    #liqObj.setExpPoly(True)
-    print("T base:"+str(liqObj._Tbase))
+    # liqObj.setExpPoly(True)
+    print("T base:" + str(liqObj._Tbase))
     print("")
 
     # row and column sharing for test plots
-    #matplotlib.pyplot.subplots_adjust(top=0.85)
+    # matplotlib.pyplot.subplots_adjust(top=0.85)
     f, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = matplotlib.pyplot.subplots(3, 2, sharex='col')
-    f.set_size_inches(matplotlib.pyplot.figaspect(1.2)*1.5)
+    f.set_size_inches(matplotlib.pyplot.figaspect(1.2) * 1.5)
     #f.suptitle("Fit for "+str(data.Desc), fontsize=14)
 
-    ### This is the actual fitting
+    # This is the actual fitting
     tData = data.T
-    tDat1 = numpy.linspace(numpy.min(tData)+1, numpy.max(tData)-1, 10)
-    Pin = 1e20 # Dummy pressure
-    inCP =liqObj.inCoolProp(data.Name)
-    print("Fluid in CoolProp: "+str(inCP))
+    tDat1 = numpy.linspace(numpy.min(tData) + 1, numpy.max(tData) - 1, 10)
+    Pin = 1e20  # Dummy pressure
+    inCP = liqObj.inCoolProp(data.Name)
+    print("Fluid in CoolProp: " + str(inCP))
     print("")
 
     inVal = 'D'
     xData = data.rho
     oldCoeffs = liqObj.getCoefficients(inVal)
-    newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
+    newCoeffs = liqObj.fitCoefficients(inVal, T=tData, xData=xData)
 #     print "Density, old: "+str(oldCoeffs)
-    print("Density, new: "+str(newCoeffs))
+    print("Density, new: " + str(newCoeffs))
 #     print
-    liqObj.setCoefficients(inVal,newCoeffs)
+    liqObj.setCoefficients(inVal, newCoeffs)
 #     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
 #     ax1.plot(tData-273.15, xData, 'o', label="Data Sheet")
 #     ax1.plot(tDat1-273.15, fData, 'o', label="Python")
@@ -484,11 +484,11 @@ for data in containerList:
     inVal = 'C'
     xData = data.c_p
     oldCoeffs = liqObj.getCoefficients(inVal)
-    newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
+    newCoeffs = liqObj.fitCoefficients(inVal, T=tData, xData=xData)
 #     print "Heat c., old: "+str(oldCoeffs)
 #     print "Heat c., new: "+str(newCoeffs)
 #     print
-    liqObj.setCoefficients(inVal,newCoeffs)
+    liqObj.setCoefficients(inVal, newCoeffs)
 #     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
 #     ax2.plot(tData-273.15, xData/1e3, 'o', label="Data Sheet")
 #     ax2.plot(tDat1-273.15, fData/1e3, 'o', label="Python")
@@ -507,11 +507,11 @@ for data in containerList:
     inVal = 'L'
     xData = data.lam
     oldCoeffs = liqObj.getCoefficients(inVal)
-    newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
+    newCoeffs = liqObj.fitCoefficients(inVal, T=tData, xData=xData)
 #     print "Th. Co., old: "+str(oldCoeffs)
 #     print "Th. Co., new: "+str(newCoeffs)
 #     print
-    liqObj.setCoefficients(inVal,newCoeffs)
+    liqObj.setCoefficients(inVal, newCoeffs)
 #     fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
 #     ax3.plot(tData-273.15, xData*1e3, 'o', label="Data Sheet")
 #     ax3.plot(tDat1-273.15, fData*1e3, 'o', label="Python")
@@ -529,15 +529,15 @@ for data in containerList:
 
     inVal = 'V'
     tData = data.T[data.mu_dyn > 0]
-    if len(tData)>liqObj._minPoints:
-        tDat1 = numpy.linspace(numpy.min(tData)+1, numpy.max(tData)-1, 10)
+    if len(tData) > liqObj._minPoints:
+        tDat1 = numpy.linspace(numpy.min(tData) + 1, numpy.max(tData) - 1, 10)
         xData = data.mu_dyn[data.mu_dyn > 0]
         oldCoeffs = liqObj.getCoefficients(inVal)
-        newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
+        newCoeffs = liqObj.fitCoefficients(inVal, T=tData, xData=xData)
 #         print "Viscos., old: "+str(oldCoeffs)
 #         print "Viscos., new: "+str(newCoeffs)
 #         print
-        liqObj.setCoefficients(inVal,newCoeffs)
+        liqObj.setCoefficients(inVal, newCoeffs)
 #         fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
 #         ax4.plot(tData-273.15, xData*1e3, 'o', label="Data Sheet")
 #         ax4.plot(tDat1-273.15, fData*1e3, 'o', label="Python")
@@ -556,17 +556,17 @@ for data in containerList:
     j['viscosity']['type'] = 'polynomial'
 
     inVal = 'Psat'
-    mask = numpy.logical_and(numpy.greater_equal(data.T,data.TminPsat),numpy.greater(data.psat,0))
+    mask = numpy.logical_and(numpy.greater_equal(data.T, data.TminPsat), numpy.greater(data.psat, 0))
     tData = data.T[mask]
-    if len(tData)>liqObj._minPoints:
-        tDat1 = numpy.linspace(numpy.min(tData)+1, numpy.max(tData)-1, 10)
+    if len(tData) > liqObj._minPoints:
+        tDat1 = numpy.linspace(numpy.min(tData) + 1, numpy.max(tData) - 1, 10)
         xData = data.psat[mask]
         oldCoeffs = liqObj.getCoefficients(inVal)
-        newCoeffs = liqObj.fitCoefficients(inVal,T=tData,xData=xData)
+        newCoeffs = liqObj.fitCoefficients(inVal, T=tData, xData=xData)
 #         print "P sat. , old: "+str(oldCoeffs)
 #         print "P sat. , new: "+str(newCoeffs)
 #         print
-        liqObj.setCoefficients(inVal,newCoeffs)
+        liqObj.setCoefficients(inVal, newCoeffs)
 #         fData = numpy.array([liqObj.Props(inVal, T=Tin, P=Pin) for Tin in tDat1])
 #         ax5.plot(tData-273.15, xData/1e3, 'o', label="Data Sheet")
 #         ax5.plot(tDat1-273.15, fData/1e3, 'o', label="Python")
@@ -663,8 +663,8 @@ for data in containerList:
 #     raw_input("Finished with "+data.Name+", press Enter to continue...")
 
     import json
-    print(json.dumps(j, indent = 2))
+    print(json.dumps(j, indent=2))
 
-    fp = open(j['name']+'.json', 'w')
-    fp.write(json.dumps(j, indent = 2, sort_keys = True))
+    fp = open(j['name'] + '.json', 'w')
+    fp.write(json.dumps(j, indent=2, sort_keys=True))
     fp.close()

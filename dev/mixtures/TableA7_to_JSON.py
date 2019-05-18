@@ -1,6 +1,6 @@
 from CoolProp.CoolProp import get_fluid_param_string
 
-lines = open('KunzWagner2012_TableA7.txt','r').read()
+lines = open('KunzWagner2012_TableA7.txt', 'r').read()
 
 template = """{{"Name1" : "{Name1:s}",
 "Name2" : "{Name2:s}",
@@ -20,7 +20,7 @@ chunks = lines.split('\n\n')
 for chunk in chunks:
     lines = chunk.split('\n')
 
-    D,T,N,ETA,EPSILON,BETA,GAMMA = [0],[0],[0],[0],[0],[0],[0]
+    D, T, N, ETA, EPSILON, BETA, GAMMA = [0], [0], [0], [0], [0], [0], [0]
     names = lines.pop(0)
 
     for line in lines:
@@ -43,20 +43,20 @@ for chunk in chunks:
         BETA.append(float(beta))
         GAMMA.append(float(gamma))
 
-    name1,name2 = names.split('/')
+    name1, name2 = names.split('/')
 
-    CAS1 = get_fluid_param_string(name1,'CAS')
-    CAS2 = get_fluid_param_string(name2,'CAS')
+    CAS1 = get_fluid_param_string(name1, 'CAS')
+    CAS2 = get_fluid_param_string(name2, 'CAS')
 
-    print(template.format(Name1 = name1,
-                          Name2 = name2,
-                          CAS1 = CAS1,
-                          CAS2 = CAS2,
-                          d = str(D),
-                          t = str(T),
-                          n = str(N),
-                          eta = str(ETA),
-                          epsilon= str(EPSILON),
-                          beta = str(BETA),
-                          gamma = str(GAMMA)
+    print(template.format(Name1=name1,
+                          Name2=name2,
+                          CAS1=CAS1,
+                          CAS2=CAS2,
+                          d=str(D),
+                          t=str(T),
+                          n=str(N),
+                          eta=str(ETA),
+                          epsilon=str(EPSILON),
+                          beta=str(BETA),
+                          gamma=str(GAMMA)
                           ))

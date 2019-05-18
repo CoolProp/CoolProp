@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <cerrno>
 
 // This will kill the horrible min and max macros 
 #ifndef NOMINMAX

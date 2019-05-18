@@ -131,7 +131,7 @@ void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDb
     this->resize(N); // No reallocation of this->mole_fractions happens
     // Also store the mole fractions as doubles
     this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
-    _reducing.fill(_HUGE);
+    clear_comp_change();
     
 };
 void HelmholtzEOSMixtureBackend::sync_linked_states(const HelmholtzEOSMixtureBackend * const source){
@@ -578,7 +578,12 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_melting_line(int param, int given, 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_surface_tension(void)
 {
     if (is_pure_or_pseudopure){
-		return components[0].ancillaries.surface_tension.evaluate(T());
+        if ((_phase == iphase_twophase) || (_phase == iphase_critical_point)){  // if within the two phase region or at critical point
+            return components[0].ancillaries.surface_tension.evaluate(T());     //    calculate surface tension and return
+        }
+        else {                                                                  // else state point not in the two phase region
+            throw ValueError(format("surface tension is only defined within the two-phase region; Try PQ or QT inputs"));   // throw error
+        }
     }
     else{
         throw NotImplementedError(format("surface tension not implemented for mixtures"));
@@ -1515,7 +1520,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         _phase = iphase_liquid;
                     }
                     else{
-                        if (_T < Tm){
+                        if (_T < Tm-0.001){
                             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
                         }
                     }
@@ -1525,7 +1530,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         _phase = iphase_liquid;
                     }
                     else{
-                        if (_T < Tmin()){
+                        if (_T < Tmin()-0.001){
                             throw ValueError(format("For now, we don't support T [%g K] below Tmin(saturation) [%g K]", _T, Tmin()));
                         }
                     }
@@ -2469,7 +2474,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
 
     try{
-        double rhomolar = rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 20);
+        double rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 20);
         if (!ValidNumber(rhomolar) || rhomolar < 0) {
             throw ValueError();
         }

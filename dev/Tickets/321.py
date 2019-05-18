@@ -17,4 +17,4 @@ fluids = [
   ["R1270", "Propylene"]]
 
 for f in fluids:
-    print("{0}:{1} - {2}:{3}".format(f[0],CP.PropsSI('Tcrit','T',0,'D',0,f[0]),CP.PropsSI('Tcrit','T',0,'D',0,f[1]),f[1]))
+    print("{0}:{1} - {2}:{3}".format(f[0], CP.PropsSI('Tcrit', 'T', 0, 'D', 0, f[0]), CP.PropsSI('Tcrit', 'T', 0, 'D', 0, f[1]), f[1]))

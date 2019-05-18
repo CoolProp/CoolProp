@@ -4,7 +4,7 @@ Welcome to CoolProp
 
 CoolProp is a thermophysical property database and wrappers for a selection of programming environments. 
 It offers similar functionality to REFPROP, but CoolProp is open-source and free. 
-It was originally developed by Ian Bell, currently a post-doc at the University of Liege, in Liege, Belgium.
+It was originally developed by Ian Bell, at the time a post-doc at the University of Liege, in Liege, Belgium.
 
 * CoolProp has flexible licensing terms: Commercial - ok! Academic? - ok! |ghlicense|
 

@@ -754,7 +754,6 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv_splined(paramet
 	CoolPropDbl Delta_end = hE - hL;
 
 	CoolPropDbl TL = pure_saturation.evaluate(iT, _p, 0, cached_saturation_iL, cached_saturation_iV);
-	CoolPropDbl TV = pure_saturation.evaluate(iT, _p, 1, cached_saturation_iL, cached_saturation_iV);
 	CoolPropDbl TE = pure_saturation.evaluate(iT, _p, x_end, cached_saturation_iL, cached_saturation_iV);
 
 	// TODO: We cheat here and fake access to a derived class.

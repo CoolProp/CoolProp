@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-
 if (DEFINED COOLPROP_INSTALL_PREFIX)
     #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
@@ -11,32 +10,6 @@ endif()
 
 set(CMAKE_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX} CACHE PATH "default install path" FORCE)
 
-#######################################
-#         PROJECT INFORMATION         #
-#-------------------------------------#
-# This CMakeLists.txt file is for the #
-# CoolProp thermodynamic library      #
-# written by Ian Bell. The following  #
-# section contains project and        #
-# version information.                #
-#######################################
-
-# Project name
-set(project_name "CoolProp")
-set(app_name ${project_name})
-project(${project_name})
-
-# Project version
-set (COOLPROP_VERSION_MAJOR 6)
-set (COOLPROP_VERSION_MINOR 2)
-set (COOLPROP_VERSION_PATCH 1)
-set (COOLPROP_VERSION_REVISION)
-set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
-message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
-
-string ( TIMESTAMP COOLPROP_YEAR 2010-%Y )
-#set ( COOLPROP_YEAR "2010-2016" )
-set ( COOLPROP_PUBLISHER "The CoolProp developers")
 
 #######################################
 #           BUILD OPTIONS             #
@@ -106,10 +79,90 @@ option (COOLPROP_MSVC_DYNAMIC
 option (COOLPROP_MSVC_DEBUG
        "Link the debug version of Microsoft Standard library to the debug builds."
        ON)
-       
-option (DARWIN_USE_LIBCPP
-        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
-        OFF)
+
+#option (DARWIN_USE_LIBCPP
+#        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
+#        ON)
+
+# see 
+# https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
+# https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
+# https://github.com/pandas-dev/pandas/pull/24274/files
+# https://github.com/explosion/thinc/pull/84/files
+# https://github.com/jlfaucher/builder/commit/d144d3a695949f90c5e2acff4dfd94fdcf8dcdfa
+# https://github.com/CoolProp/CoolProp/issues/1778
+# https://gitlab.kitware.com/cmake/cmake/issues/18396
+if (DEFINED DARWIN_USE_LIBCPP)
+  if(DARWIN_USE_LIBCPP)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libc++")
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.9")
+    set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lc++")
+    set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -nodefaultlibs")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
+  else(DARWIN_USE_LIBCPP)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.5" CACHE STRING "Minimum OS X deployment version") # Default is 10.7
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -stdlib=libstdc++")
+    set(OSX_COMPILE_FLAGS "${OSX_COMPILE_FLAGS} -mmacosx-version-min=10.5")
+    set(OSX_LINK_FLAGS "${OSX_LINK_FLAGS} -lstdc++")
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
+  endif(DARWIN_USE_LIBCPP)
+  message(STATUS "DARWIN_USE_LIBCPP was set added some flags:")
+  message(STATUS "  OSX_COMPILE_FLAGS: ${OSX_COMPILE_FLAGS}")
+  message(STATUS "     OSX_LINK_FLAGS: ${OSX_LINK_FLAGS}")
+else (DEFINED DARWIN_USE_LIBCPP)
+  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    message(STATUS "OSX build detected:")
+    message(STATUS "  You might want to pass the -DDARWIN_USE_LIBCPP=ON/OFF parameter")
+    message(STATUS "  to enable or disable different C++ standard libraries.")
+    message(STATUS "  You can also specify the environment variable MACOSX_DEPLOYMENT_TARGET=10.9 to force clang builds.")
+  endif ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+endif (DEFINED DARWIN_USE_LIBCPP)
+
+#if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+#  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${OSX_COMPILE_FLAGS}")
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}${OSX_COMPILE_FLAGS}")
+#endif()
+# Alternatively you could use 
+# set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
+# set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
+
+
+#######################################
+#         PROJECT INFORMATION         #
+#-------------------------------------#
+# This CMakeLists.txt file is for the #
+# CoolProp thermodynamic library      #
+# written by Ian Bell. The following  #
+# section contains project and        #
+# version information.                #
+#######################################
+
+# Project name
+set(project_name "CoolProp")
+set(app_name ${project_name})
+project(${project_name})
+
+# Project version
+set (COOLPROP_VERSION_MAJOR 6)
+set (COOLPROP_VERSION_MINOR 3)
+set (COOLPROP_VERSION_PATCH 0)
+set (COOLPROP_VERSION_REVISION)
+set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
+message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
+
+string ( TIMESTAMP COOLPROP_YEAR 2010-%Y )
+#set ( COOLPROP_YEAR "2010-2016" )
+set ( COOLPROP_PUBLISHER "The CoolProp developers")
+
+# Add definitions to silence warnings in MSVC2017 related to shared ptr code.
+#if (MSVC_VERSION GREATER_EQUAL 1910 AND MSVC_VERSION LESS_EQUAL 1919) # OR MSVC_TOOLSET_VERSION EQUAL 141) # This requuires CMake >= 3.7
+#  add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING)
+#endif (MSVC_VERSION GREATER_EQUAL 1910 AND MSVC_VERSION LESS_EQUAL 1919)
+
+if (MSVC AND NOT(MSVC_VERSION LESS 1910) AND NOT(MSVC_VERSION GREATER 1919))
+  add_definitions(-D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING)
+endif ()
 
 IF ( COOLPROP_RELEASE AND COOLPROP_DEBUG )
   MESSAGE(FATAL_ERROR "You can only make a release OR and debug build.")
@@ -403,37 +456,26 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
       SET_PROPERTY (TARGET ${LIB_NAME} PROPERTY VERSION ${COOLPROP_VERSION})
       SET_PROPERTY (TARGET ${LIB_NAME} PROPERTY SOVERSION ${COOLPROP_VERSION_MAJOR})
     ENDIF()
-    # For Mac systems
-    IF ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-        IF (DARWIN_USE_LIBCPP)
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.6")
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -stdlib=libc++ -mmacosx-version-min=10.6")
-        ELSE()
-          # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -stdlib=libstdc++ -mmacosx-version-min=10.6")
-          SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY LINK_FLAGS " -stdlib=libstdc++ -mmacosx-version-min=10.6")
-        ENDIF()
-    ENDIF()
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
   ENDIF()
 
   target_link_libraries (${LIB_NAME} ${CMAKE_DL_LIBS})
 
-  # For windows systems
-
-  # Bug workaround for Eigen
+  # For windows systems, bug workaround for Eigen
   IF (MSVC90)
     MESSAGE(STATUS "EIGEN WORKAROUND ACTIVE!!")
     SET_PROPERTY(TARGET ${LIB_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -DEIGEN_DONT_VECTORIZE")
   ENDIF()
-  #
-  # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-  if (${COOLPROP_OSX_105_COMPATIBILITY})
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
-      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
-    endif()
+
+  # For mac systems, explicitly set the c++ libraries
+  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    if(DEFINED OSX_COMPILE_FLAGS)
+      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "${OSX_COMPILE_FLAGS}")
+    endif(DEFINED OSX_COMPILE_FLAGS)
+    if(DEFINED OSX_COMPILE_FLAGS)
+      set_target_properties(${LIB_NAME} PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "${OSX_LINK_FLAGS}")
+    endif(DEFINED OSX_COMPILE_FLAGS)
   endif()
 
   # Name mangling settings
@@ -801,6 +843,10 @@ endif()
 
 if (COOLPROP_OCTAVE_MODULE)
 
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(CMAKE_CXX_STANDARD 11)
+  endif()
+
   # Must have SWIG and Octave
   FIND_PACKAGE(SWIG REQUIRED)
   INCLUDE(${SWIG_USE_FILE})
@@ -829,15 +875,28 @@ if (COOLPROP_OCTAVE_MODULE)
 
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # We need to see which library to link with on OSX - clang++ or stdc++
-    execute_process(COMMAND "otool -L ${OCTAVE_OCTAVE_LIB} | grep libc++" OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG)
-    MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
-    string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
+    message(STATUS "OCTAVE_OCTAVE_LIBRARY = ${OCTAVE_OCTAVE_LIBRARY}")
+    if(${CMAKE_VERSION} VERSION_LESS "3.10.0")
+      execute_process(COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY} | grep libc++" OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG)
+      MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
+      string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
+    else()
+      execute_process(
+        COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY}" 
+        COMMAND "grep libc++" 
+        OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG
+        ERROR_VARIABLE COOLPROP_OCTAVE_USING_CLANG
+      )
+      MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
+      string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
+    endif()
+    
     STRING(LENGTH "${COOLPROP_OCTAVE_USING_CLANG}" LEN)
     if (${LEN} GREATER 0)
-      message(STATUS "Using -stdlib=libc++")
+      message(STATUS "Using -stdlib=libc++, this might override the settings based on DARWIN_USE_LIBCPP")
       SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
     else()
-      message(STATUS "Using -stdlib=libstdc++")
+      message(STATUS "Using -stdlib=libstdc++, this might override the settings based on DARWIN_USE_LIBCPP")
       SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libstdc++")
     endif()
   endif()
@@ -897,6 +956,9 @@ if (COOLPROP_CSHARP_MODULE)
     if (MSVC)
       modify_msvc_flags("/MT") # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
     endif()
+  endif()
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set_target_properties(CoolProp PROPERTIES PREFIX "lib")
   endif()
 
   add_dependencies (${app_name} generate_headers)
@@ -986,6 +1048,54 @@ if (COOLPROP_VBDOTNET_MODULE)
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/VB.net_VS2012_example.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/VB.NET)
+
+endif()
+
+if (COOLPROP_R_MODULE)
+    IF (WIN32 AND MSVC)
+        MESSAGE(FATAL_ERROR "Must use MinGW Makefiles generator on windows")
+    ENDIF()
+
+    # Must have SWIG
+    FIND_PACKAGE(SWIG REQUIRED)
+    INCLUDE(${SWIG_USE_FILE})
+
+    # Define which headers the swig wrapper is dependent on
+    SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES} )
+
+    FIND_PACKAGE(R REQUIRED)
+    include_directories(${R_INCLUDE_DIRS})
+
+    link_directories(${R_BIN_OUT})
+    if (NOT MSVC)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -m${BITNESS}")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m${BITNESS}")
+    endif()
+
+    add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
+
+    # Set properties before adding module
+    set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
+    SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${COOLPROP_SWIG_OPTIONS}" CPLUSPLUS ON)
+
+    SWIG_ADD_MODULE(CoolProp r ${I_FILE} ${APP_SOURCES})
+    SWIG_LINK_LIBRARIES(CoolProp "${R_LIBRARY}")
+
+    # No lib prefix for the shared library
+    set_target_properties(CoolProp PROPERTIES PREFIX "")
+
+    add_dependencies (CoolProp generate_headers)
+    add_custom_command(TARGET CoolProp
+                       POST_BUILD
+                       COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
+                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+    install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
+    install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
+    install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
+
+    enable_testing()
+
+    add_test(R_test "${R_BIN_DIR}/Rscript" Example.R)
 
 endif()
 
@@ -1160,314 +1270,6 @@ function(JOIN VALUES GLUE OUTPUT)
   set (${OUTPUT} "${_TMP_STR}" PARENT_SCOPE)
 endfunction()
 
-if (COOLPROP_SCILAB_SWIG_MODULE)
-
-  # Must have SWIG
-  FIND_PACKAGE(SWIG REQUIRED)
-  INCLUDE(${SWIG_USE_FILE})
-
-  IF( "$ENV{SCILAB_ROOT}" STREQUAL "" )
-      MESSAGE(STATUS "SCILAB_ROOT environment variable not set." )
-      MESSAGE(STATUS "In Linux this can be done in your user .bashrc file by appending the corresponding line, e.g:" )
-      MESSAGE(STATUS "export SCILAB_ROOT=/usr/local/SCILAB" )
-      MESSAGE(STATUS "In Windows this can be done by adding system variable, e.g:" )
-      MESSAGE(STATUS "SCILAB_ROOT=D:\\Program Files\\SCILAB" )
-  	MESSAGE(FATAL_ERROR "Quitting.")
-  endif()
-
-  SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
-  set(SCILAB_INCLUDE_PATH "$ENV{SCILAB_ROOT}/include")
-
-  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
-
-  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
-
-  include_directories(${SCILAB_INCLUDE_PATH})
-  include_directories(${SCILAB_INCLUDE_PATH}/scilab)
-
-  set(SWIG_OPTIONS "-nobuilder" "${COOLPROP_SWIG_OPTIONS}")
-  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
-
-  list(APPEND APP_SOURCES gw_CoolProp.c)
-  set_source_files_properties(gw_CoolProp.c PROPERTIES GENERATED TRUE)
-
-  SWIG_ADD_MODULE(CoolProp scilab ${I_FILE} ${APP_SOURCES})
-
-  add_dependencies (CoolProp generate_headers)
-
-  install (TARGETS ${app_name} DESTINATION "${CMAKE_INSTALL_PREFIX}/Scilab/${CMAKE_SYSTEM_NAME}_${BITNESS}bit")
-
-endif()
-
-# Use an auto-generated SWIG interface file
-if (COOLPROP_MATLAB_SWIGAUTOGENERATED)
-  find_package(Matlab REQUIRED)
-  IF(MATLAB_FOUND)
-      message(STATUS "MATLAB Found, MATLAB MEX will be compiled.")
-  ELSE(MATLAB_FOUND)
-      MESSAGE("MATLAB not found...nothing will be built.")
-  ENDIF(MATLAB_FOUND)
-  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
-  list (APPEND APP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
-  list (APPEND APP_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/CoolPropMATLAB_wrap.cxx)
-  add_library(CoolPropMATLAB_wrap SHARED ${APP_SOURCES})
-  target_link_libraries(CoolPropMATLAB_wrap ${MATLAB_LIBRARIES})
-
-  if(WIN32) # 32-bit or 64-bit mex
-    modify_msvc_flags("/MT") # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
-    if (CMAKE_CL_64)
-        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
-    else()
-        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
-    endif()
-    add_custom_command(TARGET CoolPropMATLAB_wrap
-                       POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoolPropMATLAB_wrap> .
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  else()
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        if (${BITNESS} EQUAL "32")
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexmaci32 PREFIX "")
-        elseif((${BITNESS} EQUAL "64"))
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexmaci64 PREFIX "")
-        endif()
-    else()
-        if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
-        else()
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
-        endif()
-    endif()
-  endif()
-endif()
-
-if (COOLPROP_MATLAB_SWIG_MODULE)
-
-  # Must have SWIG
-  FIND_PACKAGE(SWIG REQUIRED)
-  INCLUDE(${SWIG_USE_FILE})
-
-  find_package(Matlab REQUIRED)
-
-  IF(MATLAB_FOUND)
-      message(STATUS "MATLAB Found, MATLAB MEX will be compiled.")
-  ELSE(MATLAB_FOUND)
-      MESSAGE("MATLAB not found...nothing will be built.")
-  ENDIF(MATLAB_FOUND)
-
-  add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
-
-  set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
-
-  list (APPEND APP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def) # To export mexFunction
-
-  SET(SWIG_MODULE_CoolPropMATLAB_wrap_EXTRA_DEPS ${SWIG_DEPENDENCIES}  )
-
-  set(SWIG_OPTIONS "${COOLPROP_SWIG_OPTIONS}")
-  string(REPLACE " " ";" SWIG_OPTIONS "${SWIG_OPTIONS}")
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${SWIG_OPTIONS}")
-  SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES CPLUSPLUS ON)
-
-  SWIG_ADD_MODULE(CoolPropMATLAB_wrap matlab ${I_FILE} ${APP_SOURCES})
-  SWIG_LINK_LIBRARIES(CoolPropMATLAB_wrap ${MATLAB_LIBRARIES})
-
-  add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
-  add_definitions(/DMX_COMPAT_32)
-
-  add_custom_command(TARGET CoolPropMATLAB_wrap
-                     POST_BUILD
-                     COMMAND 7z a "+CoolProp.7z" "+CoolProp"
-                     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  add_custom_command(TARGET CoolPropMATLAB_wrap
-                     POST_BUILD
-                     COMMAND python example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
-                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    add_custom_command(TARGET CoolPropMATLAB_wrap
-                       POST_BUILD
-                       COMMAND otool -L CoolPropMATLAB_wrap.mexmac*
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  endif()
-  if(WIN32) # 32-bit or 64-bit mex
-    modify_msvc_flags("/MT") # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
-
-    if (CMAKE_CL_64)
-        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexw64)
-        add_custom_command(TARGET CoolPropMATLAB_wrap
-                           PRE_BUILD
-                           COMMAND ${CMAKE_COMMAND} -E remove CoolPropMATLAB_wrap.mexw64
-                           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-    else()
-        SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES SUFFIX .mexw32)
-        add_custom_command(TARGET CoolPropMATLAB_wrap
-                           PRE_BUILD
-                           COMMAND ${CMAKE_COMMAND} -E remove CoolPropMATLAB_wrap.mexw32
-                           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-    endif()
-
-    add_custom_command(TARGET CoolPropMATLAB_wrap
-                       POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CoolPropMATLAB_wrap> .
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  else()
-    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        if (${BITNESS} EQUAL "32")
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexmaci32 PREFIX "")
-        elseif((${BITNESS} EQUAL "64"))
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexmaci64 PREFIX "")
-        endif()
-    else()
-        if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
-        else()
-            SET_TARGET_PROPERTIES(CoolPropMATLAB_wrap PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
-        endif()
-    endif()
-  endif()
-
-  # see https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
-  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -DEXTERNC -DCONVENTION= -m32")
-    #set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-stdlib=libstdc++ -mmacosx-version-min=10.6 -m32")
-  endif()
-
-  if (UNIX AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set_target_properties(CoolPropMATLAB_wrap PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS " -static")
-  endif()
-
-  add_dependencies (CoolPropMATLAB_wrap generate_headers)
-  if (COOLPROP_MATLAB_INSTALL_PREFIX)
-  else()
-    set(COOLPROP_MATLAB_INSTALL_PREFIX ${COOLPROP_INSTALL_PREFIX}/MATLAB)
-  endif()
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/+CoolProp.7z DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/SwigRef.m DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolPropsetup.m DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/Example.m DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
-  install (TARGETS CoolPropMATLAB_wrap DESTINATION ${COOLPROP_MATLAB_INSTALL_PREFIX})
-  enable_testing()
-  set(MATLAB_WAIT -wait)
-  if(UNIX)
-    set(MATLAB_WAIT)
-  endif()
-  # For some reason, the tests don't work on windows, though they should.
-  IF(WIN32)
-  ELSE()
-  if (BUILD_TESTING)
-  add_test(NAME MATLABtest
-           COMMAND $ENV{MATLAB_ROOT}/bin/matlab -nodesktop -nosplash -nojvm -nodisplay ${MATLAB_WAIT} -r "result = runtests('Example'); exit(result.Failed)" -logfile Example.out
-           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  endif()
-  ENDIF()
-endif()
-
-if (COOLPROP_R_MODULE)
-    IF (WIN32 AND MSVC)
-        MESSAGE(FATAL_ERROR "Must use MinGW Makefiles generator on windows")
-    ENDIF()
-
-    # Must have SWIG
-    FIND_PACKAGE(SWIG REQUIRED)
-    INCLUDE(${SWIG_USE_FILE})
-
-    # Define which headers the swig wrapper is dependent on
-    SET(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES} )
-
-    FIND_PACKAGE(R REQUIRED)
-    include_directories(${R_INCLUDE_DIRS})
-
-    link_directories(${R_BIN_OUT})
-    if (NOT MSVC)
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -m${BITNESS}")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -m${BITNESS}")
-    endif()
-
-    add_definitions(-DNO_ERROR_CATCHING) #disable internal error catching and allow swig to do the error catching itself
-
-    # Set properties before adding module
-    set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
-    SET_SOURCE_FILES_PROPERTIES(${I_FILE} PROPERTIES SWIG_FLAGS "${COOLPROP_SWIG_OPTIONS}" CPLUSPLUS ON)
-
-    SWIG_ADD_MODULE(CoolProp r ${I_FILE} ${APP_SOURCES})
-    SWIG_LINK_LIBRARIES(CoolProp "${R_LIBRARY}")
-
-    # No lib prefix for the shared library
-    set_target_properties(CoolProp PROPERTIES PREFIX "")
-
-    add_dependencies (CoolProp generate_headers)
-    add_custom_command(TARGET CoolProp
-                       POST_BUILD
-                       COMMAND python example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-    install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
-    install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
-    install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
-
-    enable_testing()
-
-    add_test(R_test "${R_BIN_DIR}/Rscript" Example.R)
-
-endif()
-
-if (COOLPROP_MATLAB_MODULE)
-
-  add_definitions(/DMATLAB_MEX_FILE) #define matlab macros
-  add_definitions(/DMX_COMPAT_32)
-
-  find_package(Matlab REQUIRED)
-
-  IF(MATLAB_FOUND)
-      message(STATUS "MATLAB Found, MATLAB MEX will be compiled.")
-  ELSE(MATLAB_FOUND)
-      MESSAGE("MATLAB not found...nothing will be built.")
-  ENDIF(MATLAB_FOUND)
-
-  # set up matlab libraries
-  INCLUDE_DIRECTORIES(${MATLAB_INCLUDE_DIR})
-  add_library(PropsSI SHARED ${APP_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/PropsSI.cpp)
-  add_library(HAPropsSI SHARED ${APP_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/Matlabdef.def ${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MATLAB/HAProps.cpp)
-  target_link_libraries(PropsSI ${MATLAB_LIBRARIES})
-  target_link_libraries(HAPropsSI ${MATLAB_LIBRARIES})
-
-  set_target_properties(PropsSI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
-  set_target_properties(HAPropsSI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}) #Put .lib in this directory so it won't get installed
-
-  if(WIN32) # 32-bit or 64-bit mex
-    if (CMAKE_CL_64)
-        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexw64)
-        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexw64)
-    else()
-        SET_TARGET_PROPERTIES(PropsSI PROPERTIES SUFFIX .mexw32)
-        SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES SUFFIX .mexw32)
-    endif()
-  else()
-  	if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        if (${BITNESS} EQUAL "32")
-		    SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexmaci32 PREFIX "")
-    	    SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexmaci32 PREFIX "")
-  		elseif((${BITNESS} EQUAL "64"))
-	        SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexmaci64 PREFIX "")
-    	    SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexmaci64 PREFIX "")
-  		endif()
-    else()
-    	if (CMAKE_SIZEOF_VOID_P MATCHES "8")
-        	SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
-        	SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexa64 PREFIX "")
-    	else()
-        	SET_TARGET_PROPERTIES(PropsSI PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
-        	SET_TARGET_PROPERTIES(HAPropsSI PROPERTIES PREFIX "" SUFFIX .mexglx PREFIX "")
-    	endif()
-    endif()
-  endif()
-  add_dependencies (PropsSI generate_headers)
-  add_dependencies (HAPropsSI generate_headers)
-
-  install (TARGETS PropsSI HAPropsSI DESTINATION ${CMAKE_INSTALL_PREFIX}/MATLAB/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
-endif()
-
 if (COOLPROP_PYTHON_BINARIES)
   if (WIN32)
     set(COOLPROP_PYTHON_BINARY_VERSIONS  bdist_wheel --dist-dir ${CMAKE_INSTALL_PREFIX}/Python bdist_wininst --dist-dir ${CMAKE_INSTALL_PREFIX}/Python)
@@ -1490,6 +1292,56 @@ if (COOLPROP_PYTHON_PYPI)
                     )
 endif()
 
+if (COOLPROP_LIBREOFFICE_MODULE)
+
+  IF( "${LO_PROGRAM_PATH}" STREQUAL "")
+        message(FATAL_ERROR "You must provide the path to LibreOffice programs, something like -DLO_PROGRAM_PATH=/usr/lib/libreoffice/program")
+  else()
+        message(STATUS "LO_PROGRAM_PATH: ${LO_PROGRAM_PATH}")
+  endif()
+
+  IF( "${LO_SDK_PATH}" STREQUAL "")
+        message(FATAL_ERROR "You must provide the path to LibreOffice SDK, something like -DLO_SDK_PATH=/usr/lib/libreoffice/sdk")
+  else()
+        message(STATUS "LO_SDK_PATH: ${LO_SDK_PATH}")
+  endif()
+
+  add_custom_target(CoolPropLibreOfficeAddin)
+
+  # set paths for LibreOffice tools
+  set(LO_IDLC "${LO_SDK_PATH}/bin/idlc")
+  set(LO_REGMERGE "${LO_PROGRAM_PATH}/regmerge")
+  set(COOLPROP_LIBREOFFICE_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/LibreOffice")
+
+  # set version strings for LibreOffice extension
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/src/description.xml.in" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/description.xml")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/src/scripts/scripts.py.in" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/scripts/scripts.py")
+
+  add_custom_command(
+    TARGET CoolPropLibreOfficeAddin
+    # copy source files to build directory
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/src" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/description.xml.in" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/scripts/scripts.py.in"
+    # rebuild the registry database file (rdb)
+    COMMAND ${LO_IDLC} XCoolProp.idl -I. -I${LO_SDK_PATH}/idl -O. XCoolProp.idl
+		COMMAND ${LO_REGMERGE} XCoolProp.rdb /UCR XCoolProp.urd
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove" XCoolProp.urd
+    # download and bundle latest Python certifi package (py2.py3, platform independent)
+    COMMAND pip download certifi -d pythonpath
+    COMMAND 7z x "./pythonpath/certifi-*.whl" -y -opythonpath
+    # add license file
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/license"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/license/."
+    # package complete folder to extension
+    COMMAND 7z a -tzip "../CoolProp.oxt"
+    # copy example spreadsheet file
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/TestLibreOffice.ods" "${COOLPROP_LIBREOFFICE_TMP_DIR}/."
+    WORKING_DIRECTORY ${COOLPROP_LIBREOFFICE_TMP_DIR}/src
+    COMMENT "Building LibreOffice wrapper"
+    VERBATIM
+  )
+endif()
+
 if (COOLPROP_JAVASCRIPT_MODULE)
   # cmake -DCOOLPROP_JAVASCRIPT_MODULE=ON
   #       -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Platform/Emscripten.cmake
@@ -1503,6 +1355,9 @@ if (COOLPROP_JAVASCRIPT_MODULE)
 
   add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
   add_definitions(-s ASSERTIONS=1)
+  add_definitions(-s SAFE_HEAP=1)
+  add_definitions(-s SAFE_HEAP_LOG=1)
+  add_definitions(-s WASM=1)
   add_definitions(--bind)
   # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
   if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
@@ -1511,8 +1366,8 @@ if (COOLPROP_JAVASCRIPT_MODULE)
     set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 1")
   endif()
 
-  set(CMAKE_EXE_LINKER_FLAGS "--bind ${EMSCRIPTEN_INIT_FLAG} -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0 ")
-  set(CMAKE_BUILD_TYPE Release)
+  set(CMAKE_EXE_LINKER_FLAGS "--bind ${EMSCRIPTEN_INIT_FLAG} -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0")
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/emscripten_interface.cxx")
   include_directories(${APP_INCLUDE_DIRS})
@@ -1585,11 +1440,12 @@ if (COOLPROP_SMATH_MODULE)
 
 endif()
 
+# Use like cmake ..\CoolProp.git -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
 if (COOLPROP_MY_MAIN)
   list(APPEND APP_SOURCES "${COOLPROP_MY_MAIN}")
   add_executable        (Main ${APP_SOURCES})
   add_dependencies      (Main generate_headers)
-if(UNIX)
+  if(UNIX)
     target_link_libraries (Main ${CMAKE_DL_LIBS})
   endif()
 endif()
@@ -1617,7 +1473,7 @@ if (COOLPROP_MAIN_MODULE)
     set_property(TARGET Main PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
   endif()
 
-if(UNIX)
+  if(UNIX)
     target_link_libraries (Main ${CMAKE_DL_LIBS})
   endif()
 endif()

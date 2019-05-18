@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dlg:window PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "dialog.dtd">
+<dlg:window xmlns:dlg="http://openoffice.org/2000/dialog" xmlns:script="http://openoffice.org/2000/script" dlg:id="InstallCoolProp" dlg:left="139" dlg:top="84" dlg:width="260" dlg:height="185" dlg:closeable="true" dlg:moveable="true" dlg:withtitlebar="false">
+  <dlg:bulletinboard>
+    <dlg:text dlg:id="InstallCoolPropLabel" dlg:tab-index="0" dlg:left="12" dlg:top="19" dlg:width="140" dlg:height="13" dlg:value="Download and install CoolProp python package"/>
+    <dlg:button dlg:id="InstallCoolPropButton" dlg:tab-index="1" dlg:left="165" dlg:top="16" dlg:width="52" dlg:height="14" dlg:value="Install CoolProp">
+      <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:CoolProp.oxt|scripts|scripts.py$install_coolprop?language=Python&amp;location=user:uno_packages" script:language="Script"/>
+    </dlg:button>
+    <dlg:text dlg:id="HelpTextLabel" dlg:tab-index="2" dlg:left="12" dlg:top="59" dlg:width="230" dlg:height="45" dlg:value="The CoolProp AddIn for LibreOffice uses the CoolProp Python package internally. If this package is not already available on your system, you can install it by clicking the button above. The python package will then be downloaded from pypi.org and installed locally in the LibreOffice CoolProp extension folder." dlg:multiline="true"/>
+  </dlg:bulletinboard>
+</dlg:window>

@@ -4,7 +4,7 @@ using Compat
 
 errcode = Ref{Clong}(0)
 const buffer_length = 20000
-message_buffer = Array(UInt8, buffer_length)
+message_buffer = Array{UInt8}(undef, buffer_length)
 
 const inputs_to_get_global_param_string = ["version", "gitrevision", "errstring", "warnstring", "FluidsList", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list", "parameter_list", "predefined_mixtures", "HOME", "cubic_fluids_schema"]
 
@@ -31,11 +31,11 @@ julia> PropsSI("n-Butane", "rhomolar_critical")
 CoolProp::Props1SI(std::string, std::string)
 """
 function PropsSI(fluid::AbstractString, output::AbstractString)
-  val = ccall( (:Props1SI, "CoolProp"), Cdouble, (Cstring, Cstring), fluid, output)
-  if val == Inf
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return val
+    val = ccall( (:Props1SI, "CoolProp"), Cdouble, (Cstring, Cstring), fluid, output)
+    if val == Inf
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return val
 end
 
 """
@@ -74,11 +74,11 @@ julia> PropsSI("Dmass", "T", 300, "P", 101325, "100-41-4[0.5]&106-42-3[0.5]") # 
 CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
 """
 function PropsSI(output::AbstractString, name1::AbstractString, value1::Real, name2::AbstractString, value2::Real, fluid::AbstractString)
-  val = ccall( (:PropsSI, "CoolProp"), Cdouble, (Cstring, Cstring, Cdouble, Cstring, Cdouble, Cstring), output, name1, value1, name2, value2, fluid)
-  if val == Inf
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return val
+    val = ccall( (:PropsSI, "CoolProp"), Cdouble, (Cstring, Cstring, Cdouble, Cstring, Cdouble, Cstring), output, name1, value1, name2, value2, fluid)
+    if val == Inf
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return val
 end
 
 """
@@ -111,12 +111,12 @@ julia> PhaseSI("T", 300, "P", 3541, "Water")
 CoolProp::PhaseSI(const std::string &, double, const std::string &, double, const std::string&)
 """
 function PhaseSI(name1::AbstractString, value1::Real, name2::AbstractString, value2::Real, fluid::AbstractString)
-  val = ccall( (:PhaseSI, "CoolProp"), Int32, (Cstring, Cdouble, Cstring, Cdouble, Cstring, Ptr{UInt8}, Int), name1, value1, name2, value2, fluid, message_buffer::Array{UInt8, 1}, buffer_length)
-  val = unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
-  if val == ""
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return val
+    val = ccall( (:PhaseSI, "CoolProp"), Int32, (Cstring, Cdouble, Cstring, Cdouble, Cstring, Ptr{UInt8}, Int), name1, value1, name2, value2, fluid, message_buffer::Array{UInt8, 1}, buffer_length)
+    val = unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
+    if val == ""
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return val
 end
 
 #=No sample no test
@@ -136,7 +136,7 @@ CoolProp::set_departure_functions(const char * string_data, long *errcode, char 
 """
 function set_departure_functions(string_data::AbstractString)
   errcode = ref{Clong}(0);
-  ccall( (:set_departure_functions, "CoolProp"), Void, (Cstring, Ptr{Clong}, Ptr{UInt8}, Int), string_data, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+  ccall( (:set_departure_functions, "CoolProp"), Nothing, (Cstring, Ptr{Clong}, Ptr{UInt8}, Int), string_data, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
   if errcode != 0
     error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1}))))
   end
@@ -182,11 +182,11 @@ set_reference_stateS(const std::string& FluidName, const std::string& reference_
 The changing of the reference state should be part of the initialization of your program, and it is not recommended to change the reference state during the course of making calculations
 """
 function set_reference_state(fluid::AbstractString, reference_state::AbstractString)
-  val = ccall( (:set_reference_stateS, "CoolProp"), Cint, (Cstring, Cstring), fluid, reference_state)
-  if val == 0
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return val
+    val = ccall( (:set_reference_stateS, "CoolProp"), Cint, (Cstring, Cstring), fluid, reference_state)
+    if val == 0
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return val
 end
 
 """
@@ -205,11 +205,11 @@ Set the reference state based on a thermodynamic state point specified by temper
 set_reference_stateD(const char* Ref, double T, double rhomolar, double hmolar0, double smolar0)
 """
 function set_reference_state(fluid::AbstractString, T::Real, rhomolar::Real, hmolar0::Real, smolar0::Real)
-  val = ccall( (:set_reference_stateD, "CoolProp"), Cint, (Cstring, Cdouble, Cdouble, Cdouble, Cdouble), fluid, T, rhomolar, hmolar0, smolar0)
-  if val == 0
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return val
+    val = ccall( (:set_reference_stateD, "CoolProp"), Cint, (Cstring, Cdouble, Cdouble, Cdouble, Cdouble), fluid, T, rhomolar, hmolar0, smolar0)
+    if val == 0
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return val
 end
 
 """
@@ -232,11 +232,11 @@ julia> saturation_ancillary("R410A","I",1,"T", 300)
 double saturation_ancillary(const char* fluid_name, const char* output, int Q, const char* input, double value);
 """
 function saturation_ancillary(fluid_name::AbstractString, output::AbstractString, quality::Integer, input::AbstractString, value::Real)
-  val = ccall( (:saturation_ancillary, "CoolProp"), Cdouble, (Cstring, Cstring, Cint, Cstring, Cdouble), fluid_name, output, quality, input, value)
-  if val == Inf
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return val
+    val = ccall( (:saturation_ancillary, "CoolProp"), Cdouble, (Cstring, Cstring, Cint, Cstring, Cdouble), fluid_name, output, quality, input, value)
+    if val == Inf
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return val
 end
 
 # ---------------------------------
@@ -260,8 +260,8 @@ ALTERNATIVE_REFPROP_HMX_BNC_PATH | "" | An alternative path to the HMX.BNC file.
 VTPR_UNIFAC_PATH | "" | The path to the directory containing the UNIFAC JSON files.  Should be slash terminated
 """
 function set_config(key::AbstractString, val::AbstractString)
-  ccall( (:set_config_string, "CoolProp"), Void, (Cstring, Cstring), key, val)
-  return get_global_param_string("errstring")
+    ccall( (:set_config_string, "CoolProp"), Nothing, (Cstring, Cstring), key, val)
+    return get_global_param_string("errstring")
 end
 
 """
@@ -281,8 +281,8 @@ R_U_CODATA |  8.3144598 | The value for the ideal gas constant in J/mol/K accord
 SPINODAL_MINIMUM_DELTA |  0.5 | The minimal delta to be used in tracing out the spinodal; make sure that the EOS has a spinodal at this value of delta=rho/rho_r
 """
 function set_config(key::AbstractString, val::Real)
-  ccall( (:set_config_double, "CoolProp"), Void, (Cstring, Cdouble), key, val)
-  return get_global_param_string("errstring")
+    ccall( (:set_config_double, "CoolProp"), Nothing, (Cstring, Cdouble), key, val)
+    return get_global_param_string("errstring")
 end
 
 """
@@ -311,8 +311,8 @@ OVERWRITE_DEPARTURE_FUNCTION |  false | If true, and a departure function to be 
 OVERWRITE_BINARY_INTERACTION |  false | If true, and a pair of binary interaction pairs to be added is already there, rather than not adding the binary interaction pair (and probably throwing an exception), overwrite it
 """
 function set_config(key::AbstractString, val::Bool)
-  ccall( (:set_config_bool, "CoolProp"), Void, (Cstring, UInt8), key, val)
-  return get_global_param_string("errstring")
+    ccall( (:set_config_bool, "CoolProp"), Nothing, (Cstring, UInt8), key, val)
+    return get_global_param_string("errstring")
 end
 
 export CoolProp_parameters, CoolProp_fluids;
@@ -323,30 +323,30 @@ $(isfile(abspath(@__FILE__, "..", "parameters.table")) ? readstring(abspath(@__F
 """
 const CoolProp_parameters = "Type `?CoolProp_arameters` to get a list of all CoolProp parameters."
 buildparameters() = begin
-  logf = open("parameters.table", "w");
-  println(logf, "Paramerer |Description |Unit |Comment ");
-  println(logf, ":---------|:-----------|:----|:-------" );
-  counter = 0;
-  longunits = Set();
-  for p in coolpropparameters
-    longunit = get_parameter_information_string(p, "long") * " | " * get_parameter_information_string(p, "units");
-    note = "";
-    if (!in(longunit, longunits))
-      push!(longunits, longunit);
-    else
-      note = " *Duplicated* "
+    logf = open("parameters.table", "w");
+    println(logf, "Paramerer |Description |Unit |Comment ");
+    println(logf, ":---------|:-----------|:----|:-------" );
+    counter = 0;
+    longunits = Set();
+    for p in coolpropparameters
+        longunit = get_parameter_information_string(p, "long") * " | " * get_parameter_information_string(p, "units");
+        note = "";
+        if (!in(longunit, longunits))
+            push!(longunits, longunit);
+        else
+        note = " *Duplicated* "
+        end
+        for fluid in coolpropfluids
+            try
+                res = ("$(PropsSI(p, fluid))");
+                note *= " **Constant Property** "
+                break;
+            catch err
+            end
+        end
+        println(logf, "$p" * " | " * longunit * " | " * note);
     end
-    for fluid in coolpropfluids
-      try
-        res = ("$(PropsSI(p, fluid))");
-        note *= " **Constant Property** "
-        break;
-      catch err
-      end
-    end
-    println(logf, "$p" * " | " * longunit * " | " * note);
-  end
-  close(logf);
+    close(logf);
 end
 """
 # CoolProp fluids table, to build run `CoolProp.buildfluids()`
@@ -355,23 +355,23 @@ $(isfile(abspath(@__FILE__, "..", "fluids.table")) ? readstring(abspath(@__FILE_
 """
 const CoolProp_fluids = "Type `?CoolProp_fluids` to get a list of all CoolProp fluids."
 buildfluids() = begin
-  logf = open("fluids.table", "w");
-  println(logf, "ID |Name |Alias |CAS |Pure |Formula |BibTeX ");
-  println(logf, ":--|:----|:-----|:---|:----|:-------|:------");
-  id = 0;
-  for fluid in coolpropfluids
-    id+=1;
-    print(logf, "$id | $fluid | $(get_fluid_param_string(fluid, "aliases"))");
-    print(logf, " | $(get_fluid_param_string(fluid, "CAS"))");
-    pure = get_fluid_param_string(fluid, "pure");
-    print(logf, " | $pure");
-    print(logf, " | $(get_fluid_param_string(fluid, "formula")) | ");
-    for bi in ["BibTeX-CONDUCTIVITY", "BibTeX-EOS", "BibTeX-CP0", "BibTeX-SURFACE_TENSION","BibTeX-MELTING_LINE","BibTeX-VISCOSITY"]
-      print(logf, " $bi:$(get_fluid_param_string(fluid, bi))");
+    logf = open("fluids.table", "w");
+    println(logf, "ID |Name |Alias |CAS |Pure |Formula |BibTeX ");
+    println(logf, ":--|:----|:-----|:---|:----|:-------|:------");
+    id = 0;
+    for fluid in coolpropfluids
+        id+=1;
+        print(logf, "$id | $fluid | $(get_fluid_param_string(fluid, "aliases"))");
+        print(logf, " | $(get_fluid_param_string(fluid, "CAS"))");
+        pure = get_fluid_param_string(fluid, "pure");
+        print(logf, " | $pure");
+        print(logf, " | $(get_fluid_param_string(fluid, "formula")) | ");
+        for bi in ["BibTeX-CONDUCTIVITY", "BibTeX-EOS", "BibTeX-CP0", "BibTeX-SURFACE_TENSION","BibTeX-MELTING_LINE","BibTeX-VISCOSITY"]
+            print(logf, " $bi:$(get_fluid_param_string(fluid, bi))");
+        end
+        print(logf, "\n");
     end
-    print(logf, "\n");
-  end
-  close(logf);
+    close(logf);
 end
 # ---------------------------------
 #       Information functions
@@ -389,11 +389,11 @@ ref CoolProp::get_global_param_string
 * `key`: A string represents parameter name, could be one of $inputs_to_get_global_param_string
 """
 function get_global_param_string(key::AbstractString)
-  val = ccall( (:get_global_param_string, "CoolProp"), Clong, (Cstring, Ptr{UInt8}, Int), key, message_buffer::Array{UInt8, 1}, buffer_length)
-  if val == 0
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
+    val = ccall( (:get_global_param_string, "CoolProp"), Clong, (Cstring, Ptr{UInt8}, Int), key, message_buffer::Array{UInt8, 1}, buffer_length)
+    if val == 0
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
 end
 
 """
@@ -418,16 +418,16 @@ julia> get_parameter_information_string("HMOLAR", "units")
 A tabular output for this function is available with `?CoolProp_parameters`
 """
 function get_parameter_information_string(key::AbstractString, outtype::AbstractString)
-  message_buffer[1:length(outtype)+1] = [Vector{UInt8}(outtype); 0x00]
-  val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Cstring, Ptr{UInt8}, Int), key, message_buffer::Array{UInt8, 1}, buffer_length)
-  if val == 0
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
+    message_buffer[1:length(outtype)+1] = [Vector{UInt8}(outtype); 0x00]
+    val = ccall( (:get_parameter_information_string, "CoolProp"), Clong, (Cstring, Ptr{UInt8}, Int), key, message_buffer::Array{UInt8, 1}, buffer_length)
+    if val == 0
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
 end
 
 function get_parameter_information_string(key::AbstractString)
-  return get_parameter_information_string(key, "long")
+    return get_parameter_information_string(key, "long")
 end
 
 """
@@ -453,11 +453,11 @@ ParamName                    | Description
 A tabular output for this function is available with `?CoolProp_fluids`
 """
 function get_fluid_param_string(fluid::AbstractString, param::AbstractString)
-  val = ccall( (:get_fluid_param_string, "CoolProp"), Clong, (Cstring, Cstring, Ptr{UInt8}, Int), fluid, param, message_buffer::Array{UInt8, 1}, buffer_length)
-  if val == 0
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
+    val = ccall( (:get_fluid_param_string, "CoolProp"), Clong, (Cstring, Cstring, Ptr{UInt8}, Int), fluid, param, message_buffer::Array{UInt8, 1}, buffer_length)
+    if val == 0
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer::Array{UInt8, 1})))
 end
 
 """
@@ -466,7 +466,7 @@ end
 Convert from degrees Fahrenheit to Kelvin (useful primarily for testing).
 """
 function F2K(tf::Real)
-  return ccall( (:F2K, "CoolProp"), Cdouble, (Cdouble,), tf)
+    return ccall( (:F2K, "CoolProp"), Cdouble, (Cdouble,), tf)
 end
 
 """
@@ -475,7 +475,7 @@ end
 Convert from Kelvin to degrees Fahrenheit (useful primarily for testing).
 """
 function K2F(tk::Real)
-  return ccall( (:K2F, "CoolProp"), Cdouble, (Cdouble,), tk)
+    return ccall( (:K2F, "CoolProp"), Cdouble, (Cdouble,), tk)
 end
 
 """
@@ -487,11 +487,11 @@ Get the index as a long for a parameter "T", "P", etc, for `abstractstate_keyed_
 * `param`: A string represents parameter name, to see full list check "Table of string inputs to PropsSI function": http://www.coolprop.org/coolprop/HighLevelAPI.html#parameter-table, or simply type `get_global_param_string("parameter_list")`
 """
 function get_param_index(param::AbstractString)
-  val = ccall( (:get_param_index, "CoolProp"), Clong, (Cstring,), param)
-  if val == -1
-    error("CoolProp: Unknown parameter: ", param)
-  end
-  return val
+    val = ccall( (:get_param_index, "CoolProp"), Clong, (Cstring,), param)
+    if val == -1
+        error("CoolProp: Unknown parameter: ", param)
+    end
+    return val
 end
 
 """
@@ -547,11 +547,11 @@ julia> get_input_pair_index("PT_INPUTS")
 ```
 """
 function get_input_pair_index(pair::AbstractString)
-  val = ccall( (:get_input_pair_index, "CoolProp"), Clong, (Cstring,), pair)
-  if val == -1
-    error("CoolProp: Unknown input pair: ", pair)
-  end
-  return val
+    val = ccall( (:get_input_pair_index, "CoolProp"), Clong, (Cstring,), pair)
+    if val == -1
+        error("CoolProp: Unknown input pair: ", pair)
+    end
+    return val
 end
 const coolpropparameters = map(Compat.String, split(get_global_param_string("parameter_list"),','));
 const coolpropfluids = map(Compat.String, split(get_global_param_string("FluidsList"),','));
@@ -569,7 +569,7 @@ Get the debug level.
 Level The level of the verbosity for the debugging output (0-10) 0: no debgging output
 """
 function get_debug_level()
-  ccall( (:get_debug_level, "CoolProp"), Cint, () )
+    ccall( (:get_debug_level, "CoolProp"), Cint, () )
 end
 
 """
@@ -581,7 +581,7 @@ Set the debug level.
 * `level::Integer`: The level of the verbosity for the debugging output (0-10) 0: no debgging output
 """
 function set_debug_level(level::Integer) # change ::Int to ::Integer to make set_debug_level(get_debug_level()) works on different machine
-  ccall( (:set_debug_level, "CoolProp"), Void, (Cint,), level)
+    ccall( (:set_debug_level, "CoolProp"), Nothing, (Cint,), level)
 end
 
 # ---------------------------------
@@ -646,11 +646,11 @@ julia> T = HAPropsSI("T", "H", h, "R", 1.0, "P", 101325)
 HumidAir::HAPropsSI(const char* OutputName, const char* Input1Name, double Input1, const char* Input2Name, double Input2, const char* Input3Name, double Input3);
 """
 function HAPropsSI(output::AbstractString, name1::AbstractString, value1::Real, name2::AbstractString, value2::Real, name3::AbstractString, value3::Real)
-  val = ccall( (:HAPropsSI, "CoolProp"), Cdouble, (Cstring, Cstring, Cdouble, Cstring, Cdouble, Cstring, Cdouble), output, name1, value1, name2, value2, name3, value3)
-  if val == Inf
-    error("CoolProp: ", get_global_param_string("errstring"))
-  end
-  return val
+    val = ccall( (:HAPropsSI, "CoolProp"), Cdouble, (Cstring, Cstring, Cdouble, Cstring, Cdouble, Cstring, Cdouble), output, name1, value1, name2, value2, name3, value3)
+    if val == Inf
+        error("CoolProp: ", get_global_param_string("errstring"))
+    end
+    return val
 end
 
 """
@@ -668,20 +668,20 @@ HumidAir::cair_sat(double);
 Equals partial derivative of enthalpy with respect to temperature at constant relative humidity of 100 percent and pressure of 1 atmosphere.
 """
 function cair_sat(t::Real)
-  val = ccall( (:cair_sat, "CoolProp"), Cdouble, (Cdouble, ), t)
-  return val;
+    val = ccall( (:cair_sat, "CoolProp"), Cdouble, (Cdouble, ), t)
+    return val;
 end
 
 function raise(errcode, message_buffer)
-  if errcode[] != 0
-    if errcode[] == 1
-      error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
-    elseif errcode[] == 2
-      error("CoolProp: message buffer too small")
-    else # == 3
-      error("CoolProp: unknown error")
+    if errcode[] != 0
+        if errcode[] == 1
+            error("CoolProp: ", unsafe_string(convert(Ptr{UInt8}, pointer(message_buffer))))
+        elseif errcode[] == 2
+            error("CoolProp: message buffer too small")
+        else # == 3
+            error("CoolProp: unknown error")
+        end
     end
-  end
 end
 # ---------------------------------
 #        Low-level access
@@ -706,9 +706,9 @@ julia> PR = AbstractState_factory("PR", "R245fa");
 ```
 """
 function AbstractState_factory(backend::AbstractString, fluids::AbstractString)
-  AbstractState = ccall( (:AbstractState_factory, "CoolProp"), Clong, (Cstring, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), backend, fluids, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return AbstractState
+    AbstractState = ccall( (:AbstractState_factory, "CoolProp"), Clong, (Cstring, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), backend, fluids, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return AbstractState
 end
 
 """
@@ -720,9 +720,9 @@ Release a state class generated by the low-level interface wrapper.
 * `handle`: The integer handle for the state class stored in memory
 """
 function AbstractState_free(handle::Clong)
-  ccall( (:AbstractState_free, "CoolProp"), Void, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_free, "CoolProp"), Nothing, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -747,9 +747,9 @@ julia> AbstractState_free(handle);
 ```
 """
 function AbstractState_set_fractions(handle::Clong, fractions::Array{Float64})
-  ccall( (:AbstractState_set_fractions, "CoolProp"), Void, (Clong, Ptr{Cdouble}, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, fractions, length(fractions), errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_set_fractions, "CoolProp"), Nothing, (Clong, Ptr{Cdouble}, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, fractions, length(fractions), errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -778,14 +778,14 @@ julia> AbstractState_free(handle);
 ```
 """
 function AbstractState_update(handle::Clong, input_pair::Clong, value1::Real, value2::Real)
-  ccall( (:AbstractState_update, "CoolProp"), Void, (Clong, Clong, Cdouble, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_update, "CoolProp"), Nothing, (Clong, Clong, Cdouble, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 function AbstractState_update(handle::Clong, input_pair::AbstractString, value1::Real, value2::Real)
-  AbstractState_update(handle::Clong, get_input_pair_index(input_pair), value1::Real, value2::Real)
-  return nothing
+    AbstractState_update(handle::Clong, get_input_pair_index(input_pair), value1::Real, value2::Real)
+    return nothing
 end
 
 """
@@ -801,12 +801,12 @@ Get an output value from the `AbstractState` using an integer value for the desi
 See `AbstractState_output`
 """
 function AbstractState_keyed_output(handle::Clong, param::Clong)
-  output = ccall( (:AbstractState_keyed_output, "CoolProp"), Cdouble, (Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, param, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  if output == -Inf
-    error("CoolProp: no correct state has been set with AbstractState_update")
-  end
-  return output
+    output = ccall( (:AbstractState_keyed_output, "CoolProp"), Cdouble, (Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, param, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    if output == -Inf
+        error("CoolProp: no correct state has been set with AbstractState_update")
+    end
+    return output
 end
 
 """
@@ -819,7 +819,7 @@ Get an output value from the `AbstractState` using an integer value for the desi
 * `param::AbstractString`: The name for the parameter you want
 """
 function AbstractState_output(handle::Clong, param::AbstractString)
-  return AbstractState_keyed_output(handle, get_param_index(param))
+    return AbstractState_keyed_output(handle, get_param_index(param))
 end
 
 
@@ -860,9 +860,9 @@ julia> AbstractState_free(heos);
 ```
 """
 function AbstractState_specify_phase(handle::Clong, phase::AbstractString)
-  ccall( (:AbstractState_specify_phase, "CoolProp"), Void, (Clong, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), handle, phase, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_specify_phase, "CoolProp"), Nothing, (Clong, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), handle, phase, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -874,9 +874,9 @@ Unspecify the phase to be used for all further calculations.
 * `handle`: The integer handle for the state class stored in memory
 """
 function AbstractState_unspecify_phase(handle::Clong)
-  ccall( (:AbstractState_unspecify_phase, "CoolProp"), Void, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_unspecify_phase, "CoolProp"), Nothing, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -909,22 +909,22 @@ julia> AbstractState_free(handle);
 ```
 """
 function AbstractState_update_and_common_out(handle::Clong, input_pair::Clong, value1::Array{Float64}, value2::Array{Float64}, length::Integer, T::Array{Float64}, p::Array{Float64}, rhomolar::Array{Float64}, hmolar::Array{Float64}, smolar::Array{Float64})
-  ccall( (:AbstractState_update_and_common_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, T, p, rhomolar, hmolar, smolar, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return T, p, rhomolar, hmolar, smolar
+    ccall( (:AbstractState_update_and_common_out, "CoolProp"), Nothing, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, T, p, rhomolar, hmolar, smolar, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return T, p, rhomolar, hmolar, smolar
 end
 
 function AbstractState_update_and_common_out(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer, T::Array{Float64}, p::Array{Float64}, rhomolar::Array{Float64}, hmolar::Array{Float64}, smolar::Array{Float64})
-  return AbstractState_update_and_common_out(handle, get_input_pair_index(input_pair), value1, value2, length, T, p, rhomolar, hmolar, smolar)
+    return AbstractState_update_and_common_out(handle, get_input_pair_index(input_pair), value1, value2, length, T, p, rhomolar, hmolar, smolar)
 end
 
 function AbstractState_update_and_common_out(handle::Clong, input_pair::Clong, value1::Array{Float64}, value2::Array{Float64}, length::Integer)
-  T, p, rhomolar, hmolar, smolar = [fill(NaN,length) for i=1:5]
-  return AbstractState_update_and_common_out(handle, input_pair, value1, value2, length, T, p, rhomolar, hmolar, smolar)
+    T, p, rhomolar, hmolar, smolar = [fill(NaN,length) for i=1:5]
+    return AbstractState_update_and_common_out(handle, input_pair, value1, value2, length, T, p, rhomolar, hmolar, smolar)
 end
 
 function AbstractState_update_and_common_out(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer)
-  return AbstractState_update_and_common_out(handle, get_input_pair_index(input_pair), value1, value2, length)
+    return AbstractState_update_and_common_out(handle, get_input_pair_index(input_pair), value1, value2, length)
 end
 
 """
@@ -944,22 +944,22 @@ Update the state of the AbstractState and get one output value (temperature, pre
 * `out`: The array for output
 """
 function AbstractState_update_and_1_out(handle::Clong, input_pair::Clong, value1::Array{Float64}, value2::Array{Float64}, length::Integer, output::Clong, out::Array{Float64})
-  ccall( (:AbstractState_update_and_1_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Clong, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, output, out, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return out
+    ccall( (:AbstractState_update_and_1_out, "CoolProp"), Nothing, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Clong, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, output, out, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return out
 end
 
 function AbstractState_update_and_1_out(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer, output::AbstractString, out::Array{Float64})
-  return AbstractState_update_and_1_out(handle, get_input_pair_index(input_pair), value1, value2, length, get_param_index(output), out)
+    return AbstractState_update_and_1_out(handle, get_input_pair_index(input_pair), value1, value2, length, get_param_index(output), out)
 end
 
 function AbstractState_update_and_1_out(handle::Clong, input_pair::Clong, value1::Array{Float64}, value2::Array{Float64}, length::Integer, output::Clong)
-  out = fill(NaN,length)
-  return AbstractState_update_and_1_out(handle, input_pair, value1, value2, length, output, out)
+    out = fill(NaN,length)
+    return AbstractState_update_and_1_out(handle, input_pair, value1, value2, length, output, out)
 end
 
 function AbstractState_update_and_1_out(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer, output::AbstractString)
-  return AbstractState_update_and_1_out(handle, get_input_pair_index(input_pair), value1, value2, length, get_param_index(output))
+    return AbstractState_update_and_1_out(handle, get_input_pair_index(input_pair), value1, value2, length, get_param_index(output))
 end
 
 """
@@ -983,24 +983,24 @@ Update the state of the AbstractState and get an output value five common output
 * `out5`: The array for the fifth output
 """
 function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array{Float64}, value2::Array{Float64}, length::Integer, outputs::Array{Clong}, out1::Array{Float64}, out2::Array{Float64}, out3::Array{Float64}, out4::Array{Float64}, out5::Array{Float64})
-  ccall( (:AbstractState_update_and_5_out, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Clong}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, outputs, out1, out2, out3, out4, out5, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return out1, out2, out3, out4, out5
+    ccall( (:AbstractState_update_and_5_out, "CoolProp"), Nothing, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Clong, Ref{Clong}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, input_pair, value1, value2, length, outputs, out1, out2, out3, out4, out5, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return out1, out2, out3, out4, out5
 end
 
-function AbstractState_update_and_5_out{S<:AbstractString}(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer, outputs::Array{S}, out1::Array{Float64}, out2::Array{Float64}, out3::Array{Float64}, out4::Array{Float64}, out5::Array{Float64})
-  outputs_key = [get_param_index(outputs[k]) for k = 1:5]
-  return AbstractState_update_and_5_out(handle, get_input_pair_index(input_pair), value1, value2, length, outputs_key, out1, out2, out3, out4, out5)
+function AbstractState_update_and_5_out(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer, outputs::Array{S}, out1::Array{Float64}, out2::Array{Float64}, out3::Array{Float64}, out4::Array{Float64}, out5::Array{Float64}) where {S<:AbstractString}
+    outputs_key = [get_param_index(outputs[k]) for k = 1:5]
+    return AbstractState_update_and_5_out(handle, get_input_pair_index(input_pair), value1, value2, length, outputs_key, out1, out2, out3, out4, out5)
 end
 
 function AbstractState_update_and_5_out(handle::Clong, input_pair::Clong, value1::Array{Float64}, value2::Array{Float64}, length::Integer, outputs::Array{Clong})
-  out1, out2, out3, out4, out5 = [fill(NaN,length) for i=1:5]
-  return AbstractState_update_and_5_out(handle, input_pair, value1, value2, length, outputs, out1, out2, out3, out4, out5)
+    out1, out2, out3, out4, out5 = [fill(NaN,length) for i=1:5]
+    return AbstractState_update_and_5_out(handle, input_pair, value1, value2, length, outputs, out1, out2, out3, out4, out5)
 end
 
-function AbstractState_update_and_5_out{S<:AbstractString}(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer, outputs::Array{S})
-  outputs_key = [get_param_index(outputs[k]) for k = 1:5]
-  return AbstractState_update_and_5_out(handle, get_input_pair_index(input_pair), value1, value2, length, outputs_key)
+function AbstractState_update_and_5_out(handle::Clong, input_pair::AbstractString, value1::Array{Float64}, value2::Array{Float64}, length::Integer, outputs::Array{S}) where {S<:AbstractString}
+    outputs_key = [get_param_index(outputs[k]) for k = 1:5]
+    return AbstractState_update_and_5_out(handle, get_input_pair_index(input_pair), value1, value2, length, outputs_key)
 end
 
 """
@@ -1029,9 +1029,9 @@ julia> AbstractState_free(handle);
 ```
 """
 function AbstractState_set_binary_interaction_double(handle::Clong, i::Integer, j::Integer, parameter::AbstractString, value::Real)
-  ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Void, (Clong, Clong, Clong, Cstring, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, j, parameter, value, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_set_binary_interaction_double, "CoolProp"), Nothing, (Clong, Clong, Clong, Cstring, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, j, parameter, value, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -1048,9 +1048,9 @@ Set cubic's alpha function parameters.
 * `c3`: the third parameter for the alpha function
 """
 function AbstractState_set_cubic_alpha_C(handle::Clong, i::Integer, parameter::AbstractString, c1::Real, c2::Real, c3::Real)
-  ccall( (:AbstractState_set_cubic_alpha_C, "CoolProp"), Void, (Clong, Clong, Cstring, Cdouble, Cdouble, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, parameter, c1, c2, c3, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_set_cubic_alpha_C, "CoolProp"), Nothing, (Clong, Clong, Cstring, Cdouble, Cdouble, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, parameter, c1, c2, c3, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -1065,9 +1065,9 @@ Set some fluid parameter (ie volume translation for cubic). Currently applied to
 * `value`: the value of the parameter
 """
 function AbstractState_set_fluid_parameter_double(handle::Clong, i::Integer, parameter::AbstractString, value::Real)
-  ccall( (:AbstractState_set_fluid_parameter_double, "CoolProp"), Void, (Clong, Clong, Cstring, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, parameter, value, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_set_fluid_parameter_double, "CoolProp"), Nothing, (Clong, Clong, Cstring, Cdouble, Ref{Clong}, Ptr{UInt8}, Clong), handle, i, parameter, value, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -1092,12 +1092,12 @@ julia> AbstractState_first_saturation_deriv(as, get_param_index("Hmolar"), get_p
 double CoolProp::AbstractState_first_saturation_deriv(const long handle, const long Of, const long Wrt, long* errcode, char* message_buffer, const long buffer_length);
 """
 function AbstractState_first_saturation_deriv(handle::Clong, of::Clong, wrt::Clong)
-  output = ccall( (:AbstractState_first_saturation_deriv, "CoolProp"), Cdouble, (Clong, Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, of, wrt, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  if output == -Inf
-    error("CoolProp: no correct state has been set with AbstractState_update")
-  end
-  return output
+    output = ccall( (:AbstractState_first_saturation_deriv, "CoolProp"), Cdouble, (Clong, Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, of, wrt, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    if output == -Inf
+        error("CoolProp: no correct state has been set with AbstractState_update")
+    end
+    return output
 end
 
 """
@@ -1125,12 +1125,12 @@ julia> AbstractState_first_partial_deriv(as, get_param_index("Hmolar"), get_para
 double CoolProp::AbstractState_first_partial_deriv(const long handle, const long Of, const long Wrt, const long Constant, long* errcode, char* message_buffer, const long buffer_length);
 """
 function AbstractState_first_partial_deriv(handle::Clong, of::Clong, wrt::Clong, constant::Clong)
-  output = ccall( (:AbstractState_first_partial_deriv, "CoolProp"), Cdouble, (Clong, Clong, Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, of, wrt, constant, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  if output == -Inf
-    error("CoolProp: no correct state has been set with AbstractState_update")
-  end
-  return output
+    output = ccall( (:AbstractState_first_partial_deriv, "CoolProp"), Cdouble, (Clong, Clong, Clong, Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, of, wrt, constant, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    if output == -Inf
+        error("CoolProp: no correct state has been set with AbstractState_update")
+    end
+    return output
 end
 
 """
@@ -1149,9 +1149,9 @@ If there is an error in an update call for one of the inputs, no change in the o
 CoolPRop::AbstractState_build_phase_envelope(const long handle, const char* level, long* errcode, char* message_buffer, const long buffer_length);
 """
 function AbstractState_build_phase_envelope(handle::Clong, level::AbstractString)
-  ccall( (:AbstractState_build_phase_envelope, "CoolProp"), Void, (Clong, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), handle, level, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_build_phase_envelope, "CoolProp"), Nothing, (Clong, Cstring, Ref{Clong}, Ptr{UInt8}, Clong), handle, level, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -1187,15 +1187,15 @@ If there is an error in an update call for one of the inputs, no change in the o
 CoolProp::AbstractState_get_phase_envelope_data(const long handle, const long length, double* T, double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y, long* errcode, char* message_buffer, const long buffer_length);
 """
 function AbstractState_get_phase_envelope_data(handle::Clong, length::Integer, T::Array{Float64}, p::Array{Float64}, rhomolar_vap::Array{Float64}, rhomolar_liq::Array{Float64}, x::Array{Float64}, y::Array{Float64})
-  ccall( (:AbstractState_get_phase_envelope_data, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, T, p, rhomolar_vap, rhomolar_liq, x, y, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return T, p, rhomolar_vap, rhomolar_liq, x, y
+    ccall( (:AbstractState_get_phase_envelope_data, "CoolProp"), Nothing, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, T, p, rhomolar_vap, rhomolar_liq, x, y, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return T, p, rhomolar_vap, rhomolar_liq, x, y
 end
 
 function AbstractState_get_phase_envelope_data(handle::Clong, length::Integer, ncomp::Integer)
-  T, p, rhomolar_vap, rhomolar_liq = [fill(NaN,length) for i=1:5]
-  x, y = [fill(NaN,length*ncomp) for i=1:2]
-  return AbstractState_get_phase_envelope_data(handle, length, T, p, rhomolar_vap, rhomolar_liq, x, y)
+    T, p, rhomolar_vap, rhomolar_liq = [fill(NaN,length) for i=1:5]
+    x, y = [fill(NaN,length*ncomp) for i=1:2]
+    return AbstractState_get_phase_envelope_data(handle, length, T, p, rhomolar_vap, rhomolar_liq, x, y)
 end
 
 """
@@ -1210,9 +1210,9 @@ Build the spinodal.
 CoolProp::AbstractState_build_spinodal(const long handle, long* errcode, char* message_buffer, const long buffer_length);
 """
 function AbstractState_build_spinodal(handle::Clong)
-  ccall( (:AbstractState_build_spinodal, "CoolProp"), Void, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return nothing
+    ccall( (:AbstractState_build_spinodal, "CoolProp"), Nothing, (Clong, Ref{Clong}, Ptr{UInt8}, Clong), handle, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return nothing
 end
 
 """
@@ -1240,14 +1240,14 @@ julia> tau, delta, m1 = AbstractState_get_spinodal_data(HEOS, 127);
 CoolProp::AbstractState_get_spinodal_data(const long handle, const long length, double* tau, double* delta, double* M1, long* errcode, char* message_buffer, const long buffer_length);
 """
 function AbstractState_get_spinodal_data(handle::Clong, length::Integer, tau::Array{Float64}, delta::Array{Float64}, m1::Array{Float64})
-  ccall( (:AbstractState_get_spinodal_data, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, tau, delta, m1, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return tau, delta, m1;
+    ccall( (:AbstractState_get_spinodal_data, "CoolProp"), Nothing, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, tau, delta, m1, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return tau, delta, m1;
 end
 
 function AbstractState_get_spinodal_data(handle::Clong, length::Integer)
-  tau, delta, m1 = [fill(NaN,length) for i=1:3]
-  return AbstractState_get_spinodal_data(handle, length, tau, delta, m1)
+    tau, delta, m1 = [fill(NaN,length) for i=1:3]
+    return AbstractState_get_spinodal_data(handle, length, tau, delta, m1)
 end
 
 """
@@ -1270,21 +1270,21 @@ If there is an error in an update call for one of the inputs, no change in the o
 CoolProp::AbstractState_all_critical_points(const long handle, const long length, double* T, double* p, double* rhomolar, long* stable, long* errcode, char* message_buffer, const long buffer_length);
 """
 function AbstractState_all_critical_points(handle::Clong, length::Integer, T::Array{Float64}, p::Array{Float64}, rhomolar::Array{Float64}, stable::Array{Clong})
-  ccall( (:AbstractState_all_critical_points, "CoolProp"), Void, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, T, p, rhomolar, stable, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
-  raise(errcode, message_buffer)
-  return T, p, rhomolar, stable
+    ccall( (:AbstractState_all_critical_points, "CoolProp"), Nothing, (Clong, Clong, Ref{Cdouble}, Ref{Cdouble}, Ref{Cdouble}, Ref{Clong}, Ref{Clong}, Ptr{UInt8}, Clong), handle, length, T, p, rhomolar, stable, errcode, message_buffer::Array{UInt8, 1}, buffer_length)
+    raise(errcode, message_buffer)
+    return T, p, rhomolar, stable
 end
 
 function AbstractState_all_critical_points(handle::Clong, length::Integer)
-  T, p, rhomolar = [fill(NaN,length) for i=1:3]
-  stable = zeros(Clong, length)
-  return  AbstractState_all_critical_points(handle, length, T, p, rhomolar, stable)
+    T, p, rhomolar = [fill(NaN,length) for i=1:3]
+    stable = zeros(Clong, length)
+    return  AbstractState_all_critical_points(handle, length, T, p, rhomolar, stable)
 end
 
 for symorigin = [:PropsSI, :PhaseSI, :K2F, :F2K, :HAPropsSI, :AbstractState_factory, :AbstractState_free, :AbstractState_set_fractions, :AbstractState_update, :AbstractState_keyed_output, :AbstractState_output, :AbstractState_specify_phase, :AbstractState_unspecify_phase, :AbstractState_update_and_common_out, :AbstractState_update_and_1_out, :AbstractState_update_and_5_out, :AbstractState_set_binary_interaction_double, :AbstractState_set_cubic_alpha_C, :AbstractState_set_fluid_parameter_double, :AbstractState_first_saturation_deriv, :AbstractState_first_partial_deriv, :AbstractState_build_phase_envelope, :AbstractState_build_spinodal, :AbstractState_all_critical_points, :AbstractState_get_phase_envelope_data, :AbstractState_get_spinodal_data]
-  sym = Symbol(lowercase(string(symorigin)))
-  @eval const $sym = $symorigin
-  @eval export $sym, $symorigin
+    sym = Symbol(lowercase(string(symorigin)))
+    @eval const $sym = $symorigin
+    @eval export $sym, $symorigin
 end
 const set_reference_stateS = set_reference_state
 const set_reference_stateD = set_reference_state

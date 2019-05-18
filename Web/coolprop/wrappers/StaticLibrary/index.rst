@@ -16,7 +16,7 @@ When writing your own C++ code, it is advised to compile CoolProp to a static li
 CMake Integration
 =================
 
-If you are using CMake, the process is quite trivial to integrate the CoolProp static library into your build system.  The only tricky thing here is that the CoolProp source directory MUST be a subdirectory of your main CMakeLists.txt.  For instance, if you have the folder layout::
+If you are using CMake, the process is quite trivial to integrate the CoolProp static library into your build system.  For instance, if you have the folder layout::
 
     main
      |- CMakeLists.txt (For your project, see below)
@@ -35,7 +35,7 @@ Then CMakeLists.txt might have the contents::
     cmake_minimum_required (VERSION 2.8.11)
     project (main)
     set(COOLPROP_STATIC_LIBRARY true)
-    add_subdirectory ("${CMAKE_SOURCE_DIR}/externals/CoolProp")
+    add_subdirectory ("${CMAKE_SOURCE_DIR}/externals/CoolProp" CoolProp)
     add_executable (main "${CMAKE_SOURCE_DIR}/mycode.cpp")
     target_link_libraries (main CoolProp)
 
@@ -93,7 +93,7 @@ You can build the static library using::
 Usage
 -----
 
-For all platforms we start with a simple example file here called main.cpp::
+For all platforms we start with a simple example file here called main.cpp; the "Hello world" of CoolProp ::
 
     #include "CoolProp.h"
     #include <iostream>

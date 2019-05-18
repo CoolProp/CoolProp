@@ -1,7 +1,7 @@
 from __future__ import print_function
 import os, json, glob, textwrap
 
-json_options = {'indent' : 2, 'sort_keys' : True}
+json_options = {'indent': 2, 'sort_keys': True}
 
 # Data from Mulero, JPCRD, 2012
 # CAS codes added from CoolProp 4.2, and wikipedia where necessary
@@ -90,88 +90,88 @@ Mulero2012_data = """67-64-1 Acetone 0.0633 1.160
 
 def inject_surface_tension_2012(root_dir):
     print("*** Injecting surface tension curves from Mulero")
-    Tc_dict = {'Argon':150.687,
-    'Benzene':562.02,
-    '1-Butene':419.29, #Butene from Mulero
-    'CarbonMonoxide':132.86,
-    'Cyclohexane':553.64,
-    'D2O':643.847,
-    'n-Decane':617.7,
-    'Ethane':305.322,
-    'Fluorine':144.414,
-    'Helium':5.1953,
-    'Isobutane':407.81,
-    'Isobutene':418.09,
-    'Isopentane':460.35,
-    'Methanol':513.38,
-    'Nitrogen':126.192,
-    'n-Nonane':594.55,
-    'Oxygen':154.581,
-    'Parahydrogen':32.938,
-    'Perfluorobutane':386.326,
-    'n-Propane':369.89,
-    'Propyne':402.38,
-    'R11':471.11,
-    'R113':487.21,
-    'R114':418.83,
-    'R115':353.1,
-    'R123':456.831,
-    'R1234yf':367.85,
-    'R124':395.425,
-    'R125':339.173,
-    'R134a':374.21,
-    'R14':227.51,
-    'R142b':410.26,
-    'R143a':345.857,
-    'R152a':386.411,
-    'R21':451.48,
-    'R218':345.02,
-    'R227ea':374.9,
-    'R32':351.255,
-    'R365mfc':460,
-    'RC318':388.38,
-    'SulfurDioxide':430.64,
-    'Toluene':591.75,
-    'Trifluoroiodomethane':396.44,
-    'Water':647.096,
-    'Acetone':508.1,
-    'n-Butane':425.125,
-    'CarbonDioxide':304.128,
-    'DimethylEther':400.378,
-    'n-Dodecane':658.1, #Decane in Mulero
-    'Ethylene':282.35,
-    'n-Heptane':540.13,
-    'n-Hexane':507.82,
-    'HydrogenSulfide':373.1,
-    'Isohexane':497.7,
-    'Krypton':209.48,
-    'NitrousOxide':309.52,
-    'n-Pentane':469.7,
-    'R116':293.03,
-    'R13':302,
-    'R23':299.293,
-    'R245ca':447.57,
-    'Xenon':289.733,
-    'CarbonylSulfide':378.77,
-    'Hydrogen':33.145,
-    'Methane':190.564,
-    'n-Octane':569.32,
-    'Perfluoropentane':420.555,
-    'Propylene':364.211,
-    'R12':385.12,
-    'R141b':477.5,
-    'R161':375.3,
-    'R22':369.295,
-    'R236ea':412.44,
-    'R236fa':398.07,
-    'R245fa':427.16,
-    'R41':317.28,
-    'SulfurHexafluoride':318.723,
-    'Ammonia':405.4,
-    'Deuterium':38.34,
-    'Ethanol':513.9,
-    'Neon':44.4918,
-    'Decafluorobutane':113.3+273.15 # According to http://encyclopedia.airliquide.com/Encyclopedia.asp?GasID=19#GeneralData, not in Mulero
+    Tc_dict = {'Argon': 150.687,
+    'Benzene': 562.02,
+    '1-Butene': 419.29,  # Butene from Mulero
+    'CarbonMonoxide': 132.86,
+    'Cyclohexane': 553.64,
+    'D2O': 643.847,
+    'n-Decane': 617.7,
+    'Ethane': 305.322,
+    'Fluorine': 144.414,
+    'Helium': 5.1953,
+    'Isobutane': 407.81,
+    'Isobutene': 418.09,
+    'Isopentane': 460.35,
+    'Methanol': 513.38,
+    'Nitrogen': 126.192,
+    'n-Nonane': 594.55,
+    'Oxygen': 154.581,
+    'Parahydrogen': 32.938,
+    'Perfluorobutane': 386.326,
+    'n-Propane': 369.89,
+    'Propyne': 402.38,
+    'R11': 471.11,
+    'R113': 487.21,
+    'R114': 418.83,
+    'R115': 353.1,
+    'R123': 456.831,
+    'R1234yf': 367.85,
+    'R124': 395.425,
+    'R125': 339.173,
+    'R134a': 374.21,
+    'R14': 227.51,
+    'R142b': 410.26,
+    'R143a': 345.857,
+    'R152a': 386.411,
+    'R21': 451.48,
+    'R218': 345.02,
+    'R227ea': 374.9,
+    'R32': 351.255,
+    'R365mfc': 460,
+    'RC318': 388.38,
+    'SulfurDioxide': 430.64,
+    'Toluene': 591.75,
+    'Trifluoroiodomethane': 396.44,
+    'Water': 647.096,
+    'Acetone': 508.1,
+    'n-Butane': 425.125,
+    'CarbonDioxide': 304.128,
+    'DimethylEther': 400.378,
+    'n-Dodecane': 658.1,  # Decane in Mulero
+    'Ethylene': 282.35,
+    'n-Heptane': 540.13,
+    'n-Hexane': 507.82,
+    'HydrogenSulfide': 373.1,
+    'Isohexane': 497.7,
+    'Krypton': 209.48,
+    'NitrousOxide': 309.52,
+    'n-Pentane': 469.7,
+    'R116': 293.03,
+    'R13': 302,
+    'R23': 299.293,
+    'R245ca': 447.57,
+    'Xenon': 289.733,
+    'CarbonylSulfide': 378.77,
+    'Hydrogen': 33.145,
+    'Methane': 190.564,
+    'n-Octane': 569.32,
+    'Perfluoropentane': 420.555,
+    'Propylene': 364.211,
+    'R12': 385.12,
+    'R141b': 477.5,
+    'R161': 375.3,
+    'R22': 369.295,
+    'R236ea': 412.44,
+    'R236fa': 398.07,
+    'R245fa': 427.16,
+    'R41': 317.28,
+    'SulfurHexafluoride': 318.723,
+    'Ammonia': 405.4,
+    'Deuterium': 38.34,
+    'Ethanol': 513.9,
+    'Neon': 44.4918,
+    'Decafluorobutane': 113.3 + 273.15  # According to http://encyclopedia.airliquide.com/Encyclopedia.asp?GasID=19#GeneralData, not in Mulero
     }
 
     import glob, json, os
@@ -184,24 +184,24 @@ def inject_surface_tension_2012(root_dir):
         n = row[1:len(row):2]
         n = [float(_) for _ in n]
         if name not in Tc_dict:
-            raise ValueError( 'could not find Tc for ' + name)
+            raise ValueError('could not find Tc for ' + name)
             continue
         Tc = Tc_dict[name]
 
         # The dictionary of values for the surface tension
-        j_st = dict(Tc = Tc,
-                    a = a,
-                    n = n,
-                    BibTeX = 'Mulero-JPCRD-2012',
-                    description = 'sigma = sum(a_i*(1-T/Tc)^n_i)'
+        j_st = dict(Tc=Tc,
+                    a=a,
+                    n=n,
+                    BibTeX='Mulero-JPCRD-2012',
+                    description='sigma = sum(a_i*(1-T/Tc)^n_i)'
                     )
 
-        fname = os.path.join(root_dir,'dev','fluids',name+'.json')
+        fname = os.path.join(root_dir, 'dev', 'fluids', name + '.json')
         if not os.path.exists(fname):
-            print(fname+' does not exist')
+            print(fname + ' does not exist')
             continue
 
-        j = json.load(open(fname,'r'))
+        j = json.load(open(fname, 'r'))
 
         j['ANCILLARIES']['surface_tension'] = j_st
 
@@ -253,29 +253,29 @@ def inject_surface_tension_2014(root_dir):
     rename = {'Undecane': 'n-Undecane',
               'm-xylene (1,3-dimethylbenzene)': 'm-Xylene',
               'o-xylene (1,2-dimethylbenzene)': 'o-Xylene',
-              'R1234ze(E) (trans-1,3,3,3-tetrafluoropropene)':'R1234ze(E)',
-              'R143a (1,1,1-Trifluoroethane)':'R143a',
-              'Methyl linoleate (Methyl (Z,Z)- 9,12-octadecadienoate)':'MethylLinoleate',
-              'Methyl oleate (Methyl cis-9-octadecenoate)':'MethylOleate',
-              'Methyl palmitate (Methyl hexadecanoate)':'MethylPalmitate',
-              'Methyl stearate (Methyl octadecanoate)':'MethylStearate',
-              'Dimethyl carbonate (Dimethyl ester carbonic acid)':'DimethylCarbonate',
+              'R1234ze(E) (trans-1,3,3,3-tetrafluoropropene)': 'R1234ze(E)',
+              'R143a (1,1,1-Trifluoroethane)': 'R143a',
+              'Methyl linoleate (Methyl (Z,Z)- 9,12-octadecadienoate)': 'MethylLinoleate',
+              'Methyl oleate (Methyl cis-9-octadecenoate)': 'MethylOleate',
+              'Methyl palmitate (Methyl hexadecanoate)': 'MethylPalmitate',
+              'Methyl stearate (Methyl octadecanoate)': 'MethylStearate',
+              'Dimethyl carbonate (Dimethyl ester carbonic acid)': 'DimethylCarbonate',
               'Hexamethyldisiloxane': 'MM',
-              'Tetradecamethylhexasiloxane':'MD4M',
-              'Dodecamethylpentasiloxane':'MD3M',
-              'Octamethyltrisiloxane':'MDM',
-              'Decamethyltetrasiloxane':'MD2M',
-              'Octamethylcyclotetrasiloxane':'D4',
-              'Dodecamethylcyclohexasiloxane':'D6',
-              'Decamethylcyclopentasiloxane':'D5',
-              'Diethyl ether':'DiethylEther',
-              'Neopentane (2,2- dimethylpropane)':'Neopentane'
+              'Tetradecamethylhexasiloxane': 'MD4M',
+              'Dodecamethylpentasiloxane': 'MD3M',
+              'Octamethyltrisiloxane': 'MDM',
+              'Decamethyltetrasiloxane': 'MD2M',
+              'Octamethylcyclotetrasiloxane': 'D4',
+              'Dodecamethylcyclohexasiloxane': 'D6',
+              'Decamethylcyclopentasiloxane': 'D5',
+              'Diethyl ether': 'DiethylEther',
+              'Neopentane (2,2- dimethylpropane)': 'Neopentane'
               }
     import glob, json, os
     for line in Mulero2014_data.split('\n'):
 
         row = line.split(' ')
-        #print(row)
+        # print(row)
         values = []
         j = 0
         for i in range(len(row)):
@@ -284,28 +284,28 @@ def inject_surface_tension_2014(root_dir):
             except:
                 j = i
 
-        name = ' '.join(row[0:j+1])
+        name = ' '.join(row[0:j + 1])
 
         Tc = values.pop(0)
         a = values[0:len(row):2]
         n = values[1:len(row):2]
 
         # The dictionary of values for the surface tension
-        j_st = dict(Tc = Tc,
-                    a = a,
-                    n = n,
-                    BibTeX = 'Mulero-JPCRD-2014',
-                    description = 'sigma = sum(a_i*(1-T/Tc)^n_i)'
+        j_st = dict(Tc=Tc,
+                    a=a,
+                    n=n,
+                    BibTeX='Mulero-JPCRD-2014',
+                    description='sigma = sum(a_i*(1-T/Tc)^n_i)'
                     )
 
         if name in rename:
             name = rename[name]
-        fname = os.path.join(root_dir,'dev','fluids',name+'.json')
+        fname = os.path.join(root_dir, 'dev', 'fluids', name + '.json')
         if not os.path.exists(fname):
             print(fname + ' does not exist')
             continue
 
-        j = json.load(open(fname,'r'))
+        j = json.load(open(fname, 'r'))
 
         j['ANCILLARIES']['surface_tension'] = j_st
 
@@ -316,36 +316,36 @@ def inject_surface_tension_2014(root_dir):
 
 def inject_environmental_data(root_dir):
     print('*** Injecting environmental data from DTU')
-    j = json.load(open(os.path.join(root_dir,'dev','environmental_data_from_DTU','DTU_environmental.json'),'r'))
+    j = json.load(open(os.path.join(root_dir, 'dev', 'environmental_data_from_DTU', 'DTU_environmental.json'), 'r'))
 
     for CAS in j:
         data = j[CAS]
-        fname = os.path.join(root_dir,'dev','fluids',data['Name']+'.json')
+        fname = os.path.join(root_dir, 'dev', 'fluids', data['Name'] + '.json')
         if os.path.isfile(fname):
-            fluid = json.load(open(fname,'r'))
+            fluid = json.load(open(fname, 'r'))
             fluid['ENVIRONMENTAL'] = data
             fp = open(fname, 'w')
             fp.write(json.dumps(fluid, **json_options))
         else:
-            print('Could not inject environmental data for',data['Name'])
+            print('Could not inject environmental data for', data['Name'])
 
 
 def inject_ancillaries(root_dir):
     print('*** Injecting saturation ancillary curves')
     master = []
 
-    for file in glob.glob(os.path.join(root_dir,'dev','fluids','*.json')):
+    for file in glob.glob(os.path.join(root_dir, 'dev', 'fluids', '*.json')):
         path, file_name = os.path.split(file)
         fluid_name = file_name.split('.')[0]
         # Load the fluid file
-        fluid = json.load(open(os.path.join(root_dir,'dev','fluids', fluid_name+'.json'), 'r'))
+        fluid = json.load(open(os.path.join(root_dir, 'dev', 'fluids', fluid_name + '.json'), 'r'))
 
         # Load the ancillary
-        anc = json.load(open(os.path.join(root_dir,'dev','ancillaries',fluid_name+'_anc.json'),'r'))
+        anc = json.load(open(os.path.join(root_dir, 'dev', 'ancillaries', fluid_name + '_anc.json'), 'r'))
         # Apply the ancillary by merging dictionaries
         fluid.update(anc)
         # Write fluid back to file
-        fp = open(os.path.join(root_dir,'dev','fluids', fluid_name+'.json'),'w')
+        fp = open(os.path.join(root_dir, 'dev', 'fluids', fluid_name + '.json'), 'w')
         fp.write(json.dumps(fluid, **json_options))
 
 
@@ -361,7 +361,7 @@ def combine_json(root_dir):
     master = []
 
     print('*** Combining fluid JSON files in JSON format in dev folder...')
-    for file in glob.glob(os.path.join(root_dir,'dev','fluids','*.json')):
+    for file in glob.glob(os.path.join(root_dir, 'dev', 'fluids', '*.json')):
 
         path, file_name = os.path.split(file)
         fluid_name = file_name.split('.')[0]
@@ -371,18 +371,18 @@ def combine_json(root_dir):
 
         master += [fluid]
 
-    fp = open(os.path.join(root_dir,'dev','all_fluids_verbose.json'),'w')
+    fp = open(os.path.join(root_dir, 'dev', 'all_fluids_verbose.json'), 'w')
     fp.write(json.dumps(master, **json_options))
     fp.close()
 
-    fp = open(os.path.join(root_dir,'dev','all_fluids.json'),'w')
+    fp = open(os.path.join(root_dir, 'dev', 'all_fluids.json'), 'w')
     fp.write(json.dumps(master))
     fp.close()
 
     master = []
 
     print('*** Combining incompressible JSON files in JSON format in dev folder...')
-    for file in glob.glob(os.path.join(root_dir,'dev','IncompressibleLiquids','*.json')):
+    for file in glob.glob(os.path.join(root_dir, 'dev', 'IncompressibleLiquids', '*.json')):
 
         path, file_name = os.path.split(file)
         fluid_name = file_name.split('.')[0]
@@ -392,15 +392,15 @@ def combine_json(root_dir):
 
         master += [fluid]
 
-    fp = open(os.path.join(root_dir,'dev','all_incompressibles_verbose.json'),'w')
+    fp = open(os.path.join(root_dir, 'dev', 'all_incompressibles_verbose.json'), 'w')
     fp.write(json.dumps(master, **json_options))
     fp.close()
 
-    fp = open(os.path.join(root_dir,'dev','all_incompressibles.json'),'w')
+    fp = open(os.path.join(root_dir, 'dev', 'all_incompressibles.json'), 'w')
     fp.write(json.dumps(master))
     fp.close()
 
 
-if __name__=='__main__':
-    inject_surface_tension_2014(root_dir = '..')
-    combine_json(root_dir = '..')
+if __name__ == '__main__':
+    inject_surface_tension_2014(root_dir='..')
+    combine_json(root_dir='..')

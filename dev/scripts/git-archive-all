@@ -385,7 +385,7 @@ class GitArchiver(object):
         output = output.decode(encoding)
 
         if p.returncode:
-            if sys.version_info > (2,6):
+            if sys.version_info > (2, 6):
                 raise CalledProcessError(returncode=p.returncode, cmd=cmd, output=output)
             else:
                 raise CalledProcessError(returncode=p.returncode, cmd=cmd)
@@ -413,7 +413,7 @@ class GitArchiver(object):
         output = output.decode('unicode_escape').encode('raw_unicode_escape').decode('utf-8')
 
         if p.returncode:
-            if sys.version_info > (2,6):
+            if sys.version_info > (2, 6):
                 raise CalledProcessError(returncode=p.returncode, cmd=cmd, output=output)
             else:
                 raise CalledProcessError(returncode=p.returncode, cmd=cmd)

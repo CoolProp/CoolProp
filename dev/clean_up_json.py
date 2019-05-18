@@ -1,12 +1,13 @@
-import json, sys, glob
-sys.path.append('..')
+import json, sys, glob, os
+here = os.path.dirname(__file__)
+sys.path.append(here+'/..')
 from package_json import json_options
 
-for fluid in glob.glob('fluids/*.json'):
+for fluid in glob.glob(here+'/fluids/*.json'):
 
     print(fluid)
-    j = json.load(open(fluid,'r'))
+    j = json.load(open(fluid, 'r'))
 
-    fp = open(fluid,'w')
-    fp.write(json.dumps(j,**json_options))
+    fp = open(fluid, 'w')
+    fp.write(json.dumps(j, **json_options))
     fp.close()

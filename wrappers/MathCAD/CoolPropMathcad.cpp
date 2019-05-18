@@ -22,10 +22,10 @@ namespace CoolProp {
 }
 
 enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad Error Codes
-          BAD_FLUID, BAD_PARAMETER, BAD_PHASE,                      // CoolProp Error Codes
+          BAD_FLUID, BAD_IF97_FLUID, BAD_PARAMETER, BAD_PHASE,      // CoolProp Error Codes
           ONLY_ONE_PHASE_SPEC, BAD_REF, NON_TRIVIAL,
           NO_REFPROP, NOT_AVAIL, BAD_INPUT_PAIR, BAD_QUAL,
-          TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
+          TWO_PHASE, NON_TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
           H_OUT_OF_RANGE, S_OUT_OF_RANGE, HA_INPUTS, 
           BAD_BINARY_PAIR, BAD_RULE, PAIR_EXISTS, UNKNOWN, 
           NUMBER_OF_ERRORS };                                       // Dummy Code for Error Count
@@ -40,6 +40,7 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
         "Insufficient Memory",
         "Argument must be real",
         "Invalid Fluid String",
+        "IF97 Backend supports pure water only",
         "Invalid Parameter String",
         "Invalid Phase String",
         "Only one input key phase specification allowed",
@@ -50,6 +51,7 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
         "This Input Pair is not yet support for this Fluid",
         "Input vapor quality must be between 0 and 1",
         "Output variable not valid in two phase region",
+        "Output variable only valid in two phase region",
         "Temperature out of range",
         "Pressure out of range",
         "Enthalpy out of range",
@@ -190,17 +192,26 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
             std::string emsg = CoolProp::get_global_param_string("errstring");
             CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
             if (emsg.find("valid fluid")!=std::string::npos) {
-                if (emsg.find("Neither input")!=std::string::npos)
-                    if (emsg.find("REFPROP")!=std::string::npos) {
+                if (emsg.find("Neither input") != std::string::npos) {
+                    if (emsg.find("REFPROP") != std::string::npos) {
                         // Fluid can be in either parameter location, find out which.
                         // It will be in brackets in the error message.
-                        if (FluidString.find("REFPROP")!=std::string::npos)
+                        if (FluidString.find("REFPROP") != std::string::npos)
                             errPos = 1;  // [REFPROP::???] is in Fluid->str, i.e. position 1
                         else
                             errPos = 2;  // [REFPROP::???] is in PropName->str, i.e. position 2
-                        return MAKELRESULT(NO_REFPROP,errPos);
-                    } else
-                        return MAKELRESULT(BAD_FLUID,1);
+                        return MAKELRESULT(BAD_FLUID, errPos);
+                    }
+                    else if (emsg.find("IF97") != std::string::npos) {
+                        if (FluidString.find("IF97") != std::string::npos)
+                            errPos = 1; // [IF97::???] is in Fluid->str, i.e. position 1
+                        else
+                            errPos = 2; // [IF97::???] is in PropName-str, i.e. position 2
+                        return MAKELRESULT(BAD_IF97_FLUID, errPos);
+                    }
+                    else
+                        return MAKELRESULT(BAD_FLUID, 1);
+                }
                 else //  "Both inputs"
                     return MAKELRESULT(BAD_PARAMETER,2);
             } else if (emsg.find("Unable to use")!=std::string::npos) {
@@ -295,6 +306,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                 return MAKELRESULT(BAD_PARAMETER,1);  // first position parameter
             } else if (emsg.find("not valid in two phase region")!=std::string::npos) {
                 return MAKELRESULT(TWO_PHASE,1);  // first position parameter
+            } else if (emsg.find("only defined within the two-phase") != std::string::npos) {
+                return MAKELRESULT(NON_TWO_PHASE, 1);  // first position parameter
             } else if (emsg.find("not implemented")!=std::string::npos) {
                 return MAKELRESULT(NOT_AVAIL,1);      // first position parameter
             } else if (emsg.find("Initialize failed")!=std::string::npos) {
@@ -303,6 +316,8 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                         return MAKELRESULT(NO_REFPROP,6);
                     else
                         return MAKELRESULT(BAD_FLUID,6);
+                } else if (emsg.find("IF97") != std::string::npos) {
+                    return MAKELRESULT(BAD_IF97_FLUID, 6);
                 } else
                     return MAKELRESULT(BAD_FLUID,6);
             } else if (emsg.find("Temperature")!=std::string::npos) {

@@ -42,7 +42,12 @@
     using namespace std::tr1;
 #elif defined(__ISWINDOWS__) && !defined(__MINGW32__)
     #include <memory>
-    using namespace std::tr1;
+    // VS2008 has std::shared_ptr from C++11 
+    #if defined(_MSC_VER) && _MSC_VER >= 1600
+        using std::shared_ptr;
+    #else
+        using namespace std::tr1;
+    #endif
 #else
     #pragma error
 #endif

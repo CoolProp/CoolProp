@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 SEP="####################################"
 echo $SEP
 echo "Running a nightly build on $(date)"

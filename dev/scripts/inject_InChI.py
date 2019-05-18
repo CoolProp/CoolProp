@@ -1,6 +1,6 @@
 import CoolProp
 from chemspipy import ChemSpider
-from chemspipy_key import key # private file with the key (DO NOT COMMIT!!)
+from chemspipy_key import key  # private file with the key (DO NOT COMMIT!!)
 import glob, json
 cs = ChemSpider(key)
 
@@ -24,7 +24,7 @@ c = cs.get_compound(2157)
 assert(c.inchikey == 'BSYNRYMUTXBXSQ-UHFFFAOYAW')
 
 for fname in glob.glob('../fluids/*.json'):
-    with open(fname,'r') as fp:
+    with open(fname, 'r') as fp:
         jj = json.load(fp)
 
     fluid = jj['INFO']['NAME']
@@ -56,14 +56,14 @@ for fname in glob.glob('../fluids/*.json'):
             print('%s %s !!failure!! %s' % (fluid, CAS, len(results)))
             for result in results:
                 spectra = cs.get_compound_spectra(result.csid)
-                if spectra and '##CAS REGISTRY NO='+CAS in spectra[0].data:
+                if spectra and '##CAS REGISTRY NO=' + CAS in spectra[0].data:
                     doset(result)
-                    print ('GOT IT!!')
+                    print('GOT IT!!')
                     break
                 print(result.common_name, result.inchikey, result.stdinchi, cs.get_extended_compound_info(result.csid))
             print('')
 
-    with open(fname,'w') as fp:
-        json.dump(jj, fp, indent = 2, sort_keys = True)
+    with open(fname, 'w') as fp:
+        json.dump(jj, fp, indent=2, sort_keys=True)
 
     del jj, fp
