@@ -28,6 +28,7 @@ the CoolProp library.
       of the latest release and looks at all issues that have been closed
       since then. It reports problems such as missing labels.
     - Take the time to fix all problems and label issues and PRs.
+
 * **Version**: Edit CMakeLists.txt and remove all qualifiers (alpha, dev,
   ...) from the version number and update the number for the upcoming
   release.
@@ -41,6 +42,7 @@ the CoolProp library.
       ``Web/coolprop/changelog.rst``. You might also use the same text for
       the annotated tag / release on GitHub.
     
+* **Merge Code**: Merge *master* into *release* branch.
 * **Build Bots**: Force all buildbots to run on the *release* branch, this
   will also change the upload folder from *binaries* to *release*.
 * **Release**: Wait for all bots to finish and run the release script by
