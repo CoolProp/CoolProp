@@ -10,6 +10,10 @@ Here is your new best friend, a checklist that helps you to keep track of
 all the small things that have to be done when releasing a new version of
 the CoolProp library. 
 
+* **Merge Code**: Close issues and merge pull requests where appropriate.
+                  Merge all relevant changes from your feature branches
+                  into the *master* branch and merge *master* into
+                  *release* branch.
 * **Issues**: Make sure that all issues that were closed since the last
               release have either been tagged / labelled as described below
               or have a milestone attached to them. The label "invalid"
@@ -39,10 +43,6 @@ the CoolProp library.
       ``Web/coolprop/changelog.rst``. You might also use the same text for
       the annotated tag / release on GitHub.
     
-* **Merge Code**: Close issues and merge pull requests where appropriate.
-                  Merge all relevant changes from your feature branches
-                  into the *master* branch and merge *master* into
-                  *release* branch. 
 * **Build Bots**: Force all buildbots to run on the *release* branch, this
                   will also change the upload folder from *binaries* to
                   *release*.

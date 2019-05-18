@@ -1,6 +1,76 @@
 Changelog for CoolProp
 ======================
 
+6.3.0
+-----
+
+Highlights:
+
+* The molar mass gets now reset properly - affected mixture calculations with changing concentrations.
+* The humid air calculations check the inputs and outputs according to the limits from the publication.
+* The isentropic expansion coefficient can now be accessed directly.
+* ... and a lot of little bugfixes (see issues)
+
+Issues Closed:
+
+* `#1820 <https://github.com/CoolProp/CoolProp/issues/1820>`_ : Humid air example fails due to new limits
+* `#1815 <https://github.com/CoolProp/CoolProp/issues/1815>`_ : molar_mass not getting cleared
+* `#1811 <https://github.com/CoolProp/CoolProp/issues/1811>`_ : Humid air properties above 388 K
+* `#1786 <https://github.com/CoolProp/CoolProp/issues/1786>`_ : Incompressible docs not building properly
+* `#1784 <https://github.com/CoolProp/CoolProp/issues/1784>`_ : Sphinx builder still broken
+* `#1782 <https://github.com/CoolProp/CoolProp/issues/1782>`_ : OSX 10.14 builds
+* `#1778 <https://github.com/CoolProp/CoolProp/issues/1778>`_ : There are no nightly builds after 2018/11/04
+* `#1777 <https://github.com/CoolProp/CoolProp/issues/1777>`_ : Building from the PyPI sdist on Python 3.7 results in compilation errors on macOS
+* `#1775 <https://github.com/CoolProp/CoolProp/issues/1775>`_ : Tmin function cannot be evaluated at 0.0 concentration for incomp fluids
+* `#1763 <https://github.com/CoolProp/CoolProp/issues/1763>`_ : Mathcad 15 binary builds dropped as of version 6.2
+* `#1762 <https://github.com/CoolProp/CoolProp/issues/1762>`_ : IF97 Documentation Page Error
+* `#1760 <https://github.com/CoolProp/CoolProp/issues/1760>`_ : Android Wrapper error at 6.2.0 and 6.2.2dev
+* `#1759 <https://github.com/CoolProp/CoolProp/issues/1759>`_ : Memory leak in Mathematica interface
+* `#1758 <https://github.com/CoolProp/CoolProp/issues/1758>`_ : Build AbstractState object from stored tabular data
+* `#1756 <https://github.com/CoolProp/CoolProp/issues/1756>`_ : Issue with incompressible fluid in v6.2.1
+* `#1753 <https://github.com/CoolProp/CoolProp/issues/1753>`_ : numpy.core.multiarray failed to import
+* `#1752 <https://github.com/CoolProp/CoolProp/issues/1752>`_ : Add fluids to CoolProp if you are using matlab
+* `#1748 <https://github.com/CoolProp/CoolProp/issues/1748>`_ : Apostrophe should be escaped in '...' strings or be used in "..." string
+* `#1745 <https://github.com/CoolProp/CoolProp/issues/1745>`_ : Surface Tension calculation failing ungracefully
+* `#1744 <https://github.com/CoolProp/CoolProp/issues/1744>`_ : Error value Excel on Mac
+* `#1742 <https://github.com/CoolProp/CoolProp/issues/1742>`_ : r404a JT valve error
+* `#1741 <https://github.com/CoolProp/CoolProp/issues/1741>`_ : Wrapper for OCTAVE-4.x.x 32 bit for Windows
+* `#1734 <https://github.com/CoolProp/CoolProp/issues/1734>`_ : Can I access the older 'Props' functions in CoolProp 6
+* `#1732 <https://github.com/CoolProp/CoolProp/issues/1732>`_ : Error 53 Excel Wrapper MacBook Issue
+* `#1731 <https://github.com/CoolProp/CoolProp/issues/1731>`_ : Will CoolProp contain R513a refrigerant properties in the near future??
+* `#1724 <https://github.com/CoolProp/CoolProp/issues/1724>`_ : REFPROP v10.0 enthalpy/pressure look-up bug
+* `#1717 <https://github.com/CoolProp/CoolProp/issues/1717>`_ : Coolprop cannot work on local JS
+* `#1708 <https://github.com/CoolProp/CoolProp/issues/1708>`_ : calc_phase missing for REFPROP backend.
+* `#1707 <https://github.com/CoolProp/CoolProp/issues/1707>`_ : Inconsistency in incompressible backend when getting fluid name()
+* `#1700 <https://github.com/CoolProp/CoolProp/issues/1700>`_ : HAPropsSi broken in 6.1.1dev for R(p,T,h)
+* `#1618 <https://github.com/CoolProp/CoolProp/issues/1618>`_ : Excel and Python wrapper, HAPropsSI problem with P_w input
+* `#1601 <https://github.com/CoolProp/CoolProp/issues/1601>`_ : ValueError: HAProps failed ungracefully with inputs: "W","T",2.7852603934336025e+02,"P",1.0132500000000000e+05,"H",1.4114309647910737e+04
+* `#1465 <https://github.com/CoolProp/CoolProp/issues/1465>`_ : Humid air calculations when dry bulb is above freezing but wet bulb is below freezing
+
+Pull Requests merged:
+
+* `#1823 <https://github.com/CoolProp/CoolProp/pull/1823>`_ : Robustify humid air limit checks
+* `#1814 <https://github.com/CoolProp/CoolProp/pull/1814>`_ : Feature/docs py3
+* `#1813 <https://github.com/CoolProp/CoolProp/pull/1813>`_ : Added limits to the humid air properties, closes #1811
+* `#1810 <https://github.com/CoolProp/CoolProp/pull/1810>`_ : Use std::shared_ptr if available in VS
+* `#1797 <https://github.com/CoolProp/CoolProp/pull/1797>`_ : Set _phase in REFPROP backend and return it in calc_phase()
+* `#1791 <https://github.com/CoolProp/CoolProp/pull/1791>`_ : Add isentropic expansion coefficient
+* `#1787 <https://github.com/CoolProp/CoolProp/pull/1787>`_ : Add conda install instructions from conda-forge
+* `#1783 <https://github.com/CoolProp/CoolProp/pull/1783>`_ : Feature/recent compilers
+* `#1773 <https://github.com/CoolProp/CoolProp/pull/1773>`_ : Make wrapper for LibreOffice an extension
+* `#1770 <https://github.com/CoolProp/CoolProp/pull/1770>`_ : Disambiguate IF97 Fluid Names - Water only
+* `#1767 <https://github.com/CoolProp/CoolProp/pull/1767>`_ : Add IF97 links to CoolProp homepage and backends page
+* `#1765 <https://github.com/CoolProp/CoolProp/pull/1765>`_ : Patch PropsSI for INCOMP fluid with zero mass fraction
+* `#1761 <https://github.com/CoolProp/CoolProp/pull/1761>`_ : Free input strings in Mathematica interface
+* `#1755 <https://github.com/CoolProp/CoolProp/pull/1755>`_ : Throw sensible error message if single-phase surface tension requested
+* `#1751 <https://github.com/CoolProp/CoolProp/pull/1751>`_ : update syntax to julia 1.0
+
+6.2.1
+-----
+
+Only a minor fix to the Javascript wrapper
+
+
 6.2.0
 -----
 

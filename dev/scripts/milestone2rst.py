@@ -1,10 +1,5 @@
 from __future__ import print_function
-import urllib, json, sys, os
-
-try:
-    from urllib.request import urlopen, Request
-except ImportError:
-    from urllib import urlopen, Request
+import requests, json, sys, os
 
 
 def _log_msg(msg: str):
@@ -19,8 +14,16 @@ def _log_msg(msg: str):
     except Exception as e:
         print(str(e))
 
-
 def _make_request(url: str):
+    headers = {'user-agent': 'CoolProp/0.0.1'}
+    try:
+        headers["Authorization"] = "token {0}".format(oauth2_token)
+    except:
+        pass
+    r = requests.get(url, headers=headers)
+    return r.json()
+
+def _make_request_urllib(url: str):
     """Takes a URL, makes a request and returns a JSON dict"""
     request = Request(url)
     # use a global variable for the authentication token
@@ -43,6 +46,7 @@ def _make_request(url: str):
 REPO_NAME = "CoolProp/CoolProp"
 REPO_URL = "https://api.github.com/repos"
 SEARCH_URL = "https://api.github.com/search"
+SITE_URL = "https://github.com"
 
 
 def get_latest_tag_and_date():
@@ -67,12 +71,12 @@ def get_latest_tag_and_date():
     return _release
 
 
-def get_issues_closed_since(tag_date: str):
+def get_issues_closed_since(tag_date: str, what: str):
     """Finds all issues that have been closed after the tag_data"""
     BASE_URL = "/".join([SEARCH_URL, "issues"])
     POST_VARS = dict(page=1, per_page=1000, sort="created", order="asc")
     QUER_VARS = dict(repo=REPO_NAME, closed=">="+tag_date)
-    QUER_VARS["is"] = "issue"
+    QUER_VARS["is"] = what
 
     QUER_VARS_LIST = []
     for k,v in QUER_VARS.items():
@@ -109,28 +113,30 @@ def check_issues_for_labels_and_milestone(ms: str, _issues_dict: dict):
         if _milestone is not None:
             if _milestone["title"] == ms:
                 continue
-            _wrong_milestone.append(str(_num))
+            _wrong_milestone.append(_num)
         else:
-            _no_label_or_ms.append(str(_num))
+            _no_label_or_ms.append(_num)
+
+    _LINK_URL = "/".join([SITE_URL, REPO_NAME, 'issues'])
 
     if (len(_no_label_or_ms) + len(_wrong_milestone)) > 0:
-        _log_msg("The following issues seem to have missing information:\n")
+        _log_msg("The following issues/pull requests seem to have missing information:\n")
         _log_msg(' - No excluded label and no milestone information ({0}): \n'.format(len(_no_label_or_ms)))
         for _num in _no_label_or_ms:
-            _log_msg('     #{0} - https://github.com/CoolProp/CoolProp/issues/{0} \n'.format(_num))
-        _log_msg(' - Closed issues that belong to a different milestone ({0}): \n'.format(len(_wrong_milestone)))
+            _log_msg('     #{0} - {1}/{0} \n'.format(_num, _LINK_URL))
+        _log_msg(' - Closed items that belong to a different milestone ({0}): \n'.format(len(_wrong_milestone)))
         for _num in _wrong_milestone:
-            _log_msg('     #{0} - https://github.com/CoolProp/CoolProp/issues/{0} \n'.format(_num))
+            _log_msg('     #{0} - {1}/{0} \n'.format(_num, _LINK_URL))
         return False
     return True
 
 
 def get_milestones(milestone):
     fname = milestone + '-milestones.json'
-    if not os.path.exists(fname):
+    if True or not os.path.exists(fname):
         _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'milestones'])
         # Find the milestone number for the given name
-        milestones_json = json.loads(urlopen(_REQUEST_URL).read())
+        milestones_json = _make_request(_REQUEST_URL)
         with open(fname, 'w') as fp:
             fp.write(json.dumps(milestones_json, indent=2))
     with open(fname, 'r') as fp:
@@ -140,10 +146,11 @@ def get_milestones(milestone):
 def get_PR_JSON(milestone, number):
     # Get the merged pull requests associated with the milestone
     fname = milestone + '-PR.json'
-    if not os.path.exists(fname):
+    if True or not os.path.exists(fname):
         _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'pulls'])
+        _REQUEST_URL += '?state=closed&per_page=1000&milestone=' + str(number)
         # Find the milestone number for the given name
-        PR = json.loads(urlopen(_REQUEST_URL + '?state=closed&per_page=1000&milestone=' + str(number)).read())
+        PR = _make_request(_REQUEST_URL)
         with open(fname, 'w') as fp:
             fp.write(json.dumps(PR, indent=2))
     with open(fname, 'r') as fp:
@@ -153,10 +160,11 @@ def get_PR_JSON(milestone, number):
 def get_issues_JSON(milestone, number):
     # Get the issues associated with the milestone
     fname = milestone + '-issues.json'
-    if not os.path.exists(fname):
+    if True or not os.path.exists(fname):
         # Find the milestone number for the given name
         _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'issues'])
-        issues = json.loads(urlopen(_REQUEST_URL + '?state=all&per_page=1000&milestone=' + str(number)).read())
+        _REQUEST_URL += '?state=all&per_page=1000&milestone=' + str(number)
+        issues = _make_request(_REQUEST_URL)
         with open(fname, 'w') as fp:
             fp.write(json.dumps(issues, indent=2))
     with open(fname, 'r') as fp:
@@ -224,20 +232,29 @@ if __name__ == '__main__':
 
     if sys.argv[1] == "check":
         release_json = get_latest_tag_and_date()
-        issues_json = get_issues_closed_since(release_json["tag_date"])
+
+        issues_json = get_issues_closed_since(release_json["tag_date"], what="issues")
         succ = check_issues_for_labels_and_milestone(sys.argv[2], issues_json)
         if succ:
              _log_msg("All issues seem to have the correct labels and milestones, congrats!\n")
-        #else:
-        #    _log_msg("There are some issues that seem to have incorrect label and milestone information.\n")
+
+        issues_json = get_issues_closed_since(release_json["tag_date"], what="pr")
+        succ = check_issues_for_labels_and_milestone(sys.argv[2], issues_json)
+        if succ:
+             _log_msg("All pull requests seem to have the correct labels and milestones, congrats!\n")
 
     elif sys.argv[1] == "changelog":
-        print(generate_issues(sys.argv[2]))
+        issues_rst = generate_issues(sys.argv[2])
+        print(issues_rst)
+        with open("snippet_issues.rst.txt", 'w') as fp:
+            fp.write(issues_rst)
+
         print('')
-        print(generate_PR(sys.argv[2]))
 
-
-
+        issues_rst = generate_PR(sys.argv[2])
+        print(issues_rst)
+        with open("snippet_pulls.rst.txt", 'w') as fp:
+            fp.write(issues_rst)
 
 
 
