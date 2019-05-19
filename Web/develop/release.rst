@@ -50,10 +50,13 @@ the CoolProp library.
   correct version number. This uploads binaries to pypi and sourceforge.
   Ignore the warning ``failed to set times on 
   "/home/project-web/coolprop/htdocs/jscript/coolprop-latest.js"``,
-  it is a symlink and will be overwritten... 
+  it is a symlink and will be overwritten. If you encounter problems, log
+  in via SSH and have a look at the logs. If you would like to finished the
+  release manually, consider editing the case statement in bash script and
+  run the commands from ``release.bsh.cmds.txt`` manually.
 * **Clean and Tag**: If everything went well, you can proceed: 
 
-    - Tag the release branch in your git software. It is a good idea to
+    - Create a new tag and a new release on GitHub. Remember to
       make an annotated tag and include the information on the closed
       issues here as well. 
     - Change the default download file on sourceforge to point to the new
