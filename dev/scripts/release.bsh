@@ -144,7 +144,7 @@ else
         echo -n "Development binaries of the" >> "$BINFOLDER/README.rst.txt"
         echo -n " \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "$BINFOLDER/README.rst.txt"
         echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "$BINFOLDER/README.rst.txt"
-        RSYNC_OPTS="-a --no-perms -z --stats --delete"
+        RSYNC_OPTS="-a --chmod=Dug=rwx,Do=rx,Fug=rw,Fo=r -z --stats --delete"
         #for i in {1..2}; do for j in $BINFOLDER/Python/*.tar.gz; do binstar upload --force -u coolprop -t pypi -c dev $j; done; done
         #for i in {1..5}; do for j in $BINFOLDER/Python_conda/*/*.tar.bz2; do binstar upload --force -u coolprop -t conda -c dev $j && rm $j; done; done
         printMessage "Overwriting the coverity_scan branch with the master branch"
@@ -159,7 +159,7 @@ else
         echo    "-----------------------------------------------"   >> "$BINFOLDER/README.rst.txt"
                 cat     "$REPODIR/dev/scripts/release_readme.rst.txt" >> "$BINFOLDER/README.rst.txt"
         echo    "This README.rst.txt was generated automatically on $(date +%F) at $(date +%X) $(date +%Z)." >> "$BINFOLDER/README.rst.txt"
-        RSYNC_OPTS="-a --no-perms -z --stats"
+        RSYNC_OPTS="-a --chmod=Dug=rwx,Do=rx,Fug=rw,Fo=r -z --stats"
         printMessage "Detected full release, uploading the python binaries to pypi"
         runCommand twine upload $BINFOLDER/Python/*.whl $BINFOLDER/Python/*.tar.gz
         #printMessage "and uploading the python binaries to binstar"
