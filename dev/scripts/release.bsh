@@ -91,7 +91,7 @@ DOCFOLDER="$BINFOLDER/docs"
 SPHFOLDER="$BINFOLDER/sphinx"
 DOC4FILES="4.2.5/coolpropv425docs.zip"
 DOC4FOLDER="$SPHFOLDER/v4"
-RSYNC_EXCL="--exclude=sphinx"
+RSYNC_EXCL="--exclude=sphinx --exclude=shared_library/Linux"
 #
 DOCFILE="documentation.zip"
 #
