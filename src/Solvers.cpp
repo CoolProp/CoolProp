@@ -428,8 +428,13 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
     if (!ValidNumber(fa)){
         throw ValueError(format("Brent's method f(a) is NAN for a = %g, other input was b = %g",a,b).c_str());
     }
+
     if (fa*fb>0){
-        throw ValueError(format("Inputs in Brent [%f,%f] do not bracket the root.  Function values are [%f,%f]",a,b,fa,fb));
+        // Only throw an error for large values, we might want to assume that small values should be zero
+        const double eps = 0.01;
+        if (std::abs(fa) < eps * std::abs(fb) || std::abs(fb) < eps * std::abs(fa)) {
+            throw ValueError(format("Inputs in Brent [%f,%f] do not bracket the root.  Function values are [%f,%f]", a, b, fa, fb));
+        }
     }
 
     c=a;
