@@ -156,6 +156,10 @@ public:
     /// A flash routine for (H,S)
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void HS_flash(HelmholtzEOSMixtureBackend &HEOS);
+
+    /// A flash routine for (U,S)
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    static void US_flash(HelmholtzEOSMixtureBackend &HEOS);
     
     /// Randomly generate a single phase set of inputs for T and p - searches entire single-phase region
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used

@@ -2014,6 +2014,64 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend &HEOS)
     Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
 }
 
+void FlashRoutines::US_flash(HelmholtzEOSMixtureBackend &HEOS)
+{
+    // Use TS flash and iterate on T (known to be between Tmin and Tmax) 
+    // in order to find U
+    double umolar = HEOS.umolar(), smolar = HEOS.smolar();
+    class Residual : public FuncWrapper1D
+    {
+    public:
+        HelmholtzEOSMixtureBackend &HEOS;
+        CoolPropDbl umolar, smolar;
+        Residual(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl umolar_spec, CoolPropDbl smolar_spec) : HEOS(HEOS), umolar(umolar_spec), smolar(smolar_spec){};
+        double call(double T){
+            HEOS.update(SmolarT_INPUTS, smolar, T);
+            double r = HEOS.umolar() - umolar;
+            return r;
+        }
+    } resid(HEOS, umolar, smolar);
+    std::string errstr;
+    // Find minimum temperature
+    bool good_Tmin = false;
+    double Tmin = HEOS.Ttriple();
+    double rmin;
+    do{
+        try{
+            rmin = resid.call(Tmin); good_Tmin = true;
+        }
+        catch(...){
+            Tmin += 0.5;
+        }
+        if (Tmin > HEOS.Tmax()){
+            throw ValueError("Cannot find good Tmin");
+        }
+    }
+    while(!good_Tmin);
+
+    // Find maximum temperature
+    bool good_Tmax = false;
+    double Tmax = HEOS.Tmax()*1.01; // Just a little above, so if we use Tmax as input, it should still work
+    double rmax;
+    do{
+        try{
+            rmax = resid.call(Tmax); good_Tmax = true;
+        }
+        catch(...){
+            Tmax -= 0.1;
+        }
+        if (Tmax < Tmin){
+            throw ValueError("Cannot find good Tmax");
+        }
+    }
+    while(!good_Tmax);
+    if (rmin*rmax > 0 && std::abs(rmax) < std::abs(rmin)){
+        throw CoolProp::ValueError(format("US inputs correspond to temperature above maximum temperature of EOS [%g K]",HEOS.Tmax()));
+    }
+    Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+}
+
+
 #if defined(ENABLE_CATCH)
 
 
