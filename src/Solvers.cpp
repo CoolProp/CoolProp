@@ -396,6 +396,34 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
     return x3;
 }
 
+
+/**
+
+This function performs a postcheck for brent algorithm, if the initial guess values did not bracket the root
+
+if b and fb are     equal to the initial guess values, then brent got caught at one of the initial guess values --> abort
+if b and fb are not equal to the initial guess values, then brent has converged and has found a root outside the initial range
+
+@param dopostcheck flag which is indicating, if the postcheck is performed or not
+@param aguess  initial guess value "a"  in brent
+@param bguess  initial guess value "b"  in brent
+@param faguess initial guess value "fa" in brent
+@param fbguess initial guess value "fb" in brent
+@param b       root position found in brent
+@param fb      function value at root position found in brent
+*/
+void postcheck( double aguess, double bguess, double faguess, double fbguess, double b, double fb)
+{
+    if(b==aguess || b==bguess || fb==faguess || fb==fbguess){
+        throw ValueError(format("Inputs in Brent [%f,%f] did not bracket the root and iteration procedure did not converge. Function values are [%f,%f]",aguess,bguess,faguess,fbguess));
+    }
+    else{
+        std::cout << format("Warning: Root found outside the the initial range! Solution may be unphysical!");
+    }
+    return;
+}
+
+
 /**
 
 This function implements a 1-D bounded solver using the algorithm from Brent, R. P., Algorithms for Minimization Without Derivatives.
@@ -414,8 +442,10 @@ at least one solution in the interval [a,b].
 double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter)
 {
     int iter;
+    int dopostcheck;
     f->errstring.clear();
     double fa,fb,c,fc,m,tol,d,e,p,q,s,r;
+    double faguess,fbguess,aguess,bguess;
     fa = f->call(a);
     fb = f->call(b);
 
@@ -428,8 +458,16 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
     if (!ValidNumber(fa)){
         throw ValueError(format("Brent's method f(a) is NAN for a = %g, other input was b = %g",a,b).c_str());
     }
+    // If fa and fb have the same sign, save the first initial guess, proceed the algorithm and perform a postcheck
     if (fa*fb>0){
-        throw ValueError(format("Inputs in Brent [%f,%f] do not bracket the root.  Function values are [%f,%f]",a,b,fa,fb));
+        aguess  = a ;
+        bguess  = b ;
+        faguess = fa;
+        fbguess = fb;
+        dopostcheck = 1;
+    }
+    else{
+        dopostcheck = 0;
     }
 
     c=a;
@@ -502,6 +540,9 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
             throw ValueError(format("Brent's method f(t) is NAN for t = %g",b).c_str());
         }
         if (std::abs(fb) < macheps){
+            if(dopostcheck==1){
+                postcheck(aguess,bguess,faguess,fbguess,b,fb);
+            }
             return b;
         }
         if (fb*fc>0){
@@ -531,8 +572,14 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
         if (iter>maxiter){
             throw SolutionError(format("Brent's method reached maximum number of steps of %d ", maxiter));}
         if (std::abs(fb)< 2*macheps*std::abs(b)){
+            if(dopostcheck==1){
+                postcheck(aguess,bguess,faguess,fbguess,b,fb);
+            }
             return b;
         }
+    }
+    if(dopostcheck==1){
+        postcheck(aguess,bguess,faguess,fbguess,b,fb);
     }
     return b;
 }
