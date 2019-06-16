@@ -402,7 +402,7 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
 This function performs a postcheck for brent algorithm, if the initial guess values did not bracket the root
 
 if b and fb are     equal to the initial guess values, then brent got caught at one of the initial guess values --> abort
-if b and fb are not equal to the initial guess values, then brent has converged and has found a root outside the initial range
+if b and fb are not equal to the initial guess values, then brent has converged and has found a root inside or outside the initial range
 
 @param dopostcheck flag which is indicating, if the postcheck is performed or not
 @param aguess  initial guess value "a"  in brent
@@ -417,8 +417,11 @@ void postcheck( double aguess, double bguess, double faguess, double fbguess, do
     if(b==aguess || b==bguess || fb==faguess || fb==fbguess){
         throw ValueError(format("Inputs in Brent [%f,%f] did not bracket the root and iteration procedure did not converge. Function values are [%f,%f]",aguess,bguess,faguess,fbguess));
     }
+    else if(b>=aguess && b<=bguess){
+        std::cout << format("Warning: Root [%f] found inside the initial range [%f,%f]! There may be more roots inside the intervall! Solution may be unphysical!",b,aguess,bguess);
+    }
     else{
-        std::cout << format("Warning: Root found outside the the initial range! Solution may be unphysical!");
+        std::cout << format("Warning: Root [%f] found outside the initial range [%f,%f]! Solution may be unphysical!",b,aguess,bguess);
     }
     return;
 }
