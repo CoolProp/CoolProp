@@ -2805,23 +2805,33 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_cpmolar_idealgas(void)
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 {
-    // Calculate the reducing parameters
-    _delta = _rhomolar/_reducing.rhomolar;
-    _tau = _reducing.T/_T;
+    if (isTwoPhase())
+    {
+        throw ValueError(format("Speed of sound is not defined for two-phase states because it depends on the distribution of phases."));
+    }
+    else if (isHomogeneousPhase())
+    {
+        // Calculate the reducing parameters
+        _delta = _rhomolar/_reducing.rhomolar;
+        _tau = _reducing.T/_T;
 
-    // Calculate derivatives if needed, or just use cached values
-    CoolPropDbl d2a0_dTau2 = d2alpha0_dTau2();
-    CoolPropDbl dar_dDelta = dalphar_dDelta();
-    CoolPropDbl d2ar_dDelta2 = d2alphar_dDelta2();
-    CoolPropDbl d2ar_dDelta_dTau = d2alphar_dDelta_dTau();
-    CoolPropDbl d2ar_dTau2 = d2alphar_dTau2();
-    CoolPropDbl R_u = gas_constant();
-    CoolPropDbl mm = molar_mass();
+        // Calculate derivatives if needed, or just use cached values
+        CoolPropDbl d2a0_dTau2 = d2alpha0_dTau2();
+        CoolPropDbl dar_dDelta = dalphar_dDelta();
+        CoolPropDbl d2ar_dDelta2 = d2alphar_dDelta2();
+        CoolPropDbl d2ar_dDelta_dTau = d2alphar_dDelta_dTau();
+        CoolPropDbl d2ar_dTau2 = d2alphar_dTau2();
+        CoolPropDbl R_u = gas_constant();
+        CoolPropDbl mm = molar_mass();
 
-    // Get speed of sound
-    _speed_sound = sqrt(R_u*_T/mm*(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2 - pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2))));
+        // Get speed of sound
+        _speed_sound = sqrt(R_u*_T/mm*(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2 - pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2))));
 
-    return static_cast<double>(_speed_sound);
+        return static_cast<CoolPropDbl>(_speed_sound);
+    }
+    else{
+        throw ValueError(format("phase is invalid in calc_gibbsmolar"));
+    }
 }
     
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar)
