@@ -2807,7 +2807,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 {
     if (isTwoPhase())
     {
-        throw ValueError(format("Speed of sound is not defined for two-phase states because it depends on the distribution of phases."));
+        if (!this->SatL || !this->SatV){
+            throw ValueError(format("Speed of sound is not defined for two-phase states because it depends on the distribution of phases."));
+        }
     }
     else if (isHomogeneousPhase())
     {
@@ -2830,7 +2832,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_speed_sound(void)
         return static_cast<CoolPropDbl>(_speed_sound);
     }
     else{
-        throw ValueError(format("phase is invalid in calc_gibbsmolar"));
+        throw ValueError(format("phase is invalid in calc_speed_sound"));
     }
 }
     
