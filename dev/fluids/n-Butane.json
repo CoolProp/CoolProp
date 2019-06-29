@@ -458,10 +458,12 @@
     "ALIASES": [
       "nButane",
       "butane",
+      "Butane",
       "BUTANE",
       "N-BUTANE",
       "R600",
-      "NC4H10"
+      "NC4H10",
+      "n-C4H10"
     ],
     "CAS": "106-97-8",
     "CHEMSPIDER_ID": 7555,
