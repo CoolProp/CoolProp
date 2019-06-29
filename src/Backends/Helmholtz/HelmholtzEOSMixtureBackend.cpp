@@ -2807,7 +2807,13 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 {
     if (isTwoPhase())
     {
-        if (!this->SatL || !this->SatV){
+        if (std::abs(_Q) < DBL_EPSILON){
+            return SatL->speed_sound();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            return SatV->speed_sound();
+        }
+        else{
             throw ValueError(format("Speed of sound is not defined for two-phase states because it depends on the distribution of phases."));
         }
     }
