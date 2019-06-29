@@ -2504,6 +2504,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             double rhomolar = Brent(resid, 1e-10, 3*rhomolar_reducing(), DBL_EPSILON, 1e-8, 100);
             return rhomolar;
         }
+        else if  (is_pure_or_pseudopure && T>T_critical()){
+            try{
+                double rhomolar = Brent(resid, 1e-10, 5*rhomolar_reducing(), DBL_EPSILON, 1e-8, 100);
+                return rhomolar;
+                
+            }
+            catch(...){
+                double rhomolar = Householder4(resid, 3*rhomolar_reducing(), 1e-8, 100);
+                return rhomolar;
+            }
+        }
         throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg with error: %s",T,p,rhomolar_guess, e.what()));
     }
 }
