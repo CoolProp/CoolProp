@@ -180,6 +180,8 @@ public:
     CoolPropDbl calc_surface_tension(void);
     /// Calc the B virial coefficient
     CoolPropDbl calc_Bvirial(void);
+    /// Calc the temperature derivative of the second virial coefficient
+    CoolPropDbl calc_dBvirial_dT(void);
     /// Calc the C virial coefficient
     CoolPropDbl calc_Cvirial(void);
 
