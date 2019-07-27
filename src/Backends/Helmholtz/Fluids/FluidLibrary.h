@@ -1310,7 +1310,7 @@ public:
     /// Return a comma-separated list of fluid names
     std::string get_fluid_list(void)
     {
-        return strjoin(name_vector, ",");
+        return strjoin(name_vector, get_config_string(LIST_STRING_DELIMITER));
     };
 };
 
