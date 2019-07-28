@@ -789,7 +789,7 @@ public:
      *
      * see also Colonna et al, FPE, 2010
      *
-     * \f[ \Gamma = 1+\frac{\rho}{c}\left(\frac{partial c}{\partial \rho}\right)_{s} = 1+\frac{\rho}{2c^2}\left(\frac{partial^2 p}{\partial \rho^2}\right)_{s} = 1+\frac{v^3}{2c^2}\left(\frac{partial^2 p}{\partial v^2}\right)_{s}\f]
+     * \f[ \Gamma = 1+\frac{\rho}{c}\left(\frac{\partial c}{\partial \rho}\right)_{s} = 1+\frac{\rho}{2c^2}\left(\frac{\partial^2 p}{\partial \rho^2}\right)_{s} = \frac{v^3}{2c^2}\left(\frac{\partial^2 p}{\partial v^2}\right)_{s}\f]
      *
      * Note: densities are mass-based densities, not mole-based densities
      */
