@@ -374,6 +374,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string> &f
                 return;
             }
             else{
+            	if (get_debug_level() > 0){
+            		std::cout << format("%s:%d Unable to load predefined mixture [%s] with ierr: [%d] and herr: [%s]\n",__FILE__,__LINE__, mix, ierr, herr);
+            	}
                 throw ValueError(format("Unable to load mixture: %s",components_joined_raw.c_str()));
             }
         }
@@ -876,6 +879,12 @@ CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void)
 {
     double b;
     VIRBdll(&_T, &(mole_fractions[0]), &b);
+    return b*0.001; // 0.001 to convert from l/mol to m^3/mol
+}
+CoolPropDbl REFPROPMixtureBackend::calc_dBvirial_dT(void)
+{
+    double b;
+    DBDTdll(&_T, &(mole_fractions[0]), &b);
     return b*0.001; // 0.001 to convert from l/mol to m^3/mol
 }
 CoolPropDbl REFPROPMixtureBackend::calc_Cvirial(void)
