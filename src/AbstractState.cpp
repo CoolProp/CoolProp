@@ -315,7 +315,7 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, Cool
 }
 double AbstractState::trivial_keyed_output(parameters key)
 {
-    if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
+    if (get_debug_level()>=50) std::cout << format("AbstractState: trivial_keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     switch (key)
     {
     case imolar_mass:
