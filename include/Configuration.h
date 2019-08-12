@@ -275,8 +275,6 @@ void set_config_bool(configuration_keys key, bool val);
 void set_config_int(configuration_keys key, int val);
 /// Set the value of a double configuration value
 void set_config_double(configuration_keys key, double val);
-/// Set the value of an integer configuration value
-void set_config_integer(configuration_keys key, int val);
 /// Set the value of a string configuration value
 void set_config_string(configuration_keys key, const std::string &val);
 /// Set values in the configuration based on a json file
