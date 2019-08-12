@@ -183,6 +183,8 @@ if __name__ == '__main__':
                 cmake_config_args += ['-DFORCE_BITNESS_32=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-DFORCE_BITNESS_64=ON']
+            elif cmake_bitness == 'any':
+                pass
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
