@@ -30,6 +30,7 @@
     X(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS, "REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS", false, "If true, if the binary interaction parameters in REFPROP are estimated, throw an error rather than silently continuing") \
     X(REFPROP_IGNORE_ERROR_ESTIMATED_INTERACTION_PARAMETERS, "REFPROP_IGNORE_ERROR_ESTIMATED_INTERACTION_PARAMETERS", false, "If true, if the binary interaction parameters in REFPROP are unable to be estimated, silently continue rather than failing") \
     X(REFPROP_USE_GERG, "REFPROP_USE_GERG", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the pure-fluid EOS from GERG-2008") \
+    X(REFPROP_ERROR_THRESHOLD, "REFPROP_ERROR_THRESHOLD", static_cast<int>(0), "The highest acceptable error code without throwing an exception") \
     X(REFPROP_USE_PENGROBINSON, "REFPROP_USE_PENGROBINSON", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the Peng-Robinson EOS") \
     X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0, "The maximum allowed size of the directory that is used to store tabular data") \
     X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false, "If true, when possible, CoolProp will skip checking whether values are inside the property limits") \
@@ -92,6 +93,8 @@ class ConfigurationItem
         operator double() const { check_data_type(CONFIGURATION_DOUBLE_TYPE);  return v_double; };
         /// Cast to string
         operator std::string() const { check_data_type(CONFIGURATION_STRING_TYPE);  return v_string; };
+        /// Cast to integer
+        operator int() const { check_data_type(CONFIGURATION_INTEGER_TYPE);  return v_integer; };
         // Initializer for bool
         ConfigurationItem(configuration_keys key, bool val){
             this->key = key; type = CONFIGURATION_BOOL_TYPE; v_bool = val;
@@ -250,6 +253,8 @@ class Configuration
 
 /// Return the value of a boolean key from the configuration
 bool get_config_bool(configuration_keys key);
+/// Return the value of an integer key from the configuration
+int get_config_int(configuration_keys key);
 /// Return the value of a double configuration key
 double get_config_double(configuration_keys key);
 /// Return the value of a string configuration key
@@ -266,8 +271,12 @@ std::string get_config_as_json_string();
 
 /// Set the value of a boolean configuration value
 void set_config_bool(configuration_keys key, bool val);
+/// Set the value of an integer configuration value
+void set_config_int(configuration_keys key, int val);
 /// Set the value of a double configuration value
 void set_config_double(configuration_keys key, double val);
+/// Set the value of an integer configuration value
+void set_config_integer(configuration_keys key, int val);
 /// Set the value of a string configuration value
 void set_config_string(configuration_keys key, const std::string &val);
 /// Set values in the configuration based on a json file

@@ -68,6 +68,9 @@ static Configuration config;
 void set_config_bool(configuration_keys key, bool val){
     config.get_item(key).set_bool(val);
 }
+void set_config_int(configuration_keys key, int val){
+    config.get_item(key).set_integer(val);
+}
 void set_config_double(configuration_keys key, double val){
 	config.get_item(key).set_double(val);
 }
@@ -82,6 +85,9 @@ void set_config_string(configuration_keys key, const std::string &val){
 
 bool get_config_bool(configuration_keys key){
     return static_cast<bool>(config.get_item(key));
+}
+int get_config_int(configuration_keys key){
+    return static_cast<int>(config.get_item(key));
 }
 double get_config_double(configuration_keys key){
     return static_cast<double>(config.get_item(key));
