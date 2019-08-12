@@ -573,7 +573,7 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
         throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
     }
     SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
-    if (ierr > 0L){
+    if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)){
         throw ValueError(format("Unable to set parameter[%s] to value[%s]: %s",parameter.c_str(),value.c_str(),herr));
     }
 }
@@ -599,7 +599,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
             throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
         }
         SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
-        if (ierr > 0L){
+        if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)){
             throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s",parameter.c_str(),value,herr));
         }
     }
@@ -728,7 +728,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_T_critical(){
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
     CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255);
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(Tcrit);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_p_critical(){
@@ -736,14 +736,14 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_critical(){
     int ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
-    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(pcrit_kPa*1000);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_critical(){
     int ierr = 0;
     char herr[255];
     double Tcrit, pcrit_kPa, dcrit_mol_L;
-    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    CRITPdll(&(mole_fractions[0]),&Tcrit,&pcrit_kPa,&dcrit_mol_L,&ierr,herr,255); if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(dcrit_mol_L*1000);
 };
 void REFPROPMixtureBackend::calc_reducing_state(){
@@ -827,7 +827,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_triple(){
                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
     return p_kPa*1000;
 };
 CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment(){
@@ -905,7 +905,7 @@ double REFPROPMixtureBackend::calc_melt_Tmax()
     MELTPdll(&pmax_kPa, &(mole_fractions[0]),
              &Tmax_melt,
              &ierr,herr,errormessagelength);      // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return Tmax_melt;
 }
@@ -920,7 +920,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
         MELTTdll(&_T, &(mole_fractions[0]),
              &p_kPa,
              &ierr,herr,errormessagelength);      // Error message
-        if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
         return p_kPa*1000;
     }
     else if (param == iT && given == iP){
@@ -928,7 +928,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
         MELTPdll(&p_kPa, &(mole_fractions[0]),
              &_T,
              &ierr,herr,errormessagelength);      // Error message
-        if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); } //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
         return _T;
     }
     else{
@@ -994,7 +994,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_viscosity(void)
     TRNPRPdll(&_T,&rhomol_L,&(mole_fractions[0]),  // Inputs
               &eta,&tcx,                           // Outputs
               &ierr,herr,errormessagelength);      // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     _viscosity = 1e-6*eta;
     _conductivity = tcx;
@@ -1015,7 +1015,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_surface_tension(void)
     SURFTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
              &sigma,                                 // Outputs
              &ierr, herr, errormessagelength);       // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     _surface_tension = sigma;
     return static_cast<double>(_surface_tension);
@@ -1031,7 +1031,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(std::size_t i)
     FUGCOFdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
              &(fug_cof[0]),                           // Outputs
              &ierr, herr, errormessagelength);        // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(fug_cof[i]);
 }
@@ -1045,7 +1045,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity(std::size_t i)
     FGCTY2dll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
               &(f[0]),                                // Outputs
         &ierr, herr, errormessagelength);             // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s", herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s", herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(f[i]*1000);
 }
@@ -1059,7 +1059,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_chemical_potential(std::size_t i)
     CHEMPOTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
         &(chem_pot[0]),                           // Outputs
         &ierr, herr, errormessagelength);        // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s", herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s", herr).c_str()); }
     //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     return static_cast<CoolPropDbl>(chem_pot[i]);
 }
@@ -1072,7 +1072,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
     char herr[255];
     SATSPLNdll(&(mole_fractions[0]),  // Inputs
                &ierr, herr, errormessagelength);       // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("%s",herr).c_str()); }
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
 
     // Clear the phase envelope data
     PhaseEnvelope = PhaseEnvelopeData();
@@ -1234,7 +1234,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                           &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                           &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
                           &ierr,herr,errormessagelength); //
-                if (static_cast<int>(ierr) > 0) {
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                     throw ValueError(format("PT: %s",herr).c_str());
                 }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
             }
@@ -1299,7 +1299,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                           &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                           &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w,
                           &ierr,herr,errormessagelength);
-                if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("DmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
             }
             else{
                 // phase is imposed
@@ -1331,7 +1331,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &q,&emol,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength);  // Error terms
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarP: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("DmolarP: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _rhomolar = value1;
@@ -1358,7 +1358,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&smol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength);
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarHmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("DmolarHmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
@@ -1385,7 +1385,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&emol,&hmol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength);
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("DmolarSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
@@ -1412,7 +1412,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                       &q,&hmol,&hmol,&cvmol,&cpmol,&w,
                       &ierr,herr,errormessagelength);
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("DmolarUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("DmolarUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000;
@@ -1439,7 +1439,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &rhoLmol_L,&rhoVmol_L,&(mole_fractions_liq[0]),&(mole_fractions_vap[0]), // Saturation terms
                 &q,&emol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("HmolarPmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("HmolarPmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value2;
@@ -1466,7 +1466,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &q,&emol,&hmol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("PSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1494,7 +1494,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &q,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("PUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1520,7 +1520,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &q,&emol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("HmolarSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("HmolarSmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1548,7 +1548,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &q,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("SmolarUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("SmolarUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1584,7 +1584,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &q,&emol,&hmol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("SmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("SmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1619,7 +1619,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &q,&emol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("HmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("HmolarT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1654,7 +1654,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 &q,&hmol,&smol,&cvmol,&cpmol,&w, // Other thermodynamic terms
                 &ierr,herr,errormessagelength); // Error terms
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("TUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("TUmolar: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa*1000; // 1000 for conversion from kPa to Pa
@@ -1715,7 +1715,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &rho_mol_L, &rhoLmol_L,&rhoVmol_L,
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
-                if (ierr > 0L) {
+                if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                     ierr = 0;
                     // SATPdll(p, z, kph, T, Dl, Dv, x, y, ierr, herr)
                     //
@@ -1735,7 +1735,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
                 }
             }
-            if (static_cast<int>(ierr) > 0 || iFlsh == 0){
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD) || iFlsh == 0){
                 // From REFPROP:
                 //additional input--only for TQFLSH and PQFLSH
                 //     kq--flag specifying units for input quality
@@ -1750,7 +1750,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     &ierr,herr,errormessagelength); // Error terms
             }
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1779,7 +1779,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                       &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                       &ierr,herr,errormessagelength);
 
-                if (ierr > 0L){
+                if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)){
                     ierr = 0;
                     // SATTdll(T, z, kph, P, Dl, Dv, x, y, ierr, herr)
                     //
@@ -1799,7 +1799,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
                 }
             }
-            if (static_cast<int>(ierr) > 0 || iFlsh == 0){
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD) || iFlsh == 0){
                 ierr = 0;
                 /* From REFPROP:
                 additional input--only for TQFLSH and PQFLSH
@@ -1814,7 +1814,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     &ierr,herr,errormessagelength); // Error terms
             }
 
-            if (static_cast<int>(ierr) > 0) {
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("TQ(%s): %s",LoadedREFPROPRef.c_str(), herr).c_str());
                 }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());
 
@@ -1879,7 +1879,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             int kph = (guesses.rhomolar > calc_rhomolar_critical()) ? 1 : 2; // liquid  if density > rhoc, vapor otherwise - though we are passing the guess density
             rho_mol_L = guesses.rhomolar/1000.0;
             TPRHOdll(&_T, &p_kPa, &(mole_fractions[0]), &kph, &kguess, &rho_mol_L, &ierr, herr, errormessagelength);
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("PT: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1931,7 +1931,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
                      &(mole_fractions_liq[0]),&(mole_fractions_vap[0]), &q,
                      &ierr,herr,errormessagelength);
 
-            if (static_cast<int>(ierr) > 0) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("PQ: %s",herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -2009,7 +2009,7 @@ void REFPROPMixtureBackend::calc_excess_properties(){
     EXCESSdll(&T_K, &p_kPa, &(mole_fractions[0]), &kph,
         &rho, &vE, &eE, &hE, &sE, &aE, &gE,
         &ierr, herr, errormessagelength);      // Error message
-    if (static_cast<int>(ierr) > 0) { throw ValueError(format("EXCESSdll: %s", herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("EXCESSdll: %s", herr).c_str()); }// TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
     _volumemolar_excess = vE;
     _umolar_excess = eE;
     _hmolar_excess = hE;

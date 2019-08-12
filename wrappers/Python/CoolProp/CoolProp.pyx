@@ -53,10 +53,12 @@ cdef extern from "Configuration.h" namespace "CoolProp":
     void _set_config_string "CoolProp::set_config_string"(constants_header.configuration_keys,string) except +
     void _set_config_double "CoolProp::set_config_double"(constants_header.configuration_keys,double) except +
     void _set_config_bool "CoolProp::set_config_bool"(constants_header.configuration_keys,bint) except +
+    void _set_config_int "CoolProp::set_config_int"(constants_header.configuration_keys,int) except +
     
     string _get_config_string "CoolProp::get_config_string"(constants_header.configuration_keys) except +
     double _get_config_double "CoolProp::get_config_double"(constants_header.configuration_keys) except +
     bint _get_config_bool "CoolProp::get_config_bool"(constants_header.configuration_keys) except +
+    int _get_config_int "CoolProp::get_config_int"(constants_header.configuration_keys) except +
 
 cdef extern from "DataStructures.h" namespace "CoolProp":    
     string _get_parameter_information "CoolProp::get_parameter_information"(int, string) except +
@@ -234,6 +236,10 @@ cpdef set_config_string(constants_header.configuration_keys key, string value):
 cpdef set_config_bool(constants_header.configuration_keys key, bint value):
     """ Set a configuration key that is a boolean;  wrapper of wrapper of C++ function :cpapi:`CoolProp::set_config_bool` """
     _set_config_bool(key, value)
+
+cpdef set_config_int(constants_header.configuration_keys key, int value):
+    """ Set a configuration key that is an integer;  wrapper of wrapper of C++ function :cpapi:`CoolProp::set_config_int` """
+    _set_config_int(key, value)
     
 cpdef double get_config_double(constants_header.configuration_keys key):
     """ Get a configuration key that is a double-precision float;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_double` """
@@ -246,6 +252,10 @@ cpdef string get_config_string(constants_header.configuration_keys key):
 cpdef bint get_config_bool(constants_header.configuration_keys key):
     """ Get a configuration key that is a boolean;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_bool` """
     return _get_config_bool(key)
+
+cpdef int get_config_int(constants_header.configuration_keys key):
+    """ Get a configuration key that is an integer;  wrapper of wrapper of C++ function :cpapi:`CoolProp::get_config_int` """
+    return _get_config_int(key)
 
 cpdef int get_parameter_index(string key):
     return _get_parameter_index(key)
