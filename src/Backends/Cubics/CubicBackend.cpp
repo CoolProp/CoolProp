@@ -452,6 +452,9 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                 else if (rho1 > 0){
                     rho = rho1;
                 }
+                else if (rho2 > 0){
+                    rho = rho2;
+                }
                 else{
                     throw CoolProp::ValueError(format("Unable to find gaseous density for T: %g K, p: %g Pa", T, p));
                 }
