@@ -17,6 +17,7 @@
 #include "Backends/Cubics/CubicBackend.h"
 #include "Backends/Cubics/VTPRBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
+#include "Backends/PCSAFT/PCSAFTBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"

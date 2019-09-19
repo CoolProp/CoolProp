@@ -46,6 +46,7 @@
 #include "DataStructures.h"
 #include "Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "Backends/Cubics/CubicsLibrary.h"
+#include "Backends/PCSAFT/PCSAFTLibrary.h"
 
 #if defined(ENABLE_CATCH)
     #include "catch.hpp"
@@ -152,7 +153,7 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             const std::string &name = name_fraction[0], &fraction = name_fraction[1];
             // The default locale for conversion from string to double is en_US with . as the deliminter
             // Good: 0.1234 Bad: 0,1234
-            // But you can change the punctuation character for fraction parsing 
+            // But you can change the punctuation character for fraction parsing
             // with the configuration variable FLOAT_PUNCTUATION to change the locale to something more convenient for you (e.g., a ',')
             // See also http://en.cppreference.com/w/cpp/locale/numpunct/decimal_point
             std::stringstream ssfraction(fraction);
@@ -163,7 +164,7 @@ std::string extract_fractions(const std::string &fluid_string, std::vector<doubl
             if (ssfraction.rdbuf()->in_avail() != 0){
                 throw ValueError(format("fraction [%s] was not converted fully", fraction.c_str()));
             }
-            
+
             if (f > 1 || f < 0){
                 throw ValueError(format("fraction [%s] was not converted to a value between 0 and 1 inclusive", fraction.c_str()));
             }
@@ -408,7 +409,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
                 switch (output.type){
                     case output_parameter::OUTPUT_TYPE_TRIVIAL:
                     case output_parameter::OUTPUT_TYPE_NORMAL:
-                        IO[i][j] = State->keyed_output(output.Of1); 
+                        IO[i][j] = State->keyed_output(output.Of1);
                         if (use_guesses) {
                             switch (output.Of1) {
                             case iDmolar: guesses.rhomolar = IO[i][j]; break;
@@ -594,7 +595,7 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
 
         // BEGIN OF TRY
         // Here is the real code that is inside the try block
-    
+
 
         std::string backend, fluid;
         extract_backend(Ref, backend, fluid);
@@ -626,7 +627,7 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
     }
     #endif
 }
-    
+
 bool add_fluids_as_JSON(const std::string &backend, const std::string &fluidstring)
 {
     if (backend == "SRK" || backend == "PR")
@@ -636,6 +637,10 @@ bool add_fluids_as_JSON(const std::string &backend, const std::string &fluidstri
     else if (backend == "HEOS")
     {
         JSONFluidLibrary::add_many(fluidstring); return true;
+    }
+    else if (backend == "PCSAFT")
+    {
+        PCSAFTLibrary::add_fluids_as_JSON(fluidstring); return true;
     }
     else{
         throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON; valid options are SRK, PR, HEOS",backend.c_str()));
@@ -851,7 +856,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
     std::string backend, fluid;
     extract_backend(fluid_string, backend, fluid);
     if (backend == "REFPROP"){
-        
+
         int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
         char herr[255], hrf[4];
@@ -875,7 +880,7 @@ void set_reference_stateS(const std::string &fluid_string, const std::string &re
         if (!reference_state.compare("IIR"))
         {
             if (HEOS.Ttriple() > 273.15){
-                throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K",HEOS.Ttriple())); 
+                throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K",HEOS.Ttriple()));
             }
             HEOS.update(QT_INPUTS, 0, 273.15);
 
@@ -989,14 +994,17 @@ std::string get_global_param_string(const std::string &ParamName)
     else if (!ParamName.compare("HOME")){
         return get_home_dir();
     }
-	else if (ParamName == "REFPROP_version"){
-		return REFPROPMixtureBackend::version();
-	}
+  	else if (ParamName == "REFPROP_version"){
+  		  return REFPROPMixtureBackend::version();
+  	}
     else if (ParamName == "cubic_fluids_schema"){
         return CoolProp::CubicLibrary::get_cubic_fluids_schema();
     }
     else if (ParamName == "cubic_fluids_list"){
         return CoolProp::CubicLibrary::get_cubic_fluids_list();
+    }
+    else if (ParamName == "pcsaft_fluids_schema"){
+        return CoolProp::PCSAFTLibrary::get_pcsaft_fluids_schema();
     }
     else{
         throw ValueError(format("Input parameter [%s] is invalid",ParamName.c_str()));
@@ -1094,4 +1102,3 @@ std::string PhaseSI(const std::string &Name1, double Prop1, const std::string &N
 }
 */
 } /* namespace CoolProp */
-

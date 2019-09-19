@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Fluid for PC-SAFT EOS in CoolProp",
+  "items": {
+    "properties": {
+      "name": {
+        "description": "Name of the fluid",
+        "type": "string"
+      },
+      "CAS": {
+        "description": "CAS registry number of the fluid",
+        "type": "string"
+      },
+      "m": {
+        "description": "Number of segments (-)",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1000
+      },
+      "sigma": {
+        "description": "Segment diameter (1/Angstrom)",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 6
+      },
+      "sigma_units": {
+        "description": "Units of the segment diameter provided",
+        "enum": [
+          "1/Angstrom"
+        ]
+      },
+      "u": {
+        "description": "Dispersion energy divided by Boltzmann constant (K)",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1000
+      },
+      "u_units": {
+        "description": "Units of the dispersion energy provided",
+        "enum": [
+          "K"
+        ]
+      },
+      "uAB": {
+        "description": "Association energy (K)",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 5000
+      },
+      "uAB_units": {
+        "description": "Units of the association energy provided",
+        "enum": [
+          "K"
+        ]
+      },
+      "kappa": {
+        "description": "Association volume",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "kappa_units": {
+        "description": "Units of the association volume provided",
+        "enum": [
+          "1/Angstrom^3"
+        ]
+      },
+      "dipm": {
+        "description": "Dipole moment (Debye)",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 13
+      },
+      "dipm_units": {
+        "description": "Units of the dipole moment provided",
+        "enum": [
+          "Debye"
+        ]
+      },
+      "dipnum": {
+        "description": "Number of dipole moments per molecule (-)",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "molemass": {
+        "description": "Molar mass (kg/mol)",
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "molemass_units": {
+        "description": "Units of the molar mass provided",
+        "enum": [
+          "kg/mol"
+        ]
+      },
+      "aliases": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 0
+      },
+      "BibTeX": {
+        "description": "BibTeX reference to the source from which the PC-SAFT parameters were taken",
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "CAS",
+      "m",
+      "sigma",
+      "sigma_units",
+      "u",
+      "u_units",
+      "molemass",
+      "molemass_units"
+    ]
+  },
+  "type": "array"
+}

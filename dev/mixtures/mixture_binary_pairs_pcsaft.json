@@ -1,0 +1,18 @@
+[
+  {
+    "BibTeX": "test",
+    "CAS1": "106-98-9",
+    "CAS2": "108-88-3",
+    "Name1": "1-BUTENE",
+    "Name2": "TOLUENE",
+    "kij": 0.00
+  },
+  {
+    "BibTeX": "test",
+    "CAS1": "74-98-6",
+    "CAS2": "108-88-3",
+    "Name1": "PROPANE",
+    "Name2": "TOLUENE",
+    "kij": 0.00
+  }
+]
