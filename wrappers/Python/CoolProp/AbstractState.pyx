@@ -240,6 +240,9 @@ cdef class AbstractState:
     cpdef double p(self) except *: 
         """ Get the pressure in Pa - wrapper of c++ function :cpapi:`CoolProp::AbstractState::p(void)` """
         return self.thisptr.p()
+    cpdef double compressibility_factor(self) except *: 
+        """ Get the compressibility factor Z=p/(rho*R*T) - wrapper of c++ function :cpapi:`CoolProp::AbstractState::compressibility_factor(void)` """
+        return self.thisptr.compressibility_factor()
     cpdef double Q(self) except *: 
         """ Get the vapor quality in mol/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Q(void)` """
         return self.thisptr.Q()

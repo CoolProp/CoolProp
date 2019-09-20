@@ -103,6 +103,7 @@ cdef class AbstractState:
     cpdef double T(self) except *
     cpdef double p(self) except *
     cpdef double Q(self) except *
+    cpdef double compressibility_factor(self) except *
     cpdef double rhomolar(self) except *
     cpdef double hmolar(self) except *
     cpdef double smolar(self) except *
