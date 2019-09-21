@@ -109,7 +109,7 @@ public:
  *
  * This departure function has a form like
  * \f[
- * \alphar^r_{ij} = \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}}\exp(-\delta^{l_{ij,k}}) + \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}}\exp[-\eta_{ij,k}(\delta-\varepsilon_{ij,k})^2-\beta_{ij,k}(\tau-\gamma_{ij,k})^2]
+ * \alphar^r_{ij} = \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}}\exp(-c_{ij,k}\delta^{l_{ij,k}} -\eta_{ij,k}(\delta-\varepsilon_{ij,k})^2-\beta_{ij,k}(\tau-\gamma_{ij,k})^2)
  * \f]
  * It is symmetric so \f$\alphar^r_{ij} = \alphar^r_{ji}\f$
  */
