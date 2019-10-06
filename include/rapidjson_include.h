@@ -225,7 +225,8 @@ namespace cpjson
     };
 
     /// A convenience function to get a std::string from a JSON value
-    inline std::string to_string(rapidjson::Value &v)
+    template <typename T>
+    inline std::string to_string(const T &v)
     {
         rapidjson::StringBuffer buffer;
         rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
@@ -332,11 +333,7 @@ namespace cpjson
         if (!d.Accept(validator)) {
             // Input JSON is invalid according to the schema
             // Output diagnostic information
-            rapidjson::StringBuffer sb;
-            validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-            errstr = format("Invalid schema: %s\n", sb.GetString());
-            errstr += format("Invalid keyword: %s\n", validator.GetInvalidSchemaKeyword());
-            sb.Clear();
+            errstr = to_string(validator.GetError());
             return SCHEMA_NOT_VALIDATED;
         }
         return SCHEMA_VALIDATION_OK;
