@@ -33,11 +33,13 @@ protected:
 
     std::size_t N; ///< Number of components
 
+    bool water_present; ///< Whether or not water is present in the system because water has a temperature dependent sigma
+    int water_idx;
     bool ion_term; ///< Whether or not the ion term should be included
     bool polar_term; ///< Whether or not the dipole term should be included
     bool assoc_term; ///< Whether or not the association term should be included
 
-    void post_update(bool optional_checks = true);
+    void post_update(bool optional_checks = false); // <-- TODO implement phase check and set this back to true
 
     // these functions are used internally to solve for association parameters
     vector<double> XA_find(vector<double> XA_guess, int ncomp, vector<double> delta_ij, double den,

@@ -105,6 +105,15 @@ public:
 // This static initialization will cause the generator to register
 static CoolProp::GeneratorInitializer<VTPRGenerator> vtpr_gen(CoolProp::VTPR_BACKEND_FAMILY);
 
+class PCSAFTGenerator : public CoolProp::AbstractStateGenerator{
+public:
+    CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        return new CoolProp::PCSAFTBackend(fluid_names);
+    };
+} ;
+// This static initialization will cause the generator to register
+static CoolProp::GeneratorInitializer<PCSAFTGenerator> pcsaft_gen(CoolProp::PCSAFT_BACKEND_FAMILY);
+
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
 {
@@ -284,9 +293,11 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, Cool
     case DmassSmass_INPUTS: ///< Mass density in kg/m^3, Entropy in J/kg/K
     case DmassUmass_INPUTS: ///< Mass density in kg/m^3, Internal energy in J/kg
     {
+        std::cout << "in switch" << std::endl;
         // Set the cache value for the molar mass if it hasn't been set yet
         molar_mass();
 
+        std::cout << "after molar mass caching" << std::endl;
         // Molar mass (just for compactness of the following switch)
         CoolPropDbl mm = static_cast<CoolPropDbl>(_molar_mass);
 
@@ -311,6 +322,7 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, Cool
         break;
     }
     default:
+        std::cout << "in default" << std::endl;
         return;
     }
 }
@@ -616,6 +628,7 @@ double AbstractState::surface_tension(void){
     return _surface_tension;
 }
 double AbstractState::molar_mass(void){
+    std::cout << "in molar_mass(): " << !_molar_mass << std::endl; // !!! remove
     if (!_molar_mass) _molar_mass = calc_molar_mass();
     return _molar_mass;
 }

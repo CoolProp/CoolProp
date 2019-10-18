@@ -179,10 +179,12 @@ PCSAFTFluid& PCSAFTLibraryClass::get(std::size_t key) {
 
 void add_fluids_as_JSON(const std::string &JSON)
 {
+    std::cout << "in add_fluids_as_JSON" << std::endl; // !!! Remove
     // First we validate the json string against the schema;
     std::string errstr;
     cpjson::schema_validation_code val_code = cpjson::validate_schema(pcsaft_fluids_schema_JSON, JSON, errstr);
     // Then we check the validation code
+
     if (val_code == cpjson::SCHEMA_VALIDATION_OK){
         rapidjson::Document dd;
 
@@ -191,6 +193,7 @@ void add_fluids_as_JSON(const std::string &JSON)
             throw ValueError("Unable to load all_pcsaft_JSON.json");
         } else{
             try{
+                std::cout << "in try loop before add_many" << std::endl; // !!! Remove
                 library.add_many(dd);
             }catch(std::exception &e){std::cout << e.what() << std::endl;}
         }
@@ -202,6 +205,7 @@ void add_fluids_as_JSON(const std::string &JSON)
 
 int PCSAFTLibraryClass::add_many(rapidjson::Value &listing)
 {
+    std::cout << "in add_many" << std::endl; // !!! Remove
     int counter = 0;
     std::string fluid_name;
     for (rapidjson::Value::ValueIterator itr = listing.Begin();
@@ -304,6 +308,7 @@ int PCSAFTLibraryClass::add_many(rapidjson::Value &listing)
 };
 
 std::string get_pcsaft_fluids_schema(){
+    std::cout << "in get_pcsaft_fluids_schema" << std::endl; // !!! Remove
     return pcsaft_fluids_schema_JSON;
 }
 

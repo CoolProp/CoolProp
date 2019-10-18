@@ -15,10 +15,11 @@ namespace CoolProp {
 
 PCSAFTBackend::PCSAFTBackend(const std::vector<std::string> &component_names) { //, bool generate_SatL_and_SatV
     N = component_names.size();
-    std::vector<PCSAFTFluid> components(N);
+    components.resize(N);
     ion_term = false;
     polar_term = false;
     assoc_term = false;
+    water_present = false;
     for (unsigned int i = 0; i < N; ++i){
         components[i] = PCSAFTLibrary::get_library().get(component_names[i]);
         // Determining which PC-SAFT terms should be used
@@ -30,6 +31,10 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string> &component_names) { 
         }
         if (components[i].getVolA() != 0) {
             assoc_term = true;
+        }
+        if (components[i].getCAS() == "7732-18-5") {
+            water_present = true;
+            water_idx = i;
         }
     }
 
@@ -64,6 +69,7 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid> &components) { //boo
     ion_term = false;
     polar_term = false;
     assoc_term = false;
+    water_present = false;
     for (unsigned int i = 0; i < N; ++i){
         if (components[i].getZ() != 0) {
             ion_term = true;
@@ -73,6 +79,10 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid> &components) { //boo
         }
         if (components[i].getVolA() != 0) {
             assoc_term = true;
+        }
+        if (components[i].getCAS() == "7732-18-5") {
+            water_present = true;
+            water_idx = i;
         }
     }
     // Reset the residual Helmholtz energy class
@@ -85,7 +95,7 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid> &components) { //boo
     // loading interaction parameters
     std::string kij_string;
     if (!is_pure_or_pseudopure) {
-        std::vector<double> k_ij(N*N, 0.0);
+        k_ij.resize(N*N, 0.0);
         for (unsigned int i = 0; i < N; ++i){
             for (unsigned int j = 0; j < N; ++j){
                 if (i != j) {
@@ -393,6 +403,8 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
     double Zid = 1.0;
     double Zhc = m_avg*Zhs - summ;
     double Zdisp = -2*PI*den*detI1_det*m2es3 - PI*den*m_avg*(C1*detI2_det + C2*eta*I2)*m2e2s3;
+    // std::cout << "den=" << den << " detI1_det=" << detI1_det << " m2es3=" << m2es3 << " C1=" << C1 << std::endl; // !!! Remove
+    // std::cout << "eta=" << eta << " detI2_det=" << detI2_det << " I2=" << I2 << " m2e2s3=" << m2e2s3 << std::endl; // !!! Remove this
 
     // Dipole term (Gross and Vrabec term) --------------------------------------
     double Zpolar = 0;
@@ -592,6 +604,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
     }
 
     double Z = Zid + Zhc + Zdisp + Zpolar + Zassoc + Zion;
+    std::cout << "Z:" << Z << " Zhc=" << Zhc << " Zdisp=" << Zdisp << " Zpolar=" << Zpolar << " Zassoc=" << Zassoc << " Zion=" << Zion << std::endl; // !!! Remove this
     return Z;
 }
 
@@ -633,16 +646,29 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     switch(input_pair)
     {
         case PT_INPUTS:
-            dielc = dielc_water(value2); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
-            _p = value1; _T = value2; _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/, -1.0/*rho_guess*/); break;
+            _p = value1; _T = value2;
+            if (water_present) {
+                components[water_idx].calc_water_sigma(_T);
+                dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+            }
+            _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/, -1.0/*rho_guess*/); break;
         case QT_INPUTS:
-            dielc = dielc_water(value2);
-            _Q = value1; _T = value2; flash_QT(*this); break;
+            _Q = value1; _T = value2;
+            if (water_present) {
+                components[water_idx].calc_water_sigma(_T);
+                dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+            }
+            flash_QT(*this); break;
         case PQ_INPUTS:
             _p = value1; _Q = value2; flash_PQ(*this); break;
         case DmolarT_INPUTS:
-            dielc = dielc_water(value2);
-            _rhomolar = value1; _T = value2; update_DmolarT(); break;
+            _rhomolar = value1; _T = value2;
+            if (water_present) {
+                components[water_idx].calc_water_sigma(_T);
+                dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+            }
+            update_DmolarT();
+            break;
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
         case DmolarHmolar_INPUTS:

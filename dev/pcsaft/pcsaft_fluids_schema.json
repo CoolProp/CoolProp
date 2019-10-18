@@ -20,7 +20,7 @@
       "sigma": {
         "description": "Segment diameter (1/Angstrom)",
         "type": "number",
-        "minimum": 0,
+        "minimum": -2,
         "maximum": 6
       },
       "sigma_units": {
@@ -33,7 +33,7 @@
         "description": "Dispersion energy divided by Boltzmann constant (K)",
         "type": "number",
         "minimum": 0,
-        "maximum": 1000
+        "maximum": 2000
       },
       "u_units": {
         "description": "Units of the dispersion energy provided",
@@ -53,13 +53,13 @@
           "K"
         ]
       },
-      "kappa": {
+      "volA": {
         "description": "Association volume",
         "type": "number",
         "minimum": 0,
         "maximum": 1
       },
-      "kappa_units": {
+      "volA_units": {
         "description": "Units of the association volume provided",
         "enum": [
           "1/Angstrom^3"
@@ -82,6 +82,12 @@
         "type": "number",
         "minimum": 0,
         "maximum": 100
+      },
+      "charge": {
+        "description": "Charge of ion (-)",
+        "type": "number",
+        "minimum": -10,
+        "maximum": 10
       },
       "molemass": {
         "description": "Molar mass (kg/mol)",

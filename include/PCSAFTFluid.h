@@ -44,6 +44,8 @@ class PCSAFTFluid {
         CoolPropDbl getDipm() const {return params.dipm;}
         CoolPropDbl getDipnum() const {return params.dipnum;}
         CoolPropDbl getZ() const {return params.z;}
+
+        void calc_water_sigma(double t);
 };
 
 } /* namespace CoolProp */
