@@ -1979,56 +1979,93 @@ TEST_CASE("Check the PC-SAFT pressure function", "[pcsaft_pressure]")
     double p = 101325.;
     double p_calc = CoolProp::PropsSI("P","T",320.,"Dmolar",9033.11420899,"PCSAFT::TOLUENE");
     std::cout << "Toluene: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
-    CHECK((p_calc/p - 1) < 1e-5);
+    CHECK((abs(p_calc/p) - 1) < 1e-5);
 
-    p_calc = CoolProp::PropsSI("P","T",274.,"Dmolar",55476.44200944,"PCSAFT::WATER");
+    p_calc = CoolProp::PropsSI("P","T",274.,"Dmolar", 55530.40512318346,"PCSAFT::WATER");
     std::cout << "Water: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
-    CHECK((p_calc/p - 1) < 1e-5);
+    CHECK((abs(p_calc/p) - 1) < 1e-5);
 
     p_calc = CoolProp::PropsSI("P","T",305.,"Dmolar",16965.43663595,"PCSAFT::ACETIC ACID");
     std::cout << "Acetic acid: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
-    CHECK((p_calc/p - 1) < 1e-5);
+    CHECK((abs(p_calc/p) - 1) < 1e-5);
 
     p_calc = CoolProp::PropsSI("P","T",240.,"Dmolar",15865.69021378,"PCSAFT::DIMETHYL ETHER");
     std::cout << "Dimethyl ether: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
-    CHECK((p_calc/p - 1) < 1e-5);
+    CHECK((abs(p_calc/p) - 1) < 1e-5);
 
-    // p_calc = CoolProp::PropsSI("P","T",298.15,"Dmolar", 9368.9036823, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
-    // std::cout << "Methanol-cyclohexane: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
-    // CHECK((p_calc/p - 1) < 1e-5);
-    //
-    // p_calc = CoolProp::PropsSI("P","T",298.15,"Dmolar", 55756.67269771, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
-    // std::cout << "NaCl in water: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
-    // CHECK((p_calc/p - 1) < 1e-5);
+    p_calc = CoolProp::PropsSI("P","T",298.15,"Dmolar", 9368.9036823, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
+    std::cout << "Methanol-cyclohexane: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
+    CHECK((abs(p_calc/p) - 1) < 1e-5);
+
+    p_calc = CoolProp::PropsSI("P","T",298.15,"Dmolar", 55740.157290833515, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
+    std::cout << "NaCl in water: P calc: " << p_calc << " P actual: " << p << std::endl; // !!! Remove this
+    CHECK((abs(p_calc/p) - 1) < 1e-5);
 }
 
 TEST_CASE("Check the PC-SAFT density function", "[pcsaft_density]")
 {
-    double den = 9135.590853014008.;
-    double den_calc = CoolProp::PropsSI("Dmolar","T",320.,"P", 101325.,"PCSAFT::TOLUENE");
+    double den = 9033.114209728405;
+    double den_calc = CoolProp::PropsSI("Dmolar","T|liquid",320.,"P", 101325.,"PCSAFT::TOLUENE");
     std::cout << "Toluene: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
-    CHECK((den_calc/den - 1) < 1e-5);
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
 
-    den = 55502.5970532902;
-    den_calc = CoolProp::PropsSI("Dmolar","T",274.,"P",101325,"PCSAFT::WATER");
+    den = 55530.40512318346;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",274.,"P",101325,"PCSAFT::WATER");
     std::cout << "Water: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
-    CHECK((den_calc/den - 1) < 1e-5);
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
 
-    den_calc = CoolProp::PropsSI("Dmolar","T",305.,"P",101325,"PCSAFT::ACETIC ACID");
+    den = 16965.436637145376;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",305.,"P",101325,"PCSAFT::ACETIC ACID");
     std::cout << "Acetic acid: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
-    CHECK((den_calc/den - 1) < 1e-5);
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
 
-    den_calc = CoolProp::PropsSI("Dmolar","T",240.,"P",101325,"PCSAFT::DIMETHYL ETHER");
+    den = 15865.690215090615;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",240.,"P",101325,"PCSAFT::DIMETHYL ETHER");
     std::cout << "Dimethyl ether: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
-    CHECK((den_calc/den - 1) < 1e-5);
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
 
-    // den_calc = CoolProp::PropsSI("Dmolar","T",298.15,"P", 101325, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
-    // std::cout << "Methanol-cyclohexane: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
-    // CHECK((den_calc/den - 1) < 1e-5);
-    //
-    // den_calc = CoolProp::PropsSI("Dmolar","T",298.15,"P", 101325, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
-    // std::cout << "NaCl in water: calc: " << den_calc << " actual: " << p << std::endl; // !!! Remove this
-    // CHECK((den_calc/den - 1) < 1e-5);
+    den = 9368.90368306872;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",298.15,"P", 101325, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
+    std::cout << "Methanol-cyclohexane: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
+
+    den = 55740.157290833515;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",298.15,"P", 101325, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
+    std::cout << "NaCl in water: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
+}
+
+TEST_CASE("Check the PC-SAFT enthalpy function", "[pcsaft_enthalpy]")
+{
+    double den = 9033.114209728405;
+    double den_calc = CoolProp::PropsSI("Dmolar","T|liquid",320.,"P", 101325.,"PCSAFT::TOLUENE");
+    std::cout << "Toluene: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
+
+    den = 55530.40512318346;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",274.,"P",101325,"PCSAFT::WATER");
+    std::cout << "Water: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
+
+    den = 16965.436637145376;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",305.,"P",101325,"PCSAFT::ACETIC ACID");
+    std::cout << "Acetic acid: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
+
+    den = 15865.690215090615;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",240.,"P",101325,"PCSAFT::DIMETHYL ETHER");
+    std::cout << "Dimethyl ether: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
+
+    den = 9368.90368306872;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",298.15,"P", 101325, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
+    std::cout << "Methanol-cyclohexane: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
+
+    den = 55740.157290833515;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",298.15,"P", 101325, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
+    std::cout << "NaCl in water: calc: " << den_calc << " actual: " << den << std::endl; // !!! Remove this
+    CHECK((abs(den_calc/den) - 1) < 1e-5);
 }
 
 /*

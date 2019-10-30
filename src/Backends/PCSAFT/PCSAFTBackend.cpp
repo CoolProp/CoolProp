@@ -47,13 +47,19 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string> &component_names) { 
 
     // loading interaction parameters
     std::string kij_string;
+    std::string kijT_string;
     if (!is_pure_or_pseudopure) {
-        std::vector<double> k_ij(N*N, 0.0);
+        k_ij.resize(N*N, 0.0);
+        k_ijT.resize(N*N, 0.0);
         for (unsigned int i = 0; i < N; ++i){
             for (unsigned int j = 0; j < N; ++j){
                 if (i != j) {
                     kij_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
+                    kijT_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
                     k_ij[i*N+j] = atof(kij_string.c_str());
+                    k_ijT[i*N+j] = atof(kijT_string.c_str());
+                    // std::cout << "kij string=" << kij_string << " kij=" << k_ij[i*N+j] << std::endl;
+                    // std::cout << "kijT string=" << kijT_string << " kijT=" << k_ijT[i*N+j] << std::endl;
                 }
             }
         }
@@ -94,13 +100,17 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid> &components) { //boo
 
     // loading interaction parameters
     std::string kij_string;
+    std::string kijT_string;
     if (!is_pure_or_pseudopure) {
         k_ij.resize(N*N, 0.0);
+        k_ijT.resize(N*N, 0.0);
         for (unsigned int i = 0; i < N; ++i){
             for (unsigned int j = 0; j < N; ++j){
                 if (i != j) {
                     kij_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
+                    kijT_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
                     k_ij[i*N+j] = atof(kij_string.c_str());
+                    k_ijT[i*N+j] = atof(kijT_string.c_str());
                 }
             }
         }
@@ -154,8 +164,8 @@ void PCSAFTBackend::resize(std::size_t N)
     this->lnK.resize(N);
 }
 
-void PCSAFTBackend::update_DmolarT() {
-    _p = this->calc_pressure_nocache(_T, _rhomolar);
+CoolPropDbl PCSAFTBackend::update_DmolarT(CoolPropDbl T, CoolPropDbl rhomolar) {
+    return this->calc_pressure_nocache(T, rhomolar);
 }
 
 CoolPropDbl PCSAFTBackend::calc_pressure_nocache(CoolPropDbl t, CoolPropDbl rho) {
@@ -344,7 +354,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                         e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
                     }
                     else {
-                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1-k_ij[idx]);
+                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * t));
                     }
                 }
             } else {
@@ -352,7 +362,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                     e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
                 }
                 else {
-                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1-k_ij[idx]);
+                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * t));
                 }
             }
             m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/t*pow(s_ij[idx], 3);
@@ -527,6 +537,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                 volABij[idxa] = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
                     s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
                 delta_ij[idxa] = ghs[iA[j]]*(exp(eABij[idxa]/t)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
+                // std::cout << i << "," << j << ": " << "delta_ij=" << delta_ij[idxa] << " eABij=" << eABij[idxa] << " volABij=" << volABij[idxa] << std::endl; // !!! remove
                 for (int k = 0; k < ncomp; k++) {
                     idx_ddelta += 1;
                     dghsd_dd = PI/6.*components[k].getM()*(pow(d[k], 3)/(1-zeta[3])/(1-zeta[3]) + 3*d[iA[i]]*d[iA[j]]/
@@ -561,6 +572,11 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
 
         vector<double> dXA_dd(a_sites*ncA*ncomp, 0);
         dXA_dd = dXA_find(ncA, ncomp, iA, delta_ij, den, XA, ddelta_dd, x_assoc, a_sites);
+
+        // std::cout << "ncA=" << ncA << " ncomp=" << ncomp << " a_sites=" << a_sites << std::endl; // !!! remove
+        // std::cout << "XA=" << XA[0] << ", " << XA[1] << ", " << XA[2] << std::endl; // !!! remove
+        // std::cout << "dXA_dd=" << dXA_dd[0] << ", " << dXA_dd[1] << ", " << dXA_dd[2] << std::endl; // !!! remove
+        // std::cout << "delta_ij=" << delta_ij[0] << ", " << delta_ij[1] << ", " << delta_ij[2] << std::endl; // !!! remove
 
         summ = 0.;
         for (int i = 0; i < ncomp; i++) {
@@ -604,7 +620,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
     }
 
     double Z = Zid + Zhc + Zdisp + Zpolar + Zassoc + Zion;
-    std::cout << "Z:" << Z << " Zhc=" << Zhc << " Zdisp=" << Zdisp << " Zpolar=" << Zpolar << " Zassoc=" << Zassoc << " Zion=" << Zion << std::endl; // !!! Remove this
+    // std::cout << "Z:" << Z << " Zhc=" << Zhc << " Zdisp=" << Zdisp << " Zpolar=" << Zpolar << " Zassoc=" << Zassoc << " Zion=" << Zion << std::endl; // !!! Remove this
     return Z;
 }
 
@@ -643,6 +659,18 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     // If the inputs are in mass units, convert them to molar units
     mass_to_molar_inputs(input_pair, value1, value2);
 
+    // TODO make sure phase can also be determined automatically
+    phases phase;
+    // Check if the phase is imposed
+    if (imposed_phase_index != iphase_not_imposed)
+        // Use the imposed phase index
+        phase = imposed_phase_index;
+    else
+        // Use the phase index in the class
+        phase = _phase;
+    // TODO check to make sure that an unknown phase is not sent to the density solver
+    // TODO check that twophase phase is handled correctly
+
     switch(input_pair)
     {
         case PT_INPUTS:
@@ -651,7 +679,7 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
                 components[water_idx].calc_water_sigma(_T);
                 dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
             }
-            _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/, -1.0/*rho_guess*/); break;
+            _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/, phase/*phase*/); break;
         case QT_INPUTS:
             _Q = value1; _T = value2;
             if (water_present) {
@@ -667,7 +695,7 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
                 components[water_idx].calc_water_sigma(_T);
                 dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
             }
-            update_DmolarT();
+            _p = update_DmolarT(_T, _rhomolar);
             break;
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
@@ -726,100 +754,52 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
     //!!! remember to update dielc constant
 }
 
-CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_guess){
-    phases phase;
+CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase){
+    // Define the residual to be driven to zero
+    class SolverRhoResid : public FuncWrapper1D
+    {
+    public:
+        PCSAFTBackend *PCSAFT;
+        CoolPropDbl T, p;
 
-    // SolverTPResid resid(this,T,p);
-    //
-    // // Check if the phase is imposed
-    // if (imposed_phase_index != iphase_not_imposed)
-    //     // Use the imposed phase index
-    //     phase = imposed_phase_index;
-    // else
-    //     // Use the phase index in the class
-    //     phase = _phase;
-    //
-    // if (rhomolar_guess < 0) // Not provided
-    // {
-    //     // A gas-like phase, ideal gas might not be the perfect model, but probably good enough
-    //     if (phase == iphase_gas || phase == iphase_supercritical_gas || phase == iphase_supercritical)
-    //     {
-    //         if (rhomolar_guess < 0 || !ValidNumber(rhomolar_guess)) // If the guess is bad, probably high temperature, use ideal gas
-    //         {
-    //             rhomolar_guess = p/(gas_constant()*T);
-    //         }
-    //     }
-    //     else if (phase == iphase_liquid)
-    //     {
-    //         double rhomolar;
-    //         if (is_pure_or_pseudopure){
-    //             mw = calc_molar_mass();
-    //             rhomolar_guess = 1100000.0/mw; // initial guess for liquid chosen to be 1100000 g m^-3
-    //             try{
-    //                 // First we try with Halley's method starting at saturated liquid
-    //                 rhomolar = Halley(resid, rhomolar_guess, 1e-8, 100);
-    //                 if (!ValidNumber(rhomolar) || first_partial_deriv(iP, iDmolar, iT) < 0 || second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) < 0){
-    //                     throw ValueError("Liquid density is invalid");
-    //                 }
-    //             }
-    //             catch(std::exception &){
-    //                 // Next we try with a Brent method bounded solver since the function is 1-1
-    //                 rhomolar = Brent(resid, rhomolar_guess*0.5, rhomolar_guess*1.4, DBL_EPSILON,1e-8,100);
-    //                 if (!ValidNumber(rhomolar)){throw ValueError();}
-    //             }
-    //         }
-    //         else{
-    //             // Try with 4th order Householder method starting at a very high density
-    //             rhomolar = Householder4(&resid, 3*rhomolar_guess, 1e-8, 100);
-    //         }
-    //         return rhomolar;
-    //     }
-    //     else if (phase == iphase_supercritical_liquid){
-    //         mw = calc_molar_mass();
-    //         rhomolar_guess = 1100000.0/mw; // initial guess chosen to be 1100000 g m^-3
-    //
-    //         double rhomolar = Brent(resid, rhomolar_guess*0.5, rhomolar_guess*2, DBL_EPSILON,1e-8,100);
-    //         if (!ValidNumber(rhomolar)){throw ValueError();}
-    //         return rhomolar;
-    //     }
-    // }
-    //
-    // try{
-    //     double rhomolar = rhomolar = Householder4(resid, rhomolar_guess, 1e-8, 20);
-    //     if (!ValidNumber(rhomolar) || rhomolar < 0) {
-    //         throw ValueError();
-    //     }
-    //     if (phase == iphase_liquid){
-    //         double dpdrho = first_partial_deriv(iP, iDmolar, iT);
-    //         double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
-    //         if(dpdrho < 0 || d2pdrho2 < 0){
-    //             // Try again with a larger density in order to end up at the right solution
-    //             rhomolar = Householder4(resid, 3*rhomolar_guess, 1e-8, 100);
-    //             return rhomolar;
-    //         }
-    //     }
-    //     else if (phase == iphase_gas){
-    //         double dpdrho = first_partial_deriv(iP, iDmolar, iT);
-    //         double d2pdrho2 = second_partial_deriv(iP, iDmolar, iT, iDmolar, iT);
-    //         if(dpdrho < 0 || d2pdrho2 > 0){
-    //             // Try again with a tiny density in order to end up at the right solution
-    //             rhomolar = Householder4(resid, 1e-6, 1e-8, 100);
-    //             return rhomolar;
-    //         }
-    //     }
-    //     return rhomolar;
-    // }
-    // catch(std::exception &e)
-    // {
-    //     if (phase == iphase_supercritical || phase == iphase_supercritical_gas){
-    //         mw = calc_molar_mass();
-    //         rhomolar_guess = 350000.0/mw; // initial guess chosen to be 350000 g m^-3
-    //         double rhomolar = Brent(resid, 1e-10, 3*rhomolar_guess, DBL_EPSILON, 1e-8, 100);
-    //         return rhomolar;
-    //     }
-    //     throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg with error: %s",T,p,rhomolar_guess, e.what()));
-    // }
-    return 1100000.0;
+        SolverRhoResid(PCSAFTBackend *PCSAFT, CoolPropDbl T, CoolPropDbl p)
+        : PCSAFT(PCSAFT), T(T), p(p){}
+        double call(double rhomolar){
+            CoolPropDbl peos = PCSAFT->update_DmolarT(T, rhomolar);
+            // std::cout << rhomolar << ", " << (peos-p)/p << ", " << p << ", " << peos << std::endl; // !!! remove
+            return (peos-p)/p;
+        };
+    };
+
+    SolverRhoResid resid(this, T, p);
+
+    double x_lo, x_hi;
+    double rho_guess;
+    if ((phase == iphase_liquid) or (phase == iphase_supercritical_liquid)) {
+        x_lo = 0.2;
+        x_hi = 0.7405;
+    }
+    else if ((phase == iphase_gas) or (phase == iphase_supercritical_gas)) {
+        x_lo = 1.0e-12;
+        x_hi = 0.06;
+    }
+    else if (phase == iphase_supercritical) {
+        x_lo = 1.0e-12;
+        x_hi = 0.7405;
+    }
+
+    vector<double> d(N);
+    double summ = 0.;
+    for (int i = 0; i < N; i++) {
+        d[i] = components[i].getSigma()*(1-0.12*exp(-3*components[i].getU() / T));
+        summ += mole_fractions[i]*components[i].getM()*pow(d[i],3.);
+    }
+
+    x_lo = 6/PI*x_lo/summ*1.0e30/N_AV;
+    x_hi = 6/PI*x_hi/summ*1.0e30/N_AV;
+
+    double rho = Brent(resid, x_lo, x_hi, DBL_EPSILON, 1e-8, 200);
+    return rho;
 }
 
 CoolPropDbl PCSAFTBackend::calc_molar_mass(void){
@@ -831,24 +811,24 @@ CoolPropDbl PCSAFTBackend::calc_molar_mass(void){
     return summer;
 }
 
-vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, int ncomp, vector<double> delta_ij, double den,
+vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, int ncA, vector<double> delta_ij, double den,
     vector<double> x) {
     /**Iterate over this function in order to solve for XA*/
-    int n_sites = XA_guess.size()/ncomp;
+    int n_sites = XA_guess.size()/ncA;
     double summ2;
     vector<CoolPropDbl> XA = XA_guess;
 
-    for (int i = 0; i < ncomp; i++) {
+    for (int i = 0; i < ncA; i++) {
         for (int kout = 0; kout < n_sites; kout++) {
             summ2 = 0.;
-            for (int j = 0; j < ncomp; j++) {
+            for (int j = 0; j < ncA; j++) {
                 for (int kin = 0; kin < n_sites; kin++) {
                     if (kin != kout) {
-                        summ2 += den*mole_fractions[j]*XA_guess[j*ncomp+kin]*delta_ij[i*ncomp+j];
+                        summ2 += den*x[j]*XA_guess[j*n_sites+kin]*delta_ij[i*ncA+j];
                     }
                 }
             }
-            XA[i*ncomp+kout] = 1./(1.+summ2);
+            XA[i*n_sites+kout] = 1./(1.+summ2);
         }
     }
 
@@ -879,10 +859,10 @@ vector<double> PCSAFTBackend::dXA_find(int ncA, int ncomp, vector<int> iA, vecto
                 for (int k = 0; k < ncA; k++) {
                     for (int l = 0; l < n_sites; l++) {
                         indx2 += 1;
-                        sum1 = sum1 + den*mole_fractions[k]*(XA[indx2]*ddelta_dd[j*(ncA*ncomp)+k*(ncomp)+i]*((indx1+indx2)%2)); // (indx1+indx2)%2 ensures that A-A and B-B associations are set to zero
+                        sum1 = sum1 + den*x[k]*(XA[indx2]*ddelta_dd[j*(ncA*ncomp)+k*(ncomp)+i]*((indx1+indx2)%2)); // (indx1+indx2)%2 ensures that A-A and B-B associations are set to zero
                         A(indx1+i*n_sites*ncA,indx2+i*n_sites*ncA) =
                         A(indx1+i*n_sites*ncA,indx2+i*n_sites*ncA) +
-                        XA[indx1]*XA[indx1]*den*mole_fractions[k]*delta_ij[j*ncA+k]*((indx1+indx2)%2);
+                        XA[indx1]*XA[indx1]*den*x[k]*delta_ij[j*ncA+k]*((indx1+indx2)%2);
                     }
                 }
 
@@ -924,9 +904,9 @@ vector<double> PCSAFTBackend::dXAdt_find(int ncA, vector<double> delta_ij, doubl
             for (int j = 0; j < ncA; j++) {
                 for (int bj = 0; bj < n_sites; bj++) {
                     i_in += 1;
-                    B(i_out) -= mole_fractions[j]*XA[i_in]*ddelta_dt[i*ncA+j]*((i_in+i_out)%2); // (i_in+i_out)%2 ensures that A-A and B-B associations are set to zero
-                    A(i_out,i_in) = mole_fractions[j]*delta_ij[i*ncA+j]*((i_in+i_out)%2);
-                    summ += mole_fractions[j]*XA[i_in]*delta_ij[i*ncA+j]*((i_in+i_out)%2);
+                    B(i_out) -= x[j]*XA[i_in]*ddelta_dt[i*ncA+j]*((i_in+i_out)%2); // (i_in+i_out)%2 ensures that A-A and B-B associations are set to zero
+                    A(i_out,i_in) = x[j]*delta_ij[i*ncA+j]*((i_in+i_out)%2);
+                    summ += x[j]*XA[i_in]*delta_ij[i*ncA+j]*((i_in+i_out)%2);
                 }
             }
             A(i_out,i_out) = A(i_out,i_out) + pow(1+den*summ, 2.)/den;

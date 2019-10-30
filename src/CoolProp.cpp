@@ -227,7 +227,9 @@ void _PropsSI_initialize(const std::string &backend,
         // Set the pointer - we are going to use the supplied fractions; they must be provided
         fractions_ptr = &z;
         // Reset the state
+        std::cout << "Before factory call" << std::endl; // !!! remove
         State.reset(AbstractState::factory(backend, fluid_names));
+        std::cout << "After factory call" << std::endl; // !!! remove
     }
     else if (fluid_names.size() == 1){
         if (has_fractions_in_string(fluid_names[0]) || has_solution_concentration(fluid_names[0])){

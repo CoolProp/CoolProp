@@ -127,14 +127,17 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
 
     std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator gen, end;
     get_backend_library().get_generator_iterators(f1, gen, end);
+    std::cout << "after get_generator_iterators" << std::endl; // !!! remove
 
     if (get_debug_level() > 0){
         std::cout << "AbstractState::factory backend_library size: " << get_backend_library().size() << std::endl;
     }
 
+    std::cout << "(gen != end) " << (gen != end) << std::endl; // !!! remove
     if (gen != end){
         // One of the registered backends was able to match the given backend family
         return gen->second->get_AbstractState(fluid_names);
+        std::cout << "after get_AbstractState" << std::endl; // !!! remove
     }
     #if !defined(NO_TABULAR_BACKENDS)
     else if (f1==TTSE_BACKEND_FAMILY)

@@ -24,6 +24,7 @@ class PCSAFTBackend : public AbstractState  {
 protected:
     std::vector<PCSAFTFluid> components; ///< The components that are in use
     std::vector<double> k_ij; ///< binary interaction parameters
+    std::vector<double> k_ijT; ///< temperature dependent binary interaction parameters
     bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
     std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
     std::vector<double> mole_fractions_double; ///< A copy of the bulk mole fractions of the mixture stored as doubles
@@ -40,6 +41,8 @@ protected:
     bool assoc_term; ///< Whether or not the association term should be included
 
     void post_update(bool optional_checks = false); // <-- TODO implement phase check and set this back to true
+
+    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
 
     // these functions are used internally to solve for association parameters
     vector<double> XA_find(vector<double> XA_guess, int ncomp, vector<double> delta_ij, double den,
@@ -102,7 +105,7 @@ public:
     CoolPropDbl calc_pressure_nocache(CoolPropDbl t, CoolPropDbl rho);
 
     /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
-    virtual void update_DmolarT();
+    CoolPropDbl update_DmolarT(CoolPropDbl T, CoolPropDbl rhomolar);
 
     CoolPropDbl calc_alpha0(void); // ideal gas helmholtz energy term
     CoolPropDbl calc_alphar(void); // residual helmholtz energy
@@ -116,7 +119,6 @@ public:
     // CoolPropDbl calc_cp0molar(void);
     CoolPropDbl calc_compressibility_factor(double t, double rho);
 
-    CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_guess);
     double calc_SatLiquid(bool is_temperature_input, CoolPropDbl value1);
     double calc_SatVapor(bool is_temperature_input, CoolPropDbl value1);
     void flash_QT(PCSAFTBackend &PCSAFT);

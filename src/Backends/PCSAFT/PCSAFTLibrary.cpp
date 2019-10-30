@@ -179,7 +179,6 @@ PCSAFTFluid& PCSAFTLibraryClass::get(std::size_t key) {
 
 void add_fluids_as_JSON(const std::string &JSON)
 {
-    std::cout << "in add_fluids_as_JSON" << std::endl; // !!! Remove
     // First we validate the json string against the schema;
     std::string errstr;
     cpjson::schema_validation_code val_code = cpjson::validate_schema(pcsaft_fluids_schema_JSON, JSON, errstr);
@@ -193,7 +192,6 @@ void add_fluids_as_JSON(const std::string &JSON)
             throw ValueError("Unable to load all_pcsaft_JSON.json");
         } else{
             try{
-                std::cout << "in try loop before add_many" << std::endl; // !!! Remove
                 library.add_many(dd);
             }catch(std::exception &e){std::cout << e.what() << std::endl;}
         }
@@ -205,7 +203,6 @@ void add_fluids_as_JSON(const std::string &JSON)
 
 int PCSAFTLibraryClass::add_many(rapidjson::Value &listing)
 {
-    std::cout << "in add_many" << std::endl; // !!! Remove
     int counter = 0;
     std::string fluid_name;
     for (rapidjson::Value::ValueIterator itr = listing.Begin();
@@ -308,7 +305,6 @@ int PCSAFTLibraryClass::add_many(rapidjson::Value &listing)
 };
 
 std::string get_pcsaft_fluids_schema(){
-    std::cout << "in get_pcsaft_fluids_schema" << std::endl; // !!! Remove
     return pcsaft_fluids_schema_JSON;
 }
 
@@ -318,13 +314,45 @@ std::string PCSAFTLibraryClass::get_mixture_binary_pair_pcsaft(const std::string
     CAS.push_back(CAS1);
     CAS.push_back(CAS2);
 
-    if (m_binary_pair_map.find(CAS) != m_binary_pair_map.end()){
+    std::vector<std::string> CASrev;
+    CASrev.push_back(CAS2);
+    CASrev.push_back(CAS1);
+
+    if (m_binary_pair_map.find(CAS) != m_binary_pair_map.end()) {
         std::vector<Dictionary> &v = m_binary_pair_map[CAS];
         try{
             if (key == "name1"){ return v[0].get_string("name1"); }
             else if (key == "name2"){ return v[0].get_string("name2"); }
             else if (key == "BibTeX"){ return v[0].get_string("BibTeX"); }
             else if (key == "kij"){ return format("%0.16g", v[0].get_double("kij")); }
+            else if (key == "kijT"){
+                try {
+                    return format("%0.16g", v[0].get_double("kijT"));
+                }
+                catch(ValueError) {
+                    return format("%0.16g", 0.0);
+                }
+            }
+            else{ }
+        }
+        catch(...){ }
+        throw ValueError(format("Could not match the parameter [%s] for the binary pair [%s,%s] - for now this is an error.", key.c_str(), CAS1.c_str(), CAS2.c_str()));
+    }
+    else if (m_binary_pair_map.find(CASrev) != m_binary_pair_map.end()) {
+        std::vector<Dictionary> &v = m_binary_pair_map[CASrev];
+        try{
+            if (key == "name1"){ return v[0].get_string("name1"); }
+            else if (key == "name2"){ return v[0].get_string("name2"); }
+            else if (key == "BibTeX"){ return v[0].get_string("BibTeX"); }
+            else if (key == "kij"){ return format("%0.16g", v[0].get_double("kij")); }
+            else if (key == "kijT"){
+                try {
+                    return format("%0.16g", v[0].get_double("kijT"));
+                }
+                catch(ValueError) {
+                    return format("%0.16g", 0.0);
+                }
+            }
             else{ }
         }
         catch(...){ }
@@ -410,6 +438,9 @@ void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document &doc) {
         else{
             std::cout << "Loading error: binary pair of " << name1 << " & " << name2 << "does not provide kij" << std::endl;
         }
+        if (itr->HasMember("kijT")){
+            dict.add_number("kijT", cpjson::get_double(*itr, "kijT"));
+        }
 
         std::map<std::vector<std::string>, std::vector<Dictionary> >::iterator it = m_binary_pair_map.find(CAS);
         if (it == m_binary_pair_map.end()){
@@ -437,7 +468,6 @@ void PCSAFTLibraryClass::load_from_string(const std::string &str){
     rapidjson::Document doc;
     doc.Parse<0>(str.c_str());
     if (doc.HasParseError()){
-        std::cout << str << std::endl ;
         throw ValueError("Unable to parse PC-SAFT binary interaction parameter string");
     }
     load_from_JSON(doc);
