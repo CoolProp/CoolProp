@@ -515,6 +515,76 @@ void ResidualHelmholtzGeneralizedCubic::all(const CoolPropDbl &tau, const CoolPr
     derivs.d4alphar_dtau4 += m_abstractcubic->alphar(tau, delta, z, 4, 0);
 }
 
+/**
+
+Sympy code:
+
+import sympy as sy
+n,t,d,eta,beta,gamma,epsilon,b,tau,delta = sy.symbols('n,t,d,eta,beta,gamma,epsilon,b,tau,delta')
+Fdelta = delta**d*sy.exp(eta*(delta-epsilon)**2)
+Ftau = tau**t*sy.exp(1/(beta*(tau-gamma)**2+b))
+
+alphar = n*Ftau*Fdelta
+display(sy.ccode(Ftau))
+display(sy.ccode(Fdelta))
+
+display(sy.ccode(sy.simplify(sy.diff(Fdelta, delta, 1)*delta**1)))
+display(sy.ccode(sy.simplify(sy.diff(Fdelta, delta, 2)*delta**2)))
+display(sy.ccode(sy.simplify(sy.diff(Fdelta, delta, 3)*delta**3)))
+display(sy.ccode(sy.simplify(sy.diff(Fdelta, delta, 4)*delta**4)))
+
+display(sy.ccode(sy.simplify(sy.diff(Ftau, tau, 1)*tau**1)))
+display(sy.ccode(sy.simplify(sy.diff(Ftau, tau, 2)*tau**2)))
+display(sy.ccode(sy.simplify(sy.diff(Ftau, tau, 3)*tau**3)))
+display(sy.ccode(sy.simplify(sy.diff(Ftau, tau, 4)*tau**4)))
+
+*/
+void ResidualHelmholtzGaoB::all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
+{
+    if (!enabled){ return; }
+
+    CoolPropDbl Ftau=0,Fdelta=0,taudFtaudtau=0,tau2d2Ftaudtau2=0,tau3d3Ftaudtau3=0,tau4d4Ftaudtau4=0,
+                deltadFdeltaddelta=0,delta2d2Fdeltaddelta2=0,delta3d3Fdeltaddelta3=0,delta4d4Fdeltaddelta4=0;
+
+    for (int i =0; i < static_cast<int>(n.size());++i){
+
+        const CoolPropDbl n=this->n[i], t=this->t[i], d=this->d[i],
+            eta=this->eta[i], beta=this->beta[i], gamma=this->gamma[i], 
+            epsilon=this->epsilon[i], b = this->b[i];
+
+        Ftau = pow(tau, t)*exp(1.0/(b + beta*pow(-gamma + tau, 2)));
+        Fdelta = pow(delta, d)*exp(eta*pow(delta - epsilon, 2));
+        taudFtaudtau = (2*beta*pow(tau, t + 1)*(gamma - tau) + t*pow(tau, t)*pow(b + beta*pow(gamma - tau, 2), 2))*exp(1.0/(b + beta*pow(gamma - tau, 2)))/pow(b + beta*pow(gamma - tau, 2), 2);
+        tau2d2Ftaudtau2 = pow(tau, t)*(4*beta*t*tau*pow(b + beta*pow(gamma - tau, 2), 2)*(gamma - tau) + 2*beta*pow(tau, 2)*(4*beta*(b + beta*pow(gamma - tau, 2))*pow(gamma - tau, 2) + 2*beta*pow(gamma - tau, 2) - pow(b + beta*pow(gamma - tau, 2), 2)) + t*pow(b + beta*pow(gamma - tau, 2), 4)*(t - 1))*exp(1.0/(b + beta*pow(gamma - tau, 2)))/pow(b + beta*pow(gamma - tau, 2), 4);
+        tau3d3Ftaudtau3 = pow(tau, t)*(4*pow(beta, 2)*pow(tau, 3)*(gamma - tau)*(12*beta*(b + beta*pow(gamma - tau, 2))*pow(gamma - tau, 2) + 2*beta*pow(gamma - tau, 2) - 6*pow(b + beta*pow(gamma - tau, 2), 3) + pow(b + beta*pow(gamma - tau, 2), 2)*(12*beta*pow(gamma - tau, 2) - 3)) + 6*beta*t*pow(tau, 2)*pow(b + beta*pow(gamma - tau, 2), 2)*(4*beta*(b + beta*pow(gamma - tau, 2))*pow(gamma - tau, 2) + 2*beta*pow(gamma - tau, 2) - pow(b + beta*pow(gamma - tau, 2), 2)) + 6*beta*t*tau*pow(b + beta*pow(gamma - tau, 2), 4)*(gamma - tau)*(t - 1) + t*pow(b + beta*pow(gamma - tau, 2), 6)*(pow(t, 2) - 3*t + 2))*exp(1.0/(b + beta*pow(gamma - tau, 2)))/pow(b + beta*pow(gamma - tau, 2), 6);
+        tau4d4Ftaudtau4 = pow(tau, t)*(16*pow(beta, 2)*t*pow(tau, 3)*pow(b + beta*pow(gamma - tau, 2), 2)*(gamma - tau)*(12*beta*(b + beta*pow(gamma - tau, 2))*pow(gamma - tau, 2) + 2*beta*pow(gamma - tau, 2) - 6*pow(b + beta*pow(gamma - tau, 2), 3) + pow(b + beta*pow(gamma - tau, 2), 2)*(12*beta*pow(gamma - tau, 2) - 3)) + pow(beta, 2)*pow(tau, 4)*(pow(beta, 2)*(192*b + 192*beta*pow(gamma - tau, 2))*pow(gamma - tau, 4) + 16*pow(beta, 2)*pow(gamma - tau, 4) + 96*beta*pow(b + beta*pow(gamma - tau, 2), 3)*pow(gamma - tau, 2)*(4*beta*pow(gamma - tau, 2) - 3) + 48*beta*pow(b + beta*pow(gamma - tau, 2), 2)*pow(gamma - tau, 2)*(12*beta*pow(gamma - tau, 2) - 1) + 24*pow(b + beta*pow(gamma - tau, 2), 5) + pow(b + beta*pow(gamma - tau, 2), 4)*(-288*beta*pow(gamma - tau, 2) + 12)) + 12*beta*t*pow(tau, 2)*pow(b + beta*pow(gamma - tau, 2), 4)*(t - 1)*(4*beta*(b + beta*pow(gamma - tau, 2))*pow(gamma - tau, 2) + 2*beta*pow(gamma - tau, 2) - pow(b + beta*pow(gamma - tau, 2), 2)) + 8*beta*t*tau*pow(b + beta*pow(gamma - tau, 2), 6)*(gamma - tau)*(pow(t, 2) - 3*t + 2) + t*pow(b + beta*pow(gamma - tau, 2), 8)*(pow(t, 3) - 6*pow(t, 2) + 11*t - 6))*exp(1.0/(b + beta*pow(gamma - tau, 2)))/pow(b + beta*pow(gamma - tau, 2), 8);
+        deltadFdeltaddelta = (d*pow(delta, d) + 2*pow(delta, d + 1)*eta*(delta - epsilon))*exp(eta*pow(delta - epsilon, 2));
+        delta2d2Fdeltaddelta2 = pow(delta, d)*(4*d*delta*eta*(delta - epsilon) + d*(d - 1) + 2*pow(delta, 2)*eta*(2*eta*pow(delta - epsilon, 2) + 1))*exp(eta*pow(delta - epsilon, 2));
+        delta3d3Fdeltaddelta3 = pow(delta, d)*(6*d*pow(delta, 2)*eta*(2*eta*pow(delta - epsilon, 2) + 1) + 6*d*delta*eta*(d - 1)*(delta - epsilon) + d*(pow(d, 2) - 3*d + 2) + 4*pow(delta, 3)*pow(eta, 2)*(delta - epsilon)*(2*eta*pow(delta - epsilon, 2) + 3))*exp(eta*pow(delta - epsilon, 2));
+        delta4d4Fdeltaddelta4 = pow(delta, d)*(16*d*pow(delta, 3)*pow(eta, 2)*(delta - epsilon)*(2*eta*pow(delta - epsilon, 2) + 3) + 12*d*pow(delta, 2)*eta*(d - 1)*(2*eta*pow(delta - epsilon, 2) + 1) + 8*d*delta*eta*(delta - epsilon)*(pow(d, 2) - 3*d + 2) + d*(pow(d, 3) - 6*pow(d, 2) + 11*d - 6) + pow(delta, 4)*pow(eta, 2)*(16*pow(eta, 2)*pow(delta - epsilon, 4) + 48*eta*pow(delta - epsilon, 2) + 12))*exp(eta*pow(delta - epsilon, 2));
+
+        derivs.alphar += n*Ftau*Fdelta;
+
+        derivs.dalphar_ddelta += n*Ftau*deltadFdeltaddelta/delta;
+        derivs.dalphar_dtau += n*Fdelta*taudFtaudtau/tau;
+
+        derivs.d2alphar_ddelta2 += n*Ftau*delta2d2Fdeltaddelta2/POW2(delta);
+        derivs.d2alphar_ddelta_dtau += n*taudFtaudtau*deltadFdeltaddelta/tau/delta;
+        derivs.d2alphar_dtau2 += n*Fdelta*tau2d2Ftaudtau2/POW2(tau);
+
+        derivs.d3alphar_ddelta3 += n*Ftau*delta3d3Fdeltaddelta3/POW3(delta);
+        derivs.d3alphar_ddelta2_dtau += n*taudFtaudtau*delta2d2Fdeltaddelta2/POW2(delta)/tau;
+        derivs.d3alphar_ddelta_dtau2 += n*tau2d2Ftaudtau2*deltadFdeltaddelta/POW2(tau)/delta;
+        derivs.d3alphar_dtau3 += n*Fdelta*tau3d3Ftaudtau3/POW3(tau);
+
+        derivs.d4alphar_ddelta4 += n*Ftau*delta4d4Fdeltaddelta4/POW4(delta);
+        derivs.d4alphar_ddelta3_dtau += n*taudFtaudtau*delta3d3Fdeltaddelta3/POW3(delta)/tau;
+        derivs.d4alphar_ddelta2_dtau2 += n*tau2d2Ftaudtau2*delta2d2Fdeltaddelta2/POW2(delta)/POW2(tau);
+        derivs.d4alphar_ddelta_dtau3 += n*tau3d3Ftaudtau3*deltadFdeltaddelta/POW3(tau)/delta;
+        derivs.d4alphar_dtau4 += n*Fdelta*tau4d4Ftaudtau4/POW4(tau);
+    }
+}
+
 ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(
     const CoolPropDbl Tc,
     const CoolPropDbl pc,
@@ -1069,7 +1139,7 @@ class HelmholtzConsistencyFixture
 public:
     CoolPropDbl numerical, analytic;
 
-    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic, Soave, PR, XiangDeiters;
+    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic, Soave, PR, XiangDeiters, GaoB;
     shared_ptr<CoolProp::ResidualHelmholtzGeneralizedExponential> Gaussian, Lemmon2005, Exponential, GERG2008, Power;
 
     HelmholtzConsistencyFixture(){
@@ -1083,8 +1153,29 @@ public:
         _PR->set_rhor(4000);
         PR.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_PR));
 
+        {
+            CoolPropDbl beta[] = {0.3696, 0.2962},
+              epsilon[] = {0.4478, 0.44689},
+              eta[] = {-2.8452, -2.8342},
+              gamma[] = {1.108, 1.313},
+              n[] = {-1.6909858,0.93739074},
+              t[] = {4.3315, 4.015},
+              d[] = {1, 1},
+              b[] = {1.244, 0.6826},
+            GaoB.reset(new CoolProp::ResidualHelmholtzGaoB(
+                std::vector<CoolPropDbl>(n,n+sizeof(n)/sizeof(n[0])),
+               std::vector<CoolPropDbl>(t,t+sizeof(t)/sizeof(t[0])),
+               std::vector<CoolPropDbl>(d,d+sizeof(d)/sizeof(d[0])),
+               std::vector<CoolPropDbl>(eta,eta+sizeof(eta)/sizeof(eta[0])),
+               std::vector<CoolPropDbl>(beta,beta+sizeof(beta)/sizeof(beta[0])),
+               std::vector<CoolPropDbl>(gamma,gamma+sizeof(gamma)/sizeof(gamma[0]))
+               std::vector<CoolPropDbl>(epsilon,epsilon+sizeof(epsilon)/sizeof(epsilon[0])),
+               std::vector<CoolPropDbl>(b,b+sizeof(b)/sizeof(b[0])),
+            ));
+        }
 
         XiangDeiters.reset(new CoolProp::ResidualHelmholtzXiangDeiters(300, 4e6, 4000, 0.3, 8.3144621));
+
         Lead.reset(new CoolProp::IdealHelmholtzLead(1,3));
         LogTau.reset(new CoolProp::IdealHelmholtzLogTau(1.5));
         {
@@ -1229,6 +1320,7 @@ public:
         else if (!t.compare("SRK")){ return Soave; }
         else if (!t.compare("PengRobinson")) { return PR; }
         else if (!t.compare("XiangDeiters")){ return XiangDeiters; }
+        else if (!t.compare("GaoB")){ return GaoB; }
 
         else if (!t.compare("Gaussian")){return Gaussian;}
         else if (!t.compare("Lemmon2005")){return Lemmon2005;}
@@ -1338,7 +1430,7 @@ public:
 
 std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","CP0Constant","CP0PolyT",
                        "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
-                       "GERG2008","SRK","PengRobinson","XiangDeiters"};
+                       "GERG2008","SRK","PengRobinson","XiangDeiters","GaoB"};
 std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau","dTau4","dDelta_dTau3","dDelta2_dTau2","dDelta3_dTau","dDelta4"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")

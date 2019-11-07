@@ -77,6 +77,25 @@ public:
                 assert(n.size() == gamma.size());
                 alphar.GenExp.add_Gaussian(n,d,t,eta,epsilon,beta,gamma);
             }
+            else if (!type.compare("ResidualHelmholtzGaoB"))
+            {
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
+                std::vector<CoolPropDbl> eta = cpjson::get_long_double_array(contribution["eta"]);
+                std::vector<CoolPropDbl> beta = cpjson::get_long_double_array(contribution["beta"]);
+                std::vector<CoolPropDbl> gamma = cpjson::get_long_double_array(contribution["gamma"]);
+                std::vector<CoolPropDbl> epsilon = cpjson::get_long_double_array(contribution["epsilon"]);
+                std::vector<CoolPropDbl> b = cpjson::get_long_double_array(contribution["b"]);
+                assert(n.size() == t.size());
+                assert(n.size() == d.size());
+                assert(n.size() == eta.size());
+                assert(n.size() == epsilon.size());
+                assert(n.size() == beta.size());
+                assert(n.size() == gamma.size());
+                assert(n.size() == b.size());
+                alphar.GaoB = ResidualHelmholtzGaoB(n,t,d,eta,beta,gamma,epsilon,b);
+            }
             else if (!type.compare("ResidualHelmholtzNonAnalytic"))
             {
                 if (alphar.NonAnalytic.N > 0){throw ValueError("Cannot add ");}
