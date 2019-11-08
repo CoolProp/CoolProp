@@ -164,15 +164,16 @@ void PCSAFTBackend::resize(std::size_t N)
     this->lnK.resize(N);
 }
 
-CoolPropDbl PCSAFTBackend::update_DmolarT(CoolPropDbl T, CoolPropDbl rhomolar) {
-    return this->calc_pressure_nocache(T, rhomolar);
+CoolPropDbl PCSAFTBackend::update_DmolarT(CoolPropDbl rho) {
+    _rhomolar = rho;
+    return this->calc_pressure();
 }
 
-CoolPropDbl PCSAFTBackend::calc_pressure_nocache(CoolPropDbl t, CoolPropDbl rho) {
-    double den = rho*N_AV/1.0e30;
+CoolPropDbl PCSAFTBackend::calc_pressure(void) {
+    double den = _rhomolar*N_AV/1.0e30;
 
-    double Z = this->calc_compressibility_factor(t, rho);
-    double P = Z*kb*t*den*1.0e30; // Pa
+    CoolPropDbl Z = this->calc_compressibility_factor();
+    CoolPropDbl P = Z*kb*_T*den*1.0e30; // Pa
     return P;
 }
 
@@ -181,135 +182,10 @@ CoolPropDbl PCSAFTBackend::calc_alpha0(void) {
 }
 
 CoolPropDbl PCSAFTBackend::calc_alphar(void) {
-
-}
-
-CoolPropDbl PCSAFTBackend::calc_hmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar) {
-    // Calculate the reducing parameters
-    // CoolPropDbl delta = rhomolar/_reducing.rhomolar;
-    // CoolPropDbl tau = _reducing.T/T;
-    //
-    // // Calculate derivatives if needed, or just use cached values
-    // // Calculate derivative if needed
-    // CoolPropDbl dar_dDelta = calc_alphar_deriv_nocache(0, 1, mole_fractions, tau, delta);
-    // CoolPropDbl dar_dTau = calc_alphar_deriv_nocache(1, 0, mole_fractions, tau, delta);
-    // CoolPropDbl da0_dTau = calc_alpha0_deriv_nocache(1, 0, mole_fractions, tau, delta, _reducing.T, _reducing.rhomolar);
-    // CoolPropDbl R_u = gas_constant();
-    //
-    // // Get molar enthalpy
-    // return R_u*T*(1 + tau*(da0_dTau+dar_dTau) + delta*dar_dDelta);
-}
-
-CoolPropDbl PCSAFTBackend::calc_hmolar(void){
-	// if (get_debug_level()>=50) std::cout << format("HelmholtzEOSMixtureBackend::calc_hmolar: 2phase: %d T: %g rhomomolar: %g", isTwoPhase(), _T, _rhomolar) << std::endl;
-  //   if (isTwoPhase())
-  //   {
-	// 	if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
-  //       if (std::abs(_Q) < DBL_EPSILON){
-  //           _hmolar = SatL->hmolar();
-  //       }
-  //       else if (std::abs(_Q-1) < DBL_EPSILON){
-  //           _hmolar = SatV->hmolar();
-  //       }
-  //       else{
-  //           _hmolar = _Q*SatV->hmolar() + (1 - _Q)*SatL->hmolar();
-  //       }
-  //       return static_cast<CoolPropDbl>(_hmolar);
-  //   }
-  //   else if (isHomogeneousPhase())
-  //   {
-  //           // Calculate the reducing parameters
-  //       _delta = _rhomolar/_reducing.rhomolar;
-  //       _tau = _reducing.T/_T;
-  //
-  //       // Calculate derivatives if needed, or just use cached values
-  //       CoolPropDbl da0_dTau = dalpha0_dTau();
-  //       CoolPropDbl dar_dTau = dalphar_dTau();
-  //       CoolPropDbl dar_dDelta = dalphar_dDelta();
-  //       CoolPropDbl R_u = gas_constant();
-  //
-  //       // Get molar enthalpy
-  //       _hmolar = R_u*_T*(1 + _tau.pt()*(da0_dTau+dar_dTau) + _delta.pt()*dar_dDelta);
-  //
-  //       return static_cast<CoolPropDbl>(_hmolar);
-  //   }
-  //   else{
-  //       throw ValueError(format("phase is invalid in calc_hmolar"));
-  //   }
-}
-
-CoolPropDbl PCSAFTBackend::calc_smolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar){
-    // Calculate the reducing parameters
-    // CoolPropDbl delta = rhomolar/_reducing.rhomolar;
-    // CoolPropDbl tau = _reducing.T/T;
-    //
-    // // Calculate derivatives if needed, or just use cached values
-    // // Calculate derivative if needed
-    // CoolPropDbl dar_dTau = calc_alphar_deriv_nocache(1, 0, mole_fractions, tau, delta);
-    // CoolPropDbl ar = calc_alphar_deriv_nocache(0, 0, mole_fractions, tau, delta);
-    // CoolPropDbl da0_dTau = calc_alpha0_deriv_nocache(1, 0, mole_fractions, tau, delta, _reducing.T, _reducing.rhomolar);
-    // CoolPropDbl a0 = calc_alpha0_deriv_nocache(0, 0, mole_fractions, tau, delta, _reducing.T, _reducing.rhomolar);
-    // CoolPropDbl R_u = gas_constant();
-    //
-    // // Get molar entropy
-    // return R_u*(tau*(da0_dTau+dar_dTau) - a0 - ar);
-}
-
-CoolPropDbl PCSAFTBackend::calc_smolar(void){
-    // if (isTwoPhase())
-    // {
-		// if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
-    //     if (std::abs(_Q) < DBL_EPSILON){
-    //         _smolar = SatL->smolar();
-    //     }
-    //     else if (std::abs(_Q-1) < DBL_EPSILON){
-    //         _smolar = SatV->smolar();
-    //     }
-    //     else{
-    //         _smolar = _Q*SatV->smolar() + (1 - _Q)*SatL->smolar();
-    //     }
-    //     return static_cast<CoolPropDbl>(_smolar);
-    // }
-    // else if (isHomogeneousPhase())
-    // {
-    //     // Calculate the reducing parameters
-    //     _delta = _rhomolar/_reducing.rhomolar;
-    //     _tau = _reducing.T/_T;
-    //
-    //     // Calculate derivatives if needed, or just use cached values
-    //     CoolPropDbl da0_dTau = dalpha0_dTau();
-    //     CoolPropDbl ar = alphar();
-    //     CoolPropDbl a0 = alpha0();
-    //     CoolPropDbl dar_dTau = dalphar_dTau();
-    //     CoolPropDbl R_u = gas_constant();
-    //
-    //     // Get molar entropy
-    //     _smolar = R_u*(_tau.pt()*(da0_dTau+dar_dTau) - a0 - ar);
-    //
-    //     return static_cast<CoolPropDbl>(_smolar);
-    // }
-    // else{
-    //     throw ValueError(format("phase is invalid in calc_smolar"));
-    // }
-}
-
-CoolPropDbl PCSAFTBackend::calc_fugacity_coefficient(void) {
-
-}
-
-CoolPropDbl PCSAFTBackend::calc_gibbsmolar(void) {
-
-}
-
-CoolPropDbl PCSAFTBackend::calc_cpmolar(void) {
-
-}
-
-CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
     int ncomp = N; // number of components
-    vector<double> d(ncomp);
+    vector<double> d (ncomp);
     for (int i = 0; i < ncomp; i++) {
-        d[i] = components[i].getSigma()*(1-0.12*exp(-3*components[i].getU()/t));
+        d[i] = components[i].getSigma()*(1-0.12*exp(-3*components[i].getU()/_T));
     }
     if (ion_term) {
         for (int i = 0; i < ncomp; i++) {
@@ -319,9 +195,1079 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
         }
     }
 
-    double den = rho*N_AV/1.0e30;
+    double den = _rhomolar*N_AV/1.0e30;
 
     vector<double> zeta (4, 0);
+    double summ;
+    for (int i = 0; i < 4; i++) {
+        summ = 0;
+        for (int j = 0; j < ncomp; j++) {
+            summ += mole_fractions[j]*components[j].getM()*pow(d[j], i);
+        }
+        zeta[i] = PI/6*den*summ;
+    }
+
+    double eta = zeta[3];
+    double m_avg = 0;
+    for (int i = 0; i < ncomp; i++) {
+        m_avg += mole_fractions[i]*components[i].getM();
+    }
+
+    vector<double> ghs (ncomp*ncomp, 0);
+    vector<double> e_ij (ncomp*ncomp, 0);
+    vector<double> s_ij (ncomp*ncomp, 0);
+    double m2es3 = 0.;
+    double m2e2s3 = 0.;
+    int idx = -1;
+    for (int i = 0; i < ncomp; i++) {
+        for (int j = 0; j < ncomp; j++) {
+            idx += 1;
+            s_ij[idx] = (components[i].getSigma() + components[j].getSigma())/2.;
+            if (ion_term) {
+                if (components[i].getZ()*components[j].getZ() <= 0) { // for two cations or two anions e_ij is kept at zero to avoid dispersion between like ions (see Held et al. 2014)
+                    if (k_ij.empty()) {
+                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
+                    }
+                    else {
+                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
+                    }
+                }
+            } else {
+                if (k_ij.empty()) {
+                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
+                }
+                else {
+                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
+                }
+            }
+            m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/_T*pow(s_ij[idx], 3);
+            m2e2s3 = m2e2s3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*pow(e_ij[idx]/_T,2)*pow(s_ij[idx], 3);
+            ghs[idx] = 1/(1-zeta[3]) + (d[i]*d[j]/(d[i]+d[j]))*3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
+                pow(d[i]*d[j]/(d[i]+d[j]), 2)*2*zeta[2]*zeta[2]/pow(1-zeta[3], 3);
+        }
+    }
+
+    double ares_hs = 1/zeta[0]*(3*zeta[1]*zeta[2]/(1-zeta[3]) + pow(zeta[2], 3.)/(zeta[3]*pow(1-zeta[3],2))
+            + (pow(zeta[2], 3.)/pow(zeta[3], 2.) - zeta[0])*log(1-zeta[3]));
+
+    static double a0[7] = { 0.910563145, 0.636128145, 2.686134789, -26.54736249, 97.75920878, -159.5915409, 91.29777408 };
+    static double a1[7] = { -0.308401692, 0.186053116, -2.503004726, 21.41979363, -65.25588533, 83.31868048, -33.74692293 };
+    static double a2[7] = { -0.090614835, 0.452784281, 0.596270073, -1.724182913, -4.130211253, 13.77663187, -8.672847037 };
+    static double b0[7] = { 0.724094694, 2.238279186, -4.002584949, -21.00357682, 26.85564136, 206.5513384, -355.6023561 };
+    static double b1[7] = { -0.575549808, 0.699509552, 3.892567339, -17.21547165, 192.6722645, -161.8264617, -165.2076935 };
+    static double b2[7] = { 0.097688312, -0.255757498, -9.155856153, 20.64207597, -38.80443005, 93.62677408, -29.66690559 };
+
+    vector<double> a (7, 0);
+    vector<double> b (7, 0);
+    for (int i = 0; i < 7; i++) {
+        a[i] = a0[i] + (m_avg-1.)/m_avg*a1[i] + (m_avg-1.)/m_avg*(m_avg-2.)/m_avg*a2[i];
+        b[i] = b0[i] + (m_avg-1.)/m_avg*b1[i] + (m_avg-1.)/m_avg*(m_avg-2.)/m_avg*b2[i];
+    }
+
+    double I1 = 0.0;
+    double I2 = 0.0;
+    for (int i = 0; i < 7; i++) {
+        I1 += a[i]*pow(eta, i);
+        I2 += b[i]*pow(eta, i);
+    }
+    double C1 = 1./(1. + m_avg*(8*eta-2*eta*eta)/pow(1-eta, 4) + (1-m_avg)*(20*eta-27*eta*eta+12*pow(eta, 3)-2*pow(eta, 4))/pow((1-eta)*(2-eta), 2.0));
+
+    summ = 0.0;
+    for (int i = 0; i < ncomp; i++) {
+        summ += mole_fractions[i]*(components[i].getM()-1)*log(ghs[i*ncomp+i]);
+    }
+
+    double ares_hc = m_avg*ares_hs - summ;
+    double ares_disp = -2*PI*den*I1*m2es3 - PI*den*m_avg*C1*I2*m2e2s3;
+
+    // Dipole term (Gross and Vrabec term) --------------------------------------
+    double ares_polar = 0.;
+    if (polar_term) {
+        double A2 = 0.;
+        double A3 = 0.;
+        vector<double> dipmSQ (ncomp, 0);
+
+        static double a0dip[5] = { 0.3043504, -0.1358588, 1.4493329, 0.3556977, -2.0653308 };
+        static double a1dip[5] = { 0.9534641, -1.8396383, 2.0131180, -7.3724958, 8.2374135 };
+        static double a2dip[5] = { -1.1610080, 4.5258607, 0.9751222, -12.281038, 5.9397575 };
+        static double b0dip[5] = { 0.2187939, -1.1896431, 1.1626889, 0, 0 };
+        static double b1dip[5] = { -0.5873164, 1.2489132, -0.5085280, 0, 0 };
+        static double b2dip[5] = { 3.4869576, -14.915974, 15.372022, 0, 0 };
+        static double c0dip[5] = { -0.0646774, 0.1975882, -0.8087562, 0.6902849, 0 };
+        static double c1dip[5] = { -0.9520876, 2.9924258, -2.3802636, -0.2701261, 0 };
+        static double c2dip[5] = { -0.6260979, 1.2924686, 1.6542783, -3.4396744, 0 };
+
+        const static double conv = 7242.702976750923; // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
+
+        for (int i = 0; i < ncomp; i++) {
+            dipmSQ[i] = pow(components[i].getDipm(), 2.)/(components[i].getM()*components[i].getU()*pow(components[i].getSigma(),3.))*conv;
+        }
+
+        vector<double> adip (5, 0);
+        vector<double> bdip (5, 0);
+        vector<double> cdip (5, 0);
+        double J2, J3;
+        double m_ij;
+        double m_ijk;
+        for (int i = 0; i < ncomp; i++) {
+            for (int j = 0; j < ncomp; j++) {
+                m_ij = sqrt(components[i].getM()*components[j].getM());
+                if (m_ij > 2) {
+                    m_ij = 2;
+                }
+                J2 = 0.;
+                for (int l = 0; l < 5; l++) {
+                    adip[l] = a0dip[l] + (m_ij-1)/m_ij*a1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*a2dip[l];
+                    bdip[l] = b0dip[l] + (m_ij-1)/m_ij*b1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*b2dip[l];
+                    J2 += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/_T)*pow(eta, l); // j*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                }
+                A2 += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)/
+                    pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*J2;
+
+                for (int k = 0; k < ncomp; k++) {
+                    m_ijk = pow((components[i].getM()*components[j].getM()*components[k].getM()),1/3.);
+                    if (m_ijk > 2) {
+                        m_ijk = 2;
+                    }
+                    J3 = 0.;
+                    for (int l = 0; l < 5; l++) {
+                        cdip[l] = c0dip[l] + (m_ijk-1)/m_ijk*c1dip[l] + (m_ijk-1)/m_ijk*(m_ijk-2)/m_ijk*c2dip[l];
+                        J3 += cdip[l]*pow(eta, l);
+                    }
+                    A3 += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
+                        pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
+                        s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
+                        dipmSQ[j]*dipmSQ[k]*J3;
+                }
+            }
+        }
+
+        A2 = -PI*den*A2;
+        A3 = -4/3.*PI*PI*den*den*A3;
+
+        ares_polar = A2/(1-A3/A2);
+    }
+
+    // Association term -------------------------------------------------------
+    // only the 2B association type is currently implemented
+    double ares_assoc = 0.;
+    if (assoc_term) {
+        int a_sites = 2;
+        int ncA = 0; // number of associating compounds
+        vector<int> iA; // indices of associating compounds
+        for (int i = 0; i < ncomp; i++) {
+            if (components[i].getVolA() != 0) {
+                iA.push_back(i);
+                ncA += 1;
+            }
+        }
+
+        vector<double> XA (ncA*a_sites, 0);
+        vector<double> eABij (ncA*ncA, 0);
+        vector<double> volABij (ncA*ncA, 0);
+        vector<double> delta_ij (ncA*ncA, 0);
+
+        // these indices are necessary because we are only using 1D vectors
+        int idxa = -1; // index over only associating compounds
+        int idxi = 0; // index for the ii-th compound
+        int idxj = 0; // index for the jj-th compound
+        for (int i = 0; i < ncA; i++) {
+            idxi = iA[i]*ncomp+iA[i];
+            for (int j = 0; j < ncA; j++) {
+                idxa += 1;
+                idxj = iA[j]*ncomp+iA[j];
+                eABij[idxa] = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
+                volABij[idxa] = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
+                    s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
+                delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
+            }
+            XA[i*2] = (-1 + sqrt(1+8*den*delta_ij[i*ncA+i]))/(4*den*delta_ij[i*ncA+i]);
+            if (!isfinite(XA[i*2])) {
+                XA[i*2] = 0.02;
+            }
+            XA[i*2+1] = XA[i*2];
+        }
+
+        vector<double> x_assoc(ncA); // mole fractions of only the associating compounds
+        for (int i = 0; i < ncA; i++) {
+            x_assoc[i] = mole_fractions[iA[i]];
+        }
+
+        int ctr = 0;
+        double dif = 1000.;
+        vector<double> XA_old = XA;
+        while ((ctr < 500) && (dif > 1e-9)) {
+            ctr += 1;
+            XA = XA_find(XA, ncA, delta_ij, den, x_assoc);
+            dif = 0.;
+            for (int i = 0; i < ncA*2; i++) {
+                dif += abs(XA[i] - XA_old[i]);
+            }
+            XA_old = XA;
+        }
+
+        ares_assoc = 0.;
+        for (int i = 0; i < ncA; i++) {
+            for (int k = 0; k < a_sites; k++) {
+                ares_assoc += mole_fractions[iA[i]]*(log(XA[i*a_sites+k])-0.5*XA[i*a_sites+k] + 0.5);
+            }
+        }
+    }
+
+    // Ion term ---------------------------------------------------------------
+    double ares_ion = 0.;
+    if (ion_term) {
+        vector<double> q(ncomp);
+        for (int i = 0; i < ncomp; i++) {
+            q[i] = components[i].getZ()*E_CHRG;
+        }
+
+        summ = 0.;
+        for (int i = 0; i < ncomp; i++) {
+            summ += components[i].getZ()*components[i].getZ()*mole_fractions[i];
+        }
+        double kappa = sqrt(den*E_CHRG*E_CHRG/kb/_T/(dielc*perm_vac)*summ); // the inverse Debye screening length. Equation 4 in Held et al. 2008.
+
+        if (kappa != 0) {
+            vector<double> chi(ncomp);
+            vector<double> sigma_k(ncomp);
+            summ = 0.;
+            for (int i = 0; i < ncomp; i++) {
+                chi[i] = 3/pow(kappa*components[i].getSigma(), 3)*(1.5 + log(1+kappa*components[i].getSigma()) - 2*(1+kappa*components[i].getSigma()) +
+                    0.5*pow(1+kappa*components[i].getSigma(), 2));
+                summ += mole_fractions[i]*q[i]*q[i]*chi[i]*kappa;
+            }
+
+            ares_ion = -1/12./PI/kb/_T/(dielc*perm_vac)*summ;
+        }
+    }
+
+    CoolPropDbl ares = ares_hc + ares_disp + ares_polar + ares_assoc + ares_ion;
+    return ares;
+}
+
+
+CoolPropDbl PCSAFTBackend::calc_dadt(void) {
+    int ncomp = N; // number of components
+    vector<double> d (ncomp), dd_dt(ncomp);
+    for (int i = 0; i < ncomp; i++) {
+        d[i] = components[i].getSigma()*(1-0.12*exp(-3*components[i].getU()/_T));
+        dd_dt[i] = components[i].getSigma()*-3*components[i].getU()/_T/_T*0.12*exp(-3*components[i].getU()/_T);
+    }
+    if (ion_term) {
+        for (int i = 0; i < ncomp; i++) {
+            if (components[i].getZ() != 0) {
+                d[i] = components[i].getSigma()*(1-0.12); // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                dd_dt[i] = 0.;
+            }
+        }
+    }
+
+    double den = _rhomolar*N_AV/1.0e30;
+
+    vector<double> zeta (4, 0);
+    double summ;
+    for (int i = 0; i < 4; i++) {
+        summ = 0;
+        for (int j = 0; j < ncomp; j++) {
+            summ += mole_fractions[j]*components[j].getM()*pow(d[j], i);
+        }
+        zeta[i] = PI/6*den*summ;
+    }
+
+    vector<double> dzeta_dt (4, 0);
+    for (int i = 1; i < 4; i++) {
+        summ = 0;
+        for (int j = 0; j < ncomp; j++) {
+            summ += mole_fractions[j]*components[j].getM()*i*dd_dt[j]*pow(d[j],(i-1));
+        }
+        dzeta_dt[i] = PI/6*den*summ;
+    }
+
+    double eta = zeta[3];
+    double m_avg = 0;
+    for (int i = 0; i < ncomp; i++) {
+        m_avg += mole_fractions[i]*components[i].getM();
+    }
+
+    vector<double> ghs (ncomp*ncomp, 0);
+    vector<double> dghs_dt (ncomp*ncomp, 0);
+    vector<double> e_ij (ncomp*ncomp, 0);
+    vector<double> s_ij (ncomp*ncomp, 0);
+    double m2es3 = 0.;
+    double m2e2s3 = 0.;
+    double ddij_dt;
+    int idx = -1;
+    for (int i = 0; i < ncomp; i++) {
+        for (int j = 0; j < ncomp; j++) {
+            idx += 1;
+            s_ij[idx] = (components[i].getSigma() + components[j].getSigma())/2.;
+            if (ion_term) {
+                if (components[i].getZ()*components[j].getZ() <= 0) { // for two cations or two anions e_ij is kept at zero to avoid dispersion between like ions (see Held et al. 2014)
+                    if (k_ij.empty()) {
+                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
+                    }
+                    else {
+                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
+                    }
+                }
+            } else {
+                if (k_ij.empty()) {
+                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
+                }
+                else {
+                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
+                }
+            }
+            m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/_T*pow(s_ij[idx], 3);
+            m2e2s3 = m2e2s3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*pow(e_ij[idx]/_T,2)*pow(s_ij[idx], 3);
+            ghs[idx] = 1/(1-zeta[3]) + (d[i]*d[j]/(d[i]+d[j]))*3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
+                    pow(d[i]*d[j]/(d[i]+d[j]), 2)*2*zeta[2]*zeta[2]/pow(1-zeta[3], 3);
+            ddij_dt = (d[i]*d[j]/(d[i]+d[j]))*(dd_dt[i]/d[i]+dd_dt[j]/d[j]-(dd_dt[i]+dd_dt[j])/(d[i]+d[j]));
+            dghs_dt[idx] = dzeta_dt[3]/pow(1-zeta[3], 2.)
+                + 3*(ddij_dt*zeta[2]+(d[i]*d[j]/(d[i]+d[j]))*dzeta_dt[2])/pow(1-zeta[3], 2.)
+                + 4*(d[i]*d[j]/(d[i]+d[j]))*zeta[2]*(1.5*dzeta_dt[3]+ddij_dt*zeta[2]
+                + (d[i]*d[j]/(d[i]+d[j]))*dzeta_dt[2])/pow(1-zeta[3], 3.)
+                + 6*pow((d[i]*d[j]/(d[i]+d[j]))*zeta[2], 2.)*dzeta_dt[3]/pow(1-zeta[3], 4.);
+        }
+    }
+
+    double dadt_hs = 1/zeta[0]*(3*(dzeta_dt[1]*zeta[2] + zeta[1]*dzeta_dt[2])/(1-zeta[3])
+        + 3*zeta[1]*zeta[2]*dzeta_dt[3]/pow(1-zeta[3], 2.)
+        + 3*pow(zeta[2], 2.)*dzeta_dt[2]/zeta[3]/pow(1-zeta[3], 2.)
+        + pow(zeta[2],3.)*dzeta_dt[3]*(3*zeta[3]-1)/pow(zeta[3], 2.)/pow(1-zeta[3], 3.)
+        + (3*pow(zeta[2], 2.)*dzeta_dt[2]*zeta[3] - 2*pow(zeta[2], 3.)*dzeta_dt[3])/pow(zeta[3], 3.)
+        * log(1-zeta[3])
+        + (zeta[0]-pow(zeta[2],3)/pow(zeta[3],2.))*dzeta_dt[3]/(1-zeta[3]));
+
+    static double a0[7] = { 0.910563145, 0.636128145, 2.686134789, -26.54736249, 97.75920878, -159.5915409, 91.29777408 };
+    static double a1[7] = { -0.308401692, 0.186053116, -2.503004726, 21.41979363, -65.25588533, 83.31868048, -33.74692293 };
+    static double a2[7] = { -0.090614835, 0.452784281, 0.596270073, -1.724182913, -4.130211253, 13.77663187, -8.672847037 };
+    static double b0[7] = { 0.724094694, 2.238279186, -4.002584949, -21.00357682, 26.85564136, 206.5513384, -355.6023561 };
+    static double b1[7] = { -0.575549808, 0.699509552, 3.892567339, -17.21547165, 192.6722645, -161.8264617, -165.2076935 };
+    static double b2[7] = { 0.097688312, -0.255757498, -9.155856153, 20.64207597, -38.80443005, 93.62677408, -29.66690559 };
+
+    vector<double> a (7, 0);
+    vector<double> b (7, 0);
+    for (int i = 0; i < 7; i++) {
+        a[i] = a0[i] + (m_avg-1.)/m_avg*a1[i] + (m_avg-1.)/m_avg*(m_avg-2.)/m_avg*a2[i];
+        b[i] = b0[i] + (m_avg-1.)/m_avg*b1[i] + (m_avg-1.)/m_avg*(m_avg-2.)/m_avg*b2[i];
+    }
+
+    double I1 = 0.0;
+    double I2 = 0.0;
+    double dI1_dt = 0.0, dI2_dt = 0.;
+    for (int i = 0; i < 7; i++) {
+        I1 += a[i]*pow(eta, i);
+        I2 += b[i]*pow(eta, i);
+        dI1_dt += a[i]*dzeta_dt[3]*i*pow(eta, i-1);
+        dI2_dt += b[i]*dzeta_dt[3]*i*pow(eta, i-1);
+    }
+    double C1 = 1./(1. + m_avg*(8*eta-2*eta*eta)/pow(1-eta, 4) + (1-m_avg)*(20*eta-27*eta*eta+12*pow(eta, 3)-2*pow(eta, 4))/pow((1-eta)*(2-eta), 2.0));
+    double C2 = -1*C1*C1*(m_avg*(-4*eta*eta+20*eta+8)/pow(1-eta,5.) + (1-m_avg)*(2*pow(eta,3)+12*eta*eta-48*eta+40)/pow((1-eta)*(2-eta),3));
+    double dC1_dt = C2*dzeta_dt[3];
+
+    summ = 0.;
+    for (int i = 0; i < ncomp; i++) {
+        summ += mole_fractions[i]*(components[i].getM()-1)*dghs_dt[i*ncomp+i]/ghs[i*ncomp+i];
+    }
+
+    double dadt_hc = m_avg*dadt_hs - summ;
+    double dadt_disp = -2*PI*den*(dI1_dt-I1/_T)*m2es3 - PI*den*m_avg*(dC1_dt*I2+C1*dI2_dt-2*C1*I2/_T)*m2e2s3;
+
+    // Dipole term (Gross and Vrabec term) --------------------------------------
+    double dadt_polar = 0.;
+    if (polar_term) {
+        double A2 = 0.;
+        double A3 = 0.;
+        double dA2_dt = 0.;
+        double dA3_dt = 0.;
+        vector<double> dipmSQ (ncomp, 0);
+
+        static double a0dip[5] = { 0.3043504, -0.1358588, 1.4493329, 0.3556977, -2.0653308 };
+        static double a1dip[5] = { 0.9534641, -1.8396383, 2.0131180, -7.3724958, 8.2374135 };
+        static double a2dip[5] = { -1.1610080, 4.5258607, 0.9751222, -12.281038, 5.9397575 };
+        static double b0dip[5] = { 0.2187939, -1.1896431, 1.1626889, 0, 0 };
+        static double b1dip[5] = { -0.5873164, 1.2489132, -0.5085280, 0, 0 };
+        static double b2dip[5] = { 3.4869576, -14.915974, 15.372022, 0, 0 };
+        static double c0dip[5] = { -0.0646774, 0.1975882, -0.8087562, 0.6902849, 0 };
+        static double c1dip[5] = { -0.9520876, 2.9924258, -2.3802636, -0.2701261, 0 };
+        static double c2dip[5] = { -0.6260979, 1.2924686, 1.6542783, -3.4396744, 0 };
+
+        const static double conv = 7242.702976750923; // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
+
+        for (int i = 0; i < ncomp; i++) {
+            dipmSQ[i] = pow(components[i].getDipm(), 2.)/(components[i].getM()*components[i].getU()*pow(components[i].getSigma(),3.))*conv;
+        }
+
+
+        vector<double> adip (5, 0);
+        vector<double> bdip (5, 0);
+        vector<double> cdip (5, 0);
+        double J2, J3, dJ2_dt, dJ3_dt;
+        double m_ij;
+        double m_ijk;
+        for (int i = 0; i < ncomp; i++) {
+            for (int j = 0; j < ncomp; j++) {
+                m_ij = sqrt(components[i].getM()*components[j].getM());
+                if (m_ij > 2) {
+                    m_ij = 2;
+                }
+                J2 = 0.;
+                dJ2_dt = 0.;
+                for (int l = 0; l < 5; l++) {
+                    adip[l] = a0dip[l] + (m_ij-1)/m_ij*a1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*a2dip[l];
+                    bdip[l] = b0dip[l] + (m_ij-1)/m_ij*b1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*b2dip[l];
+                    J2 += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/_T)*pow(eta, l); // j*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                    dJ2_dt += adip[l]*l*pow(eta, l-1)*dzeta_dt[3]
+                        + bdip[l]*e_ij[j*ncomp+j]*(1/_T*l*pow(eta, l-1)*dzeta_dt[3]
+                        - 1/pow(_T,2.)*pow(eta,l));
+                }
+                A2 += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)/
+                    pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*J2;
+                dA2_dt += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]*e_ij[j*ncomp+j]*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)
+                    /pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*
+                    (dJ2_dt/pow(_T,2)-2*J2/pow(_T,3));
+
+                for (int k = 0; k < ncomp; k++) {
+                    m_ijk = pow((components[i].getM()*components[j].getM()*components[k].getM()),1/3.);
+                    if (m_ijk > 2) {
+                        m_ijk = 2;
+                    }
+                    J3 = 0.;
+                    dJ3_dt = 0.;
+                    for (int l = 0; l < 5; l++) {
+                        cdip[l] = c0dip[l] + (m_ijk-1)/m_ijk*c1dip[l] + (m_ijk-1)/m_ijk*(m_ijk-2)/m_ijk*c2dip[l];
+                        J3 += cdip[l]*pow(eta, l);
+                        dJ3_dt += cdip[l]*l*pow(eta, l-1)*dzeta_dt[3];
+                    }
+                    A3 += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
+                        pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
+                        s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
+                        dipmSQ[j]*dipmSQ[k]*J3;
+                    dA3_dt += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]*e_ij[j*ncomp+j]*e_ij[k*ncomp+k]*
+                        pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]
+                        /s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]
+                        *dipmSQ[j]*dipmSQ[k]*(-3*J3/pow(_T,4) + dJ3_dt/pow(_T,3));
+                }
+            }
+        }
+
+        A2 = -PI*den*A2;
+        A3 = -4/3.*PI*PI*den*den*A3;
+        dA2_dt = -PI*den*dA2_dt;
+        dA3_dt = -4/3.*PI*PI*den*den*dA3_dt;
+
+        dadt_polar = (dA2_dt-2*A3/A2*dA2_dt+dA3_dt)/pow(1-A3/A2, 2.);
+    }
+
+    // Association term -------------------------------------------------------
+    // only the 2B association type is currently implemented
+    double dadt_assoc = 0.;
+    if (assoc_term) {
+        int a_sites = 2;
+        int ncA = 0; // number of associating compounds
+        vector<int> iA; // indices of associating compounds
+        for (int i = 0; i < ncomp; i++) {
+            if (components[i].getVolA() != 0) {
+                iA.push_back(i);
+                ncA += 1;
+            }
+        }
+
+        vector<double> XA (ncA*a_sites, 0);
+        vector<double> eABij (ncA*ncA, 0);
+        vector<double> volABij (ncA*ncA, 0);
+        vector<double> delta_ij (ncA*ncA, 0);
+        vector<double> ddelta_dt (ncA*ncA, 0);
+
+        // these indices are necessary because we are only using 1D vectors
+        int idxa = -1; // index over only associating compounds
+        int idxi = 0; // index for the ii-th compound
+        int idxj = 0; // index for the jj-th compound
+        for (int i = 0; i < ncA; i++) {
+            idxi = iA[i]*ncomp+iA[i];
+            for (int j = 0; j < ncA; j++) {
+                idxa += 1;
+                idxj = iA[j]*ncomp+iA[j];
+                eABij[idxa] = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
+                volABij[idxa] = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
+                    s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
+                delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
+                ddelta_dt[idxa] = pow(s_ij[idxj],3)*volABij[idxa]*(-eABij[idxa]/pow(_T,2)
+                    *exp(eABij[idxa]/_T)*ghs[iA[i]*ncomp+iA[j]] + dghs_dt[iA[i]*ncomp+iA[j]]
+                    *(exp(eABij[idxa]/_T)-1));
+            }
+            XA[i*2] = (-1 + sqrt(1+8*den*delta_ij[i*ncA+i]))/(4*den*delta_ij[i*ncA+i]);
+            if (!isfinite(XA[i*2])) {
+                XA[i*2] = 0.02;
+            }
+            XA[i*2+1] = XA[i*2];
+        }
+
+        vector<double> x_assoc(ncA); // mole fractions of only the associating compounds
+        for (int i = 0; i < ncA; i++) {
+            x_assoc[i] = mole_fractions[iA[i]];
+        }
+
+        int ctr = 0;
+        double dif = 1000.;
+        vector<double> XA_old = XA;
+        while ((ctr < 500) && (dif > 1e-9)) {
+            ctr += 1;
+            XA = XA_find(XA, ncA, delta_ij, den, x_assoc);
+            dif = 0.;
+            for (int i = 0; i < ncA*2; i++) {
+                dif += abs(XA[i] - XA_old[i]);
+            }
+            XA_old = XA;
+        }
+
+        vector<double> dXA_dt (ncA*a_sites, 0);
+        dXA_dt = dXAdt_find(ncA, delta_ij, den, XA, ddelta_dt, x_assoc, a_sites);
+
+        int idx = -1;
+        for (int i = 0; i < ncA; i++) {
+            for (int j = 0; j < a_sites; j++) {
+                idx += 1;
+                dadt_assoc += mole_fractions[iA[i]]*(1/XA[idx]-0.5)*dXA_dt[idx];
+            }
+        }
+    }
+
+    // Ion term ---------------------------------------------------------------
+    double dadt_ion = 0.;
+    if (ion_term) {
+        vector<double> q(ncomp);
+        for (int i = 0; i < ncomp; i++) {
+            q[i] = components[i].getZ()*E_CHRG;
+        }
+
+        summ = 0.;
+        for (int i = 0; i < ncomp; i++) {
+            summ += components[i].getZ()*components[i].getZ()*mole_fractions[i];
+        }
+        double kappa = sqrt(den*E_CHRG*E_CHRG/kb/_T/(dielc*perm_vac)*summ); // the inverse Debye screening length. Equation 4 in Held et al. 2008.
+
+        double dkappa_dt;
+        if (kappa != 0) {
+            vector<double> chi(ncomp);
+            vector<double> dchikap_dk(ncomp);
+            summ = 0.;
+            for (int i = 0; i < ncomp; i++) {
+                chi[i] = 3/pow(kappa*components[i].getSigma(), 3)*(1.5 + log(1+kappa*components[i].getSigma()) - 2*(1+kappa*components[i].getSigma()) +
+                    0.5*pow(1+kappa*components[i].getSigma(), 2));
+                dchikap_dk[i] = -2*chi[i]+3/(1+kappa*components[i].getSigma());
+                summ += mole_fractions[i]*components[i].getZ()*components[i].getZ();
+            }
+            dkappa_dt = -0.5*den*E_CHRG*E_CHRG/kb/_T/_T/(dielc*perm_vac)*summ/kappa;
+
+            summ = 0.;
+            for (int i = 0; i < ncomp; i++) {
+                summ += mole_fractions[i]*q[i]*q[i]*(dchikap_dk[i]*dkappa_dt/_T-kappa*chi[i]/_T/_T);
+            }
+            dadt_ion = -1/12./PI/kb/(dielc*perm_vac)*summ;
+        }
+    }
+
+    double dadt = dadt_hc + dadt_disp + dadt_assoc + dadt_polar + dadt_ion;
+    // std::cout << "dadt_hc=" << dadt_hc << " dadt_disp=" << dadt_disp << " dadt_assoc=" << dadt_assoc << " dadt_polar=" << dadt_polar << " dadt_ion=" << dadt_ion << std::endl; // !!! remove
+    return dadt;
+}
+
+CoolPropDbl PCSAFTBackend::calc_hmolar(void) {
+    CoolPropDbl Z = calc_compressibility_factor();
+    CoolPropDbl dares_dt = calc_dadt();
+
+    CoolPropDbl hres = (-_T*dares_dt + (Z-1))*kb*N_AV*_T; // Equation A.46 from Gross and Sadowski 2001
+    return hres;
+}
+
+CoolPropDbl PCSAFTBackend::calc_smolar(void){
+    CoolPropDbl gres = calc_gibbsmolar();
+    CoolPropDbl hres = calc_hmolar();
+
+    CoolPropDbl sres = (hres - gres)/_T;
+    return sres;
+}
+
+vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
+    int ncomp = N; // number of components
+    vector<double> d(ncomp);
+    for (int i = 0; i < ncomp; i++) {
+       d[i] = components[i].getSigma()*(1-0.12*exp(-3*components[i].getU()/_T));
+    }
+    if (ion_term) {
+       for (int i = 0; i < ncomp; i++) {
+           if (components[i].getZ() != 0) {
+               d[i] = components[i].getSigma()*(1-0.12); // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+           }
+       }
+    }
+
+    double den = _rhomolar*N_AV/1.0e30;
+
+    vector<double> zeta (4, 0);
+    double summ;
+    for (int i = 0; i < 4; i++) {
+       summ = 0;
+       for (int j = 0; j < ncomp; j++) {
+           summ += mole_fractions[j]*components[j].getM()*pow(d[j], i);
+       }
+       zeta[i] = PI/6*den*summ;
+    }
+
+    double eta = zeta[3];
+    double m_avg = 0;
+    for (int i = 0; i < ncomp; i++) {
+       m_avg += mole_fractions[i]*components[i].getM();
+    }
+
+    vector<double> ghs(ncomp*ncomp, 0);
+    vector<double> denghs(ncomp*ncomp, 0);
+    vector<double> e_ij(ncomp*ncomp, 0);
+    vector<double> s_ij(ncomp*ncomp, 0);
+    double m2es3 = 0.;
+    double m2e2s3 = 0.;
+    int idx = -1;
+    for (int i = 0; i < ncomp; i++) {
+       for (int j = 0; j < ncomp; j++) {
+           idx += 1;
+           s_ij[idx] = (components[i].getSigma() + components[j].getSigma())/2.;
+           if (ion_term) {
+               if (components[i].getZ()*components[j].getZ() <= 0) { // for two cations or two anions e_ij is kept at zero to avoid dispersion between like ions (see Held et al. 2014)
+                   if (k_ij.empty()) {
+                       e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
+                   }
+                   else {
+                       e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
+                   }
+               }
+           } else {
+               if (k_ij.empty()) {
+                   e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
+               }
+               else {
+                   e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
+               }
+           }
+           m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/_T*pow(s_ij[idx], 3);
+           m2e2s3 = m2e2s3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*pow(e_ij[idx]/_T,2)*pow(s_ij[idx], 3);
+           ghs[idx] = 1/(1-zeta[3]) + (d[i]*d[j]/(d[i]+d[j]))*3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
+                   pow(d[i]*d[j]/(d[i]+d[j]), 2)*2*zeta[2]*zeta[2]/pow(1-zeta[3], 3);
+           denghs[idx] = zeta[3]/(1-zeta[3])/(1-zeta[3]) +
+               (d[i]*d[j]/(d[i]+d[j]))*(3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
+               6*zeta[2]*zeta[3]/pow(1-zeta[3], 3)) +
+               pow(d[i]*d[j]/(d[i]+d[j]), 2)*(4*zeta[2]*zeta[2]/pow(1-zeta[3], 3) +
+               6*zeta[2]*zeta[2]*zeta[3]/pow(1-zeta[3], 4));
+       }
+    }
+
+    double ares_hs = 1/zeta[0]*(3*zeta[1]*zeta[2]/(1-zeta[3]) + pow(zeta[2], 3.)/(zeta[3]*pow(1-zeta[3],2))
+           + (pow(zeta[2], 3.)/pow(zeta[3], 2.) - zeta[0])*log(1-zeta[3]));
+    double Zhs = zeta[3]/(1-zeta[3]) + 3.*zeta[1]*zeta[2]/zeta[0]/(1.-zeta[3])/(1.-zeta[3]) +
+       (3.*pow(zeta[2], 3.) - zeta[3]*pow(zeta[2], 3.))/zeta[0]/pow(1.-zeta[3], 3.);
+
+    static double a0[7] = { 0.910563145, 0.636128145, 2.686134789, -26.54736249, 97.75920878, -159.5915409, 91.29777408 };
+    static double a1[7] = { -0.308401692, 0.186053116, -2.503004726, 21.41979363, -65.25588533, 83.31868048, -33.74692293 };
+    static double a2[7] = { -0.090614835, 0.452784281, 0.596270073, -1.724182913, -4.130211253, 13.77663187, -8.672847037 };
+    static double b0[7] = { 0.724094694, 2.238279186, -4.002584949, -21.00357682, 26.85564136, 206.5513384, -355.6023561 };
+    static double b1[7] = { -0.575549808, 0.699509552, 3.892567339, -17.21547165, 192.6722645, -161.8264617, -165.2076935 };
+    static double b2[7] = { 0.097688312, -0.255757498, -9.155856153, 20.64207597, -38.80443005, 93.62677408, -29.66690559 };
+
+    vector<double> a (7, 0);
+    vector<double> b (7, 0);
+    for (int i = 0; i < 7; i++) {
+       a[i] = a0[i] + (m_avg-1.)/m_avg*a1[i] + (m_avg-1.)/m_avg*(m_avg-2.)/m_avg*a2[i];
+       b[i] = b0[i] + (m_avg-1.)/m_avg*b1[i] + (m_avg-1.)/m_avg*(m_avg-2.)/m_avg*b2[i];
+    }
+
+    double detI1_det = 0.0;
+    double detI2_det = 0.0;
+    double I1 = 0.0;
+    double I2 = 0.0;
+    for (int i = 0; i < 7; i++) {
+       detI1_det += a[i]*(i+1)*pow(eta, i);
+       detI2_det += b[i]*(i+1)*pow(eta, i);
+       I2 += b[i]*pow(eta, i);
+       I1 += a[i]*pow(eta, i);
+    }
+    double C1 = 1./(1. + m_avg*(8*eta-2*eta*eta)/pow(1-eta, 4) + (1-m_avg)*(20*eta-27*eta*eta+12*pow(eta, 3)-2*pow(eta, 4))/pow((1-eta)*(2-eta), 2.0));
+    double C2 = -1.*C1*C1*(m_avg*(-4*eta*eta+20*eta+8)/pow(1-eta, 5) + (1-m_avg)*(2*pow(eta, 3)+12*eta*eta-48*eta+40)/pow((1-eta)*(2-eta), 3.0));
+
+    summ = 0.0;
+    for (int i = 0; i < ncomp; i++) {
+       summ += mole_fractions[i]*(components[i].getM()-1)*log(ghs[i*ncomp+i]);
+    }
+
+    double ares_hc = m_avg*ares_hs - summ;
+    double ares_disp = -2*PI*den*I1*m2es3 - PI*den*m_avg*C1*I2*m2e2s3;
+
+    summ = 0.0;
+    for (int i = 0; i < ncomp; i++) {
+       summ += mole_fractions[i]*(components[i].getM()-1)/ghs[i*ncomp+i]*denghs[i*ncomp+i];
+    }
+
+    double Zhc = m_avg*Zhs - summ;
+    double Zdisp = -2*PI*den*detI1_det*m2es3 - PI*den*m_avg*(C1*detI2_det + C2*eta*I2)*m2e2s3;
+
+    vector<double> dghsii_dx(ncomp*ncomp, 0);
+    vector<double> dahs_dx(ncomp, 0);
+    vector<double> dzeta_dx(4, 0);
+    idx = -1;
+    for (int i = 0; i < ncomp; i++) {
+       for (int l = 0; l < 4; l++) {
+           dzeta_dx[l] = PI/6.*den*components[i].getM()*pow(d[i],l);
+       }
+       for (int j = 0; j < ncomp; j++) {
+           idx += 1;
+           dghsii_dx[idx] = dzeta_dx[3]/(1-zeta[3])/(1-zeta[3]) + (d[j]*d[j]/(d[j]+d[j]))*
+                   (3*dzeta_dx[2]/(1-zeta[3])/(1-zeta[3]) + 6*zeta[2]*dzeta_dx[3]/pow(1-zeta[3],3))
+                   + pow(d[j]*d[j]/(d[j]+d[j]),2)*(4*zeta[2]*dzeta_dx[2]/pow(1-zeta[3],3)
+                   + 6*zeta[2]*zeta[2]*dzeta_dx[3]/pow(1-zeta[3],4));
+       }
+       dahs_dx[i] = -dzeta_dx[0]/zeta[0]*ares_hs + 1/zeta[0]*(3*(dzeta_dx[1]*zeta[2]
+               + zeta[1]*dzeta_dx[2])/(1-zeta[3]) + 3*zeta[1]*zeta[2]*dzeta_dx[3]
+               /(1-zeta[3])/(1-zeta[3]) + 3*zeta[2]*zeta[2]*dzeta_dx[2]/zeta[3]/(1-zeta[3])/(1-zeta[3])
+               + pow(zeta[2],3)*dzeta_dx[3]*(3*zeta[3]-1)/zeta[3]/zeta[3]/pow(1-zeta[3],3)
+               + log(1-zeta[3])*((3*zeta[2]*zeta[2]*dzeta_dx[2]*zeta[3] -
+               2*pow(zeta[2],3)*dzeta_dx[3])/pow(zeta[3],3) - dzeta_dx[0]) +
+               (zeta[0]-pow(zeta[2],3)/zeta[3]/zeta[3])*dzeta_dx[3]/(1-zeta[3]));
+    }
+
+    vector<double> dadisp_dx(ncomp, 0);
+    vector<double> dahc_dx(ncomp, 0);
+    double dzeta3_dx, daa_dx, db_dx, dI1_dx, dI2_dx, dm2es3_dx, dm2e2s3_dx, dC1_dx;
+    for (int i = 0; i < ncomp; i++) {
+       dzeta3_dx = PI/6.*den*components[i].getM()*pow(d[i],3);
+       dI1_dx = 0.0;
+       dI2_dx = 0.0;
+       dm2es3_dx = 0.0;
+       dm2e2s3_dx = 0.0;
+       for (int l = 0; l < 7; l++) {
+           daa_dx = components[i].getM()/m_avg/m_avg*a1[l] + components[i].getM()/m_avg/m_avg*(3-4/m_avg)*a2[l];
+           db_dx = components[i].getM()/m_avg/m_avg*b1[l] + components[i].getM()/m_avg/m_avg*(3-4/m_avg)*b2[l];
+           dI1_dx += a[l]*l*dzeta3_dx*pow(eta,l-1) + daa_dx*pow(eta,l);
+           dI2_dx += b[l]*l*dzeta3_dx*pow(eta,l-1) + db_dx*pow(eta,l);
+       }
+       for (int j = 0; j < ncomp; j++) {
+           dm2es3_dx += mole_fractions[j]*components[j].getM()*(e_ij[i*ncomp+j]/_T)*pow(s_ij[i*ncomp+j],3);
+           dm2e2s3_dx += mole_fractions[j]*components[j].getM()*pow(e_ij[i*ncomp+j]/_T,2)*pow(s_ij[i*ncomp+j],3);
+           dahc_dx[i] += mole_fractions[j]*(components[j].getM()-1)/ghs[j*ncomp+j]*dghsii_dx[i*ncomp+j];
+       }
+       dm2es3_dx = dm2es3_dx*2*components[i].getM();
+       dm2e2s3_dx = dm2e2s3_dx*2*components[i].getM();
+       dahc_dx[i] = components[i].getM()*ares_hs + m_avg*dahs_dx[i] - dahc_dx[i] - (components[i].getM()-1)*log(ghs[i*ncomp+i]);
+       dC1_dx = C2*dzeta3_dx - C1*C1*(components[i].getM()*(8*eta-2*eta*eta)/pow(1-eta,4) -
+           components[i].getM()*(20*eta-27*eta*eta+12*pow(eta,3)-2*pow(eta,4))/pow((1-eta)*(2-eta),2));
+
+       dadisp_dx[i] = -2*PI*den*(dI1_dx*m2es3 + I1*dm2es3_dx) - PI*den
+           *((components[i].getM()*C1*I2 + m_avg*dC1_dx*I2 + m_avg*C1*dI2_dx)*m2e2s3
+           + m_avg*C1*I2*dm2e2s3_dx);
+    }
+
+    vector<double> mu_hc(ncomp, 0);
+    vector<double> mu_disp(ncomp, 0);
+    for (int i = 0; i < ncomp; i++) {
+       for (int j = 0; j < ncomp; j++) {
+           mu_hc[i] += mole_fractions[j]*dahc_dx[j];
+           mu_disp[i] += mole_fractions[j]*dadisp_dx[j];
+       }
+       mu_hc[i] = ares_hc + Zhc + dahc_dx[i] - mu_hc[i];
+       mu_disp[i] = ares_disp + Zdisp + dadisp_dx[i] - mu_disp[i];
+    }
+
+    // Dipole term (Gross and Vrabec term) --------------------------------------
+    vector<double> mu_polar(ncomp, 0);
+    if (polar_term) {
+       double A2 = 0.;
+       double A3 = 0.;
+       double dA2_det = 0.;
+       double dA3_det = 0.;
+       vector<double> dA2_dx(ncomp, 0);
+       vector<double> dA3_dx(ncomp, 0);
+
+       static double a0dip[5] = { 0.3043504, -0.1358588, 1.4493329, 0.3556977, -2.0653308 };
+       static double a1dip[5] = { 0.9534641, -1.8396383, 2.0131180, -7.3724958, 8.2374135 };
+       static double a2dip[5] = { -1.1610080, 4.5258607, 0.9751222, -12.281038, 5.9397575 };
+       static double b0dip[5] = { 0.2187939, -1.1896431, 1.1626889, 0, 0 };
+       static double b1dip[5] = { -0.5873164, 1.2489132, -0.5085280, 0, 0 };
+       static double b2dip[5] = { 3.4869576, -14.915974, 15.372022, 0, 0 };
+       static double c0dip[5] = { -0.0646774, 0.1975882, -0.8087562, 0.6902849, 0 };
+       static double c1dip[5] = { -0.9520876, 2.9924258, -2.3802636, -0.2701261, 0 };
+       static double c2dip[5] = { -0.6260979, 1.2924686, 1.6542783, -3.4396744, 0 };
+
+       const static double conv = 7242.702976750923; // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
+
+       vector<double> dipmSQ (ncomp, 0);
+       for (int i = 0; i < ncomp; i++) {
+           dipmSQ[i] = pow(components[i].getDipm(), 2.)/(components[i].getM()*components[i].getU()*pow(components[i].getSigma(),3.))*conv;
+       }
+
+       vector<double> adip (5, 0);
+       vector<double> bdip (5, 0);
+       vector<double> cdip (5, 0);
+       double J2, dJ2_det, J3, dJ3_det;
+       double m_ij;
+       double m_ijk;
+       for (int i = 0; i < ncomp; i++) {
+           for (int j = 0; j < ncomp; j++) {
+               m_ij = sqrt(components[i].getM()*components[j].getM());
+               if (m_ij > 2) {
+                   m_ij = 2;
+               }
+               J2 = 0.;
+               dJ2_det = 0.;
+               for (int l = 0; l < 5; l++) {
+                   adip[l] = a0dip[l] + (m_ij-1)/m_ij*a1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*a2dip[l];
+                   bdip[l] = b0dip[l] + (m_ij-1)/m_ij*b1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*b2dip[l];
+                   J2 += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/_T)*pow(eta, l); // j*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                   dJ2_det += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/_T)*l*pow(eta, l-1);
+               }
+               A2 += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)/
+                   pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*J2;
+               dA2_det += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*
+                   pow(s_ij[j*ncomp+j],3)/pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*dJ2_det;
+               if (i == j) {
+                   dA2_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)
+                       /pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*
+                       (mole_fractions[i]*mole_fractions[j]*dJ2_det*PI/6.*den*components[i].getM()*pow(d[i],3) + 2*mole_fractions[j]*J2);
+               }
+               else {
+                   dA2_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)
+                       /pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*
+                       (mole_fractions[i]*mole_fractions[j]*dJ2_det*PI/6.*den*components[i].getM()*pow(d[i],3) + mole_fractions[j]*J2);
+               }
+
+               for (int k = 0; k < ncomp; k++) {
+                   m_ijk = pow((components[i].getM()*components[j].getM()*components[k].getM()),1/3.);
+                   if (m_ijk > 2) {
+                       m_ijk = 2;
+                   }
+                   J3 = 0.;
+                   dJ3_det = 0.;
+                   for (int l = 0; l < 5; l++) {
+                       cdip[l] = c0dip[l] + (m_ijk-1)/m_ijk*c1dip[l] + (m_ijk-1)/m_ijk*(m_ijk-2)/m_ijk*c2dip[l];
+                       J3 += cdip[l]*pow(eta, l);
+                       dJ3_det += cdip[l]*l*pow(eta, (l-1));
+                   }
+                   A3 += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
+                       pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
+                       s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
+                       dipmSQ[j]*dipmSQ[k]*J3;
+                   dA3_det += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
+                       pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
+                       s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
+                       dipmSQ[j]*dipmSQ[k]*dJ3_det;
+                   if ((i == j) && (i == k)) {
+                       dA3_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*pow(s_ij[i*ncomp+i],3)
+                           *pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/s_ij[j*ncomp+k]
+                           *components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*dipmSQ[j]
+                           *dipmSQ[k]*(mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*dJ3_det*PI/6.*den*components[i].getM()*pow(d[i],3)
+                           + 3*mole_fractions[j]*mole_fractions[k]*J3);
+                   }
+                   else if ((i == j) || (i == k)) {
+                       dA3_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*pow(s_ij[i*ncomp+i],3)
+                           *pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/s_ij[j*ncomp+k]
+                           *components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*dipmSQ[j]
+                           *dipmSQ[k]*(mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*dJ3_det*PI/6.*den*components[i].getM()*pow(d[i],3)
+                           + 2*mole_fractions[j]*mole_fractions[k]*J3);
+                   }
+                   else {
+                       dA3_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*pow(s_ij[i*ncomp+i],3)
+                           *pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/s_ij[j*ncomp+k]
+                           *components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*dipmSQ[j]
+                           *dipmSQ[k]*(mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*dJ3_det*PI/6.*den*components[i].getM()*pow(d[i],3)
+                           + mole_fractions[j]*mole_fractions[k]*J3);
+                   }
+               }
+           }
+       }
+
+       A2 = -PI*den*A2;
+       A3 = -4/3.*PI*PI*den*den*A3;
+       dA2_det = -PI*den*dA2_det;
+       dA3_det = -4/3.*PI*PI*den*den*dA3_det;
+       for (int i = 0; i < ncomp; i++) {
+           dA2_dx[i] = -PI*den*dA2_dx[i];
+           dA3_dx[i] = -4/3.*PI*PI*den*den*dA3_dx[i];
+       }
+
+       vector<double> dapolar_dx(ncomp);
+       for (int i = 0; i < ncomp; i++) {
+           dapolar_dx[i] = (dA2_dx[i]*(1-A3/A2) + (dA3_dx[i]*A2 - A3*dA2_dx[i])/A2)/pow(1-A3/A2,2);
+       }
+
+       double ares_polar = A2/(1-A3/A2);
+       double Zpolar = eta*((dA2_det*(1-A3/A2)+(dA3_det*A2-A3*dA2_det)/A2)/(1-A3/A2)/(1-A3/A2));
+       for (int i = 0; i < ncomp; i++) {
+           for (int j = 0; j < ncomp; j++) {
+               mu_polar[i] += mole_fractions[j]*dapolar_dx[j];
+           }
+           mu_polar[i] = ares_polar + Zpolar + dapolar_dx[i] - mu_polar[i];
+       }
+    }
+
+    // Association term -------------------------------------------------------
+    // only the 2B association type is currently implemented
+    vector<double> mu_assoc(ncomp, 0);
+    if (assoc_term) {
+       int a_sites = 2;
+       int ncA = 0; // number of associating compounds
+       vector<int> iA; // indices of associating compounds
+       for (int i = 0; i < ncomp; i++) {
+           if (components[i].getVolA() != 0) {
+               iA.push_back(i);
+               ncA += 1;
+           }
+       }
+
+       vector<double> XA (ncA*a_sites, 0);
+       vector<double> eABij (ncA*ncA, 0);
+       vector<double> volABij (ncA*ncA, 0);
+       vector<double> delta_ij (ncA*ncA, 0);
+       vector<double> ddelta_dd (ncA*ncA*ncomp, 0);
+
+       // these indices are necessary because we are only using 1D vectors
+       int idxa = -1; // index over only associating compounds
+       int idxi = 0; // index for the ii-th compound
+       int idxj = 0; // index for the jj-th compound
+       int idx_ddelta = -1; // index for ddelta_dd vector
+       double dghsd_dd;
+       for (int i = 0; i < ncA; i++) {
+           idxi = iA[i]*ncomp+iA[i];
+           for (int j = 0; j < ncA; j++) {
+               idxa += 1;
+               idxj = iA[j]*ncomp+iA[j];
+               eABij[idxa] = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
+               volABij[idxa] = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
+                   s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
+               delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
+               for (int k = 0; k < ncomp; k++) {
+                   idx_ddelta += 1;
+                   dghsd_dd = PI/6.*components[k].getM()*(pow(d[k], 3)/(1-zeta[3])/(1-zeta[3]) + 3*d[iA[i]]*d[iA[j]]/
+                       (d[iA[i]]+d[iA[j]])*(d[k]*d[k]/(1-zeta[3])/(1-zeta[3])+2*pow(d[k], 3)*
+                       zeta[2]/pow(1-zeta[3], 3)) + 2*pow((d[iA[i]]*d[iA[j]]/(d[iA[i]]+d[iA[j]])), 2)*
+                       (2*d[k]*d[k]*zeta[2]/pow(1-zeta[3], 3)+3*(pow(d[k], 3)*zeta[2]*zeta[2]
+                       /pow(1-zeta[3], 4))));
+                   ddelta_dd[idx_ddelta] = dghsd_dd*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
+               }
+           }
+           XA[i*2] = (-1 + sqrt(1+8*den*delta_ij[i*ncA+i]))/(4*den*delta_ij[i*ncA+i]);
+           if (!isfinite(XA[i*2])) {
+               XA[i*2] = 0.02;
+           }
+           XA[i*2+1] = XA[i*2];
+       }
+
+       vector<double> x_assoc(ncA); // mole fractions of only the associating compounds
+       for (int i = 0; i < ncA; i++) {
+           x_assoc[i] = mole_fractions[iA[i]];
+       }
+
+       int ctr = 0;
+       double dif = 1000.;
+       vector<double> XA_old = XA;
+       while ((ctr < 500) && (dif > 1e-9)) {
+           ctr += 1;
+           XA = XA_find(XA, ncA, delta_ij, den, x_assoc);
+           dif = 0.;
+           for (int i = 0; i < ncA*2; i++) {
+               dif += abs(XA[i] - XA_old[i]);
+           }
+           XA_old = XA;
+       }
+
+       vector<double> dXA_dd(ncA*a_sites*ncomp, 0);
+       dXA_dd = dXA_find(ncA, ncomp, iA, delta_ij, den, XA, ddelta_dd, x_assoc, a_sites);
+
+       for (int i = 0; i < ncomp; i++) {
+           for (int j = 0; j < ncA; j++) {
+               for (int k = 0; k < a_sites; k++) {
+                   mu_assoc[i] += mole_fractions[iA[j]]*den*dXA_dd[i*(ncA*a_sites)+j*a_sites+k]*(1/XA[j*a_sites+k]-0.5);
+               }
+           }
+       }
+
+       for (int i = 0; i < ncA; i++) {
+           for (int l = 0; l < a_sites; l++) {
+               mu_assoc[iA[i]] += log(XA[i*a_sites+l])-0.5*XA[i*a_sites+l];
+           }
+           mu_assoc[iA[i]] += 0.5*a_sites;
+       }
+    }
+
+    // Ion term ---------------------------------------------------------------
+    vector<double> mu_ion(ncomp, 0);
+    if (ion_term) {
+        vector<double> q(ncomp);
+        for (int i = 0; i < ncomp; i++) {
+            q[i] = components[i].getZ()*E_CHRG;
+        }
+
+       summ = 0.;
+       for (int i = 0; i < ncomp; i++) {
+           summ += components[i].getZ()*components[i].getZ()*mole_fractions[i];
+       }
+       double kappa = sqrt(den*E_CHRG*E_CHRG/kb/_T/(dielc*perm_vac)*summ); // the inverse Debye screening length. Equation 4 in Held et al. 2008.
+
+       if (kappa != 0) {
+           vector<double> chi(ncomp);
+           vector<double> sigma_k(ncomp);
+           double summ1 = 0.;
+           double summ2 = 0.;
+           for (int i = 0; i < ncomp; i++) {
+               chi[i] = 3/pow(kappa*components[i].getSigma(), 3)*(1.5 + log(1+kappa*components[i].getSigma()) - 2*(1+kappa*components[i].getSigma()) +
+                   0.5*pow(1+kappa*components[i].getSigma(), 2));
+               sigma_k[i] = -2*chi[i]+3/(1+kappa*components[i].getSigma());
+               summ1 += q[i]*q[i]*mole_fractions[i]*sigma_k[i];
+               summ2 += mole_fractions[i]*q[i]*q[i];
+           }
+
+           for (int i = 0; i < ncomp; i++) {
+               mu_ion[i] = -q[i]*q[i]*kappa/24./PI/kb/_T/(dielc*perm_vac)*
+                   (2*chi[i] + summ1/summ2);
+           }
+       }
+    }
+
+    CoolPropDbl Z = calc_compressibility_factor();
+
+    vector<double> mu(ncomp, 0);
+    vector<CoolPropDbl> fugcoef(ncomp, 0);
+    for (int i = 0; i < ncomp; i++) {
+       mu[i] = mu_hc[i] + mu_disp[i] + mu_polar[i] + mu_assoc[i] + mu_ion[i];
+       fugcoef[i] = exp(mu[i] - log(Z)); // the fugacity coefficients
+    }
+
+    return fugcoef;
+    }
+
+CoolPropDbl PCSAFTBackend::calc_gibbsmolar(void) {
+    CoolPropDbl ares = calc_alphar();
+    CoolPropDbl Z = calc_compressibility_factor();
+
+    CoolPropDbl gres = (ares + (Z - 1) - log(Z))*kb*N_AV*_T; // Equation A.50 from Gross and Sadowski 2001
+    return gres;
+}
+
+CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
+    int ncomp = N; // number of components
+    vector<double> d(ncomp);
+    for (int i = 0; i < ncomp; i++) {
+        d[i] = components[i].getSigma()*(1-0.12*exp(-3*components[i].getU()/_T));
+    }
+    if (ion_term) {
+        for (int i = 0; i < ncomp; i++) {
+            if (components[i].getZ() != 0) {
+                d[i] = components[i].getSigma()*(1-0.12); // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+            }
+        }
+    }
+
+    double den = _rhomolar*N_AV/1.0e30;
+
+    vector<double> zeta(4, 0);
     double summ;
     for (int i = 0; i < 4; i++) {
         summ = 0;
@@ -354,7 +1300,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                         e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
                     }
                     else {
-                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * t));
+                        e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
                     }
                 }
             } else {
@@ -362,11 +1308,11 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                     e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
                 }
                 else {
-                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * t));
+                    e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
                 }
             }
-            m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/t*pow(s_ij[idx], 3);
-            m2e2s3 = m2e2s3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*pow(e_ij[idx]/t,2)*pow(s_ij[idx], 3);
+            m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/_T*pow(s_ij[idx], 3);
+            m2e2s3 = m2e2s3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*pow(e_ij[idx]/_T,2)*pow(s_ij[idx], 3);
         }
         ghs[i] = 1/(1-zeta[3]) + (d[i]*d[i]/(d[i]+d[i]))*3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
             pow(d[i]*d[i]/(d[i]+d[i]), 2)*2*zeta[2]*zeta[2]/pow(1-zeta[3], 3);
@@ -457,12 +1403,12 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                 for (int l = 0; l < 5; l++) {
                     adip[l] = a0dip[l] + (m_ij-1)/m_ij*a1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*a2dip[l];
                     bdip[l] = b0dip[l] + (m_ij-1)/m_ij*b1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*b2dip[l];
-                    J2 += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/t)*pow(eta, l); // j*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
-                    dJ2_det += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/t)*l*pow(eta, l-1);
+                    J2 += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/_T)*pow(eta, l); // j*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                    dJ2_det += (adip[l] + bdip[l]*e_ij[j*ncomp+j]/_T)*l*pow(eta, l-1);
                 }
-                A2 += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/t*e_ij[j*ncomp+j]/t*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)/
+                A2 += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)/
                     pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*J2;
-                dA2_det += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/t*e_ij[j*ncomp+j]/t*pow(s_ij[i*ncomp+i],3)*
+                dA2_det += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*
                     pow(s_ij[j*ncomp+j],3)/pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*dJ2_det;
             }
         }
@@ -482,11 +1428,11 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                         J3 += cdip[l]*pow(eta, l);
                         dJ3_det += cdip[l]*l*pow(eta, (l-1));
                     }
-                    A3 += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/t*e_ij[j*ncomp+j]/t*e_ij[k*ncomp+k]/t*
+                    A3 += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
                         pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
                         s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
                         dipmSQ[j]*dipmSQ[k]*J3;
-                    dA3_det += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/t*e_ij[j*ncomp+j]/t*e_ij[k*ncomp+k]/t*
+                    dA3_det += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
                         pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
                         s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
                         dipmSQ[j]*dipmSQ[k]*dJ3_det;
@@ -536,7 +1482,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                 eABij[idxa] = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
                 volABij[idxa] = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
                     s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
-                delta_ij[idxa] = ghs[iA[j]]*(exp(eABij[idxa]/t)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
+                delta_ij[idxa] = ghs[iA[j]]*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
                 // std::cout << i << "," << j << ": " << "delta_ij=" << delta_ij[idxa] << " eABij=" << eABij[idxa] << " volABij=" << volABij[idxa] << std::endl; // !!! remove
                 for (int k = 0; k < ncomp; k++) {
                     idx_ddelta += 1;
@@ -545,7 +1491,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                         zeta[2]/pow(1-zeta[3], 3)) + 2*pow((d[iA[i]]*d[iA[j]]/(d[iA[i]]+d[iA[j]])), 2)*
                         (2*d[k]*d[k]*zeta[2]/pow(1-zeta[3], 3)+3*(pow(d[k], 3)*zeta[2]*zeta[2]
                         /pow(1-zeta[3], 4))));
-                    ddelta_dd[idx_ddelta] = dghsd_dd*(exp(eABij[idxa]/t)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
+                    ddelta_dd[idx_ddelta] = dghsd_dd*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
                 }
             }
             XA[i*2] = (-1 + sqrt(1+8*den*delta_ij[i*ncA+i]))/(4*den*delta_ij[i*ncA+i]);
@@ -555,7 +1501,10 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
         vector<double> x_assoc(ncA); // mole fractions of only the associating compounds
         for (int i = 0; i < ncA; i++) {
             x_assoc[i] = mole_fractions[iA[i]];
+            // std::cout << "mole fraction " << i << ": " << mole_fractions[iA[i]] << std::endl; // !!! remove
         }
+        // std::cout << "den=" << den << std::endl; // !!! remove
+        // std::cout << "XAguess: " << XA[0] << ", " << XA[1] << std::endl; // !!! remove
 
         int ctr = 0;
         double dif = 1000.;
@@ -603,7 +1552,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
             summ += pow(components[i].getZ(),2.)*mole_fractions[i];
         }
 
-        double kappa = sqrt(den*E_CHRG*E_CHRG/kb/t/(dielc*perm_vac)*summ); // the inverse Debye screening length. Equation 4 in Held et al. 2008.
+        double kappa = sqrt(den*E_CHRG*E_CHRG/kb/_T/(dielc*perm_vac)*summ); // the inverse Debye screening length. Equation 4 in Held et al. 2008.
 
         if (kappa != 0) {
             double chi, sigma_k;
@@ -615,7 +1564,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(double t, double rho){
                 sigma_k = -2*chi+3/(1+kappa*components[i].getSigma());
                 summ += q[i]*q[i]*mole_fractions[i]*sigma_k;
             }
-            Zion = -1*kappa/24./PI/kb/t/(dielc*perm_vac)*summ;
+            Zion = -1*kappa/24./PI/kb/_T/(dielc*perm_vac)*summ;
         }
     }
 
@@ -695,7 +1644,7 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
                 components[water_idx].calc_water_sigma(_T);
                 dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
             }
-            _p = update_DmolarT(_T, _rhomolar);
+            _p = update_DmolarT(_rhomolar);
             break;
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
@@ -764,8 +1713,8 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
 
         SolverRhoResid(PCSAFTBackend *PCSAFT, CoolPropDbl T, CoolPropDbl p)
         : PCSAFT(PCSAFT), T(T), p(p){}
-        double call(double rhomolar){
-            CoolPropDbl peos = PCSAFT->update_DmolarT(T, rhomolar);
+        CoolPropDbl call(CoolPropDbl rhomolar){
+            CoolPropDbl peos = PCSAFT->update_DmolarT(rhomolar);
             // std::cout << rhomolar << ", " << (peos-p)/p << ", " << p << ", " << peos << std::endl; // !!! remove
             return (peos-p)/p;
         };
@@ -825,6 +1774,8 @@ vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, int ncA, vector<d
                 for (int kin = 0; kin < n_sites; kin++) {
                     if (kin != kout) {
                         summ2 += den*x[j]*XA_guess[j*n_sites+kin]*delta_ij[i*ncA+j];
+                        // std::cout << "  den=" << den << " x=" << x[j] << std::endl; // !!! remove
+                        // std::cout << i << "," << j << ": " << summ2 << std::endl; // !!! remove
                     }
                 }
             }
@@ -832,6 +1783,7 @@ vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, int ncA, vector<d
         }
     }
 
+    // std::cout << "------ XA: " << XA[0] << std::endl; // !!! remove
     return XA;
     }
 
@@ -942,10 +1894,10 @@ double PCSAFTBackend::dielc_water(double t) {
         throw ValueError("The current function for the dielectric constant for water is only valid for temperatures above 263.15 K.");
     }
     else if (t <= 368.15) {
-        dielc = 7.6555618295E-04*t*t - 8.1783881423E-01*t + 2.5419616803E+02;
+        dielc = 7.6555618295E-04*_T*_T - 8.1783881423E-01*_T + 2.5419616803E+02;
     }
     else if (t <= 443.15) {
-        dielc = 0.0005003272124*t*t - 0.6285556029*t + 220.4467027;
+        dielc = 0.0005003272124*_T*_T - 0.6285556029*_T + 220.4467027;
     }
     else {
         throw ValueError("The current function for the dielectric constant for water is only valid for temperatures less than 443.15 K.");

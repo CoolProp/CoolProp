@@ -102,22 +102,21 @@ public:
     // ************************************************************************* //
     //
     /// Calculate the pressure in most computationally efficient manner
-    CoolPropDbl calc_pressure_nocache(CoolPropDbl t, CoolPropDbl rho);
+    CoolPropDbl calc_pressure(void);
 
     /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
-    CoolPropDbl update_DmolarT(CoolPropDbl T, CoolPropDbl rhomolar);
+    CoolPropDbl update_DmolarT(CoolPropDbl rho);
 
     CoolPropDbl calc_alpha0(void); // ideal gas helmholtz energy term
     CoolPropDbl calc_alphar(void); // residual helmholtz energy
-    CoolPropDbl calc_hmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
+    CoolPropDbl calc_dadt(void); // derivative of the residual helmholtz energy with respect to temperature
     CoolPropDbl calc_hmolar(void);
-    CoolPropDbl calc_smolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
     CoolPropDbl calc_smolar(void);
-    CoolPropDbl calc_fugacity_coefficient(void);
+    vector<CoolPropDbl> calc_fugacity_coefficients(void);
     CoolPropDbl calc_gibbsmolar(void);
-    CoolPropDbl calc_cpmolar(void);
+    // CoolPropDbl calc_cpmolar(void);
     // CoolPropDbl calc_cp0molar(void);
-    CoolPropDbl calc_compressibility_factor(double t, double rho);
+    CoolPropDbl calc_compressibility_factor(void);
 
     double calc_SatLiquid(bool is_temperature_input, CoolPropDbl value1);
     double calc_SatVapor(bool is_temperature_input, CoolPropDbl value1);
@@ -144,7 +143,7 @@ public:
     //                      Saturation Functions                                 //
     // ************************************************************************* //
     //
-    double calc_pressure(void){ return _p; };
+    // double calc_pressure(void){ return _p; };
 };
 } /* namespace CoolProp */
 #endif /* PCSAFTBACKEND_H_ */
