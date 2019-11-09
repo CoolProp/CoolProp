@@ -1161,7 +1161,7 @@ public:
               n[] = {-1.6909858,0.93739074},
               t[] = {4.3315, 4.015},
               d[] = {1, 1},
-              b[] = {1.244, 0.6826},
+              b[] = {1.244, 0.6826};
             GaoB.reset(new CoolProp::ResidualHelmholtzGaoB(
                 std::vector<CoolPropDbl>(n,n+sizeof(n)/sizeof(n[0])),
                std::vector<CoolPropDbl>(t,t+sizeof(t)/sizeof(t[0])),
