@@ -7,7 +7,20 @@ from .unit_systems_constants import *
 from .param_constants import *
 from .phase_constants import *
 
-__fluids__ = CoolProp.FluidsList()
+def get_fluids():
+    """
+    Get the list of fluids in CoolProp, according to their default name
+    """
+
+    del_old = CP.get_config_string(CP.LIST_STRING_DELIMITER)
+    CP.set_config_string(CP.LIST_STRING_DELIMITER, '|')
+    try:
+        fluids = CoolProp.get_global_param_string('fluids_list')
+    finally:
+        CP.set_config_string(CP.LIST_STRING_DELIMITER, del_old)
+    return fluids
+
+__fluids__ = get_fluids()
 
 
 def test():
