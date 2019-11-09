@@ -1168,9 +1168,9 @@ public:
                std::vector<CoolPropDbl>(d,d+sizeof(d)/sizeof(d[0])),
                std::vector<CoolPropDbl>(eta,eta+sizeof(eta)/sizeof(eta[0])),
                std::vector<CoolPropDbl>(beta,beta+sizeof(beta)/sizeof(beta[0])),
-               std::vector<CoolPropDbl>(gamma,gamma+sizeof(gamma)/sizeof(gamma[0]))
+               std::vector<CoolPropDbl>(gamma,gamma+sizeof(gamma)/sizeof(gamma[0])),
                std::vector<CoolPropDbl>(epsilon,epsilon+sizeof(epsilon)/sizeof(epsilon[0])),
-               std::vector<CoolPropDbl>(b,b+sizeof(b)/sizeof(b[0])),
+               std::vector<CoolPropDbl>(b,b+sizeof(b)/sizeof(b[0]))
             ));
         }
 
