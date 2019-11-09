@@ -216,7 +216,14 @@ class FluidGenerator(object):
         ITG = FluidInfoTableGenerator(self.fluid)
         ITG.write(path)
 
-        aliases = ', '.join(['``' + a.strip() + '``' for a in CoolProp.CoolProp.get_fluid_param_string(self.fluid, 'aliases').strip().split(',') if a])
+        del_old = CP.get_config_string(CP.LIST_STRING_DELIMITER)
+       
+        CP.set_config_string(CP.LIST_STRING_DELIMITER, '|')
+        try:
+            aliases = ', '.join(['``' + a.strip() + '``' for a in CoolProp.CoolProp.get_fluid_param_string(self.fluid, 'aliases').strip().split('|') if a])
+        finally:
+            CP.set_config_string(CP.LIST_STRING_DELIMITER, del_old)
+
         if aliases:
             aliases = 'Aliases\n=======\n\n' + aliases + '\n'
 
