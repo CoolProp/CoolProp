@@ -1,4 +1,5 @@
 import CoolProp
+CP = CoolProp.CoolProp
 import os
 import codecs
 
