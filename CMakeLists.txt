@@ -1584,7 +1584,7 @@ endif()
 if (COOLPROP_CLANG_ADDRESS_SANITIZER)
 
   SET(CMAKE_CXX_FLAGS "-fsanitize=address -g")
-  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/catch_always_return_success.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)
