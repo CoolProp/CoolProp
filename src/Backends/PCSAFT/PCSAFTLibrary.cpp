@@ -372,14 +372,27 @@ std::string PCSAFTLibraryClass::get_mixture_binary_pair_pcsaft(const std::string
 }
 
 void PCSAFTLibraryClass::set_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value) {
-
     // Find pair
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
     CAS.push_back(CAS2);
 
+    std::vector<std::string> CASrev;
+    CASrev.push_back(CAS2);
+    CASrev.push_back(CAS1);
+
     if (m_binary_pair_map.find(CAS) != m_binary_pair_map.end()){
         std::vector<Dictionary> &v = m_binary_pair_map[CAS];
+        if (v[0].has_number(key)){
+            v[0].add_number(key, value);
+        }
+        else{
+            throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error",
+                                key.c_str(), CAS1.c_str(), CAS2.c_str()));
+        }
+    }
+    else if (m_binary_pair_map.find(CASrev) != m_binary_pair_map.end()) {
+        std::vector<Dictionary> &v = m_binary_pair_map[CASrev];
         if (v[0].has_number(key)){
             v[0].add_number(key, value);
         }

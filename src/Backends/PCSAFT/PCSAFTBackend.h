@@ -32,6 +32,9 @@ protected:
                              lnK; ///< The natural logarithms of the K factors of the components
     double dielc; ///< The dielectric constant of the solvent, if ion term is used
 
+    shared_ptr<PCSAFTBackend> SatL;
+    shared_ptr<PCSAFTBackend> SatV;
+
     std::size_t N; ///< Number of components
 
     bool water_present; ///< Whether or not water is present in the system because water has a temperature dependent sigma
@@ -54,8 +57,9 @@ protected:
     double dielc_water(double t);
 
 public:
-    PCSAFTBackend(const std::vector<std::string> &component_names);
-    PCSAFTBackend(const std::vector<PCSAFTFluid> &components);
+    PCSAFTBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV = true);
+    PCSAFTBackend(const std::vector<PCSAFTFluid> &components, bool generate_SatL_and_SatV = true);
+    virtual PCSAFTBackend *get_copy(bool generate_SatL_and_SatV = true);
 
     /// The name of the backend being used
     std::string backend_name(void) { return get_backend_string(PCSAFT_BACKEND); }
@@ -90,8 +94,8 @@ public:
         // }
     }
 
-    // void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
-    // double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
+    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
+    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
 
     /*  We have to override some of the functions from the AbstractState.
      *  IF97 is only mass-based and does not support conversion
@@ -107,7 +111,7 @@ public:
     /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
     CoolPropDbl update_DmolarT(CoolPropDbl rho);
 
-    CoolPropDbl calc_alpha0(void); // ideal gas helmholtz energy term
+    // CoolPropDbl calc_alpha0(void); // ideal gas helmholtz energy term
     CoolPropDbl calc_alphar(void); // residual helmholtz energy
     CoolPropDbl calc_dadt(void); // derivative of the residual helmholtz energy with respect to temperature
     CoolPropDbl calc_hmolar(void);

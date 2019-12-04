@@ -177,6 +177,8 @@ protected:
     /// Using this backend, calculate the fugacity coefficient (dimensionless)
     virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i){ throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend"); };
     /// Using this backend, calculate the fugacity in Pa
+    virtual std::vector<CoolPropDbl> calc_fugacity_coefficients(){ throw NotImplementedError("calc_fugacity_coefficients is not implemented for this backend"); };
+    /// Using this backend, calculate the fugacity in Pa
     virtual CoolPropDbl calc_fugacity(std::size_t i){ throw NotImplementedError("calc_fugacity is not implemented for this backend"); };
     /// Using this backend, calculate the chemical potential in J/mol
     virtual CoolPropDbl calc_chemical_potential(std::size_t i) { throw NotImplementedError("calc_chemical_potential is not implemented for this backend"); };
@@ -781,6 +783,8 @@ public:
     double isentropic_expansion_coefficient(void);
     /// Return the fugacity coefficient of the i-th component of the mixture
     double fugacity_coefficient(std::size_t i);
+    /// Return a vector of the fugacity coefficients for all components in the mixture
+    std::vector<double> fugacity_coefficients();
     /// Return the fugacity of the i-th component of the mixture
     double fugacity(std::size_t i);
     /// Return the chemical potential of the i-th component of the mixture

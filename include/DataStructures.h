@@ -399,7 +399,8 @@ void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);
 
 extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
 extern void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
-
+extern std::string get_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &param);
+extern void set_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
 
 /// The structure is taken directly from the AbstractState class.
 // !! If you add a parameter, update the map in the corresponding CPP file !!

@@ -631,7 +631,6 @@ double AbstractState::surface_tension(void){
     return _surface_tension;
 }
 double AbstractState::molar_mass(void){
-    std::cout << "in molar_mass(): " << !_molar_mass << std::endl; // !!! remove
     if (!_molar_mass) _molar_mass = calc_molar_mass();
     return _molar_mass;
 }
@@ -642,6 +641,10 @@ double AbstractState::gas_constant(void){
 double AbstractState::fugacity_coefficient(std::size_t i){
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity_coefficient(i);
+}
+std::vector<double> AbstractState::fugacity_coefficients(){
+    // TODO: Cache the fug. coeff for each component
+    return calc_fugacity_coefficients();
 }
 double AbstractState::fugacity(std::size_t i){
     // TODO: Cache the fug. coeff for each component
