@@ -13,6 +13,14 @@
 
 namespace CoolProp {
 
+std::string get_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key) {
+    return PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(CAS1, CAS2, key);
+}
+
+void set_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value) {
+    PCSAFTLibrary::get_library().set_binary_interaction_pcsaft(CAS1, CAS2, key, value);
+}
+
 namespace PCSAFTLibrary {
 
 static PCSAFTLibraryClass library;
@@ -61,121 +69,8 @@ PCSAFTFluid& PCSAFTLibraryClass::get(std::size_t key) {
     } else {
         throw ValueError(
             format("key [%d] was not found in PCSAFTLibraryClass",key));
-    } // !!! should add lookup via alias map
+    }
 };
-
-// /// Get a CoolPropFluid instance stored in this library
-// /**
-// @param key Either a CAS number or the name (CAS number should be preferred)
-// */
-// CoolPropFluid get(const std::string &key)
-// {
-//     // Try to find it
-//     std::map<std::string, std::size_t>::const_iterator it = string_to_index_map.find(key);
-//     // If it is found
-//     if (it != string_to_index_map.end()){
-//         return get(it->second);
-//     }
-//     else{
-//         // Here we check for the use of a cubic Helmholtz energy transformation for a multi-fluid model
-//         std::vector<std::string> endings; endings.push_back("-SRK"); endings.push_back("-PengRobinson");
-//         for (std::vector<std::string>::const_iterator end = endings.begin(); end != endings.end(); ++end){
-//             if (endswith(key, *end)){
-//                 std::string used_name = key.substr(0, key.size()-(*end).size());
-//                 it = string_to_index_map.find(used_name);
-//                 if (it != string_to_index_map.end()){
-//                     // We found the name of the fluid within the library of multiparameter
-//                     // Helmholtz-explicit models.  We will load its parameters from the
-//                     // multiparameter EOS
-//                     //
-//                     CoolPropFluid fluid = get(it->second);
-//                     // Remove all the residual contributions to the Helmholtz energy
-//                     fluid.EOSVector[0].alphar.empty_the_EOS();
-//                     // Get the parameters for the cubic EOS
-//                     CoolPropDbl Tc = fluid.EOSVector[0].reduce.T;
-//                     CoolPropDbl pc = fluid.EOSVector[0].reduce.p;
-//                     CoolPropDbl rhomolarc = fluid.EOSVector[0].reduce.rhomolar;
-//                     CoolPropDbl acentric = fluid.EOSVector[0].acentric;
-//                     CoolPropDbl R = 8.3144598; // fluid.EOSVector[0].R_u;
-//                     // Set the cubic contribution to the residual Helmholtz energy
-//                     shared_ptr<AbstractCubic> ac;
-//                     if (*end == "-SRK"){
-//                         ac.reset(new SRK(Tc, pc, acentric, R));
-//                     }
-//                     else if (*end == "-PengRobinson"){
-//                         ac.reset(new PengRobinson(Tc, pc, acentric, R));
-//                     }
-//                     else {
-//                         throw CoolProp::ValueError(format("Unable to match this ending [%s]", (*end).c_str()));
-//                     }
-//                     ac->set_Tr(Tc);
-//                     ac->set_rhor(rhomolarc);
-//                     fluid.EOSVector[0].alphar.cubic = ResidualHelmholtzGeneralizedCubic(ac);
-//                     return fluid;
-//                 }
-//                 else{
-//                     // Let's look in the library of cubic EOS
-//                     CubicLibrary::CubicsValues vals = CubicLibrary::get_cubic_values(used_name);
-//                     // Set the cubic contribution to the residual Helmholtz energy
-//                     shared_ptr<AbstractCubic> ac;
-//                     if (*end == "-SRK") {
-//                         ac.reset(new SRK(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA)));
-//                     }
-//                     else if (*end == "-PengRobinson") {
-//                         ac.reset(new PengRobinson(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA)));
-//                     }
-//                     else{
-//                         throw CoolProp::ValueError(format("Unable to match this ending [%s]",(*end).c_str()));
-//                     }
-//                     ac->set_Tr(vals.Tc);
-//                     if (vals.rhomolarc > 0){
-//                         ac->set_rhor(vals.rhomolarc);
-//                     }
-//                     else{
-//                         // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
-//                         double v_c_Lmol = 2.14107171795*(vals.Tc/vals.pc*1000)+0.00773144012514; // [L/mol]
-//                         ac->set_rhor(1/(v_c_Lmol/1000.0));
-//                     }
-//                     CoolPropFluid fluid;
-//                     fluid.CAS = vals.CAS;
-//                     EquationOfState E;
-//                     E.acentric = vals.acentric;
-//                     E.sat_min_liquid.T = _HUGE;
-//                     E.sat_min_liquid.p = _HUGE;
-//                     E.reduce.T = vals.Tc;
-//                     E.reduce.p = vals.pc;
-//                     E.reduce.rhomolar = ac->get_rhor();
-//                     fluid.EOSVector.push_back(E);
-//                     fluid.EOS().alphar.cubic = ResidualHelmholtzGeneralizedCubic(ac);
-//                     fluid.EOS().alpha0 = vals.alpha0;
-//                     fluid.crit.T = vals.Tc;
-//                     fluid.crit.p = vals.pc;
-//                     fluid.crit.rhomolar = ac->get_rhor();
-//
-//                     return fluid;
-//                 }
-//             }
-//         }
-//         throw ValueError(format("key [%s] was not found in string_to_index_map in JSONFluidLibrary", key.c_str()));
-//     }
-// };
-//
-// /// Get a CoolPropFluid instance stored in this library
-// /**
-// @param key The index of the fluid in the map
-// */
-// CoolPropFluid get(std::size_t key)
-// {
-//     // Try to find it
-//     std::map<std::size_t, CoolPropFluid>::iterator it = fluid_map.find(key);
-//     // If it is found
-//     if (it != fluid_map.end()){
-//         return it->second;
-//     }
-//     else{
-//         throw ValueError(format("key [%d] was not found in JSONFluidLibrary",key));
-//     }
-// };
 
 void add_fluids_as_JSON(const std::string &JSON)
 {
@@ -308,7 +203,7 @@ std::string get_pcsaft_fluids_schema(){
     return pcsaft_fluids_schema_JSON;
 }
 
-std::string PCSAFTLibraryClass::get_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key) {
+std::string PCSAFTLibraryClass::get_binary_interaction_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key) {
     // Find pair
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
@@ -371,7 +266,7 @@ std::string PCSAFTLibraryClass::get_mixture_binary_pair_pcsaft(const std::string
     }
 }
 
-void PCSAFTLibraryClass::set_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value) {
+void PCSAFTLibraryClass::set_binary_interaction_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value) {
     // Find pair
     std::vector<std::string> CAS;
     CAS.push_back(CAS1);
@@ -382,35 +277,43 @@ void PCSAFTLibraryClass::set_mixture_binary_pair_pcsaft(const std::string &CAS1,
     CASrev.push_back(CAS1);
 
     if (m_binary_pair_map.find(CAS) != m_binary_pair_map.end()){
-        std::vector<Dictionary> &v = m_binary_pair_map[CAS];
-        if (v[0].has_number(key)){
-            v[0].add_number(key, value);
+        if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
+            std::vector<Dictionary> &v = m_binary_pair_map[CAS];
+            if (v[0].has_number(key)){
+                v[0].add_number(key, value);
+            }
+            else {
+                throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error",
+                                    key.c_str(), CAS1.c_str(), CAS2.c_str()));
+            }
         }
-        else{
-            throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error",
-                                key.c_str(), CAS1.c_str(), CAS2.c_str()));
+        else {
+            throw ValueError(format("CAS pair(%s,%s) already in binary interaction map; considering enabling configuration key OVERWRITE_BINARY_INTERACTION", CAS1.c_str(), CAS2.c_str()));
         }
     }
     else if (m_binary_pair_map.find(CASrev) != m_binary_pair_map.end()) {
-        std::vector<Dictionary> &v = m_binary_pair_map[CASrev];
-        if (v[0].has_number(key)){
-            v[0].add_number(key, value);
+        if (get_config_bool(OVERWRITE_BINARY_INTERACTION)) {
+            std::vector<Dictionary> &v = m_binary_pair_map[CASrev];
+            if (v[0].has_number(key)) {
+                v[0].add_number(key, value);
+            }
+            else {
+                throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error",
+                                    key.c_str(), CAS1.c_str(), CAS2.c_str()));
+            }
         }
-        else{
-            throw ValueError(format("Could not set the parameter [%s] for the binary pair [%s,%s] - for now this is an error",
-                                key.c_str(), CAS1.c_str(), CAS2.c_str()));
+        else {
+            throw ValueError(format("CAS pair(%s,%s) already in binary interaction map; considering enabling configuration key OVERWRITE_BINARY_INTERACTION", CAS1.c_str(), CAS2.c_str()));
         }
     }
     else{
-        // Sort, see if other order works properly
-        std::sort(CAS.begin(), CAS.end());
-        if (m_binary_pair_map.find(CAS) != m_binary_pair_map.end())
-        {
-            throw ValueError(format("Could not match the binary pair [%s,%s] - order of CAS numbers is backwards; found the swapped CAS numbers.",CAS1.c_str(), CAS2.c_str()));
-        }
-        else{
-            throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
-        }
+        Dictionary dict;
+        std::vector<std::string> CAS;
+        CAS.push_back(CAS1);
+        CAS.push_back(CAS2);
+        dict.add_number(key, value);
+
+        m_binary_pair_map.insert(std::pair<std::vector<std::string>, std::vector<Dictionary> >(CAS, std::vector<Dictionary>(1, dict)));
     }
 }
 
@@ -419,12 +322,6 @@ void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document &doc) {
     {
         // Get the empty dictionary to be filled by the appropriate interaction parameter
         Dictionary dict;
-
-        // ParseResult result = document.Parse(json.c_str());
-        // if (!result) {
-        //   std::cerr << "JSON parse error: %s (%u)", GetParseError_En(result.Code()), result.Offset());
-        //   continue; // skip loop ;-)
-        // }
 
         // Get the vector of CAS numbers
         std::vector<std::string> CAS;

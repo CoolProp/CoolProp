@@ -10,9 +10,13 @@
 #include "rapidjson_include.h"
 
 namespace CoolProp {
+
+std::string get_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key);
+void set_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value);
+
 namespace PCSAFTLibrary {
 
-class PCSAFTLibraryClass{
+class PCSAFTLibraryClass {
 private:
     std::map<std::size_t, PCSAFTFluid> fluid_map;
     std::map<std::string, std::size_t> string_to_index_map;
@@ -24,7 +28,6 @@ private:
     void load_from_string(const std::string &str);
 public:
     PCSAFTLibraryClass();
-    // ~PCSAFTLibraryClass();
 
     bool is_empty(){ return empty; };
 
@@ -37,8 +40,8 @@ public:
         return m_binary_pair_map;
     };
 
-    std::string get_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key);
-    void set_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value);
+    std::string get_binary_interaction_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key);
+    void set_binary_interaction_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &key, const double value);
 };
 
 /** \brief Add an array of fluids to the PC-SAFT library (as a JSON-formatted string)

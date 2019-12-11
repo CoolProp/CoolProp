@@ -43,9 +43,10 @@ protected:
     bool polar_term; ///< Whether or not the dipole term should be included
     bool assoc_term; ///< Whether or not the association term should be included
 
-    void post_update(bool optional_checks = false); // <-- TODO implement phase check and set this back to true
+    void post_update(bool optional_checks = true);
 
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
+    phases calc_phase_internal(CoolProp::input_pairs input_pair);
 
     // these functions are used internally to solve for association parameters
     vector<double> XA_find(vector<double> XA_guess, int ncomp, vector<double> delta_ij, double den,
@@ -94,18 +95,11 @@ public:
         // }
     }
 
-    void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value);
-    double get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter);
-
-    /*  We have to override some of the functions from the AbstractState.
-     *  IF97 is only mass-based and does not support conversion
-     *  from mass- to molar-specific quantities.
-     */
     // ************************************************************************* //
     //                   Basic Thermodynamic Functions                           //
     // ************************************************************************* //
     //
-    /// Calculate the pressure in most computationally efficient manner
+    /// Calculate the pressure
     CoolPropDbl calc_pressure(void);
 
     /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
@@ -118,16 +112,14 @@ public:
     CoolPropDbl calc_smolar(void);
     vector<CoolPropDbl> calc_fugacity_coefficients(void);
     CoolPropDbl calc_gibbsmolar(void);
-    // CoolPropDbl calc_cpmolar(void);
+    // CoolPropDbl calc_cpmolar(void); // TODO implement these heat capacity functions
     // CoolPropDbl calc_cp0molar(void);
     CoolPropDbl calc_compressibility_factor(void);
 
-    double calc_SatLiquid(bool is_temperature_input, CoolPropDbl value1);
-    double calc_SatVapor(bool is_temperature_input, CoolPropDbl value1);
     void flash_QT(PCSAFTBackend &PCSAFT);
     void flash_PQ(PCSAFTBackend &PCSAFT);
 
-    phases calc_phase(void){return _phase;};
+    phases calc_phase(void) { return _phase; };
     /** \brief Specify the phase - this phase will always be used in calculations
      *
      * @param phase_index The index from CoolProp::phases
@@ -143,11 +135,6 @@ public:
     //
     double calc_molar_mass(void);
     //
-    // ************************************************************************* //
-    //                      Saturation Functions                                 //
-    // ************************************************************************* //
-    //
-    // double calc_pressure(void){ return _p; };
 };
 } /* namespace CoolProp */
 #endif /* PCSAFTBACKEND_H_ */

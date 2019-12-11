@@ -127,17 +127,14 @@ AbstractState * AbstractState::factory(const std::string &backend, const std::ve
 
     std::map<backend_families,shared_ptr<AbstractStateGenerator> >::const_iterator gen, end;
     get_backend_library().get_generator_iterators(f1, gen, end);
-    std::cout << "after get_generator_iterators" << std::endl; // !!! remove
 
     if (get_debug_level() > 0){
         std::cout << "AbstractState::factory backend_library size: " << get_backend_library().size() << std::endl;
     }
 
-    std::cout << "(gen != end) " << (gen != end) << std::endl; // !!! remove
     if (gen != end){
         // One of the registered backends was able to match the given backend family
         return gen->second->get_AbstractState(fluid_names);
-        std::cout << "after get_AbstractState" << std::endl; // !!! remove
     }
     #if !defined(NO_TABULAR_BACKENDS)
     else if (f1==TTSE_BACKEND_FAMILY)
@@ -296,11 +293,9 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, Cool
     case DmassSmass_INPUTS: ///< Mass density in kg/m^3, Entropy in J/kg/K
     case DmassUmass_INPUTS: ///< Mass density in kg/m^3, Internal energy in J/kg
     {
-        std::cout << "in switch" << std::endl;
         // Set the cache value for the molar mass if it hasn't been set yet
         molar_mass();
 
-        std::cout << "after molar mass caching" << std::endl;
         // Molar mass (just for compactness of the following switch)
         CoolPropDbl mm = static_cast<CoolPropDbl>(_molar_mass);
 
@@ -325,7 +320,6 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, Cool
         break;
     }
     default:
-        std::cout << "in default" << std::endl;
         return;
     }
 }

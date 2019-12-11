@@ -13,6 +13,48 @@
 
 using namespace std;
 
+/*
+References
+----------
+* J. Gross and G. Sadowski, “Perturbed-Chain SAFT:  An Equation of State
+Based on a Perturbation Theory for Chain Molecules,” Ind. Eng. Chem.
+Res., vol. 40, no. 4, pp. 1244–1260, Feb. 2001.
+* M. Kleiner and G. Sadowski, “Modeling of Polar Systems Using PCP-SAFT: 
+An Approach to Account for Induced-Association Interactions,” J. Phys.
+Chem. C, vol. 111, no. 43, pp. 15544–15553, Nov. 2007.
+* Gross Joachim and Vrabec Jadran, “An equation‐of‐state contribution
+for polar components: Dipolar molecules,” AIChE J., vol. 52, no. 3,
+pp. 1194–1204, Feb. 2006.
+* A. J. de Villiers, C. E. Schwarz, and A. J. Burger, “Improving
+vapour–liquid-equilibria predictions for mixtures with non-associating polar
+components using sPC-SAFT extended with two dipolar terms,” Fluid Phase
+Equilibria, vol. 305, no. 2, pp. 174–184, Jun. 2011.
+* S. H. Huang and M. Radosz, “Equation of state for small, large,
+polydisperse, and associating molecules,” Ind. Eng. Chem. Res., vol. 29,
+no. 11, pp. 2284–2294, Nov. 1990.
+* S. H. Huang and M. Radosz, “Equation of state for small, large,
+polydisperse, and associating molecules: extension to fluid mixtures,”
+Ind. Eng. Chem. Res., vol. 30, no. 8, pp. 1994–2005, Aug. 1991.
+* S. H. Huang and M. Radosz, “Equation of state for small, large,
+polydisperse, and associating molecules: extension to fluid mixtures.
+[Erratum to document cited in CA115(8):79950j],” Ind. Eng. Chem. Res.,
+vol. 32, no. 4, pp. 762–762, Apr. 1993.
+* J. Gross and G. Sadowski, “Application of the Perturbed-Chain SAFT
+Equation of State to Associating Systems,” Ind. Eng. Chem. Res., vol.
+41, no. 22, pp. 5510–5515, Oct. 2002.
+* L. F. Cameretti, G. Sadowski, and J. M. Mollerup, “Modeling of Aqueous
+Electrolyte Solutions with Perturbed-Chain Statistical Associated Fluid
+Theory,” Ind. Eng. Chem. Res., vol. 44, no. 9, pp. 3355–3362, Apr. 2005.
+* L. F. Cameretti, G. Sadowski, and J. M. Mollerup, “Modeling of Aqueous
+Electrolyte Solutions with Perturbed-Chain Statistical Association Fluid
+Theory,” Ind. Eng. Chem. Res., vol. 44, no. 23, pp. 8944–8944, Nov. 2005.
+* C. Held, L. F. Cameretti, and G. Sadowski, “Modeling aqueous
+electrolyte solutions: Part 1. Fully dissociated electrolytes,” Fluid
+Phase Equilibria, vol. 270, no. 1, pp. 87–96, Aug. 2008.
+* C. Held, T. Reschke, S. Mohammad, A. Luza, and G. Sadowski, “ePC-SAFT
+revised,” Chem. Eng. Res. Des., vol. 92, no. 12, pp. 2884–2897, Dec. 2014.
+*/
+
 namespace CoolProp {
 
 PCSAFTBackend::PCSAFTBackend(const std::vector<std::string> &component_names, bool generate_SatL_and_SatV) {
@@ -40,9 +82,6 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string> &component_names, bo
         }
     }
 
-    // Reset the residual Helmholtz energy class
-    // residual_helmholtz.reset(new ResidualHelmholtz());
-
     // Set the components and associated flags
     is_pure_or_pseudopure = (N == 1);
 
@@ -55,12 +94,10 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string> &component_names, bo
         for (unsigned int i = 0; i < N; ++i){
             for (unsigned int j = 0; j < N; ++j){
                 if (i != j) {
-                    kij_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
-                    kijT_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
+                    kij_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
+                    kijT_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
                     k_ij[i*N+j] = atof(kij_string.c_str());
                     k_ijT[i*N+j] = atof(kijT_string.c_str());
-                    // std::cout << "kij string=" << kij_string << " kij=" << k_ij[i*N+j] << std::endl;
-                    // std::cout << "kijT string=" << kijT_string << " kijT=" << k_ijT[i*N+j] << std::endl;
                 }
             }
         }
@@ -72,12 +109,10 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string> &component_names, bo
         SatL->specify_phase(iphase_liquid);
         SatV.reset(this->get_copy(SatLSatV));
         SatV->specify_phase(iphase_gas);
-        // std::cout << "check string: " << SatL->components.empty() << std::endl; // !!! remove
-        // std::cout << "check string: " << SatL->components[0].getName() << std::endl; // !!! remove
-        // std::cout << "SatL components: " << SatL->components[0] << std::endl; // !!! remove
     }
 
     // Set the phase to default unknown value
+    imposed_phase_index = iphase_not_imposed;
     _phase = iphase_unknown;
 }
 
@@ -104,8 +139,6 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid> &components_in, bool
             water_idx = i;
         }
     }
-    // Reset the residual Helmholtz energy class
-    // residual_helmholtz.reset(new ResidualHelmholtz());
 
     // Set the components and associated flags
     is_pure_or_pseudopure = (N == 1);
@@ -119,8 +152,8 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid> &components_in, bool
         for (unsigned int i = 0; i < N; ++i){
             for (unsigned int j = 0; j < N; ++j){
                 if (i != j) {
-                    kij_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
-                    kijT_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
+                    kij_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kij");
+                    kijT_string = PCSAFTLibrary::get_library().get_binary_interaction_pcsaft(components[i].getCAS(), components[j].getCAS(), "kijT");
                     k_ij[i*N+j] = atof(kij_string.c_str());
                     k_ijT[i*N+j] = atof(kijT_string.c_str());
                 }
@@ -134,12 +167,10 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid> &components_in, bool
         SatL->specify_phase(iphase_liquid);
         SatV.reset(this->get_copy(SatLSatV));
         SatV->specify_phase(iphase_gas);
-        // std::cout << "check: " << SatL->components.empty() << std::endl; // !!! remove
-        // std::cout << "check: " << SatL->components[0].getName() << std::endl; // !!! remove
-        // std::cout << "SatL components: " << SatL->components[0] << std::endl; // !!! remove
     }
 
     // Set the phase to default unknown value
+    imposed_phase_index = iphase_not_imposed;
     _phase = iphase_unknown;
 }
 
@@ -193,28 +224,6 @@ void PCSAFTBackend::resize(std::size_t N)
     this->lnK.resize(N);
 }
 
-// Set binary mixture floating point parameter for this instance
-void PCSAFTBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
-    // if (parameter == "Fij"){
-    //     residual_helmholtz->Excess.F[i][j] = value;
-    //     residual_helmholtz->Excess.F[j][i] = value;
-    // }
-    // else{
-    //     Reducing->set_binary_interaction_double(i,j,parameter,value);
-    // }
-    // /// Also set the parameters in the managed pointers for other states
-    // for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend> >::iterator it = linked_states.begin(); it != linked_states.end(); ++it){
-    //     it->get()->set_binary_interaction_double(i, j, parameter, value);
-    // }
-
-    PCSAFTLibrary::get_library().set_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), parameter, value);
-}
-
-/// Get binary mixture floating point parameter for this instance
-double PCSAFTBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter){
-    std::string param_string = PCSAFTLibrary::get_library().get_mixture_binary_pair_pcsaft(components[i].getCAS(), components[j].getCAS(), parameter);
-    return atof(param_string.c_str());
-}
 
 CoolPropDbl PCSAFTBackend::update_DmolarT(CoolPropDbl rho) {
     _rhomolar = rho;
@@ -226,7 +235,6 @@ CoolPropDbl PCSAFTBackend::calc_pressure(void) {
 
     CoolPropDbl Z = this->calc_compressibility_factor();
     CoolPropDbl P = Z*kb*_T*den*1.0e30; // Pa
-    // std::cout << "P=" << P << " Z=" << Z << " _T=" << _T << " den=" << den << std::endl; // !!! remove
     return P;
 }
 
@@ -821,7 +829,6 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     }
 
     double dadt = dadt_hc + dadt_disp + dadt_assoc + dadt_polar + dadt_ion;
-    // std::cout << "dadt_hc=" << dadt_hc << " dadt_disp=" << dadt_disp << " dadt_assoc=" << dadt_assoc << " dadt_polar=" << dadt_polar << " dadt_ion=" << dadt_ion << std::endl; // !!! remove
     return dadt;
 }
 
@@ -1316,7 +1323,6 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
     }
 
     double den = _rhomolar*N_AV/1.0e30;
-    std::cout << "rhomolar=" << _rhomolar << std::endl; // !!! remove
 
     vector<double> zeta(4, 0);
     double summ;
@@ -1410,8 +1416,6 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
     double Zid = 1.0;
     double Zhc = m_avg*Zhs - summ;
     double Zdisp = -2*PI*den*detI1_det*m2es3 - PI*den*m_avg*(C1*detI2_det + C2*eta*I2)*m2e2s3;
-    // std::cout << "den=" << den << " detI1_det=" << detI1_det << " m2es3=" << m2es3 << " C1=" << C1 << std::endl; // !!! Remove
-    // std::cout << "eta=" << eta << " detI2_det=" << detI2_det << " I2=" << I2 << " m2e2s3=" << m2e2s3 << std::endl; // !!! Remove this
 
     // Dipole term (Gross and Vrabec term) --------------------------------------
     double Zpolar = 0;
@@ -1534,7 +1538,6 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
                 volABij[idxa] = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
                     s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
                 delta_ij[idxa] = ghs[iA[j]]*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
-                // std::cout << i << "," << j << ": " << "delta_ij=" << delta_ij[idxa] << " eABij=" << eABij[idxa] << " volABij=" << volABij[idxa] << std::endl; // !!! remove
                 for (int k = 0; k < ncomp; k++) {
                     idx_ddelta += 1;
                     dghsd_dd = PI/6.*components[k].getM()*(pow(d[k], 3)/(1-zeta[3])/(1-zeta[3]) + 3*d[iA[i]]*d[iA[j]]/
@@ -1552,10 +1555,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
         vector<double> x_assoc(ncA); // mole fractions of only the associating compounds
         for (int i = 0; i < ncA; i++) {
             x_assoc[i] = mole_fractions[iA[i]];
-            // std::cout << "mole fraction " << i << ": " << mole_fractions[iA[i]] << std::endl; // !!! remove
         }
-        // std::cout << "den=" << den << std::endl; // !!! remove
-        // std::cout << "XAguess: " << XA[0] << ", " << XA[1] << std::endl; // !!! remove
 
         int ctr = 0;
         double dif = 1000.;
@@ -1572,11 +1572,6 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
 
         vector<double> dXA_dd(a_sites*ncA*ncomp, 0);
         dXA_dd = dXA_find(ncA, ncomp, iA, delta_ij, den, XA, ddelta_dd, x_assoc, a_sites);
-
-        // std::cout << "ncA=" << ncA << " ncomp=" << ncomp << " a_sites=" << a_sites << std::endl; // !!! remove
-        // std::cout << "XA=" << XA[0] << ", " << XA[1] << ", " << XA[2] << std::endl; // !!! remove
-        // std::cout << "dXA_dd=" << dXA_dd[0] << ", " << dXA_dd[1] << ", " << dXA_dd[2] << std::endl; // !!! remove
-        // std::cout << "delta_ij=" << delta_ij[0] << ", " << delta_ij[1] << ", " << delta_ij[2] << std::endl; // !!! remove
 
         summ = 0.;
         for (int i = 0; i < ncomp; i++) {
@@ -1620,16 +1615,15 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
     }
 
     double Z = Zid + Zhc + Zdisp + Zpolar + Zassoc + Zion;
-    std::cout << "Z:" << Z << " Zhc=" << Zhc << " Zdisp=" << Zdisp << " Zpolar=" << Zpolar << " Zassoc=" << Zassoc << " Zion=" << Zion << std::endl; // !!! Remove this
     return Z;
 }
 
 void PCSAFTBackend::post_update(bool optional_checks){
     // Check the values that must always be set
-    //if (_p < 0){ throw ValueError("p is less than zero");}
+    // if (_p < 0){ throw ValueError("p is less than zero");}
     if (!ValidNumber(_p)){
         throw ValueError("p is not a valid number");}
-    //if (_T < 0){ throw ValueError("T is less than zero");}
+    // if (_T < 0){ throw ValueError("T is less than zero");}
     if (!ValidNumber(_T)){ throw ValueError("T is not a valid number");}
     if (_rhomolar < 0){ throw ValueError("rhomolar is less than zero");}
     if (!ValidNumber(_rhomolar)){ throw ValueError("rhomolar is not a valid number");}
@@ -1676,18 +1670,6 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     // If the inputs are in mass units, convert them to molar units
     mass_to_molar_inputs(input_pair, value1, value2);
 
-    // TODO make sure phase can also be determined automatically
-    phases phase;
-    // Check if the phase is imposed
-    if (imposed_phase_index != iphase_not_imposed)
-        // Use the imposed phase index
-        phase = imposed_phase_index;
-    else
-        // Use the phase index in the class
-        phase = _phase;
-    // TODO check to make sure that an unknown phase is not sent to the density solver
-    // TODO check that twophase phase is handled correctly
-
     switch(input_pair)
     {
         case PT_INPUTS:
@@ -1696,11 +1678,20 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
                 components[water_idx].calc_water_sigma(_T);
                 dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
             }
-            _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/, phase/*phase*/); break;
+
+            if (imposed_phase_index != iphase_not_imposed) {
+                // Use the imposed phase index
+                _phase = imposed_phase_index;
+            }
+            else {
+                _phase = calc_phase_internal(input_pair);
+            }
+            _rhomolar = solver_rho_Tp(value2/*T*/, value1/*p*/, _phase/*phase*/); break;
         case QT_INPUTS:
             _Q = value1; _T = value2;
             SatL->_Q = value1; SatV->_Q = value1;
             SatL->_T = value2; SatV->_T = value2;
+            _phase = iphase_twophase;
             if ((_Q < 0) || (_Q > 1))
                 throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             if (water_present) {
@@ -1716,6 +1707,7 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             _p = value1; _Q = value2;
             SatL->_p = value1; SatV->_p = value1;
             SatL->_Q = value2; SatV->_Q = value2;
+            _phase = iphase_twophase;
             if ((_Q < 0) || (_Q > 1)) {
                 throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             }
@@ -1727,6 +1719,14 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
                 dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
             }
             _p = update_DmolarT(_rhomolar);
+
+            if (imposed_phase_index != iphase_not_imposed) {
+                // Use the imposed phase index
+                _phase = imposed_phase_index;
+            }
+            else {
+                _phase = calc_phase_internal(input_pair);
+            }
             break;
         case SmolarT_INPUTS:
         case DmolarP_INPUTS:
@@ -1744,16 +1744,84 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
     }
 
+    // set Q, if not already set
+    if (!ValidNumber(_Q)) {
+        if (_phase == iphase_gas) {_Q = 1;}
+        else if (_phase == iphase_liquid) {_Q = 0;}
+    }
+
     post_update();
 }
 
-double PCSAFTBackend::calc_SatLiquid(bool is_temperature_input, CoolPropDbl value1) {
+
+phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
+    phases phase;
+
+    double p_input, p_bub, p_dew, rho_input;
+    switch(input_pair)
+    {
+        case PT_INPUTS:
+            p_input = _p;
+            _Q = 0;
+            SatL->_Q = _Q; SatV->_Q = _Q;
+            SatL->_T = _T; SatV->_T = _T;
+            flash_QT(*this);
+            p_bub = _p;
+            _p = p_input;
+            if (_p > p_bub) {
+                phase = iphase_liquid;
+            }
+            else if (_p == p_bub) {
+                phase = iphase_twophase;
+            }
+            else {
+                _Q = 1;
+                SatL->_Q = _Q; SatV->_Q = _Q;
+                flash_QT(*this);
+                p_dew = _p;
+                _p = p_input;
+                if (_p < p_dew) {
+                    phase = iphase_gas;
+                }
+                else if ((_p <= p_bub) && (_p >= p_dew)) {
+                    phase = iphase_twophase;
+                }
+            }
+            break;
+        case DmolarT_INPUTS:
+            p_input = _p; rho_input = _rhomolar;
+            _Q = 0;
+            flash_QT(*this);
+            p_bub = _p;
+            _p = p_input; _rhomolar = rho_input;
+            if (_p > p_bub) {
+                phase = iphase_liquid;
+            }
+            else if (_p == p_bub) {
+                phase = iphase_twophase;
+            }
+            else {
+                _Q = 1;
+                flash_QT(*this);
+                p_dew = _p;
+                _p = p_input; _rhomolar = rho_input;
+                if (_p < p_dew) {
+                    phase = iphase_gas;
+                }
+                else if ((_p <= p_bub) && (_p >= p_dew)) {
+                    phase = iphase_twophase;
+                }
+            }
+            break;
+        default:
+            throw ValueError(format("Phase determination for this pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
+    }
+
+    return phase;
 }
 
-double PCSAFTBackend::calc_SatVapor(bool is_temperature_input, CoolPropDbl value1) {
-}
 
-void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
+void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
     CoolPropDbl T = PCSAFT._T;
     if (PCSAFT.is_pure_or_pseudopure) {
         // Different solution methods could be implmented here for the critical region (e.g. splines like with HEOS)
@@ -1778,26 +1846,19 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
                 }
                 else {
                     PCSAFT.SatL->_rhomolar = PCSAFT.SatL->solver_rho_Tp(T, p, iphase_liquid);
-                    // std::cout << "rhomolar_l: " << PCSAFT->_rhomolar << std::endl; // !!! remove
                     vector<CoolPropDbl> fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
-                    // std::cout << "fugcoef_l: " << fugcoef_l[0] << std::endl; // !!! remove
 
                     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(T, p, iphase_gas);
-                    // std::cout << "rhomolar_v: " << PCSAFT->_rhomolar << std::endl; // !!! remove
                     vector<CoolPropDbl> fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-                    // std::cout << "fugcoef_v: " << fugcoef_v[0] << std::endl; // !!! remove
                     error += 100000 * pow(fugcoef_l[0] - fugcoef_v[0], 2.);
                     if (!isfinite(error)) {
                         error = 1e20;
                     }
                 }
-                // std::cout << "----- p=" << p << " error=" << error << std::endl; // !!! remove
                 return error;
             };
         };
 
-        // CoolPropDbl jnk = solver_rho_Tp(SatL, T, 100000., iphase_liquid); // !!! remove
-        // std::cout << "solver rho check: " << jnk << std::endl; // !!! remove
         SolverVaporPResid resid(*this, T);
 
         double p_guess, x_lo, x_hi;
@@ -1813,7 +1874,6 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
                 success = true;
             }
             catch (const SolutionError& ex) {
-                // std::cout << "in vaporP catch" << std::endl; // !!! remove
                 p_guess = 10 * p_guess;
             }
         }
@@ -1833,7 +1893,6 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
             SolverBubblePResid(PCSAFTBackend &PCSAFT, CoolPropDbl T)
             : PCSAFT(PCSAFT), T(T) {}
             CoolPropDbl call(CoolPropDbl p){
-                // std::cout << "p_guess=" << p << std::endl; // !!! remove
                 double error = 0;
                 if (p <= 0) {
                     error = 1e20;
@@ -1844,9 +1903,6 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
                     double dif = 10000.;
                     vector<CoolPropDbl> fugcoef_l(ncomp), fugcoef_v(ncomp);
 
-                    // std::cout << "SatL mole fractions=" << PCSAFT.SatL->mole_fractions[0] << std::endl; // !!! remove
-                    // std::cout << "right before loop: " << PCSAFT.SatL->mole_fractions[0] << ", " << PCSAFT.SatL->mole_fractions[1] << std::endl; // !!! remove
-                    // std::cout << "SatL check: " << PCSAFT.SatL->_Q << std::endl; // !!! remove
                     double rhol, rhov, summ;
                     vector<CoolPropDbl> xv_old(ncomp);
                     double x_ions = 0.; // overall mole fraction of ions in the system
@@ -1861,9 +1917,6 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
                         fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
                         PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(T, p, iphase_gas);
                         fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-                        // for (int i = 0; i < ncomp; i++) {
-                            // std::cout << "in loop " << itr << " - " << i << ": rhos=" << PCSAFT.SatL->_rhomolar << ", " << PCSAFT.SatV->_rhomolar << " fugcoef_l=" << fugcoef_l[i] << " fugcoef_v=" << fugcoef_v[i] << " xl=" << PCSAFT.SatL->mole_fractions[i] << " xv=" << PCSAFT.SatV->mole_fractions[i] << std::endl; // !!! remove
-                        // }
 
                         if (PCSAFT._Q > 0.5) {
                             summ = 0.;
@@ -1909,7 +1962,6 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
                         if (PCSAFT.components[i].getZ() == 0) {
                             error += pow(PCSAFT.SatL->mole_fractions[i]*fugcoef_l[i] - PCSAFT.SatV->mole_fractions[i]*fugcoef_v[i], 2.);
                         }
-                        // std::cout << i << ": fugcoef_l=" << fugcoef_l[i] << " fugcoef_v=" << fugcoef_v[i] << " xl=" << PCSAFT.SatL->mole_fractions[i] << " xv=" << PCSAFT.SatV->mole_fractions[i] << std::endl; // !!! remove
                         error += pow((PCSAFT.mole_fractions[i] - PCSAFT._Q*PCSAFT.SatV->mole_fractions[i] - (1-PCSAFT._Q)*PCSAFT.SatL->mole_fractions[i]), 2.);
                     }
 
@@ -1917,8 +1969,6 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
                         error = 1e20;
                     }
                 }
-                // std::cout << "----- p=" << p << " error=" << error << std::endl; // !!! remove
-                // usleep(1 * 1000000); // !!! remove
                 return error;
             };
         };
@@ -1927,22 +1977,18 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
 
         double p_guess, x_lo, x_hi;
         p_guess = 1;
-        // p_guess = 1816840.45112607; // !!! remove
         x_lo = 1e-7;
         x_hi = 1e9;
 
         CoolPropDbl p;
         bool success = false;
-        int ctr = 0; // !!! remove
         while ((x_hi > p_guess) and !success) {
             try {
                 p = BoundedSecant(resid, p_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
                 success = true;
             }
             catch (const SolutionError& ex) {
-                // std::cout << "in vaporP catch " << ctr << std::endl; // !!! remove
                 p_guess = 10 * p_guess;
-                ctr += 1; // !!! remove
             }
         }
 
@@ -1954,7 +2000,6 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT){
 }
 
 void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
-    //!!! remember to update dielc constant
     CoolPropDbl p = PCSAFT._p;
     if (PCSAFT.is_pure_or_pseudopure) {
         // Different solution methods could be implmented here for the critical region (e.g. splines like with HEOS)
@@ -1978,10 +2023,12 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                     error = 1e20;
                 }
                 else {
-                    // std::cout << "SatL mole fractions=" << PCSAFT.SatL->mole_fractions[0] << std::endl; // !!! remove
-                    // std::cout << "SatL params: m=" << PCSAFT.SatL->components[0].getM() << " s=" << PCSAFT.SatL->components[0].getSigma() << " e=" << PCSAFT.SatL->components[0].getU() << std::endl; // !!! remove
                     PCSAFT.SatL->_T = T; // _T must be updated because the density calculation depends on it
                     PCSAFT.SatV->_T = T;
+                    if (!isfinite(PCSAFT.SatV->mole_fractions[0])) {
+                        PCSAFT.SatL->mole_fractions = PCSAFT.mole_fractions;
+                        PCSAFT.SatV->mole_fractions = PCSAFT.mole_fractions;
+                    }
 
                     if (PCSAFT.water_present) {
                         PCSAFT.components[PCSAFT.water_idx].calc_water_sigma(T);
@@ -1992,29 +2039,20 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                         PCSAFT.SatV->dielc = PCSAFT.dielc_water(T);
                     }
 
-                    // std::cout << "p=" << p << " T=" << T << std::endl; // !!! remove
                     PCSAFT.SatL->_rhomolar = PCSAFT.SatL->solver_rho_Tp(T, p, iphase_liquid);
-                    // std::cout << "rhomolar_l: " << PCSAFT.SatL->_rhomolar << std::endl; // !!! remove
                     vector<CoolPropDbl> fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
-                    // std::cout << "fugcoef_l: " << fugcoef_l[0] << std::endl; // !!! remove
 
                     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(T, p, iphase_gas);
-                    // std::cout << "rhomolar_v: " << PCSAFT.SatV->_rhomolar << std::endl; // !!! remove
                     vector<CoolPropDbl> fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-                    // std::cout << "fugcoef_v: " << fugcoef_v[0] << std::endl; // !!! remove
                     error += 100000 * pow(fugcoef_l[0] - fugcoef_v[0], 2.);
                     if (!isfinite(error)) {
                         error = 1e20;
                     }
                 }
-                // std::cout << "----- t=" << T << " error=" << error << std::endl; // !!! remove
-                // usleep(1*1000000);
                 return error;
             };
         };
 
-        // CoolPropDbl jnk = solver_rho_Tp(SatL, T, 100000., iphase_liquid); // !!! remove
-        // std::cout << "solver rho check: " << jnk << std::endl; // !!! remove
         SolverTboilResid resid(*this, p);
 
         double t_guess, x_lo, x_hi;
@@ -2030,7 +2068,6 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                 success = true;
             }
             catch (const SolutionError& ex) {
-                // std::cout << "in vaporP catch" << std::endl; // !!! remove
                 t_guess += 100;
             }
             catch (const ValueError& ex) {
@@ -2053,7 +2090,6 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
             SolverTboilMixResid(PCSAFTBackend &PCSAFT, CoolPropDbl p)
             : PCSAFT(PCSAFT), p(p) {}
             CoolPropDbl call(CoolPropDbl T){
-                // std::cout << "p_guess=" << p << std::endl; // !!! remove
                 double error = 0;
                 if (T <= 0) {
                     error = 1e20;
@@ -2061,6 +2097,10 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                 else {
                     PCSAFT.SatL->_T = T; // _T must be updated because the density calculation depends on it
                     PCSAFT.SatV->_T = T;
+                    if (!isfinite(PCSAFT.SatV->mole_fractions[0])) {
+                        PCSAFT.SatL->mole_fractions = PCSAFT.mole_fractions;
+                        PCSAFT.SatV->mole_fractions = PCSAFT.mole_fractions;
+                    }
 
                     if (PCSAFT.water_present) {
                         PCSAFT.components[PCSAFT.water_idx].calc_water_sigma(T);
@@ -2076,10 +2116,6 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                     double dif = 10000.;
                     vector<CoolPropDbl> fugcoef_l(ncomp), fugcoef_v(ncomp);
 
-                    // std::cout << "SatL mole fractions=" << PCSAFT.SatL->mole_fractions[0] << std::endl; // !!! remove
-                    // std::cout << "SatL params: m=" << PCSAFT.SatL->components[0].getM() << " s=" << PCSAFT.SatL->components[0].getSigma() << " e=" << PCSAFT.SatL->components[0].getU() << std::endl; // !!! remove
-                    // std::cout << "right before loop: " << PCSAFT.SatL->mole_fractions[0] << ", " << PCSAFT.SatL->mole_fractions[1] << std::endl; // !!! remove
-                    // std::cout << "SatL check: " << PCSAFT.SatL->_Q << std::endl; // !!! remove
                     double rhol, rhov, summ;
                     vector<CoolPropDbl> xv_old(ncomp);
                     double x_ions = 0.; // overall mole fraction of ions in the system
@@ -2088,16 +2124,12 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                             x_ions += PCSAFT.mole_fractions[i];
                         }
                     }
-                    // while ((dif>1e-9) && (itr<100)) {
-                    while ((dif>1e-9) && (itr<5)) {
+                    while ((dif>1e-9) && (itr<100)) {
                         xv_old = PCSAFT.SatV->mole_fractions;
                         PCSAFT.SatL->_rhomolar = PCSAFT.SatL->solver_rho_Tp(T, p, iphase_liquid);
                         fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
                         PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(T, p, iphase_gas);
                         fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-                        // for (int i = 0; i < ncomp; i++) {
-                        //     std::cout << "in loop " << itr << " - " << i << ": rhos=" << PCSAFT.SatL->_rhomolar << ", " << PCSAFT.SatV->_rhomolar << " fugcoef_l=" << fugcoef_l[i] << " fugcoef_v=" << fugcoef_v[i] << " xl=" << PCSAFT.SatL->mole_fractions[i] << " xv=" << PCSAFT.SatV->mole_fractions[i] << std::endl; // !!! remove
-                        // }
 
                         if (PCSAFT._Q > 0.5) {
                             summ = 0.;
@@ -2143,18 +2175,13 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                         if (PCSAFT.components[i].getZ() == 0) {
                             error += pow(PCSAFT.SatL->mole_fractions[i]*fugcoef_l[i] - PCSAFT.SatV->mole_fractions[i]*fugcoef_v[i], 2.);
                         }
-                        // std::cout << i << " error: " << error << std::endl; // !!! remove
-                        std::cout << i << ": fugcoef_l=" << fugcoef_l[i] << " fugcoef_v=" << fugcoef_v[i] << " xl=" << PCSAFT.SatL->mole_fractions[i] << " xv=" << PCSAFT.SatV->mole_fractions[i] << " error=" << error << std::endl; // !!! remove
                         error += pow((PCSAFT.mole_fractions[i] - PCSAFT._Q*PCSAFT.SatV->mole_fractions[i] - (1-PCSAFT._Q)*PCSAFT.SatL->mole_fractions[i]), 2.);
-                        std::cout << "error final: " << error << std::endl; // !!! remove
                     }
 
                     if (!isfinite(error)) {
                         error = 1e20;
                     }
                 }
-                std::cout << "----- T=" << T << " error=" << error << std::endl; // !!! remove
-                // usleep(1 * 1000000); // !!! remove
                 return error;
             };
         };
@@ -2162,30 +2189,22 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
         SolverTboilMixResid resid(*this, p);
 
         double t_guess, x_lo, x_hi;
-        // t_guess = 100;
         t_guess = 100;
         x_lo = 1;
         x_hi = 1600;
 
         CoolPropDbl T;
         bool success = false;
-        int ctr = 0; // !!! remove
-        // while ((x_hi > t_guess) and !success) {
-        while ((500 > t_guess) and !success) { // !!! remove
+        while ((x_hi > t_guess) and !success) {
             try {
-                // T = BoundedSecant(resid, t_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
-                T = BoundedSecant(resid, t_guess, x_lo, x_hi, 1e-8, 1e-8, 20); // !!! remove
+                T = BoundedSecant(resid, t_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
                 success = true;
             }
             catch (const SolutionError& ex) {
-                std::cout << "in vaporP SolutionError catch " << ctr << " " << t_guess << std::endl; // !!! remove
                 t_guess += 100;
-                ctr += 1; // !!! remove
             }
             catch (const ValueError& ex) {
-                std::cout << "in vaporP ValueError catch " << ctr << " " << t_guess << std::endl; // !!! remove
                 t_guess += 100;
-                ctr += 1; // !!! remove
             }
         }
 
@@ -2208,14 +2227,11 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         : PCSAFT(PCSAFT), T(T), p(p){}
         CoolPropDbl call(CoolPropDbl rhomolar){
             CoolPropDbl peos = PCSAFT.update_DmolarT(rhomolar);
-            // std::cout << "RhoSolver: rho=" << rhomolar << " error=" << pow((peos-p)/p*100, 2.) << std::endl; // !!! remove
             return pow((peos-p)/p, 2.);
         };
     };
 
-    // std::cout << "in solver_rho_Tp" << std::endl; // !!! remove
     SolverRhoResid resid(*this, T, p);
-    // std::cout << "after resid creation" << std::endl; // !!! remove
 
     double x_lo, x_hi;
     double rho_guess;
@@ -2235,15 +2251,10 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         x_hi = 0.7405;
     }
 
-    // std::cout << "rho: x_lo=" << x_lo << ", x_hi=" << x_hi << std::endl; // !!! remove
     vector<double> d(N);
-    // std::cout << "after d creation" << std::endl; // !!! remove
     double summ = 0.;
     for (int i = 0; i < N; i++) {
-        // std::cout << "check: " << components.empty() << std::endl; // !!! remove
-        // std::cout << "check: " << components[i].getName() << std::endl; // !!! remove
         d[i] = components[i].getSigma()*(1-0.12*exp(-3*components[i].getU() / T));
-        // std::cout << "d " << i << ": " << d[i] << std::endl; // !!! remove
         summ += mole_fractions[i]*components[i].getM()*pow(d[i],3.);
     }
 
@@ -2251,20 +2262,12 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     x_lo = 6/PI*x_lo/summ*1.0e30/N_AV;
     x_hi = 6/PI*x_hi/summ*1.0e30/N_AV;
 
-    // std::cout << "P=" << p << " T=" << T << std::endl; // !!! remove
-    // std::cout << "rho: x_lo=" << x_lo << ", x_hi=" << x_hi << ", rho_guess=" << rho_guess << std::endl; // !!! remove
     double rho;
     try {
-        // std::cout << "before BoundedSecant" << std::endl; // !!! remove
         rho = BoundedSecant(resid, rho_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
-        // std::cout << "after BoundedSecant" << std::endl; // !!! remove
     } catch (const SolutionError& ex) {
-        // std::cout << "in solver_rho_Tp catch" << std::endl; // !!! remove
-        // std::cout << "err=" << err << " rho-x_lo=" << (rho - x_lo) << std::endl; // !!! remove
-        // if (((phase == iphase_gas) or (phase == iphase_supercritical_gas)) and (err > 1e-3) and ((x_hi - rho) < 1e-5)) {
         try {
             if ((phase == iphase_gas) or (phase == iphase_supercritical_gas)) {
-                // std::cout << "1st IF" << std::endl; // !!! remove
                 x_hi = 0.14;
                 summ = 0.;
                 for (int i = 0; i < N; i++) {
@@ -2273,18 +2276,13 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
                 }
                 x_hi = 6/PI*x_hi/summ*1.0e30/N_AV;
                 rho = BoundedSecant(resid, rho_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
-                // std::cout << "1st IF result: " << rho << std::endl; // !!! remove
             }
-            // else if (((phase == iphase_liquid) or (phase == iphase_supercritical_liquid)) && (err > 1.0e-3) && ((rho - x_lo) < 100)) {
             else if ((phase == iphase_liquid) or (phase == iphase_supercritical_liquid)) {
-                // std::cout << "2nd IF" << std::endl; // !!! remove
                 rho_guess = 0.73;
                 rho_guess = 6/PI*rho_guess/summ*1.0e30/N_AV;
                 rho = BoundedSecant(resid, rho_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
-                // std::cout << "2nd IF result: " << rho << std::endl; // !!! remove
             }
         } catch (const SolutionError& ex) {
-            // std::cout << "in higher tolerance catch" << std::endl; // !!! remove
             rho = BoundedSecant(resid, rho_guess, x_lo, x_hi, 1e-8, 1e3, 200);
         }
     }
@@ -2314,8 +2312,6 @@ vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, int ncA, vector<d
                 for (int kin = 0; kin < n_sites; kin++) {
                     if (kin != kout) {
                         summ2 += den*x[j]*XA_guess[j*n_sites+kin]*delta_ij[i*ncA+j];
-                        // std::cout << "  den=" << den << " x=" << x[j] << std::endl; // !!! remove
-                        // std::cout << i << "," << j << ": " << summ2 << std::endl; // !!! remove
                     }
                 }
             }
@@ -2323,7 +2319,6 @@ vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, int ncA, vector<d
         }
     }
 
-    // std::cout << "------ XA: " << XA[0] << std::endl; // !!! remove
     return XA;
     }
 

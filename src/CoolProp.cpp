@@ -216,8 +216,6 @@ void _PropsSI_initialize(const std::string &backend,
                          const std::vector<double> &z,
                          shared_ptr<AbstractState> &State){
 
-    std::cout << "in _PropsSI_initialize" << std::endl; // !!! remove
-    std::cout << "fluid_names: " << fluid_names[0] << std::endl; // !!! remove
     if (fluid_names.empty()){throw ValueError("fluid_names cannot be empty");}
 
     std::vector<double> fractions(1, 1.0); // Default to one component, unity fraction
@@ -227,9 +225,7 @@ void _PropsSI_initialize(const std::string &backend,
         // Set the pointer - we are going to use the supplied fractions; they must be provided
         fractions_ptr = &z;
         // Reset the state
-        std::cout << "Before factory call" << std::endl; // !!! remove
         State.reset(AbstractState::factory(backend, fluid_names));
-        std::cout << "After factory call" << std::endl; // !!! remove
     }
     else if (fluid_names.size() == 1){
         if (has_fractions_in_string(fluid_names[0]) || has_solution_concentration(fluid_names[0])){
@@ -374,19 +370,15 @@ void _PropsSI_outputs(shared_ptr<AbstractState> &State,
         std::cout << format("%s (%d): Iterating over %d input value pairs.",__FILE__,__LINE__,IO.size()) << std::endl;
     }
 
-  std::cout << "in _PropsSI_outputs before for loop" << std::endl; // !!! remove
 	// Iterate over the state variable inputs
 	for (std::size_t i = 0; i < IO.size(); ++i){
         // Reset the success indicator for the current state point
         success_inner = false;
 		try{
-            std::cout << i << ": " << input_pair << ", " << in1[i] << ", " << in2[i] << std::endl; // !!! remove
             if (input_pair != INPUT_PAIR_INVALID && !all_trivial_outputs && !all_outputs_in_inputs){
                 // Update the state since it is a valid set of inputs
                 if (!use_guesses || i == 0) {
-                    std::cout << "before state update" << std::endl;
                     State->update(input_pair, in1[i], in2[i]);
-                    std::cout << "after state update" << std::endl;
                 } else {
                     State->update_with_guesses(input_pair, in1[i], in2[i], guesses);
                     guesses.clear();
@@ -525,7 +517,6 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
     try{
         // Initialize the State class
         _PropsSI_initialize(backend, fluids, fractions, State);
-        std::cout << "_PropsSI_initialize finished" << std::endl; // !!! remove
     }
     catch(std::exception &e){
         // Initialization failed.  Stop.
@@ -559,7 +550,6 @@ void _PropsSImulti(const std::vector<std::string> &Outputs,
     }
 
     // Calculate the output(s).  In the case of a failure, all values will be filled with _HUGE
-    std::cout << "before _PropsSI_outputs" << std::endl; // !!! remove
     _PropsSI_outputs(State, output_parameters, input_pair, v1, v2, IO);
 }
 
@@ -600,7 +590,6 @@ std::vector<std::vector<double> > PropsSImulti(const std::vector<std::string> &O
 }
 double PropsSI(const std::string &Output, const std::string &Name1, double Prop1, const std::string &Name2, double Prop2, const std::string &Ref)
 {
-    std::cout << "in PropsSI" << std::endl; // !!! Remove this
     #if !defined(NO_ERROR_CATCHING)
     try{
     #endif
@@ -615,15 +604,12 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
         // extract_fractions checks for has_fractions_in_string / has_solution_concentration; no need to double check
         std::string fluid_string = extract_fractions(fluid, fractions);
         std::vector<std::vector<double> > IO;
-        std::cout << "before _PropsSImulti" << std::endl; // !!! Remove this
         _PropsSImulti(strsplit(Output,'&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend, strsplit(fluid_string, '&'), fractions, IO);
-        std::cout << "after _PropsSImulti" << std::endl; // !!! Remove this
         if (IO.empty()){ throw ValueError(get_global_param_string("errstring").c_str()); }
         if (IO.size()!= 1 || IO[0].size() != 1){ throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str())); }
 
         double val = IO[0][0];
 
-        std::cout << "val:" << val << std::endl; // !!! Remove this
         if (get_debug_level() > 1){ std::cout << format("_PropsSI will return %g",val) << std::endl; }
         return val;
         // END OF TRY
@@ -631,7 +617,6 @@ double PropsSI(const std::string &Output, const std::string &Name1, double Prop1
     }
     catch(const std::exception& e){
         set_error_string(e.what() + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")",Output.c_str(),Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str()));
-        std::cout << e.what() << std::endl; // !!! Remove this
         #if defined (PROPSSI_ERROR_STDOUT)
         std::cout << e.what() << std::endl;
         #endif
