@@ -262,7 +262,7 @@ if __name__ == '__main__':
             profile=_profiling_enabled,
             embedsignature=True,
             language_level=3 if sys.version_info >= (3, 0) else 2,
-            c_string_type='str' if sys.version_info >= (3, 0) else 'unicode',
+            c_string_type='unicode' if sys.version_info >= (3, 0) else 'unicode',
             c_string_encoding='ascii'
             )
 
