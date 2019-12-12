@@ -508,7 +508,7 @@ cpdef string get_BibTeXKey(string Fluid, string key) except *:
     key, string
          empty string if Fluid not in CoolProp, "Bad key" if key is invalid
     """
-    return _get_fluid_param_string(Fluid, b"BibTeX-"+key)
+    return _get_fluid_param_string(Fluid, b"BibTeX-"+key.encode('ascii'))
 
 cpdef string get_errstr():
     """
