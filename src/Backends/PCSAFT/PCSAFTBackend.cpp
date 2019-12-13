@@ -2233,12 +2233,12 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
 
     double x_lo, x_hi;
     double rho_guess;
-    if ((phase == iphase_liquid) or (phase == iphase_supercritical_liquid)) {
+    if ((phase == iphase_liquid) || (phase == iphase_supercritical_liquid)) {
         rho_guess = 0.5;
         x_lo = 0.2;
         x_hi = 0.7405;
     }
-    else if ((phase == iphase_gas) or (phase == iphase_supercritical_gas)) {
+    else if ((phase == iphase_gas) || (phase == iphase_supercritical_gas)) {
         rho_guess = 1.0e-9;
         x_lo = 1.0e-14;
         x_hi = 0.06;
@@ -2265,7 +2265,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         rho = BoundedSecant(resid, rho_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
     } catch (const SolutionError& ex) {
         try {
-            if ((phase == iphase_gas) or (phase == iphase_supercritical_gas)) {
+            if ((phase == iphase_gas) || (phase == iphase_supercritical_gas)) {
                 x_hi = 0.14;
                 summ = 0.;
                 for (int i = 0; i < N; i++) {
@@ -2275,7 +2275,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
                 x_hi = 6/PI*x_hi/summ*1.0e30/N_AV;
                 rho = BoundedSecant(resid, rho_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
             }
-            else if ((phase == iphase_liquid) or (phase == iphase_supercritical_liquid)) {
+            else if ((phase == iphase_liquid) || (phase == iphase_supercritical_liquid)) {
                 rho_guess = 0.73;
                 rho_guess = 6/PI*rho_guess/summ*1.0e30/N_AV;
                 rho = BoundedSecant(resid, rho_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
