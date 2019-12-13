@@ -1,4 +1,4 @@
-#ifndef PCSAFTFLUID_H_
+#ifndef PCSAFTFLUID_H
 #define PCSAFTFLUID_H
 
 #include <string>
