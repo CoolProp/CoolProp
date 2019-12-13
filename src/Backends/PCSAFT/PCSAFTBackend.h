@@ -1,5 +1,5 @@
-#ifndef PCSAFTBACKEND_H_
-#define PCSAFTBACKEND_H_
+#ifndef PCSAFTBACKEND_H
+#define PCSAFTBACKEND_H
 
 #include "CoolPropTools.h"
 #include "DataStructures.h"
