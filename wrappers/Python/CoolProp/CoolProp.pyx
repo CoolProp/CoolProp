@@ -98,7 +98,7 @@ cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
     void _apply_simple_mixing_rule "CoolProp::apply_simple_mixing_rule"(const string &CAS1, const string &CAS2, const string &rule) except +
     void _set_departure_functions "CoolProp::set_departure_functions"(const string &functions) except +
 
-from constants import *
+from .constants import *
 from .constants_header cimport *
 from . cimport constants_header
 
@@ -161,7 +161,7 @@ def set_reference_state(string FluidName, *args):
     elif len(args) == 4:
         _set_reference_stateD(FluidName, args[0], args[1], args[2], args[3])
     else:
-        raise ValueError('Invalid number of inputs')
+        raise ValueError(b'Invalid number of inputs')
 
 # cpdef long get_Fluid_index(string_like Fluid):
 #     """
@@ -312,14 +312,14 @@ cpdef double saturation_ancillary(string name, string output, int Q, string inpu
     return _saturation_ancillary(name, output, Q, input, value)
 
 cpdef __Props_err1(fcn, in1,in2):
-    errstr = _get_global_param_string('errstring')
+    errstr = _get_global_param_string(b'errstring')
     if not len(errstr) == 0:
         raise ValueError("{err:s} :: inputs were :\"{in1:s}\",\"{in2:s}\"".format(err= errstr,in1=in1,in2=in2))
     else:
         raise ValueError("{fcn:s} failed ungracefully with inputs:\"{in1:s}\",\"{in2:s}\"; please file a ticket at https://github.com/CoolProp/CoolProp/issues".format(fcn=fcn, in1=in1,in2=in2))
 
 cpdef __Props_err2(fcn, in1, in2, in3, in4, in5, in6):
-    errstr = _get_global_param_string('errstring')
+    errstr = _get_global_param_string(b'errstring')
     if not len(errstr) == 0:
         raise ValueError("{err:s}".format(err=errstr))
     else:
@@ -427,7 +427,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
 
             # Check that we got some output
             if outmat.empty():
-                raise ValueError(_get_global_param_string('errstring'))
+                raise ValueError(_get_global_param_string(b'errstring'))
 
             return ndarray_or_iterable(outmat)
         else:
@@ -466,7 +466,7 @@ cpdef get_aliases(string Fluid):
     Return a comma separated string of aliases for the given fluid
     """
     cdef bytes _Fluid = Fluid.encode('ascii')
-    return [F for F in _get_fluid_param_string(_Fluid, 'aliases').split(',')]
+    return [F for F in _get_fluid_param_string(_Fluid, b'aliases').split(',')]
 
 cpdef string get_REFPROPname(string Fluid):
     """
@@ -484,7 +484,7 @@ cpdef string get_REFPROPname(string Fluid):
 
        In [2]: PropsSI('D', 'T', 300, 'P', 300, Fluid)
     """
-    return _get_fluid_param_string(Fluid,'REFPROP_name')
+    return _get_fluid_param_string(Fluid,b'REFPROP_name')
 
 cpdef string get_BibTeXKey(string Fluid, string key) except *:
     """
@@ -508,13 +508,13 @@ cpdef string get_BibTeXKey(string Fluid, string key) except *:
     key, string
          empty string if Fluid not in CoolProp, "Bad key" if key is invalid
     """
-    return _get_fluid_param_string(Fluid, "BibTeX-"+key)
+    return _get_fluid_param_string(Fluid, b"BibTeX-"+key.encode('ascii'))
 
 cpdef string get_errstr():
     """
     Return the current error string
     """
-    return _get_global_param_string("errstring")
+    return _get_global_param_string(b"errstring")
 
 cpdef set_debug_level(int level):
     """
@@ -991,31 +991,31 @@ cdef class State:
         cdef char * k
         cdef long ikey
         cdef bytes Fluid = self.Fluid
-        cdef long IT = 'T'
-        cdef long ID = 'D'
+        cdef long IT = b'T'
+        cdef long ID = b'D'
         import CoolProp as CP
 
-        print 'Call to the Python call layer (CoolProp.CoolProp.Props)'
-        print "'M' involves basically no computational effort and is a good measure of the function call overhead"
+        print('Call to the Python call layer (CoolProp.CoolProp.Props)')
+        print("'M' involves basically no computational effort and is a good measure of the function call overhead")
         keys = ['H','P','S','U','C','O','V','L','M','d(P)/d(T)|Dmolar']
         for key in keys:
             t1=clock()
             for i in range(N):
-                CP.PropsSI(key,'T',self.T_,'D',self.rho_,Fluid)
+                CP.PropsSI(key,b'T',self.T_,b'D',self.rho_,Fluid)
             t2=clock()
-            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
+            print('Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6))
 
-        print 'Direct c++ call to CoolProp without the Python call layer (_Props function)'
-        print "'M' involves basically no computational effort and is a good measure of the function call overhead"
+        print('Direct c++ call to CoolProp without the Python call layer (_Props function)')
+        print("'M' involves basically no computational effort and is a good measure of the function call overhead")
         keys = ['H','P','S','U','C','O','V','L','M','C0','d(P)/d(T)|Dmolar']
         for key in keys:
             t1=clock()
             for i in range(N):
-                _PropsSI(key,'T',self.T_,'D',self.rho_,Fluid)
+                _PropsSI(key,b'T',self.T_,b'D',self.rho_,Fluid)
             t2=clock()
-            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6)
+            print('Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,key,(t2-t1)/N*1e6))
 
-        print 'Call to the c++ layer using integers'
+        print('Call to the c++ layer using integers')
         keys = [iHmass, iP,iSmass,iUmass]
         for key in keys:
             t1=clock()
@@ -1023,14 +1023,14 @@ cdef class State:
                 self.pAS.update(DmassT_INPUTS,self.rho_,self.T_)
                 self.pAS.keyed_output(key)
             t2=clock()
-            print 'Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6)
+            print('Elapsed time for {0:d} calls for "{1:s}" at {2:g} us/call'.format(N,paras[key],(t2-t1)/N*1e6))
 
-        print 'Call to the AbstractState for molar mass (fast)'
+        print('Call to the AbstractState for molar mass (fast)')
         t1=clock()
         for i in range(N):
             self.pAS.keyed_output(imolar_mass)
         t2=clock()
-        print 'Elapsed time for {0:d} calls at {1:g} us/call'.format(N, (t2-t1)/N*1e6)
+        print('Elapsed time for {0:d} calls at {1:g} us/call'.format(N, (t2-t1)/N*1e6))
 
 #
 #         print 'Call using TTSE with T,rho'
