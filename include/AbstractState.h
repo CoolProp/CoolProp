@@ -177,6 +177,8 @@ protected:
     /// Using this backend, calculate the fugacity coefficient (dimensionless)
     virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i){ throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend"); };
     /// Using this backend, calculate the fugacity in Pa
+    virtual std::vector<CoolPropDbl> calc_fugacity_coefficients(){ throw NotImplementedError("calc_fugacity_coefficients is not implemented for this backend"); };
+    /// Using this backend, calculate the fugacity in Pa
     virtual CoolPropDbl calc_fugacity(std::size_t i){ throw NotImplementedError("calc_fugacity is not implemented for this backend"); };
     /// Using this backend, calculate the chemical potential in J/mol
     virtual CoolPropDbl calc_chemical_potential(std::size_t i) { throw NotImplementedError("calc_chemical_potential is not implemented for this backend"); };
@@ -574,7 +576,7 @@ public:
     /// Set the cubic alpha function's constants:
     virtual void set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3) { throw ValueError("set_cubic_alpha_C only defined for cubic backends"); };
     /// Set fluid parameter (currently the volume translation parameter for cubic)
-	virtual void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
+	  virtual void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
     /// Double fluid parameter (currently the volume translation parameter for cubic)
     virtual double get_fluid_parameter_double(const size_t i, const std::string &parameter) { throw ValueError("get_fluid_parameter_double only defined for cubic backends"); };
 
@@ -582,7 +584,7 @@ public:
     virtual bool clear();
     /// When the composition changes, clear all cached values that are only dependent on composition, but not the thermodynamic state
     virtual bool clear_comp_change();
-    
+
 
     /// Get the state that is used in the equation of state or mixture model
     /// to reduce the state.  For pure fluids this is usually, but not always,
@@ -781,6 +783,8 @@ public:
     double isentropic_expansion_coefficient(void);
     /// Return the fugacity coefficient of the i-th component of the mixture
     double fugacity_coefficient(std::size_t i);
+    /// Return a vector of the fugacity coefficients for all components in the mixture
+    std::vector<double> fugacity_coefficients();
     /// Return the fugacity of the i-th component of the mixture
     double fugacity(std::size_t i);
     /// Return the chemical potential of the i-th component of the mixture

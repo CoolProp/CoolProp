@@ -20,8 +20,8 @@
         using std::shared_ptr;
     #endif
 #elif defined(__ISLINUX__) // GCC
-    #include <tr1/memory>
-    using namespace std::tr1;
+    #include <memory>
+    using std::shared_ptr;
 #elif defined(__ISAPPLE__) && (defined(__llvm__) || defined(__clang__)) // CLANG
     // See docs for clang: http://clang.llvm.org/docs/LanguageExtensions.html#include-file-checking-macros
     #if __has_include(<tr1/memory>)
@@ -42,7 +42,7 @@
     using namespace std::tr1;
 #elif defined(__ISWINDOWS__) && !defined(__MINGW32__)
     #include <memory>
-    // VS2008 has std::shared_ptr from C++11 
+    // VS2008 has std::shared_ptr from C++11
     #if defined(_MSC_VER) && _MSC_VER >= 1600
         using std::shared_ptr;
     #else
