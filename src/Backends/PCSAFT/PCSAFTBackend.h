@@ -93,6 +93,7 @@ public:
         //     default:
         //         throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         // }
+        throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
     }
 
     // ************************************************************************* //
