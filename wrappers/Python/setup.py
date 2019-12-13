@@ -261,8 +261,8 @@ if __name__ == '__main__':
         cython_directives = dict(
             profile=_profiling_enabled,
             embedsignature=True,
-            language_level=2,
-            c_string_type='unicode',
+            language_level=3 if sys.version_info >= (3, 0) else 2,
+            c_string_type='unicode' if sys.version_info >= (3, 0) else 'unicode',
             c_string_encoding='ascii'
             )
 

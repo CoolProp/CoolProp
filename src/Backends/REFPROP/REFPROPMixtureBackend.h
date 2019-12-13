@@ -77,6 +77,9 @@ public:
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
 
+    /// Calculate the name of the fluid
+    std::string calc_name(){ return fluid_param_string("name"); }
+
     // Get _phase for pure fluids only
     phases calc_phase(void) { 
         if (this->Ncomp > 1) {

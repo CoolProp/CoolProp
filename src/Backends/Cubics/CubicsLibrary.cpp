@@ -112,15 +112,17 @@ void add_fluids_as_JSON(const std::string &JSON)
         
         dd.Parse<0>(JSON.c_str());
         if (dd.HasParseError()){
-            throw ValueError("Unable to load all_cubics_JSON.json");
+            throw ValueError("Cubics JSON is not valid JSON");
         } else{
             try{
                 library.add_many(dd);
-            }catch(std::exception &e){std::cout << e.what() << std::endl;}
+            }catch(std::exception &e){
+                throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str()));
+            }
         }
     }
     else{
-        if (get_debug_level() > 0){ throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str())); }
+        throw ValueError(format("Unable to validate cubics library against schema with error: %s", errstr.c_str()));
     }
 }
 
