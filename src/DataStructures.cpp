@@ -552,7 +552,8 @@ const backend_family_info backend_family_list[] = {
     { BICUBIC_BACKEND_FAMILY, "BICUBIC" },
     { SRK_BACKEND_FAMILY, "SRK" },
     { PR_BACKEND_FAMILY, "PR" },
-    { VTPR_BACKEND_FAMILY, "VTPR" }
+    { VTPR_BACKEND_FAMILY, "VTPR" },
+    { PCSAFT_BACKEND_FAMILY, "PCSAFT" }
 };
 
 const backend_info backend_list[] = {
@@ -567,7 +568,8 @@ const backend_info backend_list[] = {
     { BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY },
     { SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY },
     { PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY },
-    { VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY }
+    { VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY },
+    { PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY }
 };
 
 class BackendInformation {
@@ -674,4 +676,3 @@ TEST_CASE("Check that all phases are described","[phase_index]")
 }
 
 #endif
-

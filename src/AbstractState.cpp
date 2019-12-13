@@ -17,6 +17,7 @@
 #include "Backends/Cubics/CubicBackend.h"
 #include "Backends/Cubics/VTPRBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
+#include "Backends/PCSAFT/PCSAFTBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -103,6 +104,15 @@ public:
 } ;
 // This static initialization will cause the generator to register
 static CoolProp::GeneratorInitializer<VTPRGenerator> vtpr_gen(CoolProp::VTPR_BACKEND_FAMILY);
+
+class PCSAFTGenerator : public CoolProp::AbstractStateGenerator{
+public:
+    CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        return new CoolProp::PCSAFTBackend(fluid_names);
+    };
+} ;
+// This static initialization will cause the generator to register
+static CoolProp::GeneratorInitializer<PCSAFTGenerator> pcsaft_gen(CoolProp::PCSAFT_BACKEND_FAMILY);
 
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
@@ -625,6 +635,10 @@ double AbstractState::gas_constant(void){
 double AbstractState::fugacity_coefficient(std::size_t i){
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity_coefficient(i);
+}
+std::vector<double> AbstractState::fugacity_coefficients(){
+    // TODO: Cache the fug. coeff for each component
+    return calc_fugacity_coefficients();
 }
 double AbstractState::fugacity(std::size_t i){
     // TODO: Cache the fug. coeff for each component

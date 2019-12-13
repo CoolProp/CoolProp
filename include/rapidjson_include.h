@@ -22,7 +22,7 @@ typedef unsigned int UINT32;
 
 namespace cpjson
 {
-    
+
     /// Convert a JSON-formatted string to a rapidjson::Document object
     inline void JSON_string_to_rapidjson(const std::string &JSON_string, rapidjson::Document &doc)
     {
@@ -31,7 +31,7 @@ namespace cpjson
             throw CoolProp::ValueError("Unable to load JSON string");
         }
     }
-    
+
     struct value_information{
         bool isnull, isfalse, istrue, isbool, isobject, isarray, isnumber, isint, isint64, isuint, isuint64, isdouble, isstring;
     };
@@ -53,7 +53,7 @@ namespace cpjson
         i.isstring = v.IsString();
         return i;
     };
-    
+
     inline std::string json2string(const rapidjson::Value &v)
     {
         rapidjson::StringBuffer buffer;
@@ -106,10 +106,10 @@ namespace cpjson
             return el.GetString();
         }
     };
-    
-    
-    
-    
+
+
+
+
     /// A convenience function to get a double array compactly
     inline std::vector<double> get_double_array(const rapidjson::Value &v)
     {
@@ -122,7 +122,7 @@ namespace cpjson
         }
         return out;
     };
-    
+
     /// A convenience function to get a double array compactly
     inline std::vector<double> get_double_array(const rapidjson::Value &v, std::string m)
     {
@@ -130,7 +130,7 @@ namespace cpjson
         else{
             return get_double_array(v[m.c_str()]);
         }
-    };    
+    };
 
     /// A convenience function to get a long double array compactly
     inline std::vector<CoolPropDbl> get_long_double_array(const rapidjson::Value &v)
@@ -156,7 +156,7 @@ namespace cpjson
             // This is here for debugging purposes
             // cpjson::value_information vi = cpjson::get_information((*itr));
             if (!(itr->IsArray())) {
-                throw CoolProp::ValueError(format("input \"%s\" is not a 2D array",cpjson::json2string(v).c_str())); 
+                throw CoolProp::ValueError(format("input \"%s\" is not a 2D array",cpjson::json2string(v).c_str()));
             }
             tmp.clear();
             for (rapidjson::Value::ConstValueIterator i = itr->Begin(); i != itr->End(); ++i)
@@ -214,7 +214,7 @@ namespace cpjson
         }
         return out;
     };
-    
+
     /// A convenience function to get a string array compactly
     inline std::vector<std::string> get_string_array(const rapidjson::Value &v, std::string m)
     {
@@ -249,7 +249,7 @@ namespace cpjson
         }
         value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), _i, doc.GetAllocator());
     };
-    
+
     /// A convenience function to set a string compactly
     inline void set_string(const std::string &key, const std::string &s, rapidjson::Value &value, rapidjson::Document &doc)
     {
@@ -257,7 +257,7 @@ namespace cpjson
                         rapidjson::Value(s.c_str(), doc.GetAllocator()).Move(),
                         doc.GetAllocator());
     };
-    
+
     /// A convenience function to set a string array compactly
     inline void set_string_array(const char *key, const std::vector<std::string> &vec, rapidjson::Value &value, rapidjson::Document &doc)
     {
@@ -283,7 +283,7 @@ namespace cpjson
                         _v,
                         doc.GetAllocator());
     };
-    
+
     /// A convenience function to set a double array compactly
     inline void set_double_array(const char *key, const std::vector<double> &vec, rapidjson::Value &value, rapidjson::Document &doc)
     {
@@ -292,7 +292,7 @@ namespace cpjson
         {
             _v.PushBack(vec[i],doc.GetAllocator());
         }
-        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), 
+        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(),
                         _v,
                         doc.GetAllocator());
     };
@@ -305,11 +305,11 @@ namespace cpjson
         {
             _v.PushBack(static_cast<double>(vec[i]), doc.GetAllocator());
         }
-        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(), 
+        value.AddMember(rapidjson::Value(key, doc.GetAllocator()).Move(),
                         _v,
                         doc.GetAllocator());
     };
-    
+
     enum schema_validation_code{
         SCHEMA_VALIDATION_OK = 0,
         SCHEMA_INVALID_JSON,
@@ -324,11 +324,11 @@ namespace cpjson
         sd.Parse(schemaJson.c_str());
         if (sd.HasParseError()) { errstr = format("Invalid schema: %s\n", schemaJson.c_str()); return SCHEMA_INVALID_JSON; }
         rapidjson::SchemaDocument schema(sd); // Compile a Document to SchemaDocument
-        
+
         rapidjson::Document d;
         d.Parse(inputJson.c_str());
         if (d.HasParseError()) { errstr = format("Invalid input json: %s\n", inputJson.c_str()); return INPUT_INVALID_JSON; }
-        
+
         rapidjson::SchemaValidator validator(schema);
         if (!d.Accept(validator)) {
             // Input JSON is invalid according to the schema

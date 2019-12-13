@@ -84,7 +84,7 @@ option (COOLPROP_MSVC_DEBUG
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
 
-# see 
+# see
 # https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
 # https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
 # https://github.com/pandas-dev/pandas/pull/24274/files
@@ -123,7 +123,7 @@ endif (DEFINED DARWIN_USE_LIBCPP)
 #  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${OSX_COMPILE_FLAGS}")
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}${OSX_COMPILE_FLAGS}")
 #endif()
-# Alternatively you could use 
+# Alternatively you could use
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
 
@@ -212,7 +212,7 @@ SET(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD") # order matters "/MXd" before "
 #######################################
 
 # These backends will be compiled in
-set(COOLPROP_ENABLED_BACKENDS Cubics IF97 Helmholtz REFPROP Incompressible Tabular)
+set(COOLPROP_ENABLED_BACKENDS Cubics IF97 Helmholtz REFPROP Incompressible Tabular PCSAFT)
 
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -904,15 +904,15 @@ if (COOLPROP_OCTAVE_MODULE)
       string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     else()
       execute_process(
-        COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY}" 
-        COMMAND "grep libc++" 
+        COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY}"
+        COMMAND "grep libc++"
         OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG
         ERROR_VARIABLE COOLPROP_OCTAVE_USING_CLANG
       )
       MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
       string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     endif()
-    
+
     STRING(LENGTH "${COOLPROP_OCTAVE_USING_CLANG}" LEN)
     if (${LEN} GREATER 0)
       message(STATUS "Using -stdlib=libc++, this might override the settings based on DARWIN_USE_LIBCPP")

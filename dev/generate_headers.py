@@ -43,7 +43,10 @@ values = [
     ('mixtures/mixture_binary_pairs.json', 'mixture_binary_pairs_JSON.h', 'mixture_binary_pairs_JSON'),
     ('mixtures/predefined_mixtures.json', 'predefined_mixtures_JSON.h', 'predefined_mixtures_JSON'),
     ('cubics/all_cubic_fluids.json', 'all_cubics_JSON.h', 'all_cubics_JSON'),
-    ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON')
+    ('cubics/cubic_fluids_schema.json', 'cubic_fluids_schema_JSON.h', 'cubic_fluids_schema_JSON'),
+    ('pcsaft/pcsaft_fluids_schema.json', 'pcsaft_fluids_schema_JSON.h', 'pcsaft_fluids_schema_JSON'),
+    ('pcsaft/all_pcsaft_fluids.json', 'all_pcsaft_JSON.h', 'all_pcsaft_JSON'),
+    ('pcsaft/mixture_binary_pairs_pcsaft.json', 'mixture_binary_pairs_pcsaft_JSON.h', 'mixture_binary_pairs_pcsaft_JSON')
 ]
 
 
