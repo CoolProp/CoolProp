@@ -1866,7 +1866,7 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
 
         CoolPropDbl p;
         bool success = false;
-        while ((x_hi > p_guess) and !success) {
+        while ((x_hi > p_guess) && !success) {
             try {
                 p = BoundedSecant(resid, p_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
                 success = true;
@@ -1980,7 +1980,7 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
 
         CoolPropDbl p;
         bool success = false;
-        while ((x_hi > p_guess) and !success) {
+        while ((x_hi > p_guess) && !success) {
             try {
                 p = BoundedSecant(resid, p_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
                 success = true;
@@ -2060,7 +2060,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
 
         CoolPropDbl T;
         bool success = false;
-        while ((x_hi > t_guess) and !success) {
+        while ((x_hi > t_guess) && !success) {
             try {
                 T = BoundedSecant(resid, t_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
                 success = true;
@@ -2193,7 +2193,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
 
         CoolPropDbl T;
         bool success = false;
-        while ((x_hi > t_guess) and !success) {
+        while ((x_hi > t_guess) && !success) {
             try {
                 T = BoundedSecant(resid, t_guess, x_lo, x_hi, 1e-8, 1e-8, 200);
                 success = true;
