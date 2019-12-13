@@ -9,8 +9,6 @@
 #include "Solvers.h"
 #include "Backends/Helmholtz/VLERoutines.h"
 
-#include <unistd.h>
-
 using namespace std;
 
 /*
