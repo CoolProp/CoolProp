@@ -13,9 +13,9 @@ def get_fluids():
     """
 
     del_old = CP.get_config_string(CP.LIST_STRING_DELIMITER)
-    CP.set_config_string(CP.LIST_STRING_DELIMITER, '|')
+    CP.set_config_string(CP.LIST_STRING_DELIMITER, b'|')
     try:
-        fluids = CoolProp.get_global_param_string('fluids_list')
+        fluids = CoolProp.get_global_param_string(b'fluids_list')
     finally:
         CP.set_config_string(CP.LIST_STRING_DELIMITER, del_old)
     return fluids
