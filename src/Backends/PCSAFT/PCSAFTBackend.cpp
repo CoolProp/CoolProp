@@ -438,7 +438,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
                 delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij[idxa]/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij[idxa];
             }
             XA[i*2] = (-1 + sqrt(1+8*den*delta_ij[i*ncA+i]))/(4*den*delta_ij[i*ncA+i]);
-            if (!isfinite(XA[i*2])) {
+            if (!std::isfinite(XA[i*2])) {
                 XA[i*2] = 0.02;
             }
             XA[i*2+1] = XA[i*2];
@@ -755,7 +755,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
                     *(exp(eABij[idxa]/_T)-1));
             }
             XA[i*2] = (-1 + sqrt(1+8*den*delta_ij[i*ncA+i]))/(4*den*delta_ij[i*ncA+i]);
-            if (!isfinite(XA[i*2])) {
+            if (!std::isfinite(XA[i*2])) {
                 XA[i*2] = 0.02;
             }
             XA[i*2+1] = XA[i*2];
@@ -1209,7 +1209,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
                }
            }
            XA[i*2] = (-1 + sqrt(1+8*den*delta_ij[i*ncA+i]))/(4*den*delta_ij[i*ncA+i]);
-           if (!isfinite(XA[i*2])) {
+           if (!std::isfinite(XA[i*2])) {
                XA[i*2] = 0.02;
            }
            XA[i*2+1] = XA[i*2];
@@ -1849,7 +1849,7 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
                     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(T, p, iphase_gas);
                     vector<CoolPropDbl> fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
                     error += 100000 * pow(fugcoef_l[0] - fugcoef_v[0], 2.);
-                    if (!isfinite(error)) {
+                    if (!std::isfinite(error)) {
                         error = 1e20;
                     }
                 }
@@ -1963,7 +1963,7 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
                         error += pow((PCSAFT.mole_fractions[i] - PCSAFT._Q*PCSAFT.SatV->mole_fractions[i] - (1-PCSAFT._Q)*PCSAFT.SatL->mole_fractions[i]), 2.);
                     }
 
-                    if (!isfinite(error)) {
+                    if (!std::isfinite(error)) {
                         error = 1e20;
                     }
                 }
@@ -2023,7 +2023,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                 else {
                     PCSAFT.SatL->_T = T; // _T must be updated because the density calculation depends on it
                     PCSAFT.SatV->_T = T;
-                    if (!isfinite(PCSAFT.SatV->mole_fractions[0])) {
+                    if (!std::isfinite(PCSAFT.SatV->mole_fractions[0])) {
                         PCSAFT.SatL->mole_fractions = PCSAFT.mole_fractions;
                         PCSAFT.SatV->mole_fractions = PCSAFT.mole_fractions;
                     }
@@ -2043,7 +2043,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(T, p, iphase_gas);
                     vector<CoolPropDbl> fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
                     error += 100000 * pow(fugcoef_l[0] - fugcoef_v[0], 2.);
-                    if (!isfinite(error)) {
+                    if (!std::isfinite(error)) {
                         error = 1e20;
                     }
                 }
@@ -2095,7 +2095,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                 else {
                     PCSAFT.SatL->_T = T; // _T must be updated because the density calculation depends on it
                     PCSAFT.SatV->_T = T;
-                    if (!isfinite(PCSAFT.SatV->mole_fractions[0])) {
+                    if (!std::isfinite(PCSAFT.SatV->mole_fractions[0])) {
                         PCSAFT.SatL->mole_fractions = PCSAFT.mole_fractions;
                         PCSAFT.SatV->mole_fractions = PCSAFT.mole_fractions;
                     }
@@ -2176,7 +2176,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                         error += pow((PCSAFT.mole_fractions[i] - PCSAFT._Q*PCSAFT.SatV->mole_fractions[i] - (1-PCSAFT._Q)*PCSAFT.SatL->mole_fractions[i]), 2.);
                     }
 
-                    if (!isfinite(error)) {
+                    if (!std::isfinite(error)) {
                         error = 1e20;
                     }
                 }
