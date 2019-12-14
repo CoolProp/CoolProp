@@ -1,9 +1,9 @@
 from __future__ import print_function
 import platform
-import subprocess, shutil, os, sys, glob
+import subprocess, shutil, os, sys, glob, tempfile
 from distutils.version import LooseVersion
 from distutils.sysconfig import get_config_var
-
+from setuptools.command.build_ext import build_ext
 
 def copy_files():
     def copytree(old, new):
@@ -298,20 +298,65 @@ if __name__ == '__main__':
         'zip_safe': False  # no compressed egg; see http://stackoverflow.com/a/29124937/1360263
     }
     from setuptools import setup, Extension, find_packages
+
+    def get_shared_ptr_setter(base_class):
+        """
+        Get the setter class with the appropriate base class
+        """
+        
+        # See https://stackoverflow.com/a/54518348
+        class shared_ptr_subclass(base_class):
+            """ Metaclass for overwriting compilation flags """
+
+            def set_shared_ptr_flags(self):
+                from distutils.errors import CompileError
+
+                good_index = -1
+                for ic,contents in enumerate([
+                    "#include <memory> int main() { std::shared_ptr<int> int_ptr; return 0; }",
+                    "#include <memory> int main() { std::tr1::shared_ptr<int> int_ptr; return 0;}",
+                    "#include <tr1/memory> int main() { std::tr1::shared_ptr<int> int_ptr; return 0;}"
+                ]):
+                    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
+                        f.write(contents)
+                        try:
+                            self.compiler.compile([f.name])
+                            good_index = ic
+                            break
+                        except CompileError:
+                            pass
+                more_flags = []
+                if good_index == 0:
+                    return
+                elif good_index == 1:
+                    more_flags = ['-DSHARED_PTR_TR1_NAMESPACE ']
+                elif good_index == 2:
+                    more_flags = ['-DSHARED_PTR_TR1_NAMESPACE', '-DSHARED_PTR_TR1_MEMORY_HEADER']
+                print("adding these compilation macros:", more_flags)
+                for ext in self.extensions:
+                    ext.extra_compile_args += more_flags
+                
+            def build_extensions(self):
+                self.set_shared_ptr_flags()
+                build_ext.build_extensions(self)
+        return shared_ptr_subclass
+
     if USE_CYTHON:
         import Cython.Compiler
         from Cython.Distutils.extension import Extension
         from Cython.Build import cythonize
         from Cython.Distutils import build_ext
 
+        setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
+
         # This will always generate HTML to show where there are still pythonic bits hiding out
         Cython.Compiler.Options.annotate = True
-
-        setup_kwargs['cmdclass'] = dict(build_ext=build_ext)
 
         print('Cython will be used; cy_ext is ' + cy_ext)
     else:
         print('Cython will not be used; cy_ext is ' + cy_ext)
+
+        setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
 
     def find_cpp_sources(root=os.path.join('..', '..', 'src'), extensions=['.cpp'], skip_files=None):
         file_listing = []
