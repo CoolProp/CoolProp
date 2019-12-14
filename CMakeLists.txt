@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.11)
 
+include(CheckIncludeFileCXX)
+
 if (DEFINED COOLPROP_INSTALL_PREFIX)
     #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
@@ -356,6 +358,27 @@ ELSEIF(FORCE_BITNESS_64)
 ELSEIF(FORCE_BITNESS_NATIVE)
   SET(BITNESS "NATIVE")
 ENDIF()
+
+#######################################
+#         SHARED POINTER              #
+#-------------------------------------#
+# In this section we define the       #
+# flags needed to use shared_ptr      #
+# reliably                            #
+#######################################
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/FindSharedPtr.cmake")
+FIND_SHARED_PTR()
+if(NOT SHARED_PTR_FOUND)
+  message(FATAL_ERROR "Must be able to find shared_ptr")
+else()
+  if (SHARED_PTR_TR1_MEMORY_HEADER)
+    add_definitions(" -DSHARED_PTR_TR1_MEMORY_HEADER ")
+  endif()
+  if (SHARED_PTR_TR1_NAMESPACE)
+    add_definitions(" -DSHARED_PTR_TR1_NAMESPACE ")
+  endif()
+endif()
 
 #######################################
 #         MAKE ARTEFACTS              #
