@@ -303,7 +303,7 @@ if __name__ == '__main__':
         """
         Get the setter class with the appropriate base class
         """
-        
+
         # See https://stackoverflow.com/a/54518348
         class shared_ptr_subclass(base_class):
             """ Metaclass for overwriting compilation flags """
@@ -313,12 +313,13 @@ if __name__ == '__main__':
 
                 good_index = -1
                 for ic,contents in enumerate([
-                    "#include <memory> int main() { std::shared_ptr<int> int_ptr; return 0; }",
-                    "#include <memory> int main() { std::tr1::shared_ptr<int> int_ptr; return 0;}",
-                    "#include <tr1/memory> int main() { std::tr1::shared_ptr<int> int_ptr; return 0;}"
+                    "#include <memory> \nusing std::shared_ptr;\n int main() { shared_ptr<int> int_ptr; return 0; }",
+                    "#include <memory> \nusing std::tr1::shared_ptr; \nint main() { shared_ptr<int> int_ptr; return 0;}",
+                    "#include <tr1/memory>\nusing std::tr1::shared_ptr;\nint main() { shared_ptr<int> int_ptr; return 0;}"
                 ]):
                     with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
                         f.write(contents)
+                        f.seek(0)
                         try:
                             self.compiler.compile([f.name])
                             good_index = ic
@@ -327,12 +328,13 @@ if __name__ == '__main__':
                             pass
                 more_flags = []
                 if good_index == 0:
+                    print('No shared_ptr flags needed')
                     return
                 elif good_index == 1:
                     more_flags = ['-DSHARED_PTR_TR1_NAMESPACE ']
                 elif good_index == 2:
                     more_flags = ['-DSHARED_PTR_TR1_NAMESPACE', '-DSHARED_PTR_TR1_MEMORY_HEADER']
-                print("adding these compilation macros:", more_flags)
+                print("Adding these shared_ptr compilation macros:", more_flags)
                 for ext in self.extensions:
                     ext.extra_compile_args += more_flags
                 
@@ -342,6 +344,7 @@ if __name__ == '__main__':
         return shared_ptr_subclass
 
     if USE_CYTHON:
+        print('Cython will be used; cy_ext is ' + cy_ext)
         import Cython.Compiler
         from Cython.Distutils.extension import Extension
         from Cython.Build import cythonize
@@ -351,11 +354,8 @@ if __name__ == '__main__':
 
         # This will always generate HTML to show where there are still pythonic bits hiding out
         Cython.Compiler.Options.annotate = True
-
-        print('Cython will be used; cy_ext is ' + cy_ext)
     else:
         print('Cython will not be used; cy_ext is ' + cy_ext)
-
         setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
 
     def find_cpp_sources(root=os.path.join('..', '..', 'src'), extensions=['.cpp'], skip_files=None):
