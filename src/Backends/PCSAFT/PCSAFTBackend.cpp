@@ -2,6 +2,7 @@
 #include <string>
 #include <cmath>
 #include "math.h"
+#include <cmath>
 #include <Eigen/Dense>
 #include <stdlib.h>
 
