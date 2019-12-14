@@ -13,7 +13,7 @@
 #endif
 
 #if defined(SHARED_PTR_TR1_NAMESPACE)
-using std::tr1::shared_ptr
+using std::tr1::shared_ptr;
 #else
 using std::shared_ptr;
 #endif
