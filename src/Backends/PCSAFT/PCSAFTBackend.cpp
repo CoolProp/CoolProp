@@ -842,7 +842,7 @@ CoolPropDbl PCSAFTBackend::calc_smolar(void){
     CoolPropDbl gres = calc_gibbsmolar();
     CoolPropDbl hres = calc_hmolar();
 
-    CoolPropDbl sres = (hres - gres)/_T;
+    CoolPropDbl sres = (hres - gres)/(2*_T);
     return sres;
 }
 
