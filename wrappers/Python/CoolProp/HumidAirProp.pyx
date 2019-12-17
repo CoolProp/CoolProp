@@ -42,7 +42,7 @@ cpdef HAPropsSI(string OutputName, string Input1Name, Input1, string Input2Name,
         val = _HAPropsSI(OutputName, Input1Name, Input1, Input2Name, Input2, Input3Name, Input3)
     
         if math.isinf(val) or math.isnan(val):
-            err_string = _get_global_param_string('errstring')
+            err_string = _get_global_param_string(b'errstring')
             if not len(err_string) == 0:
                 raise ValueError("{err:s} :: inputs were:\"{out:s}\",\"{in1n:s}\",{in1:0.16e},\"{in2n:s}\",{in2:0.16e},\"{in3n:s}\",{in3:0.16e} ".format(err=err_string,out=OutputName,in1n=Input1Name,in1=Input1,in2n=Input2Name,in2=Input2,in3n=Input3Name,in3=Input3))
             else:
@@ -87,7 +87,7 @@ cpdef HAPropsSI(string OutputName, string Input1Name, Input1, string Input2Name,
             val = _HAPropsSI(OutputName, Input1Name, _Input1, Input2Name, _Input2, Input3Name, _Input3)
         
             if math.isinf(val) or math.isnan(val):
-                err_string = _get_global_param_string('errstring')
+                err_string = _get_global_param_string(b'errstring')
                 if not len(err_string) == 0:
                     raise ValueError("{err:s} :: inputs were:\"{out:s}\",\"{in1n:s}\",{in1:0.16e},\"{in2n:s}\",{in2:0.16e},\"{in3n:s}\",{in3:0.16e}".format(err=err_string,out=OutputName,in1n=Input1Name,in1=_Input1,in2n=Input2Name,in2=_Input2,in3n=Input3Name,in3=_Input3))
                 else:
@@ -116,7 +116,7 @@ cpdef HAProps(string OutputName, string Input1Name, Input1, string Input2Name, I
         val = _HAProps(OutputName, Input1Name, Input1, Input2Name, Input2, Input3Name, Input3)
     
         if math.isinf(val) or math.isnan(val):
-            err_string = _get_global_param_string('errstring')
+            err_string = _get_global_param_string(b'errstring')
             if not len(err_string) == 0:
                 raise ValueError("{err:s} :: inputs were:\"{out:s}\",\"{in1n:s}\",{in1:0.16e},\"{in2n:s}\",{in2:0.16e},\"{in3n:s}\",{in3:0.16e} ".format(err=err_string,out=OutputName,in1n=Input1Name,in1=Input1,in2n=Input2Name,in2=Input2,in3n=Input3Name,in3=Input3))
             else:
@@ -161,7 +161,7 @@ cpdef HAProps(string OutputName, string Input1Name, Input1, string Input2Name, I
             val = _HAProps(OutputName, Input1Name, _Input1, Input2Name, _Input2, Input3Name, _Input3)
         
             if math.isinf(val) or math.isnan(val):
-                err_string = _get_global_param_string('errstring')
+                err_string = _get_global_param_string(b'errstring')
                 if not len(err_string) == 0:
                     raise ValueError("{err:s} :: inputs were:\"{out:s}\",\"{in1n:s}\",{in1:0.16e},\"{in2n:s}\",{in2:0.16e},\"{in3n:s}\",{in3:0.16e}".format(err=err_string,out=OutputName,in1n=Input1Name,in1=_Input1,in2n=Input2Name,in2=_Input2,in3n=Input3Name,in3=_Input3))
                 else:

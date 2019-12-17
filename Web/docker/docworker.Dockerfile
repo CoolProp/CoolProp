@@ -32,3 +32,5 @@ RUN source activate docs && \
     cp librefprop.so /opt/refprop && \
     cp -r /REFPROP_sources/fluids /opt/refprop && \
     cp -r /REFPROP_sources/mixtures /opt/refprop 
+
+RUN pip3 install pybtex

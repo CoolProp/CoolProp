@@ -1364,9 +1364,9 @@ class SolutionDataWriter(object):
     def writeCsvTableToFile(self, path, table):
         if not os.path.exists(os.path.dirname(path + ".csv")):
             os.makedirs(os.path.dirname(path + ".csv"))
-        with open(path + ".csv", 'wb') as f:
-            #writer = csv.writer(f)
-            writer = UnicodeWriter(f)
+        with codecs.open(path + ".csv", 'w', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            # writer = UnicodeWriter(f)
             writer.writerows(table)
         return True
 

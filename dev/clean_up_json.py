@@ -1,5 +1,5 @@
 import json, sys, glob, os
-here = os.path.dirname(__file__)
+here = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(here+'/..')
 from package_json import json_options
 

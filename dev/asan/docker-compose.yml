@@ -1,0 +1,14 @@
+version: '3.2'
+
+services:   
+  worker:
+    cap_add:
+      - SYS_PTRACE
+    build:
+      context: ./
+      dockerfile: asanworker.Dockerfile
+    command: /coolprop/dev/asan/run_asan.sh
+    volumes:
+      - type: bind
+        source: ../..
+        target: /coolprop

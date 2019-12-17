@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.11)
 
+include(CheckIncludeFileCXX)
+
 if (DEFINED COOLPROP_INSTALL_PREFIX)
     #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
@@ -84,7 +86,7 @@ option (COOLPROP_MSVC_DEBUG
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
 
-# see 
+# see
 # https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
 # https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
 # https://github.com/pandas-dev/pandas/pull/24274/files
@@ -123,7 +125,7 @@ endif (DEFINED DARWIN_USE_LIBCPP)
 #  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${OSX_COMPILE_FLAGS}")
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}${OSX_COMPILE_FLAGS}")
 #endif()
-# Alternatively you could use 
+# Alternatively you could use
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
 
@@ -212,7 +214,7 @@ SET(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD") # order matters "/MXd" before "
 #######################################
 
 # These backends will be compiled in
-set(COOLPROP_ENABLED_BACKENDS Cubics IF97 Helmholtz REFPROP Incompressible Tabular)
+set(COOLPROP_ENABLED_BACKENDS Cubics IF97 Helmholtz REFPROP Incompressible Tabular PCSAFT)
 
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -260,7 +262,29 @@ set(COOLPROP_INCLUDE_DIRECTORIES ${APP_INCLUDE_DIRS} CACHE LIST "List of include
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
-find_package (PythonInterp 2.7 REQUIRED)
+find_package (PythonInterp 2.7)
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(STATUS "Looking for Python")
+  find_package (Python COMPONENTS Interpreter)
+endif()
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(STATUS "Looking for Python2")
+  find_package (Python2 COMPONENTS Interpreter)
+  if(Python2_Interpreter_FOUND)
+    set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE})
+  endif()
+endif()
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(STATUS "Looking for Python3")
+  find_package (Python3 COMPONENTS Interpreter)
+  if(Python3_Interpreter_FOUND)
+    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+  endif()
+endif()
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(WARNING "Could not find Python, be prepared for errors.")
+endif()
+
 if(CMAKE_DL_LIBS)
     find_package (${CMAKE_DL_LIBS} REQUIRED)
 endif()
@@ -334,6 +358,27 @@ ELSEIF(FORCE_BITNESS_64)
 ELSEIF(FORCE_BITNESS_NATIVE)
   SET(BITNESS "NATIVE")
 ENDIF()
+
+#######################################
+#         SHARED POINTER              #
+#-------------------------------------#
+# In this section we define the       #
+# flags needed to use shared_ptr      #
+# reliably                            #
+#######################################
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/FindSharedPtr.cmake")
+FIND_SHARED_PTR()
+if(NOT SHARED_PTR_FOUND)
+  message(FATAL_ERROR "Must be able to find shared_ptr")
+else()
+  if (SHARED_PTR_TR1_MEMORY_HEADER)
+    add_definitions("-DSHARED_PTR_TR1_MEMORY_HEADER")
+  endif()
+  if (SHARED_PTR_TR1_NAMESPACE)
+    add_definitions("-DSHARED_PTR_TR1_NAMESPACE")
+  endif()
+endif()
 
 #######################################
 #         MAKE ARTEFACTS              #
@@ -882,15 +927,15 @@ if (COOLPROP_OCTAVE_MODULE)
       string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     else()
       execute_process(
-        COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY}" 
-        COMMAND "grep libc++" 
+        COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY}"
+        COMMAND "grep libc++"
         OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG
         ERROR_VARIABLE COOLPROP_OCTAVE_USING_CLANG
       )
       MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
       string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     endif()
-    
+
     STRING(LENGTH "${COOLPROP_OCTAVE_USING_CLANG}" LEN)
     if (${LEN} GREATER 0)
       message(STATUS "Using -stdlib=libc++, this might override the settings based on DARWIN_USE_LIBCPP")
@@ -1562,12 +1607,13 @@ endif()
 if (COOLPROP_CLANG_ADDRESS_SANITIZER)
 
   SET(CMAKE_CXX_FLAGS "-fsanitize=address -g")
-  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/catch_always_return_success.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)
   set_target_properties (CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
-  set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address -lstdc++")
+  set(CMAKE_CXX_FLAGS "-O1")
+  set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address -fno-omit-frame-pointer -lstdc++")
   if(UNIX)
     target_link_libraries (CatchTestRunner ${CMAKE_DL_LIBS})
   endif()

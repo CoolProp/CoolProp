@@ -2,6 +2,7 @@ from CPWeb.BibtexTools import getCitationOrAlternative, getBibtexParser
 from CPWeb.SphinxTools import FluidGenerator
 import os.path
 import CoolProp
+CP = CoolProp.CoolProp
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..'))

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <FUNCTIONS>
-    
+
 	<!-- Below are the entries for the CoolProp High-Level functions -->
     <function>
         <name>PropsSI</name>
@@ -58,6 +58,20 @@
         <params>"CAS1", "CAS2", "Parameter", Value</params>
         <category>CoolProp</category>
         <description>Sets the binary mixing parameter for a specified binary pair.  Fluid names MUST be the "CAS" string for each of the components.  "Parameter" must be one of ["F", "xi", "zeta", "gammaT", "gammaV", "betaT", "betaV"].  Value, is the numeric value of the parameter being set.</description>
+    </function>
+    <function>
+        <name>get_mixture_binary_pair_pcsaft</name>
+        <local_name>get_mixture_binary_pair_pcsaft</local_name>
+        <params>"CAS1", "CAS2", "Parameter"</params>
+        <category>CoolProp</category>
+        <description>Gets the PCSAFT binary mixing parameter for a specified binary pair.  Fluid names MUST be the "CAS" string for each of the components.</description>
+    </function>
+    <function>
+        <name>set_mixture_binary_pair_pcsaft</name>
+        <local_name>set_mixture_binary_pair_pcsaft</local_name>
+        <params>"CAS1", "CAS2", "Parameter", Value</params>
+        <category>CoolProp</category>
+        <description>Sets the PCSAFT binary mixing parameter for a specified binary pair.  Fluid names MUST be the "CAS" string for each of the components. Value, is the numeric value of the parameter being set.</description>
     </function>
     <function>
         <name>apply_simple_mixing_rule</name>
