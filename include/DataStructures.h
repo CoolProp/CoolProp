@@ -399,7 +399,8 @@ void split_input_pair(input_pairs pair, parameters &p1, parameters &p2);
 
 extern std::string get_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param);
 extern void set_mixture_binary_pair_data(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
-
+extern std::string get_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &param);
+extern void set_mixture_binary_pair_pcsaft(const std::string &CAS1, const std::string &CAS2, const std::string &param, const double val);
 
 /// The structure is taken directly from the AbstractState class.
 // !! If you add a parameter, update the map in the corresponding CPP file !!
@@ -414,7 +415,8 @@ enum backend_families {
     BICUBIC_BACKEND_FAMILY,
     SRK_BACKEND_FAMILY,
     PR_BACKEND_FAMILY,
-    VTPR_BACKEND_FAMILY
+    VTPR_BACKEND_FAMILY,
+    PCSAFT_BACKEND_FAMILY
 };
 enum backends {
     INVALID_BACKEND = 0,
@@ -429,7 +431,8 @@ enum backends {
     BICUBIC_BACKEND,
     SRK_BACKEND,
     PR_BACKEND,
-    VTPR_BACKEND
+    VTPR_BACKEND,
+    PCSAFT_BACKEND
 };
 
 /// Convert a string into the enum values

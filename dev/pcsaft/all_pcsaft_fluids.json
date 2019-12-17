@@ -1,0 +1,3041 @@
+[
+  {
+    "CAS": "74-82-8",
+    "aliases": [
+      "METHANE"
+    ],
+    "m": 1.0,
+    "sigma": 3.7039,
+    "sigma_units": "1/Angstrom",
+    "u": 150.03,
+    "u_units": "K",
+    "molemass": 0.016043,
+    "molemass_units": "kg/mol",
+    "name": "METHANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "74-84-0",
+    "aliases": [
+      "ETHANE"
+    ],
+    "m": 1.6069,
+    "sigma": 3.5206,
+    "sigma_units": "1/Angstrom",
+    "u":  191.42,
+    "u_units": "K",
+    "molemass": 0.03007,
+    "molemass_units": "kg/mol",
+    "name": "ETHANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "74-98-6",
+    "aliases": [
+      "PROPANE"
+    ],
+    "m": 2.0020,
+    "sigma": 3.6184,
+    "sigma_units": "1/Angstrom",
+    "u": 208.11,
+    "u_units": "K",
+    "molemass": 0.044096,
+    "molemass_units": "kg/mol",
+    "name": "PROPANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "106-97-8",
+    "aliases": [
+      "BUTANE",
+      "N-BUTANE"
+    ],
+    "m": 2.3316,
+    "sigma": 3.7086,
+    "sigma_units": "1/Angstrom",
+    "u": 222.88,
+    "u_units": "K",
+    "molemass": 0.055123,
+    "molemass_units": "kg/mol",
+    "name": "N-BUTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "109-66-0",
+    "aliases": [
+      "PENTANE",
+      "N-PENTANE"
+    ],
+    "m": 2.6896,
+    "sigma": 3.7729,
+    "sigma_units": "1/Angstrom",
+    "u": 231.20,
+    "u_units": "K",
+    "molemass": 0.072146,
+    "molemass_units": "kg/mol",
+    "name": "N-PENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "110-54-3",
+    "aliases": [
+      "HEXANE",
+      "N-HEXANE"
+    ],
+    "m": 3.0576,
+    "sigma": 3.7983,
+    "sigma_units": "1/Angstrom",
+    "u": 236.77,
+    "u_units": "K",
+    "molemass": 0.086177,
+    "molemass_units": "kg/mol",
+    "name": "N-HEXANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "142-82-5",
+    "aliases": [
+      "HEPTANE",
+      "N-HEPTANE"
+    ],
+    "m": 3.4831,
+    "sigma": 3.8049,
+    "sigma_units": "1/Angstrom",
+    "u": 238.40,
+    "u_units": "K",
+    "molemass": 0.100203,
+    "molemass_units": "kg/mol",
+    "name": "N-HEPTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "111-65-9",
+    "aliases": [
+      "OCTANE",
+      "N-OCTANE"
+    ],
+    "m": 3.8176,
+    "sigma": 3.8373,
+    "sigma_units": "1/Angstrom",
+    "u": 242.78,
+    "u_units": "K",
+    "molemass": 0.114231,
+    "molemass_units": "kg/mol",
+    "name": "N-OCTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "111-84-2",
+    "aliases": [
+      "NONANE",
+      "N-NONANE"
+    ],
+    "m": 4.2079,
+    "sigma": 3.8448,
+    "sigma_units": "1/Angstrom",
+    "u": 244.51,
+    "u_units": "K",
+    "molemass": 0.12825,
+    "molemass_units": "kg/mol",
+    "name": "N-NONANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "124-18-5",
+    "aliases": [
+      "DECANE",
+      "N-DECANE"
+    ],
+    "m": 4.6627,
+    "sigma": 3.8384,
+    "sigma_units": "1/Angstrom",
+    "u": 243.87,
+    "u_units": "K",
+    "molemass": 0.142285,
+    "molemass_units": "kg/mol",
+    "name": "N-DECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "1120-21-4",
+    "aliases": [
+      "UNDECANE",
+      "N-UNDECANE"
+    ],
+    "m": 4.9082,
+    "sigma": 3.8893,
+    "sigma_units": "1/Angstrom",
+    "u": 248.82,
+    "u_units": "K",
+    "molemass": 0.156312,
+    "molemass_units": "kg/mol",
+    "name": "N-UNDECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "112-40-3",
+    "aliases": [
+      "DODECANE",
+      "N-DODECANE"
+    ],
+    "m": 5.3060,
+    "sigma": 3.8959,
+    "sigma_units": "1/Angstrom",
+    "u": 249.21,
+    "u_units": "K",
+    "molemass": 0.170338,
+    "molemass_units": "kg/mol",
+    "name": "N-DODECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "629-50-5",
+    "aliases": [
+      "TRIDECANE",
+      "N-TRIDECANE"
+    ],
+    "m": 5.6877,
+    "sigma": 3.9143,
+    "sigma_units": "1/Angstrom",
+    "u": 249.78,
+    "u_units": "K",
+    "molemass": 0.184365,
+    "molemass_units": "kg/mol",
+    "name": "N-TRIDECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "629-59-4",
+    "aliases": [
+      "TETRADECANE",
+      "N-TETRADECANE"
+    ],
+    "m": 5.9002,
+    "sigma": 3.9396,
+    "sigma_units": "1/Angstrom",
+    "u": 254.21,
+    "u_units": "K",
+    "molemass": 0.198392,
+    "molemass_units": "kg/mol",
+    "name": "N-TETRADECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "629-62-9",
+    "aliases": [
+      "PENTADECANE",
+      "N-PENTADECANE"
+    ],
+    "m": 6.2855,
+    "sigma": 3.9531,
+    "sigma_units": "1/Angstrom",
+    "u": 254.14,
+    "u_units": "K",
+    "molemass": 0.212419,
+    "molemass_units": "kg/mol",
+    "name": "N-PENTADECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "544-76-3",
+    "aliases": [
+      "HEXADECANE",
+      "N-HEXADECANE"
+    ],
+    "m": 6.6485,
+    "sigma": 3.9552,
+    "sigma_units": "1/Angstrom",
+    "u": 254.70,
+    "u_units": "K",
+    "molemass": 0.226446,
+    "molemass_units": "kg/mol",
+    "name": "N-HEXADECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "629-78-7",
+    "aliases": [
+      "HEPTADECANE",
+      "N-HEPTADECANE"
+    ],
+    "m": 6.9809,
+    "sigma": 3.9675,
+    "sigma_units": "1/Angstrom",
+    "u": 255.65,
+    "u_units": "K",
+    "molemass": 0.240473,
+    "molemass_units": "kg/mol",
+    "name": "N-HEPTADECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "593-45-3",
+    "aliases": [
+      "OCTADECANE",
+      "N-OCTADECANE"
+    ],
+    "m": 7.3271,
+    "sigma": 3.9668,
+    "sigma_units": "1/Angstrom",
+    "u": 256.20,
+    "u_units": "K",
+    "molemass": 0.2545,
+    "molemass_units": "kg/mol",
+    "name": "N-OCTADECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "629-92-5",
+    "aliases": [
+      "NONADECANE",
+      "N-NONADECANE"
+    ],
+    "m": 7.7175,
+    "sigma": 3.9721,
+    "sigma_units": "1/Angstrom",
+    "u": 256.00,
+    "u_units": "K",
+    "molemass": 0.268527,
+    "molemass_units": "kg/mol",
+    "name": "N-NONADECANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "112-95-8",
+    "aliases": [
+      "EICOSANE",
+      "N-EICOSANE"
+    ],
+    "m": 7.9849,
+    "sigma": 3.9869,
+    "sigma_units": "1/Angstrom",
+    "u": 257.75,
+    "u_units": "K",
+    "molemass": 0.282553,
+    "molemass_units": "kg/mol",
+    "name": "N-EICOSANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "75-28-5",
+    "aliases": [
+      "ISOBUTANE",
+      "2-METHYLPROPANE"
+    ],
+    "m": 2.2616,
+    "sigma": 3.7574,
+    "sigma_units": "1/Angstrom",
+    "u": 216.53,
+    "u_units": "K",
+    "molemass": 0.058123,
+    "molemass_units": "kg/mol",
+    "name": "ISOBUTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "78-78-4",
+    "aliases": [
+      "ISOPENTANE",
+      "2-METHYLBUTANE"
+    ],
+    "m": 2.5620,
+    "sigma": 3.8296,
+    "sigma_units": "1/Angstrom",
+    "u": 230.75,
+    "u_units": "K",
+    "molemass": 0.07215,
+    "molemass_units": "kg/mol",
+    "name": "ISOPENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "463-82-1",
+    "aliases": [
+      "NEOPENTANE",
+      "2,2-DIMETHYLPROPANE"
+    ],
+    "m": 2.3543,
+    "sigma": 3.9550,
+    "sigma_units": "1/Angstrom",
+    "u": 225.69,
+    "u_units": "K",
+    "molemass": 0.07215,
+    "molemass_units": "kg/mol",
+    "name": "NEOPENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "107-83-5",
+    "aliases": [
+      "2-METHYLPENTANE",
+      "ISOHEXANE"
+    ],
+    "m": 2.9317,
+    "sigma": 3.8535,
+    "sigma_units": "1/Angstrom",
+    "u": 235.58,
+    "u_units": "K",
+    "molemass": 0.086177,
+    "molemass_units": "kg/mol",
+    "name": "2-METHYLPENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "75-83-2",
+    "aliases": [
+      "2,2-DIMETHYLBUTANE",
+      "NEOHEXANE"
+    ],
+    "m": 2.6008,
+    "sigma": 4.0042,
+    "sigma_units": "1/Angstrom",
+    "u": 243.51,
+    "u_units": "K",
+    "molemass": 0.086177,
+    "molemass_units": "kg/mol",
+    "name": "2,2-DIMETHYLBUTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "79-29-8",
+    "aliases": [
+      "2,3-DIMETHYLBUTANE",
+      "DIISOPROPYL"
+    ],
+    "m": 2.6853,
+    "sigma": 3.9545,
+    "sigma_units": "1/Angstrom",
+    "u": 246.07,
+    "u_units": "K",
+    "molemass": 0.086177,
+    "molemass_units": "kg/mol",
+    "name": "2,3-DIMETHYLBUTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "96-14-0",
+    "aliases": [
+      "3-METHYLPENTANE"
+    ],
+    "m": 2.8852,
+    "sigma": 3.8605,
+    "sigma_units": "1/Angstrom",
+    "u": 240.48,
+    "u_units": "K",
+    "molemass": 0.086177,
+    "molemass_units": "kg/mol",
+    "name": "3-METHYLPENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "591-76-4",
+    "aliases": [
+      "2-METHYLHEXANE"
+    ],
+    "m": 3.3478,
+    "sigma": 3.8612,
+    "sigma_units": "1/Angstrom",
+    "u": 237.42,
+    "u_units": "K",
+    "molemass": 0.100204,
+    "molemass_units": "kg/mol",
+    "name": "2-METHYLHEXANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "287-92-3",
+    "aliases": [
+      "CYCLOPENTANE"
+    ],
+    "m": 2.3655,
+    "sigma": 3.7114,
+    "sigma_units": "1/Angstrom",
+    "u": 265.83,
+    "u_units": "K",
+    "molemass": 0.07013,
+    "molemass_units": "kg/mol",
+    "name": "CYCLOPENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "110-82-7",
+    "aliases": [
+      "CYCLOHEXANE"
+    ],
+    "m": 2.5303,
+    "sigma": 3.8499,
+    "sigma_units": "1/Angstrom",
+    "u": 278.11,
+    "u_units": "K",
+    "molemass": 0.084147,
+    "molemass_units": "kg/mol",
+    "name": "CYCLOHEXANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "96-37-7",
+    "aliases": [
+      "METHYLCYCLOPENTANE"
+    ],
+    "m": 2.6130,
+    "sigma": 3.8253,
+    "sigma_units": "1/Angstrom",
+    "u": 265.12,
+    "u_units": "K",
+    "molemass": 0.084156,
+    "molemass_units": "kg/mol",
+    "name": "METHYLCYCLOPENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "108-87-2",
+    "aliases": [
+      "METHYLCYCLOHEXANE"
+    ],
+    "m": 2.6637,
+    "sigma": 3.9993,
+    "sigma_units": "1/Angstrom",
+    "u": 282.33,
+    "u_units": "K",
+    "molemass": 0.098182,
+    "molemass_units": "kg/mol",
+    "name": "METHYLCYCLOHEXANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "1640-89-7",
+    "aliases": [
+      "ETHYLCYCLOPENTANE"
+    ],
+    "m": 2.9062,
+    "sigma": 3.8873,
+    "sigma_units": "1/Angstrom",
+    "u": 270.50,
+    "u_units": "K",
+    "molemass": 0.098182,
+    "molemass_units": "kg/mol",
+    "name": "ETHYLCYCLOPENTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "1678-91-7",
+    "aliases": [
+      "ETHYLCYCLOHEXANE"
+    ],
+    "m": 2.8256,
+    "sigma": 4.1039,
+    "sigma_units": "1/Angstrom",
+    "u": 294.04,
+    "u_units": "K",
+    "molemass": 0.112215,
+    "molemass_units": "kg/mol",
+    "name": "ETHYLCYCLOHEXANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "74-85-1",
+    "aliases": [
+      "ETHYLENE",
+      "ETHENE"
+    ],
+    "m": 1.5930,
+    "sigma": 3.4450,
+    "sigma_units": "1/Angstrom",
+    "u": 176.47,
+    "u_units": "K",
+    "molemass": 0.02805,
+    "molemass_units": "kg/mol",
+    "name": "ETHYLENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "115-07-1",
+    "aliases": [
+      "PROPYLENE",
+      "PROPENE"
+    ],
+    "m": 1.9597,
+    "sigma": 3.5356,
+    "sigma_units": "1/Angstrom",
+    "u": 207.19,
+    "u_units": "K",
+    "molemass": 0.042081,
+    "molemass_units": "kg/mol",
+    "name": "PROPYLENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "106-98-9",
+    "aliases": [
+      "BUTENE",
+      "1BUTENE",
+      "1-BUTENE"
+    ],
+    "m": 2.2864,
+    "sigma": 3.6431,
+    "sigma_units": "1/Angstrom",
+    "u": 222.00,
+    "u_units": "K",
+    "molemass": 0.05610631999999999,
+    "molemass_units": "kg/mol",
+    "name": "1-BUTENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "109-67-1",
+    "aliases": [
+      "1-PENTENE"
+    ],
+    "m": 2.6006,
+    "sigma": 3.7399,
+    "sigma_units": "1/Angstrom",
+    "u": 231.99,
+    "u_units": "K",
+    "molemass": 0.070134,
+    "molemass_units": "kg/mol",
+    "name": "1-PENTENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "592-41-6",
+    "aliases": [
+      "1-HEXENE"
+    ],
+    "m": 2.9853,
+    "sigma": 3.7753,
+    "sigma_units": "1/Angstrom",
+    "u": 236.81,
+    "u_units": "K",
+    "molemass": 0.084616,
+    "molemass_units": "kg/mol",
+    "name": "1-HEXENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "592-76-7",
+    "aliases": [
+      "1-HEPTENE"
+    ],
+    "m": 3.3637,
+    "sigma": 3.7898,
+    "sigma_units": "1/Angstrom",
+    "u": 240.62,
+    "u_units": "K",
+    "molemass": 0.0981861,
+    "molemass_units": "kg/mol",
+    "name": "1-HEPTENE",
+    "BibTeX": "Ghosh-2003"
+  },
+  {
+    "CAS": "111-66-0",
+    "aliases": [
+      "1-OCTENE"
+    ],
+    "m": 3.7424,
+    "sigma": 3.8133,
+    "sigma_units": "1/Angstrom",
+    "u": 243.02,
+    "u_units": "K",
+    "molemass": 0.112215,
+    "molemass_units": "kg/mol",
+    "name": "1-OCTENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "124-11-8",
+    "aliases": [
+      "1-NONENE"
+    ],
+    "m": 3.9900,
+    "sigma": 3.8746,
+    "sigma_units": "1/Angstrom",
+    "u": 249.27,
+    "u_units": "K",
+    "molemass": 0.126243,
+    "molemass_units": "kg/mol",
+    "name": "1-NONENE",
+    "BibTeX": "Ghosh-2003"
+  },
+  {
+    "CAS": "872-05-9",
+    "aliases": [
+      "1-DECENE"
+    ],
+    "m": 4.3700,
+    "sigma": 3.8908,
+    "sigma_units": "1/Angstrom",
+    "u": 250.35,
+    "u_units": "K",
+    "molemass": 0.140266,
+    "molemass_units": "kg/mol",
+    "name": "1-DECENE",
+    "BibTeX": "Ghosh-2003"
+  },
+  {
+    "CAS": "112-41-4",
+    "aliases": [
+      "1-DODECENE"
+    ],
+    "m": 4.9880,
+    "sigma": 3.9470,
+    "sigma_units": "1/Angstrom",
+    "u": 255.14,
+    "u_units": "K",
+    "molemass": 0.168319,
+    "molemass_units": "kg/mol",
+    "name": "1-DODECENE",
+    "BibTeX": "Ghosh-2003"
+  },
+  {
+    "CAS": "1120-36-1",
+    "aliases": [
+      "1-TETRADECENE"
+    ],
+    "m": 5.7437,
+    "sigma": 3.9600,
+    "sigma_units": "1/Angstrom",
+    "u": 256.66,
+    "u_units": "K",
+    "molemass": 0.196378,
+    "molemass_units": "kg/mol",
+    "name": "1-TETRADECENE",
+    "BibTeX": "Ghosh-2003"
+  },
+  {
+    "CAS": "629-73-2",
+    "aliases": [
+      "1-HEXADECENE"
+    ],
+    "m": 6.5000,
+    "sigma": 3.9748,
+    "sigma_units": "1/Angstrom",
+    "u": 256.70,
+    "u_units": "K",
+    "molemass": 0.224432,
+    "molemass_units": "kg/mol",
+    "name": "1-HEXADECENE",
+    "BibTeX": "Ghosh-2003"
+  },
+  {
+    "CAS": "142-29-0",
+    "aliases": [
+      "CYCLOPENTENE"
+    ],
+    "m": 2.2934,
+    "sigma": 3.6668,
+    "sigma_units": "1/Angstrom",
+    "u": 267.76,
+    "u_units": "K",
+    "molemass": 0.068114,
+    "molemass_units": "kg/mol",
+    "name": "CYCLOPENTENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "71-43-2",
+    "aliases": [
+      "BENZENE"
+    ],
+    "m": 2.4653,
+    "sigma": 3.6478,
+    "sigma_units": "1/Angstrom",
+    "u": 287.35,
+    "u_units": "K",
+    "molemass": 0.078114,
+    "molemass_units": "kg/mol",
+    "name": "BENZENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "108-88-3",
+    "aliases": [
+      "TOLUENE",
+      "METHYLBENZENE"
+    ],
+    "m": 2.8149,
+    "sigma": 3.7169,
+    "sigma_units": "1/Angstrom",
+    "u": 285.69,
+    "u_units": "K",
+    "molemass": 0.092141,
+    "molemass_units": "kg/mol",
+    "name": "TOLUENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "100-41-4",
+    "aliases": [
+      "ETHYLBENZENE"
+    ],
+    "m": 3.0799,
+    "sigma": 3.7974,
+    "sigma_units": "1/Angstrom",
+    "u": 287.35,
+    "u_units": "K",
+    "molemass": 0.106167,
+    "molemass_units": "kg/mol",
+    "name": "ETHYLBENZENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "108-38-3",
+    "aliases": [
+      "M-XYLENE",
+      "1,3-DIMETHYLBENZENE"
+    ],
+    "m": 3.1861,
+    "sigma": 3.7563,
+    "sigma_units": "1/Angstrom",
+    "u": 283.98,
+    "u_units": "K",
+    "molemass": 0.106167,
+    "molemass_units": "kg/mol",
+    "name": "M-XYLENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "95-47-6",
+    "aliases": [
+      "O-XYLENE",
+      "1,2-DIMETHYLBENZENE"
+    ],
+    "m": 3.1362,
+    "sigma": 3.7600,
+    "sigma_units": "1/Angstrom",
+    "u": 291.05,
+    "u_units": "K",
+    "molemass": 0.106167,
+    "molemass_units": "kg/mol",
+    "name": "O-XYLENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "106-42-3",
+    "aliases": [
+      "P-XYLENE",
+      "1,4-DIMETHYLBENZENE"
+    ],
+    "m": 3.1723,
+    "sigma": 3.7781,
+    "sigma_units": "1/Angstrom",
+    "u": 283.77,
+    "u_units": "K",
+    "molemass": 0.106167,
+    "molemass_units": "kg/mol",
+    "name": "P-XYLENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "103-65-1",
+    "aliases": [
+      "N-PROPYLBENZENE"
+    ],
+    "m": 3.3438,
+    "sigma": 3.8438,
+    "sigma_units": "1/Angstrom",
+    "u": 288.13,
+    "u_units": "K",
+    "molemass": 0.120194,
+    "molemass_units": "kg/mol",
+    "name": "N-PROPYLBENZENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "119-64-2",
+    "aliases": [
+      "TETRALIN",
+      "1,2,3,4-TETRAHYDRONAPHTHALENE"
+    ],
+    "m": 3.3131,
+    "sigma": 3.8750,
+    "sigma_units": "1/Angstrom",
+    "u": 325.07,
+    "u_units": "K",
+    "molemass": 0.132205,
+    "molemass_units": "kg/mol",
+    "name": "TETRALIN",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "104-51-8",
+    "aliases": [
+      "N-BUTYLBENZENE"
+    ],
+    "m": 3.7662,
+    "sigma": 3.8727,
+    "sigma_units": "1/Angstrom",
+    "u": 283.07,
+    "u_units": "K",
+    "molemass": 0.134221,
+    "molemass_units": "kg/mol",
+    "name": "N-BUTYLBENZENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "92-52-4",
+    "aliases": [
+      "BIPHENYL"
+    ],
+    "m": 3.8877,
+    "sigma": 3.8151,
+    "sigma_units": "1/Angstrom",
+    "u": 327.42,
+    "u_units": "K",
+    "molemass": 0.154211,
+    "molemass_units": "kg/mol",
+    "name": "BIPHENYL",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "630-08-0",
+    "aliases": [
+      "CARBON MONOXIDE"
+    ],
+    "m": 1.3097,
+    "sigma": 3.2507,
+    "sigma_units": "1/Angstrom",
+    "u": 92.15,
+    "u_units": "K",
+    "molemass": 0.02801,
+    "molemass_units": "kg/mol",
+    "name": "CARBON MONOXIDE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "7727-37-9",
+    "aliases": [
+      "NITROGEN"
+    ],
+    "m": 1.2053,
+    "sigma": 3.3130,
+    "sigma_units": "1/Angstrom",
+    "u": 90.96,
+    "u_units": "K",
+    "molemass": 0.02801,
+    "molemass_units": "kg/mol",
+    "name": "NITROGEN",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "7440-37-1",
+    "aliases": [
+      "ARGON"
+    ],
+    "m": 0.9285,
+    "sigma": 3.4784,
+    "sigma_units": "1/Angstrom",
+    "u": 122.23,
+    "u_units": "K",
+    "molemass": 0.039948,
+    "molemass_units": "kg/mol",
+    "name": "ARGON",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "124-38-9",
+    "aliases": [
+      "CARBON DIOXIDE"
+    ],
+    "m": 2.0729,
+    "sigma": 2.7852,
+    "sigma_units": "1/Angstrom",
+    "u": 169.21,
+    "u_units": "K",
+    "molemass": 0.04401,
+    "molemass_units": "kg/mol",
+    "name": "CARBON DIOXIDE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "7446-09-5",
+    "aliases": [
+      "SULFUR DIOXIDE"
+    ],
+    "m": 2.8611,
+    "sigma": 2.6826,
+    "sigma_units": "1/Angstrom",
+    "u": 205.35,
+    "u_units": "K",
+    "molemass": 0.064065,
+    "molemass_units": "kg/mol",
+    "name": "SULFUR DIOXIDE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "1333-74-0",
+    "aliases": [
+      "HYDROGEN"
+    ],
+    "m": 1.0,
+    "sigma": 2.9860,
+    "sigma_units": "1/Angstrom",
+    "u": 19.2775,
+    "u_units": "K",
+    "molemass": 0.00201588,
+    "molemass_units": "kg/mol",
+    "name": "HYDROGEN",
+    "BibTeX": "Ghosh-2003"
+  },
+  {
+    "CAS": "7782-50-5",
+    "aliases": [
+      "CHLORINE"
+    ],
+    "m": 1.5514,
+    "sigma": 3.3672,
+    "sigma_units": "1/Angstrom",
+    "u": 265.67,
+    "u_units": "K",
+    "molemass": 0.070905,
+    "molemass_units": "kg/mol",
+    "name": "CHLORINE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "75-15-0",
+    "aliases": [
+      "CARBON DISULFIDE"
+    ],
+    "m": 1.6919,
+    "sigma": 3.6172,
+    "sigma_units": "1/Angstrom",
+    "u": 334.82,
+    "u_units": "K",
+    "molemass": 0.076143,
+    "molemass_units": "kg/mol",
+    "name": "CARBON DISULFIDE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "75-00-3",
+    "aliases": [
+      "CHLOROETHANE"
+    ],
+    "m": 2.2638,
+    "sigma": 3.4160,
+    "sigma_units": "1/Angstrom",
+    "u": 245.43,
+    "u_units": "K",
+    "molemass": 0.064514,
+    "molemass_units": "kg/mol",
+    "name": "CHLOROETHANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "75-29-6",
+    "aliases": [
+      "2-CHLOROPROPANE"
+    ],
+    "m": 2.4151,
+    "sigma": 3.6184,
+    "sigma_units": "1/Angstrom",
+    "u": 251.47,
+    "u_units": "K",
+    "molemass": 0.078541,
+    "molemass_units": "kg/mol",
+    "name": "2-CHLOROPROPANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "109-69-3",
+    "aliases": [
+      "1-CHLOROBUTANE"
+    ],
+    "m": 2.8585,
+    "sigma": 3.6424,
+    "sigma_units": "1/Angstrom",
+    "u": 258.66,
+    "u_units": "K",
+    "molemass": 0.092568,
+    "molemass_units": "kg/mol",
+    "name": "1-CHLOROBUTANE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "108-90-7",
+    "aliases": [
+      "CHLOROBENZENE"
+    ],
+    "m": 2.6485,
+    "sigma": 3.7533,
+    "sigma_units": "1/Angstrom",
+    "u": 315.04,
+    "u_units": "K",
+    "molemass": 0.112558,
+    "molemass_units": "kg/mol",
+    "name": "CHLOROBENZENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "108-86-1",
+    "aliases": [
+      "BROMOBENZENE"
+    ],
+    "m": 2.6456,
+    "sigma": 3.8360,
+    "sigma_units": "1/Angstrom",
+    "u": 334.37,
+    "u_units": "K",
+    "molemass": 0.15701,
+    "molemass_units": "kg/mol",
+    "name": "BROMOBENZENE",
+    "BibTeX": "Gross-2001"
+  },
+  {
+    "CAS": "67-56-1",
+    "aliases": [
+      "METHANOL"
+    ],
+    "m": 1.5255,
+    "sigma": 3.2300,
+    "sigma_units": "1/Angstrom",
+    "u": 188.90,
+    "u_units": "K",
+    "uAB": 2899.5,
+    "uAB_units": "K",
+    "volA": 0.035176,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.032042,
+    "molemass_units": "kg/mol",
+    "name": "METHANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "64-17-5",
+    "aliases": [
+      "ETHANOL"
+    ],
+    "m": 2.3827,
+    "sigma": 3.1771,
+    "sigma_units": "1/Angstrom",
+    "u": 198.24,
+    "u_units": "K",
+    "uAB": 2653.4,
+    "uAB_units": "K",
+    "volA": 0.032384,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.046069,
+    "molemass_units": "kg/mol",
+    "name": "ETHANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "71-23-8",
+    "aliases": [
+      "1-PROPANOL"
+    ],
+    "m": 2.9997,
+    "sigma": 3.2522,
+    "sigma_units": "1/Angstrom",
+    "u": 233.40,
+    "u_units": "K",
+    "uAB": 2276.8,
+    "uAB_units": "K",
+    "volA": 0.015268,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.060096,
+    "molemass_units": "kg/mol",
+    "name": "1-PROPANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "71-36-3",
+    "aliases": [
+      "1-BUTANOL"
+    ],
+    "m": 2.7515,
+    "sigma": 3.6139,
+    "sigma_units": "1/Angstrom",
+    "u": 259.59,
+    "u_units": "K",
+    "uAB": 2544.6,
+    "uAB_units": "K",
+    "volA": 0.006692,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.074123,
+    "molemass_units": "kg/mol",
+    "name": "1-BUTANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "71-41-0",
+    "aliases": [
+      "1-PENTANOL"
+    ],
+    "m": 3.6260,
+    "sigma": 3.4508,
+    "sigma_units": "1/Angstrom",
+    "u": 247.28,
+    "u_units": "K",
+    "uAB": 2252.1,
+    "uAB_units": "K",
+    "volA": 0.010319,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.08815,
+    "molemass_units": "kg/mol",
+    "name": "1-PENTANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "111-27-3",
+    "aliases": [
+      "1-HEXANOL"
+    ],
+    "m": 3.5146,
+    "sigma": 3.6735,
+    "sigma_units": "1/Angstrom",
+    "u": 262.32,
+    "u_units": "K",
+    "uAB": 2538.9,
+    "uAB_units": "K",
+    "volA": 0.005747,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.102177,
+    "molemass_units": "kg/mol",
+    "name": "1-HEXANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "111-70-6",
+    "aliases": [
+      "1-HEPTANOL"
+    ],
+    "m": 4.3985,
+    "sigma": 3.5450,
+    "sigma_units": "1/Angstrom",
+    "u": 253.46,
+    "u_units": "K",
+    "uAB": 2878.5,
+    "uAB_units": "K",
+    "volA": 0.001155,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.116203,
+    "molemass_units": "kg/mol",
+    "name": "1-HEPTANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "111-87-5",
+    "aliases": [
+      "1-OCTANOL"
+    ],
+    "m": 4.3555,
+    "sigma": 3.7145,
+    "sigma_units": "1/Angstrom",
+    "u": 262.74,
+    "u_units": "K",
+    "uAB": 2754.8,
+    "uAB_units": "K",
+    "volA": 0.002197,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.13023,
+    "molemass_units": "kg/mol",
+    "name": "1-OCTANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "143-08-8",
+    "aliases": [
+      "1-NONANOL"
+    ],
+    "m": 4.6839,
+    "sigma": 3.7292,
+    "sigma_units": "1/Angstrom",
+    "u": 263.64,
+    "u_units": "K",
+    "uAB": 2941.9,
+    "uAB_units": "K",
+    "volA": 0.001427,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.144257,
+    "molemass_units": "kg/mol",
+    "name": "1-NONANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "67-63-0",
+    "aliases": [
+      "2-PROPANOL",
+      "ISOPROPYL ALCOHOL"
+    ],
+    "m": 3.0929,
+    "sigma": 3.2085,
+    "sigma_units": "1/Angstrom",
+    "u": 208.42,
+    "u_units": "K",
+    "uAB": 2253.9,
+    "uAB_units": "K",
+    "volA": 0.024675,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.060096,
+    "molemass_units": "kg/mol",
+    "name": "2-PROPANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "75-85-4",
+    "aliases": [
+      "2-METHYL-2-BUTANOL"
+    ],
+    "m": 2.5487,
+    "sigma": 3.9053,
+    "sigma_units": "1/Angstrom",
+    "u": 266.01,
+    "u_units": "K",
+    "uAB": 2618.8,
+    "uAB_units": "K",
+    "volA": 0.001863,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.08815,
+    "molemass_units": "kg/mol",
+    "name": "2-METHYL-2-BUTANOL",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "74-89-5",
+    "aliases": [
+      "METHYLAMINE"
+    ],
+    "m": 2.3967,
+    "sigma": 2.8906,
+    "sigma_units": "1/Angstrom",
+    "u": 214.94,
+    "u_units": "K",
+    "uAB": 684.3,
+    "uAB_units": "K",
+    "volA": 0.095103,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.03106,
+    "molemass_units": "kg/mol",
+    "name": "METHYLAMINE",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "75-04-7",
+    "aliases": [
+      "ETHYLAMINE"
+    ],
+    "m": 2.7046,
+    "sigma": 3.1343,
+    "sigma_units": "1/Angstrom",
+    "u": 221.53,
+    "u_units": "K",
+    "uAB": 854.7,
+    "uAB_units": "K",
+    "volA": 0.017275,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.04509,
+    "molemass_units": "kg/mol",
+    "name": "ETHYLAMINE",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "107-10-8",
+    "aliases": [
+      "1-PROPYLAMINE"
+    ],
+    "m": 2.4539,
+    "sigma": 3.5347,
+    "sigma_units": "1/Angstrom",
+    "u": 250.52,
+    "u_units": "K",
+    "uAB": 1028.1,
+    "uAB_units": "K",
+    "volA": 0.022674,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.05911,
+    "molemass_units": "kg/mol",
+    "name": "1-PROPYLAMINE",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "75-31-0",
+    "aliases": [
+      "2-PROPYLAMINE"
+    ],
+    "m": 2.5908,
+    "sigma": 3.4777,
+    "sigma_units": "1/Angstrom",
+    "u": 231.80,
+    "u_units": "K",
+    "uAB": 932.2,
+    "uAB_units": "K",
+    "volA": 0.021340,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.05911,
+    "molemass_units": "kg/mol",
+    "name": "2-PROPYLAMINE",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "62-53-3",
+    "aliases": [
+      "ANILINE"
+    ],
+    "m": 2.6607,
+    "sigma": 3.7021,
+    "sigma_units": "1/Angstrom",
+    "u": 335.47,
+    "u_units": "K",
+    "uAB": 1351.6,
+    "uAB_units": "K",
+    "volA": 0.074883,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.09313,
+    "molemass_units": "kg/mol",
+    "name": "ANILINE",
+    "BibTeX": "Gross-2002"
+  },
+  {
+    "CAS": "7732-18-5",
+    "aliases": [
+      "WATER",
+      "DIHYDROGEN OXIDE"
+    ],
+    "m": 1.2047,
+    "sigma": -1,
+    "sigma_units": "1/Angstrom",
+    "u": 353.95,
+    "u_units": "K",
+    "uAB": 2425.67,
+    "uAB_units": "K",
+    "volA": 0.0451,
+    "volA_units": "1/Angstrom^3",
+    "charge": 0,
+    "molemass": 0.01801528,
+    "molemass_units": "kg/mol",
+    "name": "WATER",
+    "BibTeX": "Fuchs-2006"
+  },
+  {
+    "CAS": "13968-08-6",
+    "aliases": [
+      "H3O+",
+      "HYDRONIUM"
+    ],
+    "m": 1,
+    "sigma": 3.4654,
+    "sigma_units": "1/Angstrom",
+    "u": 500.00,
+    "u_units": "K",
+    "charge": 1,
+    "molemass": 0.0190232,
+    "molemass_units": "kg/mol",
+    "name": "H3O+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "17341-24-1",
+    "aliases": [
+      "Li+"
+    ],
+    "m": 1,
+    "sigma": 2.8449,
+    "sigma_units": "1/Angstrom",
+    "u": 360.00,
+    "u_units": "K",
+    "charge": 1,
+    "molemass": 0.006941,
+    "molemass_units": "kg/mol",
+    "name": "Li+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "17341-25-2",
+    "aliases": [
+      "Na+"
+    ],
+    "m": 1,
+    "sigma": 2.8232,
+    "sigma_units": "1/Angstrom",
+    "u": 230.00,
+    "u_units": "K",
+    "charge": 1,
+    "molemass": 0.02299,
+    "molemass_units": "kg/mol",
+    "name": "Na+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "24203-36-9",
+    "aliases": [
+      "K+"
+    ],
+    "m": 1,
+    "sigma": 3.3417,
+    "sigma_units": "1/Angstrom",
+    "u": 200.00,
+    "u_units": "K",
+    "charge": 1,
+    "molemass": 0.039098,
+    "molemass_units": "kg/mol",
+    "name": "K+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "18459-37-5",
+    "aliases": [
+      "Cs+"
+    ],
+    "m": 1,
+    "sigma": 3.9246,
+    "sigma_units": "1/Angstrom",
+    "u": 180.00,
+    "u_units": "K",
+    "charge": 1,
+    "molemass": 0.132905,
+    "molemass_units": "kg/mol",
+    "name": "Cs+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14798-03-9",
+    "aliases": [
+      "NH4+",
+      "AMMONIUM"
+    ],
+    "m": 1,
+    "sigma": 3.5740,
+    "sigma_units": "1/Angstrom",
+    "u": 230.00,
+    "u_units": "K",
+    "charge": 1,
+    "molemass": 0.018039,
+    "molemass_units": "kg/mol",
+    "name": "NH4+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "16984-48-8",
+    "aliases": [
+      "F-",
+      "FLUORIDE"
+    ],
+    "m": 1,
+    "sigma": 1.7712,
+    "sigma_units": "1/Angstrom",
+    "u": 275.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.018998,
+    "molemass_units": "kg/mol",
+    "name": "F-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "16887-00-6",
+    "aliases": [
+      "Cl-",
+      "CHLORIDE"
+    ],
+    "m": 1,
+    "sigma": 2.7560,
+    "sigma_units": "1/Angstrom",
+    "u": 170.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.03545,
+    "molemass_units": "kg/mol",
+    "name": "Cl-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "24959-67-9",
+    "aliases": [
+      "Br-",
+      "BROMIDE"
+    ],
+    "m": 1,
+    "sigma": 3.0707,
+    "sigma_units": "1/Angstrom",
+    "u": 190.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.079904,
+    "molemass_units": "kg/mol",
+    "name": "Br-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "20461-54-5",
+    "aliases": [
+      "I-"
+    ],
+    "m": 1,
+    "sigma": 3.6672,
+    "sigma_units": "1/Angstrom",
+    "u": 200.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.126904,
+    "molemass_units": "kg/mol",
+    "name": "I-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14797-55-8",
+    "aliases": [
+      "NO3-"
+    ],
+    "m": 1,
+    "sigma": 3.2988,
+    "sigma_units": "1/Angstrom",
+    "u": 130.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.062004,
+    "molemass_units": "kg/mol",
+    "name": "NO3-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14280-30-9",
+    "aliases": [
+      "OH-"
+    ],
+    "m": 1,
+    "sigma": 2.0177,
+    "sigma_units": "1/Angstrom",
+    "u": 650.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.017007,
+    "molemass_units": "kg/mol",
+    "name": "OH-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14797-73-0",
+    "aliases": [
+      "ClO4-"
+    ],
+    "m": 1,
+    "sigma": 4.0186,
+    "sigma_units": "1/Angstrom",
+    "u": 104.16,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.099446,
+    "molemass_units": "kg/mol",
+    "name": "ClO4-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "71-52-3",
+    "aliases": [
+      "HCO3-"
+    ],
+    "m": 1,
+    "sigma": 2.9296,
+    "sigma_units": "1/Angstrom",
+    "u": 70.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.061016,
+    "molemass_units": "kg/mol",
+    "name": "HCO3-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14066-20-7",
+    "aliases": [
+      "H2PO4-"
+    ],
+    "m": 1,
+    "sigma": 3.6505,
+    "sigma_units": "1/Angstrom",
+    "u": 95.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.096986,
+    "molemass_units": "kg/mol",
+    "name": "H2PO4-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "71-47-6",
+    "aliases": [
+      "CHO2-",
+      "FORMATE"
+    ],
+    "m": 1,
+    "sigma": 3.3077,
+    "sigma_units": "1/Angstrom",
+    "u": 190.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.045017,
+    "molemass_units": "kg/mol",
+    "name": "CHO2-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "71-50-1",
+    "aliases": [
+      "C2H3O2-",
+      "ACETATE"
+    ],
+    "m": 1,
+    "sigma": 3.9328,
+    "sigma_units": "1/Angstrom",
+    "u": 150.00,
+    "u_units": "K",
+    "charge": -1,
+    "molemass": 0.059044,
+    "molemass_units": "kg/mol",
+    "name": "C2H3O2-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "22537-22-0",
+    "aliases": [
+      "Mg2+"
+    ],
+    "m": 1,
+    "sigma": 3.1327,
+    "sigma_units": "1/Angstrom",
+    "u": 1500.00,
+    "u_units": "K",
+    "charge": 2,
+    "molemass": 0.024305,
+    "molemass_units": "kg/mol",
+    "name": "Mg2+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14127-61-8",
+    "aliases": [
+      "Ca2+"
+    ],
+    "m": 1,
+    "sigma": 3.2648,
+    "sigma_units": "1/Angstrom",
+    "u": 1060.00,
+    "u_units": "K",
+    "charge": 2,
+    "molemass": 0.040078,
+    "molemass_units": "kg/mol",
+    "name": "Ca2+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "15158-11-9",
+    "aliases": [
+      "Cu2+"
+    ],
+    "m": 1,
+    "sigma": 3.8379,
+    "sigma_units": "1/Angstrom",
+    "u": 1610.90,
+    "u_units": "K",
+    "charge": 2,
+    "molemass": 0.063546,
+    "molemass_units": "kg/mol",
+    "name": "Cu2+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "23713-49-7",
+    "aliases": [
+      "Zn2+"
+    ],
+    "m": 1,
+    "sigma": 2.9798,
+    "sigma_units": "1/Angstrom",
+    "u": 1250.00,
+    "u_units": "K",
+    "charge": 2,
+    "molemass": 0.06538,
+    "molemass_units": "kg/mol",
+    "name": "Zn2+",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14808-79-8",
+    "aliases": [
+      "SO42-"
+    ],
+    "m": 1,
+    "sigma": 2.6491,
+    "sigma_units": "1/Angstrom",
+    "u": 80.00,
+    "u_units": "K",
+    "charge": -2,
+    "molemass": 0.096056,
+    "molemass_units": "kg/mol",
+    "name": "SO42-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14383-50-7",
+    "aliases": [
+      "S2O32-"
+    ],
+    "m": 1,
+    "sigma": 3.1877,
+    "sigma_units": "1/Angstrom",
+    "u": 80.00,
+    "u_units": "K",
+    "charge": -2,
+    "molemass": 0.112117,
+    "molemass_units": "kg/mol",
+    "name": "S2O32-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "3812-32-6",
+    "aliases": [
+      "CO32-"
+    ],
+    "m": 1,
+    "sigma": 2.4422,
+    "sigma_units": "1/Angstrom",
+    "u": 249.26,
+    "u_units": "K",
+    "charge": -2,
+    "molemass": 0.060008,
+    "molemass_units": "kg/mol",
+    "name": "CO32-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14066-19-4",
+    "aliases": [
+      "HPO42-"
+    ],
+    "m": 1,
+    "sigma": 2.1621,
+    "sigma_units": "1/Angstrom",
+    "u": 146.02,
+    "u_units": "K",
+    "charge": -2,
+    "molemass": 0.095978,
+    "molemass_units": "kg/mol",
+    "name": "HPO42-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "14265-44-2",
+    "aliases": [
+      "PO43-"
+    ],
+    "m": 1,
+    "sigma": 2.5516,
+    "sigma_units": "1/Angstrom",
+    "u": 310.00,
+    "u_units": "K",
+    "charge": -3,
+    "molemass": 0.09497,
+    "molemass_units": "kg/mol",
+    "name": "PO43-",
+    "BibTeX": "Held-2014"
+  },
+  {
+    "CAS": "115-10-6",
+    "aliases": [
+      "DIMETHYL ETHER"
+    ],
+    "m": 2.2634,
+    "sigma": 3.2723,
+    "sigma_units": "1/Angstrom",
+    "u": 210.29,
+    "u_units": "K",
+    "dipm": 1.3,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.046069000000000006,
+    "molemass_units": "kg/mol",
+    "name": "DIMETHYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "60-29-7",
+    "aliases": [
+      "DIETHYL ETHER"
+    ],
+    "m": 2.9726,
+    "sigma": 3.5127,
+    "sigma_units": "1/Angstrom",
+    "u": 219.15,
+    "u_units": "K",
+    "dipm": 1.15,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.07412300000000001,
+    "molemass_units": "kg/mol",
+    "name": "DIETHYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "111-43-3",
+    "aliases": [
+      "DI-N-PROPYL ETHER"
+    ],
+    "m": 3.5753,
+    "sigma": 3.6702,
+    "sigma_units": "1/Angstrom",
+    "u": 231.03,
+    "u_units": "K",
+    "dipm": 1.21,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.102177,
+    "molemass_units": "kg/mol",
+    "name": "DI-N-PROPYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "142-96-1",
+    "aliases": [
+      "DI-N-BUTYL ETHER"
+    ],
+    "m": 4.4334,
+    "sigma": 3.6959,
+    "sigma_units": "1/Angstrom",
+    "u": 233.03,
+    "u_units": "K",
+    "dipm": 1.17,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.13022999999999998,
+    "molemass_units": "kg/mol",
+    "name": "DI-N-BUTYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "693-65-2",
+    "aliases": [
+      "DI-N-PENTYL ETHER"
+    ],
+    "m": 5.4296,
+    "sigma": 3.676,
+    "sigma_units": "1/Angstrom",
+    "u": 232.83,
+    "u_units": "K",
+    "dipm": 1.21,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.15828,
+    "molemass_units": "kg/mol",
+    "name": "DI-N-PENTYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "540-67-0",
+    "aliases": [
+      "METHYL ETHYL ETHER"
+    ],
+    "m": 2.6425,
+    "sigma": 3.3794,
+    "sigma_units": "1/Angstrom",
+    "u": 215.79,
+    "u_units": "K",
+    "dipm": 1.17,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.0601,
+    "molemass_units": "kg/mol",
+    "name": "METHYL ETHYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "557-17-5",
+    "aliases": [
+      "METHYL N-PROPYL ETHER"
+    ],
+    "m": 3.0004,
+    "sigma": 3.4602,
+    "sigma_units": "1/Angstrom",
+    "u": 222.67,
+    "u_units": "K",
+    "dipm": 1.107,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.07412300000000001,
+    "molemass_units": "kg/mol",
+    "name": "METHYL N-PROPYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "628-28-4",
+    "aliases": [
+      "METHYL N-BUTYL ETHER"
+    ],
+    "m": 3.2233,
+    "sigma": 3.6144,
+    "sigma_units": "1/Angstrom",
+    "u": 233.13,
+    "u_units": "K",
+    "dipm": 1.2,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.08815,
+    "molemass_units": "kg/mol",
+    "name": "METHYL N-BUTYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "628-80-8",
+    "aliases": [
+      "METHYL N-PENTYL ETHER"
+    ],
+    "m": 3.7883,
+    "sigma": 3.5841,
+    "sigma_units": "1/Angstrom",
+    "u": 230.62,
+    "u_units": "K",
+    "dipm": 1.2,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.102177,
+    "molemass_units": "kg/mol",
+    "name": "METHYL N-PENTYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "628-32-0",
+    "aliases": [
+      "ETHYL N-PROPYL ETHER"
+    ],
+    "m": 3.3071,
+    "sigma": 3.6031,
+    "sigma_units": "1/Angstrom",
+    "u": 225.17,
+    "u_units": "K",
+    "dipm": 1.2,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.08815,
+    "molemass_units": "kg/mol",
+    "name": "ETHYL N-PROPYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "108-20-3",
+    "aliases": [
+      "DIISOPROPYL ETHER"
+    ],
+    "m": 3.5458,
+    "sigma": 3.6717,
+    "sigma_units": "1/Angstrom",
+    "u": 216.73,
+    "u_units": "K",
+    "dipm": 1.13,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.102176,
+    "molemass_units": "kg/mol",
+    "name": "DIISOPROPYL ETHER",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "109-87-5",
+    "aliases": [
+      "DIMETHOXYMETHANE"
+    ],
+    "m": 2.8454,
+    "sigma": 3.4017,
+    "sigma_units": "1/Angstrom",
+    "u": 234.02,
+    "u_units": "K",
+    "dipm": 1.2,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.076095,
+    "molemass_units": "kg/mol",
+    "name": "DIMETHOXYMETHANE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "110-71-4",
+    "aliases": [
+      "1,2-DIMETHOXYETHANE"
+    ],
+    "m": 3.412,
+    "sigma": 3.4047,
+    "sigma_units": "1/Angstrom",
+    "u": 238.47,
+    "u_units": "K",
+    "dipm": 1.2,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.090122,
+    "molemass_units": "kg/mol",
+    "name": "1,2-DIMETHOXYETHANE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "629-14-1",
+    "aliases": [
+      "1,2-DIETHOXYETHANE"
+    ],
+    "m": 4.4552,
+    "sigma": 3.4274,
+    "sigma_units": "1/Angstrom",
+    "u": 225.4,
+    "u_units": "K",
+    "dipm": 1.2,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.118176,
+    "molemass_units": "kg/mol",
+    "name": "1,2-DIETHOXYETHANE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "75-56-9",
+    "aliases": [
+      "1,2-PROPYLENE OXIDE"
+    ],
+    "m": 2.5514,
+    "sigma": 3.2885,
+    "sigma_units": "1/Angstrom",
+    "u": 241.06,
+    "u_units": "K",
+    "dipm": 2,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.05808,
+    "molemass_units": "kg/mol",
+    "name": "1,2-PROPYLENE OXIDE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "503-30-0",
+    "aliases": [
+      "1,3-PROPYLENE OXIDE"
+    ],
+    "m": 2.1171,
+    "sigma": 3.4363,
+    "sigma_units": "1/Angstrom",
+    "u": 248.6,
+    "u_units": "K",
+    "dipm": 1.8,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.05808,
+    "molemass_units": "kg/mol",
+    "name": "1,3-PROPYLENE OXIDE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "106-88-7",
+    "aliases": [
+      "1,2-BUTENE OXIDE"
+    ],
+    "m": 2.4944,
+    "sigma": 3.5899,
+    "sigma_units": "1/Angstrom",
+    "u": 268.39,
+    "u_units": "K",
+    "dipm": 1.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.072107,
+    "molemass_units": "kg/mol",
+    "name": "1,2-BUTENE OXIDE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "109-99-9",
+    "aliases": [
+      "TETRAHYDROFURAN"
+    ],
+    "m": 2.4634,
+    "sigma": 3.5186,
+    "sigma_units": "1/Angstrom",
+    "u": 274.04,
+    "u_units": "K",
+    "dipm": 1.75,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.072107,
+    "molemass_units": "kg/mol",
+    "name": "TETRAHYDROFURAN",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "107-31-3",
+    "aliases": [
+      "METHYL FORMATE"
+    ],
+    "m": 2.6225,
+    "sigma": 3.1095,
+    "sigma_units": "1/Angstrom",
+    "u": 239.05,
+    "u_units": "K",
+    "dipm": 1.77,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.060052,
+    "molemass_units": "kg/mol",
+    "name": "METHYL FORMATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "109-94-4",
+    "aliases": [
+      "ETHYL FORMATE"
+    ],
+    "m": 2.8338,
+    "sigma": 3.3316,
+    "sigma_units": "1/Angstrom",
+    "u": 244.5,
+    "u_units": "K",
+    "dipm": 1.93,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.07407899999999999,
+    "molemass_units": "kg/mol",
+    "name": "ETHYL FORMATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "110-74-7",
+    "aliases": [
+      "PROPYL FORMATE"
+    ],
+    "m": 3.1723,
+    "sigma": 3.4269,
+    "sigma_units": "1/Angstrom",
+    "u": 245.64,
+    "u_units": "K",
+    "dipm": 1.89,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.08810599999999999,
+    "molemass_units": "kg/mol",
+    "name": "PROPYL FORMATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "592-84-7",
+    "aliases": [
+      "BUTYL FORMATE"
+    ],
+    "m": 3.7832,
+    "sigma": 3.4074,
+    "sigma_units": "1/Angstrom",
+    "u": 237.33,
+    "u_units": "K",
+    "dipm": 1.9,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.102133,
+    "molemass_units": "kg/mol",
+    "name": "BUTYL FORMATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "79-20-9",
+    "aliases": [
+      "METHYL ACETATE"
+    ],
+    "m": 3.1426,
+    "sigma": 3.1885,
+    "sigma_units": "1/Angstrom",
+    "u": 233.05,
+    "u_units": "K",
+    "dipm": 1.72,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.07407899999999999,
+    "molemass_units": "kg/mol",
+    "name": "METHYL ACETATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "141-78-6",
+    "aliases": [
+      "ETHYL ACETATE"
+    ],
+    "m": 3.506,
+    "sigma": 3.3177,
+    "sigma_units": "1/Angstrom",
+    "u": 230.24,
+    "u_units": "K",
+    "dipm": 1.78,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.08810599999999999,
+    "molemass_units": "kg/mol",
+    "name": "ETHYL ACETATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "109-60-4",
+    "aliases": [
+      "PROPYL ACETATE"
+    ],
+    "m": 3.7658,
+    "sigma": 3.4289,
+    "sigma_units": "1/Angstrom",
+    "u": 235.42,
+    "u_units": "K",
+    "dipm": 1.78,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.102133,
+    "molemass_units": "kg/mol",
+    "name": "PROPYL ACETATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "554-12-01",
+    "aliases": [
+      "METHYL PROPANOATE"
+    ],
+    "m": 3.4442,
+    "sigma": 3.3255,
+    "sigma_units": "1/Angstrom",
+    "u": 234.26,
+    "u_units": "K",
+    "dipm": 1.85,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.08810599999999999,
+    "molemass_units": "kg/mol",
+    "name": "METHYL PROPANOATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "105-37-3",
+    "aliases": [
+      "ETHYL PROPANOATE"
+    ],
+    "m": 3.9629,
+    "sigma": 3.5482,
+    "sigma_units": "1/Angstrom",
+    "u": 242.27,
+    "u_units": "K",
+    "dipm": 1.87,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.102133,
+    "molemass_units": "kg/mol",
+    "name": "ETHYL PROPANOATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "106-36-5",
+    "aliases": [
+      "PROPYL PROPANOATE"
+    ],
+    "m": 4.0993,
+    "sigma": 3.4921,
+    "sigma_units": "1/Angstrom",
+    "u": 235.38,
+    "u_units": "K",
+    "dipm": 1.8,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.11616,
+    "molemass_units": "kg/mol",
+    "name": "PROPYL PROPANOATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "623-42-7",
+    "aliases": [
+      "METHYL BUTANOATE"
+    ],
+    "m": 3.642,
+    "sigma": 3.4535,
+    "sigma_units": "1/Angstrom",
+    "u": 240.02,
+    "u_units": "K",
+    "dipm": 2.03,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.102133,
+    "molemass_units": "kg/mol",
+    "name": "METHYL BUTANOATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "96-33-3",
+    "aliases": [
+      "METHYL ACRYLATE"
+    ],
+    "m": 2.9536,
+    "sigma": 3.4036,
+    "sigma_units": "1/Angstrom",
+    "u": 256.65,
+    "u_units": "K",
+    "dipm": 1.77,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.08609,
+    "molemass_units": "kg/mol",
+    "name": "METHYL ACRYLATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "140-88-5",
+    "aliases": [
+      "ETHYL ACRYLATE"
+    ],
+    "m": 3.4638,
+    "sigma": 3.4434,
+    "sigma_units": "1/Angstrom",
+    "u": 244.81,
+    "u_units": "K",
+    "dipm": 1.96,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.100117,
+    "molemass_units": "kg/mol",
+    "name": "ETHYL ACRYLATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "25281-48-5",
+    "aliases": [
+      "MMA"
+    ],
+    "m": 3.0467,
+    "sigma": 3.6305,
+    "sigma_units": "1/Angstrom",
+    "u": 265.29,
+    "u_units": "K",
+    "dipm": 1.67,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.100117,
+    "molemass_units": "kg/mol",
+    "name": "MMA",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "97-63-2",
+    "aliases": [
+      "ETHYL METHACRYLATE"
+    ],
+    "m": 2.8869,
+    "sigma": 3.6845,
+    "sigma_units": "1/Angstrom",
+    "u": 258.5,
+    "u_units": "K",
+    "dipm": 1.67,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.11414400000000001,
+    "molemass_units": "kg/mol",
+    "name": "ETHYL METHACRYLATE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "50-00-0",
+    "aliases": [
+      "FORMALDEHYDE"
+    ],
+    "m": 2.1199,
+    "sigma": 2.8472,
+    "sigma_units": "1/Angstrom",
+    "u": 187.3,
+    "u_units": "K",
+    "dipm": 2.33,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.030026,
+    "molemass_units": "kg/mol",
+    "name": "FORMALDEHYDE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "123-38-6",
+    "aliases": [
+      "PROPANAL"
+    ],
+    "m": 2.6001,
+    "sigma": 3.2872,
+    "sigma_units": "1/Angstrom",
+    "u": 235.21,
+    "u_units": "K",
+    "dipm": 2.72,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.05808,
+    "molemass_units": "kg/mol",
+    "name": "PROPANAL",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "123-72-8",
+    "aliases": [
+      "BUTANAL"
+    ],
+    "m": 2.8825,
+    "sigma": 3.4698,
+    "sigma_units": "1/Angstrom",
+    "u": 247.09,
+    "u_units": "K",
+    "dipm": 2.72,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.0721066,
+    "molemass_units": "kg/mol",
+    "name": "BUTANAL",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "98-01-01",
+    "aliases": [
+      "FURFURAL"
+    ],
+    "m": 3.9731,
+    "sigma": 3.0551,
+    "sigma_units": "1/Angstrom",
+    "u": 259.15,
+    "u_units": "K",
+    "dipm": 3.6,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.096086,
+    "molemass_units": "kg/mol",
+    "name": "FURFURAL",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "67-64-1",
+    "aliases": [
+      "ACETONE"
+    ],
+    "m": 2.7448,
+    "sigma": 3.2742,
+    "sigma_units": "1/Angstrom",
+    "u": 232.99,
+    "u_units": "K",
+    "dipm": 2.88,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.05808,
+    "molemass_units": "kg/mol",
+    "name": "ACETONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "78-93-3",
+    "aliases": [
+      "2-BUTANONE"
+    ],
+    "m": 2.9835,
+    "sigma": 3.4239,
+    "sigma_units": "1/Angstrom",
+    "u": 244.99,
+    "u_units": "K",
+    "dipm": 2.78,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.072107,
+    "molemass_units": "kg/mol",
+    "name": "2-BUTANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "107-87-9",
+    "aliases": [
+      "2-PENTANONE"
+    ],
+    "m": 3.3537,
+    "sigma": 3.4942,
+    "sigma_units": "1/Angstrom",
+    "u": 246.66,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.086134,
+    "molemass_units": "kg/mol",
+    "name": "2-PENTANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "96-22-0",
+    "aliases": [
+      "3-PENTANONE"
+    ],
+    "m": 3.2786,
+    "sigma": 3.5159,
+    "sigma_units": "1/Angstrom",
+    "u": 248.69,
+    "u_units": "K",
+    "dipm": 2.82,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.086134,
+    "molemass_units": "kg/mol",
+    "name": "3-PENTANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "591-78-6",
+    "aliases": [
+      "2-HEXANONE"
+    ],
+    "m": 3.58,
+    "sigma": 3.5868,
+    "sigma_units": "1/Angstrom",
+    "u": 254.99,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.10016,
+    "molemass_units": "kg/mol",
+    "name": "2-HEXANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "589-38-8",
+    "aliases": [
+      "3-HEXANONE"
+    ],
+    "m": 3.6018,
+    "sigma": 3.5688,
+    "sigma_units": "1/Angstrom",
+    "u": 251.28,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.10016,
+    "molemass_units": "kg/mol",
+    "name": "3-HEXANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "110-43-0",
+    "aliases": [
+      "2-HEPTANONE"
+    ],
+    "m": 3.9839,
+    "sigma": 3.6201,
+    "sigma_units": "1/Angstrom",
+    "u": 255.02,
+    "u_units": "K",
+    "dipm": 2.59,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.11419,
+    "molemass_units": "kg/mol",
+    "name": "2-HEPTANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "123-19-3",
+    "aliases": [
+      "4-HEPTANONE"
+    ],
+    "m": 2.8836,
+    "sigma": 4.0604,
+    "sigma_units": "1/Angstrom",
+    "u": 298.79,
+    "u_units": "K",
+    "dipm": 2.59,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.11419,
+    "molemass_units": "kg/mol",
+    "name": "4-HEPTANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "111-13-7",
+    "aliases": [
+      "2-OCTANONE"
+    ],
+    "m": 2.5489,
+    "sigma": 4.4399,
+    "sigma_units": "1/Angstrom",
+    "u": 338.99,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.12888,
+    "molemass_units": "kg/mol",
+    "name": "2-OCTANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "106-68-3",
+    "aliases": [
+      "3-OCTANONE"
+    ],
+    "m": 3.3055,
+    "sigma": 4.0266,
+    "sigma_units": "1/Angstrom",
+    "u": 294.73,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.12888,
+    "molemass_units": "kg/mol",
+    "name": "3-OCTANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "821-55-6",
+    "aliases": [
+      "2-NONANONE"
+    ],
+    "m": 4.8255,
+    "sigma": 3.6584,
+    "sigma_units": "1/Angstrom",
+    "u": 252.93,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.14224,
+    "molemass_units": "kg/mol",
+    "name": "2-NONANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "502-56-7",
+    "aliases": [
+      "5-NONANONE"
+    ],
+    "m": 4.7551,
+    "sigma": 3.6698,
+    "sigma_units": "1/Angstrom",
+    "u": 251.23,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.14224,
+    "molemass_units": "kg/mol",
+    "name": "5-NONANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "112-12-9",
+    "aliases": [
+      "2-UNDECANONE"
+    ],
+    "m": 5.6392,
+    "sigma": 3.6905,
+    "sigma_units": "1/Angstrom",
+    "u": 252.24,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.1703,
+    "molemass_units": "kg/mol",
+    "name": "2-UNDECANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "927-49-1",
+    "aliases": [
+      "6-UNDECANONE"
+    ],
+    "m": 5.9764,
+    "sigma": 3.6066,
+    "sigma_units": "1/Angstrom",
+    "u": 241.25,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.1703,
+    "molemass_units": "kg/mol",
+    "name": "6-UNDECANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "593-08-8",
+    "aliases": [
+      "2-TRIDECANONE"
+    ],
+    "m": 6.4669,
+    "sigma": 3.7125,
+    "sigma_units": "1/Angstrom",
+    "u": 251.32,
+    "u_units": "K",
+    "dipm": 2.7,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.19835,
+    "molemass_units": "kg/mol",
+    "name": "2-TRIDECANONE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "68-12-2",
+    "aliases": [
+      "DIMETHYLFORMAMIDE"
+    ],
+    "m": 2.269,
+    "sigma": 3.714,
+    "sigma_units": "1/Angstrom",
+    "u": 331.56,
+    "u_units": "K",
+    "dipm": 3.82,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.07309,
+    "molemass_units": "kg/mol",
+    "name": "DIMETHYLFORMAMIDE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "67-68-5",
+    "aliases": [
+      "DIMETHYL SULFOXIDE"
+    ],
+    "m": 3.0243,
+    "sigma": 3.2427,
+    "sigma_units": "1/Angstrom",
+    "u": 309.36,
+    "u_units": "K",
+    "dipm": 3.96,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.07812999999999999,
+    "molemass_units": "kg/mol",
+    "name": "DIMETHYL SULFOXIDE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "75-05-8",
+    "aliases": [
+      "ACETONITRILE"
+    ],
+    "m": 2.1572,
+    "sigma": 3.273,
+    "sigma_units": "1/Angstrom",
+    "u": 216.89,
+    "u_units": "K",
+    "dipm": 3.9252,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.041052,
+    "molemass_units": "kg/mol",
+    "name": "ACETONITRILE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "107-13-1",
+    "aliases": [
+      "ACRYLONITRILE"
+    ],
+    "m": 2.3188,
+    "sigma": 3.3996,
+    "sigma_units": "1/Angstrom",
+    "u": 227.57,
+    "u_units": "K",
+    "dipm": 3.91,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.053,
+    "molemass_units": "kg/mol",
+    "name": "ACRYLONITRILE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "107-12-0",
+    "aliases": [
+      "PROPIONITRILE"
+    ],
+    "m": 2.5096,
+    "sigma": 3.3981,
+    "sigma_units": "1/Angstrom",
+    "u": 239.15,
+    "u_units": "K",
+    "dipm": 4.05,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.055079,
+    "molemass_units": "kg/mol",
+    "name": "PROPIONITRILE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "109-74-0",
+    "aliases": [
+      "BUTYRONITRILE"
+    ],
+    "m": 2.9041,
+    "sigma": 3.4585,
+    "sigma_units": "1/Angstrom",
+    "u": 251.32,
+    "u_units": "K",
+    "dipm": 4.07,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.06911,
+    "molemass_units": "kg/mol",
+    "name": "BUTYRONITRILE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "75-52-5",
+    "aliases": [
+      "NITROMETHANE"
+    ],
+    "m": 2.4826,
+    "sigma": 3.1338,
+    "sigma_units": "1/Angstrom",
+    "u": 259.17,
+    "u_units": "K",
+    "dipm": 3.46,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.06104,
+    "molemass_units": "kg/mol",
+    "name": "NITROMETHANE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "79-24-3",
+    "aliases": [
+      "NITROETHANE"
+    ],
+    "m": 2.949,
+    "sigma": 3.2312,
+    "sigma_units": "1/Angstrom",
+    "u": 265.96,
+    "u_units": "K",
+    "dipm": 3.23,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.075067,
+    "molemass_units": "kg/mol",
+    "name": "NITROETHANE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "74-87-3",
+    "aliases": [
+      "CHLOROMETHANE"
+    ],
+    "m": 1.807,
+    "sigma": 3.3034,
+    "sigma_units": "1/Angstrom",
+    "u": 229.97,
+    "u_units": "K",
+    "dipm": 1.8963,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.050488,
+    "molemass_units": "kg/mol",
+    "name": "CHLOROMETHANE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "75-09-2",
+    "aliases": [
+      "DICHLOROMETHANE"
+    ],
+    "m": 2.1901,
+    "sigma": 3.381,
+    "sigma_units": "1/Angstrom",
+    "u": 271.75,
+    "u_units": "K",
+    "dipm": 1.8,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.08493200000000001,
+    "molemass_units": "kg/mol",
+    "name": "DICHLOROMETHANE",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "67-66-3",
+    "aliases": [
+      "CHLOROFORM"
+    ],
+    "m": 2.5313,
+    "sigma": 3.4608,
+    "sigma_units": "1/Angstrom",
+    "u": 269.47,
+    "u_units": "K",
+    "dipm": 1.04,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.119377,
+    "molemass_units": "kg/mol",
+    "name": "CHLOROFORM",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "75-45-6",
+    "aliases": [
+      "R22"
+    ],
+    "m": 2.4143,
+    "sigma": 3.1604,
+    "sigma_units": "1/Angstrom",
+    "u": 186.78,
+    "u_units": "K",
+    "dipm": 1.46,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.086468,
+    "molemass_units": "kg/mol",
+    "name": "R22",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "811-97-2",
+    "aliases": [
+      "R134A"
+    ],
+    "m": 3.1206,
+    "sigma": 3.0557,
+    "sigma_units": "1/Angstrom",
+    "u": 165.96,
+    "u_units": "K",
+    "dipm": 2.06,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.10203,
+    "molemass_units": "kg/mol",
+    "name": "R134A",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "354-33-6",
+    "aliases": [
+      "R125"
+    ],
+    "m": 3.0849,
+    "sigma": 3.1294,
+    "sigma_units": "1/Angstrom",
+    "u": 154.31,
+    "u_units": "K",
+    "dipm": 1.563,
+    "dipm_units": "Debye",
+    "dipnum": 1,
+    "molemass": 0.12002,
+    "molemass_units": "kg/mol",
+    "name": "R125",
+    "BibTeX": "Kleiner-2007"
+  },
+  {
+    "CAS": "64-19-7",
+    "aliases": [
+      "ACETIC ACID",
+      "ETHANOIC ACID"
+    ],
+    "m": 1.3403,
+    "sigma": 3.8582,
+    "sigma_units": "1/Angstrom",
+    "u": 211.59,
+    "u_units": "K",
+    "uAB": 3044.4,
+    "uAB_units": "K",
+    "volA": 0.07555,
+    "volA_units": "1/Angstrom^3",
+    "molemass": 0.060052,
+    "molemass_units": "kg/mol",
+    "name": "ACETIC ACID",
+    "BibTeX": "Gross-2002"
+  }
+]

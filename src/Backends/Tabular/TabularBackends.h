@@ -27,10 +27,10 @@ namespace CoolProp{
 
 class PackablePhaseEnvelopeData : public PhaseEnvelopeData
 {
-   
+
 public:
     int revision;
-    
+
     PackablePhaseEnvelopeData() : revision(0) {} ;
 
     void copy_from_nonpackable(const PhaseEnvelopeData &PED) {
@@ -46,7 +46,7 @@ public:
 
     std::map<std::string, std::vector<double> > vectors;
     std::map<std::string, std::vector<std::vector<double> > > matrices;
-    
+
     MSGPACK_DEFINE(revision, vectors, matrices); // write the member variables that you want to pack using msgpack
 
     /// Take all the vectors that are in the class and pack them into the vectors map for easy unpacking using msgpack
@@ -76,14 +76,14 @@ public:
     }
     /// Take all the vectors that are in the class and unpack them from the vectors map
     void unpack(){
-        /* Use X macros to auto-generate the unpacking code; 
-         * each will look something like: T = get_vector_iterator("T")->second 
+        /* Use X macros to auto-generate the unpacking code;
+         * each will look something like: T = get_vector_iterator("T")->second
          */
         #define X(name) name = get_vector_iterator(#name)->second;
         PHASE_ENVELOPE_VECTORS
         #undef X
-        /* Use X macros to auto-generate the unpacking code; 
-         * each will look something like: T = get_matrix_iterator("T")->second 
+        /* Use X macros to auto-generate the unpacking code;
+         * each will look something like: T = get_matrix_iterator("T")->second
          **/
         #define X(name) name = get_matrix_iterator(#name)->second;
         PHASE_ENVELOPE_MATRICES
@@ -93,7 +93,7 @@ public:
         // Find the index of the point with the highest pressure
         ipsat_max = std::distance(p.begin(), std::max_element(p.begin(), p.end()));
     };
-    void deserialize(msgpack::object &deserialized){       
+    void deserialize(msgpack::object &deserialized){
         PackablePhaseEnvelopeData temp;
         deserialized.convert(temp);
         temp.unpack();
@@ -134,19 +134,19 @@ inline void mass_to_molar(parameters &param, double &conversion_factor, double m
 }
 
 /** \brief This class holds the data for a two-phase table that is log spaced in p
- * 
+ *
  * It contains very few members or methods, mostly it just holds the data
  */
 class PureFluidSaturationTableData{
 	public:
 		std::size_t N;
 		shared_ptr<CoolProp::AbstractState> AS;
-    
+
 		PureFluidSaturationTableData(){N = 1000; revision = 1;}
-        
+
         /// Build this table
         void build(shared_ptr<CoolProp::AbstractState> &AS);
-    
+
 		/* Use X macros to auto-generate the variables; each will look something like: std::vector<double> T; */
 		#define X(name) std::vector<double> name;
 		LIST_OF_SATURATION_VECTORS
@@ -154,7 +154,7 @@ class PureFluidSaturationTableData{
 
 		int revision;
 		std::map<std::string, std::vector<double> > vectors;
-    
+
 		MSGPACK_DEFINE(revision, vectors); // write the member variables that you want to pack
 
         /***
@@ -167,7 +167,7 @@ class PureFluidSaturationTableData{
          * @param iV The index associated with the nearest point for the vapor
          * @param yL The value associated with the nearest point for the liquid (based on interpolation)
          * @param yV The value associated with the nearest point for the vapor (based on interpolation)
-         
+
          \note If PQ or QT are inputs, yL and yV will correspond to the other main variable: p->T or T->p
          */
         bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t &iL, std::size_t &iV, CoolPropDbl &yL, CoolPropDbl &yV){
@@ -181,7 +181,7 @@ class PureFluidSaturationTableData{
                 case iDmolar: yvecL = &rhomolarL; yvecV = &rhomolarV; break;
                 default: throw ValueError("invalid input for other in is_inside");
             }
-            
+
             // Trivial checks
             if (main == iP){
                 // If p is outside the range (ptriple, pcrit), considered to not be inside
@@ -196,7 +196,7 @@ class PureFluidSaturationTableData{
             else{
                 throw ValueError("invalid input for other in is_inside");
             }
-            
+
             // Now check based on a rough analysis using bounding pressure
             std::size_t iLplus, iVplus;
             // Find the indices (iL,iL+1) & (iV,iV+1) that bound the given pressure
@@ -249,8 +249,8 @@ class PureFluidSaturationTableData{
                 yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
                 yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
             }
-            
-            if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){ 
+
+            if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){
                 return false;
             }
             else{
@@ -288,7 +288,7 @@ class PureFluidSaturationTableData{
 			#undef X
 			N = TL.size();
 		};
-        void deserialize(msgpack::object &deserialized){       
+        void deserialize(msgpack::object &deserialized){
             PureFluidSaturationTableData temp;
             deserialized.convert(temp);
             temp.unpack();
@@ -433,11 +433,11 @@ class PureFluidSaturationTableData{
 };
 
 /** \brief This class holds the data for a single-phase interpolation table that is regularly spaced
- * 
+ *
  * It contains very few members or methods, mostly it just holds the data
  */
 class SinglePhaseGriddedTableData{
-        
+
 	public:
 		std::size_t Nx, Ny;
 		CoolProp::parameters xkey, ykey;
@@ -446,16 +446,16 @@ class SinglePhaseGriddedTableData{
         std::vector<std::vector<std::size_t> > nearest_neighbor_i, nearest_neighbor_j;
 		bool logx, logy;
 		double xmin, ymin, xmax, ymax;
-        
+
         virtual void set_limits() = 0;
-    
+
 		SinglePhaseGriddedTableData(){
-            Nx = 200; Ny = 200; revision = 0; 
-            xkey = INVALID_PARAMETER; ykey = INVALID_PARAMETER; 
+            Nx = 200; Ny = 200; revision = 0;
+            xkey = INVALID_PARAMETER; ykey = INVALID_PARAMETER;
             logx = false; logy = false;
             xmin = _HUGE; xmax = _HUGE; ymin = _HUGE; ymax = _HUGE;
         }
-    
+
 		/* Use X macros to auto-generate the variables; each will look something like: std::vector< std::vector<double> > T; */
 		#define X(name) std::vector< std::vector<double> > name;
 		LIST_OF_MATRICES
@@ -464,7 +464,7 @@ class SinglePhaseGriddedTableData{
 		std::map<std::string, std::vector<std::vector<double> > > matrices;
         /// Build this table
         void build(shared_ptr<CoolProp::AbstractState> &AS);
-    
+
 		MSGPACK_DEFINE(revision, matrices, xmin, xmax, ymin, ymax); // write the member variables that you want to pack
 		/// Resize all the matrices
 		void resize(std::size_t Nx, std::size_t Ny){
@@ -604,7 +604,7 @@ class SinglePhaseGriddedTableData{
 			find_native_nearest_neighbor(x,y,i,j);
 			// Check whether found node is good
 			if (!ValidNumber(T[i][j])){
-				// If not, find its nearest good neighbor 
+				// If not, find its nearest good neighbor
                 // (nearest good neighbors are precalculated and cached)
                 std::size_t inew = nearest_neighbor_i[i][j];
                 std::size_t jnew = nearest_neighbor_j[i][j];
@@ -647,17 +647,17 @@ class LogPHTable : public SinglePhaseGriddedTableData
             // Minimum enthalpy is the saturated liquid enthalpy
             AS->update(QT_INPUTS, 0, Tmin);
             xmin = AS->hmolar(); ymin = AS->p();
-            
+
             // Check both the enthalpies at the Tmax isotherm to see whether to use low or high pressure
             AS->update(DmolarT_INPUTS, 1e-10, 1.499*AS->Tmax());
             CoolPropDbl xmax1 = AS->hmolar();
             AS->update(PT_INPUTS, AS->pmax(), 1.499*AS->Tmax());
             CoolPropDbl xmax2 = AS->hmolar();
             xmax = std::max(xmax1, xmax2);
-            
+
             ymax = AS->pmax();
         }
-        void deserialize(msgpack::object &deserialized){       
+        void deserialize(msgpack::object &deserialized){
             LogPHTable temp;
             deserialized.convert(temp);
             temp.unpack();
@@ -694,10 +694,10 @@ class LogPTTable : public SinglePhaseGriddedTableData
             AS->update(QT_INPUTS, 0, Tmin);
             xmin = Tmin;
             ymin = AS->p();
-            
+
             xmax = AS->Tmax()*1.499; ymax = AS->pmax();
         }
-        void deserialize(msgpack::object &deserialized){   
+        void deserialize(msgpack::object &deserialized){
             LogPTTable temp;
             deserialized.convert(temp);
             temp.unpack();
@@ -721,7 +721,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
 };
 
 /// This structure holds the coefficients for one cell, the coefficients are stored in matrices
-/// and can be obtained by the get() function.  
+/// and can be obtained by the get() function.
 class CellCoeffs{
 private:
     std::size_t alt_i, alt_j;
@@ -831,7 +831,7 @@ public:
 /**
  * @brief This class contains the general code for tabular backends (TTSE, bicubic, etc.)
  *
- * This class layout was used in order to move the general code needed for all backends (building,  writing, loading) 
+ * This class layout was used in order to move the general code needed for all backends (building,  writing, loading)
  * into a common base class in order to remove code duplication.  DRY!
  */
 class TabularBackend : public AbstractState
@@ -855,9 +855,9 @@ class TabularBackend : public AbstractState
         TabularBackend(shared_ptr<CoolProp::AbstractState> AS) : tables_loaded(false), using_single_phase_table(false), is_mixture(false), AS(AS) {
             selected_table = SELECTED_NO_TABLE;
             // Flush the cached indices (set to large number)
-            cached_single_phase_i = std::numeric_limits<std::size_t>::max(); 
+            cached_single_phase_i = std::numeric_limits<std::size_t>::max();
             cached_single_phase_j = std::numeric_limits<std::size_t>::max();
-            cached_saturation_iL = std::numeric_limits<std::size_t>::max(); 
+            cached_saturation_iL = std::numeric_limits<std::size_t>::max();
             cached_saturation_iV = std::numeric_limits<std::size_t>::max();
             z = NULL; dzdx = NULL; dzdy = NULL; d2zdx2 = NULL; d2zdxdy = NULL; d2zdy2 = NULL; dataset = NULL;
             imposed_phase_index = iphase_not_imposed;
@@ -865,7 +865,7 @@ class TabularBackend : public AbstractState
 
         // None of the tabular methods are available from the high-level interface
         bool available_in_high_level(void){return false;}
-    
+
         std::string calc_name(void){ return AS->name(); }
         std::vector<std::string> calc_fluid_names(void){ return AS->fluid_names(); }
 
@@ -948,17 +948,17 @@ class TabularBackend : public AbstractState
         /// Ask the derived class to find the nearest good set of i,j that it wants to use (pure virtual)
         virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j) = 0;
         /// Ask the derived class to find the nearest neighbor (pure virtual)
-        virtual void find_nearest_neighbor(SinglePhaseGriddedTableData &table, 
-                                           const std::vector<std::vector<CellCoeffs> > &coeffs, 
-                                           const parameters variable1, 
-                                           const double value1, 
-                                           const parameters other, 
-                                           const double otherval, 
-                                           std::size_t &i, 
+        virtual void find_nearest_neighbor(SinglePhaseGriddedTableData &table,
+                                           const std::vector<std::vector<CellCoeffs> > &coeffs,
+                                           const parameters variable1,
+                                           const double value1,
+                                           const parameters other,
+                                           const double otherval,
+                                           std::size_t &i,
                                            std::size_t &j) = 0;
-        /// 
+        ///
         virtual void invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
-        /// 
+        ///
         virtual void invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
 
 
@@ -981,7 +981,7 @@ class TabularBackend : public AbstractState
         const std::vector<CoolPropDbl> calc_mass_fractions(void){ return AS->get_mass_fractions(); };
 
         CoolPropDbl calc_molar_mass(void){return AS->molar_mass();};
-        
+
         CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
         CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 
@@ -1000,8 +1000,8 @@ class TabularBackend : public AbstractState
             phase_envelope.pack();
         }
         /// Write the tables to file
-        void write_tables();        
-        
+        void write_tables();
+
         CoolPropDbl phase_envelope_sat(const PhaseEnvelopeData &env, parameters output, parameters iInput1, double value1){
             const PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
             CoolPropDbl yL = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iL);
@@ -1038,7 +1038,7 @@ class TabularBackend : public AbstractState
 
 		/// If you need all three values (drho_dh__p, drho_dp__h and rho_spline), you should calculate drho_dp__h first to avoid duplicate calculations.
 		CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
-		
+
         void check_tables(){
             if (!tables_loaded){
                 try{
