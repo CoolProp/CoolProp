@@ -109,10 +109,10 @@ public:
     // CoolPropDbl calc_alpha0(void); // ideal gas helmholtz energy term
     CoolPropDbl calc_alphar(void); // residual helmholtz energy
     CoolPropDbl calc_dadt(void); // derivative of the residual helmholtz energy with respect to temperature
-    CoolPropDbl calc_hmolar(void);
-    CoolPropDbl calc_smolar(void);
+    CoolPropDbl calc_hmolar_residual(void);
+    CoolPropDbl calc_smolar_residual(void);
     vector<CoolPropDbl> calc_fugacity_coefficients(void);
-    CoolPropDbl calc_gibbsmolar(void);
+    CoolPropDbl calc_gibbsmolar_residual(void);
     // CoolPropDbl calc_cpmolar(void); // TODO implement these heat capacity functions
     // CoolPropDbl calc_cp0molar(void);
     CoolPropDbl calc_compressibility_factor(void);

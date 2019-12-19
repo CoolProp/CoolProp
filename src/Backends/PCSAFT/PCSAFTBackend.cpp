@@ -830,7 +830,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     return dadt;
 }
 
-CoolPropDbl PCSAFTBackend::calc_hmolar(void) {
+CoolPropDbl PCSAFTBackend::calc_hmolar_residual(void) {
     CoolPropDbl Z = calc_compressibility_factor();
     CoolPropDbl dares_dt = calc_dadt();
 
@@ -838,9 +838,9 @@ CoolPropDbl PCSAFTBackend::calc_hmolar(void) {
     return hres;
 }
 
-CoolPropDbl PCSAFTBackend::calc_smolar(void){
-    CoolPropDbl gres = calc_gibbsmolar();
-    CoolPropDbl hres = calc_hmolar();
+CoolPropDbl PCSAFTBackend::calc_smolar_residual(void){
+    CoolPropDbl gres = calc_gibbsmolar_residual();
+    CoolPropDbl hres = calc_hmolar_residual();
 
     CoolPropDbl sres = (hres - gres)/(2*_T);
     return sres;
@@ -1298,7 +1298,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     return fugcoef;
     }
 
-CoolPropDbl PCSAFTBackend::calc_gibbsmolar(void) {
+CoolPropDbl PCSAFTBackend::calc_gibbsmolar_residual(void) {
     CoolPropDbl ares = calc_alphar();
     CoolPropDbl Z = calc_compressibility_factor();
 

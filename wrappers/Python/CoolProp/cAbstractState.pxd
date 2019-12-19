@@ -1,4 +1,4 @@
-from libcpp cimport bool 
+from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
@@ -12,7 +12,7 @@ cdef extern from "PhaseEnvelope.h" namespace "CoolProp":
         size_t iTsat_max, ipsat_max, icrit
         vector[double] T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
         vector[vector[double]] x, y, K
-    
+
 cdef extern from "DataStructures.h" namespace "CoolProp":
     cdef cppclass CriticalState:
         double T, p, rhomolar, hmolar, smolar
@@ -28,28 +28,28 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
 
     cdef cppclass SpinodalData:
         vector[double] tau, delta, M1
-        
+
     cdef cppclass AbstractState:
-        
+
         ## Nullary Constructor
         AbstractState() except +ValueError
-        
+
         ## Constructor with fluid name
         AbstractState(string FluidName) except +ValueError
-        
+
         void set_mole_fractions(vector[double]) except+ValueError
         void set_mass_fractions(vector[double]) except+ValueError
         void set_volu_fractions(vector[double]) except+ValueError
-        
+
         vector[CoolPropDbl] mole_fractions_liquid() except +ValueError
         vector[CoolPropDbl] mole_fractions_vapor() except +ValueError
         vector[CoolPropDbl] get_mole_fractions() except +ValueError
         vector[CoolPropDbl] get_mass_fractions() except +ValueError
-        
+
         constants_header.phases phase() except +ValueError
         void specify_phase(constants_header.phases phase) except +ValueError
         void unspecify_phase() except +ValueError
-        
+
         void change_EOS(const size_t, const string &) except +ValueError
 
         void set_binary_interaction_double(const string, const string &, const string &, const double s) except +ValueError
@@ -58,25 +58,25 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         string get_binary_interaction_string(const string &, const string &, const string &) except +ValueError
         void set_binary_interaction_string(const size_t, const size_t, const string &, const string &) except +ValueError
         void apply_simple_mixing_rule(size_t, size_t, const string &) except +ValueError
-        
+
         double get_binary_interaction_double(const size_t, const size_t, const string &) except +ValueError
         void set_binary_interaction_double(const size_t, const size_t, const string &, const double s) except +ValueError
-        
+
         string name() except +ValueError
         string backend_name() except +ValueError
         vector[string] fluid_names() except +ValueError
         string fluid_param_string(const string &) except +ValueError
         void set_fluid_parameter_double(const size_t, const string&, const double) except +ValueError
         double get_fluid_parameter_double(const size_t, const string&) except +ValueError
-        
+
         bool clear()
-        
+
         ## Limits
         double Tmin() except +ValueError
         double Tmax() except +ValueError
         double pmax() except +ValueError
         double Ttriple() except +ValueError
-        
+
         ## Critical point
         double T_critical() except +ValueError
         double rhomass_critical() except +ValueError
@@ -88,15 +88,15 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         ## Spinodal curve
         void build_spinodal() except +ValueError
         SpinodalData get_spinodal_data() except +ValueError
-        
+
         ## Tangent plane analysis
         double tangent_plane_distance(const double, const double, const vector[double], const double) except +ValueError
-        
+
         ## Reducing point
         double T_reducing() except +ValueError
         double rhomolar_reducing() except +ValueError
         double rhomass_reducing() except +ValueError
-        
+
         void ideal_curve(const string &, vector[double] &T, vector[double] &p) except +ValueError
 
         ## Property updater
@@ -115,8 +115,10 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double compressibility_factor() except +ValueError
         double Q() except +ValueError
         double hmolar() except +ValueError
+        double hmolar_residual() except +ValueError
         double hmass() except +ValueError
         double smolar() except +ValueError
+        double smolar_residual() except +ValueError
         double smass() except +ValueError
         double umolar() except +ValueError
         double umass() except +ValueError
@@ -127,6 +129,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double cvmolar() except +ValueError
         double cvmass() except +ValueError
         double gibbsmolar() except +ValueError
+        double gibbsmolar_residual() except +ValueError
         double gibbsmass() except +ValueError
         double helmholtzmolar() except +ValueError
         double helmholtzmass() except +ValueError
@@ -163,17 +166,17 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double fugacity(size_t) except +ValueError
         double fugacity_coefficient(size_t) except +ValueError
         double chemical_potential(size_t) except +ValueError
-        
+
         double get_fluid_constant(size_t,constants_header.parameters) except+ValueError
         double keyed_output(constants_header.parameters) except+ValueError
         double trivial_keyed_output(constants_header.parameters) except+ValueError
         double saturated_liquid_keyed_output(constants_header.parameters) except+ValueError
         double saturated_vapor_keyed_output(constants_header.parameters) except+ValueError
-        
+
         double molar_mass() except+ValueError
         double acentric_factor() except+ValueError
         double gas_constant() except+ValueError
-        
+
         CoolPropDbl first_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         CoolPropDbl second_partial_deriv(constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except+ValueError
         CoolPropDbl first_saturation_deriv(constants_header.parameters, constants_header.parameters) except+ValueError
@@ -182,15 +185,15 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double second_two_phase_deriv(constants_header.parameters Of, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except+ValueError
         double first_two_phase_deriv_splined(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except+ValueError
         void true_critical_point(double &T, double &rho) except +ValueError
-        
+
         double melting_line(int,int,double) except+ValueError
         bool has_melting_line() except+ValueError
         double saturation_ancillary(constants_header.parameters, int, constants_header.parameters, double) except +ValueError
-        
-        double build_phase_envelope() except+ValueError        
+
+        double build_phase_envelope() except+ValueError
         void build_phase_envelope(string) except+ValueError
         PhaseEnvelopeData get_phase_envelope_data() except+ValueError
-        
+
         CoolPropDbl alpha0() except+ValueError
         CoolPropDbl dalpha0_dDelta() except+ValueError
         CoolPropDbl dalpha0_dTau() except+ValueError
