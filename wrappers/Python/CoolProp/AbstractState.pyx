@@ -256,7 +256,7 @@ cdef class AbstractState:
         """ Get the enthalpy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmolar(void)` """
         return self.thisptr.hmolar()
     cpdef double hmolar_residual(self) except *:
-        """ Get the residual enthalpy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmolar_residual(void)` """        
+        """ Get the residual enthalpy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmolar_residual(void)` """
         return self.thisptr.hmolar_residual()
     cpdef double hmass(self) except *:
         """ Get the enthalpy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmass(void)` """
@@ -270,9 +270,9 @@ cdef class AbstractState:
     cpdef double smolar(self) except *:
         """ Get the entropy in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar(void)` """
         return self.thisptr.smolar()
-    cpdef double smolar_residual(self) except *:
-        """ Get the residual entropy in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar_residual(void)` """
-        return self.thisptr.smolar_residual()
+    cpdef double smolar_residual_trho(self) except *:
+        """ Get the residual entropy (as a function of temperature and density) in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar_residual(void)` """
+        return self.thisptr.smolar_residual_trho()
     cpdef double smass(self) except *:
         """ Get the entropy in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smass(void)` """
         return self.thisptr.smass()

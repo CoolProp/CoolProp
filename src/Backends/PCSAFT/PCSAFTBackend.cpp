@@ -838,11 +838,11 @@ CoolPropDbl PCSAFTBackend::calc_hmolar_residual(void) {
     return hres;
 }
 
-CoolPropDbl PCSAFTBackend::calc_smolar_residual(void){
-    CoolPropDbl gres = calc_gibbsmolar_residual();
-    CoolPropDbl hres = calc_hmolar_residual();
+CoolPropDbl PCSAFTBackend::calc_smolar_residual_trho(void){
+    CoolPropDbl dares_dt = calc_dadt();
+    CoolPropDbl ares = calc_alphar();
 
-    CoolPropDbl sres = (hres - gres)/(2*_T);
+    CoolPropDbl sres = kb * N_AV * (-_T * dares_dt - ares);
     return sres;
 }
 

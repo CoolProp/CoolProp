@@ -118,7 +118,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double hmolar_residual() except +ValueError
         double hmass() except +ValueError
         double smolar() except +ValueError
-        double smolar_residual() except +ValueError
+        double smolar_residual_trho() except +ValueError
         double smass() except +ValueError
         double umolar() except +ValueError
         double umass() except +ValueError

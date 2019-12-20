@@ -101,12 +101,12 @@ RHOMOLAR_REDUCING | Molar density at reducing point | mol/m^3 |  **Constant Prop
 S | Mass specific entropy | J/kg/K |
 SMASS | Mass specific entropy | J/kg/K |  *Duplicated*
 SMOLAR | Molar specific entropy | J/mol/K |
-SMOLAR_RESIDUAL | Residual molar entropy | J/mol/K |
+SMOLAR_RESIDUAL_TRHO | Residual molar entropy (as a function of temperature and density) | J/mol/K |
 SPEED_OF_SOUND | Speed of sound | m/s |  *Duplicated*
 SURFACE_TENSION | Surface tension | N/m |  *Duplicated*
 Smass | Mass specific entropy | J/kg/K |  *Duplicated*
-Smolar | Molar specific entropy | J/mol/K |  *Duplicated* 
-Smolar_residual | Residual molar entropy | J/mol/K |  *Duplicated*
+Smolar | Molar specific entropy | J/mol/K |  *Duplicated*
+Smolar_residual_trho | Residual molar entropy (as a function of temperature and density) | J/mol/K |  *Duplicated*
 T | Temperature | K |
 TAU | Reciprocal reduced temperature (Tc/T) | - |
 TCRIT | Temperature at the critical point | K |  **Constant Property**

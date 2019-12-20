@@ -101,7 +101,7 @@ namespace coolprop_wrapper
                      "CPMOLAR", "Cpmolar",                                         // [J/mol/K] O  Molar specific constant presssure specific heat
                      "CVMOLAR", "Cvmolar",                                         // [J/mol/K] O  Molar specific constant volume specific heat
                      "GAS_CONSTANT", "gas_constant",                               // [J/mol/K] O  Molar gas constant
-                     "SMOLAR_RESIDUAL", "Smolar_residual");                        // [J/mol/K] O  Residual molar entropy (sr/R = tau*dar_dtau-ar)
+                     "SMOLAR_RESIDUAL_TRHO", "Smolar_residual_trho");              // [J/mol/K] O  Residual molar entropy (as a function of temperature and density)
             AddUnits(ref dic, J_kg_K,
                      "S", "SMASS", "Smass",                                        // [J/kg/K]  IO Mass specific entropy
                      "CVMASS", "Cvmass", "O",                                      // [J/kg/K]  O  Mass specific constant volume specific heat
