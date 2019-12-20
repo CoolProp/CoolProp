@@ -23,7 +23,7 @@ void init_CoolProp(py::module &m){
         .def_readwrite("T", &SimpleState::T)
         .def_readwrite("p", &SimpleState::p)
         .def_readwrite("rhomolar", &SimpleState::rhomolar);
-        
+
     py::class_<GuessesStructure>(m, "GuessesStructure")
         .def(py::init<>())
         .def_readwrite("T", &GuessesStructure::T)
@@ -68,14 +68,14 @@ void init_CoolProp(py::module &m){
         .def_readwrite("conductivity_liq", &PhaseEnvelopeData::conductivity_liq)
         .def_readwrite("conductivity_vap", &PhaseEnvelopeData::conductivity_vap)
         .def_readwrite("speed_sound_vap", &PhaseEnvelopeData::speed_sound_vap);
-    
+
     // See http://stackoverflow.com/a/148610 and http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
     py::enum_<configuration_keys>(m, "configuration_keys")
         #define X(Enum, String, Default, Desc) .value(String, configuration_keys::Enum)
             CONFIGURATION_KEYS_ENUM
         #undef X
         .export_values();
-    
+
     py::enum_<parameters>(m, "parameters")
         .value("igas_constant", parameters::igas_constant)
         .value("imolar_mass", parameters::imolar_mass)
@@ -109,7 +109,7 @@ void init_CoolProp(py::module &m){
         .value("iUmolar", parameters::iUmolar)
         .value("iGmolar", parameters::iGmolar)
         .value("iHelmholtzmolar", parameters::iHelmholtzmolar)
-        .value("iSmolar_residual", parameters::iSmolar_residual)
+        .value("iSmolar_residual_trho", parameters::iSmolar_residual_trho)
         .value("iDmass", parameters::iDmass)
         .value("iHmass", parameters::iHmass)
         .value("iSmass", parameters::iSmass)
@@ -357,7 +357,7 @@ void init_CoolProp(py::module &m){
         .def("d4alphar_dTau4", &AbstractState::d4alphar_dTau4);
 
     m.def("AbstractState", &factory);
-    
+
     m.def("get_config_as_json_string", &get_config_as_json_string);
     m.def("set_config_as_json_string", &set_config_as_json_string);
     m.def("config_key_description", (std::string (*)(configuration_keys))&config_key_description);
@@ -390,9 +390,9 @@ void init_CoolProp(py::module &m){
     m.def("add_fluids_as_JSON", &add_fluids_as_JSON);
     m.def("HAPropsSI", &HumidAir::HAPropsSI);
     m.def("HAProps", &HumidAir::HAProps);
-    m.def("HAProps_Aux", [](std::string out_string, double T, double p, double psi_w) { 
-                        char units[1000]; 
-                        double out = HumidAir::HAProps_Aux(out_string.c_str(), T, p, psi_w, units); 
+    m.def("HAProps_Aux", [](std::string out_string, double T, double p, double psi_w) {
+                        char units[1000];
+                        double out = HumidAir::HAProps_Aux(out_string.c_str(), T, p, psi_w, units);
                         return py::make_tuple(out, std::string(units));
                     }
          );
@@ -400,7 +400,7 @@ void init_CoolProp(py::module &m){
     m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);
     m.def("set_mixture_binary_pair_data", &set_mixture_binary_pair_data);
     m.def("apply_simple_mixing_rule", &apply_simple_mixing_rule);
-    
+
 }
 
 #if defined(COOLPROP_PYBIND11_MODULE)

@@ -108,7 +108,7 @@ cdef class AbstractState:
     cpdef double hmolar(self) except *
     cpdef double hmolar_residual(self) except *
     cpdef double smolar(self) except *
-    cpdef double smolar_residual(self) except *
+    cpdef double smolar_residual_trho(self) except *
     cpdef double umolar(self) except *
     cpdef double cpmolar(self) except *
     cpdef double cp0molar(self) except *
