@@ -51,11 +51,11 @@ public:
                 val.alpha0 = JSONFluidLibrary::parse_alpha0((*itr)["alpha0"]);
             }
             std::pair<std::map<std::string, CubicsValues>::iterator, bool> ret;
-            ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val) );
+            ret = fluid_map.insert(std::pair<std::string, CubicsValues>(upper(val.name), val) );
             if (ret.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 fluid_map.erase(ret.first);
-                ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val));
+                ret = fluid_map.insert(std::pair<std::string, CubicsValues>(upper(val.name), val));
                 if (get_debug_level() > 0){
                     std::cout << "added the cubic fluid: "+val.name << std::endl;
                 }
@@ -65,7 +65,7 @@ public:
             for (std::vector<std::string>::const_iterator it = val.aliases.begin(); it != val.aliases.end(); ++it){
                 if (aliases_map.find(*it) == aliases_map.end()){
                     // It's not already in aliases map
-                    aliases_map.insert(std::pair<std::string, std::string>(*it, val.name) );
+                    aliases_map.insert(std::pair<std::string, std::string>(*it, upper(val.name)));
                 }
             }
             counter ++;
@@ -80,7 +80,7 @@ public:
         if (it != fluid_map.end()) {
             return it->second;
         } else {
-            std::map<std::string, std::string>::iterator italias = aliases_map.find(uppercase_identifier);
+            std::map<std::string, std::string>::iterator italias = aliases_map.find(identifier);
             if (italias != aliases_map.end()){
                 // Alias was found, use it to get the fluid name, and then the cubic values
                 return fluid_map.find(italias->second)->second;
