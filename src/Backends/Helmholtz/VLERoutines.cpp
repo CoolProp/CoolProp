@@ -958,6 +958,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                     // Then we assume vapor to be ideal gas
                     if (SatL->p() > 0){
                         rhoV = SatL->p()/(SatL->gas_constant()*T);
+                    }
                     else{
                         rhoV = p/(SatL->gas_constant()*T);
                     }
