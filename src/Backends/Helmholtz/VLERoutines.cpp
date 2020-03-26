@@ -956,7 +956,11 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                     // Then we calculate pressure from this density
                     SatL->update_DmolarT_direct(rhoL, T);
                     // Then we assume vapor to be ideal gas
-                    rhoV = SatL->p()/(SatL->gas_constant()*T);
+                    if (SatL->p() > 0){
+                        rhoV = SatL->p()/(SatL->gas_constant()*T);
+                    else{
+                        rhoV = p/(SatL->gas_constant()*T);
+                    }
                     // Update the vapor state
                     SatV->update_DmolarT_direct(rhoV, T);
                 }
