@@ -1,4 +1,4 @@
-smolar_residualfrom libcpp cimport bool
+from libcpp cimport bool
 from libcpp.string cimport string
 
 # A header defining the AbstractState class

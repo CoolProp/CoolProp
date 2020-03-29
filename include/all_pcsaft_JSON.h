@@ -3780,5 +3780,5 @@ const unsigned char all_pcsaft_JSON_binary[] = {
 0x20, 0x7d, 0x0a, 0x5d, 0x0a, 0x00
 };
 
-// Combined into a single std::string 
+// Combined into a single std::string
 std::string all_pcsaft_JSON(all_pcsaft_JSON_binary, all_pcsaft_JSON_binary + sizeof(all_pcsaft_JSON_binary)/sizeof(all_pcsaft_JSON_binary[0]));

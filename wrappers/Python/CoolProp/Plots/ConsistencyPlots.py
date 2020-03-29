@@ -403,8 +403,7 @@ class ConsistencyAxis(object):
             # plt.title(self.pair)
             # plt.show()
 
-            # good.to_csv('times_water', sep=';')
-            good.to_excel('times_water.xlsx') # !!! uncomment
+            good.to_excel('times_water.xlsx')
         return df[df.cls != 'GOOD']
 
     def consistency_check_twophase(self):
@@ -511,8 +510,7 @@ if __name__ == '__main__':
             skips = ['DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar', 'HmolarSmolar']
             skips = []
             ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=skips)  # , NT_1phase = 10, Np_1phase = 10, NT_2phase = 100, NQ_2phase = 0)
-            # ff.to_csv('Errors' + fluid, sep=';')
-            ff.errors.to_excel('Errors' + fluid + '.xlsx') # !!! uncomment
+            ff.errors.to_excel('Errors' + fluid + '.xlsx')
             toc = timeit.default_timer()
             print('Time to build:', toc - tic, 'seconds')
             ff.add_to_pdf(PVT)
