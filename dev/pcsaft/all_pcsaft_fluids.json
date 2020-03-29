@@ -32,7 +32,8 @@
   {
     "CAS": "74-98-6",
     "aliases": [
-      "PROPANE"
+      "PROPANE",
+      "N-PROPANE"
     ],
     "m": 2.0020,
     "sigma": 3.6184,

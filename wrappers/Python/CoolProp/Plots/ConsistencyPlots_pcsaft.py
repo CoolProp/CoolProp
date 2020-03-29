@@ -8,12 +8,15 @@ import time, timeit
 import six
 import pandas
 import CoolProp as CP
+from math import ceil
 
 CP.CoolProp.set_debug_level(00)
 from matplotlib.backends.backend_pdf import PdfPages
 
-all_solvers = ['PT', 'DmolarT', 'HmolarP', 'PSmolar', 'SmolarT', 'PUmolar', 'DmolarP', 'DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar', 'HmolarSmolar', 'HmolarT', 'TUmolar', 'SmolarUmolar', 'HmolarUmolar']
-not_implemented_solvers = ['SmolarUmolar', 'HmolarUmolar', 'TUmolar', 'HmolarT']
+# all_solvers = ['PT', 'DmolarT', 'HmolarP', 'PSmolar', 'SmolarT', 'DmolarP', 'DmolarHmolar', 'DmolarSmolar', 'HmolarSmolar', 'HmolarT']
+# not_implemented_solvers = ['HmolarP', 'PSmolar', 'SmolarT', 'DmolarP', 'DmolarHmolar', 'DmolarSmolar', 'HmolarSmolar', 'HmolarT']
+all_solvers = ['PT', 'DmolarT']
+not_implemented_solvers = []
 no_two_phase_solvers = ['PT']
 
 implemented_solvers = [pair for pair in all_solvers if pair not in not_implemented_solvers]
@@ -76,38 +79,50 @@ def myprint(level, *args, **kwargs):
 
 
 class ConsistencyFigure(object):
-    def __init__(self, fluid, figsize=(15, 23), backend='HEOS', additional_skips=[], mole_fractions=None, p_limits_1phase=None, T_limits_1phase=None, NT_1phase=40, Np_1phase=40, NT_2phase=20, NQ_2phase=20):
+    def __init__(self, fluid, figsize=(15, 23), backend='PCSAFT', additional_skips=[], mole_fractions=None, p_limits_1phase=None, T_limits_1phase=None, NT_1phase=40, Np_1phase=40, NT_2phase=20, NQ_2phase=20):
 
         self.fluid = fluid
         self.backend = backend
+        self.additional_backend = 'HEOS' # the PCSAFT backend does not currently have all the constants and functions for calculating the boundaries of the phase diagram
         print('***********************************************************************************')
         print('*************** ' + backend + '::' + fluid + ' ************************')
         print('***********************************************************************************')
-        self.fig, self.axes = plt.subplots(nrows=5, ncols=3, figsize=figsize)
+        self.fig, self.axes = plt.subplots(nrows=ceil(len(all_solvers)/2), ncols=2, figsize=figsize)
         self.pairs = all_solvers
         pairs_generator = iter(self.pairs)
 
-        states = [CP.AbstractState(backend, fluid) for _ in range(3)]
+        states = [CP.AbstractState(self.additional_backend, fluid) for _ in range(3)]
+        states_pcsaft = [CP.AbstractState(backend, fluid) for _ in range(3)]
         if mole_fractions is not None:
             for state in states:
                 state.set_mole_fractions(mole_fractions)
+            for state in states_pcsaft:
+                state.set_mole_fractions(mole_fractions)
         self.axes_list = []
-        for row in self.axes:
-            for ax in row:
+        if len(self.axes.shape) > 1:
+            for row in self.axes:
+                for ax in row:
+                    pair = six.next(pairs_generator)
+                    kwargs = dict(p_limits_1phase=p_limits_1phase, T_limits_1phase=T_limits_1phase, NT_1phase=NT_1phase, Np_1phase=Np_1phase,
+                                  NT_2phase=NT_2phase, NQ_2phase=NQ_2phase)
+                    self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, self.additional_backend, *states, *states_pcsaft, **kwargs))
+                    ax.set_title(pair)
+        else:
+            for ax in self.axes:
                 pair = six.next(pairs_generator)
                 kwargs = dict(p_limits_1phase=p_limits_1phase, T_limits_1phase=T_limits_1phase, NT_1phase=NT_1phase, Np_1phase=Np_1phase,
                               NT_2phase=NT_2phase, NQ_2phase=NQ_2phase)
-                self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, *states, **kwargs))
+                self.axes_list.append(ConsistencyAxis(ax, self, pair, self.fluid, self.backend, self.additional_backend, *states, *states_pcsaft, **kwargs))
                 ax.set_title(pair)
 
         self.calc_saturation_curves()
         self.plot_saturation_curves()
 
-        self.calc_Tmax_curve()
-        self.plot_Tmax_curve()
-
-        self.calc_melting_curve()
-        self.plot_melting_curve()
+        # self.calc_Tmax_curve()
+        # self.plot_Tmax_curve()
+        #
+        # self.calc_melting_curve()
+        # self.plot_melting_curve()
 
         self.tight_layout()
 
@@ -129,32 +144,37 @@ class ConsistencyFigure(object):
         """
         Calculate all the saturation curves in one shot using the state class to save computational time
         """
-        HEOS = CP.AbstractState(self.backend, self.fluid)
+        HEOS = CP.AbstractState(self.additional_backend, self.fluid)
+        PCSAFT = CP.AbstractState(self.backend, self.fluid)
         self.dictL, self.dictV = {}, {}
         for Q, dic in zip([0, 1], [self.dictL, self.dictV]):
-            rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
+            # rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
+            rhomolar, T, p = [], [], []
             for _T in np.logspace(np.log10(HEOS.keyed_output(CP.iT_triple)), np.log10(HEOS.keyed_output(CP.iT_critical)), 500):
                 try:
-                    HEOS.update(CP.QT_INPUTS, Q, _T)
-                    if (HEOS.p() < 0): raise ValueError('P is negative:' + str(HEOS.p()))
-                    HEOS.T(), HEOS.p(), HEOS.rhomolar(), HEOS.hmolar(), HEOS.smolar()
-                    HEOS.umolar()
+                    PCSAFT.update(CP.QT_INPUTS, Q, _T)
+                    # print('T', PCSAFT.T())
+                    # print('p', PCSAFT.p())
+                    # print('rhomolar', PCSAFT.rhomolar())
+                    if (PCSAFT.p() < 0): raise ValueError('P is negative:' + str(PCSAFT.p()))
+                    PCSAFT.T(), PCSAFT.p(), PCSAFT.rhomolar()
+                    # PCSAFT.hmolar(), PCSAFT.smolar(), PCSAFT.umolar()
 
-                    T.append(HEOS.T())
-                    p.append(HEOS.p())
-                    rhomolar.append(HEOS.rhomolar())
-                    hmolar.append(HEOS.hmolar())
-                    smolar.append(HEOS.smolar())
-                    umolar.append(HEOS.umolar())
+                    T.append(PCSAFT.T())
+                    p.append(PCSAFT.p())
+                    rhomolar.append(PCSAFT.rhomolar())
+                    # hmolar.append(PCSAFT.hmolar())
+                    # smolar.append(PCSAFT.smolar())
+                    # umolar.append(PCSAFT.umolar())
                 except ValueError as VE:
                     myprint(1, 'satT error:', VE, '; T:', '{T:0.16g}'.format(T=_T), 'T/Tc:', _T / HEOS.keyed_output(CP.iT_critical))
 
             dic.update(dict(T=np.array(T),
                             P=np.array(p),
-                            Dmolar=np.array(rhomolar),
-                            Hmolar=np.array(hmolar),
-                            Smolar=np.array(smolar),
-                            Umolar=np.array(umolar)))
+                            Dmolar=np.array(rhomolar)))
+                            # Hmolar=np.array(hmolar),
+                            # Smolar=np.array(smolar)))
+                            # Umolar=np.array(umolar)))
 
     def plot_saturation_curves(self):
         for ax in self.axes_list:
@@ -162,32 +182,38 @@ class ConsistencyFigure(object):
             ax.plot_saturation_curves()
 
     def calc_Tmax_curve(self):
-        HEOS = CP.AbstractState(self.backend, self.fluid)
-        rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
+        HEOS = CP.AbstractState(self.additional_backend, self.fluid)
+        PCSAFT = CP.AbstractState(self.backend, self.fluid)
+        # rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
+        rhomolar, T, p = [], [], []
 
         for _p in np.logspace(np.log10(HEOS.keyed_output(CP.iP_min) * 1.01), np.log10(HEOS.keyed_output(CP.iP_max)), 300):
             try:
-                HEOS.update(CP.PT_INPUTS, _p, HEOS.keyed_output(CP.iT_max))
+                PCSAFT.update(CP.PT_INPUTS, _p, HEOS.keyed_output(CP.iT_max))
             except ValueError as VE:
+                print(1, 'Tmax', _p, VE)
+                print('T', PCSAFT.T())
+                print('p', PCSAFT.p())
+                print('rhomolar', PCSAFT.rhomolar())
                 myprint(1, 'Tmax', _p, VE)
                 continue
 
             try:
-                T.append(HEOS.T())
-                p.append(HEOS.p())
-                rhomolar.append(HEOS.rhomolar())
-                hmolar.append(HEOS.hmolar())
-                smolar.append(HEOS.smolar())
-                umolar.append(HEOS.umolar())
+                T.append(PCSAFT.T())
+                p.append(PCSAFT.p())
+                rhomolar.append(PCSAFT.rhomolar())
+                # hmolar.append(PCSAFT.hmolar())
+                # smolar.append(PCSAFT.smolar())
+                # umolar.append(PCSAFT.umolar())
             except ValueError as VE:
                 myprint(1, 'Tmax access', VE)
 
         self.Tmax = dict(T=np.array(T),
                          P=np.array(p),
-                         Dmolar=np.array(rhomolar),
-                         Hmolar=np.array(hmolar),
-                         Smolar=np.array(smolar),
-                         Umolar=np.array(umolar))
+                         Dmolar=np.array(rhomolar))
+                         # Hmolar=np.array(hmolar),
+                         # Smolar=np.array(smolar))
+                         # Umolar=np.array(umolar))
 
     def plot_Tmax_curve(self):
         for ax in self.axes_list:
@@ -195,7 +221,8 @@ class ConsistencyFigure(object):
 
     def calc_melting_curve(self):
         state = CP.AbstractState('HEOS', self.fluid)
-        rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
+        # rhomolar, smolar, hmolar, T, p, umolar = [], [], [], [], [], []
+        rhomolar, T, p = [], [], []
 
         # Melting line if it has it
         if state.has_melting_line():
@@ -209,18 +236,18 @@ class ConsistencyFigure(object):
                     T.append(state.T())
                     p.append(state.p())
                     rhomolar.append(state.rhomolar())
-                    hmolar.append(state.hmolar())
-                    smolar.append(state.smolar())
-                    umolar.append(state.umolar())
+                    # hmolar.append(state.hmolar())
+                    # smolar.append(state.smolar())
+                    # umolar.append(state.umolar())
                 except ValueError as VE:
                     myprint(1, 'melting', VE)
 
         self.melt = dict(T=np.array(T),
                          P=np.array(p),
-                         Dmolar=np.array(rhomolar),
-                         Hmolar=np.array(hmolar),
-                         Smolar=np.array(smolar),
-                         Umolar=np.array(umolar))
+                         Dmolar=np.array(rhomolar))
+                         # Hmolar=np.array(hmolar),
+                         # Smolar=np.array(smolar))
+                         # Umolar=np.array(umolar))
 
     def plot_melting_curve(self):
         for ax in self.axes_list:
@@ -238,8 +265,8 @@ class ConsistencyFigure(object):
 
 
 class ConsistencyAxis(object):
-    def __init__(self, axis, fig, pair, fluid, backend, state1, state2, state3,
-                 p_limits_1phase=None, T_limits_1phase=None, NT_1phase=40, Np_1phase=40,
+    def __init__(self, axis, fig, pair, fluid, backend, additional_backend, state1, state2, state3,
+                 state4, state5, state6, p_limits_1phase=None, T_limits_1phase=None, NT_1phase=40, Np_1phase=40,
                  NT_2phase=20, NQ_2phase=20
                  ):
         self.ax = axis
@@ -247,9 +274,13 @@ class ConsistencyAxis(object):
         self.pair = pair
         self.fluid = fluid
         self.backend = backend
+        self.additional_backend = additional_backend
         self.state = state1
         self.state_PT = state2
         self.state_QT = state3
+        self.state_pcsaft = state4
+        self.state_pcsaft_PT = state5
+        self.state_pcsaft_QT = state6
         self.p_limits_1phase = p_limits_1phase
         self.T_limits_1phase = T_limits_1phase
         self.NT_1phase = NT_1phase
@@ -282,7 +313,7 @@ class ConsistencyAxis(object):
         xparam, yparam = split_pair_xy(self.pair)
         x = self.to_axis_units(xparam, self.fig.Tmax[xparam])
         y = self.to_axis_units(yparam, self.fig.Tmax[yparam])
-        self.ax.plot(x, y, 'r', lw=1)
+        self.ax.plot(x, y, 'r', lw=1) # !!! start here: ValueError: x and y must have same first dimension, but have shapes (0,) and (65,)
 
     def plot_melting_curve(self):
         xparam, yparam = split_pair_xy(self.pair)
@@ -325,7 +356,6 @@ class ConsistencyAxis(object):
             p_max = self.state.keyed_output(CP.iP_max)
 
         for p in np.logspace(np.log10(p_min), np.log10(p_max), self.Np_1phase):
-
             if self.T_limits_1phase is None:
                 # No user-specified limits were provided, using the defaults
                 Tmin = self.state.keyed_output(CP.iT_triple)
@@ -348,11 +378,12 @@ class ConsistencyAxis(object):
                 Tvec = np.linspace(self.T_limits_1phase[0], self.T_limits_1phase[1], self.NT_1phase)
 
             for T in Tvec:
-
                 try:
                     # Update the state using PT inputs in order to calculate all the remaining inputs
-                    self.state_PT.update(CP.PT_INPUTS, p, T)
+                    self.state_pcsaft_PT.update(CP.PT_INPUTS, p, T)
                 except ValueError as VE:
+                    print(self.state_pcsaft_PT.get_mole_fractions())
+                    print(self.state_PT.get_mole_fractions())
                     data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1="P", val1=p, in2="T", val2=T))
                     myprint(1, 'consistency', VE)
                     continue
@@ -360,27 +391,27 @@ class ConsistencyAxis(object):
                 _exception = False
                 tic2 = timeit.default_timer()
                 try:
-                    val1, val2 = self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)
-                    self.state.update(pairkey, val1, val2)
+                    val1, val2 = self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)
+                    self.state_pcsaft.update(pairkey, val1, val2)
                     toc2 = timeit.default_timer()
                 except ValueError as VE:
                     data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
-                    myprint(1, 'update(1p)', self.pair, 'P', p, 'T', T, 'D', self.state_PT.keyed_output(CP.iDmolar), '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), VE)
+                    myprint(1, 'update(1p)', self.pair, 'P', p, 'T', T, 'D', self.state_pcsaft_PT.keyed_output(CP.iDmolar), '{0:18.16g}, {1:18.16g}'.format(self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)), VE)
                     _exception = True
 
-                x = self.to_axis_units(xparam, self.state_PT.keyed_output(xkey))
-                y = self.to_axis_units(yparam, self.state_PT.keyed_output(ykey))
+                x = self.to_axis_units(xparam, self.state_pcsaft_PT.keyed_output(xkey))
+                y = self.to_axis_units(yparam, self.state_pcsaft_PT.keyed_output(ykey))
 
                 if not _exception:
                     # Check the error on the density
-                    if abs(self.state_PT.rhomolar() / self.state.rhomolar() - 1) < 1e-3 and abs(self.state_PT.p() / self.state.p() - 1) < 1e-3 and abs(self.state_PT.T() - self.state.T()) < 1e-3:
+                    if abs(self.state_pcsaft_PT.rhomolar() / self.state_pcsaft.rhomolar() - 1) < 1e-3 and abs(self.state_pcsaft_PT.p() / self.state_pcsaft.p() - 1) < 1e-3 and abs(self.state_pcsaft_PT.T() - self.state_pcsaft.T()) < 1e-3:
                         data.append(dict(cls="GOOD", x=x, y=y, elapsed=toc2 - tic2))
                         if 'REFPROP' not in self.backend:
-                            if self.state_PT.phase() != self.state.phase():
-                                myprint(1, 'bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_PT.phase())
+                            if self.state_pcsaft_PT.phase() != self.state_pcsaft.phase():
+                                myprint(1, 'bad phase', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)), self.state_pcsaft.phase(), 'instead of', self.state_pcsaft_PT.phase())
                     else:
                         data.append(dict(cls="INCONSISTENT", type="update", in1=param1, val1=val1, in2=param2, val2=val2, x=x, y=y))
-                        myprint(1, 'bad', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), 'T:', self.state_PT.T(), 'Drho:', abs(self.state_PT.rhomolar() / self.state.rhomolar() - 1), abs(self.state_PT.p() / self.state.p() - 1), 'DT:', abs(self.state_PT.T() - self.state.T()))
+                        myprint(1, 'bad', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_pcsaft_PT.keyed_output(key1), self.state_pcsaft_PT.keyed_output(key2)), 'T:', self.state_pcsaft_PT.T(), 'Drho:', abs(self.state_pcsaft_PT.rhomolar() / self.state_pcsaft.rhomolar() - 1), abs(self.state_pcsaft_PT.p() / self.state_pcsaft.p() - 1), 'DT:', abs(self.state_pcsaft_PT.T() - self.state_pcsaft.T()))
 
         toc = time.time()
         df = pandas.DataFrame(data)
@@ -403,8 +434,8 @@ class ConsistencyAxis(object):
             # plt.title(self.pair)
             # plt.show()
 
-            # good.to_csv('times_water', sep=';')
-            good.to_excel('times_water.xlsx') # !!! uncomment
+            good.to_csv('times_water', sep=';')
+            # good.to_excel('times_water.xlsx') # !!! uncomment
         return df[df.cls != 'GOOD']
 
     def consistency_check_twophase(self):
@@ -413,7 +444,7 @@ class ConsistencyAxis(object):
         state = self.state
 
         try:
-            if state.fluid_param_string('pure') == 'false':
+            if state_pcsaft.fluid_param_string('pure') == 'false':
                 print("Not a pure-fluid, skipping two-phase evaluation")
                 return
         except:
@@ -439,7 +470,7 @@ class ConsistencyAxis(object):
 
                 try:
                     # Update the state using QT inputs in order to calculate all the remaining inputs
-                    self.state_QT.update(CP.QT_INPUTS, q, T)
+                    self.state_pcsaft_QT.update(CP.QT_INPUTS, q, T)
                 except ValueError as VE:
                     data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1="Q", val1=q, in2="T", val2=T))
                     myprint(1, 'consistency', VE)
@@ -447,28 +478,28 @@ class ConsistencyAxis(object):
 
                 _exception = False
                 try:
-                    val1, val2 = self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)
-                    state.update(pairkey, val1, val2)
+                    val1, val2 = self.state_pcsaft_QT.keyed_output(key1), self.state_pcsaft_QT.keyed_output(key2)
+                    self.state_pcsaft.update(pairkey, val1, val2)
                 except ValueError as VE:
                     data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
                     myprint(1, 'update_QT', T, q)
-                    myprint(1, 'update', param1, self.state_QT.keyed_output(key1), param2, self.state_QT.keyed_output(key2), VE)
+                    myprint(1, 'update', param1, self.state_pcsaft_QT.keyed_output(key1), param2, self.state_pcsaft_QT.keyed_output(key2), VE)
                     _exception = True
 
-                x = self.to_axis_units(xparam, self.state_QT.keyed_output(xkey))
-                y = self.to_axis_units(yparam, self.state_QT.keyed_output(ykey))
+                x = self.to_axis_units(xparam, self.state_pcsaft_QT.keyed_output(xkey))
+                y = self.to_axis_units(yparam, self.state_pcsaft_QT.keyed_output(ykey))
 
                 if not _exception:
                     # Check the error on the density
-                    if abs(self.state_QT.rhomolar() / self.state.rhomolar() - 1) < 1e-3 and abs(self.state_QT.p() / self.state.p() - 1) < 1e-3 and abs(self.state_QT.T() - self.state.T()) < 1e-3:
+                    if abs(self.state_pcsaft_QT.rhomolar() / self.state_pcsaft.rhomolar() - 1) < 1e-3 and abs(self.state_pcsaft_QT.p() / self.state_pcsaft.p() - 1) < 1e-3 and abs(self.state_pcsaft_QT.T() - self.state_pcsaft.T()) < 1e-3:
                         data.append(dict(cls="GOOD", x=x, y=y))
                         if 'REFPROP' not in self.backend:
-                            if self.state_QT.phase() != self.state.phase():
-                                myprint(1, 'bad phase (2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), self.state.phase(), 'instead of', self.state_QT.phase())
+                            if self.state_pcsaft_QT.phase() != self.state_pcsaft.phase():
+                                myprint(1, 'bad phase (2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_pcsaft_QT.keyed_output(key1), self.state_pcsaft_QT.keyed_output(key2)), self.state_pcsaft.phase(), 'instead of', self.state_pcsaft_QT.phase())
 
                     else:
                         myprint(1, 'Q', q)
-                        myprint(1, 'bad(2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)), 'pnew:', self.state.p(), 'pold:', self.state_QT.p(), 'Tnew:', self.state.T(), 'T:', self.state_QT.T(), 'Drho:', abs(self.state_QT.rhomolar() / self.state.rhomolar() - 1), 'DP', abs(self.state_QT.p() / self.state.p() - 1), 'DT:', abs(self.state_QT.T() - self.state.T()))
+                        myprint(1, 'bad(2phase)', self.pair, '{0:18.16g}, {1:18.16g}'.format(self.state_pcsaft_QT.keyed_output(key1), self.state_pcsaft_QT.keyed_output(key2)), 'pnew:', self.state_pcsaft.p(), 'pold:', self.state_pcsaft_QT.p(), 'Tnew:', self.state_pcsaft.T(), 'T:', self.state_pcsaft_QT.T(), 'Drho:', abs(self.state_pcsaft_QT.rhomolar() / self.state_pcsaft.rhomolar() - 1), 'DP', abs(self.state_pcsaft_QT.p() / self.state_pcsaft.p() - 1), 'DT:', abs(self.state_pcsaft_QT.T() - self.state_pcsaft.T()))
                         data.append(dict(cls="INCONSISTENT", type="update", in1=param1, val1=val1, in2=param2, val2=val2, x=x, y=y))
 
         toc = time.time()
@@ -510,9 +541,9 @@ if __name__ == '__main__':
             tic = timeit.default_timer()
             skips = ['DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar', 'HmolarSmolar']
             skips = []
-            ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=skips)  # , NT_1phase = 10, Np_1phase = 10, NT_2phase = 100, NQ_2phase = 0)
-            # ff.to_csv('Errors' + fluid, sep=';')
-            ff.errors.to_excel('Errors' + fluid + '.xlsx') # !!! uncomment
+            ff = ConsistencyFigure(fluid, backend='PCSAFT', additional_skips=skips)  # , NT_1phase = 10, Np_1phase = 10, NT_2phase = 100, NQ_2phase = 0)
+            ff.to_csv('Errors' + fluid, sep=';')
+            # ff.errors.to_excel('Errors' + fluid + '.xlsx') # !!! uncomment
             toc = timeit.default_timer()
             print('Time to build:', toc - tic, 'seconds')
             ff.add_to_pdf(PVT)

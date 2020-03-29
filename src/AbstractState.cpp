@@ -413,8 +413,8 @@ double AbstractState::keyed_output(parameters key)
         return hmass();
     case iSmolar:
         return smolar();
-    case iSmolar_residual_trho:
-        return smolar_residual_trho();
+    case iSmolar_residual:
+        return smolar_residual();
     case iSmass:
         return smass();
     case iUmolar:
@@ -564,9 +564,9 @@ double AbstractState::smolar(void){
     if (!_smolar) _smolar = calc_smolar();
     return _smolar;
 }
-double AbstractState::smolar_residual_trho(void){
-    if (!_smolar_residual_trho) _smolar_residual_trho = calc_smolar_residual_trho();
-    return _smolar_residual_trho;
+double AbstractState::smolar_residual(void){
+    if (!_smolar_residual) _smolar_residual = calc_smolar_residual();
+    return _smolar_residual;
 }
 double AbstractState::smolar_excess(void) {
     if (!_smolar_excess) calc_excess_properties();

@@ -9,7 +9,7 @@
 #include "Exceptions.h"
 #include <vector>
 
-using namespace std;
+using std::vector;
 
 namespace CoolProp {
 
@@ -47,6 +47,7 @@ protected:
 
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
     phases calc_phase_internal(CoolProp::input_pairs input_pair);
+    CoolPropDbl reduced_to_molar(CoolPropDbl nu, CoolPropDbl T);
 
     // these functions are used internally to solve for association parameters
     vector<double> XA_find(vector<double> XA_guess, int ncomp, vector<double> delta_ij, double den,
@@ -110,7 +111,7 @@ public:
     CoolPropDbl calc_alphar(void); // residual helmholtz energy
     CoolPropDbl calc_dadt(void); // derivative of the residual helmholtz energy with respect to temperature
     CoolPropDbl calc_hmolar_residual(void);
-    CoolPropDbl calc_smolar_residual_trho(void);
+    CoolPropDbl calc_smolar_residual(void);
     vector<CoolPropDbl> calc_fugacity_coefficients(void);
     CoolPropDbl calc_gibbsmolar_residual(void);
     // CoolPropDbl calc_cpmolar(void); // TODO implement these heat capacity functions

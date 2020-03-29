@@ -107,7 +107,7 @@ protected:
     CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar, _helmholtzmolar;
 
     /// Residual properties
-    CachedElement _hmolar_residual, _smolar_residual_trho, _gibbsmolar_residual;
+    CachedElement _hmolar_residual, _smolar_residual, _gibbsmolar_residual;
 
     /// Excess properties
     CachedElement _hmolar_excess, _smolar_excess, _gibbsmolar_excess, _umolar_excess, _volumemolar_excess, _helmholtzmolar_excess;
@@ -146,7 +146,7 @@ protected:
     /// Using this backend, calculate the molar entropy in J/mol/K
     virtual CoolPropDbl calc_smolar(void){ throw NotImplementedError("calc_smolar is not implemented for this backend"); };
     /// Using this backend, calculate the residual molar entropy in J/mol/K
-    virtual CoolPropDbl calc_smolar_residual_trho(void){ throw NotImplementedError("calc_smolar_residual_trho is not implemented for this backend"); };
+    virtual CoolPropDbl calc_smolar_residual(void){ throw NotImplementedError("calc_smolar_residual is not implemented for this backend"); };
     /// Using this backend, calculate the molar internal energy in J/mol
     virtual CoolPropDbl calc_umolar(void){ throw NotImplementedError("calc_umolar is not implemented for this backend"); };
     /// Using this backend, calculate the molar constant-pressure specific heat in J/mol/K
@@ -739,7 +739,7 @@ public:
     /// Return the molar entropy in J/mol/K
     double smolar(void);
     /// Return the residual molar entropy (as a function of temperature and density) in J/mol/K
-    double smolar_residual_trho(void);
+    double smolar_residual(void);
     /// Return the molar entropy in J/kg/K
     double smass(void){ return calc_smass(); };
     /// Return the molar entropy in J/mol/K

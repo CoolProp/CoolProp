@@ -87,7 +87,7 @@ enum parameters{
     iGmolar, ///< Mole-based Gibbs energy
     iHelmholtzmolar, ///< Mole-based Helmholtz energy
     iHmolar_residual, ///< The residual molar enthalpy
-    iSmolar_residual_trho, ///< The residual molar entropy (as a function of temperature and density)
+    iSmolar_residual, ///< The residual molar entropy (as a function of temperature and density)
     iGmolar_residual, ///< The residual molar Gibbs energy
 
     // Mass specific thermodynamic properties

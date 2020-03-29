@@ -298,7 +298,7 @@ public:
     CoolPropDbl calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
     CoolPropDbl calc_smolar(void);
     CoolPropDbl calc_smolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
-    CoolPropDbl calc_smolar_residual_trho(void) { return gas_constant()*(tau()*dalphar_dTau() - alphar()); }
+    CoolPropDbl calc_smolar_residual(void) { return gas_constant()*(tau()*dalphar_dTau() - alphar()); }
 
     CoolPropDbl calc_hmolar(void);
     CoolPropDbl calc_hmolar_residual(void) { return gas_constant()*_T*(tau()*dalphar_dTau() + delta()*dalphar_dDelta()); }

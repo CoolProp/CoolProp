@@ -41,7 +41,7 @@ const parameter_info parameter_info_list[] = {
     {iCp0molar,          "Cp0molar",          "O", "J/mol/K", "Ideal gas molar specific constant pressure specific heat",false},
     {iCp0mass,           "Cp0mass",           "O", "J/kg/K",  "Ideal gas mass specific constant pressure specific heat",false},
     {iHmolar_residual,   "Hmolar_residual",   "O", "J/mol/K", "Residual molar enthalpy",false},
-    {iSmolar_residual_trho,   "Smolar_residual_trho",   "O", "J/mol/K", "Residual molar entropy (as a function of temperature and density)",false},
+    {iSmolar_residual,   "Smolar_residual",   "O", "J/mol/K", "Residual molar entropy (sr/R = s(T,rho) - s^0(T,rho))",false},
     {iGmolar_residual,   "Gmolar_residual",   "O", "J/mol/K", "Residual molar Gibbs energy",false},
     {iGWP20,             "GWP20",             "O", "-",       "20-year global warming potential",                 true},
     {iGWP100,            "GWP100",            "O", "-",       "100-year global warming potential",                true},

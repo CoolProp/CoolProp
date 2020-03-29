@@ -109,7 +109,7 @@ void init_CoolProp(py::module &m){
         .value("iUmolar", parameters::iUmolar)
         .value("iGmolar", parameters::iGmolar)
         .value("iHelmholtzmolar", parameters::iHelmholtzmolar)
-        .value("iSmolar_residual_trho", parameters::iSmolar_residual_trho)
+        .value("ismolar_residual", parameters::ismolar_residual)
         .value("iDmass", parameters::iDmass)
         .value("iHmass", parameters::iHmass)
         .value("iSmass", parameters::iSmass)
