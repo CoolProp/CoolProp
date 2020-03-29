@@ -1827,7 +1827,6 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
                 SatL->_Q = _Q; SatV->_Q = _Q;
                 flash_QT(*this);
                 rho_dew = _rhomolar;
-                p_dew = _p;
                 _p = p_input; _rhomolar = rho_input;
                 if (_rhomolar < rho_dew) {
                     phase = iphase_gas;
@@ -2279,13 +2278,12 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     // split into grid and find bounds for each root
     vector<double> x_lo, x_hi;
     int num_pts = 25;
-    double err;
     double rho_guess = 1e-13;
     double rho_guess_prev = rho_guess;
     double err_prev = (update_DmolarT(reduced_to_molar(rho_guess, T)) - p) / p;
     for (int i = 0; i < num_pts; i++) {
         rho_guess = 0.7405 / (double)num_pts * i + 6e-3;
-        err = (update_DmolarT(reduced_to_molar(rho_guess, T)) - p) / p;
+        double err = (update_DmolarT(reduced_to_molar(rho_guess, T)) - p) / p;
         if (err * err_prev < 0) {
             x_lo.push_back(rho_guess_prev);
             x_hi.push_back(rho_guess);
@@ -2295,7 +2293,8 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     }
 
     // solve for appropriate root(s)
-    double rho, x_lo_molar, x_hi_molar;
+    double rho = _HUGE;
+    double x_lo_molar, x_hi_molar;
 
     if (x_lo.size() == 1) {
         rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 2., T);
@@ -2338,10 +2337,10 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     else {
         int num_pts = 25;
         double err_min = 1e40;
-        double err, rho_guess, rho_min;
+        double rho_min;
         for (int i = 0; i < num_pts; i++) {
-            rho_guess = 0.7405 / (double)num_pts * i + 1e-8;
-            err = (update_DmolarT(reduced_to_molar(rho_guess, T)) - p) / p;
+            double rho_guess = 0.7405 / (double)num_pts * i + 1e-8;
+            double err = (update_DmolarT(reduced_to_molar(rho_guess, T)) - p) / p;
             if (abs(err) < err_min) {
                 err_min = abs(err);
                 rho_min = reduced_to_molar(rho_guess, T);
