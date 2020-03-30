@@ -43,7 +43,7 @@
     X(OVERWRITE_DEPARTURE_FUNCTION, "OVERWRITE_DEPARTURE_FUNCTION", false, "If true, and a departure function to be added is already there, rather than not adding the departure function (and probably throwing an exception), overwrite it") \
     X(OVERWRITE_BINARY_INTERACTION, "OVERWRITE_BINARY_INTERACTION", false, "If true, and a pair of binary interaction pairs to be added is already there, rather than not adding the binary interaction pair (and probably throwing an exception), overwrite it") \
     X(USE_GUESSES_IN_PROPSSI, "USE_GUESSES_IN_PROPSSI", false, "If true, calls to the vectorized versions of PropsSI use the previous state as guess value while looping over the input vectors, only makes sense when working with a single fluid and with points that are not too far from each other.") \
-    X(ASSUME_CRITICAL_POINT_STABLE, "ASSUME_CRIT_POINT_STABLE", false, "If true, evaluation of the stability of critical point will be skipped and point will be assumed to be stable") \
+    X(ASSUME_CRITICAL_POINT_STABLE, "ASSUME_CRITICAL_POINT_STABLE", false, "If true, evaluation of the stability of critical point will be skipped and point will be assumed to be stable") \
     X(VTPR_ALWAYS_RELOAD_LIBRARY, "VTPR_ALWAYS_RELOAD_LIBRARY", false, "If true, the library will always be reloaded, no matter what is currently loaded") \
     X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.") \
     X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")
