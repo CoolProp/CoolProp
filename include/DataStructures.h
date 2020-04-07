@@ -86,7 +86,9 @@ enum parameters{
     iUmolar, ///< Mole-based internal energy
     iGmolar, ///< Mole-based Gibbs energy
     iHelmholtzmolar, ///< Mole-based Helmholtz energy
-    iSmolar_residual, ///< The residual molar entropy (s^r/R = tau*dar_dtau-ar)
+    iHmolar_residual, ///< The residual molar enthalpy
+    iSmolar_residual, ///< The residual molar entropy (as a function of temperature and density)
+    iGmolar_residual, ///< The residual molar Gibbs energy
 
     // Mass specific thermodynamic properties
     iDmass, ///< Mass-based density

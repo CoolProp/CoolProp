@@ -1994,6 +1994,13 @@ TEST_CASE("Check the PC-SAFT pressure function", "[pcsaft_pressure]")
 
     p_calc = CoolProp::PropsSI("P","T",298.15,"Dmolar", 55740.157290833515, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
     CHECK(abs((p_calc/p) - 1) < 1e-5);
+
+    p = CoolProp::PropsSI("P","T",100.,"Q", 0,"PCSAFT::PROPANE");
+    double rho = 300;
+    double phase = CoolProp::PropsSI("Phase","T",100.,"Dmolar", rho,"PCSAFT::PROPANE");
+    CHECK(phase == get_phase_index("phase_twophase"));
+    p_calc = CoolProp::PropsSI("P","T",100,"Dmolar", rho, "PCSAFT::PROPANE");
+    CHECK(abs((p_calc/p) - 1) < 1e-4);
 }
 
 TEST_CASE("Check the PC-SAFT density function", "[pcsaft_density]")
@@ -2021,86 +2028,141 @@ TEST_CASE("Check the PC-SAFT density function", "[pcsaft_density]")
     den = 55740.157290833515;
     den_calc = CoolProp::PropsSI("Dmolar","T|liquid",298.15,"P", 101325, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
     CHECK(abs((den_calc/den) - 1) < 1e-5);
+
+    den = 16621.0;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",85.525,"P", 1.7551e-4, "PCSAFT::PROPANE");
+    CHECK(abs((den_calc/den) - 1) < 1e-2);
+
+    den = 1.9547e-7;
+    den_calc = CoolProp::PropsSI("Dmolar","T|gas",85.525,"P", 1.39e-4, "PCSAFT::PROPANE");
+    CHECK(abs((den_calc/den) - 1) < 1e-2);
+
+    den = 11346.0;
+    den_calc = CoolProp::PropsSI("Dmolar","T|liquid", 293,"P", 833240, "PCSAFT::PROPANE");
+    CHECK(abs((den_calc/den) - 1) < 1e-2);
+
+    den = 623.59;
+    den_calc = CoolProp::PropsSI("Dmolar","T", 430,"P", 2000000, "PCSAFT::PROPANE");
+    CHECK(abs((den_calc/den) - 1) < 1e-2);
+
+    den = 623.59;
+    den_calc = CoolProp::PropsSI("Dmolar","T", 430,"P", 2000000, "PCSAFT::PROPANE");
+    CHECK(abs((den_calc/den) - 1) < 1e-2);
 }
 
-TEST_CASE("Check the PC-SAFT enthalpy function", "[pcsaft_enthalpy]")
+TEST_CASE("Check the PC-SAFT residual enthalpy function", "[pcsaft_enthalpy]")
 {
     double h = -36809.962122036086;
-    double h_calc = CoolProp::PropsSI("Hmolar","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE");
+    double h_calc = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE");
     CHECK(abs((h_calc/h) - 1) < 1e-5);
 
     h = -362.6832840695562;
-    h_calc = CoolProp::PropsSI("Hmolar","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
     CHECK(abs((h_calc/h) - 1) < 1e-5);
 
     h = -38925.302571456035;
-    h_calc = CoolProp::PropsSI("Hmolar","T|liquid",325.,"Dmolar", 16655.844528563375,"PCSAFT::ACETIC ACID");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 16655.844528563375,"PCSAFT::ACETIC ACID");
     CHECK(abs((h_calc/h) - 1) < 1e-5);
 
     h = -15393.870073928741;
-    h_calc = CoolProp::PropsSI("Hmolar","T|gas",325.,"Dmolar", 85.70199446609787,"PCSAFT::ACETIC ACID");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 85.70199446609787,"PCSAFT::ACETIC ACID");
     CHECK(abs((h_calc/h) - 1) < 1e-5);
 
     h = -18037.24422056259;
-    h_calc = CoolProp::PropsSI("Hmolar","T|liquid",325.,"Dmolar", 12963.391139983729,"PCSAFT::DIMETHYL ETHER");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 12963.391139983729,"PCSAFT::DIMETHYL ETHER");
     CHECK(abs((h_calc/h) - 1) < 1e-5);
 
     h = -92.66136745908202;
-    h_calc = CoolProp::PropsSI("Hmolar","T|gas",325.,"Dmolar", 37.9473393419189,"PCSAFT::DIMETHYL ETHER");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 37.9473393419189,"PCSAFT::DIMETHYL ETHER");
     CHECK(abs((h_calc/h) - 1) < 1e-5);
+
+    // checks based on values from the HEOS backend
+    h = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 8983.377722763931,"HEOS::TOLUENE");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE");
+    CHECK(abs(h_calc - h) < 600.);
+
+    h = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 39.44490805826904,"HEOS::TOLUENE");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
+    CHECK(abs(h_calc - h) < 600.);
+
+    h = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 54794.1,"HEOS::WATER");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 54794.1,"PCSAFT::WATER");
+    CHECK(abs(h_calc - h) < 600.);
+
+    h = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 0.370207,"HEOS::WATER");
+    h_calc = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 0.370207,"PCSAFT::WATER");
+    CHECK(abs(h_calc - h) < 600.);
 }
 
-TEST_CASE("Check the PC-SAFT entropy function", "[pcsaft_entropy]")
+TEST_CASE("Check the PC-SAFT residual entropy function", "[pcsaft_entropy]")
 {
-    double s = -96.37073923620108;
-    double s_calc = CoolProp::PropsSI("Smolar","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE");
+    // checks based on values from working PC-SAFT code
+    double s = -50.81694890352192;
+    double s_calc = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE"); // !!! remove _trho
     CHECK(abs((s_calc/s) - 1) < 1e-5);
 
-    s = -0.71399188851593;
-    s_calc = CoolProp::PropsSI("Smolar","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
+    s = -0.2929618646219797;
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
     CHECK(abs((s_calc/s) - 1) < 1e-5);
 
-    s = -98.11438226878514;
-    s_calc = CoolProp::PropsSI("Smolar","T|liquid",325.,"Dmolar", 16655.844528563375,"PCSAFT::ACETIC ACID");
+    s = -47.42736805661422;
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 16655.844528563375,"PCSAFT::ACETIC ACID");
     CHECK(abs((s_calc/s) - 1) < 1e-5);
 
-    s = -40.875010518267636;
-    s_calc = CoolProp::PropsSI("Smolar","T|gas",325.,"Dmolar", 85.70199446609787,"PCSAFT::ACETIC ACID");
+    s = -34.0021996393859;
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 85.70199446609787,"PCSAFT::ACETIC ACID");
     CHECK(abs((s_calc/s) - 1) < 1e-5);
 
-    s = -74.51530616035801;
-    s_calc = CoolProp::PropsSI("Smolar","T|liquid",325.,"Dmolar", 12963.391139983729,"PCSAFT::DIMETHYL ETHER");
+    s = -25.91216157948035;
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 12963.391139983729,"PCSAFT::DIMETHYL ETHER");
     CHECK(abs((s_calc/s) - 1) < 1e-5);
 
-    s = -0.18345485579470536;
-    s_calc = CoolProp::PropsSI("Smolar","T|gas",325.,"Dmolar", 37.9473393419189,"PCSAFT::DIMETHYL ETHER");
+    s = -0.0842409121406476;
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 37.9473393419189,"PCSAFT::DIMETHYL ETHER");
     CHECK(abs((s_calc/s) - 1) < 1e-5);
+
+    // checks based on values from the HEOS backend
+    s = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 8983.377722763931,"HEOS::TOLUENE");
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE");
+    CHECK(abs(s_calc - s) < 3.);
+
+    s = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 39.44490805826904,"HEOS::TOLUENE");
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
+    CHECK(abs(s_calc - s) < 3.);
+
+    s = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 54794.1,"HEOS::WATER");
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 54794.1,"PCSAFT::WATER");
+    CHECK(abs(s_calc - s) < 3.);
+
+    s = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 0.370207,"HEOS::WATER");
+    s_calc = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 0.370207,"PCSAFT::WATER");
+    CHECK(abs(s_calc - s) < 3.);
 }
 
-TEST_CASE("Check the PC-SAFT gibbs energy function", "[pcsaft_gibbs]")
+TEST_CASE("Check the PC-SAFT residual gibbs energy function", "[pcsaft_gibbs]")
 {
     double g = -5489.471870270737;
-    double g_calc = CoolProp::PropsSI("Gmolar","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE");
+    double g_calc = CoolProp::PropsSI("Gmolar_residual","T|liquid",325.,"Dmolar", 8983.377722763931,"PCSAFT::TOLUENE");
     CHECK(abs((g_calc/g) - 1) < 1e-5);
 
     g = -130.63592030187894;
-    g_calc = CoolProp::PropsSI("Gmolar","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
+    g_calc = CoolProp::PropsSI("Gmolar_residual","T|gas",325.,"Dmolar", 39.44490805826904,"PCSAFT::TOLUENE");
     CHECK(abs((g_calc/g) - 1) < 1e-5);
 
     g = -7038.128334100866;
-    g_calc = CoolProp::PropsSI("Gmolar","T|liquid",325.,"Dmolar", 16655.844528563375,"PCSAFT::ACETIC ACID");
+    g_calc = CoolProp::PropsSI("Gmolar_residual","T|liquid",325.,"Dmolar", 16655.844528563375,"PCSAFT::ACETIC ACID");
     CHECK(abs((g_calc/g) - 1) < 1e-5);
 
     g = -2109.4916554917604;
-    g_calc = CoolProp::PropsSI("Gmolar","T|gas",325.,"Dmolar", 85.70199446609787,"PCSAFT::ACETIC ACID");
+    g_calc = CoolProp::PropsSI("Gmolar_residual","T|gas",325.,"Dmolar", 85.70199446609787,"PCSAFT::ACETIC ACID");
     CHECK(abs((g_calc/g) - 1) < 1e-5);
 
     g = 6180.230281553767;
-    g_calc = CoolProp::PropsSI("Gmolar","T|liquid",325.,"Dmolar", 12963.391139983729,"PCSAFT::DIMETHYL ETHER");
+    g_calc = CoolProp::PropsSI("Gmolar_residual","T|liquid",325.,"Dmolar", 12963.391139983729,"PCSAFT::DIMETHYL ETHER");
     CHECK(abs((g_calc/g) - 1) < 1e-5);
 
     g = -33.03853932580277;
-    g_calc = CoolProp::PropsSI("Gmolar","T|gas",325.,"Dmolar", 37.9473393419189,"PCSAFT::DIMETHYL ETHER");
+    g_calc = CoolProp::PropsSI("Gmolar_residual","T|gas",325.,"Dmolar", 37.9473393419189,"PCSAFT::DIMETHYL ETHER");
     CHECK(abs((g_calc/g) - 1) < 1e-5);
 }
 
@@ -2121,6 +2183,21 @@ TEST_CASE("Check vapor pressures calculated using PC-SAFT", "[pcsaft_vapor_press
     vp = 623027.07850612;
     vp_calc = CoolProp::PropsSI("P","T", 300.,"Q", 0,"PCSAFT::DIMETHYL ETHER");
     CHECK(abs((vp_calc/vp) - 1) < 1e-3);
+
+    vp = 1.7551e-4;
+    vp_calc = CoolProp::PropsSI("P","T",85.525,"Q", 0, "PCSAFT::PROPANE");
+    std::cout << "Propane: vp=" << vp << " vp_calc=" << vp_calc << " error=" << abs((vp_calc/vp) - 1) << std::endl; // !!!
+    CHECK(abs((vp_calc/vp) - 1) < 0.1);
+
+    vp = 8.3324e5;
+    vp_calc = CoolProp::PropsSI("P","T", 293,"Q", 0, "PCSAFT::PROPANE");
+    std::cout << "Propane: vp=" << vp << " vp_calc=" << vp_calc << " error=" << abs((vp_calc/vp) - 1) << std::endl; // !!!
+    CHECK(abs((vp_calc/vp) - 1) < 0.01);
+
+    vp = 42.477e5;
+    vp_calc = CoolProp::PropsSI("P","T", 369.82,"Q", 0, "PCSAFT::PROPANE");
+    std::cout << "Propane: vp=" << vp << " vp_calc=" << vp_calc << " error=" << abs((vp_calc/vp) - 1) << std::endl; // !!!
+    CHECK(abs((vp_calc/vp) - 1) < 0.01);
 }
 
 TEST_CASE("Check PC-SAFT interaction parameter functions", "[pcsaft_binary_interaction]")
