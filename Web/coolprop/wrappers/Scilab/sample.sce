@@ -6,7 +6,7 @@
 //
 // Conveniently, FORTRAN77 also requires that all functions take all arguments by
 // reference, and we added FORTRAN77-compatible versions of HAPropsSI and PropsSI
-// (but no other functions).  So these reference-only functions will work with 
+// (but no other functions).  So these reference-only functions will work with
 // scilab's crippled shared library interface.
 //
 // Below we have made small Scilab wrapper functions around these FORTRAN77-compatible
@@ -17,9 +17,9 @@ if (getos() == "Windows") then
     else
         link('CoolProp.dll', ['propssi_','hapropssi_'], 'c');
     end
-elseif (getOS() == "Darwin") then
+elseif (getos() == "Darwin") then
     link('libCoolProp.dylib', ['propssi_','hapropssi_'], 'c');
-else: // Linux
+else // Linux
     link('libCoolProp.so', ['propssi_','hapropssi_'], 'c');
 end
 
