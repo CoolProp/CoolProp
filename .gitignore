@@ -40,6 +40,7 @@
 /dev/all_fluids_verbose.json
 /dev/all_fluids.json
 /include/all_fluids_JSON.h
+/include/all_pcsaft_JSON.h 
 /include/gitrevision.h
 /include/mixture_excess_term_JSON.h
 /include/mixture_reducing_parameters_JSON.h

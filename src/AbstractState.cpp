@@ -407,12 +407,14 @@ double AbstractState::keyed_output(parameters key)
         return rhomass();
     case iHmolar:
         return hmolar();
+    case iHmolar_residual:
+        return hmolar_residual();
     case iHmass:
         return hmass();
     case iSmolar:
         return smolar();
     case iSmolar_residual:
-        return gas_constant()*(tau()*dalphar_dTau() - alphar());
+        return smolar_residual();
     case iSmass:
         return smass();
     case iUmolar:
@@ -421,6 +423,8 @@ double AbstractState::keyed_output(parameters key)
         return umass();
     case iGmolar:
         return gibbsmolar();
+    case iGmolar_residual:
+        return gibbsmolar_residual();
     case iGmass:
         return gibbsmass();
     case iHelmholtzmolar:
@@ -548,6 +552,10 @@ double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
     return _hmolar;
 }
+double AbstractState::hmolar_residual(void){
+    if (!_hmolar_residual) _hmolar_residual = calc_hmolar_residual();
+    return _hmolar_residual;
+}
 double AbstractState::hmolar_excess(void) {
     if (!_hmolar_excess) calc_excess_properties();
     return _hmolar_excess;
@@ -555,6 +563,10 @@ double AbstractState::hmolar_excess(void) {
 double AbstractState::smolar(void){
     if (!_smolar) _smolar = calc_smolar();
     return _smolar;
+}
+double AbstractState::smolar_residual(void){
+    if (!_smolar_residual) _smolar_residual = calc_smolar_residual();
+    return _smolar_residual;
 }
 double AbstractState::smolar_excess(void) {
     if (!_smolar_excess) calc_excess_properties();
@@ -571,6 +583,10 @@ double AbstractState::umolar_excess(void) {
 double AbstractState::gibbsmolar(void){
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
     return _gibbsmolar;
+}
+double AbstractState::gibbsmolar_residual(void){
+    if (!_gibbsmolar_residual) _gibbsmolar_residual = calc_gibbsmolar_residual();
+    return _gibbsmolar_residual;
 }
 double AbstractState::gibbsmolar_excess(void) {
     if (!_gibbsmolar_excess) calc_excess_properties();
