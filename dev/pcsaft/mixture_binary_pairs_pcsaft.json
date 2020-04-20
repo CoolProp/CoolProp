@@ -236,7 +236,7 @@
     "CAS1": "1333-74-0",
     "CAS2": "592-76-7",
     "Name1": "HYDROGEN",
-    "Name2": "HEPTENE",
+    "Name2": "1-HEPTENE",
     "kij": 0.0
   },
   {
@@ -244,7 +244,7 @@
     "CAS1": "1333-74-0",
     "CAS2": "111-66-0",
     "Name1": "HYDROGEN",
-    "Name2": "OCTENE",
+    "Name2": "1-OCTENE",
     "kij": 0.0
   },
   {
