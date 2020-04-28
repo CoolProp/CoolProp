@@ -2054,7 +2054,7 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated(){
                 J(k,j) = (IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
                 J(k,j+N-1) = -(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
             }
-            std::size_t j = N-1;
+            std::size_t j = N-2;
             J(k,j) = -(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
             J(k,j+N-1) = +(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
         }
