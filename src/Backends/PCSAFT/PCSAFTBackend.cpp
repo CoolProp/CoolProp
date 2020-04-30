@@ -2264,7 +2264,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         CoolPropDbl call(CoolPropDbl rhomolar){
             CoolPropDbl peos = PCSAFT.update_DmolarT(rhomolar);
             double cost = (peos-p)/p;
-            if (isfinite(cost)) {
+            if (std::isfinite(cost)) {
                 return cost;
             }
             else {
