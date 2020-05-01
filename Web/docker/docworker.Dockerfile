@@ -36,4 +36,4 @@ RUN source activate docs && \
     cp -r /REFPROP_sources/fluids /opt/refprop && \
     cp -r /REFPROP_sources/mixtures /opt/refprop 
 
-RUN pip3 install pybtex
+RUN python -m pip install pybtex
