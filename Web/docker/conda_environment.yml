@@ -6,6 +6,7 @@ dependencies:
   - matplotlib
   - ipython
   - pandas
+  - pip
   - pip:
     - cython
     - sphinx
