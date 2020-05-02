@@ -80,13 +80,13 @@ public:
         if (it != fluid_map.end()) {
             return it->second;
         } else {
-            std::map<std::string, std::string>::iterator italias = aliases_map.find(identifier);
+            std::map<std::string, std::string>::iterator italias = aliases_map.find(uppercase_identifier);
             if (italias != aliases_map.end()){
                 // Alias was found, use it to get the fluid name, and then the cubic values
                 return fluid_map.find(italias->second)->second;
             }
             else{
-                throw ValueError(format("Fluid identifier [%s] was not found in CubicsLibrary", identifier.c_str()));
+                throw ValueError(format("Fluid identifier [%s] was not found in CubicsLibrary", uppercase_identifier.c_str()));
             }
         }
     };
