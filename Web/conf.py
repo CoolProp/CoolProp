@@ -199,7 +199,8 @@ html_theme_options = {"roottarget": "index",
                        "max_width": "13in",
                        "logotarget": "index",
                        "googleanalytics_id": "UA-53205480-2",
-                       "default_layout_text_size": "85%"
+                       "default_layout_text_size": "85%",
+                       "table_style_default_align": "left"
                        }
 
 edit_on_github_project = 'CoolProp/CoolProp'
