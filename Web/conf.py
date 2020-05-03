@@ -173,7 +173,7 @@ pygments_style = 'sphinx'
 autoclass_content = 'both'
 
 # Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
-html4_writer = true
+html4_writer = True
 
 # -- Options for HTML output ---------------------------------------------------
 
