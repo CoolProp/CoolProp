@@ -97,22 +97,20 @@ Based on the miniconda Python ecosystem, you can create your own virtual
 environments for building the Python wheels. This requires the following
 steps on a Windows machine::
 
-    conda create -n CoolProp27 python=2.7 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel ndg-httpsclient
-    conda create -n CoolProp34 python=3.4 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
-    conda create -n CoolProp35 python=3.5 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
-    conda create -n CoolProp36 python=3.6 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
-    conda create -n CoolProp37 python=3.7 cython pip pywin32 unxutils requests jinja2 pyyaml pycrypto wheel 
-    conda create -n CoolPropWorker pip && activate CoolPropWorker && pip install buildbot-worker && deactivate
+    conda create -y -n CoolProp27 python=2.7 cython pip pywin32 requests jinja2 pyyaml pycrypto wheel ndg-httpsclient
+    conda create -y -n CoolProp36 python=3.6 cython pip pywin32 requests jinja2 pyyaml pycrypto wheel 
+    conda create -y -n CoolProp37 python=3.7 cython pip pywin32 requests jinja2 pyyaml pycrypto wheel 
+    conda create -y -n CoolProp38 python=3.8 cython pip pywin32 requests jinja2 pyyaml pycrypto wheel 
+    conda create -y -n CoolPropWorker pip && activate CoolPropWorker && pip install buildbot-worker && deactivate
 
 Please repeat the steps above for **both 32bit and 64bit** Python environments.
 
 On a Linux system, things only change a little bit::
 
     conda create -n CoolProp27 python=2.7 cython pip requests jinja2 pyyaml pycrypto wheel
-    conda create -n CoolProp34 python=3.4 cython pip requests jinja2 pyyaml pycrypto wheel
-    conda create -n CoolProp35 python=3.5 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp36 python=3.6 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp37 python=3.7 cython pip requests jinja2 pyyaml pycrypto wheel
+	conda create -n CoolProp38 python=3.8 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolPropWorker pip && source activate CoolPropWorker && pip install buildbot-worker && source deactivate
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
