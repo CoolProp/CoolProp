@@ -326,7 +326,7 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
 
     In [0]: import CoolProp
 
-    In [0]: REFPROP = CoolProp.AbstractState("REFPROP", "Water")
+    In [0]: REFPROP = CoolProp.AbstractState("REFPROP", "WATER")
     
     In [0]: REFPROP.update(CoolProp.DmolarT_INPUTS, 1e-6, 300)
     

@@ -136,7 +136,7 @@ In python, the ``PropsSI`` function is overloaded to also accept two inputs:
 
     In [1]: CP.PropsSI("Tcrit","Water")
 
-    In [1]: CP.PropsSI("Tcrit","REFPROP::Water")
+    In [1]: CP.PropsSI("Tcrit","REFPROP::WATER")
 
 Furthermore, you can in all languages call the ``PropsSI`` function directly using dummy arguments for the other unused parameters:
 
