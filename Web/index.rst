@@ -12,27 +12,27 @@ What is CoolProp?
 
 CoolProp is a C++ library that implements:
 
-- :ref:`Pure and pseudo-pure fluid equations of state and transport properties for 122 components <list_of_fluids>`
-- :ref:`Mixture properties using high-accuracy Helmholtz energy formulations <mixtures>`
-- :ref:`Correlations of properties of incompressible fluids and brines <Pure>`
-- :ref:`Computationally efficient tabular interpolation <tabular_interpolation>`
-- :ref:`Highest accuracy psychrometric routines <Humid-Air>`
-- :ref:`User-friendly interface around the full capabilities of NIST REFPROP <REFPROP>`
-- :ref:`Fast IAPWS-IF97 (Industrial Formulation) for Water/Steam <IF97>`
-- :ref:`Cubic equations of state (SRK, PR) <cubic_backend>`
+* :ref:`Pure and pseudo-pure fluid equations of state and transport properties for 122 components <list_of_fluids>`
+* :ref:`Mixture properties using high-accuracy Helmholtz energy formulations <mixtures>`
+* :ref:`Correlations of properties of incompressible fluids and brines <Pure>`
+* :ref:`Computationally efficient tabular interpolation <tabular_interpolation>`
+* :ref:`Highest accuracy psychrometric routines <Humid-Air>`
+* :ref:`User-friendly interface around the full capabilities of NIST REFPROP <REFPROP>`
+* :ref:`Fast IAPWS-IF97 (Industrial Formulation) for Water/Steam <IF97>`
+* :ref:`Cubic equations of state (SRK, PR) <cubic_backend>`
 
 Environments Supported
 ----------------------
 
 Programming Languages:
 
-- Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>`, :ref:`C++ (as static library) <static_library>`, :ref:`C++ as shared library <shared_library>`, `Modelica <https://github.com/modelica/ExternalMedia>`_, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`VB.net <VBdotNet>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`Android <Android>`, :ref:`MATLAB <MATLAB>`
-- High-level interface only: :ref:`Labview <Labview>`, :ref:`EES <EES>`, :ref:`Microsoft Excel <Excel>`, :ref:`LibreOffice <LibreOffice>`, :ref:`Javascript <Javascript>`, :ref:`PHP <PHP>`, :ref:`FORTRAN <FORTRAN>`, :ref:`Maple <Maple>`, :ref:`Mathematica <Mathematica>`, :ref:`Scilab <Scilab>`, :ref:`Delphi & Lazarus <Delphi>`, :ref:`Julia <Julia>`
+* Fully-featured wrappers: :ref:`Python (2.x, 3.x) <Python>`, :ref:`C++ (as static library) <static_library>`, :ref:`C++ as shared library <shared_library>`, `Modelica <https://github.com/modelica/ExternalMedia>`_, :ref:`Octave <Octave>`, :ref:`C# <Csharp>`, :ref:`VB.net <VBdotNet>`, :ref:`MathCAD <MathCAD>`, :ref:`Java <Java>`, :ref:`Android <Android>`, :ref:`MATLAB <MATLAB>`
+* High-level interface only: :ref:`Labview <Labview>`, :ref:`EES <EES>`, :ref:`Microsoft Excel <Excel>`, :ref:`LibreOffice <LibreOffice>`, :ref:`Javascript <Javascript>`, :ref:`PHP <PHP>`, :ref:`FORTRAN <FORTRAN>`, :ref:`Maple <Maple>`, :ref:`Mathematica <Mathematica>`, :ref:`Scilab <Scilab>`, :ref:`Delphi & Lazarus <Delphi>`, :ref:`Julia <Julia>`
 
 Architectures:
 
-- 32-bit/64-bit
-- Windows, Linux, OSX, Raspberry PI, VxWorks Compact Rio, etc. (if you can compile C++ on it, CoolProp will run)
+* 32-bit/64-bit
+* Windows, Linux, OSX, Raspberry PI, VxWorks Compact Rio, etc. (if you can compile C++ on it, CoolProp will run)
 
 
 High-Level Interface Example
@@ -49,21 +49,22 @@ See more examples of PropsSI usage at :ref:`High-Level interface <high_level_api
 Help
 ----
 
-- (**General Discussion**) Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
-- (**Bugs, feature requests**) File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
-- `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
-- `Docs for development version of CoolProp <http://www.coolprop.org/dev/>`_
+* (**General Discussion**) Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+* (**Bugs, feature requests**) File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
+* `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
+* `Docs for development version of CoolProp <http://www.coolprop.org/dev/>`_
 
 Projects Using CoolProp
 -----------------------------------
 
-- `Thermocycle <http://www.thermocycle.net/>`_
-- `PDSim <http://pdsim.sourceforge.net/>`_
-- `ACHP <http://achp.sourceforge.net/>`_
-- `DWSim <http://sourceforge.net/projects/dwsim/>`_
-- `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
-- `SmoWeb <http://platform.sysmoltd.com>`_
-- `T-Props <https://play.google.com/store/apps/details?id=com.innoversetech.tprops>`_
+* `Thermocycle <http://www.thermocycle.net/>`_
+* `PDSim <http://pdsim.sourceforge.net/>`_
+* `ACHP <http://achp.sourceforge.net/>`_
+* `DWSim <http://sourceforge.net/projects/dwsim/>`_
+* `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
+* `SmoWeb <http://platform.sysmoltd.com>`_
+* `T-Props <https://play.google.com/store/apps/details?id=com.innoversetech.tprops>`_
+* `PropiedadesDeFluidos <http://jfc.us.es/propiedadesdefluidos/descripcion/>`_
 
 Main Developers
 ---------------

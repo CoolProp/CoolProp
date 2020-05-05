@@ -266,7 +266,7 @@ high_level_interface = [
                 "type": "function",
                 "function": "Props1SI",
                 "arguments": [
-                    "'REFPROP::Water'",
+                    "'REFPROP::WATER'",
                     "'Tcrit'"
                 ]
             },
@@ -282,7 +282,7 @@ high_level_interface = [
                 "type": "function",
                 "function": "PropsSI",
                 "arguments": [
-                    "'T'", "'P'", "101325", "'Q'", "0", "'REFPROP::Water'"
+                    "'T'", "'P'", "101325", "'Q'", "0", "'REFPROP::WATER'"
                 ]
             },
             "'K'"
@@ -297,7 +297,7 @@ high_level_interface = [
                 "type": "function",
                 "function": "PropsSI",
                 "arguments": [
-                    "'C'", "'P'", "101325", "'T'", "300", "'REFPROP::Water'"
+                    "'C'", "'P'", "101325", "'T'", "300", "'REFPROP::WATER'"
                 ]
             },
             "'J/kg/K'"
@@ -404,7 +404,7 @@ low_level_interface_with_mixtures = [
                 "type": "function",
                 "function": "factory",
                 "arguments": [
-                    "'REFPROP'", "'Methane&Ethane'"
+                    "'REFPROP'", "'METHANE&ETHANE'"
                 ]
             },
         "EOL":True

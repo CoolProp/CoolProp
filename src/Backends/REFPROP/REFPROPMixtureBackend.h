@@ -226,6 +226,9 @@ public:
     /// Calculate the minimum temperature
     CoolPropDbl calc_Tmin(void);
 
+    /// Calculate the residual entropy in J/mol/K (should be a uniquely negative quantity)
+    CoolPropDbl calc_smolar_residual(void){ return (tau()*calc_dalphar_dTau()-calc_alphar())*gas_constant(); }
+
 	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
 	CoolPropDbl calc_alphar(void){return call_phixdll(0,0);};
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)

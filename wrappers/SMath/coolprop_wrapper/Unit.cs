@@ -83,7 +83,9 @@ namespace coolprop_wrapper
             AddUnits(ref dic, J_mol,
                      "HMOLAR", "Hmolar",                                           // [J/mol]   IO Molar specific enthalpy
                      "UMOLAR", "Umolar",                                           // [J/mol]   IO Molar specific internal energy
-                     "GMOLAR", "Gmolar");                                          // [J/mol]   O  Molar specific Gibbs energy
+                     "GMOLAR", "Gmolar",                               // [J/mol/K] O  Molar gas constant
+                     "HMOLAR_RESIDUAL", "Hmolar_residual",                               // [J/mol/K] O  Molar gas constant
+                     "GMOLAR_RESIDUAL", "Gmolar_residual");                                          // [J/mol]   O  Molar specific Gibbs energy
             AddUnits(ref dic, J_kg,
                      "H", "HMASS", "Hmass",                                        // [J/kg]    IO Mass specific enthalpy
                      "U", "UMASS", "Umass",                                        // [J/kg]    IO Mass specific internal energy

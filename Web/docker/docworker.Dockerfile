@@ -1,4 +1,7 @@
 FROM continuumio/miniconda3
+
+RUN mkdir /usr/share/man/man1/
+
 RUN apt-get -y -m update && \
     apt-get install -y \
         g++ make cmake swig doxygen p7zip-full \
@@ -7,7 +10,7 @@ RUN apt-get -y -m update && \
         r-base-dev \
         default-jre default-jdk \
         texlive-extra-utils \
-        imagemagick
+        imagemagick rsync
 
         
 ADD conda_environment.yml /environment.yml
@@ -33,4 +36,4 @@ RUN source activate docs && \
     cp -r /REFPROP_sources/fluids /opt/refprop && \
     cp -r /REFPROP_sources/mixtures /opt/refprop 
 
-RUN pip3 install pybtex
+RUN python -m pip install pybtex

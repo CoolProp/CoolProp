@@ -58,19 +58,17 @@ but here the latest version of the preferred work flow for editing the ``master.
 Workers
 -------
 
-To start a worker connected to a buildbot master at IP address 10.0.0.2 (default for
-host for VirtualBox), with a worker named ``a-worker`` and passsword ``pass``,
+To start a worker connected to a buildbot master at IP address 10.0.0.2 (default for host for VirtualBox), with a worker named ``a-worker`` and passsword ``pass`` in the directory ``workdir``,
 run the command::
 
     virtualenv a-worker-sandbox
     source a-worker-sandbox/bin/activate
     pip install sqlalchemy==0.7.10 buildbot-worker
-    buildbot-worker create-worker a-worker coolprop.dreamhosters.com:port a-worker pass
-    buildbot-worker start a-worker
+    buildslave create-slave workdir coolprop.dreamhosters.com:port a-worker pass
+    buildslave restart workdir
 
 If the master is somewhere else, just change the IP address.  As of Sept, 2014, the
-master was at www.coolprop.dreamhosters.com.  The buildbot_private.py on the master
-holds the required passwords.
+master was at www.coolprop.dreamhosters.com, and the port is specified in the master.cfg ``file``.  The file ``buildbot_private.py`` on the master holds the required passwords.
 
 OSX Virtualbox host
 -------------------

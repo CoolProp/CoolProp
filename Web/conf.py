@@ -172,6 +172,8 @@ pygments_style = 'sphinx'
 # 'both' - Both the class’ and the __init__ method’s docstring are concatenated and inserted
 autoclass_content = 'both'
 
+# Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
+html4_writer = True
 
 # -- Options for HTML output ---------------------------------------------------
 
@@ -199,7 +201,8 @@ html_theme_options = {"roottarget": "index",
                        "max_width": "13in",
                        "logotarget": "index",
                        "googleanalytics_id": "UA-53205480-2",
-                       "default_layout_text_size": "85%"
+                       "default_layout_text_size": "85%",
+                       "table_style_default_align": "left"
                        }
 
 edit_on_github_project = 'CoolProp/CoolProp'

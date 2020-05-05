@@ -106,6 +106,9 @@ protected:
 
     CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar, _helmholtzmolar;
 
+    /// Residual properties
+    CachedElement _hmolar_residual, _smolar_residual, _gibbsmolar_residual;
+
     /// Excess properties
     CachedElement _hmolar_excess, _smolar_excess, _gibbsmolar_excess, _umolar_excess, _volumemolar_excess, _helmholtzmolar_excess;
 
@@ -138,8 +141,12 @@ protected:
     // ----------------------------------------
     /// Using this backend, calculate the molar enthalpy in J/mol
     virtual CoolPropDbl calc_hmolar(void){ throw NotImplementedError("calc_hmolar is not implemented for this backend"); };
+    /// Using this backend, calculate the residual molar enthalpy in J/mol
+    virtual CoolPropDbl calc_hmolar_residual(void){ throw NotImplementedError("calc_hmolar_residual is not implemented for this backend"); };
     /// Using this backend, calculate the molar entropy in J/mol/K
     virtual CoolPropDbl calc_smolar(void){ throw NotImplementedError("calc_smolar is not implemented for this backend"); };
+    /// Using this backend, calculate the residual molar entropy in J/mol/K
+    virtual CoolPropDbl calc_smolar_residual(void){ throw NotImplementedError("calc_smolar_residual is not implemented for this backend"); };
     /// Using this backend, calculate the molar internal energy in J/mol
     virtual CoolPropDbl calc_umolar(void){ throw NotImplementedError("calc_umolar is not implemented for this backend"); };
     /// Using this backend, calculate the molar constant-pressure specific heat in J/mol/K
@@ -150,6 +157,8 @@ protected:
     virtual CoolPropDbl calc_cvmolar(void){ throw NotImplementedError("calc_cvmolar is not implemented for this backend"); };
     /// Using this backend, calculate the molar Gibbs function in J/mol
     virtual CoolPropDbl calc_gibbsmolar(void){ throw NotImplementedError("calc_gibbsmolar is not implemented for this backend"); };
+    /// Using this backend, calculate the residual molar Gibbs function in J/mol
+    virtual CoolPropDbl calc_gibbsmolar_residual(void){ throw NotImplementedError("calc_gibbsmolar_residual is not implemented for this backend"); };
     /// Using this backend, calculate the molar Helmholtz energy in J/mol
     virtual CoolPropDbl calc_helmholtzmolar(void){ throw NotImplementedError("calc_helmholtzmolar is not implemented for this backend"); };
     /// Using this backend, calculate the speed of sound in m/s
@@ -719,6 +728,8 @@ public:
     double compressibility_factor(void);
     /// Return the molar enthalpy in J/mol
     double hmolar(void);
+    /// Return the residual molar enthalpy in J/mol
+    double hmolar_residual(void);
     /// Return the mass enthalpy in J/kg
     double hmass(void){ return calc_hmass(); };
     /// Return the excess molar enthalpy in J/mol
@@ -727,6 +738,8 @@ public:
     double hmass_excess(void) { return calc_hmass_excess(); };
     /// Return the molar entropy in J/mol/K
     double smolar(void);
+    /// Return the residual molar entropy (as a function of temperature and density) in J/mol/K
+    double smolar_residual(void);
     /// Return the molar entropy in J/kg/K
     double smass(void){ return calc_smass(); };
     /// Return the molar entropy in J/mol/K
@@ -755,6 +768,8 @@ public:
     double cvmass(void){ return calc_cvmass(); };
     /// Return the Gibbs energy in J/mol
     double gibbsmolar(void);
+    /// Return the residual Gibbs energy in J/mol
+    double gibbsmolar_residual(void);
     /// Return the Gibbs energy in J/kg
     double gibbsmass(void){ return calc_gibbsmass(); };
     /// Return the excess Gibbs energy in J/mol

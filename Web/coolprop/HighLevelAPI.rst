@@ -398,6 +398,23 @@ which can be used like
     # Should not be zero
     In [1]: CP.PropsSI('H', 'T', 233.15, 'Q', 0, 'n-Propane')
 
+For non-standard reference states, you can specify them directly for the given temperature and molar(!) density.  Here is an example of setting the enthalpy and entropy at 298.15 K and 1 atm to some specified values
+
+.. ipython::
+    
+    In [1]: import CoolProp.CoolProp as CP
+
+    In [1]: Dmolar = CP.PropsSI("Dmolar", "T", 298.15, "P", 101325, "NH3") 
+
+    In [1]: CP.set_reference_state('NH3', 298.15, Dmolar, -60000.12, 314.159) # fluid, T, D (mol/m^3), h (J/mol), s (J/mol/K)
+
+    In [1]: CP.PropsSI("Hmolar", "T", 298.15, "P", 101325, "NH3")
+
+    In [1]: CP.PropsSI("Smolar", "T", 298.15, "P", 101325, "NH3")
+
+    # Back to the original value
+    In [1]: CP.set_reference_state('NH3','DEF')
+
 Calling REFPROP
 ---------------
 
