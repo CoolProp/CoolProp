@@ -99,7 +99,8 @@ steps on a Windows machine::
     conda create -y -n CoolProp36 python=3.6 cython pip pywin32 requests jinja2 pyyaml pycrypto wheel 
     conda create -y -n CoolProp37 python=3.7 cython pip pywin32 requests jinja2 pyyaml pycrypto wheel 
     conda create -y -n CoolProp38 python=3.8 cython pip pywin32 requests jinja2 pyyaml pycrypto wheel 
-    conda create -y -n CoolPropWorker pip && activate CoolPropWorker && pip install buildbot-worker && deactivate
+    #conda create -y -n CoolPropWorker python=2.7 pip && conda activate CoolPropWorker && pip install buildbot-worker && conda deactivate
+    conda create -y -n CoolPropWorker python=2.7 pip && conda activate CoolPropWorker && pip install buildbot-slave==0.8.14 && conda deactivate
 
 Please repeat the steps above for **both 32bit and 64bit** Python environments.
 
@@ -108,7 +109,7 @@ On a Linux system, things only change a little bit::
     conda create -n CoolProp27 python=2.7 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp36 python=3.6 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolProp37 python=3.7 cython pip requests jinja2 pyyaml pycrypto wheel
-	conda create -n CoolProp38 python=3.8 cython pip requests jinja2 pyyaml pycrypto wheel
+    conda create -n CoolProp38 python=3.8 cython pip requests jinja2 pyyaml pycrypto wheel
     conda create -n CoolPropWorker pip && source activate CoolPropWorker && pip install buildbot-worker && source deactivate
 
 Please make sure that the standard shell ``/bin/sh`` used by the builbot is
