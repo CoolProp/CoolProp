@@ -29,11 +29,11 @@ RUN source activate docs && \
     python -c "import numpy; print(numpy.__file__)" && \
     mkdir build && \
     cd build && \
-    cmake .. -DREFPROP_FORTRAN_PATH=/REFPROP_sources/fortran && \
+    cmake .. -DREFPROP_FORTRAN_PATH=/REFPROP_sources/FORTRAN && \
     cmake --build . && \
     mkdir -p /opt/refprop && \
     cp librefprop.so /opt/refprop && \
-    cp -r /REFPROP_sources/fluids /opt/refprop && \
-    cp -r /REFPROP_sources/mixtures /opt/refprop 
+    cp -r /REFPROP_sources/FLUIDS /opt/refprop && \
+    cp -r /REFPROP_sources/MIXTURES /opt/refprop 
 
 RUN python -m pip install pybtex
