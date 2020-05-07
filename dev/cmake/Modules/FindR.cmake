@@ -57,15 +57,27 @@ execute_process(
 file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/get_bin.R)
 chomp(${R_BIN_TEXT} R_BIN_DIR)
 MESSAGE(STATUS "R_BIN_TEXT = ${R_BIN_DIR} w/ RESULT=${R_BIN_RESULT}")
-        
-find_library (
+
+if (WIN32)
+# Bug in cmake 3.17, need to search for file rather than library
+find_file(
           R_LIBRARY
-          R
-          PATHS ${R_BIN_DIR} ${R_HOME_TEXT}/lib
+          NAMES R.dll
+          PATHS ${R_BIN_DIR}
           NO_DEFAULT_PATH
-          NO_CMAKE_PATH
+)
+else()
+find_library(
+          R_LIBRARY
+          NAMES R
+          PATHS ${R_BIN_EXPANDED}
+          NO_DEFAULT_PATH
+          #NO_CMAKE_PATH
           )
 MESSAGE(STATUS "R_LIBRARY = ${R_LIBRARY}")
+endif()
+MESSAGE(STATUS "R_LIBRARY = ${R_LIBRARY}")
+
 find_package_handle_standard_args(R DEFAULT_MSG
                                   R_LIBRARY R_INCLUDE_DIRS)
 
