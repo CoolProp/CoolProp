@@ -63,3 +63,5 @@
 /.idea/
 /.vs/
 /.vscode/
+
+bld/
