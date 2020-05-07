@@ -1873,7 +1873,7 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
                     if (PCSAFT.N > 1) {
                         bool reset_mole_fractions = false;
                         for (int i = 0; i < PCSAFT.N; i++) {
-                            if (isnan(PCSAFT.SatL->mole_fractions[i]) || isnan(PCSAFT.SatV->mole_fractions[i])) {
+                            if (!ValidNumber(PCSAFT.SatL->mole_fractions[i]) || !ValidNumber(PCSAFT.SatV->mole_fractions[i])) {
                                 reset_mole_fractions = true;
                             }
                         }
@@ -2083,7 +2083,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT){
                     if (PCSAFT.N > 1) {
                         bool reset_mole_fractions = false;
                         for (int i = 0; i < PCSAFT.N; i++) {
-                            if (isnan(PCSAFT.SatL->mole_fractions[i]) || isnan(PCSAFT.SatV->mole_fractions[i])) {
+                            if (!ValidNumber(PCSAFT.SatL->mole_fractions[i]) || !ValidNumber(PCSAFT.SatV->mole_fractions[i])) {
                                 reset_mole_fractions = true;
                             }
                         }
@@ -2264,7 +2264,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         CoolPropDbl call(CoolPropDbl rhomolar){
             CoolPropDbl peos = PCSAFT.update_DmolarT(rhomolar);
             double cost = (peos-p)/p;
-            if (std::isfinite(cost)) {
+            if (ValidNumber(cost)) {
                 return cost;
             }
             else {
