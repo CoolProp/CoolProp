@@ -311,29 +311,33 @@ if __name__ == '__main__':
             def set_shared_ptr_flags(self):
                 from distutils.errors import CompileError
 
-                good_index = -1
-                for ic,contents in enumerate([
-                    "#include <memory> \nusing std::shared_ptr;\n int main() { shared_ptr<int> int_ptr; return 0; }",
-                    "#include <memory> \nusing std::tr1::shared_ptr; \nint main() { shared_ptr<int> int_ptr; return 0;}",
-                    "#include <tr1/memory>\nusing std::tr1::shared_ptr;\nint main() { shared_ptr<int> int_ptr; return 0;}"
-                ]):
-                    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-                        f.write(contents)
-                        f.seek(0)
-                        try:
-                            self.compiler.compile([f.name])
-                            good_index = ic
-                            break
-                        except CompileError:
-                            pass
-                more_flags = []
-                if good_index == 0:
-                    print('No shared_ptr flags needed')
-                    return
-                elif good_index == 1:
-                    more_flags = ['-DSHARED_PTR_TR1_NAMESPACE ']
-                elif good_index == 2:
-                    more_flags = ['-DSHARED_PTR_TR1_NAMESPACE', '-DSHARED_PTR_TR1_MEMORY_HEADER']
+                if sys.platform.startswith('win') and sys.version_info <= (3, 0):
+                    # Hardcode for windows for python 2.7...
+                    more_flags = ['-DSHARED_PTR_TR1_NAMESPACE']
+                else:
+                    good_index = -1
+                    for ic,contents in enumerate([
+                        "#include <memory> \nusing std::shared_ptr;\n int main() { shared_ptr<int> int_ptr; return 0; }",
+                        "#include <memory> \nusing std::tr1::shared_ptr; \nint main() { shared_ptr<int> int_ptr; return 0;}",
+                        "#include <tr1/memory>\nusing std::tr1::shared_ptr;\nint main() { shared_ptr<int> int_ptr; return 0;}"
+                    ]):
+                        with tempfile.NamedTemporaryFile('w', suffix='.cpp', dir='.') as f:
+                            f.write(contents)
+                            f.seek(0)
+                            try:
+                                self.compiler.compile([f.name])
+                                good_index = ic
+                                break
+                            except CompileError:
+                                pass
+                    more_flags = []
+                    if good_index == 0:
+                        print('No shared_ptr flags needed')
+                        return
+                    elif good_index == 1:
+                        more_flags = ['-DSHARED_PTR_TR1_NAMESPACE ']
+                    elif good_index == 2:
+                        more_flags = ['-DSHARED_PTR_TR1_NAMESPACE', '-DSHARED_PTR_TR1_MEMORY_HEADER']
                 print("Adding these shared_ptr compilation macros:", more_flags)
                 for ext in self.extensions:
                     ext.extra_compile_args += more_flags
