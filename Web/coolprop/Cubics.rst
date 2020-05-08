@@ -186,7 +186,7 @@ Here we plot phase envelopes and critical points for an equimolar methane/ethane
         SRK.set_binary_interaction_double(0, 1, "kij", kij)
 
         # Some VLE calculations
-        for p in [1e4, 1e5, 1e6]:
+        for p in [1e5, 1e6]:
             SRK.update(CP.PQ_INPUTS, p, 0)
             plt.plot(SRK.T(), SRK.p(), '<', color = c)
 
