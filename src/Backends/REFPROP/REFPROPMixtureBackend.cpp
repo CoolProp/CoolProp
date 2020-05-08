@@ -73,26 +73,41 @@ static char default_reference_state[] = "DEF";
     #pragma error
 #endif
 
+/// Find either FLUIDS or fluids folder relative to the root path provided; return the path
+std::string get_casesensitive_fluids(const std::string &root) {
+    std::string joined = join_path(root, "fluids");
+    if (path_exists(joined)) {
+        return joined;
+    }
+    else {
+        std::string ucase_joined = join_path(root, "FLUIDS");
+        if (path_exists(ucase_joined)) {
+            return ucase_joined;
+        }
+        else {
+            throw CoolProp::ValueError(format("fluid directories \"FLUIDS\" or \"fluids\" could not be found in the directory [%s]", root));
+        }
+    }
+}
 std::string get_REFPROP_fluid_path_prefix()
 {
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
-    std::string separator = get_separator();
     if (!alt_refprop_path.empty()){
+        // The alternative path has been set, so we give all fluid paths as relative to this directory
         //if (!endswith(alt_refprop_path, separator)){
         //    throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] must end with a path sparator, typically a slash character", alt_refprop_path.c_str()));
         //}
         if (!path_exists(alt_refprop_path)) {
             throw CoolProp::ValueError(format("ALTERNATIVE_REFPROP_PATH [%s] could not be found", alt_refprop_path.c_str()));
         }
-        // The alternative path has been set, so we give all fluid paths as relative to this directory
-        return join_path(alt_refprop_path,"fluids");
+        return get_casesensitive_fluids(alt_refprop_path);
     }
     #if defined(__ISWINDOWS__)
         return rpPath;
     #elif defined(__ISLINUX__) || defined(__ISAPPLE__)
-        return join_path(rpPath,"fluids");
+        return get_casesensitive_fluids(rpPath);
     #else
         throw CoolProp::NotImplementedError("This function should not be called.");
         return rpPath;
