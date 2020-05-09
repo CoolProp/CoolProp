@@ -1,6 +1,49 @@
 Changelog for CoolProp
 ======================
 
+6.4.0
+-----
+
+Highlights:
+
+* Added a working version of PC-SAFT EOS (big thanks to Zach Baird)
+* Updated EOS for neon, helium
+* Added Python 3.8 wheels
+
+Deprecated:
+
+* Python 2.7 interface. This will be the last release supporting Python 2.7
+* 32-bit builds on OSX
+
+Issues Closed:
+
+* `#1922 <https://github.com/CoolProp/CoolProp/issues/1922>`_ : Bug: The density of air is off by a magnitude of 10 given the P and T inputs specified below
+* `#1915 <https://github.com/CoolProp/CoolProp/issues/1915>`_ : Error in Low Level Interface example code on coolprop.org
+* `#1857 <https://github.com/CoolProp/CoolProp/issues/1857>`_ : calc_name is not implemented for REFPROP backend
+* `#1856 <https://github.com/CoolProp/CoolProp/issues/1856>`_ : List of incompressible fluids/mixtures is missing
+* `#1855 <https://github.com/CoolProp/CoolProp/issues/1855>`_ : Python AbstractState has no attribute 'compressibility_factor'
+* `#1848 <https://github.com/CoolProp/CoolProp/issues/1848>`_ : PR density calc fail
+
+Pull Requests merged:
+
+* `#1921 <https://github.com/CoolProp/CoolProp/pull/1921>`_ : fix typos in pcsaft json
+* `#1916 <https://github.com/CoolProp/CoolProp/pull/1916>`_ : Fix second_partial_deriv example
+* `#1913 <https://github.com/CoolProp/CoolProp/pull/1913>`_ : Fix pcsaft flash
+* `#1906 <https://github.com/CoolProp/CoolProp/pull/1906>`_ : Update index.rst
+* `#1903 <https://github.com/CoolProp/CoolProp/pull/1903>`_ : Update index.rst adding PropiedadesDeFluidos Tool
+* `#1901 <https://github.com/CoolProp/CoolProp/pull/1901>`_ : for CDNJS auto-update request
+* `#1896 <https://github.com/CoolProp/CoolProp/pull/1896>`_ : Update init.py byte string in split for Py3.8
+* `#1891 <https://github.com/CoolProp/CoolProp/pull/1891>`_ : Fix uppercase-only fluid naming
+* `#1885 <https://github.com/CoolProp/CoolProp/pull/1885>`_ : fixed typo in getos() and else statement
+* `#1881 <https://github.com/CoolProp/CoolProp/pull/1881>`_ : Fixed crash in PTflash_twophase::build_arrays
+* `#1878 <https://github.com/CoolProp/CoolProp/pull/1878>`_ : Py38
+* `#1877 <https://github.com/CoolProp/CoolProp/pull/1877>`_ : Adding PC-SAFT EOS
+* `#1875 <https://github.com/CoolProp/CoolProp/pull/1875>`_ : Document apply_simple_mixing_rule initialisation behaviour
+* `#1842 <https://github.com/CoolProp/CoolProp/pull/1842>`_ : fixes in doxygen docu for fundamental derivative
+* `#1838 <https://github.com/CoolProp/CoolProp/pull/1838>`_ : Allow list delimiter to be changed
+* `#1837 <https://github.com/CoolProp/CoolProp/pull/1837>`_ : Never allow two-phase SOS. 
+
+
 6.3.0
 -----
 
