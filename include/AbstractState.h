@@ -106,6 +106,9 @@ protected:
 
     CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar, _helmholtzmolar;
 
+    /// Residual properties
+    CachedElement _hmolar_residual, _smolar_residual, _gibbsmolar_residual;
+
     /// Excess properties
     CachedElement _hmolar_excess, _smolar_excess, _gibbsmolar_excess, _umolar_excess, _volumemolar_excess, _helmholtzmolar_excess;
 
@@ -138,8 +141,12 @@ protected:
     // ----------------------------------------
     /// Using this backend, calculate the molar enthalpy in J/mol
     virtual CoolPropDbl calc_hmolar(void){ throw NotImplementedError("calc_hmolar is not implemented for this backend"); };
+    /// Using this backend, calculate the residual molar enthalpy in J/mol
+    virtual CoolPropDbl calc_hmolar_residual(void){ throw NotImplementedError("calc_hmolar_residual is not implemented for this backend"); };
     /// Using this backend, calculate the molar entropy in J/mol/K
     virtual CoolPropDbl calc_smolar(void){ throw NotImplementedError("calc_smolar is not implemented for this backend"); };
+    /// Using this backend, calculate the residual molar entropy in J/mol/K
+    virtual CoolPropDbl calc_smolar_residual(void){ throw NotImplementedError("calc_smolar_residual is not implemented for this backend"); };
     /// Using this backend, calculate the molar internal energy in J/mol
     virtual CoolPropDbl calc_umolar(void){ throw NotImplementedError("calc_umolar is not implemented for this backend"); };
     /// Using this backend, calculate the molar constant-pressure specific heat in J/mol/K
@@ -150,6 +157,8 @@ protected:
     virtual CoolPropDbl calc_cvmolar(void){ throw NotImplementedError("calc_cvmolar is not implemented for this backend"); };
     /// Using this backend, calculate the molar Gibbs function in J/mol
     virtual CoolPropDbl calc_gibbsmolar(void){ throw NotImplementedError("calc_gibbsmolar is not implemented for this backend"); };
+    /// Using this backend, calculate the residual molar Gibbs function in J/mol
+    virtual CoolPropDbl calc_gibbsmolar_residual(void){ throw NotImplementedError("calc_gibbsmolar_residual is not implemented for this backend"); };
     /// Using this backend, calculate the molar Helmholtz energy in J/mol
     virtual CoolPropDbl calc_helmholtzmolar(void){ throw NotImplementedError("calc_helmholtzmolar is not implemented for this backend"); };
     /// Using this backend, calculate the speed of sound in m/s
@@ -176,6 +185,8 @@ protected:
     virtual CoolPropDbl calc_gas_constant(void){ throw NotImplementedError("calc_gas_constant is not implemented for this backend"); };
     /// Using this backend, calculate the fugacity coefficient (dimensionless)
     virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i){ throw NotImplementedError("calc_fugacity_coefficient is not implemented for this backend"); };
+    /// Using this backend, calculate the fugacity in Pa
+    virtual std::vector<CoolPropDbl> calc_fugacity_coefficients(){ throw NotImplementedError("calc_fugacity_coefficients is not implemented for this backend"); };
     /// Using this backend, calculate the fugacity in Pa
     virtual CoolPropDbl calc_fugacity(std::size_t i){ throw NotImplementedError("calc_fugacity is not implemented for this backend"); };
     /// Using this backend, calculate the chemical potential in J/mol
@@ -574,7 +585,7 @@ public:
     /// Set the cubic alpha function's constants:
     virtual void set_cubic_alpha_C(const size_t i, const std::string &parameter, const double c1, const double c2, const double c3) { throw ValueError("set_cubic_alpha_C only defined for cubic backends"); };
     /// Set fluid parameter (currently the volume translation parameter for cubic)
-	virtual void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
+	  virtual void set_fluid_parameter_double(const size_t i, const std::string &parameter, const double value) { throw ValueError("set_fluid_parameter_double only defined for cubic backends"); };
     /// Double fluid parameter (currently the volume translation parameter for cubic)
     virtual double get_fluid_parameter_double(const size_t i, const std::string &parameter) { throw ValueError("get_fluid_parameter_double only defined for cubic backends"); };
 
@@ -582,7 +593,7 @@ public:
     virtual bool clear();
     /// When the composition changes, clear all cached values that are only dependent on composition, but not the thermodynamic state
     virtual bool clear_comp_change();
-    
+
 
     /// Get the state that is used in the equation of state or mixture model
     /// to reduce the state.  For pure fluids this is usually, but not always,
@@ -717,6 +728,8 @@ public:
     double compressibility_factor(void);
     /// Return the molar enthalpy in J/mol
     double hmolar(void);
+    /// Return the residual molar enthalpy in J/mol
+    double hmolar_residual(void);
     /// Return the mass enthalpy in J/kg
     double hmass(void){ return calc_hmass(); };
     /// Return the excess molar enthalpy in J/mol
@@ -725,6 +738,8 @@ public:
     double hmass_excess(void) { return calc_hmass_excess(); };
     /// Return the molar entropy in J/mol/K
     double smolar(void);
+    /// Return the residual molar entropy (as a function of temperature and density) in J/mol/K
+    double smolar_residual(void);
     /// Return the molar entropy in J/kg/K
     double smass(void){ return calc_smass(); };
     /// Return the molar entropy in J/mol/K
@@ -753,6 +768,8 @@ public:
     double cvmass(void){ return calc_cvmass(); };
     /// Return the Gibbs energy in J/mol
     double gibbsmolar(void);
+    /// Return the residual Gibbs energy in J/mol
+    double gibbsmolar_residual(void);
     /// Return the Gibbs energy in J/kg
     double gibbsmass(void){ return calc_gibbsmass(); };
     /// Return the excess Gibbs energy in J/mol
@@ -781,6 +798,8 @@ public:
     double isentropic_expansion_coefficient(void);
     /// Return the fugacity coefficient of the i-th component of the mixture
     double fugacity_coefficient(std::size_t i);
+    /// Return a vector of the fugacity coefficients for all components in the mixture
+    std::vector<double> fugacity_coefficients();
     /// Return the fugacity of the i-th component of the mixture
     double fugacity(std::size_t i);
     /// Return the chemical potential of the i-th component of the mixture
@@ -789,7 +808,7 @@ public:
      *
      * see also Colonna et al, FPE, 2010
      *
-     * \f[ \Gamma = 1+\frac{\rho}{c}\left(\frac{partial c}{\partial \rho}\right)_{s} = 1+\frac{\rho}{2c^2}\left(\frac{partial^2 p}{\partial \rho^2}\right)_{s} = 1+\frac{v^3}{2c^2}\left(\frac{partial^2 p}{\partial v^2}\right)_{s}\f]
+     * \f[ \Gamma = 1+\frac{\rho}{c}\left(\frac{\partial c}{\partial \rho}\right)_{s} = 1+\frac{\rho}{2c^2}\left(\frac{\partial^2 p}{\partial \rho^2}\right)_{s} = \frac{v^3}{2c^2}\left(\frac{\partial^2 p}{\partial v^2}\right)_{s}\f]
      *
      * Note: densities are mass-based densities, not mole-based densities
      */

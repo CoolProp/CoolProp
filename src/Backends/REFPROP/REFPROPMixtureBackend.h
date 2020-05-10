@@ -77,6 +77,9 @@ public:
     bool using_mass_fractions(){return false;}
     bool using_volu_fractions(){return false;}
 
+    /// Calculate the name of the fluid
+    std::string calc_name(){ return fluid_param_string("name"); }
+
     // Get _phase for pure fluids only
     phases calc_phase(void) { 
         if (this->Ncomp > 1) {
@@ -180,6 +183,8 @@ public:
     CoolPropDbl calc_surface_tension(void);
     /// Calc the B virial coefficient
     CoolPropDbl calc_Bvirial(void);
+    /// Calc the temperature derivative of the second virial coefficient
+    CoolPropDbl calc_dBvirial_dT(void);
     /// Calc the C virial coefficient
     CoolPropDbl calc_Cvirial(void);
 
@@ -220,6 +225,9 @@ public:
     CoolPropDbl calc_Tmax(void);
     /// Calculate the minimum temperature
     CoolPropDbl calc_Tmin(void);
+
+    /// Calculate the residual entropy in J/mol/K (should be a uniquely negative quantity)
+    CoolPropDbl calc_smolar_residual(void){ return (tau()*calc_dalphar_dTau()-calc_alphar())*gas_constant(); }
 
 	/// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
 	CoolPropDbl calc_alphar(void){return call_phixdll(0,0);};

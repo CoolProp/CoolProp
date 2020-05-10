@@ -956,7 +956,12 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend &HE
                     // Then we calculate pressure from this density
                     SatL->update_DmolarT_direct(rhoL, T);
                     // Then we assume vapor to be ideal gas
-                    rhoV = SatL->p()/(SatL->gas_constant()*T);
+                    if (SatL->p() > 0){
+                        rhoV = SatL->p()/(SatL->gas_constant()*T);
+                    }
+                    else{
+                        rhoV = p/(SatL->gas_constant()*T);
+                    }
                     // Update the vapor state
                     SatV->update_DmolarT_direct(rhoV, T);
                 }
@@ -2049,7 +2054,7 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated(){
                 J(k,j) = (IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
                 J(k,j+N-1) = -(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
             }
-            std::size_t j = N-1;
+            std::size_t j = N-2;
             J(k,j) = -(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
             J(k,j+N-1) = +(IO.z[j] - IO.x[j])/POW2(IO.y[j]-IO.x[j]);
         }

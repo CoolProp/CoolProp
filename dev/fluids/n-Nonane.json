@@ -357,9 +357,11 @@
     "2DPNG_URL": "http://www.chemspider.com/ImagesHandler.ashx?id=7849",
     "ALIASES": [
       "nonane",
+      "Nonane",
       "NONANE",
       "N-NONANE",
-      "NC9H20"
+      "NC9H20",
+      "n-C9H20"
     ],
     "CAS": "111-84-2",
     "CHEMSPIDER_ID": 7849,

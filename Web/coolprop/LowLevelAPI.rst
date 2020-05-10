@@ -199,8 +199,10 @@ For more information, see the docs: :cpapi:`CoolProp::AbstractState::first_parti
     In [4]: HEOS.first_partial_deriv(CoolProp.iSmass, CoolProp.iT, CoolProp.iDmass)
 
     # In the same way you can do second partial derivatives
-    # This is the second mixed partial of entropy with respect to density and temperature
-    In [4]: HEOS.second_partial_deriv(CoolProp.iSmass, CoolProp.iT, CoolProp.iDmass, CoolProp.iT, CoolProp.iDmass)
+    # This is the second mixed partial derivative of entropy with respect to density and temperature
+    In [4]: HEOS.second_partial_deriv(CoolProp.iSmass, CoolProp.iT, CoolProp.iDmass, CoolProp.iDmass, CoolProp.iT)
+    # This is the second partial derivative of entropy with respect to density at constant temperature
+    In [4]: HEOS.second_partial_deriv(CoolProp.iSmass,CoolProp.iDmass,CoolProp.iT,CoolProp.iDmass,CoolProp.iT)
     
 Two-Phase and Saturation Derivatives
 ------------------------------------
@@ -324,7 +326,7 @@ If you have the `REFPROP library <http://www.nist.gov/srd/nist23.cfm>`_ installe
 
     In [0]: import CoolProp
 
-    In [0]: REFPROP = CoolProp.AbstractState("REFPROP", "Water")
+    In [0]: REFPROP = CoolProp.AbstractState("REFPROP", "WATER")
     
     In [0]: REFPROP.update(CoolProp.DmolarT_INPUTS, 1e-6, 300)
     

@@ -40,7 +40,9 @@ const parameter_info parameter_info_list[] = {
     {iCvmass,            "Cvmass",            "O", "J/kg/K",  "Mass specific constant volume specific heat",     false},
     {iCp0molar,          "Cp0molar",          "O", "J/mol/K", "Ideal gas molar specific constant pressure specific heat",false},
     {iCp0mass,           "Cp0mass",           "O", "J/kg/K",  "Ideal gas mass specific constant pressure specific heat",false},
-    {iSmolar_residual,   "Smolar_residual",   "O", "J/mol/K", "Residual molar entropy (sr/R = tau*dar_dtau-ar)",false},
+    {iHmolar_residual,   "Hmolar_residual",   "O", "J/mol/K", "Residual molar enthalpy",false},
+    {iSmolar_residual,   "Smolar_residual",   "O", "J/mol/K", "Residual molar entropy (sr/R = s(T,rho) - s^0(T,rho))",false},
+    {iGmolar_residual,   "Gmolar_residual",   "O", "J/mol/K", "Residual molar Gibbs energy",false},
     {iGWP20,             "GWP20",             "O", "-",       "20-year global warming potential",                 true},
     {iGWP100,            "GWP100",            "O", "-",       "100-year global warming potential",                true},
     {iGWP500,            "GWP500",            "O", "-",       "500-year global warming potential",                true},
@@ -552,7 +554,8 @@ const backend_family_info backend_family_list[] = {
     { BICUBIC_BACKEND_FAMILY, "BICUBIC" },
     { SRK_BACKEND_FAMILY, "SRK" },
     { PR_BACKEND_FAMILY, "PR" },
-    { VTPR_BACKEND_FAMILY, "VTPR" }
+    { VTPR_BACKEND_FAMILY, "VTPR" },
+    { PCSAFT_BACKEND_FAMILY, "PCSAFT" }
 };
 
 const backend_info backend_list[] = {
@@ -567,7 +570,8 @@ const backend_info backend_list[] = {
     { BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY },
     { SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY },
     { PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY },
-    { VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY }
+    { VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY },
+    { PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY }
 };
 
 class BackendInformation {
@@ -674,4 +678,3 @@ TEST_CASE("Check that all phases are described","[phase_index]")
 }
 
 #endif
-

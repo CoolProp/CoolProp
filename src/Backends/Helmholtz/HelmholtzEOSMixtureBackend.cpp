@@ -217,7 +217,7 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string &Pa
         return cpfluid.name;
     }
     else if (!ParamName.compare("aliases")){
-        return strjoin(cpfluid.aliases, ", ");
+        return strjoin(cpfluid.aliases, get_config_string(LIST_STRING_DELIMITER));
     }
     else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")){
         return cpfluid.CAS;
@@ -2504,6 +2504,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             double rhomolar = Brent(resid, 1e-10, 3*rhomolar_reducing(), DBL_EPSILON, 1e-8, 100);
             return rhomolar;
         }
+        else if  (is_pure_or_pseudopure && T>T_critical()){
+            try{
+                double rhomolar = Brent(resid, 1e-10, 5*rhomolar_reducing(), DBL_EPSILON, 1e-8, 100);
+                return rhomolar;
+                
+            }
+            catch(...){
+                double rhomolar = Householder4(resid, 3*rhomolar_reducing(), 1e-8, 100);
+                return rhomolar;
+            }
+        }
         throw ValueError(format("solver_rho_Tp was unable to find a solution for T=%10Lg, p=%10Lg, with guess value %10Lg with error: %s",T,p,rhomolar_guess, e.what()));
     }
 }
@@ -2805,23 +2816,41 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_cpmolar_idealgas(void)
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_speed_sound(void)
 {
-    // Calculate the reducing parameters
-    _delta = _rhomolar/_reducing.rhomolar;
-    _tau = _reducing.T/_T;
+    if (isTwoPhase())
+    {
+        if (std::abs(_Q) < DBL_EPSILON){
+            return SatL->speed_sound();
+        }
+        else if (std::abs(_Q-1) < DBL_EPSILON){
+            return SatV->speed_sound();
+        }
+        else{
+            throw ValueError(format("Speed of sound is not defined for two-phase states because it depends on the distribution of phases."));
+        }
+    }
+    else if (isHomogeneousPhase())
+    {
+        // Calculate the reducing parameters
+        _delta = _rhomolar/_reducing.rhomolar;
+        _tau = _reducing.T/_T;
 
-    // Calculate derivatives if needed, or just use cached values
-    CoolPropDbl d2a0_dTau2 = d2alpha0_dTau2();
-    CoolPropDbl dar_dDelta = dalphar_dDelta();
-    CoolPropDbl d2ar_dDelta2 = d2alphar_dDelta2();
-    CoolPropDbl d2ar_dDelta_dTau = d2alphar_dDelta_dTau();
-    CoolPropDbl d2ar_dTau2 = d2alphar_dTau2();
-    CoolPropDbl R_u = gas_constant();
-    CoolPropDbl mm = molar_mass();
+        // Calculate derivatives if needed, or just use cached values
+        CoolPropDbl d2a0_dTau2 = d2alpha0_dTau2();
+        CoolPropDbl dar_dDelta = dalphar_dDelta();
+        CoolPropDbl d2ar_dDelta2 = d2alphar_dDelta2();
+        CoolPropDbl d2ar_dDelta_dTau = d2alphar_dDelta_dTau();
+        CoolPropDbl d2ar_dTau2 = d2alphar_dTau2();
+        CoolPropDbl R_u = gas_constant();
+        CoolPropDbl mm = molar_mass();
 
-    // Get speed of sound
-    _speed_sound = sqrt(R_u*_T/mm*(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2 - pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2))));
+        // Get speed of sound
+        _speed_sound = sqrt(R_u*_T/mm*(1+2*_delta.pt()*dar_dDelta+pow(_delta.pt(),2)*d2ar_dDelta2 - pow(1+_delta.pt()*dar_dDelta-_delta.pt()*_tau.pt()*d2ar_dDelta_dTau,2)/(pow(_tau.pt(),2)*(d2ar_dTau2 + d2a0_dTau2))));
 
-    return static_cast<double>(_speed_sound);
+        return static_cast<CoolPropDbl>(_speed_sound);
+    }
+    else{
+        throw ValueError(format("phase is invalid in calc_speed_sound"));
+    }
 }
     
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_gibbsmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar)

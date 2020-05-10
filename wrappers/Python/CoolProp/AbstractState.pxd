@@ -1,4 +1,4 @@
-from libcpp cimport bool 
+from libcpp cimport bool
 from libcpp.string cimport string
 
 # A header defining the AbstractState class
@@ -31,7 +31,7 @@ cdef class PyPhaseEnvelopeData:
     cpdef public size_t iTsat_max, ipsat_max, icrit
     cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
     cpdef public list x, y, K
-    
+
 cdef class PyGuessesStructure:
     cpdef public double T, p, rhomolar, hmolar, smolar
     cpdef public double rhomolar_liq, rhomolar_vap
@@ -57,7 +57,7 @@ cdef class AbstractState:
     cpdef set_binary_interaction_string(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter, string val)
     cpdef string get_binary_interaction_string(self, string CAS1, string CAS2, string parameter) except *
     cpdef apply_simple_mixing_rule(self, size_t, size_t, string)
-    
+
     cpdef name(self)
     cpdef backend_name(self)
     cpdef fluid_names(self)
@@ -65,17 +65,17 @@ cdef class AbstractState:
     cpdef set_fluid_parameter_double(self, size_t i, string parameter, double value)
     cpdef double get_fluid_parameter_double(self, size_t i, string parameter) except *
     cpdef change_EOS(self, size_t, string)
-    
-    cpdef constants_header.phases phase(self) except *  
+
+    cpdef constants_header.phases phase(self) except *
     cpdef specify_phase(self, constants_header.phases phase)
     cpdef unspecify_phase(self)
-    
+
     ## Limits
     cpdef double Tmin(self) except *
     cpdef double Tmax(self) except *
     cpdef double pmax(self) except *
     cpdef double Ttriple(self) except *
-    
+
     ## Critical point
     cpdef double T_critical(self) except *
     cpdef double rhomass_critical(self) except *
@@ -87,22 +87,23 @@ cdef class AbstractState:
     ## Spinodal curve(s)
     cpdef build_spinodal(self)
     cpdef PySpinodalData get_spinodal_data(self)
-    
+
     ## Reducing point
     cpdef double T_reducing(self) except *
     cpdef double rhomolar_reducing(self) except *
     cpdef double rhomass_reducing(self) except *
-    
+
     ## Tangent plane distance
     cpdef double tangent_plane_distance(self, double T, double p, vector[double] w, double rhomolar_guess=*) except *
-        
-    ## ---------------------------------------- 
+
+    ## ----------------------------------------
     ##        Fluid property accessors
     ## ----------------------------------------
-    
+
     cpdef double T(self) except *
     cpdef double p(self) except *
     cpdef double Q(self) except *
+    cpdef double compressibility_factor(self) except *
     cpdef double rhomolar(self) except *
     cpdef double hmolar(self) except *
     cpdef double smolar(self) except *
@@ -155,10 +156,13 @@ cdef class AbstractState:
     cpdef double helmholtzmolar_excess(self) except *
     cpdef double helmholtzmass_excess(self) except *
 
-    
+    cpdef double gibbsmolar_residual(self) except *
+    cpdef double hmolar_residual(self) except *
+    cpdef double smolar_residual(self) except *
 
 
-    
+
+
     cpdef double molar_mass(self) except *
     cpdef double acentric_factor(self) except*
     cpdef tuple true_critical_point(self)
@@ -167,34 +171,34 @@ cdef class AbstractState:
     cpdef double trivial_keyed_output(self, constants_header.parameters) except *
     cpdef double saturated_liquid_keyed_output(self, constants_header.parameters) except *
     cpdef double saturated_vapor_keyed_output(self, constants_header.parameters) except *
-    
+
     cpdef tuple ideal_curve(self, string)
-    
-    ## ----------------------------------------	
+
+    ## ----------------------------------------
     ##        Derivatives
     ## ----------------------------------------
-    
+
     cpdef CoolPropDbl first_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
     cpdef CoolPropDbl second_partial_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
     cpdef CoolPropDbl first_saturation_deriv(self, constants_header.parameters, constants_header.parameters) except *
     cpdef CoolPropDbl second_saturation_deriv(self, constants_header.parameters, constants_header.parameters, constants_header.parameters) except *
-    
+
     cpdef double first_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except *
     cpdef double second_two_phase_deriv(self, constants_header.parameters Of, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except *
     cpdef double first_two_phase_deriv_splined(self ,constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except *
-    
+
     cpdef double melting_line(self, int, int, double) except *
     cpdef bool has_melting_line(self) except *
     cpdef double saturation_ancillary(self, constants_header.parameters, int, constants_header.parameters, double) except *
-        
+
     cpdef build_phase_envelope(self, string)
     cpdef PyPhaseEnvelopeData get_phase_envelope_data(self)
-    
+
     cpdef mole_fractions_liquid(self)
     cpdef mole_fractions_vapor(self)
-    cpdef get_mass_fractions(self) 
+    cpdef get_mass_fractions(self)
     cpdef get_mole_fractions(self)
-    
+
     cpdef CoolPropDbl alpha0(self) except *
     cpdef CoolPropDbl dalpha0_dDelta(self) except *
     cpdef CoolPropDbl dalpha0_dTau(v) except *
@@ -221,4 +225,3 @@ cdef class AbstractState:
     cpdef CoolPropDbl d4alphar_dDelta2_dTau2(self) except *
     cpdef CoolPropDbl d4alphar_dDelta_dTau3(self) except *
     cpdef CoolPropDbl d4alphar_dTau4(self) except *
-

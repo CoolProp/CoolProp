@@ -200,6 +200,8 @@ Table of Inputs/Outputs to HAPropsSI
     ``B``, ``Twb``, ``T_wb``, ``WetBulb``; K; Input/Output; Wet-Bulb Temperature
     ``C``, ``cp``; J/kg dry air/K; Output; Mixture specific heat per unit dry air
     ``Cha``, ``cp_ha``; J/kg humid air/K; Output; Mixture specific heat per unit humid air
+    ``CV``; J/kg dry air/K; Output; Mixture specific heat at constant volume per unit dry air
+    ``CVha``, ``cv_ha``; J/kg humid air/K; Output; Mixture specific heat at constant volume per unit humid air
     ``D``, ``Tdp``, ``DewPoint``, ``T_dp``; K; Input/Output;	Dew-Point Temperature
     ``H``, ``Hda``, ``Enthalpy``;	J/kg dry air; Input/Output; Mixture enthalpy per dry air
     ``Hha``; J/kg humid air; Input/Output; Mixture enthalpy per humid air 

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.11)
 
+include(CheckIncludeFileCXX)
+
 if (DEFINED COOLPROP_INSTALL_PREFIX)
     #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
     message(STATUS "COOLPROP_INSTALL_PREFIX=${COOLPROP_INSTALL_PREFIX}")
@@ -84,7 +86,7 @@ option (COOLPROP_MSVC_DEBUG
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
 
-# see 
+# see
 # https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
 # https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
 # https://github.com/pandas-dev/pandas/pull/24274/files
@@ -123,7 +125,7 @@ endif (DEFINED DARWIN_USE_LIBCPP)
 #  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${OSX_COMPILE_FLAGS}")
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}${OSX_COMPILE_FLAGS}")
 #endif()
-# Alternatively you could use 
+# Alternatively you could use
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS "-mmacosx-version-min=10.5")
 # set_target_properties(TARGET_NAME PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS "-mmacosx-version-min=10.5")
 
@@ -145,9 +147,9 @@ project(${project_name})
 
 # Project version
 set (COOLPROP_VERSION_MAJOR 6)
-set (COOLPROP_VERSION_MINOR 3)
+set (COOLPROP_VERSION_MINOR 4)
 set (COOLPROP_VERSION_PATCH 0)
-set (COOLPROP_VERSION_REVISION)
+set (COOLPROP_VERSION_REVISION )
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
@@ -212,7 +214,7 @@ SET(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD") # order matters "/MXd" before "
 #######################################
 
 # These backends will be compiled in
-set(COOLPROP_ENABLED_BACKENDS Cubics IF97 Helmholtz REFPROP Incompressible Tabular)
+set(COOLPROP_ENABLED_BACKENDS Cubics IF97 Helmholtz REFPROP Incompressible Tabular PCSAFT)
 
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
@@ -260,7 +262,29 @@ set(COOLPROP_INCLUDE_DIRECTORIES ${APP_INCLUDE_DIRS} CACHE LIST "List of include
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
 
 set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5 2.4)
-find_package (PythonInterp 2.7 REQUIRED)
+find_package (PythonInterp 2.7)
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(STATUS "Looking for Python")
+  find_package (Python COMPONENTS Interpreter)
+endif()
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(STATUS "Looking for Python2")
+  find_package (Python2 COMPONENTS Interpreter)
+  if(Python2_Interpreter_FOUND)
+    set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE})
+  endif()
+endif()
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(STATUS "Looking for Python3")
+  find_package (Python3 COMPONENTS Interpreter)
+  if(Python3_Interpreter_FOUND)
+    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+  endif()
+endif()
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(WARNING "Could not find Python, be prepared for errors.")
+endif()
+
 if(CMAKE_DL_LIBS)
     find_package (${CMAKE_DL_LIBS} REQUIRED)
 endif()
@@ -334,6 +358,27 @@ ELSEIF(FORCE_BITNESS_64)
 ELSEIF(FORCE_BITNESS_NATIVE)
   SET(BITNESS "NATIVE")
 ENDIF()
+
+#######################################
+#         SHARED POINTER              #
+#-------------------------------------#
+# In this section we define the       #
+# flags needed to use shared_ptr      #
+# reliably                            #
+#######################################
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/FindSharedPtr.cmake")
+FIND_SHARED_PTR()
+if(NOT SHARED_PTR_FOUND)
+  message(FATAL_ERROR "Must be able to find shared_ptr")
+else()
+  if (SHARED_PTR_TR1_MEMORY_HEADER)
+    add_definitions("-DSHARED_PTR_TR1_MEMORY_HEADER")
+  endif()
+  if (SHARED_PTR_TR1_NAMESPACE)
+    add_definitions("-DSHARED_PTR_TR1_NAMESPACE")
+  endif()
+endif()
 
 #######################################
 #         MAKE ARTEFACTS              #
@@ -690,7 +735,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   set(COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
   set(COOLPROP_WINDOWS_PACKAGE_ISS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
   # Generator for DLLs
-  set(COOLPROP_WINDOWS_PACKAGE_DLL_GEN "Visual Studio 10 2010")
+  set(COOLPROP_WINDOWS_PACKAGE_DLL_GEN "${CMAKE_GENERATOR}") # Use the currently selected generator, architecture is hard-coded below
   # Configure variables like version number and build year
   CONFIGURE_FILE("${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}/cmake-templates/config.iss" "${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}/config.iss")
   # Find the installer generator executable
@@ -700,7 +745,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   SET(BINDIR64 $ENV{${BINDIR64_ENV_NAME}})
   find_program (COOLPROP_WINDOWS_PACKAGE_ISS_EXE
     NAMES iscc.exe
-    HINTS "${BINDIR32}/Inno Setup 5" "${BINDIR64}/Inno Setup 5"
+    HINTS "${BINDIR32}/Inno Setup 6" "${BINDIR64}/Inno Setup 6"
   )
 
   # ******************************************************************
@@ -737,7 +782,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
     VERBATIM )
 
   # **************************************************************
-  # Add the target for the shared libraries, 3x 32bit and 1x 64bit
+  # Add the target for the shared libraries, 2x 32bit and 1x 64bit
   # **************************************************************
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES COOLPROP_WINDOWS_PACKAGE_PREPARE)
@@ -747,23 +792,16 @@ if (COOLPROP_WINDOWS_PACKAGE)
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
     COMMENT "Copy the header file for the CoolProp library"
     VERBATIM )
-  # # Build the 32bit DLLs
-  # add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
-  #   COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
-  #   COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
-  #   COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x86.dll"
-  #   WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
-  #   COMMENT "Building the 32bit shared library with default settings"
-  #   VERBATIM )
+  # Build the 32bit DLLs
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "-AWin32" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR_STDCALL}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_stdcall.dll"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR_STDCALL}
     COMMENT "Building the 32bit shared library with stdcall"
     VERBATIM )
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_CDECL_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "-AWin32" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_CDECL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_cdecl.dll"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL}
@@ -771,7 +809,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
     VERBATIM )
   # Build the 64bit DLL
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN} Win64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "-Ax64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
 	COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_64B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x64.dll"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_64B_DIR}
@@ -784,7 +822,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_EES)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_EES COOLPROP_WINDOWS_PACKAGE_PREPARE)
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_EES PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_EES_MODULE=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "-AWin32" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_EES_MODULE=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "COOLPROP_EES" "--config" "Release"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy_directory" "${COOLPROP_WINDOWS_PACKAGE_EES_DIR}" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/EES"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_EES_DIR}
@@ -882,15 +920,15 @@ if (COOLPROP_OCTAVE_MODULE)
       string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     else()
       execute_process(
-        COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY}" 
-        COMMAND "grep libc++" 
+        COMMAND "otool -L ${OCTAVE_OCTAVE_LIBRARY}"
+        COMMAND "grep libc++"
         OUTPUT_VARIABLE COOLPROP_OCTAVE_USING_CLANG
         ERROR_VARIABLE COOLPROP_OCTAVE_USING_CLANG
       )
       MESSAGE(STATUS "COOLPROP_OCTAVE_USING_CLANG = ${COOLPROP_OCTAVE_USING_CLANG}")
       string(STRIP "${COOLPROP_OCTAVE_USING_CLANG}" COOLPROP_OCTAVE_USING_CLANG)
     endif()
-    
+
     STRING(LENGTH "${COOLPROP_OCTAVE_USING_CLANG}" LEN)
     if (${LEN} GREATER 0)
       message(STATUS "Using -stdlib=libc++, this might override the settings based on DARWIN_USE_LIBCPP")
@@ -906,7 +944,7 @@ if (COOLPROP_OCTAVE_MODULE)
     include_directories($ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION}/octave)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-fpermissive")
     SWIG_LINK_LIBRARIES(CoolProp octave octinterp)
-    set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-L$ENV{OCTAVE_ROOT}/lib/octave/${OCTAVE_VERSION}")
+    set_target_properties(CoolProp PROPERTIES LINK_FLAGS "-L$ENV{OCTAVE_ROOT}/mingw64/lib/octave/${OCTAVE_VERSION} -L$ENV{OCTAVE_ROOT}")
   else()
     SWIG_LINK_LIBRARIES(CoolProp ${OCTAVE_LIBRARIES})
   endif()
@@ -1562,12 +1600,13 @@ endif()
 if (COOLPROP_CLANG_ADDRESS_SANITIZER)
 
   SET(CMAKE_CXX_FLAGS "-fsanitize=address -g")
-  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
+  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/catch_always_return_success.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable        (CatchTestRunner ${APP_SOURCES})
   add_dependencies      (CatchTestRunner generate_headers)
   set_target_properties (CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
-  set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address -lstdc++")
+  set(CMAKE_CXX_FLAGS "-O1")
+  set(CMAKE_EXE_LINKER_FLAGS "-fsanitize=address -fno-omit-frame-pointer -lstdc++")
   if(UNIX)
     target_link_libraries (CatchTestRunner ${CMAKE_DL_LIBS})
   endif()

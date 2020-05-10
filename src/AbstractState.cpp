@@ -17,6 +17,7 @@
 #include "Backends/Cubics/CubicBackend.h"
 #include "Backends/Cubics/VTPRBackend.h"
 #include "Backends/Incompressible/IncompressibleBackend.h"
+#include "Backends/PCSAFT/PCSAFTBackend.h"
 
 #if !defined(NO_TABULAR_BACKENDS)
     #include "Backends/Tabular/TTSEBackend.h"
@@ -103,6 +104,15 @@ public:
 } ;
 // This static initialization will cause the generator to register
 static CoolProp::GeneratorInitializer<VTPRGenerator> vtpr_gen(CoolProp::VTPR_BACKEND_FAMILY);
+
+class PCSAFTGenerator : public CoolProp::AbstractStateGenerator{
+public:
+    CoolProp::AbstractState * get_AbstractState(const std::vector<std::string> &fluid_names){
+        return new CoolProp::PCSAFTBackend(fluid_names);
+    };
+} ;
+// This static initialization will cause the generator to register
+static CoolProp::GeneratorInitializer<PCSAFTGenerator> pcsaft_gen(CoolProp::PCSAFT_BACKEND_FAMILY);
 
 
 AbstractState * AbstractState::factory(const std::string &backend, const std::vector<std::string> &fluid_names)
@@ -315,7 +325,7 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs &input_pair, Cool
 }
 double AbstractState::trivial_keyed_output(parameters key)
 {
-    if (get_debug_level()>=50) std::cout << format("AbstractState: keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
+    if (get_debug_level()>=50) std::cout << format("AbstractState: trivial_keyed_output called for %s ",get_parameter_information(key,"short").c_str()) << std::endl;
     switch (key)
     {
     case imolar_mass:
@@ -397,12 +407,14 @@ double AbstractState::keyed_output(parameters key)
         return rhomass();
     case iHmolar:
         return hmolar();
+    case iHmolar_residual:
+        return hmolar_residual();
     case iHmass:
         return hmass();
     case iSmolar:
         return smolar();
     case iSmolar_residual:
-        return gas_constant()*(tau()*dalphar_dTau() - alphar());
+        return smolar_residual();
     case iSmass:
         return smass();
     case iUmolar:
@@ -411,6 +423,8 @@ double AbstractState::keyed_output(parameters key)
         return umass();
     case iGmolar:
         return gibbsmolar();
+    case iGmolar_residual:
+        return gibbsmolar_residual();
     case iGmass:
         return gibbsmass();
     case iHelmholtzmolar:
@@ -538,6 +552,10 @@ double AbstractState::hmolar(void){
     if (!_hmolar) _hmolar = calc_hmolar();
     return _hmolar;
 }
+double AbstractState::hmolar_residual(void){
+    if (!_hmolar_residual) _hmolar_residual = calc_hmolar_residual();
+    return _hmolar_residual;
+}
 double AbstractState::hmolar_excess(void) {
     if (!_hmolar_excess) calc_excess_properties();
     return _hmolar_excess;
@@ -545,6 +563,10 @@ double AbstractState::hmolar_excess(void) {
 double AbstractState::smolar(void){
     if (!_smolar) _smolar = calc_smolar();
     return _smolar;
+}
+double AbstractState::smolar_residual(void){
+    if (!_smolar_residual) _smolar_residual = calc_smolar_residual();
+    return _smolar_residual;
 }
 double AbstractState::smolar_excess(void) {
     if (!_smolar_excess) calc_excess_properties();
@@ -561,6 +583,10 @@ double AbstractState::umolar_excess(void) {
 double AbstractState::gibbsmolar(void){
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
     return _gibbsmolar;
+}
+double AbstractState::gibbsmolar_residual(void){
+    if (!_gibbsmolar_residual) _gibbsmolar_residual = calc_gibbsmolar_residual();
+    return _gibbsmolar_residual;
 }
 double AbstractState::gibbsmolar_excess(void) {
     if (!_gibbsmolar_excess) calc_excess_properties();
@@ -625,6 +651,10 @@ double AbstractState::gas_constant(void){
 double AbstractState::fugacity_coefficient(std::size_t i){
     // TODO: Cache the fug. coeff for each component
     return calc_fugacity_coefficient(i);
+}
+std::vector<double> AbstractState::fugacity_coefficients(){
+    // TODO: Cache the fug. coeff for each component
+    return calc_fugacity_coefficients();
 }
 double AbstractState::fugacity(std::size_t i){
     // TODO: Cache the fug. coeff for each component

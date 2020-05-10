@@ -34,6 +34,7 @@ The two schemes available are
 * ``linear`` - :math:`T_r` and :math:`v_r` are a linear function of molar composition between the two pure fluid values
 * ``Lorentz-Berthelot`` - all interaction parameters are 1.0
 
+Note that if  ``apply_simple_mixing_rule`` is called first in a programme before any property calculation function, the interaction parameter library is initialized with just the binary mixture that was specified, and other binary mixtures will raise an error. To augment the built-in database, call a property calculation function before calling ``apply_simple_mixing_rule``.
 
 Here is a sample of using this in python:
 
@@ -50,6 +51,7 @@ Here is a sample of using this in python:
 .. warning::
 
     Use with caution!! For other mixtures this can give you entirely(!) wrong predictions
+    
 
 Using your own interaction parameters
 -------------------------------------

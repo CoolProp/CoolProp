@@ -51,11 +51,11 @@ public:
                 val.alpha0 = JSONFluidLibrary::parse_alpha0((*itr)["alpha0"]);
             }
             std::pair<std::map<std::string, CubicsValues>::iterator, bool> ret;
-            ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val) );
+            ret = fluid_map.insert(std::pair<std::string, CubicsValues>(upper(val.name), val) );
             if (ret.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 fluid_map.erase(ret.first);
-                ret = fluid_map.insert(std::pair<std::string, CubicsValues>(val.name, val));
+                ret = fluid_map.insert(std::pair<std::string, CubicsValues>(upper(val.name), val));
                 if (get_debug_level() > 0){
                     std::cout << "added the cubic fluid: "+val.name << std::endl;
                 }
@@ -65,7 +65,7 @@ public:
             for (std::vector<std::string>::const_iterator it = val.aliases.begin(); it != val.aliases.end(); ++it){
                 if (aliases_map.find(*it) == aliases_map.end()){
                     // It's not already in aliases map
-                    aliases_map.insert(std::pair<std::string, std::string>(*it, val.name) );
+                    aliases_map.insert(std::pair<std::string, std::string>(*it, upper(val.name)));
                 }
             }
             counter ++;
@@ -86,7 +86,7 @@ public:
                 return fluid_map.find(italias->second)->second;
             }
             else{
-                throw ValueError(format("Fluid identifier [%s] was not found in CubicsLibrary", identifier.c_str()));
+                throw ValueError(format("Fluid identifier [%s] was not found in CubicsLibrary", uppercase_identifier.c_str()));
             }
         }
     };
@@ -112,15 +112,17 @@ void add_fluids_as_JSON(const std::string &JSON)
         
         dd.Parse<0>(JSON.c_str());
         if (dd.HasParseError()){
-            throw ValueError("Unable to load all_cubics_JSON.json");
+            throw ValueError("Cubics JSON is not valid JSON");
         } else{
             try{
                 library.add_many(dd);
-            }catch(std::exception &e){std::cout << e.what() << std::endl;}
+            }catch(std::exception &e){
+                throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str()));
+            }
         }
     }
     else{
-        if (get_debug_level() > 0){ throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str())); }
+        throw ValueError(format("Unable to validate cubics library against schema with error: %s", errstr.c_str()));
     }
 }
 

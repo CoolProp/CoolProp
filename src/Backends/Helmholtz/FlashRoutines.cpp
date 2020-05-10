@@ -47,6 +47,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend &HEOS)
                 }
             }
             HEOS.unspecify_phase();
+            HEOS._Q = -1;
         }
         else{
             // Liquid solution

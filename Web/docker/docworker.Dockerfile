@@ -1,4 +1,7 @@
 FROM continuumio/miniconda3
+
+RUN mkdir /usr/share/man/man1/
+
 RUN apt-get -y -m update && \
     apt-get install -y \
         g++ make cmake swig doxygen p7zip-full \
@@ -7,7 +10,7 @@ RUN apt-get -y -m update && \
         r-base-dev \
         default-jre default-jdk \
         texlive-extra-utils \
-        imagemagick
+        imagemagick rsync
 
         
 ADD conda_environment.yml /environment.yml
@@ -26,9 +29,11 @@ RUN source activate docs && \
     python -c "import numpy; print(numpy.__file__)" && \
     mkdir build && \
     cd build && \
-    cmake .. -DREFPROP_FORTRAN_PATH=/REFPROP_sources/fortran && \
+    cmake .. -DREFPROP_FORTRAN_PATH=/REFPROP_sources/FORTRAN && \
     cmake --build . && \
     mkdir -p /opt/refprop && \
     cp librefprop.so /opt/refprop && \
-    cp -r /REFPROP_sources/fluids /opt/refprop && \
-    cp -r /REFPROP_sources/mixtures /opt/refprop 
+    cp -r /REFPROP_sources/FLUIDS /opt/refprop && \
+    cp -r /REFPROP_sources/MIXTURES /opt/refprop 
+
+RUN python -m pip install pybtex

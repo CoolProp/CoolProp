@@ -1,9 +1,9 @@
 from __future__ import print_function
 import platform
-import subprocess, shutil, os, sys, glob
+import subprocess, shutil, os, sys, glob, tempfile
 from distutils.version import LooseVersion
 from distutils.sysconfig import get_config_var
-
+from setuptools.command.build_ext import build_ext
 
 def copy_files():
     def copytree(old, new):
@@ -183,6 +183,8 @@ if __name__ == '__main__':
                 cmake_config_args += ['-DFORCE_BITNESS_32=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-DFORCE_BITNESS_64=ON']
+            elif cmake_bitness == 'any':
+                pass
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         else:
@@ -259,8 +261,8 @@ if __name__ == '__main__':
         cython_directives = dict(
             profile=_profiling_enabled,
             embedsignature=True,
-            language_level=2,
-            c_string_type='unicode',
+            language_level=3 if sys.version_info >= (3, 0) else 2,
+            c_string_type='unicode' if sys.version_info >= (3, 0) else 'unicode',
             c_string_encoding='ascii'
             )
 
@@ -296,20 +298,69 @@ if __name__ == '__main__':
         'zip_safe': False  # no compressed egg; see http://stackoverflow.com/a/29124937/1360263
     }
     from setuptools import setup, Extension, find_packages
+
+    def get_shared_ptr_setter(base_class):
+        """
+        Get the setter class with the appropriate base class
+        """
+
+        # See https://stackoverflow.com/a/54518348
+        class shared_ptr_subclass(base_class):
+            """ Metaclass for overwriting compilation flags """
+
+            def set_shared_ptr_flags(self):
+                from distutils.errors import CompileError
+
+                if sys.platform.startswith('win') and sys.version_info <= (3, 0):
+                    # Hardcode for windows for python 2.7...
+                    more_flags = ['-DSHARED_PTR_TR1_NAMESPACE']
+                else:
+                    good_index = -1
+                    for ic,contents in enumerate([
+                        "#include <memory> \nusing std::shared_ptr;\n int main() { shared_ptr<int> int_ptr; return 0; }",
+                        "#include <memory> \nusing std::tr1::shared_ptr; \nint main() { shared_ptr<int> int_ptr; return 0;}",
+                        "#include <tr1/memory>\nusing std::tr1::shared_ptr;\nint main() { shared_ptr<int> int_ptr; return 0;}"
+                    ]):
+                        with tempfile.NamedTemporaryFile('w', suffix='.cpp', dir='.') as f:
+                            f.write(contents)
+                            f.seek(0)
+                            try:
+                                self.compiler.compile([f.name])
+                                good_index = ic
+                                break
+                            except CompileError:
+                                pass
+                    more_flags = []
+                    if good_index == 0:
+                        print('No shared_ptr flags needed')
+                        return
+                    elif good_index == 1:
+                        more_flags = ['-DSHARED_PTR_TR1_NAMESPACE ']
+                    elif good_index == 2:
+                        more_flags = ['-DSHARED_PTR_TR1_NAMESPACE', '-DSHARED_PTR_TR1_MEMORY_HEADER']
+                print("Adding these shared_ptr compilation macros:", more_flags)
+                for ext in self.extensions:
+                    ext.extra_compile_args += more_flags
+                
+            def build_extensions(self):
+                self.set_shared_ptr_flags()
+                build_ext.build_extensions(self)
+        return shared_ptr_subclass
+
     if USE_CYTHON:
+        print('Cython will be used; cy_ext is ' + cy_ext)
         import Cython.Compiler
         from Cython.Distutils.extension import Extension
         from Cython.Build import cythonize
         from Cython.Distutils import build_ext
 
+        setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
+
         # This will always generate HTML to show where there are still pythonic bits hiding out
         Cython.Compiler.Options.annotate = True
-
-        setup_kwargs['cmdclass'] = dict(build_ext=build_ext)
-
-        print('Cython will be used; cy_ext is ' + cy_ext)
     else:
         print('Cython will not be used; cy_ext is ' + cy_ext)
+        setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
 
     def find_cpp_sources(root=os.path.join('..', '..', 'src'), extensions=['.cpp'], skip_files=None):
         file_listing = []

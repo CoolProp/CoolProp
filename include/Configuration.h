@@ -30,6 +30,7 @@
     X(REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS, "REFPROP_DONT_ESTIMATE_INTERACTION_PARAMETERS", false, "If true, if the binary interaction parameters in REFPROP are estimated, throw an error rather than silently continuing") \
     X(REFPROP_IGNORE_ERROR_ESTIMATED_INTERACTION_PARAMETERS, "REFPROP_IGNORE_ERROR_ESTIMATED_INTERACTION_PARAMETERS", false, "If true, if the binary interaction parameters in REFPROP are unable to be estimated, silently continue rather than failing") \
     X(REFPROP_USE_GERG, "REFPROP_USE_GERG", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the pure-fluid EOS from GERG-2008") \
+    X(REFPROP_ERROR_THRESHOLD, "REFPROP_ERROR_THRESHOLD", static_cast<int>(0), "The highest acceptable error code without throwing an exception") \
     X(REFPROP_USE_PENGROBINSON, "REFPROP_USE_PENGROBINSON", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the Peng-Robinson EOS") \
     X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0, "The maximum allowed size of the directory that is used to store tabular data") \
     X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false, "If true, when possible, CoolProp will skip checking whether values are inside the property limits") \
@@ -42,9 +43,10 @@
     X(OVERWRITE_DEPARTURE_FUNCTION, "OVERWRITE_DEPARTURE_FUNCTION", false, "If true, and a departure function to be added is already there, rather than not adding the departure function (and probably throwing an exception), overwrite it") \
     X(OVERWRITE_BINARY_INTERACTION, "OVERWRITE_BINARY_INTERACTION", false, "If true, and a pair of binary interaction pairs to be added is already there, rather than not adding the binary interaction pair (and probably throwing an exception), overwrite it") \
     X(USE_GUESSES_IN_PROPSSI, "USE_GUESSES_IN_PROPSSI", false, "If true, calls to the vectorized versions of PropsSI use the previous state as guess value while looping over the input vectors, only makes sense when working with a single fluid and with points that are not too far from each other.") \
-    X(ASSUME_CRITICAL_POINT_STABLE, "ASSUME_CRIT_POINT_STABLE", false, "If true, evaluation of the stability of critical point will be skipped and point will be assumed to be stable") \
+    X(ASSUME_CRITICAL_POINT_STABLE, "ASSUME_CRITICAL_POINT_STABLE", false, "If true, evaluation of the stability of critical point will be skipped and point will be assumed to be stable") \
     X(VTPR_ALWAYS_RELOAD_LIBRARY, "VTPR_ALWAYS_RELOAD_LIBRARY", false, "If true, the library will always be reloaded, no matter what is currently loaded") \
-    X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.")
+    X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.") \
+    X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")
 
 
  // Use preprocessor to create the Enum
@@ -91,6 +93,8 @@ class ConfigurationItem
         operator double() const { check_data_type(CONFIGURATION_DOUBLE_TYPE);  return v_double; };
         /// Cast to string
         operator std::string() const { check_data_type(CONFIGURATION_STRING_TYPE);  return v_string; };
+        /// Cast to integer
+        operator int() const { check_data_type(CONFIGURATION_INTEGER_TYPE);  return v_integer; };
         // Initializer for bool
         ConfigurationItem(configuration_keys key, bool val){
             this->key = key; type = CONFIGURATION_BOOL_TYPE; v_bool = val;
@@ -249,6 +253,8 @@ class Configuration
 
 /// Return the value of a boolean key from the configuration
 bool get_config_bool(configuration_keys key);
+/// Return the value of an integer key from the configuration
+int get_config_int(configuration_keys key);
 /// Return the value of a double configuration key
 double get_config_double(configuration_keys key);
 /// Return the value of a string configuration key
@@ -265,6 +271,8 @@ std::string get_config_as_json_string();
 
 /// Set the value of a boolean configuration value
 void set_config_bool(configuration_keys key, bool val);
+/// Set the value of an integer configuration value
+void set_config_int(configuration_keys key, int val);
 /// Set the value of a double configuration value
 void set_config_double(configuration_keys key, double val);
 /// Set the value of a string configuration value

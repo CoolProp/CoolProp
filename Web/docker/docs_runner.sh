@@ -7,4 +7,5 @@ cat build_docs.sh
 cp -r ${HOME}/REFPROP_sources .
 
 # Run the build of the docs
+docker-compose build
 docker-compose run worker bash /coolprop/Web/docker/build_docs.sh $1

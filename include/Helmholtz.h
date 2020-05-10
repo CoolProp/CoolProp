@@ -491,6 +491,34 @@ public:
     void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 };
 
+
+class ResidualHelmholtzGaoB : public BaseHelmholtzTerm{
+protected:
+    std::vector<double> n,t,d,eta,beta,gamma,epsilon,b;
+public:
+    bool enabled;
+    
+    /// Default Constructor
+    ResidualHelmholtzGaoB() { enabled = false; };
+
+    /// Constructor given coefficients
+    ResidualHelmholtzGaoB(
+        const std::vector<CoolPropDbl> &n,
+        const std::vector<CoolPropDbl> &t,
+        const std::vector<CoolPropDbl> &d,
+        const std::vector<CoolPropDbl> &eta,
+        const std::vector<CoolPropDbl> &beta,
+        const std::vector<CoolPropDbl> &gamma,
+        const std::vector<CoolPropDbl> &epsilon,
+        const std::vector<CoolPropDbl> &b)
+        :n(n),t(t),d(d),eta(eta),beta(beta),gamma(gamma),epsilon(epsilon),b(b) {
+        enabled = true; 
+    };
+    
+    void to_json(rapidjson::Value &el, rapidjson::Document &doc);
+    void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
+};
+
 /// The generalized Lee-Kesler formulation of Xiang & Deiters: doi:10.1016/j.ces.2007.11.029
 class ResidualHelmholtzXiangDeiters : public BaseHelmholtzTerm{
 
@@ -669,6 +697,7 @@ public:
     ResidualHelmholtzGeneralizedExponential GenExp;
     ResidualHelmholtzGeneralizedCubic cubic;
     ResidualHelmholtzXiangDeiters XiangDeiters;
+    ResidualHelmholtzGaoB GaoB;
 
     void empty_the_EOS(){
         NonAnalytic = ResidualHelmholtzNonAnalytic();
@@ -676,6 +705,7 @@ public:
         GenExp = ResidualHelmholtzGeneralizedExponential();
         cubic = ResidualHelmholtzGeneralizedCubic();
         XiangDeiters = ResidualHelmholtzXiangDeiters();
+        GaoB = ResidualHelmholtzGaoB();
     };
     
     HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false)
@@ -686,6 +716,7 @@ public:
         SAFT.all(tau, delta, derivs);
         cubic.all(tau, delta, derivs);
         XiangDeiters.all(tau, delta, derivs);
+        GaoB.all(tau, delta, derivs);
         if (cache_values){
             _base = derivs.alphar;
             _dDelta = derivs.dalphar_ddelta;
