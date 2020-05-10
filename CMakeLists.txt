@@ -745,7 +745,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   SET(BINDIR64 $ENV{${BINDIR64_ENV_NAME}})
   find_program (COOLPROP_WINDOWS_PACKAGE_ISS_EXE
     NAMES iscc.exe
-    HINTS "${BINDIR32}/Inno Setup 5" "${BINDIR64}/Inno Setup 5"
+    HINTS "${BINDIR32}/Inno Setup 6" "${BINDIR64}/Inno Setup 6"
   )
 
   # ******************************************************************
