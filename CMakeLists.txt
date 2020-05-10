@@ -735,7 +735,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
   set(COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
   set(COOLPROP_WINDOWS_PACKAGE_ISS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
   # Generator for DLLs
-  set(COOLPROP_WINDOWS_PACKAGE_DLL_GEN "Visual Studio 16 2019")
+  set(COOLPROP_WINDOWS_PACKAGE_DLL_GEN "${CMAKE_GENERATOR}") # Use the currently selected generator, architecture is hard-coded below
   # Configure variables like version number and build year
   CONFIGURE_FILE("${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}/cmake-templates/config.iss" "${COOLPROP_WINDOWS_PACKAGE_ISS_DIR}/config.iss")
   # Find the installer generator executable
@@ -782,7 +782,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
     VERBATIM )
 
   # **************************************************************
-  # Add the target for the shared libraries, 3x 32bit and 1x 64bit
+  # Add the target for the shared libraries, 2x 32bit and 1x 64bit
   # **************************************************************
   add_custom_target(COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES)
   add_dependencies (COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES COOLPROP_WINDOWS_PACKAGE_PREPARE)
@@ -792,14 +792,7 @@ if (COOLPROP_WINDOWS_PACKAGE)
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
     COMMENT "Copy the header file for the CoolProp library"
     VERBATIM )
-  # # Build the 32bit DLLs
-  # add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
-  #   COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
-  #   COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
-  #   COMMAND ${CMAKE_COMMAND} ARGS "-E" "copy" "${COOLPROP_WINDOWS_PACKAGE_32B_DIR}/Release/CoolProp.dll" "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x86.dll"
-  #   WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_32B_DIR}
-  #   COMMENT "Building the 32bit shared library with default settings"
-  #   VERBATIM )
+  # Build the 32bit DLLs
   add_custom_command(TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES PRE_BUILD
     COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}" "-AWin32" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON" "-DCOOLPROP_STDCALL_LIBRARY=ON"
     COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config" "Release"
