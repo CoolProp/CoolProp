@@ -67,14 +67,15 @@ find_file(
           NO_DEFAULT_PATH
 )
 else()
+set(R_PATH_LOC "${R_HOME_TEXT}/lib")
+MESSAGE(STATUS "R_PATH_LOC = ${R_PATH_LOC}")
 find_library(
           R_LIBRARY
           NAMES R
-          PATHS ${R_BIN_EXPANDED}
+          PATHS ${R_PATH_LOC}
           NO_DEFAULT_PATH
           #NO_CMAKE_PATH
           )
-MESSAGE(STATUS "R_LIBRARY = ${R_LIBRARY}")
 endif()
 MESSAGE(STATUS "R_LIBRARY = ${R_LIBRARY}")
 
