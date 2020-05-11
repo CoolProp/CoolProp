@@ -110,7 +110,8 @@ else
     runCommand mkdir -p "$TMPSDIR" "$SRCSDIR" # Generating directories
     printMessage "Updating sources"
     runCommand pushd "$REPODIR"
-    runCommand find . ! -readable -exec chmod a+r {} \\\;
+    runCommand find . -type d ! -perm -a+rx -exec chmod -v a+rx {} \\\;
+    runCommand find . -type f ! -perm -a+r -exec chmod -v a+r {} \\\;
     runCommand git checkout -B master origin/master
     runCommand git pull
     runCommand git submodule init
