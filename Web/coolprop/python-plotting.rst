@@ -3,6 +3,10 @@
 Python Plotting
 ===============
 
+.. note::
+
+    Please see also the new project `CoolPlot <http://github.com/CoolProp/CoolPlot>`_, aiming to build upon the routines in CoolProp for plotting.
+
 The simplest and most straight forward use case is the generation of plots 
 with default isolines and spacing. Here is a brief example to demonstrate 
 how to create a pressure-enthalpy (:math:`\log p,h`) plot for propane 
@@ -84,32 +88,30 @@ graphs a little simpler, for example:
     ts_plot.show()
     
 
-Mixture Syntax
-==============
+..    Mixture Syntax
+    ==============
 
-You can also specify mixtures straight away and pass the mole fractions as part of the 
-fluid string. 
-    
-.. plot::
-    :include-source:   
+    You can also specify mixtures straight away and pass the mole fractions as part of the 
+    fluid string. 
+        
+    .. plot::
+        :include-source:   
 
-    from CoolProp.Plots import PropertyPlot
-    plot = PropertyPlot("REFPROP::ISOBUTAN[0.8]&PROPANE[0.2]", 'PH', unit_system='EUR', tp_limits='ACHP')
-    plot.calc_isolines()
-    plot.show()
-    
-If you would like to specify the mass fractions instead, you have to construct the state
-object separately and pass it to the plot object instead of a string.
-    
-.. plot::
-    :include-source:   
+        from CoolProp.Plots import PropertyPlot
+        plot = PropertyPlot("REFPROP::ISOBUTAN[0.8]&PROPANE[0.2]", 'PH', unit_system='EUR', tp_limits='ACHP')
+        plot.calc_isolines()
+        plot.show()
+        
+    If you would like to specify the mass fractions instead, you have to construct the state
+    object separately and pass it to the plot object instead of a string.
+        
+    .. plot::
+        :include-source:   
 
-    import CoolProp
-    state = CoolProp.AbstractState("REFPROP", "ISOBUTAN&PROPANE")
-    state.set_mass_fractions([0.8,0.2])
-    from CoolProp.Plots import PropertyPlot
-    plot = PropertyPlot(state, 'TS', unit_system='EUR', tp_limits='ACHP')
-    plot.calc_isolines()
-    plot.show()
-
-
+        import CoolProp
+        state = CoolProp.AbstractState("REFPROP", "ISOBUTAN&PROPANE")
+        state.set_mass_fractions([0.8,0.2])
+        from CoolProp.Plots import PropertyPlot
+        plot = PropertyPlot(state, 'TS', unit_system='EUR', tp_limits='ACHP')
+        plot.calc_isolines()
+        plot.show()
