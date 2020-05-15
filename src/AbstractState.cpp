@@ -229,6 +229,10 @@ bool AbstractState::clear() {
     this->_umolar_excess.clear();
     this->_helmholtzmolar_excess.clear();
 
+    this->_hmolar_residual.clear();
+    this->_smolar_residual.clear();
+    this->_gibbsmolar_residual.clear();
+
     /// Smoothing values
 	this->_rho_spline.clear();
 	this->_drho_spline_dh__constp.clear();
