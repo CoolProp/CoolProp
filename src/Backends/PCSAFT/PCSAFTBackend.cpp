@@ -1659,13 +1659,13 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     if (SatV->mole_fractions.empty()) {
         SatV->set_mole_fractions(mole_fractions);
         double summ = 0;
-        for (int i; i < N; i++) {
+        for (int i = 0; i < N; i++) {
             if (SatV->components[i].getZ() != 0) { // we make the assumption that ions do not appear in the vapor phase
                 summ -= SatV->mole_fractions[i];
                 SatV->mole_fractions[i] = 0;
             }
         }
-        for (int i; i < N; i++) {
+        for (int i = 0; i < N; i++) {
             SatV->mole_fractions[i] = SatV->mole_fractions[i] / summ;
         }
     }
