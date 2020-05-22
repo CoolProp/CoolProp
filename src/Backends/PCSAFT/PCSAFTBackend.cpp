@@ -1796,6 +1796,9 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
                 else if ((_p <= p_bub) && (_p >= p_dew)) {
                     phase = iphase_twophase;
                 }
+                else{
+                	phase = iphase_unknown;
+                }
             }
             break;
         case DmolarT_INPUTS:
