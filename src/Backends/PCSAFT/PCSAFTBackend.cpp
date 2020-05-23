@@ -1623,7 +1623,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
 
 void PCSAFTBackend::post_update(bool optional_checks){
     // Check the values that must always be set
-    if (_p < 0){ throw ValueError("p is less than zero");}
+    // if (_p < 0){ throw ValueError("p is less than zero");}
     if (!ValidNumber(_p)){
         throw ValueError("p is not a valid number");}
     if (_T < 0){ throw ValueError("T is less than zero");}
