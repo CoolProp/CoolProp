@@ -409,6 +409,8 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             target_size = None
             # Resize state variable inputs
             if is_iterable3 and is_iterable5:
+                in3 = np.asanyarray(in3)
+                in5 = np.asanyarray(in5)
                 target_shape = in3.shape
                 target_size = in3.size
                 if in3.shape != in5.shape:
@@ -417,6 +419,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                     vval1 = np.ravel(in3)
                     vval2 = np.ravel(in5)
             elif is_iterable3 and not is_iterable5:
+                in3 = np.asanyarray(in3)
                 target_shape = in3.shape
                 target_size = in3.size
                 vval1 = np.ravel(in3)
@@ -424,6 +427,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                 templist = [in5]*target_size
                 vval2 = templist
             elif is_iterable5 and not is_iterable3:
+                in5 = np.asanyarray(in5)
                 target_shape = in5.shape
                 target_size = in5.size
                 vval1.resize(target_size)
