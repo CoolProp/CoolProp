@@ -179,6 +179,8 @@ if __name__ == '__main__':
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'default':
             cmake_config_args = []
+            if sys.platform.startswith('win'):
+            	cmake_build_args = ['--config', '"Release"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-DFORCE_BITNESS_32=ON']
             elif cmake_bitness == '64':
