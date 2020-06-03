@@ -427,7 +427,7 @@ if __name__ == '__main__':
                author="Ian Bell",
                author_email='ian.h.bell@gmail.com',
                url='http://www.coolprop.org',
-               requires=['msvc_runtime'] if sys.platform.startswith('win') else [], # post-install the C++ runtime for windows will be automatically installed, nothing on other platforms
+               install_requires=['msvc_runtime'] if sys.platform.startswith('win') else [], # post-install the C++ runtime for windows will be automatically installed, nothing on other platforms
                description="""Open-source thermodynamic and transport properties database""",
                packages=find_packages(),
                ext_modules=ext_modules,
