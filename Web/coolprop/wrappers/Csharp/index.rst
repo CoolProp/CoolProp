@@ -6,6 +6,32 @@ C# Wrapper
 
 .. contents:: :depth: 2
 
+Nuget package (3-party wrapper)
+============
+
+Nuget packages are easy to get started with.
+
+How to start 
+
+- Create a new C# Console App(.NET Framework) project in Visual studio
+- Right click your new project and press 'Manage NuGet Packages'
+- Go to 'Browse' and search for 'SharpFluids' and press 'Install'
+- Add this to the top of your code :: 
+    
+    using SharpFluids;
+    using UnitsNet;
+
+- Add this example code in your main ::
+
+    Fluid Water = new Fluid(FluidList.Water);
+    Water.UpdatePT(Pressure.FromBars(1.013), Temperature.FromDegreesCelsius(13));
+    Console.WriteLine("Density of water at 13°C: " + Water.RHO);
+    Console.ReadLine();
+
+- Press '5F' or 'Start' to check that it is working
+
+- If you have problems or questions, find SharpFluids at Github.
+
 Pre-compiled Binaries
 =====================
 
