@@ -9,7 +9,7 @@ C# Wrapper
 Nuget package (3-party wrapper)
 ============
 
-Nuget packages are easy to get started with.
+This C# NuGet package uses CoolProp to perform all Fluid Properties lookups. It combines the speed from the low-level lookup with a units of measurement system packed into a easy-to-use system. If you are new to using CoolProp, this is a good place to start.
 
 How to start 
 
@@ -30,7 +30,7 @@ How to start
 
 - Press '5F' or 'Start' to check that it is working
 
-- If you have problems or questions, find SharpFluids at Github.
+- If you have problems or questions, `Find SharpFluids at Github <https://github.com/MadsKirkFoged/SharpFluids>`_.
 
 Pre-compiled Binaries
 =====================
