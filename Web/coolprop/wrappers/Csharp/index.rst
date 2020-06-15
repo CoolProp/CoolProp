@@ -28,7 +28,7 @@ How to start
     Console.WriteLine("Density of water at 13°C: " + Water.RHO);
     Console.ReadLine();
 
-- Press '5F' or 'Start' to check that it is working
+- Press 'F5' or 'Start' to check that it is working
 
 - If you have problems or questions, `Find SharpFluids at Github <https://github.com/MadsKirkFoged/SharpFluids>`_.
 
