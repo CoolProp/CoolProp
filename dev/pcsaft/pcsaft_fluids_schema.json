@@ -18,7 +18,7 @@
         "maximum": 1000
       },
       "sigma": {
-        "description": "Segment diameter (1/Angstrom)",
+        "description": "Segment diameter (Angstrom)",
         "type": "number",
         "minimum": -2,
         "maximum": 6
@@ -26,7 +26,7 @@
       "sigma_units": {
         "description": "Units of the segment diameter provided",
         "enum": [
-          "1/Angstrom"
+          "Angstrom"
         ]
       },
       "u": {
@@ -62,7 +62,7 @@
       "volA_units": {
         "description": "Units of the association volume provided",
         "enum": [
-          "1/Angstrom^3"
+          "Angstrom^3"
         ]
       },
       "dipm": {
