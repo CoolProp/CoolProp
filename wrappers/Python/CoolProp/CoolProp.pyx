@@ -144,17 +144,21 @@ def set_reference_state(string FluidName, *args):
 
     Type #2 (A Python wrapper of :cpapi:`CoolProp::set_reference_stateD`):
 
-    set_reference_state(FluidName,T0,rho0,h0,s0)
+    set_reference_state(FluidName,T0,rhomolar,hmolar0,smolar0)
+
+    .. note::
+
+        Only supported for internal backend currently
 
     ``FluidName`` The name of the fluid
 
     ``T0`` The temperature at the reference point [K]
 
-    ``rho0`` The density at the reference point [kg/m^3]
+    ``rhomolar`` The density at the reference point [mol/m^3]
 
-    ``h0`` The enthalpy at the reference point [J/kg]
+    ``hmolar0`` The enthalpy at the reference point [J/mol]
 
-    ``s0`` The entropy at the reference point [J/kg]
+    ``smolar0`` The entropy at the reference point [J/mol/K]
     """
 
     cdef bytes _param
