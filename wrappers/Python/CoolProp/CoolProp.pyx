@@ -397,10 +397,10 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
         is_iterable3 = iterable(in3)
         is_iterable5 = iterable(in5)
 
-        #if _numpy_supported and is_iterable3 and isinstance(in3, np.ndarray) and (np.prod(in3.shape) != max(in3.shape)):
-        #    raise ValueError("Input 3 is not one-dimensional")
-        #if _numpy_supported and is_iterable5 and isinstance(in5, np.ndarray) and (np.prod(in5.shape) != max(in5.shape)):
-        #    raise ValueError("Input 5 is not one-dimensional")
+        if _numpy_supported and is_iterable3 and isinstance(in3, np.ndarray) and (np.prod(in3.shape) != max(in3.shape)):
+            raise ValueError("Input 3 is not one-dimensional")
+        if _numpy_supported and is_iterable5 and isinstance(in5, np.ndarray) and (np.prod(in5.shape) != max(in5.shape)):
+            raise ValueError("Input 5 is not one-dimensional")
 
         if is_iterable1 or is_iterable3 or is_iterable5:
             # Prepare the output datatype
@@ -409,38 +409,24 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             else:
                 vin1 = in1
 
-            target_shape = None # out.reshape(target_shape)
-            target_size = None
             # Resize state variable inputs
             if is_iterable3 and is_iterable5:
-                in3 = np.asanyarray(in3)
-                in5 = np.asanyarray(in5)
-                target_shape = in3.shape
-                target_size = in3.size
-                if in3.shape != in5.shape:
-                    raise TypeError("Shapes of Prop1 {n1} and Prop2 {n2} to PropsSI are not the same".format(n1 = in3.shape, n2 = in5.shape))
+                if len(in3) != len(in5):
+                    raise TypeError("Sizes of Prop1 {n1:d} and Prop2 {n2:d} to PropsSI are not the same".format(n1 = len(in3), n2 = len(in5)))
                 else:
-                    vval1 = np.ravel(in3)
-                    vval2 = np.ravel(in5)
+                    vval1 = in3
+                    vval2 = in5
             elif is_iterable3 and not is_iterable5:
-                in3 = np.asanyarray(in3)
-                target_shape = in3.shape
-                target_size = in3.size
-                vval1 = np.ravel(in3)
-                vval2.resize(target_size)
-                templist = [in5]*target_size
+                vval1 = in3
+                vval2.resize(len(in3))
+                templist = [in5]*len(in3)
                 vval2 = templist
             elif is_iterable5 and not is_iterable3:
-                in5 = np.asanyarray(in5)
-                target_shape = in5.shape
-                target_size = in5.size
-                vval1.resize(target_size)
-                templist = [in3]*target_size
+                vval1.resize(len(in5))
+                templist = [in3]*len(in5)
                 vval1 = templist
-                vval2 = np.ravel(in5)
+                vval2 = in5
             else:
-                target_shape = None
-                target_size = None
                 vval1.resize(1)
                 vval1[0] = in3
                 vval2.resize(1)
@@ -462,10 +448,8 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             # Check that we got some output
             if outmat.empty():
                 raise ValueError(_get_global_param_string(b'errstring'))
-            if target_shape is not None:
-                return ndarray_or_iterable(outmat).reshape(target_shape)
-            else:
-                return ndarray_or_iterable(outmat)
+
+            return ndarray_or_iterable(outmat)
         else:
             # This version takes doubles
             val = _PropsSI(in1, in2, in3, in4, in5, in6)
