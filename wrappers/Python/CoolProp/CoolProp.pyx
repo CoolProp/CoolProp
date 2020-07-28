@@ -403,6 +403,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
         #    raise ValueError("Input 5 is not one-dimensional")
 
         if is_iterable1 or is_iterable3 or is_iterable5:
+
             # Prepare the output datatype
             if not is_iterable1:
                 vin1.push_back(in1)
@@ -458,13 +459,22 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
 
             # Call the function - this version takes iterables
             outmat = _PropsSImulti(vin1, in2, vval1, in4, vval2, backend, fluids, fractions)
+            # outmat is vector[vector[double]] - inputs as first dimension, outputs as second dimension
 
             # Check that we got some output
             if outmat.empty():
                 raise ValueError(_get_global_param_string(b'errstring'))
+            
             if target_shape is not None:
-                return ndarray_or_iterable(outmat).reshape(target_shape)
+                # Multiple points
+                if is_iterable1:
+                    # Multiple outputs
+                    return ndarray_or_iterable(outmat).reshape(target_shape + tuple(-1))
+                else:
+                    # Single output
+                    return ndarray_or_iterable(outmat).reshape(target_shape)
             else:
+                # Single point
                 return ndarray_or_iterable(outmat)
         else:
             # This version takes doubles
