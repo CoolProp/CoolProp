@@ -7,6 +7,8 @@ dependencies:
   - ipython
   - pandas
   - pip
+  - six
+  - requests
   - pip:
     - cython
     - sphinx
