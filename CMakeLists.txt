@@ -265,16 +265,16 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmak
 #find_package (PythonInterp 2.7)
 
 if (NOT PYTHON_EXECUTABLE)
-  MESSAGE(STATUS "Looking for Python")
-  find_package (Python COMPONENTS Interpreter)
-endif()
-
-if (NOT PYTHON_EXECUTABLE)
   MESSAGE(STATUS "Looking for Python3")
   find_package (Python3 COMPONENTS Interpreter)
   if(Python3_Interpreter_FOUND)
     set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
   endif()
+endif()
+
+if (NOT PYTHON_EXECUTABLE)
+  MESSAGE(STATUS "Looking for Python")
+  find_package (Python COMPONENTS Interpreter)
 endif()
 
 #if (NOT PYTHON_EXECUTABLE)
