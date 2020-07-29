@@ -9,6 +9,8 @@ dependencies:
   - pip
   - six
   - requests
+  - jinja2
+  - pyyaml
   - pip:
     - cython
     - sphinx
