@@ -144,17 +144,21 @@ def set_reference_state(string FluidName, *args):
 
     Type #2 (A Python wrapper of :cpapi:`CoolProp::set_reference_stateD`):
 
-    set_reference_state(FluidName,T0,rho0,h0,s0)
+    set_reference_state(FluidName,T0,rhomolar,hmolar0,smolar0)
+
+    .. note::
+
+        Only supported for internal backend currently
 
     ``FluidName`` The name of the fluid
 
     ``T0`` The temperature at the reference point [K]
 
-    ``rho0`` The density at the reference point [kg/m^3]
+    ``rhomolar`` The density at the reference point [mol/m^3]
 
-    ``h0`` The enthalpy at the reference point [J/kg]
+    ``hmolar0`` The enthalpy at the reference point [J/mol]
 
-    ``s0`` The entropy at the reference point [J/kg]
+    ``smolar0`` The entropy at the reference point [J/mol/K]
     """
 
     cdef bytes _param
@@ -399,6 +403,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
         #    raise ValueError("Input 5 is not one-dimensional")
 
         if is_iterable1 or is_iterable3 or is_iterable5:
+
             # Prepare the output datatype
             if not is_iterable1:
                 vin1.push_back(in1)
@@ -409,6 +414,8 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             target_size = None
             # Resize state variable inputs
             if is_iterable3 and is_iterable5:
+                in3 = np.asanyarray(in3)
+                in5 = np.asanyarray(in5)
                 target_shape = in3.shape
                 target_size = in3.size
                 if in3.shape != in5.shape:
@@ -417,6 +424,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                     vval1 = np.ravel(in3)
                     vval2 = np.ravel(in5)
             elif is_iterable3 and not is_iterable5:
+                in3 = np.asanyarray(in3)
                 target_shape = in3.shape
                 target_size = in3.size
                 vval1 = np.ravel(in3)
@@ -424,6 +432,7 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
                 templist = [in5]*target_size
                 vval2 = templist
             elif is_iterable5 and not is_iterable3:
+                in5 = np.asanyarray(in5)
                 target_shape = in5.shape
                 target_size = in5.size
                 vval1.resize(target_size)
@@ -450,13 +459,22 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
 
             # Call the function - this version takes iterables
             outmat = _PropsSImulti(vin1, in2, vval1, in4, vval2, backend, fluids, fractions)
+            # outmat is vector[vector[double]] - inputs as first dimension, outputs as second dimension
 
             # Check that we got some output
             if outmat.empty():
                 raise ValueError(_get_global_param_string(b'errstring'))
+            
             if target_shape is not None:
-                return ndarray_or_iterable(outmat).reshape(target_shape)
+                # Multiple points
+                if is_iterable1:
+                    # Multiple outputs
+                    return ndarray_or_iterable(outmat).reshape(target_shape + tuple(-1))
+                else:
+                    # Single output
+                    return ndarray_or_iterable(outmat).reshape(target_shape)
             else:
+                # Single point
                 return ndarray_or_iterable(outmat)
         else:
             # This version takes doubles

@@ -46,6 +46,8 @@
 /include/mixture_excess_term_JSON.h
 /include/mixture_reducing_parameters_JSON.h
 /include/cubic_fluids_schema_JSON.h
+/include/mixture_binary_pairs_pcsaft_JSON.h
+/include/pcsaft_fluids_schema_JSON.h
 /include/version.h
 /include/catch.hpp
 /build*/

@@ -1623,7 +1623,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void){
 
 void PCSAFTBackend::post_update(bool optional_checks){
     // Check the values that must always be set
-    if (_p < 0){ throw ValueError("p is less than zero");}
+    // if (_p < 0){ throw ValueError("p is less than zero");}
     if (!ValidNumber(_p)){
         throw ValueError("p is not a valid number");}
     if (_T < 0){ throw ValueError("T is less than zero");}
@@ -1659,13 +1659,13 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     if (SatV->mole_fractions.empty()) {
         SatV->set_mole_fractions(mole_fractions);
         double summ = 0;
-        for (int i; i < N; i++) {
+        for (int i = 0; i < N; i++) {
             if (SatV->components[i].getZ() != 0) { // we make the assumption that ions do not appear in the vapor phase
                 summ -= SatV->mole_fractions[i];
                 SatV->mole_fractions[i] = 0;
             }
         }
-        for (int i; i < N; i++) {
+        for (int i = 0; i < N; i++) {
             SatV->mole_fractions[i] = SatV->mole_fractions[i] / summ;
         }
     }
@@ -1795,6 +1795,9 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
                 }
                 else if ((_p <= p_bub) && (_p >= p_dew)) {
                     phase = iphase_twophase;
+                }
+                else{
+                	phase = iphase_unknown;
                 }
             }
             break;
