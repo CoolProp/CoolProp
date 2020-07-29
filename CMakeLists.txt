@@ -956,11 +956,11 @@ if (COOLPROP_OCTAVE_MODULE)
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
   add_dependencies (${app_name} generate_headers)
 
-  add_custom_command(TARGET CoolProp
-                     POST_BUILD
-                     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Octave "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
-                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
+  #add_custom_command(TARGET CoolProp
+  #                   POST_BUILD
+  #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Octave "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
+  #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+  #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
   install (TARGETS ${app_name} DESTINATION Octave/Octave${OCTAVE_VERSION}_${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 endif()
 
@@ -1009,11 +1009,11 @@ if (COOLPROP_CSHARP_MODULE)
                      POST_BUILD
                      COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.cs" -x!Example.cs
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  add_custom_command(TARGET CoolProp
-                     POST_BUILD
-                     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Csharp "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
-                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.cs" DESTINATION Csharp)
+  #add_custom_command(TARGET CoolProp
+  #                   POST_BUILD
+  #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Csharp "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
+  #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+  #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.cs" DESTINATION Csharp)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
@@ -1127,11 +1127,11 @@ if (COOLPROP_R_MODULE)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
 
     add_dependencies (CoolProp generate_headers)
-    add_custom_command(TARGET CoolProp
-                       POST_BUILD
-                       COMMAND "${PYTHON_EXECUTABLE}" example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-    install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
+    #add_custom_command(TARGET CoolProp
+    #                   POST_BUILD
+    #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
+    #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+    #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 
@@ -1187,17 +1187,17 @@ if (COOLPROP_JAVA_MODULE)
                      POST_BUILD
                      COMMAND 7z a "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" "${CMAKE_CURRENT_BINARY_DIR}/*.java" -x!Example.java
                      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-  add_custom_command(TARGET CoolProp
-                     POST_BUILD
-                     COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Java "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
-                     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-
+  #add_custom_command(TARGET CoolProp
+  #                   POST_BUILD
+  #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Java "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
+  #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+  #
   # Install all the generated java files
   install(
     CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
     CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
   )
-  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java" DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java" DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
