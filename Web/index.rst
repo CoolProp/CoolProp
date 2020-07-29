@@ -74,7 +74,7 @@ Main Developers
 The primary developers are:
 
 - `Ian Bell <mailto:ian.h.bell@gmail.com>`_, Bell Thermal Consultants
-- `Jorrit Wronski <mailto:jowr@ipu.dk>`_, IPU Refrigeration and Energy Technology, Kgs. Lyngby, Denmark
+- `Jorrit Wronski <mailto:jowr@ipu.dk>`_, `IPU Refrigeration and Energy Technology <https://www.ipu.dk/expertise/thermodynamics-energy-technology/>`_, Kgs. Lyngby, Denmark
 - `Sylvain Quoilin <mailto:squoilin@ulg.ac.be>`_, `Vincent Lemort <mailto:vincent.lemort@ulg.ac.be>`_, Thermodynamics Laboratory, University of Liege, Liege, Belgium
 
 Please be so kind and cite our work in your publication: :ref:`Citation information <citation>`.
@@ -92,7 +92,6 @@ Supporters
 .. image:: _static/logo_ORCNext.jpg
    :height: 100px
    :alt: ORCNext
-   :target: http://www.orcnext.be/
 
 \
 
@@ -104,19 +103,19 @@ Supporters
 .. image:: _static/logo_maplesoft.png
    :height: 100px
    :alt: Maple
-   :target: http://www.maplesoft.com
+   :target: https://www.maplesoft.com
 
 \
 
 .. image:: _static/logo_dtu_mekanik.png
    :height: 50px
    :alt: DTU Mechanical Engineering - Section for Thermal Energy
-   :target: http://www.mek.dtu.dk/english/Sections/TES
+   :target: https://www.mek.dtu.dk/english/Sections/TES
 
 .. image:: _static/logo_ipu.png
    :height: 50px
    :alt: IPU Refrigeration and Energy Technology
-   :target: http://www.ipu.dk
+   :target: https://www.ipu.dk
    
 
 License Information
