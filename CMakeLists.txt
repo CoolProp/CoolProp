@@ -82,6 +82,10 @@ option (COOLPROP_MSVC_DEBUG
        "Link the debug version of Microsoft Standard library to the debug builds."
        ON)
 
+option (COOLPROP_NO_EXAMPLES
+       "Do not generate example code, does only apply to some wrappers."
+       OFF)
+
 #option (DARWIN_USE_LIBCPP
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
@@ -393,6 +397,7 @@ endif()
 add_custom_target(generate_headers
                   COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
 
+if (NOT COOLPROP_NO_EXAMPLES)
 add_custom_target(generate_examples
                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Python "${CMAKE_CURRENT_BINARY_DIR}/Example.py"
                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Octave "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
@@ -401,7 +406,10 @@ add_custom_target(generate_examples
                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Java "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Csharp "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-
+else()
+add_custom_target(generate_examples
+                  COMMAND echo "Example generation has been disabled with the COOLPROP_NO_EXAMPLES option.")
+endif()
 
 ###      Library options            ###
 # We already know the bitness from the earlier
