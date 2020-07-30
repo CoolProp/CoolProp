@@ -49,6 +49,10 @@ Usage
 
     We retired the MATLAB wrapper in favour of a Python-based approach, read more in the [docs](http://www.coolprop.org/coolprop/wrappers/MATLAB/index.html#matlab-wrapper).
 
+6. **Where is the enthalpy of mixing for incompressible fluids?**
+
+    This is a major flaw in the incompressible backend. The incompressible fluids module was designed to handle heat transfer fluids with fixed compositions and you should not compare enthalpy and entropy values for different concentrations. The way the reference state is calculated makes it impossible to properly handle mixing enthalpy etc.
+
 Compilation
 -----------
 
