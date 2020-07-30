@@ -391,7 +391,17 @@ endif()
 
 ###     FLUIDS, MIXTURES JSON       ###
 add_custom_target(generate_headers
-                  COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+                  COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/dev/generate_headers.py")
+
+add_custom_target(generate_examples
+                  COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Python "${CMAKE_CURRENT_BINARY_DIR}/Example.py"
+                  COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Octave "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
+                  COMMAND "${PYTHON_EXECUTABLE}" example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
+                  #COMMAND "${PYTHON_EXECUTABLE}" example_generator.py MATLAB "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
+                  COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Java "${CMAKE_CURRENT_BINARY_DIR}/Example.java"
+                  COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Csharp "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
+                  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
+
 
 ###      Library options            ###
 # We already know the bitness from the earlier
@@ -950,13 +960,13 @@ if (COOLPROP_OCTAVE_MODULE)
   endif()
 
   set_target_properties(CoolProp PROPERTIES SUFFIX ".oct" PREFIX "")
-  add_dependencies (${app_name} generate_headers)
+  add_dependencies (${app_name} generate_headers generate_examples)
 
   #add_custom_command(TARGET CoolProp
   #                   POST_BUILD
   #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Octave "${CMAKE_CURRENT_BINARY_DIR}/Example.m"
   #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-  #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
+  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.m" DESTINATION Octave)
   install (TARGETS ${app_name} DESTINATION Octave/Octave${OCTAVE_VERSION}_${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 endif()
 
@@ -999,7 +1009,7 @@ if (COOLPROP_CSHARP_MODULE)
     set_target_properties(CoolProp PROPERTIES PREFIX "lib")
   endif()
 
-  add_dependencies (${app_name} generate_headers)
+  add_dependencies (${app_name} generate_headers generate_examples)
 
   add_custom_command(TARGET CoolProp
                      POST_BUILD
@@ -1009,7 +1019,7 @@ if (COOLPROP_CSHARP_MODULE)
   #                   POST_BUILD
   #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py Csharp "${CMAKE_CURRENT_BINARY_DIR}/Example.cs"
   #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-  #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.cs" DESTINATION Csharp)
+  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.cs" DESTINATION Csharp)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Csharp)
   install (TARGETS ${app_name} DESTINATION Csharp/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
@@ -1122,12 +1132,12 @@ if (COOLPROP_R_MODULE)
     # No lib prefix for the shared library
     set_target_properties(CoolProp PROPERTIES PREFIX "")
 
-    add_dependencies (CoolProp generate_headers)
+    add_dependencies (${app_name} generate_headers generate_examples)
     #add_custom_command(TARGET CoolProp
     #                   POST_BUILD
     #                   COMMAND "${PYTHON_EXECUTABLE}" example_generator.py R "${CMAKE_CURRENT_BINARY_DIR}/Example.R"
     #                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dev/scripts/examples")
-    #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
+    install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.R" DESTINATION R)
     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.R" DESTINATION R)
     install (TARGETS ${app_name} DESTINATION R/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
 
@@ -1177,7 +1187,7 @@ if (COOLPROP_JAVA_MODULE)
     set_target_properties(CoolProp PROPERTIES COMPILE_FLAGS "-m${BITNESS}" LINK_FLAGS "-m${BITNESS}")
   endif()
 
-  add_dependencies (${app_name} generate_headers)
+  add_dependencies (${app_name} generate_headers generate_examples)
 
   add_custom_command(TARGET CoolProp
                      POST_BUILD
@@ -1193,7 +1203,7 @@ if (COOLPROP_JAVA_MODULE)
     CODE "file( GLOB _GeneratedJavaSources \"${CMAKE_CURRENT_BINARY_DIR}/*.java\" )"
     CODE "file( INSTALL \${_GeneratedJavaSources} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/platform-independent )"
   )
-  #install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java" DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
+  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/Example.java" DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   install (FILES "${CMAKE_CURRENT_BINARY_DIR}/platform-independent.7z" DESTINATION ${CMAKE_INSTALL_PREFIX}/Java)
   install (TARGETS ${app_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/Java/${CMAKE_SYSTEM_NAME}_${BITNESS}bit)
   enable_testing()
