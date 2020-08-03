@@ -21,7 +21,7 @@ install, use::
 If you dare, you can also try the latest nightly release from :sfnightly:`Python`
 or get it directly from the development server using::
 
-    pip install -vvv --pre --trusted-host www.coolprop.dreamhosters.com --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --force-reinstall CoolProp
+    pip install -vvv --pre --trusted-host www.coolprop.dreamhosters.com --find-links http://www.coolprop.dreamhosters.com/binaries/Python/ -U --no-cache --force-reinstall CoolProp
 
 Manual installation
 ===================

@@ -112,10 +112,13 @@ else
     runCommand pushd "$REPODIR"
     runCommand find . -type d ! -perm -a+rx -exec chmod -v a+rx {} \\\;
     runCommand find . -type f ! -perm -a+r -exec chmod -v a+r {} \\\;
+    runCommand git clean -xfd
+    runCommand git reset --hard
+    runCommand git submodule foreach --recursive git clean -xfd
+    runCommand git submodule foreach --recursive git reset --hard
     runCommand git checkout -B master origin/master
     runCommand git pull
-    runCommand git submodule init
-    runCommand git submodule update
+    runCommand git submodule update --init --recursive
     runCommand popd
     printMessage "Generating headers"
     runCommand rsync -a --delete "$REPODIR/" "$TMPSDIR"
@@ -128,6 +131,9 @@ else
     runCommand zip -rq $SRCSDIR/CoolProp_sources.zip $(basename $TMPSDIR)
     runCommand cd $(basename $TMPSDIR)
     runCommand popd
+    printMessage "Avoid security warnings caused by commands in externals/pybind11/docs/benchmark.py"
+    runCommand rm "$REPODIR"/externals/pybind11/docs/benchmark.py
+    runCommand rm "$TMPSDIR"/externals/pybind11/docs/benchmark.py
     ######################################
     # ... and now we use relative paths
     ######################################
