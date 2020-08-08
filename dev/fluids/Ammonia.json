@@ -664,15 +664,15 @@
   }, 
   "STATES": {
     "critical": {
-      "T": 405.40000000000003, 
+      "T": 405.56, 
       "T_units": "K", 
-      "hmolar": 21498.578924065936, 
+      "hmolar": 21501.16668203028, 
       "hmolar_units": "J/mol", 
-      "p": 11333000.0, 
+      "p": 11363400, 
       "p_units": "Pa", 
-      "rhomolar": 13211.777154312384, 
+      "rhomolar": 13696, 
       "rhomolar_units": "mol/m^3", 
-      "smolar": 68.5595020166536, 
+      "smolar": 68.56438502935785, 
       "smolar_units": "J/mol/K"
     }, 
     "triple_liquid": {
