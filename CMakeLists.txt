@@ -1016,6 +1016,9 @@ if (COOLPROP_CSHARP_MODULE)
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set_target_properties(CoolProp PROPERTIES PREFIX "lib")
   endif()
+  if (UNIX)
+    set_target_properties(CoolProp PROPERTIES PREFIX "lib")
+  endif()
 
   add_dependencies (${app_name} generate_headers generate_examples)
 
