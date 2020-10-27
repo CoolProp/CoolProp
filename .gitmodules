@@ -38,3 +38,6 @@
 	path = externals/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
 	branch = master
+[submodule "wrappers/Rust"]
+	path = wrappers/Rust
+	url = git@github.com:sgolle/coolprop-rs.git
