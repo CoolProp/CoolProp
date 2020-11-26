@@ -281,13 +281,15 @@
           "type": "IdealGasHelmholtzPower"
         },
         {
+          "Tcrit": 126.192,
+          "Tcrit_units": "K",
           "n": [
             1.012941
           ],
-          "t": [
-            26.65788
+          "v": [
+            3364.011
           ],
-          "type": "IdealGasHelmholtzPlanckEinstein"
+          "type": "IdealGasHelmholtzPlanckEinsteinFunctionT"
         }
       ],
       "alphar": [
