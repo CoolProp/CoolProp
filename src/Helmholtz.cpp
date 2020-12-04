@@ -1081,6 +1081,7 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
 
     void IdealHelmholtzGERG2004Sinh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw()
     {
+        if (!enabled){ return; }
         // Check that the reducing temperature value is provided
         CoolPropDbl T_red = HUGE;
         if (ValidNumber(_Tr)) {
@@ -1112,6 +1113,7 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
 
     void IdealHelmholtzGERG2004Cosh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw()
     {
+        if (!enabled) { return; }
         // Check that the reducing temperature value is provided in the derivs structure
         CoolPropDbl T_red = HUGE;
         if (ValidNumber(_Tr)) {
@@ -1132,7 +1134,7 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
             sum10 += -n[i]*t*tanh(t*tau);
             sum20 += -n[i]*POW2(t)/POW2(cosh(t*tau));
             sum30 += -2*n[i]*POW3(t)*(POW3(tanh(t*tau))-tanh(t*tau));
-            sum40 += 2*n[i]*POW4(t)*(3*POW4(tanh(t * tau)) - 4*POW2(tanh(t*tau)) + 1);
+            sum40 +=  2*n[i]*POW4(t)*(3*POW4(tanh(t * tau)) - 4*POW2(tanh(t*tau)) + 1);
         }
         derivs.alphar += sum00;
         derivs.dalphar_dtau += sum10;
