@@ -1221,7 +1221,6 @@ public:
         IdealHelmholtzGERG2004Cosh GERG2004Cosh;
         IdealHelmholtzGERG2004Sinh GERG2004Sinh;
 
-
         void set_Tred(double T_red){
             GERG2004Cosh.set_Tred(T_red);
             GERG2004Sinh.set_Tred(T_red);
@@ -1236,6 +1235,8 @@ public:
             PlanckEinstein = IdealHelmholtzPlanckEinsteinGeneralized();
             CP0Constant = IdealHelmholtzCP0Constant();
             CP0PolyT = IdealHelmholtzCP0PolyT();
+            GERG2004Cosh = IdealHelmholtzGERG2004Cosh();
+            GERG2004Sinh = IdealHelmholtzGERG2004Sinh();
         };
         
         HelmholtzDerivatives all(const CoolPropDbl tau, const CoolPropDbl delta, bool cache_values = false)
@@ -1249,6 +1250,8 @@ public:
             PlanckEinstein.all(tau, delta, derivs);
             CP0Constant.all(tau, delta, derivs);
             CP0PolyT.all(tau, delta, derivs);
+            GERG2004Cosh.all(tau, delta, derivs);
+            GERG2004Sinh.all(tau, delta, derivs);
             
             if (cache_values){
                 _base = derivs.alphar;
