@@ -48,6 +48,7 @@ struct HelmholtzDerivatives
     #define X(name)  CoolPropDbl name;
         LIST_OF_DERIVATIVE_VARIABLES
     #undef X
+    CoolPropDbl tau, delta, T_red, rhomolar_red;
 
     void reset(CoolPropDbl v){
         #define X(name)  name = v;
@@ -70,7 +71,7 @@ struct HelmholtzDerivatives
         #undef X
         return _new;
     }
-    HelmholtzDerivatives(){reset(0.0);};
+    HelmholtzDerivatives(){reset(0.0); T_red = _HUGE; rhomolar_red = _HUGE;};
     /// Retrieve a single value based on the number of derivatives with respect to tau and delta
     double get(std::size_t itau, std::size_t idelta){
         if (itau == 0){
@@ -1012,6 +1013,66 @@ public:
     void to_json(rapidjson::Value &el, rapidjson::Document &doc);
     void all(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 };
+/**
+
+*/
+class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm {
+private:
+    std::vector<CoolPropDbl> n, theta;
+    CoolPropDbl Tc, _Tr;
+    std::size_t N;
+    bool enabled;
+public:
+    IdealHelmholtzGERG2004Sinh()
+        : Tc(_HUGE), _Tr(_HUGE), N(0), enabled(false) {}
+
+    /// Constructor with std::vectors
+    IdealHelmholtzGERG2004Sinh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
+        : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(HUGE), enabled(true)
+    {
+        assert(n.size() == theta.size());
+    }
+
+    void extend(const std::vector<CoolPropDbl>& c, const std::vector<CoolPropDbl>& t)
+    {
+        this->n.insert(this->n.end(), n.begin(), n.end());
+        this->theta.insert(this->theta.end(), theta.begin(), theta.end());
+        N += c.size();
+    }
+    void set_Tred(CoolPropDbl Tr) { this->_Tr = Tr; }
+
+    bool is_enabled() const { return enabled; };
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+};
+
+class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm {
+private:
+    std::vector<CoolPropDbl> n, theta;
+    CoolPropDbl Tc, _Tr;
+    std::size_t N;
+    bool enabled;
+public:
+    IdealHelmholtzGERG2004Cosh()
+        : Tc(_HUGE), _Tr(HUGE), N(0), enabled(false) {}
+
+    /// Constructor with std::vectors
+    IdealHelmholtzGERG2004Cosh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
+        : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(HUGE), enabled(true)
+    {
+        assert(n.size() == theta.size());
+    }
+
+    void extend(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta)
+    {
+        this->n.insert(this->n.end(), n.begin(), n.end());
+        this->theta.insert(this->theta.end(), theta.begin(), theta.end());
+        N += n.size();
+    }
+    void set_Tred(CoolPropDbl Tr){ this->_Tr = Tr; }
+
+    bool is_enabled() const { return enabled; };
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+};
 
 ///// Term in the ideal-gas specific heat equation that is based on Aly-Lee formulation
 ///** Specific heat is of the form:
@@ -1157,6 +1218,14 @@ public:
         
         IdealHelmholtzCP0Constant CP0Constant;
         IdealHelmholtzCP0PolyT CP0PolyT;
+        IdealHelmholtzGERG2004Cosh GERG2004Cosh;
+        IdealHelmholtzGERG2004Sinh GERG2004Sinh;
+
+
+        void set_Tred(double T_red){
+            GERG2004Cosh.set_Tred(T_red);
+            GERG2004Sinh.set_Tred(T_red);
+        }
         
         void empty_the_EOS(){
             Lead = IdealHelmholtzLead();
