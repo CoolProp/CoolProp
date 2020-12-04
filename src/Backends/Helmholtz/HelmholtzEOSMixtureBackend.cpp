@@ -3033,6 +3033,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         // rather than tau=Tr/T and delta=rho/rhor
         // For multiparameter EOS, this changes nothing because Tc/Tr = 1 and rhoc/rhor = 1
         double Tc = get_fluid_constant(0, iT_reducing), rhomolarc = get_fluid_constant(0, irhomolar_reducing);
+
+        // Cache the reducing temperature in some terms that need it (GERG-2004 models)
+        E.alpha0.set_Tred(Tc);
         double taustar = Tc/Tr*tau, deltastar = rhor/rhomolarc*delta;
         if (nTau == 0 && nDelta == 0){
 			val = E.base0(taustar, deltastar);
@@ -3092,6 +3095,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
             tau_i = T_ci*tau/Tr;
             delta_i = delta*rhor/rho_ci;
             CoolPropDbl Rratio = Rcomponent/Rmix;
+
+            // Cache the reducing temperature in some terms that need it (GERG-2004 models)
+            components[i].EOS().alpha0.set_Tred(Tr);
 
             if (nTau == 0 && nDelta == 0){
                 double logxi = (std::abs(mole_fractions[i]) > DBL_EPSILON) ? log(mole_fractions[i]) : 0;

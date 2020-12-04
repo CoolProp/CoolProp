@@ -253,6 +253,32 @@ public:
                     alpha0.PlanckEinstein = IdealHelmholtzPlanckEinsteinGeneralized(n, theta, c, d);
                 }
             }
+            else if (!type.compare("IdealGasHelmholtzGERG2004Cosh"))
+            {
+                // Retrieve the values
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution["theta"]);
+                double Tc = cpjson::get_double(contribution, "Tcrit");
+                if (alpha0.GERG2004Cosh.is_enabled() == true) {
+                    alpha0.GERG2004Cosh.extend(n, theta);
+                }
+                else {
+                    alpha0.GERG2004Cosh = IdealHelmholtzGERG2004Cosh(n, theta, Tc);
+                }
+            }
+            else if (!type.compare("IdealGasHelmholtzGERG2004Sinh"))
+            {
+                // Retrieve the values
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution["theta"]);
+                double Tc = cpjson::get_double(contribution, "Tcrit");
+                if (alpha0.GERG2004Sinh.is_enabled() == true) {
+                    alpha0.GERG2004Sinh.extend(n, theta);
+                }
+                else {
+                    alpha0.GERG2004Sinh = IdealHelmholtzGERG2004Sinh(n, theta, Tc);
+                }
+            }
             else if (!type.compare("IdealGasHelmholtzCP0Constant"))
             {
                 if (alpha0.CP0Constant.is_enabled() == true){throw ValueError("Cannot add another IdealGasHelmholtzCP0Constant term; join them together");}
