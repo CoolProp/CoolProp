@@ -92,6 +92,11 @@ void JSONFluidLibrary::add_many(const std::string &JSON_string){
     
 void JSONFluidLibrary::add_many(rapidjson::Value &listing)
 {
+    if (!listing.IsArray())
+    {
+        add_one(listing);
+        return;
+    }
     for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr)
     {
         add_one(*itr);
