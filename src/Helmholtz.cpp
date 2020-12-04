@@ -1099,10 +1099,9 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
             CoolPropDbl t = theta[i] * Tci_over_Tr;
             sum00 += n[i]*log(std::abs(sinh(t*tau)));
             sum10 += n[i]*t/tanh(t*tau);
-            //sum20 += -n[i]*POW2(t)/POW2(sinh(t*tau));
-            sum20 += n[i]*POW2(t)*(1.0-1.0/POW2(tanh(t*tau)));
-            sum30 += -n[i]*POW3(t)*(1/tanh(t*tau)-1/POW3(tanh(t*tau)));
-            sum40 += -n[i]*POW4(t)*(1-4/POW2(tanh(t * tau)) +3/POW4(tanh(t * tau)));
+            sum20 += -n[i]*POW2(t)/POW2(sinh(t*tau));
+            sum30 += -2*n[i]*POW3(t)*(1/tanh(t*tau)-1/POW3(tanh(t*tau)));
+            sum40 += -2*n[i]*POW4(t)*(1-4/POW2(tanh(t * tau)) +3/POW4(tanh(t * tau)));
         }
         derivs.alphar += sum00;
         derivs.dalphar_dtau += sum10;
@@ -1261,7 +1260,7 @@ public:
             std::vector<CoolPropDbl> theta(2, 0.0); theta[0] = 5.251822620; theta[1] = 13.788988208;
             CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
             GERG2004Cosh.reset(new CoolProp::IdealHelmholtzGERG2004Cosh(n,theta,T_crit));
-            static_cast<CoolProp::IdealHelmholtzGERG2004Cosh*>(GERG2004Cosh.get())->set_Tred(T_crit);
+            static_cast<CoolProp::IdealHelmholtzGERG2004Cosh*>(GERG2004Cosh.get())->set_Tred(T_crit*1.3);
         }
         {
             // Nitrogen
@@ -1269,7 +1268,7 @@ public:
             std::vector<CoolPropDbl> theta(1, 0.0); theta[0] = -5.393067706;
             CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
             GERG2004Sinh.reset(new CoolProp::IdealHelmholtzGERG2004Sinh(n, theta, T_crit));
-            static_cast<CoolProp::IdealHelmholtzGERG2004Sinh*>(GERG2004Sinh.get())->set_Tred(T_crit);
+            static_cast<CoolProp::IdealHelmholtzGERG2004Sinh*>(GERG2004Sinh.get())->set_Tred(T_crit*1.3);
         }
 
         {
