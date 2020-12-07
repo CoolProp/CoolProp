@@ -410,7 +410,11 @@ protected:
 
         EOS.alphar = parse_alphar(EOS_json["alphar"]);
         EOS.alpha0 = parse_alpha0(EOS_json["alpha0"]);
-        
+
+        // Store the prefactor multipliying alpha0 if present
+        if (EOS_json.HasMember("alpha0_prefactor")){
+            EOS.alpha0.set_prefactor(cpjson::get_double(EOS_json, "alpha0_prefactor"));
+        }
         if (EOS_json["STATES"].HasMember("hs_anchor")){
             rapidjson::Value &hs_anchor = EOS_json["STATES"]["hs_anchor"];
             EOS.hs_anchor.T = cpjson::get_double(hs_anchor, "T");

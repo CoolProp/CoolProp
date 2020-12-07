@@ -1209,6 +1209,8 @@ public:
 
     class IdealHelmholtzContainer : public BaseHelmholtzContainer
     {
+    private:
+        double _prefactor;
     public:
         IdealHelmholtzLead Lead;
         IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffsetCore, EnthalpyEntropyOffset;
@@ -1220,6 +1222,12 @@ public:
         IdealHelmholtzCP0PolyT CP0PolyT;
         IdealHelmholtzGERG2004Cosh GERG2004Cosh;
         IdealHelmholtzGERG2004Sinh GERG2004Sinh;
+
+        IdealHelmholtzContainer(): _prefactor(1.0) {};
+
+        void set_prefactor(double prefactor){
+            _prefactor = prefactor;
+        }
 
         void set_Tred(double T_red){
             GERG2004Cosh.set_Tred(T_red);
@@ -1265,7 +1273,7 @@ public:
                 _dDelta2_dTau = derivs.d3alphar_ddelta2_dtau;
                 _dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2;
             }
-            return derivs;
+            return derivs*_prefactor;
         };
     };
 }; /* namespace CoolProp */
