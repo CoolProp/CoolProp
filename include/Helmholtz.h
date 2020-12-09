@@ -1262,16 +1262,16 @@ public:
             GERG2004Sinh.all(tau, delta, derivs);
             
             if (cache_values){
-                _base = derivs.alphar;
-                _dDelta = derivs.dalphar_ddelta;
-                _dTau = derivs.dalphar_dtau;
-                _dDelta2 = derivs.d2alphar_ddelta2;
-                _dTau2 = derivs.d2alphar_dtau2;
-                _dDelta_dTau = derivs.d2alphar_ddelta_dtau;
-                _dDelta3 = derivs.d3alphar_ddelta3;
-                _dTau3 = derivs.d3alphar_dtau3;
-                _dDelta2_dTau = derivs.d3alphar_ddelta2_dtau;
-                _dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2;
+                _base = derivs.alphar*_prefactor;
+                _dDelta = derivs.dalphar_ddelta*_prefactor;
+                _dTau = derivs.dalphar_dtau*_prefactor;
+                _dDelta2 = derivs.d2alphar_ddelta2*_prefactor;
+                _dTau2 = derivs.d2alphar_dtau2*_prefactor;
+                _dDelta_dTau = derivs.d2alphar_ddelta_dtau*_prefactor;
+                _dDelta3 = derivs.d3alphar_ddelta3*_prefactor;
+                _dTau3 = derivs.d3alphar_dtau3*_prefactor;
+                _dDelta2_dTau = derivs.d3alphar_ddelta2_dtau*_prefactor;
+                _dDelta_dTau2 = derivs.d3alphar_ddelta_dtau2*_prefactor;
             }
             return derivs*_prefactor;
         };
