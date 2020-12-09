@@ -1053,11 +1053,11 @@ private:
     bool enabled;
 public:
     IdealHelmholtzGERG2004Cosh()
-        : Tc(_HUGE), _Tr(HUGE), N(0), enabled(false) {}
+        : Tc(_HUGE), _Tr(_HUGE), N(0), enabled(false) {}
 
     /// Constructor with std::vectors
     IdealHelmholtzGERG2004Cosh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
-        : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(HUGE), enabled(true)
+        : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(_HUGE), enabled(true)
     {
         assert(n.size() == theta.size());
     }
