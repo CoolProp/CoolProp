@@ -1028,7 +1028,7 @@ public:
 
     /// Constructor with std::vectors
     IdealHelmholtzGERG2004Sinh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
-        : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(HUGE), enabled(true)
+        : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(_HUGE), enabled(true)
     {
         assert(n.size() == theta.size());
     }
@@ -1223,7 +1223,7 @@ public:
         IdealHelmholtzGERG2004Cosh GERG2004Cosh;
         IdealHelmholtzGERG2004Sinh GERG2004Sinh;
 
-        IdealHelmholtzContainer(): _prefactor(1.0) {};
+        IdealHelmholtzContainer() : _prefactor(1.0) {};
 
         void set_prefactor(double prefactor){
             _prefactor = prefactor;
