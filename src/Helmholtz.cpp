@@ -1083,7 +1083,7 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
     {
         if (!enabled){ return; }
         // Check that the reducing temperature value is provided
-        CoolPropDbl T_red = HUGE;
+        CoolPropDbl T_red = _HUGE;
         if (ValidNumber(_Tr)) {
             T_red = _Tr; // Primarily useful for testing
         }
@@ -1115,7 +1115,7 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
     {
         if (!enabled) { return; }
         // Check that the reducing temperature value is provided in the derivs structure
-        CoolPropDbl T_red = HUGE;
+        CoolPropDbl T_red = _HUGE;
         if (ValidNumber(_Tr)) {
             T_red = _Tr; // Primarily useful for testing
         }
