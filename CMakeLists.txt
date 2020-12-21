@@ -1385,6 +1385,9 @@ if (COOLPROP_LIBREOFFICE_MODULE)
     COMMAND ${LO_IDLC} XCoolProp.idl -I. -I${LO_SDK_PATH}/idl -O. XCoolProp.idl
 		COMMAND ${LO_REGMERGE} XCoolProp.rdb /UCR XCoolProp.urd
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove" XCoolProp.urd
+    # download and bundle latest Python pip package (py2.py3, platform independent)
+    COMMAND pip download pip -d pythonpath
+    COMMAND 7z x "./pythonpath/pip-*.whl" -y -opythonpath
     # download and bundle latest Python certifi package (py2.py3, platform independent)
     COMMAND pip download certifi -d pythonpath
     COMMAND 7z x "./pythonpath/certifi-*.whl" -y -opythonpath
