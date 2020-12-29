@@ -183,7 +183,7 @@
   "EOS": [
     {
       "BibTeX_CP0": "",
-      "BibTeX_EOS": "Thol-IJT-2016-R1234zeE,Thol-REFPROP-9.1",
+      "BibTeX_EOS": "Thol-IJT-2016-R1234zeE",
       "STATES": {
         "hs_anchor": {
           "T": 420.772,
@@ -198,7 +198,7 @@
           "smolar_units": "J/mol/K"
         },
         "reducing": {
-          "T": 382.52,
+          "T": 382.513,
           "T_units": "K",
           "hmolar": 45109.50216279902,
           "hmolar_units": "J/mol",
