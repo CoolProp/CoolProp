@@ -1078,6 +1078,70 @@ void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value &el, rapidjson::Document &
             derivs.d4alphar_dtau4 += sum;
         }
     }
+
+    void IdealHelmholtzGERG2004Sinh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw()
+    {
+        if (!enabled){ return; }
+        // Check that the reducing temperature value is provided
+        CoolPropDbl T_red = _HUGE;
+        if (ValidNumber(_Tr)) {
+            T_red = _Tr; // Primarily useful for testing
+        }
+        else if (ValidNumber(derivs.T_red)){
+            T_red = derivs.T_red;
+        }
+        else{
+            throw ValueError("T_red needs to be stored somewhere for GERG2004Sinh");
+        }
+        CoolPropDbl Tci_over_Tr = Tc/T_red;
+
+        double sum00 = 0, sum10 = 0, sum20 = 0, sum30 = 0, sum40 = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            CoolPropDbl t = theta[i] * Tci_over_Tr;
+            sum00 += n[i]*log(std::abs(sinh(t*tau)));
+            sum10 += n[i]*t/tanh(t*tau);
+            sum20 += -n[i]*POW2(t)/POW2(sinh(t*tau));
+            sum30 += -2*n[i]*POW3(t)*(1/tanh(t*tau)-1/POW3(tanh(t*tau)));
+            sum40 += -2*n[i]*POW4(t)*(1-4/POW2(tanh(t * tau)) +3/POW4(tanh(t * tau)));
+        }
+        derivs.alphar += sum00;
+        derivs.dalphar_dtau += sum10;
+        derivs.d2alphar_dtau2 += sum20;
+        derivs.d3alphar_dtau3 += sum30;
+        derivs.d4alphar_dtau4 += sum40;
+    }
+
+    void IdealHelmholtzGERG2004Cosh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw()
+    {
+        if (!enabled) { return; }
+        // Check that the reducing temperature value is provided in the derivs structure
+        CoolPropDbl T_red = _HUGE;
+        if (ValidNumber(_Tr)) {
+            T_red = _Tr; // Primarily useful for testing
+        }
+        else if (ValidNumber(derivs.T_red)) {
+            T_red = derivs.T_red;
+        }
+        else {
+            throw ValueError("T_red needs to be stored somewhere for GERG2004Cosh");
+        }
+        CoolPropDbl Tci_over_Tr = Tc / T_red;
+
+        double sum00 = 0, sum10 = 0, sum20 = 0, sum30 = 0, sum40 = 0;
+        for (std::size_t i = 0; i < N; ++i) {
+            CoolPropDbl t = theta[i]*Tci_over_Tr;
+            sum00 += -n[i]*log(std::abs(cosh(t*tau)));
+            sum10 += -n[i]*t*tanh(t*tau);
+            sum20 += -n[i]*POW2(t)/POW2(cosh(t*tau));
+            sum30 += -2*n[i]*POW3(t)*(POW3(tanh(t*tau))-tanh(t*tau));
+            sum40 +=  2*n[i]*POW4(t)*(3*POW4(tanh(t * tau)) - 4*POW2(tanh(t*tau)) + 1);
+        }
+        derivs.alphar += sum00;
+        derivs.dalphar_dtau += sum10;
+        derivs.d2alphar_dtau2 += sum20;
+        derivs.d3alphar_dtau3 += sum30;
+        derivs.d4alphar_dtau4 += sum40;
+    }
     
 //void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
 //    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
@@ -1139,7 +1203,7 @@ class HelmholtzConsistencyFixture
 public:
     CoolPropDbl numerical, analytic;
 
-    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic, Soave, PR, XiangDeiters, GaoB;
+    shared_ptr<CoolProp::BaseHelmholtzTerm> PlanckEinstein, Lead, LogTau, IGPower, CP0Constant, CP0PolyT, SAFT, NonAnalytic, Soave, PR, XiangDeiters, GaoB, GERG2004Cosh, GERG2004Sinh;
     shared_ptr<CoolProp::ResidualHelmholtzGeneralizedExponential> Gaussian, Lemmon2005, Exponential, GERG2008, Power;
 
     HelmholtzConsistencyFixture(){
@@ -1192,6 +1256,23 @@ public:
             CP0PolyT.reset(new CoolProp::IdealHelmholtzCP0PolyT(c, t, Tc, T0));
         }
         CP0Constant.reset(new CoolProp::IdealHelmholtzCP0Constant(4/8.314472,300,250));
+        {
+            // Nitrogen
+            std::vector<CoolPropDbl> n(2,0.0); n[0] = 0.137320000; n[1] = 0.900660000;
+            std::vector<CoolPropDbl> theta(2, 0.0); theta[0] = 5.251822620; theta[1] = 13.788988208;
+            CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
+            GERG2004Cosh.reset(new CoolProp::IdealHelmholtzGERG2004Cosh(n,theta,T_crit));
+            static_cast<CoolProp::IdealHelmholtzGERG2004Cosh*>(GERG2004Cosh.get())->set_Tred(T_crit*1.3);
+        }
+        {
+            // Nitrogen
+            std::vector<CoolPropDbl> n(1, 0.0); n[0] = -0.146600000;
+            std::vector<CoolPropDbl> theta(1, 0.0); theta[0] = -5.393067706;
+            CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
+            GERG2004Sinh.reset(new CoolProp::IdealHelmholtzGERG2004Sinh(n, theta, T_crit));
+            static_cast<CoolProp::IdealHelmholtzGERG2004Sinh*>(GERG2004Sinh.get())->set_Tred(T_crit*1.3);
+        }
+
         {
             CoolPropDbl beta[] = {1.24, 0.821, 15.45, 2.21, 437, 0.743},
                         d[] = {1, 1, 2, 2, 3, 3},
@@ -1317,6 +1398,8 @@ public:
         else if (!t.compare("PlanckEinstein")){return PlanckEinstein;}
         else if (!t.compare("CP0Constant")){return CP0Constant;}
         else if (!t.compare("CP0PolyT")){return CP0PolyT;}
+        else if (!t.compare("GERG2004Cosh")){return GERG2004Cosh;}
+        else if (!t.compare("GERG2004Sinh")){return GERG2004Sinh;}
         else if (!t.compare("SRK")){ return Soave; }
         else if (!t.compare("PengRobinson")) { return PR; }
         else if (!t.compare("XiangDeiters")){ return XiangDeiters; }
@@ -1430,7 +1513,7 @@ public:
 
 std::string terms[] = {"Lead","LogTau","IGPower","PlanckEinstein","CP0Constant","CP0PolyT",
                        "Gaussian","Lemmon2005","Power","SAFT","NonAnalytic","Exponential",
-                       "GERG2008","SRK","PengRobinson","XiangDeiters","GaoB"};
+                       "GERG2008","SRK","PengRobinson","XiangDeiters","GaoB","GERG2004Cosh","GERG2004Sinh"};
 std::string derivs[] = {"dTau","dTau2","dTau3","dDelta","dDelta2","dDelta3","dDelta_dTau","dDelta_dTau2","dDelta2_dTau","dTau4","dDelta_dTau3","dDelta2_dTau2","dDelta3_dTau","dDelta4"};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]")

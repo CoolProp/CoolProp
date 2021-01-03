@@ -40,9 +40,10 @@ Installation
 
 1. Download the CoolProp.oxt Extension for LibreOffice (don't rename the file) and the example spreadsheet file ``TestLibreOffice.ods``
 
-2. On Linux systems that split the LibreOffice package, install the necessary python script provider. On Ubuntu this can be done by::
+2. On Linux systems that split the LibreOffice package, install the necessary python script provider. If your system Python doesn't contain the distutils package (e.g.on Ubuntu), than you also need to install distutils. On Ubuntu this can be done by::
 
     sudo apt-get install libreoffice-script-provider-python
+    sudo apt-get install python3-distutils
 
 3. Install the CoolProp Extension by double-clicking the oxt-file (install only for user)
 

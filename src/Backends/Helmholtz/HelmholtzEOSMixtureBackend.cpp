@@ -3033,6 +3033,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         // rather than tau=Tr/T and delta=rho/rhor
         // For multiparameter EOS, this changes nothing because Tc/Tr = 1 and rhoc/rhor = 1
         double Tc = get_fluid_constant(0, iT_reducing), rhomolarc = get_fluid_constant(0, irhomolar_reducing);
+
+        // Cache the reducing temperature in some terms that need it (GERG-2004 models)
+        E.alpha0.set_Tred(Tc);
         double taustar = Tc/Tr*tau, deltastar = rhor/rhomolarc*delta;
         if (nTau == 0 && nDelta == 0){
 			val = E.base0(taustar, deltastar);
@@ -3083,31 +3086,37 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer = 0;
         CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
+        CoolPropDbl Rmix = gas_constant();
         for (unsigned int i = 0; i < N; ++i){
             
             rho_ci = get_fluid_constant(i, irhomolar_critical);
             T_ci = get_fluid_constant(i, iT_critical);
+            CoolPropDbl Rcomponent = components[i].EOS().R_u;
             tau_i = T_ci*tau/Tr;
             delta_i = delta*rhor/rho_ci;
+            CoolPropDbl Rratio = Rcomponent/Rmix;
+
+            // Cache the reducing temperature in some terms that need it (GERG-2004 models)
+            components[i].EOS().alpha0.set_Tred(Tr);
 
             if (nTau == 0 && nDelta == 0){
                 double logxi = (std::abs(mole_fractions[i]) > DBL_EPSILON) ? log(mole_fractions[i]) : 0;
-                summer += mole_fractions[i]*(components[i].EOS().base0(tau_i, delta_i) + logxi);
+                summer += mole_fractions[i]*Rratio*(components[i].EOS().base0(tau_i, delta_i) + logxi);
             }
             else if (nTau == 0 && nDelta == 1){
-                summer += mole_fractions[i]*rhor/rho_ci*components[i].EOS().dalpha0_dDelta(tau_i, delta_i);
+                summer += mole_fractions[i]*Rratio*rhor/rho_ci*components[i].EOS().dalpha0_dDelta(tau_i, delta_i);
             }
             else if (nTau == 1 && nDelta == 0){
-                summer += mole_fractions[i]*T_ci/Tr*components[i].EOS().dalpha0_dTau(tau_i, delta_i);
+                summer += mole_fractions[i]*Rratio*T_ci/Tr*components[i].EOS().dalpha0_dTau(tau_i, delta_i);
             }
             else if (nTau == 0 && nDelta == 2){
-                summer += mole_fractions[i]*pow(rhor/rho_ci,2)*components[i].EOS().d2alpha0_dDelta2(tau_i, delta_i);
+                summer += mole_fractions[i]*Rratio*pow(rhor/rho_ci,2)*components[i].EOS().d2alpha0_dDelta2(tau_i, delta_i);
             }
             else if (nTau == 1 && nDelta == 1){
-                summer += mole_fractions[i]*rhor/rho_ci*T_ci/Tr*components[i].EOS().d2alpha0_dDelta_dTau(tau_i, delta_i);
+                summer += mole_fractions[i]*Rratio*rhor/rho_ci*T_ci/Tr*components[i].EOS().d2alpha0_dDelta_dTau(tau_i, delta_i);
             }
             else if (nTau == 2 && nDelta == 0){
-                summer += mole_fractions[i]*pow(T_ci/Tr,2)*components[i].EOS().d2alpha0_dTau2(tau_i, delta_i);
+                summer += mole_fractions[i]*Rratio*pow(T_ci/Tr,2)*components[i].EOS().d2alpha0_dTau2(tau_i, delta_i);
             }
             else
             {

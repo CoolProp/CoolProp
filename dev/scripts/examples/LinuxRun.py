@@ -56,7 +56,7 @@ if __name__ == '__main__':
     subprocess.check_call('cmake --build .', **kwargs)
     subprocess.check_call(r'javac *.java', **kwargs)
     with codecs.open('Java/Example.out', 'w', encoding='utf-8') as fp:
-        tee_call(r'java Example', fp, shell=True, cwd='Java')
+        tee_call(r'java -Djava.library.path="'+os.path.abspath('Java')+'" Example', fp, shell=True, cwd='Java')
     copyfiles('Java', 'java')
 
     if not os.path.exists('Csharp'): os.mkdir('Csharp')

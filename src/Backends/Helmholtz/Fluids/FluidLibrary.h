@@ -235,6 +235,50 @@ public:
                     alpha0.PlanckEinstein = IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d);
                 }
             }
+            else if (!type.compare("IdealGasHelmholtzPlanckEinsteinFunctionT"))
+            {
+                // Retrieve the values
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<CoolPropDbl> v = cpjson::get_long_double_array(contribution["v"]), theta(n.size(), 0.0);
+                // Calculate theta
+                double Tc = cpjson::get_double(contribution, "Tcrit");
+                for (std::size_t i = 0; i < v.size(); ++i) { theta[i] = -v[i]/Tc; }
+                std::vector<CoolPropDbl> c(n.size(), 1);
+                std::vector<CoolPropDbl> d(c.size(), -1);
+
+                if (alpha0.PlanckEinstein.is_enabled() == true) {
+                    alpha0.PlanckEinstein.extend(n, theta, c, d);
+                }
+                else {
+                    alpha0.PlanckEinstein = IdealHelmholtzPlanckEinsteinGeneralized(n, theta, c, d);
+                }
+            }
+            else if (!type.compare("IdealGasHelmholtzGERG2004Cosh"))
+            {
+                // Retrieve the values
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution["theta"]);
+                double Tc = cpjson::get_double(contribution, "Tcrit");
+                if (alpha0.GERG2004Cosh.is_enabled() == true) {
+                    alpha0.GERG2004Cosh.extend(n, theta);
+                }
+                else {
+                    alpha0.GERG2004Cosh = IdealHelmholtzGERG2004Cosh(n, theta, Tc);
+                }
+            }
+            else if (!type.compare("IdealGasHelmholtzGERG2004Sinh"))
+            {
+                // Retrieve the values
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<CoolPropDbl> theta = cpjson::get_long_double_array(contribution["theta"]);
+                double Tc = cpjson::get_double(contribution, "Tcrit");
+                if (alpha0.GERG2004Sinh.is_enabled() == true) {
+                    alpha0.GERG2004Sinh.extend(n, theta);
+                }
+                else {
+                    alpha0.GERG2004Sinh = IdealHelmholtzGERG2004Sinh(n, theta, Tc);
+                }
+            }
             else if (!type.compare("IdealGasHelmholtzCP0Constant"))
             {
                 if (alpha0.CP0Constant.is_enabled() == true){throw ValueError("Cannot add another IdealGasHelmholtzCP0Constant term; join them together");}
@@ -366,7 +410,11 @@ protected:
 
         EOS.alphar = parse_alphar(EOS_json["alphar"]);
         EOS.alpha0 = parse_alpha0(EOS_json["alpha0"]);
-        
+
+        // Store the prefactor multipliying alpha0 if present
+        if (EOS_json.HasMember("alpha0_prefactor")){
+            EOS.alpha0.set_prefactor(cpjson::get_double(EOS_json, "alpha0_prefactor"));
+        }
         if (EOS_json["STATES"].HasMember("hs_anchor")){
             rapidjson::Value &hs_anchor = EOS_json["STATES"]["hs_anchor"];
             EOS.hs_anchor.T = cpjson::get_double(hs_anchor, "T");

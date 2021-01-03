@@ -268,6 +268,8 @@
           "type": "IdealGasHelmholtzLogTau"
         },
         {
+          "Tcrit": 33.145,
+          "Tcrit_units": "K",
           "n": [
             1.616,
             -0.4117,
@@ -275,14 +277,14 @@
             0.758,
             1.217
           ],
-          "t": [
-            16.0205159149,
-            22.6580178006,
-            60.0090511389,
-            74.9434303817,
-            206.9392065168
-          ],
-          "type": "IdealGasHelmholtzPlanckEinstein"
+          "type": "IdealGasHelmholtzPlanckEinsteinFunctionT",
+          "v": [
+            531,
+            751,
+            1989,
+            2484,
+            6859
+          ]
         }
       ],
       "alphar": [

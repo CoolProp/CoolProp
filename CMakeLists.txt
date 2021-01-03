@@ -152,8 +152,8 @@ project(${project_name})
 # Project version
 set (COOLPROP_VERSION_MAJOR 6)
 set (COOLPROP_VERSION_MINOR 4)
-set (COOLPROP_VERSION_PATCH 1)
-set (COOLPROP_VERSION_REVISION )
+set (COOLPROP_VERSION_PATCH 2)
+set (COOLPROP_VERSION_REVISION dev)
 set (COOLPROP_VERSION "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}")
 message(STATUS "CoolProp version: ${COOLPROP_VERSION}")
 
@@ -1016,6 +1016,9 @@ if (COOLPROP_CSHARP_MODULE)
   if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set_target_properties(CoolProp PROPERTIES PREFIX "lib")
   endif()
+  if (UNIX)
+    set_target_properties(CoolProp PROPERTIES PREFIX "lib")
+  endif()
 
   add_dependencies (${app_name} generate_headers generate_examples)
 
@@ -1382,6 +1385,9 @@ if (COOLPROP_LIBREOFFICE_MODULE)
     COMMAND ${LO_IDLC} XCoolProp.idl -I. -I${LO_SDK_PATH}/idl -O. XCoolProp.idl
 		COMMAND ${LO_REGMERGE} XCoolProp.rdb /UCR XCoolProp.urd
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove" XCoolProp.urd
+    # download and bundle latest Python pip package (py2.py3, platform independent)
+    COMMAND pip download pip -d pythonpath
+    COMMAND 7z x "./pythonpath/pip-*.whl" -y -opythonpath
     # download and bundle latest Python certifi package (py2.py3, platform independent)
     COMMAND pip download certifi -d pythonpath
     COMMAND 7z x "./pythonpath/certifi-*.whl" -y -opythonpath
