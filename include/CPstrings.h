@@ -32,7 +32,13 @@
 
     /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
     // trim from start
-    #if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+    #if __cplusplus <= 199711L
+    inline std::string& strlstrip(std::string& s)
+    {
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+        return s;
+    }
+    #else
     inline std::string &strlstrip(std::string &s)
     {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
@@ -40,26 +46,20 @@
                 }));
         return s;
     }
-    #else // C++11 i s no supported -> legacy code
-    inline std::string& strlstrip(std::string& s)
-    {
-        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-        return s;
-    }
     #endif
     // trim from end
-    #if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+    #if __cplusplus <= 199711L
+    inline std::string& strrstrip(std::string& s) {
+        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+        return s;
+    }
+    #else
     inline std::string &strrstrip(std::string & s)
     {
         s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
                     return !std::isspace(ch);
                 }).base(),
                 s.end());
-        return s;
-    }
-    #else // C++11 i s no supported -> legacy code
-    inline std::string& strrstrip(std::string& s) {
-        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
         return s;
     }
     #endif
