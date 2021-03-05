@@ -32,7 +32,8 @@
 
     /// The following code for the trim functions was taken from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
     // trim from start
-    #if __cplusplus <= 199711L
+    #ifdef HAS_MOVE_SEMANTICS //More robust c++11 detection https://stackoverflow.com/questions/10717502/is-there-a-preprocessor-directive-for-detecting-c11x-support
+    // #ifdef __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
     inline std::string& strlstrip(std::string& s)
     {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
@@ -48,7 +49,8 @@
     }
     #endif
     // trim from end
-    #if __cplusplus <= 199711L
+    #ifdef HAS_MOVE_SEMANTICS //More robust c++11 detection https://stackoverflow.com/questions/10717502/is-there-a-preprocessor-directive-for-detecting-c11x-support
+    // #ifdef __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900)
     inline std::string& strrstrip(std::string& s) {
         s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
         return s;
