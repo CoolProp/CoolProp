@@ -66,7 +66,7 @@ if __name__ == '__main__':
             print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_version))
         else:
             import subprocess
-            cmd = subprocess.Popen('gcc --version | grep clang | grep -o -E "(\d+\.)+\d+" | uniq | sort', shell=True, stdout=subprocess.PIPE)
+            cmd = subprocess.Popen(r'gcc --version | grep clang | grep -o -E "(\d+\.)+\d+" | uniq | sort', shell=True, stdout=subprocess.PIPE)
             for line in cmd.stdout:
                 # print(line)
                 try: line = line.decode()
@@ -343,7 +343,7 @@ if __name__ == '__main__':
                 print("Adding these shared_ptr compilation macros:", more_flags)
                 for ext in self.extensions:
                     ext.extra_compile_args += more_flags
-                
+
             def build_extensions(self):
                 self.set_shared_ptr_flags()
                 build_ext.build_extensions(self)
@@ -392,6 +392,10 @@ if __name__ == '__main__':
 
     common_args = dict(include_dirs=include_dirs,
                        language='c++')
+    if sys.platform == 'darwin':
+        common_args.update(dict(
+            extra_compile_args=["-std=c++11"]
+        ))
 
     if USE_CYTHON:
         common_args.update(dict(cython_c_in_temp=True,
