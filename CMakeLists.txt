@@ -523,8 +523,10 @@ IF ( COOLPROP_OBJECT_LIBRARY OR COOLPROP_STATIC_LIBRARY OR COOLPROP_SHARED_LIBRA
   ELSE()
     MESSAGE(FATAL_ERROR "You have to build a static or shared library.")
   ENDIF()
-
-  target_link_libraries (${LIB_NAME} ${CMAKE_DL_LIBS})
+ 
+  if (NOT COOLPROP_OBJECT_LIBRARY)
+    target_link_libraries (${LIB_NAME} ${CMAKE_DL_LIBS})
+  endif()
 
   # For windows systems, bug workaround for Eigen
   IF (MSVC90)
