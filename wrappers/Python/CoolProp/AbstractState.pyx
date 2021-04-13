@@ -67,12 +67,12 @@ cdef class AbstractState:
         """ Apply a simple mixing rule - wrapper of c++ function :cpapi:`CoolProp::AbstractState::apply_simple_mixing_rule` """
         self.thisptr.apply_simple_mixing_rule(i, j, model)
 
-    cpdef set_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter, double val):
+    cpdef set_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter, double val, bool sym=True):
         """ Set a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::set_binary_interaction_double` """
         if string_or_size_t in cython.integral:
-            self.thisptr.set_binary_interaction_double(<size_t>CAS1, <size_t>CAS2, parameter, val)
+            self.thisptr.set_binary_interaction_double(<size_t>CAS1, <size_t>CAS2, parameter, val, sym)
         else:
-            self.thisptr.set_binary_interaction_double(<string>CAS1, <string>CAS2, parameter, val)
+            self.thisptr.set_binary_interaction_double(<string>CAS1, <string>CAS2, parameter, val, sym)
     cpdef double get_binary_interaction_double(self, string_or_size_t CAS1, string_or_size_t CAS2, string parameter) except *:
         """ Get a double precision interaction parameter - wrapper of c++ function :cpapi:`CoolProp::AbstractState::get_binary_interaction_double` """
         if string_or_size_t in cython.integral:

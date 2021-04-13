@@ -519,8 +519,11 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass(void)
 }
 
 void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value){
+    CoolProp::AbstractCubicBackend::set_binary_interaction_double(i, j, parameter, value, false);
+}
+void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string &parameter, const double value, const bool symmetric){
     if (parameter == "kij" || parameter == "k_ij"){
-        get_cubic()->set_kij(i, j, value);
+        get_cubic()->set_kij(i, j, value, symmetric);
     }
     else{
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
