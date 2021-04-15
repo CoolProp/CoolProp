@@ -1186,7 +1186,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_smolar(void)
 	sV_mol = calc_saturated_vapor_keyed_output(iSmolar);
 	_smolar = _Q*sV_mol + (1 - _Q)*sL_mol;
       }
-      else if(not _smolar) {
+      else if(!_smolar) {
 	double s_mol, rho_mol_L = 0.001*static_cast<double>(_rhomolar);
 	try {
 	  ENTROdll(&_T, &rho_mol_L, &(mole_fractions[0]), &s_mol);
