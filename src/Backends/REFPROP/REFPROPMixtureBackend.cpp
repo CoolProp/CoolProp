@@ -2577,7 +2577,7 @@ CoolPropDbl REFPROPMixtureBackend::_calc_saturated_liquid_output(CachedElement &
 CoolPropDbl REFPROPMixtureBackend::_calc_saturated_vapor_output(CachedElement &cachedV) {
   this->check_loaded_fluid();
   
-  if(not cachedV)  {// Check whether the variable is cached..
+  if(!cachedV)  {// Check whether the variable is cached..
                     // If not, update the saturated (vapor) quantities.
     if (_RPcheckTwophase() && _rhoVmolar) {
       double rhoV_mol_L = 0.001*static_cast<double>(_rhoVmolar);
