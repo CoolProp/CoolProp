@@ -1209,7 +1209,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_hmolar(void)
 	hV_mol = calc_saturated_vapor_keyed_output(iHmolar);
 	_hmolar = _Q*hV_mol + (1 - _Q)*hL_mol;
       }
-      else if(not _hmolar) {
+      else if(!_hmolar) {
 	double h_mol, rho_mol_L = 0.001*static_cast<double>(_rhomolar);
 	try {
 	  ENTHALdll(&_T, &rho_mol_L, &(mole_fractions[0]), &h_mol);
