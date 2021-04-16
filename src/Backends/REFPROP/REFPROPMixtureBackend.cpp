@@ -1433,6 +1433,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters
 
        shared_ptr<REFPROPMixtureBackend> Liq(new REFPROPMixtureBackend(this->calc_fluid_names())), End(new REFPROPMixtureBackend(this->calc_fluid_names()));
     
+    Liq->set_mole_fractions(this->get_mole_fractions());
     Liq->specify_phase(iphase_liquid);
     Liq->_Q = -1;
     Liq->update_DmolarT_direct(SatL->rhomolar(), SatL->T());
