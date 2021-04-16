@@ -1437,6 +1437,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters
     Liq->specify_phase(iphase_liquid);
     Liq->_Q = -1;
     Liq->update_DmolarT_direct(SatL->rhomolar(), SatL->T());
+    End->set_mole_fractions(this->get_mole_fractions());
     End->update(QT_INPUTS, x_end, SatL->T());
            
     CoolPropDbl Delta = Q()*(SatV->keyed_output(iHmolar) - SatL->keyed_output(iHmolar));
