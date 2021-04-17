@@ -1380,7 +1380,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
 	 CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP, rhoL_mol, rhoV_mol);
 	 CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP, rhoL_mol, rhoV_mol);
 	 CoolPropDbl dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(hL_mass - hV_mass);
-	 CoolPropDbl dvdp_h = dvL_dp + dxdp_h*(1/rhoV_mol - 1/rhoL_mol) + Q()*(dvV_dp - dvL_dp);
+	 CoolPropDbl dvdp_h = dvL_dp + dxdp_h*(1/rhoV_mass - 1/rhoL_mass) + Q()*(dvV_dp - dvL_dp);
 	 return -POW2(rhomass())*dvdp_h;
        }
        else{
