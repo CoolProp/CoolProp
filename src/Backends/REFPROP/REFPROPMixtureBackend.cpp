@@ -1343,7 +1343,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
        SatL->update(QT_INPUTS, 0.0, _T); // <--- This looks never effecient,
        SatV->update(QT_INPUTS, 1.0, _T); //      but just mimics the saturate states of HEOS..
        
-       double rhoV_mol = _rhoVmolar, rhoL_mol = _rhoVmolar; //This looks redundant, but, by this, we avoid annoying static casts ..
+       double rhoV_mol = _rhoVmolar, rhoL_mol = _rhoLmolar; //This looks redundant, but, by this, we avoid annoying static casts ..
        double hL_mol, hV_mol;
        hL_mol = calc_saturated_liquid_keyed_output(iHmolar);
        hV_mol = calc_saturated_vapor_keyed_output(iHmolar);
