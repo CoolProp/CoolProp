@@ -1349,7 +1349,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, par
        hV_mol = calc_saturated_vapor_keyed_output(iHmolar);
        
        double rhoV_mass = rhoV_mol*molar_mass(), rhoL_mass = rhoL_mol*molar_mass();
-       double hL_mass = hL_mol*molar_mass(), hV_mass = hV_mol*molar_mass();
+       double hL_mass = hL_mol/molar_mass(), hV_mass = hV_mol/molar_mass();
        
        if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
 	 return -POW2(rhomolar())*(1/rhoV_mol - 1/rhoL_mol)/(hV_mol - hL_mol);
