@@ -15,9 +15,8 @@
 
 namespace CoolProp {
 
-
 class REFPROPMixtureBackend : public AbstractState  {
-    private:
+private:
     std::string cached_component_string;
 protected:
     std::size_t Ncomp;
@@ -30,11 +29,24 @@ protected:
     std::vector<double> mole_fractions_liq, mole_fractions_vap;
 	std::vector<std::string> fluid_names;
 
-
 	/// Call the PHIXdll function in the dll
 	CoolPropDbl call_phixdll(int itau, int idelta);
 	/// Call the PHI0dll function in the dll
 	CoolPropDbl call_phi0dll(int itau, int idelta);
+    
+    // To be replaced or integrated with the phase indicator, hopefully..
+    inline bool _RPcheckTwophase( void) {
+      if (ValidNumber(_Q) && (_Q >= 0.00) && (_Q <= 1.00)) return true;
+      else return false;
+    }
+    // Functions for the cached variables of saturated state
+    void _RPclearSat( void);
+    CoolPropDbl _calc_saturated_liquid_output( CachedElement&);
+    CoolPropDbl _calc_saturated_vapor_output( CachedElement&);
+    // Cached values of saturated state
+    CachedElement _hLmolar, _hVmolar, _sLmolar, _sVmolar,_uLmolar, _uVmolar;
+    CachedElement _wL, _wV, _cvLmolar, _cvVmolar, _cpLmolar, _cpVmolar;
+    CachedElement _viscosityL, _viscosityV, _conductivityL, _conductivityV; //transport properties of saturated state
 
 public:
     REFPROPMixtureBackend():Ncomp(0),_mole_fractions_set(false) {instance_counter++;}
@@ -54,6 +66,8 @@ public:
 	std::vector<std::string> calc_fluid_names(){return fluid_names;};
     PhaseEnvelopeData PhaseEnvelope;
 
+    /// Overriding the clear() function
+    bool clear( void) override { _RPclearSat(); return AbstractState::clear();}
     /// Set binary mixture floating point parameter
     void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value);
     /// Get binary mixture double value
@@ -102,6 +116,11 @@ public:
      */
     void calc_unspecify_phase(){ imposed_phase_index = iphase_not_imposed;}
 
+    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
+    CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1, CoolPropDbl rhoL_mol, CoolPropDbl rhoV_mol);    
+    CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
+    CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
+
     /// Updating function for REFPROP
     /**
     In this function we take a pair of thermodynamic states, those defined in the input_pairs
@@ -126,6 +145,8 @@ public:
                 double value2,
                 const GuessesStructure &guesses);
 
+    void update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T);
+
     CoolPropDbl calc_molar_mass(void);
 
     void check_loaded_fluid(void);
@@ -139,6 +160,10 @@ public:
 
     CoolPropDbl calc_PIP(void);
 
+    CoolPropDbl calc_smolar(void);
+    
+    CoolPropDbl calc_hmolar(void);
+    
     CoolPropDbl calc_cpmolar_idealgas(void);
 
     /// Set the fluids in REFPROP DLL by calling the SETUPdll function
@@ -210,9 +235,9 @@ public:
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double &T, double &rho);
 
-	/// Calculate the saturation properties
-	CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
-	CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+    /// Calculate the saturation properties
+    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
+    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 
     /// Calculate an ideal curve
     void calc_ideal_curve(const std::string &type, std::vector<double> &T, std::vector<double> &p);

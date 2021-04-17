@@ -170,7 +170,8 @@ public:
 };
 // This static initialization will cause the generator to register
 static GeneratorInitializer<REFPROPGenerator> refprop_gen(REFPROP_BACKEND_FAMILY);
-
+  
+/* public */
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
     // Do the REFPROP instantiation for this fluid
     _mole_fractions_set = false;
@@ -1171,6 +1172,58 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string &type)
         PhaseEnvelope.conductivity_vap.push_back(tcx);
     }
 }
+
+/* Not sure, to implement such a way to take into accout the vapor quality Q...
+ */
+
+CoolPropDbl REFPROPMixtureBackend::calc_smolar(void)  
+{
+      this->check_loaded_fluid();
+
+      if (_RPcheckTwophase()) {
+	double sL_mol, sV_mol;
+	sL_mol = calc_saturated_liquid_keyed_output(iSmolar);
+	sV_mol = calc_saturated_vapor_keyed_output(iSmolar);
+	_smolar = _Q*sV_mol + (1 - _Q)*sL_mol;
+      }
+      else if(!_smolar) {
+	double s_mol, rho_mol_L = 0.001*static_cast<double>(_rhomolar);
+	try {
+	  ENTROdll(&_T, &rho_mol_L, &(mole_fractions[0]), &s_mol);
+	  _smolar = s_mol;
+	}
+	catch(std::logic_error) {
+	  throw ValueError(format("Error in ENTROdll: cancelled during the calculation of liquid state.").c_str());
+	}
+      }
+      return static_cast<CoolPropDbl>(_smolar);
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_hmolar(void)  
+{
+      this->check_loaded_fluid();
+
+      if (_RPcheckTwophase()) {
+	double hL_mol, hV_mol;
+	hL_mol = calc_saturated_liquid_keyed_output(iHmolar);
+	hV_mol = calc_saturated_vapor_keyed_output(iHmolar);
+	_hmolar = _Q*hV_mol + (1 - _Q)*hL_mol;
+      }
+      else if(!_hmolar) {
+	double h_mol, rho_mol_L = 0.001*static_cast<double>(_rhomolar);
+	try {
+	  ENTHALdll(&_T, &rho_mol_L, &(mole_fractions[0]), &h_mol);
+	  _hmolar = h_mol;
+	}
+	catch(std::logic_error) {
+	  throw ValueError(format("Error in ENTHALdll: cancelled during the calculation of liquid state.").c_str());
+	}
+      }
+      return static_cast<CoolPropDbl>(_hmolar);
+}
+
+/* */
+
 CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void)
 {
     this->check_loaded_fluid();
@@ -1216,6 +1269,244 @@ phases REFPROPMixtureBackend::GetRPphase()
             RPphase = iphase_unknown;
     }
     return RPphase;
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1)
+{
+        this->check_loaded_fluid();
+
+        if (_RPcheckTwophase() == false)
+	  throw ValueError("Not two phase fluid: saturation derivative is not possible");
+
+	double rhoV_mol = _rhoVmolar, rhoL_mol = _rhoLmolar; //This looks redundant, but, by this, we avoid annoying static casts ..
+	double hL_mol, hV_mol;
+	hL_mol = calc_saturated_liquid_keyed_output(iHmolar);
+       	hV_mol = calc_saturated_vapor_keyed_output(iHmolar);
+  
+	// Derivative of temperature w.r.t. pressure ALONG the saturation curve
+	CoolPropDbl dTdP_sat = _T*(1/rhoV_mol - 1/rhoL_mol)/(hV_mol - hL_mol);
+
+	// "Trivial" inputs
+	if (Of1 == iT && Wrt1 == iP){ return dTdP_sat;}
+	else if (Of1 == iP && Wrt1 == iT){ return 1/dTdP_sat;}
+	// Derivative taken with respect to T
+	else if (Wrt1 == iT){
+		return first_partial_deriv(Of1, iT, iP) + first_partial_deriv(Of1, iP, iT)/dTdP_sat;
+	}
+	// Derivative taken with respect to p
+	else if (Wrt1 == iP){
+		return first_partial_deriv(Of1, iP, iT) + first_partial_deriv(Of1, iT, iP)*dTdP_sat;
+	}
+	else{
+		throw ValueError(format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1,"short").c_str()));
+	}
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1, CoolPropDbl rhoL_mol, CoolPropDbl rhoV_mol) {
+        this->check_loaded_fluid();
+	
+        if (_RPcheckTwophase() == false)
+	  throw ValueError("Not two phase fluid: saturation derivative is not possible");
+
+	double hL_mol, hV_mol;
+	hL_mol = calc_saturated_liquid_keyed_output(iHmolar);
+       	hV_mol = calc_saturated_vapor_keyed_output(iHmolar);
+	
+	// Derivative of temperature w.r.t. pressure ALONG the saturation curve
+	CoolPropDbl dTdP_sat = _T*(1/rhoV_mol - 1/rhoL_mol)/(hV_mol - hL_mol);
+
+	// "Trivial" inputs
+	if (Of1 == iT && Wrt1 == iP){ return dTdP_sat;}
+	else if (Of1 == iP && Wrt1 == iT){ return 1/dTdP_sat;}
+	// Derivative taken with respect to T
+	else if (Wrt1 == iT){
+		return first_partial_deriv(Of1, iT, iP) + first_partial_deriv(Of1, iP, iT)/dTdP_sat;
+	}
+	// Derivative taken with respect to p
+	else if (Wrt1 == iP){
+		return first_partial_deriv(Of1, iP, iT) + first_partial_deriv(Of1, iT, iP)*dTdP_sat;
+	}
+	else{
+		throw ValueError(format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1,"short").c_str()));
+	}
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant) {
+       this->check_loaded_fluid();
+	
+       if (_RPcheckTwophase() == false)
+	 throw ValueError("Not two phase fluid: saturation derivative is not possible");
+    
+       shared_ptr<REFPROPMixtureBackend> SatL(new REFPROPMixtureBackend(this->calc_fluid_names())), SatV(new REFPROPMixtureBackend(this->calc_fluid_names()));
+       SatL->set_mole_fractions(this->get_mole_fractions());
+       SatV->set_mole_fractions(this->get_mole_fractions());
+       SatL->update(QT_INPUTS, 0.0, _T); // <--- This looks never effecient,
+       SatV->update(QT_INPUTS, 1.0, _T); //      but just mimics the saturate states of HEOS..
+       
+       double rhoV_mol = _rhoVmolar, rhoL_mol = _rhoLmolar; //This looks redundant, but, by this, we avoid annoying static casts ..
+       double hL_mol, hV_mol;
+       hL_mol = calc_saturated_liquid_keyed_output(iHmolar);
+       hV_mol = calc_saturated_vapor_keyed_output(iHmolar);
+       
+       double rhoV_mass = rhoV_mol*molar_mass(), rhoL_mass = rhoL_mol*molar_mass();
+       double hL_mass = hL_mol/molar_mass(), hV_mass = hV_mol/molar_mass();
+       
+       if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
+	 return -POW2(rhomolar())*(1/rhoV_mol - 1/rhoL_mol)/(hV_mol - hL_mol);
+       }
+       else if (Of == iDmass && Wrt == iHmass && Constant == iP){
+	 return -POW2(rhomass())*(1/rhoV_mass - 1/rhoL_mass)/(hV_mass - hL_mass);
+       }
+       else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
+	 // v = 1/rho; drhodv = -rho^2; dvdrho = -1/rho^2
+	 CoolPropDbl dvdrhoL = -1/POW2(rhoL_mol);
+	 CoolPropDbl dvdrhoV = -1/POW2(rhoV_mol);
+	 
+	 CoolPropDbl dvL_dp = dvdrhoL*SatL->calc_first_saturation_deriv(iDmolar, iP, rhoL_mol, rhoV_mol);
+	 CoolPropDbl dvV_dp = dvdrhoV*SatV->calc_first_saturation_deriv(iDmolar, iP, rhoL_mol, rhoV_mol); 
+	 CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmolar, iP, rhoL_mol, rhoV_mol);
+	 CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmolar, iP, rhoL_mol, rhoV_mol);	
+	 CoolPropDbl dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(hL_mol - hV_mol);
+	 CoolPropDbl dvdp_h = dvL_dp + dxdp_h*(1/rhoV_mol - 1/rhoL_mol) + Q()*(dvV_dp - dvL_dp);
+	 return -POW2(rhomolar())*dvdp_h;
+       }
+       else if (Of == iDmass && Wrt == iP && Constant == iHmass){
+	 // v = 1/rho; drhodv = -rho^2; dvdrho = -1/rho^2
+	 CoolPropDbl dvdrhoL = -1/POW2(rhoL_mass);
+	 CoolPropDbl dvdrhoV = -1/POW2(rhoV_mass);
+	 
+	 CoolPropDbl dvL_dp = dvdrhoL*SatL->calc_first_saturation_deriv(iDmass, iP, rhoL_mol, rhoV_mol);
+	 CoolPropDbl dvV_dp = dvdrhoV*SatV->calc_first_saturation_deriv(iDmass, iP, rhoL_mol, rhoV_mol); 
+	 CoolPropDbl dhL_dp = SatL->calc_first_saturation_deriv(iHmass, iP, rhoL_mol, rhoV_mol);
+	 CoolPropDbl dhV_dp = SatV->calc_first_saturation_deriv(iHmass, iP, rhoL_mol, rhoV_mol);
+	 CoolPropDbl dxdp_h = (Q()*dhV_dp + (1 - Q())*dhL_dp)/(hL_mass - hV_mass);
+	 CoolPropDbl dvdp_h = dvL_dp + dxdp_h*(1/rhoV_mass - 1/rhoL_mass) + Q()*(dvV_dp - dvL_dp);
+	 return -POW2(rhomass())*dvdp_h;
+       }
+       else{
+	 throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+       }
+}
+
+CoolPropDbl REFPROPMixtureBackend::calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) {
+	// Note: If you need all three values (drho_dh__p, drho_dp__h and rho_spline), 
+	// you should calculate drho_dp__h first to avoid duplicate calculations.
+
+	bool drho_dh__p = false;
+	bool drho_dp__h = false;
+	bool rho_spline = false;
+
+	if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
+		drho_dh__p = true;
+		if (_drho_spline_dh__constp) return _drho_spline_dh__constp;
+	}
+	else if (Of == iDmass && Wrt == iHmass && Constant == iP){
+		return first_two_phase_deriv_splined(iDmolar, iHmolar, iP, x_end)*POW2(molar_mass());
+	}
+	else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
+		drho_dp__h = true;
+		if (_drho_spline_dp__consth) return _drho_spline_dp__consth;
+	}
+	else if (Of == iDmass && Wrt == iP && Constant == iHmass){
+		return first_two_phase_deriv_splined(iDmolar, iP, iHmolar, x_end)*molar_mass();
+	}
+	// Add the special case for the splined density
+	else if (Of == iDmolar && Wrt == iDmolar && Constant == iDmolar){
+		rho_spline = true;
+		if (_rho_spline) return _rho_spline;
+	}
+	else if (Of == iDmass && Wrt == iDmass && Constant == iDmass){
+		return first_two_phase_deriv_splined(iDmolar, iDmolar, iDmolar, x_end)*molar_mass();
+	}
+	else{
+		throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+	}
+
+       if (_RPcheckTwophase() == false)
+	 throw ValueError("Not two phase fluid: saturation derivative is not possible");
+    
+       shared_ptr<REFPROPMixtureBackend> SatL(new REFPROPMixtureBackend(this->calc_fluid_names())), SatV(new REFPROPMixtureBackend(this->calc_fluid_names()));
+       SatL->set_mole_fractions(this->get_mole_fractions());
+       SatV->set_mole_fractions(this->get_mole_fractions());
+       SatL->update(QT_INPUTS, 0.0, _T); // <--- This looks never effecient,
+       SatV->update(QT_INPUTS, 1.0, _T); //      but just mimics the saturate states of HEOS..
+
+       shared_ptr<REFPROPMixtureBackend> Liq(new REFPROPMixtureBackend(this->calc_fluid_names())), End(new REFPROPMixtureBackend(this->calc_fluid_names()));
+    
+    Liq->set_mole_fractions(this->get_mole_fractions());
+    Liq->specify_phase(iphase_liquid);
+    Liq->_Q = -1;
+    Liq->update_DmolarT_direct(SatL->rhomolar(), SatL->T());
+    End->set_mole_fractions(this->get_mole_fractions());
+    End->update(QT_INPUTS, x_end, SatL->T());
+           
+    CoolPropDbl Delta = Q()*(SatV->keyed_output(iHmolar) - SatL->keyed_output(iHmolar));
+    CoolPropDbl Delta_end = End->keyed_output(iHmolar) - SatL->keyed_output(iHmolar);
+        
+    // At the end of the zone to which spline is applied
+    CoolPropDbl drho_dh_end = End->calc_first_two_phase_deriv(iDmolar, iHmolar, iP);
+    CoolPropDbl rho_end = End->keyed_output(iDmolar);
+        
+    // Faking single-phase
+    CoolPropDbl rho_liq = Liq->keyed_output(iDmolar);
+    CoolPropDbl drho_dh_liq__constp = Liq->first_partial_deriv(iDmolar, iHmolar, iP);
+        
+    // Spline coordinates a, b, c, d
+    CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+    CoolPropDbl a = 1/POW3(Delta_end) * Abracket;
+    CoolPropDbl b = 3/POW2(Delta_end) * (-rho_liq + rho_end) - 1/Delta_end * (drho_dh_end + 2 * drho_dh_liq__constp);
+    CoolPropDbl c = drho_dh_liq__constp;
+    CoolPropDbl d = rho_liq;
+        
+	// Either the spline value or drho/dh|p can be directly evaluated now
+	_rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
+	_drho_spline_dh__constp = 3 * a*POW2(Delta) + 2 * b*Delta + c;
+	if (rho_spline) return _rho_spline;
+	if (drho_dh__p) return _drho_spline_dh__constp;
+        
+    // It's drho/dp|h
+    // ... calculate some more things
+        
+    // Derivatives *along* the saturation curve using the special internal method
+    double rhoV_mol = _rhoVmolar, rhoL_mol = _rhoVmolar;
+    CoolPropDbl dhL_dp_sat =  SatL->calc_first_saturation_deriv(iHmolar, iP, rhoL_mol, rhoV_mol);
+    CoolPropDbl dhV_dp_sat =  SatV->calc_first_saturation_deriv(iHmolar, iP, rhoL_mol, rhoV_mol);
+    CoolPropDbl drhoL_dp_sat = SatL->calc_first_saturation_deriv(iDmolar, iP, rhoL_mol, rhoV_mol);
+    CoolPropDbl drhoV_dp_sat = SatV->calc_first_saturation_deriv(iDmolar, iP, rhoL_mol, rhoV_mol);
+    CoolPropDbl rhoV = SatV->keyed_output(iDmolar);
+    CoolPropDbl rhoL = SatL->keyed_output(iDmolar);
+    CoolPropDbl drho_dp_end = POW2(End->keyed_output(iDmolar))*(x_end/POW2(rhoV)*drhoV_dp_sat + (1-x_end)/POW2(rhoL)*drhoL_dp_sat);
+        
+    // Faking single-phase
+    //CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(iDmolar, iP, iHmolar);
+    CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar); // ?
+        
+    // Derivatives at the end point
+    // CoolPropDbl drho_dp__consth_end = End->calc_first_two_phase_deriv(iDmolar, iP, iHmolar);
+    CoolPropDbl d2rhodhdp_end = End->calc_second_two_phase_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
+        
+    // Reminder:
+    // Delta = Q()*(hV-hL) = h-hL
+    // Delta_end = x_end*(hV-hL);
+    CoolPropDbl d_Delta_dp__consth = -dhL_dp_sat;
+    CoolPropDbl d_Delta_end_dp__consth = x_end*(dhV_dp_sat - dhL_dp_sat);
+        
+    // First pressure derivative at constant h of the coefficients a,b,c,d
+    // CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+    CoolPropDbl d_Abracket_dp_consth = (2*drhoL_dp_sat - 2*drho_dp_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_end_dp__consth*(drho_dh_liq__constp + drho_dh_end));
+    CoolPropDbl da_dp = 1/POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3/POW4(Delta_end)*d_Delta_end_dp__consth);
+    CoolPropDbl db_dp = - 6/POW3(Delta_end)*d_Delta_end_dp__consth*(rho_end - rho_liq)
+                        + 3/POW2(Delta_end)*(drho_dp_end - drhoL_dp_sat)
+                        + (1/POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end + 2*drho_dh_liq__constp)
+                        - (1/Delta_end) * (d2rhodhdp_end + 2*d2rhodhdp_liq);
+    CoolPropDbl dc_dp = d2rhodhdp_liq;
+    CoolPropDbl dd_dp = drhoL_dp_sat;
+        
+	_drho_spline_dp__consth = (3 * a*POW2(Delta) + 2 * b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
+	if (drho_dp__h) return _drho_spline_dp__consth;
+
+	throw ValueError("Something went wrong in HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined");
+	return _HUGE;
 }
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2)
@@ -1735,12 +2026,11 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     // SATPdll(p, z, kph, T, Dl, Dv, x, y, ierr, herr)
                     //
                     //kph--Phase flag : 1 - Input x is liquid composition(bubble point)
-                    //                - 1 - Force calculation in the liquid phase even if T<Ttrp
                     //                  2 - Input x is vapor composition(dew point)
-                    //                - 2 - Force calculation in the vapor phase even if T<Ttrp
                     //                  3 - Input x is liquid composition along the freezing line(melting line)
                     //                  4 - Input x is vapor composition along the sublimation line
-                    SATPdll(&_p, &(mole_fractions[0]), &iFlsh,
+		    int kph = iFlsh - 2;
+                    SATPdll(&p_kPa, &(mole_fractions[0]), &kph,
                         &_T, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
                         &ierr, herr, errormessagelength);
                     rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
@@ -1804,7 +2094,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                     //                - 2 - Force calculation in the vapor phase even if T<Ttrp
                     //                  3 - Input x is liquid composition along the freezing line(melting line)
                     //                  4 - Input x is vapor composition along the sublimation line
-                    SATTdll(&_T, &(mole_fractions[0]), &iFlsh,
+		    int kph = iFlsh;
+                    SATTdll(&_T, &(mole_fractions[0]), &kph,
                         &p_kPa, &rhoLmol_L, &rhoVmol_L,&(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
                         &ierr, herr, errormessagelength);
                     rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
@@ -1860,7 +2151,15 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
     if (imposed_phase_index == iphase_not_imposed) {  // If phase is imposed, _phase will already be set.
         if (Ncomp == 1) {          // Only set _phase for pure fluids
             _phase = GetRPphase(); // Set the CoolProp _phase variable based on RefProp's quality value (q)
+	    if(_phase != iphase_twophase) {
+	      _rhoLmolar = _HUGE;
+	      _rhoVmolar = _HUGE;
+	    }
         }
+	else if (_RPcheckTwophase() != true) {
+	  _rhoLmolar = _HUGE;
+	  _rhoVmolar = _HUGE;
+	}
     }
 }
 
@@ -1974,6 +2273,26 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
     _Q = q;
 
 }
+
+void REFPROPMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T) {
+    this->check_loaded_fluid();
+    _T = T;
+    _rhomolar = rhomolar;
+    
+    double rho_mol_L = 0.001*static_cast<double>(_rhomolar);
+    double p_kPa, emol, hmol, smol, cvmol, cpmol, w, hjt_dummy;
+    try {
+      THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt_dummy);
+    }
+    catch(std::logic_error) {
+	clear();
+	throw ValueError(format("Error in THERMdll: during the calculation of vapor state.").c_str());
+    }
+    _p = 1000.*p_kPa;
+    _tau = calc_T_reducing()/_T;
+    _delta = _rhomolar/calc_rhomolar_reducing();    
+}
+
 CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel)
 {
     this->check_loaded_fluid();
@@ -2061,42 +2380,117 @@ void REFPROPMixtureBackend::calc_true_critical_point(double &T, double &rho)
 }
 
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_liquid_keyed_output(parameters key) {
-    if (_rhoLmolar) {
+  if (_rhoLmolar && _RPcheckTwophase()) {
         if (key == iDmolar) {
             return _rhoLmolar;
         }
         else if (key == iDmass) {
-            return static_cast<double>(_rhoLmolar)*calc_saturated_liquid_keyed_output(imolar_mass);
+            return static_cast<CoolPropDbl>(_rhoLmolar)*calc_molar_mass();
         }
         else if (key == imolar_mass){
-            double wmm_kg_kmol = 0;
-            WMOLdll(&(mole_fractions_liq[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
-            return wmm_kg_kmol/1000; // kg/mol
+            return calc_molar_mass(); // kg/mol
         }
-        else {
-            throw ValueError("Invalid parameter. Only mass and molar density are available with RefProp");
-            return _HUGE;
+	else if (key == iHmolar) {
+	  return _calc_saturated_liquid_output(_hLmolar);
+	}
+	else if (key == iHmass) {
+	  return _calc_saturated_liquid_output(_hLmolar)/calc_molar_mass();
+	}
+	else if (key == iSmolar) {
+	  return _calc_saturated_liquid_output(_sLmolar);
+	}
+	else if (key == iSmass) {
+	  return _calc_saturated_liquid_output(_sLmolar)/calc_molar_mass();
+	}
+	else if (key == iUmolar) {
+	  return _calc_saturated_liquid_output(_uLmolar);
+	}
+	else if (key == iUmass) {
+	  return _calc_saturated_liquid_output(_uLmolar)/calc_molar_mass();
+	}
+	else if (key == iCpmolar) {
+	  return _calc_saturated_liquid_output(_cpLmolar);
+	}
+	else if (key == iCpmass) {
+	  return _calc_saturated_liquid_output(_cpLmolar)/calc_molar_mass();
+	}
+	else if (key == iCvmolar) {
+	  return _calc_saturated_liquid_output(_cvLmolar);
+	}
+	else if (key == iCvmass) {
+	  return _calc_saturated_liquid_output(_cvLmolar)/calc_molar_mass();
+	}
+	else if (key == ispeed_sound) {
+	  return _calc_saturated_liquid_output(_wL);
+	}
+	else if (key == iviscosity) {
+	  return _calc_saturated_liquid_output(_viscosityL);
+	  }
+	else if (key == iconductivity) {
+	  return _calc_saturated_liquid_output(_conductivityL);
+	  }	
+	else {
+	  throw ValueError(format("Invalid key [%d]", static_cast<int>(key)).c_str());
+	  return _HUGE;
         }
     }
     throw ValueError("The saturated liquid state has not been set.");
     return _HUGE;
 }
+
 CoolPropDbl REFPROPMixtureBackend::calc_saturated_vapor_keyed_output(parameters key) {
     if (_rhoVmolar) {
         if (key == iDmolar) {
             return _rhoVmolar;
         }
         else if (key == iDmass) {
-            return static_cast<double>(_rhoVmolar)*calc_saturated_vapor_keyed_output(imolar_mass);
+            return static_cast<double>(_rhoVmolar)*calc_molar_mass();
         }
         else if (key == imolar_mass){
-            double wmm_kg_kmol = 0;
-            WMOLdll(&(mole_fractions_vap[0]), &wmm_kg_kmol); // returns mole mass in kg/kmol
-            return wmm_kg_kmol/1000; // kg/mol
+	  return calc_molar_mass(); // kg/mol
         }
+	else if (key == iHmolar) {
+	  return _calc_saturated_vapor_output(_hVmolar);
+	}
+	else if (key == iHmass) {
+	  return _calc_saturated_vapor_output(_hVmolar)/calc_molar_mass();
+	}
+	else if (key == iSmolar) {
+	  return _calc_saturated_vapor_output(_sVmolar);
+	}
+	else if (key == iSmass) {
+	  return _calc_saturated_vapor_output(_sVmolar)/calc_molar_mass();
+	}
+	else if (key == iUmolar) {
+	  return _calc_saturated_vapor_output(_uVmolar);
+	}
+	else if (key == iUmass) {
+	  return _calc_saturated_vapor_output(_uVmolar)/calc_molar_mass();
+	}
+	else if (key == iCpmolar) {
+	  return _calc_saturated_vapor_output(_cpVmolar);
+	}
+	else if (key == iCpmass) {
+	  return _calc_saturated_vapor_output(_cpVmolar)/calc_molar_mass();
+	  }
+	else if (key == iCvmolar) {
+	  return _calc_saturated_vapor_output(_cvVmolar);
+	}
+	else if (key == iCvmass) {
+	  return _calc_saturated_vapor_output(_cvVmolar)/calc_molar_mass();
+	}
+	else if (key == ispeed_sound) {
+	  return _calc_saturated_vapor_output(_wV);
+	}
+	else if (key == iviscosity) {
+	  return _calc_saturated_liquid_output(_viscosityV);
+	}
+	else if (key == iconductivity) {
+	  return _calc_saturated_liquid_output(_conductivityV);
+	}	
         else {
-            throw ValueError("Invalid key.");
-            return _HUGE;
+	  throw ValueError(format("Invalid key [%d]", static_cast<int>(key)).c_str());
+	  return _HUGE;
         }
     }
     throw ValueError("The saturated vapor state has not been set.");
@@ -2124,6 +2518,100 @@ void REFPROPMixtureBackend::calc_ideal_curve(const std::string &type, std::vecto
         throw ValueError(format("Invalid ideal curve type: %s", type.c_str()));
     }
 };
+
+/* protected */
+void REFPROPMixtureBackend::_RPclearSat( void) {
+  // clearing the cached variables of saturated state..
+    _hLmolar.clear();  // molar enthalpy in saturated (dew and bubble) states
+    _hVmolar.clear();
+    _sLmolar.clear();  // molar entropy in saturated (dew and bubble) states
+    _sVmolar.clear();
+    _uLmolar.clear();  // molar internal energy in saturated (dew and bubble) states
+    _uVmolar.clear();
+    _wL.clear();       // sound speed in saturated (dew and bubble) states
+    _wV.clear();
+    _cvLmolar.clear(); // molar Cv in saturated (dew and bubble) states
+    _cvVmolar.clear();
+    _cpLmolar.clear(); // molar Cp in saturated (dew and bubble) states
+    _cpVmolar.clear();
+    _viscosityL.clear();
+    _viscosityV.clear();
+    _conductivityL.clear();
+    _conductivityL.clear();
+}
+
+CoolPropDbl REFPROPMixtureBackend::_calc_saturated_liquid_output(CachedElement &cachedL) {
+  this->check_loaded_fluid();
+
+  if(!cachedL) { // Check whether the variable is cached..
+                    // If not, update the saturated (liquid) quantities.
+    if (_RPcheckTwophase() && _rhoLmolar) {  
+      double rhoL_mol_L = 0.001*static_cast<double>(_rhoLmolar);
+      double p_kPa, emol, hmol, smol, cvmol, cpmol, w, hjt_dummy;
+      double eta, tcx;
+      int ierr = 0;
+      char herr[255];
+      try {
+	THERMdll(&_T, &rhoL_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt_dummy);
+      }
+      catch(std::logic_error) {
+	_RPclearSat();
+	throw ValueError(format("Error in THERMdll: cancelled during the calculation of liquid state.").c_str());
+      }
+      _hLmolar = hmol;
+      _sLmolar = smol;
+      _uLmolar = emol;
+      _cvLmolar = cvmol;
+      _cpLmolar = cpmol;
+      _wL =w;
+      TRNPRPdll(&_T,&rhoL_mol_L,&(mole_fractions[0]),  // Inputs
+              &eta,&tcx,                           // Outputs
+              &ierr,herr,errormessagelength);      // Error message
+      if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
+      _viscosityL = 1e-6*eta;
+      _conductivityL = tcx;
+    }
+    else return _HUGE;
+  }
+  return static_cast<CoolPropDbl>(cachedL);
+}
+
+CoolPropDbl REFPROPMixtureBackend::_calc_saturated_vapor_output(CachedElement &cachedV) {
+  this->check_loaded_fluid();
+  
+  if(!cachedV)  {// Check whether the variable is cached..
+                    // If not, update the saturated (vapor) quantities.
+    if (_RPcheckTwophase() && _rhoVmolar) {
+      double rhoV_mol_L = 0.001*static_cast<double>(_rhoVmolar);
+      double p_kPa, emol, hmol, smol, cvmol, cpmol, w, hjt_dummy;
+      double eta, tcx;
+      int ierr = 0;
+      char herr[255];
+      try {
+	THERMdll(&_T, &rhoV_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt_dummy);
+      }
+      catch(std::logic_error) {
+	_RPclearSat();
+	throw ValueError(format("Error in THERMdll: during the calculation of vapor state.").c_str());
+      }
+      _hVmolar = hmol;
+      _sVmolar = smol;
+      _uVmolar = emol;
+      _cvVmolar = cvmol;
+      _cpVmolar = cpmol;
+      _wV =w;
+      TRNPRPdll(&_T,&rhoV_mol_L,&(mole_fractions[0]),  // Inputs
+              &eta,&tcx,                           // Outputs
+              &ierr,herr,errormessagelength);      // Error message
+      if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) { throw ValueError(format("%s",herr).c_str()); }
+      _viscosityV = 1e-6*eta;
+      _conductivityV = tcx;
+    }
+    else return _HUGE;
+  }
+  return static_cast<CoolPropDbl>(cachedV);
+}
+
 
 bool force_load_REFPROP() {
     std::string err;
