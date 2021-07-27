@@ -82,5 +82,12 @@ struct REFPROP_departure_function{
  */
 void set_departure_functions(const std::string &string_data);
 
+/** 
+ * @brief Set the interaction parameters from a string format
+ * @param string_data The model parameters, as a JSON-formatted string
+ *
+ */
+void set_interaction_parameters(const std::string &string_data);
+
 } /* namespace CoolProp */
 #endif
