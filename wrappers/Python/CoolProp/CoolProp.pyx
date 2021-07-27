@@ -97,6 +97,7 @@ cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
     void _set_mixture_binary_pair_data "CoolProp::set_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key, const double val) except +
     void _apply_simple_mixing_rule "CoolProp::apply_simple_mixing_rule"(const string &CAS1, const string &CAS2, const string &rule) except +
     void _set_departure_functions "CoolProp::set_departure_functions"(const string &functions) except +
+    void _set_interaction_parameters "CoolProp::set_interaction_parameters"(const string &data) except +
 
 cdef extern from "Backends/PCSAFT/PCSAFTLibrary.h" namespace "CoolProp":
     string _get_mixture_binary_pair_pcsaft "CoolProp::get_mixture_binary_pair_pcsaft"(const string CAS1, const string CAS2, const string key) except +
@@ -324,6 +325,12 @@ cpdef set_departure_functions(functions):
     Specify the departure terms as JSON. Python wrapper of C++ function :cpapi:`CoolProp::set_departure_functions`
     """
     _set_departure_functions(functions)
+
+cpdef set_interaction_parameters(data):
+    """
+    Specify the binary interaction terms as JSON. Python wrapper of C++ function :cpapi:`CoolProp::set_interaction_parameters`
+    """
+    _set_interaction_parameters(data)    
 
 cpdef double saturation_ancillary(string name, string output, int Q, string input, double value):
     """

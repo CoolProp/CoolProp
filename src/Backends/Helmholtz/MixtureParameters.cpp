@@ -78,7 +78,7 @@ public:
         doc.Parse<0>(str.c_str());
         if (doc.HasParseError()){
             std::cout << str << std::endl ;
-            throw ValueError("Unable to parse departure function string");
+            throw ValueError("Unable to parse binary interaction function string");
         }
         load_from_JSON(doc);
     }
@@ -375,6 +375,13 @@ std::string get_reducing_function_name(const std::string &CAS1, const std::strin
         throw ValueError(format("Could not match the binary pair [%s,%s] - for now this is an error.",CAS1.c_str(), CAS2.c_str()));
     }
 }
+
+void set_interaction_parameters(const std::string &string_data)
+{
+    // JSON-encoded string for binary interaction parameters
+    mixturebinarypairlibrary.load_from_string(string_data);
+}
+
 
 /** \brief A container for the departure functions for CoolProp mixtures
  */
