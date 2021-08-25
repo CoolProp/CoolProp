@@ -32,6 +32,7 @@
     X(REFPROP_USE_GERG, "REFPROP_USE_GERG", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the pure-fluid EOS from GERG-2008") \
     X(REFPROP_ERROR_THRESHOLD, "REFPROP_ERROR_THRESHOLD", static_cast<int>(0), "The highest acceptable error code without throwing an exception") \
     X(REFPROP_USE_PENGROBINSON, "REFPROP_USE_PENGROBINSON", false, "If true, rather than using the highly-accurate pure fluid equations of state, use the Peng-Robinson EOS") \
+    X(REFPROP_USE_QMASS, "REFPROP_USE_QMASS", false, "If true, rather than using the mole-based vapor quality, use the mass-based vapor quality") \
     X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0, "The maximum allowed size of the directory that is used to store tabular data") \
     X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false, "If true, when possible, CoolProp will skip checking whether values are inside the property limits") \
 	X(HENRYS_LAW_TO_GENERATE_VLE_GUESSES, "HENRYS_LAW_TO_GENERATE_VLE_GUESSES", false, "If true, when doing water-based mixture dewpoint calculations, use Henry's Law to generate guesses for liquid-phase composition") \
@@ -232,7 +233,7 @@ class Configuration
         
         /// Return a reference to all of the items
         std::map<configuration_keys, ConfigurationItem> & get_items(void){return items;};
-        
+
         /// Set the default values in the configuration
         void set_defaults(void)
         {
