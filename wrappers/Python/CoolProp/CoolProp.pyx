@@ -1098,30 +1098,31 @@ cdef class State:
         """
         Return a string representation of the state
         """
-        units={'T': 'K',
-               'p': 'kPa',
-               'rho': 'kg/m^3',
-               'Q':'kg/kg',
-               'h':'kJ/kg',
-               'u':'kJ/kg',
-               's':'kJ/kg/K',
-               'visc':'Pa-s',
-               'k':'kW/m/K',
-               'cp':'kJ/kg/K',
-               'cp0':'kJ/kg/K',
-               'cv':'kJ/kg/K',
-               'dpdT':'kPa/K',
-               'Tsat':'K',
-               'superheat':'K',
-               'subcooling':'K',
-               'MM':'kg/kmol'
+        units = {
+        'T': 'K',
+        'p': 'kPa',
+        'rho': 'kg/m^3',
+        'Q': 'kg/kg',
+        'h': 'kJ/kg',
+        'u': 'kJ/kg',
+        's': 'kJ/kg/K',
+        'visc': 'Pa-s',
+        'k': 'kW/m/K',
+        'cp': 'kJ/kg/K',
+        'cp0': 'kJ/kg/K',
+        'cv': 'kJ/kg/K',
+        'dpdT': 'kPa/K',
+        'Tsat': 'K',
+        'superheat': 'K',
+        'subcooling': 'K',
+        'MM': 'kg/kmol'
         }
-        s='phase = '+self.phase+'\n'
+        s = 'phase = '+self.phase.decode('ascii')+'\n'
         for k in ['T','p','rho','Q','h','u','s','visc','k','cp','cp0','cv','dpdT','Prandtl','superheat','subcooling','MM']:
             if k in units:
-                s+=k+' = '+str(getattr(self,k))+' '+units[k]+'\n'
+                s += k + ' = '+str(getattr(self,k))+' '+units[k]+'\n'
             else:
-                s+=k+' = '+str(getattr(self,k))+' NO UNITS'+'\n'
+                s += k + ' = '+str(getattr(self,k))+' NO UNITS'+'\n'
         return s.rstrip()
 
     cpdef State copy(self):
