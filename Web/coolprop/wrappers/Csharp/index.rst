@@ -6,7 +6,7 @@ C# Wrapper
 
 .. contents:: :depth: 2
 
-Nuget packages (3-party wrappers)
+NuGet packages (3-party wrappers)
 =================================
 
 SharpFluids
