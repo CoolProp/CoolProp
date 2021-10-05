@@ -6,13 +6,77 @@ C# Wrapper
 
 .. contents:: :depth: 2
 
-NuGet packages (3-party wrappers)
-============
+Nuget packages (3-party wrappers)
+=================================
 
-For the convenience of using CoolProp C# Wrapper, the following NuGet packages are available:
+SharpFluids
+-----------
 
-- `SharpFluids <https://www.nuget.org/packages/SharpFluids/>`_ (`See on GitHub <https://github.com/MadsKirkFoged/SharpFluids>`_)
-- `SharpProp <https://www.nuget.org/packages/SharpProp/>`_ (`See on GitHub <https://github.com/portyanikhin/SharpProp>`_)
+This C# NuGet package uses CoolProp to perform all Fluid Properties lookups. It combines the speed from the low-level lookup with a units of measurement system packed into a easy-to-use system. If you are new to using CoolProp, this is a good place to start.
+
+How to start 
+
+- Create a new C# Console App(.NET Framework) project in Visual studio
+- Right click your new project and press 'Manage NuGet Packages'
+- Go to 'Browse' and search for 'SharpFluids' and press 'Install'
+- Add this to the top of your code :: 
+
+    using SharpFluids;
+    using UnitsNet;
+
+- Add this example code in your main ::
+
+    Fluid Water = new Fluid(FluidList.Water);
+    Water.UpdatePT(Pressure.FromBars(1.013), Temperature.FromDegreesCelsius(13));
+    Console.WriteLine("Density of water at 13°C: " + Water.RHO);
+    Console.ReadLine();
+
+- Press 'F5' or 'Start' to check that it is working
+
+- If you have problems or questions, `Find SharpFluids at Github <https://github.com/MadsKirkFoged/SharpFluids>`_.
+
+SharpProp
+---------
+
+It is a simple, full-featured, lightweight CoolProp wrapper for C#. SharpProp gets published on `NuGet <https://www.nuget.org/packages/SharpProp/>`_.
+
+All CoolProp features are included: thermophysical properties of pure fluids, mixtures and humid air (all in *SI units*).
+Also you can easily convert the results to JSON, add new properties or inputs for lookups, and more.
+
+Examples
+^^^^^^^^
+
+Don't forget to add ``using SharpProp;`` at the top of the code.
+
+To calculate the specific heat of saturated water vapour at *101325 Pa*: ::
+
+    var waterVapour = new Fluid(FluidsList.Water);
+    waterVapour.Update(Input.Pressure(101325), Input.Quality(1));
+    Console.WriteLine(waterVapour.SpecificHeat); // 2079.937085633241
+
+To calculate the dynamic viscosity of propylene glycol aqueous solution with *60 %* mass fraction at *101325 Pa* and *253.15 K*: ::
+
+    var propyleneGlycol = new Fluid(FluidsList.MPG, 0.6);
+    propyleneGlycol.Update(Input.Pressure(101325), Input.Temperature(253.15));
+    Console.WriteLine(propyleneGlycol.DynamicViscosity); // 0.13907391053938847
+
+To calculate the density of ethanol aqueous solution (with ethanol *40 %* mass fraction) at *200 kPa* and *277.15 K*: ::
+
+    var mixture = new Mixture(new List<FluidsList> {FluidsList.Water, FluidsList.Ethanol}, new List<double> {0.6, 0.4});
+    mixture.Update(Input.Pressure(200e3), Input.Temperature(277.15));
+    Console.WriteLine(mixture.Density); // 883.3922771627759
+
+To calculate the wet bulb temperature of humid air at *99 kPa*, *303.15 K* and *50 %* relative humidity: ::
+
+    var humidAir = new HumidAir();
+    humidAir.Update(InputHumidAir.Pressure(99e3), InputHumidAir.Temperature(303.15),
+        InputHumidAir.RelativeHumidity(0.5));
+    // or use:
+    // var humidAir = HumidAir.WithState(InputHumidAir.Pressure(99e3), InputHumidAir.Temperature(303.15),
+    //     InputHumidAir.RelativeHumidity(0.5));
+    Console.WriteLine(humidAir.WetBulbTemperature); // 295.0965785590792
+
+For any questions or more examples, `see SharpProp on GitHub <https://github.com/portyanikhin/SharpProp>`_.
 
 Pre-compiled Binaries
 =====================
