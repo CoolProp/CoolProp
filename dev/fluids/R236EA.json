@@ -84,7 +84,7 @@
         91.75937442449276,
         -17637.12637362363
       ],
-      "reducing_value": 3715.9999999999995,
+      "reducing_value": 3716.16644216198,
       "t": [
         0.643,
         0.695,
@@ -110,7 +110,7 @@
         -158549.1553855615,
         335529.06839972973
       ],
-      "reducing_value": 3715.9999999999995,
+      "reducing_value": 3716.16644216198,
       "t": [
         0.463,
         1.088,
@@ -204,7 +204,7 @@
           "hmolar_units": "J/mol",
           "p": 3420000,
           "p_units": "Pa",
-          "rhomolar": 3716,
+          "rhomolar": 3716.16644216198,
           "rhomolar_units": "mol/m^3",
           "smolar": 246.34416839114922,
           "smolar_units": "J/mol/K"
@@ -432,7 +432,7 @@
       "hmolar_units": "J/mol",
       "p": 3420000.0,
       "p_units": "Pa",
-      "rhomolar": 3716.0,
+      "rhomolar": 3716.16644216198,
       "rhomolar_units": "mol/m^3",
       "smolar": 246.32568384647226,
       "smolar_units": "J/mol/K"
