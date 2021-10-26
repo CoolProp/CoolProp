@@ -30,7 +30,7 @@ const parameter_info parameter_info_list[] = {
     {iUmass,  "Umass",  "IO", "J/kg",    "Mass specific internal energy",         false},
     {iGmass,  "Gmass",  "O",  "J/kg",    "Mass specific Gibbs energy",            false},
     {iHelmholtzmass,  "Helmholtzmass",  "O",  "J/kg",    "Mass specific Helmholtz energy",            false},
-    {iQ,      "Q",      "IO", "mol/mol", "Mass vapor quality",                    false},
+    {iQ,      "Q",      "IO", "mol/mol", "Molar vapor quality",                    false},
     {iDelta,  "Delta",  "IO", "-",       "Reduced density (rho/rhoc)",            false},
     {iTau,    "Tau",    "IO", "-",       "Reciprocal reduced temperature (Tc/T)", false},
     /// Output only
