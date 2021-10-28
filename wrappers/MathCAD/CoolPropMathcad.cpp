@@ -26,7 +26,7 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
           ONLY_ONE_PHASE_SPEC, BAD_REF, NON_TRIVIAL,
           NO_REFPROP, NOT_AVAIL, BAD_INPUT_PAIR, BAD_QUAL,
           TWO_PHASE, NON_TWO_PHASE, T_OUT_OF_RANGE, P_OUT_OF_RANGE,
-          H_OUT_OF_RANGE, S_OUT_OF_RANGE, HA_INPUTS, 
+          H_OUT_OF_RANGE, S_OUT_OF_RANGE, TP_SATURATION, HA_INPUTS, 
           BAD_BINARY_PAIR, BAD_RULE, PAIR_EXISTS, UNKNOWN, 
           NUMBER_OF_ERRORS };                                       // Dummy Code for Error Count
 
@@ -56,6 +56,7 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
         "Pressure out of range",
         "Enthalpy out of range",
         "Entropy out of range",
+        "Temperature-Pressure inputs in 2-phase region; use TQ or PQ",
         "At least one of the inputs must be [T], [R], [W], or [Tdp]",
         "Could not match binary pair",
         "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
@@ -325,11 +326,16 @@ enum EC { MUST_BE_REAL = 1, INSUFFICIENT_MEMORY, INTERRUPTED,       // Mathcad E
                     return MAKELRESULT(T_OUT_OF_RANGE,3);  // First value position
                 else
                     return MAKELRESULT(T_OUT_OF_RANGE,5);  // Second value position
-            } else if (emsg.find("Pressure")!=std::string::npos) {
+            } else if (emsg.find("Saturation pressure")!=std::string::npos) {
                 if (Prop1Name == "P")
-                    return MAKELRESULT(P_OUT_OF_RANGE,3);  // First value position
+                    return MAKELRESULT(TP_SATURATION,3);  // First value position
                 else
-                    return MAKELRESULT(P_OUT_OF_RANGE,5);  // Second value position
+                    return MAKELRESULT(TP_SATURATION,5);  // Second value position
+            } else if (emsg.find("Pressure") != std::string::npos) {
+                if (Prop1Name == "P")
+                    return MAKELRESULT(P_OUT_OF_RANGE, 3);  // First value position
+                else
+                    return MAKELRESULT(P_OUT_OF_RANGE, 5);  // Second value position
             } else if ((emsg.find("Enthalpy")!=std::string::npos) ||
                        (emsg.find("solution because Hmolar")!=std::string::npos)) {
                 if ((Prop1Name == "H") || (Prop1Name == "Hmolar"))
