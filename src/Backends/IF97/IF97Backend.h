@@ -50,8 +50,12 @@ public:
 
     void set_phase() {
         double epsilon = 3.3e-5;                              // IAPWS-IF97 RMS saturated pressure inconsistency
-        if (_T >= IF97::get_Tcrit()) {                        // to the right of the critical point
-            if (_p >= IF97::get_pcrit()) {                    //     above the critical point
+        if ((abs(_T - IF97::Tcrit) < epsilon/10.0) &&         //            RMS temperature inconsistency ~ epsilon/10
+            (abs(_p - IF97::Pcrit) < epsilon)) {              // within epsilon of [Tcrit,Pcrit]
+            _phase = iphase_critical_point;                   //     at critical point
+        }
+        else if (_T >= IF97::Tcrit) {                         // to the right of the critical point
+            if (_p >= IF97::Pcrit) {                          //     above the critical point
                 _phase = iphase_supercritical;
             }
             else {                                            //     below the critical point
@@ -59,15 +63,15 @@ public:
             }
         }
         else {                                                // to the left of the critical point
-            if (_p >= IF97::get_pcrit()) {                    //     above the critical point
+            if (_p >= IF97::Pcrit) {                          //     above the critical point
                 _phase = iphase_supercritical_liquid;
             }
             else {                                            //     below critical point
                 double psat = IF97::psat97(_T);
-                if (_p > psat*(1.0 + epsilon)) {               //         above the saturation curve
+                if (_p > psat*(1.0 + epsilon)) {              //         above the saturation curve
                     _phase = iphase_liquid;
                 }
-                else if (_p < psat*(1.0 - epsilon)) {          //         below the saturation curve
+                else if (_p < psat*(1.0 - epsilon)) {         //         below the saturation curve
                     _phase = iphase_gas;
                 }
                 else                                          //         exactly on saturation curve (within 1e-4 %)
