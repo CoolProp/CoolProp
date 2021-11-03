@@ -48,6 +48,38 @@ public:
         return true;
     };
 
+    void set_phase() {
+        double epsilon = 3.3e-5;                              // IAPWS-IF97 RMS saturated pressure inconsistency
+        if ((abs(_T - IF97::Tcrit) < epsilon/10.0) &&         //            RMS temperature inconsistency ~ epsilon/10
+            (abs(_p - IF97::Pcrit) < epsilon)) {              // within epsilon of [Tcrit,Pcrit]
+            _phase = iphase_critical_point;                   //     at critical point
+        }
+        else if (_T >= IF97::Tcrit) {                         // to the right of the critical point
+            if (_p >= IF97::Pcrit) {                          //     above the critical point
+                _phase = iphase_supercritical;
+            }
+            else {                                            //     below the critical point
+                _phase = iphase_supercritical_gas;
+            }
+        }
+        else {                                                // to the left of the critical point
+            if (_p >= IF97::Pcrit) {                          //     above the critical point
+                _phase = iphase_supercritical_liquid;
+            }
+            else {                                            //     below critical point
+                double psat = IF97::psat97(_T);
+                if (_p > psat*(1.0 + epsilon)) {              //         above the saturation curve
+                    _phase = iphase_liquid;
+                }
+                else if (_p < psat*(1.0 - epsilon)) {         //         below the saturation curve
+                    _phase = iphase_gas;
+                }
+                else                                          //         exactly on saturation curve (within 1e-4 %)
+                    _phase = iphase_twophase;
+            }
+        }
+    };
+
     /// Updating function for IF97 Water
     /**
     In this function we take a pair of thermodynamic states, those defined in the input_pairs
@@ -64,7 +96,15 @@ public:
         clear();  //clear the few cached values we are using
 
         switch(input_pair){
-            case PT_INPUTS: _p = value1; _T = value2; break;
+            case PT_INPUTS: 
+                _p = value1; 
+                _T = value2; 
+                _Q = -1;
+                set_phase();
+                //Two-Phase Check, with PT Inputs: 
+                if (_phase == iphase_twophase)
+                    throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%Lg Pa]", IF97::psat97(_T), _T, _p));
+                break;
             case PQ_INPUTS: 
                 _p = value1; 
                 _Q = value2;
@@ -98,6 +138,10 @@ public:
                     _Q = (H - hLmass)/(hVmass - hLmass);
                     _phase = iphase_twophase;
                 }
+                else {
+                    _Q = -1;
+                    set_phase();
+                };
                 break;
             case PSmolar_INPUTS:
                 // IF97 is mass based so convert smolar input to smass
@@ -108,13 +152,17 @@ public:
                 _p = value1;
                 if (!(_smass)) _smass   = value2;
                 _T = IF97::T_psmass(_p, _smass);
-                if (IF97::BackwardRegion(_p, _smass, IF97_SMASS) == 4){
+                if (IF97::BackwardRegion(_p, _smass, IF97_SMASS) == 4) {
                     S = _smass;
                     sVmass = IF97::svap_p(_p);
                     sLmass = IF97::sliq_p(_p);
-                    _Q = (S - sLmass)/(sVmass - sLmass);
+                    _Q = (S - sLmass) / (sVmass - sLmass);
                     _phase = iphase_twophase;
                 }
+                else {
+                    _Q = -1;
+                    set_phase();
+                };
                 break;
             case HmolarSmolar_INPUTS:
                 // IF97 is mass based so convert smolar input to smass
@@ -134,6 +182,10 @@ public:
                     _Q = (H - hLmass)/(hVmass - hLmass);
                     _phase = iphase_twophase;
                 }
+                else {
+                    _Q = -1;
+                    set_phase();
+                };
                 break;
             default:
                 throw ValueError("This pair of inputs is not yet supported");
@@ -225,7 +277,7 @@ public:
                 case iviscosity: return IF97::visc_Tp(_T,_p); break;     ///< Viscosity function
                 case iconductivity: return IF97::tcond_Tp(_T,_p); break; ///< Thermal conductivity
                 case isurface_tension:
-                        throw NotImplementedError(format("Viscosity only valid along saturation curve")); break;
+                    throw NotImplementedError(format("Surface Tension is only valid within the two phase region; Try PQ or QT inputs")); break;
                 case iPrandtl: return IF97::prandtl_Tp(_T,_p); break;    ///< Prandtl number
                 default: throw NotImplementedError(format("Output variable not implemented in IF97 Backend"));
                 };
@@ -276,6 +328,10 @@ public:
     /// Return the speed of sound in m/s
     double speed_sound(void){ return calc_speed_sound(); };
     double calc_speed_sound(void) { return calc_Flash(ispeed_sound); };
+
+    // Return the phase
+    phases calc_phase(void) { return _phase; };
+
     //
     // ************************************************************************* //
     //                         Trivial Functions                                 //
