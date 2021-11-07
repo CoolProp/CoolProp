@@ -38,43 +38,95 @@ How to start
 SharpProp
 ---------
 
-It is a simple, full-featured, lightweight CoolProp wrapper for C#. SharpProp gets published on `NuGet <https://www.nuget.org/packages/SharpProp/>`_.
+It is a simple, full-featured, lightweight, cross-platform CoolProp wrapper for C#. SharpProp gets published on `NuGet <https://www.nuget.org/packages/SharpProp/>`_.
 
-All CoolProp features are included: thermophysical properties of pure fluids, mixtures and humid air (all in *SI units*).
-Also you can easily convert the results to JSON, add new properties or inputs for lookups, and more.
+All CoolProp features are included: thermophysical properties of pure fluids, mixtures and humid air.
+
+Calculations of thermophysical properties are *unit safe* (thanks to `UnitsNet <https://github.com/angularsen/UnitsNet>`_). This allows you to avoid errors associated with incorrect dimensions of quantities, and will help you save a lot of time on their search and elimination. In addition, you will be able to convert all values to many other dimensions without the slightest difficulty.
+
+Also you can easily convert the results to a JSON string, add new properties or inputs for lookups, and more.
 
 Examples
 ^^^^^^^^
 
-Don't forget to add ``using SharpProp;`` at the top of the code.
+To calculate the specific heat of saturated water vapor at *1 atm*: ::
 
-To calculate the specific heat of saturated water vapour at *101325 Pa*: ::
+    using System;
+    using SharpProp;
+    using UnitsNet.NumberExtensions.NumberToPressure;
+    using UnitsNet.NumberExtensions.NumberToRatio;
+    using UnitsNet.Units;
 
+::
+    
     var waterVapour = new Fluid(FluidsList.Water);
-    waterVapour.Update(Input.Pressure(101325), Input.Quality(1));
-    Console.WriteLine(waterVapour.SpecificHeat); // 2079.937085633241
+    waterVapour.Update(Input.Pressure((1).Atmospheres()), Input.Quality((100).Percent()));
+    Console.WriteLine(waterVapour.SpecificHeat.JoulesPerKilogramKelvin); // 2079.937085633241
+    Console.WriteLine(waterVapour.SpecificHeat);                         // 2.08 kJ/kg.K
+    Console.WriteLine(waterVapour.SpecificHeat
+        .ToUnit(SpecificEntropyUnit.CaloriePerGramKelvin));              // 0.5 cal/g.K
 
-To calculate the dynamic viscosity of propylene glycol aqueous solution with *60 %* mass fraction at *101325 Pa* and *253.15 K*: ::
+To calculate the dynamic viscosity of propylene glycol aqueous solution with *60 %* mass fraction at *100 kPa* and *-20 °C*: ::
 
-    var propyleneGlycol = new Fluid(FluidsList.MPG, 0.6);
-    propyleneGlycol.Update(Input.Pressure(101325), Input.Temperature(253.15));
-    Console.WriteLine(propyleneGlycol.DynamicViscosity); // 0.13907391053938847
+    using System;
+    using SharpProp;
+    using UnitsNet.NumberExtensions.NumberToPressure;
+    using UnitsNet.NumberExtensions.NumberToRatio;
+    using UnitsNet.NumberExtensions.NumberToTemperature;
+    using UnitsNet.Units;
+
+::
+
+    var propyleneGlycol = new Fluid(FluidsList.MPG, (60).Percent());
+    propyleneGlycol.Update(Input.Pressure((100).Kilopascals()), Input.Temperature((-20).DegreesCelsius()));
+    Console.WriteLine(propyleneGlycol.DynamicViscosity?.PascalSeconds); // 0.13907391053938878
+    Console.WriteLine(propyleneGlycol.DynamicViscosity);                // 139.07 mPa·s
+    Console.WriteLine(propyleneGlycol.DynamicViscosity?
+        .ToUnit(DynamicViscosityUnit.Poise));                           // 1.39 P
 
 To calculate the density of ethanol aqueous solution (with ethanol *40 %* mass fraction) at *200 kPa* and *277.15 K*: ::
 
-    var mixture = new Mixture(new List<FluidsList> {FluidsList.Water, FluidsList.Ethanol}, new List<double> {0.6, 0.4});
-    mixture.Update(Input.Pressure(200e3), Input.Temperature(277.15));
-    Console.WriteLine(mixture.Density); // 883.3922771627759
+    using System;
+    using System.Collections.Generic;
+    using SharpProp;
+    using UnitsNet;
+    using UnitsNet.NumberExtensions.NumberToPressure;
+    using UnitsNet.NumberExtensions.NumberToRatio;
+    using UnitsNet.NumberExtensions.NumberToTemperature;
+    using UnitsNet.Units;
 
-To calculate the wet bulb temperature of humid air at *99 kPa*, *303.15 K* and *50 %* relative humidity: ::
+::
+
+    var mixture = new Mixture(new List<FluidsList> {FluidsList.Water, FluidsList.Ethanol}, 
+        new List<Ratio> {(60).Percent(), (40).Percent()});
+    mixture.Update(Input.Pressure((200).Kilopascals()), Input.Temperature((277.15).Kelvins()));
+    Console.WriteLine(mixture.Density.KilogramsPerCubicMeter);               // 883.3922771627759
+    Console.WriteLine(mixture.Density);                                      // 883.39 kg/m3
+    Console.WriteLine(mixture.Density.ToUnit(DensityUnit.GramPerDeciliter)); // 88.34 g/dl
+
+
+To calculate the wet bulb temperature of humid air at *99 kPa*, *30 °C* and *50 %* relative humidity: ::
+
+    using System;
+    using SharpProp;
+    using UnitsNet.NumberExtensions.NumberToPressure;
+    using UnitsNet.NumberExtensions.NumberToRelativeHumidity;
+    using UnitsNet.NumberExtensions.NumberToTemperature;
+    using UnitsNet.Units;
+
+::
 
     var humidAir = new HumidAir();
-    humidAir.Update(InputHumidAir.Pressure(99e3), InputHumidAir.Temperature(303.15),
-        InputHumidAir.RelativeHumidity(0.5));
+    humidAir.Update(InputHumidAir.Pressure((99).Kilopascals()), 
+        InputHumidAir.Temperature((30).DegreesCelsius()), InputHumidAir.RelativeHumidity((50).Percent()));
     // or use:
-    // var humidAir = HumidAir.WithState(InputHumidAir.Pressure(99e3), InputHumidAir.Temperature(303.15),
-    //     InputHumidAir.RelativeHumidity(0.5));
-    Console.WriteLine(humidAir.WetBulbTemperature); // 295.0965785590792
+    // var humidAir1 = 
+    //     HumidAir.WithState(InputHumidAir.Pressure((99).Kilopascals()), 
+    //         InputHumidAir.Temperature((30).DegreesCelsius()), InputHumidAir.RelativeHumidity((50).Percent()));
+    Console.WriteLine(humidAir.WetBulbTemperature.Kelvins); // 295.0965785590792
+    Console.WriteLine(humidAir.WetBulbTemperature);         // 21.95 °C
+    Console.WriteLine(humidAir.WetBulbTemperature
+        .ToUnit(TemperatureUnit.DegreeFahrenheit));         // 71.5 °F
 
 For any questions or more examples, `see SharpProp on GitHub <https://github.com/portyanikhin/SharpProp>`_.
 
