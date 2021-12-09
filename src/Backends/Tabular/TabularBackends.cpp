@@ -356,8 +356,10 @@ void CoolProp::TabularBackend::write_tables(){
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+    SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
     write_table(single_phase_logph, path_to_tables, "single_phase_logph");
     write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(single_phase_logdu, path_to_tables, "single_phase_logdu");
     write_table(pure_saturation, path_to_tables, "pure_saturation");
     write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
@@ -855,6 +857,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+    SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
 
     switch (input_pair)
     {

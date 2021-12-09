@@ -1042,8 +1042,10 @@ class TabularBackend : public AbstractState
             PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
             single_phase_logph.pack();
             single_phase_logpT.pack();
+            single_phase_logdu.pack();
             pure_saturation.pack();
             phase_envelope.pack();
         }
