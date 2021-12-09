@@ -719,6 +719,53 @@ class LogPTTable : public SinglePhaseGriddedTableData
             this->AS = temp.AS; // Reconnect the AbstractState pointer
         };
 };
+/// This class holds the single-phase data for a log(rho)-u gridded table
+class LogDUTable : public SinglePhaseGriddedTableData
+{
+    public:
+        LogDUTable(){
+            xkey = iUmolar; ykey = iDmolar; logy = true; logx = false; xmin = _HUGE; ymin = _HUGE; xmax=_HUGE; ymax=_HUGE;
+        };
+        void set_limits(){
+            if (this->AS.get() == NULL){
+                throw ValueError("AS is not yet set");
+            }
+            CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
+            // Minimum internal energery is the saturated liquid internal energery
+            AS->update(QT_INPUTS, 0, Tmin);
+            xmin = AS->umolar(); ymin = 1e-10;
+
+            // Check both the internal energery at the Tmax isotherm to see whether to use low or high pressure
+            AS->update(DmolarT_INPUTS, 1e-10, 1.499*AS->Tmax());
+            CoolPropDbl xmax1 = AS->umolar();
+            AS->update(PT_INPUTS, AS->pmax(), 1.499*AS->Tmax());
+            CoolPropDbl xmax2 = AS->umolar();
+            xmax = std::max(xmax1, xmax2);
+
+            ymax = AS->rhomolar();
+        }
+        void deserialize(msgpack::object &deserialized){
+            LogDUTable temp;
+            deserialized.convert(temp);
+            temp.unpack();
+            if (Nx != temp.Nx || Ny != temp.Ny)
+            {
+                throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree",temp.Nx, temp.Ny, Nx, Ny));
+            }
+            else if (revision > temp.revision)
+            {
+                throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
+            }
+            else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10) && (std::abs(temp.xmin - xmin)/xmin > 1e-6 || std::abs(temp.xmax - xmax)/xmax > 1e-6)){
+                throw ValueError(format("Current limits for x [%g,%g] do not agree with loaded limits [%g,%g]", xmin, xmax, temp.xmin, temp.xmax));
+            }
+            else if ((std::abs(ymin) > 1e-10 && std::abs(ymax) > 1e-10) && (std::abs(temp.ymin - ymin)/ymin > 1e-6 || std::abs(temp.ymax - ymax)/ymax > 1e-6)){
+                throw ValueError(format("Current limits for y [%g,%g] do not agree with loaded limits [%g,%g]", ymin, ymax, temp.ymin, temp.ymax));
+            }
+            std::swap(*this, temp); // Swap
+            this->AS = temp.AS; // Reconnect the AbstractState pointer
+        };
+};
 
 /// This structure holds the coefficients for one cell, the coefficients are stored in matrices
 /// and can be obtained by the get() function.
