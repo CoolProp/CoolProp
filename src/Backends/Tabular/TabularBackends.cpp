@@ -1217,6 +1217,7 @@ void CoolProp::TabularDataSet::write_tables(const std::string &path_to_tables)
     make_dirs(path_to_tables);
     write_table(single_phase_logph, path_to_tables, "single_phase_logph");
     write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(single_phase_logdu, path_to_tables, "single_phase_logdu");
     write_table(pure_saturation, path_to_tables, "pure_saturation");
     write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
@@ -1225,11 +1226,14 @@ void CoolProp::TabularDataSet::load_tables(const std::string &path_to_tables, sh
 {
     single_phase_logph.AS = AS;
     single_phase_logpT.AS = AS;
+    single_phase_logdu.AS = AS;
     pure_saturation.AS = AS;
     single_phase_logph.set_limits();
     single_phase_logpT.set_limits();
+    single_phase_logdu.set_limits();
     load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
     load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
+    load_table(single_phase_logdu, path_to_tables, "single_phase_logdu.bin.z");
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
     tables_loaded = true;
@@ -1254,6 +1258,7 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState> 
     }
     single_phase_logph.build(AS);
     single_phase_logpT.build(AS);
+    single_phase_logdu.build(AS);
     tables_loaded = true;
 }
 

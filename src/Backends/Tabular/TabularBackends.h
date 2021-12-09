@@ -836,6 +836,7 @@ public:
     bool tables_loaded;
     LogPHTable single_phase_logph;
     LogPTTable single_phase_logpT;
+    LogDUTable single_phase_logdu;
     PureFluidSaturationTableData pure_saturation;
     PackablePhaseEnvelopeData phase_envelope;
     std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;

@@ -26,6 +26,10 @@ int main()
     single_phase_logdu.build(AS);
 
     std::cout << single_phase_logdu.dTdx[100][100] << std::endl;
+
+    TabularDataSet data_set;
+    data_set.build_tables(AS);
+
     std::cout << "Done" << std::endl;
 
     // All done return
