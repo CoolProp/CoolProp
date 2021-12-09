@@ -839,7 +839,7 @@ public:
     LogDUTable single_phase_logdu;
     PureFluidSaturationTableData pure_saturation;
     PackablePhaseEnvelopeData phase_envelope;
-    std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;
+    std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT, coeffs_du;
 
     TabularDataSet(){ tables_loaded = false; }
     /// Write the tables to files on the computer
