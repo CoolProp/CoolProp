@@ -193,6 +193,12 @@ class PureFluidSaturationTableData{
                 double Tmax = this->TV[TV.size()-1], Tmin = this->TV[0];
                 if (mainval > Tmax || mainval < Tmin){return false;}
             }
+            //TODO: Check this
+            else if (main == iDmolar){
+                // If Dmolar is outside the range (Dmin, Dcrit), considered to not be inside
+                double Dmax = this->rhomolarV[rhomolarV.size()-1], Dmin = this->rhomolarV[0];
+                if (mainval > Dmax || mainval < Dmin){return false;}
+            }
             else{
                 throw ValueError("invalid input for other in is_inside");
             }
@@ -210,8 +216,13 @@ class PureFluidSaturationTableData{
                 bisect_vector(TV, mainval, iV);
                 bisect_vector(TL, mainval, iL);
             }
+            // TODO: Check this
+            else if (main == iDmolar){
+				bisect_vector(rhomolarV, mainval, iV);
+				bisect_vector(rhomolarL, mainval, iL);
+              }
             else{
-                throw ValueError(format("For now, main input in is_inside must be T or p"));
+                throw ValueError(format("For now, main input in is_inside must be T, p or Dmolar"));
             }
 
             iVplus = std::min(iV+1, N-1);
@@ -231,6 +242,12 @@ class PureFluidSaturationTableData{
                     yV = exp(CubicInterp(TV, logpV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval));
                     yL = exp(CubicInterp(TL, logpL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval));
                 }
+                // TODO: Check this
+                else if (main == iDmolar){
+                    // Calculate pressure
+                    yV = exp(CubicInterp(rhomolarV, logpV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval));
+                    yL = exp(CubicInterp(rhomolarL, logpL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval));
+                }
                 return true;
             }
             // Find the bounding values for the other variable
@@ -248,6 +265,11 @@ class PureFluidSaturationTableData{
             else if (main == iT){
                 yV = CubicInterp(TV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
                 yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+            }
+            // TODO: Check this
+            else if (main == iDmolar){
+                yV = CubicInterp(rhomolarV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
+                yL = CubicInterp(rhomolarL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
             }
 
             if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){
