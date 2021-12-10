@@ -1025,6 +1025,19 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         }
         break;
     }
+    case DmolarUmolar_INPUTS:{
+        _rhomolar = val1; _umolar = val2;
+        if (!single_phase_logdu.native_inputs_are_in_range(_umolar, _rhomolar)){
+            // Use the AbstractState instance
+            using_single_phase_table = false;
+            if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+            throw ValueError(format("inputs are not in range, rhomolar=%Lg, umolar=%Lg", static_cast<CoolPropDbl>(_rhomolar), static_cast<CoolPropDbl>(_umolar)));
+        }
+        else{
+
+        }
+    	break;
+    }
     case PUmolar_INPUTS:
     case PSmolar_INPUTS:
     case DmolarP_INPUTS:{
