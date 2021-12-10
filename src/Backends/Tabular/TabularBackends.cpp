@@ -1034,6 +1034,24 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             throw ValueError(format("inputs are not in range, rhomolar=%Lg, umolar=%Lg", static_cast<CoolPropDbl>(_rhomolar), static_cast<CoolPropDbl>(_umolar)));
         }
         else{
+        	using_single_phase_table = true; // Use the table !
+            std::size_t iL = std::numeric_limits<std::size_t>::max(),
+                        iV = std::numeric_limits<std::size_t>::max(),
+                        iclosest = 0;
+            CoolPropDbl uL = 0, uV = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // If phase is imposed, use it, but only if it's single phase:
+            //   - Imposed two phase still needs to determine saturation limits by calling pure_saturation.is_inside().
+            //   - There's no speed increase to be gained by imposing two phase.
+            if ((imposed_phase_index == iphase_not_imposed) || (imposed_phase_index == iphase_twophase)) {
+                if (is_mixture){
+                    throw NotImplementedError("Phase detection is not implemented for mixture.");
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iDmolar, _rhomolar, iUmolar, _umolar, iL, iV, uL, uV);
+                }
+            }
 
         }
     	break;
