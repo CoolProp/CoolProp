@@ -73,8 +73,10 @@ class BicubicBackend : public TabularBackend
                 check_tables();
                 SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
                 SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+                SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
                 dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
                 dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
+                dataset->build_coeffs(single_phase_logdu, dataset->coeffs_du);
                 is_mixture = (this->AS->get_mole_fractions().size() > 1);
             }
 		};
@@ -87,8 +89,10 @@ class BicubicBackend : public TabularBackend
             // function so that the set_mole_fractions function can be called
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
             dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
             dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
+            dataset->build_coeffs(single_phase_logdu, dataset->coeffs_du);
         };
         std::string backend_name(void){return get_backend_string(BICUBIC_BACKEND);}
         
