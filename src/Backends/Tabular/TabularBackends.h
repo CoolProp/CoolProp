@@ -909,7 +909,7 @@ class TabularBackend : public AbstractState
     protected:
         phases imposed_phase_index;
         bool tables_loaded, using_single_phase_table, is_mixture;
-        enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
+        enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE, SELECTED_DU_TABLE};
         selected_table_options selected_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;

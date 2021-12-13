@@ -1052,6 +1052,17 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     is_two_phase = pure_saturation.is_inside(iDmolar, _rhomolar, iUmolar, _umolar, iL, iV, uL, uV);
                 }
             }
+            // Phase determined or imposed, now interpolate results
+            if (is_two_phase){
+                throw NotImplementedError("The two phase region is not implemented.");
+            }
+            else{
+                selected_table = SELECTED_DU_TABLE;
+                // Find and cache the indices i, j
+                find_native_nearest_good_indices(single_phase_logdu, dataset->coeffs_du, _umolar, _rhomolar, cached_single_phase_i, cached_single_phase_j);
+                // Recalculate the phase
+                //recalculate_singlephase_phase();
+            }
 
         }
     	break;
