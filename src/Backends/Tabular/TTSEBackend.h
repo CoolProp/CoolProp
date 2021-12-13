@@ -34,6 +34,11 @@ class TTSEBackend : public TabularBackend
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase(single_phase_logpT, output, _T, _p, i, j);
         }
+        double evaluate_single_phase_du(parameters output, std::size_t i, std::size_t j){
+        	// TODO: Implement this.
+        	throw NotImplementedError("Variable evaluation is not implemented for density and internal energy inputs.");
+        	return 0;
+        }
         double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             return evaluate_single_phase_transport(single_phase_logph, output, _hmolar, _p, i, j);

@@ -400,7 +400,13 @@ CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(paramet
 CoolPropDbl CoolProp::TabularBackend::calc_p(void){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     if (using_single_phase_table){
-        return _p;
+        switch (selected_table){
+    	case SELECTED_PH_TABLE: return _p;
+    	case SELECTED_PT_TABLE: return _p;
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iP, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
     }
     else{
         if (is_mixture){
@@ -418,8 +424,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return _T;
-        // TODO: Implement this.
-        case SELECTED_DU_TABLE: throw NotImplementedError("Output T not implemented for density and internal energy inputs.");
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iT, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -466,8 +471,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return _hmolar;
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iHmolar, cached_single_phase_i, cached_single_phase_j);
-        // TODO: Implement this.
-        case SELECTED_DU_TABLE: throw NotImplementedError("Output hmolar not implemented for density and internal energy inputs.");
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iHmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -488,8 +492,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_smolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iSmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iSmolar, cached_single_phase_i, cached_single_phase_j);
-        // TODO: Implement this.
-        case SELECTED_DU_TABLE: throw NotImplementedError("Output smolar not implemented for density and internal energy inputs.");
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iSmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy

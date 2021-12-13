@@ -1010,6 +1010,7 @@ class TabularBackend : public AbstractState
 
         virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_du(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
@@ -1110,6 +1111,9 @@ class TabularBackend : public AbstractState
 
 		/// If you need all three values (drho_dh__p, drho_dp__h and rho_spline), you should calculate drho_dp__h first to avoid duplicate calculations.
 		CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
+
+	    /// Return the pressure in Pa
+		double p(void){ return calc_p(); };
 
         void check_tables(){
             if (!tables_loaded){
