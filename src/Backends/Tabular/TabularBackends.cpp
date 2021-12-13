@@ -418,6 +418,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return _T;
+        // TODO: Implement this.
+        case SELECTED_DU_TABLE: throw NotImplementedError("Output T not implemented for density and internal energy inputs.");
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -443,6 +445,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iDmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return _rhomolar;
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -463,6 +466,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return _hmolar;
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iHmolar, cached_single_phase_i, cached_single_phase_j);
+        // TODO: Implement this.
+        case SELECTED_DU_TABLE: throw NotImplementedError("Output hmolar not implemented for density and internal energy inputs.");
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -483,6 +488,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_smolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iSmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iSmolar, cached_single_phase_i, cached_single_phase_j);
+        // TODO: Implement this.
+        case SELECTED_DU_TABLE: throw NotImplementedError("Output smolar not implemented for density and internal energy inputs.");
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -503,6 +510,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_umolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iUmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iUmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return _umolar;
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -557,6 +565,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
+        // TODO: Implement this.
+        case SELECTED_DU_TABLE: throw NotImplementedError("Output viscosity not implemented for density and internal energy inputs.");
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -577,6 +587,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
+        // TODO: Implement this.
+        case SELECTED_DU_TABLE: throw NotImplementedError("Output conductivity not implemented for density and internal energy inputs.");
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -634,6 +646,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, pa
             dConstant_dy = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 0, 1);
             break;
         }
+        // TODO: Implement this.
+        case SELECTED_DU_TABLE: throw NotImplementedError("Output first partial derivative not implemented for density and internal energy inputs.");
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         double val = (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
