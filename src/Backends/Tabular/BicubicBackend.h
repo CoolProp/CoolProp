@@ -167,6 +167,9 @@ class BicubicBackend : public TabularBackend
 		double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
             return evaluate_single_phase_transport(dataset->single_phase_logpT, output, _T, _p, i, j);
         };
+		double evaluate_single_phase_du_transport(parameters output, std::size_t i, std::size_t j){
+            return evaluate_single_phase_transport(dataset->single_phase_logdu, output, _umolar, _rhomolar, i, j);
+        };
 
         /**
          * @brief Use the table to solve for the x variable of the table given the y coordinate of the table and a variable that can yield a unique solution for x

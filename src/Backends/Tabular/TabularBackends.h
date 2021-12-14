@@ -1013,6 +1013,7 @@ class TabularBackend : public AbstractState
         virtual double evaluate_single_phase_du(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_du_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
         virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
 

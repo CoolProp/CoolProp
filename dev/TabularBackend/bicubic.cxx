@@ -43,6 +43,10 @@ int main()
 
     std::cout << "p = " << Bicubic->p() << ", T = " << Bicubic->T() << std::endl;
     std::cout << "hmolar = " << Bicubic->hmolar() << ", smolar = " << Bicubic->smolar() << std::endl;
+    std::cout << "viscosity = " << Bicubic->viscosity() << ", conductivity = " << Bicubic->conductivity() << std::endl;
+
+    Bicubic->update(DmassUmass_INPUTS, 2.0 * Bicubic->rhomass(), Bicubic->umass());
+
 
     /*
 
