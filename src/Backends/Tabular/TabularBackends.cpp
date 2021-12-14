@@ -647,7 +647,15 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, pa
             break;
         }
         // TODO: Implement this.
-        case SELECTED_DU_TABLE: throw NotImplementedError("Output first partial derivative not implemented for density and internal energy inputs.");
+        case SELECTED_DU_TABLE: {
+            dOf_dx = evaluate_single_phase_du_derivative(Of, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf_dy = evaluate_single_phase_du_derivative(Of, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt_dx = evaluate_single_phase_du_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt_dy = evaluate_single_phase_du_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dConstant_dx = evaluate_single_phase_du_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant_dy = evaluate_single_phase_du_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            break;
+        }
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         double val = (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);

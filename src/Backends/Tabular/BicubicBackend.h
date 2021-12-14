@@ -116,6 +116,9 @@ class BicubicBackend : public TabularBackend
         double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
             return evaluate_single_phase_derivative(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j, Nx, Ny);
         };
+        double evaluate_single_phase_du_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            return evaluate_single_phase_derivative(dataset->single_phase_logdu, dataset->coeffs_du, output, _umolar, _rhomolar, i, j, Nx, Ny);
+        };
         
         /**
          * @brief 

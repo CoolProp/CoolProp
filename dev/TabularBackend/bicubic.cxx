@@ -44,6 +44,9 @@ int main()
     std::cout << "p = " << Bicubic->p() << ", T = " << Bicubic->T() << std::endl;
     std::cout << "hmolar = " << Bicubic->hmolar() << ", smolar = " << Bicubic->smolar() << std::endl;
     std::cout << "viscosity = " << Bicubic->viscosity() << ", conductivity = " << Bicubic->conductivity() << std::endl;
+    std::cout << "dp/dT|rhomolar=const = " << Bicubic->first_partial_deriv(iP, iT, iDmolar) << std::endl;
+    std::cout << "cpmolar = " << Bicubic->cpmolar() << ", cvmolar = " << Bicubic->cvmolar() << std::endl;
+    std::cout << "speed_of_sound = " << Bicubic->speed_sound() << std::endl;
 
     Bicubic->update(DmassUmass_INPUTS, 2.0 * Bicubic->rhomass(), Bicubic->umass());
 

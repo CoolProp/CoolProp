@@ -92,6 +92,11 @@ class TTSEBackend : public TabularBackend
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_derivative(single_phase_logpT, output, _T, _p, i, j, Nx, Ny);
         };
+        double evaluate_single_phase_du_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+        	// TODO: Implement this.
+        	throw NotImplementedError("Derivative evaluation is not implemented for density and internal energy inputs.");
+        	return 0;
+        };
 };
 
 } // namespace CoolProp
