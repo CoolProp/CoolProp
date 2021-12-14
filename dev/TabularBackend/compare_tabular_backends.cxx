@@ -38,12 +38,13 @@ void print_parameter(std::string parameter, double heos, double bicubic, double 
 	rel_error_ttse = relative_error(ttse, heos);
 
 
-    std::cout << std::setw(LENGTH_PARAMETER) << std::left << parameter
-    		  << std::setw(LENGTH_HEOS) << std::left << heos
-			  << std::setw(LENGTH_BICUBIC) << std::left << bicubic
-			  << std::setw(LENGTH_TTSE) << std::left << ttse
-			  << std::setw(LENGTH_REL_ERROR_BICUBIC) << std::left << rel_error_bicubic
-			  << std::setw(LENGTH_REL_ERROR_TTSE) << std::left << rel_error_ttse
+    std::cout << std::left
+    		  << std::setw(LENGTH_PARAMETER) << parameter
+    		  << std::setw(LENGTH_HEOS) << heos
+			  << std::setw(LENGTH_BICUBIC) << bicubic
+			  << std::setw(LENGTH_TTSE) << ttse
+			  << std::setw(LENGTH_REL_ERROR_BICUBIC) << rel_error_bicubic
+			  << std::setw(LENGTH_REL_ERROR_TTSE) << rel_error_ttse
 			  << std::endl;
 
 };
@@ -60,12 +61,13 @@ void print_parameter(std::string parameter, int heos, int bicubic, int ttse){
 	}
 
 
-    std::cout << std::setw(LENGTH_PARAMETER) << std::left << parameter
-    		  << std::setw(LENGTH_HEOS) << std::left << heos
-			  << std::setw(LENGTH_BICUBIC) << std::left << bicubic
-			  << std::setw(LENGTH_TTSE) << std::left << ttse
-			  << std::setw(LENGTH_REL_ERROR_BICUBIC) << std::left << rel_error_bicubic
-			  << std::setw(LENGTH_REL_ERROR_TTSE) << std::left << rel_error_ttse
+    std::cout << std::left << std::boolalpha
+    		  << std::setw(LENGTH_PARAMETER) << parameter
+    		  << std::setw(LENGTH_HEOS) << heos
+			  << std::setw(LENGTH_BICUBIC) << bicubic
+			  << std::setw(LENGTH_TTSE) << ttse
+			  << std::setw(LENGTH_REL_ERROR_BICUBIC) << rel_error_bicubic
+			  << std::setw(LENGTH_REL_ERROR_TTSE) << rel_error_ttse
 			  << std::endl;
 
 };
@@ -87,12 +89,13 @@ int main()
     TTSE->update(DmolarUmolar_INPUTS, rhomolar, umolar);
 
     std::cout << std::endl;
-    std::cout << std::setw(LENGTH_PARAMETER) << std::left << "Parameter"
-    		  << std::setw(LENGTH_HEOS) << std::left << "HEOS"
-    		  << std::setw(LENGTH_BICUBIC) << std::left << "Bicubic"
-			  << std::setw(LENGTH_TTSE) << std::left << "TTSE"
-    		  << std::setw(LENGTH_REL_ERROR_BICUBIC) << std::left << "rel. error Bicubic"
-			  << std::setw(LENGTH_REL_ERROR_TTSE) << std::left << "rel. error TTSE"
+    std::cout << std::left
+	          << std::setw(LENGTH_PARAMETER) << "Parameter"
+    		  << std::setw(LENGTH_HEOS) << "HEOS"
+    		  << std::setw(LENGTH_BICUBIC) << "Bicubic"
+			  << std::setw(LENGTH_TTSE) << "TTSE"
+    		  << std::setw(LENGTH_REL_ERROR_BICUBIC) << "rel. error Bicubic"
+			  << std::setw(LENGTH_REL_ERROR_TTSE) << "rel. error TTSE"
 			  << std::endl;
     std::cout << std::string(LINE_LENGTH, '-') << std::endl;
 
