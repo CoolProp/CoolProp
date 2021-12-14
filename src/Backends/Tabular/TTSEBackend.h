@@ -35,9 +35,8 @@ class TTSEBackend : public TabularBackend
             return evaluate_single_phase(single_phase_logpT, output, _T, _p, i, j);
         }
         double evaluate_single_phase_du(parameters output, std::size_t i, std::size_t j){
-        	// TODO: Implement this.
-        	throw NotImplementedError("Variable evaluation is not implemented for density and internal energy inputs.");
-        	return 0;
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
+            return evaluate_single_phase(single_phase_logdu, output, _umolar, _rhomolar, i, j);
         }
         double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
@@ -48,9 +47,8 @@ class TTSEBackend : public TabularBackend
             return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
         }
         double evaluate_single_phase_du_transport(parameters output, std::size_t i, std::size_t j){
-        	// TODO: Implement this.
-        	throw NotImplementedError("Transport variable evaluation is not implemented for density and internal energy inputs.");
-        	return 0;
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
+            return evaluate_single_phase_transport(single_phase_logdu, output, _umolar, _rhomolar, i, j);
         }
         void invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j);
         void invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double y, double x, std::size_t i, std::size_t j);
@@ -93,9 +91,8 @@ class TTSEBackend : public TabularBackend
             return evaluate_single_phase_derivative(single_phase_logpT, output, _T, _p, i, j, Nx, Ny);
         };
         double evaluate_single_phase_du_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
-        	// TODO: Implement this.
-        	throw NotImplementedError("Derivative evaluation is not implemented for density and internal energy inputs.");
-        	return 0;
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
+            return evaluate_single_phase_derivative(single_phase_logdu, output, _umolar, _rhomolar, i, j, Nx, Ny);
         };
 };
 

@@ -947,6 +947,10 @@ class TabularBackend : public AbstractState
 					z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
 					d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
 					break;
+				case iP:
+					z = &table.p; dzdx = &table.dpdx; dzdy = &table.dpdy;
+					d2zdxdy = &table.d2pdxdy; d2zdx2 = &table.d2pdx2; d2zdy2 = &table.d2pdy2;
+					break;
 				case iDmolar:
 					z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
 					d2zdxdy = &table.d2rhomolardxdy; d2zdx2 = &table.d2rhomolardx2; d2zdy2 = &table.d2rhomolardy2;

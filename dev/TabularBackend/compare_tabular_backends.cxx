@@ -78,12 +78,13 @@ int main()
     std::string fluid = "helium";
 
     // Low level interface
-    shared_ptr<AbstractState> Bicubic(AbstractState::factory("BICUBIC&HEOS",fluid));
     shared_ptr<AbstractState> HEOS(AbstractState::factory("HEOS",fluid));
+    shared_ptr<AbstractState> Bicubic(AbstractState::factory("BICUBIC&HEOS",fluid));
+    shared_ptr<AbstractState> TTSE(AbstractState::factory("TTSE&HEOS",fluid));
 
-
-    Bicubic->update(DmolarUmolar_INPUTS, rhomolar, umolar);
     HEOS->update(DmolarUmolar_INPUTS, rhomolar, umolar);
+    Bicubic->update(DmolarUmolar_INPUTS, rhomolar, umolar);
+    TTSE->update(DmolarUmolar_INPUTS, rhomolar, umolar);
 
     std::cout << std::endl;
     std::cout << std::setw(LENGTH_PARAMETER) << std::left << "Parameter"
@@ -95,24 +96,24 @@ int main()
 			  << std::endl;
     std::cout << std::string(LINE_LENGTH, '-') << std::endl;
 
-    print_parameter("umolar", HEOS->umolar(), Bicubic->umolar(), 0.0);
-    print_parameter("rhomolar", HEOS->rhomolar(), Bicubic->rhomolar(), 0.0);
+    print_parameter("umolar", HEOS->umolar(), Bicubic->umolar(), TTSE->umolar());
+    print_parameter("rhomolar", HEOS->rhomolar(), Bicubic->rhomolar(), TTSE->rhomolar());
     std::cout << std::string(LINE_LENGTH, '-') << std::endl;
 
-    print_parameter("T", HEOS->T(), Bicubic->T(), 0.0);
-    print_parameter("p", HEOS->p(), Bicubic->p(), 0.0);
-    print_parameter("hmolar", HEOS->hmolar(), Bicubic->hmolar(), 0.0);
-    print_parameter("smolar", HEOS->smolar(), Bicubic->smolar(), 0.0);
-    print_parameter("cpmolar", HEOS->cpmolar(), Bicubic->cpmolar(), 0.0);
-    print_parameter("cvmolar", HEOS->cvmolar(), Bicubic->cvmolar(), 0.0);
-    print_parameter("viscosity", HEOS->viscosity(), Bicubic->viscosity(), 0.0);
-    print_parameter("conductivity", HEOS->conductivity(), Bicubic->conductivity(), 0.0);
-    print_parameter("speed_sound", HEOS->speed_sound(), Bicubic->speed_sound(), 0.0);
-    print_parameter("dpdT|rhomolar", HEOS->first_partial_deriv(iP, iT, iDmolar), Bicubic->first_partial_deriv(iP, iT, iDmolar), 0.0);
+    print_parameter("T", HEOS->T(), Bicubic->T(), TTSE->T());
+    print_parameter("p", HEOS->p(), Bicubic->p(), TTSE->p());
+    print_parameter("hmolar", HEOS->hmolar(), Bicubic->hmolar(), TTSE->hmolar());
+    print_parameter("smolar", HEOS->smolar(), Bicubic->smolar(), TTSE->smolar());
+    print_parameter("cpmolar", HEOS->cpmolar(), Bicubic->cpmolar(), TTSE->cpmolar());
+    print_parameter("cvmolar", HEOS->cvmolar(), Bicubic->cvmolar(), TTSE->cvmolar());
+    print_parameter("viscosity", HEOS->viscosity(), Bicubic->viscosity(), TTSE->viscosity());
+    print_parameter("conductivity", HEOS->conductivity(), Bicubic->conductivity(), TTSE->conductivity());
+    print_parameter("speed_sound", HEOS->speed_sound(), Bicubic->speed_sound(), TTSE->speed_sound());
+    print_parameter("dpdT|rhomolar", HEOS->first_partial_deriv(iP, iT, iDmolar), Bicubic->first_partial_deriv(iP, iT, iDmolar), TTSE->first_partial_deriv(iP, iT, iDmolar));
     // print_parameter("dpdT|sat", HEOS->first_saturation_deriv(iP, iT), Bicubic->first_saturation_deriv(iP, iT), 0.0);
     // print_parameter("drhodh|p, 2p", HEOS->first_two_phase_deriv(iDmolar, iHmolar, iP), Bicubic->first_two_phase_deriv(iP, iT, iDmolar), 0.0);
     // print_parameter("drhodh|p, 2p", HEOS->first_two_phase_deriv_splined(iDmolar, iHmolar, iP, 0.0), Bicubic->first_two_phase_deriv_splined(iP, iT, iDmolar, 0.0), 0.0);
-    print_parameter("phase", HEOS->phase(), Bicubic->phase(), 0);
+    print_parameter("phase", HEOS->phase(), Bicubic->phase(), TTSE->phase());
 
     // All done return
     return EXIT_SUCCESS;

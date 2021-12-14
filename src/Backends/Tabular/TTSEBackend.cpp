@@ -173,6 +173,7 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
     // Cache the output value calculated
     switch(output){
         case iT:  _T = val; break;
+        case iP: _p = val; break;
         case iDmolar: _rhomolar = val; break;
         case iSmolar: _smolar = val; break;
         case iHmolar: _hmolar = val; break;
