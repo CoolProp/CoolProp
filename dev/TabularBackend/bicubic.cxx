@@ -74,7 +74,7 @@ int main()
 {
 	set_debug_level(0);
 
-    double rhomolar = 2.7635029493162853e-07, umolar = 13886.488232581964;
+    double rhomolar = 1000.0, umolar = 2500.0;
     std::string fluid = "helium";
 
     // Low level interface
