@@ -1083,7 +1083,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 // Find and cache the indices i, j
                 find_native_nearest_good_indices(single_phase_logdu, dataset->coeffs_du, _umolar, _rhomolar, cached_single_phase_i, cached_single_phase_j);
                 // Recalculate the phase
-                //recalculate_singlephase_phase();
+                recalculate_singlephase_phase();
             }
 
         }
