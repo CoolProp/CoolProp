@@ -753,11 +753,11 @@ class LogDUTable : public SinglePhaseGriddedTableData
                 throw ValueError("AS is not yet set");
             }
             CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
-            // Minimum internal energery is the saturated liquid internal energery
+            // Minimum internal energery is the saturated liquid internal energy
             AS->update(QT_INPUTS, 0, Tmin);
             xmin = AS->umolar(); ymin = 1e-10;
 
-            // Check both the internal energery at the Tmax isotherm to see whether to use low or high pressure
+            // Check both the internal energy at the Tmax isotherm to see whether to use low or high pressure
             AS->update(DmolarT_INPUTS, 1e-10, 1.499*AS->Tmax());
             CoolPropDbl xmax1 = AS->umolar();
             AS->update(PT_INPUTS, AS->pmax(), 1.499*AS->Tmax());
