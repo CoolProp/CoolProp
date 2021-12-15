@@ -1060,7 +1060,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             std::size_t iL = std::numeric_limits<std::size_t>::max(),
                         iV = std::numeric_limits<std::size_t>::max(),
                         iclosest = 0;
-            CoolPropDbl uL = 0, uV = 0;
+            CoolPropDbl umolarL = 0, umolarV = 0;
             SimpleState closest_state;
             bool is_two_phase = false;
             // If phase is imposed, use it, but only if it's single phase:
@@ -1071,7 +1071,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     throw NotImplementedError("Phase detection is not implemented for mixture.");
                 }
                 else{
-                    is_two_phase = pure_saturation.is_inside(iDmolar, _rhomolar, iUmolar, _umolar, iL, iV, uL, uV);
+                    is_two_phase = pure_saturation.is_inside(iUmolar, _umolar, iDmolar, _rhomolar, iL, iV, umolarL, umolarV);
                 }
             }
             // Phase determined or imposed, now interpolate results

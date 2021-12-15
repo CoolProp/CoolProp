@@ -194,10 +194,23 @@ class PureFluidSaturationTableData{
                 if (mainval > Tmax || mainval < Tmin){return false;}
             }
             //TODO: Check this
-            else if (main == iDmolar){
-                // If Dmolar is outside the range (Dmin, Dcrit), considered to not be inside
-                double Dmax = this->rhomolarV[rhomolarV.size()-1], Dmin = this->rhomolarV[0];
-                if (mainval > Dmax || mainval < Dmin){return false;}
+            else if (main == iUmolar){
+                // If Umolar is outside the range (Umin, Umax), considered to not be inside
+
+                double Umax = this->umolarV[0], Umin = this->umolarL[0];
+
+                if (mainval > Umax || mainval < Umin){return false;}
+
+                switch (other){
+                case iDmolar: {
+                	double Dmax = this->rhomolarL[0], Dmin = this->rhomolarV[0];
+
+                	if (val > Dmax || val < Dmin){return false;}
+                	break;
+                }
+                default:
+                	throw ValueError("invalid input for other in is_inside with main=iUmolar");
+                }
             }
             else{
                 throw ValueError("invalid input for other in is_inside");
@@ -217,9 +230,60 @@ class PureFluidSaturationTableData{
                 bisect_vector(TL, mainval, iL);
             }
             // TODO: Check this
-            else if (main == iDmolar){
-				bisect_vector(rhomolarV, mainval, iV);
-				bisect_vector(rhomolarL, mainval, iL);
+            else if (main == iUmolar){
+
+            	int count = 0;
+
+            	double Q, umolar;
+
+            	double Tmax = this->TV[TV.size()-1], Tmin = this->TV[0];
+
+            	while (std::abs(umolar-mainval) > 1e-5){
+
+            		count++;
+
+            		double T = 0.5*(Tmax + Tmin);
+
+					bisect_vector(TV, T, iV);
+					bisect_vector(TL, T, iL);
+
+		            iVplus = std::min(iV+1, N-1);
+		            iLplus = std::min(iL+1, N-1);
+
+		            if (iVplus < 3){ iVplus = 3;}
+		            if (iLplus < 3){ iLplus = 3;}
+
+		            double uV, uL, DV, DL;
+
+	                uV = CubicInterp(TV, umolarV, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
+	                uL = CubicInterp(TL, umolarL, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
+
+	                DV = CubicInterp(TV, rhomolarV, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
+	                DL = CubicInterp(TL, rhomolarL, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
+
+	                //yL = CubicInterp(umolarL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+
+					double Dmax = DL, Dmin = DV;
+
+					if (val < Dmax && val > Dmin){
+
+						Q = ( 1.0 / Dmin - 1.0 / val ) / ( 1.0 / Dmin - 1.0 / Dmax );
+						umolar = (1.0 - Q) * umolarL[iL] + Q * umolarV[iV];
+
+						if (umolar < mainval){
+							Tmax = T;
+						}
+						else {Tmin = T;}
+					}
+					else {Tmax=T;}
+
+					if (count >= 100){
+						return false;
+						break;
+					}
+
+				return true;
+            	}
               }
             else{
                 throw ValueError(format("For now, main input in is_inside must be T, p or Dmolar"));
@@ -243,10 +307,10 @@ class PureFluidSaturationTableData{
                     yL = exp(CubicInterp(TL, logpL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval));
                 }
                 // TODO: Check this
-                else if (main == iDmolar){
+                else if (main == iUmolar){
                     // Calculate pressure
-                    yV = exp(CubicInterp(rhomolarV, logpV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval));
-                    yL = exp(CubicInterp(rhomolarL, logpL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval));
+                    yV = exp(CubicInterp(umolarV, logpV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval));
+                    yL = exp(CubicInterp(umolarL, logpL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval));
                 }
                 return true;
             }
@@ -267,9 +331,9 @@ class PureFluidSaturationTableData{
                 yL = CubicInterp(TL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
             }
             // TODO: Check this
-            else if (main == iDmolar){
-                yV = CubicInterp(rhomolarV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
-                yL = CubicInterp(rhomolarL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
+            else if (main == iUmolar){
+                yV = CubicInterp(umolarV, *yvecV, iVplus-3, iVplus-2, iVplus-1, iVplus, mainval);
+                yL = CubicInterp(umolarL, *yvecL, iLplus-3, iLplus-2, iLplus-1, iLplus, mainval);
             }
 
             if (!is_in_closed_range(yV, yL, static_cast<CoolPropDbl>(val))){
