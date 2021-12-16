@@ -1076,7 +1076,15 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             }
             // Phase determined or imposed, now interpolate results
             if (is_two_phase){
-                throw NotImplementedError("The two phase region is not implemented.");
+                using_single_phase_table = false;
+                _Q = (static_cast<double>(_umolar)-umolarL)/(umolarV-umolarL);
+                if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))){
+                    throw ValueError(format("vapor quality is not in (0,1) for umolar: %g rhomolar: %g, umolarL: %g umolarV: %g ", static_cast<double>(_umolar), _rhomolar, umolarL, umolarV));
+                }
+                else{
+                    cached_saturation_iL = iL; cached_saturation_iV = iV;
+                    _phase = iphase_twophase;
+                }
             }
             else{
                 selected_table = SELECTED_DU_TABLE;
