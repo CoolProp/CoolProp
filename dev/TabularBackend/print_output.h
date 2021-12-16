@@ -98,7 +98,14 @@ void print_output(shared_ptr<AbstractState> HEOS, shared_ptr<AbstractState> Bicu
     print_parameter("viscosity", HEOS->viscosity(), Bicubic->viscosity(), TTSE->viscosity());
     print_parameter("conductivity", HEOS->conductivity(), Bicubic->conductivity(), TTSE->conductivity());
     print_parameter("phase", HEOS->phase(), Bicubic->phase(), TTSE->phase());
-
+    if ( HEOS->phase() == iphase_twophase ){
+    	try {
+            print_parameter("Q", HEOS->Q(), Bicubic->Q(), TTSE->Q());
+    	}
+    	catch (ValueError){
+    		std::cout << "Could not calculate Q for tabular data." << std::endl;
+    	}
+    }
     if ( HEOS->phase() != iphase_twophase ){
         print_parameter("speed_sound", HEOS->speed_sound(), Bicubic->speed_sound(), TTSE->speed_sound());
     }
