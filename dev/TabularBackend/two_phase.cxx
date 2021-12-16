@@ -27,6 +27,8 @@ int main()
     TTSE->update(DmolarUmolar_INPUTS, HEOS->rhomolar(), HEOS->umolar());
 
     std::cout << HEOS->p() << ", " << Bicubic->p() << ", " << TTSE->p() << std::endl;
+    std::cout << HEOS->T() << ", " << Bicubic->T() << ", " << TTSE->T() << std::endl;
+
     std::cout << HEOS->Q() << ", " << Bicubic->Q() << ", " << TTSE->Q() << std::endl;
 
 

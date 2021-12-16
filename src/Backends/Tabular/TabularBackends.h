@@ -514,6 +514,34 @@ class PureFluidSaturationTableData{
                                          val)*factor;
         };
         //calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
+
+        /**
+         *  @brief Calculate the pressure from saturated liquid and vapor internal energy
+         * @param Input parameter for interpolation
+         * @param UL Saturated liquid internal energy
+         * @param UV Saturated vapor internal energy
+         * @param iL Index on liquid line
+         * @param iV Index on vapor line
+         */
+        double evaluate_p(parameters main, double UL, double UV, std::size_t iL, std::size_t iV){
+
+        	double pV, pL, p;
+
+        	switch (main) {
+        	case iUmolar: {
+				pV = exp(CubicInterp(umolarV, logpV, iV-2, iV-1, iV, iV+1, UV));
+				pL = exp(CubicInterp(umolarL, logpL, iV-2, iV-1, iV, iV+1, UL));
+				break;
+        	default : throw ValueError("only accepts iUmolar for main.");
+        		}
+        	}
+
+        	if (std::abs(pV-pL)>1e-5){throw ValueError("saturated liquid and vaport presssure are not almost the same.");}
+
+        	p = 0.5 * (pV + pL);
+
+            return p;
+        }
 };
 
 /** \brief This class holds the data for a single-phase interpolation table that is regularly spaced

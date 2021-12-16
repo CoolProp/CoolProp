@@ -438,7 +438,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void){
                 return _T;
             }
             else{
-                return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
+            	return pure_saturation.evaluate(iT, _p, _Q, cached_saturation_iL, cached_saturation_iV);
             }
         }
     }
@@ -1082,6 +1082,8 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     throw ValueError(format("vapor quality is not in (0,1) for umolar: %g rhomolar: %g, umolarL: %g umolarV: %g ", static_cast<double>(_umolar), _rhomolar, umolarL, umolarV));
                 }
                 else{
+                	// Evaluate p here, because calc_* methods need p as input.
+                	_p = pure_saturation.evaluate_p(iUmolar, umolarL, umolarV, iL, iV);
                     cached_saturation_iL = iL; cached_saturation_iV = iV;
                     _phase = iphase_twophase;
                 }
