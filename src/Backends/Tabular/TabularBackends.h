@@ -205,14 +205,10 @@ class PureFluidSaturationTableData{
                 throw ValueError("invalid input for other in is_inside");
             }
 
-            switch (other){
-            case iDmolar: {
+            if (other == iDmolar){
             	double Dmax = this->rhomolarL[0], Dmin = this->rhomolarV[0];
 
             	if (val > Dmax || val < Dmin){return false;}
-            	break;
-            	}
-            default: throw ValueError("invalid input for other in is_inside");
             }
 
             // Now check based on a rough analysis using bounding pressure
