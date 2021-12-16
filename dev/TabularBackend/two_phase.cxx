@@ -4,6 +4,7 @@
 #include "AbstractState.h"
 #include "crossplatform_shared_ptr.h"
 #include "Backends/Tabular/TabularBackends.h"
+#include "print_output.h"
 using namespace CoolProp;
 
 
@@ -19,18 +20,24 @@ int main()
     shared_ptr<AbstractState> Bicubic(AbstractState::factory("BICUBIC&HEOS",fluid));
     shared_ptr<AbstractState> TTSE(AbstractState::factory("TTSE&HEOS",fluid));
 
-    HEOS->update(QT_INPUTS, 0.5, HEOS->Tmin());
+    HEOS->update(QT_INPUTS, 0.5, HEOS->Tmin() + 0.25*( HEOS->T_critical() - HEOS->Tmin() ) );
 
     std::cout << HEOS->rhomolar() << ", " << HEOS->umolar() << std::endl;
 
     Bicubic->update(DmolarUmolar_INPUTS, HEOS->rhomolar(), HEOS->umolar());
     TTSE->update(DmolarUmolar_INPUTS, HEOS->rhomolar(), HEOS->umolar());
 
+    /*
     std::cout << HEOS->p() << ", " << Bicubic->p() << ", " << TTSE->p() << std::endl;
     std::cout << HEOS->T() << ", " << Bicubic->T() << ", " << TTSE->T() << std::endl;
 
     std::cout << HEOS->Q() << ", " << Bicubic->Q() << ", " << TTSE->Q() << std::endl;
+    // std::cout << HEOS->first_saturation_deriv(iP, iT) << ", " << Bicubic->first_saturation_deriv(iP, iT) << std::endl;
+    std::cout << HEOS->first_two_phase_deriv(iDmolar, iHmolar, iP) << ", " << Bicubic->first_two_phase_deriv(iDmolar, iHmolar, iP) << std::endl;
+    std::cout << HEOS->saturated_vapor_keyed_output(iDmolar) << ", " << Bicubic->saturated_vapor_keyed_output(iDmolar) << std::endl;
+	*/
 
+    print_output(HEOS, Bicubic, TTSE);
 
     // All done return
     return EXIT_SUCCESS;
