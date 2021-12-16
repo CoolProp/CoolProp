@@ -646,7 +646,6 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, pa
             dConstant_dy = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 0, 1);
             break;
         }
-        // TODO: Implement this.
         case SELECTED_DU_TABLE: {
             dOf_dx = evaluate_single_phase_du_derivative(Of, cached_single_phase_i, cached_single_phase_j, 1, 0);
             dOf_dy = evaluate_single_phase_du_derivative(Of, cached_single_phase_i, cached_single_phase_j, 0, 1);
