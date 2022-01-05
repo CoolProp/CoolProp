@@ -196,9 +196,41 @@ class PureFluidSaturationTableData{
             else if (main == iUmolar){
                 // If Umolar is outside the range (Umin, Umax), considered to not be inside
 
-                double Umax = this->umolarV[0], Umin = this->umolarL[0];
+                auto uminmax_v = std::minmax_element(this->umolarV.begin(), this->umolarV.end());
+                auto uminmax_l = std::minmax_element(this->umolarL.begin(), this->umolarL.end());
 
-                if (mainval > Umax || mainval < Umin){return false;}
+                double umin_v = *uminmax_v.first;
+                double umax_v = *uminmax_v.second;
+
+                double umin_l = *uminmax_l.first;
+                double umax_l = *uminmax_l.second;
+
+                double umax = std::max(umax_v, umax_l);
+                double umin = std::min(umin_v, umin_l);
+
+                if (mainval > umax || mainval < umin){return false;}
+                else {
+                	if (other == iDmolar)
+                	{
+                        auto rhominmax_v = std::minmax_element(this->rhomolarV.begin(), this->rhomolarV.end());
+                        auto rhominmax_l = std::minmax_element(this->rhomolarL.begin(), this->rhomolarL.end());
+
+                        double rhomin_v = *rhominmax_v.first;
+                        double rhomax_v = *rhominmax_v.second;
+
+                        double rhomin_l = *rhominmax_l.first;
+                        double rhomax_l = *rhominmax_l.second;
+
+                        double rhomax = std::max(rhomax_v, rhomax_l);
+                        double rhomin = std::min(rhomin_v, rhomin_l);
+
+                        if (val > rhomax || val < rhomin){return false;}
+						else {return true;}
+                	}
+                	else{
+                		throw ValueError("input combination not supported");
+                	}
+                }
 
             }
             else{
@@ -209,6 +241,7 @@ class PureFluidSaturationTableData{
             	double Dmax = this->rhomolarL[0], Dmin = this->rhomolarV[0];
 
             	if (val > Dmax || val < Dmin){return false;}
+            	else {return true;}
             }
 
             // Now check based on a rough analysis using bounding pressure
@@ -223,72 +256,6 @@ class PureFluidSaturationTableData{
             else if (main == iT){
                 bisect_vector(TV, mainval, iV);
                 bisect_vector(TL, mainval, iL);
-            }
-            else if (main == iUmolar && other == iDmolar){
-            	// Iterate over the two phase region, because specific internal energy
-            	// and molar density are constant between saturated liquid and vapor line.
-
-            	int count = 0;
-
-            	// Set umolar =! mainval to force one iteration
-            	double Q=0.0, umolar = 1.1 * mainval;
-	            double DV, DL;
-
-	            // Iterate between Tmin and Tcrit.
-            	double Tmax = this->TV[TV.size()-1], Tmin = this->TV[0];
-
-            	while (true){
-
-            		double T = 0.5*(Tmax + Tmin);
-
-					bisect_vector(TV, T, iV);
-					bisect_vector(TL, T, iL);
-
-		            iVplus = std::min(iV+1, N-1);
-		            iLplus = std::min(iL+1, N-1);
-
-		            if (iVplus < 3){ iVplus = 3;}
-		            if (iLplus < 3){ iLplus = 3;}
-
-	                yV = CubicInterp(TV, umolarV, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
-	                yL = CubicInterp(TL, umolarL, iLplus-3, iLplus-2, iLplus-1, iLplus, T);
-
-	                DV = CubicInterp(TV, rhomolarV, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
-	                DL = CubicInterp(TL, rhomolarL, iLplus-3, iLplus-2, iLplus-1, iLplus, T);
-
-					if (is_in_closed_range(DV, DL, static_cast<CoolPropDbl>(val))){
-
-						Q = ( 1.0 / DV - 1.0 / val ) / ( 1.0 / DV - 1.0 / DL );
-						umolar = (1.0 - Q) * yL + Q * yV;
-
-						if (umolar < mainval){
-							Tmax = T;
-						}
-						else {Tmin = T;}
-					}
-					else {Tmax=T;}
-
-            		count++;
-            		// Stop when converged
-					if (std::abs(umolar-mainval) < 1e-5 ){
-						return true;
-						break;
-					}
-					// Stop when not converged, assume single phase
-					else if (count >= 100){
-						return false;
-						break;
-					}
-            	}
-
-				if (!is_in_closed_range(DV, DL, static_cast<CoolPropDbl>(val))){
-					return false;
-				}
-				else{
-					iL = iLplus-1;
-					iV = iVplus-1;
-					return true;
-				}
             }
             else{
                 throw ValueError(format("For now, main input in is_inside must be T, p or Umolar"));
@@ -510,34 +477,6 @@ class PureFluidSaturationTableData{
                                          val)*factor;
         };
         //calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
-
-        /**
-         *  @brief Calculate the pressure from saturated liquid and vapor internal energy
-         * @param Input parameter for interpolation
-         * @param UL Saturated liquid internal energy
-         * @param UV Saturated vapor internal energy
-         * @param iL Index on liquid line
-         * @param iV Index on vapor line
-         */
-        double evaluate_p(parameters main, double UL, double UV, std::size_t iL, std::size_t iV){
-
-        	double pV, pL, p;
-
-        	switch (main) {
-        	case iUmolar: {
-				pV = exp(CubicInterp(umolarV, logpV, iV-2, iV-1, iV, iV+1, UV));
-				pL = exp(CubicInterp(umolarL, logpL, iV-2, iV-1, iV, iV+1, UL));
-				break;
-        	default : throw ValueError("only accepts iUmolar for main.");
-        		}
-        	}
-
-        	if (std::abs(pV-pL)>1e-5){throw ValueError("saturated liquid and vaport presssure are not almost the same.");}
-
-        	p = 0.5 * (pV + pL);
-
-            return p;
-        }
 };
 
 /** \brief This class holds the data for a single-phase interpolation table that is regularly spaced
