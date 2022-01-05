@@ -31,8 +31,8 @@ scalarMap = cmx.ScalarMappable(norm = cNorm, cmap = plt.get_cmap('jet'))
 
 for a_useless_counter in range(40000):
 
-    umolar = random.uniform(-10,100)
-    rhomolar = 10**random.uniform(2,6)
+    umolar = random.uniform(-50,50000)
+    rhomolar = 10**random.uniform(-10,5.5)
     CP.set_debug_level(0)
     try:
 
