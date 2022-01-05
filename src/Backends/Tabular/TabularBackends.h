@@ -251,10 +251,10 @@ class PureFluidSaturationTableData{
 		            if (iLplus < 3){ iLplus = 3;}
 
 	                yV = CubicInterp(TV, umolarV, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
-	                yL = CubicInterp(TL, umolarL, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
+	                yL = CubicInterp(TL, umolarL, iLplus-3, iLplus-2, iLplus-1, iLplus, T);
 
 	                DV = CubicInterp(TV, rhomolarV, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
-	                DL = CubicInterp(TL, rhomolarL, iVplus-3, iVplus-2, iVplus-1, iVplus, T);
+	                DL = CubicInterp(TL, rhomolarL, iLplus-3, iLplus-2, iLplus-1, iLplus, T);
 
 					if (is_in_closed_range(DV, DL, static_cast<CoolPropDbl>(val))){
 
