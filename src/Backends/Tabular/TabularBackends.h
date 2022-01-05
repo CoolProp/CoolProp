@@ -787,9 +787,19 @@ class LogDUTable : public SinglePhaseGriddedTableData
             CoolPropDbl xmax1 = AS->umolar();
             AS->update(PT_INPUTS, AS->pmax(), 1.499*AS->Tmax());
             CoolPropDbl xmax2 = AS->umolar();
+            CoolPropDbl ymax1 = AS->rhomolar();
             xmax = std::max(xmax1, xmax2);
+            if (AS->has_melting_line()){
 
-            ymax = AS->rhomolar();
+            	CoolPropDbl Tmelt = AS->melting_line(iT, iP, AS->pmax());
+            	AS->update(PT_INPUTS, AS->pmax(), Tmelt);
+            	CoolPropDbl ymax2 = AS->rhomolar();
+
+            	ymax = std::max(ymax1, ymax2);
+            }
+            else{
+            	ymax = ymax1;
+            }
         }
         void deserialize(msgpack::object &deserialized){
             LogDUTable temp;
