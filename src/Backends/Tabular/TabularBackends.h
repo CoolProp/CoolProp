@@ -152,6 +152,9 @@ class PureFluidSaturationTableData{
 		LIST_OF_SATURATION_VECTORS
 		#undef X
 
+		std::vector<double> uminmax{std::vector<double>(2)};
+		std::vector<double> rhominmax{std::vector<double>(2)};
+
 		int revision;
 		std::map<std::string, std::vector<double> > vectors;
 
@@ -196,35 +199,11 @@ class PureFluidSaturationTableData{
             else if (main == iUmolar){
                 // If Umolar is outside the range (Umin, Umax), considered to not be inside
 
-                auto uminmax_v = std::minmax_element(this->umolarV.begin(), this->umolarV.end());
-                auto uminmax_l = std::minmax_element(this->umolarL.begin(), this->umolarL.end());
-
-                double umin_v = *uminmax_v.first;
-                double umax_v = *uminmax_v.second;
-
-                double umin_l = *uminmax_l.first;
-                double umax_l = *uminmax_l.second;
-
-                double umax = std::max(umax_v, umax_l);
-                double umin = std::min(umin_v, umin_l);
-
-                if (mainval > umax || mainval < umin){return false;}
+                if (mainval > uminmax[1] || mainval < uminmax[0]){return false;}
                 else {
                 	if (other == iDmolar)
                 	{
-                        auto rhominmax_v = std::minmax_element(this->rhomolarV.begin(), this->rhomolarV.end());
-                        auto rhominmax_l = std::minmax_element(this->rhomolarL.begin(), this->rhomolarL.end());
-
-                        double rhomin_v = *rhominmax_v.first;
-                        double rhomax_v = *rhominmax_v.second;
-
-                        double rhomin_l = *rhominmax_l.first;
-                        double rhomax_l = *rhominmax_l.second;
-
-                        double rhomax = std::max(rhomax_v, rhomax_l);
-                        double rhomin = std::min(rhomin_v, rhomin_l);
-
-                        if (val > rhomax || val < rhomin){return false;}
+                        if (val > rhominmax[1] || val < rhominmax[0]){return false;}
 						else {return true;}
                 	}
                 	else{
@@ -319,6 +298,10 @@ class PureFluidSaturationTableData{
 			#define X(name) vectors.insert(std::pair<std::string, std::vector<double> >(#name, name));
 			LIST_OF_SATURATION_VECTORS
 			#undef X
+
+			vectors.insert(std::pair<std::string, std::vector<double> >("uminmax", uminmax));
+			vectors.insert(std::pair<std::string, std::vector<double> >("rhominmax", rhominmax));
+
 		};
         std::map<std::string, std::vector<double> >::iterator get_vector_iterator(const std::string &name){
             std::map<std::string, std::vector<double> >::iterator it = vectors.find(name);
@@ -334,6 +317,9 @@ class PureFluidSaturationTableData{
 			LIST_OF_SATURATION_VECTORS
 			#undef X
 			N = TL.size();
+
+			uminmax = get_vector_iterator("uminmax")->second;
+			rhominmax = get_vector_iterator("rhominmax")->second;
 		};
         void deserialize(msgpack::object &deserialized){
             PureFluidSaturationTableData temp;

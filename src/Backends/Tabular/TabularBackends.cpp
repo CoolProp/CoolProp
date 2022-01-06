@@ -202,6 +202,30 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
 
     logpL[i] = log(AS->p()); 
 	logrhomolarL[i] = log(rhomolarL[i]);
+
+    auto uminmax_v = std::minmax_element(umolarV.begin(), umolarV.end());
+    auto uminmax_l = std::minmax_element(umolarL.begin(), umolarL.end());
+
+    double umin_v = *uminmax_v.first;
+    double umax_v = *uminmax_v.second;
+
+    double umin_l = *uminmax_l.first;
+    double umax_l = *uminmax_l.second;
+
+    uminmax[1] = std::max(umax_v, umax_l);
+    uminmax[0] = std::min(umin_v, umin_l);
+
+    auto rhominmax_v = std::minmax_element(rhomolarV.begin(), rhomolarV.end());
+    auto rhominmax_l = std::minmax_element(rhomolarL.begin(), rhomolarL.end());
+
+    double rhomin_v = *rhominmax_v.first;
+    double rhomax_v = *rhominmax_v.second;
+
+    double rhomin_l = *rhominmax_l.first;
+    double rhomax_l = *rhominmax_l.second;
+
+    rhominmax[1] = std::max(rhomax_v, rhomax_l);
+    rhominmax[0] = std::min(rhomin_v, rhomin_l);
 }
     
 void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
