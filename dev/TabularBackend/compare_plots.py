@@ -6,6 +6,15 @@ import matplotlib.cm as cmx
 import matplotlib.ticker
 import numpy as np
 import random
+import pathlib
+import shutil
+from debugpy.common.json import default
+
+CP_HOME = pathlib.Path(CP.get_global_param_string('HOME'))
+TABULAR_FOLDER = pathlib.Path('.CoolProp/Tables')
+TABLES_PATH = CP_HOME.joinpath(TABULAR_FOLDER)
+if TABLES_PATH.exists():
+    shutil.rmtree(TABLES_PATH, True)
 
 fig = plt.figure(figsize=(10,5))
 ax1 = fig.add_axes((0.08,0.1,0.32,0.83))
@@ -58,6 +67,10 @@ for a_useless_counter in range(40000):
     except ValueError as VE:
         print('ERROR', VE)
         pass
+    except:
+        print("Unkwnown error")
+        raise
+    
 
 SC1 = ax1.scatter(DDD, UUU, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
 SC2 = ax2.scatter(DDD, UUU, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
