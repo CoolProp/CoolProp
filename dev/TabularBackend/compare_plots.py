@@ -23,16 +23,15 @@ DV = CP.PropsSI('Dmolar','T',T,'Q',1,Ref)
 uL = CP.PropsSI('Umolar','T',T,'Q',0,Ref)
 uV = CP.PropsSI('Umolar','T',T,'Q',1,Ref)
 
-UUU1, DDD1, EEE1 = [], [], []
-UUU2, DDD2, EEE2 = [], [], []
+UUU, DDD, EEE1, EEE2  = [], [], [], []
 
 cNorm  = colors.LogNorm(vmin=1e-12, vmax=10)
 scalarMap = cmx.ScalarMappable(norm = cNorm, cmap = plt.get_cmap('jet'))
 
 for a_useless_counter in range(40000):
 
-    umolar = random.uniform(-50,50000)
-    rhomolar = 10**random.uniform(-10,5.5)
+    umolar = random.uniform(-50,100)#random.uniform(-50,50000)
+    rhomolar = 10**random.uniform(2,5.5) #10**random.uniform(-10,5.5)
     CP.set_debug_level(0)
     try:
 
@@ -50,20 +49,18 @@ for a_useless_counter in range(40000):
         if errorTTSE > 100 or errorTTSE < 1e-12:
             print(umolar, rhomolar, errorTTSE)
 
-        UUU1.append(umolar)
-        DDD1.append(rhomolar)
+        UUU.append(umolar)
+        DDD.append(rhomolar)
         EEE1.append(errorTTSE)
 
-        UUU2.append(umolar)
-        DDD2.append(rhomolar)
         EEE2.append(errorBICUBIC)
 
     except ValueError as VE:
         print('ERROR', VE)
         pass
 
-SC1 = ax1.scatter(DDD1, UUU1, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
-SC2 = ax2.scatter(DDD2, UUU2, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
+SC1 = ax1.scatter(DDD, UUU, s = 8, c = EEE1, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
+SC2 = ax2.scatter(DDD, UUU, s = 8, c = EEE2, edgecolors = 'none', cmap = plt.get_cmap('jet'), norm = cNorm)
 
 ax1.set_title('Error in Pressure from TTSE')
 ax2.set_title('Error in Pressure from Bicubic')
