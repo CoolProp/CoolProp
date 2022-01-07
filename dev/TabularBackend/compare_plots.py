@@ -6,15 +6,6 @@ import matplotlib.cm as cmx
 import matplotlib.ticker
 import numpy as np
 import random
-import pathlib
-import shutil
-from debugpy.common.json import default
-
-CP_HOME = pathlib.Path(CP.get_global_param_string('HOME'))
-TABULAR_FOLDER = pathlib.Path('.CoolProp/Tables')
-TABLES_PATH = CP_HOME.joinpath(TABULAR_FOLDER)
-if TABLES_PATH.exists():
-    shutil.rmtree(TABLES_PATH, True)
 
 fig = plt.figure(figsize=(10,5))
 ax1 = fig.add_axes((0.08,0.1,0.32,0.83))
