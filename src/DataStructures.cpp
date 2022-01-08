@@ -96,6 +96,8 @@ const parameter_info parameter_info_list[] = {
     {ialpha0,                  "alpha0",                  "O", "-", "Ideal Helmholtz energy", false},
     {idalpha0_dtau_constdelta, "dalpha0_dtau_constdelta", "O", "-", "Derivative of ideal Helmholtz energy with tau",false},
     {idalpha0_ddelta_consttau, "dalpha0_ddelta_consttau", "O", "-", "Derivative of ideal Helmholtz energy with delta",false},
+    {id2alpha0_ddelta2_consttau, "d2alpha0_ddelta2_consttau", "O", "-", "Second derivative of ideal Helmholtz energy with delta",false},
+    {id3alpha0_ddelta3_consttau, "d3alpha0_ddelta3_consttau", "O", "-", "Third derivative of ideal Helmholtz energy with delta",false},
 
     {iPhase, "Phase", "O", "-", "Phase index as a float", false},
 
