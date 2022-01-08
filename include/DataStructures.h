@@ -125,6 +125,8 @@ enum parameters{
     ialpha0,
     idalpha0_dtau_constdelta,
     idalpha0_ddelta_consttau,
+    id2alpha0_ddelta2_consttau,
+    id3alpha0_ddelta3_consttau,
 
     // Other functions and derivatives
     iBvirial, ///< Second virial coefficient

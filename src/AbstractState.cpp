@@ -461,6 +461,10 @@ double AbstractState::keyed_output(parameters key)
         return alpha0();
     case idalpha0_ddelta_consttau:
         return dalpha0_dDelta();
+    case id2alpha0_ddelta2_consttau:
+        return d2alpha0_dDelta2();
+    case id3alpha0_ddelta3_consttau:
+        return d3alpha0_dDelta3();
     case idalpha0_dtau_constdelta:
         return dalpha0_dTau();
     case idalphar_ddelta_consttau:
