@@ -730,13 +730,13 @@ CoolPropDbl CoolProp::TabularBackend::calc_second_partial_deriv(parameters Of1, 
         CoolPropDbl dWrt2_dx, dWrt2_dy;
         CoolPropDbl dConstant2_dx, dConstant2_dy;
 
-        CoolPropDbl N1, D1, dN1_dx, dN1_dy, dD1_dx, dD1_dy;
+        CoolPropDbl N, D, dN_dx, dN_dy, dD_dx, dD_dy;
 
-        CoolPropDbl ddOf1_dWrt1_dx, ddOf1_dWrt1_dy;
+        CoolPropDbl d2Of1_dWrt1_dx, d2Of1_dWrt1_dy;
         CoolPropDbl ddWrt1_dx2, ddWrt1_dy2, ddWrt1_dxdy;
 
-        CoolPropDbl ddConstant1_dx2, ddConstant1_dy2, ddConstant1_dxdy;
-        CoolPropDbl ddOf1_dx2, ddOf1_dy2, ddOf1_dxdy;
+        CoolPropDbl d2Constant1_dx2, d2Constant1_dy2, d2Constant1_dxdy;
+        CoolPropDbl d2Of1_dx2, d2Of1_dy2, d2Of1_dxdy;
 
         CoolPropDbl second_deriv;
 
@@ -767,13 +767,13 @@ CoolPropDbl CoolProp::TabularBackend::calc_second_partial_deriv(parameters Of1, 
             dConstant2_dx = evaluate_single_phase_phmolar_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 1, 0);
             dConstant2_dy = evaluate_single_phase_phmolar_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 0, 1);
 
-			ddConstant1_dx2 = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
-			ddConstant1_dy2 = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
-			ddConstant1_dxdy = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+			d2Constant1_dx2 = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			d2Constant1_dy2 = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			d2Constant1_dxdy = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
 
-			ddOf1_dx2 = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
-			ddOf1_dy2 = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
-			ddOf1_dxdy = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+			d2Of1_dx2 = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			d2Of1_dy2 = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			d2Of1_dxdy = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
         	break;
         }
         case SELECTED_PT_TABLE:{
@@ -793,13 +793,13 @@ CoolPropDbl CoolProp::TabularBackend::calc_second_partial_deriv(parameters Of1, 
             dConstant2_dx = evaluate_single_phase_pT_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 1, 0);
             dConstant2_dy = evaluate_single_phase_pT_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 0, 1);
 
-			ddConstant1_dx2 = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
-			ddConstant1_dy2 = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
-			ddConstant1_dxdy = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+			d2Constant1_dx2 = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			d2Constant1_dy2 = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			d2Constant1_dxdy = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
 
-			ddOf1_dx2 = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
-			ddOf1_dy2 = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
-			ddOf1_dxdy = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+			d2Of1_dx2 = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			d2Of1_dy2 = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			d2Of1_dxdy = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
         	break;
         }
         case SELECTED_DU_TABLE: {
@@ -819,31 +819,31 @@ CoolPropDbl CoolProp::TabularBackend::calc_second_partial_deriv(parameters Of1, 
             dConstant2_dx = evaluate_single_phase_du_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 1, 0);
             dConstant2_dy = evaluate_single_phase_du_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 0, 1);
 
-			ddConstant1_dx2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
-			ddConstant1_dy2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
-			ddConstant1_dxdy = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+			d2Constant1_dx2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			d2Constant1_dy2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			d2Constant1_dxdy = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
 
-			ddOf1_dx2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
-			ddOf1_dy2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
-			ddOf1_dxdy = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+			d2Of1_dx2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			d2Of1_dy2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			d2Of1_dxdy = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
         	break;
         }
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
 
-        N1 = calc_first_partial_deriv_nominator(dOf1_dx, dOf1_dy, dConstant1_dx, dConstant1_dy);
-		D1 = calc_first_partial_deriv_denominator(dWrt1_dx, dWrt1_dy, dConstant1_dx, dConstant1_dy);
+        N = calc_first_partial_deriv_nominator(dOf1_dx, dOf1_dy, dConstant1_dx, dConstant1_dy);
+		D = calc_first_partial_deriv_denominator(dWrt1_dx, dWrt1_dy, dConstant1_dx, dConstant1_dy);
 
-		dN1_dx = calc_deriv_product(dOf1_dx, dConstant1_dy, ddOf1_dx2, ddConstant1_dxdy) - calc_deriv_product(dOf1_dy, dConstant1_dx, ddOf1_dxdy, ddConstant1_dx2);
-		dN1_dy = calc_deriv_product(dOf1_dx, dConstant1_dy, ddOf1_dxdy, ddConstant1_dy2) - calc_deriv_product(dOf1_dy, dConstant1_dx, ddOf1_dy2, ddConstant1_dxdy);
+		dN_dx = calc_deriv_product(dOf1_dx, dConstant1_dy, d2Of1_dx2, d2Constant1_dxdy) - calc_deriv_product(dOf1_dy, dConstant1_dx, d2Of1_dxdy, d2Constant1_dx2);
+		dN_dy = calc_deriv_product(dOf1_dx, dConstant1_dy, d2Of1_dxdy, d2Constant1_dy2) - calc_deriv_product(dOf1_dy, dConstant1_dx, d2Of1_dy2, d2Constant1_dxdy);
 
-		dD1_dx = calc_deriv_product(dWrt1_dx, dConstant1_dy, ddWrt1_dx2, ddConstant1_dxdy) - calc_deriv_product(dWrt1_dy, dConstant1_dx, ddWrt1_dxdy, ddConstant1_dx2);
-		dD1_dy = calc_deriv_product(dWrt1_dx, dConstant1_dy, ddWrt1_dxdy, ddConstant1_dy2) - calc_deriv_product(dWrt1_dy, dConstant1_dx, ddWrt1_dy2, ddConstant1_dxdy);
+		dD_dx = calc_deriv_product(dWrt1_dx, dConstant1_dy, ddWrt1_dx2, d2Constant1_dxdy) - calc_deriv_product(dWrt1_dy, dConstant1_dx, ddWrt1_dxdy, d2Constant1_dx2);
+		dD_dy = calc_deriv_product(dWrt1_dx, dConstant1_dy, ddWrt1_dxdy, d2Constant1_dy2) - calc_deriv_product(dWrt1_dy, dConstant1_dx, ddWrt1_dy2, d2Constant1_dxdy);
 
-		ddOf1_dWrt1_dx = ( D1 * dN1_dx - N1 * dD1_dx ) / pow(D1, 2);
-		ddOf1_dWrt1_dy = ( D1 * dN1_dy - N1 * dD1_dy ) / pow(D1, 2);
+		d2Of1_dWrt1_dx = ( D * dN_dx - N * dD_dx ) / pow(D, 2);
+		d2Of1_dWrt1_dy = ( D * dN_dy - N * dD_dy ) / pow(D, 2);
 
-		second_deriv = calc_first_partial_deriv_chain(ddOf1_dWrt1_dx, ddOf1_dWrt1_dy, dWrt2_dx, dWrt2_dy, dConstant2_dx, dConstant2_dy);
+		second_deriv = calc_first_partial_deriv_chain(d2Of1_dWrt1_dx, d2Of1_dWrt1_dy, dWrt2_dx, dWrt2_dy, dConstant2_dx, dConstant2_dy);
 
         return second_deriv*pow(Of_conversion_factor1,2)/Wrt_conversion_factor1/Wrt_conversion_factor2;
     }
