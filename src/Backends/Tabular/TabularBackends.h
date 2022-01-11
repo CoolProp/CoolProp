@@ -1131,6 +1131,11 @@ class TabularBackend : public AbstractState
         /// Calculate the speed of sound using a tabular backend [m/s]
         CoolPropDbl calc_speed_sound(void);
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+        CoolPropDbl calc_first_partial_deriv_nominator(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        CoolPropDbl calc_first_partial_deriv_denominator(CoolPropDbl dBdx_y, CoolPropDbl dBAdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        CoolPropDbl calc_first_partial_deriv_chain(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        CoolPropDbl calc_dNdy(CoolPropDbl dAdx, CoolPropDbl dAdy, CoolPropDbl d2Ady2, CoolPropDbl d2Adxdy, CoolPropDbl dConstdx, CoolPropDbl dConstdy, CoolPropDbl d2Constdy2, CoolPropDbl d2Constdxdy);
+        CoolPropDbl calc_deriv_product(CoolPropDbl A, CoolPropDbl B, CoolPropDbl dAdx, CoolPropDbl dBdx);
         CoolPropDbl calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
         /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */
