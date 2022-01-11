@@ -9,7 +9,7 @@
 
 using namespace CoolProp;
 
-const int LENGTH_PARAMETER = 15, LENGTH_HEOS = 15, LENGTH_BICUBIC = 15, LENGTH_TTSE = 15;
+const int LENGTH_PARAMETER = 20, LENGTH_HEOS = 15, LENGTH_BICUBIC = 15, LENGTH_TTSE = 15;
 const int LENGTH_REL_ERROR_BICUBIC = 20, LENGTH_REL_ERROR_TTSE = 20;
 const int LINE_LENGTH = LENGTH_PARAMETER + LENGTH_HEOS + LENGTH_BICUBIC + LENGTH_TTSE + LENGTH_REL_ERROR_BICUBIC + LENGTH_REL_ERROR_TTSE - 5;
 
@@ -115,6 +115,15 @@ void print_output(shared_ptr<AbstractState> HEOS, shared_ptr<AbstractState> Bicu
 
     if ( HEOS->phase() != iphase_twophase ){
     	print_parameter("dpdT|rhomolar", HEOS->first_partial_deriv(iP, iT, iDmolar), Bicubic->first_partial_deriv(iP, iT, iDmolar), TTSE->first_partial_deriv(iP, iT, iDmolar));
+    }
+    else {
+    	std::cout << "dpdT|rhomolar not defined for two phase state." << std::endl;
+    }
+
+    if ( HEOS->phase() != iphase_twophase ){
+    	print_parameter("d2pdT2|rhomolar", HEOS->second_partial_deriv(iP, iT, iDmolar, iT, iDmolar), Bicubic->second_partial_deriv(iP, iT, iDmolar, iT, iDmolar), TTSE->second_partial_deriv(iP, iT, iDmolar, iT, iDmolar));
+    	print_parameter("d2pdUmass2|rhomass", HEOS->second_partial_deriv(iP, iUmass, iDmass, iUmass, iDmass), Bicubic->second_partial_deriv(iP, iUmass, iDmass, iUmass, iDmass), TTSE->second_partial_deriv(iP, iUmass, iDmass, iUmass, iDmass));
+    	print_parameter("dUmassdDmass2|P", HEOS->second_partial_deriv(iUmass, iDmass, iUmass, iDmass, iP), Bicubic->second_partial_deriv(iUmass, iDmass, iUmass, iDmass, iP), TTSE->second_partial_deriv(iUmass, iDmass, iUmass, iDmass, iP));
     }
     else {
     	std::cout << "dpdT|rhomolar not defined for two phase state." << std::endl;

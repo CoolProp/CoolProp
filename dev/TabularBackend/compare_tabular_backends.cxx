@@ -18,18 +18,9 @@ int main()
     shared_ptr<AbstractState> Bicubic(AbstractState::factory("BICUBIC&HEOS",fluid));
     shared_ptr<AbstractState> TTSE(AbstractState::factory("TTSE&HEOS",fluid));
 
-    for (int i=0; i<=1000; i++){
-    	try {
-			HEOS->update(DmolarUmolar_INPUTS, rhomolar, umolar);
-			Bicubic->update(DmolarUmolar_INPUTS, rhomolar, umolar);
-			TTSE->update(DmolarUmolar_INPUTS, rhomolar, umolar);
-
-			std::cout << "sucess: " << i << std::endl;
-    	}
-    	catch (CoolPropBaseError)
-    	{
-    	}
-    }
+	HEOS->update(DmolarUmolar_INPUTS, rhomolar, umolar);
+	Bicubic->update(DmolarUmolar_INPUTS, rhomolar, umolar);
+	TTSE->update(DmolarUmolar_INPUTS, rhomolar, umolar);
 
     print_output(HEOS, Bicubic, TTSE);
 

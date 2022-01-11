@@ -1131,6 +1131,7 @@ class TabularBackend : public AbstractState
         /// Calculate the speed of sound using a tabular backend [m/s]
         CoolPropDbl calc_speed_sound(void);
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+        CoolPropDbl calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
         /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */
         CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);

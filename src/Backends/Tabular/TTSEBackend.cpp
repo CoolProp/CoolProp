@@ -211,8 +211,20 @@ double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGridde
 		if (output == table.xkey) { return 0.0; }
 		val = (*dzdy)[i][j] + deltay*(*d2zdy2)[i][j] + deltax*(*d2zdxdy)[i][j];
 	}
+	else if (Ny == 1 && Nx == 1){
+		if (output == table.xkey || output == table.ykey) { return 0.0; }
+		val = (*d2zdxdy)[i][j];
+	}
+	else if (Ny == 2 && Nx == 0){
+		if (output == table.xkey || output == table.ykey) { return 0.0; }
+		val = (*d2zdy2)[i][j];
+	}
+	else if (Ny == 0 && Nx == 2){
+		if (output == table.xkey || output == table.ykey) { return 0.0; }
+		val = (*d2zdx2)[i][j];
+	}
 	else{
-		throw NotImplementedError("only first derivatives currently supported");
+		throw NotImplementedError("only first and second derivatives currently supported");
 	}
     return val;
 }

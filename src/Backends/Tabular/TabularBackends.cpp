@@ -688,6 +688,93 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, pa
         throw ValueError(format("Inputs [rho: %g mol/m3, T: %g K, p: %g Pa] are two-phase; cannot use single-phase derivatives", _rhomolar, _T, _p));
     }
 };
+CoolPropDbl CoolProp::TabularBackend::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){
+    if (using_single_phase_table){
+
+        CoolPropDbl dOf1_dx, dOf1_dy;
+		CoolPropDbl dWrt1_dx, dWrt1_dy;
+		CoolPropDbl dConstant1_dx, dConstant1_dy;
+
+        CoolPropDbl dWrt2_dx, dWrt2_dy;
+        CoolPropDbl dConstant2_dx, dConstant2_dy;
+
+        CoolPropDbl N1, D1, dN1_dx, dN1_dy, dD1_dx, dD1_dy;
+
+        CoolPropDbl ddOf1_dWrt1_dx, ddOf1_dWrt1_dy;
+        CoolPropDbl ddWrt1_dx2, ddWrt1_dy2, ddWrt1_dxdy;
+
+        CoolPropDbl ddConstant1_dx2, ddConstant1_dy2, ddConstant1_dxdy;
+        CoolPropDbl ddOf1_dx2, ddOf1_dy2, ddOf1_dxdy;
+
+        CoolPropDbl second_deriv;
+
+        // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
+        double Of_conversion_factor1 = 1.0, Wrt_conversion_factor1 = 1.0, Wrt_conversion_factor2 = 1.0;
+        double Constant_conversion_factor1 = 1.0, Constant_conversion_factor2 = 1.0, MM = AS->molar_mass();
+        mass_to_molar(Of1, Of_conversion_factor1, MM);
+        mass_to_molar(Wrt1, Wrt_conversion_factor1, MM);
+        mass_to_molar(Wrt2, Wrt_conversion_factor2, MM);
+        mass_to_molar(Constant1, Constant_conversion_factor1, MM);
+        mass_to_molar(Constant2, Constant_conversion_factor2, MM);
+
+        switch (selected_table){
+        case SELECTED_PH_TABLE: {
+        	throw NotImplementedError();
+        	break;
+        }
+        case SELECTED_PT_TABLE:{
+        	throw NotImplementedError();
+        	break;
+        }
+        case SELECTED_DU_TABLE: {
+
+            dOf1_dx = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf1_dy = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt1_dx = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt1_dy = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            ddWrt1_dx2 = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            ddWrt1_dy2 = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            ddWrt1_dxdy = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+            dConstant1_dx = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant1_dy = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            dWrt2_dx = evaluate_single_phase_du_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt2_dy = evaluate_single_phase_du_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            N1 = dOf1_dx  * dConstant1_dy - dOf1_dy  * dConstant1_dx;
+            D1 = dWrt1_dx * dConstant1_dy - dWrt1_dy * dConstant1_dx;
+
+            dConstant2_dx = evaluate_single_phase_du_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant2_dy = evaluate_single_phase_du_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+			ddConstant1_dx2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			ddConstant1_dy2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			ddConstant1_dxdy = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+
+			ddOf1_dx2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+			ddOf1_dy2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+			ddOf1_dxdy = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+
+			dN1_dx = dOf1_dx * ddConstant1_dxdy + ddOf1_dx2  * dConstant1_dy - dOf1_dy * ddConstant1_dx2  - ddOf1_dxdy * dConstant1_dx;
+			dN1_dy = dOf1_dx * ddConstant1_dy2  + ddOf1_dxdy * dConstant1_dy - dOf1_dy * ddConstant1_dxdy -  ddOf1_dy2 * dConstant1_dx;
+
+			dD1_dx = dWrt1_dx * ddConstant1_dxdy + ddWrt1_dx2  * dConstant1_dy - dWrt1_dy * ddConstant1_dx2  - ddWrt1_dxdy * dConstant1_dx;
+			dD1_dy = dWrt1_dx * ddConstant1_dy2  + ddWrt1_dxdy * dConstant1_dy - dWrt1_dy * ddConstant1_dxdy - ddWrt1_dy2  * dConstant1_dx;
+
+			ddOf1_dWrt1_dx = ( D1 * dN1_dx - N1 * dD1_dx ) / pow(D1, 2); //✓
+			ddOf1_dWrt1_dy = ( D1 * dN1_dy - N1 * dD1_dy ) / pow(D1, 2);
+
+			second_deriv = ( ddOf1_dWrt1_dx * dConstant2_dy - ddOf1_dWrt1_dy * dConstant2_dx ) / ( dWrt2_dx * dConstant2_dy - dWrt2_dy * dConstant2_dx );
+        	break;
+        }
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+        return second_deriv*pow(Of_conversion_factor1,2)/Wrt_conversion_factor1/Wrt_conversion_factor2;
+    }
+    else{
+        throw ValueError(format("Inputs [rho: %g mol/m3, T: %g K, p: %g Pa] are two-phase; cannot use single-phase derivatives", _rhomolar, _T, _p));
+    }
+};
 
 CoolPropDbl CoolProp::TabularBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1){
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
