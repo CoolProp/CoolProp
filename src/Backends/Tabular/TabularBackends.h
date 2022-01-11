@@ -1131,11 +1131,44 @@ class TabularBackend : public AbstractState
         /// Calculate the speed of sound using a tabular backend [m/s]
         CoolPropDbl calc_speed_sound(void);
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+        /** /brief Calulate the nominator of the first partial derivative from the fundamental derivatives
+         * @param dAdx_x First partial derivative wrt. x of differentiated variable
+         * @param dAdx_y First partial derivative wrt. y of differentiated variable
+         * @param dBdx_x First partial derivative wrt. x of constant
+         * @param dBdx_y First partial derivative wrt. y of constant
+         * \f[ N = \left( \frac{\partial A}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial A}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y \f]
+		*/
         CoolPropDbl calc_first_partial_deriv_nominator(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        /** /brief Calulate the denominator of the first partial derivative from the fundamental derivatives
+         * @param dBdx_x First partial derivative wrt. x of differentiator
+         * @param dBdx_y First partial derivative wrt. y of differentiator
+         * @param dBdx_x First partial derivative wrt. x of constant
+         * @param dBdx_y First partial derivative wrt. y of constant
+         * *
+         * \f[ D = \left( \frac{\partial B}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial B}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y \f]
+		*/
         CoolPropDbl calc_first_partial_deriv_denominator(CoolPropDbl dBdx_y, CoolPropDbl dBAdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
-        CoolPropDbl calc_first_partial_deriv_chain(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
-        CoolPropDbl calc_dNdy(CoolPropDbl dAdx, CoolPropDbl dAdy, CoolPropDbl d2Ady2, CoolPropDbl d2Adxdy, CoolPropDbl dConstdx, CoolPropDbl dConstdy, CoolPropDbl d2Constdy2, CoolPropDbl d2Constdxdy);
-        CoolPropDbl calc_deriv_product(CoolPropDbl A, CoolPropDbl B, CoolPropDbl dAdx, CoolPropDbl dBdx);
+        /** /brief Calculate the first partial derivative from the fundamental derivatives
+         * @param dAdx_x First partial derivative wrt. x of differentiated variable
+         * @param dAdx_y First partial derivative wrt. y of differentiated variable
+         * @param dBdx_x First partial derivative wrt. x of differentiator
+         * @param dBdx_y First partial derivative wrt. y of differentiator
+         * @param dBdx_x First partial derivative wrt. x of constant
+         * @param dBdx_y First partial derivative wrt. y of constant
+         *
+         * \f[ \left( \frac{\partial A}{\partial B} \right)_C = \frac{ \left( \frac{\partial A}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial A}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y}{ \left( \frac{\partial B}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial B}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y} = \frac{N}{D}\f]
+		*/
+        CoolPropDbl calc_first_partial_deriv_from_fundamental_derivs(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        /** /brief Apply the chain rule
+         * @param A The first term
+         * @param B The second term
+         * @param dAdx The derivative of the first term
+         * @param dBdx The derivative of the second term
+         *
+        * \f[ F = A(x) \cdot B(x)\f]
+        * \f[ \frac{dF}{dx} = A \frac{dB}{dx} + B \frac{dA}{dx} \f]
+		*/
+        CoolPropDbl chain_rule(CoolPropDbl A, CoolPropDbl B, CoolPropDbl dAdx, CoolPropDbl dBdx);
         CoolPropDbl calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
         /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */

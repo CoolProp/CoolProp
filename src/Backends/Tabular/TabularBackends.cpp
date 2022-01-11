@@ -694,12 +694,12 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_nominator(CoolPro
 CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_denominator(CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x){
 	return calc_first_partial_deriv_nominator(dBdx_y, dBdy_x, dCdx_y, dCdy_x);
 }
-CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_chain(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x){
+CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_from_fundamental_derivs(CoolPropDbl dAdx, CoolPropDbl dAdy, CoolPropDbl dBdx, CoolPropDbl dBdy, CoolPropDbl dCdx, CoolPropDbl dCdy){
 
 	CoolPropDbl nominator = 0.0, denominator = 0.0;
 
-	nominator = calc_first_partial_deriv_nominator(dAdx_y, dAdy_x, dCdx_y, dCdy_x);
-	denominator = calc_first_partial_deriv_denominator(dBdx_y, dBdy_x, dCdx_y, dCdy_x);
+	nominator = calc_first_partial_deriv_nominator(dAdx, dAdy, dCdx, dCdy);
+	denominator = calc_first_partial_deriv_denominator(dBdx, dBdy, dCdx, dCdy);
 
 	if ( denominator == 0.0 ){
 		return HUGE;
@@ -708,13 +708,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_chain(CoolPropDbl
 		return nominator / denominator;
 	}
 }
-CoolPropDbl CoolProp::TabularBackend::calc_dNdy(CoolPropDbl dAdx, CoolPropDbl dAdy, CoolPropDbl d2Ady2, CoolPropDbl d2Adxdy, CoolPropDbl dConstdx, CoolPropDbl dConstdy, CoolPropDbl d2Constdy2, CoolPropDbl d2Constdxdy){
-
-	return dAdx * d2Constdy2 + d2Adxdy * dConstdy - dAdy * d2Constdxdy - d2Ady2 * dConstdx;
-}
-
-
-CoolPropDbl CoolProp::TabularBackend::calc_deriv_product(CoolPropDbl A, CoolPropDbl B, CoolPropDbl dAdx, CoolPropDbl dBdx){
+CoolPropDbl CoolProp::TabularBackend::chain_rule(CoolPropDbl A, CoolPropDbl B, CoolPropDbl dAdx, CoolPropDbl dBdx){
 	// A(x,y) * B(x,y)
 	// dAdx = A * dBdx - B * dAdx
 	return A * dBdx + B * dAdx;
@@ -834,16 +828,16 @@ CoolPropDbl CoolProp::TabularBackend::calc_second_partial_deriv(parameters Of1, 
         N = calc_first_partial_deriv_nominator(dOf1_dx, dOf1_dy, dConstant1_dx, dConstant1_dy);
 		D = calc_first_partial_deriv_denominator(dWrt1_dx, dWrt1_dy, dConstant1_dx, dConstant1_dy);
 
-		dN_dx = calc_deriv_product(dOf1_dx, dConstant1_dy, d2Of1_dx2, d2Constant1_dxdy) - calc_deriv_product(dOf1_dy, dConstant1_dx, d2Of1_dxdy, d2Constant1_dx2);
-		dN_dy = calc_deriv_product(dOf1_dx, dConstant1_dy, d2Of1_dxdy, d2Constant1_dy2) - calc_deriv_product(dOf1_dy, dConstant1_dx, d2Of1_dy2, d2Constant1_dxdy);
+		dN_dx = chain_rule(dOf1_dx, dConstant1_dy, d2Of1_dx2, d2Constant1_dxdy) - chain_rule(dOf1_dy, dConstant1_dx, d2Of1_dxdy, d2Constant1_dx2);
+		dN_dy = chain_rule(dOf1_dx, dConstant1_dy, d2Of1_dxdy, d2Constant1_dy2) - chain_rule(dOf1_dy, dConstant1_dx, d2Of1_dy2, d2Constant1_dxdy);
 
-		dD_dx = calc_deriv_product(dWrt1_dx, dConstant1_dy, ddWrt1_dx2, d2Constant1_dxdy) - calc_deriv_product(dWrt1_dy, dConstant1_dx, ddWrt1_dxdy, d2Constant1_dx2);
-		dD_dy = calc_deriv_product(dWrt1_dx, dConstant1_dy, ddWrt1_dxdy, d2Constant1_dy2) - calc_deriv_product(dWrt1_dy, dConstant1_dx, ddWrt1_dy2, d2Constant1_dxdy);
+		dD_dx = chain_rule(dWrt1_dx, dConstant1_dy, ddWrt1_dx2, d2Constant1_dxdy) - chain_rule(dWrt1_dy, dConstant1_dx, ddWrt1_dxdy, d2Constant1_dx2);
+		dD_dy = chain_rule(dWrt1_dx, dConstant1_dy, ddWrt1_dxdy, d2Constant1_dy2) - chain_rule(dWrt1_dy, dConstant1_dx, ddWrt1_dy2, d2Constant1_dxdy);
 
 		d2Of1_dWrt1_dx = ( D * dN_dx - N * dD_dx ) / pow(D, 2);
 		d2Of1_dWrt1_dy = ( D * dN_dy - N * dD_dy ) / pow(D, 2);
 
-		second_deriv = calc_first_partial_deriv_chain(d2Of1_dWrt1_dx, d2Of1_dWrt1_dy, dWrt2_dx, dWrt2_dy, dConstant2_dx, dConstant2_dy);
+		second_deriv = calc_first_partial_deriv_from_fundamental_derivs(d2Of1_dWrt1_dx, d2Of1_dWrt1_dy, dWrt2_dx, dWrt2_dy, dConstant2_dx, dConstant2_dy);
 
         return second_deriv*pow(Of_conversion_factor1,2)/Wrt_conversion_factor1/Wrt_conversion_factor2;
     }
