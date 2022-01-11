@@ -65,6 +65,7 @@ Projects Using CoolProp
 * `SmoWeb <http://platform.sysmoltd.com>`_
 * `T-Props <https://play.google.com/store/apps/details?id=com.innoversetech.tprops>`_
 * `PropiedadesDeFluidos <http://jfc.us.es/propiedadesdefluidos/descripcion/>`_
+* `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_
 
 Main Developers
 ---------------
