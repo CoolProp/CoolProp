@@ -234,9 +234,9 @@ bool AbstractState::clear() {
     this->_gibbsmolar_residual.clear();
 
     /// Smoothing values
-	this->_rho_spline.clear();
-	this->_drho_spline_dh__constp.clear();
-	this->_drho_spline_dp__consth.clear();
+    this->_rho_spline.clear();
+    this->_drho_spline_dh__constp.clear();
+    this->_drho_spline_dp__consth.clear();
 
     /// Cached low-level elements for in-place calculation of other properties
     this->_alpha0.clear();
@@ -336,8 +336,8 @@ double AbstractState::trivial_keyed_output(parameters key)
         return molar_mass();
     case iacentric_factor:
         return acentric_factor();
-	case igas_constant:
-		return gas_constant();
+    case igas_constant:
+        return gas_constant();
     case iT_min:
         return Tmin();
     case iT_triple:
@@ -353,8 +353,8 @@ double AbstractState::trivial_keyed_output(parameters key)
         return calc_T_reducing();
     case irhomolar_reducing:
         return calc_rhomolar_reducing();
-	case iP_reducing:
-		return calc_p_reducing();
+    case iP_reducing:
+        return calc_p_reducing();
     case iP_critical:
         return this->p_critical();
     case iT_critical:
@@ -491,8 +491,8 @@ double AbstractState::keyed_output(parameters key)
         return conductivity();
     case iPrandtl:
         return Prandtl();
-	case isurface_tension:
-		return surface_tension();
+    case isurface_tension:
+        return surface_tension();
     case iPhase:
         return phase();
     case iZ:
@@ -840,7 +840,7 @@ void get_dT_drho(AbstractState &AS, parameters index, CoolPropDbl &dT, CoolPropD
 }
 void get_dT_drho_second_derivatives(AbstractState &AS, int index, CoolPropDbl &dT2, CoolPropDbl &drho_dT, CoolPropDbl &drho2)
 {
-	CoolPropDbl T = AS.T(),
+    CoolPropDbl T = AS.T(),
                 rho = AS.rhomolar(),
                 rhor = AS.rhomolar_reducing(),
                 Tr = AS.T_reducing(),
@@ -854,7 +854,7 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, CoolPropDbl &d
     switch (index)
     {
     case iT:
-	case iDmass:
+    case iDmass:
     case iDmolar:
         dT2 = 0; // d2rhomolar_dtau2
         drho2 = 0;
@@ -925,7 +925,7 @@ void get_dT_drho_second_derivatives(AbstractState &AS, int index, CoolPropDbl &d
 }
 CoolPropDbl AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant)
 {
-	CoolPropDbl dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
+    CoolPropDbl dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
 
     get_dT_drho(*this, Of, dOf_dT, dOf_drho);
     get_dT_drho(*this, Wrt, dWrt_dT, dWrt_drho);
