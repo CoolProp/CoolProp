@@ -71,27 +71,8 @@ ax2.set_title('Error in Pressure from Bicubic')
 
 for ax in [ax1, ax2]:
 
-    #ax.set_xlim(250000, 550000)
-    #ax.set_ylim(100000, 7000000)
-
     ax.set_xscale('log')
-
-    #ticks = [100000,200000,400000,600000,800000,1000000,2000000, 4000000, 6000000]
-    #labels = [str(tick) for tick in ticks]
-    #ax.set_yticks(ticks)
-    #ax.set_yticklabels(labels)
-    #ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-
-    #ticks = [150000, 250000,350000,450000,550000]
-    #labels = [str(tick) for tick in ticks]
-    #ax.set_xticks(ticks)
-    #ax.set_xticklabels(labels)
-
-    #ax.tick_params(axis='y',which='minor', left='off')
-
-    #ax.set_xticklabels(ax.get_xticks())
     ax.set_ylabel('Specific internal energy [J/mol]')
-    #ax.set_yticklabels(ax.get_yticks())
     ax.set_xlabel('Molar density [m^3/mol^3]')
 
     ax.plot(DL,uL,'k',lw = 4)
