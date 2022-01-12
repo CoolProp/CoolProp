@@ -1988,7 +1988,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(int itau, int idel)
     double val = 0, tau = _tau, __T = T(), __rho = rhomolar()/1000;
     if (PHI0dll == NULL){throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");}
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);
-    return static_cast<CoolPropDbl>(val)/pow(tau,itau); // Not multiplied by delta^idel
+    return static_cast<CoolPropDbl>(val)/pow(static_cast<CoolPropDbl>(_delta),idel)/pow(tau,itau);
 }
 /// Calculate excess properties
 void REFPROPMixtureBackend::calc_excess_properties(){
@@ -2286,6 +2286,27 @@ TEST_CASE("Check trivial inputs for REFPROP work", "[REFPROP_trivial]")
             CAPTURE(errstr);
             double err = (cp_val - rp_val)/cp_val;
             CHECK(err < 1e-3);
+        }
+    }
+}
+
+TEST_CASE("Check PHI0 derivatives", "[REFPROP_PHI0]")
+{
+
+    const int num_inputs = 3;
+    std::string inputs[num_inputs] = {"DALPHA0_DDELTA_CONSTTAU", "D2ALPHA0_DDELTA2_CONSTTAU", "D3ALPHA0_DDELTA3_CONSTTAU"};
+    for (int i = 0; i < num_inputs; ++i){
+        std::ostringstream ss;
+        ss << "Check " << inputs[i];
+        SECTION(ss.str(),"")
+        {
+            double cp_val = CoolProp::PropsSI(inputs[i],"P",101325,"T",298,"HEOS::Water");
+            double rp_val = CoolProp::PropsSI(inputs[i],"P",101325,"T",298,"REFPROP::Water");
+
+            std::string errstr = CoolProp::get_global_param_string("errstring");
+            CAPTURE(errstr);
+            double err = std::abs((cp_val - rp_val)/cp_val);
+            CHECK(err < 1e-12);
         }
     }
 }
