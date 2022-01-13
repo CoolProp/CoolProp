@@ -3,7 +3,6 @@ import CoolProp.CoolProp as CP
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
-import matplotlib.ticker
 import numpy as np
 import random
 
@@ -57,7 +56,7 @@ for a_useless_counter in range(40000):
 
     except ValueError as VE:
         print('ERROR', VE)
-        pass
+        
     except:
         print("Unkwnown error")
         raise
