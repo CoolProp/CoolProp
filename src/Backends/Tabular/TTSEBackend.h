@@ -71,6 +71,9 @@ class TTSEBackend : public TabularBackend
         
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table
+         *
+         * Note that the second derivative is from the nearest neighbor grid point and it is not interpolated, so the resolution might be poor.
+         *
          * @param table A reference to the table to be used
          * @param output The output variable
          * @param x The 
