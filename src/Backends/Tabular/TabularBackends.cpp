@@ -183,25 +183,25 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     AS->update(PQ_INPUTS, AS->p_critical(), 1);
     std::size_t i = N-1;
     
-    pV[i] = AS->p(); 
-    TV[i] = AS->T(); 
-    rhomolarV[i] = AS->rhomolar();
+	pV[i] = AS->p(); 
+	TV[i] = AS->T(); 
+	rhomolarV[i] = AS->rhomolar();
     hmolarV[i] = AS->hmolar(); 
-    smolarV[i] = AS->smolar(); 
-    umolarV[i] = AS->umolar();
+	smolarV[i] = AS->smolar(); 
+	umolarV[i] = AS->umolar();
 
     pL[i] = AS->p(); 
-    TL[i] = AS->T(); 
-    rhomolarL[i] = AS->rhomolar(); 
+	TL[i] = AS->T(); 
+	rhomolarL[i] = AS->rhomolar(); 
     hmolarL[i] = AS->hmolar(); 
-    smolarL[i] = AS->smolar(); 
-    umolarL[i] = AS->umolar();
+	smolarL[i] = AS->smolar(); 
+	umolarL[i] = AS->umolar();
 
     logpV[i] = log(AS->p()); 
-    logrhomolarV[i] = log(rhomolarV[i]);
+	logrhomolarV[i] = log(rhomolarV[i]);
 
     logpL[i] = log(AS->p()); 
-    logrhomolarL[i] = log(rhomolarL[i]);
+	logrhomolarL[i] = log(rhomolarL[i]);
 
     auto uminmax_v = std::minmax_element(umolarV.begin(), umolarV.end());
     auto uminmax_l = std::minmax_element(umolarL.begin(), umolarL.end());
@@ -303,7 +303,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             rhomolar[i][j] = AS->rhomolar();
             hmolar[i][j] = AS->hmolar();
             smolar[i][j] = AS->smolar();
-            umolar[i][j] = AS->umolar();
+			umolar[i][j] = AS->umolar();
             
             // -------------------------
             //   Transport properties
@@ -329,7 +329,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             dhmolardy[i][j] = AS->first_partial_deriv(iHmolar, ykey, xkey);
             dsmolardx[i][j] = AS->first_partial_deriv(iSmolar, xkey, ykey);
             dsmolardy[i][j] = AS->first_partial_deriv(iSmolar, ykey, xkey);
-            dumolardx[i][j] = AS->first_partial_deriv(iUmolar, xkey, ykey);
+			dumolardx[i][j] = AS->first_partial_deriv(iUmolar, xkey, ykey);
             dumolardy[i][j] = AS->first_partial_deriv(iUmolar, ykey, xkey);
             
             // ----------------------------------------
@@ -350,7 +350,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             d2smolardx2[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, xkey, ykey);
             d2smolardxdy[i][j] = AS->second_partial_deriv(iSmolar, xkey, ykey, ykey, xkey);
             d2smolardy2[i][j] = AS->second_partial_deriv(iSmolar, ykey, xkey, ykey, xkey);
-            d2umolardx2[i][j] = AS->second_partial_deriv(iUmolar, xkey, ykey, xkey, ykey);
+			d2umolardx2[i][j] = AS->second_partial_deriv(iUmolar, xkey, ykey, xkey, ykey);
             d2umolardxdy[i][j] = AS->second_partial_deriv(iUmolar, xkey, ykey, ykey, xkey);
             d2umolardy2[i][j] = AS->second_partial_deriv(iUmolar, ykey, xkey, ykey, xkey);
         }
@@ -399,25 +399,25 @@ void CoolProp::TabularBackend::load_tables(){
 CoolPropDbl CoolProp::TabularBackend::calc_saturated_vapor_keyed_output(parameters key){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
-    double factor = 1.0;
-    mass_to_molar(key, factor, molar_mass());
+	double factor = 1.0;
+	mass_to_molar(key, factor, molar_mass());
     if (is_mixture){
-        return phase_envelope_sat(phase_envelope, key, iP, _p) * factor;
+		return phase_envelope_sat(phase_envelope, key, iP, _p) * factor;
     }
     else{
-        return pure_saturation.evaluate(key, _p, 1, cached_saturation_iL, cached_saturation_iV) * factor;
+		return pure_saturation.evaluate(key, _p, 1, cached_saturation_iL, cached_saturation_iV) * factor;
     }
 }
 CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(parameters key){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
-    double factor = 1.0;
-    mass_to_molar(key, factor, molar_mass());
+	double factor = 1.0;
+	mass_to_molar(key, factor, molar_mass());
     if (is_mixture){
-        return phase_envelope_sat(phase_envelope, key, iP, _p) * factor;
+		return phase_envelope_sat(phase_envelope, key, iP, _p) * factor;
     }
     else{
-        return pure_saturation.evaluate(key, _p, 0, cached_saturation_iL, cached_saturation_iV) * factor;
+		return pure_saturation.evaluate(key, _p, 0, cached_saturation_iL, cached_saturation_iV) * factor;
     }
 };
 
@@ -428,7 +428,6 @@ CoolPropDbl CoolProp::TabularBackend::calc_p(void){
         case SELECTED_PH_TABLE: return _p;
         case SELECTED_PT_TABLE: return _p;
         case SELECTED_DU_TABLE: return evaluate_single_phase_du(iP, cached_single_phase_i, cached_single_phase_j);
-        case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
     }
@@ -592,7 +591,8 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
-        case SELECTED_DU_TABLE: return evaluate_single_phase_du_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
     }
@@ -897,136 +897,136 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv(parameters Of, 
 }
 
 CoolPropDbl CoolProp::TabularBackend::calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end){
-    // Note: If you need all three values (drho_dh__p, drho_dp__h and rho_spline), 
-    // you should calculate drho_dp__h first to avoid duplicate calculations.
+	// Note: If you need all three values (drho_dh__p, drho_dp__h and rho_spline), 
+	// you should calculate drho_dp__h first to avoid duplicate calculations.
 
-    bool drho_dh__p = false;
-    bool drho_dp__h = false;
-    bool rho_spline = false;
+	bool drho_dh__p = false;
+	bool drho_dp__h = false;
+	bool rho_spline = false;
 
-    if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
-        drho_dh__p = true;
-        if (_drho_spline_dh__constp) return _drho_spline_dh__constp;
-    }
-    else if (Of == iDmass && Wrt == iHmass && Constant == iP){
-        return first_two_phase_deriv_splined(iDmolar, iHmolar, iP, x_end)*POW2(molar_mass());
-    }
-    else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
-        drho_dp__h = true;
-        if (_drho_spline_dp__consth) return _drho_spline_dp__consth;
-    }
-    else if (Of == iDmass && Wrt == iP && Constant == iHmass){
-        return first_two_phase_deriv_splined(iDmolar, iP, iHmolar, x_end)*molar_mass();
-    }
-    // Add the special case for the splined density
-    else if (Of == iDmolar && Wrt == iDmolar && Constant == iDmolar){
-        rho_spline = true;
-        if (_rho_spline) return _rho_spline;
-    }
-    else if (Of == iDmass && Wrt == iDmass && Constant == iDmass){
-        return first_two_phase_deriv_splined(iDmolar, iDmolar, iDmolar, x_end)*molar_mass();
-    }
-    else{
-        throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
-    }
+	if (Of == iDmolar && Wrt == iHmolar && Constant == iP){
+		drho_dh__p = true;
+		if (_drho_spline_dh__constp) return _drho_spline_dh__constp;
+	}
+	else if (Of == iDmass && Wrt == iHmass && Constant == iP){
+		return first_two_phase_deriv_splined(iDmolar, iHmolar, iP, x_end)*POW2(molar_mass());
+	}
+	else if (Of == iDmolar && Wrt == iP && Constant == iHmolar){
+		drho_dp__h = true;
+		if (_drho_spline_dp__consth) return _drho_spline_dp__consth;
+	}
+	else if (Of == iDmass && Wrt == iP && Constant == iHmass){
+		return first_two_phase_deriv_splined(iDmolar, iP, iHmolar, x_end)*molar_mass();
+	}
+	// Add the special case for the splined density
+	else if (Of == iDmolar && Wrt == iDmolar && Constant == iDmolar){
+		rho_spline = true;
+		if (_rho_spline) return _rho_spline;
+	}
+	else if (Of == iDmass && Wrt == iDmass && Constant == iDmass){
+		return first_two_phase_deriv_splined(iDmolar, iDmolar, iDmolar, x_end)*molar_mass();
+	}
+	else{
+		throw ValueError("These inputs are not supported to calc_first_two_phase_deriv");
+	}
 
-    if (_Q > x_end){ throw ValueError(format("Q [%g] is greater than x_end [%Lg]", _Q, x_end).c_str()); }
-    if (_phase != iphase_twophase){ throw ValueError(format("state is not two-phase")); }    
+	if (_Q > x_end){ throw ValueError(format("Q [%g] is greater than x_end [%Lg]", _Q, x_end).c_str()); }
+	if (_phase != iphase_twophase){ throw ValueError(format("state is not two-phase")); }	
 
-    // TODO: replace AS with a cloned instance of TTSE or BICUBIC, add "clone()" as mandatory function in base class
-    //shared_ptr<TabularBackend>
-    //    Liq(this->clone())),
-    //    End(this->clone()));
-    //
-    //Liq->specify_phase(iphase_liquid);
-    //Liq->_Q = -1;
-    //Liq->update_DmolarT_direct(SatL->rhomolar(), SatL->T());
-    //End->update(QT_INPUTS, x_end, SatL->T());
+	// TODO: replace AS with a cloned instance of TTSE or BICUBIC, add "clone()" as mandatory function in base class
+	//shared_ptr<TabularBackend>
+	//	Liq(this->clone())),
+	//	End(this->clone()));
+	//
+	//Liq->specify_phase(iphase_liquid);
+	//Liq->_Q = -1;
+	//Liq->update_DmolarT_direct(SatL->rhomolar(), SatL->T());
+	//End->update(QT_INPUTS, x_end, SatL->T());
 
 
-    // Start with quantities needed for all calculations
-    PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation; 
-    CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
-    CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
-    CoolPropDbl hE = pure_saturation.evaluate(iHmolar, _p, x_end, cached_saturation_iL, cached_saturation_iV);
-    
-    CoolPropDbl dL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
-    CoolPropDbl dV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
-    CoolPropDbl dE = pure_saturation.evaluate(iDmolar, _p, x_end, cached_saturation_iL, cached_saturation_iV);
+	// Start with quantities needed for all calculations
+	PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation; 
+	CoolPropDbl hL = pure_saturation.evaluate(iHmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+	CoolPropDbl hV = pure_saturation.evaluate(iHmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+	CoolPropDbl hE = pure_saturation.evaluate(iHmolar, _p, x_end, cached_saturation_iL, cached_saturation_iV);
+	
+	CoolPropDbl dL = pure_saturation.evaluate(iDmolar, _p, 0, cached_saturation_iL, cached_saturation_iV);
+	CoolPropDbl dV = pure_saturation.evaluate(iDmolar, _p, 1, cached_saturation_iL, cached_saturation_iV);
+	CoolPropDbl dE = pure_saturation.evaluate(iDmolar, _p, x_end, cached_saturation_iL, cached_saturation_iV);
 
-    CoolPropDbl Delta = Q()*(hV - hL);
-    CoolPropDbl Delta_end = hE - hL;
+	CoolPropDbl Delta = Q()*(hV - hL);
+	CoolPropDbl Delta_end = hE - hL;
 
-    CoolPropDbl TL = pure_saturation.evaluate(iT, _p, 0, cached_saturation_iL, cached_saturation_iV);
-    CoolPropDbl TE = pure_saturation.evaluate(iT, _p, x_end, cached_saturation_iL, cached_saturation_iV);
+	CoolPropDbl TL = pure_saturation.evaluate(iT, _p, 0, cached_saturation_iL, cached_saturation_iV);
+	CoolPropDbl TE = pure_saturation.evaluate(iT, _p, x_end, cached_saturation_iL, cached_saturation_iV);
 
-    // TODO: We cheat here and fake access to a derived class.
-    // Liquid state
-    AS->specify_phase(iphase_liquid);
-    AS->update(DmolarT_INPUTS, dL, TL);
-    CoolPropDbl drho_dh_liq__constp = AS->first_partial_deriv(iDmolar, iHmolar, iP);
-    CoolPropDbl d2rhodhdp_liq = AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
-    // End of spline
-    AS->specify_phase(iphase_twophase);
-    AS->update(DmolarT_INPUTS, dE, TE);
-    CoolPropDbl drho_dh_end__constp = AS->first_partial_deriv(iDmolar, iHmolar, iP);
-    CoolPropDbl d2rhodhdp_end = AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
+	// TODO: We cheat here and fake access to a derived class.
+	// Liquid state
+	AS->specify_phase(iphase_liquid);
+	AS->update(DmolarT_INPUTS, dL, TL);
+	CoolPropDbl drho_dh_liq__constp = AS->first_partial_deriv(iDmolar, iHmolar, iP);
+	CoolPropDbl d2rhodhdp_liq = AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
+	// End of spline
+	AS->specify_phase(iphase_twophase);
+	AS->update(DmolarT_INPUTS, dE, TE);
+	CoolPropDbl drho_dh_end__constp = AS->first_partial_deriv(iDmolar, iHmolar, iP);
+	CoolPropDbl d2rhodhdp_end = AS->second_partial_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
 
-    // Spline coordinates a, b, c, d
-    CoolPropDbl Abracket = (2 * dL - 2 * dE + Delta_end * (drho_dh_liq__constp + drho_dh_end__constp));
-    CoolPropDbl a = 1 / POW3(Delta_end) * Abracket;
-    CoolPropDbl b = 3 / POW2(Delta_end) * (-dL + dE) - 1 / Delta_end * (drho_dh_end__constp + 2 * drho_dh_liq__constp);
-    CoolPropDbl c = drho_dh_liq__constp;
-    CoolPropDbl d = dL;
+	// Spline coordinates a, b, c, d
+	CoolPropDbl Abracket = (2 * dL - 2 * dE + Delta_end * (drho_dh_liq__constp + drho_dh_end__constp));
+	CoolPropDbl a = 1 / POW3(Delta_end) * Abracket;
+	CoolPropDbl b = 3 / POW2(Delta_end) * (-dL + dE) - 1 / Delta_end * (drho_dh_end__constp + 2 * drho_dh_liq__constp);
+	CoolPropDbl c = drho_dh_liq__constp;
+	CoolPropDbl d = dL;
 
-    // Either the spline value or drho/dh|p can be directly evaluated now
-    _rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
-    _drho_spline_dh__constp = 3 * a*POW2(Delta) + 2 * b*Delta + c;
-    if (rho_spline) return _rho_spline;
-    if (drho_dh__p) return _drho_spline_dh__constp;
+	// Either the spline value or drho/dh|p can be directly evaluated now
+	_rho_spline = a*POW3(Delta) + b*POW2(Delta) + c*Delta + d;
+	_drho_spline_dh__constp = 3 * a*POW2(Delta) + 2 * b*Delta + c;
+	if (rho_spline) return _rho_spline;
+	if (drho_dh__p) return _drho_spline_dh__constp;
 
-    // It's drho/dp|h
-    // ... calculate some more things
+	// It's drho/dp|h
+	// ... calculate some more things
 
-    // Derivatives *along* the saturation curve using the special internal method
-    CoolPropDbl dhL_dp_sat = pure_saturation.first_saturation_deriv(iHmolar, iP, 0, _p, cached_saturation_iL);
-    CoolPropDbl dhV_dp_sat = pure_saturation.first_saturation_deriv(iHmolar, iP, 1, _p, cached_saturation_iV);
-    CoolPropDbl drhoL_dp_sat = pure_saturation.first_saturation_deriv(iDmolar, iP, 0, _p, cached_saturation_iL);
-    CoolPropDbl drhoV_dp_sat = pure_saturation.first_saturation_deriv(iDmolar, iP, 1, _p, cached_saturation_iV);
-    //CoolPropDbl rhoV = SatV->keyed_output(rho_key);
-    //CoolPropDbl rhoL = SatL->keyed_output(rho_key);
-    CoolPropDbl drho_dp_end = POW2(dE)*(x_end / POW2(dV)*drhoV_dp_sat + (1 - x_end) / POW2(dL)*drhoL_dp_sat);
+	// Derivatives *along* the saturation curve using the special internal method
+	CoolPropDbl dhL_dp_sat = pure_saturation.first_saturation_deriv(iHmolar, iP, 0, _p, cached_saturation_iL);
+	CoolPropDbl dhV_dp_sat = pure_saturation.first_saturation_deriv(iHmolar, iP, 1, _p, cached_saturation_iV);
+	CoolPropDbl drhoL_dp_sat = pure_saturation.first_saturation_deriv(iDmolar, iP, 0, _p, cached_saturation_iL);
+	CoolPropDbl drhoV_dp_sat = pure_saturation.first_saturation_deriv(iDmolar, iP, 1, _p, cached_saturation_iV);
+	//CoolPropDbl rhoV = SatV->keyed_output(rho_key);
+	//CoolPropDbl rhoL = SatL->keyed_output(rho_key);
+	CoolPropDbl drho_dp_end = POW2(dE)*(x_end / POW2(dV)*drhoV_dp_sat + (1 - x_end) / POW2(dL)*drhoL_dp_sat);
 
-    // Faking single-phase
-    //CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
-    //CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
+	// Faking single-phase
+	//CoolPropDbl drho_dp__consth_liq = Liq->first_partial_deriv(rho_key, p_key, h_key);
+	//CoolPropDbl d2rhodhdp_liq = Liq->second_partial_deriv(rho_key, h_key, p_key, p_key, h_key); // ?
 
-    // Derivatives at the end point
-    // CoolPropDbl drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
-    //CoolPropDbl d2rhodhdp_end = End->calc_second_two_phase_deriv(rho_key, h_key, p_key, p_key, h_key);
+	// Derivatives at the end point
+	// CoolPropDbl drho_dp__consth_end = End->calc_first_two_phase_deriv(rho_key, p_key, h_key);
+	//CoolPropDbl d2rhodhdp_end = End->calc_second_two_phase_deriv(rho_key, h_key, p_key, p_key, h_key);
 
-    // Reminder:
-    // Delta = Q()*(hV-hL) = h-hL
-    // Delta_end = x_end*(hV-hL);
-    CoolPropDbl d_Delta_dp__consth = -dhL_dp_sat;
-    CoolPropDbl d_Delta_end_dp__consth = x_end*(dhV_dp_sat - dhL_dp_sat);
+	// Reminder:
+	// Delta = Q()*(hV-hL) = h-hL
+	// Delta_end = x_end*(hV-hL);
+	CoolPropDbl d_Delta_dp__consth = -dhL_dp_sat;
+	CoolPropDbl d_Delta_end_dp__consth = x_end*(dhV_dp_sat - dhL_dp_sat);
 
-    // First pressure derivative at constant h of the coefficients a,b,c,d
-    // CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
-    CoolPropDbl d_Abracket_dp_consth = (2 * drhoL_dp_sat - 2 * drho_dp_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_end_dp__consth*(drho_dh_liq__constp + drho_dh_end__constp));
-    CoolPropDbl da_dp = 1 / POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3 / POW4(Delta_end)*d_Delta_end_dp__consth);
-    CoolPropDbl db_dp = -6 / POW3(Delta_end)*d_Delta_end_dp__consth*(dE - dL)
-        + 3 / POW2(Delta_end)*(drho_dp_end - drhoL_dp_sat)
-        + (1 / POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end__constp + 2 * drho_dh_liq__constp)
-        - (1 / Delta_end) * (d2rhodhdp_end + 2 * d2rhodhdp_liq);
-    CoolPropDbl dc_dp = d2rhodhdp_liq;
-    CoolPropDbl dd_dp = drhoL_dp_sat;
+	// First pressure derivative at constant h of the coefficients a,b,c,d
+	// CoolPropDbl Abracket = (2*rho_liq - 2*rho_end + Delta_end * (drho_dh_liq__constp + drho_dh_end));
+	CoolPropDbl d_Abracket_dp_consth = (2 * drhoL_dp_sat - 2 * drho_dp_end + Delta_end*(d2rhodhdp_liq + d2rhodhdp_end) + d_Delta_end_dp__consth*(drho_dh_liq__constp + drho_dh_end__constp));
+	CoolPropDbl da_dp = 1 / POW3(Delta_end)*d_Abracket_dp_consth + Abracket*(-3 / POW4(Delta_end)*d_Delta_end_dp__consth);
+	CoolPropDbl db_dp = -6 / POW3(Delta_end)*d_Delta_end_dp__consth*(dE - dL)
+		+ 3 / POW2(Delta_end)*(drho_dp_end - drhoL_dp_sat)
+		+ (1 / POW2(Delta_end)*d_Delta_end_dp__consth) * (drho_dh_end__constp + 2 * drho_dh_liq__constp)
+		- (1 / Delta_end) * (d2rhodhdp_end + 2 * d2rhodhdp_liq);
+	CoolPropDbl dc_dp = d2rhodhdp_liq;
+	CoolPropDbl dd_dp = drhoL_dp_sat;
 
-    _drho_spline_dp__consth = (3 * a*POW2(Delta) + 2 * b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
-    if (drho_dp__h) return _drho_spline_dp__consth;
+	_drho_spline_dp__consth = (3 * a*POW2(Delta) + 2 * b*Delta + c)*d_Delta_dp__consth + POW3(Delta)*da_dp + POW2(Delta)*db_dp + Delta*dc_dp + dd_dp;
+	if (drho_dp__h) return _drho_spline_dp__consth;
 
-    throw ValueError("Something went wrong in TabularBackend::calc_first_two_phase_deriv_splined");
-    return _HUGE;
+	throw ValueError("Something went wrong in TabularBackend::calc_first_two_phase_deriv_splined");
+	return _HUGE;
 
 }
 
@@ -1175,26 +1175,26 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     }
                     else if ((imposed_phase_index == iphase_gas || imposed_phase_index == iphase_supercritical_gas) && cached_single_phase_i > 0){
 
-                        // We want a gas solution, but we got a liquid solution
-                        if (_p < this->AS->p_critical()){
-                            while (
-                                cached_single_phase_i > 0
-                                &&
-                                single_phase_logpT.rhomolar[cached_single_phase_i][cached_single_phase_j+1] > rhoc
-                                )
-                            {
-                                // Bump to lower temperature
-                                cached_single_phase_i++;
-                            }
-                            double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
-                            if (rho > rhoc){
-                                // Didn't work
-                                throw ValueError("Bump unsuccessful");
-                            }
-                            else{
-                                _rhomolar = rho;
-                            }
-                        }
+						// We want a gas solution, but we got a liquid solution
+						if (_p < this->AS->p_critical()){
+							while (
+								cached_single_phase_i > 0
+								&&
+								single_phase_logpT.rhomolar[cached_single_phase_i][cached_single_phase_j+1] > rhoc
+								)
+							{
+								// Bump to lower temperature
+								cached_single_phase_i++;
+							}
+							double rho = evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+							if (rho > rhoc){
+								// Didn't work
+								throw ValueError("Bump unsuccessful");
+							}
+							else{
+								_rhomolar = rho;
+							}
+						}
                     }
                 }
                 else{
@@ -1296,8 +1296,8 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
                     if (intersect.size() < 2){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                     iV = intersect[0].first; iL = intersect[1].first;
-                    zL = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iP, _p, iL);
-                    zV = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iP, _p, iV);
+				    zL = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iP, _p, iL);
+				    zV = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iP, _p, iV);
                 }
             }
             else{
@@ -1358,8 +1358,8 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iT, _T);
                     if (intersect.size() < 2){ throw ValueError(format("T [%g K] is not within phase envelope", _T)); }
                     iV = intersect[0].first; iL = intersect[1].first;
-                    zL = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iT, _T, iL);
-                    zV = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iT, _T, iV);
+				    zL = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iT, _T, iL);
+				    zV = PhaseEnvelopeRoutines::evaluate(phase_envelope, otherkey, iT, _T, iV);
                 }
             }
             else{
@@ -1415,8 +1415,8 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 std::vector<std::pair<std::size_t, std::size_t> > intersect = PhaseEnvelopeRoutines::find_intersections(phase_envelope, iP, _p);
                 if (intersect.size()<2){ throw ValueError(format("p [%g Pa] is not within phase envelope", _p)); }
                 iV = intersect[0].first; iL = intersect[1].first;
-                TL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iL);
-                TV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iV);
+				TL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iL);
+				TV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iT, iP, _p, iV);
             }
             else{
                 bool it_is_inside = pure_saturation.is_inside(iP, _p, iQ, _Q, iL, iV, TL, TV);

@@ -59,10 +59,10 @@ void CoolProp::TTSEBackend::invert_single_phase_x(const SinglePhaseGriddedTableD
     if (!table.logx){
         xspacing = table.xvec[1] - table.xvec[0];
         if (std::abs(deltax1) < xspacing && !(std::abs(deltax2) < xspacing) ){
-            val = deltax1 + table.xvec[i];
+		    val = deltax1 + table.xvec[i];
         }
         else if (std::abs(deltax2) < xspacing && !(std::abs(deltax1) < xspacing) ){
-            val = deltax2 + table.xvec[i];
+		    val = deltax2 + table.xvec[i];
         }
         else if (std::abs(deltax1) < std::abs(deltax2) && std::abs(deltax1) < 10*xspacing){
             val = deltax1 + table.xvec[i];
@@ -76,13 +76,13 @@ void CoolProp::TTSEBackend::invert_single_phase_x(const SinglePhaseGriddedTableD
         double xratio1 = (xj+deltax1)/xj;
         double xratio2 = (xj+deltax2)/xj;
         if (xratio1 < xratio && xratio1 > 1/xratio ){
-            val = deltax1 + table.xvec[i];
+		    val = deltax1 + table.xvec[i];
         }
         else if (xratio2 < xratio && xratio2 > 1/xratio ){
-            val = deltax2 + table.xvec[i];
+		    val = deltax2 + table.xvec[i];
         }
         else if (xratio1 < xratio*5 && xratio1 > 1/xratio/5 ){
-            val = deltax1 + table.xvec[i];
+		    val = deltax1 + table.xvec[i];
         }
         else{
             throw ValueError(format("Cannot find the x solution; xj: %g xratio: %g xratio1: %g xratio2: %g a: %g b^2-4*a*c %g", xj, xratio, xratio1, xratio2, a, b*b-4*a*c));
@@ -117,10 +117,10 @@ void CoolProp::TTSEBackend::invert_single_phase_y(const SinglePhaseGriddedTableD
     if (!table.logy){
         yspacing = table.yvec[1] - table.yvec[0];
         if (std::abs(deltay1) < yspacing && !(std::abs(deltay2) < yspacing) ){
-            val = deltay1 + table.yvec[j];
+		    val = deltay1 + table.yvec[j];
         }
         else if (std::abs(deltay2) < yspacing && !(std::abs(deltay1) < yspacing) ){
-            val = deltay2 + table.yvec[j];
+		    val = deltay2 + table.yvec[j];
         }
         else if (std::abs(deltay1) < std::abs(deltay2) && std::abs(deltay1) < 10*yspacing){
             val = deltay1 + table.yvec[j];
@@ -134,16 +134,16 @@ void CoolProp::TTSEBackend::invert_single_phase_y(const SinglePhaseGriddedTableD
         double yratio1 = (yj+deltay1)/yj;
         double yratio2 = (yj+deltay2)/yj;
         if (yratio1 < yratio && yratio1 > 1/yratio ){
-            val = deltay1 + table.yvec[j];
+		    val = deltay1 + table.yvec[j];
         }
         else if (yratio2 < yratio && yratio2 > 1/yratio ){
-            val = deltay2 + table.yvec[j];
+		    val = deltay2 + table.yvec[j];
         }
         else if (std::abs(yratio1-1) < std::abs(yratio2-1)){
-            val = deltay1 + table.yvec[j];
+		    val = deltay1 + table.yvec[j];
         }
         else if (std::abs(yratio2-1) < std::abs(yratio1-1)){
-            val = deltay2 + table.yvec[j];
+		    val = deltay2 + table.yvec[j];
         }
         else{
             throw ValueError(format("Cannot find the y solution; yj: %g yratio: %g yratio1: %g yratio2: %g a: %g b: %g b^2-4ac: %g %d %d", yj, yratio, yratio1, yratio2, a, b, b*b-4*a*c, i, j));
@@ -161,10 +161,10 @@ void CoolProp::TTSEBackend::invert_single_phase_y(const SinglePhaseGriddedTableD
 /// Use the single-phase table to evaluate an output
 double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j)
 {
-    connect_pointers(output, table);
+	connect_pointers(output, table);
 
     // Distances from the node
-    double deltax = x - table.xvec[i];
+	double deltax = x - table.xvec[i];
     double deltay = y - table.yvec[j];
     
     // Calculate the output value desired
@@ -185,32 +185,32 @@ double CoolProp::TTSEBackend::evaluate_single_phase(SinglePhaseGriddedTableData 
 /// Use the single-phase table to evaluate an output
 double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData &table, parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny)
 {
-    if (Nx == 1 && Ny == 0){
-        if (output == table.xkey) { return 1.0; }
-        if (output == table.ykey) { return 0.0; }
-    }
-    else if (Ny == 1 && Nx == 0){
-        if (output == table.ykey) { return 1.0; }
-        if (output == table.xkey) { return 0.0; }
-    }
+	if (Nx == 1 && Ny == 0){
+		if (output == table.xkey) { return 1.0; }
+		if (output == table.ykey) { return 0.0; }
+	}
+	else if (Ny == 1 && Nx == 0){
+		if (output == table.ykey) { return 1.0; }
+		if (output == table.xkey) { return 0.0; }
+	}
     
     connect_pointers(output, table);
     
     // Distances from the node
-    double deltax = x - table.xvec[i];
+	double deltax = x - table.xvec[i];
     double deltay = y - table.yvec[j];
     double val;
     // Calculate the output value desired
     if (Nx == 1 && Ny == 0){
-        if (output == table.xkey) { return 1.0; }
-        if (output == table.ykey) { return 0.0; }
-        val = (*dzdx)[i][j] + deltax*(*d2zdx2)[i][j] + deltay*(*d2zdxdy)[i][j];
-    }
-    else if (Ny == 1 && Nx == 0){
-        if (output == table.ykey) { return 1.0; }
-        if (output == table.xkey) { return 0.0; }
-        val = (*dzdy)[i][j] + deltay*(*d2zdy2)[i][j] + deltax*(*d2zdxdy)[i][j];
-    }
+		if (output == table.xkey) { return 1.0; }
+		if (output == table.ykey) { return 0.0; }
+		val = (*dzdx)[i][j] + deltax*(*d2zdx2)[i][j] + deltay*(*d2zdxdy)[i][j];
+	}
+	else if (Ny == 1 && Nx == 0){
+		if (output == table.ykey) { return 1.0; }
+		if (output == table.xkey) { return 0.0; }
+		val = (*dzdy)[i][j] + deltay*(*d2zdy2)[i][j] + deltax*(*d2zdxdy)[i][j];
+	}
     else if (Ny == 1 && Nx == 1){
         if (output == table.xkey || output == table.ykey) { return 0.0; }
         val = (*d2zdxdy)[i][j];
@@ -223,9 +223,9 @@ double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGridde
         if (output == table.xkey || output == table.ykey) { return 0.0; }
         val = (*d2zdx2)[i][j];
     }
-    else{
-        throw NotImplementedError("only first and second derivatives currently supported");
-    }
+	else{
+		throw NotImplementedError("only first and second derivatives currently supported");
+	}
     return val;
 }
 

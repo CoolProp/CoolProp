@@ -82,11 +82,11 @@ double CoolProp::BicubicBackend::evaluate_single_phase(const SinglePhaseGriddedT
     // Get the cell
     const CellCoeffs &cell = coeffs[i][j];
     
-    // Get the alpha coefficients
+	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(output);
     
     // Normalized value in the range (0, 1)
-    double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
+	double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
     double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
     
     // Calculate the output value desired 
@@ -107,7 +107,7 @@ double CoolProp::BicubicBackend::evaluate_single_phase(const SinglePhaseGriddedT
         case iP: _p = val; break;
         case iDmolar: _rhomolar = val; break;
         case iSmolar: _smolar = val; break;
-        case iHmolar: _hmolar = val; break;
+		case iHmolar: _hmolar = val; break;
         case iUmolar: _umolar = val; break;
         default: throw ValueError("Invalid output variable in evaluate_single_phase");
     }
@@ -120,20 +120,20 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
     // Get the cell
     CellCoeffs &cell = coeffs[i][j];
     
-    // Get the alpha coefficients
+	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(output);
     
     // Normalized value in the range (0, 1)
-    double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
+	double xhat = (x - table.xvec[i])/(table.xvec[i+1] - table.xvec[i]);
     double yhat = (y - table.yvec[j])/(table.yvec[j+1] - table.yvec[j]);
     double dxhatdx = 1/(table.xvec[i+1] - table.xvec[i]);
     double dyhatdy = 1/(table.yvec[j+1] - table.yvec[j]);
     
     // Calculate the output value desired
-    double val = 0;
+	double val = 0;
     if (Nx == 1 && Ny == 0){
-        if (output == table.xkey) { return 1.0; }
-        if (output == table.ykey) { return 0.0; }
+		if (output == table.xkey) { return 1.0; }
+		if (output == table.ykey) { return 0.0; }
         for (std::size_t l = 1; l < 4; ++l)
         {
             for(std::size_t m = 0; m < 4; ++m)
@@ -145,8 +145,8 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
         return val*dxhatdx;
     }
     else if (Ny == 1 && Nx == 0){
-        if (output == table.ykey) { return 1.0; }
-        if (output == table.xkey) { return 0.0; }
+		if (output == table.ykey) { return 1.0; }
+		if (output == table.xkey) { return 0.0; }
         for (std::size_t l = 0; l < 4; ++l)
         {
             for(std::size_t m = 1; m < 4; ++m)
@@ -201,7 +201,7 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     // Get the cell
     const CellCoeffs &cell = coeffs[i][j];
     
-    // Get the alpha coefficients
+	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(other_key);
     
     // Normalized value in the range (0, 1)
@@ -256,7 +256,7 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     // Get the cell
     const CellCoeffs &cell = coeffs[i][j];
     
-    // Get the alpha coefficients
+	// Get the alpha coefficients
     const std::vector<double> &alpha = cell.get(other_key);
     
     // Normalized value in the range (0, 1)
