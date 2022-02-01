@@ -419,19 +419,24 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
 	}
     return -1;
 }
-EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char **& fluids, long *N, long *errcode, char *message_buffer, const long buffer_length)
+EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char* fluids, long *errcode, char *message_buffer, const long buffer_length)
 {
     *errcode = 0;
 
     try{
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         std::vector<std::string> _fluids = AS->fluid_names();
-        *N = _fluids.size();
-        fluids = (char**)malloc(sizeof(char*)**N);                        // fluids is only allocated memory if AbstractState exists for handle --> only needs to be freed, if *N != 0
-        for (int i = 0; i < *N; i++) {
-            fluids[i] = (char*)malloc(sizeof(char)*(_fluids[i].length()+1));
-            strcpy(fluids[i],_fluids[i].c_str());
+        std::string fluidsstring = _fluids[0];
+        for (int i = 1; i < _fluids.size(); i++) {
+           fluidsstring += "&" + _fluids[i]; 
         }
+        if (fluidsstring.size() < static_cast<std::size_t>(buffer_length)) {
+            strcpy(fluids,fluidsstring.c_str());
+        }
+        else {
+            throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", fluidsstring.size(), static_cast<std::size_t>(buffer_length)));
+        }
+        
     }
     catch (...) {
 		HandleException(errcode, message_buffer, buffer_length);
@@ -467,7 +472,7 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
 		HandleException(errcode, message_buffer, buffer_length);
 	}
 }
-EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, double *& fractions, long *N, long *errcode, char *message_buffer, const long buffer_length)
+EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, double* fractions, const long maxN, long *N, long *errcode, char *message_buffer, const long buffer_length)
 {
     *errcode = 0;
 
@@ -475,9 +480,13 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, 
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         std::vector<double> _fractions = AS->get_mole_fractions();
         *N = _fractions.size();
-        fractions = (double*) malloc(sizeof(double)**N);                        // fractions is only allocated memory if AbstractState exists for handle --> only needs to be freed, if *N != 0
-        for (int i = 0; i < *N; i++)
-            fractions[i] = _fractions[i];
+        if (*N <= maxN) {
+            for (int i = 0; i < *N; i++)
+                fractions[i] = _fractions[i];
+        }
+        else {
+            throw CoolProp::ValueError(format("Length of array [%d] is greater than allocated buffer length [%d]", *N, maxN));
+        }
     }
     catch (...) {
 		HandleException(errcode, message_buffer, buffer_length);
