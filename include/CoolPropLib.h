@@ -273,7 +273,7 @@
     /**
      * @brief Get the fluid names for the AbstractState
      * @param handle The integer handle for the state class stored in memory
-     * @param fluids '&' delimited list of fluids
+     * @param fluids LIST_STRING_DELIMETER (',') delimited list of fluids
      * @param errcode The errorcode that is returned (0 = no error, !0 = error)
      * @param message_buffer A buffer for the error code
      * @param buffer_length The length of the buffer for the error code

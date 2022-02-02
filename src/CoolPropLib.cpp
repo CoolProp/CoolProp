@@ -426,10 +426,7 @@ EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char* f
     try{
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
         std::vector<std::string> _fluids = AS->fluid_names();
-        std::string fluidsstring = _fluids[0];
-        for (int i = 1; i < _fluids.size(); i++) {
-           fluidsstring += "&" + _fluids[i]; 
-        }
+        std::string fluidsstring = strjoin(_fluids, CoolProp::get_config_string(LIST_STRING_DELIMITER));
         if (fluidsstring.size() < static_cast<std::size_t>(buffer_length)) {
             strcpy(fluids,fluidsstring.c_str());
         }
