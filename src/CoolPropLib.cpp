@@ -419,6 +419,26 @@ EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const cha
 	}
     return -1;
 }
+EXPORT_CODE void CONVENTION AbstractState_fluid_names(const long handle, char* fluids, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+
+    try{
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        std::vector<std::string> _fluids = AS->fluid_names();
+        std::string fluidsstring = strjoin(_fluids, CoolProp::get_config_string(LIST_STRING_DELIMITER));
+        if (fluidsstring.size() < static_cast<std::size_t>(buffer_length)) {
+            strcpy(fluids,fluidsstring.c_str());
+        }
+        else {
+            throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", fluidsstring.size(), static_cast<std::size_t>(buffer_length)));
+        }
+        
+    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
+}
 EXPORT_CODE void CONVENTION AbstractState_free(const long handle, long *errcode, char *message_buffer, const long buffer_length)
 {
     *errcode = 0;
@@ -443,6 +463,26 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
         }
         else if (AS->using_volu_fractions()){
             AS->set_volu_fractions(_fractions);
+        }
+    }
+    catch (...) {
+		HandleException(errcode, message_buffer, buffer_length);
+	}
+}
+EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, double* fractions, const long maxN, long *N, long *errcode, char *message_buffer, const long buffer_length)
+{
+    *errcode = 0;
+
+    try{
+        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
+        std::vector<double> _fractions = AS->get_mole_fractions();
+        *N = _fractions.size();
+        if (*N <= maxN) {
+            for (int i = 0; i < *N; i++)
+                fractions[i] = _fractions[i];
+        }
+        else {
+            throw CoolProp::ValueError(format("Length of array [%d] is greater than allocated buffer length [%d]", *N, maxN));
         }
     }
     catch (...) {
