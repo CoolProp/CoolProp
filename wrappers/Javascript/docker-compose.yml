@@ -1,0 +1,12 @@
+version: '3.2'
+
+services:
+  runner:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - type: bind
+        source: ../..
+        target: /src
+        # read_only: true

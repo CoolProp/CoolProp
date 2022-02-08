@@ -19,6 +19,10 @@
     #ifndef __has_feature         // Optional of course.
         #define __has_feature(x) 0  // Compatibility with non-clang compilers.
     #endif  
+
+    #ifdef __EMSCRIPTEN__ 
+        #define thread_local 
+    #endif
     
     // see http://stackoverflow.com/questions/18298280/how-to-declare-a-variable-as-thread-local-portably
     #ifndef thread_local
