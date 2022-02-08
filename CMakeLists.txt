@@ -1418,12 +1418,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
     message(FATAL_ERROR "Cannot use visual studio, use MinGW Makefiles generator on windows")
   endif()
 
-  add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
-  add_definitions(-s ASSERTIONS=1)
-  add_definitions(-s SAFE_HEAP=1)
-  add_definitions(-s SAFE_HEAP_LOG=1)
-  add_definitions(-s WASM=1)
-  add_definitions(--bind)
+  add_definitions( -sDISABLE_EXCEPTION_CATCHING=0)
   # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
   if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
     set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 0")
@@ -1432,7 +1427,7 @@ if (COOLPROP_JAVASCRIPT_MODULE)
   endif()
 
   set(CMAKE_EXE_LINKER_FLAGS "--bind ${EMSCRIPTEN_INIT_FLAG} -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0")
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  set(CMAKE_BUILD_TYPE Release)
 
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/emscripten_interface.cxx")
   include_directories(${APP_INCLUDE_DIRS})
