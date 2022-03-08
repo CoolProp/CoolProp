@@ -481,6 +481,7 @@ if __name__ == '__main__':
                 "Operating System :: OS Independent",
                 "Topic :: Software Development :: Libraries :: Python Modules"
                 ],
+               setup_requires=['Cython'],
                **setup_kwargs
                )
     except BaseException as E:
