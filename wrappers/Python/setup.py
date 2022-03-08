@@ -124,7 +124,7 @@ if __name__ == '__main__':
             sys.argv.pop(i)
             cmake_bitness = sys.argv.pop(i)
         elif os.environ.get('COOLPROP_CMAKE_BITNESS'):
-            cmake_compiler = os.environ.get('COOLPROP_CMAKE_BITNESS')
+            cmake_bitness = os.environ.get('COOLPROP_CMAKE_BITNESS')
         else:
             cmake_bitness = ''
 
@@ -134,6 +134,10 @@ if __name__ == '__main__':
 
     STATIC_LIBRARY_BUILT = False
     if USING_CMAKE:
+
+        if not cmake_compiler:
+            # Assume default
+            cmake_compiler = 'default'
 
         # Always force build since any changes in the C++ files will not force a rebuild
         touch('CoolProp/CoolProp.pyx')
