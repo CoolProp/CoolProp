@@ -51,7 +51,7 @@ jobs:
         path: ./wrappers/Python/CoolProp-Linux_wheels.tar.gz
 
     - name: Publish wheels to (Test)PyPI
-      # TODO: for now I'm effectively disabling it
+      # TODO: for now I'm effectively disabling uploading to testpypi on each build
       if: contains(github.ref, 'refs/tags')
       working-directory: ./wrappers/Python/
       env:
