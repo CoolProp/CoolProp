@@ -36,7 +36,7 @@ jobs:
             python: 310
             bitness: 64
             platform_id: win_amd64
-            cmake_compiler: vc17
+            cmake_compiler: vc19
 
           # Window 32 bit
           - os: windows-latest
@@ -128,7 +128,7 @@ jobs:
     - name: Build and test wheels
       env:
         COOLPROP_CMAKE: ${{ matrix.compiler}},${{ matrix.bitness }}
-        CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.compiler}},${{ matrix.bitness }}
+        CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
         CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
         CIBW_ARCHS: all
         CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
