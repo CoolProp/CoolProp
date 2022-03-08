@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import platform
 import subprocess, shutil, os, sys, glob, tempfile
 from distutils.version import LooseVersion
@@ -106,11 +107,15 @@ if __name__ == '__main__':
         i = sys.argv.index(cmake_args[0])
         sys.argv.pop(i)
         cmake_compiler, cmake_bitness = cmake_args[0].split('cmake=')[1].split(',')
+    elif os.environ.get('COOLPROP_CMAKE'):
+        cmake_compiler, cmake_bitness = os.environ.get('COOLPROP_CMAKE').split(',')
     else:
         if '--cmake-compiler' in sys.argv:
             i = sys.argv.index('--cmake-compiler')
             sys.argv.pop(i)
             cmake_compiler = sys.argv.pop(i)
+        elif os.environ.get('COOLPROP_CMAKE_COMPILER'):
+            cmake_compiler = os.environ.get('COOLPROP_CMAKE_COMPILER')
         else:
             cmake_compiler = ''
 
@@ -118,6 +123,8 @@ if __name__ == '__main__':
             i = sys.argv.index('--cmake-bitness')
             sys.argv.pop(i)
             cmake_bitness = sys.argv.pop(i)
+        elif os.environ.get('COOLPROP_CMAKE_BITNESS'):
+            cmake_compiler = os.environ.get('COOLPROP_CMAKE_BITNESS')
         else:
             cmake_bitness = ''
 
