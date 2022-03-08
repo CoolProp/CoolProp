@@ -4,6 +4,7 @@ import subprocess, shutil, os, sys, glob, tempfile
 from distutils.version import LooseVersion
 from distutils.sysconfig import get_config_var
 from setuptools.command.build_ext import build_ext
+from multiprocessing import cpu_count
 
 def copy_files():
     def copytree(old, new):
@@ -200,7 +201,7 @@ if __name__ == '__main__':
         elif cmake_compiler == 'default':
             cmake_config_args = []
             if sys.platform.startswith('win'):
-            	cmake_build_args = ['--config', '"Release"']
+                cmake_build_args = ['--config', '"Release"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-DFORCE_BITNESS_32=ON']
             elif cmake_bitness == '64':
@@ -233,7 +234,8 @@ if __name__ == '__main__':
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell=True, stdout=sys.stdout, stderr=sys.stderr, cwd=cmake_build_dir)
 
-        cmake_build_string = ' '.join(['cmake', '--build', '.'] + cmake_build_args)
+        cmake_build_string = ' '.join(['cmake', '--build', '.', '-j',
+                                       str(cpu_count())] + cmake_build_args)
         print('calling: ' + cmake_build_string)
         subprocess.check_call(cmake_build_string, shell=True, stdout=sys.stdout, stderr=sys.stderr, cwd=cmake_build_dir)
 
