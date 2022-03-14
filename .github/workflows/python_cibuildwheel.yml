@@ -14,6 +14,7 @@ jobs:
   python_bindings:
     name: Build wheel for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.allow_failure }}
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
@@ -28,18 +29,21 @@ jobs:
             platform_id: win_amd64
             cmake_compiler: vc16
             arch: x64
+            allow_failure: false
           - os: windows-latest
             python: 39
             bitness: 64
             cmake_compiler: vc17
             platform_id: win_amd64
             arch: x64
+            allow_failure: false
           - os: windows-latest
             python: 310
             bitness: 64
             platform_id: win_amd64
             cmake_compiler: vc17
             arch: x64
+            allow_failure: false
 
           # Window 32 bit
           - os: windows-latest
@@ -48,12 +52,14 @@ jobs:
             platform_id: win32
             cmake_compiler: vc17
             arch: x86
+            allow_failure: true
           - os: windows-latest
             python: 39
             bitness: 32
             platform_id: win32
             cmake_compiler: vc17
             arch: x86
+            allow_failure: true
 
           # Linux 64 bit manylinux2014
           - os: ubuntu-latest
@@ -62,24 +68,28 @@ jobs:
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
             cmake_compiler: default
+            allow_failure: false
           - os: ubuntu-latest
             python: 38
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
             cmake_compiler: default
+            allow_failure: false
           - os: ubuntu-latest
             python: 39
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
             cmake_compiler: default
+            allow_failure: false
           - os: ubuntu-latest
             python: 310
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
             cmake_compiler: default
+            allow_failure: false
 
           # MacOS x86_64
           - os: macos-latest
@@ -87,21 +97,25 @@ jobs:
             python: 37
             platform_id: macosx_x86_64
             cmake_compiler: default
+            allow_failure: false
           - os: macos-latest
             bitness: 64
             python: 38
             platform_id: macosx_x86_64
             cmake_compiler: default
+            allow_failure: false
           - os: macos-latest
             bitness: 64
             python: 39
             platform_id: macosx_x86_64
             cmake_compiler: default
+            allow_failure: false
           - os: macos-latest
             bitness: 64
             python: 310
             platform_id: macosx_x86_64
             cmake_compiler: default
+            allow_failure: false
 
           # MacOS arm64
           - os: macos-latest
@@ -109,16 +123,19 @@ jobs:
             python: 38
             platform_id: macosx_arm64
             cmake_compiler: default
+            allow_failure: false
           - os: macos-latest
             bitness: 64
             python: 39
             platform_id: macosx_arm64
             cmake_compiler: default
+            allow_failure: false
           - os: macos-latest
             bitness: 64
             python: 310
             platform_id: macosx_arm64
             cmake_compiler: default
+            allow_failure: false
 
     steps:
     - uses: actions/checkout@v3
