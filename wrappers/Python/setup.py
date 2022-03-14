@@ -1,5 +1,4 @@
 from __future__ import print_function
-import os
 import platform
 import subprocess, shutil, os, sys, glob, tempfile
 from distutils.version import LooseVersion
