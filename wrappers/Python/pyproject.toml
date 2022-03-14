@@ -1,2 +1,2 @@
 [build-system]
-requires = ["setuptools", "wheel", "cython", "pywin32", "requests", "jinja2", "pyyaml", "pycrypto"]
+requires = ["setuptools", "wheel", "cython", "requests", "jinja2", "pyyaml", "pycrypto"]
