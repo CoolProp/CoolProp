@@ -241,7 +241,10 @@ if __name__ == '__main__':
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
 
-        cmake_call_string = ' '.join(['cmake', '../../../..', '-DCOOLPROP_STATIC_LIBRARY=ON', '-DCMAKE_VERBOSE_MAKEFILE=ON', '-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
+        if 'vc' not in cmake_compiler:
+            cmake_config_args += ['-DCMAKE_BUILD_TYPE=Release']
+
+        cmake_call_string = ' '.join(['cmake', '../../../..', '-DCOOLPROP_STATIC_LIBRARY=ON', '-DCMAKE_VERBOSE_MAKEFILE=ON'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell=True, stdout=sys.stdout, stderr=sys.stderr, cwd=cmake_build_dir)
 
