@@ -146,7 +146,8 @@ jobs:
       env:
         COOLPROP_CMAKE: ${{ matrix.cmake_compiler}},${{ matrix.bitness }}
         CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
-        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+        MACOSX_DEPLOYMENT_TARGET: 10.15
+        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_BEFORE_ALL_WINDOWS: call vcvarsall.bat ${{ matrix.arch }}
         CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
