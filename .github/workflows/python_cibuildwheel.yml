@@ -154,7 +154,7 @@ jobs:
         CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
         CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux_image }}
         CIBW_TEST_SKIP: "*-macosx_arm64"
-        CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
+        # CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
         CIBW_BUILD_VERBOSITY: 1
 
       run: |
