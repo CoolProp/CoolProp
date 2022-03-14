@@ -129,6 +129,7 @@ jobs:
       env:
         COOLPROP_CMAKE: ${{ matrix.compiler}},${{ matrix.bitness }}
         CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
+        CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
         CIBW_ARCHS: all
         CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
