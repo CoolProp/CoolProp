@@ -125,11 +125,25 @@ jobs:
       with:
         python-version: 3.9.x
 
+    - name: Setup Deps
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          # C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise
+          MSVC_DIR=$(cmd.exe /c "vswhere -products * -requires Microsoft.Component.MSBuild -property installationPath -latest")
+          echo "Latest is: $MSVC_DIR"
+          echo "MSVC_DIR=$MSVC_DIR" >> $GITHUB_ENV
+          # add folder containing vcvarsall.bat
+          echo "$MSVC_DIR\VC\Auxiliary\Build" >> $GITHUB_PATH
+        fi
+
     - name: Build and test wheels
       env:
         COOLPROP_CMAKE: ${{ matrix.compiler}},${{ matrix.bitness }}
         CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
+        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
+        CIBW_BEFORE_ALL_WINDOWS: call vcvarsall.bat x64
         CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
         CIBW_ARCHS: all
         CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
