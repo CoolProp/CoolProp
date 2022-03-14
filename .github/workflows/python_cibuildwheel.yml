@@ -26,17 +26,20 @@ jobs:
             python: 38
             bitness: 64
             platform_id: win_amd64
-            cmake_compiler: vc17
+            cmake_compiler: vc16
+            arch: x64
           - os: windows-latest
             python: 39
             bitness: 64
             cmake_compiler: vc17
             platform_id: win_amd64
+            arch: x64
           - os: windows-latest
             python: 310
             bitness: 64
             platform_id: win_amd64
-            cmake_compiler: vc19
+            cmake_compiler: vc17
+            arch: x64
 
           # Window 32 bit
           - os: windows-latest
@@ -44,11 +47,13 @@ jobs:
             bitness: 32
             platform_id: win32
             cmake_compiler: vc17
+            arch: x86
           - os: windows-latest
             python: 39
             bitness: 32
             platform_id: win32
             cmake_compiler: vc17
+            arch: x86
 
           # Linux 64 bit manylinux2014
           - os: ubuntu-latest
@@ -143,7 +148,7 @@ jobs:
         CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
-        CIBW_BEFORE_ALL_WINDOWS: call vcvarsall.bat x64
+        CIBW_BEFORE_ALL_WINDOWS: call vcvarsall.bat ${{ matrix.arch }}
         CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
         CIBW_ARCHS: all
         CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
