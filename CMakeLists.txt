@@ -90,6 +90,9 @@ option (COOLPROP_NO_EXAMPLES
 #        "On Darwin systems, compile and link with -std=libc++ instead of the default -std=libstdc++"
 #        ON)
 
+# Force C++11 since lambdas are used in CPStrings.h
+set(CMAKE_CXX_STANDARD 11)
+
 # see
 # https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
 # https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks
