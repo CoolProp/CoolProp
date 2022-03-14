@@ -168,7 +168,6 @@ jobs:
         path: wheelhouse/*.whl
 
   upload_python_bindings_to_pypi:
-    if: contains(github.ref, 'refs/tags')
     needs: python_bindings
     name: Upload to PyPi
     runs-on: ubuntu-latest
