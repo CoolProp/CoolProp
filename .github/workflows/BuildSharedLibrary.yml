@@ -1,0 +1,80 @@
+name: BuildSharedLibrary
+
+on:
+  push:
+    branches: [ master, develop, actions_shared ]
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
+    branches: [ master, develop ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macOS-latest]
+        include:
+        - os: windows-latest
+          nproc: 2
+        - os: ubuntu-latest
+          nproc: 2
+        - os: macOS-latest
+          nproc: 3
+
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Create Build Environment
+      shell: bash
+      run: |
+        mkdir build
+
+    - name: Configure CMake
+      working-directory: ./build
+      shell: bash
+      run: cmake -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_SHARED_LIBRARY:BOOL=ON ..
+
+    - name: Build
+      working-directory: ./build
+      shell: bash
+      run: |
+        cmake --build . --target install -j $(nproc) --config $BUILD_TYPE
+
+    # TODO: enable testing. -DBUILD_TESTING:BOOL=ON does nothing unless you have Csharp. There is an undocumentated -DCOOLPROP_CATCH_MODULE:BOOL=ON but that fails to build
+    #- name: Test
+    #  working-directory: ${{runner.workspace}}/build
+    #  shell: bash
+    #  # Execute tests defined by the CMake configuration.
+    #  # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+    #  run: ctest -C $BUILD_TYPE
+
+    - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+      working-directory: ./install_root/shared_library/
+      shell: bash
+      run: |
+        tar -cvzf CoolProp-shared-${{ matrix.os }}.tar.gz ./*
+
+    - name: Archive TGZ or ZIP artifacts
+      uses: actions/upload-artifact@v2
+      with:
+          path: install_root/shared_library/CoolProp-shared-${{ matrix.os }}.tar.gz
+
+    - name: Upload TGZ or ZIP to release
+      if: contains(github.ref, 'refs/tags')
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: install_root/shared_library/CoolProp-shared-${{ matrix.os }}.tar.gz
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: false
