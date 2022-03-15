@@ -67,6 +67,7 @@ jobs:
     - name: Archive TGZ or ZIP artifacts
       uses: actions/upload-artifact@v2
       with:
+          name: CoolProp-shared-${{ matrix.os }}.tar.gz
           path: install_root/shared_library/CoolProp-shared-${{ matrix.os }}.tar.gz
 
     - name: Upload TGZ or ZIP to release
