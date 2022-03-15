@@ -36,6 +36,10 @@ jobs:
       with:
         submodules: recursive
 
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
     - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
       run: |
