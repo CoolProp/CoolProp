@@ -1,0 +1,52 @@
+name: BuildSharedLibrary
+
+on:
+  push:
+    branches: [ master, develop, actions_shared ]
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        set -x
+        sudo apt update
+        sudo apt install doxygen
+
+    - name: Build documentation with Doxygen
+      shell: bash
+      run: doxygen
+
+    - name: Zip the HTML documentation
+      working-directory: ./Web/_static/doxygen/html/
+      shell: bash
+      run: |
+        tar -cvzf CoolProp-documentation-html.tar.gz ./*
+
+    - name: Archive TGZ or ZIP artifacts
+      uses: actions/upload-artifact@v2
+      with:
+          name: CoolProp-documentation-html.tar.gz
+          path: Web/_static/doxygen/html/CoolProp-documentation-html.tar.gz
+
+    - name: Upload TGZ or ZIP to release
+      if: contains(github.ref, 'refs/tags')
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: Web/_static/doxygen/html/CoolProp-documentation-html.tar.gz
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: false
+
