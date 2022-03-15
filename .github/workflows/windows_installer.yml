@@ -25,6 +25,8 @@ jobs:
         set -x
         COOLPROP_VERSION=$(python dev/extract_version.py)
         echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+        # Create the build directory too
+        mkdir build
 
     - name: Configure CMake
       working-directory: ./build
