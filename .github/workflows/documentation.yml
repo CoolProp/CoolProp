@@ -24,6 +24,13 @@ jobs:
         sudo apt update
         sudo apt install doxygen
 
+    - name: Extract CoolProp version from CMakeLists.txt
+      shell: bash
+      run: |
+        set -x
+        COOLPROP_VERSION=$(python dev/extract_version.py)
+        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+
     - name: Build documentation with Doxygen
       shell: bash
       run: doxygen
@@ -32,20 +39,20 @@ jobs:
       working-directory: ./Web/_static/doxygen/html/
       shell: bash
       run: |
-        tar -cvzf CoolProp-documentation-html.tar.gz ./*
+        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz ./*
 
     - name: Archive TGZ or ZIP artifacts
       uses: actions/upload-artifact@v2
       with:
-          name: CoolProp-documentation-html.tar.gz
-          path: Web/_static/doxygen/html/CoolProp-documentation-html.tar.gz
+          name: CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+          path: Web/_static/doxygen/html/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
 
     - name: Upload TGZ or ZIP to release
       if: contains(github.ref, 'refs/tags')
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: Web/_static/doxygen/html/CoolProp-documentation-html.tar.gz
+        file: Web/_static/doxygen/html/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: false

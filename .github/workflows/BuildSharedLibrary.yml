@@ -34,9 +34,13 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Create Build Environment
+    - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
       run: |
+        set -x
+        COOLPROP_VERSION=$(python dev/extract_version.py)
+        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+        # Create the build directory too
         mkdir build
 
     - name: Configure CMake
@@ -48,6 +52,7 @@ jobs:
       working-directory: ./build
       shell: bash
       run: |
+        set -x
         cmake --build . --target install -j $(nproc) --config $BUILD_TYPE
 
     # TODO: enable testing. -DBUILD_TESTING:BOOL=ON does nothing unless you have Csharp. There is an undocumentated -DCOOLPROP_CATCH_MODULE:BOOL=ON but that fails to build
@@ -59,53 +64,13 @@ jobs:
     #  run: ctest -C $BUILD_TYPE
 
 
-    - name: Extract OSApp version from CMakeLists.txt
-      shell: python
-      run: |
-        import re
-        from pathlib import Path
 
-        with open('CMakeLists.txt', 'r') as f:
-            content = f.read()
-
-        no_comments_lines = []
-        for line in content.splitlines():
-            l = line.strip().split('#')[0]
-            if l:
-                no_comments_lines.append(l)
-        content = "\n".join(no_comments_lines)
-
-        m_major = re.search(r'set\s*\(COOLPROP_VERSION_MAJOR (\d+)\)', content)
-        m_minor = re.search(r'set\s*\(COOLPROP_VERSION_MINOR (\d+)\)', content)
-        m_patch = re.search(r'set\s*\(COOLPROP_VERSION_PATCH (\d+)\)', content)
-        m_rev = re.search(r'set\s*\(COOLPROP_VERSION_REVISION "*(.*?)"*\)', content)
-
-        coolprop_version = ''
-        if m_major:
-            COOLPROP_VERSION_MAJOR = m_major.groups()[0]
-            coolprop_version += COOLPROP_VERSION_MAJOR
-
-
-        if m_minor:
-            COOLPROP_VERSION_MINOR = m_minor.groups()[0]
-            coolprop_version += "." + COOLPROP_VERSION_MINOR
-
-        if m_patch:
-            COOLPROP_VERSION_PATCH = m_patch.groups()[0]
-            coolprop_version += "." + COOLPROP_VERSION_PATCH
-
-        if m_rev:
-            COOLPROP_VERSION_REV = m_rev.groups()[0]
-            coolprop_version += "-" + COOLPROP_VERSION_REV
-
-        with open(os.environ['GITHUB_ENV'], 'a') as f:
-            f.write(f"\COOLPROP_VERSION={coolprop_version}")
-        print(f"{coolprop_version=}")
 
     - name: Tar.gz the shared library to maintain case sensitivy and file permissions
       working-directory: ./install_root/shared_library/
       shell: bash
       run: |
+        set -x
         tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
 
     - name: Archive TGZ or ZIP artifacts
