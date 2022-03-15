@@ -18,6 +18,8 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     strategy:
+      # fail-fast: Default is true, switch to false to allow one platform to fail and still run others
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macOS-latest]
         include:
@@ -62,9 +64,6 @@ jobs:
     #  # Execute tests defined by the CMake configuration.
     #  # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
     #  run: ctest -C $BUILD_TYPE
-
-
-
 
     - name: Tar.gz the shared library to maintain case sensitivy and file permissions
       working-directory: ./install_root/shared_library/

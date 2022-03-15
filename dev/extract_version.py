@@ -36,4 +36,4 @@ if m_rev:
     COOLPROP_VERSION_REV = m_rev.groups()[0]
     coolprop_version += "-" + COOLPROP_VERSION_REV
 
-print(f"{coolprop_version}")
+print(coolprop_version)
