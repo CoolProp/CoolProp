@@ -1,0 +1,62 @@
+name: Windows Installer
+
+on:
+  push:
+    branches: [ master, develop, actions_shared ]
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Extract CoolProp version from CMakeLists.txt
+      shell: bash
+      run: |
+        set -x
+        COOLPROP_VERSION=$(python dev/extract_version.py)
+        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+
+    - name: Configure CMake
+      working-directory: ./build
+      shell: bash
+      run: cmake -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_WINDOWS_PACKAGE:BOOL=ON ..
+
+    - name: Build
+      working-directory: ./build
+      shell: bash
+      run: |
+        set -x
+        cmake --build . --target COOLPROP_WINDOWS_PACKAGE_INSTALLER -j $(nproc) --config $BUILD_TYPE
+
+    - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+      working-directory: ./build/InnoScript/bin/
+      shell: bash
+      run: |
+        set -x
+        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz ./*
+
+    - name: Archive TGZ or ZIP artifacts
+      uses: actions/upload-artifact@v2
+      with:
+          name: CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz
+          path: build/InnoScript/bin/CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz
+
+    - name: Upload TGZ or ZIP to release
+      if: contains(github.ref, 'refs/tags')
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: build/InnoScript/bin/CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: false

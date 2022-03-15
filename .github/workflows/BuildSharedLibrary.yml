@@ -22,14 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macOS-latest]
-        include:
-        - os: windows-latest
-          nproc: 2
-        - os: ubuntu-latest
-          nproc: 2
-        - os: macOS-latest
-          nproc: 3
-
 
     steps:
     - uses: actions/checkout@v3
