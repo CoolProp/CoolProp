@@ -1,4 +1,4 @@
-name: BuildSharedLibrary
+name: Doxygen documentation
 
 on:
   push:
