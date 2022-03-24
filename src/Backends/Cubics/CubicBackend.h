@@ -71,6 +71,7 @@ public:
             case irhomolar_reducing:
             case irhomolar_critical:
                     return components[i].rhomolarc;
+            case igas_constant: return get_config_double(R_U_CODATA);
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         }

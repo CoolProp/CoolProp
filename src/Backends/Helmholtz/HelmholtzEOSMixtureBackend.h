@@ -197,6 +197,7 @@ public:
             case imolar_mass: return fld.EOS().molar_mass;
             case iT_triple: return fld.EOS().sat_min_liquid.T;
             case iP_triple: return fld.EOS().sat_min_liquid.p;
+            case igas_constant: return fld.EOS().R_u;
             default:
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param,"short").c_str()));
         }
