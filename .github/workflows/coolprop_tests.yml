@@ -1,0 +1,51 @@
+name: Catch2 Testing
+
+on:
+  push:
+    branches: [ master, develop, actions_shared ]
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
+    branches: [ master, develop ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Extract CoolProp version from CMakeLists.txt
+      shell: bash
+      run: |
+        set -x
+        COOLPROP_VERSION=$(python dev/extract_version.py)
+        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+        # Create the build directory too
+        mkdir build
+
+    - name: Configure CMake
+      working-directory: ./build
+      shell: bash
+      run: cmake -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_CATCH_MODULE:BOOL=ON ..
+
+    - name: Build
+      working-directory: ./build
+      shell: bash
+      run: |
+        set -x
+        cmake --build . --target install -j $(nproc) --config $BUILD_TYPE
+
+    - name: Test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: |
+        ./CatchTestRunner
