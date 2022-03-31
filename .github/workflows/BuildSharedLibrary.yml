@@ -32,6 +32,11 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install requests packaging
+
     - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
       run: |
