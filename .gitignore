@@ -67,3 +67,6 @@
 /.vscode/
 
 bld/
+
+compile_commands.json
+cppcheck.txt
