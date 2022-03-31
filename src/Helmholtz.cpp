@@ -36,9 +36,9 @@ double ramp(double x) {
 /*
 void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw()
 {
-    double log_tau = log(tau), log_delta = log(delta), 
+    double log_tau = log(tau), log_delta = log(delta),
            one_over_delta = 1/delta, one_over_tau = 1/tau; // division is much slower than multiplication, so do one division here
-    
+
     Eigen::Map<Eigen::ArrayXd> nE(&(n[0]), elements.size());
     Eigen::Map<Eigen::ArrayXd> dE(&(d[0]), elements.size());
     Eigen::Map<Eigen::ArrayXd> tE(&(t[0]), elements.size());
@@ -53,11 +53,11 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
     Eigen::Map<Eigen::ArrayXd> beta2E(&(beta2[0]), elements.size());
     Eigen::Map<Eigen::ArrayXd> gamma1E(&(gamma1[0]), elements.size());
     Eigen::Map<Eigen::ArrayXd> gamma2E(&(gamma2[0]), elements.size());
-    
+
     // ****************************************
     // The u part in exp(u) and its derivatives
     // ****************************************
-    
+
     #if defined(EIGEN_VECTORIZE_SSE2)
         //std::cout << "EIGEN_VECTORIZE_SSE2" << std::endl;
     #endif
@@ -70,7 +70,7 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
     d2u_dtau2E.fill(0);
     d3u_ddelta3E.fill(0);
     d3u_dtau3E.fill(0);
-    
+
     if (delta_li_in_u){
         Eigen::ArrayXd u_increment = -cE*(log_delta*l_doubleE).exp(); //pow(delta,L) -> exp(L*log(delta))
         uE += u_increment;
@@ -78,7 +78,7 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
         d2u_ddelta2E += (l_doubleE-1)*l_doubleE*u_increment*one_over_delta*one_over_delta;
         d3u_ddelta3E += (l_doubleE-2)*(l_doubleE-1)*l_doubleE*u_increment*one_over_delta*one_over_delta*one_over_delta;
     }
-    
+
 //    if (tau_mi_in_u){
 //        CoolPropDbl omegai = el.omega, m_double = el.m_double;
 //        if (std::abs(m_double) > 0){
@@ -110,7 +110,7 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
         du_dtauE += -2*beta2E*(tau-gamma2E);
         d2u_dtau2E += -2*beta2E;
     }
-    
+
     Eigen::ArrayXd ndteuE = nE*exp(tE*log_tau + dE*log_delta + uE);
     Eigen::ArrayXd B_deltaE = delta*du_ddeltaE + dE;
     Eigen::ArrayXd B_tauE = tau*du_dtauE + tE;
@@ -118,19 +118,19 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
     Eigen::ArrayXd B_tau2E = POW2(tau)*(d2u_dtau2E + du_dtauE.square()) + 2*tE*tau*du_dtauE + tE*(tE-1);
     Eigen::ArrayXd B_delta3E = POW3(delta)*d3u_ddelta3E + 3*dE*POW2(delta)*d2u_ddelta2E+3*POW3(delta)*d2u_ddelta2E*du_ddeltaE+3*dE*POW2(delta*du_ddeltaE)+3*dE*(dE-1)*delta*du_ddeltaE+dE*(dE-1)*(dE-2)+POW3(delta*du_ddeltaE);
     Eigen::ArrayXd B_tau3E = POW3(tau)*d3u_dtau3E + 3*tE*POW2(tau)*d2u_dtau2E+3*POW3(tau)*d2u_dtau2E*du_dtauE+3*tE*POW2(tau*du_dtauE)+3*tE*(tE-1)*tau*du_dtauE+tE*(tE-1)*(tE-2)+POW3(tau*du_dtauE);
-    
+
     derivs.alphar                +=  ndteuE.sum();
     derivs.dalphar_ddelta        += (ndteuE*B_deltaE).sum()*one_over_delta;
     derivs.dalphar_dtau          += (ndteuE*B_tauE).sum()*one_over_tau;
     derivs.d2alphar_ddelta2      += (ndteuE*B_delta2E).sum()*POW2(one_over_delta);
     derivs.d2alphar_dtau2        += (ndteuE*B_tau2E).sum()*POW2(one_over_tau);
     derivs.d2alphar_ddelta_dtau  += (ndteuE*B_deltaE*B_tauE).sum()*one_over_delta*one_over_tau;
-    
+
     derivs.d3alphar_ddelta3      += (ndteuE*B_delta3E).sum()*POW3(one_over_delta);
     derivs.d3alphar_dtau3        += (ndteuE*B_tau3E).sum()*POW3(one_over_tau);
     derivs.d3alphar_ddelta2_dtau += (ndteuE*B_delta2E*B_tauE).sum()*POW2(one_over_delta)*one_over_tau;
     derivs.d3alphar_ddelta_dtau2 += (ndteuE*B_deltaE*B_tau2E).sum()*one_over_delta*POW2(one_over_tau);
-    
+
     return;
 };
 */

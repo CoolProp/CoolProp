@@ -212,7 +212,7 @@ std::vector<T> logspace(T xmin, T xmax, std::size_t n) {
 
 /**
  * @brief Use bisection to find the inputs that bisect the value you want, the trick
- * here is that this function is allowed to have "holes" where parts of the the array are 
+ * here is that this function is allowed to have "holes" where parts of the the array are
  * also filled with invalid numbers for which ValidNumber(x) is false
  * @param vec The vector to be bisected
  * @param val The value to be found
@@ -291,7 +291,7 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
 
 /**
  * @brief Use bisection to find the inputs that bisect the value you want, the trick
- * here is that this function is allowed to have "holes" where parts of the the array are 
+ * here is that this function is allowed to have "holes" where parts of the the array are
  * also filled with invalid numbers for which ValidNumber(x) is false
  * @param matrix The vector to be bisected
  * @param j The index of the matric in the off-grain dimension
@@ -553,9 +553,9 @@ T is_in_closed_range(T x1, T x2, T x) {
 };
 
 /** \brief Solve a cubic with coefficients in decreasing order
-    * 
+    *
     * 0 = ax^3 + b*x^2 + c*x + d
-    * 
+    *
     * @param a The x^3 coefficient
     * @param b The x^2 coefficient
     * @param c The x^1 coefficient
@@ -649,10 +649,10 @@ void sort3(T& a, T& b, T& c) {
 * Due to the periodicity of angles, you need to handle the case where the
 * angles wrap around - suppose theta_d is 6.28 and you are at an angles of 0.1 rad,
 * the difference should be around 0.1, not -6.27
-* 
+*
 * This brilliant method is from http://blog.lexique-du-net.com/index.php?post/Calculate-the-real-difference-between-two-angles-keeping-the-sign
 * and the comment of user tk
-* 
+*
 * Originally implemented in PDSim
 */
 template <class T>

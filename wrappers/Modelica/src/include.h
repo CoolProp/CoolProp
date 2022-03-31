@@ -11,7 +11,7 @@
   Ian Bell (ian.bell@ulg.ac.be)
   2012-2013
   University of Liege, Liege, Belgium
-  
+
   Francesco Casella, Christoph Richter, Roberto Bonifetto
   2006-2012
   Copyright Politecnico di Milano, TU Braunschweig, Politecnico di Torino
@@ -63,7 +63,7 @@
 // Selection of build type for this project
 //! Build project into a DLL
 /*!
-  Set this preprocessor variable to 1 if the project is built into a 
+  Set this preprocessor variable to 1 if the project is built into a
   dynamic link library. This setting influences the error reporting
   mechanism as well as the export statement.
 */
@@ -79,7 +79,7 @@
 
 /********************************************************************
  *                 End of user option selection
- *            Do not change anything below this line                                    
+ *            Do not change anything below this line
  ********************************************************************/
 
 // General purpose includes

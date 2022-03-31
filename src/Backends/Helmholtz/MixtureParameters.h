@@ -6,24 +6,24 @@
 namespace CoolProp {
 
 /** \brief Get a comma-separated list of CAS code pairs
- * 
+ *
  * Each of the pairs will be CAS1&CAS2 ("&" delimited)
  */
 std::string get_csv_mixture_binary_pairs();
 
 /** \brief Get the parameters for a predefined mixture - R410A, R404A, etc. if the mixture is predefined
- * 
+ *
  */
 bool is_predefined_mixture(const std::string& name, Dictionary& dict);
 
 /** \brief Get a comma-separated list of predefined mixtures in CoolProp
- * 
+ *
  */
 std::string get_csv_predefined_mixtures();
 
 /** \brief Get a string for the given binary pair
- * 
- * 
+ *
+ *
  */
 std::string get_mixture_binary_pair_data(const std::string& CAS1, const std::string& CAS2, const std::string& param);
 
@@ -51,7 +51,7 @@ class MixtureParameters
     static void set_mixture_parameters(HelmholtzEOSMixtureBackend& HEOS);
 };
 
-/** 
+/**
  * @brief Get the allocated Departure function for a given departure function name
  * @param Name The name of the function to be used, or its alias
  * @warning The pointer points to an instance created with new, you should manage the pointer with shared_ptr or similar
@@ -74,7 +74,7 @@ struct REFPROP_departure_function
     std::vector<std::string> comments;
 };
 
-/** 
+/**
  * @brief Set the departure functions in the departure function library from a string format
  * @param string_data The departure functions to be set, either provided as a JSON-formatted string
  *                    or as a string of the contents of a HMX.BNC file from REFPROP
@@ -84,7 +84,7 @@ struct REFPROP_departure_function
  */
 void set_departure_functions(const std::string& string_data);
 
-/** 
+/**
  * @brief Set the interaction parameters from a string format
  * @param string_data The model parameters, as a JSON-formatted string
  *

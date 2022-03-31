@@ -12,10 +12,10 @@
  * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511
  * This will be used to generate an enum like:
  * enum configuration_keys {NORMALIZE_GAS_CONSTANTS, CRITICAL_SPLINES_ENABLED};
- * 
+ *
  * The values in this list are given by:
  * enum, string representation of enum, default value, description
- * 
+ *
  * The type of the default value specifies the only type that will be accepted for this parameter
  */
 #define CONFIGURATION_KEYS_ENUM                                                                                                                      \

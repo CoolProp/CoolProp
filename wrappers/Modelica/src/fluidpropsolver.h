@@ -3,7 +3,7 @@
  * This class defines a solver object encapsulating a FluidProp object
  *
  * The class will work if FluidProp is correctly installed, and if
- * the following files, defining the CFluidProp object, are included 
+ * the following files, defining the CFluidProp object, are included
  * in the C project:
  *   - FluidProp_IF.h
  *   - FluidProp_IF.cpp
@@ -14,7 +14,7 @@
  *  Compilation requires support of the COM libraries:
  *  http://en.wikipedia.org/wiki/Component_Object_Model
  *
- * To instantiate a specific FluidProp fluid, it is necessary to set 
+ * To instantiate a specific FluidProp fluid, it is necessary to set
  * the libraryName and substanceNames package constants as in the
  * following example:
  *
@@ -28,7 +28,7 @@
  *
  * Francesco Casella, Christoph Richter, Roberto Bonifetto
  * 2006 - 2012
- * Copyright Politecnico di Milano, TU Braunschweig, 
+ * Copyright Politecnico di Milano, TU Braunschweig,
  * Politecnico di Torino
  ********************************************************************/
 

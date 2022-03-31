@@ -137,16 +137,16 @@ def _get_index(prop):
 
 
 class BaseQuantity(object):
-    """A very basic property that can convert an input to and from a 
-    given unit system, note that the conversion from SI units starts 
-    with a multiplication. If you need to remove an offset, use the 
-    off_SI property. 
+    """A very basic property that can convert an input to and from a
+    given unit system, note that the conversion from SI units starts
+    with a multiplication. If you need to remove an offset, use the
+    off_SI property.
     Examples with temperature:
     celsius = BaseQuantity(add_SI=-273.15)
     fahrenheit = BaseQuantity(add_SI=32.0, mul_SI=1.8, off_SI=-273.15)
     Examples with pressure:
     bar = BaseQuantity(mul_SI=1e-5)
-    psi = BaseQuantity(mul_SI=0.000145037738)    
+    psi = BaseQuantity(mul_SI=0.000145037738)
     """
 
     def __init__(self, add_SI=0.0, mul_SI=1.0, off_SI=0.0):
@@ -330,7 +330,7 @@ class EURunits(KSIunits):
 
 
 class Base2DObject(with_metaclass(ABCMeta), object):
-    """A container for shared settings and constants for the 
+    """A container for shared settings and constants for the
     isolines and the property plots."""
 
     # A list of supported plot
@@ -458,8 +458,8 @@ class Base2DObject(with_metaclass(ABCMeta), object):
 
 
 class IsoLine(Base2DObject):
-    """An object that holds the functions to calculate a line of 
-    a constant property in the dimensions of a property plot. This 
+    """An object that holds the functions to calculate a line of
+    a constant property in the dimensions of a property plot. This
     class only uses SI units."""
 
     # Normally we calculate a sweep in x-dimensions, but
@@ -510,7 +510,7 @@ class IsoLine(Base2DObject):
         """Processes the values for the isoproperty and the graph dimensions
         to figure which should be used as inputs to the state update. Returns
         a tuple with the indices for the update call and the property constant.
-        For an isobar in a Ts-diagram it returns the default order and the 
+        For an isobar in a Ts-diagram it returns the default order and the
         correct constant for the update pair:
         get_update_pair(CoolProp.iP,CoolProp.iSmass,CoolProp.iT) -> (0,1,2,CoolProp.PSmass_INPUTS)
         other values require switching and swapping.
@@ -694,7 +694,7 @@ class IsoLine(Base2DObject):
 
 
 class BasePlot(Base2DObject):
-    """The base class for all plots. It can be instantiated itself, but provides many 
+    """The base class for all plots. It can be instantiated itself, but provides many
     general facilities to be used in the different plots. """
 
     # Define the iteration keys
@@ -881,7 +881,7 @@ consider replacing it with \"_get_sat_bounds\".",
             self.axis.grid(kwargs)
 
     def set_Tp_limits(self, limits):
-        """Set the limits for the graphs in temperature and pressure, based on 
+        """Set the limits for the graphs in temperature and pressure, based on
         the active units: [Tmin, Tmax, pmin, pmax]"""
         dim = self._system[CoolProp.iT]
         limits[0] = dim.to_SI(limits[0])
@@ -892,7 +892,7 @@ consider replacing it with \"_get_sat_bounds\".",
         self.limits = limits
 
     def get_Tp_limits(self):
-        """Get the limits for the graphs in temperature and pressure, based on 
+        """Get the limits for the graphs in temperature and pressure, based on
         the active units: [Tmin, Tmax, pmin, pmax]"""
         limits = self._get_Tp_limits()
         dim = self._system[CoolProp.iT]
@@ -904,7 +904,7 @@ consider replacing it with \"_get_sat_bounds\".",
         return limits
 
     def _get_Tp_limits(self):
-        """Get the limits for the graphs in temperature and pressure, based on 
+        """Get the limits for the graphs in temperature and pressure, based on
         SI units: [Tmin, Tmax, pmin, pmax]"""
         T_lo, T_hi, P_lo, P_hi = self.limits
         Ts_lo, Ts_hi = self._get_sat_bounds(CoolProp.iT)
@@ -945,7 +945,7 @@ consider replacing it with \"_get_sat_bounds\".",
         self.axis.set_ylim([dim.from_SI(limits[2]), dim.from_SI(limits[3])])
 
     def get_axis_limits(self, x_index=None, y_index=None):
-        """Returns the previously set limits or generates them and 
+        """Returns the previously set limits or generates them and
         converts the default values to the selected unit system.
         Returns a list containing [xmin, xmax, ymin, ymax]"""
         if x_index is None: x_index = self._x_index

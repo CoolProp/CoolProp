@@ -53,7 +53,7 @@ BaseSolver* SolverMap::getSolver(const string& mediumName, const string& library
 
 //! Generate a unique solver key
 /*!
-  This function generates a unique solver key based on the library name and 
+  This function generates a unique solver key based on the library name and
   substance name.
 */
 string SolverMap::solverKey(const string& libraryName, const string& substanceName) {
