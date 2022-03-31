@@ -73,8 +73,10 @@ class BicubicBackend : public TabularBackend
                 check_tables();
                 SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
                 SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+                SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
                 dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
                 dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
+                dataset->build_coeffs(single_phase_logdu, dataset->coeffs_du);
                 is_mixture = (this->AS->get_mole_fractions().size() > 1);
             }
 		};
@@ -87,8 +89,10 @@ class BicubicBackend : public TabularBackend
             // function so that the set_mole_fractions function can be called
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
             dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
             dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
+            dataset->build_coeffs(single_phase_logdu, dataset->coeffs_du);
         };
         std::string backend_name(void){return get_backend_string(BICUBIC_BACKEND);}
         
@@ -112,6 +116,9 @@ class BicubicBackend : public TabularBackend
         double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
             return evaluate_single_phase_derivative(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j, Nx, Ny);
         };
+        double evaluate_single_phase_du_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            return evaluate_single_phase_derivative(dataset->single_phase_logdu, dataset->coeffs_du, output, _umolar, _rhomolar, i, j, Nx, Ny);
+        };
         
         /**
          * @brief 
@@ -131,6 +138,9 @@ class BicubicBackend : public TabularBackend
         double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j){
 			return evaluate_single_phase(dataset->single_phase_logpT, dataset->coeffs_pT, output, _T, _p, i, j);
 		};
+        double evaluate_single_phase_du(parameters output, std::size_t i, std::size_t j){
+        	return evaluate_single_phase(dataset->single_phase_logdu, dataset->coeffs_du, output, _umolar, _rhomolar, i, j);
+        };
 
         virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j);
         
@@ -159,6 +169,9 @@ class BicubicBackend : public TabularBackend
         };
 		double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
             return evaluate_single_phase_transport(dataset->single_phase_logpT, output, _T, _p, i, j);
+        };
+		double evaluate_single_phase_du_transport(parameters output, std::size_t i, std::size_t j){
+            return evaluate_single_phase_transport(dataset->single_phase_logdu, output, _umolar, _rhomolar, i, j);
         };
 
         /**

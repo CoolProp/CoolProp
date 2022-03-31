@@ -34,6 +34,10 @@ class TTSEBackend : public TabularBackend
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase(single_phase_logpT, output, _T, _p, i, j);
         }
+        double evaluate_single_phase_du(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
+            return evaluate_single_phase(single_phase_logdu, output, _umolar, _rhomolar, i, j);
+        }
         double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j){
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             return evaluate_single_phase_transport(single_phase_logph, output, _hmolar, _p, i, j);
@@ -41,6 +45,10 @@ class TTSEBackend : public TabularBackend
         double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j){
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_transport(single_phase_logpT, output, _T, _p, i, j);
+        }
+        double evaluate_single_phase_du_transport(parameters output, std::size_t i, std::size_t j){
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
+            return evaluate_single_phase_transport(single_phase_logdu, output, _umolar, _rhomolar, i, j);
         }
         void invert_single_phase_x(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double x, double y, std::size_t i, std::size_t j);
         void invert_single_phase_y(const SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, parameters output, double y, double x, std::size_t i, std::size_t j);
@@ -63,6 +71,9 @@ class TTSEBackend : public TabularBackend
         
         /**
          * @brief Evaluate a derivative in terms of the native inputs of the table
+         *
+         * Note that the second derivative is from the nearest neighbor grid point and it is not interpolated, so the resolution might be poor.
+         *
          * @param table A reference to the table to be used
          * @param output The output variable
          * @param x The 
@@ -81,6 +92,10 @@ class TTSEBackend : public TabularBackend
         double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
             return evaluate_single_phase_derivative(single_phase_logpT, output, _T, _p, i, j, Nx, Ny);
+        };
+        double evaluate_single_phase_du_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny){
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
+            return evaluate_single_phase_derivative(single_phase_logdu, output, _umolar, _rhomolar, i, j, Nx, Ny);
         };
 };
 

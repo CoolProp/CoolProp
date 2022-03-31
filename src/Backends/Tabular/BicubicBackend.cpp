@@ -104,6 +104,7 @@ double CoolProp::BicubicBackend::evaluate_single_phase(const SinglePhaseGriddedT
     // Cache the output value calculated
     switch(output){
         case iT:  _T = val; break;
+        case iP: _p = val; break;
         case iDmolar: _rhomolar = val; break;
         case iSmolar: _smolar = val; break;
 		case iHmolar: _hmolar = val; break;
@@ -155,6 +156,39 @@ double CoolProp::BicubicBackend::evaluate_single_phase_derivative(SinglePhaseGri
         }
         // val is now dz/dyhat|xhat
         return val*dyhatdy;
+    }
+    else if (Ny == 1 && Nx == 1){
+        if (output == table.xkey || output == table.ykey ) {  return 0.0; }
+        for (std::size_t l = 1; l < 4; ++l)
+        {
+            for (std::size_t m = 1; m < 4; ++m)
+            {
+                val += alpha[m*4+l]*l*pow(xhat, static_cast<int>(l-1))*m*pow(yhat, static_cast<int>(m-1));
+            }
+        }
+        return val*dyhatdy*dxhatdx;
+    }
+    else if (Ny == 2 && Nx == 0){
+        if (output == table.xkey || output == table.ykey ) {  return 0.0; }
+        for (std::size_t l = 0; l < 4; ++l)
+        {
+            for (std::size_t m = 2; m < 4; ++m)
+            {
+                val += alpha[m*4+l]*pow(xhat, static_cast<int>(l))*m*(m-1)*pow(yhat, static_cast<int>(m-2));
+            }
+        }
+        return val*dyhatdy*dyhatdy;
+    }
+    else if (Ny == 0 && Nx == 2){
+        if (output == table.xkey || output == table.ykey ) {  return 0.0; }
+        for (std::size_t l = 2; l < 4; ++l)
+        {
+            for (std::size_t m = 0; m < 4; ++m)
+            {
+                val += alpha[m*4+l]*l*(l-1)*pow(xhat, static_cast<int>(l-2))*pow(yhat, static_cast<int>(m));
+            }
+        }
+        return val*dxhatdx*dxhatdx;
     }
     else{
         throw ValueError("Invalid input");

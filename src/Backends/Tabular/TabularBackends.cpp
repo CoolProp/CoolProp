@@ -202,6 +202,24 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
 
     logpL[i] = log(AS->p()); 
 	logrhomolarL[i] = log(rhomolarL[i]);
+
+    double umin_v = *std::min_element(umolarV.begin(), umolarV.end());
+    double umax_v = *std::max_element(umolarV.begin(), umolarV.end());
+
+    double umin_l = *std::min_element(umolarL.begin(), umolarL.end());
+    double umax_l = *std::max_element(umolarL.begin(), umolarL.end());
+
+    uminmax[1] = std::max(umax_v, umax_l);
+    uminmax[0] = std::min(umin_v, umin_l);
+
+    double rhomin_v = *std::min_element(rhomolarV.begin(), rhomolarV.end());
+    double rhomax_v = *std::max_element(rhomolarV.begin(), rhomolarV.end());
+
+    double rhomin_l = *std::min_element(rhomolarL.begin(), rhomolarL.end());
+    double rhomax_l = *std::max_element(rhomolarL.begin(), rhomolarL.end());
+
+    rhominmax[1] = std::max(rhomax_v, rhomax_l);
+    rhominmax[0] = std::min(rhomin_v, rhomin_l);
 }
     
 void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState> &AS)
@@ -356,8 +374,10 @@ void CoolProp::TabularBackend::write_tables(){
     PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
     SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+    SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
     write_table(single_phase_logph, path_to_tables, "single_phase_logph");
     write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(single_phase_logdu, path_to_tables, "single_phase_logdu");
     write_table(pure_saturation, path_to_tables, "pure_saturation");
     write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
@@ -398,7 +418,12 @@ CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(paramet
 CoolPropDbl CoolProp::TabularBackend::calc_p(void){
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     if (using_single_phase_table){
-        return _p;
+        switch (selected_table){
+        case SELECTED_PH_TABLE: return _p;
+        case SELECTED_PT_TABLE: return _p;
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iP, cached_single_phase_i, cached_single_phase_j);
+        }
+        return _HUGE; // not needed, will never be hit, just to make compiler happy
     }
     else{
         if (is_mixture){
@@ -416,6 +441,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iT, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return _T;
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iT, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -441,6 +467,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iDmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iDmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return _rhomolar;
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -461,6 +488,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return _hmolar;
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iHmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iHmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -481,6 +509,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_smolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iSmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iSmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du(iSmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -501,6 +530,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_umolar(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar(iUmolar, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT(iUmolar, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return _umolar;
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -555,6 +585,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du_transport(iviscosity, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -575,6 +606,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void){
         switch (selected_table){
         case SELECTED_PH_TABLE: return evaluate_single_phase_phmolar_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_PT_TABLE: return evaluate_single_phase_pT_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
+        case SELECTED_DU_TABLE: return evaluate_single_phase_du_transport(iconductivity, cached_single_phase_i, cached_single_phase_j);
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         return _HUGE; // not needed, will never be hit, just to make compiler happy
@@ -632,10 +664,176 @@ CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, pa
             dConstant_dy = evaluate_single_phase_pT_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 0, 1);
             break;
         }
+        case SELECTED_DU_TABLE: {
+            dOf_dx = evaluate_single_phase_du_derivative(Of, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf_dy = evaluate_single_phase_du_derivative(Of, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt_dx = evaluate_single_phase_du_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt_dy = evaluate_single_phase_du_derivative(Wrt, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dConstant_dx = evaluate_single_phase_du_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant_dy = evaluate_single_phase_du_derivative(Constant, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            break;
+        }
         case SELECTED_NO_TABLE: throw ValueError("table not selected");
         }
         double val = (dOf_dx*dConstant_dy-dOf_dy*dConstant_dx)/(dWrt_dx*dConstant_dy-dWrt_dy*dConstant_dx);
         return val*Of_conversion_factor/Wrt_conversion_factor;
+    }
+    else{
+        throw ValueError(format("Inputs [rho: %g mol/m3, T: %g K, p: %g Pa] are two-phase; cannot use single-phase derivatives", _rhomolar, _T, _p));
+    }
+};
+CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_nominator(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x){
+    return dAdx_y * dCdy_x - dAdy_x * dCdx_y;
+}
+CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_denominator(CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x){
+    return calc_first_partial_deriv_nominator(dBdx_y, dBdy_x, dCdx_y, dCdy_x);
+}
+CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv_from_fundamental_derivs(CoolPropDbl dAdx, CoolPropDbl dAdy, CoolPropDbl dBdx, CoolPropDbl dBdy, CoolPropDbl dCdx, CoolPropDbl dCdy){
+
+    CoolPropDbl nominator = 0.0, denominator = 0.0;
+
+    nominator = calc_first_partial_deriv_nominator(dAdx, dAdy, dCdx, dCdy);
+    denominator = calc_first_partial_deriv_denominator(dBdx, dBdy, dCdx, dCdy);
+
+    if ( denominator == 0.0 ){
+        return HUGE;
+    }
+    else {
+        return nominator / denominator;
+    }
+}
+CoolPropDbl CoolProp::TabularBackend::chain_rule(CoolPropDbl A, CoolPropDbl B, CoolPropDbl dAdx, CoolPropDbl dBdx){
+    // A(x,y) * B(x,y)
+    // dAdx = A * dBdx - B * dAdx
+    return A * dBdx + B * dAdx;
+}
+
+CoolPropDbl CoolProp::TabularBackend::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2){
+    if (using_single_phase_table){
+
+        CoolPropDbl dOf1_dx, dOf1_dy;
+        CoolPropDbl dWrt1_dx, dWrt1_dy;
+        CoolPropDbl dConstant1_dx, dConstant1_dy;
+
+        CoolPropDbl dWrt2_dx, dWrt2_dy;
+        CoolPropDbl dConstant2_dx, dConstant2_dy;
+
+        CoolPropDbl N, D, dN_dx, dN_dy, dD_dx, dD_dy;
+
+        CoolPropDbl d2Of1_dWrt1_dx, d2Of1_dWrt1_dy;
+        CoolPropDbl ddWrt1_dx2, ddWrt1_dy2, ddWrt1_dxdy;
+
+        CoolPropDbl d2Constant1_dx2, d2Constant1_dy2, d2Constant1_dxdy;
+        CoolPropDbl d2Of1_dx2, d2Of1_dy2, d2Of1_dxdy;
+
+        CoolPropDbl second_deriv;
+
+        // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
+        double Of_conversion_factor1 = 1.0, Wrt_conversion_factor1 = 1.0, Wrt_conversion_factor2 = 1.0;
+        double Constant_conversion_factor1 = 1.0, Constant_conversion_factor2 = 1.0, MM = AS->molar_mass();
+        mass_to_molar(Of1, Of_conversion_factor1, MM);
+        mass_to_molar(Wrt1, Wrt_conversion_factor1, MM);
+        mass_to_molar(Wrt2, Wrt_conversion_factor2, MM);
+        mass_to_molar(Constant1, Constant_conversion_factor1, MM);
+        mass_to_molar(Constant2, Constant_conversion_factor2, MM);
+
+        switch (selected_table){
+        case SELECTED_PH_TABLE: {
+            dOf1_dx = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf1_dy = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt1_dx = evaluate_single_phase_phmolar_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt1_dy = evaluate_single_phase_phmolar_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            ddWrt1_dx2 = evaluate_single_phase_phmolar_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            ddWrt1_dy2 = evaluate_single_phase_phmolar_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            ddWrt1_dxdy = evaluate_single_phase_phmolar_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+            dConstant1_dx = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant1_dy = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            dWrt2_dx = evaluate_single_phase_phmolar_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt2_dy = evaluate_single_phase_phmolar_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            dConstant2_dx = evaluate_single_phase_phmolar_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant2_dy = evaluate_single_phase_phmolar_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            d2Constant1_dx2 = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            d2Constant1_dy2 = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            d2Constant1_dxdy = evaluate_single_phase_phmolar_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+
+            d2Of1_dx2 = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            d2Of1_dy2 = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            d2Of1_dxdy = evaluate_single_phase_phmolar_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+            break;
+        }
+        case SELECTED_PT_TABLE:{
+            dOf1_dx = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf1_dy = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt1_dx = evaluate_single_phase_pT_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt1_dy = evaluate_single_phase_pT_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            ddWrt1_dx2 = evaluate_single_phase_pT_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            ddWrt1_dy2 = evaluate_single_phase_pT_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            ddWrt1_dxdy = evaluate_single_phase_pT_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+            dConstant1_dx = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant1_dy = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            dWrt2_dx = evaluate_single_phase_pT_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt2_dy = evaluate_single_phase_pT_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            dConstant2_dx = evaluate_single_phase_pT_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant2_dy = evaluate_single_phase_pT_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            d2Constant1_dx2 = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            d2Constant1_dy2 = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            d2Constant1_dxdy = evaluate_single_phase_pT_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+
+            d2Of1_dx2 = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            d2Of1_dy2 = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            d2Of1_dxdy = evaluate_single_phase_pT_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+            break;
+        }
+        case SELECTED_DU_TABLE: {
+            dOf1_dx = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dOf1_dy = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            dWrt1_dx = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt1_dy = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+            ddWrt1_dx2 = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            ddWrt1_dy2 = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            ddWrt1_dxdy = evaluate_single_phase_du_derivative(Wrt1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+            dConstant1_dx = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant1_dy = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            dWrt2_dx = evaluate_single_phase_du_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dWrt2_dy = evaluate_single_phase_du_derivative(Wrt2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            dConstant2_dx = evaluate_single_phase_du_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 1, 0);
+            dConstant2_dy = evaluate_single_phase_du_derivative(Constant2, cached_single_phase_i, cached_single_phase_j, 0, 1);
+
+            d2Constant1_dx2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            d2Constant1_dy2 = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            d2Constant1_dxdy = evaluate_single_phase_du_derivative(Constant1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+
+            d2Of1_dx2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 2, 0);
+            d2Of1_dy2 = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 0, 2);
+            d2Of1_dxdy = evaluate_single_phase_du_derivative(Of1, cached_single_phase_i, cached_single_phase_j, 1, 1);
+            break;
+        }
+        case SELECTED_NO_TABLE: throw ValueError("table not selected");
+        }
+
+        N = calc_first_partial_deriv_nominator(dOf1_dx, dOf1_dy, dConstant1_dx, dConstant1_dy);
+        D = calc_first_partial_deriv_denominator(dWrt1_dx, dWrt1_dy, dConstant1_dx, dConstant1_dy);
+
+        dN_dx = chain_rule(dOf1_dx, dConstant1_dy, d2Of1_dx2, d2Constant1_dxdy) - chain_rule(dOf1_dy, dConstant1_dx, d2Of1_dxdy, d2Constant1_dx2);
+        dN_dy = chain_rule(dOf1_dx, dConstant1_dy, d2Of1_dxdy, d2Constant1_dy2) - chain_rule(dOf1_dy, dConstant1_dx, d2Of1_dy2, d2Constant1_dxdy);
+
+        dD_dx = chain_rule(dWrt1_dx, dConstant1_dy, ddWrt1_dx2, d2Constant1_dxdy) - chain_rule(dWrt1_dy, dConstant1_dx, ddWrt1_dxdy, d2Constant1_dx2);
+        dD_dy = chain_rule(dWrt1_dx, dConstant1_dy, ddWrt1_dxdy, d2Constant1_dy2) - chain_rule(dWrt1_dy, dConstant1_dx, ddWrt1_dy2, d2Constant1_dxdy);
+
+        d2Of1_dWrt1_dx = ( D * dN_dx - N * dD_dx ) / pow(D, 2);
+        d2Of1_dWrt1_dy = ( D * dN_dy - N * dD_dy ) / pow(D, 2);
+
+        second_deriv = calc_first_partial_deriv_from_fundamental_derivs(d2Of1_dWrt1_dx, d2Of1_dWrt1_dy, dWrt2_dx, dWrt2_dy, dConstant2_dx, dConstant2_dy);
+
+        return second_deriv*pow(Of_conversion_factor1,2)/Wrt_conversion_factor1/Wrt_conversion_factor2;
     }
     else{
         throw ValueError(format("Inputs [rho: %g mol/m3, T: %g K, p: %g Pa] are two-phase; cannot use single-phase derivatives", _rhomolar, _T, _p));
@@ -855,6 +1053,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
     PhaseEnvelopeData & phase_envelope = dataset->phase_envelope;
     SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
     SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+    SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
 
     switch (input_pair)
     {
@@ -1019,6 +1218,48 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 // Recalculate the phase
                 recalculate_singlephase_phase();
             }
+        }
+        break;
+    }
+    case DmolarUmolar_INPUTS:{
+        _rhomolar = val1; _umolar = val2;
+        if (!single_phase_logdu.native_inputs_are_in_range(_umolar, _rhomolar)){
+            // Use the AbstractState instance
+            using_single_phase_table = false;
+            if (get_debug_level() > 5){ std::cout << "inputs are not in range"; }
+            throw ValueError(format("inputs are not in range, rhomolar=%Lg, umolar=%Lg", static_cast<CoolPropDbl>(_rhomolar), static_cast<CoolPropDbl>(_umolar)));
+        }
+        else{
+            using_single_phase_table = true; // Use the table !
+            std::size_t iL = std::numeric_limits<std::size_t>::max(),
+                        iV = std::numeric_limits<std::size_t>::max(),
+                        iclosest = 0;
+            CoolPropDbl umolarL = 0, umolarV = 0;
+            SimpleState closest_state;
+            bool is_two_phase = false;
+            // If phase is imposed, use it, but only if it's single phase:
+            //   - Imposed two phase still needs to determine saturation limits by calling pure_saturation.is_inside().
+            //   - There's no speed increase to be gained by imposing two phase.
+            if ((imposed_phase_index == iphase_not_imposed) || (imposed_phase_index == iphase_twophase)) {
+                if (is_mixture){
+                    throw NotImplementedError("Phase detection is not implemented for mixture.");
+                }
+                else{
+                    is_two_phase = pure_saturation.is_inside(iUmolar, _umolar, iDmolar, _rhomolar, iL, iV, umolarL, umolarV);
+                }
+            }
+            // Phase determined or imposed, now interpolate results
+            if (is_two_phase){
+                throw NotImplementedError("Two phase region is not implemented for density and internal energy inputs.");
+            }
+            else{
+                selected_table = SELECTED_DU_TABLE;
+                // Find and cache the indices i, j
+                find_native_nearest_good_indices(single_phase_logdu, dataset->coeffs_du, _umolar, _rhomolar, cached_single_phase_i, cached_single_phase_j);
+                // Recalculate the phase
+                recalculate_singlephase_phase();
+            }
+
         }
         break;
     }
@@ -1217,6 +1458,7 @@ void CoolProp::TabularDataSet::write_tables(const std::string &path_to_tables)
     make_dirs(path_to_tables);
     write_table(single_phase_logph, path_to_tables, "single_phase_logph");
     write_table(single_phase_logpT, path_to_tables, "single_phase_logpT");
+    write_table(single_phase_logdu, path_to_tables, "single_phase_logdu");
     write_table(pure_saturation, path_to_tables, "pure_saturation");
     write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
@@ -1225,11 +1467,14 @@ void CoolProp::TabularDataSet::load_tables(const std::string &path_to_tables, sh
 {
     single_phase_logph.AS = AS;
     single_phase_logpT.AS = AS;
+    single_phase_logdu.AS = AS;
     pure_saturation.AS = AS;
     single_phase_logph.set_limits();
     single_phase_logpT.set_limits();
+    single_phase_logdu.set_limits();
     load_table(single_phase_logph, path_to_tables, "single_phase_logph.bin.z");
     load_table(single_phase_logpT, path_to_tables, "single_phase_logpT.bin.z");
+    load_table(single_phase_logdu, path_to_tables, "single_phase_logdu.bin.z");
     load_table(pure_saturation, path_to_tables, "pure_saturation.bin.z");
     load_table(phase_envelope, path_to_tables, "phase_envelope.bin.z");
     tables_loaded = true;
@@ -1254,6 +1499,7 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState> 
     }
     single_phase_logph.build(AS);
     single_phase_logpT.build(AS);
+    single_phase_logdu.build(AS);
     tables_loaded = true;
 }
 

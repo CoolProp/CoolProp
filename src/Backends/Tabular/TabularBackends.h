@@ -152,6 +152,9 @@ class PureFluidSaturationTableData{
 		LIST_OF_SATURATION_VECTORS
 		#undef X
 
+		std::vector<double> uminmax{std::vector<double>(2)};
+		std::vector<double> rhominmax{std::vector<double>(2)};
+
 		int revision;
 		std::map<std::string, std::vector<double> > vectors;
 
@@ -193,8 +196,31 @@ class PureFluidSaturationTableData{
                 double Tmax = this->TV[TV.size()-1], Tmin = this->TV[0];
                 if (mainval > Tmax || mainval < Tmin){return false;}
             }
+            else if (main == iUmolar){
+                // If Umolar is outside the range (Umin, Umax), considered to not be inside
+
+                if (mainval > uminmax[1] || mainval < uminmax[0]){return false;}
+                else {
+                	if (other == iDmolar)
+                	{
+                        if (val > rhominmax[1] || val < rhominmax[0]){return false;}
+						else {return true;}
+                	}
+                	else{
+                		throw ValueError("input combination not supported");
+                	}
+                }
+
+            }
             else{
                 throw ValueError("invalid input for other in is_inside");
+            }
+
+            if (other == iDmolar){
+            	double Dmax = this->rhomolarL[0], Dmin = this->rhomolarV[0];
+
+            	if (val > Dmax || val < Dmin){return false;}
+            	else {return true;}
             }
 
             // Now check based on a rough analysis using bounding pressure
@@ -211,7 +237,7 @@ class PureFluidSaturationTableData{
                 bisect_vector(TL, mainval, iL);
             }
             else{
-                throw ValueError(format("For now, main input in is_inside must be T or p"));
+                throw ValueError(format("For now, main input in is_inside must be T, p or Umolar"));
             }
 
             iVplus = std::min(iV+1, N-1);
@@ -272,6 +298,10 @@ class PureFluidSaturationTableData{
 			#define X(name) vectors.insert(std::pair<std::string, std::vector<double> >(#name, name));
 			LIST_OF_SATURATION_VECTORS
 			#undef X
+
+			vectors.insert(std::pair<std::string, std::vector<double> >("uminmax", uminmax));
+			vectors.insert(std::pair<std::string, std::vector<double> >("rhominmax", rhominmax));
+
 		};
         std::map<std::string, std::vector<double> >::iterator get_vector_iterator(const std::string &name){
             std::map<std::string, std::vector<double> >::iterator it = vectors.find(name);
@@ -287,6 +317,9 @@ class PureFluidSaturationTableData{
 			LIST_OF_SATURATION_VECTORS
 			#undef X
 			N = TL.size();
+
+			uminmax = get_vector_iterator("uminmax")->second;
+			rhominmax = get_vector_iterator("rhominmax")->second;
 		};
         void deserialize(msgpack::object &deserialized){
             PureFluidSaturationTableData temp;
@@ -719,6 +752,63 @@ class LogPTTable : public SinglePhaseGriddedTableData
             this->AS = temp.AS; // Reconnect the AbstractState pointer
         };
 };
+/// This class holds the single-phase data for a log(rho)-u gridded table
+class LogDUTable : public SinglePhaseGriddedTableData
+{
+    public:
+        LogDUTable(){
+            xkey = iUmolar; ykey = iDmolar; logy = true; logx = false; xmin = _HUGE; ymin = _HUGE; xmax=_HUGE; ymax=_HUGE;
+        };
+        void set_limits(){
+            if (this->AS.get() == NULL){
+                throw ValueError("AS is not yet set");
+            }
+            CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
+            // Minimum internal energery is the saturated liquid internal energy
+            AS->update(QT_INPUTS, 0, Tmin);
+            xmin = AS->umolar(); ymin = 1e-10;
+
+            // Check both the internal energy at the Tmax isotherm to see whether to use low or high pressure
+            AS->update(DmolarT_INPUTS, 1e-10, 1.499*AS->Tmax());
+            CoolPropDbl xmax1 = AS->umolar();
+            AS->update(PT_INPUTS, AS->pmax(), 1.499*AS->Tmax());
+            CoolPropDbl xmax2 = AS->umolar();
+            CoolPropDbl ymax1 = AS->rhomolar();
+            xmax = std::max(xmax1, xmax2);
+            if (AS->has_melting_line()){
+
+            	CoolPropDbl Tmelt = AS->melting_line(iT, iP, AS->pmax());
+            	AS->update(PT_INPUTS, AS->pmax(), Tmelt);
+            	CoolPropDbl ymax2 = AS->rhomolar();
+
+            	ymax = std::max(ymax1, ymax2);
+            }
+            else{
+            	ymax = ymax1;
+            }
+        }
+        void deserialize(msgpack::object &deserialized){
+            LogDUTable temp;
+            deserialized.convert(temp);
+            temp.unpack();
+            if (Nx != temp.Nx || Ny != temp.Ny)
+            {
+                throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree",temp.Nx, temp.Ny, Nx, Ny));
+            }
+            else if (revision > temp.revision)
+            {
+                throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
+            }
+            else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10) && (std::abs(temp.xmin - xmin)/xmin > 1e-6 || std::abs(temp.xmax - xmax)/xmax > 1e-6)){
+                throw ValueError(format("Current limits for x [%g,%g] do not agree with loaded limits [%g,%g]", xmin, xmax, temp.xmin, temp.xmax));
+            }
+            else if ((std::abs(ymin) > 1e-10 && std::abs(ymax) > 1e-10) && (std::abs(temp.ymin - ymin)/ymin > 1e-6 || std::abs(temp.ymax - ymax)/ymax > 1e-6)){
+                throw ValueError(format("Current limits for y [%g,%g] do not agree with loaded limits [%g,%g]", ymin, ymax, temp.ymin, temp.ymax));
+            }
+            std::swap(*this, temp); // Swap
+            this->AS = temp.AS; // Reconnect the AbstractState pointer
+        };
+};
 
 /// This structure holds the coefficients for one cell, the coefficients are stored in matrices
 /// and can be obtained by the get() function.
@@ -789,9 +879,10 @@ public:
     bool tables_loaded;
     LogPHTable single_phase_logph;
     LogPTTable single_phase_logpT;
+    LogDUTable single_phase_logdu;
     PureFluidSaturationTableData pure_saturation;
     PackablePhaseEnvelopeData phase_envelope;
-    std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT;
+    std::vector<std::vector<CellCoeffs> > coeffs_ph, coeffs_pT, coeffs_du;
 
     TabularDataSet(){ tables_loaded = false; }
     /// Write the tables to files on the computer
@@ -839,7 +930,7 @@ class TabularBackend : public AbstractState
     protected:
         phases imposed_phase_index;
         bool tables_loaded, using_single_phase_table, is_mixture;
-        enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE};
+        enum selected_table_options{SELECTED_NO_TABLE=0, SELECTED_PH_TABLE, SELECTED_PT_TABLE, SELECTED_DU_TABLE};
         selected_table_options selected_table;
         std::size_t cached_single_phase_i, cached_single_phase_j;
         std::size_t cached_saturation_iL, cached_saturation_iV;
@@ -876,6 +967,10 @@ class TabularBackend : public AbstractState
 				case iT:
 					z = &table.T; dzdx = &table.dTdx; dzdy = &table.dTdy;
 					d2zdxdy = &table.d2Tdxdy; d2zdx2 = &table.d2Tdx2; d2zdy2 = &table.d2Tdy2;
+					break;
+				case iP:
+					z = &table.p; dzdx = &table.dpdx; dzdy = &table.dpdy;
+					d2zdxdy = &table.d2pdxdy; d2zdx2 = &table.d2pdx2; d2zdy2 = &table.d2pdy2;
 					break;
 				case iDmolar:
 					z = &table.rhomolar; dzdx = &table.drhomolardx; dzdy = &table.drhomolardy;
@@ -940,10 +1035,13 @@ class TabularBackend : public AbstractState
 
         virtual double evaluate_single_phase_phmolar(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_du(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_pT_transport(parameters output, std::size_t i, std::size_t j) = 0;
+        virtual double evaluate_single_phase_du_transport(parameters output, std::size_t i, std::size_t j) = 0;
         virtual double evaluate_single_phase_phmolar_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
         virtual double evaluate_single_phase_pT_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
+        virtual double evaluate_single_phase_du_derivative(parameters output, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny) = 0;
 
         /// Ask the derived class to find the nearest good set of i,j that it wants to use (pure virtual)
         virtual void find_native_nearest_good_indices(SinglePhaseGriddedTableData &table, const std::vector<std::vector<CellCoeffs> > &coeffs, double x, double y, std::size_t &i, std::size_t &j) = 0;
@@ -994,8 +1092,10 @@ class TabularBackend : public AbstractState
             PureFluidSaturationTableData &pure_saturation = dataset->pure_saturation;
             SinglePhaseGriddedTableData &single_phase_logph = dataset->single_phase_logph;
             SinglePhaseGriddedTableData &single_phase_logpT = dataset->single_phase_logpT;
+            SinglePhaseGriddedTableData &single_phase_logdu = dataset->single_phase_logdu;
             single_phase_logph.pack();
             single_phase_logpT.pack();
+            single_phase_logdu.pack();
             pure_saturation.pack();
             phase_envelope.pack();
         }
@@ -1031,6 +1131,45 @@ class TabularBackend : public AbstractState
         /// Calculate the speed of sound using a tabular backend [m/s]
         CoolPropDbl calc_speed_sound(void);
         CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
+        /** @brief Calulate the nominator of the first partial derivative from the fundamental derivatives
+         * @param dAdx_y First partial derivative wrt. x of differentiated variable
+         * @param dAdy_x First partial derivative wrt. y of differentiated variable
+         * @param dCdx_x First partial derivative wrt. x of constant
+         * @param dCdy_x First partial derivative wrt. y of constant
+         * \f[ N = \left( \frac{\partial A}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial A}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y \f]
+		*/
+        CoolPropDbl calc_first_partial_deriv_nominator(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        /** @brief Calulate the denominator of the first partial derivative from the fundamental derivatives
+         * @param dBdx_y First partial derivative wrt. x of differentiator
+         * @param dBdy_x First partial derivative wrt. y of differentiator
+         * @param dCdx_y First partial derivative wrt. x of constant
+         * @param dCdy_x First partial derivative wrt. y of constant
+         *
+         * \f[ D = \left( \frac{\partial B}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial B}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y \f]
+		*/
+        CoolPropDbl calc_first_partial_deriv_denominator(CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        /** @brief Calculate the first partial derivative from the fundamental derivatives
+         * @param dAdx_y First partial derivative wrt. x of differentiated variable
+         * @param dAdy_x First partial derivative wrt. y of differentiated variable
+         * @param dBdx_x First partial derivative wrt. x of differentiator
+         * @param dBdy_x First partial derivative wrt. y of differentiator
+         * @param dCdx_y First partial derivative wrt. x of constant
+         * @param dCdy_x First partial derivative wrt. y of constant
+         *
+         * \f[ \left( \frac{\partial A}{\partial B} \right)_C = \frac{ \left( \frac{\partial A}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial A}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y}{ \left( \frac{\partial B}{\partial x} \right)_y \left( \frac{\partial C}{\partial y} \right)_x - \left( \frac{\partial B}{\partial y} \right)_x \left( \frac{\partial C}{\partial x} \right)_y} = \frac{N}{D}\f]
+		*/
+        CoolPropDbl calc_first_partial_deriv_from_fundamental_derivs(CoolPropDbl dAdx_y, CoolPropDbl dAdy_x, CoolPropDbl dBdx_y, CoolPropDbl dBdy_x, CoolPropDbl dCdx_y, CoolPropDbl dCdy_x);
+        /** @brief Apply the chain rule
+         * @param A The first term
+         * @param B The second term
+         * @param dAdx The derivative of the first term
+         * @param dBdx The derivative of the second term
+         *
+        * \f[ F = A(x) \cdot B(x)\f]
+        * \f[ \frac{dF}{dx} = A \frac{dB}{dx} + B \frac{dA}{dx} \f]
+		*/
+        CoolPropDbl chain_rule(CoolPropDbl A, CoolPropDbl B, CoolPropDbl dAdx, CoolPropDbl dBdx);
+        CoolPropDbl calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
         /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */
         CoolPropDbl calc_first_saturation_deriv(parameters Of1, parameters Wrt1);
@@ -1038,6 +1177,9 @@ class TabularBackend : public AbstractState
 
 		/// If you need all three values (drho_dh__p, drho_dp__h and rho_spline), you should calculate drho_dp__h first to avoid duplicate calculations.
 		CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
+
+	    /// Return the pressure in Pa
+		double p(void){ return calc_p(); };
 
         void check_tables(){
             if (!tables_loaded){
