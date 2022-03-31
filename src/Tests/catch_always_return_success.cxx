@@ -4,7 +4,7 @@
 // number of failing catch tests
 
 #define CATCH_CONFIG_RUNNER
-#include "catch.hpp"
+#include <catch2/catch_all.hpp>
 #include <iostream>
 
 int main(int argc, char* argv[]) {

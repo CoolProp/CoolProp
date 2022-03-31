@@ -146,7 +146,7 @@ CoolPropDbl CoolProp::VTPRBackend::calc_fugacity_coefficient(std::size_t i) {
 }
 
 #ifdef ENABLE_CATCH
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 #    include "Backends/Cubics/CubicBackend.h"
 

@@ -930,7 +930,7 @@ double Poly2DFracIntResidual::deriv(double target) {
 #ifdef ENABLE_CATCH
 #    include <math.h>
 #    include <iostream>
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", "[PolyMath]") {
     bool PRINT = false;

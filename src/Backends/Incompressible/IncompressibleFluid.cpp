@@ -438,7 +438,7 @@ bool IncompressibleFluid::checkX(double x) {
 #ifdef ENABLE_CATCH
 #    include <math.h>
 #    include <iostream>
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 #    include "TestObjects.h"
 
 Eigen::MatrixXd makeMatrix(const std::vector<double>& coefficients) {
