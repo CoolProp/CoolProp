@@ -7,33 +7,29 @@
   by all Modelica tools
 */
 
-extern void ModelicaMessage(const char *string);
+extern void ModelicaMessage(const char* string);
 /* 
 Output the message string (no format control).
 */
 
-
-extern void ModelicaFormatMessage(const char *string,...);
-  /* 
+extern void ModelicaFormatMessage(const char* string, ...);
+/* 
 Output the message under the same format control as the C-function printf.
   */
 
-
-extern void ModelicaError(const char *string);
+extern void ModelicaError(const char* string);
 /* 
 Output the error message string (no format control). This function
 never returns to the calling function, but handles the error
 similarly to an assert in the Modelica code.
 */
 
-
-extern void ModelicaFormatError(const char *string,...);
+extern void ModelicaFormatError(const char* string, ...);
 /*
 Output the error message under the same format control as the C-function
 printf. This function never returns to the calling function,
 but handles the error similarly to an assert in the Modelica code.
 */
-
 
 extern char* ModelicaAllocateString(size_t len);
 /* 
@@ -43,7 +39,6 @@ for string arrays (= pointer to string array) is still provided by the
 calling program, as for any other array. If an error occurs, this
 function does not return, but calls "ModelicaError".
 */
-
 
 extern char* ModelicaAllocateStringWithErrorReturn(size_t len);
 /*

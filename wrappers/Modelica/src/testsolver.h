@@ -32,19 +32,20 @@
   2006-2012
   Copyright Politecnico di Milano, TU Braunschweig, Politecnico di Torino
 */
-class TestSolver : public BaseSolver{
-public:
-	TestSolver(const string &mediumName, const string &libraryName, const string &substanceName);
-	~TestSolver();
-	virtual void setFluidConstants();
+class TestSolver : public BaseSolver
+{
+   public:
+    TestSolver(const string& mediumName, const string& libraryName, const string& substanceName);
+    ~TestSolver();
+    virtual void setFluidConstants();
 
-	virtual void setSat_p(double &p, ExternalSaturationProperties *const properties);
-	virtual void setSat_T(double &T, ExternalSaturationProperties *const properties);
+    virtual void setSat_p(double& p, ExternalSaturationProperties* const properties);
+    virtual void setSat_T(double& T, ExternalSaturationProperties* const properties);
 
-	virtual void setState_ph(double &p, double &h, int &phase, ExternalThermodynamicState *const properties);
-	virtual void setState_pT(double &p, double &T, ExternalThermodynamicState *const properties);
-	virtual void setState_dT(double &d, double &T, int &phase, ExternalThermodynamicState *const properties);
-	virtual void setState_ps(double &p, double &s, int &phase, ExternalThermodynamicState *const properties);
+    virtual void setState_ph(double& p, double& h, int& phase, ExternalThermodynamicState* const properties);
+    virtual void setState_pT(double& p, double& T, ExternalThermodynamicState* const properties);
+    virtual void setState_dT(double& d, double& T, int& phase, ExternalThermodynamicState* const properties);
+    virtual void setState_ps(double& p, double& s, int& phase, ExternalThermodynamicState* const properties);
 };
 
-#endif // TESTSOLVER_H_
+#endif  // TESTSOLVER_H_

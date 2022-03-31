@@ -11,11 +11,10 @@
 #include <map>
 #include <algorithm>
 
-namespace CoolProp{
+namespace CoolProp {
 
 // Forward declaration of the necessary debug function to avoid including the whole header
 extern int get_debug_level();
-
 
 ///// Class to access Lithium-Bromide solutions
 ///** Employs some basic wrapper-like functionality
@@ -128,9 +127,6 @@ extern int get_debug_level();
 //};
 //
 
-
-
-
 /// A container for the fluid parameters for the incompressible fluids
 /**
 This container holds copies of all of the fluid instances for the fluids that are loaded in incompressible.
@@ -151,29 +147,31 @@ class JSONIncompressibleLibrary
     std::map<std::string, std::size_t> string_to_index_map;
     bool _is_empty;
 
-protected:
+   protected:
     /// A general function to parse the json files that hold the coefficient matrices
-    IncompressibleData parse_coefficients(rapidjson::Value &obj, const std::string &id, bool vital);
-    double parse_value(rapidjson::Value &obj, const std::string &id, bool vital, double def);
-    composition_types parse_ifrac(rapidjson::Value &obj, const std::string &id);
+    IncompressibleData parse_coefficients(rapidjson::Value& obj, const std::string& id, bool vital);
+    double parse_value(rapidjson::Value& obj, const std::string& id, bool vital, double def);
+    composition_types parse_ifrac(rapidjson::Value& obj, const std::string& id);
 
-public:
+   public:
     // Default constructor;
     JSONIncompressibleLibrary();
     ~JSONIncompressibleLibrary();
 
-    bool is_empty(void){ return _is_empty;};
+    bool is_empty(void) {
+        return _is_empty;
+    };
 
     /// Add all the fluid entries in the rapidjson::Value instance passed in
-    void add_many(rapidjson::Value &listing);
-    void add_one(rapidjson::Value &fluid_json);
-    void add_obj(const IncompressibleFluid &fluid_obj);
+    void add_many(rapidjson::Value& listing);
+    void add_one(rapidjson::Value& fluid_json);
+    void add_obj(const IncompressibleFluid& fluid_obj);
 
     /** \brief Get an IncompressibleFluid instance stored in this library
      *
      * @param name Name of the fluid
      */
-    IncompressibleFluid& get(const std::string &name);
+    IncompressibleFluid& get(const std::string& name);
 
     /** \brief Get a CoolPropFluid instance stored in this library
      *
@@ -182,13 +180,17 @@ public:
     IncompressibleFluid& get(std::size_t key);
 
     /// Return a comma-separated list of incompressible pure fluid names
-    std::string get_incompressible_list_pure(void){ return strjoin(name_vector_pure, ",");};
+    std::string get_incompressible_list_pure(void) {
+        return strjoin(name_vector_pure, ",");
+    };
     /// Return a comma-separated list of solution names
-    std::string get_incompressible_list_solution(void){ return strjoin(name_vector_solution, ",");};
+    std::string get_incompressible_list_solution(void) {
+        return strjoin(name_vector_solution, ",");
+    };
 };
 
 /// Get a reference to the library instance
-JSONIncompressibleLibrary & get_incompressible_library(void);
+JSONIncompressibleLibrary& get_incompressible_library(void);
 
 /// Return a comma-separated list of incompressible pure fluid names
 std::string get_incompressible_list_pure(void);
@@ -197,7 +199,7 @@ std::string get_incompressible_list_pure(void);
 std::string get_incompressible_list_solution(void);
 
 /// Get the fluid structure returned as a reference
-IncompressibleFluid& get_incompressible_fluid(const std::string &fluid_string);
+IncompressibleFluid& get_incompressible_fluid(const std::string& fluid_string);
 
 } /* namespace CoolProp */
 #endif
