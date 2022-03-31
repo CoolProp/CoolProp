@@ -864,7 +864,7 @@ CoolPropDbl sign(CoolPropDbl x) {
 void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_Akasaka_options& options) {
 
     /*
-    This function implements the method of 
+    This function implements the method of
 
     Ancillary equations are used to get a sensible starting point
     */
@@ -2025,7 +2025,7 @@ void SaturationSolvers::PTflash_twophase::build_arrays() {
 } /* namespace CoolProp*/
 
 #if defined(ENABLE_CATCH)
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 TEST_CASE("Check the PT flash calculation for two-phase inputs", "[PTflash_twophase]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane&Ethane"));

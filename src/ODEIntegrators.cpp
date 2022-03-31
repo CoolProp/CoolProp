@@ -165,7 +165,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
 }
 
 #if defined(ENABLE_CATCH)
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 TEST_CASE("Integrate y'=y", "[ODEIntegrator]") {
     class SimpleODEIntegrator : public ODEIntegrators::AbstractODEIntegrator

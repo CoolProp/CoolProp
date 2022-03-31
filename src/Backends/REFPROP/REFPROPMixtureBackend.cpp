@@ -2129,7 +2129,7 @@ void REFPROP_SETREF(char hrf[3], int ixflag, double x0[1], double& h0, double& s
 
 #ifdef ENABLE_CATCH
 #    include "CoolProp.h"
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
     SECTION("Saturation densities agree within 0.5% at T/Tc = 0.9") {

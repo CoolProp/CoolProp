@@ -25,7 +25,7 @@ static CoolProp::TabularDataLibrary library;
 namespace CoolProp {
 
 /**
- * @brief 
+ * @brief
  * @param table
  * @param path_to_tables
  * @param filename
@@ -1468,7 +1468,7 @@ void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, 
 }
 
 #    if defined(ENABLE_CATCH)
-#        include "catch.hpp"
+#        include <catch2/catch_all.hpp>
 
 // Defined global so we only load once
 static shared_ptr<CoolProp::AbstractState> ASHEOS, ASTTSE, ASBICUBIC;

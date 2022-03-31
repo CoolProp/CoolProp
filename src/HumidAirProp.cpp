@@ -2179,7 +2179,7 @@ double IceProps(const char* Name, double T, double p) {
 
 #ifdef ENABLE_CATCH
 #    include <math.h>
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 TEST_CASE("Check HA Virials from Table A.2.1", "[RP1485]") {
     SECTION("B_aa") {

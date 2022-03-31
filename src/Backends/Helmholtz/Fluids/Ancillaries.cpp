@@ -5,7 +5,7 @@
 #if defined(ENABLE_CATCH)
 
 #    include "crossplatform_shared_ptr.h"
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 #endif
 

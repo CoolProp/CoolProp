@@ -6,7 +6,7 @@
 #include "Configuration.h"
 
 #if defined(ENABLE_CATCH)
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 #    include "Backends/Cubics/CubicBackend.h"
 #endif
 

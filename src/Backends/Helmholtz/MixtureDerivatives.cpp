@@ -1103,7 +1103,7 @@ CoolPropDbl MixtureDerivatives::d2psir_dxi_dxj(HelmholtzEOSMixtureBackend& HEOS,
 } /* namespace CoolProp */
 
 #ifdef ENABLE_CATCH
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 #    include "Backends/Cubics/CubicBackend.h"
 #    include "Backends/Cubics/VTPRBackend.h"
@@ -1294,7 +1294,7 @@ class DerivativeFixture
             numeric = (g(*HEOS_plus_delta, xN) - g(*HEOS_minus_delta, xN)) / (2 * ddelta);
         }
         CAPTURE(name);
-        CAPTURE(analytic)
+        CAPTURE(analytic);
         CAPTURE(numeric);
         CAPTURE(xN);
         double error = mix_deriv_err_func(numeric, analytic);
@@ -1321,7 +1321,7 @@ class DerivativeFixture
             }
             CAPTURE(name);
             CAPTURE(i);
-            CAPTURE(analytic)
+            CAPTURE(analytic);
             CAPTURE(numeric);
             CAPTURE(xN);
             double error = mix_deriv_err_func(numeric, analytic);
@@ -1346,7 +1346,7 @@ class DerivativeFixture
 
             CAPTURE(name);
             CAPTURE(i);
-            CAPTURE(analytic)
+            CAPTURE(analytic);
             CAPTURE(numeric);
             CAPTURE(xN);
             double error = mix_deriv_err_func(numeric, analytic);
@@ -1370,7 +1370,7 @@ class DerivativeFixture
                 CAPTURE(name);
                 CAPTURE(i);
                 CAPTURE(j);
-                CAPTURE(analytic)
+                CAPTURE(analytic);
                 CAPTURE(numeric);
                 CAPTURE(xN);
                 double error = mix_deriv_err_func(numeric, analytic);
@@ -1394,7 +1394,7 @@ class DerivativeFixture
                 CAPTURE(name);
                 CAPTURE(i);
                 CAPTURE(j);
-                CAPTURE(analytic)
+                CAPTURE(analytic);
                 CAPTURE(numeric);
                 CAPTURE(xN);
                 double error = mix_deriv_err_func(numeric, analytic);
@@ -1417,7 +1417,7 @@ class DerivativeFixture
                     CAPTURE(name);
                     CAPTURE(i);
                     CAPTURE(j);
-                    CAPTURE(analytic)
+                    CAPTURE(analytic);
                     CAPTURE(numeric);
                     CAPTURE(xN);
                     double error = mix_deriv_err_func(numeric, analytic);
@@ -1443,7 +1443,7 @@ class DerivativeFixture
                     CAPTURE(i);
                     CAPTURE(j);
                     CAPTURE(k);
-                    CAPTURE(analytic)
+                    CAPTURE(analytic);
                     CAPTURE(numeric);
                     CAPTURE(xN);
                     double error = mix_deriv_err_func(numeric, analytic);

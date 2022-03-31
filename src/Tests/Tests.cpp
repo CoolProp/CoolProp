@@ -8,8 +8,7 @@ Catch clashing
 #include "time.h"
 
 #if defined ENABLE_CATCH
-#    define CATCH_CONFIG_RUNNER
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 static Catch::Session session;  // There must be exactly one instance
 
