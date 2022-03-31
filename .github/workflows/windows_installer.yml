@@ -27,7 +27,7 @@ jobs:
       shell: bash
       run: |
         set -x
-        COOLPROP_VERSION=$(python dev/extract_version.py)
+        COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
         echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
         # Create the build directory too
         mkdir build
