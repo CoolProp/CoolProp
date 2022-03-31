@@ -49,7 +49,7 @@
 #include "Backends/PCSAFT/PCSAFTLibrary.h"
 
 #if defined(ENABLE_CATCH)
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 #endif
 
 namespace CoolProp {

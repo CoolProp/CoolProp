@@ -292,9 +292,10 @@ def combine_json(root_dir):
 
 def generate():
 
-    import shutil
-    shutil.copy2(os.path.join(repo_root_path, 'externals', 'Catch', 'single_include', 'catch.hpp'), os.path.join(repo_root_path, 'include', 'catch.hpp'))
-    #shutil.copy2(os.path.join(repo_root_path, 'externals','REFPROP-headers','REFPROP_lib.h'),os.path.join(repo_root_path,'include','REFPROP_lib.h'))
+    # import shutil
+    # shutil.copy2(
+    #    os.path.join(repo_root_path, 'externals', 'REFPROP-headers', 'REFPROP_lib.h'),
+    #    os.path.join(repo_root_path, 'include', 'REFPROP_lib.h'))
 
     version_to_file(root_dir=repo_root_path)
     gitrev_to_file(root_dir=repo_root_path)

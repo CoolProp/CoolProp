@@ -575,7 +575,7 @@ double IncompressibleBackend::calc_dhdpatTx(double T, double rho, double drhodTa
 #ifdef ENABLE_CATCH
 #    include <math.h>
 #    include <iostream>
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 #    include "TestObjects.h"
 

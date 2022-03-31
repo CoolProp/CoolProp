@@ -743,7 +743,7 @@ std::string get_backend_string(backends backend) {
 } /* namespace CoolProp */
 
 #ifdef ENABLE_CATCH
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 #    include <sstream>
 
 TEST_CASE("Check that all parameters are described", "") {

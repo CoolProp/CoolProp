@@ -1064,7 +1064,7 @@ CoolPropDbl AbstractState::calc_second_partial_deriv(parameters Of1, parameters 
 
 #ifdef ENABLE_CATCH
 
-#include "catch.hpp"
+#include <catch2/catch_all.hpp>
 
 TEST_CASE("Check AbstractState", "[AbstractState]") {
     SECTION("bad backend") {

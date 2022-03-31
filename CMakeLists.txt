@@ -1964,21 +1964,27 @@ endif()
 
 ###      COOLPROP TESTING APP       ###
 if(COOLPROP_CATCH_MODULE)
+
+  add_subdirectory("externals/Catch2")
   enable_testing()
 
-  list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/test_main.cxx")
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CoolProp-Tests.cpp")
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
-  add_dependencies(CatchTestRunner generate_headers)
-  set_target_properties(
-    CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
+
+  target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
+  target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
   if(UNIX)
     target_link_libraries(CatchTestRunner ${CMAKE_DL_LIBS})
   endif()
-  add_test(ProcedureTests CatchTestRunner)
+
+  target_link_libraries(CatchTestRunner PRIVATE ${COOLPROP_LIBRARY_NAME})
+
+  include(CTest)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2/extras/Catch.cmake)
+  catch_discover_tests(CatchTestRunner)
 
   if(COOLPROP_IWYU)
     find_program(iwyu_path NAMES include-what-you-use iwyu)

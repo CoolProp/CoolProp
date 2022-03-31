@@ -141,7 +141,7 @@ Component UNIFACParameterLibrary::get_component(const std::string& identifier, c
 }; /* namespace UNIFACLibrary */
 
 #if defined(ENABLE_CATCH)
-#    include "catch.hpp"
+#    include <catch2/catch_all.hpp>
 
 #    include "UNIFAC.h"
 
