@@ -198,9 +198,11 @@ public:
     CoolPropDbl calc_molar_mass(void);
     
     void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter, const double value);
+    void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter, const double value, const bool symmetric);    
     double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string &parameter);
     
     void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value){throw ValueError("set_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); }
+    void set_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter, const double value, const bool symmetric){throw ValueError("set_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); }
     double get_binary_interaction_double(const std::string &CAS1, const std::string &CAS2, const std::string &parameter){throw ValueError("get_binary_interaction_double not defined for AbstractCubic not defined for CAS #"); };
 
     // Return a 1-1 copy of this class

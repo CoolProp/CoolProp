@@ -111,7 +111,11 @@ public:
     /// Set the entire kij matrix in one shot
     void set_kmat(const std::vector< std::vector<double> > &k){ this->k = k; };
     /// Set the kij factor for the ij pair
-    void set_kij(std::size_t i, std::size_t j, double val){ k[i][j] = val; k[j][i] = val;}
+    void set_kij(std::size_t i, std::size_t j, double val, double symmetric){ 
+        k[i][j] = val;
+        if (symmetric)
+            k[j][i] = val;
+    }
     /// Get the kij factor for the ij pair
     double get_kij(std::size_t i, std::size_t j){ return k[i][j]; }
     /// Get the vector of critical temperatures (in K)
