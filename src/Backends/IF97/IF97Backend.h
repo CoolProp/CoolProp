@@ -7,6 +7,7 @@
 #include "AbstractState.h"
 #include "Exceptions.h"
 #include <vector>
+#include <cmath>
 
 namespace CoolProp {
 
@@ -44,14 +45,14 @@ public:
         this->_rhomass.clear();
         this->_hmass.clear();
         this->_smass.clear();
-        this->_phase = iphase_not_imposed; 
+        this->_phase = iphase_not_imposed;
         return true;
     };
 
     void set_phase() {
         double epsilon = 3.3e-5;                              // IAPWS-IF97 RMS saturated pressure inconsistency
-        if ((abs(_T - IF97::Tcrit) < epsilon/10.0) &&         //            RMS temperature inconsistency ~ epsilon/10
-            (abs(_p - IF97::Pcrit) < epsilon)) {              // within epsilon of [Tcrit,Pcrit]
+        if ((std::abs(_T - IF97::Tcrit) < epsilon/10.0) &&         //            RMS temperature inconsistency ~ epsilon/10
+            (std::abs(_p - IF97::Pcrit) < epsilon)) {              // within epsilon of [Tcrit,Pcrit]
             _phase = iphase_critical_point;                   //     at critical point
         }
         else if (_T >= IF97::Tcrit) {                         // to the right of the critical point
@@ -92,31 +93,31 @@ public:
     void update(CoolProp::input_pairs input_pair, double value1, double value2){
 
         double H,S,hLmass,hVmass,sLmass,sVmass;
-        
+
         clear();  //clear the few cached values we are using
 
         switch(input_pair){
-            case PT_INPUTS: 
-                _p = value1; 
-                _T = value2; 
+            case PT_INPUTS:
+                _p = value1;
+                _T = value2;
                 _Q = -1;
                 set_phase();
-                //Two-Phase Check, with PT Inputs: 
+                //Two-Phase Check, with PT Inputs:
                 if (_phase == iphase_twophase)
                     throw ValueError(format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 3.3e-3 %% of given p [%Lg Pa]", IF97::psat97(_T), _T, _p));
                 break;
-            case PQ_INPUTS: 
-                _p = value1; 
+            case PQ_INPUTS:
+                _p = value1;
                 _Q = value2;
-                if ((_Q < 0) || (_Q > 1)) 
+                if ((_Q < 0) || (_Q > 1))
                     throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _T = IF97::Tsat97(_p);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
                 break;
-            case QT_INPUTS: 
-                _Q = value1; 
-                _T = value2; 
-                if ((_Q < 0) || (_Q > 1)) 
+            case QT_INPUTS:
+                _Q = value1;
+                _T = value2;
+                if ((_Q < 0) || (_Q > 1))
                     throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
                 _p = IF97::psat97(_T);  // ...will throw exception if _P not on saturation curve
                 _phase = iphase_twophase;
@@ -241,8 +242,8 @@ public:
                 else if (std::abs(_Q-1) < 1e-10){
                     return calc_SatVapor(iCalc);     // dew point (Q == 1) on Sat. Vapor curve
                 }
-                else {                               // else "inside" bubble ( 0 < Q < 1 )    
-                    switch(iCalc){ 
+                else {                               // else "inside" bubble ( 0 < Q < 1 )
+                    switch(iCalc){
                     case iDmass:
                         // Density is an inverse phase weighted property, since it's the inverse of specific volume
                         return 1.0/(_Q/calc_SatVapor(iDmass) + (1.0-_Q)/calc_SatLiquid(iDmass)); break;
