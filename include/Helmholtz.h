@@ -168,7 +168,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl base(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl base(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.alphar;
@@ -177,7 +177,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.dalphar_dtau;
@@ -186,7 +186,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d2alphar_dtau2;
@@ -195,7 +195,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dDelta_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d2alphar_ddelta_dtau;
@@ -204,7 +204,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dDelta(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.dalphar_ddelta;
@@ -213,7 +213,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dDelta2(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta2(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d2alphar_ddelta2;
@@ -222,7 +222,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dDelta2_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta2_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d3alphar_ddelta2_dtau;
@@ -231,7 +231,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dDelta_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d3alphar_ddelta_dtau2;
@@ -240,7 +240,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d3alphar_dtau3;
@@ -249,7 +249,7 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dDelta3(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta3(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d3alphar_ddelta3;
@@ -258,33 +258,33 @@ class BaseHelmholtzTerm
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
      *  @param delta Reduced density where \f$\delta = \rho / \rho_c \f$
      */
-    virtual CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d4alphar_dtau4;
     };
-    virtual CoolPropDbl dDelta_dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta_dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d4alphar_ddelta_dtau3;
     };
-    virtual CoolPropDbl dDelta2_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta2_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d4alphar_ddelta2_dtau2;
     };
-    virtual CoolPropDbl dDelta3_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta3_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d4alphar_ddelta3_dtau;
     };
-    virtual CoolPropDbl dDelta4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    virtual CoolPropDbl dDelta4(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         HelmholtzDerivatives deriv;
         all(tau, delta, deriv);
         return deriv.d4alphar_ddelta4;
     };
 
-    virtual void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() = 0;
+    virtual void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept = 0;
 };
 
 struct ResidualHelmholtzGeneralizedExponentialElement
@@ -502,10 +502,10 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         finished = true;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const;
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
-    //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
+    //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) noexcept;
 };
 
 struct ResidualHelmholtzNonAnalyticElement
@@ -544,8 +544,8 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
             elements.push_back(el);
         }
     };
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const;
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 class ResidualHelmholtzGeneralizedCubic : public BaseHelmholtzTerm
@@ -566,8 +566,8 @@ class ResidualHelmholtzGeneralizedCubic : public BaseHelmholtzTerm
         z = std::vector<double>(1, 1);  // Init the vector to [1.0]
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const;
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
@@ -591,8 +591,8 @@ class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
         enabled = true;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const;
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 /// The generalized Lee-Kesler formulation of Xiang & Deiters: doi:10.1016/j.ces.2007.11.029
@@ -610,7 +610,7 @@ class ResidualHelmholtzXiangDeiters : public BaseHelmholtzTerm
     /// Constructor
     ResidualHelmholtzXiangDeiters(const CoolPropDbl Tc, const CoolPropDbl pc, const CoolPropDbl rhomolarc, const CoolPropDbl acentric,
                                   const CoolPropDbl R);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
@@ -667,25 +667,25 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
     //Destructor. No Implementation
     ~ResidualHelmholtzSAFTAssociating(){};
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const;
 
-    CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dTau4(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         return 1e99;
     };
-    CoolPropDbl dDelta_dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta_dTau3(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         return 1e99;
     };
-    CoolPropDbl dDelta2_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta2_dTau2(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         return 1e99;
     };
-    CoolPropDbl dDelta3_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta3_dTau(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         return 1e99;
     };
-    CoolPropDbl dDelta4(const CoolPropDbl& tau, const CoolPropDbl& delta) throw() {
+    CoolPropDbl dDelta4(const CoolPropDbl& tau, const CoolPropDbl& delta) noexcept {
         return 1e99;
     };
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& deriv) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& deriv) noexcept;
 };
 
 class BaseHelmholtzContainer
@@ -868,13 +868,13 @@ class IdealHelmholtzLead : public BaseHelmholtzTerm
         return enabled;
     }
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const {
         el.AddMember("type", "IdealHelmholtzLead", doc.GetAllocator());
         el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
         el.AddMember("a2", static_cast<double>(a2), doc.GetAllocator());
     };
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 /// The term in the EOS used to shift the reference state of the fluid
@@ -899,7 +899,7 @@ class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm
     // Set the values in the class
     void set(CoolPropDbl a1, CoolPropDbl a2, const std::string& ref) {
         // If it doesn't already exist, just set the values
-        if (enabled == false) {
+        if (!enabled) {
             this->a1 = a1;
             this->a2 = a2;
             enabled = true;
@@ -920,12 +920,12 @@ class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const {
         el.AddMember("type", "IdealHelmholtzEnthalpyEntropyOffset", doc.GetAllocator());
         el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
         el.AddMember("a2", static_cast<double>(a2), doc.GetAllocator());
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 /**
@@ -950,11 +950,11 @@ class IdealHelmholtzLogTau : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const {
         el.AddMember("type", "IdealHelmholtzLogTau", doc.GetAllocator());
         el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 /**
@@ -979,12 +979,12 @@ class IdealHelmholtzPower : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const {
         el.AddMember("type", "IdealHelmholtzPower", doc.GetAllocator());
         cpjson::set_long_double_array("n", n, el, doc);
         cpjson::set_long_double_array("t", t, el, doc);
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 /**
@@ -1062,12 +1062,12 @@ class IdealHelmholtzPlanckEinsteinGeneralized : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const {
         el.AddMember("type", "IdealHelmholtzPlanckEinsteinGeneralized", doc.GetAllocator());
         cpjson::set_long_double_array("n", n, el, doc);
         cpjson::set_long_double_array("theta", theta, el, doc);
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm
@@ -1096,14 +1096,14 @@ class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const {
         el.AddMember("type", "IdealGasHelmholtzCP0Constant", doc.GetAllocator());
         el.AddMember("cp_over_R", cp_over_R, doc.GetAllocator());
         el.AddMember("Tc", Tc, doc.GetAllocator());
         el.AddMember("T0", T0, doc.GetAllocator());
     };
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
@@ -1133,8 +1133,8 @@ class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
         return enabled;
     };
 
-    void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void to_json(rapidjson::Value& el, rapidjson::Document& doc) const;
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 /**
 
@@ -1168,7 +1168,7 @@ class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm
     bool is_enabled() const {
         return enabled;
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
@@ -1200,7 +1200,7 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
     bool is_enabled() const {
         return enabled;
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) noexcept;
 };
 
 ///// Term in the ideal-gas specific heat equation that is based on Aly-Lee formulation
@@ -1265,7 +1265,7 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
 //
 //    bool is_enabled() const {return enabled;};
 //
-//    void to_json(rapidjson::Value &el, rapidjson::Document &doc);
+//    void to_json(rapidjson::Value &el, rapidjson::Document &doc) const;
 //
 //
 //    /// The antiderivative given by \f$ \displaystyle\int \frac{1}{\tau^2}\frac{c_p^0}{R_u}d\tau \f$
@@ -1322,17 +1322,17 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
 //    */
 //    CoolPropDbl anti_deriv_cp0_tau(const CoolPropDbl &tau);
 //
-//    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
-//    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
-//    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
-//    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
-//    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
-//    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
-//    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
-//    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
-//    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) throw(){return 0.0;};
-//    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
-//    CoolPropDbl dTau4(const CoolPropDbl &tau, const CoolPropDbl &delta) throw();
+//    CoolPropDbl base(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept;
+//    CoolPropDbl dDelta(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept{return 0.0;};
+//    CoolPropDbl dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept;
+//    CoolPropDbl dDelta2(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept{return 0.0;};
+//    CoolPropDbl dDelta_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept{return 0.0;};
+//    CoolPropDbl dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept;
+//    CoolPropDbl dDelta3(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept{return 0.0;};
+//    CoolPropDbl dDelta2_dTau(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept{return 0.0;};
+//    CoolPropDbl dDelta_dTau2(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept{return 0.0;};
+//    CoolPropDbl dTau3(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept;
+//    CoolPropDbl dTau4(const CoolPropDbl &tau, const CoolPropDbl &delta) noexcept;
 //
 //};
 

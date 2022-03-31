@@ -60,6 +60,7 @@ Checks: |
   -readability-function-cognitive-complexity,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -modernize-use-override,
+  -bugprone-easily-swappable-parameters,
 
 WarningsAsErrors: '*'
 HeaderFilterRegex: '*'

@@ -1,11 +1,13 @@
 
 #include "ODEIntegrators.h"
+
+#include <cmath>
 #include "Eigen/Core"
 #include "CPstrings.h"
 #include "Exceptions.h"
 #include <algorithm>
 
-bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, double tend, double hmin, double hmax, double eps_allowed,
+bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed,
                                   double step_relax) {
     // Get the starting array of variables of integration
     std::vector<double> xold = ode.get_initial_array();
@@ -13,19 +15,29 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
 
     // Start at an index of 0
     int Itheta = 0;
-    double t0 = tstart;
+    double t0 = tmin;
     double h = hmin;
 
     // Figure out if t is increasing or decreasing in the integration and set a flag
-    bool forwards_integration = ((tend - tstart) > 0);
+    bool forwards_integration = ((tmax - tmin) > 0);
     // If backwards integration, flip the sign of the step
     if (!forwards_integration) {
         h *= -1;
     }
 
-    double max_error;
-
-    std::vector<double> xnew1(N), xnew2(N), xnew3(N), xnew4(N), xnew5(N), f1(N), f2(N), f3(N), f4(N), f5(N), f6(N), error(N), xnew(N);
+    std::vector<double> xnew1(N);
+    std::vector<double> xnew2(N);
+    std::vector<double> xnew3(N);
+    std::vector<double> xnew4(N);
+    std::vector<double> xnew5(N);
+    std::vector<double> f1(N);
+    std::vector<double> f2(N);
+    std::vector<double> f3(N);
+    std::vector<double> f4(N);
+    std::vector<double> f5(N);
+    std::vector<double> f6(N);
+    std::vector<double> error(N);
+    std::vector<double> xnew(N);
 
     // t is the independent variable here, where t takes on values in the bounded range [tmin,tmax]
     do {
@@ -36,7 +48,9 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
             return abort;
         }
 
-        bool stepAccepted = false, disableAdaptive = false;
+        bool stepAccepted = false;
+        bool disableAdaptive = false;
+        double max_error = 0.0;
 
         while (!stepAccepted) {
 
@@ -45,13 +59,13 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
 
             // If the step would go beyond the end of the region of integration,
             // just take a step to the end of the region of integration
-            if (forwards_integration && (t0 + h > tend)) {
+            if (forwards_integration && (t0 + h > tmax)) {
                 disableAdaptive = true;
-                h = tend - t0;
+                h = tmax - t0;
             }
-            if (!forwards_integration && (t0 + h < tend)) {
+            if (!forwards_integration && (t0 + h < tmax)) {
                 disableAdaptive = true;
-                h = tend - t0;
+                h = tmax - t0;
             }
 
             ode.pre_step_callback();
@@ -74,30 +88,36 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
                 // Call post derivative callback after the first derivative evaluation (which might cache values)
                 ode.post_deriv_callback();
 
-                Eigen::Map<Eigen::VectorXd> xnew1_w(&(xnew1[0]), N), f1_w(&(f1[0]), N);
+                Eigen::Map<Eigen::VectorXd> xnew1_w(&(xnew1[0]), N);
+                Eigen::Map<Eigen::VectorXd> f1_w(&(f1[0]), N);
                 xnew1_w = xold_w + h * (1.0 / 5.0) * f1_w;
 
                 ode.derivs(t0 + 1.0 / 5.0 * h, xnew1, f2);
-                Eigen::Map<Eigen::VectorXd> xnew2_w(&(xnew2[0]), N), f2_w(&(f2[0]), N);
+                Eigen::Map<Eigen::VectorXd> xnew2_w(&(xnew2[0]), N);
+                Eigen::Map<Eigen::VectorXd> f2_w(&(f2[0]), N);
                 xnew2_w = xold_w + h * (+3.0 / 40.0 * f1_w + 9.0 / 40.0 * f2_w);
 
                 ode.derivs(t0 + 3.0 / 10.0 * h, xnew2, f3);
-                Eigen::Map<Eigen::VectorXd> xnew3_w(&(xnew3[0]), N), f3_w(&(f3[0]), N);
+                Eigen::Map<Eigen::VectorXd> xnew3_w(&(xnew3[0]), N);
+                Eigen::Map<Eigen::VectorXd> f3_w(&(f3[0]), N);
                 xnew3_w = xold_w + h * (3.0 / 10.0 * f1_w - 9.0 / 10.0 * f2_w + 6.0 / 5.0 * f3_w);
 
                 ode.derivs(t0 + 3.0 / 5.0 * h, xnew3, f4);
-                Eigen::Map<Eigen::VectorXd> xnew4_w(&(xnew4[0]), N), f4_w(&(f4[0]), N);
+                Eigen::Map<Eigen::VectorXd> xnew4_w(&(xnew4[0]), N);
+                Eigen::Map<Eigen::VectorXd> f4_w(&(f4[0]), N);
                 xnew4_w = xold_w + h * (-11.0 / 54.0 * f1_w + 5.0 / 2.0 * f2_w - 70.0 / 27.0 * f3_w + 35.0 / 27.0 * f4_w);
 
                 ode.derivs(t0 + h, xnew4, f5);
-                Eigen::Map<Eigen::VectorXd> xnew5_w(&(xnew5[0]), N), f5_w(&(f5[0]), N);
+                Eigen::Map<Eigen::VectorXd> xnew5_w(&(xnew5[0]), N);
+                Eigen::Map<Eigen::VectorXd> f5_w(&(f5[0]), N);
                 xnew5_w =
                   xold_w
                   + h * (1631.0 / 55296 * f1_w + 175.0 / 512.0 * f2_w + 575.0 / 13824.0 * f3_w + 44275.0 / 110592.0 * f4_w + 253.0 / 4096.0 * f5_w);
 
                 // Updated values at the next step using 5-th order
                 ode.derivs(t0 + 7.0 / 8.0 * h, xnew5, f6);
-                Eigen::Map<Eigen::VectorXd> xnew_w(&(xnew[0]), N), f6_w(&(f6[0]), N);
+                Eigen::Map<Eigen::VectorXd> xnew_w(&(xnew[0]), N);
+                Eigen::Map<Eigen::VectorXd> f6_w(&(f6[0]), N);
                 xnew_w = xold_w + h * (37.0 / 378.0 * f1_w + 250.0 / 621.0 * f3_w + 125.0 / 594.0 * f4_w + 512.0 / 1771.0 * f6_w);
 
                 Eigen::Map<Eigen::VectorXd> error_w(&(error[0]), N);
@@ -138,7 +158,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
         ode.post_step_callback(t0, h, xnew);
 
         // The error is already below the threshold
-        if (max_error < eps_allowed && disableAdaptive == false && max_error > 0) {
+        if ((max_error < eps_allowed) && !disableAdaptive && (max_error > 0)) {
             // Take a bigger step next time, since eps_allowed>max_error, but don't
             // let the steps get much larger too quickly
             h *= step_relax * pow(eps_allowed / max_error, 0.2);
@@ -152,13 +172,13 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
         }
 
         // Overshot the end, oops...  That's an error
-        if (forwards_integration && (t0 - tend > +1e-3)) {
-            throw CoolProp::ValueError(format("t0 - tend [%g] > 1e-3", t0 - tend));
+        if (forwards_integration && (t0 - tmax > +1e-3)) {
+            throw CoolProp::ValueError(format("t0 - tmax [%g] > 1e-3", t0 - tmax));
         }
-        if (!forwards_integration && (t0 - tend < -1e-3)) {
-            throw CoolProp::ValueError(format("t0 - tend [%g] < -1e-3", t0 - tend));
+        if (!forwards_integration && (t0 - tmax < -1e-3)) {
+            throw CoolProp::ValueError(format("t0 - tmax [%g] < -1e-3", t0 - tmax));
         }
-    } while (((forwards_integration) && t0 < tend - 1e-10) || ((!forwards_integration) && t0 > tend + 1e-10));
+    } while (((forwards_integration) && t0 < tmax - 1e-10) || ((!forwards_integration) && t0 > tmax + 1e-10));
 
     // No termination was requested
     return false;

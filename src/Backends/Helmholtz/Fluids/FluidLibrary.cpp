@@ -266,9 +266,10 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
             fluid_exists = true;                       //   Set the flag for replace
             name_vector.pop_back();                    //   Pop duplicate name off the back of the name vector; otherwise it keeps growing!
             if (!get_config_bool(OVERWRITE_FLUIDS)) {  // Throw exception if replacing fluids is not allowed
-                throw ValueError(format("Cannot load fluid [%s:%s] because it is already in library; index = [%i] of [%i]; Consider enabling the "
-                                        "config boolean variable OVERWRITE_FLUIDS",
-                                        fluid.name.c_str(), fluid.CAS.c_str(), index, fluid_map.size()));
+                throw ValueError(
+                  format("Cannot load fluid [%s:%s] because it is already in library; index = [%i] of [%i]; Consider enabling the config "
+                         "boolean variable OVERWRITE_FLUIDS",
+                         fluid.name.c_str(), fluid.CAS.c_str(), index, fluid_map.size()));
             }
         }
 

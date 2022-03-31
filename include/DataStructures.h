@@ -15,7 +15,7 @@ namespace CoolProp {
 
 struct SimpleState
 {
-    double rhomolar, T, p, hmolar, smolar, umolar, Q;
+    double rhomolar{}, T{}, p{}, hmolar{}, smolar{}, umolar{}, Q{};
     SimpleState() {
         fill(_HUGE);
     }
@@ -28,7 +28,7 @@ struct SimpleState
         umolar = v;
         Q = v;
     }
-    bool is_valid() {
+    bool is_valid() const {
         return ValidNumber(rhomolar) && ValidNumber(T) && ValidNumber(hmolar) && ValidNumber(p);
     }
 };
@@ -61,6 +61,7 @@ struct SsatSimpleState : public SimpleState
 /// The structure is taken directly from the AbstractState class.
 //
 // !! If you add a parameter, update the map in the corresponding CPP file !!
+// TODO: make that an **enum class**
 enum parameters
 {
     INVALID_PARAMETER = 0,
@@ -448,8 +449,8 @@ enum backends
 };
 
 /// Convert a string into the enum values
-void extract_backend_families(std::string backend_string, backend_families& f1, backend_families& f2);
-void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2);
+void extract_backend_families(const std::string& backend_string, backend_families& f1, backend_families& f2);
+void extract_backend_families_string(const std::string& backend_string, backend_families& f1, std::string& f2);
 std::string get_backend_string(backends backend);
 
 } /* namespace CoolProp */

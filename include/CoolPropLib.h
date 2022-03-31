@@ -88,7 +88,7 @@ EXPORT_CODE double CONVENTION Props1SI(const char* FluidName, const char* Output
      *
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
-EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Ref);
+EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName);
 
 /**
      *\overload
@@ -96,7 +96,7 @@ EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, dou
      *
      * \note This function returns the phase string in pre-allocated phase variable.  If buffer is not large enough, no copy is made
      */
-EXPORT_CODE long CONVENTION PhaseSI(const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Ref, char* phase, int n);
+EXPORT_CODE long CONVENTION PhaseSI(const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName, char* phase, int n);
 
 /**
      *\overload
@@ -171,7 +171,7 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char* Ref, double T, doubl
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
 EXPORT_CODE void CONVENTION propssi_(const char* Output, const char* Name1, const double* Prop1, const char* Name2, const double* Prop2,
-                                     const char* Ref, double* output);
+                                     const char* FluidName, double* output);
 
 /// Convert from degrees Fahrenheit to Kelvin (useful primarily for testing)
 EXPORT_CODE double CONVENTION F2K(double T_F);
@@ -186,7 +186,7 @@ EXPORT_CODE long CONVENTION get_param_index(const char* param);
      *
      * @returns index The index as a long.  If input is invalid, returns -1
      */
-EXPORT_CODE long CONVENTION get_input_pair_index(const char* param);
+EXPORT_CODE long CONVENTION get_input_pair_index(const char* pair);
 /** \brief Redirect all output that would go to console (stdout) to a file
      */
 EXPORT_CODE long CONVENTION redirect_stdout(const char* file);

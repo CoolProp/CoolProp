@@ -3,7 +3,7 @@
 #    define _CRT_SECURE_NO_WARNINGS
 #    include <crtdbg.h>
 #else
-#    include <fenv.h>
+#    include <cfenv>
 #endif
 
 #include "CoolPropLib.h"
@@ -11,20 +11,21 @@
 #include "HumidAirProp.h"
 #include "DataStructures.h"
 #include "Exceptions.h"
-#include "float.h"
+#include <cfloat>
 #include "crossplatform_shared_ptr.h"
 #include "AbstractState.h"
 #include "Exceptions.h"
 #include "Configuration.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
 
-#include <string.h>
+#include <string>
 
 void str2buf(const std::string& str, char* buf, int n) {
-    if (str.size() < static_cast<unsigned int>(n))
+    if (str.size() < static_cast<size_t>(n)) {
         strcpy(buf, str.c_str());
-    else
+    } else {
         throw CoolProp::ValueError("Buffer size is too small");
+    }
 }
 void HandleException(long* errcode, char* message_buffer, const long buffer_length) {
     try {
@@ -60,13 +61,13 @@ struct fpu_reset_guard
 #if defined(_MSC_VER)
         _clearfp();  // For MSVC, clear the floating point error flags
 #elif defined(FE_ALL_EXCEPT)
-        feclearexcept(FE_ALL_EXCEPT);
+        std::feclearexcept(FE_ALL_EXCEPT);
 #endif
     }
 };
 double convert_from_kSI_to_SI(long iInput, double value) {
     if (get_debug_level() > 8) {
-        std::cout << format("%s:%d: convert_from_kSI_to_SI(i=%d,value=%g)\n", __FILE__, __LINE__, iInput, value).c_str();
+        std::cout << format("%s:%d: convert_from_kSI_to_SI(i=%d,value=%g)\n", __FILE__, __LINE__, iInput, value);
     }
 
     switch (iInput) {
@@ -89,7 +90,7 @@ double convert_from_kSI_to_SI(long iInput, double value) {
         case CoolProp::isurface_tension:
             return value;
         default:
-            throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_kSI_to_SI", iInput).c_str());
+            throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_kSI_to_SI", iInput));
     }
 }
 
@@ -117,7 +118,7 @@ double convert_from_SI_to_kSI(long iInput, double value) {
         case CoolProp::isurface_tension:
             return value;
         default:
-            throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_SI_to_kSI", iInput).c_str());
+            throw CoolProp::ValueError(format("index [%d] is invalid in convert_from_SI_to_kSI", iInput));
     }
 }
 
@@ -129,7 +130,7 @@ EXPORT_CODE int CONVENTION set_reference_stateS(const char* Ref, const char* ref
     fpu_reset_guard guard;
     try {
         CoolProp::set_reference_stateS(std::string(Ref), std::string(reference_state));
-        return true;
+        return true;  // TODO: implicit conversion bool -> int
     } catch (std::exception& e) {
         CoolProp::set_error_string(e.what());
     } catch (...) {
@@ -153,10 +154,13 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char* Ref, double T, doubl
 // All the function interfaces that point to the single-input Props function
 EXPORT_CODE double CONVENTION Props1(const char* FluidName, const char* Output) {
     fpu_reset_guard guard;
+    // TODO: Are arguments swapped here?!
+    // Signature: `Props1SI(const char* FluidName, const char* Output)`
     double val = Props1SI(Output, FluidName);
-    if (!ValidNumber(val))
+    if (!ValidNumber(val)) {
         // Error code was already set in Props1SI
         return val;
+    }
     // val is valid; so, Output is already checked in Props1SI -> get_parameter_index won't throw
     CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
     return convert_from_SI_to_kSI(iOutput, val);
@@ -168,7 +172,8 @@ EXPORT_CODE double CONVENTION Props(const char* Output, const char Name1, double
     fpu_reset_guard guard;
     try {
         // Get parameter indices
-        std::string sName1 = std::string(1, Name1), sName2 = std::string(1, Name2);
+        std::string sName1 = std::string(1, Name1);
+        std::string sName2 = std::string(1, Name2);
         CoolProp::parameters iOutput = CoolProp::get_parameter_index(Output);
         if (!CoolProp::is_trivial_parameter(iOutput)) {
             CoolProp::parameters iName1 = CoolProp::get_parameter_index(sName1);
@@ -281,14 +286,14 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char* param, char* Out
     }
     return 0;
 }
-EXPORT_CODE long CONVENTION get_parameter_information_string(const char* param, char* Output, int n) {
+EXPORT_CODE long CONVENTION get_parameter_information_string(const char* key, char* Output, int n) {
     try {
-        int key = CoolProp::get_parameter_index(param);
-        std::string s = CoolProp::get_parameter_information(key, Output);
+        int index = CoolProp::get_parameter_index(key);
+        std::string s = CoolProp::get_parameter_information(index, Output);
         str2buf(s, Output, n);
         return 1;
     } catch (std::exception& e) {
-        // if param is wrong, CoolProp::get_parameter_index throws string like
+        // if key is wrong, CoolProp::get_parameter_index throws string like
         // "Your input name [%s] is not valid in get_parameter_index (names are case sensitive)"
         // CoolProp::get_parameter_information throws string like
         // "Bad info string [%s] to get_parameter_information" (if Output is wrong)
@@ -296,9 +301,9 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char* param, 
         // (see src/DataStructures.cpp)
         // if n is too small, str2buf throws string
         // "Buffer size is too small"
-        CoolProp::set_error_string(format("get_parameter_information_string(\"%s\", \"%s\", %d): %s", param, Output, n, e.what()));
+        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): %s)", key, Output, n, e.what()));
     } catch (...) {
-        CoolProp::set_error_string(format("get_parameter_information_string(\"%s\", \"%s\", %d): Undefined error", param, Output, n));
+        CoolProp::set_error_string(format(R"(get_parameter_information_string("%s", "%s", %d): Undefined error)", key, Output, n));
     }
     return 0;
 }
@@ -382,13 +387,13 @@ class AbstractStateLibrary
 {
    private:
     std::map<std::size_t, shared_ptr<CoolProp::AbstractState>> ASlibrary;
-    long next_handle;
+    long next_handle{};
 
    public:
-    AbstractStateLibrary() : next_handle(0){};
+    AbstractStateLibrary() = default;
     long add(shared_ptr<CoolProp::AbstractState> AS) {
-        ASlibrary.insert(std::pair<std::size_t, shared_ptr<CoolProp::AbstractState>>(this->next_handle, AS));
-        this->next_handle++;
+        ASlibrary.insert(std::make_pair(this->next_handle, std::move(AS)));
+        ++next_handle;
         return next_handle - 1;
     }
     void remove(long handle) {
@@ -398,7 +403,7 @@ class AbstractStateLibrary
         }
     }
     shared_ptr<CoolProp::AbstractState>& get(long handle) {
-        std::map<std::size_t, shared_ptr<CoolProp::AbstractState>>::iterator it = ASlibrary.find(handle);
+        auto it = ASlibrary.find(handle);
         if (it != ASlibrary.end()) {
             return it->second;
         } else {
@@ -406,7 +411,7 @@ class AbstractStateLibrary
         }
     }
 };
-static AbstractStateLibrary handle_manager;
+static AbstractStateLibrary handle_manager;  // TODO: Is this static neeed?
 
 EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const char* fluids, long* errcode, char* message_buffer,
                                                   const long buffer_length) {
@@ -472,8 +477,9 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, 
         std::vector<double> _fractions = AS->get_mole_fractions();
         *N = _fractions.size();
         if (*N <= maxN) {
-            for (int i = 0; i < *N; i++)
+            for (int i = 0; i < *N; i++) {
                 fractions[i] = _fractions[i];
+            }
         } else {
             throw CoolProp::ValueError(format("Length of array [%d] is greater than allocated buffer length [%d]", *N, maxN));
         }

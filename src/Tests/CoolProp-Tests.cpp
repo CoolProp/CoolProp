@@ -1,5 +1,3 @@
-
-
 #include "AbstractState.h"
 #include "DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
@@ -7,6 +5,9 @@
 // ############################################
 //                      TESTS
 // ############################################
+
+#include <array>
+#include <utility>
 
 #if defined(ENABLE_CATCH)
 
@@ -23,20 +24,23 @@ namespace TransportValidation {
 struct vel
 {
    public:
-    std::string in1, in2, out, fluid;
+    std::string fluid;
+    std::string in1;
+    std::string in2;
+    std::string out;
     double v1, v2, tol, expected;
-    vel(std::string fluid, std::string in1, double v1, std::string in2, double v2, std::string out, double expected, double tol) {
-        this->in1 = in1;
-        this->in2 = in2;
-        this->fluid = fluid;
-        this->v1 = v1;
-        this->v2 = v2;
-        this->expected = expected;
-        this->tol = tol;
-    };
+    vel(std::string t_fluid, std::string t_in1, double t_v1, std::string t_in2, double t_v2, std::string t_out, double t_expected, double t_tol)
+      : fluid(std::move(t_fluid)),
+        in1(std::move(t_in1)),
+        in2(std::move(t_in2)),
+        out(std::move(t_out)),
+        v1(t_v1),
+        v2(t_v2),
+        expected(t_expected),
+        tol(t_tol){};
 };
 
-vel viscosity_validation_data[] = {
+std::array<vel, 179> viscosity_validation_data{{
   // From Vogel, JPCRD, 1998
   vel("Propane", "T", 90, "Dmolar", 16.52e3, "V", 7388e-6, 1e-3),
   vel("Propane", "T", 150, "Dmolar", 15.14e3, "V", 656.9e-6, 5e-3),
@@ -297,25 +301,26 @@ vel viscosity_validation_data[] = {
   vel("Toluene", "T", 400, "Dmass", 770, "V", 232.75e-6, 1e-4),
   vel("Toluene", "T", 550, "Dmass", 550, "V", 80.267e-6, 1e-4),
 
-};
+}};
 
 class TransportValidationFixture
 {
    protected:
-    CoolPropDbl actual, x1, x2;
+    CoolPropDbl actual{};
+    CoolPropDbl x1{};
+    CoolPropDbl x2{};
     shared_ptr<CoolProp::AbstractState> pState;
     CoolProp::input_pairs pair;
 
    public:
-    TransportValidationFixture() {}
-    ~TransportValidationFixture() {}
-    void set_backend(std::string backend, std::string fluid_name) {
+    void set_backend(const std::string& backend, const std::string& fluid_name) {
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
     void set_pair(std::string& in1, double v1, std::string& in2, double v2) {
-        double o1, o2;
         parameters iin1 = CoolProp::get_parameter_index(in1);
         parameters iin2 = CoolProp::get_parameter_index(in2);
+        double o1 = 0.0;
+        double o2 = 0.0;
         CoolProp::input_pairs pair = CoolProp::generate_update_pair(iin1, v1, iin2, v2, o1, o2);
         pState->update(pair, o1, o2);
     }
@@ -325,9 +330,7 @@ class TransportValidationFixture
 };
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against published data", "[viscosity],[transport]") {
-    int inputsN = sizeof(viscosity_validation_data) / sizeof(viscosity_validation_data[0]);
-    for (int i = 0; i < inputsN; ++i) {
-        vel el = viscosity_validation_data[i];
+    for (vel& el : viscosity_validation_data) {
         CHECK_NOTHROW(set_backend("HEOS", el.fluid));
 
         CAPTURE(el.fluid);
@@ -343,248 +346,246 @@ TEST_CASE_METHOD(TransportValidationFixture, "Compare viscosities against publis
     }
 }
 
-vel conductivity_validation_data[] = {
+std::array<vel, 143> conductivity_validation_data{{
   ///\todo Re-enable the conductivity tests that fail due to not having viscosity correlation
 
   // From Assael, JPCRD, 2013
-  vel("Hexane", "T", 250, "Dmass", 700, "L", 137.62e-3, 1e-4),
-  vel("Hexane", "T", 400, "Dmass", 2, "L", 23.558e-3, 1e-4),
-  vel("Hexane", "T", 400, "Dmass", 650, "L", 129.28e-3, 2e-4),
-  vel("Hexane", "T", 510, "Dmass", 2, "L", 36.772e-3, 1e-4),
+  {"Hexane", "T", 250, "Dmass", 700, "L", 137.62e-3, 1e-4},
+  {"Hexane", "T", 400, "Dmass", 2, "L", 23.558e-3, 1e-4},
+  {"Hexane", "T", 400, "Dmass", 650, "L", 129.28e-3, 2e-4},
+  {"Hexane", "T", 510, "Dmass", 2, "L", 36.772e-3, 1e-4},
 
   // From Assael, JPCRD, 2013
-  vel("Heptane", "T", 250, "Dmass", 720, "L", 137.09e-3, 1e-4),
-  vel("Heptane", "T", 400, "Dmass", 2, "L", 21.794e-3, 1e-4),
-  vel("Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4),
-  vel("Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 3e-3),  // Relaxed tolerance because conductivity was fit using older viscosity correlation
+  {"Heptane", "T", 250, "Dmass", 720, "L", 137.09e-3, 1e-4},
+  {"Heptane", "T", 400, "Dmass", 2, "L", 21.794e-3, 1e-4},
+  {"Heptane", "T", 400, "Dmass", 650, "L", 120.75e-3, 1e-4},
+  {"Heptane", "T", 535, "Dmass", 100, "L", 51.655e-3, 3e-3},  // Relaxed tolerance because conductivity was fit using older viscosity correlation
 
   // From Assael, JPCRD, 2013
-  vel("Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4),
-  vel("Ethanol", "T", 400, "Dmass", 2, "L", 26.108e-3, 1e-4),
-  vel("Ethanol", "T", 400, "Dmass", 690, "L", 149.21e-3, 1e-4),
-  vel("Ethanol", "T", 500, "Dmass", 10, "L", 39.594e-3, 1e-4),
-
-  //// From Assael, JPCRD, 2012
-  //vel("Toluene", "T", 298.15, "Dmass", 1e-15, "L", 10.749e-3, 1e-4),
-  //vel("Toluene", "T", 298.15, "Dmass", 862.948, "L", 130.66e-3, 1e-4),
-  //vel("Toluene", "T", 298.15, "Dmass", 876.804, "L", 136.70e-3, 1e-4),
-  //vel("Toluene", "T", 595, "Dmass", 1e-15, "L", 40.538e-3, 1e-4),
-  //vel("Toluene", "T", 595, "Dmass", 46.512, "L", 41.549e-3, 1e-4),
-  //vel("Toluene", "T", 185, "Dmass", 1e-15, "L", 4.3758e-3, 1e-4),
-  //vel("Toluene", "T", 185, "Dmass", 968.821, "L", 158.24e-3, 1e-4),
+  {"Ethanol", "T", 300, "Dmass", 850, "L", 209.68e-3, 1e-4},
+  {"Ethanol", "T", 400, "Dmass", 2, "L", 26.108e-3, 1e-4},
+  {"Ethanol", "T", 400, "Dmass", 690, "L", 149.21e-3, 1e-4},
+  {"Ethanol", "T", 500, "Dmass", 10, "L", 39.594e-3, 1e-4},
 
   // From Assael, JPCRD, 2012
-  vel("SF6", "T", 298.15, "Dmass", 1e-13, "L", 12.952e-3, 1e-4),
-  vel("SF6", "T", 298.15, "Dmass", 100, "L", 14.126e-3, 1e-4),
-  vel("SF6", "T", 298.15, "Dmass", 1600, "L", 69.729e-3, 1e-4),
-  vel("SF6", "T", 310, "Dmass", 1e-13, "L", 13.834e-3, 1e-4),
-  vel("SF6", "T", 310, "Dmass", 1200, "L", 48.705e-3, 1e-4),
-  vel("SF6", "T", 480, "Dmass", 100, "L", 28.847e-3, 1e-4),
+  // {"Toluene", "T", 298.15, "Dmass", 1e-15, "L", 10.749e-3, 1e-4},
+  // {"Toluene", "T", 298.15, "Dmass", 862.948, "L", 130.66e-3, 1e-4},
+  // {"Toluene", "T", 298.15, "Dmass", 876.804, "L", 136.70e-3, 1e-4},
+  // {"Toluene", "T", 595, "Dmass", 1e-15, "L", 40.538e-3, 1e-4},
+  // {"Toluene", "T", 595, "Dmass", 46.512, "L", 41.549e-3, 1e-4},
+  // {"Toluene", "T", 185, "Dmass", 1e-15, "L", 4.3758e-3, 1e-4},
+  // {"Toluene", "T", 185, "Dmass", 968.821, "L", 158.24e-3, 1e-4},
 
-  //// From Assael, JPCRD, 2012
-  //vel("Benzene", "T", 290, "Dmass", 890, "L", 147.66e-3, 1e-4),
-  //vel("Benzene", "T", 500, "Dmass", 2, "L", 30.174e-3, 1e-4),
-  //vel("Benzene", "T", 500, "Dmass", 32, "L", 32.175e-3, 1e-4),
-  //vel("Benzene", "T", 500, "Dmass", 800, "L", 141.24e-3, 1e-4),
-  //vel("Benzene", "T", 575, "Dmass", 1.7, "L", 37.763e-3, 1e-4),
+  // From Assael, JPCRD, 2012
+  {"SF6", "T", 298.15, "Dmass", 1e-13, "L", 12.952e-3, 1e-4},
+  {"SF6", "T", 298.15, "Dmass", 100, "L", 14.126e-3, 1e-4},
+  {"SF6", "T", 298.15, "Dmass", 1600, "L", 69.729e-3, 1e-4},
+  {"SF6", "T", 310, "Dmass", 1e-13, "L", 13.834e-3, 1e-4},
+  {"SF6", "T", 310, "Dmass", 1200, "L", 48.705e-3, 1e-4},
+  {"SF6", "T", 480, "Dmass", 100, "L", 28.847e-3, 1e-4},
+
+  // From Assael, JPCRD, 2012
+  // {"Benzene", "T", 290, "Dmass", 890, "L", 147.66e-3, 1e-4},
+  // {"Benzene", "T", 500, "Dmass", 2, "L", 30.174e-3, 1e-4},
+  // {"Benzene", "T", 500, "Dmass", 32, "L", 32.175e-3, 1e-4},
+  // {"Benzene", "T", 500, "Dmass", 800, "L", 141.24e-3, 1e-4},
+  // {"Benzene", "T", 575, "Dmass", 1.7, "L", 37.763e-3, 1e-4},
 
   // From Assael, JPCRD, 2011
-  vel("Hydrogen", "T", 298.15, "Dmass", 1e-13, "L", 185.67e-3, 1e-4),
-  vel("Hydrogen", "T", 298.15, "Dmass", 0.80844, "L", 186.97e-3, 1e-4),
-  vel("Hydrogen", "T", 298.15, "Dmass", 14.4813, "L", 201.35e-3, 1e-4),
-  vel("Hydrogen", "T", 35, "Dmass", 1e-13, "L", 26.988e-3, 1e-4),
-  vel("Hydrogen", "T", 35, "Dmass", 30, "L", 0.0770177, 1e-4),  // Updated since Assael uses a different viscosity correlation
-  vel("Hydrogen", "T", 18, "Dmass", 1e-13, "L", 13.875e-3, 1e-4),
-  vel("Hydrogen", "T", 18, "Dmass", 75, "L", 104.48e-3, 1e-4),
-  /*vel("ParaHydrogen", "T", 298.15, "Dmass", 1e-13, "L", 192.38e-3, 1e-4),
-vel("ParaHydrogen", "T", 298.15, "Dmass", 0.80844, "L", 192.81e-3, 1e-4),
-vel("ParaHydrogen", "T", 298.15, "Dmass", 14.4813, "L", 207.85e-3, 1e-4),
-vel("ParaHydrogen", "T", 35, "Dmass", 1e-13, "L", 27.222e-3, 1e-4),
-vel("ParaHydrogen", "T", 35, "Dmass", 30, "L", 70.335e-3, 1e-4),
-vel("ParaHydrogen", "T", 18, "Dmass", 1e-13, "L", 13.643e-3, 1e-4),
-vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
+  {"Hydrogen", "T", 298.15, "Dmass", 1e-13, "L", 185.67e-3, 1e-4},
+  {"Hydrogen", "T", 298.15, "Dmass", 0.80844, "L", 186.97e-3, 1e-4},
+  {"Hydrogen", "T", 298.15, "Dmass", 14.4813, "L", 201.35e-3, 1e-4},
+  {"Hydrogen", "T", 35, "Dmass", 1e-13, "L", 26.988e-3, 1e-4},
+  {"Hydrogen", "T", 35, "Dmass", 30, "L", 0.0770177, 1e-4},  // Updated since Assael uses a different viscosity correlation
+  {"Hydrogen", "T", 18, "Dmass", 1e-13, "L", 13.875e-3, 1e-4},
+  {"Hydrogen", "T", 18, "Dmass", 75, "L", 104.48e-3, 1e-4},
+  // {"ParaHydrogen", "T", 298.15, "Dmass", 1e-13, "L", 192.38e-3, 1e-4},
+  // {"ParaHydrogen", "T", 298.15, "Dmass", 0.80844, "L", 192.81e-3, 1e-4},
+  // {"ParaHydrogen", "T", 298.15, "Dmass", 14.4813, "L", 207.85e-3, 1e-4},
+  // {"ParaHydrogen", "T", 35, "Dmass", 1e-13, "L", 27.222e-3, 1e-4},
+  // {"ParaHydrogen", "T", 35, "Dmass", 30, "L", 70.335e-3, 1e-4},
+  // {"ParaHydrogen", "T", 18, "Dmass", 1e-13, "L", 13.643e-3, 1e-4},
+  // {"ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4},
 
   // Some of these don't work
-  vel("R125", "T", 341, "Dmass", 600, "L", 0.0565642978494, 2e-4),
-  vel("R125", "T", 200, "Dmass", 1e-13, "L", 0.007036843623086, 2e-4),
-  vel("IsoButane", "T", 390, "Dmass", 387.09520158645068, "L", 0.063039, 2e-4),
-  vel("IsoButane", "T", 390, "Dmass", 85.76703973869482, "L", 0.036603, 2e-4),
-  vel("n-Butane", "T", 415, "Dmass", 360.01895129934866, "L", 0.067045, 2e-4),
-  vel("n-Butane", "T", 415, "Dmass", 110.3113177144, "L", 0.044449, 1e-4),
+  {"R125", "T", 341, "Dmass", 600, "L", 0.0565642978494, 2e-4},
+  {"R125", "T", 200, "Dmass", 1e-13, "L", 0.007036843623086, 2e-4},
+  {"IsoButane", "T", 390, "Dmass", 387.09520158645068, "L", 0.063039, 2e-4},
+  {"IsoButane", "T", 390, "Dmass", 85.76703973869482, "L", 0.036603, 2e-4},
+  {"n-Butane", "T", 415, "Dmass", 360.01895129934866, "L", 0.067045, 2e-4},
+  {"n-Butane", "T", 415, "Dmass", 110.3113177144, "L", 0.044449, 1e-4},
 
   // From Huber, FPE, 2005
-  vel("n-Octane", "T", 300, "Dmolar", 6177.2, "L", 0.12836, 1e-4),
-  vel("n-Nonane", "T", 300, "Dmolar", 5619.4, "L", 0.13031, 1e-4),
-  //vel("n-Decane", "T", 300, "Dmass", 5150.4, "L", 0.13280, 1e-4), // no viscosity
+  {"n-Octane", "T", 300, "Dmolar", 6177.2, "L", 0.12836, 1e-4},
+  {"n-Nonane", "T", 300, "Dmolar", 5619.4, "L", 0.13031, 1e-4},
+  // {"n-Decane", "T", 300, "Dmass", 5150.4, "L", 0.13280, 1e-4}, // no viscosity
 
   // From Huber, EF, 2004
-  vel("n-Dodecane", "T", 300, "Dmolar", 4411.5, "L", 0.13829, 1e-4),
-  vel("n-Dodecane", "T", 500, "Dmolar", 3444.7, "L", 0.09384, 1e-4),
-  vel("n-Dodecane", "T", 660, "Dmolar", 1500.98, "L", 0.090346, 1e-4),
+  {"n-Dodecane", "T", 300, "Dmolar", 4411.5, "L", 0.13829, 1e-4},
+  {"n-Dodecane", "T", 500, "Dmolar", 3444.7, "L", 0.09384, 1e-4},
+  {"n-Dodecane", "T", 660, "Dmolar", 1500.98, "L", 0.090346, 1e-4},
 
   // From REFPROP 9.1 since no data provided in Marsh, 2002
-  vel("n-Propane", "T", 368, "Q", 0, "L", 0.07282154952457, 1e-3),
-  vel("n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317, 1e-4),
+  {"n-Propane", "T", 368, "Q", 0, "L", 0.07282154952457, 1e-3},
+  {"n-Propane", "T", 368, "Dmolar", 1e-10, "L", 0.0266135388745317, 1e-4},
 
   // From Perkins, JCED, 2011
-  //vel("R1234yf", "T", 250, "Dmass", 2.80006, "L", 0.0098481, 1e-4),
-  //vel("R1234yf", "T", 300, "Dmass", 4.671556, "L", 0.013996, 1e-4),
-  //vel("R1234yf", "T", 250, "Dmass", 1299.50, "L", 0.088574, 1e-4),
-  //vel("R1234yf", "T", 300, "Dmass", 1182.05, "L", 0.075245, 1e-4),
-  //vel("R1234ze(E)", "T", 250, "Dmass", 2.80451, "L", 0.0098503, 1e-4),
-  //vel("R1234ze(E)", "T", 300, "Dmass", 4.67948, "L", 0.013933, 1e-4),
-  //vel("R1234ze(E)", "T", 250, "Dmass", 1349.37, "L", 0.10066, 1e-4),
-  //vel("R1234ze(E)", "T", 300, "Dmass", 1233.82, "L", 0.085389, 1e-4),
+  // {"R1234yf", "T", 250, "Dmass", 2.80006, "L", 0.0098481, 1e-4},
+  // {"R1234yf", "T", 300, "Dmass", 4.671556, "L", 0.013996, 1e-4},
+  // {"R1234yf", "T", 250, "Dmass", 1299.50, "L", 0.088574, 1e-4},
+  // {"R1234yf", "T", 300, "Dmass", 1182.05, "L", 0.075245, 1e-4},
+  // {"R1234ze(E)", "T", 250, "Dmass", 2.80451, "L", 0.0098503, 1e-4},
+  // {"R1234ze(E)", "T", 300, "Dmass", 4.67948, "L", 0.013933, 1e-4},
+  // {"R1234ze(E)", "T", 250, "Dmass", 1349.37, "L", 0.10066, 1e-4},
+  // {"R1234ze(E)", "T", 300, "Dmass", 1233.82, "L", 0.085389, 1e-4},
 
   // From Laesecke, IJR 1995
-  vel("R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 2e-4),
-  vel("R123", "T", 180, "Dmass", 0.2873e-2, "L", 2.473e-3, 1e-3),
-  vel("R123", "T", 430, "Dmass", 996.35, "L", 45.62e-3, 1e-3),
-  vel("R123", "T", 430, "Dmass", 166.9, "L", 21.03e-3, 1e-3),
+  {"R123", "T", 180, "Dmass", 1739, "L", 110.9e-3, 2e-4},
+  {"R123", "T", 180, "Dmass", 0.2873e-2, "L", 2.473e-3, 1e-3},
+  {"R123", "T", 430, "Dmass", 996.35, "L", 45.62e-3, 1e-3},
+  {"R123", "T", 430, "Dmass", 166.9, "L", 21.03e-3, 1e-3},
 
   // From Scalabrin, JPCRD, 2006
-  vel("CO2", "T", 218, "Q", 0, "L", 181.09e-3, 1e-4),
-  vel("CO2", "T", 218, "Q", 1, "L", 10.837e-3, 1e-4),
-  vel("CO2", "T", 304, "Q", 0, "L", 140.3e-3, 1e-4),
-  vel("CO2", "T", 304, "Q", 1, "L", 217.95e-3, 1e-4),
-  vel("CO2", "T", 225, "Dmass", 0.23555, "L", 11.037e-3, 1e-4),
-  vel("CO2", "T", 275, "Dmass", 1281.64, "L", 238.44e-3, 1e-4),
+  {"CO2", "T", 218, "Q", 0, "L", 181.09e-3, 1e-4},
+  {"CO2", "T", 218, "Q", 1, "L", 10.837e-3, 1e-4},
+  {"CO2", "T", 304, "Q", 0, "L", 140.3e-3, 1e-4},
+  {"CO2", "T", 304, "Q", 1, "L", 217.95e-3, 1e-4},
+  {"CO2", "T", 225, "Dmass", 0.23555, "L", 11.037e-3, 1e-4},
+  {"CO2", "T", 275, "Dmass", 1281.64, "L", 238.44e-3, 1e-4},
 
   // From Friend, JPCRD, 1991
-  vel("Ethane", "T", 100, "Dmass", 1e-13, "L", 3.46e-3, 1e-2),
-  vel("Ethane", "T", 230, "Dmolar", 16020, "L", 126.2e-3, 1e-2),
-  vel("Ethane", "T", 440, "Dmolar", 1520, "L", 45.9e-3, 1e-2),
-  vel("Ethane", "T", 310, "Dmolar", 4130, "L", 45.4e-3, 1e-2),
+  {"Ethane", "T", 100, "Dmass", 1e-13, "L", 3.46e-3, 1e-2},
+  {"Ethane", "T", 230, "Dmolar", 16020, "L", 126.2e-3, 1e-2},
+  {"Ethane", "T", 440, "Dmolar", 1520, "L", 45.9e-3, 1e-2},
+  {"Ethane", "T", 310, "Dmolar", 4130, "L", 45.4e-3, 1e-2},
 
   // From Lemmon and Jacobsen, JPCRD, 2004
-  vel("Nitrogen", "T", 100, "Dmolar", 1e-14, "L", 9.27749e-3, 1e-4),
-  vel("Nitrogen", "T", 300, "Dmolar", 1e-14, "L", 25.9361e-3, 1e-4),
-  vel("Nitrogen", "T", 100, "Dmolar", 25000, "L", 103.834e-3, 1e-4),
-  vel("Nitrogen", "T", 200, "Dmolar", 10000, "L", 36.0099e-3, 1e-4),
-  vel("Nitrogen", "T", 300, "Dmolar", 5000, "L", 32.7694e-3, 1e-4),
-  vel("Nitrogen", "T", 126.195, "Dmolar", 11180, "L", 675.800e-3, 1e-4),
-  vel("Argon", "T", 100, "Dmolar", 1e-14, "L", 6.36587e-3, 1e-4),
-  vel("Argon", "T", 300, "Dmolar", 1e-14, "L", 17.8042e-3, 1e-4),
-  vel("Argon", "T", 100, "Dmolar", 33000, "L", 111.266e-3, 1e-4),
-  vel("Argon", "T", 200, "Dmolar", 10000, "L", 26.1377e-3, 1e-4),
-  vel("Argon", "T", 300, "Dmolar", 5000, "L", 23.2302e-3, 1e-4),
-  vel("Argon", "T", 150.69, "Dmolar", 13400, "L", 856.793e-3, 1e-4),
-  vel("Oxygen", "T", 100, "Dmolar", 1e-14, "L", 8.94334e-3, 1e-4),
-  vel("Oxygen", "T", 300, "Dmolar", 1e-14, "L", 26.4403e-3, 1e-4),
-  vel("Oxygen", "T", 100, "Dmolar", 35000, "L", 146.044e-3, 1e-4),
-  vel("Oxygen", "T", 200, "Dmolar", 10000, "L", 34.6124e-3, 1e-4),
-  vel("Oxygen", "T", 300, "Dmolar", 5000, "L", 32.5491e-3, 1e-4),
-  vel("Oxygen", "T", 154.6, "Dmolar", 13600, "L", 377.476e-3, 1e-4),
-  vel("Air", "T", 100, "Dmolar", 1e-14, "L", 9.35902e-3, 1e-4),
-  vel("Air", "T", 300, "Dmolar", 1e-14, "L", 26.3529e-3, 1e-4),
-  vel("Air", "T", 100, "Dmolar", 28000, "L", 119.221e-3, 1e-4),
-  vel("Air", "T", 200, "Dmolar", 10000, "L", 35.3185e-3, 1e-4),
-  vel("Air", "T", 300, "Dmolar", 5000, "L", 32.6062e-3, 1e-4),
-  vel("Air", "T", 132.64, "Dmolar", 10400, "L", 75.6231e-3, 1e-4),
+  {"Nitrogen", "T", 100, "Dmolar", 1e-14, "L", 9.27749e-3, 1e-4},
+  {"Nitrogen", "T", 300, "Dmolar", 1e-14, "L", 25.9361e-3, 1e-4},
+  {"Nitrogen", "T", 100, "Dmolar", 25000, "L", 103.834e-3, 1e-4},
+  {"Nitrogen", "T", 200, "Dmolar", 10000, "L", 36.0099e-3, 1e-4},
+  {"Nitrogen", "T", 300, "Dmolar", 5000, "L", 32.7694e-3, 1e-4},
+  {"Nitrogen", "T", 126.195, "Dmolar", 11180, "L", 675.800e-3, 1e-4},
+  {"Argon", "T", 100, "Dmolar", 1e-14, "L", 6.36587e-3, 1e-4},
+  {"Argon", "T", 300, "Dmolar", 1e-14, "L", 17.8042e-3, 1e-4},
+  {"Argon", "T", 100, "Dmolar", 33000, "L", 111.266e-3, 1e-4},
+  {"Argon", "T", 200, "Dmolar", 10000, "L", 26.1377e-3, 1e-4},
+  {"Argon", "T", 300, "Dmolar", 5000, "L", 23.2302e-3, 1e-4},
+  {"Argon", "T", 150.69, "Dmolar", 13400, "L", 856.793e-3, 1e-4},
+  {"Oxygen", "T", 100, "Dmolar", 1e-14, "L", 8.94334e-3, 1e-4},
+  {"Oxygen", "T", 300, "Dmolar", 1e-14, "L", 26.4403e-3, 1e-4},
+  {"Oxygen", "T", 100, "Dmolar", 35000, "L", 146.044e-3, 1e-4},
+  {"Oxygen", "T", 200, "Dmolar", 10000, "L", 34.6124e-3, 1e-4},
+  {"Oxygen", "T", 300, "Dmolar", 5000, "L", 32.5491e-3, 1e-4},
+  {"Oxygen", "T", 154.6, "Dmolar", 13600, "L", 377.476e-3, 1e-4},
+  {"Air", "T", 100, "Dmolar", 1e-14, "L", 9.35902e-3, 1e-4},
+  {"Air", "T", 300, "Dmolar", 1e-14, "L", 26.3529e-3, 1e-4},
+  {"Air", "T", 100, "Dmolar", 28000, "L", 119.221e-3, 1e-4},
+  {"Air", "T", 200, "Dmolar", 10000, "L", 35.3185e-3, 1e-4},
+  {"Air", "T", 300, "Dmolar", 5000, "L", 32.6062e-3, 1e-4},
+  {"Air", "T", 132.64, "Dmolar", 10400, "L", 75.6231e-3, 1e-4},
 
   // Huber, JPCRD, 2012
-  vel("Water", "T", 298.15, "Dmass", 1e-14, "L", 18.4341883e-3, 1e-6),
-  vel("Water", "T", 298.15, "Dmass", 998, "L", 607.712868e-3, 1e-6),
-  vel("Water", "T", 298.15, "Dmass", 1200, "L", 799.038144e-3, 1e-6),
-  vel("Water", "T", 873.15, "Dmass", 1e-14, "L", 79.1034659e-3, 1e-6),
-  vel("Water", "T", 647.35, "Dmass", 1, "L", 51.9298924e-3, 1e-6),
-  vel("Water", "T", 647.35, "Dmass", 122, "L", 130.922885e-3, 2e-4),
-  vel("Water", "T", 647.35, "Dmass", 222, "L", 367.787459e-3, 2e-4),
-  vel("Water", "T", 647.35, "Dmass", 272, "L", 757.959776e-3, 2e-4),
-  vel("Water", "T", 647.35, "Dmass", 322, "L", 1443.75556e-3, 2e-4),
-  vel("Water", "T", 647.35, "Dmass", 372, "L", 650.319402e-3, 2e-4),
-  vel("Water", "T", 647.35, "Dmass", 422, "L", 448.883487e-3, 2e-4),
-  vel("Water", "T", 647.35, "Dmass", 750, "L", 600.961346e-3, 2e-4),
+  {"Water", "T", 298.15, "Dmass", 1e-14, "L", 18.4341883e-3, 1e-6},
+  {"Water", "T", 298.15, "Dmass", 998, "L", 607.712868e-3, 1e-6},
+  {"Water", "T", 298.15, "Dmass", 1200, "L", 799.038144e-3, 1e-6},
+  {"Water", "T", 873.15, "Dmass", 1e-14, "L", 79.1034659e-3, 1e-6},
+  {"Water", "T", 647.35, "Dmass", 1, "L", 51.9298924e-3, 1e-6},
+  {"Water", "T", 647.35, "Dmass", 122, "L", 130.922885e-3, 2e-4},
+  {"Water", "T", 647.35, "Dmass", 222, "L", 367.787459e-3, 2e-4},
+  {"Water", "T", 647.35, "Dmass", 272, "L", 757.959776e-3, 2e-4},
+  {"Water", "T", 647.35, "Dmass", 322, "L", 1443.75556e-3, 2e-4},
+  {"Water", "T", 647.35, "Dmass", 372, "L", 650.319402e-3, 2e-4},
+  {"Water", "T", 647.35, "Dmass", 422, "L", 448.883487e-3, 2e-4},
+  {"Water", "T", 647.35, "Dmass", 750, "L", 600.961346e-3, 2e-4},
 
   // From Shan, ASHRAE, 2000
-  vel("R23", "T", 180, "Dmolar", 21097, "L", 143.19e-3, 1e-4),
-  vel("R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 2e-4),
-  vel("R23", "T", 370, "Dmolar", 32.62, "L", 17.455e-3, 1e-4),
+  {"R23", "T", 180, "Dmolar", 21097, "L", 143.19e-3, 1e-4},
+  {"R23", "T", 420, "Dmolar", 7564, "L", 50.19e-3, 2e-4},
+  {"R23", "T", 370, "Dmolar", 32.62, "L", 17.455e-3, 1e-4},
 
   // From REFPROP 9.1 since no sample data provided in Tufeu
-  vel("Ammonia", "T", 310, "Dmolar", 34320, "L", 0.45223303481784971, 1e-4),
-  vel("Ammonia", "T", 395, "Q", 0, "L", 0.2264480769301, 1e-4),
+  {"Ammonia", "T", 310, "Dmolar", 34320, "L", 0.45223303481784971, 1e-4},
+  {"Ammonia", "T", 395, "Q", 0, "L", 0.2264480769301, 1e-4},
 
   // From Hands, Cryogenics, 1981
-  vel("Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-2),
-  vel("Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-2),
-  vel("Helium", "T", 20, "P", 1e5, "L", 0.0262, 1e-2),
-  vel("Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-2),
-  vel("Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-2),
-  vel("Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-2),
-  vel("Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-2),
-  vel("Helium", "T", 4, "P", 100e5, "L", 0.0385, 3e-2),
-  vel("Helium", "T", 8, "P", 100e5, "L", 0.0566, 3e-2),
-  vel("Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-2),
-  vel("Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-2),
-  vel("Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-2),
-  vel("Helium", "T", 5.180, "P", 2.3e5, "L", 0.0195, 1e-1),
-  vel("Helium", "T", 5.2, "P", 2.3e5, "L", 0.0202, 1e-1),
-  vel("Helium", "T", 5.230, "P", 2.3e5, "L", 0.0181, 1e-1),
-  vel("Helium", "T", 5.260, "P", 2.3e5, "L", 0.0159, 1e-1),
-  vel("Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-1),
+  {"Helium", "T", 800, "P", 1e5, "L", 0.3085, 1e-2},
+  {"Helium", "T", 300, "P", 1e5, "L", 0.1560, 1e-2},
+  {"Helium", "T", 20, "P", 1e5, "L", 0.0262, 1e-2},
+  {"Helium", "T", 8, "P", 1e5, "L", 0.0145, 1e-2},
+  {"Helium", "T", 4, "P", 20e5, "L", 0.0255, 1e-2},
+  {"Helium", "T", 8, "P", 20e5, "L", 0.0308, 1e-2},
+  {"Helium", "T", 20, "P", 20e5, "L", 0.0328, 1e-2},
+  {"Helium", "T", 4, "P", 100e5, "L", 0.0385, 3e-2},
+  {"Helium", "T", 8, "P", 100e5, "L", 0.0566, 3e-2},
+  {"Helium", "T", 20, "P", 100e5, "L", 0.0594, 1e-2},
+  {"Helium", "T", 4, "P", 1e5, "L", 0.0186, 1e-2},
+  {"Helium", "T", 4, "P", 2e5, "L", 0.0194, 1e-2},
+  {"Helium", "T", 5.180, "P", 2.3e5, "L", 0.0195, 1e-1},
+  {"Helium", "T", 5.2, "P", 2.3e5, "L", 0.0202, 1e-1},
+  {"Helium", "T", 5.230, "P", 2.3e5, "L", 0.0181, 1e-1},
+  {"Helium", "T", 5.260, "P", 2.3e5, "L", 0.0159, 1e-1},
+  {"Helium", "T", 5.3, "P", 2.3e5, "L", 0.0149, 1e-1},
 
   // Geller, IJT, 2001 - based on experimental data, no validation data provided
-  //vel("R404A", "T", 253.03, "P", 0.101e6, "L", 0.00991, 0.03),
-  //vel("R404A", "T", 334.38, "P", 2.176e6, "L", 19.93e-3, 0.03),
-  //vel("R407C", "T", 253.45, "P", 0.101e6, "L", 0.00970, 0.03),
-  //vel("R407C", "T", 314.39, "P", 0.458e6, "L", 14.87e-3, 0.03),
-  //vel("R410A", "T", 260.32, "P", 0.101e6, "L", 0.01043, 0.03),
-  //vel("R410A", "T", 332.09, "P", 3.690e6, "L", 22.76e-3, 0.03),
-  //vel("R507A", "T", 254.85, "P", 0.101e6, "L", 0.01007, 0.03),
-  //vel("R507A", "T", 333.18, "P", 2.644e6, "L", 21.31e-3, 0.03),
+  // {"R404A", "T", 253.03, "P", 0.101e6, "L", 0.00991, 0.03},
+  // {"R404A", "T", 334.38, "P", 2.176e6, "L", 19.93e-3, 0.03},
+  // {"R407C", "T", 253.45, "P", 0.101e6, "L", 0.00970, 0.03},
+  // {"R407C", "T", 314.39, "P", 0.458e6, "L", 14.87e-3, 0.03},
+  // {"R410A", "T", 260.32, "P", 0.101e6, "L", 0.01043, 0.03},
+  // {"R410A", "T", 332.09, "P", 3.690e6, "L", 22.76e-3, 0.03},
+  // {"R507A", "T", 254.85, "P", 0.101e6, "L", 0.01007, 0.03},
+  // {"R507A", "T", 333.18, "P", 2.644e6, "L", 21.31e-3, 0.03},
 
   // From REFPROP 9.1 since no data provided
-  vel("R134a", "T", 240, "D", 1e-10, "L", 0.008698768, 1e-4),
-  vel("R134a", "T", 330, "D", 1e-10, "L", 0.015907606, 1e-4),
-  vel("R134a", "T", 330, "Q", 0, "L", 0.06746432253, 1e-4),
-  vel("R134a", "T", 240, "Q", 1, "L", 0.00873242359, 1e-4),
+  {"R134a", "T", 240, "D", 1e-10, "L", 0.008698768, 1e-4},
+  {"R134a", "T", 330, "D", 1e-10, "L", 0.015907606, 1e-4},
+  {"R134a", "T", 330, "Q", 0, "L", 0.06746432253, 1e-4},
+  {"R134a", "T", 240, "Q", 1, "L", 0.00873242359, 1e-4},
 
   // Mylona, JPCRD, 2014
-  vel("o-Xylene", "T", 635, "D", 270, "L", 96.4e-3, 1e-2),
-  vel("m-Xylene", "T", 616, "D", 220, "L", 79.5232e-3, 1e-2),  // CoolProp is correct, paper is incorrect (it seems)
-  vel("p-Xylene", "T", 620, "D", 287, "L", 107.7e-3, 1e-2),
-  vel("EthylBenzene", "T", 617, "D", 316, "L", 140.2e-3, 1e-2),
+  {"o-Xylene", "T", 635, "D", 270, "L", 96.4e-3, 1e-2},
+  {"m-Xylene", "T", 616, "D", 220, "L", 79.5232e-3, 1e-2},  // CoolProp is correct, paper is incorrect (it seems)
+  {"p-Xylene", "T", 620, "D", 287, "L", 107.7e-3, 1e-2},
+  {"EthylBenzene", "T", 617, "D", 316, "L", 140.2e-3, 1e-2},
   // dilute values
-  vel("o-Xylene", "T", 300, "D", 1e-12, "L", 13.68e-3, 1e-3),
-  vel("o-Xylene", "T", 600, "D", 1e-12, "L", 41.6e-3, 1e-3),
-  vel("m-Xylene", "T", 300, "D", 1e-12, "L", 9.45e-3, 1e-3),
-  vel("m-Xylene", "T", 600, "D", 1e-12, "L", 40.6e-3, 1e-3),
-  vel("p-Xylene", "T", 300, "D", 1e-12, "L", 10.57e-3, 1e-3),
-  vel("p-Xylene", "T", 600, "D", 1e-12, "L", 41.73e-3, 1e-3),
-  vel("EthylBenzene", "T", 300, "D", 1e-12, "L", 9.71e-3, 1e-3),
-  vel("EthylBenzene", "T", 600, "D", 1e-12, "L", 41.14e-3, 1e-3),
+  {"o-Xylene", "T", 300, "D", 1e-12, "L", 13.68e-3, 1e-3},
+  {"o-Xylene", "T", 600, "D", 1e-12, "L", 41.6e-3, 1e-3},
+  {"m-Xylene", "T", 300, "D", 1e-12, "L", 9.45e-3, 1e-3},
+  {"m-Xylene", "T", 600, "D", 1e-12, "L", 40.6e-3, 1e-3},
+  {"p-Xylene", "T", 300, "D", 1e-12, "L", 10.57e-3, 1e-3},
+  {"p-Xylene", "T", 600, "D", 1e-12, "L", 41.73e-3, 1e-3},
+  {"EthylBenzene", "T", 300, "D", 1e-12, "L", 9.71e-3, 1e-3},
+  {"EthylBenzene", "T", 600, "D", 1e-12, "L", 41.14e-3, 1e-3},
 
   // Friend, JPCRD, 1989
-  vel("Methane", "T", 100, "D", 1e-12, "L", 9.83e-3, 1e-3),
-  vel("Methane", "T", 400, "D", 1e-12, "L", 49.96e-3, 1e-3),
-  vel("Methane", "T", 182, "Q", 0, "L", 82.5e-3, 5e-3),
-  vel("Methane", "T", 100, "Dmolar", 28.8e3, "L", 234e-3, 1e-2),
+  {"Methane", "T", 100, "D", 1e-12, "L", 9.83e-3, 1e-3},
+  {"Methane", "T", 400, "D", 1e-12, "L", 49.96e-3, 1e-3},
+  {"Methane", "T", 182, "Q", 0, "L", 82.5e-3, 5e-3},
+  {"Methane", "T", 100, "Dmolar", 28.8e3, "L", 234e-3, 1e-2},
 
   // Sykioti, JPCRD, 2013
-  vel("Methanol", "T", 300, "Dmass", 850, "L", 241.48e-3, 1e-2),
-  vel("Methanol", "T", 400, "Dmass", 2, "L", 25.803e-3, 1e-2),
-  vel("Methanol", "T", 400, "Dmass", 690, "L", 183.59e-3, 1e-2),
-  vel("Methanol", "T", 500, "Dmass", 10, "L", 40.495e-3, 1e-2),
+  {"Methanol", "T", 300, "Dmass", 850, "L", 241.48e-3, 1e-2},
+  {"Methanol", "T", 400, "Dmass", 2, "L", 25.803e-3, 1e-2},
+  {"Methanol", "T", 400, "Dmass", 690, "L", 183.59e-3, 1e-2},
+  {"Methanol", "T", 500, "Dmass", 10, "L", 40.495e-3, 1e-2},
 
   // Heavy Water, IAPWS formulation
-  vel("HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5),
-  vel("HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 259.605241187 * 0.742128e-3, 1e-5),
+  {"HeavyWater", "T", 0.5000 * 643.847, "Dmass", 3.07 * 358, "V", 835.786416818 * 0.742128e-3, 1e-5},
+  {"HeavyWater", "T", 0.9000 * 643.847, "Dmass", 2.16 * 358, "V", 627.777590127 * 0.742128e-3, 1e-5},
+  {"HeavyWater", "T", 1.2000 * 643.847, "Dmass", 0.8 * 358, "V", 259.605241187 * 0.742128e-3, 1e-5},
 
   // Vassiliou, JPCRD, 2015
-  vel("Cyclopentane", "T", 512, "Dmass", 1e-12, "L", 37.042e-3, 1e-5),
-  vel("Cyclopentane", "T", 512, "Dmass", 400, "L", 69.698e-3, 1e-1),
-  vel("Isopentane", "T", 460, "Dmass", 1e-12, "L", 35.883e-3, 1e-4),
-  vel("Isopentane", "T", 460, "Dmass", 329.914, "L", 59.649e-3, 1e-1),
-  vel("n-Pentane", "T", 460, "Dmass", 1e-12, "L", 34.048e-3, 1e-5),
-  vel("n-Pentane", "T", 460, "Dmass", 377.687, "L", 71.300e-3, 1e-1),
-};
+  {"Cyclopentane", "T", 512, "Dmass", 1e-12, "L", 37.042e-3, 1e-5},
+  {"Cyclopentane", "T", 512, "Dmass", 400, "L", 69.698e-3, 1e-1},
+  {"Isopentane", "T", 460, "Dmass", 1e-12, "L", 35.883e-3, 1e-4},
+  {"Isopentane", "T", 460, "Dmass", 329.914, "L", 59.649e-3, 1e-1},
+  {"n-Pentane", "T", 460, "Dmass", 1e-12, "L", 34.048e-3, 1e-5},
+  {"n-Pentane", "T", 460, "Dmass", 377.687, "L", 71.300e-3, 1e-1},
+}};
 
 TEST_CASE_METHOD(TransportValidationFixture, "Compare thermal conductivities against published data", "[conductivity],[transport]") {
-    int inputsN = sizeof(conductivity_validation_data) / sizeof(conductivity_validation_data[0]);
-    for (int i = 0; i < inputsN; ++i) {
-        vel el = conductivity_validation_data[i];
+    for (auto& el : conductivity_validation_data) {
         CHECK_NOTHROW(set_backend("HEOS", el.fluid));
         CAPTURE(el.fluid);
         CAPTURE(el.in1);
@@ -631,9 +632,7 @@ class ConsistencyFixture
     CoolProp::input_pairs pair;
 
    public:
-    ConsistencyFixture() {}
-    ~ConsistencyFixture() {}
-    void set_backend(std::string backend, std::string fluid_name) {
+    void set_backend(const std::string& backend, const std::string& fluid_name) {
         pState.reset(CoolProp::AbstractState::factory(backend, fluid_name));
     }
     void set_pair(CoolProp::input_pairs pair) {
@@ -724,10 +723,15 @@ class ConsistencyFixture
         State.update(pair, x1, x2);
 
         // Make sure we end up back at the same temperature and pressure we started out with
-        if (State.Q() < 1 && State.Q() > 0) throw CoolProp::ValueError(format("Q [%g] is between 0 and 1; two-phase solution", State.Q()));
-        if (std::abs(T - State.T()) > 1e-2) throw CoolProp::ValueError(format("Error on T [%Lg K] is greater than 1e-2", std::abs(State.T() - T)));
-        if (std::abs(p - State.p()) / p * 100 > 1e-2)
+        if (State.Q() < 1 && State.Q() > 0) {
+            throw CoolProp::ValueError(format("Q [%g] is between 0 and 1; two-phase solution", State.Q()));
+        }
+        if (std::abs(T - State.T()) > 1e-2) {
+            throw CoolProp::ValueError(format("Error on T [%Lg K] is greater than 1e-2", std::abs(State.T() - T)));
+        }
+        if (std::abs(p - State.p()) / p * 100 > 1e-2) {
             throw CoolProp::ValueError(format("Error on p [%Lg %%] is greater than 1e-2 %%", std::abs(p - State.p()) / p * 100));
+        }
     }
     void subcritical_pressure_liquid() {
         // Subcritical pressure liquid
@@ -795,9 +799,9 @@ TEST_CASE("Test saturation properties for a few fluids", "[saturation],[slow]") 
         std::vector<double> pv = linspace(Props1SI("CO2", "ptriple"), Props1SI("CO2", "pcrit") - 1e-6, 5);
 
         SECTION("All pressures are ok")
-        for (std::size_t i = 0; i < pv.size(); ++i) {
-            CAPTURE(pv[i]);
-            double T = CoolProp::PropsSI("T", "P", pv[i], "Q", 0, "CO2");
+        for (double i : pv) {
+            CAPTURE(i);
+            double T = CoolProp::PropsSI("T", "P", i, "Q", 0, "CO2");
         }
     }
 }
@@ -809,7 +813,7 @@ class HumidAirDewpointFixture
     std::vector<std::string> fluids;
     std::vector<double> z;
     void setup(double zH2O) {
-        double z_Air[4] = {0.7810, 0.2095, 0.0092, 0.0003};  // N2, O2, Ar, CO2
+        std::array<double, 4> z_Air{0.7810, 0.2095, 0.0092, 0.0003};  // N2, O2, Ar, CO2
         z.resize(5);
         z[0] = zH2O;
         for (int i = 0; i < 4; ++i) {
@@ -843,15 +847,16 @@ TEST_CASE_METHOD(HumidAirDewpointFixture, "Humid air dewpoint calculations", "[h
 TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert models in REFPROP", "[Gernert]") {
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
     std::string mixes[] = {"CO2[0.7]&Argon[0.3]", "CO2[0.7]&Water[0.3]", "CO2[0.7]&Nitrogen[0.3]"};
-    for (int i = 0; i < 3; ++i) {
-        const char* ykey = mixes[i].c_str();
+    for (auto& mixe : mixes) {
+        const char* ykey = mixe.c_str();
         std::ostringstream ss1;
-        ss1 << mixes[i];
+        ss1 << mixe;
         SECTION(ss1.str(), "") {
-            double Tnbp_CP, Tnbp_RP;
-            CHECK_NOTHROW(Tnbp_CP = PropsSI("T", "P", 101325, "Q", 1, "HEOS::" + mixes[i]));
+            double Tnbp_CP;
+            double Tnbp_RP;
+            CHECK_NOTHROW(Tnbp_CP = PropsSI("T", "P", 101325, "Q", 1, "HEOS::" + mixe));
             CAPTURE(Tnbp_CP);
-            CHECK_NOTHROW(Tnbp_RP = PropsSI("T", "P", 101325, "Q", 1, "REFPROP::" + mixes[i]));
+            CHECK_NOTHROW(Tnbp_RP = PropsSI("T", "P", 101325, "Q", 1, "REFPROP::" + mixe));
             CAPTURE(Tnbp_RP);
             double diff = std::abs(Tnbp_CP / Tnbp_RP - 1);
             CHECK(diff < 1e-6);
@@ -861,7 +866,9 @@ TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert model
 
 TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]") {
     SECTION("Check that T,P for saturated state yields error") {
-        double Ts, ps, rho;
+        double Ts;
+        double ps;
+        double rho;
         CHECK_NOTHROW(Ts = PropsSI("T", "P", 101325, "Q", 0, "Water"));
         CHECK(ValidNumber(Ts));
         CHECK_NOTHROW(ps = PropsSI("P", "T", Ts, "Q", 0, "Water"));
@@ -873,7 +880,9 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]") {
         CHECK(!ValidNumber(rho));
     }
     SECTION("Subcritical p slightly subcooled should be ok") {
-        double Ts, rho, dT = 1e-4;
+        double Ts;
+        double rho;
+        double dT = 1e-4;
         CHECK_NOTHROW(Ts = PropsSI("T", "P", 101325, "Q", 0, "Water"));
         CAPTURE(Ts);
         CHECK(ValidNumber(Ts));
@@ -883,7 +892,9 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]") {
         CHECK(ValidNumber(rho));
     }
     SECTION("Subcritical p slightly superheated should be ok") {
-        double Ts, rho, dT = 1e-4;
+        double Ts;
+        double rho;
+        double dT = 1e-4;
         CHECK_NOTHROW(Ts = PropsSI("T", "P", 101325, "Q", 0, "Water"));
         CAPTURE(Ts);
         CHECK(ValidNumber(Ts));
@@ -895,11 +906,12 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]") {
 }
 
 TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]") {
-    double Ts, y, T2;
+    double Ts;
+    double y;
+    double T2;
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-    std::string Ykeys[] = {"H", "S", "U", "Hmass", "Smass", "Umass", "Hmolar", "Smolar", "Umolar"};
-    for (int i = 0; i < 9; ++i) {
-        const char* ykey = Ykeys[i].c_str();
+    std::array<std::string, 9> Ykeys{"H", "S", "U", "Hmass", "Smass", "Umass", "Hmolar", "Smolar", "Umolar"};
+    for (const auto& ykey : Ykeys) {
         std::ostringstream ss1;
         ss1 << "Subcritical superheated P," << ykey;
         SECTION(ss1.str(), "") {
@@ -1025,13 +1037,12 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
 }
 
 TEST_CASE("Tests for solvers in P,H flash using Propane", "[flashdups],[flash],[PH],[consistency]") {
-    double hmolar, hmass;
     SECTION("5 times PH with HEOS AbstractState yields same results every time", "") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
 
         CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 300));
-        hmolar = AS->hmolar();
-        hmass = AS->hmass();
+        double hmolar = AS->hmolar();
+        double hmass = AS->hmass();
         CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
         CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
         hmolar = AS->hmolar();
@@ -1054,13 +1065,12 @@ TEST_CASE("Tests for solvers in P,H flash using Propane", "[flashdups],[flash],[
 }
 
 TEST_CASE("Multiple calls to state class are consistent", "[flashdups],[flash],[PH],[consistency]") {
-    double hmolar, hmass;
     SECTION("3 times PH with HEOS AbstractState yields same results every time", "") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
 
         CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 300));
-        hmolar = AS->hmolar();
-        hmass = AS->hmass();
+        double hmolar = AS->hmolar();
+        double hmass = AS->hmass();
         CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 101325));
         CHECK_NOTHROW(AS->update(CoolProp::HmolarP_INPUTS, hmolar, 101325));
         hmolar = AS->hmolar();
@@ -1193,11 +1203,17 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
     }
     SECTION("Check derivatives with respect to T", "") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
-        double rhomolar = 100, dT = 1e-1;
+        double rhomolar = 100;
+        double dT = 1e-1;
         AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
 
         // base state
-        CoolPropDbl T0 = AS->T(), rhomolar0 = AS->rhomolar(), hmolar0 = AS->hmolar(), smolar0 = AS->smolar(), umolar0 = AS->umolar(), p0 = AS->p();
+        CoolPropDbl T0 = AS->T();
+        CoolPropDbl rhomolar0 = AS->rhomolar();
+        CoolPropDbl hmolar0 = AS->hmolar();
+        CoolPropDbl smolar0 = AS->smolar();
+        CoolPropDbl umolar0 = AS->umolar();
+        CoolPropDbl p0 = AS->p();
         CoolPropDbl dhdT_rho_ana = AS->first_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iDmolar);
         CoolPropDbl d2hdT2_rho_ana = AS->second_partial_deriv(CoolProp::iHmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar);
         CoolPropDbl dsdT_rho_ana = AS->first_partial_deriv(CoolProp::iSmolar, CoolProp::iT, CoolProp::iDmolar);
@@ -1209,12 +1225,20 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
 
         // increment T
         AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T + dT);
-        CoolPropDbl Tpt = AS->T(), rhomolarpt = AS->rhomolar(), hmolarpt = AS->hmolar(), smolarpt = AS->smolar(), umolarpt = AS->umolar(),
-                    ppt = AS->p();
+        CoolPropDbl Tpt = AS->T();
+        CoolPropDbl rhomolarpt = AS->rhomolar();
+        CoolPropDbl hmolarpt = AS->hmolar();
+        CoolPropDbl smolarpt = AS->smolar();
+        CoolPropDbl umolarpt = AS->umolar();
+        CoolPropDbl ppt = AS->p();
         // decrement T
         AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T - dT);
-        CoolPropDbl Tmt = AS->T(), rhomolarmt = AS->rhomolar(), hmolarmt = AS->hmolar(), smolarmt = AS->smolar(), umolarmt = AS->umolar(),
-                    pmt = AS->p();
+        CoolPropDbl Tmt = AS->T();
+        CoolPropDbl rhomolarmt = AS->rhomolar();
+        CoolPropDbl hmolarmt = AS->hmolar();
+        CoolPropDbl smolarmt = AS->smolar();
+        CoolPropDbl umolarmt = AS->umolar();
+        CoolPropDbl pmt = AS->p();
 
         CoolPropDbl dhdT_rho_num = (hmolarpt - hmolarmt) / (2 * dT);
         CoolPropDbl d2hdT2_rho_num = (hmolarpt - 2 * hmolar0 + hmolarmt) / pow(dT, 2);
@@ -1240,11 +1264,17 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
 
     SECTION("Check derivatives with respect to rho", "") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
-        double rhomolar = 100, drho = 1e-1;
+        double rhomolar = 100;
+        double drho = 1e-1;
         AS->update(CoolProp::DmolarT_INPUTS, rhomolar, T);
 
         // base state
-        CoolPropDbl T0 = AS->T(), rhomolar0 = AS->rhomolar(), hmolar0 = AS->hmolar(), smolar0 = AS->smolar(), umolar0 = AS->umolar(), p0 = AS->p();
+        CoolPropDbl T0 = AS->T();
+        CoolPropDbl rhomolar0 = AS->rhomolar();
+        CoolPropDbl hmolar0 = AS->hmolar();
+        CoolPropDbl smolar0 = AS->smolar();
+        CoolPropDbl umolar0 = AS->umolar();
+        CoolPropDbl p0 = AS->p();
         CoolPropDbl dhdrho_T_ana = AS->first_partial_deriv(CoolProp::iHmolar, CoolProp::iDmolar, CoolProp::iT);
         CoolPropDbl d2hdrho2_T_ana = AS->second_partial_deriv(CoolProp::iHmolar, CoolProp::iDmolar, CoolProp::iT, CoolProp::iDmolar, CoolProp::iT);
         CoolPropDbl dsdrho_T_ana = AS->first_partial_deriv(CoolProp::iSmolar, CoolProp::iDmolar, CoolProp::iT);
@@ -1256,12 +1286,20 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
 
         // increment rho
         AS->update(CoolProp::DmolarT_INPUTS, rhomolar + drho, T);
-        CoolPropDbl Tpr = AS->T(), rhomolarpr = AS->rhomolar(), hmolarpr = AS->hmolar(), smolarpr = AS->smolar(), umolarpr = AS->umolar(),
-                    ppr = AS->p();
+        CoolPropDbl Tpr = AS->T();
+        CoolPropDbl rhomolarpr = AS->rhomolar();
+        CoolPropDbl hmolarpr = AS->hmolar();
+        CoolPropDbl smolarpr = AS->smolar();
+        CoolPropDbl umolarpr = AS->umolar();
+        CoolPropDbl ppr = AS->p();
         // decrement rho
         AS->update(CoolProp::DmolarT_INPUTS, rhomolar - drho, T);
-        CoolPropDbl Tmr = AS->T(), rhomolarmr = AS->rhomolar(), hmolarmr = AS->hmolar(), smolarmr = AS->smolar(), umolarmr = AS->umolar(),
-                    pmr = AS->p();
+        CoolPropDbl Tmr = AS->T();
+        CoolPropDbl rhomolarmr = AS->rhomolar();
+        CoolPropDbl hmolarmr = AS->hmolar();
+        CoolPropDbl smolarmr = AS->smolar();
+        CoolPropDbl umolarmr = AS->umolar();
+        CoolPropDbl pmr = AS->p();
 
         CoolPropDbl dhdrho_T_num = (hmolarpr - hmolarmr) / (2 * drho);
         CoolPropDbl d2hdrho2_T_num = (hmolarpr - 2 * hmolar0 + hmolarmr) / pow(drho, 2);
@@ -1286,7 +1324,8 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
     }
     SECTION("Check second mixed partial(h,p) with respect to rho", "") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Propane"));
-        double dhmass = 1.0, T = 300;
+        double dhmass = 1.0;
+        double T = 300;
         AS->update(CoolProp::QT_INPUTS, 0.0, T);
         double deriv1 = AS->first_partial_deriv(iDmass, iP, iHmass);
         double deriv_analyt = AS->second_partial_deriv(iDmass, iP, iHmass, iHmass, iP);
@@ -1304,14 +1343,14 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
 
 TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
+    for (auto& fluid : fluids) {
         std::ostringstream ss1;
-        ss1 << "Check that REFPROP fluid name for fluid " << fluids[i] << " is valid";
+        ss1 << "Check that REFPROP fluid name for fluid " << fluid << " is valid";
         SECTION(ss1.str(), "") {
-            std::string RPName = get_fluid_param_string(fluids[i], "REFPROPName");
+            std::string RPName = get_fluid_param_string(fluid, "REFPROPName");
             CHECK(!RPName.empty());
             CAPTURE(RPName);
-            if (!RPName.compare("N/A")) {
+            if (RPName == "N/A") {
                 break;
             }
             CHECK(ValidNumber(Props1SI("REFPROP::" + RPName, "molemass")));
@@ -1342,8 +1381,8 @@ class AncillaryFixture
     std::string name;
     void run_checks() {
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-        for (std::size_t i = 0; i < fluids.size(); ++i) {
-            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+        for (auto& fluid : fluids) {
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
             do_sat(AS);
         }
     }
@@ -1363,7 +1402,7 @@ class AncillaryFixture
             check_pV(AS);
         }
     }
-    void check_pL(const shared_ptr<CoolProp::AbstractState>& AS) {
+    void check_pL(const shared_ptr<CoolProp::AbstractState>& AS) const {
         double p_EOS = AS->saturated_liquid_keyed_output(iP);
         double p_anc = AS->saturation_ancillary(CoolProp::iP, 0, CoolProp::iT, AS->T());
         double err = std::abs(p_EOS - p_anc) / p_anc;
@@ -1374,7 +1413,7 @@ class AncillaryFixture
         CAPTURE(AS->T());
         CHECK(err < 0.02);
     }
-    void check_pV(const shared_ptr<CoolProp::AbstractState>& AS) {
+    void check_pV(const shared_ptr<CoolProp::AbstractState>& AS) const {
         double p_EOS = AS->saturated_liquid_keyed_output(iP);
         double p_anc = AS->saturation_ancillary(CoolProp::iP, 1, CoolProp::iT, AS->T());
         double err = std::abs(p_EOS - p_anc) / p_anc;
@@ -1385,7 +1424,7 @@ class AncillaryFixture
         CAPTURE(AS->T());
         CHECK(err < 0.02);
     }
-    void check_rhoL(const shared_ptr<CoolProp::AbstractState>& AS) {
+    void check_rhoL(const shared_ptr<CoolProp::AbstractState>& AS) const {
         double rho_EOS = AS->saturated_liquid_keyed_output(iDmolar);
         double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 0, CoolProp::iT, AS->T());
         double err = std::abs(rho_EOS - rho_anc) / rho_anc;
@@ -1396,7 +1435,7 @@ class AncillaryFixture
         CAPTURE(AS->T());
         CHECK(err < 0.03);
     }
-    void check_rhoV(const shared_ptr<CoolProp::AbstractState>& AS) {
+    void check_rhoV(const shared_ptr<CoolProp::AbstractState>& AS) const {
         double rho_EOS = AS->saturated_vapor_keyed_output(iDmolar);
         double rho_anc = AS->saturation_ancillary(CoolProp::iDmolar, 1, CoolProp::iT, AS->T());
         double err = std::abs(rho_EOS - rho_anc) / rho_anc;
@@ -1414,8 +1453,8 @@ TEST_CASE_METHOD(AncillaryFixture, "Ancillary functions", "[ancillary]") {
 
 TEST_CASE("Triple point checks", "[triple_point]") {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-    for (std::size_t i = 0; i < fluids.size(); ++i) {
-        std::vector<std::string> names(1, fluids[i]);
+    for (auto& fluid : fluids) {
+        std::vector<std::string> names(1, fluid);
         shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
         // Skip pseudo-pure
         if (!HEOS->is_pure()) {
@@ -1423,7 +1462,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
         }
 
         std::ostringstream ss1;
-        ss1 << "Minimum saturation temperature state matches for liquid " << fluids[i];
+        ss1 << "Minimum saturation temperature state matches for liquid " << fluid;
         SECTION(ss1.str(), "") {
             REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 0, HEOS->Ttriple()));
             double p_EOS = HEOS->p();
@@ -1438,7 +1477,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
             CHECK(err_sat_min_liquid < 1e-3);
         }
         std::ostringstream ss2;
-        ss2 << "Minimum saturation temperature state matches for vapor " << fluids[i];
+        ss2 << "Minimum saturation temperature state matches for vapor " << fluid;
         SECTION(ss2.str(), "") {
             REQUIRE_NOTHROW(HEOS->update(CoolProp::QT_INPUTS, 1, HEOS->Ttriple()));
 
@@ -1454,7 +1493,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
             CHECK(err_sat_min_vapor < 1e-3);
         }
         std::ostringstream ss3;
-        ss3 << "Minimum saturation temperature state matches for vapor " << fluids[i];
+        ss3 << "Minimum saturation temperature state matches for vapor " << fluid;
         SECTION(ss3.str(), "") {
             REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 1));
 
@@ -1467,7 +1506,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
             CHECK(err_sat_min_vapor < 1e-3);
         }
         std::ostringstream ss4;
-        ss4 << "Minimum saturation temperature state matches for liquid " << fluids[i];
+        ss4 << "Minimum saturation temperature state matches for liquid " << fluid;
         SECTION(ss4.str(), "") {
             REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 0));
             double T_EOS = HEOS->T();
@@ -1512,8 +1551,8 @@ class SatTFixture
     double Tc;
     void run_checks() {
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-        for (std::size_t i = 0; i < fluids.size(); ++i) {
-            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+        for (auto& fluid : fluids) {
+            shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
             do_sat(AS);
         }
     }
@@ -1529,12 +1568,12 @@ class SatTFixture
             check_QT(AS, Tc - j);
         }
     }
-    void check_at_Tc(const shared_ptr<CoolProp::AbstractState>& AS) {
+    void check_at_Tc(const shared_ptr<CoolProp::AbstractState>& AS) const {
         CAPTURE("Check @ Tc");
         CAPTURE(name);
         CHECK_NOTHROW(AS->update(QT_INPUTS, 0, Tc));
     }
-    void check_QT(const shared_ptr<CoolProp::AbstractState>& AS, double T) {
+    void check_QT(const shared_ptr<CoolProp::AbstractState>& AS, double T) const {
         std::string test_name = "Check --> Tc";
         CAPTURE(test_name);
         CAPTURE(name);
@@ -1547,9 +1586,12 @@ TEST_CASE_METHOD(SatTFixture, "Test that saturation solvers solve all the way to
 };
 
 TEST_CASE("Check mixtures with fluid name aliases", "[mixture_name_aliasing]") {
-    shared_ptr<CoolProp::AbstractState> AS1, AS2;
+
+    shared_ptr<CoolProp::AbstractState> AS1;
+    shared_ptr<CoolProp::AbstractState> AS2;
     AS1.reset(CoolProp::AbstractState::factory("HEOS", "EBENZENE&P-XYLENE"));
     AS2.reset(CoolProp::AbstractState::factory("HEOS", "EthylBenzene&P-XYLENE"));
+
     REQUIRE(AS1->fluid_names().size() == AS2->fluid_names().size());
     std::size_t N = AS1->fluid_names().size();
     for (std::size_t i = 0; i < N; ++i) {
@@ -1577,24 +1619,27 @@ TEST_CASE("Test that reference states yield proper values using high-level inter
         std::string in2;
         double val2;
     };
-    std::string fluids[] = {"n-Propane", "R134a", "R124"};
-    ref_entry entries[3] = {{"IIR", 200000, 1000, "T", 273.15, "Q", 0}, {"ASHRAE", 0, 0, "T", 233.15, "Q", 0}, {"NBP", 0, 0, "P", 101325, "Q", 0}};
-    for (std::size_t i = 0; i < 3; ++i) {
-        for (std::size_t j = 0; j < 3; ++j) {
+    std::array<ref_entry, 3> entries{{
+      {"IIR", 200000, 1000, "T", 273.15, "Q", 0},
+      {"ASHRAE", 0, 0, "T", 233.15, "Q", 0},
+      {"NBP", 0, 0, "P", 101325, "Q", 0},
+    }};
+    for (const std::string& fluid : {"n-Propane", "R134a", "R124"}) {
+        for (const ref_entry& entry : entries) {
             std::ostringstream ss1;
-            ss1 << "Check state for " << fluids[i] << " for " + entries[j].name + " reference state ";
+            ss1 << "Check state for " << fluid << " for " + entry.name + " reference state ";
             SECTION(ss1.str(), "") {
                 // First reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
                 // Then set to desired reference state
-                set_reference_stateS(fluids[i], entries[j].name);
+                set_reference_stateS(fluid, entry.name);
                 // Calculate the values
-                double hmass = PropsSI("Hmass", entries[j].in1, entries[j].val1, entries[j].in2, entries[j].val2, fluids[i]);
-                double smass = PropsSI("Smass", entries[j].in1, entries[j].val1, entries[j].in2, entries[j].val2, fluids[i]);
-                CHECK(std::abs(hmass - entries[j].hmass) < 1e-8);
-                CHECK(std::abs(smass - entries[j].smass) < 1e-8);
+                double hmass = PropsSI("Hmass", entry.in1, entry.val1, entry.in2, entry.val2, fluid);
+                double smass = PropsSI("Smass", entry.in1, entry.val1, entry.in2, entry.val2, fluid);
+                CHECK(std::abs(hmass - entry.hmass) < 1e-8);
+                CHECK(std::abs(smass - entry.smass) < 1e-8);
                 // Then reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
             }
         }
     }
@@ -1609,22 +1654,26 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
         parameters in2;
         double val2;
     };
-    std::string fluids[] = {"n-Propane", "R134a", "R124"};
-    ref_entry entries[3] = {{"IIR", 200000, 1000, iT, 273.15, iQ, 0}, {"ASHRAE", 0, 0, iT, 233.15, iQ, 0}, {"NBP", 0, 0, iP, 101325, iQ, 0}};
-    for (std::size_t i = 0; i < 3; ++i) {
-        for (std::size_t j = 0; j < 3; ++j) {
+    std::array<ref_entry, 3> entries{{
+      {"IIR", 200000, 1000, iT, 273.15, iQ, 0},
+      {"ASHRAE", 0, 0, iT, 233.15, iQ, 0},
+      {"NBP", 0, 0, iP, 101325, iQ, 0},
+    }};
+    for (const std::string& fluid : {"n-Propane", "R134a", "R124"}) {
+        for (const auto& entry : entries) {
             std::ostringstream ss1;
-            ss1 << "Check state for " << fluids[i] << " for " + entries[j].name + " reference state ";
+            ss1 << "Check state for " << fluid << " for " + entry.name + " reference state ";
             SECTION(ss1.str(), "") {
-                double val1, val2;
-                input_pairs pair = generate_update_pair(entries[j].in1, entries[j].val1, entries[j].in2, entries[j].val2, val1, val2);
+                double val1 = NAN;
+                double val2 = NAN;
+                input_pairs pair = generate_update_pair(entry.in1, entry.val1, entry.in2, entry.val2, val1, val2);
                 // Generate a state instance
-                shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+                shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
                 AS->update(pair, val1, val2);
                 double hmass0 = AS->hmass();
                 double smass0 = AS->smass();
                 // First reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
                 AS->update(pair, val1, val2);
                 double hmass00 = AS->hmass();
                 double smass00 = AS->smass();
@@ -1632,7 +1681,7 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
                 CHECK(std::abs(smass00 - smass0) < 1e-10);
 
                 // Then set to desired reference state
-                set_reference_stateS(fluids[i], entries[j].name);
+                set_reference_stateS(fluid, entry.name);
 
                 // Should not change existing instance
                 AS->clear();
@@ -1643,15 +1692,15 @@ TEST_CASE("Test that reference states yield proper values using low-level interf
                 CHECK(std::abs(smass1 - smass0) < 1e-10);
 
                 // New instance - should get updated reference state
-                shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+                shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", fluid));
                 AS2->update(pair, val1, val2);
                 double hmass2 = AS2->hmass();
                 double smass2 = AS2->smass();
-                CHECK(std::abs(hmass2 - entries[j].hmass) < 1e-8);
-                CHECK(std::abs(smass2 - entries[j].smass) < 1e-8);
+                CHECK(std::abs(hmass2 - entry.hmass) < 1e-8);
+                CHECK(std::abs(smass2 - entry.smass) < 1e-8);
 
                 // Then reset the reference state
-                set_reference_stateS(fluids[i], "DEF");
+                set_reference_stateS(fluid, "DEF");
             }
         }
     }
@@ -1730,12 +1779,12 @@ class FixedStateFixture
     void run_checks() {
 
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
-        for (std::size_t i = 0; i < fluids.size(); ++i) {
-            std::string ref_state[4] = {"DEF", "IIR", "ASHRAE", "NBP"};
-            for (std::size_t j = 0; j < 4; ++j) {
-                std::string states[] = {"hs_anchor", "reducing", "critical", "max_sat_T", "max_sat_p", "triple_liquid", "triple_vapor"};
-                for (std::size_t k = 0; k < 7; ++k) {
-                    run_fluid(fluids[i], states[k], ref_state[j]);
+        std::array<std::string, 4> ref_states{"DEF", "IIR", "ASHRAE", "NBP"};
+        std::array<std::string, 7> states{"hs_anchor", "reducing", "critical", "max_sat_T", "max_sat_p", "triple_liquid", "triple_vapor"};
+        for (const auto& fluid : fluids) {
+            for (const auto& ref_state : ref_states) {
+                for (const auto& state : states) {
+                    run_fluid(fluid, state, ref_state);
                 }
             }
         }
@@ -1746,36 +1795,46 @@ TEST_CASE_METHOD(FixedStateFixture, "Test that enthalpies and entropies are corr
 };  // !!!! check this
 
 TEST_CASE("Check the first partial derivatives", "[first_saturation_partial_deriv]") {
-    const int number_of_pairs = 10;
-    struct pair
-    {
-        parameters p1, p2;
-    };
-    pair pairs[number_of_pairs] = {{iP, iT}, {iDmolar, iT}, {iHmolar, iT}, {iSmolar, iT}, {iUmolar, iT},
-                                   {iT, iP}, {iDmolar, iP}, {iHmolar, iP}, {iSmolar, iP}, {iUmolar, iP}};
+
+    std::array<std::pair<parameters, parameters>, 10> pairs{{
+      {iP, iT},
+      {iDmolar, iT},
+      {iHmolar, iT},
+      {iSmolar, iT},
+      {iUmolar, iT},
+      {iT, iP},
+      {iDmolar, iP},
+      {iHmolar, iP},
+      {iSmolar, iP},
+      {iUmolar, iP},
+    }};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
-    for (std::size_t i = 0; i < number_of_pairs; ++i) {
+
+    for (const auto& pair : pairs) {
+        const auto& p1 = pair.first;
+        const auto& p2 = pair.second;
+
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss1;
-        ss1 << "Check first partial derivative for d(" << get_parameter_information(pairs[i].p1, "short") << ")/d("
-            << get_parameter_information(pairs[i].p2, "short") << ")|sat";
+        ss1 << "Check first partial derivative for d(" << get_parameter_information(p1, "short") << ")/d(" << get_parameter_information(p2, "short")
+            << ")|sat";
         SECTION(ss1.str(), "") {
             AS->update(QT_INPUTS, 1, 300);
             CoolPropDbl p = AS->p();
-            CoolPropDbl analytical = AS->first_saturation_deriv(pairs[i].p1, pairs[i].p2);
+            CoolPropDbl analytical = AS->first_saturation_deriv(p1, p2);
             CAPTURE(analytical);
-            CoolPropDbl numerical;
-            if (pairs[i].p2 == iT) {
+            CoolPropDbl numerical = 0.0;
+            if (p2 == iT) {
                 AS->update(QT_INPUTS, 1, 300 + 1e-5);
-                CoolPropDbl v1 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v1 = AS->keyed_output(p1);
                 AS->update(QT_INPUTS, 1, 300 - 1e-5);
-                CoolPropDbl v2 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v2 = AS->keyed_output(p1);
                 numerical = (v1 - v2) / (2e-5);
-            } else if (pairs[i].p2 == iP) {
+            } else if (p2 == iP) {
                 AS->update(PQ_INPUTS, p + 1e-2, 1);
-                CoolPropDbl v1 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v1 = AS->keyed_output(p1);
                 AS->update(PQ_INPUTS, p - 1e-2, 1);
-                CoolPropDbl v2 = AS->keyed_output(pairs[i].p1);
+                CoolPropDbl v2 = AS->keyed_output(p1);
                 numerical = (v1 - v2) / (2e-2);
             } else {
                 throw ValueError();

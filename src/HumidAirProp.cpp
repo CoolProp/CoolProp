@@ -7,6 +7,8 @@
 #include <memory>
 
 #include "HumidAirProp.h"
+
+#include <cmath>
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "Solvers.h"
 #include "CoolPropTools.h"
@@ -17,15 +19,18 @@
 #include "Configuration.h"
 
 #include <algorithm>  // std::next_permutation
-#include <stdlib.h>
-#include "math.h"
-#include "time.h"
-#include "stdio.h"
-#include <string.h>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cstdio>
+#include <string>
 #include <iostream>
 #include <list>
+#include <stdexcept>
+#include <array>
 #include "externals/IF97/IF97.h"
 
+// TODO that section of lazy stubs is a major code smell
 /// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
 std::size_t strcmp(const std::string& s, const std::string& e) {
     return s.compare(e);
@@ -77,8 +82,8 @@ enum givens
 };
 
 void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const std::vector<double>& input_vals, double& T, double& psi_w);
-double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
-double MoleFractionWater(double, double, int, double);
+double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w);  // TODO: reserved name
+double MoleFractionWater(double T, double p, int HumInput, double InVal);
 
 void check_fluid_instantiation() {
     if (!Water.get()) {
@@ -93,6 +98,7 @@ void check_fluid_instantiation() {
 };
 
 static double epsilon = 0.621945, R_bar = 8.314472;
+// TODO: use bools.
 static int FlagUseVirialCorrelations = 0, FlagUseIsothermCompressCorrelation = 0, FlagUseIdealGasEnthalpyCorrelations = 0;
 double f_factor(double T, double p);
 
@@ -102,7 +108,9 @@ static inline bool check_bounds(const givens prop, const double& value, double& 
     if (CoolProp::get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
         return true;
     }
-    if (!ValidNumber(value)) return false;
+    if (!ValidNumber(value)) {
+        return false;
+    }
 
     switch (prop) {
         case GIVEN_P:
@@ -137,11 +145,11 @@ static inline bool check_bounds(const givens prop, const double& value, double& 
 }
 
 // A couple of convenience functions that are needed quite a lot
-static double MM_Air(void) {
+static double MM_Air() {
     check_fluid_instantiation();
     return Air->keyed_output(CoolProp::imolar_mass);
 }
-static double MM_Water(void) {
+static double MM_Water() {
     check_fluid_instantiation();
     return Water->keyed_output(CoolProp::imolar_mass);
 }
@@ -223,8 +231,7 @@ void UseIdealGasEnthalpyCorrelations(int flag) {
     }
 }
 static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double W_min, double W_max) {
-    // Iterating for W,
-    double W;
+
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
        private:
@@ -247,7 +254,8 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
 
         double call(double W) {
             input_vals[1] = W;
-            double T = _HUGE, psi_w = _HUGE;
+            double T = _HUGE;
+            double psi_w = _HUGE;
             _HAPropsSI_inputs(p, input_keys, input_vals, T, psi_w);
             if (CoolProp::get_debug_level() > 0) {
                 std::cout << format("T: %g K, psi_w %g\n", T, psi_w);
@@ -265,7 +273,7 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
     double r_max = BSR.call(W_max);
     bool W_max_valid = ValidNumber(r_max);
     if (!W_min_valid && !W_max_valid) {
-        throw CoolProp::ValueError(format("Both W_min [%g] and W_max [%g] yield invalid output values in Brent_HAProps_W", W_min, W_max).c_str());
+        throw CoolProp::ValueError(format("Both W_min [%g] and W_max [%g] yield invalid output values in Brent_HAProps_W", W_min, W_max));
     } else if (W_min_valid && !W_max_valid) {
         while (!W_max_valid) {
             // Reduce W_max until it works
@@ -281,6 +289,10 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
             W_min_valid = ValidNumber(r_min);
         }
     }
+
+    // Iterating for W,
+    double W = 0.0;
+
     // We will do a secant call if the values at W_min and W_max have the same sign
     if (r_min * r_max > 0) {
         if (std::abs(r_min) < std::abs(r_max)) {
@@ -293,8 +305,9 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
     }
     return W;
 }
+
 static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double T_min, double T_max) {
-    double T;
+
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
        private:
@@ -316,8 +329,7 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
         };
 
         double call(double T_drybulb) {
-            double psi_w;
-            psi_w = MoleFractionWater(T_drybulb, p, input_keys[0], input_vals[0]);
+            double psi_w = MoleFractionWater(T_drybulb, p, input_keys[0], input_vals[0]);
             double val = _HAPropsSI_outputs(OutputKey, p, T_drybulb, psi_w);
             return val - TargetVal;
         }
@@ -332,7 +344,7 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
     double r_max = BSR.call(T_max);
     bool T_max_valid = ValidNumber(r_max);
     if (!T_min_valid && !T_max_valid) {
-        throw CoolProp::ValueError(format("Both T_min [%g] and T_max [%g] yield invalid output values in Brent_HAProps_T", T_min, T_max).c_str());
+        throw CoolProp::ValueError(format("Both T_min [%g] and T_max [%g] yield invalid output values in Brent_HAProps_T", T_min, T_max));
     } else if (T_min_valid && !T_max_valid) {
         while (!T_max_valid) {
             // Reduce T_max until it works
@@ -348,6 +360,9 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             T_min_valid = ValidNumber(r_min);
         }
     }
+
+    double T = 0.0;
+
     // We will do a secant call if the values at T_min and T_max have the same sign
     if (r_min * r_max > 0) {
         if (std::abs(r_min) < std::abs(r_max)) {
@@ -356,26 +371,25 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             T = CoolProp::Secant(BSR, T_max, -0.01 * T_max, 1e-7, 50);
         }
     } else {
-        double mach_eps = 1e-15, tol = 1e-10;
+        double mach_eps = 1e-15;
+        double tol = 1e-10;
         T = CoolProp::Brent(BSR, T_min, T_max, mach_eps, tol, 50);
     }
     return T;
 }
 static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) {
-    double T;
+
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
        private:
         double pp_water, psi_w, p;
 
        public:
-        BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) {
-            pp_water = psi_w * p;
-        };
-        ~BrentSolverResids(){};
+        BrentSolverResids(double psi_w, double p) : pp_water(psi_w * p), psi_w(psi_w), p(p){};
+        ~BrentSolverResids() = default;  // TODO: I'm leaving this in so I can leave that TODO, but you should not declare a destructor!
 
         double call(double T) {
-            double p_ws;
+            double p_ws = 0.0;
             if (T >= 273.16) {
                 // Saturation pressure [Pa] using IF97 formulation
                 p_ws = IF97::psat97(T);
@@ -391,6 +405,8 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
     };
 
     BrentSolverResids Resids(psi_w, p);
+
+    double T = 0.0;
 
     try {
         T = CoolProp::Secant(Resids, T_guess, 0.1, 1e-7, 100);
@@ -469,7 +485,14 @@ static double Secant_HAProps_T(const std::string &OutputName, const std::string 
 
 static double Secant_HAProps_W(double p, double T, givens OutputType, double TargetVal, double W_guess) {
     // Use a secant solve in order to yield a target output value for HAProps by altering humidity ratio
-    double x1 = 0, x2 = 0, x3 = 0, y1 = 0, y2 = 0, eps = 1e-12, f = 999, W = 0.0001;
+    double x1 = 0;
+    double x2 = 0;
+    double x3 = 0;
+    double y1 = 0;
+    double y2 = 0;
+    double eps = 1e-12;
+    double f = 999;
+    double W = 0.0001;
     int iter = 1;
     std::vector<givens> input_keys(2, GIVEN_T);
     input_keys[1] = GIVEN_HUMRAT;
@@ -477,7 +500,6 @@ static double Secant_HAProps_W(double p, double T, givens OutputType, double Tar
     if (OutputType == GIVEN_TWB) {
         eps = 1e-7;
     }
-    double _T, psi_w;
 
     while ((iter <= 3 || std::abs(f) > eps) && iter < 100) {
         if (iter == 1) {
@@ -492,6 +514,8 @@ static double Secant_HAProps_W(double p, double T, givens OutputType, double Tar
             W = x2;
         }
         input_vals[1] = W;
+        double _T = _HUGE;
+        double psi_w = _HUGE;
         _HAPropsSI_inputs(p, input_keys, input_vals, _T, psi_w);
         f = _HAPropsSI_outputs(OutputType, p, T, psi_w) - TargetVal;
         if (iter == 1) {
@@ -513,9 +537,10 @@ static double Secant_HAProps_W(double p, double T, givens OutputType, double Tar
 static double _B_aw(double T) {
     check_fluid_instantiation();
     // Returns value in m^3/mol
-    double a[] = {0, 0.665687e2, -0.238834e3, -0.176755e3};
-    double b[] = {0, -0.237, -1.048, -3.183};
-    double rhobarstar = 1000, Tstar = 100;
+    std::array<double, 4> a{0, 0.665687e2, -0.238834e3, -0.176755e3};
+    std::array<double, 4> b{0, -0.237, -1.048, -3.183};
+    double rhobarstar = 1000;
+    double Tstar = 100;
     return 1 / rhobarstar * (a[1] * pow(T / Tstar, b[1]) + a[2] * pow(T / Tstar, b[2]) + a[3] * pow(T / Tstar, b[3]))
            / 1000;  // Correlation has units of dm^3/mol, to convert to m^3/mol, divide by 1000
 }
@@ -523,9 +548,10 @@ static double _B_aw(double T) {
 static double _dB_aw_dT(double T) {
     check_fluid_instantiation();
     // Returns value in m^3/mol
-    double a[] = {0, 0.665687e2, -0.238834e3, -0.176755e3};
-    double b[] = {0, -0.237, -1.048, -3.183};
-    double rhobarstar = 1000, Tstar = 100;
+    std::array<double, 4> a{0, 0.665687e2, -0.238834e3, -0.176755e3};
+    std::array<double, 4> b{0, -0.237, -1.048, -3.183};
+    double rhobarstar = 1000;
+    double Tstar = 100;
     return 1 / rhobarstar / Tstar
            * (a[1] * b[1] * pow(T / Tstar, b[1] - 1) + a[2] * b[2] * pow(T / Tstar, b[2] - 1) + a[3] * b[3] * pow(T / Tstar, b[3] - 1))
            / 1000;  // Correlation has units of dm^3/mol/K, to convert to m^3/mol/K, divide by 1000
@@ -534,10 +560,11 @@ static double _dB_aw_dT(double T) {
 static double _C_aaw(double T) {
     check_fluid_instantiation();
     // Function return has units of m^6/mol^2
-    double c[] = {0, 0.482737e3, 0.105678e6, -0.656394e8, 0.294442e11, -0.319317e13};
-    double rhobarstar = 1000, Tstar = 1, summer = 0;
-    int i;
-    for (i = 1; i <= 5; i++) {
+    std::array<double, 6> c{0, 0.482737e3, 0.105678e6, -0.656394e8, 0.294442e11, -0.319317e13};
+    double rhobarstar = 1000;
+    double Tstar = 1;
+    double summer = 0;
+    for (int i = 1; i <= 5; ++i) {  // TODO: Why declare the 0 in the array above if you are going to skip it
         summer += c[i] * pow(T / Tstar, 1 - i);
     }
     return 1.0 / rhobarstar / rhobarstar * summer / 1e6;  // Correlation has units of dm^6/mol^2, to convert to m^6/mol^2 divide by 1e6
@@ -546,10 +573,11 @@ static double _C_aaw(double T) {
 static double _dC_aaw_dT(double T) {
     check_fluid_instantiation();
     // Function return in units of m^6/mol^2/K
-    double c[] = {0, 0.482737e3, 0.105678e6, -0.656394e8, 0.294442e11, -0.319317e13};
-    double rhobarstar = 1000, Tstar = 1, summer = 0;
-    int i;
-    for (i = 2; i <= 5; i++) {
+    std::array<double, 6> c{0, 0.482737e3, 0.105678e6, -0.656394e8, 0.294442e11, -0.319317e13};
+    double rhobarstar = 1000;
+    double Tstar = 1;
+    double summer = 0;
+    for (int i = 2; i <= 5; ++i) {  // TODO: confirm that it's normal that it starts at 2, add a comment explaining why
         summer += c[i] * (1 - i) * pow(T / Tstar, -i);
     }
     return 1.0 / rhobarstar / rhobarstar / Tstar * summer / 1e6;  // Correlation has units of dm^6/mol^2/K, to convert to m^6/mol^2/K divide by 1e6
@@ -558,10 +586,11 @@ static double _dC_aaw_dT(double T) {
 static double _C_aww(double T) {
     check_fluid_instantiation();
     // Function return has units of m^6/mol^2
-    double d[] = {0, -0.1072887e2, 0.347804e4, -0.383383e6, 0.334060e8};
-    double rhobarstar = 1, Tstar = 1, summer = 0;
-    int i;
-    for (i = 1; i <= 4; i++) {
+    std::array<double, 5> d{0, -0.1072887e2, 0.347804e4, -0.383383e6, 0.334060e8};
+    double rhobarstar = 1;
+    double Tstar = 1;
+    double summer = 0;
+    for (int i = 1; i <= 4; ++i) {
         summer += d[i] * pow(T / Tstar, 1 - i);
     }
     return -1.0 / rhobarstar / rhobarstar * exp(summer) / 1e6;  // Correlation has units of dm^6/mol^2, to convert to m^6/mol^2 divide by 1e6
@@ -570,13 +599,15 @@ static double _C_aww(double T) {
 static double _dC_aww_dT(double T) {
     check_fluid_instantiation();
     // Function return in units of m^6/mol^2/K
-    double d[] = {0, -0.1072887e2, 0.347804e4, -0.383383e6, 0.334060e8};
-    double rhobarstar = 1, Tstar = 1, summer1 = 0, summer2 = 0;
-    int i;
-    for (i = 1; i <= 4; i++) {
+    std::array<double, 5> d{0, -0.1072887e2, 0.347804e4, -0.383383e6, 0.334060e8};
+    double rhobarstar = 1;
+    double Tstar = 1;
+    double summer1 = 0;
+    double summer2 = 0;
+    for (int i = 1; i <= 4; ++i) {
         summer1 += d[i] * pow(T / Tstar, 1 - i);
     }
-    for (i = 2; i <= 4; i++) {
+    for (int i = 2; i <= 4; ++i) {
         summer2 += d[i] * (1 - i) * pow(T / Tstar, -i);
     }
     return -1.0 / rhobarstar / rhobarstar / Tstar * exp(summer1) * summer2
@@ -585,7 +616,8 @@ static double _dC_aww_dT(double T) {
 
 static double B_m(double T, double psi_w) {
     // Bm has units of m^3/mol
-    double B_aa, B_ww, B_aw;
+    double B_aa = 0.0;
+    double B_ww = 0.0;
     if (FlagUseVirialCorrelations == 1) {
         B_aa = -0.000721183853646 + 1.142682674467e-05 * T - 8.838228412173e-08 * pow(T, 2) + 4.104150642775e-10 * pow(T, 3)
                - 1.192780880645e-12 * pow(T, 4) + 2.134201312070e-15 * pow(T, 5) - 2.157430412913e-18 * pow(T, 6) + 9.453830907795e-22 * pow(T, 7);
@@ -596,13 +628,14 @@ static double B_m(double T, double psi_w) {
         B_ww = B_Water(T);  // [m^3/mol]
     }
 
-    B_aw = _B_aw(T);  // [m^3/mol]
+    double B_aw = _B_aw(T);  // [m^3/mol]
     return pow(1 - psi_w, 2) * B_aa + 2 * (1 - psi_w) * psi_w * B_aw + psi_w * psi_w * B_ww;
 }
 
 static double dB_m_dT(double T, double psi_w) {
     //dBm_dT has units of m^3/mol/K
-    double dB_dT_aa, dB_dT_ww, dB_dT_aw;
+    double dB_dT_aa = 0.0;
+    double dB_dT_ww = 0.0;
     if (FlagUseVirialCorrelations) {
         dB_dT_aa = 1.65159324353e-05 - 3.026130954749e-07 * T + 2.558323847166e-09 * pow(T, 2) - 1.250695660784e-11 * pow(T, 3)
                    + 3.759401946106e-14 * pow(T, 4) - 6.889086380822e-17 * pow(T, 5) + 7.089457032972e-20 * pow(T, 6)
@@ -614,13 +647,14 @@ static double dB_m_dT(double T, double psi_w) {
         dB_dT_aa = dBdT_Air(T);    // [m^3/mol]
         dB_dT_ww = dBdT_Water(T);  // [m^3/mol]
     }
-    dB_dT_aw = _dB_aw_dT(T);  // [m^3/mol]
+    double dB_dT_aw = _dB_aw_dT(T);  // [m^3/mol]
     return pow(1 - psi_w, 2) * dB_dT_aa + 2 * (1 - psi_w) * psi_w * dB_dT_aw + psi_w * psi_w * dB_dT_ww;
 }
 
 static double C_m(double T, double psi_w) {
     // Cm has units of m^6/mol^2
-    double C_aaa, C_www, C_aww, C_aaw;
+    double C_aaa = 0.0;
+    double C_www = 0.0;
     if (FlagUseVirialCorrelations) {
         C_aaa = 1.29192158975e-08 - 1.776054020409e-10 * T + 1.359641176409e-12 * pow(T, 2) - 6.234878717893e-15 * pow(T, 3)
                 + 1.791668730770e-17 * pow(T, 4) - 3.175283581294e-20 * pow(T, 5) + 3.184306136120e-23 * pow(T, 6) - 1.386043640106e-26 * pow(T, 7);
@@ -630,15 +664,16 @@ static double C_m(double T, double psi_w) {
         C_aaa = C_Air(T);    //[m^6/mol^2]
         C_www = C_Water(T);  //[m^6/mol^2]
     }
-    C_aaw = _C_aaw(T);  //[m^6/mol^2]
-    C_aww = _C_aww(T);  //[m^6/mol^2]
+    double C_aaw = _C_aaw(T);  //[m^6/mol^2]
+    double C_aww = _C_aww(T);  //[m^6/mol^2]
     return pow(1 - psi_w, 3) * C_aaa + 3 * pow(1 - psi_w, 2) * psi_w * C_aaw + 3 * (1 - psi_w) * psi_w * psi_w * C_aww + pow(psi_w, 3) * C_www;
 }
 
 static double dC_m_dT(double T, double psi_w) {
     // dCm_dT has units of m^6/mol^2/K
 
-    double dC_dT_aaa, dC_dT_www, dC_dT_aww, dC_dT_aaw;
+    double dC_dT_aaa = 0.0;
+    double dC_dT_www = 0.0;
     // NDG for fluid EOS for virial terms
     if (FlagUseVirialCorrelations) {
         dC_dT_aaa = -2.46582342273e-10 + 4.425401935447e-12 * T - 3.669987371644e-14 * pow(T, 2) + 1.765891183964e-16 * pow(T, 3)
@@ -651,8 +686,8 @@ static double dC_m_dT(double T, double psi_w) {
         dC_dT_aaa = dCdT_Air(T);    // [m^6/mol^2]
         dC_dT_www = dCdT_Water(T);  // [m^6/mol^2]
     }
-    dC_dT_aaw = _dC_aaw_dT(T);  // [m^6/mol^2]
-    dC_dT_aww = _dC_aww_dT(T);  // [m^6/mol^2]
+    double dC_dT_aaw = _dC_aaw_dT(T);  // [m^6/mol^2]
+    double dC_dT_aww = _dC_aww_dT(T);  // [m^6/mol^2]
     return pow(1 - psi_w, 3) * dC_dT_aaa + 3 * pow(1 - psi_w, 2) * psi_w * dC_dT_aaw + 3 * (1 - psi_w) * psi_w * psi_w * dC_dT_aww
            + pow(psi_w, 3) * dC_dT_www;
 }
@@ -662,18 +697,18 @@ double HumidityRatio(double psi_w) {
 
 static double HenryConstant(double T) {
     // Result has units of 1/Pa
-    double p_ws, beta_N2, beta_O2, beta_Ar, beta_a, tau, Tr, Tc = 647.096;
-    Tr = T / Tc;
-    tau = 1 - Tr;
-    p_ws = IF97::psat97(T);  //[Pa]
-    beta_N2 = p_ws * exp(-9.67578 / Tr + 4.72162 * pow(tau, 0.355) / Tr + 11.70585 * pow(Tr, -0.41) * exp(tau));
-    beta_O2 = p_ws * exp(-9.44833 / Tr + 4.43822 * pow(tau, 0.355) / Tr + 11.42005 * pow(Tr, -0.41) * exp(tau));
-    beta_Ar = p_ws * exp(-8.40954 / Tr + 4.29587 * pow(tau, 0.355) / Tr + 10.52779 * pow(Tr, -0.41) * exp(tau));
-    beta_a = 1 / (0.7812 / beta_N2 + 0.2095 / beta_O2 + 0.0093 / beta_Ar);
+    double Tc = 647.096;
+    double Tr = T / Tc;
+    double tau = 1 - Tr;
+    double p_ws = IF97::psat97(T);  //[Pa]
+    double beta_N2 = p_ws * exp(-9.67578 / Tr + 4.72162 * pow(tau, 0.355) / Tr + 11.70585 * pow(Tr, -0.41) * exp(tau));
+    double beta_O2 = p_ws * exp(-9.44833 / Tr + 4.43822 * pow(tau, 0.355) / Tr + 11.42005 * pow(Tr, -0.41) * exp(tau));
+    double beta_Ar = p_ws * exp(-8.40954 / Tr + 4.29587 * pow(tau, 0.355) / Tr + 10.52779 * pow(Tr, -0.41) * exp(tau));
+    double beta_a = 1 / (0.7812 / beta_N2 + 0.2095 / beta_O2 + 0.0093 / beta_Ar);
     return 1 / (1.01325 * beta_a);
 }
 double isothermal_compressibility(double T, double p) {
-    double k_T;
+    double k_T = 0.0;
 
     if (T > 273.16) {
         if (FlagUseIsothermCompressCorrelation) {
@@ -690,13 +725,20 @@ double isothermal_compressibility(double T, double p) {
     }
     return k_T;
 }
-double f_factor(double T, double p) {
-    double f = 0, Rbar = 8.314371, eps = 1e-8;
-    double x1 = 0, x2 = 0, x3, y1 = 0, y2, change = _HUGE;
-    int iter = 1;
-    double p_ws, B_aa, B_aw, B_ww, C_aaa, C_aaw, C_aww, C_www, line1, line2, line3, line4, line5, line6, line7, line8, k_T, beta_H, LHS, RHS, psi_ws,
-      vbar_ws;
 
+double f_factor(double T, double p) {
+
+    double f = 0;
+    double Rbar = 8.314371;
+    double eps = 1e-8;
+    double x1 = 0;
+    double x2 = 0;
+    double y1 = 0;
+    int iter = 1;
+
+    double p_ws = 0.0;
+    double vbar_ws = 0.0;
+    double beta_H = 0.0;
     // Saturation pressure [Pa]
     if (T > 273.16) {
         // It is liquid water
@@ -711,7 +753,7 @@ double f_factor(double T, double p) {
         vbar_ws = dg_dp_Ice(T, p) * MM_Water();  //[m^3/mol]
     }
 
-    k_T = isothermal_compressibility(T, p);  //[1/Pa]
+    double k_T = isothermal_compressibility(T, p);  //[1/Pa]
 
     // Hermann: In the iteration process of the enhancement factor in Eq. (3.25), k_T is set to zero for pw,s (T) > p.
     if (p_ws > p) {
@@ -719,6 +761,10 @@ double f_factor(double T, double p) {
         beta_H = 0;
     }
 
+    double B_aa = 0.0;
+    double C_aaa = 0.0;
+    double B_ww = 0.0;
+    double C_www = 0.0;
     // NDG for fluid EOS for virial terms
     if (FlagUseVirialCorrelations) {
         B_aa = -0.000721183853646 + 1.142682674467e-05 * T - 8.838228412173e-08 * pow(T, 2) + 4.104150642775e-10 * pow(T, 3)
@@ -735,12 +781,13 @@ double f_factor(double T, double p) {
         B_ww = B_Water(T);   // [m^3/mol]
         C_www = C_Water(T);  // [m^6/mol^2]
     }
-    B_aw = _B_aw(T);    //[m^3/mol]
-    C_aaw = _C_aaw(T);  //[m^6/mol^2]
-    C_aww = _C_aww(T);  //[m^6/mol^2]
+    double B_aw = _B_aw(T);    //[m^3/mol]
+    double C_aaw = _C_aaw(T);  //[m^6/mol^2]
+    double C_aww = _C_aww(T);  //[m^6/mol^2]
 
     // Use a little secant loop to find f iteratively
     // Start out with a guess value of 1 for f
+    double change = _HUGE;
     while ((iter <= 3 || change > eps) && iter < 100) {
         if (iter == 1) {
             x1 = 1.00;
@@ -755,32 +802,33 @@ double f_factor(double T, double p) {
         }
 
         // Left-hand-side of Equation 3.25
-        LHS = log(f);
+        double LHS = log(f);
         // Eqn 3.24
-        psi_ws = f * p_ws / p;
+        double psi_ws = f * p_ws / p;
 
         // All the terms forming the RHS of Eqn 3.25
-        line1 = ((1 + k_T * p_ws) * (p - p_ws) - k_T * (p * p - p_ws * p_ws) / 2.0) / (Rbar * T) * vbar_ws + log(1 - beta_H * (1 - psi_ws) * p);
-        line2 = pow(1 - psi_ws, 2) * p / (Rbar * T) * B_aa - 2 * pow(1 - psi_ws, 2) * p / (Rbar * T) * B_aw
-                - (p - p_ws - pow(1 - psi_ws, 2) * p) / (Rbar * T) * B_ww;
-        line3 = pow(1 - psi_ws, 3) * p * p / pow(Rbar * T, 2) * C_aaa
-                + (3 * pow(1 - psi_ws, 2) * (1 - 2 * (1 - psi_ws)) * p * p) / (2 * pow(Rbar * T, 2)) * C_aaw;
-        line4 = -3 * pow(1 - psi_ws, 2) * psi_ws * p * p / pow(Rbar * T, 2) * C_aww
-                - ((3 - 2 * psi_ws) * psi_ws * psi_ws * p * p - p_ws * p_ws) / (2 * pow(Rbar * T, 2)) * C_www;
-        line5 = -(pow(1 - psi_ws, 2) * (-2 + 3 * psi_ws) * psi_ws * p * p) / pow(Rbar * T, 2) * B_aa * B_ww;
-        line6 = -(2 * pow(1 - psi_ws, 3) * (-1 + 3 * psi_ws) * p * p) / pow(Rbar * T, 2) * B_aa * B_aw;
-        line7 = (6 * pow(1 - psi_ws, 2) * psi_ws * psi_ws * p * p) / pow(Rbar * T, 2) * B_ww * B_aw
-                - (3 * pow(1 - psi_ws, 4) * p * p) / (2 * pow(Rbar * T, 2)) * B_aa * B_aa;
-        line8 = -(2 * pow(1 - psi_ws, 2) * psi_ws * (-2 + 3 * psi_ws) * p * p) / pow(Rbar * T, 2) * B_aw * B_aw
-                - (p_ws * p_ws - (4 - 3 * psi_ws) * pow(psi_ws, 3) * p * p) / (2 * pow(Rbar * T, 2)) * B_ww * B_ww;
-        RHS = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8;
+        double line1 =
+          ((1 + k_T * p_ws) * (p - p_ws) - k_T * (p * p - p_ws * p_ws) / 2.0) / (Rbar * T) * vbar_ws + log(1 - beta_H * (1 - psi_ws) * p);
+        double line2 = pow(1 - psi_ws, 2) * p / (Rbar * T) * B_aa - 2 * pow(1 - psi_ws, 2) * p / (Rbar * T) * B_aw
+                       - (p - p_ws - pow(1 - psi_ws, 2) * p) / (Rbar * T) * B_ww;
+        double line3 = pow(1 - psi_ws, 3) * p * p / pow(Rbar * T, 2) * C_aaa
+                       + (3 * pow(1 - psi_ws, 2) * (1 - 2 * (1 - psi_ws)) * p * p) / (2 * pow(Rbar * T, 2)) * C_aaw;
+        double line4 = -3 * pow(1 - psi_ws, 2) * psi_ws * p * p / pow(Rbar * T, 2) * C_aww
+                       - ((3 - 2 * psi_ws) * psi_ws * psi_ws * p * p - p_ws * p_ws) / (2 * pow(Rbar * T, 2)) * C_www;
+        double line5 = -(pow(1 - psi_ws, 2) * (-2 + 3 * psi_ws) * psi_ws * p * p) / pow(Rbar * T, 2) * B_aa * B_ww;
+        double line6 = -(2 * pow(1 - psi_ws, 3) * (-1 + 3 * psi_ws) * p * p) / pow(Rbar * T, 2) * B_aa * B_aw;
+        double line7 = (6 * pow(1 - psi_ws, 2) * psi_ws * psi_ws * p * p) / pow(Rbar * T, 2) * B_ww * B_aw
+                       - (3 * pow(1 - psi_ws, 4) * p * p) / (2 * pow(Rbar * T, 2)) * B_aa * B_aa;
+        double line8 = -(2 * pow(1 - psi_ws, 2) * psi_ws * (-2 + 3 * psi_ws) * p * p) / pow(Rbar * T, 2) * B_aw * B_aw
+                       - (p_ws * p_ws - (4 - 3 * psi_ws) * pow(psi_ws, 3) * p * p) / (2 * pow(Rbar * T, 2)) * B_ww * B_ww;
+        double RHS = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8;
 
         if (iter == 1) {
             y1 = LHS - RHS;
         }
         if (iter > 1) {
-            y2 = LHS - RHS;
-            x3 = x2 - y2 / (y2 - y1) * (x2 - x1);
+            double y2 = LHS - RHS;
+            double x3 = x2 - y2 / (y2 - y1) * (x2 - x1);
             change = std::abs(y2 / (y2 - y1) * (x2 - x1));
             y1 = y2;
             x1 = x2;
@@ -788,30 +836,32 @@ double f_factor(double T, double p) {
         }
         iter = iter + 1;
     }
-    if (f >= 1.0)
+    if (f >= 1.0) {
         return f;
-    else
-        return 1.0;
+    }
+
+    return 1.0;
 }
-void HAHelp(void) {
+void HAHelp() {
     printf("Sorry, Need to update!");
 }
 int returnHumAirCode(const char* Code) {
-    if (!strcmp(Code, "GIVEN_TDP"))
+    if (strcmp(Code, "GIVEN_TDP") == 0) {
         return GIVEN_TDP;
-    else if (!strcmp(Code, "GIVEN_HUMRAT"))
+    } else if (strcmp(Code, "GIVEN_HUMRAT") == 0) {
         return GIVEN_HUMRAT;
-    else if (!strcmp(Code, "GIVEN_TWB"))
+    } else if (strcmp(Code, "GIVEN_TWB") == 0) {
         return GIVEN_TWB;
-    else if (!strcmp(Code, "GIVEN_RH"))
+    } else if (strcmp(Code, "GIVEN_RH") == 0) {
         return GIVEN_RH;
-    else if (!strcmp(Code, "GIVEN_ENTHALPY"))
+    } else if (strcmp(Code, "GIVEN_ENTHALPY") == 0) {
         return GIVEN_ENTHALPY;
-    else {
+    } else {
         fprintf(stderr, "Code to returnHumAirCode in HumAir.c [%s] not understood", Code);
         return -1;
     }
 }
+
 double Viscosity(double T, double p, double psi_w) {
     /*
     Using the method of:
@@ -820,17 +870,16 @@ double Viscosity(double T, double p, double psi_w) {
 
     but using the detailed measurements for pure fluid from IAPWS formulations
     */
-    double mu_a, mu_w, Phi_av, Phi_va, Ma, Mw;
-    Mw = MM_Water();
-    Ma = MM_Air();
+    double Mw = MM_Water();
+    double Ma = MM_Air();
     // Viscosity of dry air at dry-bulb temp and total pressure
     Air->update(CoolProp::PT_INPUTS, p, T);
-    mu_a = Air->keyed_output(CoolProp::iviscosity);
+    double mu_a = Air->keyed_output(CoolProp::iviscosity);
     // Saturated water vapor of pure water at total pressure
     Water->update(CoolProp::PQ_INPUTS, p, 1);
-    mu_w = Water->keyed_output(CoolProp::iviscosity);
-    Phi_av = sqrt(2.0) / 4.0 * pow(1 + Ma / Mw, -0.5) * pow(1 + sqrt(mu_a / mu_w) * pow(Mw / Ma, 0.25), 2);  //[-]
-    Phi_va = sqrt(2.0) / 4.0 * pow(1 + Mw / Ma, -0.5) * pow(1 + sqrt(mu_w / mu_a) * pow(Ma / Mw, 0.25), 2);  //[-]
+    double mu_w = Water->keyed_output(CoolProp::iviscosity);
+    double Phi_av = sqrt(2.0) / 4.0 * pow(1 + Ma / Mw, -0.5) * pow(1 + sqrt(mu_a / mu_w) * pow(Mw / Ma, 0.25), 2);  //[-]
+    double Phi_va = sqrt(2.0) / 4.0 * pow(1 + Mw / Ma, -0.5) * pow(1 + sqrt(mu_w / mu_a) * pow(Ma / Mw, 0.25), 2);  //[-]
     return (1 - psi_w) * mu_a / ((1 - psi_w) + psi_w * Phi_av) + psi_w * mu_w / (psi_w + (1 - psi_w) * Phi_va);
 }
 double Conductivity(double T, double p, double psi_w) {
@@ -841,20 +890,19 @@ double Conductivity(double T, double p, double psi_w) {
 
     but using the detailed measurements for pure fluid from IAPWS formulations
     */
-    double mu_a, mu_w, k_a, k_w, Phi_av, Phi_va, Ma, Mw;
-    Mw = MM_Water();
-    Ma = MM_Air();
+    double Mw = MM_Water();
+    double Ma = MM_Air();
 
     // Viscosity of dry air at dry-bulb temp and total pressure
     Air->update(CoolProp::PT_INPUTS, p, T);
-    mu_a = Air->keyed_output(CoolProp::iviscosity);
-    k_a = Air->keyed_output(CoolProp::iconductivity);
+    double mu_a = Air->keyed_output(CoolProp::iviscosity);
+    double k_a = Air->keyed_output(CoolProp::iconductivity);
     // Conductivity of saturated pure water at total pressure
     Water->update(CoolProp::PQ_INPUTS, p, 1);
-    mu_w = Water->keyed_output(CoolProp::iviscosity);
-    k_w = Water->keyed_output(CoolProp::iconductivity);
-    Phi_av = sqrt(2.0) / 4.0 * pow(1 + Ma / Mw, -0.5) * pow(1 + sqrt(mu_a / mu_w) * pow(Mw / Ma, 0.25), 2);  //[-]
-    Phi_va = sqrt(2.0) / 4.0 * pow(1 + Mw / Ma, -0.5) * pow(1 + sqrt(mu_w / mu_a) * pow(Ma / Mw, 0.25), 2);  //[-]
+    double mu_w = Water->keyed_output(CoolProp::iviscosity);
+    double k_w = Water->keyed_output(CoolProp::iconductivity);
+    double Phi_av = sqrt(2.0) / 4.0 * pow(1 + Ma / Mw, -0.5) * pow(1 + sqrt(mu_a / mu_w) * pow(Mw / Ma, 0.25), 2);  //[-]
+    double Phi_va = sqrt(2.0) / 4.0 * pow(1 + Mw / Ma, -0.5) * pow(1 + sqrt(mu_w / mu_a) * pow(Ma / Mw, 0.25), 2);  //[-]
     return (1 - psi_w) * k_a / ((1 - psi_w) + psi_w * Phi_av) + psi_w * k_w / (psi_w + (1 - psi_w) * Phi_va);
 }
 /**
@@ -865,23 +913,26 @@ double Conductivity(double T, double p, double psi_w) {
  */
 double MolarVolume(double T, double p, double psi_w) {
     // Output in m^3/mol_ha
-    int iter;
-    double v_bar0, v_bar = 0, R_bar = 8.314472, x1 = 0, x2 = 0, x3, y1 = 0, y2, resid, eps, Bm, Cm;
+    double v_bar = 0;
+    double R_bar = 8.314472;
+    double x1 = 0;
+    double x2 = 0;
+    double y1 = 0;
 
     // -----------------------------
     // Iteratively find molar volume
     // -----------------------------
 
     // Start by assuming it is an ideal gas to get initial guess
-    v_bar0 = R_bar * T / p;  // [m^3/mol_ha]
+    double v_bar0 = R_bar * T / p;  // [m^3/mol_ha]
 
     // Bring outside the loop since not a function of v_bar
-    Bm = B_m(T, psi_w);
-    Cm = C_m(T, psi_w);
+    double Bm = B_m(T, psi_w);
+    double Cm = C_m(T, psi_w);
 
-    iter = 1;
-    eps = 1e-11;
-    resid = 999;
+    int iter = 1;
+    double eps = 1e-11;
+    double resid = 999;
     while ((iter <= 3 || std::abs(resid) > eps) && iter < 100) {
         if (iter == 1) {
             x1 = v_bar0;
@@ -902,8 +953,8 @@ double MolarVolume(double T, double p, double psi_w) {
             y1 = resid;
         }
         if (iter > 1) {
-            y2 = resid;
-            x3 = x2 - y2 / (y2 - y1) * (x2 - x1);
+            double y2 = resid;
+            double x3 = x2 - y2 / (y2 - y1) * (x2 - x1);
             y1 = y2;
             x1 = x2;
             x2 = x3;
@@ -919,31 +970,30 @@ double Pressure(double T, double v_bar, double psi_w) {
     return (R_bar)*T / v_bar * (1 + Bm / v_bar + Cm / (v_bar * v_bar));
 }
 double IdealGasMolarEnthalpy_Water(double T, double p) {
-    double hbar_w_0, tau, hbar_w;
     // Ideal-Gas contribution to enthalpy of water
-    hbar_w_0 = -0.01102303806;  //[J/mol]
+    double hbar_w_0 = -0.01102303806;  //[J/mol]
 
     // Calculate the offset in the water enthalpy from a given state with a known (desired) enthalpy
-    double Tref = 473.15, vmolarref = 0.038837428192186184, href = 51885.582451893446;
+    double Tref = 473.15;
+    double vmolarref = 0.038837428192186184;
+    double href = 51885.582451893446;
     Water->update(CoolProp::DmolarT_INPUTS, 1 / vmolarref, Tref);
     double tauref = Water->keyed_output(CoolProp::iT_reducing) / Tref;  //[no units]
     double href_EOS = R_bar * Tref * (1 + tauref * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
     double hoffset = href - href_EOS;
 
-    tau = Water->keyed_output(CoolProp::iT_reducing) / T;
+    double tau = Water->keyed_output(CoolProp::iT_reducing) / T;
     Water->specify_phase(CoolProp::iphase_gas);
     Water->update_DmolarT_direct(p / (R_bar * T), T);
     Water->unspecify_phase();
-    hbar_w = hbar_w_0 + hoffset + R_bar * T * (1 + tau * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
+    double hbar_w = hbar_w_0 + hoffset + R_bar * T * (1 + tau * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
     return hbar_w;
 }
 double IdealGasMolarEntropy_Water(double T, double p) {
-
     // Serious typo in RP-1485 - should use total pressure rather than
     // reference pressure in density calculation for water vapor molar entropy
 
-    double sbar_w, tau, R_bar;
-    R_bar = 8.314371;  //[J/mol/K]
+    double R_bar = 8.314371;  //[J/mol/K]
 
     // Calculate the offset in the water entropy from a given state with a known (desired) entropy
     double Tref = 473.15, pref = 101325, sref = 141.18297895840303;
@@ -953,36 +1003,39 @@ double IdealGasMolarEntropy_Water(double T, double p) {
     double soffset = sref - sref_EOS;
 
     // Now calculate it based on the given inputs
-    tau = Water->keyed_output(CoolProp::iT_reducing) / T;
+    double tau = Water->keyed_output(CoolProp::iT_reducing) / T;
     Water->specify_phase(CoolProp::iphase_gas);
     Water->update(CoolProp::DmolarT_INPUTS, p / (R_bar * T), T);
     Water->unspecify_phase();
-    sbar_w =
+    double sbar_w =
       soffset + R_bar * (tau * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta) - Water->keyed_output(CoolProp::ialpha0));  //[kJ/kmol/K]
     return sbar_w;
 }
 double IdealGasMolarEnthalpy_Air(double T, double p) {
-    double hbar_a_0, tau, hbar_a, R_bar_Lemmon;
     // Ideal-Gas contribution to enthalpy of air
-    hbar_a_0 = -7914.149298;  //[J/mol]
+    double hbar_a_0 = -7914.149298;  //[J/mol]
 
-    R_bar_Lemmon = 8.314510;  //[J/mol/K]
+    const double R_bar_Lemmon = 8.314510;  //[J/mol/K]
     // Calculate the offset in the air enthalpy from a given state with a known (desired) enthalpy
-    double Tref = 473.15, vmolarref = 0.038837428192186184, href = 13782.240592933371;
+    double Tref = 473.15;
+    double vmolarref = 0.038837428192186184;
+    double href = 13782.240592933371;
     Air->update(CoolProp::DmolarT_INPUTS, 1 / vmolarref, Tref);
     double tauref = 132.6312 / Tref;  //[no units]
     double href_EOS = R_bar_Lemmon * Tref * (1 + tauref * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta));
     double hoffset = href - href_EOS;
 
     // Tj is given by 132.6312 K
-    tau = 132.6312 / T;
+    double tau = 132.6312 / T;
     // Now calculate it based on the given inputs
     Air->specify_phase(CoolProp::iphase_gas);
     Air->update_DmolarT_direct(p / (R_bar * T), T);
     Air->unspecify_phase();
-    hbar_a = hbar_a_0 + hoffset + R_bar_Lemmon * T * (1 + tau * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta));  //[J/mol]
+    double hbar_a = hbar_a_0 + hoffset + R_bar_Lemmon * T * (1 + tau * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta));  //[J/mol]
     return hbar_a;
 }
+
+// TODO: I AM STOPPING HERE
 double IdealGasMolarEntropy_Air(double T, double vmolar_a) {
     double sbar_0_Lem, tau, sbar_a, R_bar_Lemmon = 8.314510, T0 = 273.15, p0 = 101325, vmolar_a_0;
 
@@ -1086,7 +1139,6 @@ double MassInternalEnergy_per_kgda(double T, double p, double psi_w) {
  @returns s_ha Mixture molar entropy on a humid air basis in J/mol_ha/K
  */
 double MolarEntropy(double T, double p, double psi_w, double v_bar) {
-
     // vbar (molar volume) in m^3/mol
     double x1 = 0, x2 = 0, x3 = 0, y1 = 0, y2 = 0, eps = 1e-8, f = 999, R_bar_Lem = 8.314510;
     int iter = 1;
@@ -1653,9 +1705,9 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
         else if ((key = get_input_key(input_keys, GIVEN_TDP)) >= 0) {
         }  // Dewpoint temperature is given
         else {
-            throw CoolProp::ValueError(
-              "Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, "
-              "or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now");
+            throw CoolProp::ValueError("Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative "
+                                       "humidity, humidity ratio, or "
+                                       "dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now");
         }
         // Don't allow inputs that have two water inputs
         int number_of_water_content_inputs =
@@ -1938,7 +1990,7 @@ double HAPropsSI(const std::string& OutputName, const std::string& Input1Name, d
 
         // Check the input values
         double min_val = _HUGE, max_val = -_HUGE;  // Initialize with invalid values
-        for (std::size_t i = 0; i < input_keys.size(); i++) {
+        for (std::size_t i = 0; i < input_keys.size(); ++i) {
             if (!check_bounds(input_keys[i], input_vals[i], min_val, max_val)) {
                 throw CoolProp::ValueError(format("The input for key (%d) with value (%g) is outside the range of validity: (%g) to (%g)",
                                                   input_keys[i], input_vals[i], min_val, max_val));
