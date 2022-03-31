@@ -15,9 +15,9 @@
   @param libraryName Library name
   @param substanceName Substance name
 */
-double TwoPhaseMedium_getMolarMass_C_impl(const char *mediumName, const char *libraryName, const char *substanceName){
-	// Return molar mass
-	return SolverMap::getSolver(mediumName, libraryName, substanceName)->molarMass();
+double TwoPhaseMedium_getMolarMass_C_impl(const char* mediumName, const char* libraryName, const char* substanceName) {
+    // Return molar mass
+    return SolverMap::getSolver(mediumName, libraryName, substanceName)->molarMass();
 }
 
 //! Get critical temperature
@@ -27,9 +27,9 @@ double TwoPhaseMedium_getMolarMass_C_impl(const char *mediumName, const char *li
   @param libraryName Library name
   @param substanceName Substance name
 */
-double TwoPhaseMedium_getCriticalTemperature_C_impl(const char *mediumName, const char *libraryName, const char *substanceName){
-	// Return critical temperature
-	return SolverMap::getSolver(mediumName, libraryName, substanceName)->criticalTemperature();
+double TwoPhaseMedium_getCriticalTemperature_C_impl(const char* mediumName, const char* libraryName, const char* substanceName) {
+    // Return critical temperature
+    return SolverMap::getSolver(mediumName, libraryName, substanceName)->criticalTemperature();
 }
 
 //! Get critical pressure
@@ -39,9 +39,9 @@ double TwoPhaseMedium_getCriticalTemperature_C_impl(const char *mediumName, cons
   @param libraryName Library name
   @param substanceName Substance name
 */
-double TwoPhaseMedium_getCriticalPressure_C_impl(const char *mediumName, const char *libraryName, const char *substanceName){
-	// Return critical pressure
-	return SolverMap::getSolver(mediumName, libraryName, substanceName)->criticalPressure();
+double TwoPhaseMedium_getCriticalPressure_C_impl(const char* mediumName, const char* libraryName, const char* substanceName) {
+    // Return critical pressure
+    return SolverMap::getSolver(mediumName, libraryName, substanceName)->criticalPressure();
 }
 
 //! Get critical molar volume
@@ -51,9 +51,9 @@ double TwoPhaseMedium_getCriticalPressure_C_impl(const char *mediumName, const c
   @param libraryName Library name
   @param substanceName Substance name
 */
-double TwoPhaseMedium_getCriticalMolarVolume_C_impl(const char *mediumName, const char *libraryName, const char *substanceName){
-	// Return critical molar volume
-	return SolverMap::getSolver(mediumName, libraryName, substanceName)->criticalMolarVolume();
+double TwoPhaseMedium_getCriticalMolarVolume_C_impl(const char* mediumName, const char* libraryName, const char* substanceName) {
+    // Return critical molar volume
+    return SolverMap::getSolver(mediumName, libraryName, substanceName)->criticalMolarVolume();
 }
 
 //! Compute properties from p, h, and phase
@@ -67,9 +67,9 @@ double TwoPhaseMedium_getCriticalMolarVolume_C_impl(const char *mediumName, cons
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setState_ph_C_impl(double p, double h, int phase, ExternalThermodynamicState *state,
-								 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setState_ph_C_impl(double p, double h, int phase, ExternalThermodynamicState* state, const char* mediumName,
+                                       const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setState_ph(p, h, phase, state);
 }
 
@@ -85,9 +85,9 @@ void TwoPhaseMedium_setState_ph_C_impl(double p, double h, int phase, ExternalTh
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setState_pT_C_impl(double p, double T, ExternalThermodynamicState *state,
-								 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setState_pT_C_impl(double p, double T, ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                       const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setState_pT(p, T, state);
 }
 
@@ -102,9 +102,9 @@ void TwoPhaseMedium_setState_pT_C_impl(double p, double T, ExternalThermodynamic
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setState_dT_C_impl(double d, double T, int phase, ExternalThermodynamicState *state,
-								 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setState_dT_C_impl(double d, double T, int phase, ExternalThermodynamicState* state, const char* mediumName,
+                                       const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setState_dT(d, T, phase, state);
 }
 
@@ -119,9 +119,9 @@ void TwoPhaseMedium_setState_dT_C_impl(double d, double T, int phase, ExternalTh
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setState_ps_C_impl(double p, double s, int phase, ExternalThermodynamicState *state,
-								 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setState_ps_C_impl(double p, double s, int phase, ExternalThermodynamicState* state, const char* mediumName,
+                                       const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setState_ps(p, s, phase, state);
 }
 
@@ -129,9 +129,9 @@ void TwoPhaseMedium_setState_ps_C_impl(double p, double s, int phase, ExternalTh
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_prandtlNumber_C_impl(ExternalThermodynamicState *state,
-									 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_prandtlNumber_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                           const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->Pr(state);
 }
 
@@ -139,9 +139,9 @@ double TwoPhaseMedium_prandtlNumber_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_temperature_C_impl(ExternalThermodynamicState *state,
-								   const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_temperature_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                         const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->T(state);
 }
 
@@ -149,9 +149,9 @@ double TwoPhaseMedium_temperature_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_velocityOfSound_C_impl(ExternalThermodynamicState *state,
-									   const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_velocityOfSound_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                             const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->a(state);
 }
 
@@ -159,9 +159,9 @@ double TwoPhaseMedium_velocityOfSound_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_isobaricExpansionCoefficient_C_impl(ExternalThermodynamicState *state,
-													const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_isobaricExpansionCoefficient_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                                          const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->beta(state);
 }
 
@@ -169,9 +169,9 @@ double TwoPhaseMedium_isobaricExpansionCoefficient_C_impl(ExternalThermodynamicS
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_specificHeatCapacityCp_C_impl(ExternalThermodynamicState *state,
-											  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_specificHeatCapacityCp_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                                    const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->cp(state);
 }
 
@@ -179,9 +179,9 @@ double TwoPhaseMedium_specificHeatCapacityCp_C_impl(ExternalThermodynamicState *
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_specificHeatCapacityCv_C_impl(ExternalThermodynamicState *state,
-											  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_specificHeatCapacityCv_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                                    const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->cv(state);
 }
 
@@ -189,9 +189,8 @@ double TwoPhaseMedium_specificHeatCapacityCv_C_impl(ExternalThermodynamicState *
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_density_C_impl(ExternalThermodynamicState *state,
-							   const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_density_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->d(state);
 }
 
@@ -199,9 +198,9 @@ double TwoPhaseMedium_density_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_density_derh_p_C_impl(ExternalThermodynamicState *state,
-									  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_density_derh_p_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                            const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->ddhp(state);
 }
 
@@ -209,9 +208,9 @@ double TwoPhaseMedium_density_derh_p_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_density_derp_h_C_impl(ExternalThermodynamicState *state,
-									  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_density_derp_h_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                            const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->ddph(state);
 }
 
@@ -219,9 +218,9 @@ double TwoPhaseMedium_density_derp_h_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dynamicViscosity_C_impl(ExternalThermodynamicState *state,
-										const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dynamicViscosity_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                              const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->eta(state);
 }
 
@@ -229,9 +228,9 @@ double TwoPhaseMedium_dynamicViscosity_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_specificEnthalpy_C_impl(ExternalThermodynamicState *state,
-										const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_specificEnthalpy_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                              const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->h(state);
 }
 
@@ -239,9 +238,9 @@ double TwoPhaseMedium_specificEnthalpy_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_isothermalCompressibility_C_impl(ExternalThermodynamicState *state,
-												 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_isothermalCompressibility_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                                       const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->kappa(state);
 }
 
@@ -249,9 +248,9 @@ double TwoPhaseMedium_isothermalCompressibility_C_impl(ExternalThermodynamicStat
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_thermalConductivity_C_impl(ExternalThermodynamicState *state,
-										   const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_thermalConductivity_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                                 const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->lambda(state);
 }
 
@@ -259,9 +258,8 @@ double TwoPhaseMedium_thermalConductivity_C_impl(ExternalThermodynamicState *sta
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_pressure_C_impl(ExternalThermodynamicState *state,
-								const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_pressure_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->p(state);
 }
 
@@ -269,9 +267,9 @@ double TwoPhaseMedium_pressure_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_specificEntropy_C_impl(ExternalThermodynamicState *state,
-									   const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_specificEntropy_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                             const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->s(state);
 }
 
@@ -279,16 +277,16 @@ double TwoPhaseMedium_specificEntropy_C_impl(ExternalThermodynamicState *state,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_density_ph_der_C_impl(ExternalThermodynamicState *state,
-									  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_density_ph_der_C_impl(ExternalThermodynamicState* state, const char* mediumName, const char* libraryName,
+                                            const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->d_der(state);
 }
 
 //! Return the enthalpy at pressure p after an isentropic transformation from the specified medium state
-double TwoPhaseMedium_isentropicEnthalpy_C_impl(double p_downstream, ExternalThermodynamicState *refState,
-										  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_isentropicEnthalpy_C_impl(double p_downstream, ExternalThermodynamicState* refState, const char* mediumName,
+                                                const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->isentropicEnthalpy(p_downstream, refState);
 }
 
@@ -301,9 +299,9 @@ double TwoPhaseMedium_isentropicEnthalpy_C_impl(double p_downstream, ExternalThe
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setSat_p_C_impl(double p, ExternalSaturationProperties *sat,
-							  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setSat_p_C_impl(double p, ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                    const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setSat_p(p, sat);
 }
 
@@ -316,9 +314,9 @@ void TwoPhaseMedium_setSat_p_C_impl(double p, ExternalSaturationProperties *sat,
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setSat_T_C_impl(double T, ExternalSaturationProperties *sat,
-							  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setSat_T_C_impl(double T, ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                    const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setSat_T(T, sat);
 }
 
@@ -332,9 +330,9 @@ void TwoPhaseMedium_setSat_T_C_impl(double T, ExternalSaturationProperties *sat,
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setBubbleState_C_impl(ExternalSaturationProperties *sat, int phase, ExternalThermodynamicState *state,
-									const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setBubbleState_C_impl(ExternalSaturationProperties* sat, int phase, ExternalThermodynamicState* state, const char* mediumName,
+                                          const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setBubbleState(sat, phase, state);
 }
 
@@ -348,35 +346,35 @@ void TwoPhaseMedium_setBubbleState_C_impl(ExternalSaturationProperties *sat, int
   @param libraryName Library name
   @param substanceName Substance name
 */
-void TwoPhaseMedium_setDewState_C_impl(ExternalSaturationProperties *sat, int phase, ExternalThermodynamicState *state,
-								 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+void TwoPhaseMedium_setDewState_C_impl(ExternalSaturationProperties* sat, int phase, ExternalThermodynamicState* state, const char* mediumName,
+                                       const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     solver->setDewState(sat, phase, state);
 }
 
 //! Compute saturation temperature for specified medium and pressure
-double TwoPhaseMedium_saturationTemperature_C_impl(double p, const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_saturationTemperature_C_impl(double p, const char* mediumName, const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     ExternalSaturationProperties sat;
-	solver->setSat_p(p, &sat);
-	return sat.Tsat;
+    solver->setSat_p(p, &sat);
+    return sat.Tsat;
 }
 
 //! Compute derivative of saturation temperature for specified medium and pressure
-double TwoPhaseMedium_saturationTemperature_derp_C_impl(double p, const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_saturationTemperature_derp_C_impl(double p, const char* mediumName, const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     ExternalSaturationProperties sat;
-	solver->setSat_p(p, &sat);
-	return sat.dTp;
+    solver->setSat_p(p, &sat);
+    return sat.dTp;
 }
 
 //! Return derivative of saturation temperature of specified medium from saturation properties
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_saturationTemperature_derp_sat_C_impl(ExternalSaturationProperties *sat,
-													  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_saturationTemperature_derp_sat_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                                            const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->dTp(sat);
 }
 
@@ -384,9 +382,9 @@ double TwoPhaseMedium_saturationTemperature_derp_sat_C_impl(ExternalSaturationPr
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dBubbleDensity_dPressure_C_impl(ExternalSaturationProperties *sat,
-												const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dBubbleDensity_dPressure_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                                      const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->ddldp(sat);
 }
 
@@ -394,9 +392,9 @@ double TwoPhaseMedium_dBubbleDensity_dPressure_C_impl(ExternalSaturationProperti
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dDewDensity_dPressure_C_impl(ExternalSaturationProperties *sat,
-											 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dDewDensity_dPressure_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                                   const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->ddvdp(sat);
 }
 
@@ -404,9 +402,9 @@ double TwoPhaseMedium_dDewDensity_dPressure_C_impl(ExternalSaturationProperties 
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dBubbleEnthalpy_dPressure_C_impl(ExternalSaturationProperties *sat,
-												 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dBubbleEnthalpy_dPressure_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                                       const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->dhldp(sat);
 }
 
@@ -414,9 +412,9 @@ double TwoPhaseMedium_dBubbleEnthalpy_dPressure_C_impl(ExternalSaturationPropert
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dDewEnthalpy_dPressure_C_impl(ExternalSaturationProperties *sat,
-											  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dDewEnthalpy_dPressure_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                                    const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->dhvdp(sat);
 }
 
@@ -424,9 +422,9 @@ double TwoPhaseMedium_dDewEnthalpy_dPressure_C_impl(ExternalSaturationProperties
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_bubbleDensity_C_impl(ExternalSaturationProperties *sat,
-									 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_bubbleDensity_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                           const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->dl(sat);
 }
 
@@ -434,9 +432,9 @@ double TwoPhaseMedium_bubbleDensity_C_impl(ExternalSaturationProperties *sat,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dewDensity_C_impl(ExternalSaturationProperties *sat,
-								  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dewDensity_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                        const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->dv(sat);
 }
 
@@ -444,9 +442,9 @@ double TwoPhaseMedium_dewDensity_C_impl(ExternalSaturationProperties *sat,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_bubbleEnthalpy_C_impl(ExternalSaturationProperties *sat,
-									  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_bubbleEnthalpy_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                            const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->hl(sat);
 }
 
@@ -454,9 +452,9 @@ double TwoPhaseMedium_bubbleEnthalpy_C_impl(ExternalSaturationProperties *sat,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dewEnthalpy_C_impl(ExternalSaturationProperties *sat,
-								   const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dewEnthalpy_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                         const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->hv(sat);
 }
 
@@ -464,20 +462,20 @@ double TwoPhaseMedium_dewEnthalpy_C_impl(ExternalSaturationProperties *sat,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_saturationPressure_C_impl(double T, const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_saturationPressure_C_impl(double T, const char* mediumName, const char* libraryName, const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     ExternalSaturationProperties sat;
-	solver->setSat_T(T, &sat);
-	return sat.psat;
+    solver->setSat_T(T, &sat);
+    return sat.psat;
 }
 
 //! Return surface tension of specified medium
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_surfaceTension_C_impl(ExternalSaturationProperties *sat,
-									  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_surfaceTension_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                            const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->sigma(sat);
 }
 
@@ -485,9 +483,9 @@ double TwoPhaseMedium_surfaceTension_C_impl(ExternalSaturationProperties *sat,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_bubbleEntropy_C_impl(ExternalSaturationProperties *sat,
-									 const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_bubbleEntropy_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                           const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->sl(sat);
 }
 
@@ -495,8 +493,8 @@ double TwoPhaseMedium_bubbleEntropy_C_impl(ExternalSaturationProperties *sat,
 /*! Note: This function is not used by the default implementation of ExternalTwoPhaseMedium class.
     It might be used by external medium models customized solvers redeclaring the default functions
 */
-double TwoPhaseMedium_dewEntropy_C_impl(ExternalSaturationProperties *sat,
-								  const char *mediumName, const char *libraryName, const char *substanceName){
-	BaseSolver *solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
+double TwoPhaseMedium_dewEntropy_C_impl(ExternalSaturationProperties* sat, const char* mediumName, const char* libraryName,
+                                        const char* substanceName) {
+    BaseSolver* solver = SolverMap::getSolver(mediumName, libraryName, substanceName);
     return solver->sv(sat);
 }
