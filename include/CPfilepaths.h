@@ -11,26 +11,26 @@ std::string get_separator(void);
 std::string get_home_dir(void);
 
 /// Return true if path exists
-bool path_exists(const std::string &path);
+bool path_exists(const std::string& path);
 
 /// Return merged path, append separator if string two is empty
-std::string join_path(const std::string &one, const std::string &two);
+std::string join_path(const std::string& one, const std::string& two);
 
 /// Make directory and all required intermediate directories
 void make_dirs(std::string file_path);
 
 /// Get the size of a directory in bytes
 #if defined(__ISWINDOWS__)
-unsigned long long CalculateDirSize(const std::wstring &path, std::vector<std::wstring> *errVect = NULL);
+unsigned long long CalculateDirSize(const std::wstring& path, std::vector<std::wstring>* errVect = NULL);
 #else
-unsigned long long CalculateDirSize(const std::string &path);
+unsigned long long CalculateDirSize(const std::string& path);
 #endif
 
 // Get all the contents of a file and dump into a STL string
 // Thanks to http://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-std::string get_file_contents(const char *filename);
+std::string get_file_contents(const char* filename);
 
 /// Get all the contents of a binary file
-std::vector<char> get_binary_file_contents(const char *filename);
+std::vector<char> get_binary_file_contents(const char* filename);
 
 #endif

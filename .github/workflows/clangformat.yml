@@ -1,0 +1,28 @@
+name: Clang Format
+
+on:
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0   # Fetch all history (especially branches)
+
+    - name: Run clang-format against C++ files touched by the PR
+      shell: bash
+      run: |
+          echo "GITHUB_REF=$GITHUB_REF GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
+          git fetch --all
+          clang-format --version
+          ./dev/ci/clang-format.sh remotes/origin/$GITHUB_HEAD_REF remotes/origin/$GITHUB_BASE_REF
+
+    - name: Upload clang-format patch as artifact
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+          name: CoolProp-${{ github.sha }}-clang_format.patch
+          path: clang_format.patch
