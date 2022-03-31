@@ -174,7 +174,7 @@ jobs:
           v=$(python dev/extract_version.py)
           echo "Found next available version on TestPyPi: $v"
         fi
-        sed -i "s/version=version,/version='$v'/g" wrappers/Python/setup.py
+        sed -i "s/version=version,/version='$v',/g" wrappers/Python/setup.py
 
     - name: Build and test wheels
       env:
