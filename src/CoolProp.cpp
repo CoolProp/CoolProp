@@ -78,13 +78,44 @@ void set_error_string(const std::string& error) {
     error_string = error;
 }
 
-struct BackendAndFluid
-{
-    std::string backend;
-    std::string fluid;
-};
-
-BackendAndFluid extract_backend(std::string fluid_string) {
+// TODO: this would be better like this
+// struct BackendAndFluid
+// {
+//   std::string backend;
+//   std::string fluid;
+// };
+//
+// BackendAndFluid extract_backend(std::string fluid_string) {
+//   // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start
+//   // the fluid_string, replace them with "REFPROP::"
+//   if (fluid_string.find("REFPROP-MIX:") == 0) {
+//     fluid_string.replace(0, 12, "REFPROP::");
+//   }
+//   if (fluid_string.find("REFPROP-") == 0) {
+//     fluid_string.replace(0, 8, "REFPROP::");
+//   }
+//
+//   BackendAndFluid result;
+//
+//   // if the string has "BACKEND::*" format where * signifies a wildcard
+//   std::size_t i = fluid_string.find("::");
+//   if (i != std::string::npos) {
+//     // Part without the ::
+//     result.backend = fluid_string.substr(0, i);
+//     // Fluid name after the ::
+//     result.fluid = fluid_string.substr(i + 2);
+//   } else {
+//     result.backend = "?";
+//     result.fluid = fluid_string;
+//   }
+//   if (get_debug_level() > 10) {
+//     std::cout << format("%s:%d: backend extracted. backend: %s. fluid: %s\n", __FILE__, __LINE__, result.backend.c_str(), result.fluid.c_str());
+//   }
+//
+//   return result;
+// }
+//
+void extract_backend(std::string fluid_string, std::string& backend, std::string& fluid) {
     // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start
     // the fluid_string, replace them with "REFPROP::"
     if (fluid_string.find("REFPROP-MIX:") == 0) {
@@ -94,24 +125,20 @@ BackendAndFluid extract_backend(std::string fluid_string) {
         fluid_string.replace(0, 8, "REFPROP::");
     }
 
-    BackendAndFluid result;
-
     // if the string has "BACKEND::*" format where * signifies a wildcard
     std::size_t i = fluid_string.find("::");
     if (i != std::string::npos) {
         // Part without the ::
-        result.backend = fluid_string.substr(0, i);
+        backend = fluid_string.substr(0, i);
         // Fluid name after the ::
-        result.fluid = fluid_string.substr(i + 2);
+        fluid = fluid_string.substr(i + 2);
     } else {
-        result.backend = "?";
-        result.fluid = fluid_string;
+        backend = "?";
+        fluid = fluid_string;
     }
     if (get_debug_level() > 10) {
-        std::cout << format("%s:%d: backend extracted. backend: %s. fluid: %s\n", __FILE__, __LINE__, result.backend.c_str(), result.fluid.c_str());
+        std::cout << format("%s:%d: backend extracted. backend: %s. fluid: %s\n", __FILE__, __LINE__, backend.c_str(), fluid.c_str());
     }
-
-    return result;
 }
 
 bool has_fractions_in_string(const std::string& fluid_string) {
@@ -646,13 +673,15 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
         // BEGIN OF TRY
         // Here is the real code that is inside the try block
 
-        auto bf = extract_backend(FluidName);
+        std::string bf_backend;
+        std::string bf_fluid;
+        extract_backend(FluidName, bf_backend, bf_fluid);
 
         std::vector<double> fractions(1, 1.0);
         // extract_fractions checks for has_fractions_in_string / has_solution_concentration; no need to double check
-        std::string fluid_string = extract_fractions(bf.fluid, fractions);
+        std::string fluid_string = extract_fractions(bf_fluid, fractions);
         std::vector<std::vector<double>> IO;
-        _PropsSImulti(strsplit(Output, '&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), bf.backend,
+        _PropsSImulti(strsplit(Output, '&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), bf_backend,
                       strsplit(fluid_string, '&'), fractions, IO);
         if (IO.empty()) {
             throw ValueError(get_global_param_string("errstring"));
@@ -886,10 +915,12 @@ bool is_valid_fluid_string(const std::string& fluidstring) {
     try {
         std::vector<double> fractions;
         // First try to extract backend and fractions
-        auto bf = extract_backend(fluidstring);
-        std::string fluid_string = extract_fractions(bf.fluid, fractions);
+        std::string bf_backend;
+        std::string bf_fluid;
+        extract_backend(fluidstring, bf_backend, bf_fluid);
+        std::string fluid_string = extract_fractions(bf_fluid, fractions);
         // We are going to let the factory function load the state
-        shared_ptr<AbstractState> State(AbstractState::factory(bf.backend, fluid_string));
+        shared_ptr<AbstractState> State(AbstractState::factory(bf_backend, fluid_string));
         return true;
     } catch (...) {
         return false;
@@ -907,8 +938,10 @@ double saturation_ancillary(const std::string& fluid_name, const std::string& ou
     return HEOS.saturation_ancillary(iOutput, Q, iInput, value);
 }
 void set_reference_stateS(const std::string& FluidName, const std::string& reference_state) {
-    auto bf = extract_backend(FluidName);
-    if (bf.backend == "REFPROP") {
+    std::string bf_backend;
+    std::string bf_fluid;
+    extract_backend(FluidName, bf_backend, bf_fluid);
+    if (bf_backend == "REFPROP") {
 
         int ierr = 0;
         int ixflag = 1;
@@ -930,8 +963,8 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             strcpy(hrf, refstate);
         }
         REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
-    } else if (bf.backend == "HEOS" || bf.backend == "?") {
-        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, bf.fluid));
+    } else if (bf_backend == "HEOS" || bf_backend == "?") {
+        CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, bf_fluid));
         if (reference_state == "IIR") {
             if (HEOS.Ttriple() > 273.15) {
                 throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K", HEOS.Ttriple()));
@@ -944,7 +977,7 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
             double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass() * HEOS.get_reducing_state().T);
             // Change the value in the library for the given fluid
-            set_fluid_enthalpy_entropy_offset(bf.fluid, delta_a1, delta_a2, "IIR");
+            set_fluid_enthalpy_entropy_offset(bf_fluid, delta_a1, delta_a2, "IIR");
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
@@ -960,7 +993,7 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
             double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass() * HEOS.get_reducing_state().T);
             // Change the value in the library for the given fluid
-            set_fluid_enthalpy_entropy_offset(bf.fluid, delta_a1, delta_a2, "ASHRAE");
+            set_fluid_enthalpy_entropy_offset(bf_fluid, delta_a1, delta_a2, "ASHRAE");
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
@@ -976,14 +1009,14 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             double delta_a1 = deltas / (HEOS.gas_constant() / HEOS.molar_mass());
             double delta_a2 = -deltah / (HEOS.gas_constant() / HEOS.molar_mass() * HEOS.get_reducing_state().T);
             // Change the value in the library for the given fluid
-            set_fluid_enthalpy_entropy_offset(bf.fluid, delta_a1, delta_a2, "NBP");
+            set_fluid_enthalpy_entropy_offset(bf_fluid, delta_a1, delta_a2, "NBP");
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
         } else if (reference_state == "DEF") {
-            set_fluid_enthalpy_entropy_offset(bf.fluid, 0, 0, "DEF");
+            set_fluid_enthalpy_entropy_offset(bf_fluid, 0, 0, "DEF");
         } else if (reference_state == "RESET") {
-            set_fluid_enthalpy_entropy_offset(bf.fluid, 0, 0, "RESET");
+            set_fluid_enthalpy_entropy_offset(bf_fluid, 0, 0, "RESET");
         } else {
             throw ValueError(format("Reference state string is invalid: [%s]", reference_state.c_str()));
         }
@@ -1045,8 +1078,9 @@ std::string get_global_param_string(const std::string& ParamName) {
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to get_global_param_string", "[get_global_param_string]") {
     std::array<std::string, 8> good_inputs{
-      "version",        "gitrevision",        "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list",
-      "parameter_list", "predefined_mixtures"};
+      "version",        "gitrevision",         "fluids_list", "incompressible_list_pure", "incompressible_list_solution", "mixture_binary_pairs_list",
+      "parameter_list", "predefined_mixtures",
+    };
     std::ostringstream ss3c;
     for (const auto& good_input : good_inputs) {
         ss3c << "Test for" << good_input;
@@ -1058,8 +1092,10 @@ TEST_CASE("Check inputs to get_global_param_string", "[get_global_param_string]"
 };
 #endif
 std::string get_fluid_param_string(const std::string& FluidName, const std::string& ParamName) {
-    auto bf = extract_backend(FluidName);
-    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(bf.backend, bf.fluid));
+    std::string bf_backend;
+    std::string bf_fluid;
+    extract_backend(FluidName, bf_backend, bf_fluid);
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(bf_backend, bf_fluid));
     return AS->fluid_param_string(ParamName);
 }
 #if defined(ENABLE_CATCH)
