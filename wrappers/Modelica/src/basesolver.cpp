@@ -59,7 +59,7 @@ double BaseSolver::criticalEntropy() const {
   This function sets the fluid constants which are defined in the
   FluidConstants record in Modelica. It should be called when a new
   solver is created.
-  
+
   Must be re-implemented in the specific solver
 */
 void BaseSolver::setFluidConstants() {}
@@ -414,11 +414,11 @@ void BaseSolver::setSat_T(double& T, ExternalSaturationProperties* const propert
 
 //! Set bubble state
 /*!
-  This function sets the bubble state record bubbleProperties corresponding to the 
+  This function sets the bubble state record bubbleProperties corresponding to the
   saturation data contained in the properties record.
 
-  The default implementation of the setBubbleState function is relying on the correct 
-  behaviour of setState_ph with respect to the state input. Can be overridden 
+  The default implementation of the setBubbleState function is relying on the correct
+  behaviour of setState_ph with respect to the state input. Can be overridden
   in the specific solver code to get more efficient or correct handling of this situation.
   @param properties ExternalSaturationProperties record with saturation properties data
   @param phase Phase (1: one-phase, 2: two-phase)
@@ -431,11 +431,11 @@ void BaseSolver::setBubbleState(ExternalSaturationProperties* const properties, 
 
 //! Set dew state
 /*!
-  This function sets the dew state record dewProperties corresponding to the 
+  This function sets the dew state record dewProperties corresponding to the
   saturation data contained in the properties record.
 
-  The default implementation of the setDewState function is relying on the correct 
-  behaviour of setState_ph with respect to the state input. Can be overridden 
+  The default implementation of the setDewState function is relying on the correct
+  behaviour of setState_ph with respect to the state input. Can be overridden
   in the specific solver code to get more efficient or correct handling of this situation.
   @param properties ExternalSaturationProperties record with saturation properties data
   @param phase Phase (1: one-phase, 2: two-phase)
@@ -618,7 +618,7 @@ double BaseSolver::sv(ExternalSaturationProperties* const properties) {
 /*!
   This function computes the derivatives according to the Bridgman's table.
   The computed values are written to the two phase medium property struct.
-  This function can be called from within the setState_XX routines 
+  This function can be called from within the setState_XX routines
   when implementing a new solver. Please be aware that cp, beta and
   kappa have to be provided to allow the computation of the derivatives. It
   returns false if the computation failed.

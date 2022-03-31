@@ -13,8 +13,8 @@ namespace CoolProp {
 typedef std::vector<std::vector<CoolPropDbl>> STLMatrix;
 
 /** \brief The abstract base class for departure functions used in the excess part of the Helmholtz energy
- * 
- * The only code included in the ABC is the structure for the derivatives of the Helmholtz energy with 
+ *
+ * The only code included in the ABC is the structure for the derivatives of the Helmholtz energy with
  * the reduced density and reciprocal reduced temperature
  */
 class DepartureFunction
@@ -94,7 +94,7 @@ class DepartureFunction
 };
 
 /** \brief The departure function used by the GERG-2008 formulation
- * 
+ *
  * This departure function has a form like
  * \f[
  * \alphar^r_{ij} = \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}} + \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}}\exp[-\eta_{ij,k}(\delta-\varepsilon_{ij,k})^2-\beta_{ij,k}(\delta-\gamma_{ij,k})]
@@ -171,7 +171,7 @@ class GaussianExponentialDepartureFunction : public DepartureFunction
 };
 
 /** \brief A polynomial/exponential departure function
- * 
+ *
  * This departure function has a form like
  * \f[
  * \alpha^r_{ij} = \sum_k n_{ij,k}\delta^{d_{ij,k}}\tau^{t_{ij,k}}\exp(-\delta^{l_{ij,k}})

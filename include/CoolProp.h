@@ -66,7 +66,7 @@ void set_error_string(const std::string& error);
 void set_warning_string(const std::string& warning);
 
 /* \brief Extract a value from the saturation ancillary
-     * 
+     *
      * @param fluid_name The name of the fluid to be used - HelmholtzEOS backend only
      * @param output The desired output variable ("P" for instance for pressure)
      * @param Q The quality, 0 or 1
@@ -85,12 +85,12 @@ std::string get_global_param_string(const std::string& ParamName);
     /// @returns long element from global type enumeration
     long getFluidType(std::string FluidName);*/
 
-/** 
+/**
     \brief Get a string for a value from a fluid (numerical values for the fluid can be obtained from Props1SI function)
 
     @param FluidName The name of the fluid that is part of CoolProp, for instance "n-Propane"
     @param ParamName A string, can be in one of the terms described in the following table
-    
+
     ParamName                    | Description
     --------------------------   | ----------------------------------------
     "aliases"                    | A comma separated list of aliases for the fluid
@@ -100,15 +100,15 @@ std::string get_global_param_string(const std::string& ParamName);
     "Bibtex-XXX"                 | A BibTeX key, where XXX is one of the bibtex keys used in get_BibTeXKey
     "pure"                       | "true" if the fluid is pure, "false" otherwise
     "formula"                    | The chemical formula of the fluid in LaTeX form if available, "" otherwise
-    
+
     @returns The string, or an error message if not valid input
     */
 std::string get_fluid_param_string(const std::string& FluidName, const std::string& ParamName);
 
 /** \brief Check if the fluid name is valid
-     * 
+     *
      * @returns output Returns true if the fluid string is valid
-     * 
+     *
      * \note "gfreilgregre" -> false; "HEOS::Water" -> true; "Water" -> true
      *
      */
@@ -122,12 +122,12 @@ bool is_valid_fluid_string(const std::string& fluidstring);
      */
 bool add_fluids_as_JSON(const std::string& backend, const std::string& fluidstring);
 
-/** 
+/**
     \brief Set the reference state based on a string representation
-    
+
     @param FluidName The name of the fluid (Backend can be provided like "REFPROP::Water", or if no backend is provided, "HEOS" is the assumed backend)
-    @param reference_state The reference state to use, one of 
-    
+    @param reference_state The reference state to use, one of
+
     Reference State | Description
     -------------   | -------------------
     "IIR"           | h = 200 kJ/kg, s=1 kJ/kg/K at 0C saturated liquid
@@ -135,10 +135,10 @@ bool add_fluids_as_JSON(const std::string& backend, const std::string& fluidstri
     "NBP"           | h = 0, s = 0 @ 1.0 bar saturated liquid
     "DEF"           | Reset to the default reference state for the fluid
     "RESET"         | Remove the offset
-    
+
     The offset in the ideal gas Helmholtz energy can be obtained from
-    \f[ 
-    \displaystyle\frac{\Delta s}{R_u/M}+\frac{\Delta h}{(R_u/M)T}\tau 
+    \f[
+    \displaystyle\frac{\Delta s}{R_u/M}+\frac{\Delta h}{(R_u/M)T}\tau
     \f]
     where \f$ \Delta s = s-s_{spec} \f$ and \f$ \Delta h = h-h_{spec} \f$
     */

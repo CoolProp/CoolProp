@@ -8,17 +8,17 @@
 */
 
 extern void ModelicaMessage(const char* string);
-/* 
+/*
 Output the message string (no format control).
 */
 
 extern void ModelicaFormatMessage(const char* string, ...);
-/* 
+/*
 Output the message under the same format control as the C-function printf.
   */
 
 extern void ModelicaError(const char* string);
-/* 
+/*
 Output the error message string (no format control). This function
 never returns to the calling function, but handles the error
 similarly to an assert in the Modelica code.
@@ -32,7 +32,7 @@ but handles the error similarly to an assert in the Modelica code.
 */
 
 extern char* ModelicaAllocateString(size_t len);
-/* 
+/*
 Allocate memory for a Modelica string which is used as return
 argument of an external Modelica function. Note, that the storage
 for string arrays (= pointer to string array) is still provided by the

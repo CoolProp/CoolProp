@@ -3,7 +3,7 @@
  *
  * The actual implementation depends on the selected preprocessor
  * variable defined in include.h
- * 
+ *
  * Francesco Casella, Christoph Richter, Nov 2006
  ********************************************************************/
 

@@ -76,7 +76,7 @@ struct Component
      *
      * This container is intended to be sufficiently generic to allow the user to populate it with UNIFAC parameters from
      * any of the standard UNIFAC models
-     * 
+     *
      * Input of parameters (population) is done using JSON-formatted strings, and the class can be interrogated to return
      * the desired group information and/or interaction parameters
      */

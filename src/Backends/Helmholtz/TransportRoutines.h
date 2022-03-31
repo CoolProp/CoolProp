@@ -79,8 +79,8 @@ class TransportRoutines
     static CoolPropDbl viscosity_initial_density_dependence_Rainwater_Friend(HelmholtzEOSMixtureBackend& HEOS);
 
     /**
-     * \brief An empirical form for the initial density dependence 
-     * 
+     * \brief An empirical form for the initial density dependence
+     *
      * Given by the polynomial-like form
      * \f[
      *  \eta^1 = \sum_i n_i\delta^{d_i}\tau^{t_i}
@@ -107,7 +107,7 @@ class TransportRoutines
     static CoolPropDbl viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend& HEOS);
 
     /** \brief Viscosity hardcoded for Methanol
-     * 
+     *
      * From Xiang et al., A New Reference Correlation for the Viscosity of Methanol, J. Phys. Chem. Ref. Data, Vol. 35, No. 4, 2006
      */
     static CoolPropDbl viscosity_methanol_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
@@ -129,15 +129,15 @@ class TransportRoutines
 
     /**
      * @brief Higher-order viscosity term from friction theory of Sergio Quinones-Cisneros
-     * 
+     *
      * Several functional forms have been proposed and this function attempts to handle all of them
      * \f$ \eta_{HO} = \kappa_ap_a + \kappa_r\Delta p_r + \kappa_i p_{id}+\kappa_{aa}p_a^2 + \kappa_{drdr}\Delta p_r^2 + \kappa_{rr}p_{r}^2 + \kappa_{ii}p_{id}^2 +\kappa_{rrr}p_r^3 + \kappa_{aaa}p_a^3
-     * 
+     *
      * Watch out that sometimes it is \f$\Delta p_r\f$ and other times it is \f$p_r\f$!
-     * 
+     *
 	 * 1e5 for conversion from Pa -> bar
-	 * 
-     * \f[ p_r = T \frac{\partial p}{\partial T}\right|_{\rho}/1e5 \f] 
+	 *
+     * \f[ p_r = T \frac{\partial p}{\partial T}\right|_{\rho}/1e5 \f]
      * \f[ p_a = p - p_r \f]
      * \f[ p_{id} = \rho R T \f] / 1e5 \f]
      * \f[ \Delta p_r = p_r - p_{id} \f]
@@ -152,16 +152,16 @@ class TransportRoutines
      * \f[ \kappa_{aa} = (A_{aa,0} + F_{Aaa,1}\psi_1 + F.Aaa[2]\psi_2)\tau^{N_{aa}} \f]
      * \f[ \kappa_{rrr} = (A_{rrr,0} + A_{rrr,1}\psi_1 + A_{rrr,2}\psi_2)\tau^{N_{rrr}} \f]
      * \f[ \kappa_{aaa} = (A_{aaa,0} + A_{aaa,1}\psi_1 + A_{aaa,2}\psi_2)\tau^{N_{aaa}} \f]
-     * 
+     *
      * @param HEOS The instance to use
-     * @return 
+     * @return
      */
     static CoolPropDbl viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend& HEOS);
 
     /**
      * Implement the method of:
      *
-     * Chung, Ting Horng, et al. "Generalized multiparameter correlation for nonpolar and polar fluid transport properties." 
+     * Chung, Ting Horng, et al. "Generalized multiparameter correlation for nonpolar and polar fluid transport properties."
      * Industrial & engineering chemistry research 27(4) (1988): 671-679.
      */
     static CoolPropDbl viscosity_Chung(HelmholtzEOSMixtureBackend& HEOS);
@@ -274,7 +274,7 @@ class TransportRoutines
     static CoolPropDbl conductivity_ECS(HelmholtzEOSMixtureBackend& HEOS, HelmholtzEOSMixtureBackend& HEOS_Reference);
 
     /* \brief Solver for the conformal state for ECS model
-     * 
+     *
      */
     static void conformal_state_solver(HelmholtzEOSMixtureBackend& HEOS, HelmholtzEOSMixtureBackend& HEOS_Reference, CoolPropDbl& T0,
                                        CoolPropDbl& rhomolar0);

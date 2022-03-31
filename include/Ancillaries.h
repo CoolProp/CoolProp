@@ -58,25 +58,25 @@ class SurfaceTensionCorrelation
     }
 };
 /**
- * 
- * This is generalized class that can be used to manage an ancillary curve, 
+ *
+ * This is generalized class that can be used to manage an ancillary curve,
  * here they are ancillary curves for saturation pressure, density, enthalpy, entropy.
- * 
+ *
  * The form of the ancillary equation can take one of a number of forms:
- * 
+ *
  * a) So-called "exponential" form (type = TYPE_EXPONENTIAL) that has a form like
- * 
- * \f[ y = y_c\exp\left(\frac{T_c}{T}\sum(n_i \theta^{t_i})\right) \f] 
- * or 
+ *
+ * \f[ y = y_c\exp\left(\frac{T_c}{T}\sum(n_i \theta^{t_i})\right) \f]
+ * or
  * \f[ y = y_c\exp\left(\sum(n_i \theta^{t_i})\right) \f]
- * 
+ *
  * b) A non-exponential form (type = TYPE_NOT_EXPONENTIAL) that has a form of
  *
  * \f[ y = y_c\left(1+\sum_i(n_i\theta^t_i)\right) \f]
  * with
  * \f[ \theta = \left(1-\frac{T}{T_c}\right) \f]
  * which is conveniently equal to zero at the critical point
- * 
+ *
  * c) Rational polynomial form (type = TYPE_RATIONAL_POLYNOMIAL) that has a form of
  * \f[ y = \frac{\sum_iA_iT^i}{\sum_iB_iT^i}\f]
  * where i is an integer, and the coefficients are in increasing order in both numerator and denominator
@@ -190,7 +190,7 @@ struct MeltingLinePiecewisePolynomialInTrData
     std::vector<MeltingLinePiecewisePolynomialInTrSegment> parts;
 };
 
-/** 
+/**
  \brief The evaluator class for a melting curve formed of segments in the form
 
  \f[
@@ -242,7 +242,7 @@ class MeltingLineVariables
 
     MeltingLineVariables() : Tmin(_HUGE), Tmax(_HUGE), pmin(_HUGE), pmax(_HUGE), T_m(_HUGE), type(MELTING_LINE_NOT_SET){};
 
-    /** 
+    /**
      * \brief Evaluate the melting line
      * @param OF The output variable
      * @param GIVEN The given variable

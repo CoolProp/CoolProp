@@ -604,7 +604,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend& HEOS)
             }
             /*
             if (i == 0){
-                std::cout << format("betaT %10.9Lg gammaT %10.9Lg betaV %10.9Lg gammaV %10.9Lg %s",  
+                std::cout << format("betaT %10.9Lg gammaT %10.9Lg betaV %10.9Lg gammaV %10.9Lg %s",
                                     beta_T[i][j], gamma_T[i][j], beta_v[i][j], gamma_v[i][j], get_mixture_binary_pair_data(CAS[0],CAS[1],"gammaT").c_str()) << std::endl;
             }
             */
