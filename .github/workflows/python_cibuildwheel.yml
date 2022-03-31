@@ -159,6 +159,18 @@ jobs:
           echo "$MSVC_DIR\VC\Auxiliary\Build" >> $GITHUB_PATH
         fi
 
+    - name: Figure out the TestPyPi/PyPi Version
+      shell: bash
+      run: |
+        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
+          v=$(python dev/extract_version.py --pypi )
+          echo "Found next available version on PyPi: $v"
+        else
+          v=$(python dev/extract_version.py)
+          echo "Found next available version on TestPyPi: $v"
+        fi
+        sed -i "s/version=version,/version='$v'/g" wrappers/Python/setup.py
+
     - name: Build and test wheels
       env:
         COOLPROP_CMAKE: ${{ matrix.cmake_compiler}},${{ matrix.bitness }}
