@@ -31,7 +31,7 @@ class PropertyPlot(BasePlot):
         tp_limits : string, ['NONE','DEF','ACHP','ORC']
             Select the limits in T and p.
         reciprocal_density : bool
-            NOT IMPLEMENTED: If True, 1/rho will be plotted instead of rho 
+            NOT IMPLEMENTED: If True, 1/rho will be plotted instead of rho
 
         Examples
         --------
@@ -116,7 +116,7 @@ class PropertyPlot(BasePlot):
 
     def calc_isolines(self, iso_type=None, iso_range=None, num=15, rounding=False, points=250):
         """Calculate lines with constant values of type 'iso_type' in terms of x and y as
-        defined by the plot object. 'iso_range' either is a collection of values or 
+        defined by the plot object. 'iso_range' either is a collection of values or
         simply the minimum and maximum value between which 'num' lines get calculated.
         The 'rounding' parameter can be used to generate prettier labels if needed.
         """

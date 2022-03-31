@@ -195,13 +195,13 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
 
 /**
  In the 4-th order Householder method, three derivatives of the input variable are needed, it yields the following method:
- 
+
  \f[
  x_{n+1} = x_n - f(x_n)\left( \frac {[f'(x_n)]^2 - f(x_n)f''(x_n)/2  } {[f'(x_n)]^3-f(x_n)f'(x_n)f''(x_n)+f'''(x_n)*[f(x_n)]^2/6 } \right)
  \f]
- 
+
 http://numbers.computation.free.fr/Constants/Algorithms/newton.ps
- 
+
  @param f A pointer to an instance of the FuncWrapper1DWithThreeDerivs class that implements the call() and three derivatives
  @param x0 The initial guess for the solution
  @param ftol The absolute value of the tolerance accepted for the objective function

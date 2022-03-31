@@ -64,13 +64,13 @@ class TTSEBackend : public TabularBackend
          * @brief Evaluate a derivative in terms of the native inputs of the table
          * @param table A reference to the table to be used
          * @param output The output variable
-         * @param x The 
+         * @param x The
          * @param y
          * @param i
          * @param j
          * @param Nx The number of derivatives with respect to x with y held constant
          * @param Ny The number of derivatives with respect to y with x held constant
-         * @return 
+         * @return
          */
     double evaluate_single_phase_derivative(SinglePhaseGriddedTableData& table, parameters output, double x, double y, std::size_t i, std::size_t j,
                                             std::size_t Nx, std::size_t Ny);

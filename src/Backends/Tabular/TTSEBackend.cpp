@@ -4,10 +4,10 @@
 #    include "CoolProp.h"
 
 /** Use the single_phase table to evaluate an output for a transport property
- * 
- * Here we use bilinear interpolation because we don't have any information about the derivatives with respect to the 
+ *
+ * Here we use bilinear interpolation because we don't have any information about the derivatives with respect to the
  * independent variables and it is too computationally expensive to build the derivatives numerically
- * 
+ *
  * See also http://en.wikipedia.org/wiki/Bilinear_interpolation#Nonlinear
  */
 double CoolProp::TTSEBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData& table, parameters output, double x, double y,

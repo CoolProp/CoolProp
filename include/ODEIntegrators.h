@@ -31,7 +31,7 @@ class AbstractODEIntegrator
      @param hmax Maximum step size
      @param eps_allowed Maximum absolute error of any CV per step allowed.  Don't make this parameter too big or you may not be able to get a stable solution.  Also don't make it too small because then you are going to run into truncation error.
      @param step_relax The relaxation factor that is used in the step resizing algorithm.  Should be less than 1.0; you can play with this parameter to improve the adaptive resizing, but should not be necessary.
-     
+
      */
 bool AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed, double step_relax);
 

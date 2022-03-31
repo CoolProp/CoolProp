@@ -219,7 +219,7 @@ void FluidPropSolver::setSat_T(double& T, ExternalSaturationProperties* const pr
 }
 
 //! Computes the properties of the state vector from p and h
-/*! Note: the phase input is currently not supported according to the standard, 
+/*! Note: the phase input is currently not supported according to the standard,
     the phase input is returned in the state record
 */
 void FluidPropSolver::setState_ph(double& p, double& h, int& phase, ExternalThermodynamicState* const properties) {
@@ -292,7 +292,7 @@ void FluidPropSolver::setState_pT(double& p, double& T, ExternalThermodynamicSta
 }
 
 // Computes the properties of the state vector from d and T
-/*! Note: the phase input is currently not supported according to the standard, 
+/*! Note: the phase input is currently not supported according to the standard,
     the phase input is returned in the state record
 */
 void FluidPropSolver::setState_dT(double& d, double& T, int& phase, ExternalThermodynamicState* const properties) {
@@ -330,7 +330,7 @@ void FluidPropSolver::setState_dT(double& d, double& T, int& phase, ExternalTher
 }
 
 //! Computes the properties of the state vector from p and s
-/*! Note: the phase input is currently not supported according to the standard, 
+/*! Note: the phase input is currently not supported according to the standard,
     the phase input is returned in the state record
 */
 void FluidPropSolver::setState_ps(double& p, double& s, int& phase, ExternalThermodynamicState* const properties) {
@@ -370,7 +370,7 @@ void FluidPropSolver::setState_ps(double& p, double& s, int& phase, ExternalTher
 
 //! Set bubble state
 /*!
-  This function sets the bubble state record bubbleProperties corresponding to the 
+  This function sets the bubble state record bubbleProperties corresponding to the
   saturation data contained in the properties record.
 
   Due to current lack of direct control over the phase in FluidProp, a small delta is added to
@@ -395,11 +395,11 @@ void FluidPropSolver::setBubbleState(ExternalSaturationProperties* const propert
 
 //! Set dew state
 /*!
-  This function sets the dew state record dewProperties corresponding to the 
+  This function sets the dew state record dewProperties corresponding to the
   saturation data contained in the properties record.
 
-  The default implementation of the setDewState function is relying on the correct 
-  behaviour of setState_ph with respect to the state input. Can be overridden 
+  The default implementation of the setDewState function is relying on the correct
+  behaviour of setState_ph with respect to the state input. Can be overridden
   in the specific solver code to get more efficient or correct handling of this situation.
   @param properties ExternalSaturationProperties record with saturation properties data
   @param phase Phase (1: one-phase, 2: two-phase)

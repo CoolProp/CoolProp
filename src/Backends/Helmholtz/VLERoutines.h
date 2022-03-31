@@ -105,7 +105,7 @@ void saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl specifie
 /* \brief This is a backup saturation_p solver for the case where the Newton solver cannot approach closely enough the solution
      *
      * This is especially a problem at low pressures where catastrophic truncation error occurs, especially in the saturated vapor side
-     * 
+     *
      * @param HEOS The Helmholtz EOS backend instance to be used
      * @param p Imposed pressure in kPa
      * @param options Options to be passed to the function (at least T, rhoL and rhoV must be provided)
@@ -115,7 +115,7 @@ void saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, sat
 /* \brief This is a backup saturation_T solver for the case where the Newton solver cannot approach closely enough the solution
      *
      * This is especially a problem at low pressures where catastrophic truncation error occurs, especially in the saturated vapor side
-     * 
+     *
      * @param HEOS The Helmholtz EOS backend instance to be used
      * @param T Imposed temperature in K
      * @param options Options to be passed to the function (at least p, rhoL and rhoV must be provided)
@@ -123,14 +123,14 @@ void saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, sat
 void saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_options& options);
 
 /* \brief A robust but slow solver in the very-near-critical region
-     * 
+     *
      * This solver operates in the following fashion:
      * 1. Using a bounded interval for rho'':[rhoc, rhoc-??], guess a value for rho''
      * 2. For guessed value of rho'' and given value of T, calculate p
      * 3. Using a Brent solver on the other co-existing phase (rho'), calculate the (bounded) value of rho' that yields the same pressure
      * 4. Use another outer Brent solver on rho'' to enforce the same Gibbs function between liquid and vapor
      * 5. Fin.
-     * 
+     *
      * @param HEOS The Helmholtz EOS backend instance to be used
      * @param ykey The CoolProp::parameters key to be imposed - one of iT or iP
      * @param y The value for the imposed variable
@@ -223,11 +223,11 @@ inline double saturation_preconditioner(HelmholtzEOSMixtureBackend& HEOS, double
      * \f[
      * \sum_i \frac{x_i(K_i-1)}{1 - \beta + \beta K_i} = 0
      * \f]
-     * When \f$T\f$ is known for \f$\beta=0$, \f$p\f$can be obtained from  
+     * When \f$T\f$ is known for \f$\beta=0$, \f$p\f$can be obtained from
      * \f[
      * -1+\sum_i K_ix_i=0,
      * \f]
-     * or 
+     * or
      * \f[
      * p = \sum_i x_ip_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T).
      * \f]
@@ -235,7 +235,7 @@ inline double saturation_preconditioner(HelmholtzEOSMixtureBackend& HEOS, double
      * \f[
      * -1+\sum_ix_i=0,
      * \f]
-     * or 
+     * or
      * \f[
      * p = \left[ \sum_i \frac{y_i}{p_{c,i}\exp(5.373(1+\omega_i)(1-T_{c,i}/T)} \right]^{-1}
      * \f]
@@ -319,33 +319,33 @@ struct newton_raphson_twophase_options
 };
 
 /** \brief A class to do newton raphson solver for mixture VLE for p,Q or T,Q
-     * 
+     *
      * A class is used rather than a function so that it is easier to store iteration histories, additional output values, etc.
-     * 
+     *
      * As in Gernert, FPE, 2014, except that only one of T and P are known
-     * 
+     *
      * The independent variables are \f$N-1\f$ mole fractions in liquid, \f$N-1\f$ mole fractions in vapor, and the non-specified variable in p or T, for a total of \f$2N-1\f$ independent variables
-     * 
+     *
      * First N residuals are from
-     * 
+     *
      * \f$F_k = \ln f_i(T,p,\mathbf{x}) - \ln f_i(T,p,\mathbf{y})\f$ for \f$i = 1, ... N\f$ and \f$k=i\f$
-     * 
+     *
      * Derivatives are the same as for the saturation solver \ref newton_raphson_saturation
-     * 
+     *
      * Second N-1 residuals are from
-     * 
+     *
      * \f$F_k = \dfrac{z_i-x_i}{y_i-x_i} - \beta_{spec}\f$ for \f$ i = 1, ... N-2\f$ and \f$k = i+N\f$
-     * 
+     *
      * Gernert eq. 35
-     * 
+     *
      * \f$\dfrac{\partial F_k}{\partial x_i} = \dfrac{z_i-y_i}{(y_i-x_i)^2}\f$
-     * 
+     *
      * Gernert eq. 36
-     * 
+     *
      * \f$\dfrac{\partial F_k}{\partial y_i} = -\dfrac{z_i-x_i}{(y_i-x_i)^2}\f$
-     * 
+     *
      * \f$\dfrac{\partial F_k}{\partial T} = 0\f$ Because x, y and T are independent by definition of the formulation
-     * 
+     *
      * \f$\dfrac{\partial F_k}{\partial p} = 0\f$ Because x, y and p are independent by definition of the formulation
      */
 class newton_raphson_twophase
@@ -394,17 +394,17 @@ class newton_raphson_twophase
 
     /** \brief Call the Newton-Raphson VLE Solver
          *
-         * This solver must be passed reasonable guess values for the mole fractions, 
+         * This solver must be passed reasonable guess values for the mole fractions,
          * densities, etc.  You may want to take a few steps of successive substitution
          * before you start with Newton Raphson.
-         * 
+         *
          * @param HEOS HelmholtzEOSMixtureBackend instance
          * @param IO The input/output data structure
          */
     void call(HelmholtzEOSMixtureBackend& HEOS, newton_raphson_twophase_options& IO);
 
     /* \brief Build the arrays for the Newton-Raphson solve
-         * 
+         *
          */
     void build_arrays();
 };
@@ -444,30 +444,30 @@ struct newton_raphson_saturation_options
 };
 
 /** \brief A class to do newton raphson solver mixture bubble point and dew point calculations
-     * 
-     * A class is used rather than a function so that it is easier to store iteration histories, additional output 
+     *
+     * A class is used rather than a function so that it is easier to store iteration histories, additional output
      * values, etc.  This class is used in \ref PhaseEnvelopeRoutines for the construction of the phase envelope
-     * 
-     * This class only handles bubble and dew lines.  The independent variables are the first N-1 mole fractions 
+     *
+     * This class only handles bubble and dew lines.  The independent variables are the first N-1 mole fractions
      * in the incipient phase along with one of T, p, or \f$\rho''\f$.
-     * 
-     * These methods are based on the work of Gernert, FPE, 2014, the thesis of Gernert, as well as much 
+     *
+     * These methods are based on the work of Gernert, FPE, 2014, the thesis of Gernert, as well as much
      * help from Andreas Jaeger of Uni. Bochum.
-     * 
+     *
      * There are N residuals from
-     * 
+     *
      * \f$F_i = \ln f_i(T, p, \mathbf{x}) - \ln f_i(T, p, \mathbf{y})\f$ for \f$i = 1, ... N\f$
-     * 
-     * if either T or p are imposed. In this case a solver is used to find \f$\rho\f$ given \f$T\f$ and \f$p\f$.  
-     * 
+     *
+     * if either T or p are imposed. In this case a solver is used to find \f$\rho\f$ given \f$T\f$ and \f$p\f$.
+     *
      * In the case that \f$\rho''\f$ is imposed, the case is much nicer and the first \f$N\f$ residuals are
-     * 
-     * \f$F_i = \ln f_i(T, \rho', \mathbf{x}) - \ln f_i(T, \rho'', \mathbf{y})\f$ for \f$i = 1, ... N\f$ 
-     * 
+     *
+     * \f$F_i = \ln f_i(T, \rho', \mathbf{x}) - \ln f_i(T, \rho'', \mathbf{y})\f$ for \f$i = 1, ... N\f$
+     *
      * which requires no iteration. A final residual is set up to ensure the same pressures in the phases:
-     * 
+     *
      * \f$p(T,\rho',\mathbf{x})-p(T,\rho'',\mathbf{y}) = 0\f$
-     * 
+     *
      * Documentation of the derivatives needed can be found in the work of Gernert, FPE, 2014
      */
 class newton_raphson_saturation
@@ -503,10 +503,10 @@ class newton_raphson_saturation
 
     /** \brief Call the Newton-Raphson VLE Solver
          *
-         * This solver must be passed reasonable guess values for the mole fractions, 
+         * This solver must be passed reasonable guess values for the mole fractions,
          * densities, etc.  You may want to take a few steps of successive substitution
          * before you start with Newton Raphson.
-         * 
+         *
          * @param HEOS HelmholtzEOSMixtureBackend instance
          * @param z Bulk mole fractions [-]
          * @param z_incipient Initial guesses for the mole fractions of the incipient phase [-]
@@ -516,9 +516,9 @@ class newton_raphson_saturation
               newton_raphson_saturation_options& IO);
 
     /** \brief Build the arrays for the Newton-Raphson solve
-         * 
+         *
          * This method builds the Jacobian matrix, the sensitivity matrix, etc.
-         * 
+         *
          */
     void build_arrays();
 

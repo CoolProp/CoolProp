@@ -10,8 +10,8 @@ namespace CoolProp {
 
 /** \brief This class implements bicubic interpolation, as very clearly laid out by
  * the page on wikipedia: http://en.wikipedia.org/wiki/Bicubic_interpolation
- * 
- * Essentially you have an already-inverted matrix that you need to multiply 
+ *
+ * Essentially you have an already-inverted matrix that you need to multiply
 
 \f[
 A^{-1} =  \left[ \begin{array}{*{16}c} 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
@@ -95,13 +95,13 @@ class BicubicBackend : public TabularBackend
          * @param table A reference to the table to be used
          * @param coeffs A reference to the matrix of the coefficients
          * @param output The output variable
-         * @param x The 
+         * @param x The
          * @param y
          * @param i
          * @param j
          * @param Nx The number of derivatives with respect to x with y held constant
          * @param Ny The number of derivatives with respect to y with x held constant
-         * @return 
+         * @return
          */
     double evaluate_single_phase_derivative(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs, parameters output,
                                             double x, double y, std::size_t i, std::size_t j, std::size_t Nx, std::size_t Ny);
@@ -113,7 +113,7 @@ class BicubicBackend : public TabularBackend
     };
 
     /**
-         * @brief 
+         * @brief
          * @param table A reference to the table that is to be used
          * @param coeffs A reference to the matrix of bicubic coefficients
          * @param output What output is desired
@@ -121,7 +121,7 @@ class BicubicBackend : public TabularBackend
          * @param y
          * @param i
          * @param j
-         * @return 
+         * @return
          */
     double evaluate_single_phase(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                  const parameters output, const double x, const double y, const std::size_t i, const std::size_t j);
@@ -144,9 +144,9 @@ class BicubicBackend : public TabularBackend
          * @brief Evaluate the single-phase transport properties using linear interpolation.  Works well except for near the critical point
          * @param table A reference to the table to be used
          * @param output The output parameter, viscosity or conductivity
-         * @param x The 
+         * @param x The
          * @param y
-         * @return 
+         * @return
          */
     double evaluate_single_phase_transport(SinglePhaseGriddedTableData& table, parameters output, double x, double y, std::size_t i, std::size_t j);
 
@@ -161,7 +161,7 @@ class BicubicBackend : public TabularBackend
          * @brief Use the table to solve for the x variable of the table given the y coordinate of the table and a variable that can yield a unique solution for x
          * @param table The table to be used
          * @param coeffs The matrix of coefficients to be used
-         * @param other_key The x variable 
+         * @param other_key The x variable
          * @param other The value of the x-ish variable to be used to find d
          * @param i The x-coordinate of the cell
          * @param j The y-coordinate of the cell

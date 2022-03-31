@@ -53,10 +53,10 @@ class UNIFACMixture
    public:
     UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary& library, const double T_r) : library(library), T_r(T_r){};
 
-    /** 
+    /**
         * \brief Set all the interaction parameters between groups
         *
-        * \param subgroups A vector of the set of the unique Group forming the mixture - these 
+        * \param subgroups A vector of the set of the unique Group forming the mixture - these
         * permutations represent the set of posisble binary interactions
         */
     void set_interaction_parameters();

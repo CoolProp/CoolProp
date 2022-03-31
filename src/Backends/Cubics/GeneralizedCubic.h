@@ -2,10 +2,10 @@
  This C++ code is the implementation of the analyses presented in the paper
  I.Bell and A. Jäger, "Helmholtz energy translations for common cubic equations of state
  for use in one-fluid and multi-fluid mixture models", J. Res. NIST, 2016
- 
+
  This code is in the public domain, though if used in academic work, we would appreciate
  a reference back to the paper given above.
- 
+
  */
 
 #ifndef CUBIC_H
@@ -90,12 +90,12 @@ class AbstractCubic
    public:
     /**
      \brief The abstract base clase for the concrete implementations of the cubic equations of state
-     
+
      This abstract base class describes the structure that must be implemented by concrete implementations
      of the cubic equations of state (SRK, PR, etc.).  The virtual functions must be implemented by the
      derived classes, the remaining functions are generic and are not dependent on the equation of state,
      so long as it has the formulation given in this work.
-     
+
      */
     AbstractCubic(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
                   std::vector<double> C1 = std::vector<double>(), std::vector<double> C2 = std::vector<double>(),

@@ -1,7 +1,7 @@
 /**
 This file contains flash routines in which the state is unknown,
 and a solver of some kind must be used to obtain temperature and
-density, the two state variables upon which the equation of 
+density, the two state variables upon which the equation of
 state is based.
 */
 
@@ -18,7 +18,7 @@ state is based.
 namespace CoolProp {
 
 /**
-This class is a friend class of HelmholtzEOSMixtureBackend, therefore the 
+This class is a friend class of HelmholtzEOSMixtureBackend, therefore the
 static methods contained in it have access to the private and
 protected variables in the HelmholtzEOSMixtureBackend instance.
 

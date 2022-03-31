@@ -393,7 +393,7 @@ class SolutionDataWriter(object):
                     # Let the base class default method raise the TypeError
                     return json.JSONEncoder.default(self, obj)
             dump = json.dumps(jobj, indent=2, sort_keys=True, cls=RoundingEncoder)
-        
+
 
         # print dump
         hashes = self.load_hashes()

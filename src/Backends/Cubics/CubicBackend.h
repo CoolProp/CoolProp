@@ -1,11 +1,11 @@
 /*
 
 The goal of this backend is to allow the Helmholtz-based structure for cubics and to replace the entire
-multi-fluid model with a one-fluid model.  The other changes are relatively trivial.  The primary 
+multi-fluid model with a one-fluid model.  The other changes are relatively trivial.  The primary
 change is to replace the core residual Helmholtz energy derivatives from HelmholtzEOSMixtureBackend
-with the derivatives from this class. 
+with the derivatives from this class.
 
-The core code for the Helmholtz translations is from the publication 
+The core code for the Helmholtz translations is from the publication
 "Helmholtz energy translations for common cubic equations of state for use in one-fluid and multi-fluid mixture models"
 by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 
@@ -200,7 +200,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     };
     /**
      * /brief Solve for rho = f(T,p)
-     * 
+     *
      * You can often get three solutions, to overcome this problem you must either specify the phase, or provide a reasonable guess value for rho_guess, but not both
      */
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess = -1);

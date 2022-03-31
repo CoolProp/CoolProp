@@ -134,9 +134,9 @@ struct HelmholtzDerivatives
 
 /// The base class class for the Helmholtz energy terms
 /**
- 
+
  Residual Helmholtz Energy Terms:
- 
+
  Term                               | Helmholtz Energy Contribution
  ----------                         | ------------------------------
  ResidualHelmholtzPower             | \f$ \alpha^r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.\f$
@@ -146,10 +146,10 @@ struct HelmholtzDerivatives
  ResidualHelmholtzGERG2008Gaussian  | \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\delta-\gamma_i))\f$
  ResidualHelmholtzNonAnalytic       | \f$ \begin{array}{c}\alpha^r&=&\displaystyle\sum_i n_i \Delta^{b_i}\delta\psi \\ \Delta & = & \theta^2+B_i[(\delta-1)^2]^{a_i}\\ \theta & = & (1-\tau)+A_i[(\delta-1)^2]^{1/(2\beta_i)}\\ \psi & = & \exp(-C_i(\delta-1)^2-D_i(\tau-1)^2) \end{array}\f$
  ResidualHelmholtzSAFTAssociating   | \f$ \alpha^r = am\left(\ln X-\frac{X}{2}+\frac{1}{2}\right); \f$
- 
- 
+
+
  Ideal-Gas Helmholtz Energy Terms:
- 
+
  Term                                        | Helmholtz Energy Contribution
  ----------                                  | ------------------------------
  IdealHelmholtzLead                          | \f$ \alpha^0 = n_1 + n_2\tau + \ln\delta \f$
@@ -322,11 +322,11 @@ struct ResidualHelmholtzGeneralizedExponentialElement
     };
 };
 /** \brief A generalized residual helmholtz energy container that can deal with a wide range of terms which can be converted to this general form
- * 
+ *
  * \f$ \alpha^r=\sum_i n_i \delta^{d_i} \tau^{t_i}\exp(u_i) \f$
- * 
+ *
  * where \f$ u_i \f$ is given by
- * 
+ *
  * \f$ u_i = -c_i\delta^{l_i}-\omega_i\tau^{m_i}-\eta_{1,i}(\delta-\epsilon_{1,i})-\eta_{2,i}(\delta-\epsilon_{2,i})^2-\beta_{1,i}(\tau-\gamma_{1,i})-\beta_{2,i}(\tau-\gamma_{2,i})^2 \f$
  */
 class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
@@ -350,7 +350,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     ResidualHelmholtzGeneralizedExponential()
       : delta_li_in_u(false), tau_mi_in_u(false), eta1_in_u(false), eta2_in_u(false), beta1_in_u(false), beta2_in_u(false), finished(false), N(0){};
     /** \brief Add and convert an old-style power (polynomial) term to generalized form
-	 * 
+	 *
 	 * Term of the format
 	 * \f$ \alpha^r=\left\lbrace\begin{array}{cc}\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} & l_i=0\\ \displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}) & l_i\neq 0\end{array}\right.\f$
 	 */
@@ -372,8 +372,8 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         delta_li_in_u = true;
     };
     /** \brief Add and convert an old-style exponential term to generalized form
-	 * 
-	 * Term of the format 
+	 *
+	 * Term of the format
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-g_i\delta^{l_i}) \f$
 	 */
     void add_Exponential(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& d, const std::vector<CoolPropDbl>& t,
@@ -391,7 +391,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         delta_li_in_u = true;
     }
     /** \brief Add and convert an old-style Gaussian term to generalized form
-	 * 
+	 *
 	 * Term of the format
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\tau-\gamma_i)^2)\f$
 	 */
@@ -413,7 +413,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         beta2_in_u = true;
     };
     /** \brief Add and convert an old-style Gaussian term from GERG 2008 natural gas model to generalized form
-	 * 
+	 *
 	 * Term of the format
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\eta_i(\delta-\epsilon_i)^2-\beta_i(\delta-\gamma_i))\f$
 	 */
@@ -435,7 +435,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         eta1_in_u = true;
     };
     /** \brief Add and convert a term from Lemmon and Jacobsen (2005) used for R125
-	 * 
+	 *
 	 * Term of the format
 	 * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-\delta^{l_i}-\tau^{m_i})\f$
 	 */
@@ -989,10 +989,10 @@ class IdealHelmholtzPower : public BaseHelmholtzTerm
 
 /**
 \f[
-\alpha^0 = \displaystyle\sum_i n_i\log[c_i+d_i\exp(\theta_i\tau)] 
+\alpha^0 = \displaystyle\sum_i n_i\log[c_i+d_i\exp(\theta_i\tau)]
 \f]
 
-To convert conventional Plank-Einstein forms, given by 
+To convert conventional Plank-Einstein forms, given by
 \f$
 \frac{c_p^0}{R} = a_k\displaystyle\frac{\left( b_k/T \right)^2\exp \left( b_k/T \right)}{\left(\exp \left(b_k/T\right) - 1 \right)^2}
 \f$
@@ -1002,7 +1002,7 @@ and
 \f$
 use \f$c = 1\f$, \f$d = -1\f$, \f$n = a\f$, \f$\theta = -\displaystyle\frac{b_k}{T_c}\f$
 
-To convert the second form of Plank-Einstein terms, given by 
+To convert the second form of Plank-Einstein terms, given by
 \f$
 \frac{c_p^0}{R} = a_k\displaystyle\frac{\left( -b_k/T \right)^2\exp \left( b_k/T \right)}{c\left(\exp \left(-b_k/T\right) + 1 \right)^2}
 \f$

@@ -143,7 +143,7 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> vec_to_eigen(const std::vector<
     }
     return result;
 }
-/** 
+/**
  * @param coefficients matrix containing the ordered coefficients
  * @param axis axis along which to extract data
  */
