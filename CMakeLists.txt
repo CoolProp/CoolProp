@@ -1980,8 +1980,6 @@ if(COOLPROP_CATCH_MODULE)
     target_link_libraries(CatchTestRunner ${CMAKE_DL_LIBS})
   endif()
 
-  target_link_libraries(CatchTestRunner PRIVATE ${COOLPROP_LIBRARY_NAME})
-
   include(CTest)
   include(${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2/extras/Catch.cmake)
   catch_discover_tests(CatchTestRunner)
