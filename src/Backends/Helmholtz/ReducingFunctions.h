@@ -187,6 +187,16 @@ class GERG2008ReducingFunction : public ReducingFunction
 
     /// Set all beta and gamma values in one shot
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, double betaT, double gammaT, double betaV, double gammaV) {
+        // bound-check indices
+        if (i < 0 || i >= N) {
+            if (j < 0 || j >= N) {
+                throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+            } else {
+                throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+            }
+        } else if (j < 0 || j >= N) {
+            throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
+        }
         beta_T[i][j] = betaT;
         beta_T[j][i] = 1 / betaT;
         gamma_T[i][j] = gammaT;
@@ -199,6 +209,16 @@ class GERG2008ReducingFunction : public ReducingFunction
 
     /// Set a parameter
     virtual void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, double value) {
+        // bound-check indices
+        if (i < 0 || i >= N) {
+            if (j < 0 || j >= N) {
+                throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+            } else {
+                throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+            }
+        } else if (j < 0 || j >= N) {
+            throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
+        }
         if (parameter == "betaT") {
             beta_T[i][j] = value;
             beta_T[j][i] = 1 / value;
