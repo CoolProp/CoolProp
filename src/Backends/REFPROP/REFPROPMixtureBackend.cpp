@@ -548,7 +548,16 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
 /// Set binary mixture string value
 void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                           const std::string& value) {
-
+    // bound-check indices
+    if (i < 0 || i >= Ncomp) {
+        if (j < 0 || j >= Ncomp) {
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp-1));
+        } else {
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp-1));
+        }
+    } else if (j < 0 || j >= Ncomp) {
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
+    }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
@@ -574,6 +583,16 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
 void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                           const double value) {
+    // bound-check indices
+    if (i < 0 || i >= Ncomp) {
+        if (j < 0 || j >= Ncomp) {
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp-1));
+        } else {
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp-1));
+        }
+    } else if (j < 0 || j >= Ncomp) {
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
+    }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
@@ -609,6 +628,16 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
 
 /// Get binary mixture double value (EXPERT USE ONLY!!!)
 double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
+    // bound-check indices
+    if (i < 0 || i >= Ncomp) {
+        if (j < 0 || j >= Ncomp) {
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp-1));
+        } else {
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp-1));
+        }
+    } else if (j < 0 || j >= Ncomp) {
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
+    }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1;
     char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
