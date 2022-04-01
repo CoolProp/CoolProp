@@ -73,7 +73,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     current_v = parse_cmake_version_info()
     if args.cmake_only:
-        print(current_v)
+        print(current_v, end="")
         exit(0)
 
     current_v = version.Version(current_v)
