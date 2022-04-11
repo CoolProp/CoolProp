@@ -169,9 +169,15 @@ jobs:
       run: |
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
           python dev/extract_version.py --pypi --replace-setup-py
+          TWINE_REPOSITORY=pypi
+          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
         else
           python dev/extract_version.py --replace-setup-py
-        fi
+          TWINE_REPOSITORY=testpypi
+          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
+        fi;
+        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
+        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
 
     - name: Build and test wheels
       env:
@@ -232,15 +238,4 @@ jobs:
       env:
         TWINE_USERNAME: __token__
       run: |
-
-        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          TWINE_REPOSITORY=pypi
-          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
-        else
-          TWINE_REPOSITORY=testpypi
-          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
-        fi;
-        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
-        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
-
         python -m twine upload --skip-existing ./*.whl
