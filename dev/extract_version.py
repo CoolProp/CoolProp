@@ -54,6 +54,18 @@ def parse_cmake_version_info():
     return coolprop_version
 
 
+def replace_setup_py(new_v: version.Version):
+    fp = ROOT_DIR / 'wrappers/Python/setup.py'
+
+    with open(fp, 'r') as f:
+        content = f.read()
+
+    with open(fp, 'w') as f:
+        f.write(content.replace('version=version,', f"version='{new_v}',"))
+
+    print(f"Replaced version '{new_v}' in {fp}")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Find the right version from pypi/testpypi")
@@ -69,6 +81,10 @@ if __name__ == '__main__':
     parser.add_argument("--current", default=False,
                         action='store_true',
                         help="Check current version instead of incrementing by one")
+
+    parser.add_argument("--replace-setup-py", default=False,
+                        action='store_true',
+                        help="Do replacement in setup.py")
 
     args = parser.parse_args()
     current_v = parse_cmake_version_info()
@@ -98,4 +114,10 @@ if __name__ == '__main__':
         new_v = str(current_v)
 
     new_v = version.Version(new_v)
-    print(new_v, end="")
+    if args.replace_setup_py:
+        remote = "PyPi" if args.pypi else "TestPyPi"
+        print(f"Found next available version on {remote}: {new_v}")
+
+        replace_setup_py(new_v=new_v)
+    else:
+        print(new_v, end="")
