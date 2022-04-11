@@ -223,7 +223,9 @@ jobs:
     - name: Display structure of downloaded files
       working-directory: ./wheels
       run: |
+        set -x
         ls -R
+        du -sh
 
     - name: Publish wheels to (Test)PyPI
       working-directory: ./wheels/artifact
@@ -241,5 +243,4 @@ jobs:
         echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
         echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
 
-        twine upload *.whl
-
+        python -m twine upload --skip-existing ./*.whl
