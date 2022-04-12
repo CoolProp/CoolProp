@@ -172,7 +172,9 @@ jobs:
         fi
 
         if [ "${{ matrix.platform_id }}" == "win32" ]; then
-          echo "Not setting COOLPROP_CMAKE"
+          echo "Not setting COOLPROP_CMAKE for win32 (fails to build)"
+        elif [ "${{ matrix.platform_id }}" == "macosx_arm64" ]; then
+          echo "Not setting COOLPROP_CMAKE for arm64 (fails to install)"
         else
           COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
           echo "COOLPROP_CMAKE=$COOLPROP_CMAKE"
