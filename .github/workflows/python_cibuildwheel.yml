@@ -12,35 +12,21 @@ on:
 jobs:
 
   python_bindings:
-    name: Build wheel for ${{ matrix.os }}
+    name: py${{ matrix.python-version }}-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2019, macos-latest]
-        include:
-          # Window 64 bit
-          # Note: windows-2019 is needed for older Python versions:
-          # https://github.com/scikit-learn/scikit-learn/issues/22530
-          - os: windows-2019
-            archs: 'AMD64,x86'
-
-          # Linux 64 bit manylinux2014
-          - os: ubuntu-latest
-            archs: 'x86_64,aarch64'
-
-            # MacOS x86_64
-          - os: macos-latest
-            archs: 'x86_64,arm64'
-
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [36, 37, 38, 39, 310]
 
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: 3.9.x
@@ -49,18 +35,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install requests packaging cibuildwheel
-
-#    - name: Setup Deps
-#      shell: bash
-#      run: |
-#        if [ "$RUNNER_OS" == "Windows" ]; then
-#          # C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise
-#          MSVC_DIR=$(cmd.exe /c "vswhere -products * -requires Microsoft.Component.MSBuild -property installationPath -latest")
-#          echo "Latest is: $MSVC_DIR"
-#          echo "MSVC_DIR=$MSVC_DIR" >> $GITHUB_ENV
-#          # add folder containing vcvarsall.bat
-#          echo "$MSVC_DIR\VC\Auxiliary\Build" >> $GITHUB_PATH
-#        fi
 
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
@@ -76,6 +50,7 @@ jobs:
         MACOSX_DEPLOYMENT_TARGET: 10.9
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
+        CIBW_BUILD: cp${{ matrix.python-version }}-*
         CIBW_ARCHS_MACOS: 'x86_64,arm64'
         CIBW_ARCHS_WINDOWS: 'AMD64,x86'
         CIBW_ARCHS_LINUX: 'x86_64,aarch64'
