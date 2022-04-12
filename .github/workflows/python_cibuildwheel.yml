@@ -24,6 +24,13 @@ jobs:
           # Note: windows-2019 is needed for older Python versions:
           # https://github.com/scikit-learn/scikit-learn/issues/22530
           - os: windows-2019
+            python: 37
+            bitness: 64
+            platform_id: win_amd64
+            cmake_compiler: vc16
+            arch: x64
+            allow_failure: false
+          - os: windows-2019
             python: 38
             bitness: 64
             platform_id: win_amd64
