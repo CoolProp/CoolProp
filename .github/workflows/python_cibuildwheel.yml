@@ -53,11 +53,11 @@ jobs:
             allow_failure: false
 
           # Window 32 bit
-          - os: windows-latest
+          - os: windows-2019
             python: 38
             bitness: 32
             platform_id: win32
-            cmake_compiler: vc17
+            cmake_compiler: vc16
             arch: x86
             allow_failure: true
           - os: windows-latest
