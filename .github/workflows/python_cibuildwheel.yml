@@ -171,6 +171,15 @@ jobs:
           echo "$MSVC_DIR\VC\Auxiliary\Build" >> $GITHUB_PATH
         fi
 
+        if [ "${{ matrix.platform_id }}" == "win32" ]; then
+          echo "Not setting COOLPROP_CMAKE"
+        else
+          COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
+          echo "COOLPROP_CMAKE=$COOLPROP_CMAKE"
+          echo "COOLPROP_CMAKE=$COOLPROP_CMAKE" >> $GITHUB_ENV
+        fi
+
+
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
       run: |
@@ -183,7 +192,7 @@ jobs:
     - name: Build and test wheels
       env:
         COOLPROP_CMAKE: ${{ matrix.cmake_compiler}},${{ matrix.bitness }}
-        CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
+        CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ env.COOLPROP_CMAKE }}
         MACOSX_DEPLOYMENT_TARGET: 10.9
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
