@@ -24,6 +24,13 @@ jobs:
           # Note: windows-2019 is needed for older Python versions:
           # https://github.com/scikit-learn/scikit-learn/issues/22530
           - os: windows-2019
+            python: 37
+            bitness: 64
+            platform_id: win_amd64
+            cmake_compiler: vc16
+            arch: x64
+            allow_failure: false
+          - os: windows-2019
             python: 38
             bitness: 64
             platform_id: win_amd64
@@ -46,11 +53,11 @@ jobs:
             allow_failure: false
 
           # Window 32 bit
-          - os: windows-latest
+          - os: windows-2019
             python: 38
             bitness: 32
             platform_id: win32
-            cmake_compiler: vc17
+            cmake_compiler: vc16
             arch: x86
             allow_failure: true
           - os: windows-latest
@@ -164,6 +171,15 @@ jobs:
           echo "$MSVC_DIR\VC\Auxiliary\Build" >> $GITHUB_PATH
         fi
 
+        if [ "${{ matrix.platform_id }}" == "win32" ]; then
+          echo "Not setting COOLPROP_CMAKE"
+        else
+          COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
+          echo "COOLPROP_CMAKE=$COOLPROP_CMAKE"
+          echo "COOLPROP_CMAKE=$COOLPROP_CMAKE" >> $GITHUB_ENV
+        fi
+
+
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
       run: |
@@ -176,7 +192,7 @@ jobs:
     - name: Build and test wheels
       env:
         COOLPROP_CMAKE: ${{ matrix.cmake_compiler}},${{ matrix.bitness }}
-        CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
+        CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ env.COOLPROP_CMAKE }}
         MACOSX_DEPLOYMENT_TARGET: 10.9
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
