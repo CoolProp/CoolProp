@@ -12,144 +12,21 @@ on:
 jobs:
 
   python_bindings:
-    name: Build wheel for cp${{ matrix.python }}-${{ matrix.platform_id }}-${{ matrix.manylinux_image }}
+    name: py${{ matrix.python-version }}-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.allow_failure }}
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        include:
-          # Window 64 bit
-          # Note: windows-2019 is needed for older Python versions:
-          # https://github.com/scikit-learn/scikit-learn/issues/22530
-          - os: windows-2019
-            python: 37
-            bitness: 64
-            platform_id: win_amd64
-            cmake_compiler: vc16
-            arch: x64
-            allow_failure: false
-          - os: windows-2019
-            python: 38
-            bitness: 64
-            platform_id: win_amd64
-            cmake_compiler: vc16
-            arch: x64
-            allow_failure: false
-          - os: windows-latest
-            python: 39
-            bitness: 64
-            cmake_compiler: vc17
-            platform_id: win_amd64
-            arch: x64
-            allow_failure: false
-          - os: windows-latest
-            python: 310
-            bitness: 64
-            platform_id: win_amd64
-            cmake_compiler: vc17
-            arch: x64
-            allow_failure: false
-
-          # Window 32 bit
-          - os: windows-2019
-            python: 38
-            bitness: 32
-            platform_id: win32
-            cmake_compiler: vc16
-            arch: x86
-            allow_failure: true
-          - os: windows-latest
-            python: 39
-            bitness: 32
-            platform_id: win32
-            cmake_compiler: vc17
-            arch: x86
-            allow_failure: true
-
-          # Linux 64 bit manylinux2014
-          - os: ubuntu-latest
-            python: 37
-            bitness: 64
-            platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cmake_compiler: default
-            allow_failure: false
-          - os: ubuntu-latest
-            python: 38
-            bitness: 64
-            platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cmake_compiler: default
-            allow_failure: false
-          - os: ubuntu-latest
-            python: 39
-            bitness: 64
-            platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cmake_compiler: default
-            allow_failure: false
-          - os: ubuntu-latest
-            python: 310
-            bitness: 64
-            platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cmake_compiler: default
-            allow_failure: false
-
-          # MacOS x86_64
-          - os: macos-latest
-            bitness: 64
-            python: 37
-            platform_id: macosx_x86_64
-            cmake_compiler: default
-            allow_failure: false
-          - os: macos-latest
-            bitness: 64
-            python: 38
-            platform_id: macosx_x86_64
-            cmake_compiler: default
-            allow_failure: false
-          - os: macos-latest
-            bitness: 64
-            python: 39
-            platform_id: macosx_x86_64
-            cmake_compiler: default
-            allow_failure: false
-          - os: macos-latest
-            bitness: 64
-            python: 310
-            platform_id: macosx_x86_64
-            cmake_compiler: default
-            allow_failure: false
-
-          # MacOS arm64
-          - os: macos-latest
-            bitness: 64
-            python: 38
-            platform_id: macosx_arm64
-            cmake_compiler: default
-            allow_failure: false
-          - os: macos-latest
-            bitness: 64
-            python: 39
-            platform_id: macosx_arm64
-            cmake_compiler: default
-            allow_failure: false
-          - os: macos-latest
-            bitness: 64
-            python: 310
-            platform_id: macosx_arm64
-            cmake_compiler: default
-            allow_failure: false
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [36, 37, 38, 39, 310]
 
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: 3.9.x
@@ -157,28 +34,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install requests packaging
-
-    - name: Setup Deps
-      shell: bash
-      run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          # C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise
-          MSVC_DIR=$(cmd.exe /c "vswhere -products * -requires Microsoft.Component.MSBuild -property installationPath -latest")
-          echo "Latest is: $MSVC_DIR"
-          echo "MSVC_DIR=$MSVC_DIR" >> $GITHUB_ENV
-          # add folder containing vcvarsall.bat
-          echo "$MSVC_DIR\VC\Auxiliary\Build" >> $GITHUB_PATH
-        fi
-
-        if [ "${{ matrix.platform_id }}" == "win32" ]; then
-          echo "Not setting COOLPROP_CMAKE"
-        else
-          COOLPROP_CMAKE=${{ matrix.cmake_compiler }},${{ matrix.bitness }}
-          echo "COOLPROP_CMAKE=$COOLPROP_CMAKE"
-          echo "COOLPROP_CMAKE=$COOLPROP_CMAKE" >> $GITHUB_ENV
-        fi
-
+        python -m pip install requests packaging cibuildwheel
 
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
@@ -191,22 +47,23 @@ jobs:
 
     - name: Build and test wheels
       env:
-        COOLPROP_CMAKE: ${{ matrix.cmake_compiler}},${{ matrix.bitness }}
-        CIBW_ENVIRONMENT: COOLPROP_CMAKE=${{ env.COOLPROP_CMAKE }}
         MACOSX_DEPLOYMENT_TARGET: 10.9
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
-        CIBW_BEFORE_ALL_WINDOWS: call vcvarsall.bat ${{ matrix.arch }}
-        CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
-        CIBW_ARCHS: all
-        CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
-        CIBW_MANYLINUX_I686_IMAGE: ${{ matrix.manylinux_image }}
+        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
+        CIBW_BUILD: cp${{ matrix.python-version }}-*
+        CIBW_ARCHS_MACOS: 'x86_64,arm64'
+        CIBW_ARCHS_WINDOWS: 'AMD64,x86'
+        CIBW_ARCHS_LINUX: 'x86_64'   # aarch64 is having issues launching the docker correctly
+        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+        CIBW_MANYLINUX_I686_IMAGE: manylinux2014
+        CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+        CIBW_SKIP: "*musllinux* pp* *-manylinux_i686"
         CIBW_TEST_SKIP: "*-macosx_arm64"
         # CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
         CIBW_BUILD_VERBOSITY: 1
 
       run: |
-        python -m pip install cibuildwheel
         python -m cibuildwheel --output-dir wheelhouse ./wrappers/Python
 
     - name: Store artifacts
