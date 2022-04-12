@@ -53,7 +53,7 @@ jobs:
         CIBW_BUILD: cp${{ matrix.python-version }}-*
         CIBW_ARCHS_MACOS: 'x86_64,arm64'
         CIBW_ARCHS_WINDOWS: 'AMD64,x86'
-        CIBW_ARCHS_LINUX: 'x86_64,aarch64'
+        CIBW_ARCHS_LINUX: 'x86_64'   # aarch64 is having issues launching the docker correctly
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
