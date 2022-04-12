@@ -169,15 +169,9 @@ jobs:
       run: |
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
           python dev/extract_version.py --pypi --replace-setup-py
-          TWINE_REPOSITORY=pypi
-          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
         else
           python dev/extract_version.py --replace-setup-py
-          TWINE_REPOSITORY=testpypi
-          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
         fi;
-        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
-        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
 
     - name: Build and test wheels
       env:
@@ -220,6 +214,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install setuptools wheel twine requests packaging
         mkdir wheels
+
+        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
+          TWINE_REPOSITORY=pypi
+          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
+        else
+          TWINE_REPOSITORY=testpypi
+          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
+        fi;
+        echo "Using TWINE_REPOSITORY=$TWINE_REPOSITORY"
+        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
+        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
 
     - name: Download ALL wheels
       uses: actions/download-artifact@v2
