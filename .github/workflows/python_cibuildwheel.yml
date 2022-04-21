@@ -58,7 +58,7 @@ jobs:
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-        CIBW_SKIP: "*musllinux* pp* *-manylinux_i686"
+        CIBW_SKIP: "pp* *-manylinux_i686"
         CIBW_TEST_SKIP: "*-macosx_arm64"
         # CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
         CIBW_BUILD_VERBOSITY: 1
