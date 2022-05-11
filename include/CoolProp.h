@@ -26,6 +26,14 @@ namespace CoolProp {
 /// @param FluidName The fluid name
 /// @param Output The output parameter, one of "Tcrit","D","H",etc.
 double Props1SI(std::string FluidName, std::string Output);
+/**
+     * @brief  Get a matrix of outputs that do not depend on the thermodynamic state - this is a convenience function that does the call PropsSImulti(Outputs, "", {0}, "", {0}, backend, fluids, fractions)
+     * @param Outputs A vector of strings for the output parameters
+     * @param backend The string representation of the backend (HEOS, REFPROP, INCOMP, etc.)
+     * @param fluids The fluid name(s)
+     * @param fractions The fractions (molar, mass, volume, etc.) of the components
+     */     
+std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend, const std::vector<std::string>& fluids, const std::vector<double>& fractions);
 /// Return a value that depends on the thermodynamic state
 /// @param Output The output parameter, one of "T","D","H",etc.
 /// @param Name1 The first state variable name, one of "T","D","H",etc.

@@ -82,6 +82,15 @@ inline void __assert(const char* error) {
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
 EXPORT_CODE double CONVENTION Props1SI(const char* FluidName, const char* Output);
+
+/**
+     *\overload
+     *\sa \ref CoolProp::Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend, const std::vector<std::string>& fluids, const std::vector<double>& fractions)
+     *
+     * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
+     */
+EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, const char* FluidNames, const double* fractions,
+                                          const long length_fractions, double* result, long* resdim1);
 /**
      *\overload
      *\sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
@@ -89,7 +98,31 @@ EXPORT_CODE double CONVENTION Props1SI(const char* FluidName, const char* Output
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
 EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Ref);
-
+/**
+     *\overload
+     *\sa \ref CoolProp::PropsSImulti(const std::vector<std::string>& Outputs, const std::string& Name1, const std::vector<double>& Prop1,
+                                              const std::string& Name2, const std::vector<double>& Prop2, const std::string& backend,
+                                              const std::vector<std::string>& fluids, const std::vector<double>& fractions)
+     *
+     * @param Outputs Delimited string separated by LIST_STRING_DELIMITER for the output parameters
+     * @param Name1 The name of the first input variable
+     * @param Prop1 A vector of the first input values 
+     * @param size_Prop1 Size of Prop1 double*
+     * @param Name2 The name of the second input variable
+     * @param Prop2 A vector of the second input values 
+     * @param size_Prop2 Size of Prop2 double*
+     * @param backend 	The string representation of the backend (HEOS, REFPROP, INCOMP, etc.) 
+     * @param FluidNames  Delimited string separated by LIST_STRING_DELIMITER for the fluid name(s)
+     * @param fractions The fractions (molar, mass, volume, etc.) of the components
+     * @param length_fractions Size of fractions double*
+     * @param result Allocated memory for result vector
+     * @param resdim1 result vector dimension 1 pointer, to check allocated space and return actual result size
+     * @param resdim2 result vector dimension 2 pointer, to check allocated space and return actual result size
+     * \note If there is an error, an empty vector will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
+     */
+EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1, double* Prop1, const long size_Prop1, const char* Name2,
+                                         double* Prop2, const long size_Prop2, char* backend, const char* FluidNames, const double* fractions,
+                                         const long length_fractions, double* result, long* resdim1, long* resdim2);
 /**
      *\overload
      *\sa \ref CoolProp::PhaseSI(const std::string &, double, const std::string &, double, const std::string&)
