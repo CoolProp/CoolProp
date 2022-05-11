@@ -1843,6 +1843,9 @@ if(COOLPROP_MATHEMATICA_MODULE)
 
   list(
     APPEND APP_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
+  list(
+    APPEND APP_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Mathematica/CoolPropMathematica.cpp")
   list(APPEND APP_INCLUDE_DIRS "${Mathematica_WolframLibrary_INCLUDE_DIR}")
   include_directories(${APP_INCLUDE_DIRS})
