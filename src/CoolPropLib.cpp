@@ -568,6 +568,40 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, 
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
+EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long handle, const char* saturated_state, double* fractions,
+                                                                      const long maxN, long* N, long* errcode, char* message_buffer,
+                                                                      const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        std::vector<double> _fractions;
+        double quality = AS->Q();
+        if (0 <= quality && quality <= 1) {
+            if (strcmp("liquid", saturated_state) == 0) {
+                _fractions = AS->mole_fractions_liquid();
+            } else if (strcmp("gas", saturated_state) == 0) {
+                _fractions = AS->mole_fractions_vapor();
+            } else {
+                throw CoolProp::ValueError(
+                  format("Bad info string [%s] to saturated state mole fractions, options are \"liquid\" and \"gas\"", saturated_state));
+            }
+        } else {
+            throw CoolProp::ValueError(format("AbstractState_get_mole_fractions_satState only returns outputs for saturated states if AbstractState "
+                                              "quality [%g] is within two-phase region (0 <= quality <= 1)",
+                                              static_cast<double>(quality)));
+        }
+        *N = _fractions.size();
+        if (*N <= maxN) {
+            for (int i = 0; i < *N; i++)
+                fractions[i] = _fractions[i];
+        } else {
+            throw CoolProp::ValueError(format("Length of array [%d] is greater than allocated buffer length [%d]", *N, maxN));
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
 EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long* errcode,
                                                  char* message_buffer, const long buffer_length) {
     *errcode = 0;
@@ -744,26 +778,32 @@ EXPORT_CODE void CONVENTION AbstractState_build_phase_envelope(const long handle
     }
 }
 
-EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long handle, const long length, double* T, double* p, double* rhomolar_vap,
-                                                                  double* rhomolar_liq, double* x, double* y, long* errcode, char* message_buffer,
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long handle, const long length, const long maxComponents, double* T,
+                                                                  double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y,
+                                                                  long* actual_length, long* actual_components, long* errcode, char* message_buffer,
                                                                   const long buffer_length) {
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         CoolProp::PhaseEnvelopeData pe = AS->get_phase_envelope_data();
+        *actual_length = pe.T.size();
         if (pe.T.size() > static_cast<std::size_t>(length)) {
             throw CoolProp::ValueError(format("Length of phase envelope vectors [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(pe.T.size()), static_cast<int>(length)));
         }
-        std::size_t N = pe.x.size();
+        *actual_components = pe.x.size();
+        if (*actual_components > static_cast<std::size_t>(maxComponents)) {
+            throw CoolProp::ValueError(format("Length of phase envelope composition vectors [%d] is greater than allocated buffer length [%d]",
+                                              static_cast<int>(*actual_components), static_cast<int>(maxComponents)));
+        }
         for (std::size_t i = 0; i < pe.T.size(); i++) {
             *(T + i) = pe.T[i];
             *(p + i) = pe.p[i];
             *(rhomolar_vap + i) = pe.rhomolar_vap[i];
             *(rhomolar_liq + i) = pe.rhomolar_liq[i];
-            for (std::size_t j = 0; j < N; ++j) {
-                *(x + i * N + j) = pe.x[j][i];
-                *(y + i * N + j) = pe.y[j][i];
+            for (std::size_t j = 0; j < *actual_components; ++j) {
+                *(x + i * *actual_components + j) = pe.x[j][i];
+                *(y + i * *actual_components + j) = pe.y[j][i];
             }
         }
     } catch (...) {
@@ -817,6 +857,57 @@ EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle,
             *(rhomolar + i) = pts[i].rhomolar;
             *(stable + i) = pts[i].stable;
         }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long handle, const char* saturated_state, const long param, long* errcode,
+                                                                  char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        double quality = AS->Q();
+        if (0 <= quality && quality <= 1) {
+            if (strcmp("liquid", saturated_state) == 0) {
+                return AS->saturated_liquid_keyed_output(static_cast<CoolProp::parameters>(param));
+            } else if (strcmp("gas", saturated_state) == 0) {
+                return AS->saturated_vapor_keyed_output(static_cast<CoolProp::parameters>(param));
+            } else {
+                throw CoolProp::ValueError(
+                  format("Bad info string [%s] to saturated state output, options are \"liquid\" and \"gas\"", saturated_state));
+            }
+        } else {
+            throw CoolProp::ValueError(format("AbstractState_keyed_output_satState only returns outputs for saturated states if AbstractState "
+                                              "quality [%g] is within two-phase region (0 <= quality <= 1)",
+                                              static_cast<double>(quality)));
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+        return _HUGE;
+    }
+}
+
+EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
+                                                       const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        strcpy(backend, AS->backend_name().c_str());
+
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
+                                               const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        CoolProp::add_fluids_as_JSON(backend, fluidstring);
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }
