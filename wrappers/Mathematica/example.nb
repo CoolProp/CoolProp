@@ -1,117 +1,705 @@
 (* Content-type: application/vnd.wolfram.mathematica *)
 
-(*** Wolfram Notebook File ***)
-(* http://www.wolfram.com/nb *)
-
-(* CreatedBy='Mathematica 9.0' *)
-
-(*CacheID: 234*)
-(* Internal cache information:
-NotebookFileLineBreakTest
-NotebookFileLineBreakTest
-NotebookDataPosition[       157,          7]
-NotebookDataLength[      4066,        108]
-NotebookOptionsPosition[      3606,         87]
-NotebookOutlinePosition[      3952,        102]
-CellTagsIndexPosition[      3909,         99]
-WindowFrame->Normal*)
-
 (* Beginning of Notebook Content *)
 Notebook[{
 
 Cell[CellGroupData[{
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"PropsSI", "=", " ", 
-   RowBox[{"LibraryFunctionLoad", "[", 
-    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<PropsSI\>\"", ",", 
-     RowBox[{"{", 
-      RowBox[{
-      "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",", 
-       "Real", ",", "UTF8String"}], "}"}], ",", "Real"}], "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{"PropsSI", "[", 
-  RowBox[{
-  "\"\<T\>\"", ",", "\"\<P\>\"", ",", "101325", ",", "\"\<Q\>\"", ",", "1", 
-   ",", "\"\<Water\>\""}], "]"}], "\[IndentingNewLine]", 
- RowBox[{"LibraryFunctionUnload", "[", "PropsSI", "]"}]}], "Input",
- CellChangeTimes->{{3.5975962701305647`*^9, 3.597596273924782*^9}, {
-   3.5975963268728104`*^9, 3.597596370765321*^9}, {3.597596413885787*^9, 
-   3.597596447831729*^9}, {3.597596485780899*^9, 3.5975965035799174`*^9}, 
-   3.5975965729218836`*^9, {3.629071287196377*^9, 3.629071314962002*^9}, {
-   3.629071375805752*^9, 3.629071391805752*^9}, {3.629071633071377*^9, 
-   3.629071633915127*^9}, {3.629072034399502*^9, 3.629072046962002*^9}, {
-   3.629072100196377*^9, 3.629072107680752*^9}, {3.629072359774502*^9, 
-   3.629072373243252*^9}, {3.629072404696377*^9, 3.629072437821377*^9}, {
-   3.629072744133877*^9, 3.629072744696377*^9}, {3.629073005590908*^9, 
-   3.629073025731533*^9}, {3.6290737478135643`*^9, 3.6290737487979393`*^9}}],
-
-Cell[BoxData["373.1242958476879`"], "Output",
- CellChangeTimes->{{3.5975965638133626`*^9, 3.597596574246959*^9}, 
-   3.5975966820841274`*^9, 3.5979454740346136`*^9, 3.597945533625022*^9, 
-   3.629071315774502*^9, 3.629072017149502*^9, 3.629072048399502*^9, 
-   3.629072107899502*^9, 3.629072361305752*^9, {3.629072420383877*^9, 
-   3.629072462899502*^9}, {3.629073007278408*^9, 3.629073026778408*^9}, {
-   3.6290737409541893`*^9, 3.6290737497510643`*^9}}]
-}, Open  ]],
+Cell["Manually load single functions from Library", "Section"],
 
 Cell[CellGroupData[{
 
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"HAPropsSI", "=", " ", 
-   RowBox[{"LibraryFunctionLoad", "[", 
-    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<HAPropsSI\>\"", ",", 
-     RowBox[{"{", 
+  RowBox[{"PropsSI", "=", " ",
+   RowBox[{"LibraryFunctionLoad", "[",
+    RowBox[{"\"\<libCoolProp\>\"", ",", "\"\<PropsSI\>\"", ",",
+     RowBox[{"{",
       RowBox[{
-      "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",", 
-       "Real", ",", "UTF8String", ",", "Real"}], "}"}], ",", "Real"}], 
-    "]"}]}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"HAPropsSI", "[", 
+      "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",",
+       "Real", ",", "UTF8String"}], "}"}], ",", "Real"}], "]"}]}],
+  ";"}], "\[IndentingNewLine]",
+ RowBox[{"PropsSI", "[",
   RowBox[{
-  "\"\<W\>\"", ",", "\"\<T\>\"", ",", "300", ",", "\"\<P\>\"", ",", "101325", 
-   ",", "\"\<R\>\"", ",", "0.5"}], "]"}], "\[IndentingNewLine]", 
- RowBox[{"LibraryFunctionUnload", "[", "HAPropsSI", "]"}]}], "Input",
- CellChangeTimes->{{3.597945273818162*^9, 3.597945373524865*^9}, 
-   3.5979455508320065`*^9, {3.629072044180752*^9, 3.629072083821377*^9}, {
-   3.629072119868252*^9, 3.629072144477627*^9}}],
+  "\"\<T\>\"", ",", "\"\<P\>\"", ",", "101325", ",", "\"\<Q\>\"", ",", "1",
+   ",", "\"\<Water\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"LibraryFunctionUnload", "[", "PropsSI", "]"}]}], "Input"]
+}]],
 
-Cell[BoxData["0.01109623184668821`"], "Output",
- CellChangeTimes->{{3.5979455418264914`*^9, 3.5979455523070908`*^9}, {
-   3.629072050602627*^9, 3.629072084196377*^9}, {3.629072117633877*^9, 
-   3.629072145087002*^9}, 3.6290737526573143`*^9}]
-}, Open  ]],
+Cell[CellGroupData[{
 
-Cell[BoxData[""], "Input",
- CellChangeTimes->{{3.597945508477584*^9, 3.597945508482584*^9}}]
-},
-WindowSize->{1280, 823},
-WindowMargins->{{-8, Automatic}, {Automatic, -8}},
-FrontEndVersion->"10.0 for Microsoft Windows (64-bit) (December 4, 2014)",
-StyleDefinitions->"Default.nb"
-]
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"HAPropsSI", "=", " ",
+   RowBox[{"LibraryFunctionLoad", "[",
+    RowBox[{"\"\<CoolProp\>\"", ",", "\"\<HAPropsSI\>\"", ",",
+     RowBox[{"{",
+      RowBox[{
+      "UTF8String", ",", "UTF8String", ",", "Real", ",", "UTF8String", ",",
+       "Real", ",", "UTF8String", ",", "Real"}], "}"}], ",", "Real"}],
+    "]"}]}], ";"}], "\[IndentingNewLine]",
+ RowBox[{"HAPropsSI", "[",
+  RowBox[{
+  "\"\<W\>\"", ",", "\"\<T\>\"", ",", "300", ",", "\"\<P\>\"", ",", "101325",
+   ",", "\"\<R\>\"", ",", "0.5"}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"LibraryFunctionUnload", "[", "HAPropsSI", "]"}]}], "Input"]
+}]],
+
+Cell[BoxData[{
+ RowBox[{"Remove", "@", "Global`PropsSI"}], "\[IndentingNewLine]",
+ RowBox[{"Remove", "@", "Global`HAPropsSI"}]}], "Input"]
+}]],
+
+Cell[TextData[StyleBox["CoolProp Package", "Title"]], "Section"],
+
+Cell[CellGroupData[{
+
+Cell["Load Package", "Section"],
+
+Cell[BoxData[
+ RowBox[{"Get", "[",
+  RowBox[{
+   RowBox[{"NotebookDirectory", "[", "]"}], "<>", " ",
+   "\"\<CoolProp.wl\>\""}], "]"}]], "Input"],
+
+Cell["\<\
+?\[CloseCurlyDoubleQuote]CoolProp`*\[CloseCurlyDoubleQuote] lists all \
+available functions in the package. Clicking on a function reveals its usage \
+message. These can also be shown by calling ?FunctionName (e.g. ?PropsSI)\
+\>", "Text"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"?", "\"\<CoolProp`*\>\""}]], "Input"]
+}]]
+}]],
+
+Cell[CellGroupData[{
+
+Cell["Single Function Tests", "Section"],
+
+Cell[CellGroupData[{
+
+Cell["Direct Functions", "Subsection"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Props1SI", "[",
+  RowBox[{"\"\<water\>\"", ",", "\"\<M\>\""}], "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Props1SImulti", "[",
+  RowBox[{
+  "\"\<M,acentric,Tcrit,pcrit\>\"", ",", " ", "\"\<HEOS\>\"", ",", " ",
+   "\"\<ethanol\>\"", ",", " ",
+   RowBox[{"{", "1", "}"}]}], "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"PropsSI", "[",
+  RowBox[{
+  "\"\<Dmolar\>\"", ",", "\"\<P\>\"", ",", " ", "1500000", ",", " ",
+   "\"\<T\>\"", ",", " ", "300", ",", "\"\<water\>\""}], "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"PropsSImulti", "[",
+  RowBox[{"\"\<Dmolar,Hmolar,Smolar,Dmass\>\"", ",", "\"\<P\>\"", ",", " ",
+   RowBox[{"{",
+    RowBox[{"1500000", ",", "200"}], "}"}], ",", " ", "\"\<T\>\"", ",", " ",
+   RowBox[{"{",
+    RowBox[{"300", ",", "200"}], "}"}], ",", " ", "\"\<PR\>\"", ",",
+   "\"\<water\>\"", ",", " ",
+   RowBox[{"{", "1", "}"}]}], "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"PhaseSI", "[",
+  RowBox[{
+  "\"\<P\>\"", ",", "101325", ",", "\"\<Q\>\"", ",", " ", "0.5", ",",
+   "\"\<Water\>\""}], "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"HAPropsSI", "[",
+  RowBox[{
+  "\"\<D\>\"", ",", "\"\<P\>\"", ",", "101325", ",", " ", "\"\<T\>\"", ",",
+   " ", "300", ",", " ", "\"\<R\>\"", ",", " ", "0.5"}], "]"}]], "Input"]
+}]]
+}]],
+
+Cell[CellGroupData[{
+
+Cell["Information Functions", "Subsection"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"GetGlobalParamString", "@", "\"\<FluidsList\>\""}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"GetInputPairIndex", "[", "\"\<DmolarT_INPUTS\>\"", "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"GetInputPairDescription", "[",
+  RowBox[{"11", ",", " ", "\"\<short\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"GetInputPairDescription", "[",
+  RowBox[{"11", ",", " ", "\"\<long\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"GetInputPairDescription", "[",
+  RowBox[{"11", ",", " ", "\"\<both\>\""}], "]"}]}], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"GetParamIndex", "[", "\"\<T\>\"", "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"GetParameterInformation", "[",
+  RowBox[{"19", ",", "\"\<IO\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"GetParameterInformation", "[",
+  RowBox[{"19", ",", "\"\<short\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"GetParameterInformation", "[",
+  RowBox[{"19", ",", "\"\<long\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"GetParameterInformation", "[",
+  RowBox[{"19", ",", "\"\<units\>\""}], "]"}]}], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CubicFluidsList", "[", "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"GetFluidsAsJSON", "[",
+  RowBox[{"\"\<PR\>\"", ",", " ", "\"\<water\>\""}], "]"}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"AddFluidsAsJSON", "[",
+  RowBox[{"\"\<PR\>\"", ",", " ", "%"}], "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"FluidParamString", "[",
+  RowBox[{"\"\<PR::Propane\>\"", ",", "\"\<aliases\>\""}], "]"}]], "Input"]
+}]]
+}]],
+
+Cell[CellGroupData[{
+
+Cell["AbstractState", "Subsection"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASFactory", "[",
+  RowBox[{"\"\<HEOS\>\"", ",", " ", "\"\<water&ethanol\>\""}], "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASFree", "[", "1", "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASUpdate", "[",
+  RowBox[{"0", ",",
+   RowBox[{"GetInputPairIndex", "[", "\"\<PT_INPUTS\>\"", "]"}], ",", " ",
+   "1000000", ",", " ", "300"}], "]"}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASSetFractions", "[",
+  RowBox[{"0", ",", " ",
+   RowBox[{"{",
+    RowBox[{"0.5", ",", "0.5"}], "}"}]}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"ASUpdate", "[",
+  RowBox[{"0", ",",
+   RowBox[{"GetInputPairIndex", "[", "\"\<PT_INPUTS\>\"", "]"}], ",", " ",
+   "1000000", ",", " ", "300"}], "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASKeyedOutput", "[",
+  RowBox[{"0", ",", " ",
+   RowBox[{"GetParamIndex", "@", "\"\<Hmolar\>\""}]}], "]"}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASUpdate", "[",
+  RowBox[{"0", ",", " ",
+   RowBox[{"GetInputPairIndex", "[", "\"\<PQ_INPUTS\>\"", "]"}], ",", " ",
+   "100000", ",", "0.4"}], "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"ASKeyedOutputSatState", "[",
+  RowBox[{"0", ",", " ",
+   RowBox[{"GetParamIndex", "@", "\"\<H\>\""}], ",", " ", "\"\<liquid\>\""}],
+  "]"}], "\[IndentingNewLine]",
+ RowBox[{"ASKeyedOutputSatState", "[",
+  RowBox[{"0", ",", " ",
+   RowBox[{"GetParamIndex", "@", "\"\<H\>\""}], ",", " ", "\"\<gas\>\""}],
+  "]"}]}], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"ASGetMoleFractions", "@", "0"}], "\[IndentingNewLine]",
+ RowBox[{"ASGetMoleFractionsSatState", "[",
+  RowBox[{"0", ",", " ", "\"\<liquid\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"ASGetMoleFractionsSatState", "[",
+  RowBox[{"0", ",", " ", "\"\<gas\>\""}], "]"}]}], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASFluidNames", "[", "0", "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"ASSpecifyPhase", "[",
+  RowBox[{"0", ",", " ", "\"\<gas\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"ASSpecifyPhase", "[",
+  RowBox[{"0", ",", " ", "\"\<phase_gas\>\""}], "]"}]}], "Input"]
+}]],
+
+Cell[BoxData[{
+ RowBox[{"ASBuildPhaseEnvelope", "[",
+  RowBox[{"0", ",", "\"\<none\>\""}], "]"}], "\[IndentingNewLine]",
+ RowBox[{"ASBuildPhaseEnvelope", "[",
+  RowBox[{"0", ",", "\"\<veryfine\>\""}], "]"}]}], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ASReadPhaseEnvelopeData", "@", "0"}], " ", "//",
+  "Short"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASBackendName", "@", "0"}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASFree", "@", "0"}]], "Input"]
+}]]
+}]],
+
+Cell[CellGroupData[{
+
+Cell["Access Low-Level from Low-Level", "Section"],
+
+Cell["\<\
+Copies example from \
+http://www.coolprop.org/coolprop/LowLevelAPI.html#access-from-high-level-\
+interface \
+\>", "Text"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ptInput", " ", "=", " ",
+  RowBox[{"GetInputPairIndex", "[", "\"\<PT_INPUTS\>\"", "]"}]}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"cpmass", " ", "=", " ",
+  RowBox[{"GetParamIndex", "[", "\"\<C\>\"", "]"}]}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"handle", " ", "=",
+  RowBox[{"ASFactory", "[",
+   RowBox[{"\"\<HEOS\>\"", ",", " ", "\"\<Water\>\""}], "]"}]}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASUpdate", "[",
+  RowBox[{
+  "handle", ",", " ", "ptInput", ",", " ", "101325", ",", " ", "300"}],
+  "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASKeyedOutput", "[",
+  RowBox[{"handle", ",", " ", "39"}], "]"}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASFree", "[", "handle", "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"handle", "=",
+  RowBox[{"ASFactory", "[",
+   RowBox[{"\"\<HEOS\>\"", ",", "\"\<Water&Ethanol\>\""}], "]"}]}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"pqInput", "=",
+  RowBox[{"GetInputPairIndex", "[", "\"\<PQ_INPUTS\>\"", "]"}]}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"T", "=",
+  RowBox[{"GetParamIndex", "[", "\"\<T\>\"", "]"}]}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASSetFractions", "[",
+  RowBox[{"handle", ",", " ",
+   RowBox[{"{",
+    RowBox[{"0.4", ",", " ", "0.6"}], "}"}]}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"ASUpdate", "[",
+  RowBox[{"handle", ",", " ", "pqInput", ",", " ", "101325", ",", " ", "0"}],
+  "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASKeyedOutput", "[",
+  RowBox[{"handle", ",", " ", "T"}], "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASFluidNames", "[", "handle", "]"}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASFree", "[", "handle", "]"}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell["Cubic EoS", "Section"],
+
+Cell["\<\
+Copies example from http://www.coolprop.org/coolprop/Cubics.html#mixtures \
+\>", "Text"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"handle", " ", "=", " ",
+  RowBox[{"ASFactory", "[",
+   RowBox[{"\"\<SRK\>\"", ",", " ", "\"\<Methane&Ethane&Propane\>\""}],
+   "]"}]}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASSetFractions", "[",
+  RowBox[{"handle", ",", " ",
+   RowBox[{"{",
+    RowBox[{"0.25", ",", " ", "0.25", ",", " ", "0.5"}], "}"}]}],
+  "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"qtInput", " ", "=", " ",
+  RowBox[{"GetInputPairIndex", "[", "\"\<QT_INPUTS\>\"", "]"}]}]], "Input"]
+}]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"p", " ", "=", " ",
+  RowBox[{"GetParamIndex", "[", "\"\<P\>\"", "]"}]}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASUpdate", "[",
+  RowBox[{"handle", ",", " ", "qtInput", ",", " ", "0", ",", " ", "120"}],
+  "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASKeyedOutput", "[",
+  RowBox[{"handle", ",", " ", "p"}], "]"}]], "Input"]
+}]],
+
+Cell[BoxData[
+ RowBox[{"ASSetBinaryInteraction", "[",
+  RowBox[{
+  "handle", ",", " ", "0", ",", " ", "1", ",", " ", "\"\<kij\>\"", ",", " ",
+   RowBox[{"-", "0.05"}]}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"ASUpdate", "[",
+  RowBox[{"handle", ",", " ", "qtInput", ",", " ", "0", ",", " ", "120"}],
+  "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ASKeyedOutput", "[",
+  RowBox[{"handle", ",", " ", "p"}], "]"}]], "Input"]
+}]]
+}]],
+
+Cell[CellGroupData[{
+
+Cell["Phase Enevelope", "Section"],
+
+Cell["\<\
+Example on how to handle the phase envelope data. Currently there is a \
+problem that after building the phase envelope, further calls to update the \
+AbstractState with quality input will fail in an Assertion Failure. To \
+circumvent this, one can have two \[OpenCurlyDoubleQuote]related\
+\[CloseCurlyDoubleQuote] AbstractStates which are setup the exact same way: \
+one to build and read the phase envelope and one to actually calculate the \
+properties.\
+\>", "Text"],
+
+Cell[BoxData[
+ RowBox[{"ASBuildPhaseEnvelope", "[",
+  RowBox[{"handle", ",", "\"\<veryfine\>\""}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"pe", "=",
+   RowBox[{"ASReadPhaseEnvelopeData", "[", "handle", "]"}]}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"pe", " ", "=", " ",
+   RowBox[{"DeleteDuplicates", "[",
+    RowBox[{"pe", ",",
+     RowBox[{
+      RowBox[{
+       RowBox[{"#1", "[",
+        RowBox[{"[", "1", "]"}], "]"}], "==",
+       RowBox[{"#2", "[",
+        RowBox[{"[", "1", "]"}], "]"}]}], "&"}]}], "]"}]}], ";"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{"splitPePosition1", " ", "=", " ",
+  RowBox[{
+   RowBox[{"Position", "[",
+    RowBox[{
+     RowBox[{"pe", "[",
+      RowBox[{"[",
+       RowBox[{"All", ",",
+        RowBox[{"1", ";;", "2"}]}], "]"}], "]"}], ",",
+     RowBox[{"{",
+      RowBox[{
+       RowBox[{"Max", "@",
+        RowBox[{"pe", "[",
+         RowBox[{"[",
+          RowBox[{"All", ",", "1"}], "]"}], "]"}]}], ",", "_"}], "}"}]}],
+    "]"}], "[",
+   RowBox[{"[",
+    RowBox[{"1", ",", "1"}], "]"}], "]"}]}], "\[IndentingNewLine]",
+ RowBox[{"splitPePosition2", " ", "=", " ",
+  RowBox[{
+   RowBox[{"Position", "[",
+    RowBox[{
+     RowBox[{"pe", "[",
+      RowBox[{"[",
+       RowBox[{"All", ",",
+        RowBox[{"1", ";;", "2"}]}], "]"}], "]"}], ",",
+     RowBox[{"{",
+      RowBox[{"_", ",", " ",
+       RowBox[{"Max", "@",
+        RowBox[{"pe", "[",
+         RowBox[{"[",
+          RowBox[{"All", ",", "2"}], "]"}], "]"}]}]}], "}"}]}], "]"}], "[",
+   RowBox[{"[",
+    RowBox[{"1", ",", "1"}], "]"}], "]"}]}]}], "Input"]
+}]],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dew1", " ", "=", " ",
+   RowBox[{"pe", "[",
+    RowBox[{"[",
+     RowBox[{
+      RowBox[{"1", ";;", "splitPePosition1"}], ",",
+      RowBox[{"1", ";;", "2"}]}], "]"}], "]"}]}],
+  ";"}], "\[IndentingNewLine]",
+ RowBox[{
+  RowBox[{"bub", " ", "=", " ",
+   RowBox[{"pe", "[",
+    RowBox[{"[",
+     RowBox[{
+      RowBox[{"splitPePosition2", ";;",
+       RowBox[{"-", "1"}]}], ",",
+      RowBox[{"1", ";;", "2"}]}], "]"}], "]"}]}],
+  ";"}], "\[IndentingNewLine]",
+ RowBox[{
+  RowBox[{"dew2", " ", "=", " ",
+   RowBox[{"pe", "[",
+    RowBox[{"[",
+     RowBox[{
+      RowBox[{"splitPePosition1", ";;", "splitPePosition2"}], ",",
+      RowBox[{"1", ";;", "2"}]}], "]"}], "]"}]}], ";"}]}], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ListPlot", "[",
+  RowBox[{
+   RowBox[{"{",
+    RowBox[{
+     RowBox[{"pe", "[",
+      RowBox[{"[",
+       RowBox[{
+        RowBox[{"1", ";;", "splitPePosition1"}], ",",
+        RowBox[{"1", ";;", "2"}]}], "]"}], "]"}], ",", " ",
+     RowBox[{"pe", "[",
+      RowBox[{"[",
+       RowBox[{
+        RowBox[{"splitPePosition1", ";;", "splitPePosition2"}], ",",
+        RowBox[{"1", ";;", "2"}]}], "]"}], "]"}], ",", " ",
+     RowBox[{"pe", "[",
+      RowBox[{"[",
+       RowBox[{
+        RowBox[{"splitPePosition2", ";;",
+         RowBox[{"-", "1"}]}], ",",
+        RowBox[{"1", ";;", "2"}]}], "]"}], "]"}]}], "}"}], ",", " ",
+   RowBox[{"PlotRange", "\[Rule]", "All"}]}], "]"}]], "Input"]
+}]],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dew1Interpolation", " ", "=", " ",
+   RowBox[{"Interpolation", "[",
+    RowBox[{"dew1", ",", " ",
+     RowBox[{"InterpolationOrder", "\[Rule]", "1"}]}], "]"}]}],
+  ";"}], "\[IndentingNewLine]",
+ RowBox[{
+  RowBox[{"bubInterpolation", " ", "=", " ",
+   RowBox[{"Interpolation", "[",
+    RowBox[{"bub", ",", " ",
+     RowBox[{"InterpolationOrder", "\[Rule]", "1"}]}], " ", "]"}]}],
+  ";"}], "\[IndentingNewLine]",
+ RowBox[{
+  RowBox[{"dew2Interpolation", " ", "=", " ",
+   RowBox[{"Interpolation", "[",
+    RowBox[{"dew2", ",", " ",
+     RowBox[{"InterpolationOrder", "\[Rule]", "1"}]}], "]"}]}],
+  ";"}]}], "Input"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Show", "[",
+  RowBox[{
+   RowBox[{"Plot", "[",
+    RowBox[{
+     RowBox[{"dew1Interpolation", "[", "x", "]"}], ",", " ",
+     RowBox[{"{",
+      RowBox[{"x", ",",
+       RowBox[{"dew1Interpolation", "[",
+        RowBox[{"[",
+         RowBox[{"1", ",", "1", ",", "1"}], "]"}], "]"}], ",", " ",
+       RowBox[{"dew1Interpolation", "[",
+        RowBox[{"[",
+         RowBox[{"1", ",", "1", ",", "2"}], "]"}], "]"}]}], "}"}], ",", " ",
+     RowBox[{"PlotRange", "\[Rule]",
+      RowBox[{"{",
+       RowBox[{
+        RowBox[{"{",
+         RowBox[{"50", ",", "315"}], "}"}], ",", "All"}], "}"}]}], ",", " ",
+     RowBox[{"PlotStyle", "\[Rule]", "Blue"}]}], "]"}], ",",
+   RowBox[{"Plot", "[",
+    RowBox[{
+     RowBox[{"dew2Interpolation", "[", "x", "]"}], ",",
+     RowBox[{"{",
+      RowBox[{"x", ",",
+       RowBox[{"dew2Interpolation", "[",
+        RowBox[{"[",
+         RowBox[{"1", ",", "1", ",", "1"}], "]"}], "]"}], ",", " ",
+       RowBox[{"dew2Interpolation", "[",
+        RowBox[{"[",
+         RowBox[{"1", ",", "1", ",", "2"}], "]"}], "]"}]}], "}"}], ",", " ",
+     RowBox[{"PlotStyle", "\[Rule]", "Blue"}]}], "]"}], ",",
+   RowBox[{"Plot", "[",
+    RowBox[{
+     RowBox[{"bubInterpolation", "[", "x", "]"}], ",",
+     RowBox[{"{",
+      RowBox[{"x", ",",
+       RowBox[{"bubInterpolation", "[",
+        RowBox[{"[",
+         RowBox[{"1", ",", "1", ",", "1"}], "]"}], "]"}], ",", " ",
+       RowBox[{"bubInterpolation", "[",
+        RowBox[{"[",
+         RowBox[{"1", ",", "1", ",", "2"}], "]"}], "]"}]}], "}"}], ",", " ",
+     RowBox[{"PlotStyle", "\[Rule]", "Red"}]}], "]"}], ",", " ",
+   RowBox[{"PlotRange", "\[Rule]",
+    RowBox[{"{",
+     RowBox[{
+      RowBox[{"{",
+       RowBox[{"50", ",", "400"}], "}"}], ",",
+      RowBox[{"{",
+       RowBox[{"0", ",", "All"}], "}"}]}], "}"}]}], ",", " ",
+   RowBox[{"PlotRangePadding", " ", "->", " ",
+    RowBox[{"{",
+     RowBox[{
+      RowBox[{"{",
+       RowBox[{"0", ",", "0"}], "}"}], ",",
+      RowBox[{"{",
+       RowBox[{"0", ",",
+        RowBox[{"10", "^", "6"}]}], "}"}]}], "}"}]}]}], "]"}]], "Input"]
+}]]
+}]]
+}]
 (* End of Notebook Content *)
-
-(* Internal cache information *)
-(*CellTagsOutline
-CellTagsIndex->{}
-*)
-(*CellTagsIndex
-CellTagsIndex->{}
-*)
-(*NotebookFileOutline
-Notebook[{
-Cell[CellGroupData[{
-Cell[579, 22, 1344, 24, 72, "Input"],
-Cell[1926, 48, 455, 6, 31, "Output"]
-}, Open  ]],
-Cell[CellGroupData[{
-Cell[2418, 59, 833, 17, 72, "Input"],
-Cell[3254, 78, 241, 3, 64, "Output"]
-}, Open  ]],
-Cell[3510, 84, 92, 1, 31, "Input"]
-}
-]
-*)
-
-(* End of internal cache information *)
