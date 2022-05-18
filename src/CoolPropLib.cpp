@@ -206,9 +206,96 @@ EXPORT_CODE double CONVENTION Props1SI(const char* FluidName, const char* Output
     fpu_reset_guard guard;
     return CoolProp::Props1SI(std::string(FluidName), std::string(Output));
 }
+EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, const char* FluidNames, const double* fractions,
+                                          const long length_fractions, double* result, long* resdim1) {
+    fpu_reset_guard guard;
+    try {
+        // Outputs is a delimited string separated by LIST_STRING_DELIMITER
+        std::string delim = CoolProp::get_config_string(LIST_STRING_DELIMITER);
+        // strsplit only support char delimiter
+        if (delim.length() > 1)
+            throw CoolProp::ValueError(format("Length of string delimiter [%d] is bigger than 1 [%d]", delim.length(), delim.size()));
+        std::vector<std::string> _outputs = strsplit(Outputs, delim[0]);
+        // FluidNames is a delimited string separated by LIST_STRING_DELIMITER
+        std::vector<std::string> _fluidNames = strsplit(FluidNames, delim[0]);
+        if (_fluidNames.size() != length_fractions)
+            throw CoolProp::ValueError(
+              format("Length of fractions vector  [%d] is not equal to length of fluidNames vector [%d]", _fluidNames.size(), length_fractions));
+        std::vector<double> _fractions(fractions, fractions + length_fractions);
+        std::vector<std::vector<double>> _result = CoolProp::Props1SImulti(_outputs, backend, _fluidNames, _fractions);
+        // if CoolProp::Props1SImulti fails it will return an empty vector -> set result dimensions to 0
+        if (_result.size() == 0) {
+            *resdim1 = 0;
+        } else {
+            if (_result.size() > *resdim1)
+                throw CoolProp::ValueError(format("Result vector [%d] is bigger than allocated memory [%d]", _result[0].size(), *resdim1));
+            *resdim1 = _result[0].size();
+            for (int i = 0; i < _result[0].size(); i++) {
+                result[i] = _result[0][i];
+            }
+        }
+    } catch (std::exception& e) {
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        CoolProp::set_error_string("Undefined error");
+    }
+}
 EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName) {
     fpu_reset_guard guard;
     return CoolProp::PropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
+}
+EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1, double* Prop1, const long size_Prop1, const char* Name2,
+                                         double* Prop2, const long size_Prop2, char* backend, const char* FluidNames, const double* fractions,
+                                         const long length_fractions, double* result, long* resdim1, long* resdim2) {
+    fpu_reset_guard guard;
+    try {
+        // Outputs is a delimited string separated by LIST_STRING_DELIMITER
+        std::string delim = CoolProp::get_config_string(LIST_STRING_DELIMITER);
+        // strsplit only support char delimiter
+        if (delim.length() > 1)
+            throw CoolProp::ValueError(format("Length of string delimiter [%d] is bigger than 1 [%d]", delim.length(), delim.size()));
+        std::vector<std::string> _outputs = strsplit(Outputs, delim[0]);
+        if (size_Prop1 != size_Prop2)
+            throw CoolProp::ValueError(
+              format("Length of input parameter 1 [%d] is not equal to length of input parameter 2 [%d]", size_Prop1, size_Prop2));
+        // make vectors out of double pointer
+        std::vector<double> _prop1(Prop1, Prop1 + size_Prop1);
+        std::vector<double> _prop2(Prop2, Prop2 + size_Prop2);
+        // FluidNames is a delimited string separated by LIST_STRING_DELIMITER
+        std::vector<std::string> _fluidNames = strsplit(FluidNames, delim[0]);
+        if (_fluidNames.size() != length_fractions)
+            throw CoolProp::ValueError(
+              format("Length of fractions vector  [%d] is not equal to length of fluidNames vector [%d]", _fluidNames.size(), length_fractions));
+        std::vector<double> _fractions(fractions, fractions + length_fractions);
+        std::vector<std::vector<double>> _result =
+          CoolProp::PropsSImulti(_outputs, std::string(Name1), _prop1, std::string(Name2), _prop2, backend, _fluidNames, _fractions);
+        // if CoolProp::PropsSImulti fails it will return an empty vector -> set result dimensions to 0
+        if (_result.size() == 0) {
+            *resdim1 = 0;
+            *resdim2 = 0;
+        } else {
+            if (_result.size() > *resdim1 || _result[0].size() > *resdim2)
+                throw CoolProp::ValueError(
+                  format("Result matrix [%d x %d] is bigger than allocated memory [%d x %d]", _result.size(), _result[0].size(), *resdim1, *resdim2));
+            *resdim1 = _result.size();
+            *resdim2 = _result[0].size();
+            for (int i = 0; i < _result.size(); i++) {
+                for (int j = 0; j < _result[i].size(); j++) {
+                    result[j + _result[i].size() * i] = _result[i][j];
+                }
+            }
+        }
+    } catch (std::exception& e) {
+        // set result dimensions to 0 to signalize, an error occured
+        *resdim1 = 0;
+        *resdim2 = 0;
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        // set result dimensions to 0 to signalize, an error occured
+        *resdim1 = 0;
+        *resdim2 = 0;
+        CoolProp::set_error_string("Undefined error");
+    }
 }
 EXPORT_CODE long CONVENTION PhaseSI(const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName, char* phase, int n) {
     fpu_reset_guard guard;
