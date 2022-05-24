@@ -611,7 +611,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
      *
      * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
      */
-EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long handle, const long length, const long maxComponents, double* T,
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents, double* T,
                                                                   double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y,
                                                                   long* actual_length, long* actual_components, long* errcode, char* message_buffer,
                                                                   const long buffer_length);
