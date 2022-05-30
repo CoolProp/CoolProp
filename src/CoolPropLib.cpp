@@ -593,8 +593,9 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
         }
         *N = _fractions.size();
         if (*N <= maxN) {
-            for (int i = 0; i < *N; i++)
+            for (int i = 0; i < *N; i++) {
                 fractions[i] = _fractions[i];
+            }
         } else {
             throw CoolProp::ValueError(format("Length of array [%d] is greater than allocated buffer length [%d]", *N, maxN));
         }
@@ -922,8 +923,13 @@ EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* 
 
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
-        strcpy(backend, AS->backend_name().c_str());
-
+        std::string backendstring = AS->backend_name();
+        if (backendstring.size() < static_cast<std::size_t>(buffer_length)) {
+            strcpy(backend, backendstring.c_str());
+        } else {
+            throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", backendstring.size(),
+                                              static_cast<std::size_t>(buffer_length)));
+        }
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }
