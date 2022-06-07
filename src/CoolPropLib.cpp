@@ -577,10 +577,11 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::vector<double> _fractions;
         double quality = AS->Q();
+        std::string string_state(saturated_state);
         if (0 <= quality && quality <= 1) {
-            if (strcmp("liquid", saturated_state) == 0) {
+            if (string_state == "liquid") {
                 _fractions = AS->mole_fractions_liquid();
-            } else if (strcmp("gas", saturated_state) == 0) {
+            } else if (string_state == "gas") {
                 _fractions = AS->mole_fractions_vapor();
             } else {
                 throw CoolProp::ValueError(
@@ -897,10 +898,11 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long han
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         double quality = AS->Q();
+        std::string string_state(saturated_state);
         if (0 <= quality && quality <= 1) {
-            if (strcmp("liquid", saturated_state) == 0) {
+            if (string_state == "liquid") {
                 return AS->saturated_liquid_keyed_output(static_cast<CoolProp::parameters>(param));
-            } else if (strcmp("gas", saturated_state) == 0) {
+            } else if (string_state == "gas") {
                 return AS->saturated_vapor_keyed_output(static_cast<CoolProp::parameters>(param));
             } else {
                 throw CoolProp::ValueError(
