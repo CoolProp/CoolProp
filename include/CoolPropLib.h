@@ -354,6 +354,21 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
 EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, double* fractions, const long maxN, long* N, long* errcode,
                                                              char* message_buffer, const long buffer_length);
 /**
+     * @brief Get the molar fractions for the AbstractState and the desired saturated State
+     * @param handle The integer handle for the state class stored in memory
+     * @param saturated_state The string specifying the state (liquid or gas)
+     * @param fractions The array of fractions
+     * @param maxN The length of the buffer for the fractions
+     * @param N number of fluids
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return 
+     */
+EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long handle, const char* saturated_state, double* fractions,
+                                                                      const long maxN, long* N, long* errcode, char* message_buffer,
+                                                                      const long buffer_length);
+/**
      * @brief Update the state of the AbstractState
      * @param handle The integer handle for the state class stored in memory
      * @param input_pair The integer value for the input pair obtained from XXXXXXXXXXXXXXXX
@@ -577,6 +592,31 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
                                                                   const long buffer_length);
 
 /**
+     * @brief Get data from the phase envelope for the given mixture composition
+     * @param handle The integer handle for the state class stored in memory
+     * @param length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
+     * @param maxComponents The number of fluid components for which memory is allocated
+     * @param T The pointer to the array of temperature (K)
+     * @param p The pointer to the array of pressure (Pa)
+     * @param rhomolar_vap The pointer to the array of molar density for vapor phase (m^3/mol)
+     * @param rhomolar_liq The pointer to the array of molar density for liquid phase (m^3/mol)
+     * @param x The compositions of the "liquid" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
+     * @param y The compositions of the "vapor" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
+     * @param actual_length The number of elements actually stored in the arrays
+     * @param actual_components The number of fluid components actually stored in the arrays
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     *
+     * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
+     */
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents, double* T,
+                                                                  double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y,
+                                                                  long* actual_length, long* actual_components, long* errcode, char* message_buffer,
+                                                                  const long buffer_length);
+
+/**
      * @brief Build the spinodal
      * @param handle The integer handle for the state class stored in memory
      * @param errcode The errorcode that is returned (0 = no error, !0 = error)
@@ -620,6 +660,38 @@ EXPORT_CODE void CONVENTION AbstractState_get_spinodal_data(const long handle, c
      */
 EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, const long length, double* T, double* p, double* rhomolar,
                                                               long* stable, long* errcode, char* message_buffer, const long buffer_length);
+/**
+     * @brief Get an output value from the AbstractState using an integer value for the desired output value and desired saturated State
+     * @param handle The integer handle for the state class stored in memory
+     * @param saturated_state The string specifying the state (liquid or gas)
+     * @param param The integer value for the parameter you want
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long handle, const char* saturated_state, const long param, long* errcode,
+                                                                  char* message_buffer, const long buffer_length);
+/**
+     * @brief Return the name of the backend used in the AbstractState
+     * @param handle The integer handle for the state class stored in memory
+     * @param backend The char pointer the name is written to
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
+                                                       const long buffer_length);
+/** 
+     * \brief Add fluids as a JSON-formatted string
+     * @param backend The backend to which these should be added; e.g. "HEOS", "SRK", "PR"
+     * @param fluidstring The JSON-formatted string
+     * @return
+     *
+     */
+EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
+                                               const long buffer_length);
 
 // *************************************************************************************
 // *************************************************************************************
