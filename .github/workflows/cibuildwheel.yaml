@@ -36,14 +36,14 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install requests packaging cibuildwheel
 
-    - name: Figure out the TestPyPi/PyPi Version
-      shell: bash
-      run: |
-        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          python dev/extract_version.py --pypi --replace-setup-py
-        else
-          python dev/extract_version.py --replace-setup-py
-        fi;
+    # - name: Figure out the TestPyPi/PyPi Version
+    #   shell: bash
+    #   run: |
+    #     if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
+    #       python dev/extract_version.py --pypi --replace-setup-py
+    #     else
+    #       python dev/extract_version.py --replace-setup-py
+    #     fi;
 
     - name: Build and test wheels
       env:
