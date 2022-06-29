@@ -13,9 +13,9 @@ using std::vector;
 
 namespace CoolProp {
 
-const static double kb = 1.380648465952442093e-23;  // Boltzmann constant, J K^-1
+const static double kb = 1.380649e-23;  // Boltzmann constant, J K^-1
 const static double PI = 3.141592653589793;
-const static double N_AV = 6.022140857e23;       // Avagadro's number
+const static double N_AV = 6.02214076e23;       // Avagadro's number
 const static double E_CHRG = 1.6021766208e-19;   // elementary charge, units of coulomb
 const static double perm_vac = 8.854187817e-22;  //permittivity in vacuum, C V^-1 Angstrom^-1
 
