@@ -538,6 +538,7 @@ if(COOLPROP_OBJECT_LIBRARY
     endif(MSVC)
     install(
       TARGETS CoolProp
+      EXPORT CoolProp-targets
       DESTINATION
         static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit_${CMAKE_CXX_COMPILER_ID}_${CMAKE_CXX_COMPILER_VERSION}
     )
@@ -549,6 +550,7 @@ if(COOLPROP_OBJECT_LIBRARY
     add_library(CoolProp SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
     install(
       TARGETS CoolProp
+      EXPORT CoolProp-targets
       DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
@@ -592,6 +594,12 @@ if(COOLPROP_OBJECT_LIBRARY
 
   if(NOT COOLPROP_OBJECT_LIBRARY)
     target_link_libraries(CoolProp PRIVATE ${CMAKE_DL_LIBS})
+
+    # install exports
+    install (
+        EXPORT CoolProp-targets
+        DESTINATION lib/cmake/CoolProp)
+
   endif()
 
   # For windows systems, bug workaround for Eigen
@@ -629,7 +637,9 @@ if(COOLPROP_OBJECT_LIBRARY
   #
   if(CMAKE_VERSION VERSION_GREATER 3.0)
     # Add target include directories for easy linking with other applications
-    target_include_directories(CoolProp PUBLIC ${APP_INCLUDE_DIRS})
+    # TODO: check: CoolProp.h does not include any other dirs, but apps
+    # might not only use CoolProp.h but also the C++ API
+    target_include_directories(CoolProp PRIVATE ${APP_INCLUDE_DIRS})
   endif()
 
   # Set the bitness
