@@ -591,7 +591,7 @@ if(COOLPROP_OBJECT_LIBRARY
   set_target_properties(CoolProp PROPERTIES OUTPUT_NAME ${LIB_NAME})
 
   if(NOT COOLPROP_OBJECT_LIBRARY)
-    target_link_libraries(CoolProp ${CMAKE_DL_LIBS})
+    target_link_libraries(CoolProp PRIVATE ${CMAKE_DL_LIBS})
   endif()
 
   # For windows systems, bug workaround for Eigen
