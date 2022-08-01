@@ -1,7 +1,6 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.0)
 
 project(CoolProp)
-set(CoolPropVersion "6.4.2dev")
 
 include(CheckIncludeFileCXX)
 
@@ -596,6 +595,11 @@ if(COOLPROP_OBJECT_LIBRARY
   if(NOT COOLPROP_OBJECT_LIBRARY)
     target_link_libraries(CoolPropLib PRIVATE ${CMAKE_DL_LIBS})
 
+    file(GENERATE
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config.cmake"
+      INPUT  "${PROJECT_SOURCE_DIR}/dev/cmake/Modules/CoolProp-config.cmake.in"
+    )
+
     set(COOLPROP_CMAKE_DIR "lib/cmake/CoolProp")
 
     # install the public header file
@@ -615,13 +619,13 @@ if(COOLPROP_OBJECT_LIBRARY
     include(CMakePackageConfigHelpers)
     write_basic_package_version_file(
       "${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config-version.cmake"
-      VERSION ${CoolPropVersion}
+      VERSION ${COOLPROP_VERSION}
       COMPATIBILITY AnyNewerVersion
     )
 
     install (
         FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config-version.cmake
-        # ${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config.cmake
         DESTINATION ${COOLPROP_CMAKE_DIR})
 
   endif()
