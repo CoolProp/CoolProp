@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8.11)
 
+project(CoolProp)
+set(CoolPropVersion "6.4.2dev")
+
 include(CheckIncludeFileCXX)
 
 if(DEFINED COOLPROP_INSTALL_PREFIX)
@@ -595,10 +598,24 @@ if(COOLPROP_OBJECT_LIBRARY
   if(NOT COOLPROP_OBJECT_LIBRARY)
     target_link_libraries(CoolPropLib PRIVATE ${CMAKE_DL_LIBS})
 
+    set(COOLPROP_CMAKE_DIR "lib/cmake/CoolProp")
+
     # install exports
     install (
         EXPORT CoolProp-targets
-        DESTINATION lib/cmake/CoolProp)
+        DESTINATION ${COOLPROP_CMAKE_DIR})
+
+    include(CMakePackageConfigHelpers)
+    write_basic_package_version_file(
+      "${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config-version.cmake"
+      VERSION ${CoolPropVersion}
+      COMPATIBILITY AnyNewerVersion
+    )
+
+    install (
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config-version.cmake
+        # ${CMAKE_CURRENT_BINARY_DIR}/CoolProp-config.cmake
+        DESTINATION ${COOLPROP_CMAKE_DIR})
 
   endif()
 
