@@ -545,8 +545,7 @@ if(COOLPROP_OBJECT_LIBRARY
       DESTINATION
         static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit_${CMAKE_CXX_COMPILER_ID}_${CMAKE_CXX_COMPILER_VERSION}
     )
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
-            DESTINATION static_library)
+    set(CoolPropLibDestination "static_library")
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
@@ -556,8 +555,7 @@ if(COOLPROP_OBJECT_LIBRARY
       EXPORT CoolProp-targets
       DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}
     )
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
-            DESTINATION shared_library)
+    set(CoolPropLibDestination "shared_library")
     set_property(
       TARGET CoolPropLib
       APPEND_STRING
@@ -599,6 +597,15 @@ if(COOLPROP_OBJECT_LIBRARY
     target_link_libraries(CoolPropLib PRIVATE ${CMAKE_DL_LIBS})
 
     set(COOLPROP_CMAKE_DIR "lib/cmake/CoolProp")
+
+    # install the public header file
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
+            DESTINATION ${CoolPropLibDestination})
+
+    # link header file to library
+    target_include_directories(CoolPropLib PUBLIC
+        $<INSTALL_INTERFACE:${CoolPropLibDestination}>
+    )
 
     # install exports
     install (
