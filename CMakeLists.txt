@@ -521,23 +521,23 @@ if(COOLPROP_OBJECT_LIBRARY
   set(LIB_NAME ${COOLPROP_LIBRARY_NAME})
   # Object, static or shared?
   if(COOLPROP_OBJECT_LIBRARY)
-    add_library(CoolProp OBJECT ${APP_SOURCES})
+    add_library(CoolPropLib OBJECT ${APP_SOURCES})
     set(COOLPROP_LIBRARY_SOURCE "")
     set(COOLPROP_LIBRARY_HEADER "")
   elseif(COOLPROP_STATIC_LIBRARY)
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
-    add_library(CoolProp STATIC ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
+    add_library(CoolPropLib STATIC ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
     if(MSVC)
       # Add postfix for debugging
-      set_property(TARGET CoolProp PROPERTY DEBUG_POSTFIX d)
-      set_property(TARGET CoolProp PROPERTY RELEASE_POSTFIX)
+      set_property(TARGET CoolPropLib PROPERTY DEBUG_POSTFIX d)
+      set_property(TARGET CoolPropLib PROPERTY RELEASE_POSTFIX)
       modify_msvc_flags("/MD")
 
       # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
     endif(MSVC)
     install(
-      TARGETS CoolProp
+      TARGETS CoolPropLib
       EXPORT CoolProp-targets
       DESTINATION
         static_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit_${CMAKE_CXX_COMPILER_ID}_${CMAKE_CXX_COMPILER_VERSION}
@@ -547,32 +547,32 @@ if(COOLPROP_OBJECT_LIBRARY
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
-    add_library(CoolProp SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
+    add_library(CoolPropLib SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
     install(
-      TARGETS CoolProp
+      TARGETS CoolPropLib
       EXPORT CoolProp-targets
       DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
             DESTINATION shared_library)
     set_property(
-      TARGET CoolProp
+      TARGET CoolPropLib
       APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")
     # Now all the compiler specific settings for Visual Studio
     if(MSVC)
       # Add postfix for debugging
-      set_property(TARGET CoolProp PROPERTY DEBUG_POSTFIX d)
-      set_property(TARGET CoolProp PROPERTY RELEASE_POSTFIX)
+      set_property(TARGET CoolPropLib PROPERTY DEBUG_POSTFIX d)
+      set_property(TARGET CoolPropLib PROPERTY RELEASE_POSTFIX)
       # No lib prefix for the shared library
-      set_property(TARGET CoolProp PROPERTY PREFIX "")
+      set_property(TARGET CoolPropLib PROPERTY PREFIX "")
       modify_msvc_flags("/MT")
 
       # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
       add_custom_command(
-        TARGET CoolProp
+        TARGET CoolPropLib
         POST_BUILD
-        COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolProp> >
+        COMMAND dumpbin /EXPORTS $<TARGET_FILE:CoolPropLib> >
                 ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
       install(
         FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt
@@ -581,8 +581,8 @@ if(COOLPROP_OBJECT_LIBRARY
     endif()
     # For Linux
     if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-      set_property(TARGET CoolProp PROPERTY VERSION ${COOLPROP_VERSION})
-      set_property(TARGET CoolProp PROPERTY SOVERSION
+      set_property(TARGET CoolPropLib PROPERTY VERSION ${COOLPROP_VERSION})
+      set_property(TARGET CoolPropLib PROPERTY SOVERSION
                                                ${COOLPROP_VERSION_MAJOR})
     endif()
   else()
@@ -590,10 +590,10 @@ if(COOLPROP_OBJECT_LIBRARY
   endif()
 
   # rename coolprop library to user-specified name
-  set_target_properties(CoolProp PROPERTIES OUTPUT_NAME ${LIB_NAME})
+  set_target_properties(CoolPropLib PROPERTIES OUTPUT_NAME ${LIB_NAME})
 
   if(NOT COOLPROP_OBJECT_LIBRARY)
-    target_link_libraries(CoolProp PRIVATE ${CMAKE_DL_LIBS})
+    target_link_libraries(CoolPropLib PRIVATE ${CMAKE_DL_LIBS})
 
     # install exports
     install (
@@ -606,7 +606,7 @@ if(COOLPROP_OBJECT_LIBRARY
   if(MSVC90)
     message(STATUS "EIGEN WORKAROUND ACTIVE!!")
     set_property(
-      TARGET CoolProp
+      TARGET CoolPropLib
       APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DEIGEN_DONT_VECTORIZE")
   endif()
@@ -615,12 +615,12 @@ if(COOLPROP_OBJECT_LIBRARY
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     if(DEFINED OSX_COMPILE_FLAGS)
       set_target_properties(
-        CoolProp PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS
+        CoolPropLib PROPERTIES APPEND_STRING PROPERTY COMPILE_FLAGS
                                                       "${OSX_COMPILE_FLAGS}")
     endif(DEFINED OSX_COMPILE_FLAGS)
     if(DEFINED OSX_COMPILE_FLAGS)
       set_target_properties(
-        CoolProp PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS
+        CoolPropLib PROPERTIES APPEND_STRING PROPERTY LINK_FLAGS
                                                       "${OSX_LINK_FLAGS}")
     endif(DEFINED OSX_COMPILE_FLAGS)
   endif()
@@ -628,18 +628,18 @@ if(COOLPROP_OBJECT_LIBRARY
   # Name mangling settings
   if(COOLPROP_EXTERNC_LIBRARY)
     set_property(
-      TARGET CoolProp
+      TARGET CoolPropLib
       APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DEXTERNC")
   endif()
   ### All options are set, we are building a library ###
-  add_dependencies(CoolProp generate_headers)
+  add_dependencies(CoolPropLib generate_headers)
   #
   if(CMAKE_VERSION VERSION_GREATER 3.0)
     # Add target include directories for easy linking with other applications
     # TODO: check: CoolProp.h does not include any other dirs, but apps
     # might not only use CoolProp.h but also the C++ API
-    target_include_directories(CoolProp PRIVATE ${APP_INCLUDE_DIRS})
+    target_include_directories(CoolPropLib PRIVATE ${APP_INCLUDE_DIRS})
   endif()
 
   # Set the bitness
@@ -647,11 +647,11 @@ if(COOLPROP_OBJECT_LIBRARY
     if(NOT "${BITNESS}" STREQUAL "NATIVE")
       message(STATUS "Setting bitness flag -m${BITNESS}")
       set_property(
-        TARGET CoolProp
+        TARGET CoolPropLib
         APPEND_STRING
         PROPERTY COMPILE_FLAGS " -m${BITNESS}")
       set_property(
-        TARGET CoolProp
+        TARGET CoolPropLib
         APPEND_STRING
         PROPERTY LINK_FLAGS " -m${BITNESS}")
     endif()
@@ -661,7 +661,7 @@ if(COOLPROP_OBJECT_LIBRARY
   if(COOLPROP_FPIC)
     message(STATUS "Setting bitness flag -m${BITNESS}")
     set_property(
-      TARGET CoolProp
+      TARGET CoolPropLib
       APPEND_STRING
       PROPERTY COMPILE_FLAGS " -fPIC")
   endif()
@@ -671,7 +671,7 @@ if(COOLPROP_OBJECT_LIBRARY
     #MESSAGE(STATUS "Skipping unknown calling convention.")
   else()
     set_property(
-      TARGET CoolProp
+      TARGET CoolPropLib
       APPEND_STRING
       PROPERTY COMPILE_FLAGS " -DCONVENTION=${CONVENTION}")
   endif()
@@ -689,12 +689,12 @@ if(COOLPROP_OBJECT_LIBRARY
   #
   get_property(
     tmpVar
-    TARGET CoolProp
+    TARGET CoolPropLib
     PROPERTY COMPILE_FLAGS)
   message(STATUS "COMPILE_FLAGS: ${tmpVar}")
   get_property(
     tmpVar
-    TARGET CoolProp
+    TARGET CoolPropLib
     PROPERTY LINK_FLAGS)
   message(STATUS "LINK_FLAGS: ${tmpVar}")
   #
