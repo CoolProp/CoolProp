@@ -555,10 +555,7 @@ if(COOLPROP_OBJECT_LIBRARY
       DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}
     )
     set(CoolPropLibDestination "shared_library")
-    set_property(
-      TARGET CoolPropLib
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")
+    target_compile_definitions(CoolPropLib PUBLIC COOLPROP_LIB)
     # Now all the compiler specific settings for Visual Studio
     if(MSVC)
       # Add postfix for debugging
