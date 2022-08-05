@@ -2015,7 +2015,7 @@ if(COOLPROP_CATCH_MODULE)
   target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
   target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
   if(UNIX)
-    target_link_libraries(CatchTestRunner ${CMAKE_DL_LIBS})
+    target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})
   endif()
 
   include(CTest)
@@ -2120,7 +2120,7 @@ if(COOLPROP_CLANG_ADDRESS_SANITIZER)
   set(CMAKE_EXE_LINKER_FLAGS
       "-fsanitize=address -fno-omit-frame-pointer -lstdc++")
   if(UNIX)
-    target_link_libraries(CatchTestRunner ${CMAKE_DL_LIBS})
+    target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})
   endif()
   add_custom_command(
     TARGET CatchTestRunner
