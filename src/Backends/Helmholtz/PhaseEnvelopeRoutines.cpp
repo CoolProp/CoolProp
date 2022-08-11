@@ -262,6 +262,36 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
                 continue;
             }
 
+            
+            // Keir Stitt 11/8/22
+            //
+            // see https://github.com/CoolProp/CoolProp/issues/2153 
+            // 
+            // I moved from Line 330 to run this test before we've written to the envelope.  
+            //
+            // I've split if statement so that testing p against previous itteration doesn't
+            // cause memory leak.
+            //
+            // 
+            // Stop if the pressure is below the  ̶ ̶s̶t̶a̶r̶t̶i̶n̶g̶ ̶p̶r̶e̶s̶s̶u̶r̶e̶  last pressure [edit KS]
+            // or if the composition of one of the phases becomes almost pure
+
+            CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
+            if (iter > 4)
+                if (IO.p < env.p[iter - 1] || std::abs(1.0 - max_fraction) < 1e-9) {
+                    env.built = true;
+                    if (debug) {
+                        std::cout << format("envelope built.\n");
+                        std::cout << format("closest fraction to 1.0: distance %g\n", 1 - max_fraction);
+                    }
+
+                    // Now we refine the phase envelope to add some points in places that are still pretty rough
+                    refine(HEOS, level);
+
+                    return;
+                }
+            
+            
             if (debug) {
                 std::cout << "dv " << IO.rhomolar_vap << " dl " << IO.rhomolar_liq << " T " << IO.T << " p " << IO.p << " hl " << IO.hmolar_liq
                           << " hv " << IO.hmolar_vap << " sl " << IO.smolar_liq << " sv " << IO.smolar_vap << " x " << vec_to_string(IO.x, "%0.10Lg")
@@ -325,22 +355,6 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
             if (std::abs(IO.rhomolar_liq / IO.rhomolar_vap - 1) < 4) {
                 // Max step is 1.1
                 factor = std::min(factor, static_cast<CoolPropDbl>(1.1));
-            }
-
-            // Stop if the pressure is below the starting pressure
-            // or if the composition of one of the phases becomes almost pure
-            CoolPropDbl max_fraction = *std::max_element(IO.x.begin(), IO.x.end());
-            if (iter > 4 && (IO.p < env.p[0] || std::abs(1.0 - max_fraction) < 1e-9)) {
-                env.built = true;
-                if (debug) {
-                    std::cout << format("envelope built.\n");
-                    std::cout << format("closest fraction to 1.0: distance %g\n", 1 - max_fraction);
-                }
-
-                // Now we refine the phase envelope to add some points in places that are still pretty rough
-                refine(HEOS, level);
-
-                return;
             }
 
             // Reset the failure counter
