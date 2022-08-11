@@ -696,6 +696,42 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData& env, parameters i
         return false;
     }
     if (iInput1 == iP && 0 < env.ipsat_max && env.ipsat_max < env.p.size() && value1 > env.p[env.ipsat_max]) {
+        
+        //written by Keir Stitt 10/8/22
+        //finds nearest point on envolope even if we are above the critical pressure.
+        //I've done this the lazy way of looping the entire envolope and for each point finding the closest point,
+        //however it would be more efficient to e.g. start at the critical pressure and go left or right.
+        //
+        //Also I'm noting that the code for below critical pressure but gas or liquid uses the envolope point 
+        //for the pressure and calls this the closest. I'm not sure if this is entirely correct - many phase envolopes
+        //are highly asymetrical and the nearest point might not share the same pressure. My understanding is that the 
+        //isotherms contour around the phase envelope so I’m assuming my approach works – but I’m probably making a 
+        //horrible mistake here so a bit of feedback from someone with a deeper understanding of the physics would 
+        //be helpful.
+        
+        double maxdistance = std::numeric_limits<double>::infinity();
+        double distance;
+        std::size_t iclosest;
+
+        for (std::size_t i = 0; i < env.p.size() - 1; ++i) {
+            distance = sqrt(pow(value1 - env.p[i], 2) + pow(value2 - env.T[i], 2));
+            if (distance < maxdistance) {
+                maxdistance = distance;
+                iclosest = i;
+            }
+        }
+
+        if (iclosest >= 0 && iclosest < env.p.size()) {
+            closest_state.T = env.T[iclosest];
+            closest_state.p = env.p[iclosest];
+            closest_state.rhomolar = env.rhomolar_vap[iclosest];
+            closest_state.hmolar = env.hmolar_vap[iclosest];
+            closest_state.smolar = env.smolar_vap[iclosest];
+            closest_state.Q = env.Q[iclosest];
+        }
+
+        //end of Keir Stitt's contribution 10/8/22
+        
         return false;
     }
 
