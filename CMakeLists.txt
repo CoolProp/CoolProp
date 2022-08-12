@@ -185,27 +185,6 @@ elseif(COOLPROP_DEBUG)
   #  ENDIF()
 endif()
 
-if(COOLPROP_MSVC_STATIC)
-  set(COOLPROP_MSVC_REL "/MT")
-  if(COOLPROP_MSVC_DEBUG)
-    set(COOLPROP_MSVC_DBG "/MTd")
-  else()
-    set(COOLPROP_MSVC_DBG "/MT")
-  endif()
-elseif(COOLPROP_MSVC_DYNAMIC)
-  set(COOLPROP_MSVC_REL "/MD")
-  if(COOLPROP_MSVC_DEBUG)
-    set(COOLPROP_MSVC_DBG "/MDd")
-  else()
-    set(COOLPROP_MSVC_DBG "/MD")
-  endif()
-else(COOLPROP_MSVC_DYNAMIC)
-  set(COOLPROP_MSVC_REL "IGNORE")
-  set(COOLPROP_MSVC_DBG "IGNORE")
-endif()
-
-set(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD"
-)# order matters "/MXd" before "/MX"
 
 #######################################
 #         FIND ALL SOURCES            #
@@ -310,34 +289,6 @@ endif()
 if(CMAKE_DL_LIBS)
   find_package(${CMAKE_DL_LIBS} REQUIRED)
 endif()
-
-include(FlagFunctions) # Is found since it is in the module path.
-macro(modify_msvc_flag_release flag_new) # Use a macro to avoid a new scope
-  foreach(flag_old IN LISTS COOLPROP_MSVC_ALL)
-    remove_compiler_flag_release("${flag_old} ") # add a space
-    remove_compiler_flag_release(" ${flag_old}") # add a space
-  endforeach()
-  add_compiler_flag_release("${flag_new}")
-endmacro()
-macro(modify_msvc_flag_debug flag_new) # Use a macro to avoid a new scope
-  foreach(flag_old IN LISTS COOLPROP_MSVC_ALL)
-    remove_compiler_flag_debug("${flag_old} ") # add a space
-    remove_compiler_flag_debug(" ${flag_old}") # add a space
-  endforeach()
-  add_compiler_flag_debug("${flag_new}")
-endmacro()
-macro(modify_msvc_flags flag_default) # Use a macro to avoid a new scope
-  if(NOT "${COOLPROP_MSVC_REL}" STREQUAL "IGNORE")
-    modify_msvc_flag_release("${COOLPROP_MSVC_REL}")
-  else()
-    modify_msvc_flag_release("${flag_default}")
-  endif()
-  if(NOT "${COOLPROP_MSVC_DBG}" STREQUAL "IGNORE")
-    modify_msvc_flag_debug("${COOLPROP_MSVC_DBG}")
-  else()
-    modify_msvc_flag_debug("${flag_default}d")
-  endif()
-endmacro()
 
 #if(MSVC)
 #  add_compiler_flag_release("/EHsc")
@@ -532,9 +483,7 @@ if(COOLPROP_OBJECT_LIBRARY
       # Add postfix for debugging
       set_property(TARGET ${LIB_NAME} PROPERTY DEBUG_POSTFIX d)
       set_property(TARGET ${LIB_NAME} PROPERTY RELEASE_POSTFIX)
-      modify_msvc_flags("/MD")
-
-      # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
+      set_property(TARGET ${LIB_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif(MSVC)
     install(
       TARGETS ${LIB_NAME}
@@ -553,10 +502,7 @@ if(COOLPROP_OBJECT_LIBRARY
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
             DESTINATION shared_library)
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DCOOLPROP_LIB")
+    target_compile_definitions(${LIB_NAME} PRIVATE COOLPROP_LIB)
     # Now all the compiler specific settings for Visual Studio
     if(MSVC)
       # Add postfix for debugging
@@ -564,7 +510,7 @@ if(COOLPROP_OBJECT_LIBRARY
       set_property(TARGET ${LIB_NAME} PROPERTY RELEASE_POSTFIX)
       # No lib prefix for the shared library
       set_property(TARGET ${LIB_NAME} PROPERTY PREFIX "")
-      modify_msvc_flags("/MT")
+      set_property(TARGET ${LIB_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
       # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
       add_custom_command(
@@ -594,10 +540,7 @@ if(COOLPROP_OBJECT_LIBRARY
   # For windows systems, bug workaround for Eigen
   if(MSVC90)
     message(STATUS "EIGEN WORKAROUND ACTIVE!!")
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DEIGEN_DONT_VECTORIZE")
+    target_compile_definitions(${LIB_NAME} PRIVATE EIGEN_DONT_VECTORIZE)
   endif()
 
   # For mac systems, explicitly set the c++ libraries
@@ -616,10 +559,7 @@ if(COOLPROP_OBJECT_LIBRARY
 
   # Name mangling settings
   if(COOLPROP_EXTERNC_LIBRARY)
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DEXTERNC")
+    target_compile_definitions(${LIB_NAME} PRIVATE EXTERNC)
   endif()
   ### All options are set, we are building a library ###
   add_dependencies(${LIB_NAME} generate_headers)
@@ -646,21 +586,33 @@ if(COOLPROP_OBJECT_LIBRARY
 
   # ADD -fPIC flag if needed
   if(COOLPROP_FPIC)
-    message(STATUS "Setting bitness flag -m${BITNESS}")
+    message(STATUS "Setting the -fPIC flag")
     set_property(
       TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -fPIC")
+      PROPERTY POSITION_INDEPENDENT_CODE ON)
   endif()
-  #
+  
+  # Select a specific MSVC runtime, overwrites defaults
+  if(COOLPROP_MSVC_STATIC)
+    message(STATUS "Force linking with the static MSVC runtime")
+    # This is for /MT and /MTd
+    set_property(
+      TARGET ${LIB_NAME}
+      PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  elseif(COOLPROP_MSVC_DYNAMIC)
+    message(STATUS "Force linking with the dynamic MSVC runtime")
+    # This is for /MD and /MDd, default behaviour
+    set_property(
+      TARGET ${LIB_NAME}
+      PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+  endif()
+
+
   # calling conventions
   if(("${CONVENTION}" STREQUAL "NULL") OR ("${CONVENTION}" STREQUAL ""))
     #MESSAGE(STATUS "Skipping unknown calling convention.")
   else()
-    set_property(
-      TARGET ${LIB_NAME}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DCONVENTION=${CONVENTION}")
+    target_compile_definitions(${LIB_NAME} PRIVATE CONVENTION=${CONVENTION})
   endif()
   #
   #set_property(SOURCE MyFile.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -msse4.1 ")
@@ -716,8 +668,7 @@ if(COOLPROP_DEBIAN_PACKAGE)
   endif()
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   add_library(${app_name} SHARED ${APP_SOURCES})
-  set_target_properties(
-    ${app_name} PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DCOOLPROP_LIB")
+  target_compile_definitions(${app_name} PRIVATE COOLPROP_LIB)
   set_target_properties(
     ${app_name} PROPERTIES VERSION ${COOLPROP_VERSION}
                            SOVERSION ${COOLPROP_VERSION_MAJOR})
@@ -755,8 +706,8 @@ if(COOLPROP_VXWORKS_LIBRARY_MODULE OR COOLPROP_VXWORKS_LIBRARY)
   list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
   add_executable(${app_name} ${APP_SOURCES})
   set_target_properties(
-    ${app_name} PROPERTIES SUFFIX ".out" COMPILE_FLAGS
-                                         "${COMPILE_FLAGS} -DEXTERNC")
+    ${app_name} PROPERTIES SUFFIX ".out")
+  target_compile_definitions(${app_name} PRIVATE EXTERNC)
   add_dependencies(${app_name} generate_headers)
   install(TARGETS ${app_name}
           DESTINATION "${COOLPROP_INSTALL_PREFIX}/shared_library/VxWorks")
@@ -844,10 +795,8 @@ if(COOLPROP_EES_MODULE)
   add_library(COOLPROP_EES SHARED ${APP_SOURCES})
   # Modify the target and add dependencies
   add_dependencies(COOLPROP_EES generate_headers)
-  set_target_properties(
-    COOLPROP_EES
-    PROPERTIES COMPILE_FLAGS
-               "${COMPILE_FLAGS} -DCOOLPROP_LIB -DCONVENTION=__cdecl")
+  target_compile_definitions(COOLPROP_EES PRIVATE COOLPROP_LIB)
+  target_compile_definitions(COOLPROP_EES PRIVATE CONVENTION=__cdecl)
   set_target_properties(COOLPROP_EES PROPERTIES SUFFIX ".dlf" PREFIX "")
   # Creates "COOLPROP_EES.dlf"
   if(NOT MSVC)
@@ -1297,9 +1246,7 @@ if(COOLPROP_CSHARP_MODULE)
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
     if(MSVC)
-      modify_msvc_flags("/MT")
-
-      # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
+      set_property(TARGET CoolProp PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
   endif()
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -1506,9 +1453,7 @@ if(COOLPROP_JAVA_MODULE)
   if(WIN32)
     set_target_properties(CoolProp PROPERTIES PREFIX "")
     if(MSVC)
-      modify_msvc_flags("/MT")
-
-      # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
+      set_property(TARGET CoolProp PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
   endif()
 
@@ -1822,9 +1767,7 @@ endif()
 if(COOLPROP_MATHEMATICA_MODULE)
 
   if(MSVC)
-    modify_msvc_flags("/MT")
-
-    # Note that the default is not used if ${COOLPROP_MSVC_REL} or ${COOLPROP_MSVC_DBG} is set
+    set_property(TARGET CoolProp PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   endif()
 
   set(CMAKE_MODULE_PATH
@@ -1945,8 +1888,7 @@ if(COOLPROP_MAIN_MODULE)
   add_executable(Main ${APP_SOURCES})
   add_dependencies(Main generate_headers)
   if(COOLPROP_TEST)
-    set_target_properties(Main PROPERTIES COMPILE_FLAGS
-                                          "${COMPILE_FLAGS} -DENABLE_CATCH")
+    target_compile_definitions(Main PRIVATE ENABLE_CATCH)
   endif()
 
   if(COOLPROP_IWYU)
@@ -2011,10 +1953,7 @@ if(COOLPROP_SNIPPETS)
   # Make the static library with which the snippets will be linked
   add_library(${app_name} STATIC ${APP_SOURCES})
   add_dependencies(${app_name} generate_headers)
-  set_property(
-    TARGET ${app_name}
-    APPEND_STRING
-    PROPERTY COMPILE_FLAGS " -DEXTERNC")
+  target_compile_definitions(${app_name} PRIVATE EXTERNC)
 
   # Collect all the snippets
   file(GLOB_RECURSE snippets
@@ -2050,10 +1989,7 @@ if(COOLPROP_SNIPPETS)
       set(BIN_PATH "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
 
-    set_property(
-      TARGET ${snippet_exe}
-      APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -DEXTERNC")
+    target_compile_definitions(${snippet_exe} PRIVATE EXTERNC)
 
     # Run it and save the output to a file with .output appended
     add_custom_command(
@@ -2075,9 +2011,8 @@ if(COOLPROP_CLANG_ADDRESS_SANITIZER)
        "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/catch_always_return_success.cxx")
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
-  add_dependencies(CatchTestRunner generate_headers)
-  set_target_properties(
-    CatchTestRunner PROPERTIES COMPILE_FLAGS "${COMPILE_FLAGS} -DENABLE_CATCH")
+  add_dependencies( generate_headers)
+  target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
   set(CMAKE_CXX_FLAGS "-O1")
   set(CMAKE_EXE_LINKER_FLAGS
       "-fsanitize=address -fno-omit-frame-pointer -lstdc++")
