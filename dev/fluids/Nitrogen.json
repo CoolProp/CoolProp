@@ -221,7 +221,7 @@
           "hmolar_units": "J/mol",
           "p": 3395800,
           "p_units": "Pa",
-          "rhomolar": 11183.90146458062,
+          "rhomolar": 11183.901464580624,
           "rhomolar_units": "mol/m^3",
           "smolar": 118.07697126543378,
           "smolar_units": "J/mol/K"
@@ -281,13 +281,15 @@
           "type": "IdealGasHelmholtzPower"
         },
         {
+          "Tcrit": 126.192,
+          "Tcrit_units": "K",
           "n": [
             1.012941
           ],
-          "t": [
-            26.65788
+          "v": [
+            3364.011
           ],
-          "type": "IdealGasHelmholtzPlanckEinstein"
+          "type": "IdealGasHelmholtzPlanckEinsteinFunctionT"
         }
       ],
       "alphar": [

@@ -15,41 +15,41 @@ PCSAFTFluid::PCSAFTFluid(rapidjson::Value::ValueIterator itr) {
     params.sigma = cpjson::get_double(*itr, "sigma");
     params.u = cpjson::get_double(*itr, "u");
 
-    if (itr->HasMember("uAB") && (*itr)["uAB"].IsNumber()){
+    if (itr->HasMember("uAB") && (*itr)["uAB"].IsNumber()) {
         params.uAB = cpjson::get_double(*itr, "uAB");
     } else {
         params.uAB = 0.;
     }
 
-    if (itr->HasMember("volA") && (*itr)["volA"].IsNumber()){
+    if (itr->HasMember("volA") && (*itr)["volA"].IsNumber()) {
         params.volA = cpjson::get_double(*itr, "volA");
     } else {
         params.volA = 0.;
     }
 
-    if (itr->HasMember("assocScheme")){
+    if (itr->HasMember("assocScheme")) {
         params.assocScheme = cpjson::get_string_array(*itr, "assocScheme");
     } else {
         params.assocScheme = {};
     }
 
-    if (itr->HasMember("dipm") && (*itr)["dipm"].IsNumber()){
+    if (itr->HasMember("dipm") && (*itr)["dipm"].IsNumber()) {
         params.dipm = cpjson::get_double(*itr, "dipm");
     } else {
         params.dipm = 0.;
     }
 
-    if (itr->HasMember("dipnum") && (*itr)["dipnum"].IsNumber()){
+    if (itr->HasMember("dipnum") && (*itr)["dipnum"].IsNumber()) {
         params.dipnum = cpjson::get_double(*itr, "dipnum");
-      } else {
-          params.dipnum = 0.;
-      }
+    } else {
+        params.dipnum = 0.;
+    }
 
-    if (itr->HasMember("charge") && (*itr)["charge"].IsNumber()){
+    if (itr->HasMember("charge") && (*itr)["charge"].IsNumber()) {
         params.z = cpjson::get_double(*itr, "charge");
-      } else {
-          params.z = 0.;
-      }
+    } else {
+        params.z = 0.;
+    }
 
     molemass = cpjson::get_double(*itr, "molemass");
     aliases = cpjson::get_string_array(*itr, "aliases");
@@ -58,8 +58,7 @@ PCSAFTFluid::PCSAFTFluid(rapidjson::Value::ValueIterator itr) {
 void PCSAFTFluid::calc_water_sigma(double t) {
     if (t > 473.16) {
         throw ValueError("The current function for sigma for water is only valid for temperatures below 473.15 K.");
-    }
-    else if (t < 273) {
+    } else if (t < 273) {
         throw ValueError("The current function for sigma for water is only valid for temperatures above 273.15 K.");
     }
 

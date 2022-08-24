@@ -9,6 +9,9 @@ set -e
 # Turn on our conda environment
 source activate docs
 
+# Try to install dependencies on the fly, or rely on the existing environment
+#conda install six numpy cython matplotlib requests jinja2 pyyaml
+
 # Build/Install CoolProp and check
 cd /coolprop/wrappers/Python
 python setup.py bdist_wheel --dist-dir dist cmake=default,64

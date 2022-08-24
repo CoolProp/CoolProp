@@ -7,6 +7,10 @@ dependencies:
   - ipython
   - pandas
   - pip
+  - six
+  - requests
+  - jinja2
+  - pyyaml
   - pip:
     - cython
     - sphinx

@@ -97,6 +97,7 @@ cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
     void _set_mixture_binary_pair_data "CoolProp::set_mixture_binary_pair_data"(const string CAS1, const string CAS2, const string key, const double val) except +
     void _apply_simple_mixing_rule "CoolProp::apply_simple_mixing_rule"(const string &CAS1, const string &CAS2, const string &rule) except +
     void _set_departure_functions "CoolProp::set_departure_functions"(const string &functions) except +
+    void _set_interaction_parameters "CoolProp::set_interaction_parameters"(const string &data) except +
 
 cdef extern from "Backends/PCSAFT/PCSAFTLibrary.h" namespace "CoolProp":
     string _get_mixture_binary_pair_pcsaft "CoolProp::get_mixture_binary_pair_pcsaft"(const string CAS1, const string CAS2, const string key) except +
@@ -325,6 +326,12 @@ cpdef set_departure_functions(functions):
     """
     _set_departure_functions(functions)
 
+cpdef set_interaction_parameters(data):
+    """
+    Specify the binary interaction terms as JSON. Python wrapper of C++ function :cpapi:`CoolProp::set_interaction_parameters`
+    """
+    _set_interaction_parameters(data)    
+
 cpdef double saturation_ancillary(string name, string output, int Q, string input, double value):
     """
     Return a value from the saturation ancillary equations; python wrapper of :cpapi:`CoolProp::saturation_ancillary`
@@ -397,10 +404,10 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
         is_iterable3 = iterable(in3)
         is_iterable5 = iterable(in5)
 
-        #if _numpy_supported and is_iterable3 and isinstance(in3, np.ndarray) and (np.prod(in3.shape) != max(in3.shape)):
-        #    raise ValueError("Input 3 is not one-dimensional")
-        #if _numpy_supported and is_iterable5 and isinstance(in5, np.ndarray) and (np.prod(in5.shape) != max(in5.shape)):
-        #    raise ValueError("Input 5 is not one-dimensional")
+        if _numpy_supported and is_iterable3 and isinstance(in3, np.ndarray) and (np.prod(in3.shape) != max(in3.shape)):
+            raise ValueError("Input 3 is not one-dimensional")
+        if _numpy_supported and is_iterable5 and isinstance(in5, np.ndarray) and (np.prod(in5.shape) != max(in5.shape)):
+            raise ValueError("Input 5 is not one-dimensional")
 
         if is_iterable1 or is_iterable3 or is_iterable5:
             # Prepare the output datatype
@@ -409,38 +416,24 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             else:
                 vin1 = in1
 
-            target_shape = None # out.reshape(target_shape)
-            target_size = None
             # Resize state variable inputs
             if is_iterable3 and is_iterable5:
-                in3 = np.asanyarray(in3)
-                in5 = np.asanyarray(in5)
-                target_shape = in3.shape
-                target_size = in3.size
-                if in3.shape != in5.shape:
-                    raise TypeError("Shapes of Prop1 {n1} and Prop2 {n2} to PropsSI are not the same".format(n1 = in3.shape, n2 = in5.shape))
+                if len(in3) != len(in5):
+                    raise TypeError("Sizes of Prop1 {n1:d} and Prop2 {n2:d} to PropsSI are not the same".format(n1 = len(in3), n2 = len(in5)))
                 else:
-                    vval1 = np.ravel(in3)
-                    vval2 = np.ravel(in5)
+                    vval1 = in3
+                    vval2 = in5
             elif is_iterable3 and not is_iterable5:
-                in3 = np.asanyarray(in3)
-                target_shape = in3.shape
-                target_size = in3.size
-                vval1 = np.ravel(in3)
-                vval2.resize(target_size)
-                templist = [in5]*target_size
+                vval1 = in3
+                vval2.resize(len(in3))
+                templist = [in5]*len(in3)
                 vval2 = templist
             elif is_iterable5 and not is_iterable3:
-                in5 = np.asanyarray(in5)
-                target_shape = in5.shape
-                target_size = in5.size
-                vval1.resize(target_size)
-                templist = [in3]*target_size
+                vval1.resize(len(in5))
+                templist = [in3]*len(in5)
                 vval1 = templist
-                vval2 = np.ravel(in5)
+                vval2 = in5
             else:
-                target_shape = None
-                target_size = None
                 vval1.resize(1)
                 vval1[0] = in3
                 vval2.resize(1)
@@ -462,10 +455,8 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             # Check that we got some output
             if outmat.empty():
                 raise ValueError(_get_global_param_string(b'errstring'))
-            if target_shape is not None:
-                return ndarray_or_iterable(outmat).reshape(target_shape)
-            else:
-                return ndarray_or_iterable(outmat)
+
+            return ndarray_or_iterable(outmat)
         else:
             # This version takes doubles
             val = _PropsSI(in1, in2, in3, in4, in5, in6)
@@ -1107,30 +1098,31 @@ cdef class State:
         """
         Return a string representation of the state
         """
-        units={'T': 'K',
-               'p': 'kPa',
-               'rho': 'kg/m^3',
-               'Q':'kg/kg',
-               'h':'kJ/kg',
-               'u':'kJ/kg',
-               's':'kJ/kg/K',
-               'visc':'Pa-s',
-               'k':'kW/m/K',
-               'cp':'kJ/kg/K',
-               'cp0':'kJ/kg/K',
-               'cv':'kJ/kg/K',
-               'dpdT':'kPa/K',
-               'Tsat':'K',
-               'superheat':'K',
-               'subcooling':'K',
-               'MM':'kg/kmol'
+        units = {
+        'T': 'K',
+        'p': 'kPa',
+        'rho': 'kg/m^3',
+        'Q': 'kg/kg',
+        'h': 'kJ/kg',
+        'u': 'kJ/kg',
+        's': 'kJ/kg/K',
+        'visc': 'Pa-s',
+        'k': 'kW/m/K',
+        'cp': 'kJ/kg/K',
+        'cp0': 'kJ/kg/K',
+        'cv': 'kJ/kg/K',
+        'dpdT': 'kPa/K',
+        'Tsat': 'K',
+        'superheat': 'K',
+        'subcooling': 'K',
+        'MM': 'kg/kmol'
         }
-        s='phase = '+self.phase+'\n'
+        s = 'phase = '+self.phase.decode('ascii')+'\n'
         for k in ['T','p','rho','Q','h','u','s','visc','k','cp','cp0','cv','dpdT','Prandtl','superheat','subcooling','MM']:
             if k in units:
-                s+=k+' = '+str(getattr(self,k))+' '+units[k]+'\n'
+                s += k + ' = '+str(getattr(self,k))+' '+units[k]+'\n'
             else:
-                s+=k+' = '+str(getattr(self,k))+' NO UNITS'+'\n'
+                s += k + ' = '+str(getattr(self,k))+' NO UNITS'+'\n'
         return s.rstrip()
 
     cpdef State copy(self):

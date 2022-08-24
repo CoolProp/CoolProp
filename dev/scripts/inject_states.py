@@ -117,7 +117,7 @@ def inject_acentric(fluid, i, json_data):
 def inject_states(fluid):
     fluid_path = '../fluids/' + fluid + '.json'
 
-    # AS = 
+    # AS =
 
     # Open the fluid JSON file
     with open(fluid_path, 'r') as fp:
@@ -137,7 +137,7 @@ def inject_states(fluid):
         fp.write(json.dumps(json_data, **json_options))
 
 if __name__ == '__main__':
-    
-    
+
+
     for fld in ['MD2M','MD3M','MD4M','R1243zf','R1234ze(Z)','Neon','HydrogenChloride','HeavyWater']:
       inject_states(fld)

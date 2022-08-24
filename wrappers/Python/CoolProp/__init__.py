@@ -59,7 +59,7 @@ def copy_BibTeX_library(file=None, folder=None):
     """
     Copy the CoolProp BibTeX library file to the file given by ``file``, or the folder given by ``folder``
 
-    If no inputs are provided, the file will be copied to the current working 
+    If no inputs are provided, the file will be copied to the current working
     directory
 
     Parameters

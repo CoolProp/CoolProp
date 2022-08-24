@@ -1,6 +1,33 @@
 Changelog for CoolProp
 ======================
 
+6.4.1
+-----
+
+Highlights:
+
+* Fixed the nightly builds
+* Added documentation for the NuGet packages by MadsKirkFoged
+
+Deprecated:
+
+* Removed the n-dimensional input for Python due to too many bugs
+
+Issues Closed:
+
+* `#1960 <https://github.com/CoolProp/CoolProp/issues/1960>`_ : Docs do not build
+* `#1952 <https://github.com/CoolProp/CoolProp/issues/1952>`_ : CoolProp Module not Found
+* `#1942 <https://github.com/CoolProp/CoolProp/issues/1942>`_ : Help with DLL hell
+* `#1940 <https://github.com/CoolProp/CoolProp/issues/1940>`_ : CoolProp import doesn't work in v6.4.0
+
+Pull Requests merged:
+
+* `#1957 <https://github.com/CoolProp/CoolProp/pull/1957>`_ : Update BaseObjects.py
+* `#1949 <https://github.com/CoolProp/CoolProp/pull/1949>`_ : fixed typo with units for sigma
+* `#1947 <https://github.com/CoolProp/CoolProp/pull/1947>`_ : Update index.rst
+* `#1932 <https://github.com/CoolProp/CoolProp/pull/1932>`_ : Allow nD-array input to PropsSI
+
+
 6.4.0
 -----
 

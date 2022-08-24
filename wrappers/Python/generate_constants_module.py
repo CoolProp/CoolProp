@@ -45,10 +45,11 @@ def config_constants():
     assert(len(matching_lines) == 1)
     iline = matching_lines[0] + 1
     keys = []
-    while iline < 1000 and contents[iline].strip().startswith('X('):
-        line = contents[iline].strip()[2::]
-        key = line.split(',')[0]
-        keys.append(key)
+    while iline < 1000 and contents[iline].strip().startswith('X(') or contents[iline].strip().startswith('"'):
+        if contents[iline].strip().startswith('X('):
+            line = contents[iline].strip()[2::]
+            key = line.split(',')[0]
+            keys.append(key)
         iline += 1
     return ('configuration_keys', keys)
 

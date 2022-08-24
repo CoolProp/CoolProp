@@ -12,9 +12,9 @@
 #if defined ENABLE_CATCH
 namespace CoolPropTesting {
 
-Eigen::MatrixXd makeMatrix(const std::vector<double> &coefficients);
+Eigen::MatrixXd makeMatrix(const std::vector<double>& coefficients);
 //CoolProp::IncompressibleFluid incompressibleFluidObject();
 //IncompressibleBackend incompressibleBackendObject();
 
-} // namespace CoolPropTesting
-#endif // ENABLE_CATCH
+}  // namespace CoolPropTesting
+#endif  // ENABLE_CATCH
