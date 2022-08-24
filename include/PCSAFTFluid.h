@@ -15,6 +15,7 @@ struct PCSAFTValues {
     CoolPropDbl u; ///< Dispersion energy divided by Boltzmann constant (K)
     CoolPropDbl uAB; ///< Association energy (K)
     CoolPropDbl volA; ///< Association volume
+    std::vector<std::string> assocScheme; ///< The type of association for each associating functional group (see Huang and Radosz 1990)
     CoolPropDbl dipm; ///< Dipole moment (Debye)
     CoolPropDbl dipnum; ///< Number of dipole moments per molecule
     CoolPropDbl z; ///< Charge of the compound
@@ -41,6 +42,7 @@ class PCSAFTFluid {
         CoolPropDbl getU() const {return params.u;}
         CoolPropDbl getUAB() const {return params.uAB;}
         CoolPropDbl getVolA() const {return params.volA;}
+        std::vector<std::string> getAssocScheme() const {return params.assocScheme;}
         CoolPropDbl getDipm() const {return params.dipm;}
         CoolPropDbl getDipnum() const {return params.dipnum;}
         CoolPropDbl getZ() const {return params.z;}

@@ -165,6 +165,16 @@ enum phases{iphase_liquid, ///< Subcritical liquid
             iphase_unknown, ///< Unknown phase
             iphase_not_imposed}; ///< Phase is not imposed
 
+/// Constants for the different association schemes (see Huang and Radosz 1990)
+enum schemes{i1,
+             i2a,
+             i2b,
+             i3a,
+             i3b,
+             i4a,
+             i4b,
+             i4c};
+
 /// Return information about the parameter
 /// @param key The key, one of iT, iP, etc.
 /// @param info The thing you want, one of "IO" ("IO" if input/output, "O" if output only), "short" (very short description), "long" (a longer description), "units"
@@ -180,6 +190,14 @@ bool is_valid_phase(const std::string &phase_name, phases &iOutput);
 
 /// Return the enum key corresponding to the phase name ("phase_liquid" for instance)
 phases get_phase_index(const std::string &param_name);
+
+/// Return true if passed association scheme name is valid, otherwise false
+/// @param scheme_name The association scheme string to be checked ("2B" for instance)
+/// @param iOutput Gets updated with the schemes enum value if scheme_name is found
+bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput);
+
+/// Return the enum key corresponding to the association scheme name ("2B" for instance)
+schemes get_scheme_index(const std::string &scheme_name);
 
 /// Returns true if the input is trivial (constants, critical parameters, etc.)
 bool is_trivial_parameter(int key);

@@ -27,6 +27,12 @@ PCSAFTFluid::PCSAFTFluid(rapidjson::Value::ValueIterator itr) {
         params.volA = 0.;
     }
 
+    if (itr->HasMember("assocScheme")){
+        params.assocScheme = cpjson::get_string_array(*itr, "assocScheme");
+    } else {
+        params.assocScheme = {};
+    }
+
     if (itr->HasMember("dipm") && (*itr)["dipm"].IsNumber()){
         params.dipm = cpjson::get_double(*itr, "dipm");
     } else {

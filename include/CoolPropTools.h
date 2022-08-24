@@ -10,7 +10,7 @@
     #include <string>
     #include <vector>
     #include <cctype>
-    #include <map> 
+    #include <map>
 
     #include "CPstrings.h"
     #include "CPnumerics.h"
@@ -18,8 +18,8 @@
 
     #ifndef __has_feature         // Optional of course.
         #define __has_feature(x) 0  // Compatibility with non-clang compilers.
-    #endif  
-    
+    #endif
+
     // see http://stackoverflow.com/questions/18298280/how-to-declare-a-variable-as-thread-local-portably
     #ifndef thread_local
         #if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
@@ -29,9 +29,9 @@
               defined __ICL || \
               defined __DMC__ || \
               defined __BORLANDC__ )
-            #define thread_local __declspec(thread) 
+            #define thread_local __declspec(thread)
         #elif defined(__ISAPPLE__) && (defined(__llvm__) || defined(__clang__)) && !__has_feature(cxx_thread_local)
-            #define thread_local 
+            #define thread_local
         /* note that ICC (linux) and Clang are covered by __GNUC__ */
         #elif defined __GNUC__ || \
               defined __SUNPRO_C || \
@@ -68,7 +68,9 @@
         typedef std::map<std::string, std::string> strings_map;
         strings_map strings;
         typedef std::map<std::string, std::vector<double> > double_vectors_map;
-        double_vectors_map double_vectors;
+				double_vectors_map double_vectors;
+				typedef std::map<std::string, std::vector<int> > int_vectors_map;
+				int_vectors_map int_vectors;
         typedef std::map<std::string, std::vector<std::string> > string_vectors_map;
         string_vectors_map string_vectors;
     public:
@@ -87,6 +89,37 @@
             }
             else{
                 throw CoolProp::ValueError(format("%s could not be matched in get_string",s.c_str()));
+            }
+        };
+				int get_int(const std::string &s) const
+				{
+						numbers_map::const_iterator i = numbers.find(s);
+						if (i != numbers.end()){
+								return i->second;
+						}
+						else{
+								throw CoolProp::ValueError(format("%s could not be matched in get_number",s.c_str()));
+						}
+				};
+				/// Get a double, or return the default value if not found
+				int get_int(const std::string &s, const double default_value) const
+				{
+						numbers_map::const_iterator i = numbers.find(s);
+						if (i != numbers.end()){
+								return i->second;
+						}
+						else{
+								return default_value;
+						}
+				};
+				const std::vector<int>& get_int_vector(const std::string &s) const
+        {
+            int_vectors_map::const_iterator i = int_vectors.find(s);
+            if (i != int_vectors.end()){
+                return i->second;
+            }
+            else{
+                throw CoolProp::ValueError(format("%s could not be matched in get_int_vector",s.c_str()));
             }
         };
         double get_double(const std::string &s) const
@@ -153,7 +186,7 @@
                                             catch(...){                                                                        \
                                                 return _HUGE;                                                                  \
                                             }
-    
+
     enum miniz_mode{MINIZ_COMPRESS, MINIZ_DECOMPRESS};
     void miniz(const std::string &inFile, const std::string &outFile, miniz_mode mode);
 #endif
