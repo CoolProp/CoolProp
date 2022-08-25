@@ -2227,7 +2227,10 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
 
         resid.u = u;
         double R0 = kb * PCSAFT._Q / (kb * PCSAFT._Q + kb0 * (1 - PCSAFT._Q));
-        double R = BoundedSecant(resid, R0, Rmin, Rmax, DBL_EPSILON, TOL, MAXITER);
+        double R = R0;
+        if (resid.call(R) > TOL) {
+            R = BoundedSecant(resid, R0, Rmin, Rmax, DBL_EPSILON, TOL, MAXITER);
+        }
 
         double pp_sum = 0;
         double eupp_sum = 0;
@@ -2452,6 +2455,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
 
     double B = std::log(kbprime / kb) / (1/Pprime - 1/p);
     double A = std::log(kb) - B * (1/p - 1/Pref);
+
     if (B < 0) {
         throw SolutionError("B < 0 in outerTQ");
     }
@@ -2470,7 +2474,10 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
 
         double R0 = kb * PCSAFT._Q / (kb * PCSAFT._Q + kb0 * (1 - PCSAFT._Q));
         resid.u = u;
-        double R = BoundedSecant(resid, R0, Rmin, Rmax, DBL_EPSILON, TOL, MAXITER);
+        double R = R0;
+        if (resid.call(R) > TOL) {
+            R = BoundedSecant(resid, R0, Rmin, Rmax, DBL_EPSILON, TOL, MAXITER);
+        }
 
         double pp_sum = 0;
         double eupp_sum = 0;
@@ -2528,7 +2535,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     }
 
     if (!std::isfinite(p) || !std::isfinite(maxdif) || maxdif > 0.1 || p < 0) {
-        throw SolutionError("outerTQ did not converge to a solution"); // !!!! TODO: update errors
+        throw SolutionError("outerTQ did not converge to a solution");
     }
 
     return p;
@@ -2596,7 +2603,6 @@ double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
         throw SolutionError("an estimate for the VLE temperature could not be found");
     }
 
-    // t_guess = 572.6667; // !!!! REMOVE
     return t_guess;
 }
 
