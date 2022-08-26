@@ -70,8 +70,8 @@
         "items": {
           "type": "string"
         },
-        "minItems": 0        
-      }
+        "minItems": 0
+      },
       "dipm": {
         "description": "Dipole moment (Debye)",
         "type": "number",
