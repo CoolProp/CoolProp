@@ -409,7 +409,7 @@ phases get_phase_index(const std::string& param_name) {
 struct scheme_info
 {
     schemes key;
-    const char *short_desc;
+    std::string short_desc;
 };
 
 const scheme_info scheme_info_list[] = {
