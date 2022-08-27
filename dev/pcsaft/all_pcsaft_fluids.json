@@ -1095,6 +1095,9 @@
     "uAB_units": "K",
     "volA": 0.035176,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.032042,
     "molemass_units": "kg/mol",
     "name": "METHANOL",
@@ -1114,6 +1117,9 @@
     "uAB_units": "K",
     "volA": 0.032384,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.046069,
     "molemass_units": "kg/mol",
     "name": "ETHANOL",
@@ -1133,6 +1139,9 @@
     "uAB_units": "K",
     "volA": 0.015268,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.060096,
     "molemass_units": "kg/mol",
     "name": "1-PROPANOL",
@@ -1152,6 +1161,9 @@
     "uAB_units": "K",
     "volA": 0.006692,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.074123,
     "molemass_units": "kg/mol",
     "name": "1-BUTANOL",
@@ -1171,6 +1183,9 @@
     "uAB_units": "K",
     "volA": 0.010319,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.08815,
     "molemass_units": "kg/mol",
     "name": "1-PENTANOL",
@@ -1190,6 +1205,9 @@
     "uAB_units": "K",
     "volA": 0.005747,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.102177,
     "molemass_units": "kg/mol",
     "name": "1-HEXANOL",
@@ -1209,6 +1227,9 @@
     "uAB_units": "K",
     "volA": 0.001155,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.116203,
     "molemass_units": "kg/mol",
     "name": "1-HEPTANOL",
@@ -1228,6 +1249,9 @@
     "uAB_units": "K",
     "volA": 0.002197,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.13023,
     "molemass_units": "kg/mol",
     "name": "1-OCTANOL",
@@ -1247,6 +1271,9 @@
     "uAB_units": "K",
     "volA": 0.001427,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.144257,
     "molemass_units": "kg/mol",
     "name": "1-NONANOL",
@@ -1267,6 +1294,9 @@
     "uAB_units": "K",
     "volA": 0.024675,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.060096,
     "molemass_units": "kg/mol",
     "name": "2-PROPANOL",
@@ -1286,6 +1316,9 @@
     "uAB_units": "K",
     "volA": 0.001863,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.08815,
     "molemass_units": "kg/mol",
     "name": "2-METHYL-2-BUTANOL",
@@ -1305,6 +1338,9 @@
     "uAB_units": "K",
     "volA": 0.095103,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.03106,
     "molemass_units": "kg/mol",
     "name": "METHYLAMINE",
@@ -1324,6 +1360,9 @@
     "uAB_units": "K",
     "volA": 0.017275,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.04509,
     "molemass_units": "kg/mol",
     "name": "ETHYLAMINE",
@@ -1343,6 +1382,9 @@
     "uAB_units": "K",
     "volA": 0.022674,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.05911,
     "molemass_units": "kg/mol",
     "name": "1-PROPYLAMINE",
@@ -1362,6 +1404,9 @@
     "uAB_units": "K",
     "volA": 0.021340,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.05911,
     "molemass_units": "kg/mol",
     "name": "2-PROPYLAMINE",
@@ -1381,6 +1426,9 @@
     "uAB_units": "K",
     "volA": 0.074883,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.09313,
     "molemass_units": "kg/mol",
     "name": "ANILINE",
@@ -1401,6 +1449,9 @@
     "uAB_units": "K",
     "volA": 0.0451,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "charge": 0,
     "molemass": 0.01801528,
     "molemass_units": "kg/mol",
@@ -3033,6 +3084,9 @@
     "uAB_units": "K",
     "volA": 0.07555,
     "volA_units": "Angstrom^3",
+    "assocScheme": [
+      "2B"
+    ],
     "molemass": 0.060052,
     "molemass_units": "kg/mol",
     "name": "ACETIC ACID",

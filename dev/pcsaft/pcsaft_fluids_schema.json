@@ -65,6 +65,13 @@
           "Angstrom^3"
         ]
       },
+      "assocScheme": {
+        "description": "PC-SAFT association scheme for each of the association sites on the molecule",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 0
+      },
       "dipm": {
         "description": "Dipole moment (Debye)",
         "type": "number",
