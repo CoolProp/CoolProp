@@ -95,7 +95,9 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param, "short").c_str()));
         }
     }
-
+    
+    /// Return a string from the backend for the mixture/fluid
+    std::string fluid_param_string(const std::string&);
     /// Calculate the gas constant in J/mol/K
     CoolPropDbl calc_gas_constant(void) {
         return cubic->get_R_u();
