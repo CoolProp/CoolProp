@@ -6,6 +6,67 @@ Python Wrapper
 
 .. contents:: :depth: 2
 
+PyFluids (3-party wrapper)
+==========================
+
+It is a simple, full-featured, lightweight CoolProp wrapper for Python.
+PyFluids gets published on `PyPI <https://pypi.org/project/pyfluids/>`_,  so you can easily install it using: ::
+
+    pip install pyfluids
+
+All CoolProp features are included: thermophysical properties of pure fluids, mixtures and humid air.
+Also you can easily convert the results to a JSON string or Python dict, add new properties or inputs for lookups, and more.
+
+Benefits
+--------
+
+* Easy to use: all fluids and properties are at hand, no need to remember CoolProp keys.
+
+* Processes for fluids and humid air are included: there is no need to code it anymore.
+
+* User-friendly interface: writing code is faster.
+
+Examples
+--------
+
+To calculate the specific heat of saturated water vapor at *1 atm*: ::
+
+    from pyfluids import Fluid, FluidsList
+
+    water_vapour = Fluid(FluidsList.Water).dew_point_at_pressure(101325)
+    print(water_vapour.specific_heat)  # 2079.937085633241
+
+To calculate the dynamic viscosity of propylene glycol aqueous solution with *60 %* mass fraction at *100 kPa* and *-20 °C*: ::
+
+    from pyfluids import Fluid, FluidsList, Input
+
+    propylene_glycol = Fluid(FluidsList.MPG, 60).with_state(
+        Input.pressure(100e3), Input.temperature(-20)
+    )
+    print(propylene_glycol.dynamic_viscosity)  # 0.13907391053938878
+
+To calculate the density of ethanol aqueous solution (with ethanol *40 %* mass fraction) at *200 kPa* and *4 °C*: ::
+
+    from pyfluids import Mixture, FluidsList, Input
+
+    mixture = Mixture([FluidsList.Water, FluidsList.Ethanol], [60, 40]).with_state(
+        Input.pressure(200e3), Input.temperature(4)
+    )
+    print(mixture.density)  # 883.3922771627963
+
+To calculate the wet bulb temperature of humid air at *99 kPa*, *30 °C* and *50 %* relative humidity: ::
+
+    from pyfluids import HumidAir, InputHumidAir
+
+    humid_air = HumidAir().with_state(
+        InputHumidAir.pressure(99e3),
+        InputHumidAir.temperature(30),
+        InputHumidAir.relative_humidity(50),
+    )
+    print(humid_air.wet_bulb_temperature)  # 21.946578559079228
+
+For any questions or more examples, `see PyFluids on GitHub <https://github.com/portyanikhin/PyFluids>`_.
+
 Automatic installation
 ======================
 
@@ -139,21 +200,21 @@ Example Code Output
 Code Warnings
 =============
 
-Messages may be issued from the Python CoolProp wrapper via the Python `warnings` module.  This module allows 
-non-fatal warning messages to be issued to the calling program and stdout to warn of 
-improper function usage or deprecation of features.  These warnings will, by 
-default, be issued each and every time a suspect call is made to CoolProp.  While, the best 
-solution is to correct the calling code according to the message received, sometimes this is 
+Messages may be issued from the Python CoolProp wrapper via the Python `warnings` module.  This module allows
+non-fatal warning messages to be issued to the calling program and stdout to warn of
+improper function usage or deprecation of features.  These warnings will, by
+default, be issued each and every time a suspect call is made to CoolProp.  While, the best
+solution is to correct the calling code according to the message received, sometimes this is
 difficult to do in a legacy or third party code and can result in many, many warning messages that obscure
 the output and hinder debugging.
 
 Suppressing warning messages
 ----------------------------
 
-The calling code can suppress or ignore these warning messages by overriding the default 
-warnings filter and changing the behavior of the warnings module.  As an example, the 
-following script will result in a `DeprecationWarning` on each call to the deprecated function 
-Props():: 
+The calling code can suppress or ignore these warning messages by overriding the default
+warnings filter and changing the behavior of the warnings module.  As an example, the
+following script will result in a `DeprecationWarning` on each call to the deprecated function
+Props()::
 
     from CoolProp.CoolProp import Props
     Rho = Props('D','T',298.15,'P',10000,'R744')
@@ -195,4 +256,3 @@ Module Documentation
 .. toctree::
 
     ../../../apidoc/CoolProp.rst
-
