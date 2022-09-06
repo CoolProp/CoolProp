@@ -14,12 +14,12 @@ SharpFluids
 
 This C# NuGet package uses CoolProp to perform all Fluid Properties lookups. It combines the speed from the low-level lookup with a units of measurement system packed into a easy-to-use system. If you are new to using CoolProp, this is a good place to start.
 
-How to start 
+How to start
 
 - Create a new C# Console App(.NET Framework) project in Visual studio
 - Right click your new project and press 'Manage NuGet Packages'
 - Go to 'Browse' and search for 'SharpFluids' and press 'Install'
-- Add this to the top of your code :: 
+- Add this to the top of your code ::
 
     using SharpFluids;
     using UnitsNet;
@@ -54,17 +54,16 @@ To calculate the specific heat of saturated water vapor at *1 atm*: ::
     using System;
     using SharpProp;
     using UnitsNet.NumberExtensions.NumberToPressure;
-    using UnitsNet.NumberExtensions.NumberToRatio;
     using UnitsNet.Units;
 
 ::
-    
-    var waterVapour = new Fluid(FluidsList.Water);
-    waterVapour.Update(Input.Pressure((1).Atmospheres()), Input.Quality((100).Percent()));
+
+    var waterVapour = new Fluid(FluidsList.Water)
+        .DewPointAt((1).Atmospheres());
     Console.WriteLine(waterVapour.SpecificHeat.JoulesPerKilogramKelvin); // 2079.937085633241
-    Console.WriteLine(waterVapour.SpecificHeat);                         // 2.08 kJ/kg.K
+    Console.WriteLine(waterVapour.SpecificHeat);                         // 2.08 kJ/kg·K
     Console.WriteLine(waterVapour.SpecificHeat
-        .ToUnit(SpecificEntropyUnit.CaloriePerGramKelvin));              // 0.5 cal/g.K
+        .ToUnit(SpecificEntropyUnit.CaloriePerGramKelvin));              // 0.5 cal/g·K
 
 To calculate the dynamic viscosity of propylene glycol aqueous solution with *60 %* mass fraction at *100 kPa* and *-20 °C*: ::
 
@@ -77,8 +76,9 @@ To calculate the dynamic viscosity of propylene glycol aqueous solution with *60
 
 ::
 
-    var propyleneGlycol = new Fluid(FluidsList.MPG, (60).Percent());
-    propyleneGlycol.Update(Input.Pressure((100).Kilopascals()), Input.Temperature((-20).DegreesCelsius()));
+    var propyleneGlycol = new Fluid(FluidsList.MPG, (60).Percent())
+        .WithState(Input.Pressure((100).Kilopascals()),
+            Input.Temperature((-20).DegreesCelsius()));
     Console.WriteLine(propyleneGlycol.DynamicViscosity?.PascalSeconds); // 0.13907391053938878
     Console.WriteLine(propyleneGlycol.DynamicViscosity);                // 139.07 mPa·s
     Console.WriteLine(propyleneGlycol.DynamicViscosity?
@@ -97,13 +97,14 @@ To calculate the density of ethanol aqueous solution (with ethanol *40 %* mass f
 
 ::
 
-    var mixture = new Mixture(new List<FluidsList> {FluidsList.Water, FluidsList.Ethanol}, 
-        new List<Ratio> {(60).Percent(), (40).Percent()});
-    mixture.Update(Input.Pressure((200).Kilopascals()), Input.Temperature((277.15).Kelvins()));
+    var mixture = new Mixture(
+        new List<FluidsList> {FluidsList.Water, FluidsList.Ethanol},
+        new List<Ratio> {(60).Percent(), (40).Percent()})
+        .WithState(Input.Pressure((200).Kilopascals()),
+            Input.Temperature((277.15).Kelvins()));
     Console.WriteLine(mixture.Density.KilogramsPerCubicMeter);               // 883.3922771627759
     Console.WriteLine(mixture.Density);                                      // 883.39 kg/m3
     Console.WriteLine(mixture.Density.ToUnit(DensityUnit.GramPerDeciliter)); // 88.34 g/dl
-
 
 To calculate the wet bulb temperature of humid air at *99 kPa*, *30 °C* and *50 %* relative humidity: ::
 
@@ -116,13 +117,10 @@ To calculate the wet bulb temperature of humid air at *99 kPa*, *30 °C* and *50
 
 ::
 
-    var humidAir = new HumidAir();
-    humidAir.Update(InputHumidAir.Pressure((99).Kilopascals()), 
-        InputHumidAir.Temperature((30).DegreesCelsius()), InputHumidAir.RelativeHumidity((50).Percent()));
-    // or use:
-    // var humidAir1 = 
-    //     HumidAir.WithState(InputHumidAir.Pressure((99).Kilopascals()), 
-    //         InputHumidAir.Temperature((30).DegreesCelsius()), InputHumidAir.RelativeHumidity((50).Percent()));
+    var humidAir = new HumidAir().WithState(
+        InputHumidAir.Pressure((99).Kilopascals()),
+        InputHumidAir.Temperature((30).DegreesCelsius()),
+        InputHumidAir.RelativeHumidity((50).Percent()));
     Console.WriteLine(humidAir.WetBulbTemperature.Kelvins); // 295.0965785590792
     Console.WriteLine(humidAir.WetBulbTemperature);         // 21.95 °C
     Console.WriteLine(humidAir.WetBulbTemperature
@@ -149,7 +147,7 @@ When you are finished, you should have a folder layout something like ::
         |- AbstractState.cs
         |- Configuration.cs
         |- ...
-        
+
 There is example code :ref:`at the end of this page <csharp_example>`
 
 Windows
@@ -172,7 +170,7 @@ Same idea as windows, but command line is just a bit different::
 
     mcs Example.cs platform-independent/*.cs -platform:x64
     ./Example
-    
+
 Use `-platform:x86` to tell C# that your shared library is 32-bit if you are on 32-bit, or `-platform:x64` if you are on a 64-bit platform.
 
 User-Compiled Binaries
@@ -190,7 +188,7 @@ OSX
 ---
 
 For OSX, to install the necessary tools using homebrew, you can do::
-    
+
     homebrew install mono
 
 Linux
@@ -226,8 +224,8 @@ If you want to change the package that CoolProp resides in, you can do so by cha
 
     cmake .. -DCOOLPROP_CSHARP_MODULE=ON -DBUILD_TESTING=ON -DCOOLPROP_SWIG_OPTIONS="-namespace package.name"
 
-where ``package.name`` is replaced with the desired name    
-    
+where ``package.name`` is replaced with the desired name
+
 .. _csharp_example:
 
 Example Code
