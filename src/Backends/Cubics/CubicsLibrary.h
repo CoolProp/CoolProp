@@ -31,6 +31,11 @@ struct CubicsValues
 /**
          * @param identifier The name or registry number of the fluid (or an alias)
          */
+std::string get_fluid_as_JSONstring(const std::string& identifier);
+
+/**
+         * @param identifier The name or registry number of the fluid (or an alias)
+         */
 CubicsValues get_cubic_values(const std::string& identifier);
 
 /** \brief Add an array of fluids to the cubics library (as a JSON-formatted string)
