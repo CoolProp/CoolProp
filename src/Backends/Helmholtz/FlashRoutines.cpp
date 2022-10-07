@@ -1136,16 +1136,33 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             SaturationSolvers::saturation_D_pure_options optionsD;
             optionsD.omega = 1;
             optionsD.use_logdelta = false;
-            if (HEOS._rhomolar > HEOS._crit.rhomolar) {
-                optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
-                SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
-                // SatL and SatV have the saturation values
-                Sat = HEOS.SatL;
-            } else {
-                optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
-                SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
-                // SatL and SatV have the saturation values
-                Sat = HEOS.SatV;
+            int saturation_solver_iterations = 200;
+            for (int i_try = 0; i_try < 7; i_try++)
+            {
+                try
+                {
+                    if (HEOS._rhomolar > HEOS._crit.rhomolar)
+                    {
+                        optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
+                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD, saturation_solver_iterations);
+                        // SatL and SatV have the saturation values
+                        Sat = HEOS.SatL;
+                    }
+                    else
+                    {
+                        optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
+                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD, saturation_solver_iterations);
+                        // SatL and SatV have the saturation values
+                        Sat = HEOS.SatV;
+                    }
+                    break; // good solve
+                }
+                catch(CoolPropBaseError)
+                {
+                    optionsD.omega /= 2;
+                    saturation_solver_iterations *= 2;
+                    if (i_try >= 6){throw;}
+                }
             }
 
             // If it is above, it is not two-phase and either liquid, vapor or supercritical

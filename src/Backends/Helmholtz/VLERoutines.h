@@ -66,13 +66,11 @@ static CoolPropDbl Wilson_lnK_factor(const HelmholtzEOSMixtureBackend& HEOS, Coo
     return log(pci / p) + 5.373 * (1 + omegai) * (1 - Tci / T);
 };
 
-void saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options);
+void saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options, int max_iter);
 void saturation_T_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_options& options);
 void saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_Akasaka_options& options);
 void saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_Akasaka_options& options);
 
-/**
-    */
 struct saturation_PHSU_pure_options
 {
     enum specified_variable_options

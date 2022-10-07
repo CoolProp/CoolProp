@@ -555,7 +555,8 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
         }
     } while (error > 1e-9);
 }
-void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options) {
+void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar, saturation_D_pure_options &options, int max_iterations=200)
+{
     /*
     This function is inspired by the method of Akasaka:
 
@@ -657,33 +658,45 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, Cool
 
         v = linsolve(J, r);
 
-        tau += options.omega * v[0];
+        double omega = options.omega;
 
         if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOL) {
             if (options.use_logdelta)
-                deltaV = exp(log(deltaV) + options.omega * v[1]);
+                deltaV = exp(log(deltaV)+omega*v[1]);
             else
-                deltaV += v[1];
-        } else {
+            {
+                if (deltaV + omega*v[1] <= 0) {omega = 0.5*deltaV/v[1];} // gone off track, take a smaller step
+                if (tau + omega*v[0] <= 0) {omega = 0.5*tau/v[0];}
+                deltaV += omega*v[1];
+            }
+        }
+        else
+        {
             if (options.use_logdelta)
-                deltaL = exp(log(deltaL) + options.omega * v[1]);
+                deltaL = exp(log(deltaL)+omega*v[1]);
             else
-                deltaL += v[1];
+            {
+                if (deltaL + omega*v[1] <= 0) {omega = 0.5*deltaL/v[1];} // gone off track, take a smaller step
+                if (tau + omega*v[0] <= 0) {omega = 0.5*tau/v[0];}
+                deltaL += omega*v[1];
+            }
         }
 
-        rhoL = deltaL * reduce.rhomolar;
-        rhoV = deltaV * reduce.rhomolar;
-        T = reduce.T / tau;
+        tau += omega*v[0];
 
-        p_error = (pL - pV) / pL;
+        rhoL = deltaL*reduce.rhomolar;
+        rhoV = deltaV*reduce.rhomolar;
+        T = reduce.T/tau;
+
+        p_error = (pL-pV)/pL;
 
         error = sqrt(pow(r[0], 2) + pow(r[1], 2));
         iter++;
         if (T < 0) {
             throw SolutionError(format("saturation_D_pure solver T < 0"));
         }
-        if (iter > 200) {
-            throw SolutionError(format("saturation_D_pure solver did not converge after 100 iterations with rho: %g mol/m^3", rhomolar));
+        if (iter > max_iterations){
+            throw SolutionError(format("saturation_D_pure solver did not converge after %d iterations with rho: %g mol/m^3",max_iterations,rhomolar));
         }
     } while (error > 1e-9);
     CoolPropDbl p_error_limit = 1e-3;
