@@ -555,7 +555,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
         }
     } while (error > 1e-9);
 }
-void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, CoolPropDbl rhomolar, saturation_D_pure_options &options, int max_iterations=200)
+void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options)
 {
     /*
     This function is inspired by the method of Akasaka:
@@ -695,8 +695,8 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend &HEOS, Cool
         if (T < 0) {
             throw SolutionError(format("saturation_D_pure solver T < 0"));
         }
-        if (iter > max_iterations){
-            throw SolutionError(format("saturation_D_pure solver did not converge after %d iterations with rho: %g mol/m^3",max_iterations,rhomolar));
+        if (iter > options.max_iterations){
+            throw SolutionError(format("saturation_D_pure solver did not converge after %d iterations with rho: %g mol/m^3",options.max_iterations,rhomolar));
         }
     } while (error > 1e-9);
     CoolPropDbl p_error_limit = 1e-3;

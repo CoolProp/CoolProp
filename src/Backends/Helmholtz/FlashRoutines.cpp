@@ -1136,7 +1136,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             SaturationSolvers::saturation_D_pure_options optionsD;
             optionsD.omega = 1;
             optionsD.use_logdelta = false;
-            int saturation_solver_iterations = 200;
+            optionsD.max_iterations = 200;
             for (int i_try = 0; i_try < 7; i_try++)
             {
                 try
@@ -1144,14 +1144,14 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     if (HEOS._rhomolar > HEOS._crit.rhomolar)
                     {
                         optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
-                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD, saturation_solver_iterations);
+                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
                         // SatL and SatV have the saturation values
                         Sat = HEOS.SatL;
                     }
                     else
                     {
                         optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
-                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD, saturation_solver_iterations);
+                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
                         // SatL and SatV have the saturation values
                         Sat = HEOS.SatV;
                     }
@@ -1160,7 +1160,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 catch(CoolPropBaseError)
                 {
                     optionsD.omega /= 2;
-                    saturation_solver_iterations *= 2;
+                    optionsD.max_iterations *= 2;
                     if (i_try >= 6){throw;}
                 }
             }
