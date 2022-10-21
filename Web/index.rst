@@ -20,6 +20,7 @@ CoolProp is a C++ library that implements:
 * :ref:`User-friendly interface around the full capabilities of NIST REFPROP <REFPROP>`
 * :ref:`Fast IAPWS-IF97 (Industrial Formulation) for Water/Steam <IF97>`
 * :ref:`Cubic equations of state (SRK, PR) <cubic_backend>`
+* :ref:`PC-SAFT equation of state <pcsaft_backend>`
 
 Environments Supported
 ----------------------
@@ -83,7 +84,7 @@ Please be so kind and cite our work in your publication: :ref:`Citation informat
 Supporters
 ----------
 
-\ 
+\
 
 .. image:: _static/logo_labothap.png
    :height: 100px
@@ -117,9 +118,9 @@ Supporters
    :height: 50px
    :alt: IPU Refrigeration and Energy Technology
    :target: https://www.ipu.dk
-   
+
 
 License Information
 -------------------
 
-CoolProp has flexible licensing terms and you can use it for commercial projects and academic work free of charge. Have a look at the actual `license <https://github.com/CoolProp/CoolProp/blob/master/LICENSE>`_, if you are in doubt. 
+CoolProp has flexible licensing terms and you can use it for commercial projects and academic work free of charge. Have a look at the actual `license <https://github.com/CoolProp/CoolProp/blob/master/LICENSE>`_, if you are in doubt.

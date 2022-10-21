@@ -12,7 +12,7 @@
     "molemass": 0.016043,
     "molemass_units": "kg/mol",
     "name": "METHANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "74-84-0",
@@ -27,7 +27,7 @@
     "molemass": 0.03007,
     "molemass_units": "kg/mol",
     "name": "ETHANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "74-98-6",
@@ -42,7 +42,7 @@
     "molemass": 0.044096,
     "molemass_units": "kg/mol",
     "name": "PROPANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "106-97-8",
@@ -58,7 +58,7 @@
     "molemass": 0.055123,
     "molemass_units": "kg/mol",
     "name": "N-BUTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "109-66-0",
@@ -74,7 +74,7 @@
     "molemass": 0.072146,
     "molemass_units": "kg/mol",
     "name": "N-PENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "110-54-3",
@@ -90,7 +90,7 @@
     "molemass": 0.086177,
     "molemass_units": "kg/mol",
     "name": "N-HEXANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "142-82-5",
@@ -106,7 +106,7 @@
     "molemass": 0.100203,
     "molemass_units": "kg/mol",
     "name": "N-HEPTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "111-65-9",
@@ -122,7 +122,7 @@
     "molemass": 0.114231,
     "molemass_units": "kg/mol",
     "name": "N-OCTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "111-84-2",
@@ -138,7 +138,7 @@
     "molemass": 0.12825,
     "molemass_units": "kg/mol",
     "name": "N-NONANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "124-18-5",
@@ -154,7 +154,7 @@
     "molemass": 0.142285,
     "molemass_units": "kg/mol",
     "name": "N-DECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "1120-21-4",
@@ -170,7 +170,7 @@
     "molemass": 0.156312,
     "molemass_units": "kg/mol",
     "name": "N-UNDECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "112-40-3",
@@ -186,7 +186,7 @@
     "molemass": 0.170338,
     "molemass_units": "kg/mol",
     "name": "N-DODECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "629-50-5",
@@ -202,7 +202,7 @@
     "molemass": 0.184365,
     "molemass_units": "kg/mol",
     "name": "N-TRIDECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "629-59-4",
@@ -218,7 +218,7 @@
     "molemass": 0.198392,
     "molemass_units": "kg/mol",
     "name": "N-TETRADECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "629-62-9",
@@ -234,7 +234,7 @@
     "molemass": 0.212419,
     "molemass_units": "kg/mol",
     "name": "N-PENTADECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "544-76-3",
@@ -250,7 +250,7 @@
     "molemass": 0.226446,
     "molemass_units": "kg/mol",
     "name": "N-HEXADECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "629-78-7",
@@ -266,7 +266,7 @@
     "molemass": 0.240473,
     "molemass_units": "kg/mol",
     "name": "N-HEPTADECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "593-45-3",
@@ -282,7 +282,7 @@
     "molemass": 0.2545,
     "molemass_units": "kg/mol",
     "name": "N-OCTADECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "629-92-5",
@@ -298,7 +298,7 @@
     "molemass": 0.268527,
     "molemass_units": "kg/mol",
     "name": "N-NONADECANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "112-95-8",
@@ -314,7 +314,7 @@
     "molemass": 0.282553,
     "molemass_units": "kg/mol",
     "name": "N-EICOSANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "75-28-5",
@@ -330,7 +330,7 @@
     "molemass": 0.058123,
     "molemass_units": "kg/mol",
     "name": "ISOBUTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "78-78-4",
@@ -346,7 +346,7 @@
     "molemass": 0.07215,
     "molemass_units": "kg/mol",
     "name": "ISOPENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "463-82-1",
@@ -362,7 +362,7 @@
     "molemass": 0.07215,
     "molemass_units": "kg/mol",
     "name": "NEOPENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "107-83-5",
@@ -378,7 +378,7 @@
     "molemass": 0.086177,
     "molemass_units": "kg/mol",
     "name": "2-METHYLPENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "75-83-2",
@@ -394,7 +394,7 @@
     "molemass": 0.086177,
     "molemass_units": "kg/mol",
     "name": "2,2-DIMETHYLBUTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "79-29-8",
@@ -410,7 +410,7 @@
     "molemass": 0.086177,
     "molemass_units": "kg/mol",
     "name": "2,3-DIMETHYLBUTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "96-14-0",
@@ -425,7 +425,7 @@
     "molemass": 0.086177,
     "molemass_units": "kg/mol",
     "name": "3-METHYLPENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "591-76-4",
@@ -440,7 +440,7 @@
     "molemass": 0.100204,
     "molemass_units": "kg/mol",
     "name": "2-METHYLHEXANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "287-92-3",
@@ -455,7 +455,7 @@
     "molemass": 0.07013,
     "molemass_units": "kg/mol",
     "name": "CYCLOPENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "110-82-7",
@@ -470,7 +470,7 @@
     "molemass": 0.084147,
     "molemass_units": "kg/mol",
     "name": "CYCLOHEXANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "96-37-7",
@@ -485,7 +485,7 @@
     "molemass": 0.084156,
     "molemass_units": "kg/mol",
     "name": "METHYLCYCLOPENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "108-87-2",
@@ -500,7 +500,7 @@
     "molemass": 0.098182,
     "molemass_units": "kg/mol",
     "name": "METHYLCYCLOHEXANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "1640-89-7",
@@ -515,7 +515,7 @@
     "molemass": 0.098182,
     "molemass_units": "kg/mol",
     "name": "ETHYLCYCLOPENTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "1678-91-7",
@@ -530,7 +530,7 @@
     "molemass": 0.112215,
     "molemass_units": "kg/mol",
     "name": "ETHYLCYCLOHEXANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "74-85-1",
@@ -546,7 +546,7 @@
     "molemass": 0.02805,
     "molemass_units": "kg/mol",
     "name": "ETHYLENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "115-07-1",
@@ -562,7 +562,7 @@
     "molemass": 0.042081,
     "molemass_units": "kg/mol",
     "name": "PROPYLENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "106-98-9",
@@ -579,7 +579,7 @@
     "molemass": 0.05610631999999999,
     "molemass_units": "kg/mol",
     "name": "1-BUTENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "109-67-1",
@@ -594,7 +594,7 @@
     "molemass": 0.070134,
     "molemass_units": "kg/mol",
     "name": "1-PENTENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "592-41-6",
@@ -609,7 +609,7 @@
     "molemass": 0.084616,
     "molemass_units": "kg/mol",
     "name": "1-HEXENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "592-76-7",
@@ -624,7 +624,7 @@
     "molemass": 0.0981861,
     "molemass_units": "kg/mol",
     "name": "1-HEPTENE",
-    "BibTeX": "Ghosh-2003"
+    "BibTeX": "Ghosh-FPE-2003"
   },
   {
     "CAS": "111-66-0",
@@ -639,7 +639,7 @@
     "molemass": 0.112215,
     "molemass_units": "kg/mol",
     "name": "1-OCTENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "124-11-8",
@@ -654,7 +654,7 @@
     "molemass": 0.126243,
     "molemass_units": "kg/mol",
     "name": "1-NONENE",
-    "BibTeX": "Ghosh-2003"
+    "BibTeX": "Ghosh-FPE-2003"
   },
   {
     "CAS": "872-05-9",
@@ -669,7 +669,7 @@
     "molemass": 0.140266,
     "molemass_units": "kg/mol",
     "name": "1-DECENE",
-    "BibTeX": "Ghosh-2003"
+    "BibTeX": "Ghosh-FPE-2003"
   },
   {
     "CAS": "112-41-4",
@@ -684,7 +684,7 @@
     "molemass": 0.168319,
     "molemass_units": "kg/mol",
     "name": "1-DODECENE",
-    "BibTeX": "Ghosh-2003"
+    "BibTeX": "Ghosh-FPE-2003"
   },
   {
     "CAS": "1120-36-1",
@@ -699,7 +699,7 @@
     "molemass": 0.196378,
     "molemass_units": "kg/mol",
     "name": "1-TETRADECENE",
-    "BibTeX": "Ghosh-2003"
+    "BibTeX": "Ghosh-FPE-2003"
   },
   {
     "CAS": "629-73-2",
@@ -714,7 +714,7 @@
     "molemass": 0.224432,
     "molemass_units": "kg/mol",
     "name": "1-HEXADECENE",
-    "BibTeX": "Ghosh-2003"
+    "BibTeX": "Ghosh-FPE-2003"
   },
   {
     "CAS": "142-29-0",
@@ -729,7 +729,7 @@
     "molemass": 0.068114,
     "molemass_units": "kg/mol",
     "name": "CYCLOPENTENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "71-43-2",
@@ -744,7 +744,7 @@
     "molemass": 0.078114,
     "molemass_units": "kg/mol",
     "name": "BENZENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "108-88-3",
@@ -760,7 +760,7 @@
     "molemass": 0.092141,
     "molemass_units": "kg/mol",
     "name": "TOLUENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "100-41-4",
@@ -775,7 +775,7 @@
     "molemass": 0.106167,
     "molemass_units": "kg/mol",
     "name": "ETHYLBENZENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "108-38-3",
@@ -791,7 +791,7 @@
     "molemass": 0.106167,
     "molemass_units": "kg/mol",
     "name": "M-XYLENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "95-47-6",
@@ -807,7 +807,7 @@
     "molemass": 0.106167,
     "molemass_units": "kg/mol",
     "name": "O-XYLENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "106-42-3",
@@ -823,7 +823,7 @@
     "molemass": 0.106167,
     "molemass_units": "kg/mol",
     "name": "P-XYLENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "103-65-1",
@@ -838,7 +838,7 @@
     "molemass": 0.120194,
     "molemass_units": "kg/mol",
     "name": "N-PROPYLBENZENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "119-64-2",
@@ -854,7 +854,7 @@
     "molemass": 0.132205,
     "molemass_units": "kg/mol",
     "name": "TETRALIN",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "104-51-8",
@@ -869,7 +869,7 @@
     "molemass": 0.134221,
     "molemass_units": "kg/mol",
     "name": "N-BUTYLBENZENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "92-52-4",
@@ -884,7 +884,7 @@
     "molemass": 0.154211,
     "molemass_units": "kg/mol",
     "name": "BIPHENYL",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "630-08-0",
@@ -899,7 +899,7 @@
     "molemass": 0.02801,
     "molemass_units": "kg/mol",
     "name": "CARBON MONOXIDE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "7727-37-9",
@@ -914,7 +914,7 @@
     "molemass": 0.02801,
     "molemass_units": "kg/mol",
     "name": "NITROGEN",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "7440-37-1",
@@ -929,7 +929,7 @@
     "molemass": 0.039948,
     "molemass_units": "kg/mol",
     "name": "ARGON",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "124-38-9",
@@ -944,7 +944,7 @@
     "molemass": 0.04401,
     "molemass_units": "kg/mol",
     "name": "CARBON DIOXIDE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "7446-09-5",
@@ -959,7 +959,7 @@
     "molemass": 0.064065,
     "molemass_units": "kg/mol",
     "name": "SULFUR DIOXIDE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "1333-74-0",
@@ -974,7 +974,7 @@
     "molemass": 0.00201588,
     "molemass_units": "kg/mol",
     "name": "HYDROGEN",
-    "BibTeX": "Ghosh-2003"
+    "BibTeX": "Ghosh-FPE-2003"
   },
   {
     "CAS": "7782-50-5",
@@ -989,7 +989,7 @@
     "molemass": 0.070905,
     "molemass_units": "kg/mol",
     "name": "CHLORINE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "75-15-0",
@@ -1004,7 +1004,7 @@
     "molemass": 0.076143,
     "molemass_units": "kg/mol",
     "name": "CARBON DISULFIDE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "75-00-3",
@@ -1019,7 +1019,7 @@
     "molemass": 0.064514,
     "molemass_units": "kg/mol",
     "name": "CHLOROETHANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "75-29-6",
@@ -1034,7 +1034,7 @@
     "molemass": 0.078541,
     "molemass_units": "kg/mol",
     "name": "2-CHLOROPROPANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "109-69-3",
@@ -1049,7 +1049,7 @@
     "molemass": 0.092568,
     "molemass_units": "kg/mol",
     "name": "1-CHLOROBUTANE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "108-90-7",
@@ -1064,7 +1064,7 @@
     "molemass": 0.112558,
     "molemass_units": "kg/mol",
     "name": "CHLOROBENZENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "108-86-1",
@@ -1079,7 +1079,7 @@
     "molemass": 0.15701,
     "molemass_units": "kg/mol",
     "name": "BROMOBENZENE",
-    "BibTeX": "Gross-2001"
+    "BibTeX": "Gross-IECR-2001"
   },
   {
     "CAS": "67-56-1",
@@ -1101,7 +1101,7 @@
     "molemass": 0.032042,
     "molemass_units": "kg/mol",
     "name": "METHANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "64-17-5",
@@ -1123,7 +1123,7 @@
     "molemass": 0.046069,
     "molemass_units": "kg/mol",
     "name": "ETHANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "71-23-8",
@@ -1145,7 +1145,7 @@
     "molemass": 0.060096,
     "molemass_units": "kg/mol",
     "name": "1-PROPANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "71-36-3",
@@ -1167,7 +1167,7 @@
     "molemass": 0.074123,
     "molemass_units": "kg/mol",
     "name": "1-BUTANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "71-41-0",
@@ -1189,7 +1189,7 @@
     "molemass": 0.08815,
     "molemass_units": "kg/mol",
     "name": "1-PENTANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "111-27-3",
@@ -1211,7 +1211,7 @@
     "molemass": 0.102177,
     "molemass_units": "kg/mol",
     "name": "1-HEXANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "111-70-6",
@@ -1233,7 +1233,7 @@
     "molemass": 0.116203,
     "molemass_units": "kg/mol",
     "name": "1-HEPTANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "111-87-5",
@@ -1255,7 +1255,7 @@
     "molemass": 0.13023,
     "molemass_units": "kg/mol",
     "name": "1-OCTANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "143-08-8",
@@ -1277,7 +1277,7 @@
     "molemass": 0.144257,
     "molemass_units": "kg/mol",
     "name": "1-NONANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "67-63-0",
@@ -1300,7 +1300,7 @@
     "molemass": 0.060096,
     "molemass_units": "kg/mol",
     "name": "2-PROPANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "75-85-4",
@@ -1322,7 +1322,7 @@
     "molemass": 0.08815,
     "molemass_units": "kg/mol",
     "name": "2-METHYL-2-BUTANOL",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "74-89-5",
@@ -1344,7 +1344,7 @@
     "molemass": 0.03106,
     "molemass_units": "kg/mol",
     "name": "METHYLAMINE",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "75-04-7",
@@ -1366,7 +1366,7 @@
     "molemass": 0.04509,
     "molemass_units": "kg/mol",
     "name": "ETHYLAMINE",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "107-10-8",
@@ -1388,7 +1388,7 @@
     "molemass": 0.05911,
     "molemass_units": "kg/mol",
     "name": "1-PROPYLAMINE",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "75-31-0",
@@ -1410,7 +1410,7 @@
     "molemass": 0.05911,
     "molemass_units": "kg/mol",
     "name": "2-PROPYLAMINE",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "62-53-3",
@@ -1432,7 +1432,7 @@
     "molemass": 0.09313,
     "molemass_units": "kg/mol",
     "name": "ANILINE",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   },
   {
     "CAS": "7732-18-5",
@@ -1456,7 +1456,7 @@
     "molemass": 0.01801528,
     "molemass_units": "kg/mol",
     "name": "WATER",
-    "BibTeX": "Fuchs-2006"
+    "BibTeX": "Fuchs-IECR-2006"
   },
   {
     "CAS": "13968-08-6",
@@ -1473,7 +1473,7 @@
     "molemass": 0.0190232,
     "molemass_units": "kg/mol",
     "name": "H3O+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "17341-24-1",
@@ -1489,7 +1489,7 @@
     "molemass": 0.006941,
     "molemass_units": "kg/mol",
     "name": "Li+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "17341-25-2",
@@ -1505,7 +1505,7 @@
     "molemass": 0.02299,
     "molemass_units": "kg/mol",
     "name": "Na+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "24203-36-9",
@@ -1521,7 +1521,7 @@
     "molemass": 0.039098,
     "molemass_units": "kg/mol",
     "name": "K+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "18459-37-5",
@@ -1537,7 +1537,7 @@
     "molemass": 0.132905,
     "molemass_units": "kg/mol",
     "name": "Cs+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14798-03-9",
@@ -1554,7 +1554,7 @@
     "molemass": 0.018039,
     "molemass_units": "kg/mol",
     "name": "NH4+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "16984-48-8",
@@ -1571,7 +1571,7 @@
     "molemass": 0.018998,
     "molemass_units": "kg/mol",
     "name": "F-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "16887-00-6",
@@ -1588,7 +1588,7 @@
     "molemass": 0.03545,
     "molemass_units": "kg/mol",
     "name": "Cl-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "24959-67-9",
@@ -1605,7 +1605,7 @@
     "molemass": 0.079904,
     "molemass_units": "kg/mol",
     "name": "Br-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "20461-54-5",
@@ -1621,7 +1621,7 @@
     "molemass": 0.126904,
     "molemass_units": "kg/mol",
     "name": "I-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14797-55-8",
@@ -1637,7 +1637,7 @@
     "molemass": 0.062004,
     "molemass_units": "kg/mol",
     "name": "NO3-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14280-30-9",
@@ -1653,7 +1653,7 @@
     "molemass": 0.017007,
     "molemass_units": "kg/mol",
     "name": "OH-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14797-73-0",
@@ -1669,7 +1669,7 @@
     "molemass": 0.099446,
     "molemass_units": "kg/mol",
     "name": "ClO4-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "71-52-3",
@@ -1685,7 +1685,7 @@
     "molemass": 0.061016,
     "molemass_units": "kg/mol",
     "name": "HCO3-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14066-20-7",
@@ -1701,7 +1701,7 @@
     "molemass": 0.096986,
     "molemass_units": "kg/mol",
     "name": "H2PO4-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "71-47-6",
@@ -1718,7 +1718,7 @@
     "molemass": 0.045017,
     "molemass_units": "kg/mol",
     "name": "CHO2-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "71-50-1",
@@ -1735,7 +1735,7 @@
     "molemass": 0.059044,
     "molemass_units": "kg/mol",
     "name": "C2H3O2-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "22537-22-0",
@@ -1751,7 +1751,7 @@
     "molemass": 0.024305,
     "molemass_units": "kg/mol",
     "name": "Mg2+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14127-61-8",
@@ -1767,7 +1767,7 @@
     "molemass": 0.040078,
     "molemass_units": "kg/mol",
     "name": "Ca2+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "15158-11-9",
@@ -1783,7 +1783,7 @@
     "molemass": 0.063546,
     "molemass_units": "kg/mol",
     "name": "Cu2+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "23713-49-7",
@@ -1799,7 +1799,7 @@
     "molemass": 0.06538,
     "molemass_units": "kg/mol",
     "name": "Zn2+",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14808-79-8",
@@ -1815,7 +1815,7 @@
     "molemass": 0.096056,
     "molemass_units": "kg/mol",
     "name": "SO42-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14383-50-7",
@@ -1831,7 +1831,7 @@
     "molemass": 0.112117,
     "molemass_units": "kg/mol",
     "name": "S2O32-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "3812-32-6",
@@ -1847,7 +1847,7 @@
     "molemass": 0.060008,
     "molemass_units": "kg/mol",
     "name": "CO32-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14066-19-4",
@@ -1863,7 +1863,7 @@
     "molemass": 0.095978,
     "molemass_units": "kg/mol",
     "name": "HPO42-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "14265-44-2",
@@ -1879,7 +1879,7 @@
     "molemass": 0.09497,
     "molemass_units": "kg/mol",
     "name": "PO43-",
-    "BibTeX": "Held-2014"
+    "BibTeX": "Held-CERD-2014"
   },
   {
     "CAS": "115-10-6",
@@ -1897,7 +1897,7 @@
     "molemass": 0.046069000000000006,
     "molemass_units": "kg/mol",
     "name": "DIMETHYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "60-29-7",
@@ -1915,7 +1915,7 @@
     "molemass": 0.07412300000000001,
     "molemass_units": "kg/mol",
     "name": "DIETHYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "111-43-3",
@@ -1933,7 +1933,7 @@
     "molemass": 0.102177,
     "molemass_units": "kg/mol",
     "name": "DI-N-PROPYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "142-96-1",
@@ -1951,7 +1951,7 @@
     "molemass": 0.13022999999999998,
     "molemass_units": "kg/mol",
     "name": "DI-N-BUTYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "693-65-2",
@@ -1969,7 +1969,7 @@
     "molemass": 0.15828,
     "molemass_units": "kg/mol",
     "name": "DI-N-PENTYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "540-67-0",
@@ -1987,7 +1987,7 @@
     "molemass": 0.0601,
     "molemass_units": "kg/mol",
     "name": "METHYL ETHYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "557-17-5",
@@ -2005,7 +2005,7 @@
     "molemass": 0.07412300000000001,
     "molemass_units": "kg/mol",
     "name": "METHYL N-PROPYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "628-28-4",
@@ -2023,7 +2023,7 @@
     "molemass": 0.08815,
     "molemass_units": "kg/mol",
     "name": "METHYL N-BUTYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "628-80-8",
@@ -2041,7 +2041,7 @@
     "molemass": 0.102177,
     "molemass_units": "kg/mol",
     "name": "METHYL N-PENTYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "628-32-0",
@@ -2059,7 +2059,7 @@
     "molemass": 0.08815,
     "molemass_units": "kg/mol",
     "name": "ETHYL N-PROPYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "108-20-3",
@@ -2077,7 +2077,7 @@
     "molemass": 0.102176,
     "molemass_units": "kg/mol",
     "name": "DIISOPROPYL ETHER",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "109-87-5",
@@ -2095,7 +2095,7 @@
     "molemass": 0.076095,
     "molemass_units": "kg/mol",
     "name": "DIMETHOXYMETHANE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "110-71-4",
@@ -2113,7 +2113,7 @@
     "molemass": 0.090122,
     "molemass_units": "kg/mol",
     "name": "1,2-DIMETHOXYETHANE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "629-14-1",
@@ -2131,7 +2131,7 @@
     "molemass": 0.118176,
     "molemass_units": "kg/mol",
     "name": "1,2-DIETHOXYETHANE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "75-56-9",
@@ -2149,7 +2149,7 @@
     "molemass": 0.05808,
     "molemass_units": "kg/mol",
     "name": "1,2-PROPYLENE OXIDE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "503-30-0",
@@ -2167,7 +2167,7 @@
     "molemass": 0.05808,
     "molemass_units": "kg/mol",
     "name": "1,3-PROPYLENE OXIDE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "106-88-7",
@@ -2185,7 +2185,7 @@
     "molemass": 0.072107,
     "molemass_units": "kg/mol",
     "name": "1,2-BUTENE OXIDE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "109-99-9",
@@ -2203,7 +2203,7 @@
     "molemass": 0.072107,
     "molemass_units": "kg/mol",
     "name": "TETRAHYDROFURAN",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "107-31-3",
@@ -2221,7 +2221,7 @@
     "molemass": 0.060052,
     "molemass_units": "kg/mol",
     "name": "METHYL FORMATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "109-94-4",
@@ -2239,7 +2239,7 @@
     "molemass": 0.07407899999999999,
     "molemass_units": "kg/mol",
     "name": "ETHYL FORMATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "110-74-7",
@@ -2257,7 +2257,7 @@
     "molemass": 0.08810599999999999,
     "molemass_units": "kg/mol",
     "name": "PROPYL FORMATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "592-84-7",
@@ -2275,7 +2275,7 @@
     "molemass": 0.102133,
     "molemass_units": "kg/mol",
     "name": "BUTYL FORMATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "79-20-9",
@@ -2293,7 +2293,7 @@
     "molemass": 0.07407899999999999,
     "molemass_units": "kg/mol",
     "name": "METHYL ACETATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "141-78-6",
@@ -2311,7 +2311,7 @@
     "molemass": 0.08810599999999999,
     "molemass_units": "kg/mol",
     "name": "ETHYL ACETATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "109-60-4",
@@ -2329,7 +2329,7 @@
     "molemass": 0.102133,
     "molemass_units": "kg/mol",
     "name": "PROPYL ACETATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "554-12-01",
@@ -2347,7 +2347,7 @@
     "molemass": 0.08810599999999999,
     "molemass_units": "kg/mol",
     "name": "METHYL PROPANOATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "105-37-3",
@@ -2365,7 +2365,7 @@
     "molemass": 0.102133,
     "molemass_units": "kg/mol",
     "name": "ETHYL PROPANOATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "106-36-5",
@@ -2383,7 +2383,7 @@
     "molemass": 0.11616,
     "molemass_units": "kg/mol",
     "name": "PROPYL PROPANOATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "623-42-7",
@@ -2401,7 +2401,7 @@
     "molemass": 0.102133,
     "molemass_units": "kg/mol",
     "name": "METHYL BUTANOATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "96-33-3",
@@ -2419,7 +2419,7 @@
     "molemass": 0.08609,
     "molemass_units": "kg/mol",
     "name": "METHYL ACRYLATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "140-88-5",
@@ -2437,7 +2437,7 @@
     "molemass": 0.100117,
     "molemass_units": "kg/mol",
     "name": "ETHYL ACRYLATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "25281-48-5",
@@ -2455,7 +2455,7 @@
     "molemass": 0.100117,
     "molemass_units": "kg/mol",
     "name": "MMA",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "97-63-2",
@@ -2473,7 +2473,7 @@
     "molemass": 0.11414400000000001,
     "molemass_units": "kg/mol",
     "name": "ETHYL METHACRYLATE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "50-00-0",
@@ -2491,7 +2491,7 @@
     "molemass": 0.030026,
     "molemass_units": "kg/mol",
     "name": "FORMALDEHYDE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "123-38-6",
@@ -2509,7 +2509,7 @@
     "molemass": 0.05808,
     "molemass_units": "kg/mol",
     "name": "PROPANAL",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "123-72-8",
@@ -2527,7 +2527,7 @@
     "molemass": 0.0721066,
     "molemass_units": "kg/mol",
     "name": "BUTANAL",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "98-01-01",
@@ -2545,7 +2545,7 @@
     "molemass": 0.096086,
     "molemass_units": "kg/mol",
     "name": "FURFURAL",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "67-64-1",
@@ -2563,7 +2563,7 @@
     "molemass": 0.05808,
     "molemass_units": "kg/mol",
     "name": "ACETONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "78-93-3",
@@ -2581,7 +2581,7 @@
     "molemass": 0.072107,
     "molemass_units": "kg/mol",
     "name": "2-BUTANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "107-87-9",
@@ -2599,7 +2599,7 @@
     "molemass": 0.086134,
     "molemass_units": "kg/mol",
     "name": "2-PENTANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "96-22-0",
@@ -2617,7 +2617,7 @@
     "molemass": 0.086134,
     "molemass_units": "kg/mol",
     "name": "3-PENTANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "591-78-6",
@@ -2635,7 +2635,7 @@
     "molemass": 0.10016,
     "molemass_units": "kg/mol",
     "name": "2-HEXANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "589-38-8",
@@ -2653,7 +2653,7 @@
     "molemass": 0.10016,
     "molemass_units": "kg/mol",
     "name": "3-HEXANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "110-43-0",
@@ -2671,7 +2671,7 @@
     "molemass": 0.11419,
     "molemass_units": "kg/mol",
     "name": "2-HEPTANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "123-19-3",
@@ -2689,7 +2689,7 @@
     "molemass": 0.11419,
     "molemass_units": "kg/mol",
     "name": "4-HEPTANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "111-13-7",
@@ -2707,7 +2707,7 @@
     "molemass": 0.12888,
     "molemass_units": "kg/mol",
     "name": "2-OCTANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "106-68-3",
@@ -2725,7 +2725,7 @@
     "molemass": 0.12888,
     "molemass_units": "kg/mol",
     "name": "3-OCTANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "821-55-6",
@@ -2743,7 +2743,7 @@
     "molemass": 0.14224,
     "molemass_units": "kg/mol",
     "name": "2-NONANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "502-56-7",
@@ -2761,7 +2761,7 @@
     "molemass": 0.14224,
     "molemass_units": "kg/mol",
     "name": "5-NONANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "112-12-9",
@@ -2779,7 +2779,7 @@
     "molemass": 0.1703,
     "molemass_units": "kg/mol",
     "name": "2-UNDECANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "927-49-1",
@@ -2797,7 +2797,7 @@
     "molemass": 0.1703,
     "molemass_units": "kg/mol",
     "name": "6-UNDECANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "593-08-8",
@@ -2815,7 +2815,7 @@
     "molemass": 0.19835,
     "molemass_units": "kg/mol",
     "name": "2-TRIDECANONE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "68-12-2",
@@ -2833,7 +2833,7 @@
     "molemass": 0.07309,
     "molemass_units": "kg/mol",
     "name": "DIMETHYLFORMAMIDE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "67-68-5",
@@ -2851,7 +2851,7 @@
     "molemass": 0.07812999999999999,
     "molemass_units": "kg/mol",
     "name": "DIMETHYL SULFOXIDE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "75-05-8",
@@ -2869,7 +2869,7 @@
     "molemass": 0.041052,
     "molemass_units": "kg/mol",
     "name": "ACETONITRILE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "107-13-1",
@@ -2887,7 +2887,7 @@
     "molemass": 0.053,
     "molemass_units": "kg/mol",
     "name": "ACRYLONITRILE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "107-12-0",
@@ -2905,7 +2905,7 @@
     "molemass": 0.055079,
     "molemass_units": "kg/mol",
     "name": "PROPIONITRILE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "109-74-0",
@@ -2923,7 +2923,7 @@
     "molemass": 0.06911,
     "molemass_units": "kg/mol",
     "name": "BUTYRONITRILE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "75-52-5",
@@ -2941,7 +2941,7 @@
     "molemass": 0.06104,
     "molemass_units": "kg/mol",
     "name": "NITROMETHANE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "79-24-3",
@@ -2959,7 +2959,7 @@
     "molemass": 0.075067,
     "molemass_units": "kg/mol",
     "name": "NITROETHANE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "74-87-3",
@@ -2977,7 +2977,7 @@
     "molemass": 0.050488,
     "molemass_units": "kg/mol",
     "name": "CHLOROMETHANE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "75-09-2",
@@ -2995,7 +2995,7 @@
     "molemass": 0.08493200000000001,
     "molemass_units": "kg/mol",
     "name": "DICHLOROMETHANE",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "67-66-3",
@@ -3013,7 +3013,7 @@
     "molemass": 0.119377,
     "molemass_units": "kg/mol",
     "name": "CHLOROFORM",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "75-45-6",
@@ -3031,7 +3031,7 @@
     "molemass": 0.086468,
     "molemass_units": "kg/mol",
     "name": "R22",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "811-97-2",
@@ -3049,7 +3049,7 @@
     "molemass": 0.10203,
     "molemass_units": "kg/mol",
     "name": "R134A",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "354-33-6",
@@ -3067,7 +3067,7 @@
     "molemass": 0.12002,
     "molemass_units": "kg/mol",
     "name": "R125",
-    "BibTeX": "Kleiner-2007"
+    "BibTeX": "Kleiner-JPCC-2007"
   },
   {
     "CAS": "64-19-7",
@@ -3090,6 +3090,6 @@
     "molemass": 0.060052,
     "molemass_units": "kg/mol",
     "name": "ACETIC ACID",
-    "BibTeX": "Gross-2002"
+    "BibTeX": "Gross-IECR-2002"
   }
 ]
