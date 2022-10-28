@@ -401,6 +401,80 @@ double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, doub
 }
 
 /**
+In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial guess for the solution is provided.
+Note that this is different than the Secant function because if something goes out of bounds, it will just make its best guess.
+
+@param f A pointer to an instance of the FuncWrapper1D class that implements the call() function
+@param x0 The initial guess for the solutionh
+@param dx The initial amount that is added to x in order to build the numerical derivative
+@param tol The absolute value of the tolerance accepted for the objective function
+@param maxiter Maximum number of iterations
+@returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
+*/
+double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
+{
+    #if defined(COOLPROP_DEEP_DEBUG)
+    static std::vector<double> xlog, flog;
+    xlog.clear(); flog.clear();
+    #endif
+
+    // Initialization
+    double x1=0,x2=0,x3=0,y0=0,y1=0,y2=0,x=x0,fval=999;
+    f->iter=1;
+    f->errstring.clear();
+    
+    // The relaxation factor (less than 1 for smaller steps)
+    double omega = f->options.get_double("omega", 1.0);
+
+    if (std::abs(dx)==0){ f->errstring="dx cannot be zero"; return _HUGE;}
+    while (f->iter<=2 || std::abs(fval)>tol)
+    {
+        if (f->iter==1){x1=x0; x=x1;}
+        if (f->iter==2){x2=x0+dx; x=x2;}
+        if (f->iter>2) {x=x2;}
+        
+            if (f->input_not_in_range(x)){
+                throw ValueError(format("Input [%g] is out of range",x));
+            }
+
+            fval = f->call(x);
+
+            #if defined(COOLPROP_DEEP_DEBUG)
+                xlog.push_back(x);
+                flog.push_back(fval);
+            #endif
+
+            if (!ValidNumber(fval)){
+                if (f->iter==1){return x;}
+                else {return x2-omega*y1/(y1-y0)*(x2-x1);}
+            };
+        if (f->iter==1){y1=fval;}
+        if (f->iter>1)
+        {
+            double deltax = x2-x1;
+            if (std::abs(deltax)<1e-14){
+                return x;
+            }
+            y2=fval;
+            double deltay = y2-y1;
+            if (f->iter > 2 && std::abs(deltay)<1e-14){
+                return x;
+            }
+            x3=x2-omega*y2/(y2-y1)*(x2-x1);
+            y0=y1;y1=y2; x1=x2; x2=x3;
+
+        }
+        if (f->iter>maxiter)
+        {
+            f->errstring=std::string("reached maximum number of iterations");
+            throw SolutionError(format("Secant reached maximum number of iterations"));
+        }
+        f->iter += 1;
+    }
+    return x3;
+}
+
+/**
 
 This function implements a 1-D bounded solver using the algorithm from Brent, R. P., Algorithms for Minimization Without Derivatives.
 Englewood Cliffs, NJ: Prentice-Hall, 1973. Ch. 3-4.
