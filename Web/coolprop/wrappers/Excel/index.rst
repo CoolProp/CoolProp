@@ -67,16 +67,31 @@ Pre-compiled Binaries for OSX
 Part 1:
 -------
 
-There are several ways to determine the bitness of your Excel version.  The easiest is to open a terminal, and do something like::
+Check the version of installed Excel app, has to be universal-type with double architecture: arm64 and x86_64, otherwise it will not work. For having both download Excel architecture type in your browser www.office.com and after you logged-in install Office 365. A ".pkg" file will start to download and after it finished follow the guided installer. I don't know if Excel from AppStore will work, may not.
+There are several ways to determine the bitness of your Excel version.  The easiest is to open a terminal, and type::
 
-    Ians-Mac-mini:~ ian$ file /Applications/Microsoft\ Excel.app/Contents/MacOS/Microsoft\ Excel 
-    /Applications/Microsoft Excel.app/Contents/MacOS/Microsoft Excel: Mach-O 64-bit executable x86_64
+    file /Applications/Microsoft\ Excel.app/Contents/MacOS/Microsoft\ Excel
+
+If the Excel version you have installed has 2 binaries Terminal window should display something like::
+
+    /Applications/Microsoft Excel.app/Contents/MacOS/Microsoft Excel: Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit executable x86_64] [arm64]
+    /Applications/Microsoft Excel.app/Contents/MacOS/Microsoft Excel (for architecture x86_64):	Mach-O 64-bit executable x86_64
+    /Applications/Microsoft Excel.app/Contents/MacOS/Microsoft Excel (for architecture arm64)Mach-O 64-bit executable arm64
 
 Or you can go into Excel->About Excel.  If version is greater than 15.24, you are running a 64-bit version of Excel.
+Even if arm64 binaries run faster on M1 we have to force our machine to run the x86_64 version because there are several incompatibilities as now with the arm binaries and the Adds-In feature of Excel. In order to force Excel to run through x86_64 binaries we have 2 option:
+
+1. make a executable file that run this command written after through Terminal or simply open Terminal and paste the same command on it:
+
+    arch -x86_64 /Applications/Microsoft\ Excel.app/Contents/MacOS/Microsoft\ Excel
+2. go "/Applications" then search "Microsoft Excel", right click and see "Obtain Information", check box with "Open With Rosetta".
+
+With the second method Excel will always open with x86_64 meanwhile with the first one only that time will run with x86_64 binaries. For an average/light use of Excel performance difference will not be noticed from native and Rosetta versions so I recommend the second choice, but you can always use the first one every time you know you will have to use CoolProp.
 
 Part 2:
 -------
 We need to convince Microsoft Excel to load our shared library, and it seems the only place it is willing to look for shared libraries is in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``, where ``${USER}`` should be replaced with your user name.  This is because Excel is now sandboxed.
+For those who don't know hot to go through directory quickly press ``Command + Shift + G`` when you are in Finder app.
 
 Following http://apple.stackexchange.com/a/106814, save these contents as the file ``~/Library/LaunchAgents/my.startup.plist`` (obviously replace ``ihb`` with the appropriate user name)::
 
@@ -123,6 +138,9 @@ Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library
 
 Place the downloaded file ``libCoolProp.dylib`` in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office`` too, but RENAME it to ``libCoolProp_32bit.dylib`` (this is to ensure that there is no name clash with the standard 64-bit shared library).
 
+Update: unfortunately the 32-bit can't be found no more in `shared_library/Darwin/32bit/`, since it doesn't exist no more.
+A self-build up version can always be made through Terminal with the help of function ``cmake`` (function that is available after installing CMake)
+
 64-bit
 ^^^^^^
 
@@ -133,29 +151,32 @@ Place the downloaded file ``libCoolProp.dylib`` in the folder ``/Users/${USER}/L
 Part 4:
 -------
 
-Open Excel, go to ``Tools/Add-ins...``. In browse, go to the folder listed above with the ``BF8T346G9.Office`` in it. Select CoolProp.xlam.
-
-Part 4b:
--------
-Go to Tools/Macro/Visual_Basic_Editor and open Module 1 in CoolProp.xlam.  Replace all references to “libCoolProp.dylib” with references to "/Users/${USER}/Library/Group Containers/UBF8T346G9.Office/libCoolProp.dylib”, again changing ${USER} to your user name.  Save and close the Visual Basic Editor.
+With x86_64 Excel version opened go to Tools>Add-Ins. In browse, go to the folder listed above with the ``BF8T346G9.Office`` in it and select ``CoolProp.xlam``. Again in Excel go to Tools>Macro>Visual_Basic_Editor and open "Module 1" of "CoolProp.xlam" in the window menu on the left.
+Replace all references to ``libCoolProp.dylib`` with references to ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office/libCoolProp.dylib``, again changing ``${USER}`` to your user name. In order to make it quicker you can press on your keyboard ``Command + F`` and then select Substitute and Substitute All. There should be 8 substitution.
+If you have the 32 bit file repeat the last passage changing ``libCoolProp_32bit.dylib`` with ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office/libCoolProp_32bit.dylib``. Again, there should be 8 substitution.
+Save and close the Visual Basic Editor.
 
 Part 5:
 -------
-Add this to a cell::
+Once you done all of these steps CoolProp should be ready to go on every Excel cartel or paper you open. I strongly suggest to exit Excel, close all apps, restart your mac and see if CoolProp still works properly in Excel sheets after the restart.
 
-    =PropsSI("T","P",101325,"Q",0,"Water")
+For instance you can copy-paste the next line to ensure it works by getting a value in return::
 
-make sure you get something like 373.1242958 K.
+    =PropsSI("T";"P";101325;"Q";0;"Water")
 
-Debugging
----------
+make sure you get something like ``373.1242958`` [K].
 
-* If it doesn't work and you get error number 53, it might be because you have a 64-bit .dylib file and you want a 32-bit .dylib file.  For instance when you run the ``file`` command on your .dylib, you should see something like::
+Debugging and Common Errors
+---------------------------
 
-    $ file libCoolProp_32bit.dylib
-    libCoolProp.dylib: Mach-O dynamically linked shared library i386
+* If it gives you an error like "The formula contains an error. ..." it means you made some syntax error, most common is putting "," for ";" between arguments.
+* If it gives you an error like "Last digit number error is 53 ..." it means ``libCoolProp.dylib`` or ``libCoolProp_32bit.dylib`` can't be found, presumably you moved the dylib file in another location or due to some kind of incompatibility of the version of Excel you are running.
 
-  the ``i386`` is the important bit, that indicates that the shared library is 32-bit.
+Note that with MacOs Systems running on Apple Silicon SOC applications always launch by default with native binaries if they exists, so we have to forced Excel to be launched with Rosetta and it works.
+
+That's why the "Part 1" is needed if you own a newer Apple Silicon based Macs.
+
+Note that this ``arm64`` compatibility could be or not solved in the future.
 
 REFPROP support on OSX
 ======================
