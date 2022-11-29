@@ -52,9 +52,9 @@ jobs:
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
         CIBW_BUILD: cp${{ matrix.python-version }}-*
-        CIBW_ARCHS_MACOS: 'x86_64,arm64'
-        CIBW_ARCHS_WINDOWS: 'AMD64,x86'
-        CIBW_ARCHS_LINUX: 'x86_64'   # aarch64 is having issues launching the docker correctly
+        CIBW_ARCHS_MACOS: x86_64 universal2 arm64
+        CIBW_ARCHS_WINDOWS: AMD64 x86
+        CIBW_ARCHS_LINUX: x86_64 # aarch64 is having issues launching the docker correctly
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
@@ -62,7 +62,6 @@ jobs:
         CIBW_TEST_SKIP: "*-macosx_arm64"
         # CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
         CIBW_BUILD_VERBOSITY: 1
-
       run: |
         python -m cibuildwheel --output-dir wheelhouse ./wrappers/Python
 
