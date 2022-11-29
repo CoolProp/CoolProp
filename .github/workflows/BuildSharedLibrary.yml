@@ -58,25 +58,25 @@ jobs:
         set -x
         cmake --build . --target install -j $(nproc) --config $BUILD_TYPE
 
-    - name: Tar.gz the shared library to maintain case sensitivy and file permissions
-      working-directory: ./install_root/shared_library/
-      shell: bash
-      run: |
-        set -x
-        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
+    # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+    #   working-directory: ./install_root/shared_library/
+    #   shell: bash
+    #   run: |
+    #     set -x
+    #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
 
-    - name: Archive TGZ or ZIP artifacts
+    - name: Archive artifacts
       uses: actions/upload-artifact@v2
       with:
-          name: CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
-          path: install_root/shared_library/CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
+          name: binaries
+          path: install_root/shared_library
 
-    - name: Upload TGZ or ZIP to release
-      if: contains(github.ref, 'refs/tags')
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: install_root/shared_library/CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
-        tag: ${{ github.ref }}
-        overwrite: true
-        file_glob: false
+    # - name: Upload TGZ or ZIP to release
+    #   if: contains(github.ref, 'refs/tags')
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: install_root/shared_library/CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
+    #     tag: ${{ github.ref }}
+    #     overwrite: true
+    #     file_glob: false

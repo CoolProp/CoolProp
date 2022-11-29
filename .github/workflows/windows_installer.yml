@@ -63,18 +63,18 @@ jobs:
     #     set -x
     #     zip -r CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip ./Installers/*
 
-    - name: Archive TGZ or ZIP artifacts
+    - name: Archive artifacts
       uses: actions/upload-artifact@v2
       with:
-          name: CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip
-          path: build/InnoScript/bin/Installers/Windows/CoolProp-${{ env.COOLPROP_VERSION }}.exe
+          name: binaries
+          path: build/InnoScript/bin/Installers
 
-    - name: Upload TGZ or ZIP to release
-      if: contains(github.ref, 'refs/tags')
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: build/InnoScript/bin/Installers/Windows/CoolProp-${{ env.COOLPROP_VERSION }}.exe
-        tag: ${{ github.ref }}
-        overwrite: true
-        file_glob: false
+    # - name: Upload TGZ or ZIP to release
+    #   if: contains(github.ref, 'refs/tags')
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: build/InnoScript/bin/Installers/Windows/CoolProp-${{ env.COOLPROP_VERSION }}.exe
+    #     tag: ${{ github.ref }}
+    #     overwrite: true
+    #     file_glob: false

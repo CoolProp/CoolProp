@@ -63,12 +63,13 @@ jobs:
         # CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
         CIBW_BUILD_VERBOSITY: 1
       run: |
-        python -m cibuildwheel --output-dir wheelhouse ./wrappers/Python
+        python -m cibuildwheel --output-dir Python ./wrappers/Python
 
     - name: Store artifacts
       uses: actions/upload-artifact@v2
       with:
-        path: wheelhouse/*.whl
+        name: binaries
+        path: Python
 
   upload_python_bindings_to_pypi:
     needs: python_bindings
