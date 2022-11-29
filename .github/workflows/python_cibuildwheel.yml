@@ -68,7 +68,7 @@ jobs:
     - name: Store artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: binaries
+        name: Python
         path: Python
 
   upload_python_bindings_to_pypi:

@@ -68,7 +68,7 @@ jobs:
     - name: Archive artifacts
       uses: actions/upload-artifact@v2
       with:
-          name: binaries
+          name: shared_library
           path: install_root/shared_library
 
     # - name: Upload TGZ or ZIP to release
