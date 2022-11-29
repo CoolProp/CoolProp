@@ -422,7 +422,7 @@ double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, i
     double x1=0,x2=0,x3=0,y0=0,y1=0,y2=0,x=x0,fval=999;
     f->iter=1;
     f->errstring.clear();
-    
+
     // The relaxation factor (less than 1 for smaller steps)
     double omega = f->options.get_double("omega", 1.0);
 
@@ -432,7 +432,7 @@ double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, i
         if (f->iter==1){x1=x0; x=x1;}
         if (f->iter==2){x2=x0+dx; x=x2;}
         if (f->iter>2) {x=x2;}
-        
+
             if (f->input_not_in_range(x)){
                 throw ValueError(format("Input [%g] is out of range",x));
             }
@@ -614,6 +614,80 @@ double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int
         }
     }
     return b;
+}
+
+
+/**
+
+This function implements a 1-D bounded solver using the regula falsi algorithm.
+
+a and b must bound the solution of interest and f(a) and f(b) must have opposite signs.  If the function is continuous, there must be
+at least one solution in the interval [a,b].
+
+@param f A pointer to an instance of the FuncWrapper1D class that must implement the call() function
+@param a The minimum bound for the solution of f=0
+@param b The maximum bound for the solution of f=0
+@param tol Tolerance (absolute)
+@param maxiter Maximum number of steps allowed.  Will throw a SolutionError if the solution cannot be found
+@param errcode An indicator for successful execution.
+*/
+double RegulaFalsi(FuncWrapper1D* f, const double a, const double b, const double tol, const int maxiter, int* errcode) {
+
+    f->errstring.clear();
+    *errcode = -1;
+
+    int side = 0;
+    double x1, x2, x3, f1, f2, f3;
+
+    x1 = a;
+    f1 = f->call(x1);
+
+    x2 = b;
+    f2 = f->call(x2);
+
+    if (f2 * f1 > 0) {
+        *errcode = 1;
+        return _HUGE;
+        // throw ValueError(format("Inputs in RegulaFalsi [%f,%f] do not bracket the root.  Function values are [%f,%f]", x1, x2, f1, f2));
+    }
+
+    if (std::abs(f1) < tol) {
+        *errcode = 0;
+        return x1;
+    }
+
+    if (std::abs(f2) < tol) {
+        *errcode = 0;
+        return x2;
+    }
+
+    for (int N = 0; N < maxiter; N++) {
+        x3 = (f2 * x1 - f1 * x2) / (f2 - f1);
+        x3 = std::min(b, std::max(x3, a));
+        f3 = f->call(x3);
+
+        if (std::abs(f3) < tol) {
+            *errcode = 0;
+            return x3;
+        }
+
+        if (f3 * f1 > 0) {  // same sign
+            x1 = x3;
+            f1 = f3;
+            if (side == -1) f2 *= 0.5;  // 0.5 for Illinois, (1-f3/f1) for Anderson–Björck
+            side = -1;
+        } else if (f3 * f2 > 0) {  // same sign
+            x2 = x3;
+            f2 = f3;
+            if (side == +1) f1 *= 0.5;  // 0.5 for Illinois, (1-f3/f2) for Anderson–Björck
+            side = +1;
+        } else {
+            *errcode = 0;
+            return x3;
+        }
+    }
+    *errcode = 2;
+    return _HUGE;
 }
 
 }; /* namespace CoolProp */
