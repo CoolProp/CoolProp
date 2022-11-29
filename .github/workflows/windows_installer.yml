@@ -49,25 +49,31 @@ jobs:
         set -x
         cmake --build . --target COOLPROP_WINDOWS_PACKAGE_INSTALLER -j $(nproc) --config $BUILD_TYPE
 
-    - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+    # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+    #   working-directory: ./build/InnoScript/bin/
+    #   shell: bash
+    #   run: |
+    #     set -x
+    #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz ./*
+        
+    - name: Create a zip archive since Windows users often cannot handle tar.gz files
       working-directory: ./build/InnoScript/bin/
       shell: bash
       run: |
-        set -x
-        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz ./*
+        zip -r CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip ./*
 
     - name: Archive TGZ or ZIP artifacts
       uses: actions/upload-artifact@v2
       with:
-          name: CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz
-          path: build/InnoScript/bin/CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz
+          name: CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip
+          path: build/InnoScript/bin/CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip
 
     - name: Upload TGZ or ZIP to release
       if: contains(github.ref, 'refs/tags')
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: build/InnoScript/bin/CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz
+        file: build/InnoScript/bin/CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: false
