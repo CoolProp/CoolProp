@@ -58,7 +58,6 @@ jobs:
         
     - name: Create a zip archive since Windows users often cannot handle tar.gz files
       working-directory: ./build/InnoScript/bin/
-      shell: bash
       run: |
         zip -r CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip ./*
 
