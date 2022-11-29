@@ -49,16 +49,18 @@ jobs:
         set -x
         cmake --build . --target COOLPROP_WINDOWS_PACKAGE_INSTALLER -j $(nproc) --config $BUILD_TYPE
 
-    # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
-    #   working-directory: ./build/InnoScript/bin/
-    #   shell: bash
-    #   run: |
-    #     set -x
-    #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz ./*
+    - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+      working-directory: ./build/InnoScript/bin/
+      shell: bash
+      run: |
+        set -x
+        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz ./*
         
     - name: Create a zip archive since Windows users often cannot handle tar.gz files
       working-directory: ./build/InnoScript/bin/
+      shell: bash
       run: |
+        set -x
         zip -r CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip ./*
 
     - name: Archive TGZ or ZIP artifacts
