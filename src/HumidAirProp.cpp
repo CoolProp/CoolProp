@@ -1566,6 +1566,32 @@ class HAProps_W_Residual : public CoolProp::FuncWrapper1D
     }
 };
 
+class HAProps_T_Residual : public CoolProp::FuncWrapper1D
+{
+   private:
+    const double p;
+    const double target;
+    const givens output;
+    const std::vector<givens> input_keys = {GIVEN_T, GIVEN_HUMRAT};
+    std::vector<double> input_vals;
+    double _T, _psi_w;
+
+   public:
+    HAProps_T_Residual(const double p, const double target, const givens output, const double W)
+      : p(p), target(target), output(output), _T(_HUGE), _psi_w(_HUGE) {
+        input_vals.resize(2, W);
+    }
+
+    double call(double T) {
+        // Update inputs
+        input_vals[0] = T;
+        // Prepare calculation
+        _HAPropsSI_inputs(p, input_keys, input_vals, _T, _psi_w);
+        // Retrieve outputs
+        return _HAPropsSI_outputs(output, p, _T, _psi_w) - target;
+    }
+};
+
 
 /// Calculate T (dry bulb temp) and psi_w (water mole fraction) given the pair of inputs
 void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const std::vector<double>& input_vals, double& T, double& psi_w) {
