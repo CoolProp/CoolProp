@@ -19,3 +19,4 @@ dependencies:
     - sphinxcontrib-bibtex
     - cloud_sptheme
     - openpyxl
+    - pybtex
