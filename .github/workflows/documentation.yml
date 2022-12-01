@@ -24,7 +24,9 @@ jobs:
       run: |
         set -x
         sudo apt update
-        sudo apt install doxygen
+        sudo apt install p7zip-full imagemagick rsync doxygen
+        sudo apt install mono-mcs octave liboctave-dev r-base-dev default-jre default-jdk
+        sudo apt install texlive-extra-utils
         
     - name: Set up Python
       uses: actions/setup-python@v2
