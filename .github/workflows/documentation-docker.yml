@@ -19,58 +19,23 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install system dependencies
-      shell: bash
-      run: |
-        set -x
-        sudo apt update
-        sudo apt install doxygen
-        
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9.x
+    - name: Build the image
+      working-directory: ./Web/docker/
+      #run: docker build . --file docworker.Dockerfile --tag my-image-name:$(date +%s)
+      run: docker-compose build
 
-    - name: Build and install wheel
-      env:
-        CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml pybtex sphinx
-        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
-        CIBW_BUILD: cp${{ matrix.python-version }}-*
-        CIBW_ARCHS_LINUX: x86_64
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_BUILD_VERBOSITY: 1
-      # python setup.py bdist_wheel --dist-dir dist cmake=default,64
-      run: |
-        python -m cibuildwheel --output-dir Python ./wrappers/Python
-        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls Python/*.whl`
-        python -c "import CoolProp; print(CoolProp.__gitrevision__)"
-        python -c "import CoolProp; print(CoolProp.__file__)"
-        
     - name: Build homepage and create graphs
       # Use a single argument with "True" or "1" to trigger a full rebuild
-      working-directory: ./Web/scripts/
+      working-directory: ./Web/docker/
       run: |
-        python -u __init__.py False
+        docker-compose run worker bash /coolprop/Web/docker/build_docs.sh False
         
-    - name: Build documentation with Doxygen
-      shell: bash
-      run: |
-        doxygen --version
-        doxygen Doxyfile
-        
-    - name: Build documentation with Sphinx
-      working-directory: ./Web
-      shell: bash
-      run: |
-        sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
-        make html
-
     - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
       run: |
         set -x
         COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
-        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV    
+        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
 
     - name: Zip the HTML documentation
       working-directory: ./Web/_static/doxygen/html/
