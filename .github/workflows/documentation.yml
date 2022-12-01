@@ -1,4 +1,4 @@
-name: Doxygen documentation
+name: Doxygen and Sphinx documentation
 
 on:
   push:
@@ -31,18 +31,27 @@ jobs:
       with:
         python-version: 3.9.x
 
-    - name: Build and install wheel
-      env:
-        CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml pybtex sphinx
-        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
-        CIBW_BUILD: cp${{ matrix.python-version }}-*
-        CIBW_ARCHS_LINUX: x86_64
-        CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-        CIBW_BUILD_VERBOSITY: 1
-      # python setup.py bdist_wheel --dist-dir dist cmake=default,64
+    # - name: Build and install wheel with cibuildwheel
+    #   env:
+    #     CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml pybtex sphinx
+    #     CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
+    #     CIBW_BUILD: cp${{ matrix.python-version }}-*
+    #     CIBW_ARCHS_LINUX: x86_64
+    #     CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+    #     CIBW_BUILD_VERBOSITY: 1
+    #   # python -m cibuildwheel --output-dir Python ./wrappers/Python
+    #   run: |
+    #     python -m cibuildwheel --output-dir Python ./wrappers/Python
+    #     pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls Python/*.whl`
+
+    - name: Build and install wheel using bdist_wheel
+      working-directory: ./wrappers/Python/
       run: |
-        python -m cibuildwheel --output-dir Python ./wrappers/Python
-        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls Python/*.whl`
+        python setup.py bdist_wheel --dist-dir dist cmake=default,64
+        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
+        
+    - name: Test the installed CoolProp version
+      run: |
         python -c "import CoolProp; print(CoolProp.__gitrevision__)"
         python -c "import CoolProp; print(CoolProp.__file__)"
         

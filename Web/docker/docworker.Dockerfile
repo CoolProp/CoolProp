@@ -1,7 +1,5 @@
 FROM continuumio/miniconda3
 
-RUN mkdir /usr/share/man/man1/
-
 RUN apt-get -y -m update && \
     apt-get install -y \
         g++ make cmake swig doxygen p7zip-full \

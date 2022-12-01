@@ -1,4 +1,4 @@
-name: Doxygen documentation
+name: Doxygen and Sphinx documentation using docker
 
 on:
   push:
