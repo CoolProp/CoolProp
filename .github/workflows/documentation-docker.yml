@@ -18,7 +18,7 @@ jobs:
       image: ghcr.io/coolprop/coolprop_docs_02_builder:dev
       credentials:
          username: ${{ github.actor }}
-         password: ${{ secrets.github_token }}
+         password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: actions/checkout@v3
