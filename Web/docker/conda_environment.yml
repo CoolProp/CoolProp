@@ -1,6 +1,6 @@
 name: docs
 dependencies:
-  - python=3.6
+  - python
   - scipy
   - numpy
   - matplotlib
