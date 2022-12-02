@@ -21,7 +21,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_SUFFIX: docs_01_base
-  IMAGE_NAME: ${{ github.repository }}_${{ env.IMAGE_SUFFIX }}
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push-image:
@@ -45,13 +45,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}_${{ env.IMAGE_SUFFIX }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
           context: ./Web/docker/
-          file: ./Web/docker/docs_01_base.Dockerfile
+          file: ./Web/docker/${{ env.IMAGE_SUFFIX }}.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
