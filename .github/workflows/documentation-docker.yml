@@ -22,7 +22,7 @@ jobs:
     - name: Build homepage and create graphs
       # Use a single argument with "True" or "1" to trigger a full rebuild
       run: |
-        run: docker run -v `pwd`:/coolprop ghcr.io/coolprop/coolprop_docs_02_builder:dev bash /coolprop/Web/docker/build_docs.sh True
+        docker run -v `pwd`:/coolprop ghcr.io/coolprop/coolprop_docs_02_builder:dev bash /coolprop/Web/docker/build_docs.sh True
         
     - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
