@@ -23,49 +23,49 @@ jobs:
     #     - my_docker_volume:/volume_mount
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-
-    # echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-    - name: Login to GitHub Container Registry
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      
+      # echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+            
+      - name: Build homepage and create graphs
+        # Use a single argument with "True" or "1" to trigger a full rebuild
+        run: |
+          docker pull ghcr.io/coolprop/coolprop_docs_02_builder:dev
+          docker run -v ${PWD}:/coolprop ghcr.io/coolprop/coolprop_docs_02_builder:dev bash /coolprop/Web/docker/build_docs.sh True
           
-    - name: Build homepage and create graphs
-      # Use a single argument with "True" or "1" to trigger a full rebuild
-      run: |
-        docker pull ghcr.io/coolprop/coolprop_docs_02_builder:dev
-        docker run -v ${PWD}:/coolprop ghcr.io/coolprop/coolprop_docs_02_builder:dev bash /coolprop/Web/docker/build_docs.sh True
-        
-    - name: Extract CoolProp version from CMakeLists.txt
-      shell: bash
-      run: |
-        set -x
-        COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
-        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
-
-    - name: Zip the HTML documentation
-      working-directory: ./Web/_build/
-      shell: bash
-      run: |
-        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz html/*
-
-    - name: Archive TGZ or ZIP artifacts
-      uses: actions/upload-artifact@v2
-      with:
-          name: CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
-          path: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
-
-    - name: Upload TGZ or ZIP to release
-      if: contains(github.ref, 'refs/tags')
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
-        tag: ${{ github.ref }}
-        overwrite: true
-        file_glob: false
+      - name: Extract CoolProp version from CMakeLists.txt
+        shell: bash
+        run: |
+          set -x
+          COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
+          echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+      
+      - name: Zip the HTML documentation
+        working-directory: ./Web/_build/
+        shell: bash
+        run: |
+          tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz html/*
+      
+      - name: Archive TGZ or ZIP artifacts
+        uses: actions/upload-artifact@v2
+        with:
+            name: CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+            path: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+      
+      - name: Upload TGZ or ZIP to release
+        if: contains(github.ref, 'refs/tags')
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: false
