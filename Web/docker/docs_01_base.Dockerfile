@@ -12,3 +12,4 @@ RUN apt-get -y -m update && \
 
 ADD conda_environment.yml /environment.yml
 RUN conda env create -f /environment.yml
+RUN mkdir -p /opt

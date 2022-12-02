@@ -20,7 +20,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_SUFFIX: docs_01_base
+  IMAGE_NAME: ${{ github.repository }}_${{ env.IMAGE_SUFFIX }}
 
 jobs:
   build-and-push-image:
@@ -50,7 +51,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./Web/docker/
-          file: ./Web/docker/doc_01_base.Dockerfile
+          file: ./Web/docker/docs_01_base.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
