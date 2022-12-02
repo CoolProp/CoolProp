@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: ghcr.io/owner/image
+      image: ghcr.io/coolprop/coolprop_docs_02_builder:dev
       credentials:
          username: ${{ github.actor }}
          password: ${{ secrets.github_token }}
