@@ -8,8 +8,9 @@ RUN apt-get -y -m update && \
         r-base-dev \
         default-jre default-jdk \
         texlive-extra-utils \
-        imagemagick rsync
+        imagemagick rsync && \
+    apt-get autoclean
 
 ADD conda_environment.yml /environment.yml
-RUN conda env create -f /environment.yml
+RUN conda env create -f /environment.yml && conda clean --all --yes
 RUN mkdir -p /opt
