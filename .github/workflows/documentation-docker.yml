@@ -19,16 +19,10 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Build the image
-      working-directory: ./Web/docker/
-      #run: docker build . --file docworker.Dockerfile --tag my-image-name:$(date +%s)
-      run: docker-compose build
-
     - name: Build homepage and create graphs
       # Use a single argument with "True" or "1" to trigger a full rebuild
-      working-directory: ./Web/docker/
       run: |
-        docker-compose run worker bash /coolprop/Web/docker/build_docs.sh False
+        run: docker run -v `pwd`:/coolprop ghcr.io/coolprop/coolprop_docs_02_builder:dev bash /coolprop/Web/docker/build_docs.sh True
         
     - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
@@ -38,23 +32,23 @@ jobs:
         echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
 
     - name: Zip the HTML documentation
-      working-directory: ./Web/_static/doxygen/html/
+      working-directory: ./Web/_build/
       shell: bash
       run: |
-        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz ./*
+        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz html/*
 
     - name: Archive TGZ or ZIP artifacts
       uses: actions/upload-artifact@v2
       with:
           name: CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
-          path: Web/_static/doxygen/html/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+          path: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
 
     - name: Upload TGZ or ZIP to release
       if: contains(github.ref, 'refs/tags')
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: Web/_static/doxygen/html/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+        file: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: false

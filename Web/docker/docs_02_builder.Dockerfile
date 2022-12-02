@@ -1,5 +1,17 @@
+# This is a dockerfile for building the docker container that can 
+# create the documentation. It requires REFPROP and cannot be made 
+# publicly available. 
+# 
+# we can use an access token to manually build the new image and push it to github
+# 
+# $ copy the REFPROP sources to the directory of this file.
+# $ cat your_token | docker login ghcr.io -u USERNAME --password-stdin
+# $ docker build --file docs_02_builder.Dockerfile --tag ghcr.io/coolprop/coolprop_docs_02_builder:dev .
+# $ docker push ghcr.io/coolprop/coolprop_docs_02_builder:dev
+
+
 # Use an intermediate container to build REFPROP
-FROM ghcr.io/coolprop/coolprop_docs_01_base as intermediate
+FROM ghcr.io/coolprop/coolprop_docs_01_base:dev as intermediate
 
 # This ADD block forces a build (invalidates the cache) if the git repo contents have changed, otherwise leaves it untouched.
 # See https://stackoverflow.com/a/39278224
@@ -28,6 +40,6 @@ RUN rm -rf /REFPROP_sources
 
 
 # Start with the second stage image
-FROM ghcr.io/coolprop/coolprop_docs_01_base
+FROM ghcr.io/coolprop/coolprop_docs_01_base:dev
 # Use the output of the earlier build
 COPY --from=intermediate /opt/refprop /opt/refprop
