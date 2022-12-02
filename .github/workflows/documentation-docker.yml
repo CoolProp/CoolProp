@@ -25,23 +25,40 @@ jobs:
         with:
           submodules: recursive
       
-      # # echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      # - name: Login to GitHub Container Registry
-      #   uses: docker/login-action@v2
-      #   with:
-      #     registry: ghcr.io
-      #     username: ${{ github.actor }}
-      #     password: ${{ secrets.GITHUB_TOKEN }}
-      #       
-      # - name: Build homepage and create graphs
-      #   # Use a single argument with "True" or "1" to trigger a full rebuild
-      #   run: |
-      #     docker pull ghcr.io/coolprop/coolprop_docs_02_builder:dev
-      #     docker run -v ${PWD}:/coolprop ghcr.io/coolprop/coolprop_docs_02_builder:dev bash /coolprop/Web/docker/build_docs.sh True
-      
+      - name: Build and install wheel using bdist_wheel
+        working-directory: ./wrappers/Python/
+        run: |
+          source activate docs
+          python setup.py bdist_wheel --dist-dir dist cmake=default,64
+          pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
+          
+      - name: Test the installed CoolProp version
+        run: |
+          source activate docs
+          python -c "import CoolProp; print(CoolProp.__gitrevision__)"
+          python -c "import CoolProp; print(CoolProp.__file__)"
+          
       - name: Build homepage and create graphs
         # Use a single argument with "True" or "1" to trigger a full rebuild
-        run: bash Web/docker/build_docs.sh True
+        working-directory: ./Web/scripts/
+        run: |
+          source activate docs
+          python -u __init__.py True
+          
+      - name: Build documentation with Doxygen
+        shell: bash
+        run: |
+          source activate docs
+          doxygen --version
+          doxygen Doxyfile
+          
+      - name: Build documentation with Sphinx
+        working-directory: ./Web
+        shell: bash
+        run: |
+          source activate docs
+          sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
+          make html
           
       - name: Extract CoolProp version from CMakeLists.txt
         shell: bash
