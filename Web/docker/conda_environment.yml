@@ -9,7 +9,7 @@ dependencies:
   - pip
   - six
   - requests
-  - jinja2
+  - jinja2<=3.0.0
   - pyyaml
   - pip:
     - cython

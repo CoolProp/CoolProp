@@ -172,8 +172,11 @@ pygments_style = 'sphinx'
 # 'both' - Both the class’ and the __init__ method’s docstring are concatenated and inserted
 autoclass_content = 'both'
 
-# Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
-html4_writer = True
+## Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
+#html4_writer = True
+
+# Fix the bibtext extension
+bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
 
 # -- Options for HTML output ---------------------------------------------------
 

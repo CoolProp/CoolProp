@@ -12,7 +12,8 @@ name: Documentation Docker image
 on:
   workflow_dispatch:
   push:
-    branches: [ master, develop, actions_docs ]
+    branches: [ actions_docs ]
+    #branches: [ master, develop, actions_docs ]
     # Sequence of patterns matched against refs/tags
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
