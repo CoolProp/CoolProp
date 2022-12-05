@@ -1,4 +1,4 @@
-name: BuildSharedLibrary
+name: Library builds (shared)
 
 on:
   push:

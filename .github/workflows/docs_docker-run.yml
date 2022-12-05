@@ -1,4 +1,4 @@
-name: Doxygen and Sphinx documentation
+name: Documentation builds (HTML)
 
 on:
   workflow_dispatch:
