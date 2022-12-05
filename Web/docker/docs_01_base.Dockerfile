@@ -30,5 +30,5 @@ RUN apt-get -y -m update && \
 RUN sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
 
 ADD conda_environment.yml /environment.yml
-RUN conda env create -f /environment.yml && conda clean --all --yes
+RUN conda update -n base -c defaults conda && conda env create -f /environment.yml && conda clean --all --yes
 RUN mkdir -p /opt
