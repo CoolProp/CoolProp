@@ -7,7 +7,7 @@ RUN apt-get -y -m update && \
         octave liboctave-dev \
         r-base-dev \
         default-jre default-jdk \
-        texlive-extra-utils pdfjam \
+        texlive-extra-utils \
         imagemagick rsync && \
     apt-get autoclean
 
