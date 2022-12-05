@@ -234,76 +234,76 @@ high_level_interface = [
         "EOL":True
     },
     "",
-    # {
-    #     "type": "comment",
-    #     "comment": "If you don't have REFPROP installed, disable the following lines",
-    #     "EOL": True
-    # },
-    # {
-    #     "type": "print",
-    #     "arguments": ["'*********** REFPROP *****************'"],
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "print",
-    #     "arguments": [
-    #         "'REFPROP version:'",
-    #         {
-    #             "type": "function",
-    #             "function": "get_global_param_string",
-    #             "arguments": [
-    #                 "'REFPROP_version'"
-    #             ]
-    #         }
-    #     ],
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "print",
-    #     "arguments": [
-    #         "'Critical temperature of water:'",
-    #         {
-    #             "type": "function",
-    #             "function": "Props1SI",
-    #             "arguments": [
-    #                 "'REFPROP::WATER'",
-    #                 "'Tcrit'"
-    #             ]
-    #         },
-    #         "'K'"
-    #     ],
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "print",
-    #     "arguments": [
-    #         "'Boiling temperature of water at 101325 Pa:'",
-    #         {
-    #             "type": "function",
-    #             "function": "PropsSI",
-    #             "arguments": [
-    #                 "'T'", "'P'", "101325", "'Q'", "0", "'REFPROP::WATER'"
-    #             ]
-    #         },
-    #         "'K'"
-    #     ],
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "print",
-    #     "arguments": [
-    #         "'c_p of water at 101325 Pa and 300 K:'",
-    #         {
-    #             "type": "function",
-    #             "function": "PropsSI",
-    #             "arguments": [
-    #                 "'C'", "'P'", "101325", "'T'", "300", "'REFPROP::WATER'"
-    #             ]
-    #         },
-    #         "'J/kg/K'"
-    #     ],
-    #     "EOL":True
-    # }
+    {
+        "type": "comment",
+        "comment": "If you don't have REFPROP installed, disable the following lines",
+        "EOL": True
+    },
+    {
+        "type": "print",
+        "arguments": ["'*********** REFPROP *****************'"],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'REFPROP version:'",
+            {
+                "type": "function",
+                "function": "get_global_param_string",
+                "arguments": [
+                    "'REFPROP_version'"
+                ]
+            }
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'Critical temperature of water:'",
+            {
+                "type": "function",
+                "function": "Props1SI",
+                "arguments": [
+                    "'REFPROP::WATER'",
+                    "'Tcrit'"
+                ]
+            },
+            "'K'"
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'Boiling temperature of water at 101325 Pa:'",
+            {
+                "type": "function",
+                "function": "PropsSI",
+                "arguments": [
+                    "'T'", "'P'", "101325", "'Q'", "0", "'REFPROP::WATER'"
+                ]
+            },
+            "'K'"
+        ],
+        "EOL":True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'c_p of water at 101325 Pa and 300 K:'",
+            {
+                "type": "function",
+                "function": "PropsSI",
+                "arguments": [
+                    "'C'", "'P'", "101325", "'T'", "300", "'REFPROP::WATER'"
+                ]
+            },
+            "'J/kg/K'"
+        ],
+        "EOL":True
+    }
 ]
 low_level_interface_with_mixtures = [
     "",
@@ -386,95 +386,95 @@ low_level_interface_with_mixtures = [
         "EOL":True
     },
     "",
-    # {
-    #     "type": "comment",
-    #     "comment": "If you don't have REFPROP installed, disable the following block",
-    #     "EOL": True
-    # },
-    # {
-    #     "type": "print",
-    #     "arguments": ["'*********** LOW-LEVEL INTERFACE (REFPROP) *****************'"],
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "custom_assignment",
-    #     "variable_type": "AbstractState",
-    #     "variable_name": "AS2",
-    #     "RHS": {
-    #             "type": "function",
-    #             "function": "factory",
-    #             "arguments": [
-    #                 "'REFPROP'", "'METHANE&ETHANE'"
-    #             ]
-    #         },
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "custom_assignment",
-    #     "variable_name": "z2",
-    #     "variable_type": "vector",
-    #     "RHS": {
-    #         "type": "vector",
-    #         "arguments": [
-    #             "0.2",
-    #             "0.8"
-    #         ]
-    #     },
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "class_dereference",
-    #     "name": "AS2",
-    #     "RHS": {
-    #             "type": "function",
-    #             "function": "set_mole_fractions",
-    #             "arguments": [
-    #                 "z2"
-    #             ]
-    #         },
-    #     "EOL":True
-    # },
-    # {
-    #     "type": "class_dereference",
-    #     "name": "AS2",
-    #     "RHS": {
-    #             "type": "function",
-    #             "function": "update",
-    #             "arguments": [
-    #                 {
-    #                     "type": "enum",
-    #                     "enum": "input_pairs",
-    #                     "key": "QT_INPUTS"
-    #                 },
-    #                 "1", "120"
-    #             ]
-    #         },
-    #     "EOL": True
-    # },
-    # {
-    #     "type": "print",
-    #     "arguments": [
-    #         "'Vapor molar density:'",
-    #         {
-    # 
-    #             "type": "class_dereference",
-    #             "name": "AS2",
-    #             "RHS": {
-    #                 "type": "function",
-    #                 "function": "keyed_output",
-    #                 "arguments": [
-    #                     {
-    #                         "type": "enum",
-    #                         "enum": "parameters",
-    #                         "key": "iDmolar"
-    #                     }
-    #                 ]
-    #             }
-    #         },
-    #         "'mol/m^3'"
-    #     ],
-    #     "EOL": True
-    # }
+    {
+        "type": "comment",
+        "comment": "If you don't have REFPROP installed, disable the following block",
+        "EOL": True
+    },
+    {
+        "type": "print",
+        "arguments": ["'*********** LOW-LEVEL INTERFACE (REFPROP) *****************'"],
+        "EOL":True
+    },
+    {
+        "type": "custom_assignment",
+        "variable_type": "AbstractState",
+        "variable_name": "AS2",
+        "RHS": {
+                "type": "function",
+                "function": "factory",
+                "arguments": [
+                    "'REFPROP'", "'METHANE&ETHANE'"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "custom_assignment",
+        "variable_name": "z2",
+        "variable_type": "vector",
+        "RHS": {
+            "type": "vector",
+            "arguments": [
+                "0.2",
+                "0.8"
+            ]
+        },
+        "EOL":True
+    },
+    {
+        "type": "class_dereference",
+        "name": "AS2",
+        "RHS": {
+                "type": "function",
+                "function": "set_mole_fractions",
+                "arguments": [
+                    "z2"
+                ]
+            },
+        "EOL":True
+    },
+    {
+        "type": "class_dereference",
+        "name": "AS2",
+        "RHS": {
+                "type": "function",
+                "function": "update",
+                "arguments": [
+                    {
+                        "type": "enum",
+                        "enum": "input_pairs",
+                        "key": "QT_INPUTS"
+                    },
+                    "1", "120"
+                ]
+            },
+        "EOL": True
+    },
+    {
+        "type": "print",
+        "arguments": [
+            "'Vapor molar density:'",
+            {
+
+                "type": "class_dereference",
+                "name": "AS2",
+                "RHS": {
+                    "type": "function",
+                    "function": "keyed_output",
+                    "arguments": [
+                        {
+                            "type": "enum",
+                            "enum": "parameters",
+                            "key": "iDmolar"
+                        }
+                    ]
+                }
+            },
+            "'mol/m^3'"
+        ],
+        "EOL": True
+    }
 ]
 
 low_level_interface = [
