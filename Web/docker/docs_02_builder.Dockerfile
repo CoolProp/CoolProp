@@ -2,7 +2,9 @@
 # create the documentation. It requires REFPROP and cannot be made 
 # publicly available. 
 # 
-# we can use an access token to manually build the new image and push it to github
+# Normally, a CI workflow should take care of executing the commands 
+# to build the docker image. However, you can also use an access 
+# token to manually build the new image and push it to github.
 # 
 # $ copy the REFPROP sources to the directory of this file.
 # $ cat your_token | docker login ghcr.io -u USERNAME --password-stdin

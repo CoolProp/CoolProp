@@ -1,17 +1,22 @@
-name: Doxygen and Sphinx documentation using docker
+name: Doxygen and Sphinx documentation
 
 on:
+  workflow_dispatch:
+    # inputs:
+    #   expensive:
+    #     description: 'Build expensive docs'
+    #     required: false
+    #     type: boolean
   push:
     branches: [ master, develop, actions_docs ]
     # Sequence of patterns matched against refs/tags
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-  pull_request:
-    branches: [ master, develop ]
+  #pull_request:
+  #  branches: [ master, develop ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     
     container:
@@ -63,6 +68,11 @@ jobs:
           sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
           make html
           
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./Web/_build/
+          
       - name: Extract CoolProp version from CMakeLists.txt
         shell: bash
         run: |
@@ -91,3 +101,26 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
           file_glob: false
+
+  # Deploy job
+  deploy:
+    # Add a dependency to the build job
+    needs: build
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        #if: contains(github.ref, 'refs/tags')
+        id: deployment
+        uses: actions/deploy-pages@v1

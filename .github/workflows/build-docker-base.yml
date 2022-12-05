@@ -10,6 +10,7 @@
 name: Create and publish a Docker image
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master, develop, actions_docs ]
     # Sequence of patterns matched against refs/tags
@@ -24,7 +25,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push-image:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -53,5 +54,6 @@ jobs:
           context: ./Web/docker/
           file: ./Web/docker/${{ env.IMAGE_SUFFIX }}.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }},dev
+          #tags: ${{ steps.meta.outputs.tags }},dev
+          tags: dev
           labels: ${{ steps.meta.outputs.labels }}
