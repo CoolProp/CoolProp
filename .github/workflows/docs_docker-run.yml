@@ -67,7 +67,9 @@ jobs:
           
       - name: Build homepage and create graphs
         env:
-          EXPENSIVE: ${{ inputs.expensive || env.TAGGED || env.WEEKLY || (steps.cached-props.outputs.cache-hit != 'true') }}     
+          EXPENSIVE_TRIGGERED: ${{ inputs.expensive || env.TAGGED || env.WEEKLY }}
+          EXPENSIVE_CACHED: ${{ steps.cached-props.outputs.cache-hit != 'true' }}
+          EXPENSIVE: ${{ format('{0}', env.EXPENSIVE_TRIGGERED || env.EXPENSIVE_CACHED ) }}
         # Use a single argument with "True" or "1" to trigger a full rebuild
         working-directory: ./Web/scripts/
         shell: bash
