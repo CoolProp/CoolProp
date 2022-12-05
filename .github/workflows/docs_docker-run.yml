@@ -58,8 +58,13 @@ jobs:
         id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
         with:
           path: |
-            ./Web/_static/fluid_properties/  
-            ./Web/fluid_properties/
+            ./Web/fluid_properties/fluids/Consistencyplots
+            ./Web/_static/fluid_properties/Incompressibles_reports  
+            ./Web/fluid_properties/Incompressibles_mass-based-fluids
+            ./Web/fluid_properties/Incompressibles_mole-based-fluids
+            ./Web/fluid_properties/Incompressibles_volume-based-fluids
+            ./Web/fluid_properties/Incompressibles_pure-fluids
+            ./Web/scripts/incompressibles_consistency
           key: cached-props
           #key: cached-props-${{ github.sha }}
           #restore-keys: |
@@ -69,12 +74,13 @@ jobs:
         env:
           EXPENSIVE_TRIGGERED: ${{ inputs.expensive || env.TAGGED || env.WEEKLY }}
           EXPENSIVE_CACHED: ${{ steps.cached-props.outputs.cache-hit != 'true' }}
-          EXPENSIVE: ${{ format('{0}', env.EXPENSIVE_TRIGGERED || env.EXPENSIVE_CACHED ) }}
+          EXPENSIVE: "${{ env.EXPENSIVE_TRIGGERED || env.EXPENSIVE_CACHED }}"
         # Use a single argument with "True" or "1" to trigger a full rebuild
         working-directory: ./Web/scripts/
         shell: bash
         run: |
           source activate docs
+          echo "Calling: python -u __init__.py $EXPENSIVE"
           python -u __init__.py $EXPENSIVE
           
       - name: Build documentation with Doxygen
