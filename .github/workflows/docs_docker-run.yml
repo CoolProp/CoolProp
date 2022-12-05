@@ -11,7 +11,7 @@ on:
         required: false
         type: boolean
   push:
-    #branches: [ actions_docs ]
+    branches: [ actions_docs ]
     #branches: [ master, develop, actions_docs ]
     # Sequence of patterns matched against refs/tags
     tags:
@@ -55,18 +55,11 @@ jobs:
           python -c "import CoolProp; print(CoolProp.__file__)"
           
       - uses: actions/cache@v2
-        id: cached-static-props # steps.cached-props.outputs.cache-hit != 'true'
-        with:
-          path: ./Web/_static/fluid_properties/  # what we cache: the folder
-          key: cached-static-props
-          #key: cached-props-${{ github.sha }}
-          #restore-keys: |
-          #  cached-props-
-          
-      - uses: actions/cache@v2
         id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
         with:
-          path: ./Web/fluid_properties/  # what we cache: the folder
+          path: |
+            ./Web/_static/fluid_properties/  
+            ./Web/fluid_properties/
           key: cached-props
           #key: cached-props-${{ github.sha }}
           #restore-keys: |
@@ -74,7 +67,7 @@ jobs:
           
       - name: Build homepage and create graphs
         env:
-          EXPENSIVE: ${{ inputs.expensive || env.TAGGED || env.WEEKLY || (steps.cached-static-props.outputs.cache-hit != 'true') || (steps.cached-props.outputs.cache-hit != 'true') }}     
+          EXPENSIVE: ${{ inputs.expensive || env.TAGGED || env.WEEKLY || (steps.cached-props.outputs.cache-hit != 'true') }}     
         # Use a single argument with "True" or "1" to trigger a full rebuild
         working-directory: ./Web/scripts/
         shell: bash
