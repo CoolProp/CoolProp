@@ -9,7 +9,7 @@ dependencies:
   - pip
   - six
   - requests
-  - jinja2<=3.0.0
+  - jinja2<=3.0.0 # needed for cloud theme compatibility
   - pyyaml
   - pip:
     - cython
