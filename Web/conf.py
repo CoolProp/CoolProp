@@ -83,7 +83,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               'sphinx.ext.mathjax',
               'sphinx.ext.extlinks',
               'sphinxcontrib.bibtex',
-              'sphinxcontrib.napoleon',
+              'sphinx.ext.napoleon',
               'sphinxcontrib.doxylink',
               'matplotlib.sphinxext.plot_directive',
               'edit_on_github',  # see https://gist.github.com/mgedmin/6052926#file-edit_on_github-pyb
