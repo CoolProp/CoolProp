@@ -11,6 +11,7 @@ dependencies:
   - requests
   - jinja2<=3.0.0 # needed for cloud theme compatibility
   - pyyaml
+  - packaging
   - pip:
     - cython
     - sphinx
