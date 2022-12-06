@@ -10,7 +10,7 @@ on:
 jobs:
 
   python_bindings:
-    name: py${{ matrix.python-version }}-${{ matrix.os }}
+    name: py${{ matrix.python-version }}-${{ runner.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       # Ensure that a wheel builder finishes even if another fails
@@ -42,8 +42,15 @@ jobs:
         else
           python dev/extract_version.py --replace-setup-py
         fi;
-
+        
+    - name: Set up QEMU
+      if: ${{ runner.os == 'Linux' }}
+      uses: docker/setup-qemu-action@v2
+      with:
+        platforms: all
+        
     - name: Build and test wheels
+      uses: pypa/cibuildwheel@v2.11.3
       env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
@@ -51,17 +58,36 @@ jobs:
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
         CIBW_BUILD: cp${{ matrix.python-version }}-*
         CIBW_ARCHS_MACOS: x86_64 universal2 arm64
-        CIBW_ARCHS_WINDOWS: AMD64 x86
-        CIBW_ARCHS_LINUX: x86_64 # aarch64 is having issues launching the docker correctly
+        CIBW_ARCHS_WINDOWS: AMD64 x86 ARM64
+        CIBW_ARCHS_LINUX: i686 x86_64 aarch64 ppc64le s390x
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-        CIBW_SKIP: "pp* *-manylinux_i686"
-        CIBW_TEST_SKIP: "*-macosx_arm64"
-        # CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
-        CIBW_BUILD_VERBOSITY: 1
-      run: |
-        python -m cibuildwheel --output-dir Python ./wrappers/Python
+        CIBW_SKIP: "pp*"
+        CIBW_TEST_SKIP: "*-macosx_arm64 *-win_arm64"
+      with:
+        package-dir: ./wrappers/Python/
+        output-dir: Python
+
+    # - name: Build and test wheels
+    #   env:
+    #     MACOSX_DEPLOYMENT_TARGET: 10.9
+    #     CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+    #     CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
+    #     CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
+    #     CIBW_BUILD: cp${{ matrix.python-version }}-*
+    #     CIBW_ARCHS_MACOS: x86_64 universal2 arm64
+    #     CIBW_ARCHS_WINDOWS: AMD64 x86 ARM64
+    #     CIBW_ARCHS_LINUX: i686 x86_64 aarch64 ppc64le s390x
+    #     CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+    #     CIBW_MANYLINUX_I686_IMAGE: manylinux2014
+    #     CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+    #     CIBW_SKIP: "pp*"
+    #     CIBW_TEST_SKIP: "*-macosx_arm64 *-win_arm64"
+    #     # CIBW_TEST_COMMAND: python -c 'from CoolProp.CoolProp import get_global_param_string; print("CoolProp gitrevision:", get_global_param_string("gitrevision"))'
+    #     CIBW_BUILD_VERBOSITY: 1
+    #   run: |
+    #     python -m cibuildwheel --output-dir Python ./wrappers/Python
 
     - name: Store artifacts
       uses: actions/upload-artifact@v2
