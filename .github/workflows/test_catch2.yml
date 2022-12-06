@@ -1,4 +1,4 @@
-name: Catch2 Testing
+name: Testing Catch2
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
+  #schedule:
+  #  - cron: '15 8 * * 3' # Run weekly
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)

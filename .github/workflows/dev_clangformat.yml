@@ -1,8 +1,13 @@
 name: Development Clang Format
 
 on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'dev_checks' ]
+  #  tags: [ 'v*' ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ 'master', 'main', 'develop' ]
+  #schedule:
+  #  - cron: '15 8 * * 3' # Run weekly
 
 jobs:
   build:

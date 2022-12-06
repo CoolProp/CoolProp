@@ -1,0 +1,68 @@
+name: Development CodeQL
+
+on:
+  push:
+    branches: [ 'dev_checks' ]
+  #  branches: [ 'master', 'main', 'develop', 'dev_checks' ]
+  #  tags: [ 'v*' ]
+  #pull_request:
+  #  branches: [ 'master', 'main', 'develop' ]
+  schedule:
+    - cron: '15 8 * * 0,4' # Run twice a week
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ cpp, python ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          
+          
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+
+
+      - name: Autobuild Python
+        if: ${{ matrix.language == 'python' }}
+        uses: github/codeql-action/autobuild@v2
+
+      
+      - name: Configure CPP
+        if: ${{ matrix.language == 'cpp' }}
+        run: cmake
+               -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
+               -B ${{github.workspace}}/build
+               -S .     
+        
+      - name: Build CPP
+        if: ${{ matrix.language == 'cpp' }}
+        run: cmake 
+               --build ${{github.workspace}}/build 
+               --config Release
+
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
