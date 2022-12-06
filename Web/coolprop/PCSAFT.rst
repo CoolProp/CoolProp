@@ -39,7 +39,7 @@ Similar to other backends in CoolProp, in the :ref:`high-level interface <high_l
     In [0]: CP.PropsSI("T","P",101325,"Q",0,"HEOS::Propane")
 
     # PC-SAFT
-    In [0]: CP.PropsSI("T","P",101325,"Q",0,"PCSAFT::Propane")
+    In [0]: CP.PropsSI("T","P",101325,"Q",0,"PCSAFT::PROPANE")
 
 The same holds for the :ref:`low-level interface <low_level_api>`:
 
@@ -47,7 +47,7 @@ The same holds for the :ref:`low-level interface <low_level_api>`:
 
     In [0]: import CoolProp.CoolProp as CP
 
-    In [0]: AS = CP.AbstractState("PCSAFT", "Propane"); AS.update(CP.QT_INPUTS, 0, 300); print(AS.p())
+    In [0]: AS = CP.AbstractState("PCSAFT", "PROPANE"); AS.update(CP.QT_INPUTS, 0, 300); print(AS.p())
 
 The PC-SAFT equation of state is available for more than 100 fluids for which parameter were available in the literature.
 
