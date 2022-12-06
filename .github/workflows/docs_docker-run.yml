@@ -114,7 +114,7 @@ jobs:
           path: ./Web/_build/html/
       
       - name: Zip the HTML documentation
-        working-directory: ./Web/_build/html/
+        working-directory: ./Web/_build/
         shell: bash
         run: |
           tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz html/*
