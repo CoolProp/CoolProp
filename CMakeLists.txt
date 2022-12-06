@@ -646,7 +646,7 @@ if(COOLPROP_OBJECT_LIBRARY
 
   # ADD -fPIC flag if needed
   if(COOLPROP_FPIC)
-    message(STATUS "Setting bitness flag -m${BITNESS}")
+    message(STATUS "Setting fPIC flag")
     set_property(
       TARGET ${LIB_NAME}
       APPEND_STRING
