@@ -36,15 +36,16 @@ def add_if_exists(fname):
     return False
 
 def add_to_task_list(fname_in):
-    fname = os.path.normpath(fname_in)
+    fname = fname_in
     if add_if_exists(os.path.abspath(fname)):
         return True
-    fname = os.path.join(script_root_dir, fname)
+    fname = os.path.join(script_root_dir, fname_in)
     if add_if_exists(os.path.abspath(fname)):
         return True
-    fname = os.path.join(repo_root_dir, fname)
+    fname = os.path.join(repo_root_dir, fname_in)
     if add_if_exists(os.path.abspath(fname)):
         return True
+    print("Error: Could not find '{}'.".format(fname_in))
     return False
 
 def run_script(path):
