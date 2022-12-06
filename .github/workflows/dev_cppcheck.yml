@@ -2,9 +2,12 @@ name: Development cppcheck
 
 on:
   push:
-    branches: [ master, develop, cppcheck_clang_format ]
+    branches: [ 'master', 'main', 'develop', 'dev_checks' ]
+  #  tags: [ 'v*' ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ 'master', 'main', 'develop' ]
+  #schedule:
+  #  - cron: '15 8 * * 3' # Run weekly
 
 jobs:
   build:
