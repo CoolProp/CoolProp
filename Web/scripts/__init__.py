@@ -3,7 +3,7 @@
 import os.path, glob, subprocess, sys, time, datetime, pytz
 
 # Start with detecting the full build
-def detect_full_rebuild(args):
+def detect_full_rebuild():
     if len(sys.argv) >= 2:
         arg = str(sys.argv[1]).lower()
         if arg == "true": return True
@@ -11,7 +11,7 @@ def detect_full_rebuild(args):
     return False
 
 
-full_rebuild = detect_full_rebuild(sys.argv)
+full_rebuild = detect_full_rebuild()
 print("Detected rebuild argument: full_rebuild = {}".format(full_rebuild))
 
 # File system functions
@@ -36,13 +36,13 @@ def add_if_exists(fname):
     return False
 
 def add_to_task_list(fname):
-    if add_if_exists(os.path.abspath(fname))
+    if add_if_exists(os.path.abspath(fname)):
         return True
     fname = os.path.join(script_root_dir, fname)
-    if add_if_exists(os.path.abspath(fname))
+    if add_if_exists(os.path.abspath(fname)):
         return True
     fname = os.path.join(repo_root_dir, fname)
-    if add_if_exists(os.path.abspath(fname))
+    if add_if_exists(os.path.abspath(fname)):
         return True
     return False
 
@@ -68,7 +68,7 @@ def run_script(path):
 # Put it at the end, overwrites prior value
 import CoolProp
 with open(os.path.join(root_dir, 'Doxyfile'), 'a+') as fp:
-    fp.write('\n\n PROJECT_NUMBER         = ' + CoolProp.__version__ + '\n')
+    fp.write('\n\n PROJECT_NUMBER         = {}\n'.format(CoolProp.__version__))
 
 # The normal tasks that are carried out each time the script runs
 normal_tasks = ["dev/scripts/examples/LinuxRun.py", "coolprop.tabular.speed.py", "fluid_properties.phase_envelope.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py", "coolprop.parametric_table.py", "coolprop.configuration.py", "logo_2014.py", "fluid_properties.REFPROPcomparison.py"]
