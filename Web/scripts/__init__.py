@@ -35,7 +35,8 @@ def add_if_exists(fname):
         return True
     return False
 
-def add_to_task_list(fname):
+def add_to_task_list(fname_in):
+    fname = os.path.normpath(fname_in)
     if add_if_exists(os.path.abspath(fname)):
         return True
     fname = os.path.join(script_root_dir, fname)
@@ -67,23 +68,28 @@ def run_script(path):
 # Inject the version of CoolProp into the doxygen configuration files
 # Put it at the end, overwrites prior value
 import CoolProp
-with open(os.path.join(root_dir, 'Doxyfile'), 'a+') as fp:
+with open(os.path.join(repo_root_dir, 'Doxyfile'), 'a+') as fp:
     fp.write('\n\n PROJECT_NUMBER         = {}\n'.format(CoolProp.__version__))
 
 # The normal tasks that are carried out each time the script runs
-normal_tasks = ["dev/scripts/examples/LinuxRun.py", "coolprop.tabular.speed.py", "fluid_properties.phase_envelope.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py", "coolprop.parametric_table.py", "coolprop.configuration.py", "logo_2014.py", "fluid_properties.REFPROPcomparison.py"]
-# The expensive tasks that are fired when full_rebuild is True
-expensive_tasks = ["fluid_properties.Consistency.py", "fluid_properties.Incompressibles.sh"]
-
 print("Adding the normal scripts to the task list.")
-selected_tasks = normal_tasks[:]
+add_to_task_list("dev/scripts/examples/LinuxRun.py")
+add_to_task_list("coolprop.tabular.speed.py")
+add_to_task_list("fluid_properties.phase_envelope.py")
+add_to_task_list("fluid_properties.PurePseudoPure.py")
+add_to_task_list("fluid_properties.Mixtures.py")
+add_to_task_list("coolprop.parametric_table.py")
+add_to_task_list("coolprop.configuration.py")
+add_to_task_list("logo_2014.py")
+add_to_task_list("fluid_properties.REFPROPcomparison.py")
+
+# The expensive tasks that are fired when full_rebuild is True
 if full_rebuild:
     print("Adding the computationally expensive scripts to the task list.")
-    selected_tasks += expensive_tasks[:]
+    add_to_task_list("fluid_properties.Consistency.py")
+    add_to_task_list("fluid_properties.Incompressibles.sh")
 
-for fname in selected_tasks:
-    add_to_task_list(fname)
-
+# Run all the files in the task list
 print("Processing the selected tasks to generate the static files.")
 for fname in task_list:
     print("Executing {0}".format(fname))
