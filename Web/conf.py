@@ -83,7 +83,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               'sphinx.ext.mathjax',
               'sphinx.ext.extlinks',
               'sphinxcontrib.bibtex',
-              'sphinxcontrib.napoleon',
+              'sphinx.ext.napoleon',
               'sphinxcontrib.doxylink',
               'matplotlib.sphinxext.plot_directive',
               'edit_on_github',  # see https://gist.github.com/mgedmin/6052926#file-edit_on_github-pyb
@@ -172,8 +172,11 @@ pygments_style = 'sphinx'
 # 'both' - Both the class’ and the __init__ method’s docstring are concatenated and inserted
 autoclass_content = 'both'
 
-# Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
-html4_writer = True
+## Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
+#html4_writer = True
+
+# Fix the bibtext extension
+bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
 
 # -- Options for HTML output ---------------------------------------------------
 

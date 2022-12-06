@@ -1,0 +1,158 @@
+name: Documentation builds (HTML)
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # daily
+    - cron: '0 4 * * 1' # weekly
+  workflow_dispatch:
+    inputs:
+      expensive:
+        description: 'Build expensive docs'
+        required: false
+        type: boolean
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_docs' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+env:
+  DAILY: ${{ github.event.schedule == '0 2 * * *' }}
+  WEEKLY: ${{ github.event.schedule == '0 4 * * 1' }}
+  TAGGED: ${{ contains(github.ref, 'refs/tags') }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    container:
+      image: ghcr.io/coolprop/coolprop_docs_02_builder:dev
+      credentials:
+         username: ${{ github.actor }}
+         password: ${{ secrets.GITHUB_TOKEN }}
+         
+    steps: 
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    
+    - uses: actions/cache@v2
+      id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
+      with:
+        path: |
+          ./Web/fluid_properties/fluids/Consistencyplots
+          ./Web/_static/fluid_properties/Incompressibles_reports  
+          ./Web/fluid_properties/Incompressibles_mass-based-fluids
+          ./Web/fluid_properties/Incompressibles_mole-based-fluids
+          ./Web/fluid_properties/Incompressibles_volume-based-fluids
+          ./Web/fluid_properties/Incompressibles_pure-fluids
+          ./Web/scripts/incompressibles_consistency
+        key: cached-props
+        #key: cached-props-${{ github.sha }}
+        #restore-keys: |
+        #  cached-props-
+        
+    - name: Variable calculations
+      id: variable_calculation
+      shell: bash
+      # echo "EXPENSIVE_TRIGGERED=${{ inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_ENV
+      run: |
+        set -x
+        echo "expensive_triggered=${{ inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_OUTPUT
+        echo "expensive_cached=${{ steps.cached-props.outputs.cache-hit != 'true' }}" >> $GITHUB_OUTPUT
+        echo "expensive=${{ (steps.cached-props.outputs.cache-hit != 'true') || inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
+        conda install -y packaging
+        COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
+        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+    
+    - name: Build and install wheel using bdist_wheel
+      working-directory: ./wrappers/Python/
+      shell: bash
+      run: |
+        source activate docs
+        python setup.py bdist_wheel --dist-dir dist cmake=default,64
+        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
+        
+    - name: Test the installed CoolProp version
+      shell: bash
+      run: |
+        source activate docs
+        python -c "import CoolProp; print(CoolProp.__gitrevision__)"
+        python -c "import CoolProp; print(CoolProp.__file__)"
+        
+    - name: Build homepage and create graphs
+      # Use a single argument with "True" or "1" to trigger a full rebuild
+      working-directory: ./Web/scripts/
+      shell: bash
+      run: |
+        source activate docs
+        echo "Calling: python -u __init__.py ${{ steps.variable_calculation.outputs.expensive }}"
+        python -u __init__.py ${{ steps.variable_calculation.outputs.expensive }}
+        
+    - name: Build documentation with Doxygen
+      shell: bash
+      run: |
+        source activate docs
+        doxygen --version
+        doxygen Doxyfile
+        
+    - name: Build documentation with Sphinx
+      working-directory: ./Web
+      shell: bash
+      run: |
+        source activate docs
+        sphinx-apidoc -T -f -e -o apidoc ../wrappers/Python/CoolProp
+        make html
+        
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v1
+      with:
+        path: ./Web/_build/html/
+    
+    - name: Zip the HTML documentation
+      working-directory: ./Web/_build/
+      shell: bash
+      run: |
+        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz html/*
+    
+    - name: Archive TGZ or ZIP artifacts
+      uses: actions/upload-artifact@v2
+      with:
+          name: CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+          path: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+    
+    - name: Upload TGZ or ZIP to release
+      if: contains(github.ref, 'refs/tags')
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: false
+
+  # Deploy job
+  deploy:
+    # Add a dependency to the build job
+    needs: build
+    # Do not deploy intermediate builds
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to GitHub Pages
+      #if: contains(github.ref, 'refs/tags')
+      id: deployment
+      uses: actions/deploy-pages@v1
