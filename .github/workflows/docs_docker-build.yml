@@ -12,13 +12,10 @@ name: Documentation Docker image
 on:
   workflow_dispatch:
   push:
-    branches: [ actions_docs ]
-    #branches: [ master, develop, actions_docs ]
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-  #pull_request:
-  #  branches: [ master, develop ]
+    branches: [ 'master', 'main', 'develop', 'actions_docs' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
 
 env:
   REGISTRY: ghcr.io
@@ -33,28 +30,28 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }} # This uses the permissions of the user who triggered the workflow
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}_${{ env.IMAGE_SUFFIX }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v3
-        with:
-          context: ./dev/docker/
-          file: ./dev/docker/${{ env.IMAGE_SUFFIX }}.Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          #tags: ${{ steps.meta.outputs.tags }},dev
-          tags: dev
-          labels: ${{ steps.meta.outputs.labels }}
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }} # This uses the permissions of the user who triggered the workflow
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}_${{ env.IMAGE_SUFFIX }}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v3
+      with:
+        context: ./dev/docker/
+        file: ./dev/docker/${{ env.IMAGE_SUFFIX }}.Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        #tags: ${{ steps.meta.outputs.tags }},dev
+        tags: dev
+        labels: ${{ steps.meta.outputs.labels }}
