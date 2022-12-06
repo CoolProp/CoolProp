@@ -57,7 +57,7 @@ jobs:
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,64
         CIBW_BUILD: cp${{ matrix.python-version }}-*
-        CIBW_ARCHS_MACOS: x86_64 universal2 arm64
+        CIBW_ARCHS_MACOS: x86_64 arm64 # skip universal2
         CIBW_ARCHS_WINDOWS: AMD64 x86 ARM64
         CIBW_ARCHS_LINUX: x86_64 aarch64 ppc64le s390x
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
