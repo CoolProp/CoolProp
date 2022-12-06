@@ -65,7 +65,7 @@ jobs:
           echo "expensive_cached=${{ steps.cached-props.outputs.cache-hit != 'true' }}" >> $GITHUB_OUTPUT
           echo "expensive=${{ (steps.cached-props.outputs.cache-hit != 'true') || inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT
-          conda install packaging
+          conda install -y packaging
           COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
           echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
       
