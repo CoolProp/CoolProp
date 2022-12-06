@@ -57,12 +57,17 @@ jobs:
           
       - name: Variable calculations
         id: variable_calculation
+        shell: bash
         # echo "EXPENSIVE_TRIGGERED=${{ inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_ENV
         run: |
+          set -x
           echo "expensive_triggered=${{ inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_OUTPUT
           echo "expensive_cached=${{ steps.cached-props.outputs.cache-hit != 'true' }}" >> $GITHUB_OUTPUT
           echo "expensive=${{ (steps.cached-props.outputs.cache-hit != 'true') || inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT
+          conda install packaging
+          COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
+          echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
       
       - name: Build and install wheel using bdist_wheel
         working-directory: ./wrappers/Python/
@@ -107,13 +112,6 @@ jobs:
         uses: actions/upload-pages-artifact@v1
         with:
           path: ./Web/_build/html/
-          
-      - name: Extract CoolProp version from CMakeLists.txt
-        shell: bash
-        run: |
-          set -x
-          COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
-          echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
       
       - name: Zip the HTML documentation
         working-directory: ./Web/_build/html/
