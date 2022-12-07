@@ -8,7 +8,7 @@ on:
     branches: [ 'master', 'main', 'develop' ]
 
 jobs:
-  python-ubuntu:
+  python_ubuntu:
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
