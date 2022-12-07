@@ -24,7 +24,7 @@ jobs:
         submodules: recursive
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9.x
 
@@ -69,7 +69,7 @@ jobs:
         output-dir: Python
 
     - name: Store artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: Python
         path: Python

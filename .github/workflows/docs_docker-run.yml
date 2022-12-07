@@ -117,7 +117,7 @@ jobs:
         tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz html/*
     
     - name: Archive TGZ or ZIP artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
           name: CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
           path: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
