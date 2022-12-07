@@ -21,6 +21,8 @@ def _make_request(url: str):
     except:
         pass
     r = requests.get(url, headers=headers)
+    #print(url)
+    #print(r.json())
     return r.json()
 
 def _make_request_urllib(url: str):
@@ -74,31 +76,51 @@ def get_latest_tag_and_date():
 def get_issues_closed_since(tag_date: str, what: str):
     """Finds all issues that have been closed after the tag_data"""
     BASE_URL = "/".join([SEARCH_URL, "issues"])
-    POST_VARS = dict(page=1, per_page=1000, sort="created", order="asc")
+    POST_VARS = dict(sort="created", order="asc")
     QUER_VARS = dict(repo=REPO_NAME, closed=">="+tag_date)
-    QUER_VARS["is"] = what
+    if what != "issues":
+        QUER_VARS["is"] = what
 
     QUER_VARS_LIST = []
     for k,v in QUER_VARS.items():
         QUER_VARS_LIST.append("{0}:{1}".format(k, v))
     QUER_VARS_STRING = "+".join(QUER_VARS_LIST)
 
-    POST_VARS_LIST = []
-    for k,v in POST_VARS.items():
-        POST_VARS_LIST.append("{0}={1}".format(k, v))
-    POST_VARS_STRING = "&".join(POST_VARS_LIST)
-
-    _REQUEST_URL = BASE_URL + "?" + POST_VARS_STRING + "&q=" + QUER_VARS_STRING
-
-    _issues_dict = _make_request(_REQUEST_URL)
-    return _issues_dict
+    _result_dict = None
+    isRunning = True
+    pageCounter = 1
+    while isRunning:
+        POST_VARS_LIST = []
+        POST_VARS["page"] = pageCounter
+        for k,v in POST_VARS.items():
+            POST_VARS_LIST.append("{0}={1}".format(k, v))
+        POST_VARS_STRING = "&".join(POST_VARS_LIST)
+        _REQUEST_URL = BASE_URL + "?" + POST_VARS_STRING + "&q=" + QUER_VARS_STRING
+        _issues_dict = _make_request(_REQUEST_URL)
+        isRunning = len(_issues_dict["items"]) > 0
+        if _result_dict is None:
+            _result_dict = _issues_dict
+        elif isRunning:
+            _result_dict["items"] += _issues_dict["items"]
+        pageCounter += 1
+    
+    return _result_dict
 
 
 def check_issues_for_labels_and_milestone(ms: str, _issues_dict: dict):
     """Check whether the issues have the correct milestone information or are labeled for exclusion"""
     _no_label_or_ms = []
     _wrong_milestone = []
+    print("Processing {} items".format(len(_issues_dict["items"])))
     for _i in _issues_dict["items"]:
+    
+        #_thetype = None
+        #if "issues" in _i["url"]:
+        #    _thetype = "issue"
+        #if "pulls" in _i["url"]:
+        #    _thetype = "pull request"
+        #print("Checking {} #{}".format(_thetype, _i["number"]))
+    
         _num = _i["number"]
         _labels = [_l["name"] for _l in _i["labels"]]
         _milestone = _i["milestone"]
