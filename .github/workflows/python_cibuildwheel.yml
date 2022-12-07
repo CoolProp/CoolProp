@@ -25,8 +25,6 @@ jobs:
 
     - name: Set up Python
       uses: actions/setup-python@v4
-      with:
-        python-version: 3.9.x
 
     - name: Install Python dependencies
       run: |
@@ -48,29 +46,6 @@ jobs:
       with:
         platforms: all
         
-    - name: Fix input strings ubuntu
-      if: ${{ inputs.os == 'ubuntu' }}
-      shell: bash
-      run: |
-        echo "CIBW_BUILD=cp${{ inputs.python-version }}-*" >> $GITHUB_ENV
-        AR=$(echo "${{ inputs.arch }}" | tr "[:upper:]" "[:lower:]")
-        echo "CIBW_ARCHS_LINUX=$AR" >> $GITHUB_ENV
-        
-    - name: Fix input strings windows
-      if: ${{ inputs.os == 'windows' }}
-      shell: bash
-      run: |
-        echo "CIBW_BUILD=cp${{ inputs.python-version }}-*" >> $GITHUB_ENV
-        echo "CIBW_ARCHS_WINDOWS=${{ inputs.arch }}" >> $GITHUB_ENV
-        
-    - name: Fix input strings macos
-      if: ${{ inputs.os == 'macos' }}
-      shell: bash
-      run: |
-        echo "CIBW_BUILD=cp${{ inputs.python-version }}-*" >> $GITHUB_ENV
-        AR=$(echo "${{ inputs.arch }}" | tr "[:upper:]" "[:lower:]")
-        echo "CIBW_ARCHS_MACOS=$AR" >> $GITHUB_ENV
-        
     - name: Build and test wheels
       uses: pypa/cibuildwheel@v2.11.3
       env:
@@ -78,10 +53,10 @@ jobs:
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
-        #CIBW_BUILD: cp${{ inputs.python-version }}-*
-        #CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
-        #CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
-        #CIBW_ARCHS_LINUX: ${{ inputs.arch }} # x86_64 aarch64 ppc64le # s390x has no users at the moment and takes forever to build
+        CIBW_BUILD: cp${{ inputs.python-version }}-*
+        CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
+        CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
+        CIBW_ARCHS_LINUX: ${{ inputs.arch }} # i686 x86_64 aarch64 ppc64le s390x
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014

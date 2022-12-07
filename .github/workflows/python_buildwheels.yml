@@ -8,37 +8,29 @@ on:
     branches: [ 'master', 'main', 'develop' ]
 
 jobs:
-  python_bindings:
+  python-ubuntu:
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        os: [ubuntu, windows, macos]
+        os: [ubuntu]
         python-version: [36, 37, 38, 39, 310, 311]
-        # Architectures 5x linux, 3x windows , 1x macos (and arm64 and x86_64)
-        arch: [i686, x86_64, aarch64, ppc64le, s390x, AMD64, x86, ARM64, universal2]
+        arch: [i686, x86_64, aarch64, ppc64le, s390x]        
+    uses: ./.github/workflows/python_cibuildwheel.yml
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      arch: ${{ matrix.arch }}
+      
+  python_windows:
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      matrix:
+        os: [windows]
+        python-version: [36, 37, 38, 39, 310, 311]
+        arch: [AMD64, x86, ARM64]
         exclude:
-          - os: ubuntu
-            arch: AMD64
-          - os: ubuntu
-            arch: x86
-          - os: ubuntu
-            arch: ARM64
-          - os: ubuntu
-            arch: arm64
-          - os: ubuntu
-            arch: universal2
-          
-          - os: windows
-            arch: i686          
-          - os: windows
-            arch: x86_64
-          - os: windows
-            arch: aarch64
-          - os: windows
-            arch: ppc64le
-          - os: windows
-            arch: s390x
           - os: windows
             arch: ARM64 # creates problems with msgpack-c
           - os: windows
@@ -50,25 +42,21 @@ jobs:
           - os: windows
             arch: ARM64
             python-version: 38
-          # - os: windows
-          #   arch: arm64 # not case-sensitive
-          - os: windows
-            arch: universal2
-          
-          - os: macos
-            arch: i686          
-          - os: macos
-            arch: aarch64
-          - os: macos
-            arch: ppc64le
-          - os: macos
-            arch: s390x
-          - os: macos
-            arch: AMD64
-          - os: macos
-            arch: x86
-          # - os: macos
-          #   arch: ARM64 # not case-sensitive
+    uses: ./.github/workflows/python_cibuildwheel.yml
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      arch: ${{ matrix.arch }}
+  
+  python_macos:
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      matrix:
+        os: [macos]
+        python-version: [36, 37, 38, 39, 310, 311]
+        arch: [x86_64, arm64, universal2]
+        exclude:
           - os: macos
             arch: arm64
             python-version: 36
@@ -77,7 +65,6 @@ jobs:
             python-version: 37
           - os: macos
             arch: universal2 # is redundant
-            
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
@@ -85,7 +72,7 @@ jobs:
       arch: ${{ matrix.arch }}
 
   upload_python_bindings_to_pypi:
-    needs: python_bindings
+    needs: [python_ubuntu, python_windows, python_macos]
     name: Upload to PyPi
     runs-on: ubuntu-latest
     steps:
