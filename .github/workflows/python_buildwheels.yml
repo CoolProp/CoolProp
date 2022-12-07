@@ -15,9 +15,11 @@ jobs:
       matrix:
         os: [ubuntu, windows, macos]
         python-version: [36, 37, 38, 39, 310, 311]
-        # Architectures 4x linux, 3x windows, 1x macos (and x86_64 and arm64)
-        arch: [x86_64, aarch64, ppc64le, s390x, AMD64, x86, ARM64, universal2]
+        # Architectures 4x linux, 3x windows , 1x macos (and x86_64 and arm64)
+        arch: [i686, x86_64, aarch64, ppc64le, s390x, AMD64, x86, ARM64, universal2]
         exclude:
+          - os: ubuntu
+            arch: i686
           - os: ubuntu
             arch: AMD64
           - os: ubuntu
@@ -28,7 +30,9 @@ jobs:
             arch: arm64
           - os: ubuntu
             arch: universal2
-            
+          
+          - os: windows
+            arch: i686          
           - os: windows
             arch: x86_64
           - os: windows
@@ -39,9 +43,13 @@ jobs:
             arch: s390x
           - os: windows
             arch: ARM64 # creates problems with msgpack-c
+          # - os: windows
+          #   arch: arm64 # not case-sensitive
           - os: windows
             arch: universal2
-            
+          
+          - os: macos
+            arch: i686          
           - os: macos
             arch: aarch64
           - os: macos
@@ -52,6 +60,8 @@ jobs:
             arch: AMD64
           - os: macos
             arch: x86
+          # - os: macos
+          #   arch: ARM64 # not case-sensitive
           - os: macos
             arch: universal2 # is redundant
             
