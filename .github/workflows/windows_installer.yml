@@ -62,7 +62,7 @@ jobs:
     #     zip -r CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip ./Installers/*
 
     - name: Archive artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
           name: Installers
           path: build/InnoScript/bin/Installers

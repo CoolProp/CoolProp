@@ -257,6 +257,14 @@ list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib"
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+## Set endianess for msgpack on ARM64 with MSVC
+#if(MSVC)
+#  if("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "ARM64")
+#    message(STATUS "Forcing msgpack-c to use little endian configuration")
+#	add_compile_definitions(MSGPACK_ENDIAN_LITTLE_BYTE)
+#  endif()
+#endif()
+
 include_directories(${APP_INCLUDE_DIRS})
 
 set(SWIG_DEPENDENCIES
@@ -646,7 +654,7 @@ if(COOLPROP_OBJECT_LIBRARY
 
   # ADD -fPIC flag if needed
   if(COOLPROP_FPIC)
-    message(STATUS "Setting bitness flag -m${BITNESS}")
+    message(STATUS "Setting fPIC flag")
     set_property(
       TARGET ${LIB_NAME}
       APPEND_STRING

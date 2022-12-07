@@ -216,6 +216,8 @@ if __name__ == '__main__':
                 cmake_config_args += ['-DFORCE_BITNESS_32=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-DFORCE_BITNESS_64=ON']
+            elif cmake_bitness == 'NATIVE':
+                cmake_config_args += ['-DFORCE_BITNESS_NATIVE=ON']
             elif cmake_bitness == 'any':
                 pass
             else:

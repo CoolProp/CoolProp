@@ -8,6 +8,7 @@
 #include <algorithm>  // For max
 #include <numeric>
 #include <cmath>
+#include "PlatformDetermination.h"
 #include "CPstrings.h"
 #include "Exceptions.h"
 
@@ -669,10 +670,10 @@ inline double get_HUGE() {
 // Microsoft version of math.h doesn't include acosh or asinh, so we just define them here.
 // It was included from Visual Studio 2013
 #    if _MSC_VER < 1800
-static double acosh(double x) {
+double acosh(double x) {
     return log(x + sqrt(x * x - 1.0));
 }
-static double asinh(double value) {
+double asinh(double value) {
     if (value > 0) {
         return log(value + sqrt(value * value + 1));
     } else {
@@ -682,12 +683,12 @@ static double asinh(double value) {
 #    endif
 #endif
 
-#if defined(__powerpc__)
+#if defined(__ISPOWERPC__)
 // PPC version of math.h doesn't include acosh or asinh, so we just define them here
-static double acosh(double x) {
+double acosh(double x) {
     return log(x + sqrt(x * x - 1.0));
 }
-static double asinh(double value) {
+double asinh(double value) {
     if (value > 0) {
         return log(value + sqrt(value * value + 1));
     } else {
@@ -696,7 +697,7 @@ static double asinh(double value) {
 }
 #endif
 
-#if defined(__powerpc__)
+#if defined(__ISPOWERPC__)
 #    undef EOS
 #endif
 
