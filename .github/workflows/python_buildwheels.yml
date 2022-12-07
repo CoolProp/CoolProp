@@ -43,6 +43,15 @@ jobs:
             arch: s390x
           - os: windows
             arch: ARM64 # creates problems with msgpack-c
+          - os: windows
+            arch: ARM64
+            python-version: 36
+          - os: windows
+            arch: ARM64
+            python-version: 37
+          - os: windows
+            arch: ARM64
+            python-version: 38
           # - os: windows
           #   arch: arm64 # not case-sensitive
           - os: windows
@@ -62,6 +71,12 @@ jobs:
             arch: x86
           # - os: macos
           #   arch: ARM64 # not case-sensitive
+          - os: macos
+            arch: arm64
+            python-version: 36
+          - os: macos
+            arch: arm64
+            python-version: 37
           - os: macos
             arch: universal2 # is redundant
             
