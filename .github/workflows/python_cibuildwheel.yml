@@ -58,7 +58,7 @@ jobs:
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
         CIBW_BUILD: cp${{ matrix.python-version }}-*
         CIBW_ARCHS_MACOS: x86_64 arm64 # universal2 is redundant
-        CIBW_ARCHS_WINDOWS: AMD64 x86 ARM64
+        CIBW_ARCHS_WINDOWS: AMD64 x86 # ARM64 creates problems with msgpack-c
         CIBW_ARCHS_LINUX: x86_64 aarch64 ppc64le s390x
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
