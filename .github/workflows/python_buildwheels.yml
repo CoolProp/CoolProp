@@ -15,8 +15,8 @@ jobs:
       matrix:
         os: [ubuntu, windows, macos]
         python-version: [36, 37, 38, 39, 310, 311]
-        # Architectures 4x linux, 3x windows, 2x macos (and x86_64)
-        arch: [x86_64, aarch64, ppc64le, s390x, AMD64, x86, ARM64, arm64, universal2]
+        # Architectures 4x linux, 3x windows, 1x macos (and x86_64 and arm64)
+        arch: [x86_64, aarch64, ppc64le, s390x, AMD64, x86, ARM64, universal2]
         exclude:
           - os: ubuntu
             arch: AMD64
@@ -40,8 +40,6 @@ jobs:
           - os: windows
             arch: ARM64 # creates problems with msgpack-c
           - os: windows
-            arch: arm64
-          - os: windows
             arch: universal2
             
           - os: macos
@@ -54,8 +52,6 @@ jobs:
             arch: AMD64
           - os: macos
             arch: x86
-          - os: macos
-            arch: ARM64
           - os: macos
             arch: universal2 # is redundant
             
