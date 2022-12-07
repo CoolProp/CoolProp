@@ -15,8 +15,8 @@ jobs:
       matrix:
         os: [ubuntu, windows, macos]
         python-version: [36, 37, 38, 39, 310, 311]
-        # Architectures 4x linux, 3x windows , 1x macos (and x86_64 and arm64)
-        arch: [i686, x86_64, aarch64, ppc64le, s390x, AMD64, x86, ARM64, universal2]
+        # Architectures 4x linux, 2x windows (and ARM) , 2x macos (and x86_64)
+        arch: [i686, x86_64, aarch64, ppc64le, s390x, AMD64, x86, arm64, universal2]
         exclude:
           - os: ubuntu
             arch: i686
