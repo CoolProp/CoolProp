@@ -17,11 +17,19 @@ jobs:
         python-version: [36, 37, 38, 39, 310, 311]
         include:
           - os: ubuntu
-            arch: [x86_64, aarch64, ppc64le] # s390x has no users at the moment and takes forever to build
+            arch: x86_64
+          - os: ubuntu
+            arch: aarch64
+          - os: ubuntu
+            arch: ppc64le # s390x has no users at the moment and takes forever to build
           - os: windows
-            arch: [AMD64, x86] # ARM64 creates problems with msgpack-c
+            arch: AMD64
+          - os: windows
+            arch: x86 # ARM64 creates problems with msgpack-c
           - os: macos
-            arch: [x86_64, arm64] # universal2 is redundant
+            arch: x86_64
+          - os: macos
+            arch: arm64 # universal2 is redundant
             
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
