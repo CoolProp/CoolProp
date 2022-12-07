@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    name: py${{ inputs.python-version }}-${{ inputs.os }}-${{ inputs.arch }}
+    #name: py${{ inputs.python-version }}-${{ inputs.os }}-${{ inputs.arch }}
     runs-on: ${{ inputs.os }}-latest
 
     steps:
