@@ -1,23 +1,22 @@
-name: Python cibuildwheel
+name: Python build one single wheel
 
 on:
-  push:
-    branches: [ 'master', 'main', 'develop', 'actions_pypi' ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ 'master', 'main', 'develop' ]
+  workflow_call:
+    inputs:
+      python-version:
+        required: true
+        type: string
+      os:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
 
 jobs:
-
-  python_bindings:
-    name: py${{ matrix.python-version }}-${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      # Ensure that a wheel builder finishes even if another fails
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [36, 37, 38, 39, 310, 311]
+  build:
+    name: py${{ inputs.python-version }}-${{ inputs.os }}-${{ inputs.arch }}
+    runs-on: ${{ inputs.os }}-latest
 
     steps:
     - uses: actions/checkout@v3
@@ -50,16 +49,16 @@ jobs:
         platforms: all
         
     - name: Build and test wheels
-      uses: pypa/cibuildwheel@v2.11.3
+      uses: pypa/cibuildwheel@v2
       env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
-        CIBW_BUILD: cp${{ matrix.python-version }}-*
-        CIBW_ARCHS_MACOS: x86_64 arm64 # universal2 is redundant
-        CIBW_ARCHS_WINDOWS: AMD64 x86 # ARM64 creates problems with msgpack-c
-        CIBW_ARCHS_LINUX: x86_64 aarch64 ppc64le # s390x has no users at the moment and takes forever to build
+        CIBW_BUILD: cp${{ inputs.python-version }}-*
+        CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
+        CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
+        CIBW_ARCHS_LINUX: ${{ inputs.arch }} # x86_64 aarch64 ppc64le # s390x has no users at the moment and takes forever to build
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
@@ -74,49 +73,3 @@ jobs:
       with:
         name: Python
         path: Python
-
-  upload_python_bindings_to_pypi:
-    needs: python_bindings
-    name: Upload to PyPi
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9.x
-
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install setuptools wheel twine requests packaging
-
-        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          TWINE_REPOSITORY=pypi
-          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
-        else
-          TWINE_REPOSITORY=testpypi
-          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
-        fi;
-        echo "Using TWINE_REPOSITORY=$TWINE_REPOSITORY"
-        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
-        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
-
-    - name: Download ALL wheels
-      uses: actions/download-artifact@v2
-      with:
-        name: Python
-        path: Python
-
-    - name: Display structure of downloaded files
-      run: |
-        set -x
-        ls -R
-        du -sh
-
-    - name: Publish wheels to (Test)PyPI
-      if: ${{ github.event_name != 'pull_request' }}
-      env:
-        TWINE_USERNAME: __token__
-      run: |
-        python -m twine upload --skip-existing Python/*.whl
