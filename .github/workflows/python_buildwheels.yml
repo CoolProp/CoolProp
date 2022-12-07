@@ -15,21 +15,49 @@ jobs:
       matrix:
         os: [ubuntu, windows, macos]
         python-version: [36, 37, 38, 39, 310, 311]
-        include:
+        # Architectures 4x linux, 3x windows, 2x macos
+        arch: [x86_64, aarch64, ppc64le, s390x, AMD64, x86, ARM64, x86_64, arm64, universal2]
+        exclude:
           - os: ubuntu
-            arch: x86_64
-          - os: ubuntu
-            arch: aarch64
-          - os: ubuntu
-            arch: ppc64le # s390x has no users at the moment and takes forever to build
-          - os: windows
             arch: AMD64
+          - os: ubuntu
+            arch: x86
+          - os: ubuntu
+            arch: ARM64
+          - os: ubuntu
+            arch: arm64
+          - os: ubuntu
+            arch: universal2
+            
           - os: windows
-            arch: x86 # ARM64 creates problems with msgpack-c
-          - os: macos
             arch: x86_64
+          - os: windows
+            arch: aarch64
+          - os: windows
+            arch: ppc64le
+          - os: windows
+            arch: s390x
+          - os: windows
+            arch: ARM64 # creates problems with msgpack-c
+          - os: windows
+            arch: arm64
+          - os: windows
+            arch: universal2
+            
           - os: macos
-            arch: arm64 # universal2 is redundant
+            arch: aarch64
+          - os: macos
+            arch: ppc64le
+          - os: macos
+            arch: s390x
+          - os: macos
+            arch: AMD64
+          - os: macos
+            arch: x86
+          - os: macos
+            arch: ARM64
+          - os: macos
+            arch: universal2 # is redundant
             
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
