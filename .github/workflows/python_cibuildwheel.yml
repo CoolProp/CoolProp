@@ -64,12 +64,13 @@ jobs:
         CIBW_BUILD_VERBOSITY: 1
 
       run: |
-        python -m cibuildwheel --output-dir wheelhouse ./wrappers/Python
+        python -m cibuildwheel --output-dir Python ./wrappers/Python
 
     - name: Store artifacts
       uses: actions/upload-artifact@v2
       with:
-        path: wheelhouse/*.whl
+        name: Python
+        path: Python
 
   upload_python_bindings_to_pypi:
     needs: python_bindings
@@ -86,7 +87,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install setuptools wheel twine requests packaging
-        mkdir wheels
 
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
           TWINE_REPOSITORY=pypi
@@ -102,18 +102,17 @@ jobs:
     - name: Download ALL wheels
       uses: actions/download-artifact@v2
       with:
-        path: ./wheels
+        name: Python
+        path: Python
 
     - name: Display structure of downloaded files
-      working-directory: ./wheels
       run: |
         set -x
         ls -R
         du -sh
 
     - name: Publish wheels to (Test)PyPI
-      working-directory: ./wheels/artifact
       env:
         TWINE_USERNAME: __token__
       run: |
-        python -m twine upload --skip-existing ./*.whl
+        python -m twine upload --skip-existing Python/*.whl
