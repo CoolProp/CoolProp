@@ -467,48 +467,6 @@ static double Secant_HAProps_T(const std::string &OutputName, const std::string 
 }
 */
 
-static double Secant_HAProps_W(double p, double T, givens OutputType, double TargetVal, double W_guess) {
-    // Use a secant solve in order to yield a target output value for HAProps by altering humidity ratio
-    double x1 = 0, x2 = 0, x3 = 0, y1 = 0, y2 = 0, eps = 1e-12, f = 999, W = 0.0001;
-    int iter = 1;
-    std::vector<givens> input_keys(2, GIVEN_T);
-    input_keys[1] = GIVEN_HUMRAT;
-    std::vector<double> input_vals(2, T);
-    if (OutputType == GIVEN_TWB) {
-        eps = 1e-7;
-    }
-    double _T, psi_w;
-
-    while ((iter <= 3 || std::abs(f) > eps) && iter < 100) {
-        if (iter == 1) {
-            x1 = W_guess;
-            W = x1;
-        }
-        if (iter == 2) {
-            x2 = W_guess * 1.1;
-            W = x2;
-        }
-        if (iter > 2) {
-            W = x2;
-        }
-        input_vals[1] = W;
-        _HAPropsSI_inputs(p, input_keys, input_vals, _T, psi_w);
-        f = _HAPropsSI_outputs(OutputType, p, T, psi_w) - TargetVal;
-        if (iter == 1) {
-            y1 = f;
-        }
-        if (iter > 1) {
-            y2 = f;
-            x3 = x2 - 0.5 * y2 / (y2 - y1) * (x2 - x1);
-            y1 = y2;
-            x1 = x2;
-            x2 = x3;
-        }
-        iter = iter + 1;
-    }
-    return W;
-}
-
 // Mixed virial components
 static double _B_aw(double T) {
     check_fluid_instantiation();
@@ -1582,6 +1540,59 @@ bool match_input_key(const std::vector<givens>& input_keys, givens key) {
     return get_input_key(input_keys, key) >= 0;
 }
 
+class HAProps_W_Residual : public CoolProp::FuncWrapper1D
+{
+   private:
+    const double p;
+    const double target;
+    const givens output;
+    const std::vector<givens> input_keys = {GIVEN_T, GIVEN_HUMRAT};
+    std::vector<double> input_vals;
+    double _T, _psi_w;
+
+   public:
+    HAProps_W_Residual(const double p, const double target, const givens output, const double T)
+      : p(p), target(target), output(output), _T(_HUGE), _psi_w(_HUGE) {
+        input_vals.resize(2, T);
+    }
+
+    double call(double W) {
+        // Update inputs
+        input_vals[1] = W;
+        // Prepare calculation
+        _HAPropsSI_inputs(p, input_keys, input_vals, _T, _psi_w);
+        // Retrieve outputs
+        return _HAPropsSI_outputs(output, p, _T, _psi_w) - target;
+    }
+};
+
+class HAProps_T_Residual : public CoolProp::FuncWrapper1D
+{
+   private:
+    const double p;
+    const double target;
+    const givens output;
+    const std::vector<givens> input_keys = {GIVEN_T, GIVEN_HUMRAT};
+    std::vector<double> input_vals;
+    double _T, _psi_w;
+
+   public:
+    HAProps_T_Residual(const double p, const double target, const givens output, const double W)
+      : p(p), target(target), output(output), _T(_HUGE), _psi_w(_HUGE) {
+        input_vals.resize(2, W);
+    }
+
+    double call(double T) {
+        // Update inputs
+        input_vals[0] = T;
+        // Prepare calculation
+        _HAPropsSI_inputs(p, input_keys, input_vals, _T, _psi_w);
+        // Retrieve outputs
+        return _HAPropsSI_outputs(output, p, _T, _psi_w) - target;
+    }
+};
+
+
 /// Calculate T (dry bulb temp) and psi_w (water mole fraction) given the pair of inputs
 void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const std::vector<double>& input_vals, double& T, double& psi_w) {
     if (CoolProp::get_debug_level() > 0) {
@@ -1611,11 +1622,11 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
                 psi_w = MoleFractionWater(T, p, othergiven, input_vals[other]);
                 break;
             default: {
-                double W;
+                HAProps_W_Residual residual(p, input_vals[other], othergiven, T);
+                double W = _HUGE;
                 try {
-                    // Find the value for W
-                    double W_guess = 0.0001;
-                    W = Secant_HAProps_W(p, T, othergiven, input_vals[other], W_guess);
+                    // Find the value for W using the Secant solver
+                    W = CoolProp::Secant(&residual, 0.0001, 0.00001, 1e-14, 100);
                     if (!ValidNumber(W)) {
                         throw CoolProp::ValueError("Iterative value for W is invalid");
                     }
