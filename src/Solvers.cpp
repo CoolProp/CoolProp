@@ -409,9 +409,10 @@ Note that this is different than the Secant function because if something goes o
 @param dx The initial amount that is added to x in order to build the numerical derivative
 @param tol The absolute value of the tolerance accepted for the objective function
 @param maxiter Maximum number of iterations
+@param best_guess If true, return your best guess at the end of the iteration process
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
+double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter, bool best_guess)
 {
     #if defined(COOLPROP_DEEP_DEBUG)
     static std::vector<double> xlog, flog;
@@ -467,6 +468,7 @@ double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, i
         if (f->iter>maxiter)
         {
             f->errstring=std::string("reached maximum number of iterations");
+            if (best_guess) { return x2-omega*y1/(y1-y0)*(x2-x1); }
             throw SolutionError(format("Secant reached maximum number of iterations"));
         }
         f->iter += 1;

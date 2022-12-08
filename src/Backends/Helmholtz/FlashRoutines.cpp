@@ -1161,6 +1161,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 {
                     optionsD.omega /= 2;
                     optionsD.max_iterations *= 2;
+                    if (i_try == 5){optionsD.best_guess = true;}
                     if (i_try >= 6){throw;}
                 }
             }

@@ -246,10 +246,12 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                 // Ancillary is deltas = s - hs_anchor.s
                 // First try a conventional call
                 try {
-                    T = anc.invert(specified_value - hs_anchor.smolar, Tmin, Tmax);
+                    SaturationAncillaryFunction_invert_options options = {Tmin, Tmax};
+                    T = anc.invert(specified_value - hs_anchor.smolar, options);
                 } catch (...) {
                     try {
-                        T = anc.invert(specified_value - hs_anchor.smolar, Tmin - 3, Tmax + 3);
+                        SaturationAncillaryFunction_invert_options options = {Tmin - 3, Tmax + 3};
+                        T = anc.invert(specified_value - hs_anchor.smolar, options);
                     } catch (...) {
                         double vmin = anc.evaluate(Tmin);
                         double vmax = anc.evaluate(Tmax);
@@ -582,7 +584,8 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, Cool
         if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOL) {
             // Invert liquid density ancillary to get temperature
             // TODO: fit inverse ancillaries too
-            T = HEOS.get_components()[0].ancillaries.rhoL.invert(rhomolar);
+            SaturationAncillaryFunction_invert_options inv_options = {-1, -1, options.max_iterations, options.omega, options.best_guess};
+            T = HEOS.get_components()[0].ancillaries.rhoL.invert(rhomolar, inv_options);
             rhoV = HEOS.get_components()[0].ancillaries.rhoV.evaluate(T);
             rhoL = rhomolar;
         } else if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOV) {
