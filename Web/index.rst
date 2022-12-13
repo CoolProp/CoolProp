@@ -7,6 +7,8 @@ These pages help you to get started using CoolProp and provide detailed informat
 returning user. Please feel free to browse the pages and use the menu on the left to navigate
 on this website.
 
+.. warning:: The documentation has not been updated to reflect all changes moving from v6.4.1 to v6.4.2. Sorry for any inconvenience.
+
 What is CoolProp?
 -----------------
 
