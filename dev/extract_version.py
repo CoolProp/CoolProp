@@ -48,8 +48,12 @@ def parse_cmake_version_info():
         coolprop_version += "." + COOLPROP_VERSION_PATCH
 
     if m_rev:
-        COOLPROP_VERSION_REV = m_rev.groups()[0]
-        coolprop_version += "-" + COOLPROP_VERSION_REV
+        try:
+            COOLPROP_VERSION_REV = str(m_rev.groups()[0])
+            if len(COOLPROP_VERSION_REV) > 0
+                coolprop_version += "-" + COOLPROP_VERSION_REV
+        except:
+            pass
 
     return coolprop_version
 
