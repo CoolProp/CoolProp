@@ -86,13 +86,36 @@ jobs:
         name: binaries
         path: binaries
         
-    - name: Create info file
+    - name: Fetch the sources
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ needs.set_vars.outputs.branch }}
+        submodules: 'recursive'
+        path: source
+        
+    - name: Prepare the sources
       run: |
-        echo    "CoolProp ${{ needs.set_vars.outputs.target }} binaries"   >  "binaries/README.rst.txt"
-        echo    "-------------------------"   >> "binaries/README.rst.txt"
-        echo -n "Binaries of the \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "binaries/README.rst.txt"
-        echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "binaries/README.rst.txt"
-        cat     "binaries/README.rst.txt"
+        pushd source
+        git reset --hard HEAD
+        python "dev/generate_headers.py"
+        find . -iwholename "*/.git*" -prune -exec rm -rf {} \;
+        popd
+        zip -rq CoolProp_sources.zip source
+        mkdir -p binaries/source
+        mv CoolProp_sources.zip binaries/source/
+        
+    - name: Create info files
+      run: |
+        echo    "CoolProp ${{ needs.set_vars.outputs.target }} binaries"                    > binaries/README.rst.txt
+        echo    "-------------------------"                                                >> binaries/README.rst.txt
+        echo -n "Binaries of the \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> binaries/README.rst.txt
+        echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)."                       >> binaries/README.rst.txt
+        cat binaries/README.rst.txt
+        mkdir -p binaries/Python
+        echo "Please use the following commands to install CoolProp for Python:"         > binaries/Python/README.txt
+        echo "nightly: python -m pip install -i https://test.pypi.org/simple/ CoolProp" >> binaries/Python/README.txt
+        echo "release: python -m pip install --upgrade CoolProp"                        >> binaries/Python/README.txt
+        cat binaries/Python/README.txt
         
     - name: Display structure of downloaded files
       run: |
