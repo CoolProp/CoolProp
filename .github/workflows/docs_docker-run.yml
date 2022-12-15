@@ -115,12 +115,15 @@ jobs:
       shell: bash
       run: |
         tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz html/*
+      # zip -rq   CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.zip    html/*
     
     - name: Archive TGZ or ZIP artifacts
       uses: actions/upload-artifact@v3
       with:
-          name: CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
-          path: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+          name: docs
+          path: |
+            Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+          # Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.zip
     
     - name: Upload TGZ or ZIP to release
       if: contains(github.ref, 'refs/tags')

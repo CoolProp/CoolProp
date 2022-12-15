@@ -1,0 +1,134 @@
+name: Release workflow run
+
+on:
+  push:
+    branches: [ 'feature/automated_release' ]
+  #   branches: [ 'master', 'main', 'develop', 'feature/automated_release' ]
+  #   tags: [ 'v*' ]
+  # pull_request:
+  #   branches: [ 'master', 'main', 'develop' ]
+  schedule:
+    - cron: '0 2 * * *' # daily
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch or tag to retrieve the binaries from'
+        required: false
+        default: 'master'
+
+jobs:
+  # release_job:    
+  #   uses: ./.github/workflows/release_binaries.yml
+  #   with:
+  #     branch: master
+  #     target: nightly
+  
+  # get_latest_tag:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     tag: ${{ fromJson(steps.get_latest_release.outputs.data).tag_name }}
+  #   steps:    
+  #     - uses: octokit/request-action@v2.x
+  #       id: get_latest_release
+  #       with:
+  #         route: GET /repos/{owner}/{repo}/releases/latest
+  #         owner: coolprop
+  #         repo: coolprop
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     - run: "echo latest release id: ${{ fromJson(steps.get_latest_release.outputs.data).id }}"
+  #     - run: "echo latest release tag: ${{ fromJson(steps.get_latest_release.outputs.data).tag_name }}"
+  
+  set_vars:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.propagate_vars.outputs.branch }}
+      target: ${{ steps.propagate_vars.outputs.target }}
+      webdir: ${{ steps.propagate_vars.outputs.webdir }}
+
+    steps:
+      - run: echo "BRANCH=${{ (inputs.branch == ''       && 'master')  || inputs.branch }}" >> $GITHUB_ENV
+      - run: echo "TARGET=${{ (env.BRANCH    == 'master' && 'nightly') || env.BRANCH    }}" >> $GITHUB_ENV
+      - run: echo "WEBDIR=${{ (env.BRANCH    == 'master' && 'dev')     || '.'           }}" >> $GITHUB_ENV
+      - run: echo ${{ env.BRANCH }}    
+      - run: echo ${{ env.TARGET }} 
+      - run: echo ${{ env.WEBDIR }} 
+      - run: echo ${BRANCH}
+      - run: echo ${TARGET}
+      - run: echo ${WEBDIR}
+      - id: propagate_vars
+        run: |
+          echo "branch=${{ (inputs.branch == '' && 'master') || inputs.branch }}" >> $GITHUB_OUTPUT
+          echo "target=${{ (env.BRANCH == 'master' && 'nightly') || env.BRANCH }}" >> $GITHUB_OUTPUT
+          echo "webdir=${{ (env.BRANCH == 'master' && 'dev') || '.' }}" >> $GITHUB_OUTPUT
+
+  collect_binaries:
+    needs: [set_vars]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu]
+        workflow: [library_shared.yml, windows_installer.yml, docs_docker-run.yml] # , python_buildwheels.yml]
+    uses: ./.github/workflows/release_get_artifact.yml
+    with:
+      branch: ${{ needs.set_vars.outputs.branch }}
+      workflow: ${{ matrix.workflow }}
+
+  check_files:
+    needs: [set_vars, collect_binaries]
+    name: Check collected files
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Download binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: binaries
+        path: binaries
+        
+    - name: Create info file
+      run: |
+        echo    "CoolProp ${{ needs.set_vars.outputs.target }} binaries"   >  "binaries/README.rst.txt"
+        echo    "-------------------------"   >> "binaries/README.rst.txt"
+        echo -n "Binaries of the \`CoolProp project <http://coolprop.sourceforge.net>\`_ " >> "binaries/README.rst.txt"
+        echo    "updated on $(date +%F) at $(date +%X) $(date +%Z)." >> "binaries/README.rst.txt"
+        cat     "binaries/README.rst.txt"
+        
+    - name: Display structure of downloaded files
+      run: |
+        set -x
+        ls -R
+        du -sh
+        
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SF_SSH_KEY }}
+        name: id_rsa-${{ secrets.SF_SSH_USER }}
+        known_hosts: ${{ secrets.SF_HOST_KEYS }}
+        config: |
+          Host frs.sf.net-${{ secrets.SF_SSH_USER }}
+            HostName frs.sf.net
+            User ${{ secrets.SF_SSH_USER }}
+            IdentityFile ~/.ssh/id_rsa-${{ secrets.SF_SSH_USER }}
+            PubkeyAcceptedKeyTypes +ssh-rsa
+        if_key_exists: fail # replace / ignore / fail; optional (defaults to fail)
+        
+    - name: Fix the docs
+      run: |
+        rm -rf binaries/github-pages
+        mkdir -p docs/v4
+        echo "skipping unzip -qo binaries/docs/*documentation*.zip -d docs"
+        tar -xzf binaries/docs/*documentation*.tar.gz -C docs
+        rsync frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/frs/project/coolprop/CoolProp/4.2.5/coolpropv425docs.zip" coolpropv4docs.zip
+        unzip -qo coolpropv4docs.zip -d docs/v4
+        zip -rq documentation.zip docs/*
+        rm -rf binaries/docs/*
+        mv documentation.zip binaries/docs/        
+    
+    - name: Upload using rsync over SSH
+      run: |
+        RSYNC_DRY_RUN=--dry-run
+        RSYNC_OPTS="-v -v -a --chmod=Dug=rwx,Do=rx,Fug=rw,Fo=r -z --stats --delete"
+        rsync $RSYNC_DRY_RUN $RSYNC_OPTS "binaries/" frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/frs/project/coolprop/CoolProp/${{ needs.set_vars.outputs.target }}
+        rsync $RSYNC_DRY_RUN $RSYNC_OPTS "docs/"     frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/project-web/coolprop/htdocs/${{ needs.set_vars.outputs.webdir }}
