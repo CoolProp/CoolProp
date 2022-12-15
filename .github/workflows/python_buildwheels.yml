@@ -15,7 +15,14 @@ jobs:
       matrix:
         os: [ubuntu]
         python-version: [36, 37, 38, 39, 310, 311]
-        arch: [i686, x86_64, aarch64, ppc64le, s390x]        
+        arch: [i686, x86_64, aarch64, ppc64le, s390x]
+        exclude:
+          - os: ubuntu
+            arch: i686 # reduce the build time until people ask for the binaries
+          - os: ubuntu
+            arch: ppc64le # reduce the build time until people ask for the binaries
+          - os: ubuntu
+            arch: s390x # reduce the build time until people ask for the binaries
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}

@@ -36,7 +36,7 @@ jobs:
       with:
         submodules: recursive
     
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
       with:
         path: |
