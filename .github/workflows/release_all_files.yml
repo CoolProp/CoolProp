@@ -62,6 +62,7 @@ jobs:
           echo "target=${{ (env.BRANCH == 'master' && 'nightly') || env.BRANCH }}" >> $GITHUB_OUTPUT
           echo "webdir=${{ (env.BRANCH == 'master' && 'dev') || '.' }}" >> $GITHUB_OUTPUT
 
+
   collect_binaries:
     needs: [set_vars]
     strategy:
@@ -73,19 +74,14 @@ jobs:
     with:
       branch: ${{ needs.set_vars.outputs.branch }}
       workflow: ${{ matrix.workflow }}
-
-  check_files:
-    needs: [set_vars, collect_binaries]
-    name: Check collected files
-    runs-on: ubuntu-latest
+      
+      
+  prepare_sources:
+    needs: [set_vars]
+    name: Prepare the source code
+    runs-on: ubuntu-latest    
     steps:
     
-    - name: Download binaries
-      uses: actions/download-artifact@v3
-      with:
-        name: binaries
-        path: binaries
-        
     - name: Fetch the sources
       uses: actions/checkout@v3
       with:
@@ -93,7 +89,7 @@ jobs:
         submodules: 'recursive'
         path: source
         
-    - name: Prepare the sources
+    - name: Update the headers
       run: |
         pushd source
         git reset --hard HEAD
@@ -103,6 +99,26 @@ jobs:
         zip -rq CoolProp_sources.zip source
         mkdir -p binaries/source
         mv CoolProp_sources.zip binaries/source/
+        
+    - name: Store artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: binaries
+        retention-days: 1
+
+
+  deploy_files:
+    needs: [set_vars, collect_binaries, prepare_sources]
+    name: Deploy collected files
+    runs-on: ubuntu-latest
+    steps:  
+    
+    - name: Download binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: binaries
+        path: binaries
         
     - name: Create info files
       run: |
@@ -140,18 +156,17 @@ jobs:
     - name: Fix the docs
       run: |
         rm -rf binaries/github-pages
-        mkdir -p docs/v4
-        echo "skipping unzip -qo binaries/docs/*documentation*.zip -d docs"
-        tar -xzf binaries/docs/*documentation*.tar.gz -C docs
-        rsync frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/frs/project/coolprop/CoolProp/4.2.5/coolpropv425docs.zip" coolpropv4docs.zip
-        unzip -qo coolpropv4docs.zip -d docs/v4
-        zip -rq documentation.zip docs/*
+        tar -xzf binaries/docs/*documentation*.tar.gz
+        mkdir -p html/v4
+        rsync frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/frs/project/coolprop/CoolProp/4.2.5/coolpropv425docs.zip coolpropv4docs.zip
+        unzip -qo coolpropv4docs.zip -d html/v4
+        zip -rq documentation.zip html
         rm -rf binaries/docs/*
         mv documentation.zip binaries/docs/        
     
     - name: Upload using rsync over SSH
       run: |
-        RSYNC_DRY_RUN=--dry-run
-        RSYNC_OPTS="-v -v -a --chmod=Dug=rwx,Do=rx,Fug=rw,Fo=r -z --stats --delete"
+        RSYNC_DRY_RUN=
+        RSYNC_OPTS="-a --chmod=Dug=rwx,Do=rx,Fug=rw,Fo=r -z --stats --delete"
         rsync $RSYNC_DRY_RUN $RSYNC_OPTS "binaries/" frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/frs/project/coolprop/CoolProp/${{ needs.set_vars.outputs.target }}
-        rsync $RSYNC_DRY_RUN $RSYNC_OPTS "docs/"     frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/project-web/coolprop/htdocs/${{ needs.set_vars.outputs.webdir }}
+        rsync $RSYNC_DRY_RUN $RSYNC_OPTS "html/"     frs.sf.net-${{ secrets.SF_SSH_USER }}:/home/project-web/coolprop/htdocs/${{ needs.set_vars.outputs.webdir }}
