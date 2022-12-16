@@ -1,6 +1,19 @@
 Changelog for CoolProp
 ======================
 
+6.4.3
+-----
+
+Highlights:
+
+* The first automated release that updates the homepage and all binaries
+
+Issues closed:
+
+* `#2196 <https://github.com/CoolProp/CoolProp/issues/2196>`_ : Automatically publish release binaries
+* `#2197 <https://github.com/CoolProp/CoolProp/issues/2197>`_ : Add sdist for Python
+
+
 6.4.2
 -----
 

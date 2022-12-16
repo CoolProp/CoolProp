@@ -48,13 +48,12 @@ the CoolProp library.
 * **Tag a release**: Tag the master branch for using ``vX.X.X`` and wait once more 
   for all CI actions to complete. Make sure that the Pythpon wheels get uploaded 
   to PyPi automatically.
-* **Release**: Wait for all actions to finish and download the artifacts. Create a 
-  new release on GitHub and sourceforge and upload the binaries. To finished the 
-  release manually, consider editing the case statement in bash script and
-  run the commands from ``release.bsh.cmds.txt`` manually.
+* **Release**: Wait for all actions to finish and manually launch the release action
+  with the version number vX.X.X as input. This updates the homepage and uploads the
+  binaries to SourceForge. 
 * **Clean up**: If everything went well, you can proceed: 
     - Create a new release on GitHub.
-    - Change the default download file on sourceforge to point to the new
+    - Change the default download file on SourceForge to point to the new
       zipped sources.
     - Bump the version number in the CMake file and commit.
     - Announce the new features if you like...

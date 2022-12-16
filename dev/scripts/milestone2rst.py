@@ -21,6 +21,7 @@ def _make_request(url: str):
         headers["Authorization"] = "token {0}".format(oauth2_token)
     except:
         pass
+    #_log_msg("Sending request to the GitHub API: {0}\n".format(url))
     r = requests.get(url, headers=headers)
     #print(url)
     #print(r.json())
@@ -228,7 +229,7 @@ if __name__ == '__main__':
     if sys.argv[1] == "check":
         release_json = get_latest_tag_and_date()
 
-        issues_json = get_issues_closed_since(release_json["tag_date"], what="issues")
+        issues_json = get_issues_closed_since(release_json["tag_date"], what="issue")
         succ = check_issues_for_labels_and_milestone(sys.argv[2], issues_json)
         if succ:
              _log_msg("All issues seem to have the correct labels and milestones, congrats!\n")
