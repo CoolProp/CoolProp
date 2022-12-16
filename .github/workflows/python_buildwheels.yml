@@ -8,6 +8,33 @@ on:
     branches: [ 'master', 'main', 'develop' ]
 
 jobs:
+  python_source:
+    name: Build source package
+    runs-on: ubuntu-latest
+    steps:
+    
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9.x
+        
+    - name: Install dependencies
+      run: pip install setuptools wheel Cython requests jinja2 pyyaml
+        
+    - name: Build package, sdist
+      working-directory: ./wrappers/Python/pypi
+      run: python prepare_pypi.py --dist-dir=${GITHUB_WORKSPACE}/Python
+
+    - name: Store artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: Python
+        path: Python
+
   python_ubuntu:
     strategy:
       # Ensure that a wheel builder finishes even if another fails
@@ -79,7 +106,7 @@ jobs:
       arch: ${{ matrix.arch }}
 
   upload_python_bindings_to_pypi:
-    needs: [python_ubuntu, python_windows, python_macos]
+    needs: [python_source, python_ubuntu, python_windows, python_macos]
     name: Upload to PyPi
     runs-on: ubuntu-latest
     steps:
@@ -121,5 +148,4 @@ jobs:
       if: ${{ github.event_name != 'pull_request' }}
       env:
         TWINE_USERNAME: __token__
-      run: |
-        python -m twine upload --skip-existing Python/*.whl
+      run: python -m twine upload --skip-existing Python/*.whl Python/*.tar.gz
