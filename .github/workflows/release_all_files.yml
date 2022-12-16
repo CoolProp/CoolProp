@@ -58,9 +58,9 @@ jobs:
       - run: echo ${WEBDIR}
       - id: propagate_vars
         run: |
-          echo "branch=${{ (inputs.branch == '' && 'master') || inputs.branch }}" >> $GITHUB_OUTPUT
-          echo "target=${{ (env.BRANCH == 'master' && 'nightly') || env.BRANCH }}" >> $GITHUB_OUTPUT
-          echo "webdir=${{ (env.BRANCH == 'master' && 'dev') || '.' }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ (inputs.branch == ''       && 'master')  || inputs.branch }}" >> $GITHUB_OUTPUT
+          echo "target=${{ (env.BRANCH    == 'master' && 'nightly') || env.BRANCH    }}" >> $GITHUB_OUTPUT
+          echo "webdir=${{ (env.BRANCH    == 'master' && 'dev')     || '.'           }}" >> $GITHUB_OUTPUT
 
 
   collect_binaries:
