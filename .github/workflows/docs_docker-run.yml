@@ -125,15 +125,15 @@ jobs:
             Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
           # Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.zip
     
-    - name: Upload TGZ or ZIP to release
-      if: contains(github.ref, 'refs/tags')
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
-        tag: ${{ github.ref }}
-        overwrite: true
-        file_glob: false
+    #- name: Upload TGZ or ZIP to release
+    #  if: contains(github.ref, 'refs/tags')
+    #  uses: svenstaro/upload-release-action@v2
+    #  with:
+    #    repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #    file: Web/_build/CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.tar.gz
+    #    tag: ${{ github.ref }}
+    #    overwrite: true
+    #    file_glob: false
 
   # Deploy job
   deploy:
