@@ -52,10 +52,11 @@ the CoolProp library.
   with the version number vX.X.X as input. This updates the homepage and uploads the
   binaries to SourceForge. 
 * **Clean up**: If everything went well, you can proceed: 
-    - Create a new release on GitHub.
+    - Create a new release on GitHub using the vX.X.X tag. 
+	- Add a note with the download link: https://sourceforge.net/projects/coolprop/files/CoolProp/X.X.X/
     - Change the default download file on SourceForge to point to the new
       zipped sources.
     - Bump the version number in the CMake file and commit.
-    - Announce the new features if you like...
+    - Announce the new features if you like.
 
 That's all folks.
