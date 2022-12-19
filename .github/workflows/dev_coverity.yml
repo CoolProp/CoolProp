@@ -1,0 +1,31 @@
+name: Development Coverity scan
+
+on:
+  push:
+    branches: [ 'dev_checks' ]
+  #  branches: [ 'master', 'main', 'develop', 'dev_checks' ]
+  #  tags: [ 'v*' ]
+  #pull_request:
+  #  branches: [ 'master', 'main', 'develop' ]
+  schedule:
+    - cron: '15 8 * * 0,4' # Run twice a week
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      
+      - name: Configure build
+        run: cmake
+                 -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
+                 -B ${{github.workspace}}/build
+                 -S .
+
+      - uses: vapier/coverity-scan-action@v1
+        with:
+          email: ${{ secrets.COVERITY_SCAN_EMAIL }}
+          token: ${{ secrets.COVERITY_SCAN_TOKEN }}
+          command: cmake --build ${{github.workspace}}/build --config Release

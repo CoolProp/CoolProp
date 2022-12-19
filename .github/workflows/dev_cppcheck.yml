@@ -1,10 +1,13 @@
-name: cppcheck
+name: Development cppcheck
 
 on:
   push:
-    branches: [ master, develop, cppcheck_clang_format ]
+    branches: [ 'master', 'main', 'develop', 'dev_checks' ]
+  #  tags: [ 'v*' ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ 'master', 'main', 'develop' ]
+  #schedule:
+  #  - cron: '15 8 * * 3' # Run weekly
 
 jobs:
   build:
@@ -39,7 +42,7 @@ jobs:
 
     - name: Upload cppcheck results as artifact
       if: ${{ always() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
           name: CoolProp-${{ github.sha }}-cppcheck_results.txt
           path: cppcheck.txt

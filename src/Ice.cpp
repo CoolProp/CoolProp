@@ -121,7 +121,7 @@ double h_Ice(double T, double p) {
 double rho_Ice(double T, double p) {
 #ifndef __powerpc__
     // Returned value is in units of kg/m3
-    return 1 / g_Ice(T, p);
+    return 1 / dg_dp_Ice(T, p);
 #else
     return 1e99;
 #endif

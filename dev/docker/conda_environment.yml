@@ -1,6 +1,6 @@
 name: docs
 dependencies:
-  - python=3.6
+  - python
   - scipy
   - numpy
   - matplotlib
@@ -9,8 +9,9 @@ dependencies:
   - pip
   - six
   - requests
-  - jinja2
+  - jinja2<=3.0.0 # needed for cloud theme compatibility
   - pyyaml
+  - packaging
   - pip:
     - cython
     - sphinx
@@ -19,3 +20,4 @@ dependencies:
     - sphinxcontrib-bibtex
     - cloud_sptheme
     - openpyxl
+    - pybtex

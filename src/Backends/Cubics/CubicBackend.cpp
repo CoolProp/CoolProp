@@ -86,6 +86,46 @@ void CoolProp::AbstractCubicBackend::set_alpha0_from_components() {
     }
 }
 
+std::string CoolProp::AbstractCubicBackend::fluid_param_string(const std::string& ParamName) {
+    CoolProp::CubicLibrary::CubicsValues cpfluid = components[0];
+    if (!ParamName.compare("name")) {
+        return cpfluid.name;
+    } else if (!ParamName.compare("aliases")) {
+        return strjoin(cpfluid.aliases, get_config_string(LIST_STRING_DELIMITER));
+    } else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")) {
+        return cpfluid.CAS;
+    } else if (!ParamName.compare("formula")) {
+        throw NotImplementedError("Parameter \"formula\" not available for cubic backends.");
+    } else if (!ParamName.compare("ASHRAE34")) {
+        throw NotImplementedError("Parameter \"ASHRAE34\" not available for cubic backends.");
+    } else if (!ParamName.compare("REFPROPName") || !ParamName.compare("REFPROP_name") || !ParamName.compare("REFPROPname")) {
+        throw NotImplementedError("Parameter \"REFPROPName\" not available for cubic backends.");
+    } else if (ParamName.find("BibTeX") == 0)  // Starts with "BibTeX"
+    {
+        throw NotImplementedError("BibTeX parameters not available for cubic backends.");
+    } else if (ParamName.find("pure") == 0) {
+        if (is_pure()) {
+            return "true";
+        } else {
+            return "false";
+        }
+    } else if (ParamName == "INCHI" || ParamName == "InChI" || ParamName == "INCHI_STRING") {
+        throw NotImplementedError("Parameter \"INCHI\" not available for cubic backends.");
+    } else if (ParamName == "INCHI_Key" || ParamName == "InChIKey" || ParamName == "INCHIKEY") {
+        throw NotImplementedError("Parameter \"INCHI_Key\" not available for cubic backends.");
+    } else if (ParamName == "2DPNG_URL") {
+        throw NotImplementedError("Parameter \"2DPNG_URL\" not available for cubic backends.");
+    } else if (ParamName == "SMILES" || ParamName == "smiles") {
+        throw NotImplementedError("Parameter \"SMILES\" not available for cubic backends.");
+    } else if (ParamName == "CHEMSPIDER_ID") {
+        throw NotImplementedError("Parameter \"CHEMSPIDER_ID\" not available for cubic backends.");
+    } else if (ParamName == "JSON") {
+        return CubicLibrary::get_fluid_as_JSONstring(cpfluid.name);
+    } else {
+        throw ValueError(format("fluid parameter [%s] is invalid", ParamName.c_str()));
+    }
+}
+
 std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names(void) {
     std::vector<std::string> out;
     for (std::size_t i = 0; i < components.size(); ++i) {
@@ -527,7 +567,12 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
         // Set some variables at the end
         this->recalculate_singlephase_phase();
     } else {
-        _phase = iphase_gas;  // TODO: fix this
+        if (imposed_phase_index != iphase_not_imposed) {
+            // Use the imposed phase index
+            _phase = imposed_phase_index;
+        } else {
+            _phase = iphase_gas;  // TODO: fix this
+        }
     }
     _Q = -1;
     return rho;
@@ -543,6 +588,16 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass(void) {
 
 void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter,
                                                                    const double value) {
+    // bound-check indices
+    if (i < 0 || i >= N) {
+        if (j < 0 || j >= N) {
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
+        } else {
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
+        }
+    } else if (j < 0 || j >= N) {
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
+    }
     if (parameter == "kij" || parameter == "k_ij") {
         get_cubic()->set_kij(i, j, value);
     } else {
@@ -553,6 +608,16 @@ void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::si
     }
 };
 double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
+    // bound-check indices
+    if (i < 0 || i >= N) {
+        if (j < 0 || j >= N) {
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
+        } else {
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
+        }
+    } else if (j < 0 || j >= N) {
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
+    }
     if (parameter == "kij" || parameter == "k_ij") {
         return get_cubic()->get_kij(i, j);
     } else {
@@ -592,6 +657,10 @@ void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor)
 
 void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2,
                                                        const double c3) {
+    // bound-check indices
+    if (i < 0 || i >= N) {
+        throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
+    }
     if (parameter == "MC" || parameter == "mc" || parameter == "Mathias-Copeman") {
         get_cubic()->set_C_MC(i, c1, c2, c3);
     } else if (parameter == "TWU" || parameter == "Twu" || parameter == "twu") {
@@ -606,6 +675,10 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
 }
 
 void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
+    // bound-check indices
+    if (i < 0 || i >= N) {
+        throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
+    }
     // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         get_cubic()->set_cm(value);
@@ -624,6 +697,10 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
     }
 }
 double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
+    // bound-check indices
+    if (i < 0 || i >= N) {
+        throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
+    }
     // Get the volume translation parrameter, currently applied to the whole fluid, not to components.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         return get_cubic()->get_cm();

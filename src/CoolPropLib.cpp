@@ -211,9 +211,96 @@ EXPORT_CODE double CONVENTION Props1SI(const char* FluidName, const char* Output
     fpu_reset_guard guard;
     return CoolProp::Props1SI(std::string(FluidName), std::string(Output));
 }
+EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, const char* FluidNames, const double* fractions,
+                                          const long length_fractions, double* result, long* resdim1) {
+    fpu_reset_guard guard;
+    try {
+        // Outputs is a delimited string separated by LIST_STRING_DELIMITER
+        std::string delim = CoolProp::get_config_string(LIST_STRING_DELIMITER);
+        // strsplit only support char delimiter
+        if (delim.length() > 1)
+            throw CoolProp::ValueError(format("Length of string delimiter [%d] is bigger than 1 [%d]", delim.length(), delim.size()));
+        std::vector<std::string> _outputs = strsplit(Outputs, delim[0]);
+        // FluidNames is a delimited string separated by LIST_STRING_DELIMITER
+        std::vector<std::string> _fluidNames = strsplit(FluidNames, delim[0]);
+        if (_fluidNames.size() != length_fractions)
+            throw CoolProp::ValueError(
+              format("Length of fractions vector  [%d] is not equal to length of fluidNames vector [%d]", _fluidNames.size(), length_fractions));
+        std::vector<double> _fractions(fractions, fractions + length_fractions);
+        std::vector<std::vector<double>> _result = CoolProp::Props1SImulti(_outputs, backend, _fluidNames, _fractions);
+        // if CoolProp::Props1SImulti fails it will return an empty vector -> set result dimensions to 0
+        if (_result.size() == 0) {
+            *resdim1 = 0;
+        } else {
+            if (_result.size() > *resdim1)
+                throw CoolProp::ValueError(format("Result vector [%d] is bigger than allocated memory [%d]", _result[0].size(), *resdim1));
+            *resdim1 = _result[0].size();
+            for (int i = 0; i < _result[0].size(); i++) {
+                result[i] = _result[0][i];
+            }
+        }
+    } catch (std::exception& e) {
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        CoolProp::set_error_string("Undefined error");
+    }
+}
 EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName) {
     fpu_reset_guard guard;
     return CoolProp::PropsSI(std::string(Output), std::string(Name1), Prop1, std::string(Name2), Prop2, std::string(FluidName));
+}
+EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1, double* Prop1, const long size_Prop1, const char* Name2,
+                                         double* Prop2, const long size_Prop2, char* backend, const char* FluidNames, const double* fractions,
+                                         const long length_fractions, double* result, long* resdim1, long* resdim2) {
+    fpu_reset_guard guard;
+    try {
+        // Outputs is a delimited string separated by LIST_STRING_DELIMITER
+        std::string delim = CoolProp::get_config_string(LIST_STRING_DELIMITER);
+        // strsplit only support char delimiter
+        if (delim.length() > 1)
+            throw CoolProp::ValueError(format("Length of string delimiter [%d] is bigger than 1 [%d]", delim.length(), delim.size()));
+        std::vector<std::string> _outputs = strsplit(Outputs, delim[0]);
+        if (size_Prop1 != size_Prop2)
+            throw CoolProp::ValueError(
+              format("Length of input parameter 1 [%d] is not equal to length of input parameter 2 [%d]", size_Prop1, size_Prop2));
+        // make vectors out of double pointer
+        std::vector<double> _prop1(Prop1, Prop1 + size_Prop1);
+        std::vector<double> _prop2(Prop2, Prop2 + size_Prop2);
+        // FluidNames is a delimited string separated by LIST_STRING_DELIMITER
+        std::vector<std::string> _fluidNames = strsplit(FluidNames, delim[0]);
+        if (_fluidNames.size() != length_fractions)
+            throw CoolProp::ValueError(
+              format("Length of fractions vector  [%d] is not equal to length of fluidNames vector [%d]", _fluidNames.size(), length_fractions));
+        std::vector<double> _fractions(fractions, fractions + length_fractions);
+        std::vector<std::vector<double>> _result =
+          CoolProp::PropsSImulti(_outputs, std::string(Name1), _prop1, std::string(Name2), _prop2, backend, _fluidNames, _fractions);
+        // if CoolProp::PropsSImulti fails it will return an empty vector -> set result dimensions to 0
+        if (_result.size() == 0) {
+            *resdim1 = 0;
+            *resdim2 = 0;
+        } else {
+            if (_result.size() > *resdim1 || _result[0].size() > *resdim2)
+                throw CoolProp::ValueError(
+                  format("Result matrix [%d x %d] is bigger than allocated memory [%d x %d]", _result.size(), _result[0].size(), *resdim1, *resdim2));
+            *resdim1 = _result.size();
+            *resdim2 = _result[0].size();
+            for (int i = 0; i < _result.size(); i++) {
+                for (int j = 0; j < _result[i].size(); j++) {
+                    result[j + _result[i].size() * i] = _result[i][j];
+                }
+            }
+        }
+    } catch (std::exception& e) {
+        // set result dimensions to 0 to signalize, an error occured
+        *resdim1 = 0;
+        *resdim2 = 0;
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        // set result dimensions to 0 to signalize, an error occured
+        *resdim1 = 0;
+        *resdim2 = 0;
+        CoolProp::set_error_string("Undefined error");
+    }
 }
 EXPORT_CODE long CONVENTION PhaseSI(const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName, char* phase, int n) {
     fpu_reset_guard guard;
@@ -487,6 +574,42 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, 
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
+EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long handle, const char* saturated_state, double* fractions,
+                                                                      const long maxN, long* N, long* errcode, char* message_buffer,
+                                                                      const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        std::vector<double> _fractions;
+        double quality = AS->Q();
+        std::string string_state(saturated_state);
+        if (0 <= quality && quality <= 1) {
+            if (string_state == "liquid") {
+                _fractions = AS->mole_fractions_liquid();
+            } else if (string_state == "gas") {
+                _fractions = AS->mole_fractions_vapor();
+            } else {
+                throw CoolProp::ValueError(
+                  format("Bad info string [%s] to saturated state mole fractions, options are \"liquid\" and \"gas\"", saturated_state));
+            }
+        } else {
+            throw CoolProp::ValueError(format("AbstractState_get_mole_fractions_satState only returns outputs for saturated states if AbstractState "
+                                              "quality [%g] is within two-phase region (0 <= quality <= 1)",
+                                              static_cast<double>(quality)));
+        }
+        *N = _fractions.size();
+        if (*N <= maxN) {
+            for (int i = 0; i < *N; i++) {
+                fractions[i] = _fractions[i];
+            }
+        } else {
+            throw CoolProp::ValueError(format("Length of array [%d] is greater than allocated buffer length [%d]", *N, maxN));
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
 EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long* errcode,
                                                  char* message_buffer, const long buffer_length) {
     *errcode = 0;
@@ -690,6 +813,39 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
     }
 }
 
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents, double* T,
+                                                                  double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y,
+                                                                  long* actual_length, long* actual_components, long* errcode, char* message_buffer,
+                                                                  const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        CoolProp::PhaseEnvelopeData pe = AS->get_phase_envelope_data();
+        *actual_length = pe.T.size();
+        if (pe.T.size() > static_cast<std::size_t>(length)) {
+            throw CoolProp::ValueError(format("Length of phase envelope vectors [%d] is greater than allocated buffer length [%d]",
+                                              static_cast<int>(pe.T.size()), static_cast<int>(length)));
+        }
+        *actual_components = pe.x.size();
+        if (*actual_components > static_cast<std::size_t>(maxComponents)) {
+            throw CoolProp::ValueError(format("Length of phase envelope composition vectors [%d] is greater than allocated buffer length [%d]",
+                                              static_cast<int>(*actual_components), static_cast<int>(maxComponents)));
+        }
+        for (std::size_t i = 0; i < pe.T.size(); i++) {
+            *(T + i) = pe.T[i];
+            *(p + i) = pe.p[i];
+            *(rhomolar_vap + i) = pe.rhomolar_vap[i];
+            *(rhomolar_liq + i) = pe.rhomolar_liq[i];
+            for (std::size_t j = 0; j < *actual_components; ++j) {
+                *(x + i * *actual_components + j) = pe.x[j][i];
+                *(y + i * *actual_components + j) = pe.y[j][i];
+            }
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
 EXPORT_CODE void CONVENTION AbstractState_build_spinodal(const long handle, long* errcode, char* message_buffer, const long buffer_length) {
     *errcode = 0;
     try {
@@ -736,6 +892,63 @@ EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle,
             *(rhomolar + i) = pts[i].rhomolar;
             *(stable + i) = pts[i].stable;
         }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long handle, const char* saturated_state, const long param, long* errcode,
+                                                                  char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        double quality = AS->Q();
+        std::string string_state(saturated_state);
+        if (0 <= quality && quality <= 1) {
+            if (string_state == "liquid") {
+                return AS->saturated_liquid_keyed_output(static_cast<CoolProp::parameters>(param));
+            } else if (string_state == "gas") {
+                return AS->saturated_vapor_keyed_output(static_cast<CoolProp::parameters>(param));
+            } else {
+                throw CoolProp::ValueError(
+                  format("Bad info string [%s] to saturated state output, options are \"liquid\" and \"gas\"", saturated_state));
+            }
+        } else {
+            throw CoolProp::ValueError(format("AbstractState_keyed_output_satState only returns outputs for saturated states if AbstractState "
+                                              "quality [%g] is within two-phase region (0 <= quality <= 1)",
+                                              static_cast<double>(quality)));
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+        return _HUGE;
+    }
+}
+
+EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
+                                                       const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        std::string backendstring = AS->backend_name();
+        if (backendstring.size() < static_cast<std::size_t>(buffer_length)) {
+            strcpy(backend, backendstring.c_str());
+        } else {
+            throw CoolProp::ValueError(format("Length of string [%d] is greater than allocated buffer length [%d]", backendstring.size(),
+                                              static_cast<std::size_t>(buffer_length)));
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
+                                               const long buffer_length) {
+    *errcode = 0;
+
+    try {
+        CoolProp::add_fluids_as_JSON(backend, fluidstring);
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }

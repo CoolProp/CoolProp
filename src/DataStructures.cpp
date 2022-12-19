@@ -413,6 +413,68 @@ phases get_phase_index(const std::string& param_name) {
         throw ValueError(format("Your input name [%s] is not valid in get_phase_index (names are case sensitive)", param_name.c_str()));
     }
 }
+
+struct scheme_info
+{
+    schemes key;
+    std::string short_desc;
+};
+
+const scheme_info scheme_info_list[] = {
+    { i1,                "1"},
+    { i2a,               "2A"},
+    { i2b,               "2B"},
+    { i3a,               "3A"},
+    { i3b,               "3B"},
+    { i4a,               "4A"},
+    { i4b,               "4B"},
+    { i4c,               "4C"},
+};
+
+class SchemeInformation {
+public:
+    std::map<schemes, std::string> short_desc_map;
+    std::map<std::string, schemes> index_map;
+    SchemeInformation()
+    {
+        const scheme_info* const end = scheme_info_list + sizeof(scheme_info_list) / sizeof(scheme_info_list[0]);
+        for (const scheme_info* el = scheme_info_list; el != end; ++el)
+        {
+            short_desc_map.insert(std::pair<schemes, std::string>(el->key, el->short_desc));
+            index_map.insert(std::pair<std::string, schemes>(el->short_desc, el->key));
+        }
+    }
+};
+static SchemeInformation scheme_information;
+
+const std::string& get_scheme_short_desc(schemes scheme) {
+    return scheme_information.short_desc_map[scheme];
+}
+
+bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput) {
+    // Try to find it
+    std::map<std::string, schemes>::const_iterator it = scheme_information.index_map.find(scheme_name);
+    // If equal to end, not found
+    if (it != scheme_information.index_map.end()){
+        // Found, return it
+        iOutput = static_cast<schemes>(it->second);
+        return true;
+    }
+    else{
+        return false;
+    }
+}
+
+schemes get_scheme_index(const std::string &param_name) {
+    schemes iScheme;
+    if (is_valid_scheme(param_name, iScheme)){
+        return iScheme;
+    }
+    else{
+        throw ValueError(format("Your input name [%s] is not valid in get_scheme_index (names are case sensitive)",param_name.c_str()));
+    }
+}
+
 parameters get_parameter_index(const std::string& param_name) {
     parameters iOutput;
     if (is_valid_parameter(param_name, iOutput)) {

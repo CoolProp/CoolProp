@@ -1,13 +1,11 @@
-name: BuildSharedLibrary
+name: Library builds (shared)
 
 on:
   push:
-    branches: [ master, develop, actions_shared ]
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+    branches: [ 'master', 'main', 'develop', 'actions_shared' ]
+    tags: [ 'v*' ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ 'master', 'main', 'develop' ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -28,7 +26,7 @@ jobs:
       with:
         submodules: recursive
 
-    - uses: actions/setup-python@v2
+    - uses: actions/setup-python@v4
       with:
         python-version: '3.x'
 
@@ -58,25 +56,25 @@ jobs:
         set -x
         cmake --build . --target install -j $(nproc) --config $BUILD_TYPE
 
-    - name: Tar.gz the shared library to maintain case sensitivy and file permissions
-      working-directory: ./install_root/shared_library/
-      shell: bash
-      run: |
-        set -x
-        tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
+    # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+    #   working-directory: ./install_root/shared_library/
+    #   shell: bash
+    #   run: |
+    #     set -x
+    #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
 
-    - name: Archive TGZ or ZIP artifacts
-      uses: actions/upload-artifact@v2
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
       with:
-          name: CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
-          path: install_root/shared_library/CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
+          name: shared_library
+          path: install_root/shared_library
 
-    - name: Upload TGZ or ZIP to release
-      if: contains(github.ref, 'refs/tags')
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: install_root/shared_library/CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
-        tag: ${{ github.ref }}
-        overwrite: true
-        file_glob: false
+    # - name: Upload TGZ or ZIP to release
+    #   if: contains(github.ref, 'refs/tags')
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: install_root/shared_library/CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz
+    #     tag: ${{ github.ref }}
+    #     overwrite: true
+    #     file_glob: false

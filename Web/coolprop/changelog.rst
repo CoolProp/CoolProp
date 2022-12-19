@@ -1,6 +1,119 @@
 Changelog for CoolProp
 ======================
 
+6.4.3
+-----
+
+Highlights:
+
+* The first automated release that updates the homepage and all binaries
+
+Issues closed:
+
+* `#2196 <https://github.com/CoolProp/CoolProp/issues/2196>`_ : Automatically publish release binaries
+* `#2197 <https://github.com/CoolProp/CoolProp/issues/2197>`_ : Add sdist for Python
+
+
+6.4.2
+-----
+
+Highlights:
+
+* The first release after 2 years
+* Fixed the values in the vicinity of the critical point of ammonia
+* Added Python wheels for Python 3.6 through 3.11 on many different architectures
+* Added a reverse T(p,h) function to IF97
+* Exposed more functions in the CoolPropLib interface
+* Fixed a faulty density calculation for ice
+* Added PC-SAFT as indepedent backend
+
+Deprecated:
+
+* Dropped support for Python 2.x
+
+Issues Closed:
+
+* `#1867 <https://github.com/CoolProp/CoolProp/issues/1867>`_ : TypeError after importing CoolProp / pip installation on Raspberry Pi
+* `#1884 <https://github.com/CoolProp/CoolProp/issues/1884>`_ : Typo in enthalpy's unit of measure
+* `#1962 <https://github.com/CoolProp/CoolProp/issues/1962>`_ : Ammonia (and maybe other?) calculations fail at the critical point
+* `#1963 <https://github.com/CoolProp/CoolProp/issues/1963>`_ : Some examples don't work in docs
+* `#1974 <https://github.com/CoolProp/CoolProp/issues/1974>`_ : Fix reducing density for Nitrogen
+* `#1980 <https://github.com/CoolProp/CoolProp/issues/1980>`_ : Wrong alias in "R1243zf.json"
+* `#1981 <https://github.com/CoolProp/CoolProp/issues/1981>`_ : Python CoolProp package doesn't work on Python 3.9.0 (32 bit and 64 bit)
+* `#1992 <https://github.com/CoolProp/CoolProp/issues/1992>`_ : Installation errors with Python 3.9
+* `#1999 <https://github.com/CoolProp/CoolProp/issues/1999>`_ :  PropsSI failed ungracefully with Water::IF97
+* `#2003 <https://github.com/CoolProp/CoolProp/issues/2003>`_ : build error on MacOS 11.2 Big Sur
+* `#2010 <https://github.com/CoolProp/CoolProp/issues/2010>`_ : cannot build the object library (COOLPROP_OBJECT_LIBRARY)
+* `#2017 <https://github.com/CoolProp/CoolProp/issues/2017>`_ : I'm not able to install the coolprop with pip in python ...
+* `#2020 <https://github.com/CoolProp/CoolProp/issues/2020>`_ : PC-SAFT integration
+* `#2025 <https://github.com/CoolProp/CoolProp/issues/2025>`_ : Error in HAPropsSI when using enthalpy as an input (Excel VBA)
+* `#2033 <https://github.com/CoolProp/CoolProp/issues/2033>`_ : Compatibility with Silicon chip in MacOS Big Sur 11.5.1
+* `#2043 <https://github.com/CoolProp/CoolProp/issues/2043>`_ : Cannot create propertyplot for ammonia
+* `#2049 <https://github.com/CoolProp/CoolProp/issues/2049>`_ : PropsSI("PHASE") calculate with ammonia, get error "options.p is not valid in saturation_T_pure_1D_P"
+* `#2052 <https://github.com/CoolProp/CoolProp/issues/2052>`_ : How to install Coolprop in MacOS which has M1 chip?
+* `#2053 <https://github.com/CoolProp/CoolProp/issues/2053>`_ : Small rounding issues for water
+* `#2054 <https://github.com/CoolProp/CoolProp/issues/2054>`_ : Rounding for reducing density for R236ea
+* `#2055 <https://github.com/CoolProp/CoolProp/issues/2055>`_ : Rounding for reducing density for nitrogen
+* `#2067 <https://github.com/CoolProp/CoolProp/issues/2067>`_ : Adding a new fluid and compiled it. Not working when function is used.
+* `#2073 <https://github.com/CoolProp/CoolProp/issues/2073>`_ : PHI0 density derivatives with REFPROP backend are wrong
+* `#2078 <https://github.com/CoolProp/CoolProp/issues/2078>`_ : Python 3.8: Error in import
+* `#2081 <https://github.com/CoolProp/CoolProp/issues/2081>`_ : Add support to release linux aarch64 wheels
+* `#2095 <https://github.com/CoolProp/CoolProp/issues/2095>`_ : Issue when compiling shared library in docker on M1 - unrecognized command-line option ‘-m64’
+* `#2100 <https://github.com/CoolProp/CoolProp/issues/2100>`_ : Cubic Mixtures: ideal gas contribution doesn't work properly (Rcomponent is wrong))
+* `#2113 <https://github.com/CoolProp/CoolProp/issues/2113>`_ : Installation failed when using command: pip install coolprop
+* `#2114 <https://github.com/CoolProp/CoolProp/issues/2114>`_ : Trouble installing MATLAB wrapper via Python
+* `#2119 <https://github.com/CoolProp/CoolProp/issues/2119>`_ : Python bindings: Call for help from the community
+* `#2126 <https://github.com/CoolProp/CoolProp/issues/2126>`_ : CoolProp 6.4.2dev0, MATLAB wrapper with Python 3.9
+* `#2149 <https://github.com/CoolProp/CoolProp/issues/2149>`_ : Bug in the departure function parameters for GeneralizedHFC in CoolProp
+* `#2178 <https://github.com/CoolProp/CoolProp/issues/2178>`_ : Please update github release
+* `#2184 <https://github.com/CoolProp/CoolProp/issues/2184>`_ : CoolProp Online throwing internal error
+* `#2186 <https://github.com/CoolProp/CoolProp/issues/2186>`_ : Ammonia critical point issue behaviour
+* `#2187 <https://github.com/CoolProp/CoolProp/issues/2187>`_ : The online version of CoolProp cannot work
+* `#2190 <https://github.com/CoolProp/CoolProp/issues/2190>`_ : Humid air property function HAPropsSI is not reversible
+* `#2192 <https://github.com/CoolProp/CoolProp/issues/2192>`_ : Update the changelog for v6.4.2
+
+Pull requests merged:
+
+* `#1977 <https://github.com/CoolProp/CoolProp/pull/1977>`_ : Add Rust Wrapper
+* `#1990 <https://github.com/CoolProp/CoolProp/pull/1990>`_ : Fix cxx17
+* `#1993 <https://github.com/CoolProp/CoolProp/pull/1993>`_ : LibreOffice: Use pip for installing CoolProp python package
+* `#2005 <https://github.com/CoolProp/CoolProp/pull/2005>`_ : Fix cxx17
+* `#2008 <https://github.com/CoolProp/CoolProp/pull/2008>`_ : Fix build on macOS
+* `#2011 <https://github.com/CoolProp/CoolProp/pull/2011>`_ : A minor correction in case of COOLPROP_OBJECT_LIBRARY=ON
+* `#2050 <https://github.com/CoolProp/CoolProp/pull/2050>`_ : Update index.rst for the C# Wrapper
+* `#2056 <https://github.com/CoolProp/CoolProp/pull/2056>`_ : Fix typo in iQ description
+* `#2058 <https://github.com/CoolProp/CoolProp/pull/2058>`_ : IF97 Backend Q and Phase Patch
+* `#2062 <https://github.com/CoolProp/CoolProp/pull/2062>`_ : Updated info for the C# Wrapper
+* `#2076 <https://github.com/CoolProp/CoolProp/pull/2076>`_ : Included CoolPropJavascriptDemo
+* `#2084 <https://github.com/CoolProp/CoolProp/pull/2084>`_ : Add functions to CoolPropLib
+* `#2097 <https://github.com/CoolProp/CoolProp/pull/2097>`_ : Add github action to build python wheels (including python 3.9 and 3.10)
+* `#2098 <https://github.com/CoolProp/CoolProp/pull/2098>`_ : Github Actions: add shared library and doxygen workflows.
+* `#2101 <https://github.com/CoolProp/CoolProp/pull/2101>`_ : Fix Rcomponent in calc_alpha0_deriv_nocache
+* `#2103 <https://github.com/CoolProp/CoolProp/pull/2103>`_ : Lint: use automated tooling to reformat C++ and CMakeLists files
+* `#2105 <https://github.com/CoolProp/CoolProp/pull/2105>`_ : Bump Catch  1 to Catch v3.0.0-preview4
+* `#2106 <https://github.com/CoolProp/CoolProp/pull/2106>`_ : Cppcheck workflow
+* `#2107 <https://github.com/CoolProp/CoolProp/pull/2107>`_ : Add bound-check to setter and getter functions
+* `#2108 <https://github.com/CoolProp/CoolProp/pull/2108>`_ : Format macros + strip trailing whitespaces
+* `#2109 <https://github.com/CoolProp/CoolProp/pull/2109>`_ : Configure upload to pypi/testpypi
+* `#2110 <https://github.com/CoolProp/CoolProp/pull/2110>`_ : Fix mac cibuildwheel
+* `#2116 <https://github.com/CoolProp/CoolProp/pull/2116>`_ : Fix mac sed
+* `#2118 <https://github.com/CoolProp/CoolProp/pull/2118>`_ : Python bindings upload to (test)pypi fixes
+* `#2120 <https://github.com/CoolProp/CoolProp/pull/2120>`_ : Missing a py37 build for Windows x64 + fix py38 win32 and py39 win32
+* `#2122 <https://github.com/CoolProp/CoolProp/pull/2122>`_ : Simplify CoolProp python bindings cibuildwheel
+* `#2132 <https://github.com/CoolProp/CoolProp/pull/2132>`_ : Bump IF97 to included reverse T(P,H) patch [skip ci]
+* `#2133 <https://github.com/CoolProp/CoolProp/pull/2133>`_ : New functions for CoolPropLib
+* `#2134 <https://github.com/CoolProp/CoolProp/pull/2134>`_ : Add fluid_param_string and get_JSONstring to cubic backend
+* `#2135 <https://github.com/CoolProp/CoolProp/pull/2135>`_ : AbstractState functions for CoolPropLib
+* `#2143 <https://github.com/CoolProp/CoolProp/pull/2143>`_ : Corrected rho_ice route by replacing g_ice with dg_dp_Ice in Ice.cpp
+* `#2146 <https://github.com/CoolProp/CoolProp/pull/2146>`_ : Bump FindMathematica to most recent version
+* `#2161 <https://github.com/CoolProp/CoolProp/pull/2161>`_ : improve PC-SAFT flash
+* `#2164 <https://github.com/CoolProp/CoolProp/pull/2164>`_ : Updated info about SharpProp (3-party wrapper for C#)
+* `#2165 <https://github.com/CoolProp/CoolProp/pull/2165>`_ : Added info about PyFluids (3-party wrapper for Python)
+* `#2173 <https://github.com/CoolProp/CoolProp/pull/2173>`_ : Prevent crashes near critical density due to saturation calc
+* `#2176 <https://github.com/CoolProp/CoolProp/pull/2176>`_ : add PCSAFT page in docs
+* `#2191 <https://github.com/CoolProp/CoolProp/pull/2191>`_ : Build the docs for v6.4.2
+
+
 6.4.1
 -----
 

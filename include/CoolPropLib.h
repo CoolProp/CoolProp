@@ -82,13 +82,48 @@ inline void __assert(const char* error) {
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
 EXPORT_CODE double CONVENTION Props1SI(const char* FluidName, const char* Output);
+
+/**
+     *\overload
+     *\sa \ref CoolProp::Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend, const std::vector<std::string>& fluids, const std::vector<double>& fractions)
+     *
+     * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
+     */
+EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, const char* FluidNames, const double* fractions,
+                                          const long length_fractions, double* result, long* resdim1);
 /**
      *\overload
      *\sa \ref CoolProp::PropsSI(const std::string &, const std::string &, double, const std::string &, double, const std::string&)
      *
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
-EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName);
+EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Ref);
+
+/**
+     *\overload
+     *\sa \ref CoolProp::PropsSImulti(const std::vector<std::string>& Outputs, const std::string& Name1, const std::vector<double>& Prop1,
+                                              const std::string& Name2, const std::vector<double>& Prop2, const std::string& backend,
+                                              const std::vector<std::string>& fluids, const std::vector<double>& fractions)
+     *
+     * @param Outputs Delimited string separated by LIST_STRING_DELIMITER for the output parameters
+     * @param Name1 The name of the first input variable
+     * @param Prop1 A vector of the first input values 
+     * @param size_Prop1 Size of Prop1 double*
+     * @param Name2 The name of the second input variable
+     * @param Prop2 A vector of the second input values 
+     * @param size_Prop2 Size of Prop2 double*
+     * @param backend 	The string representation of the backend (HEOS, REFPROP, INCOMP, etc.) 
+     * @param FluidNames  Delimited string separated by LIST_STRING_DELIMITER for the fluid name(s)
+     * @param fractions The fractions (molar, mass, volume, etc.) of the components
+     * @param length_fractions Size of fractions double*
+     * @param result Allocated memory for result vector
+     * @param resdim1 result vector dimension 1 pointer, to check allocated space and return actual result size
+     * @param resdim2 result vector dimension 2 pointer, to check allocated space and return actual result size
+     * \note If there is an error, an empty vector will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
+     */
+EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1, double* Prop1, const long size_Prop1, const char* Name2,
+                                         double* Prop2, const long size_Prop2, char* backend, const char* FluidNames, const double* fractions,
+                                         const long length_fractions, double* result, long* resdim1, long* resdim2);
 
 /**
      *\overload
@@ -321,6 +356,21 @@ EXPORT_CODE void CONVENTION AbstractState_set_fractions(const long handle, const
 EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, double* fractions, const long maxN, long* N, long* errcode,
                                                              char* message_buffer, const long buffer_length);
 /**
+     * @brief Get the molar fractions for the AbstractState and the desired saturated State
+     * @param handle The integer handle for the state class stored in memory
+     * @param saturated_state The string specifying the state (liquid or gas)
+     * @param fractions The array of fractions
+     * @param maxN The length of the buffer for the fractions
+     * @param N number of fluids
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return 
+     */
+EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long handle, const char* saturated_state, double* fractions,
+                                                                      const long maxN, long* N, long* errcode, char* message_buffer,
+                                                                      const long buffer_length);
+/**
      * @brief Update the state of the AbstractState
      * @param handle The integer handle for the state class stored in memory
      * @param input_pair The integer value for the input pair obtained from XXXXXXXXXXXXXXXX
@@ -544,6 +594,31 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
                                                                   const long buffer_length);
 
 /**
+     * @brief Get data from the phase envelope for the given mixture composition
+     * @param handle The integer handle for the state class stored in memory
+     * @param length The number of elements stored in the arrays (both inputs and outputs MUST be the same length)
+     * @param maxComponents The number of fluid components for which memory is allocated
+     * @param T The pointer to the array of temperature (K)
+     * @param p The pointer to the array of pressure (Pa)
+     * @param rhomolar_vap The pointer to the array of molar density for vapor phase (m^3/mol)
+     * @param rhomolar_liq The pointer to the array of molar density for liquid phase (m^3/mol)
+     * @param x The compositions of the "liquid" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
+     * @param y The compositions of the "vapor" phase (WARNING: buffer should be Ncomp*Npoints in length, at a minimum, but there is no way to check buffer length at runtime)
+     * @param actual_length The number of elements actually stored in the arrays
+     * @param actual_components The number of fluid components actually stored in the arrays
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     *
+     * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
+     */
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents, double* T,
+                                                                  double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y,
+                                                                  long* actual_length, long* actual_components, long* errcode, char* message_buffer,
+                                                                  const long buffer_length);
+
+/**
      * @brief Build the spinodal
      * @param handle The integer handle for the state class stored in memory
      * @param errcode The errorcode that is returned (0 = no error, !0 = error)
@@ -587,6 +662,38 @@ EXPORT_CODE void CONVENTION AbstractState_get_spinodal_data(const long handle, c
      */
 EXPORT_CODE void CONVENTION AbstractState_all_critical_points(const long handle, const long length, double* T, double* p, double* rhomolar,
                                                               long* stable, long* errcode, char* message_buffer, const long buffer_length);
+/**
+     * @brief Get an output value from the AbstractState using an integer value for the desired output value and desired saturated State
+     * @param handle The integer handle for the state class stored in memory
+     * @param saturated_state The string specifying the state (liquid or gas)
+     * @param param The integer value for the parameter you want
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long handle, const char* saturated_state, const long param, long* errcode,
+                                                                  char* message_buffer, const long buffer_length);
+/**
+     * @brief Return the name of the backend used in the AbstractState
+     * @param handle The integer handle for the state class stored in memory
+     * @param backend The char pointer the name is written to
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return
+     */
+EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
+                                                       const long buffer_length);
+/** 
+     * \brief Add fluids as a JSON-formatted string
+     * @param backend The backend to which these should be added; e.g. "HEOS", "SRK", "PR"
+     * @param fluidstring The JSON-formatted string
+     * @return
+     *
+     */
+EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
+                                               const long buffer_length);
 
 // *************************************************************************************
 // *************************************************************************************

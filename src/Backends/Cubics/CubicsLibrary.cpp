@@ -17,6 +17,8 @@ class CubicsLibraryClass
    private:
     std::map<std::string, CubicsValues> fluid_map;
     std::map<std::string, std::string> aliases_map;
+    /// Map from index of fluid to a string
+    std::map<std::string, std::string> JSONstring_map;
     bool empty;  // Is empty
    public:
     CubicsLibraryClass() : empty(true) {
@@ -68,10 +70,49 @@ class CubicsLibraryClass
                     aliases_map.insert(std::pair<std::string, std::string>(*it, upper(val.name)));
                 }
             }
+
+            // Add/Replace name->JSONstring mapping to easily pull out if the user wants it
+            // Convert fuid_json to a string and store it in the map.
+            std::pair<std::map<std::string, std::string>::iterator, bool> addJson;
+            addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name),cpjson::json2string(*itr)));
+            if (addJson.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
+                // Already there, see http://www.cplusplus.com/reference/map/map/insert/
+                JSONstring_map.erase(addJson.first);
+                addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name),cpjson::json2string(*itr)));
+                if (get_debug_level() > 0) {
+                    std::cout << "added the cubic fluid: " + val.name << std::endl;
+                }
+                assert(addJson.second == true);
+            }
+            
             counter++;
         }
         return counter;
     };
+
+    std::string get_JSONstring(const std::string& key) {
+        std::string uppercase_identifier = upper(key);
+        // Try to find it
+        std::map<std::string, std::string>::iterator it = JSONstring_map.find(uppercase_identifier);
+        // If it is found
+        if (it == JSONstring_map.end()) {
+            std::map<std::string, std::string>::iterator italias = aliases_map.find(uppercase_identifier);
+            if (italias != aliases_map.end()) {
+                // Alias was found, use it to get the fluid name, and then the cubic values
+                it = JSONstring_map.find(italias->second);
+            } else {
+                throw ValueError(format("Fluid identifier [%s] was not found in CubicsLibrary", uppercase_identifier.c_str()));
+            }
+        } 
+        // Then, load the fluids we would like to add
+        rapidjson::Document doc;
+        cpjson::JSON_string_to_rapidjson(it->second, doc);
+        rapidjson::Document doc2;
+        doc2.SetArray();
+        doc2.PushBack(doc, doc.GetAllocator());
+        return cpjson::json2string(doc2);
+    }
+
     CubicsValues get(const std::string& identifier) {
         std::string uppercase_identifier = upper(identifier);
         // Try to find it
@@ -120,6 +161,9 @@ void add_fluids_as_JSON(const std::string& JSON) {
     } else {
         throw ValueError(format("Unable to validate cubics library against schema with error: %s", errstr.c_str()));
     }
+}
+std::string get_fluid_as_JSONstring(const std::string& identifier) {
+    return library.get_JSONstring(identifier);
 }
 
 CubicLibrary::CubicsValues get_cubic_values(const std::string& identifier) {

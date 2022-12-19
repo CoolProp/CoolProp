@@ -1,8 +1,13 @@
-name: Clang Format
+name: Development Clang Format
 
 on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'dev_checks' ]
+  #  tags: [ 'v*' ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ 'master', 'main', 'develop' ]
+  #schedule:
+  #  - cron: '15 8 * * 3' # Run weekly
 
 jobs:
   build:
@@ -22,7 +27,7 @@ jobs:
 
     - name: Upload clang-format patch as artifact
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
           name: CoolProp-${{ github.sha }}-clang_format.patch
           path: clang_format.patch

@@ -13,25 +13,26 @@ using std::vector;
 
 namespace CoolProp {
 
-const static double kb = 1.380648465952442093e-23;  // Boltzmann constant, J K^-1
+const static double kb = 1.380649e-23;  // Boltzmann constant, J K^-1
 const static double PI = 3.141592653589793;
-const static double N_AV = 6.022140857e23;       // Avagadro's number
-const static double E_CHRG = 1.6021766208e-19;   // elementary charge, units of coulomb
-const static double perm_vac = 8.854187817e-22;  //permittivity in vacuum, C V^-1 Angstrom^-1
+const static double N_AV = 6.02214076e23;       // Avagadro's number
+const static double E_CHRG = 1.6021766208e-19; // elementary charge, units of coulomb
+const static double perm_vac = 8.854187817e-22; //permittivity in vacuum, C V^-1 Angstrom^-1
 
-class PCSAFTBackend : public AbstractState
-{
+class PCSAFTBackend : public AbstractState  {
 
-   protected:
-    std::vector<PCSAFTFluid> components;        ///< The components that are in use
-    std::vector<double> k_ij;                   ///< binary interaction parameters
-    std::vector<double> k_ijT;                  ///< temperature dependent binary interaction parameters
-    bool is_pure_or_pseudopure;                 ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
-    std::vector<CoolPropDbl> mole_fractions;    ///< The bulk mole fractions of the mixture
-    std::vector<double> mole_fractions_double;  ///< A copy of the bulk mole fractions of the mixture stored as doubles
-    std::vector<CoolPropDbl> K,                 ///< The K factors for the components
-      lnK;                                      ///< The natural logarithms of the K factors of the components
-    double dielc;                               ///< The dielectric constant of the solvent, if ion term is used
+protected:
+    std::vector<PCSAFTFluid> components; ///< The components that are in use
+    std::vector<int> assoc_num; ///< The number of association sites for each molecule
+    std::vector<int> assoc_matrix; ///< Whether or not association occurs between two association sites. 0 means no association, any nonzero number signifies association
+    std::vector<double> k_ij; ///< binary interaction parameters
+    std::vector<double> k_ijT; ///< temperature dependent binary interaction parameters
+    bool is_pure_or_pseudopure; ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
+    std::vector<CoolPropDbl> mole_fractions; ///< The bulk mole fractions of the mixture
+    std::vector<double> mole_fractions_double; ///< A copy of the bulk mole fractions of the mixture stored as doubles
+    std::vector<CoolPropDbl> K, ///< The K factors for the components
+                             lnK; ///< The natural logarithms of the K factors of the components
+    double dielc; ///< The dielectric constant of the solvent, if ion term is used
 
     shared_ptr<PCSAFTBackend> SatL;
     shared_ptr<PCSAFTBackend> SatV;
@@ -47,15 +48,21 @@ class PCSAFTBackend : public AbstractState
     void post_update(bool optional_checks = true);
 
     CoolPropDbl solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases phase);
+    double estimate_flash_p(PCSAFTBackend &PCSAFT);
+    double estimate_flash_t(PCSAFTBackend &PCSAFT);
+    double outerTQ(double p_guess, PCSAFTBackend &PCSAFT);
+    double outerPQ(double t_guess, PCSAFTBackend &PCSAFT);
     phases calc_phase_internal(CoolProp::input_pairs input_pair);
     CoolPropDbl reduced_to_molar(CoolPropDbl nu, CoolPropDbl T);
 
     // these functions are used internally to solve for association parameters
-    vector<double> XA_find(vector<double> XA_guess, int ncomp, vector<double> delta_ij, double den, vector<double> x);
-    vector<double> dXA_find(int ncA, int ncomp, vector<int> iA, vector<double> delta_ij, double den, vector<double> XA, vector<double> ddelta_dd,
-                            vector<double> x, int n_sites);
-    vector<double> dXAdt_find(int ncA, vector<double> delta_ij, double den, vector<double> XA, vector<double> ddelta_dt, vector<double> x,
-                              int n_sites);
+    vector<double> XA_find(vector<double> XA_guess, vector<double> delta_ij, double den,
+        vector<double> x);
+    vector<double> dXAdx_find(vector<int> assoc_num, vector<double> delta_ij,
+        double den, vector<double> XA, vector<double> ddelta_dx, vector<double> x);
+    vector<double> dXAdt_find(vector<double> delta_ij, double den,
+        vector<double> XA, vector<double> ddelta_dt, vector<double> x);
+    void set_assoc_matrix();
     double dielc_water(double t);
 
    public:

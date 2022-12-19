@@ -1,6 +1,6 @@
 [
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "106-97-8",
     "Name1": "METHANE",
@@ -8,7 +8,7 @@
     "kij": 0.022
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "110-54-3",
     "Name1": "METHANE",
@@ -16,7 +16,7 @@
     "kij": 0.021
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "142-82-5",
     "Name1": "METHANE",
@@ -24,7 +24,7 @@
     "kij": 0.016
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "124-18-5",
     "Name1": "METHANE",
@@ -32,7 +32,7 @@
     "kij": 0.056
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "75-28-5",
     "Name1": "METHANE",
@@ -40,7 +40,7 @@
     "kij": 0.028
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "110-82-7",
     "Name1": "METHANE",
@@ -48,7 +48,7 @@
     "kij": 0.045
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "71-43-2",
     "Name1": "METHANE",
@@ -56,7 +56,7 @@
     "kij": 0.037
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "108-88-3",
     "Name1": "METHANE",
@@ -64,7 +64,7 @@
     "kij": 0.052
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "119-64-2",
     "Name1": "METHANE",
@@ -72,7 +72,7 @@
     "kij": 0.075
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "108-38-3",
     "Name1": "METHANE",
@@ -80,7 +80,7 @@
     "kij": 0.045
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "7727-37-9",
     "CAS2": "74-85-1",
     "Name1": "NITROGEN",
@@ -88,7 +88,7 @@
     "kij": 0.075
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "7727-37-9",
     "CAS2": "110-54-3",
     "Name1": "NITROGEN",
@@ -96,7 +96,7 @@
     "kij": 0.119
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-85-1",
     "CAS2": "142-82-5",
     "Name1": "ETHYLENE",
@@ -104,7 +104,7 @@
     "kij": 0.018
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-85-1",
     "CAS2": "115-07-1",
     "Name1": "ETHYLENE",
@@ -112,7 +112,7 @@
     "kij": -0.001
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-98-6",
     "CAS2": "106-97-8",
     "Name1": "PROPANE",
@@ -120,7 +120,7 @@
     "kij": 0.003
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "115-07-1",
     "CAS2": "75-28-5",
     "Name1": "PROPYLENE",
@@ -128,7 +128,7 @@
     "kij": -0.006
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "109-66-0",
     "CAS2": "142-82-5",
     "Name1": "N-PENTANE",
@@ -136,7 +136,7 @@
     "kij": 0.011
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "124-38-9",
     "CAS2": "74-82-8",
     "Name1": "CARBON DIOXIDE",
@@ -144,7 +144,7 @@
     "kij": 0.065
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "124-38-9",
     "CAS2": "74-98-6",
     "Name1": "CARBON DIOXIDE",
@@ -152,7 +152,7 @@
     "kij": 0.109
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "124-38-9",
     "CAS2": "106-97-8",
     "Name1": "CARBON DIOXIDE",
@@ -160,7 +160,7 @@
     "kij": 0.120
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "124-38-9",
     "CAS2": "109-66-0",
     "Name1": "CARBON DIOXIDE",
@@ -168,7 +168,7 @@
     "kij": 0.143
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "124-38-9",
     "CAS2": "142-82-5",
     "Name1": "CARBON DIOXIDE",
@@ -176,7 +176,7 @@
     "kij": 0.129
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "124-38-9",
     "CAS2": "108-87-2",
     "Name1": "CARBON DIOXIDE",
@@ -184,7 +184,7 @@
     "kij": 0.144
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "74-82-8",
     "CAS2": "112-40-3",
     "Name1": "METHANE",
@@ -192,7 +192,7 @@
     "kij": 0.025
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "74-84-0",
     "CAS2": "112-40-3",
     "Name1": "ETHANE",
@@ -200,7 +200,7 @@
     "kij": 0.020
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "74-84-0",
     "CAS2": "111-65-9",
     "Name1": "ETHANE",
@@ -208,7 +208,7 @@
     "kij": 0.020
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "630-08-0",
     "CAS2": "111-65-9",
     "Name1": "CARBON MONOXIDE",
@@ -216,7 +216,7 @@
     "kij": 0.125
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "630-08-0",
     "CAS2": "112-40-3",
     "Name1": "CARBON MONOXIDE",
@@ -224,7 +224,7 @@
     "kij": 0.125
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "1333-74-0",
     "CAS2": "544-76-3",
     "Name1": "HYDROGEN",
@@ -232,7 +232,7 @@
     "kij": 0.0
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "1333-74-0",
     "CAS2": "592-76-7",
     "Name1": "HYDROGEN",
@@ -240,7 +240,7 @@
     "kij": 0.0
   },
   {
-    "BibTeX": "Ghosh-2003",
+    "BibTeX": "Ghosh-FPE-2003",
     "CAS1": "1333-74-0",
     "CAS2": "111-66-0",
     "Name1": "HYDROGEN",
@@ -248,7 +248,7 @@
     "kij": 0.0
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "67-56-1",
     "CAS2": "110-82-7",
     "Name1": "METHANOL",
@@ -256,7 +256,7 @@
     "kij": 0.051
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "67-56-1",
     "CAS2": "111-87-5",
     "Name1": "METHANOL",
@@ -264,7 +264,7 @@
     "kij": 0.020
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "64-17-5",
     "CAS2": "106-97-8",
     "Name1": "ETHANOL",
@@ -272,7 +272,7 @@
     "kij": 0.028
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "71-23-8",
     "CAS2": "71-43-2",
     "Name1": "1-PROPANOL",
@@ -280,7 +280,7 @@
     "kij": 0.020
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "71-23-8",
     "CAS2": "100-41-4",
     "Name1": "1-PROPANOL",
@@ -288,7 +288,7 @@
     "kij": 0.023
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "67-63-0",
     "CAS2": "71-43-2",
     "Name1": "2-PROPANOL",
@@ -296,7 +296,7 @@
     "kij": 0.021
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "71-36-3",
     "CAS2": "106-97-8",
     "Name1": "1-BUTANOL",
@@ -304,7 +304,7 @@
     "kij": 0.015
   },
   {
-    "BibTeX": "Gross-2002",
+    "BibTeX": "Gross-IECR-2002",
     "CAS1": "71-41-0",
     "CAS2": "71-43-2",
     "Name1": "1-PENTANOL",
@@ -312,7 +312,7 @@
     "kij": 0.0135
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14265-44-2",
     "Name1": "WATER",
@@ -320,7 +320,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14066-19-4",
     "Name1": "WATER",
@@ -328,7 +328,7 @@
     "kij": 0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "3812-32-6",
     "Name1": "WATER",
@@ -336,7 +336,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14383-50-7",
     "Name1": "WATER",
@@ -344,7 +344,7 @@
     "kij": 0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14808-79-8",
     "Name1": "WATER",
@@ -352,7 +352,7 @@
     "kij": 0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "23713-49-7",
     "Name1": "WATER",
@@ -360,7 +360,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "15158-11-9",
     "Name1": "WATER",
@@ -368,7 +368,7 @@
     "kij": 0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14127-61-8",
     "Name1": "WATER",
@@ -376,7 +376,7 @@
     "kij": 0.0041
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "22537-22-0",
     "Name1": "WATER",
@@ -384,7 +384,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "71-50-1",
     "Name1": "WATER",
@@ -392,7 +392,7 @@
     "kij": -0.23
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "71-47-6",
     "Name1": "WATER",
@@ -400,7 +400,7 @@
     "kij": -0.23
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14066-20-7",
     "Name1": "WATER",
@@ -408,7 +408,7 @@
     "kij": 0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "71-52-3",
     "Name1": "WATER",
@@ -416,7 +416,7 @@
     "kij": 0.00
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14797-73-0",
     "Name1": "WATER",
@@ -424,7 +424,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14280-30-9",
     "Name1": "WATER",
@@ -432,7 +432,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14797-55-8",
     "Name1": "WATER",
@@ -440,7 +440,7 @@
     "kij": 0.098
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "20461-54-5",
     "Name1": "WATER",
@@ -448,7 +448,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "24959-67-9",
     "Name1": "WATER",
@@ -456,7 +456,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "16887-00-6",
     "Name1": "WATER",
@@ -464,7 +464,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "16984-48-8",
     "Name1": "WATER",
@@ -472,7 +472,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "14798-03-9",
     "Name1": "WATER",
@@ -480,7 +480,7 @@
     "kij": 0.064
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "18459-37-5",
     "Name1": "WATER",
@@ -488,7 +488,7 @@
     "kij": 0.081
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "24203-36-9",
     "Name1": "WATER",
@@ -497,7 +497,7 @@
     "kijT": -0.004012
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "17341-25-2",
     "Name1": "WATER",
@@ -506,7 +506,7 @@
     "kijT": -0.007981
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "17341-24-1",
     "Name1": "WATER",
@@ -514,7 +514,7 @@
     "kij": -0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "7732-18-5",
     "CAS2": "13968-08-6",
     "Name1": "WATER",
@@ -522,7 +522,7 @@
     "kij": 0.25
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "13968-08-6",
     "CAS2": "16887-00-6",
     "Name1": "H3O+",
@@ -530,7 +530,7 @@
     "kij": 0.654
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "13968-08-6",
     "CAS2": "24959-67-9",
     "Name1": "H3O+",
@@ -538,7 +538,7 @@
     "kij": 0.645
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "13968-08-6",
     "CAS2": "20461-54-5",
     "Name1": "H3O+",
@@ -546,7 +546,7 @@
     "kij": 0.497
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "13968-08-6",
     "CAS2": "14797-73-0",
     "Name1": "H3O+",
@@ -554,7 +554,7 @@
     "kij": 0.861
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "16887-00-6",
     "Name1": "Li+",
@@ -562,7 +562,7 @@
     "kij": 0.669
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "24959-67-9",
     "Name1": "Li+",
@@ -570,7 +570,7 @@
     "kij": 0.591
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "20461-54-5",
     "Name1": "Li+",
@@ -578,7 +578,7 @@
     "kij": 0.002
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "14797-73-0",
     "Name1": "Li+",
@@ -586,7 +586,7 @@
     "kij": 0.406
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "14797-55-8",
     "Name1": "Li+",
@@ -594,7 +594,7 @@
     "kij": 0.364
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "71-50-1",
     "Name1": "Li+",
@@ -602,7 +602,7 @@
     "kij": -0.998
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "14280-30-9",
     "Name1": "Li+",
@@ -610,7 +610,7 @@
     "kij": -0.566
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-24-1",
     "CAS2": "14808-79-8",
     "Name1": "Li+",
@@ -618,7 +618,7 @@
     "kij": -0.952
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "16984-48-8",
     "Name1": "Na+",
@@ -626,7 +626,7 @@
     "kij": 0.665
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "16887-00-6",
     "Name1": "Na+",
@@ -634,7 +634,7 @@
     "kij": 0.317
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "24959-67-9",
     "Name1": "Na+",
@@ -642,7 +642,7 @@
     "kij": 0.290
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "20461-54-5",
     "Name1": "Na+",
@@ -650,7 +650,7 @@
     "kij": 0.018
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14797-73-0",
     "Name1": "Na+",
@@ -658,7 +658,7 @@
     "kij": -0.118
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14797-55-8",
     "Name1": "Na+",
@@ -666,7 +666,7 @@
     "kij": -0.300
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14066-20-7",
     "Name1": "Na+",
@@ -674,7 +674,7 @@
     "kij": -0.071
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14066-19-4",
     "Name1": "Na+",
@@ -682,7 +682,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14265-44-2",
     "Name1": "Na+",
@@ -690,7 +690,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "71-50-1",
     "Name1": "Na+",
@@ -698,7 +698,7 @@
     "kij": 0.246
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "71-47-6",
     "Name1": "Na+",
@@ -706,7 +706,7 @@
     "kij": -0.370
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14280-30-9",
     "Name1": "Na+",
@@ -714,7 +714,7 @@
     "kij": 0.649
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14808-79-8",
     "Name1": "Na+",
@@ -722,7 +722,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "3812-32-6",
     "Name1": "Na+",
@@ -730,7 +730,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "71-52-3",
     "Name1": "Na+",
@@ -738,7 +738,7 @@
     "kij": -0.514
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "17341-25-2",
     "CAS2": "14383-50-7",
     "Name1": "Na+",
@@ -746,7 +746,7 @@
     "kij": 0.184
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "16984-48-8",
     "Name1": "K+",
@@ -754,7 +754,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "16887-00-6",
     "Name1": "K+",
@@ -762,7 +762,7 @@
     "kij": 0.064
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "24959-67-9",
     "Name1": "K+",
@@ -770,7 +770,7 @@
     "kij": -0.102
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "20461-54-5",
     "Name1": "K+",
@@ -778,7 +778,7 @@
     "kij": -0.312
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "14797-55-8",
     "Name1": "K+",
@@ -786,7 +786,7 @@
     "kij": -0.585
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "14066-20-7",
     "Name1": "K+",
@@ -794,7 +794,7 @@
     "kij": 0.018
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "14066-19-4",
     "Name1": "K+",
@@ -802,7 +802,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "14265-44-2",
     "Name1": "K+",
@@ -810,7 +810,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "71-50-1",
     "Name1": "K+",
@@ -818,7 +818,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "71-47-6",
     "Name1": "K+",
@@ -826,7 +826,7 @@
     "kij": 0.340
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "14280-30-9",
     "Name1": "K+",
@@ -834,7 +834,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "14808-79-8",
     "Name1": "K+",
@@ -842,7 +842,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "3812-32-6",
     "Name1": "K+",
@@ -850,7 +850,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "24203-36-9",
     "CAS2": "71-52-3",
     "Name1": "K+",
@@ -858,7 +858,7 @@
     "kij": -0.476
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "16984-48-8",
     "Name1": "Cs+",
@@ -866,7 +866,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "16887-00-6",
     "Name1": "Cs+",
@@ -874,7 +874,7 @@
     "kij": -0.417
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "24959-67-9",
     "Name1": "Cs+",
@@ -882,7 +882,7 @@
     "kij": -0.670
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "20461-54-5",
     "Name1": "Cs+",
@@ -890,7 +890,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "14797-55-8",
     "Name1": "Cs+",
@@ -898,7 +898,7 @@
     "kij": -0.855
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "71-50-1",
     "Name1": "Cs+",
@@ -906,7 +906,7 @@
     "kij": 0.785
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "14280-30-9",
     "Name1": "Cs+",
@@ -914,7 +914,7 @@
     "kij": 0.564
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "18459-37-5",
     "CAS2": "14808-79-8",
     "Name1": "Cs+",
@@ -922,7 +922,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "16887-00-6",
     "Name1": "NH4+",
@@ -930,7 +930,7 @@
     "kij": -0.566
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "24959-67-9",
     "Name1": "NH4++",
@@ -938,7 +938,7 @@
     "kij": -0.639
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "20461-54-5",
     "Name1": "NH4+",
@@ -946,7 +946,7 @@
     "kij": -0.787
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "14797-73-0",
     "Name1": "NH4+",
@@ -954,7 +954,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "14797-55-8",
     "Name1": "NH4+",
@@ -962,7 +962,7 @@
     "kij": -0.419
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "14066-20-7",
     "Name1": "NH4+",
@@ -970,7 +970,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "14066-19-4",
     "Name1": "NH4+",
@@ -978,7 +978,7 @@
     "kij": -0.556
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14798-03-9",
     "CAS2": "14808-79-8",
     "Name1": "NH4+",
@@ -986,7 +986,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "22537-22-0",
     "CAS2": "16887-00-6",
     "Name1": "Mg2+",
@@ -994,7 +994,7 @@
     "kij": 0.817
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "22537-22-0",
     "CAS2": "24959-67-9",
     "Name1": "Mg2++",
@@ -1002,7 +1002,7 @@
     "kij": 0.752
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "22537-22-0",
     "CAS2": "20461-54-5",
     "Name1": "Mg2+",
@@ -1010,7 +1010,7 @@
     "kij": 0.317
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "22537-22-0",
     "CAS2": "14797-73-0",
     "Name1": "Mg2+",
@@ -1018,7 +1018,7 @@
     "kij": 0.122
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "22537-22-0",
     "CAS2": "14797-55-8",
     "Name1": "Mg2+",
@@ -1026,7 +1026,7 @@
     "kij": 0.285
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "22537-22-0",
     "CAS2": "14808-79-8",
     "Name1": "Mg2+",
@@ -1034,7 +1034,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14127-61-8",
     "CAS2": "16887-00-6",
     "Name1": "Ca2+",
@@ -1042,7 +1042,7 @@
     "kij": 1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14127-61-8",
     "CAS2": "24959-67-9",
     "Name1": "Ca2+",
@@ -1050,7 +1050,7 @@
     "kij": 0.993
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14127-61-8",
     "CAS2": "20461-54-5",
     "Name1": "Ca2+",
@@ -1058,7 +1058,7 @@
     "kij": 0.229
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14127-61-8",
     "CAS2": "14797-73-0",
     "Name1": "Ca2+",
@@ -1066,7 +1066,7 @@
     "kij": 0.674
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14127-61-8",
     "CAS2": "14797-55-8",
     "Name1": "Ca2+",
@@ -1074,7 +1074,7 @@
     "kij": -0.101
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "14127-61-8",
     "CAS2": "14808-79-8",
     "Name1": "Ca2+",
@@ -1082,7 +1082,7 @@
     "kij": -0.908
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "15158-11-9",
     "CAS2": "16887-00-6",
     "Name1": "Cu2+",
@@ -1090,7 +1090,7 @@
     "kij": -0.216
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "15158-11-9",
     "CAS2": "14808-79-8",
     "Name1": "Cu2+",
@@ -1098,7 +1098,7 @@
     "kij": -1.000
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "23713-49-7",
     "CAS2": "16887-00-6",
     "Name1": "Zn2+",
@@ -1106,7 +1106,7 @@
     "kij": -0.705
   },
   {
-    "BibTeX": "Held-2014",
+    "BibTeX": "Held-CERD-2014",
     "CAS1": "23713-49-7",
     "CAS2": "14808-79-8",
     "Name1": "Zn2+",
@@ -1114,7 +1114,7 @@
     "kij": -0.446
   },
   {
-    "BibTeX": "Gross-2001",
+    "BibTeX": "Gross-IECR-2001",
     "CAS1": "74-82-8",
     "CAS2": "109-66-0",
     "Name1": "METHANE",

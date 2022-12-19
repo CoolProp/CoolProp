@@ -31,7 +31,8 @@ struct saturation_D_pure_options
       use_logdelta;    ///< True to use partials with respect to log(delta) rather than delta
     CoolPropDbl omega, rhoL, rhoV, pL, pV;
     int imposed_rho;
-    saturation_D_pure_options() : use_guesses(false), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), imposed_rho(0) {
+    int max_iterations;
+    saturation_D_pure_options() : use_guesses(false), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), imposed_rho(0), max_iterations(200) {
         use_logdelta = true;
         omega = 1.0;
     }  // Defaults
@@ -71,8 +72,6 @@ void saturation_T_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturati
 void saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_Akasaka_options& options);
 void saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, saturation_T_pure_Akasaka_options& options);
 
-/**
-    */
 struct saturation_PHSU_pure_options
 {
     enum specified_variable_options
@@ -97,9 +96,7 @@ struct saturation_PHSU_pure_options
         omega = 1.0;
     }
 };
-/**
 
-    */
 void saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl specified_value, saturation_PHSU_pure_options& options);
 
 /* \brief This is a backup saturation_p solver for the case where the Newton solver cannot approach closely enough the solution
