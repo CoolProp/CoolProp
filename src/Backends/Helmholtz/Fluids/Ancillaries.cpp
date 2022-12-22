@@ -102,7 +102,10 @@ double SaturationAncillaryFunction::invert(double value,
         // because then you get (negative number)^(double) which is undefined.
         return Brent(resid, min_bound, max_bound, DBL_EPSILON, 1e-10, options.max_iter);
     } catch (...) {
-        return ExtrapolatingSecant(resid,max_bound, -0.01, 1e-12, options.max_iter, options.best_guess);
+        double T = ExtrapolatingSecant(resid,max_bound, -0.01, 1e-12, options.max_iter, options.best_guess);
+        T = std::max(min_bound, T);
+        T = std::min(max_bound, T);
+        return T;
     }
 }
 
