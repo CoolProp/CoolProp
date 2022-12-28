@@ -261,12 +261,20 @@ void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
         double rhomolar = HEOS._rhomolar;
         double Q = HEOS._Q;
         DQ_flash_residual resid(HEOS, rhomolar, Q);
-        Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
-        HEOS._p = HEOS.SatV->p();
-        HEOS._T = HEOS.SatV->T();
-        HEOS._rhomolar = rhomolar;
-        HEOS._Q = Q;
-        HEOS._phase = iphase_twophase;
+        try {
+            Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+            HEOS._p = HEOS.SatV->p();
+            HEOS._T = HEOS.SatV->T();
+            HEOS._rhomolar = rhomolar;
+            HEOS._Q = Q;
+            HEOS._phase = iphase_twophase;
+        } catch (ValueError e) {
+            if (rhomolar >= HEOS.rhomolar_critical()){
+                throw CoolProp::OutOfRangeError(format("DQ inputs are not defined for density above critical density (%g)", HEOS.rhomolar_critical()).c_str());
+            } else {
+                throw;
+            }
+        }
     } else {
         throw NotImplementedError("DQ_flash not ready for mixtures");
     }
