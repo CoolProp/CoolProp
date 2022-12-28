@@ -1132,54 +1132,55 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                 throw ValueError(format("Other input [%d:%g] is solid", other, value));
             }
 
-            // Check if other is above the saturation value.
-            SaturationSolvers::saturation_D_pure_options optionsD;
-            optionsD.omega = 1;
-            optionsD.use_logdelta = false;
-            optionsD.max_iterations = 200;
-            for (int i_try = 0; i_try < 7; i_try++)
-            {
-                try
+            try{
+                // Check if other is above the saturation value.
+                SaturationSolvers::saturation_D_pure_options optionsD;
+                optionsD.omega = 1;
+                optionsD.use_logdelta = false;
+                optionsD.max_iterations = 200;
+                for (int i_try = 0; i_try < 7; i_try++)
                 {
-                    if (HEOS._rhomolar > HEOS._crit.rhomolar)
+                    try
                     {
-                        optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
-                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
-                        // SatL and SatV have the saturation values
-                        Sat = HEOS.SatL;
+                        if (HEOS._rhomolar > HEOS._crit.rhomolar)
+                        {
+                            optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
+                            SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
+                            // SatL and SatV have the saturation values
+                            Sat = HEOS.SatL;
+                        }
+                        else
+                        {
+                            optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
+                            SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
+                            // SatL and SatV have the saturation values
+                            Sat = HEOS.SatV;
+                        }
+                        break; // good solve
                     }
-                    else
+                    catch(CoolPropBaseError)
                     {
-                        optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOV;
-                        SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
-                        // SatL and SatV have the saturation values
-                        Sat = HEOS.SatV;
+                        optionsD.omega /= 2;
+                        optionsD.max_iterations *= 2;
+                        if (i_try == 5){optionsD.best_guess = true;}
+                        if (i_try >= 6){throw;}
                     }
-                    break; // good solve
                 }
-                catch(CoolPropBaseError)
-                {
-                    optionsD.omega /= 2;
-                    optionsD.max_iterations *= 2;
-                    if (i_try == 5){optionsD.best_guess = true;}
-                    if (i_try >= 6){throw;}
-                }
-            }
 
-            // If it is above, it is not two-phase and either liquid, vapor or supercritical
-            if (value > Sat->keyed_output(other)) {
-                solver_resid resid(&HEOS, HEOS._rhomolar, value, other, Sat->keyed_output(iT), HEOS.Tmax() * 1.5);
-                try {
-                    HEOS._T = Halley(resid, 0.5 * (Sat->keyed_output(iT) + HEOS.Tmax() * 1.5), 1e-10, 100);
-                } catch (...) {
-                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
-                }
-                HEOS._Q = 10000;
-                HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
-                HEOS.unspecify_phase();
-                // Update the phase flag
-                HEOS.recalculate_singlephase_phase();
-            } else {
+                // If it is above, it is not two-phase and either liquid, vapor or supercritical
+                if (value > Sat->keyed_output(other)) {
+                    solver_resid resid(&HEOS, HEOS._rhomolar, value, other, Sat->keyed_output(iT), HEOS.Tmax() * 1.5);
+                    try {
+                        HEOS._T = Halley(resid, 0.5 * (Sat->keyed_output(iT) + HEOS.Tmax() * 1.5), 1e-10, 100);
+                    } catch (...) {
+                        HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
+                    }
+                    HEOS._Q = 10000;
+                    HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                    HEOS.unspecify_phase();
+                    // Update the phase flag
+                    HEOS.recalculate_singlephase_phase();
+                } else {
                 // Now we know that temperature is between Tsat(D) +- tolerance and the minimum temperature for the fluid
                 if (other == iP) {
                     // Iterate to find T(p), its just a saturation call
@@ -1204,6 +1205,17 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     HSU_D_flash_twophase(HEOS, HEOS._rhomolar, other, value);
                     HEOS._phase = iphase_twophase;
                 }
+            }
+            }catch(CoolPropBaseError){
+                // Working through the saturation process failed.
+                // Try just using a Brent solver on the entire range.
+                solver_resid resid(&HEOS, HEOS._rhomolar, value, other, HEOS.Tmin(), HEOS.Tmax() * 1.5);
+                HEOS._T = Brent(resid, HEOS.Tmin(), HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 150);
+                HEOS._Q = 10000;
+                HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
+                HEOS.unspecify_phase();
+                // Update the phase flag
+                HEOS._phase = iphase_unknown;
             }
         }
         // Check if vapor/solid region below triple point vapor density
