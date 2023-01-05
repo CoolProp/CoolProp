@@ -266,7 +266,7 @@ class SecCoolSolutionData(DigitalData):
             for j in range(c):
                 nu = np.NAN
                 try:
-                    nu = np.float(res[i, j])
+                    nu = np.cfloat(res[i, j])
                     if i == 0: nu *= 1e-2  # Percent to fraction
                     if j == 0: nu += 273.15  # Celsius to Kelvin
                     if not self.allowNegativeData and nu < 0:
@@ -493,7 +493,7 @@ class SecCoolIceData(SecCoolSolutionData):
             for j in range(c):
                 nu = np.NAN
                 try:
-                    nu = np.float(res[i, j])
+                    nu = np.cfloat(res[i, j])
                     if i == 0: nu *= 1e-2  # Percent to fraction
                     if not self.allowNegativeData and nu < 0:
                         nu = np.NAN  # invalid entries

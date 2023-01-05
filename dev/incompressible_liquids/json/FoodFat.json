@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 328.15,
+  "Tmax": 423.15,
+  "Tmin": 233.14999999999998,
+  "TminPsat": 423.15,
+  "conductivity": {
+    "NRMS": 5.155366557234942e-05,
+    "coeffs": [
+      [
+        0.164991559126412
+      ],
+      [
+        -0.0002955389603590379
+      ],
+      [
+        -1.7755904966064483e-07
+      ],
+      [
+        -3.888951150385847e-12
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 5.049446466330979e-08,
+    "coeffs": [
+      [
+        902.6236500000006
+      ],
+      [
+        -0.41757002443546604
+      ],
+      [
+        0.0
+      ],
+      [
+        4.337905968607301e-12
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Food Fat",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "FoodFat",
+  "reference": "2006 ASHRAE Handbook",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": [
+      -5000.0,
+      60.0,
+      -10.0
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 1.5924296666661782e-05,
+    "coeffs": [
+      [
+        2050.708424778518
+      ],
+      [
+        0.9451909516028041
+      ],
+      [
+        -0.004800714447758092
+      ],
+      [
+        3.3650758464698434e-09
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": null,
+    "coeffs": [
+      500.0,
+      -60.0,
+      10.0
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

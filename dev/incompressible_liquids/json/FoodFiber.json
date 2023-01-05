@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 328.15,
+  "Tmax": 423.15,
+  "Tmin": 233.14999999999998,
+  "TminPsat": 423.15,
+  "conductivity": {
+    "NRMS": 1.6172801873461915e-05,
+    "coeffs": [
+      [
+        0.2424601738922189
+      ],
+      [
+        0.0009011954175181464
+      ],
+      [
+        -3.1684400894165226e-06
+      ],
+      [
+        1.495024140024723e-12
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 4.127080192532525e-08,
+    "coeffs": [
+      [
+        1291.3760500000012
+      ],
+      [
+        -0.3658900064532833
+      ],
+      [
+        -1.1102230246251565e-16
+      ],
+      [
+        1.1456351986522906e-12
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Food Fiber",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "FoodFiber",
+  "reference": "2006 ASHRAE Handbook",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": [
+      -5000.0,
+      60.0,
+      -10.0
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 1.1937785105615114e-05,
+    "coeffs": [
+      [
+        1932.513794016177
+      ],
+      [
+        1.319003663616355
+      ],
+      [
+        -0.004650854207545185
+      ],
+      [
+        -6.064141138587869e-10
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": null,
+    "coeffs": [
+      500.0,
+      -60.0,
+      10.0
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}
