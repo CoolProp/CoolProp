@@ -269,7 +269,8 @@ void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS._Q = Q;
             HEOS._phase = iphase_twophase;
         } catch (ValueError e) {
-            if (rhomolar >= HEOS.rhomolar_critical() && Q > 0 && Q < 1){
+            const double eps = 1e-12; // small tolerance to allow for slop in iterative calculations
+            if (rhomolar >= HEOS.rhomolar_critical() && Q > (0 + eps) && Q < (1 - eps)){
                 throw CoolProp::OutOfRangeError(format("DQ inputs are not defined for density above critical density (%g)", HEOS.rhomolar_critical()).c_str());
             } else {
                 throw;
