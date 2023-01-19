@@ -260,22 +260,17 @@ void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
         double Tmin = HEOS.Tmin() + 0.1;
         double rhomolar = HEOS._rhomolar;
         double Q = HEOS._Q;
-        DQ_flash_residual resid(HEOS, rhomolar, Q);
-        try {
-            Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
-            HEOS._p = HEOS.SatV->p();
-            HEOS._T = HEOS.SatV->T();
-            HEOS._rhomolar = rhomolar;
-            HEOS._Q = Q;
-            HEOS._phase = iphase_twophase;
-        } catch (ValueError e) {
-            const double eps = 1e-12; // small tolerance to allow for slop in iterative calculations
-            if (rhomolar >= HEOS.rhomolar_critical() && Q > (0 + eps) && Q < (1 - eps)){
-                throw CoolProp::OutOfRangeError(format("DQ inputs are not defined for density above critical density (%g)", HEOS.rhomolar_critical()).c_str());
-            } else {
-                throw;
-            }
+        const double eps = 1e-12; // small tolerance to allow for slop in iterative calculations
+        if (rhomolar >= (HEOS.rhomolar_critical() + eps) && Q > (0 + eps)){
+            throw CoolProp::OutOfRangeError(format("DQ inputs are not defined for density above critical density (%g)", HEOS.rhomolar_critical()).c_str());
         }
+        DQ_flash_residual resid(HEOS, rhomolar, Q);
+        Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+        HEOS._p = HEOS.SatV->p();
+        HEOS._T = HEOS.SatV->T();
+        HEOS._rhomolar = rhomolar;
+        HEOS._Q = Q;
+        HEOS._phase = iphase_twophase;
     } else {
         throw NotImplementedError("DQ_flash not ready for mixtures");
     }
