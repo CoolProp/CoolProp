@@ -483,6 +483,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gas_constant(void) {
         } else {
             // mass fraction weighted average of the components
             double summer = 0;
+            verify_mole_fractions_set();
             for (unsigned int i = 0; i < components.size(); ++i) {
                 summer += mole_fractions[i] * components[i].gas_constant();
             }
@@ -492,6 +493,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_gas_constant(void) {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_molar_mass(void) {
     double summer = 0;
+    verify_mole_fractions_set();
     for (unsigned int i = 0; i < components.size(); ++i) {
         summer += mole_fractions[i] * components[i].molar_mass();
     }
@@ -660,6 +662,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void) {
     } else {
         set_warning_string("Mixture model for viscosity is highly approximate");
         CoolPropDbl summer = 0;
+        verify_mole_fractions_set();
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
@@ -893,6 +896,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void) {
     } else {
         set_warning_string("Mixture model for conductivity is highly approximate");
         CoolPropDbl summer = 0;
+        verify_mole_fractions_set();
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
             shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
@@ -925,6 +929,7 @@ void HelmholtzEOSMixtureBackend::calc_conformal_state(const std::string& referen
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Ttriple(void) {
     double summer = 0;
+    verify_mole_fractions_set();
     for (unsigned int i = 0; i < components.size(); ++i) {
         summer += mole_fractions[i] * components[i].EOS().Ttriple;
     }
@@ -932,6 +937,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Ttriple(void) {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_triple(void) {
     double summer = 0;
+    verify_mole_fractions_set();
     for (unsigned int i = 0; i < components.size(); ++i) {
         summer += mole_fractions[i] * components[i].EOS().ptriple;
     }
@@ -1116,6 +1122,7 @@ void HelmholtzEOSMixtureBackend::calc_pmin_sat(CoolPropDbl& pmin_satL, CoolPropD
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmax(void) {
     double summer = 0;
+    verify_mole_fractions_set();
     for (unsigned int i = 0; i < components.size(); ++i) {
         summer += mole_fractions[i] * components[i].EOS().limits.Tmax;
     }
@@ -1123,6 +1130,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmax(void) {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmin(void) {
     double summer = 0;
+    verify_mole_fractions_set();
     for (unsigned int i = 0; i < components.size(); ++i) {
         summer += mole_fractions[i] * components[i].EOS().limits.Tmin;
     }
@@ -1130,6 +1138,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_Tmin(void) {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax(void) {
     double summer = 0;
+    verify_mole_fractions_set();
     for (unsigned int i = 0; i < components.size(); ++i) {
         summer += mole_fractions[i] * components[i].EOS().limits.pmax;
     }
@@ -2521,6 +2530,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
     CoolPropDbl rhomolar, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 
+    verify_mole_fractions_set();
     for (std::size_t i = 0; i < components.size(); ++i) {
         CoolPropDbl Tci = components[i].EOS().reduce.T, pci = components[i].EOS().reduce.p, acentric_i = components[i].EOS().acentric;
         CoolPropDbl m_i = 0.480 + 1.574 * acentric_i - 0.176 * pow(acentric_i, 2);
@@ -2870,6 +2880,7 @@ void HelmholtzEOSMixtureBackend::calc_excess_properties(void) {
     _gibbsmolar_excess = this->gibbsmolar(), _smolar_excess = this->smolar(), _hmolar_excess = this->hmolar();
     _umolar_excess = this->umolar();
     _volumemolar_excess = 1 / this->rhomolar();
+    verify_mole_fractions_set();
     for (std::size_t i = 0; i < components.size(); ++i) {
         transient_pure_state.reset(new HelmholtzEOSBackend(components[i].name));
         transient_pure_state->update(PT_INPUTS, p(), T());
@@ -2916,6 +2927,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity(std::size_t i) {
     return MixtureDerivatives::fugacity_i(*this, i, xN_flag);
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_chemical_potential(std::size_t i) {
+    verify_mole_fractions_set();
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
     double Tci = get_fluid_constant(i, iT_critical);
     double rhoci = get_fluid_constant(i, irhomolar_critical);

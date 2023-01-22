@@ -54,6 +54,13 @@ class HelmholtzEOSMixtureBackend : public AbstractState
             linked_states.push_back(transient_pure_state);
         }
     };
+    // Verify that the mole fractions are set. Throw an exception if they are not.
+    virtual bool verify_mole_fractions_set(){
+        if (mole_fractions.size() != components.size()){
+            throw CoolProp::ValueError("mole fractions are not set for all components");
+        }
+        return true;
+    }
 
     std::vector<CoolPropFluid> components;      ///< The components that are in use
     bool is_pure_or_pseudopure;                 ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
