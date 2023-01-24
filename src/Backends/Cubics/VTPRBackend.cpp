@@ -24,7 +24,6 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
     // If pure, set the mole fractions to be unity
     if (is_pure_or_pseudopure) {
         mole_fractions = std::vector<CoolPropDbl>(1, 1.0);
-        mole_fractions_double = std::vector<double>(1, 1.0);
     }
 
     // Now set the reducing function for the mixture
