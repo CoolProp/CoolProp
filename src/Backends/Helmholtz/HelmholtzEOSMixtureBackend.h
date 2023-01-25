@@ -38,6 +38,9 @@ class MoleFractions{
     std::size_t size() const {
         return mole_fractions.size();
     }
+    void clear() {
+        mole_fractions.clear();
+    }
     // operator overloads
     template<typename T>
     MoleFractions& operator=(const std::vector<T>& values){
