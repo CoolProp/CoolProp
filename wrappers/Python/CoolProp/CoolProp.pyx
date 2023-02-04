@@ -1118,6 +1118,7 @@ cdef class State:
         'MM': 'kg/kmol'
         }
         s = 'phase = '+self.phase.decode('ascii')+'\n'
+        s += 'Fluid = '+self.Fluid.decode('ascii')+'\n'
         for k in ['T','p','rho','Q','h','u','s','visc','k','cp','cp0','cv','dpdT','Prandtl','superheat','subcooling','MM']:
             if k in units:
                 s += k + ' = '+str(getattr(self,k))+' '+units[k]+'\n'
