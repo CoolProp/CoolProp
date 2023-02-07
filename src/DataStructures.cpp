@@ -4,6 +4,7 @@
 #include "Exceptions.h"
 #include "CoolPropTools.h"
 #include "CoolProp.h"
+#include <memory>
 
 namespace CoolProp {
 
@@ -153,9 +154,16 @@ class ParameterInformation
     }
 };
 
-static ParameterInformation parameter_information;
+std::unique_ptr<ParameterInformation> parameter_information_p;
+ParameterInformation& get_parameter_information() {
+    if (!parameter_information_p) {
+        parameter_information_p = std::make_unique<ParameterInformation>();
+    }
+    return *parameter_information_p;
+}
 
 bool is_trivial_parameter(int key) {
+    auto& parameter_information = get_parameter_information();
     // Try to find it
     std::map<int, bool>::const_iterator it = parameter_information.trivial_map.find(key);
     // If equal to end, not found
@@ -169,7 +177,7 @@ bool is_trivial_parameter(int key) {
 
 std::string get_parameter_information(int key, const std::string& info) {
     std::map<int, std::string>* M;
-
+    auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
     if (!info.compare("IO")) {
         M = &(parameter_information.IO_map);
@@ -195,6 +203,7 @@ std::string get_parameter_information(int key, const std::string& info) {
 
 /// Return a list of parameters
 std::string get_csv_parameter_list() {
+    auto& parameter_information = get_parameter_information();
     std::vector<std::string> strings;
     for (std::map<std::string, int>::const_iterator it = parameter_information.index_map.begin(); it != parameter_information.index_map.end(); ++it) {
         strings.push_back(it->first);
@@ -202,6 +211,7 @@ std::string get_csv_parameter_list() {
     return strjoin(strings, ",");
 }
 bool is_valid_parameter(const std::string& param_name, parameters& iOutput) {
+    auto& parameter_information = get_parameter_information();
     // Try to find it
     std::map<std::string, int>::const_iterator it = parameter_information.index_map.find(param_name);
     // If equal to end, not found
@@ -379,12 +389,21 @@ class PhaseInformation
         }
     }
 };
-static PhaseInformation phase_information;
+
+std::unique_ptr<PhaseInformation> phase_information_p;
+PhaseInformation& get_phase_information() {
+    if (!phase_information_p) {
+        phase_information_p = std::make_unique<PhaseInformation>();
+    }
+    return *phase_information_p;
+}
 
 const std::string& get_phase_short_desc(phases phase) {
+    auto& phase_information = get_phase_information();
     return phase_information.short_desc_map[phase];
 }
 bool is_valid_phase(const std::string& phase_name, phases& iOutput) {
+    auto& phase_information = get_phase_information();
     // Try to find it
     std::map<std::string, phases>::const_iterator it = phase_information.index_map.find(phase_name);
     // If equal to end, not found
@@ -437,13 +456,22 @@ public:
         }
     }
 };
-static SchemeInformation scheme_information;
+
+std::unique_ptr<SchemeInformation> scheme_information_p;
+SchemeInformation& get_scheme_information() {
+    if (!scheme_information_p) {
+        scheme_information_p = std::make_unique<SchemeInformation>();
+    }
+    return *scheme_information_p;
+}
 
 const std::string& get_scheme_short_desc(schemes scheme) {
+    auto& scheme_information = get_scheme_information();
     return scheme_information.short_desc_map[scheme];
 }
 
 bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput) {
+    auto& scheme_information = get_scheme_information();
     // Try to find it
     std::map<std::string, schemes>::const_iterator it = scheme_information.index_map.find(scheme_name);
     // If equal to end, not found
@@ -541,9 +569,16 @@ class InputPairInformation
     }
 };
 
-static InputPairInformation input_pair_information;
+std::unique_ptr<InputPairInformation> input_pair_information_p;
+InputPairInformation& get_input_pair_information() {
+    if (!input_pair_information_p) {
+        input_pair_information_p = std::make_unique<InputPairInformation>();
+    }
+    return *input_pair_information_p;
+}
 
 input_pairs get_input_pair_index(const std::string& input_pair_name) {
+    auto& input_pair_information = get_input_pair_information();
     std::map<std::string, input_pairs>::iterator it = input_pair_information.index_map.find(input_pair_name);
     if (it != input_pair_information.index_map.end()) {
         return it->second;
@@ -553,9 +588,11 @@ input_pairs get_input_pair_index(const std::string& input_pair_name) {
 }
 
 const std::string& get_input_pair_short_desc(input_pairs pair) {
+    auto& input_pair_information = get_input_pair_information();
     return input_pair_information.short_desc_map[pair];
 }
 const std::string& get_input_pair_long_desc(input_pairs pair) {
+    auto& input_pair_information = get_input_pair_information();
     return input_pair_information.long_desc_map[pair];
 }
 void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
@@ -763,10 +800,17 @@ class BackendInformation
     }
 };
 
-static BackendInformation backend_information;
+std::unique_ptr<BackendInformation> backend_information_p;
+BackendInformation& get_backend_information() {
+    if (!backend_information_p) {
+        backend_information_p = std::make_unique<BackendInformation>();
+    }
+    return *backend_information_p;
+}
 
 /// Convert a string into the enum values
 void extract_backend_families(std::string backend_string, backend_families& f1, backend_families& f2) {
+    auto& backend_information = get_backend_information();
     f1 = INVALID_BACKEND_FAMILY;
     f2 = INVALID_BACKEND_FAMILY;
     std::size_t i = backend_string.find("&");
@@ -783,6 +827,7 @@ void extract_backend_families(std::string backend_string, backend_families& f1, 
 }
 
 void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2) {
+    auto& backend_information = get_backend_information();
     backend_families f2_enum;
     extract_backend_families(backend_string, f1, f2_enum);
     std::map<backend_families, std::string>::const_iterator it;
@@ -794,6 +839,7 @@ void extract_backend_families_string(std::string backend_string, backend_familie
 }
 
 std::string get_backend_string(backends backend) {
+    auto& backend_information = get_backend_information();
     std::map<backends, std::string>::const_iterator it;
     it = backend_information.backend_name_map.find(backend);
     if (it != backend_information.backend_name_map.end())
