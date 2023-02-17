@@ -49,7 +49,7 @@ See more examples of PropsSI usage at :ref:`High-Level interface <high_level_api
 Help
 ----
 
-* (**General Discussion**) Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+* (**General Discussion**) Create a new discussion at `Github CoolProp Discussions <https://github.com/CoolProp/CoolProp/discussions>`_
 * (**Bugs, feature requests**) File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
 * `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
 * `Docs for development version of CoolProp <http://www.coolprop.org/dev/>`_
