@@ -118,15 +118,13 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         linked_states.push_back(SatV);
     }
 }
-void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) {
-    if (mole_fractions.size() != N) {
-        throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]", mole_fractions.size(), N));
+void HelmholtzEOSMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl>& mf) {
+    if (mf.size() != N) {
+        throw ValueError(format("size of mole fraction vector [%d] does not equal that of component vector [%d]", mf.size(), N));
     }
     // Copy values without reallocating memory
-    this->mole_fractions = mole_fractions;  // Most effective copy
+    this->mole_fractions = mf;              // Most effective copy
     this->resize(N);                        // No reallocation of this->mole_fractions happens
-    // Also store the mole fractions as doubles
-    this->mole_fractions_double = std::vector<double>(mole_fractions.begin(), mole_fractions.end());
     clear_comp_change();
 };
 void HelmholtzEOSMixtureBackend::sync_linked_states(const HelmholtzEOSMixtureBackend* const source) {
@@ -167,7 +165,6 @@ void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDb
 };
 void HelmholtzEOSMixtureBackend::resize(std::size_t N) {
     this->mole_fractions.resize(N);
-    this->mole_fractions_double.resize(N);
     this->K.resize(N);
     this->lnK.resize(N);
     for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
@@ -2410,11 +2407,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_global(CoolPropDbl T, Cool
             // Vapor root found, return it
             return rho_vap;
         } else {
-            throw CoolProp::ValueError(format("No density solutions for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g").c_str()));
+            throw CoolProp::ValueError(format("No density solutions for T=%g,p=%g,z=%s", T, p, vec_to_string(static_cast<std::vector<double>>(mole_fractions), "%0.12g").c_str()));
         }
     } else {
         throw CoolProp::ValueError(
-          format("One stationary point (not good) for T=%g,p=%g,z=%s", T, p, vec_to_string(mole_fractions, "%0.12g").c_str()));
+          format("One stationary point (not good) for T=%g,p=%g,z=%s", T, p, vec_to_string(static_cast<std::vector<double>>(mole_fractions), "%0.12g").c_str()));
     }
 };
 
