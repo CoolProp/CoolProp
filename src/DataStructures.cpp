@@ -155,7 +155,7 @@ class ParameterInformation
 };
 
 std::unique_ptr<ParameterInformation> parameter_information_p;
-ParameterInformation& get_parameter_information() {
+const ParameterInformation& get_parameter_information() {
     if (!parameter_information_p) {
         parameter_information_p = std::make_unique<ParameterInformation>();
     }
@@ -164,19 +164,15 @@ ParameterInformation& get_parameter_information() {
 
 bool is_trivial_parameter(int key) {
     auto& parameter_information = get_parameter_information();
-    // Try to find it
-    std::map<int, bool>::const_iterator it = parameter_information.trivial_map.find(key);
-    // If equal to end, not found
+    auto it = parameter_information.trivial_map.find(key);
     if (it != parameter_information.trivial_map.end()) {
-        // Found it, return it
         return it->second;
-    } else {
-        throw ValueError(format("Unable to match the key [%d: %s] in is_trivial_parameter", key, get_parameter_information(key, "short").c_str()));
     }
+    throw ValueError(format("Unable to match the key [%d: %s] in is_trivial_parameter", key, get_parameter_information(key, "short").c_str()));
 }
 
 std::string get_parameter_information(int key, const std::string& info) {
-    std::map<int, std::string>* M;
+    const std::map<int, std::string>* M;
     auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
     if (!info.compare("IO")) {
@@ -187,18 +183,15 @@ std::string get_parameter_information(int key, const std::string& info) {
         M = &(parameter_information.description_map);
     } else if (!info.compare("units")) {
         M = &(parameter_information.units_map);
-    } else
-        throw ValueError(format("Bad info string [%s] to get_parameter_information", info.c_str()));
-
-    // Try to find it
-    std::map<int, std::string>::const_iterator it = M->find(key);
-    // If equal to end, not found
-    if (it != M->end()) {
-        // Found it, return it
-        return it->second;
     } else {
-        throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, info.c_str()));
+        throw ValueError(format("Bad info string [%s] to get_parameter_information", info.c_str()));
     }
+
+    auto it = M->find(key);
+    if (it != M->end()) {
+        return it->second;
+    }
+    throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, info.c_str()));
 }
 
 /// Return a list of parameters
@@ -391,7 +384,7 @@ class PhaseInformation
 };
 
 std::unique_ptr<PhaseInformation> phase_information_p;
-PhaseInformation& get_phase_information() {
+const PhaseInformation& get_phase_information() {
     if (!phase_information_p) {
         phase_information_p = std::make_unique<PhaseInformation>();
     }
@@ -399,8 +392,12 @@ PhaseInformation& get_phase_information() {
 }
 
 const std::string& get_phase_short_desc(phases phase) {
-    auto& phase_information = get_phase_information();
-    return phase_information.short_desc_map[phase];
+    auto& coolprop_information = get_phase_information();
+    auto iter = coolprop_information.short_desc_map.find(phase);
+    if (iter != coolprop_information.short_desc_map.end()) {
+        return iter->second;
+    }
+    throw ValueError("Cannot find the short phase description.");
 }
 bool is_valid_phase(const std::string& phase_name, phases& iOutput) {
     auto& phase_information = get_phase_information();
@@ -458,7 +455,7 @@ public:
 };
 
 std::unique_ptr<SchemeInformation> scheme_information_p;
-SchemeInformation& get_scheme_information() {
+const SchemeInformation& get_scheme_information() {
     if (!scheme_information_p) {
         scheme_information_p = std::make_unique<SchemeInformation>();
     }
@@ -466,14 +463,17 @@ SchemeInformation& get_scheme_information() {
 }
 
 const std::string& get_scheme_short_desc(schemes scheme) {
-    auto& scheme_information = get_scheme_information();
-    return scheme_information.short_desc_map[scheme];
+    auto& coolprop_information = get_scheme_information();
+    auto it = coolprop_information.short_desc_map.find(scheme);
+    if (it != coolprop_information.short_desc_map.end()) {
+        return it->second;
+    }
+    throw ValueError("Cannot find the short scheme description.");
 }
 
 bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput) {
     auto& scheme_information = get_scheme_information();
-    // Try to find it
-    std::map<std::string, schemes>::const_iterator it = scheme_information.index_map.find(scheme_name);
+    auto it = scheme_information.index_map.find(scheme_name);
     // If equal to end, not found
     if (it != scheme_information.index_map.end()){
         // Found, return it
@@ -570,7 +570,7 @@ class InputPairInformation
 };
 
 std::unique_ptr<InputPairInformation> input_pair_information_p;
-InputPairInformation& get_input_pair_information() {
+const InputPairInformation& get_input_pair_information() {
     if (!input_pair_information_p) {
         input_pair_information_p = std::make_unique<InputPairInformation>();
     }
@@ -578,22 +578,29 @@ InputPairInformation& get_input_pair_information() {
 }
 
 input_pairs get_input_pair_index(const std::string& input_pair_name) {
-    auto& input_pair_information = get_input_pair_information();
-    std::map<std::string, input_pairs>::iterator it = input_pair_information.index_map.find(input_pair_name);
-    if (it != input_pair_information.index_map.end()) {
+    auto& coolprop_information = get_input_pair_information();
+    auto it = coolprop_information.index_map.find(input_pair_name);
+    if (it != coolprop_information.index_map.end()) {
         return it->second;
-    } else {
-        throw ValueError(format("Your input name [%s] is not valid in get_input_pair_index (names are case sensitive)", input_pair_name.c_str()));
     }
+    throw ValueError(format("Your input name [%s] is not valid in get_input_pair_index (names are case sensitive)", input_pair_name.c_str()));
 }
 
 const std::string& get_input_pair_short_desc(input_pairs pair) {
-    auto& input_pair_information = get_input_pair_information();
-    return input_pair_information.short_desc_map[pair];
+    auto& coolprop_information = get_input_pair_information();
+    auto it = coolprop_information.short_desc_map.find(pair);
+    if (it != coolprop_information.short_desc_map.end()) {
+        return it->second;
+    }
+    throw ValueError("Cannot find the short input pair description.");
 }
 const std::string& get_input_pair_long_desc(input_pairs pair) {
-    auto& input_pair_information = get_input_pair_information();
-    return input_pair_information.long_desc_map[pair];
+    auto& coolprop_information = get_input_pair_information();
+    auto it = coolprop_information.long_desc_map.find(pair);
+    if (it != coolprop_information.long_desc_map.end()) {
+        return it->second;
+    }
+    throw ValueError("Cannot find the long input pair description.");
 }
 void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
     switch (pair) {
@@ -801,7 +808,7 @@ class BackendInformation
 };
 
 std::unique_ptr<BackendInformation> backend_information_p;
-BackendInformation& get_backend_information() {
+const BackendInformation& get_backend_information() {
     if (!backend_information_p) {
         backend_information_p = std::make_unique<BackendInformation>();
     }
