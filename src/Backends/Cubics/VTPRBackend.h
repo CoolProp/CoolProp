@@ -84,7 +84,6 @@ class VTPRBackend : public PengRobinsonBackend
 
     void set_mole_fractions(const std::vector<double>& z) {
         mole_fractions = z;
-        mole_fractions_double = z;
         VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
         _cubic->get_unifaq().set_mole_fractions(z);
     };
