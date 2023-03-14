@@ -1,0 +1,48 @@
+name: Development cppcheck
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'dev_checks' ]
+  #  tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+  #schedule:
+  #  - cron: '15 8 * * 3' # Run weekly
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: nrel/cppcheck:2.3
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run cppcheck
+      shell: bash
+      run: |
+          # We ignore polypartition and nano since these are third party libraries
+          cppcheck \
+            --std=c++14 \
+            --enable=warning,style,information \
+            --suppress=noExplicitConstructor \
+            --suppress=useStlAlgorithm \
+            --suppress=unmatchedSuppression \
+            --suppress=unusedPrivateFunction \
+            --suppress=functionStatic:src/Backends/Helmholtz/Fluids/FluidLibrary.h \
+            --inline-suppr \
+            --inconclusive \
+            --template='[{file}:{line}]:({severity}),[{id}],{message}' \
+            -j $(nproc) \
+            --force \
+            ./src \
+            3>&1 1>&2 2>&3 | tee cppcheck.txt
+
+    - name: Parse and colorize cppcheck
+      shell: bash
+      run: python ./dev/ci/colorize_cppcheck_results.py
+
+    - name: Upload cppcheck results as artifact
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+          name: CoolProp-${{ github.sha }}-cppcheck_results.txt
+          path: cppcheck.txt

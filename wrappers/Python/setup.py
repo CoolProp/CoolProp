@@ -4,6 +4,7 @@ import subprocess, shutil, os, sys, glob, tempfile
 from distutils.version import LooseVersion
 from distutils.sysconfig import get_config_var
 from setuptools.command.build_ext import build_ext
+from multiprocessing import cpu_count
 
 def copy_files():
     def copytree(old, new):
@@ -105,11 +106,15 @@ if __name__ == '__main__':
         i = sys.argv.index(cmake_args[0])
         sys.argv.pop(i)
         cmake_compiler, cmake_bitness = cmake_args[0].split('cmake=')[1].split(',')
+    elif os.environ.get('COOLPROP_CMAKE'):
+        cmake_compiler, cmake_bitness = os.environ.get('COOLPROP_CMAKE').split(',')
     else:
         if '--cmake-compiler' in sys.argv:
             i = sys.argv.index('--cmake-compiler')
             sys.argv.pop(i)
             cmake_compiler = sys.argv.pop(i)
+        elif os.environ.get('COOLPROP_CMAKE_COMPILER'):
+            cmake_compiler = os.environ.get('COOLPROP_CMAKE_COMPILER')
         else:
             cmake_compiler = ''
 
@@ -117,6 +122,8 @@ if __name__ == '__main__':
             i = sys.argv.index('--cmake-bitness')
             sys.argv.pop(i)
             cmake_bitness = sys.argv.pop(i)
+        elif os.environ.get('COOLPROP_CMAKE_BITNESS'):
+            cmake_bitness = os.environ.get('COOLPROP_CMAKE_BITNESS')
         else:
             cmake_bitness = ''
 
@@ -126,6 +133,10 @@ if __name__ == '__main__':
 
     STATIC_LIBRARY_BUILT = False
     if USING_CMAKE:
+
+        if not cmake_compiler:
+            # Assume default
+            cmake_compiler = 'default'
 
         # Always force build since any changes in the C++ files will not force a rebuild
         touch('CoolProp/CoolProp.pyx')
@@ -169,6 +180,26 @@ if __name__ == '__main__':
                 cmake_config_args += ['-G', '"Visual Studio 15 2017 Win64"']
             else:
                 raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'vc16':
+            cmake_build_args = ['--config', '"Release"']
+            if cmake_bitness == '32':
+                cmake_config_args += ['-G', '"Visual Studio 16 2019"', '-A',
+                                      'x86']
+            elif cmake_bitness == '64':
+                cmake_config_args += ['-G', '"Visual Studio 16 2019"', '-A',
+                                      'x64']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
+        elif cmake_compiler == 'vc17':
+            cmake_build_args = ['--config', '"Release"']
+            if cmake_bitness == '32':
+                cmake_config_args += ['-G', '"Visual Studio 17 2022"', '-A',
+                                      'x86']
+            elif cmake_bitness == '64':
+                cmake_config_args += ['-G', '"Visual Studio 17 2022"', '-A',
+                                      'x64']
+            else:
+                raise ValueError('cmake_bitness must be either 32 or 64; got ' + cmake_bitness)
         elif cmake_compiler == 'mingw':
             cmake_config_args = ['-G', '"MinGW Makefiles"']
             if cmake_bitness == '32':
@@ -180,11 +211,13 @@ if __name__ == '__main__':
         elif cmake_compiler == 'default':
             cmake_config_args = []
             if sys.platform.startswith('win'):
-            	cmake_build_args = ['--config', '"Release"']
+                cmake_build_args = ['--config', '"Release"']
             if cmake_bitness == '32':
                 cmake_config_args += ['-DFORCE_BITNESS_32=ON']
             elif cmake_bitness == '64':
                 cmake_config_args += ['-DFORCE_BITNESS_64=ON']
+            elif cmake_bitness == 'NATIVE':
+                cmake_config_args += ['-DFORCE_BITNESS_NATIVE=ON']
             elif cmake_bitness == 'any':
                 pass
             else:
@@ -209,11 +242,15 @@ if __name__ == '__main__':
         if not os.path.exists(cmake_build_dir):
             os.makedirs(cmake_build_dir)
 
-        cmake_call_string = ' '.join(['cmake', '../../../..', '-DCOOLPROP_STATIC_LIBRARY=ON', '-DCMAKE_VERBOSE_MAKEFILE=ON', '-DCMAKE_BUILD_TYPE=Release'] + cmake_config_args)
+        if 'vc' not in cmake_compiler:
+            cmake_config_args += ['-DCMAKE_BUILD_TYPE=Release']
+
+        cmake_call_string = ' '.join(['cmake', '../../../..', '-DCOOLPROP_STATIC_LIBRARY=ON', '-DCMAKE_VERBOSE_MAKEFILE=ON'] + cmake_config_args)
         print('calling: ' + cmake_call_string)
         subprocess.check_call(cmake_call_string, shell=True, stdout=sys.stdout, stderr=sys.stderr, cwd=cmake_build_dir)
 
-        cmake_build_string = ' '.join(['cmake', '--build', '.'] + cmake_build_args)
+        cmake_build_string = ' '.join(['cmake', '--build', '.', '-j',
+                                       str(cpu_count())] + cmake_build_args)
         print('calling: ' + cmake_build_string)
         subprocess.check_call(cmake_build_string, shell=True, stdout=sys.stdout, stderr=sys.stderr, cwd=cmake_build_dir)
 
@@ -448,6 +485,7 @@ if __name__ == '__main__':
                 "Operating System :: OS Independent",
                 "Topic :: Software Development :: Libraries :: Python Modules"
                 ],
+               setup_requires=['Cython'],
                **setup_kwargs
                )
     except BaseException as E:

@@ -20,10 +20,10 @@
 //    return outputs;
 //}
 
-std::vector<std::pair<std::string, double> > generate_values(double T, double R, double P = 101325) {
+std::vector<std::pair<std::string, double>> generate_values(double T, double R, double P = 101325) {
     double psi_w = HumidAir::HAPropsSI("psi_w", "T", T, "R", R, "P", P);
-    std::vector<std::string> other_output_keys = { "T_wb","T_dp","Hda","Sda","Vda","Omega" };
-    std::vector<std::pair<std::string, double> > outputs;
+    std::vector<std::string> other_output_keys = {"T_wb", "T_dp", "Hda", "Sda", "Vda", "Omega"};
+    std::vector<std::pair<std::string, double>> outputs;
     outputs.push_back(std::pair<std::string, double>("psi_w", psi_w));
     outputs.push_back(std::pair<std::string, double>("T", T));
     outputs.push_back(std::pair<std::string, double>("P", P));
@@ -34,8 +34,8 @@ std::vector<std::pair<std::string, double> > generate_values(double T, double R,
     return outputs;
 }
 
-std::vector<std::pair<std::string, std::string> > get_supported_input_pairs() {
-    std::vector<std::pair<std::string, std::string> > good_ones;
+std::vector<std::pair<std::string, std::string>> get_supported_input_pairs() {
+    std::vector<std::pair<std::string, std::string>> good_ones;
     auto inputs = generate_values(300, 0.5);
     std::string k1, k2;
     double v1 = -_HUGE, v2 = -_HUGE, p = -_HUGE;
@@ -55,16 +55,11 @@ std::vector<std::pair<std::string, std::string> > get_supported_input_pairs() {
             v1 = inputs[i].second;
             v2 = inputs[j].second;
             try {
-                double psi_w_new = HumidAir::HAPropsSI(
-                    "psi_w",
-                    k1, v1,
-                    k2, v2,
-                    "P", p);
+                double psi_w_new = HumidAir::HAPropsSI("psi_w", k1, v1, k2, v2, "P", p);
                 if (ValidNumber(psi_w_new)) {
                     good_ones.push_back(std::pair<std::string, std::string>(k1, k2));
                 }
-            }
-            catch (std::exception & e) {
+            } catch (std::exception& e) {
                 std::cout << e.what();
             }
         }
@@ -72,7 +67,8 @@ std::vector<std::pair<std::string, std::string> > get_supported_input_pairs() {
     return good_ones;
 }
 
-void calculate(std::vector<std::pair<std::string, double> > inputs, std::size_t& clc_count, std::size_t& err_count, std::size_t& acc_count, const std::vector<std::pair<std::string, std::string> >& supported_pairs) {
+void calculate(std::vector<std::pair<std::string, double>> inputs, std::size_t& clc_count, std::size_t& err_count, std::size_t& acc_count,
+               const std::vector<std::pair<std::string, std::string>>& supported_pairs) {
     //auto errors = []
 
     std::string k1, k2;
@@ -80,12 +76,14 @@ void calculate(std::vector<std::pair<std::string, double> > inputs, std::size_t&
 
     for (const auto& kv : inputs) {
         if (kv.first == "psi_w") {
-            psi_w_input = kv.second; break;
+            psi_w_input = kv.second;
+            break;
         }
     }
     for (const auto& kv : inputs) {
         if (kv.first == "P") {
-            P_input = kv.second; break;
+            P_input = kv.second;
+            break;
         }
     }
 
@@ -96,24 +94,20 @@ void calculate(std::vector<std::pair<std::string, double> > inputs, std::size_t&
         for (std::size_t j = 0; j < inputs.size(); j++) {
             if (inputs[j].first.compare(k1) == 0) {
                 v1 = inputs[j].second;
-            }
-            else if (inputs[j].first.compare(k2) == 0) {
+            } else if (inputs[j].first.compare(k2) == 0) {
                 v2 = inputs[j].second;
             }
         }
 
         clc_count += 1;
         try {
-            double psi_w_new = HumidAir::HAPropsSI(
-                "psi_w",
-                k1, v1,
-                k2, v2,
-                "P", P_input);
+            double psi_w_new = HumidAir::HAPropsSI("psi_w", k1, v1, k2, v2, "P", P_input);
             double delta = std::abs(psi_w_input - psi_w_new);
             if (delta > 1e-6) {
                 acc_count += 1;
                 HumidAir::HAPropsSI("psi_w", k1, v1, k2, v2, "P", P_input);
-                std::cout << "deviation: " << delta << " @ HAPropsSI(\"psi_w\",\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2 << ",\"P\",101325); error: " + CoolProp::get_global_param_string("errstring") << std::endl;
+                std::cout << "deviation: " << delta << " @ HAPropsSI(\"psi_w\",\"" << k1 << "\"," << v1 << ",\"" << k2 << "\"," << v2
+                          << ",\"P\",101325); error: " + CoolProp::get_global_param_string("errstring") << std::endl;
 
                 //                std::cout << "\n-------------- Error --------------\n";
                 //                std::cout << "delta = " << delta << "\n";
@@ -121,8 +115,7 @@ void calculate(std::vector<std::pair<std::string, double> > inputs, std::size_t&
                 //                std::cout << k2 << " = " << v2 << "\n";
                 //                std::cout << "P" << " = " << P_input << "\n";
             }
-        }
-        catch (std::exception & e) {
+        } catch (std::exception& e) {
             err_count += 1;
             std::cout << e.what();
         }
@@ -136,7 +129,8 @@ int main(int argc, const char* argv[]) {
         //        for (auto R = 0.0; R < 1.0; R += 0.01){
         //            std::cout << R << " " << HumidAir::HAPropsSI("Hda", "T", 240, "R", R, "P", 101325) << "\n";
         //        }
-        auto hh = HumidAir::HAPropsSI("psi_w", "R", 0.0333333, "Vda", 0.958997, "P", 101325);;
+        auto hh = HumidAir::HAPropsSI("psi_w", "R", 0.0333333, "Vda", 0.958997, "P", 101325);
+        ;
         double h = HumidAir::HAPropsSI("S", "T", 240, "P", 101325, "R", 0);
         //        double T = HumidAir::HAPropsSI("W", "P", 101325, "S", h, "T", 240);
         //        T = HumidAir::HAPropsSI("T", "H", h, "R", 1.0, "P", 101325);
@@ -150,7 +144,7 @@ int main(int argc, const char* argv[]) {
     std::vector<double> T(num), R(num);
     // Full range : -143.15 C to 350.0 C
     double T_lo = (-143.15 + 273.15) * 1.001;
-    double T_hi = ( 350.00 + 273.15) * 0.999;
+    double T_hi = (350.00 + 273.15) * 0.999;
     // Full range : 0.0 to 1.0
     double R_lo = 0.0 * 1.001;
     double R_hi = 1.0 * 0.999;
@@ -190,7 +184,6 @@ int main(int argc, const char* argv[]) {
     std::cout << "Time: " << time << " s / " << clc_count << " = " << time / clc_count * 1e3 << " ms per call \n";
 }
 
-
 // # Humid air example from Sphinx
 // from CoolProp.HumidAirProp import HAPropsSI
 // h = HAPropsSI("H","T",298.15,"P",101325,"R",0.5); print(h)
@@ -200,60 +193,59 @@ int main(int argc, const char* argv[]) {
 // import sys
 // sys.exit()
 
-// # Verification script 
+// # Verification script
 // import CoolProp.CoolProp as CP
 // import numpy as np
 // import itertools
 // from multiprocessing import Pool
 
 // def generate_values(TR,P=101325):
-    // """ Starting with T,R as inputs, generate all other values """
-    // T,R = TR
-    // psi_w = CP.HAPropsSI("psi_w","T",T,"R",R,"P",P)
-    // other_output_keys = ["T_wb","T_dp","Hda","Sda","Vda","Omega"]
-    // outputs = {"psi_w":psi_w,"T":T,"P":P,"R":R}
-    // for k in other_output_keys:
-        // outputs[k] = CP.HAPropsSI(k,"T",T,"R",R,"P",P)
-    // return outputs
+// """ Starting with T,R as inputs, generate all other values """
+// T,R = TR
+// psi_w = CP.HAPropsSI("psi_w","T",T,"R",R,"P",P)
+// other_output_keys = ["T_wb","T_dp","Hda","Sda","Vda","Omega"]
+// outputs = {"psi_w":psi_w,"T":T,"P":P,"R":R}
+// for k in other_output_keys:
+// outputs[k] = CP.HAPropsSI(k,"T",T,"R",R,"P",P)
+// return outputs
 
 // def get_supported_input_pairs():
-    // """ Determine which input pairs are supported """
-    // good_ones = []
-    // inputs = generate_values((300, 0.5))
-    // for k1, k2 in itertools.product(inputs.keys(), inputs.keys()):
-        // if "P" in [k1,k2] or k1==k2:
-            // continue
-        // args = ("psi_w", k1, inputs[k1], k2, inputs[k2], "P", inputs["P"])
-        // try:
-            // psi_w_new = CP.HAPropsSI(*args)
-            // good_ones.append((k1,k2))
-        // except BaseException as BE:
-            // pass
-            // if "currently at least one of" in str(BE) or "cannot provide two inputs" in str(BE):
-                // pass
-            // else:
-                // print(BE)
-                // good_ones.append((k1,k2))
-    // return good_ones
+// """ Determine which input pairs are supported """
+// good_ones = []
+// inputs = generate_values((300, 0.5))
+// for k1, k2 in itertools.product(inputs.keys(), inputs.keys()):
+// if "P" in [k1,k2] or k1==k2:
+// continue
+// args = ("psi_w", k1, inputs[k1], k2, inputs[k2], "P", inputs["P"])
+// try:
+// psi_w_new = CP.HAPropsSI(*args)
+// good_ones.append((k1,k2))
+// except BaseException as BE:
+// pass
+// if "currently at least one of" in str(BE) or "cannot provide two inputs" in str(BE):
+// pass
+// else:
+// print(BE)
+// good_ones.append((k1,k2))
+// return good_ones
 
 // def calculate(inputs):
-    // """ For a given input, try all possible input pairs """
-    // errors = []
-    // supported_pairs = get_supported_input_pairs()
-    // for k1, k2 in supported_pairs:
-        // psi_w_input = inputs["psi_w"]
-        // args = "psi_w",k1,inputs[k1],k2,inputs[k2],"P",inputs["P"]
-        // try:
-            // psi_w_new = CP.HAPropsSI(*args)
-        // except BaseException as BE:
-            // errors.append((str(BE),args, inputs))
-    // return errors
-
+// """ For a given input, try all possible input pairs """
+// errors = []
+// supported_pairs = get_supported_input_pairs()
+// for k1, k2 in supported_pairs:
+// psi_w_input = inputs["psi_w"]
+// args = "psi_w",k1,inputs[k1],k2,inputs[k2],"P",inputs["P"]
+// try:
+// psi_w_new = CP.HAPropsSI(*args)
+// except BaseException as BE:
+// errors.append((str(BE),args, inputs))
+// return errors
 
 // if __name__ == "__main__":
-    // TR = itertools.product(np.linspace(240, 360, 31), np.linspace(0, 1, 31))
-    // with Pool(processes=2) as pool:
-        // input_values = pool.map(generate_values, TR)
-        // errors = pool.map(calculate, input_values)
-        // for err in itertools.chain.from_iterable(errors):
-            // print(err)
+// TR = itertools.product(np.linspace(240, 360, 31), np.linspace(0, 1, 31))
+// with Pool(processes=2) as pool:
+// input_values = pool.map(generate_values, TR)
+// errors = pool.map(calculate, input_values)
+// for err in itertools.chain.from_iterable(errors):
+// print(err)

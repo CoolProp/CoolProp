@@ -1,0 +1,78 @@
+name: Windows Installer
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_installer' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install requests packaging
+
+    - name: Extract CoolProp version from CMakeLists.txt
+      shell: bash
+      run: |
+        set -x
+        COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
+        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+        # Create the build directory too
+        mkdir build
+
+    - name: Configure CMake
+      working-directory: ./build
+      shell: bash
+      run: cmake -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_WINDOWS_PACKAGE:BOOL=ON ..
+
+    - name: Build
+      working-directory: ./build
+      shell: bash
+      run: |
+        set -x
+        cmake --build . --target COOLPROP_WINDOWS_PACKAGE_INSTALLER -j $(nproc) --config $BUILD_TYPE
+
+    # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
+    #   working-directory: ./build/InnoScript/bin/
+    #   shell: bash
+    #   run: |
+    #     set -x
+    #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.tar.gz ./Installers/*
+    #     
+    # - name: Create a zip archive since Windows users often cannot handle tar.gz files
+    #   working-directory: ./build/InnoScript/bin/
+    #   shell: bash
+    #   run: |
+    #     set -x
+    #     zip -r CoolProp-${{ env.COOLPROP_VERSION }}-WindowsInstaller.zip ./Installers/*
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      with:
+          name: Installers
+          path: build/InnoScript/bin/Installers
+
+    # - name: Upload TGZ or ZIP to release
+    #   if: contains(github.ref, 'refs/tags')
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: build/InnoScript/bin/Installers/Windows/CoolProp-${{ env.COOLPROP_VERSION }}.exe
+    #     tag: ${{ github.ref }}
+    #     overwrite: true
+    #     file_glob: false

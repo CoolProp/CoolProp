@@ -5,7 +5,7 @@ h = HAPropsSI('H','T',298.15,'P',101325,'R',0.5); print(h)
 T = HAPropsSI('T','P',101325,'H',h,'R',1.0); print(T)
 T = HAPropsSI('T','H',h,'R',1.0,'P',101325); print(T)
 
-# Verification script 
+# Verification script
 import CoolProp.CoolProp as CP
 import numpy as np
 import itertools

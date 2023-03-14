@@ -470,4 +470,6 @@ parameters by running the script located at ``dev/incompressible_liquids/all_inc
 Your new fluid is now part of the codebase and should be available to all CoolProp functions as
 soon as you recompile the sources.
 
-
+Remember that the incompressible fluids are prefixed with the backend name ``INCOMP`` when accessed
+via the ``PropsSI`` function. If you define a new fluid called ``H2O2`` in ``PureFluids.py``, you
+can use it later by typing ``INCOMP::H2O2``.

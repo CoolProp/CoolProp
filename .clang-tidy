@@ -1,0 +1,79 @@
+---
+
+# magic numbers are useful to layout stuff in Qt...
+#  -readability-magic-numbers and its alias cppcoreguidelines-avoid-magic-numbers
+
+# `protected`: followed by `protected slots:` would trigger it
+#  -readability-redundant-access-specifiers,
+
+# Problem with OS_ASSERT macro
+#  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+
+# We use raw pointers for Qt, since usually the memory is then owned by the parent
+#  -cppcoreguidelines-owning-memory
+
+# Because of Google Tests
+#  -cppcoreguidelines-avoid-non-const-global-variables
+
+# I don't think this really helps clarify the intent
+#  -readability-else-after-return
+#  -modernize-concat-nested-namespaces
+
+# Aliases
+# - cppcoreguidelines-avoid-c-arrays => modernize-avoid-c-arrays
+# - cppcoreguidelines-non-private-member-variables-in-classes => misc-non-private-member-variables-in-classes
+# - cppcoreguidelines-explicit-virtual-functions, hicpp-use-override => modernize-use-override
+# - bugprone-narrowing-conversions => cppcoreguidelines-narrowing-conversions
+
+# Annoying: some config options exist only in later versions...
+# cppcoreguidelines-narrowing-conversions.WarnOnEquivalentBitWidth was added in clang-tidy 13, and that would allow avoiding uint->int narrowing conversions
+# Instead I have to disable the entire check...
+
+Checks: |
+  *,
+  -fuchsia-*,
+  -google-*,
+  -zircon-*,
+  -abseil-*,
+  -llvm*,
+  -altera*,
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -readability-redundant-access-specifiers,
+  -cppcoreguidelines-explicit-virtual-functions,
+  -readability-else-after-return,
+  -modernize-concat-nested-namespaces,
+  -hicpp-*,
+  -hicpp-avoid-goto,
+  hicpp-exception-baseclass,
+  hicpp-multiway-paths-covered,
+  hicpp-no-assembler,
+  hicpp-signed-bitwise,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -bugprone-narrowing-conversions,
+  -cppcoreguidelines-narrowing-conversions,
+  -readability-function-cognitive-complexity,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -modernize-use-override,
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: '*'
+FormatStyle:     file
+CheckOptions:
+  - key:             modernize-use-override.AllowOverrideAndFinal
+    value:           'true'
+  - key:             modernize-use-override.IgnoreDestructors
+    value:           'true'
+  - key:             performance-for-range-copy.WarnOnAllAutoCopies
+    value:           'true'
+  - key:             cppcoreguidelines-narrowing-conversions.WarnOnEquivalentBitWidth
+    value:           'false'
+  - key:             readability-implicit-bool-conversion.AllowPointerConditions
+    value:           'true'
+  - key:             misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value:           'true'

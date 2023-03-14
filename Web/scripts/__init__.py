@@ -1,92 +1,52 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 import os.path, glob, subprocess, sys, time, datetime, pytz
-#
-if len(sys.argv) < 2:
-    full_rebuild = False
-if len(sys.argv) == 2:
-    if sys.argv[1] == "True": full_rebuild = True
-    elif sys.argv[1] == "1": full_rebuild = True
-    else: full_rebuild = False
-if len(sys.argv) > 2:
-    full_rebuild = False
-    print("Cannot process more than one parameter: {0}".format(str(sys.argv)))
-#
+
+# Start with detecting the full build
+def detect_full_rebuild():
+    if len(sys.argv) >= 2:
+        arg = str(sys.argv[1]).lower()
+        if arg == "true": return True
+        if arg == "1": return True
+    return False
 
 
+full_rebuild = detect_full_rebuild()
+print("Detected rebuild argument: full_rebuild = {}".format(full_rebuild))
+
+# File system functions
 def touch(fname):
     if os.path.exists(fname): os.utime(fname, None)
     else: open(fname, 'a').close()
 #
-
-
 def get_ftime(fname):
     if os.path.isfile(fname): return os.path.getctime(fname)
     else: return 0
+#
+# Directory settings
+script_root_dir = os.path.abspath(os.path.dirname(__file__))
+repo_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+task_list = []
 
+def add_if_exists(fname):
+    if os.path.isfile(fname):
+        task_list.append(fname)
+        print("Added '{}' to the task list.".format(fname))
+        return True
+    return False
 
-#
-web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-script_dir = os.path.abspath(os.path.join(web_dir, 'scripts'))
-touch_file = os.path.abspath(os.path.join(script_dir, 'last_run'))
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-#
-cur_time = time.time()
-fil_time = get_ftime(touch_file)
-#
-# Static execution time
-#reg_hour   = time.strftime("%H")
-#reg_minute = time.strftime("%M")
-# sch_hour   = 12 #scheduled hour = 3am Boulder = 12pm CPH
-# sch_minute =  7 #scheduled minute = 7 past
-#
-# Dynamically calculated execution (includes daylight saving time etc
-masterTime = pytz.timezone('US/Pacific')
-#slaveTime  = pytz.timezone('Europe/Copenhagen')
-now_master = datetime.datetime.now(masterTime)
-run_master = datetime.datetime.strptime("03:00:00", '%H:%M:%S')
-#
-now_master = datetime.time(now_master.hour, now_master.minute, now_master.second)
-run_master = datetime.time(run_master.hour, run_master.minute, run_master.second)
-run_master_end = datetime.time(run_master.hour, run_master.minute + 5, run_master.second)
-#
-lim_days = 0.90
-lim_time = cur_time - 60 * 60 * 24 * lim_days  # seconds
-#
-if now_master >= run_master and \
-   now_master <= run_master_end and \
-   not full_rebuild:
-    print("This is a scheduled rebuild at {0}.".format(run_master))
-    if fil_time < lim_time: full_rebuild = True
-    else: print("It looks like the files have been rebuilt during the last day.")
-#
-lim_days = 3
-lim_time = cur_time - 60 * 60 * 24 * lim_days  # seconds
-if fil_time < lim_time and not full_rebuild:
-    print("The static files have not been updated in {0} days, forcing an update now.".format(lim_days))
-    full_rebuild = True
-
-#req_dir = [os.path.abspath(os.path.join(web_dir,'_static','fluid_properties','Incompressibles_reports'))]
-# req_fil = [os.path.abspath(os.path.join(web_dir,'fluid_properties','Mixtures.csv')),
-#  os.path.abspath(os.path.join(web_dir,'fluid_properties','PurePseudoPure.csv')),
-#  os.path.abspath(os.path.join(web_dir,'fluid_properties','Incompressibles_pure-fluids.csv'))]
-#
-# for d in req_dir:
-#    if not os.path.exists(d) and not full_rebuild:
-#        print "The required directory {0} is missing, trying to rebuild it.".format(d)
-#        full_rebuild = True
-# for f in req_fil:
-#    if not os.path.exists(f):
-#        print "The required file {0} is missing, trying to rebuild it.".format(f)
-#        full_rebuild = True
-# print "Executing the normal scripts for generating the static files."
-# script_files = glob.glob(os.path.join(script_dir,'*.py')) # Avoid recursion
-# script_files = [os.path.abspath(f) for f in script_files if not os.path.abspath(f)==os.path.abspath(__file__)]
-# for script in script_files:
-#     print "Executing {0}".format(script)
-#     subprocess.call('python {0}'.format(os.path.basename(script)), cwd=script_dir, shell=True)
-#
-
+def add_to_task_list(fname_in):
+    fname = fname_in
+    if add_if_exists(os.path.abspath(fname)):
+        return True
+    fname = os.path.join(script_root_dir, fname_in)
+    if add_if_exists(os.path.abspath(fname)):
+        return True
+    fname = os.path.join(repo_root_dir, fname_in)
+    if add_if_exists(os.path.abspath(fname)):
+        return True
+    print("Error: Could not find '{}'.".format(fname_in))
+    return False
 
 def run_script(path):
     if os.path.exists(path):
@@ -109,23 +69,29 @@ def run_script(path):
 # Inject the version of CoolProp into the doxygen configuration files
 # Put it at the end, overwrites prior value
 import CoolProp
-with open(os.path.join(root_dir, 'Doxyfile'), 'a+') as fp:
-    fp.write('\n\n PROJECT_NUMBER         = ' + CoolProp.__version__ + '\n')
+with open(os.path.join(repo_root_dir, 'Doxyfile'), 'a+') as fp:
+    fp.write('\n\n PROJECT_NUMBER         = {}\n'.format(CoolProp.__version__))
 
 # The normal tasks that are carried out each time the script runs
-normal_tasks = ["../../dev/scripts/examples/LinuxRun.py", "coolprop.tabular.speed.py", "fluid_properties.phase_envelope.py", "fluid_properties.PurePseudoPure.py", "fluid_properties.Mixtures.py", "coolprop.parametric_table.py", "coolprop.configuration.py", "logo_2014.py", "fluid_properties.REFPROPcomparison.py"]
+print("Adding the normal scripts to the task list.")
+add_to_task_list("dev/scripts/examples/LinuxRun.py")
+add_to_task_list("coolprop.tabular.speed.py")
+add_to_task_list("fluid_properties.phase_envelope.py")
+add_to_task_list("fluid_properties.PurePseudoPure.py")
+add_to_task_list("fluid_properties.Mixtures.py")
+add_to_task_list("coolprop.parametric_table.py")
+add_to_task_list("coolprop.configuration.py")
+add_to_task_list("logo_2014.py")
+add_to_task_list("fluid_properties.REFPROPcomparison.py")
+
 # The expensive tasks that are fired when full_rebuild is True
-expensive_tasks = ["fluid_properties.Consistency.py", "fluid_properties.Incompressibles.sh"]
-print("Executing the normal scripts for generating static files.")
-for script in normal_tasks:
-    print("Executing {0}".format(script))
-    run_script(os.path.normpath(os.path.join(script_dir, script)))
-#
 if full_rebuild:
-    print("Executing the computationally expensive scripts for generating the static files.")
-    for script in expensive_tasks:
-        print("Executing {0}".format(script))
-        run_script(os.path.join(script_dir, script))
-    touch(touch_file)
-else:
-    print("Skipping the computationally expensive scripts for generating the static files.")
+    print("Adding the computationally expensive scripts to the task list.")
+    add_to_task_list("fluid_properties.Consistency.py")
+    add_to_task_list("fluid_properties.Incompressibles.sh")
+
+# Run all the files in the task list
+print("Processing the selected tasks to generate the static files.")
+for fname in task_list:
+    print("Executing {0}".format(fname))
+    run_script(os.path.normpath(fname))

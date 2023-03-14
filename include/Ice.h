@@ -2,7 +2,7 @@
 #define ICE_H
 
 double psub_Ice(double T);
-double g_Ice(double T,double p);
+double g_Ice(double T, double p);
 double dg_dp_Ice(double T, double p);
 double dg2_dp2_Ice(double T, double p);
 double IsothermCompress_Ice(double T, double p);

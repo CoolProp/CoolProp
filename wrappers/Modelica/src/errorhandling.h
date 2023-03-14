@@ -16,11 +16,12 @@
 #include "include.h"
 
 #if (DYMOLA == 1)
-#if (BUILD_DLL == 0)
-extern "C" {
-#include "ModelicaUtilities.h"
+#    if (BUILD_DLL == 0)
+extern "C"
+{
+#        include "ModelicaUtilities.h"
 }
-#endif // BUILD_DLL == 0
+#    endif  // BUILD_DLL == 0
 #endif
 
 //! Function to display error message
@@ -29,12 +30,12 @@ extern "C" {
   terminate the simulation.
   @param errorMessage Error message to be displayed
 */
-void errorMessage(char *errorMessage);
+void errorMessage(char* errorMessage);
 //! Function to display warning message
 /*!
   Calling this function will display the specified warning message.
   @param warningMessage Warning message to be displayed
 */
-void warningMessage(char *warningMessage);
+void warningMessage(char* warningMessage);
 
-#endif // ERRORHANDLING_H_
+#endif  // ERRORHANDLING_H_

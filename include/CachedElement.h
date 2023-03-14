@@ -29,20 +29,21 @@ double CoolPropStateClassSI::d3phir_dTau3(double tau, double delta){
 };
 */
 
-class CachedElement {
+class CachedElement
+{
 
-private:
+   private:
     bool is_cached;
     CoolPropDbl value;
-public:
+
+   public:
     /// Default constructor
     CachedElement() {
         this->clear();
     };
 
     /// Function to carry out the caching
-    void _do_cache(double value)
-    {
+    void _do_cache(double value) {
         this->value = value;
         this->is_cached = true;
     }
@@ -53,19 +54,23 @@ public:
     };
 
     /// Cast to boolean, for checking if cached
-    operator bool() {return is_cached;};
+    operator bool() {
+        return is_cached;
+    };
 
     /// Cast to double, for returning value
     operator double() {
-        if (is_cached) {return static_cast<double>(value); }
-        else {
+        if (is_cached) {
+            return static_cast<double>(value);
+        } else {
             throw std::exception();
         }
     }
 #ifndef COOLPROPDBL_MAPS_TO_DOUBLE
     operator CoolPropDbl() {
-        if (is_cached) {return value; }
-        else {
+        if (is_cached) {
+            return value;
+        } else {
             throw std::exception();
         }
     }
@@ -75,7 +80,7 @@ public:
         is_cached = false;
         this->value = _HUGE;
     };
-    CoolPropDbl &pt(){
+    CoolPropDbl& pt() {
         return this->value;
     }
 };

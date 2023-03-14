@@ -44,7 +44,7 @@ if isRelease:
                 }
 else:
     extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/' + release + '/%s', ''),
-                'sfnightly': ('http://www.coolprop.dreamhosters.com/binaries/%s', ''),
+                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', ''),
                 # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
                 # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
@@ -69,7 +69,7 @@ if isRelease:
     }
 else:
     doxylink = {
-        'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.dreamhosters.com/binaries/sphinx/_static/doxygen/html')
+        'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/dev/_static/doxygen/html')
     }
 
 # -- General configuration -----------------------------------------------------
@@ -83,7 +83,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               'sphinx.ext.mathjax',
               'sphinx.ext.extlinks',
               'sphinxcontrib.bibtex',
-              'sphinxcontrib.napoleon',
+              'sphinx.ext.napoleon',
               'sphinxcontrib.doxylink',
               'matplotlib.sphinxext.plot_directive',
               'edit_on_github',  # see https://gist.github.com/mgedmin/6052926#file-edit_on_github-pyb
@@ -172,8 +172,11 @@ pygments_style = 'sphinx'
 # 'both' - Both the class’ and the __init__ method’s docstring are concatenated and inserted
 autoclass_content = 'both'
 
-# Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
-html4_writer = True
+## Don't generate HTML5 docs, recommendation from https://stackoverflow.com/a/56822558
+#html4_writer = True
+
+# Fix the bibtext extension
+bibtex_bibfiles = ["../CoolPropBibTeXLibrary.bib"]
 
 # -- Options for HTML output ---------------------------------------------------
 

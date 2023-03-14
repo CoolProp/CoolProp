@@ -1,0 +1,91 @@
+name: Download workflow artifacts
+  
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+      workflow:
+        required: true
+        type: string
+
+jobs:
+  # release_job:    
+  #   uses: ./.github/workflows/release_get_artifact.yml
+  #   with:
+  #     branch: master
+  #     workflow: library_shared.yml
+  get_artifact:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
+          # Required, if the artifact is from a different repo
+          # Required, if the repo is private a Personal Access Token with `repo` scope is needed
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional, workflow file name or ID
+          # If not specified, will be inferred from run_id (if run_id is specified), or will be the current workflow
+          workflow: ${{ inputs.workflow }}
+          # Optional, the status or conclusion of a completed workflow to search for
+          # Can be one of a workflow conclusion:
+          #   "failure", "success", "neutral", "cancelled", "skipped", "timed_out", "action_required"
+          # Or a workflow status:
+          #   "completed", "in_progress", "queued"
+          # Use the empty string ("") to ignore status or conclusion in the search
+          workflow_conclusion: success
+          # Optional, will get head commit SHA
+          #pr: ${{github.event.pull_request.number}}
+          # Optional, no need to specify if PR is
+          #commit: ${{github.event.pull_request.head.sha}}
+          # Optional, will use the specified branch. Defaults to all branches
+          branch: ${{ inputs.branch }}
+          # Optional, defaults to all types
+          #event: push
+          # Optional, will use specified workflow run
+          #run_id: 1122334455
+          # Optional, run number from the workflow
+          #run_number: 34
+          # Optional, uploaded artifact name,
+          # will download all artifacts if not specified
+          # and extract them into respective subdirectories
+          # https://github.com/actions/download-artifact#download-all-artifacts
+          #name: artifact_name
+          # Optional, a directory where to extract artifact(s), defaults to the current directory
+          path: binaries
+          # Optional, defaults to current repo
+          repo: ${{ github.repository }}
+          # Optional, check the workflow run to whether it has an artifact
+          # then will get the last available artifact from the previous workflow
+          # default false, just try to download from the last one
+          check_artifacts:  false
+          # Optional, search for the last workflow run whose stored an artifact named as in `name` input
+          # default false
+          search_artifacts: false
+          # Optional, choose to skip unpacking the downloaded artifact(s)
+          # default false
+          skip_unpack: false
+          # Optional, choose how to exit the action if no artifact is found
+          # can be one of:
+          #  "fail", "warn", "ignore"
+          # default fail
+          if_no_artifact_found: fail
+          
+      - name: Display structure of downloaded files
+        run: |
+          set -x
+          ls -R
+          du -sh
+          
+      - name: Store artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: binaries
+          retention-days: 1
+      
+
