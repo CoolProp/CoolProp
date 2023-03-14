@@ -43,8 +43,8 @@
     X(REFPROP_ERROR_THRESHOLD, "REFPROP_ERROR_THRESHOLD", static_cast<int>(0), "The highest acceptable error code without throwing an exception")    \
     X(REFPROP_USE_PENGROBINSON, "REFPROP_USE_PENGROBINSON", false,                                                                                   \
       "If true, rather than using the highly-accurate pure fluid equations of state, use the Peng-Robinson EOS")                                     \
-    X(REFPROP_USE_QMASS, "REFPROP_USE_QMASS", false,
-      "If true, rather than using the mole-based vapor quality, use the mass-based vapor quality") \
+    X(REFPROP_USE_QMASS, "REFPROP_USE_QMASS", false,                                                                                                 \
+      "If true, rather than using the mole-based vapor quality, use the mass-based vapor quality")                                                   \
     X(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB, "MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB", 1.0,                                                                 \
       "The maximum allowed size of the directory that is used to store tabular data")                                                                \
     X(DONT_CHECK_PROPERTY_LIMITS, "DONT_CHECK_PROPERTY_LIMITS", false,                                                                               \
