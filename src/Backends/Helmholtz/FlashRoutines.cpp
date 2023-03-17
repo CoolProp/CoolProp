@@ -1553,7 +1553,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         if (saturation_called) {
                             Tmin = HEOS.SatV->T();
                         } else {
-                            Tmin = HEOS._TVanc.pt() + 0.01;
+                            Tmin = HEOS._TVanc.pt() - 0.01;
                         }
                     }
                     break;
