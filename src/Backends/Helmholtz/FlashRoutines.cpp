@@ -1553,7 +1553,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                         if (saturation_called) {
                             Tmin = HEOS.SatV->T();
                         } else {
-                            Tmin = HEOS._TVanc.pt() + 0.01;
+                            Tmin = HEOS._TVanc.pt() - 0.01;
                         }
                     }
                     break;
@@ -1562,7 +1562,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     if (saturation_called) {
                         Tmax = HEOS.SatL->T();
                     } else {
-                        Tmax = HEOS._TLanc.pt();
+                        Tmax = HEOS._TLanc.pt() + 0.01;
                     }
 
                     // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
