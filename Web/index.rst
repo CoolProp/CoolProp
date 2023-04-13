@@ -67,8 +67,9 @@ Projects Using CoolProp
 * `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
 * `SmoWeb <http://platform.sysmoltd.com>`_
 * `T-Props <https://play.google.com/store/apps/details?id=com.innoversetech.tprops>`_
-* `PropiedadesDeFluidos <http://jfc.us.es/propiedadesdefluidos/descripcion/>`_
+* `PropiedadesDeFluidos <http://propiedadesdefluidos.es>`_
 * `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_
+* `CuadernoDeProblemas <http://cuadernodeproblemas.es>`_
 
 Main Developers
 ---------------
