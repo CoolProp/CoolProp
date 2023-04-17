@@ -30,6 +30,10 @@ EMSCRIPTEN_BINDINGS(coolprop_bindings) {
     function("Props1SI", &CoolProp::Props1SI);
     function("PropsSI", &CoolProp::PropsSI);
     function("get_global_param_string", &CoolProp::get_global_param_string);
+    function("get_fluid_param_string", &CoolProp::get_fluid_param_string);
+    function("apply_simple_mixing_rule", &CoolProp::apply_simple_mixing_rule);
+    function("get_mixture_binary_pair_data", &CoolProp::get_mixture_binary_pair_data);
+    function("add_fluids_as_JSON", &CoolProp::add_fluids_as_JSON);
 
     enum_<CoolProp::input_pairs>("input_pairs").value("PT_INPUTS", CoolProp::PT_INPUTS);
 }
