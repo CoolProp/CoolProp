@@ -562,5 +562,19 @@ class CoolPropFluid
     };
 };
 
+#if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
+static int format_as(ViscosityDiluteVariables::ViscosityDiluteType type) {
+    return fmt::underlying(type);
+}
+
+static int format_as(TransportPropertyData::ViscosityHardcodedEnum viscosity) {
+    return fmt::underlying(viscosity);
+}
+
+static int format_as(TransportPropertyData::ConductivityHardcodedEnum conductivity) {
+    return fmt::underlying(conductivity);
+}
+#endif
+
 } /* namespace CoolProp */
 #endif /* COOLPROPFLUID_H_ */
