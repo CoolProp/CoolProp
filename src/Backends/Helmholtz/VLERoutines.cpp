@@ -554,7 +554,10 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                                        info.c_str(), specified_value, error));
         }
     } while (error > 1e-9);
-    // recalculate error
+    // Recalculate error
+    // The result has changed since the last error calculation.
+    // In rare scenarios, the final step can become unstable due to solving a singular
+    // J matrix. This final error check verifies that the solution is still good.
     negativer[0] = -(deltaV * (1 + deltaV * SatV->dalphar_dDelta()) - deltaL * (1 + deltaL * SatL->dalphar_dDelta()));
     negativer[1] = -(deltaV * SatV->dalphar_dDelta() + SatV->alphar() + log(deltaV) - deltaL * SatL->dalphar_dDelta() - SatL->alphar() - log(deltaL));
     switch (options.specified_variable) {
