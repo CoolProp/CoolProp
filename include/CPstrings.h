@@ -74,17 +74,16 @@ inline bool endswith(const std::string& s1, const std::string& s2) {
 #if defined(NO_FMTLIB)
 // Missing string formatting function, this old guy is needed for ancient gcc compilers on PowerPC for VxWorks
 inline std::string format(const char* fmt, ...);
+#elif FMT_VERSION >= 50000
+template <typename... Args>
+inline std::string format(const char* format_str, const Args&... args) {
+    return fmt::sprintf(format_str, args...);
+}
 #else
-// Missing std::string formatting function - provided by the fmtlib library
 inline std::string format(const char* format, fmt::ArgList args) {
     return fmt::sprintf(format, args);
 }
 FMT_VARIADIC(std::string, format, const char*)
-// For latest FMTLIB
-/*template <typename... Args>
-    inline std::string format(const char *format_str, const Args & ... args) {
-        return fmt::sprintf(format_str, args);
-    }*/
 #endif
 
 // Missing string split - like in Python

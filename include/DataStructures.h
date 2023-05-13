@@ -473,5 +473,40 @@ void extract_backend_families(std::string backend_string, backend_families& f1, 
 void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2);
 std::string get_backend_string(backends backend);
 
+#if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
+/// Allows enums to be formatted
+static int format_as(parameters parameter) {
+    return fmt::underlying(parameter);
+}
+
+static int format_as(phases phase) {
+    return fmt::underlying(phase);
+}
+
+static int format_as(schemes scheme) {
+    return fmt::underlying(scheme);
+}
+
+static int format_as(composition_types type) {
+    return fmt::underlying(type);
+}
+
+static int format_as(fluid_types type) {
+    return fmt::underlying(type);
+}
+
+static int format_as(input_pairs pair) {
+    return fmt::underlying(pair);
+}
+
+static int format_as(backend_families family) {
+    return fmt::underlying(family);
+}
+
+static int format_as(backends backend) {
+    return fmt::underlying(backend);
+}
+#endif
+
 } /* namespace CoolProp */
 #endif /* DATASTRUCTURES_H_ */
