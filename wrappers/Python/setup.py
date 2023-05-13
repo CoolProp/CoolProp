@@ -419,8 +419,8 @@ if __name__ == '__main__':
         os.path.join(CProot, 'include'),
         os.path.join(CProot, 'src'),
         os.path.join(CProot, 'externals', 'Eigen'),
-        os.path.join(CProot, 'externals', 'fmtlib'),  # should be deprecated
-        #os.path.join(CProot, 'externals', 'fmtlib','include'),
+        # os.path.join(CProot, 'externals', 'fmtlib'),  # should be deprecated
+        os.path.join(CProot, 'externals', 'fmtlib','include'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     # If the file is run directly without any parameters, clean, build and install
