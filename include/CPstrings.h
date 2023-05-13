@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <functional>
 #include <cctype>
+#include <vector>
 
 #if !defined(NO_FMTLIB)
 #    ifndef FMT_HEADER_ONLY
