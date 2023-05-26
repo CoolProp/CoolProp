@@ -558,6 +558,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
     // The result has changed since the last error calculation.
     // In rare scenarios, the final step can become unstable due to solving a singular
     // J matrix. This final error check verifies that the solution is still good.
+    // Furthermore, the forced phase of SatL and SatV may have caused errors. We will recalculate them without this assumption.
+    SatL->unspecify_phase();
+    SatV->unspecify_phase();
+    SatL->update(DmolarT_INPUTS, rhoL, T);
+    SatV->update(DmolarT_INPUTS, rhoV, T);
     negativer[0] = -(deltaV * (1 + deltaV * SatV->dalphar_dDelta()) - deltaL * (1 + deltaL * SatL->dalphar_dDelta()));
     negativer[1] = -(deltaV * SatV->dalphar_dDelta() + SatV->alphar() + log(deltaV) - deltaL * SatL->dalphar_dDelta() - SatL->alphar() - log(deltaL));
     switch (options.specified_variable) {
@@ -589,6 +594,9 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
             throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid", options.specified_variable));
     }
     error = sqrt(pow(negativer[0], 2) + pow(negativer[1], 2) + pow(negativer[2], 2));
+    // reset the phase for the next update.
+    SatL->specify_phase(iphase_liquid);
+    SatV->specify_phase(iphase_gas);
     if (error > 1e-8){
         throw SolutionError(format("saturation_PHSU_pure solver was good, but went bad. Current error is %Lg", error));
     }
