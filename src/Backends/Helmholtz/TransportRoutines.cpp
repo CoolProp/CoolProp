@@ -797,6 +797,16 @@ CoolPropDbl TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMix
     return lambda_0;
 }
 
+CoolPropDbl TransportRoutines::conductivity_dilute_hardcoded_CO2_HuberJPCRD2016(HelmholtzEOSMixtureBackend& HEOS) {
+
+    double tau = HEOS.tau();
+    double l[]={0.0151874307, 0.0280674040, 0.0228564190, -0.00741624210};
+    // Huber 2016 Eq. (3)
+    double lambda_0 = pow(tau, -2)/(l[0] + l[1] * tau + l[2] * pow(tau, 2) + l[3] * pow(tau, 3) + l[4] * pow(tau, 4)); // [mW/m/K]
+    
+    return lambda_0/1000;
+}
+
 CoolPropDbl TransportRoutines::conductivity_dilute_hardcoded_ethane(HelmholtzEOSMixtureBackend& HEOS) {
 
     double e_k = 245.0;

@@ -237,6 +237,8 @@ class TransportRoutines
     static CoolPropDbl conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_critical_hardcoded_R123(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend& HEOS);
+    static CoolPropDbl conductivity_dilute_hardcoded_CO2_HuberJPCRD2016(HelmholtzEOSMixtureBackend& HEOS);
+
     static CoolPropDbl conductivity_dilute_hardcoded_ethane(HelmholtzEOSMixtureBackend& HEOS);
 
     static CoolPropDbl conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend& HEOS);

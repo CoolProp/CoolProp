@@ -826,6 +826,9 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
             case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
                 dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this);
                 break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2_HUBER_JPCRD_2016:
+                dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2_HuberJPCRD2016(*this);
+                break;
             case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
                 dilute = TransportRoutines::conductivity_dilute_hardcoded_ethane(*this);
                 break;
