@@ -774,6 +774,10 @@ class JSONFluidLibrary
             if (!target.compare("CO2")) {
                 fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2;
                 return;
+            } 
+            else if (!target.compare("CarbonDioxideHuberJPCRD2016")) {
+                fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2_HUBER_JPCRD_2016;
+                return;
             } else if (!target.compare("Ethane")) {
                 fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE;
                 return;
