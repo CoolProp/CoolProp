@@ -340,6 +340,17 @@ CoolPropDbl TransportRoutines::viscosity_heptane_higher_order_hardcoded(Helmholt
               + c[4] * rhor / (c[5] + c[6] * Tr + c[7] * rhor + rhor * rhor + c[8] * rhor * Tr));
 }
 
+CoolPropDbl TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017(HelmholtzEOSMixtureBackend& HEOS) {
+    double c1 = 0.360603235428487, c2 = 0.121550806591497, gamma = 8.06282737481277;
+    double Tt = HEOS.Ttriple(), rho_tL = 1178.53;
+    double Tr = HEOS.T() / Tt, rhor = HEOS.rhomass() / rho_tL;
+    // Eq. (9) from Laesecke, JPCRD, 2017
+    double eta_tL = pow(rho_tL, 2.0/3.0) * sqrt(HEOS.gas_constant() * Tt) / (pow(HEOS.molar_mass(), 1.0/6.0) * 84446887.43579945);
+    // Eq. (8) from Laesecke, JPCRD, 2017
+    double residual = eta_tL * (c1 * Tr * pow(rhor, 3) + (pow(rhor, 2) + pow(rhor, gamma)) / (Tr - c2));
+    return residual;
+}
+
 CoolPropDbl TransportRoutines::viscosity_higher_order_friction_theory(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
         CoolProp::ViscosityFrictionTheoryData& F = HEOS.components[0].transport.viscosity_higher_order.friction_theory;
@@ -581,6 +592,21 @@ CoolPropDbl TransportRoutines::viscosity_dilute_cyclohexane(HelmholtzEOSMixtureB
     CoolPropDbl S_eta = exp(-1.5093 + 364.87 / T - 39537 / pow(T, 2));  //[nm^2]
     return 0.19592 * sqrt(T) / S_eta / 1e6;                             //[Pa-s]
 }
+
+CoolPropDbl TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017(HelmholtzEOSMixtureBackend& HEOS) {
+    // From Laesecke, JPRCD, 2016
+    double eta0, eta1, DELTAetar, den, Bstar;
+    double T = HEOS.T();
+
+    double a[] = {
+        1749.354893188350, -369.069300007128, 5423856.34887691, -2.21283852168356, -269503.247933569, 73145.021531826, 5.34368649509278};
+    
+    // Eq. (4) from Laesecke, JPRCD, 2016
+    den = a[0] + a[1] * pow(T, 1.0/6.0) + a[2] * exp(a[3] * pow(T, 1.0/3.0)) + (a[4] + a[5] * pow(T, 1.0/3.0)) / exp(pow(T, 1.0 / 3.0)) + a[6] * sqrt(T);
+    eta0 = 0.0010055 * sqrt(T) / den;  // [Pa-s]
+    return eta0;
+}
+
 CoolPropDbl TransportRoutines::viscosity_ethane_higher_order_hardcoded(HelmholtzEOSMixtureBackend& HEOS) {
     double r[] = {0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 1, 1};
     double s[] = {0, 0, 1, 0, 1, 1.5, 0, 2, 0, 1, 0, 1};
