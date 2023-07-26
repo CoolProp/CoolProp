@@ -680,96 +680,41 @@
       }
     },
     "viscosity": {
-      "BibTeX": "Fenghour-JPCRD-1998",
-      "_note": "sigma set to 1 nm in since sigma wrapped into constant in equation in Fenghour",
+      "BibTeX": "Laesecke-JPCRD-2017-CO2",
       "dilute": {
-        "C": 1.5178953643112785e-07,
-        "_note": "Leading coefficient was back calculated from 1.00697e-6/(44.0098)**0.5 (using sigma = 1 nm)",
-        "a": [
-          0.235156,
-          -0.491266,
-          0.05211155,
-          0.05347906,
-          -0.01537102
-        ],
-        "molar_mass": 0.0440098,
-        "molar_mass_units": "kg/mol",
-        "t": [
-          0,
-          1,
-          2,
-          3,
-          4
-        ],
-        "type": "collision_integral"
+        "hardcoded": "CarbonDioxideLaeseckeJPCRD2017"
       },
-      "epsilon_over_k": 251.196,
+      "initial_density": {
+        "type": "Rainwater-Friend",
+        "b": [
+          -19.572881,
+          219.73999,
+          -1015.3226,
+          2471.0125,
+          -3375.1717,
+          2491.6597,
+          -787.26086,
+          14.085455,
+          -0.34664158
+        ],
+        "t": [
+          0.0,
+          -0.25,
+          -0.5,
+          -0.75,
+          -1.0,
+          -1.25,
+          -1.5,
+          -2.5,
+          -5.5
+        ]
+      },
+      "epsilon_over_k": 200.760,
       "epsilon_over_k_units": "K",
       "higher_order": {
-        "T_reduce": 304.1282,
-        "T_reduce_units": "K",
-        "_note": "All of the coefficients for higher order viscosity contribution were converted to be in terms of delta and tau",
-        "a": [
-          1.9036541208525784e-06,
-          1.57384720473354e-05,
-          1.4207809578440784e-07,
-          6.79058431241662e-08,
-          -3.0732988514867565e-08
-        ],
-        "d1": [
-          1,
-          2,
-          6,
-          8,
-          8
-        ],
-        "d2": [
-          1
-        ],
-        "f": [
-          0
-        ],
-        "g": [
-          1
-        ],
-        "gamma": [
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "h": [
-          0
-        ],
-        "l": [
-          1,
-          1,
-          1,
-          1,
-          0
-        ],
-        "p": [
-          1
-        ],
-        "q": [
-          0
-        ],
-        "rhomolar_reduce": 10624.9,
-        "rhomolar_reduce_units": "mol/m^3",
-        "t1": [
-          0,
-          0,
-          3,
-          0,
-          1
-        ],
-        "t2": [
-          0
-        ],
-        "type": "modified_Batschinski_Hildebrand"
+        "hardcoded": "CarbonDioxideLaeseckeJPCRD2017"
       },
-      "sigma_eta": 1e-09,
+      "sigma_eta": 0.378421e-09,
       "sigma_eta_units": "m"
     }
   }

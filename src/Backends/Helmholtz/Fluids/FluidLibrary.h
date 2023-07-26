@@ -446,6 +446,9 @@ class JSONFluidLibrary
             } else if (!target.compare("Cyclohexane")) {
                 fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_CYCLOHEXANE;
                 return;
+            } else if (!target.compare("CarbonDioxideLaeseckeJPCRD2017")) {
+                fluid.transport.viscosity_dilute.type = CoolProp::ViscosityDiluteVariables::VISCOSITY_DILUTE_CO2_LAESECKE_JPCRD_2017;
+                return;
             } else {
                 throw ValueError(format("hardcoded dilute viscosity [%s] is not understood for fluid %s", target.c_str(), fluid.name.c_str()));
             }
@@ -551,6 +554,9 @@ class JSONFluidLibrary
                 return;
             } else if (!target.compare("Benzene")) {
                 fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BENZENE;
+                return;
+            } else if (!target.compare("CarbonDioxideLaeseckeJPCRD2017")) {
+                fluid.transport.viscosity_higher_order.type = CoolProp::ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017;
                 return;
             } else {
                 throw ValueError(
