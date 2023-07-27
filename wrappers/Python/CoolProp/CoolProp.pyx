@@ -1130,8 +1130,9 @@ cdef class State:
         """
         Make a copy of this State class
         """
-        cdef State S = State(self.Fluid,dict(T=self.T_,D=self.rho_))
-        S.phase = self.phase
+        cdef State S = State(self.Fluid, None, phase=self.phase.decode('ascii')) # None is for the state variables, which we leave empty in order to set the phase
+        # Now we update the state
+        S.update(dict(T=self.T_,D=self.rho_))
         return S
 
 def rebuildState(d):
