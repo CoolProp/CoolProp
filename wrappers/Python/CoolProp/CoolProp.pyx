@@ -700,20 +700,20 @@ cdef class State:
             self.set_Fluid(_Fluid, backend)
         self.Fluid = Fluid
 
-        # Parse the inputs provided
-        if StateDict is not None:
-            self.update(StateDict)
-
         if phase is None:
             self.phase = b'??'
         else:
             self.phase = phase.encode('ascii')
 
         # Set the phase flag
-        if self.phase.lower() == 'gas':
+        if self.phase.lower() == b'gas':
             self.pAS.specify_phase(constants_header.iphase_gas)
-        elif self.phase.lower() == 'liquid':
+        elif self.phase.lower() == b'liquid':
             self.pAS.specify_phase(constants_header.iphase_liquid)
+
+        # Parse the inputs provided
+        if StateDict is not None:
+            self.update(StateDict)
 
 #     def __reduce__(self):
 #         d={}
