@@ -195,7 +195,7 @@ class MixtureBinaryPairLibrary
         }
     }
     /// Add a simple mixing rule
-    void add_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule) {
+    void add_basic_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule) {
         // Get the empty dictionary to be filled by the appropriate reducing parameter filling function
         Dictionary dict;
 
@@ -288,8 +288,8 @@ static MixtureBinaryPairLibrary mixturebinarypairlibrary;
 static MixtureBinaryPairLibrary mixturebinarypairlibrary_default;
 
 /// Add a simple mixing rule
-void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule) {
-    mixturebinarypairlibrary.add_simple_mixing_rule(identifier1, identifier2, rule);
+void apply_basic_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule) {
+    mixturebinarypairlibrary.add_basic_mixing_rule(identifier1, identifier2, rule);
 }
 
 std::string get_csv_mixture_binary_pairs() {

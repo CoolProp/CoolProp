@@ -131,6 +131,14 @@ bool is_valid_fluid_string(const std::string& fluidstring);
 bool add_fluids_as_JSON(const std::string& backend, const std::string& fluidstring);
 
 /**
+ * @brief Apply Lorentz-Berthelot mixing rule (all interaction parameters = 1.0) for a given binary pair
+ * @param identifier1 The CAS # (or name) for the first fluid
+ * @param identifier2 The CAS # (or name) for the second fluid
+ * @param rule The simple mixing rule to be used ("linear", "Lorentz-Berthelot")
+ */
+void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule);
+
+/**
     \brief Set the reference state based on a string representation
 
     @param FluidName The name of the fluid (Backend can be provided like "REFPROP::Water", or if no backend is provided, "HEOS" is the assumed backend)

@@ -672,6 +672,13 @@ bool add_fluids_as_JSON(const std::string& backend, const std::string& fluidstri
         throw ValueError(format("You have provided an invalid backend [%s] to add_fluids_as_JSON; valid options are SRK, PR, HEOS", backend.c_str()));
     }
 }
+
+void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule) {
+
+    // Pass through of function with mirrored arguments to workaround SWIG not picking up wrapper function from MixtureParameters.cpp
+    apply_basic_mixing_rule(identifier1, identifier2, rule);
+}
+
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
     SECTION("Single state, single output") {
