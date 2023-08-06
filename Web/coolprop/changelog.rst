@@ -1,6 +1,36 @@
 Changelog for CoolProp
 ======================
 
+6.5.0
+-----
+
+Highlights:
+
+* Mostly small bugfixes and dependency updates
+* Added ability to add predefined mixtures at runtime
+* Updated transport models for CO2
+
+Issues closed:
+
+* `#2277 <https://github.com/CoolProp/CoolProp/issues/2277>`_ : Update State class
+
+Pull requests merged:
+
+* `#2207 <https://github.com/CoolProp/CoolProp/pull/2207>`_ : Verify that mole fractions are set before using them
+* `#2214 <https://github.com/CoolProp/CoolProp/pull/2214>`_ : Change links from Google group to GitHub discussions
+* `#2223 <https://github.com/CoolProp/CoolProp/pull/2223>`_ : Topic 2142
+* `#2225 <https://github.com/CoolProp/CoolProp/pull/2225>`_ : update cyclopentane.json
+* `#2230 <https://github.com/CoolProp/CoolProp/pull/2230>`_ : Topic-2200: Correct typo in n-Hexane rhoV auxilliary
+* `#2238 <https://github.com/CoolProp/CoolProp/pull/2238>`_ : Incomp liqna
+* `#2241 <https://github.com/CoolProp/CoolProp/pull/2241>`_ : Update index.rst
+* `#2252 <https://github.com/CoolProp/CoolProp/pull/2252>`_ : Update fmt submodule to 10.0.0
+* `#2261 <https://github.com/CoolProp/CoolProp/pull/2261>`_ : Create CITATION.bib
+* `#2267 <https://github.com/CoolProp/CoolProp/pull/2267>`_ : implemented TCX Huber-JPCRD-2016 for CO2
+* `#2268 <https://github.com/CoolProp/CoolProp/pull/2268>`_ : implemented VISC LAESECKE-JPCRD-2017-CO2
+* `#2270 <https://github.com/CoolProp/CoolProp/pull/2270>`_ : Fix failing python_cibuildwheel workflows
+* `#2271 <https://github.com/CoolProp/CoolProp/pull/2271>`_ : Revert "Fix failing python_cibuildwheel workflows" and update
+
+
 6.4.3
 -----
 
