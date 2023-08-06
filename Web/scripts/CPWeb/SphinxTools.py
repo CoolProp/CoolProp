@@ -23,15 +23,15 @@ Fluid Information
    :widths: 40, 60
    :delim: ;
    :file: {fluid:s}-info.csv
-   
+
 REFPROP Validation Data
 =======================
 
 .. note::
 
     This figure compares the results generated from CoolProp and those generated from REFPROP.  They are all results obtained in the form :math:`Y(T,\\rho)`, where :math:`Y` is the parameter of interest and which for all EOS is a direct evaluation of the EOS
-    
-    You can download the script that generated the following figure here: :download:`(link to script)<REFPROPplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<REFPROPplots/{fluid:s}.pdf>`. 
+
+    You can download the script that generated the following figure here: :download:`(link to script)<REFPROPplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<REFPROPplots/{fluid:s}.pdf>`.
 
 .. image:: REFPROPplots/{fluid:s}.png
 
@@ -44,7 +44,7 @@ In this figure, we start off with a state point given by T,P and then we calcula
 
 .. note::
 
-    You can download the script that generated the following figure here: :download:`(link to script)<Consistencyplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<Consistencyplots/{fluid:s}.pdf>`. 
+    You can download the script that generated the following figure here: :download:`(link to script)<Consistencyplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<Consistencyplots/{fluid:s}.pdf>`.
 
 .. image:: Consistencyplots/{fluid:s}.png
 
@@ -218,7 +218,7 @@ class FluidGenerator(object):
         ITG.write(path)
 
         del_old = CP.get_config_string(CP.LIST_STRING_DELIMITER)
-       
+
         CP.set_config_string(CP.LIST_STRING_DELIMITER, '|')
         try:
             aliases = ', '.join(['``' + a.strip() + '``' for a in CoolProp.CoolProp.get_fluid_param_string(self.fluid, 'aliases').strip().split('|') if a])

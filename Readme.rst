@@ -16,7 +16,7 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.org/dev>`_  
 
-* For any kind of question regarding CoolProp and its usage, you can ask the `CoolProp user group <https://goo.gl/Pa7FBT>`_ 
+* For any kind of question regarding CoolProp and its usage, you can ask the `CoolProp Discussions <https://github.com/CoolProp/CoolProp/discussions>`_
 
 * ... you might also find answers in our `FAQ <https://github.com/CoolProp/CoolProp/blob/master/FAQ.md>`_ 
 

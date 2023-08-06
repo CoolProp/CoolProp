@@ -15,19 +15,20 @@ class BaseSolver;
   Ian Bell
   2012-2013
   University of Liege, Liege, Belgium
-  
+
   Francesco Casella, Christoph Richter, Roberto Bonifetto
   2006-2012
   Copyright Politecnico di Milano, TU Braunschweig, Politecnico di Torino
 */
-class SolverMap{
-public:
-	static BaseSolver *getSolver(const string &mediumName, const string &libraryName, const string &substanceName);
-	static string solverKey(const string &libraryName, const string &substanceName);
+class SolverMap
+{
+   public:
+    static BaseSolver* getSolver(const string& mediumName, const string& libraryName, const string& substanceName);
+    static string solverKey(const string& libraryName, const string& substanceName);
 
-protected:
-	//! Map for all solver instances identified by the SolverKey
-	static map<string, BaseSolver*> _solvers;
+   protected:
+    //! Map for all solver instances identified by the SolverKey
+    static map<string, BaseSolver*> _solvers;
 };
 
-#endif // SOLVERMAP_H_
+#endif  // SOLVERMAP_H_

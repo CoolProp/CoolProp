@@ -136,7 +136,7 @@ Part 4:
 Open Excel, go to ``Tools/Add-ins...``. In browse, go to the folder listed above with the ``BF8T346G9.Office`` in it. Select CoolProp.xlam.
 
 Part 4b:
--------
+--------
 Go to Tools/Macro/Visual_Basic_Editor and open Module 1 in CoolProp.xlam.  Replace all references to “libCoolProp.dylib” with references to "/Users/${USER}/Library/Group Containers/UBF8T346G9.Office/libCoolProp.dylib”, again changing ${USER} to your user name.  Save and close the Visual Basic Editor.
 
 Part 5:

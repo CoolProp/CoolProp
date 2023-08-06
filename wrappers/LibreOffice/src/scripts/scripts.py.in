@@ -1,3 +1,4 @@
+import os, platform, subprocess, sys, urllib.parse, urllib.request
 import uno
 
 COOLPROP_VERSION = "${COOLPROP_VERSION}"
@@ -18,74 +19,45 @@ def install_coolprop(*args):
     doc = XSCRIPTCONTEXT.getDocument()
     parent = doc.CurrentController.Frame.ContainerWindow
     ctx = uno.getComponentContext()
-
+    
+    # get LibreOffice extension path
+    pip = ctx.getByName("/singletons/com.sun.star.deployment.PackageInformationProvider")
+    extension_uri = pip.getPackageLocation('org.coolprop.wrappers.libreoffice')
+    extension_path = urllib.request.url2pathname(urllib.parse.urlparse(extension_uri).path)
+    python_pkg_path = os.path.normpath(os.path.join(extension_path, 'pythonpath'))
+    sys.path.append(python_pkg_path)
+    
     try:
-        from CoolProp import CoolProp
-        message_dialog(parent, 'CoolProp', 'CoolProp python package is already installed.')
+        import CoolProp
+        message_dialog(parent, 'CoolProp', 'CoolProp python package version {0} is already installed.'.format(CoolProp.__version__))
         return True
     except:
-        import os, sys, shutil, urllib.parse, urllib.request, zipfile
-
-        platform = None
-        is_64bits = sys.maxsize > 2**32
-        py_version = '{0}{1}'.format(sys.version_info.major, sys.version_info.minor)
-
-        if sys.platform == 'linux' and is_64bits:
-            platform = 'manylinux1_x86_64'
-        elif sys.platform == 'darwin' and is_64bits:
-            platform = 'macosx_10_7_x86_64'
-        elif sys.platform == 'win32' and is_64bits:
-            platform = 'win_amd64'
-        elif sys.platform == 'win32' and not is_64bits:
-            platform = 'win32'
-
-        if platform is None:
-            message_dialog(parent, 'CoolProp', 'Platform is unknown. Please download and install CoolProp Python package manually.')
-            return False
-
         try:
-            # get LibreOffice extension path
-            pip = ctx.getByName("/singletons/com.sun.star.deployment.PackageInformationProvider")
-            extension_uri = pip.getPackageLocation('org.coolprop.wrappers.libreoffice')
-            extension_path = urllib.request.url2pathname(urllib.parse.urlparse(extension_uri).path)
-            python_pkg_path = os.path.normpath(os.path.join(extension_path, 'pythonpath'))
-
-            # download wheel file from PyPI
-            filename = 'CoolProp-{0}-cp{1}-cp{1}m-{2}.whl'.format(COOLPROP_VERSION, py_version, platform)
-            filepath = os.path.join(python_pkg_path, filename)
-            url = 'https://files.pythonhosted.org/packages/cp{0}/c/coolprop/'.format(py_version) + filename
-
-            # use certifi on macOS because Python doesn't use system certificate manager
+            # get python binary (The embedded Python interpreter for LibreOffice
+            # versions on Windows and macOS points to the soffice binary in
+            # sys.executable)
             if sys.platform == 'darwin':
-                import certifi
-                cafile = certifi.where()
+                python_bin = os.path.dirname(sys.executable).rstrip('MacOS') + 'Resources/python'
+            elif sys.platform == 'win32':
+                python_bin = os.path.dirname(sys.executable) + '\python'
             else:
-                cafile = None
-
-            with urllib.request.urlopen(url, cafile=cafile) as request, open(filepath, 'wb') as file:
-                shutil.copyfileobj(request, file)
-
-        except Exception as e:
-            message_dialog(parent, 'CoolProp', 'Downloading Python package {0} failed: {1}'.format(filename, str(e)))
-            return False
-
-        try:
-            with zipfile.ZipFile(filepath, 'r') as zip_file:
-                zip_file.extractall(python_pkg_path)
-
+                python_bin = sys.executable
+            # install CoolProp python package with pip to extension path
+            subprocess.check_output([python_bin, '-m', 'pip', 'install', '--only-binary', ':all:', '--target', python_pkg_path, 'CoolProp==' + COOLPROP_VERSION], cwd=python_pkg_path, stderr=subprocess.STDOUT)        
             # Copy ABI version tagged library files to plain .so file (Python
             # bundled with LibreOffice on macOS has different ABI naming scheme
             # than CoolProp Python packages from PyPI. If the files will be
             # symlinked instead copied, then LO cannot uninstall the Addin.)
             if sys.platform == 'darwin':
-                import glob
+                import glob, shutil
                 for lib in glob.glob(os.path.join(python_pkg_path, 'CoolProp/*.cpython*.so')):
                     libpath, libfile = os.path.split(lib)
                     shutil.copy(lib, os.path.join(libpath, libfile.split('.')[0] + '.so'))
-
             message_dialog(parent, 'CoolProp', 'Successfully installed CoolProp python package. Please restart LibreOffice.')
             return True
-
+        except subprocess.CalledProcessError as e:
+            message_dialog(parent, 'CoolProp', 'Installing CoolProp Python package failed!\n\nSYSTEM INFORMATION:\n{0} {1}\n\n COMMAND:\n{2}\n\n ERROR:\n{3}'.format(sys.version, platform.uname(), e.cmd, e.output))
+            return False
         except Exception as e:
-            message_dialog(parent, 'CoolProp', 'Installing Python package to {0} failed: {1}'.format(python_pkg_path, str(e)))
+            message_dialog(parent, 'CoolProp', 'Installing CoolProp Python package failed!\n\nSYSTEM INFORMATION:\n{0} {1}\n\n ERROR:\n{2}'.format(sys.version, platform.uname(), repr(e)))
             return False

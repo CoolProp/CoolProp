@@ -4,9 +4,9 @@ enable_language(Fortran)
 project(FORTRAN_INTERFACING)
 
 # Add CoolProp dependency
-set(COOLPROP_STATIC_LIBRARY true CACHE BOOL "Use CoolProp")
-set(COOLPROP_EXTERNC_LIBRARY true CACHE BOOL "Use EXTERNC functions")
-add_subdirectory("../../.." "CoolProp")
+set(COOLPROP_STATIC_LIBRARY ON CACHE BOOL "Use CoolProp as static library" FORCE)
+set(COOLPROP_EXTERNC_LIBRARY ON CACHE BOOL "Use EXTERNC to expose symbols" FORCE)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../.." CoolProp)
 
 # Add main code
 add_executable(Main "${CMAKE_CURRENT_SOURCE_DIR}/cpinterface.f90" "${CMAKE_CURRENT_SOURCE_DIR}/cool_fortran_bind.f90" )

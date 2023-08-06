@@ -1,0 +1,71 @@
+name: Python Linux
+
+on:
+  push:
+    branches: [ master, develop, actions_pypi ]
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  python_bindings:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.10.x
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine
+
+    - name: Build manylinux Python wheels
+      uses: RalfG/python-wheels-manylinux-build@v0.4.2
+      with:
+        package-path: wrappers/Python/
+        pre-build-command: 'export COOLPROP_CMAKE=default,64'
+        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310'
+        build-requirements: 'cython'
+        pip-wheel-args: '-w ./dist --verbose'
+
+    - name: Zip the wheels to maintain case sensitivy and file permissions
+      working-directory: ./wrappers/Python/
+      shell: bash
+      run: |
+        tar -cvzf CoolProp-Linux_wheels.tar.gz dist/
+
+    - name: Upload .whl to artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: CoolProp-Linux_wheels
+        path: ./wrappers/Python/CoolProp-Linux_wheels.tar.gz
+
+    - name: Publish wheels to (Test)PyPI
+      # TODO: for now I'm effectively disabling uploading to testpypi on each build
+      if: contains(github.ref, 'refs/tags')
+      working-directory: ./wrappers/Python/
+      env:
+        TWINE_USERNAME: __token__
+      run: |
+
+        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
+          TWINE_REPOSITORY=pypi
+          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
+        else
+          TWINE_REPOSITORY=testpypi
+          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
+        fi;
+        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
+        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
+
+        twine upload dist/*-manylinux*.whl

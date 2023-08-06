@@ -1,0 +1,22 @@
+[package]
+name = "coolprop-rs"
+version = "0.2.0"
+authors = ["Steffen Golle <somnium@stampernet.de>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/sgolle/coolprop-rs"
+documentation = "https://github.com/sgolle/coolprop-rs"
+homepage = "https://crates.io/crates/coolprop-rs"
+description = """
+Coolprop Wrapper for Rust
+"""
+keywords = ["coolprop", "wrapper"]
+categories = ["api-bindings", "external-ffi-bindings"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.55"

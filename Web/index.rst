@@ -7,6 +7,8 @@ These pages help you to get started using CoolProp and provide detailed informat
 returning user. Please feel free to browse the pages and use the menu on the left to navigate
 on this website.
 
+.. warning:: The documentation has not been updated to reflect all changes since v6.4.1. Sorry for any inconvenience.
+
 What is CoolProp?
 -----------------
 
@@ -20,6 +22,7 @@ CoolProp is a C++ library that implements:
 * :ref:`User-friendly interface around the full capabilities of NIST REFPROP <REFPROP>`
 * :ref:`Fast IAPWS-IF97 (Industrial Formulation) for Water/Steam <IF97>`
 * :ref:`Cubic equations of state (SRK, PR) <cubic_backend>`
+* :ref:`PC-SAFT equation of state <pcsaft_backend>`
 
 Environments Supported
 ----------------------
@@ -49,7 +52,7 @@ See more examples of PropsSI usage at :ref:`High-Level interface <high_level_api
 Help
 ----
 
-* (**General Discussion**) Email the `Google group <https://groups.google.com/d/forum/coolprop-users>`_
+* (**General Discussion**) Create a new discussion at `Github CoolProp Discussions <https://github.com/CoolProp/CoolProp/discussions>`_
 * (**Bugs, feature requests**) File a `Github issue <https://github.com/CoolProp/CoolProp/issues>`_
 * `Docs for v4 of CoolProp <http://www.coolprop.org/v4/>`_
 * `Docs for development version of CoolProp <http://www.coolprop.org/dev/>`_
@@ -64,7 +67,9 @@ Projects Using CoolProp
 * `StateCalc <https://itunes.apple.com/us/app/statecalc/id891848148?ls=1&mt=8>`_
 * `SmoWeb <http://platform.sysmoltd.com>`_
 * `T-Props <https://play.google.com/store/apps/details?id=com.innoversetech.tprops>`_
-* `PropiedadesDeFluidos <http://jfc.us.es/propiedadesdefluidos/descripcion/>`_
+* `PropiedadesDeFluidos <https://personal.us.es/jfc/PropiedadesDeFluidos/descripcion/>`_ (FluidProperties)
+* `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_
+* `CuadernoDeProblemas <https://personal.us.es/jfc/CuadernoDeProblemas/>`_ (ProblemNotebook)
 
 Main Developers
 ---------------
@@ -82,7 +87,7 @@ Please be so kind and cite our work in your publication: :ref:`Citation informat
 Supporters
 ----------
 
-\ 
+\
 
 .. image:: _static/logo_labothap.png
    :height: 100px
@@ -116,9 +121,9 @@ Supporters
    :height: 50px
    :alt: IPU Refrigeration and Energy Technology
    :target: https://www.ipu.dk
-   
+
 
 License Information
 -------------------
 
-CoolProp has flexible licensing terms and you can use it for commercial projects and academic work free of charge. Have a look at the actual `license <https://github.com/CoolProp/CoolProp/blob/master/LICENSE>`_, if you are in doubt. 
+CoolProp has flexible licensing terms and you can use it for commercial projects and academic work free of charge. Have a look at the actual `license <https://github.com/CoolProp/CoolProp/blob/master/LICENSE>`_, if you are in doubt.

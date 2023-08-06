@@ -1,0 +1,151 @@
+name: Python cibuildwheel
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_pypi' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+jobs:
+  python_source:
+    name: Build source package
+    runs-on: ubuntu-latest
+    steps:
+    
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9.x
+        
+    - name: Install dependencies
+      run: pip install setuptools wheel 'Cython<3.0' requests jinja2 pyyaml
+        
+    - name: Build package, sdist
+      working-directory: ./wrappers/Python/pypi
+      run: python prepare_pypi.py --dist-dir=${GITHUB_WORKSPACE}/Python
+
+    - name: Store artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: Python
+        path: Python
+
+  python_ubuntu:
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      matrix:
+        os: [ubuntu]
+        python-version: [36, 37, 38, 39, 310, 311]
+        arch: [i686, x86_64, aarch64, ppc64le, s390x]
+        exclude:
+          - os: ubuntu
+            arch: i686 # reduce the build time until people ask for the binaries
+          - os: ubuntu
+            arch: ppc64le # reduce the build time until people ask for the binaries
+          - os: ubuntu
+            arch: s390x # reduce the build time until people ask for the binaries
+    uses: ./.github/workflows/python_cibuildwheel.yml
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      arch: ${{ matrix.arch }}
+      
+  python_windows:
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      matrix:
+        os: [windows]
+        python-version: [36, 37, 38, 39, 310, 311]
+        arch: [AMD64, x86, ARM64]
+        exclude:
+          - os: windows
+            arch: ARM64 # creates problems with msgpack-c
+          - os: windows
+            arch: ARM64
+            python-version: 36
+          - os: windows
+            arch: ARM64
+            python-version: 37
+          - os: windows
+            arch: ARM64
+            python-version: 38
+    uses: ./.github/workflows/python_cibuildwheel.yml
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      arch: ${{ matrix.arch }}
+  
+  python_macos:
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      matrix:
+        os: [macos]
+        python-version: [36, 37, 38, 39, 310, 311]
+        arch: [x86_64, arm64, universal2]
+        exclude:
+          - os: macos
+            arch: arm64
+            python-version: 36
+          - os: macos
+            arch: arm64
+            python-version: 37
+          - os: macos
+            arch: universal2 # is redundant
+    uses: ./.github/workflows/python_cibuildwheel.yml
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      arch: ${{ matrix.arch }}
+
+  upload_python_bindings_to_pypi:
+    needs: [python_source, python_ubuntu, python_windows, python_macos]
+    name: Upload to PyPi
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9.x
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel twine requests packaging
+
+        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
+          TWINE_REPOSITORY=pypi
+          TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
+        else
+          TWINE_REPOSITORY=testpypi
+          TWINE_PASSWORD=${{ secrets.TESTPYPI_TOKEN }}
+        fi;
+        echo "Using TWINE_REPOSITORY=$TWINE_REPOSITORY"
+        echo "TWINE_REPOSITORY=$TWINE_REPOSITORY" >> $GITHUB_ENV
+        echo "TWINE_PASSWORD=$TWINE_PASSWORD" >> $GITHUB_ENV
+
+    - name: Download ALL wheels
+      uses: actions/download-artifact@v3
+      with:
+        name: Python
+        path: Python
+
+    - name: Display structure of downloaded files
+      run: |
+        set -x
+        ls -R
+        du -sh
+
+    - name: Publish wheels to (Test)PyPI
+      if: ${{ github.event_name != 'pull_request' }}
+      env:
+        TWINE_USERNAME: __token__
+      run: python -m twine upload --skip-existing Python/*.whl Python/*.tar.gz

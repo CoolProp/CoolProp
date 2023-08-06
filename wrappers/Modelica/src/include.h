@@ -11,7 +11,7 @@
   Ian Bell (ian.bell@ulg.ac.be)
   2012-2013
   University of Liege, Liege, Belgium
-  
+
   Francesco Casella, Christoph Richter, Roberto Bonifetto
   2006-2012
   Copyright Politecnico di Milano, TU Braunschweig, Politecnico di Torino
@@ -41,19 +41,19 @@
 #define OPEN_MODELICA 0
 
 // Selection of used external fluid property computation packages.
-//! FluidProp solver	
+//! FluidProp solver
 /*!
   Set this preprocessor variable to 1 to include the interface to the
   FluidProp solver developed and maintained by Francesco Casella.
 */
 #if defined(WIN32) || defined(_WIN32)
-  #define FLUIDPROP 1
+#    define FLUIDPROP 1
 #else
-  #define FLUIDPROP 0
+#    define FLUIDPROP 0
 #endif
 
 // Selection of used external fluid property computation packages.
-//! CoolProp solver	
+//! CoolProp solver
 /*!
   Set this preprocessor variable to 1 to include the interface to the
   CoolProp solver developed and maintained by Ian Bell (ian.h.bell@gmail.com).
@@ -63,7 +63,7 @@
 // Selection of build type for this project
 //! Build project into a DLL
 /*!
-  Set this preprocessor variable to 1 if the project is built into a 
+  Set this preprocessor variable to 1 if the project is built into a
   dynamic link library. This setting influences the error reporting
   mechanism as well as the export statement.
 */
@@ -79,7 +79,7 @@
 
 /********************************************************************
  *                 End of user option selection
- *            Do not change anything below this line                                    
+ *            Do not change anything below this line
  ********************************************************************/
 
 // General purpose includes

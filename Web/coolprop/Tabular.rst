@@ -215,13 +215,29 @@ More Information
 
 The tables are stored in a zipped format using the msgpack package and miniz.  If you want to see what data is serialized in the tabular data, you can unzip and unpack into python (or other high-level languages) using something roughly like::
 
-    import msgpack, zlib, StringIO, numpy as np
-    
-    with open(r'/path/to/home/.CoolProp/Tables/HelmholtzEOSBackend(R245fa)/single_phase_logph.bin.z','rb') as fp:
-        ph = zlib.decompress(fp.read())
-        values = msgpack.load(StringIO.StringIO(ph))
+    import msgpack, zlib, io, numpy as np, matplotlib.pyplot as plt
+
+    root = r'C:\Users\ian\.CoolProp\Tables\REFPROPMixtureBackend(R32[0.8292500000]&R1234yf[0.1707500000])'
+    with open(root+'/single_phase_logph.bin.z','rb') as fp:
+        values = msgpack.load(io.BytesIO(zlib.decompress(fp.read())))
         revision, matrices = values[0:2]
         T,h,p,rho = np.array(matrices['T']), np.array(matrices['hmolar']), np.array(matrices['p']), np.array(matrices['rhomolar'])
-        
-You'll need msgpack wrapper for your target language.
-        
+        plt.plot(np.array(matrices['p']),np.array(matrices['hmolar']),'x')
+    with open(root+'/phase_envelope.bin.z','rb') as fp:
+        values = msgpack.load(io.BytesIO(zlib.decompress(fp.read())))
+        revision, matrices = values[0:2]
+        plt.plot(np.array(matrices['p']),np.array(matrices['hmolar_vap']),'-')
+    plt.show()
+
+    with open(root+'/single_phase_logpT.bin.z','rb') as fp:
+        values = msgpack.load(io.BytesIO(zlib.decompress(fp.read())))
+        revision, matrices = values[0:2]
+        T,h,p,rho = np.array(matrices['T']), np.array(matrices['hmolar']), np.array(matrices['p']), np.array(matrices['rhomolar'])
+        plt.plot(np.array(matrices['p']),np.array(matrices['T']),'x')
+    with open(root+'/phase_envelope.bin.z','rb') as fp:
+        values = msgpack.load(io.BytesIO(zlib.decompress(fp.read())))
+        revision, matrices = values[0:2]
+        plt.plot(np.array(matrices['p']),np.array(matrices['T']),'-')
+    plt.show()
+
+You'll need msgpack wrapper for your target language.        

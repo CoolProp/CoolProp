@@ -1,5 +1,6 @@
 from __future__ import print_function
 import requests, json, sys, os
+from typing import Dict, List
 
 
 def _log_msg(msg: str):
@@ -20,7 +21,10 @@ def _make_request(url: str):
         headers["Authorization"] = "token {0}".format(oauth2_token)
     except:
         pass
+    #_log_msg("Sending request to the GitHub API: {0}\n".format(url))
     r = requests.get(url, headers=headers)
+    #print(url)
+    #print(r.json())
     return r.json()
 
 def _make_request_urllib(url: str):
@@ -47,7 +51,45 @@ REPO_NAME = "CoolProp/CoolProp"
 REPO_URL = "https://api.github.com/repos"
 SEARCH_URL = "https://api.github.com/search"
 SITE_URL = "https://github.com"
+BASE_PATH = os.path.dirname(__file__)
 
+def query_search_api(QUER_VARS: Dict, POST_VARS: Dict = dict(sort="created", order="asc")):
+    """Finds all issues that have been closed after the tag_data"""
+    # Prepare URL
+    BASE_URL = "/".join([SEARCH_URL, "issues"])
+    QUER_VARS["repo"] = REPO_NAME
+    # Prepare query
+    QUER_VARS_LIST = []
+    for k,v in QUER_VARS.items():
+        QUER_VARS_LIST.append("{0}:{1}".format(k, v))
+    QUER_VARS_STRING = "+".join(QUER_VARS_LIST)
+    POST_VARS["q"] = QUER_VARS_STRING
+    # Prepare loop variables
+    _result_dict = None
+    if "page" in POST_VARS.keys():
+        pageCounter = POST_VARS["page"]
+        isRunning = False
+    else:
+        pageCounter = 1
+        isRunning = True
+    # Loop over the results
+    result_dict = None
+    while True:
+        POST_VARS["page"] = pageCounter
+        POST_VARS_LIST = ["{0}={1}".format(k, v) for k,v in POST_VARS.items()]
+        POST_VARS_STRING = "&".join(POST_VARS_LIST)
+        REQUEST_URL = BASE_URL + "?" + POST_VARS_STRING
+        tmp_dict = _make_request(REQUEST_URL)
+        isRunning &= len(tmp_dict["items"]) > 0
+        if result_dict is None:
+            result_dict = tmp_dict
+        elif isRunning:
+            result_dict["items"] += tmp_dict["items"]
+        pageCounter += 1
+        if not isRunning:
+            break
+    
+    return result_dict
 
 def get_latest_tag_and_date():
     # Get latest release
@@ -73,32 +115,27 @@ def get_latest_tag_and_date():
 
 def get_issues_closed_since(tag_date: str, what: str):
     """Finds all issues that have been closed after the tag_data"""
-    BASE_URL = "/".join([SEARCH_URL, "issues"])
-    POST_VARS = dict(page=1, per_page=1000, sort="created", order="asc")
-    QUER_VARS = dict(repo=REPO_NAME, closed=">="+tag_date)
+    POST_VARS = dict(sort="created", order="asc")
+    QUER_VARS = {}
+    QUER_VARS["closed"] = ">="+tag_date
     QUER_VARS["is"] = what
-
-    QUER_VARS_LIST = []
-    for k,v in QUER_VARS.items():
-        QUER_VARS_LIST.append("{0}:{1}".format(k, v))
-    QUER_VARS_STRING = "+".join(QUER_VARS_LIST)
-
-    POST_VARS_LIST = []
-    for k,v in POST_VARS.items():
-        POST_VARS_LIST.append("{0}={1}".format(k, v))
-    POST_VARS_STRING = "&".join(POST_VARS_LIST)
-
-    _REQUEST_URL = BASE_URL + "?" + POST_VARS_STRING + "&q=" + QUER_VARS_STRING
-
-    _issues_dict = _make_request(_REQUEST_URL)
-    return _issues_dict
+    return query_search_api(QUER_VARS, POST_VARS)
 
 
 def check_issues_for_labels_and_milestone(ms: str, _issues_dict: dict):
     """Check whether the issues have the correct milestone information or are labeled for exclusion"""
     _no_label_or_ms = []
     _wrong_milestone = []
+    print("Processing {} items".format(len(_issues_dict["items"])))
     for _i in _issues_dict["items"]:
+    
+        #_thetype = None
+        #if "issues" in _i["url"]:
+        #    _thetype = "issue"
+        #if "pulls" in _i["url"]:
+        #    _thetype = "pull request"
+        #print("Checking {} #{}".format(_thetype, _i["number"]))
+    
         _num = _i["number"]
         _labels = [_l["name"] for _l in _i["labels"]]
         _milestone = _i["milestone"]
@@ -143,83 +180,42 @@ def get_milestones(milestone):
         return json.load(fp)
 
 
-def get_PR_JSON(milestone, number):
+def get_milestone_JSON(milestone: str, what: str):
     # Get the merged pull requests associated with the milestone
-    fname = milestone + '-PR.json'
+    fname = "{}-{}.json".format(milestone, what)
     if True or not os.path.exists(fname):
-        _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'pulls'])
-        _REQUEST_URL += '?state=closed&per_page=1000&milestone=' + str(number)
-        # Find the milestone number for the given name
-        PR = _make_request(_REQUEST_URL)
+        POST_VARS = dict(sort="created", order="asc")
+        QUER_VARS = {}
+        QUER_VARS["milestone"] = milestone
+        QUER_VARS["is"] = what
+        #QUER_VARS["is"] = "closed"
+        #QUER_VARS["state"] = "all"
+        result = query_search_api(QUER_VARS, POST_VARS)
         with open(fname, 'w') as fp:
-            fp.write(json.dumps(PR, indent=2))
+            fp.write(json.dumps(result, indent=2))
     with open(fname, 'r') as fp:
         return json.load(fp)
 
-
-def get_issues_JSON(milestone, number):
-    # Get the issues associated with the milestone
-    fname = milestone + '-issues.json'
-    if True or not os.path.exists(fname):
-        # Find the milestone number for the given name
-        _REQUEST_URL = "/".join([REPO_URL, REPO_NAME, 'issues'])
-        _REQUEST_URL += '?state=all&per_page=1000&milestone=' + str(number)
-        issues = _make_request(_REQUEST_URL)
-        with open(fname, 'w') as fp:
-            fp.write(json.dumps(issues, indent=2))
-    with open(fname, 'r') as fp:
-        return json.load(fp)
-
+def get_milestone_items(milestone: str, what: str):
+    # Get the items associated with the milestone
+    items = get_milestone_JSON(milestone, what)["items"]
+    print("Found {} {}s associated with {}".format(len(items), what, milestone))
+    for item in items:
+        if item["state"] != "closed":
+            raise ValueError("This {} is still open: {} - {}".format(what, item["number"], item["title"]))
+    return items
 
 def generate_issues(milestone):
-
-    milestones_json = get_milestones(milestone)
-
-    # Map between name and number
-    title_to_number_map = {stone['title']: stone['number'] for stone in milestones_json}
-
-    # Find the desired number
-    number = title_to_number_map[milestone]
-
-    PR = get_PR_JSON(milestone, number)
-    pr_numbers = [issue['number'] for issue in PR]
-
-    # Get the issues associated with the milestone
-    issues = get_issues_JSON(milestone, number)
-
-    # Make sure all issues are closed in this milestone
-    l = 0
-    for issue in issues:
-        if issue['state'] != 'closed': raise ValueError('This issue is still open: ' + issue['title'])
-        l = l + 1
-
-    for i in reversed(range(l)):
-        if issues[i]['number'] in pr_numbers:
-            issues.pop(i)
-
-    rst = 'Issues Closed:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/issues/{n:d}>`_ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
-
+    # Get the items associated with the milestone
+    issues = get_milestone_items(milestone, "issue")
+    rst = 'Issues closed:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/issues/{n:d}>`_ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
     return rst
 
 
-def generate_PR(milestone):
-
-    # Find the milestone number for the given name
-    milestones_json = get_milestones(milestone)
-
-    # Map between name and number
-    title_to_number_map = {stone['title']: stone['number'] for stone in milestones_json}
-
-    # Find the desired number
-    number = title_to_number_map[milestone]
-
-    PR = get_PR_JSON(milestone, number)
-
-    rst = 'Pull Requests merged:\n\n'
-    for issue in PR:
-        if issue['milestone'] is not None and issue['milestone']['title'] == milestone:
-            rst += '* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}\n'.format(n=issue['number'], t=issue['title'])
-
+def generate_prs(milestone):
+    # Get the items associated with the milestone
+    issues = get_milestone_items(milestone, "pr")
+    rst = 'Pull requests merged:\n\n' + '\n'.join(['* `#{n:d} <https://github.com/CoolProp/CoolProp/pull/{n:d}>`_ : {t:s}'.format(n=issue['number'], t=issue['title']) for issue in issues])
     return rst
 
 
@@ -233,7 +229,7 @@ if __name__ == '__main__':
     if sys.argv[1] == "check":
         release_json = get_latest_tag_and_date()
 
-        issues_json = get_issues_closed_since(release_json["tag_date"], what="issues")
+        issues_json = get_issues_closed_since(release_json["tag_date"], what="issue")
         succ = check_issues_for_labels_and_milestone(sys.argv[2], issues_json)
         if succ:
              _log_msg("All issues seem to have the correct labels and milestones, congrats!\n")
@@ -246,14 +242,14 @@ if __name__ == '__main__':
     elif sys.argv[1] == "changelog":
         issues_rst = generate_issues(sys.argv[2])
         print(issues_rst)
-        with open("snippet_issues.rst.txt", 'w') as fp:
+        with open(os.path.join(BASE_PATH,"snippet_issues.rst.txt"), 'w') as fp:
             fp.write(issues_rst)
 
         print('')
 
-        issues_rst = generate_PR(sys.argv[2])
+        issues_rst = generate_prs(sys.argv[2])
         print(issues_rst)
-        with open("snippet_pulls.rst.txt", 'w') as fp:
+        with open(os.path.join(BASE_PATH,"snippet_pulls.rst.txt"), 'w') as fp:
             fp.write(issues_rst)
 
 
