@@ -89,6 +89,7 @@ jobs:
         source activate docs
         echo "Calling: python -u __init__.py ${{ steps.variable_calculation.outputs.expensive }}"
         python -u __init__.py ${{ steps.variable_calculation.outputs.expensive }}
+      timeout-minutes: 120
         
     - name: Build documentation with Doxygen
       shell: bash
