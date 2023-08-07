@@ -131,7 +131,7 @@ bool is_valid_fluid_string(const std::string& fluidstring);
 bool add_fluids_as_JSON(const std::string& backend, const std::string& fluidstring);
 
 /**
- * @brief Apply Lorentz-Berthelot mixing rule (all interaction parameters = 1.0) for a given binary pair
+ * @brief Apply a simple mixing rule for a given binary pair
  * @param identifier1 The CAS # (or name) for the first fluid
  * @param identifier2 The CAS # (or name) for the second fluid
  * @param rule The simple mixing rule to be used ("linear", "Lorentz-Berthelot")
