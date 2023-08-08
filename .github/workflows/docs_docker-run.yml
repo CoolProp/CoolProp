@@ -53,10 +53,10 @@ jobs:
       shell: bash
       run: |
         set -x
-        cat ${{ github.event.schedule }}
+        echo ${{ github.event.schedule }}
         echo "COOLPROP_DAILY=${{ github.event.schedule == '0 2 * * *' }}" >> $GITHUB_ENV
         echo "COOLPROP_WEEKLY=${{ github.event.schedule == '0 4 * * 1' }}" >> $GITHUB_ENV
-        cat ${{ github.ref }}
+        echo ${{ github.ref }}
         echo "COOLPROP_TAGGED=${{ contains(github.ref, 'refs/tags') }}" >> $GITHUB_ENV
         cat $GITHUB_ENV
         
