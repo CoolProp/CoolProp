@@ -16,11 +16,6 @@ on:
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
 
-env:
-  DAILY: ${{ github.event.schedule == '0 2 * * *' }}
-  WEEKLY: ${{ github.event.schedule == '0 4 * * 1' }}
-  TAGGED: ${{ contains(github.ref, 'refs/tags') }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -53,19 +48,27 @@ jobs:
         #restore-keys: |
         #  cached-props-
         
+    - name: Schedule calculations
+      id: schedule_calculation
+      shell: bash
+      run: |
+        set -x
+        cat ${{ github.event.schedule }}
+        echo "COOLPROP_DAILY=${{ github.event.schedule == '0 2 * * *' }}" >> $GITHUB_ENV
+        echo "COOLPROP_WEEKLY=${{ github.event.schedule == '0 4 * * 1' }}" >> $GITHUB_ENV
+        cat ${{ github.ref }}
+        echo "COOLPROP_TAGGED=${{ contains(github.ref, 'refs/tags') }}" >> $GITHUB_ENV
+        cat $GITHUB_ENV
+        
     - name: Variable calculations
       id: variable_calculation
       shell: bash
-      # echo "EXPENSIVE_TRIGGERED=${{ inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_ENV
       run: |
         set -x
-        echo "expensive_triggered=${{ inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_OUTPUT
-        echo "expensive_cached=${{ steps.cached-props.outputs.cache-hit != 'true' }}" >> $GITHUB_OUTPUT
-        echo "expensive=${{ (steps.cached-props.outputs.cache-hit != 'true') || inputs.expensive || env.TAGGED || env.WEEKLY }}" >> $GITHUB_OUTPUT
-        cat $GITHUB_OUTPUT
         conda install -y packaging
-        COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)
-        echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
+        echo "COOLPROP_VERSION=$(python dev/extract_version.py --cmake-only)" >> $GITHUB_ENV
+        echo "COOLPROP_EXPENSIVE=${{ (steps.cached-props.outputs.cache-hit != 'true') || inputs.expensive || env.COOLPROP_TAGGED || env.COOLPROP_WEEKLY }}" >> $GITHUB_ENV
+        cat $GITHUB_ENV
     
     - name: Build and install wheel using bdist_wheel
       working-directory: ./wrappers/Python/
@@ -88,9 +91,8 @@ jobs:
       shell: bash
       run: |
         source activate docs
-        echo "Calling: python -u __init__.py ${{ steps.variable_calculation.outputs.expensive }}"
-        python -u __init__.py ${{ steps.variable_calculation.outputs.expensive }}
-      timeout-minutes: 120
+        echo "Calling: python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}"
+        python -u __init__.py ${{ env.COOLPROP_EXPENSIVE }}
         
     - name: Build documentation with Doxygen
       shell: bash
