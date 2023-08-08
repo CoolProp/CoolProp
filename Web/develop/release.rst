@@ -46,7 +46,8 @@ the CoolProp library.
 * **Push to master**: Merge your changes to the *master* branch and wait for the 
   CI system to complete the work. Only proceed if all builds finish successfully.
   Just to be on the safe side, you may want to trigger the regeneration of the 
-  expensive documentation graphs manually.
+  expensive documentation graphs manually. If anything goes wrong, you should be
+  able to debug the workflows locally using act (https://github.com/nektos/act/).
 * **Tag a release**: Tag the master branch for using ``vX.X.X`` and wait once more 
   for all CI actions to complete. Make sure that the Python wheels get uploaded 
   to PyPi automatically.

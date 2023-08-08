@@ -37,6 +37,7 @@ jobs:
         submodules: recursive
     
     - uses: actions/cache@v3
+      if: ${{ !env.ACT }} # skip during local actions testing
       id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
       with:
         path: |
@@ -107,6 +108,7 @@ jobs:
         make html
         
     - name: Upload GitHub Pages artifact
+      if: ${{ !env.ACT }} # skip during local actions testing
       uses: actions/upload-pages-artifact@v1
       with:
         path: ./Web/_build/html/
@@ -119,6 +121,7 @@ jobs:
       # zip -rq   CoolProp-${{ env.COOLPROP_VERSION }}-documentation-html.zip    html/*
     
     - name: Archive TGZ or ZIP artifacts
+      if: ${{ !env.ACT }} # skip during local actions testing
       uses: actions/upload-artifact@v3
       with:
           name: docs
@@ -158,5 +161,6 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       #if: contains(github.ref, 'refs/tags')
+      if: ${{ !env.ACT }} # skip during local actions testing
       id: deployment
       uses: actions/deploy-pages@v1
