@@ -16,7 +16,6 @@ Pre-Compiled Binaries
 
 * A live demo of the Javascript library in action can also be found `online <http://www.coolprop.sourceforge.net/jscript/index.html>`_.
 
-* There is a bug in emscripten causing problems when a ``Release`` build of CMake is used.  Switching to ``RelWithDebInfo`` config seems to solve it, just delete the generated .wast file.
 
 Serving the JS
 ==============
