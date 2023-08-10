@@ -8,7 +8,7 @@ Javascript Wrapper
 Pre-Compiled Binaries
 =====================
 
-* Download the precompiled binaries from :sfdownloads:`Javascript`, or the development versions from the buildbot server at :sfnightly:`Javascript`. Remember to get both files, ``coolprop.js`` and ``coolprop.js.mem``.
+* Download the precompiled binaries from :sfdownloads:`Javascript`, or the development versions from the buildbot server at :sfnightly:`Javascript`. Remember to get both files, ``coolprop.js`` and ``coolprop.wasm``.
 
 * You can load your js file into your website, following the structure of `the example here <https://github.com/CoolProp/CoolProp/blob/master/Web/coolprop/wrappers/Javascript/index.html>`_, which is also included at the above download. 
 
@@ -41,8 +41,14 @@ On Apache, you need to `setup the server appropriately <https://emscripten.org/d
 User-Compiled Binaries
 ======================
 
-Linux
------
+Docker
+------
+
+We run the emscripten-based builds in a docker container and you can follow `the CI example here <https://github.com/CoolProp/CoolProp/blob/master/.github/workflows/javascript_builder.yml>`_, which is also the script that generates the official downloads.
+
+
+Linux (deprecated)
+------------------
 We are following the instructions from `emscripten.org <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_ - download the portable emscripten SDK `emsdk` for linux.
 
 1. First download node.js, clang++ and llvm using::
@@ -79,8 +85,8 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
 
      cmake .. -DCOOLPROP_JAVASCRIPT_MODULE=ON -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake
 
-Windows
--------
+Windows (deprecated)
+--------------------
 1. Download the `EMSDK installer <http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html>`_, run the web download installer, that will install everything, and get you ready.
 
 2. In the ``%HOME%/.emscripten`` file, make sure that there is only one entry for NODE_JS and it points to the right place.  Mine looks like::
