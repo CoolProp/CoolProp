@@ -2,7 +2,7 @@ name: Windows Installer
 
 on:
   push:
-    branches: [ 'master', 'main', 'develop', 'actions_installer' ]
+    branches: [ 'master', 'main', 'develop', 'actions_javascript' ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]

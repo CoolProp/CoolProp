@@ -1,0 +1,53 @@
+name: Javascript library
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_installer' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container:
+      image: emscripten/emsdk
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Configure CMake
+      shell: bash
+      run: |
+        cmake -B build -S . --fresh -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      shell: bash
+      run: |
+        set -x
+        cmake --build build --target install -j $(nproc) --config Release
+        mkdir build/Javascript
+        cp build/coolprop.* build/Javascript
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      with:
+          name: Javascript
+          path: build/Javascript
+
+    # - name: Upload TGZ or ZIP to release
+    #   if: contains(github.ref, 'refs/tags')
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: build/InnoScript/bin/Installers/Windows/CoolProp-${{ env.COOLPROP_VERSION }}.exe
+    #     tag: ${{ github.ref }}
+    #     overwrite: true
+    #     file_glob: false
