@@ -43,27 +43,27 @@ jobs:
         echo COOLPROP_VERSION=$COOLPROP_VERSION >> $GITHUB_ENV
 
     - name: Configure CMake
-      run: cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_SHARED_LIBRARY:BOOL=ON
+      run: cmake -B build -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON
 
     - name: Build
-      run: cmake --build build --target install -j $(nproc) --config $BUILD_TYPE
+      run: cmake --build build --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
 
     # Create a special case for Windows since we also need 2 flavours of 32bit binaries
     - name: Configure CMake for 32bit Windows stdcall
       if: startsWith(matrix.os, 'windows')
-      run: cmake -B build_stdc  -S . -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_STDCALL_LIBRARY:BOOL=ON -A Win32
+      run: cmake -B build_stdc  -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_STDCALL_LIBRARY:BOOL=ON -A Win32
       
     - name: Build with CMake for 32bit Windows stdcall
       if: startsWith(matrix.os, 'windows')
-      run: cmake --build build_stdc --target install -j $(nproc) --config $BUILD_TYPE
+      run: cmake --build build_stdc --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
 
     - name: Configure CMake for 32bit Windows cdecl
       if: startsWith(matrix.os, 'windows')
-      run: cmake -B build_cdecl -S . -DCMAKE_BUILD_TYPE:STRING=$BUILD_TYPE -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_CDECL_LIBRARY:BOOL=ON   -A Win32
+      run: cmake -B build_cdecl -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -DCOOLPROP_CDECL_LIBRARY:BOOL=ON   -A Win32
       
     - name: Build with CMake for 32bit Windows cdecl
       if: startsWith(matrix.os, 'windows')
-      run: cmake --build build_cdecl --target install -j $(nproc) --config $BUILD_TYPE
+      run: cmake --build build_cdecl --target install -j $(nproc) --config ${{ env.BUILD_TYPE }}
 
 
     # - name: Tar.gz the shared library to maintain case sensitivy and file permissions
