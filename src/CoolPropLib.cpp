@@ -604,8 +604,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
-// TODO: verify this is correct
-EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, const std::size_t i, long* errcode, char* message_buffer,
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, const long i, long* errcode, char* message_buffer,
                                                          const long buffer_length) {
     *errcode = 0;
     try {
@@ -616,8 +615,7 @@ EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, cons
     }
     return _HUGE;
 }
-// TODO: verify this is correct
-EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const std::size_t i, long* errcode, char* message_buffer,
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
                                                                     const long buffer_length) {
     *errcode = 0;
     try {
@@ -628,19 +626,6 @@ EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long 
     }
     return _HUGE;
 }
-// TODO: verify this is correct
-// Am I returning vectors correctly??
-// EXPORT_CODE vector<std::double> CONVENTION AbstractState_get_fugacity_coefficients(const long handle, const std::size_t i, long* errcode, char* message_buffer,
-//                                                                     const long buffer_length) {
-//     *errcode = 0;
-//     try {
-//         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
-//         return AS->fugacity_coefficients(i);
-//     } catch (...) {
-//         HandleException(errcode, message_buffer, buffer_length);
-//     }
-//     return _HUGE;
-// }
 EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long* errcode,
                                                  char* message_buffer, const long buffer_length) {
     *errcode = 0;
