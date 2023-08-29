@@ -98,7 +98,7 @@ struct saturation_PHSU_pure_options
 };
 
 #if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
-static int format_as(saturation_PHSU_pure_options::specified_variable_options option) {
+inline int format_as(saturation_PHSU_pure_options::specified_variable_options option) {
     return fmt::underlying(option);
 }
 #endif

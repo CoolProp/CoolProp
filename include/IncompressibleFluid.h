@@ -45,7 +45,7 @@ struct IncompressibleData
 };
 
 #if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
-static int format_as(IncompressibleData::IncompressibleTypeEnum type) {
+inline int format_as(IncompressibleData::IncompressibleTypeEnum type) {
     return fmt::underlying(type);
 }
 #endif
