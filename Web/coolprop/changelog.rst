@@ -1,6 +1,43 @@
 Changelog for CoolProp
 ======================
 
+6.5.0
+-----
+
+Highlights:
+
+* Mostly small bugfixes and dependency updates
+* Added ability to add predefined mixtures at runtime
+* Updated transport models for CO2
+* Fixed a bug in the hexane models
+
+Issues closed:
+
+* `#2051 <https://github.com/CoolProp/CoolProp/issues/2051>`_ : Cyclopentane EOS needs to be updated
+* `#2142 <https://github.com/CoolProp/CoolProp/issues/2142>`_ : R1233zd does not work in the saturation region close to the bubble point
+* `#2200 <https://github.com/CoolProp/CoolProp/issues/2200>`_ : CoolProp pure Hexane bug
+* `#2201 <https://github.com/CoolProp/CoolProp/issues/2201>`_ : N-heptane has repeated IdealGasHelmholtzCP0AlyLee
+* `#2205 <https://github.com/CoolProp/CoolProp/issues/2205>`_ : Python silently crashes when calling trivial_keyed_output on binary mixtures without specified mole fractions
+* `#2251 <https://github.com/CoolProp/CoolProp/issues/2251>`_ : Unable to compile with fmt 10.0.0
+* `#2265 <https://github.com/CoolProp/CoolProp/issues/2265>`_ : Sharp non-differentiable changes in thermal conductivity of CO2 and other gases
+* `#2277 <https://github.com/CoolProp/CoolProp/issues/2277>`_ : Update State class
+
+Pull requests merged:
+
+* `#2203 <https://github.com/CoolProp/CoolProp/pull/2203>`_ : Provide better feedback for bad DQ inputs
+* `#2207 <https://github.com/CoolProp/CoolProp/pull/2207>`_ : Verify that mole fractions are set before using them
+* `#2214 <https://github.com/CoolProp/CoolProp/pull/2214>`_ : Change links from Google group to GitHub discussions
+* `#2223 <https://github.com/CoolProp/CoolProp/pull/2223>`_ : Topic 2142
+* `#2225 <https://github.com/CoolProp/CoolProp/pull/2225>`_ : update cyclopentane.json
+* `#2230 <https://github.com/CoolProp/CoolProp/pull/2230>`_ : Topic-2200: Correct typo in n-Hexane rhoV auxilliary
+* `#2238 <https://github.com/CoolProp/CoolProp/pull/2238>`_ : Incomp liqna
+* `#2241 <https://github.com/CoolProp/CoolProp/pull/2241>`_ : Update index.rst
+* `#2252 <https://github.com/CoolProp/CoolProp/pull/2252>`_ : Update fmt submodule to 10.0.0
+* `#2261 <https://github.com/CoolProp/CoolProp/pull/2261>`_ : Create CITATION.bib
+* `#2267 <https://github.com/CoolProp/CoolProp/pull/2267>`_ : implemented TCX Huber-JPCRD-2016 for CO2
+* `#2268 <https://github.com/CoolProp/CoolProp/pull/2268>`_ : implemented VISC LAESECKE-JPCRD-2017-CO2
+
+
 6.4.3
 -----
 

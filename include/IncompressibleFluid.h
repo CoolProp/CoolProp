@@ -44,6 +44,12 @@ struct IncompressibleData
     };
 };
 
+#if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
+inline int format_as(IncompressibleData::IncompressibleTypeEnum type) {
+    return fmt::underlying(type);
+}
+#endif
+
 /// A property provider for incompressible solutions and pure fluids
 /**
 This fluid instance is populated using an entry from a JSON file

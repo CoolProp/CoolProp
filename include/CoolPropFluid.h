@@ -134,6 +134,7 @@ struct ConductivityDiluteVariables
         CONDUCTIVITY_DILUTE_RATIO_POLYNOMIALS,
         CONDUCTIVITY_DILUTE_ETA0_AND_POLY,
         CONDUCTIVITY_DILUTE_CO2,
+        CONDUCTIVITY_DILUTE_CO2_HUBER_JPCRD_2016,
         CONDUCTIVITY_DILUTE_ETHANE,
         CONDUCTIVITY_DILUTE_NONE,
         CONDUCTIVITY_DILUTE_NOT_SET
@@ -245,6 +246,7 @@ struct ViscosityDiluteVariables
         VISCOSITY_DILUTE_KINETIC_THEORY,                      ///< Use \ref TransportRoutines::viscosity_dilute_kinetic_theory
         VISCOSITY_DILUTE_ETHANE,                              ///< Use \ref TransportRoutines::viscosity_dilute_ethane
         VISCOSITY_DILUTE_CYCLOHEXANE,                         ///< Use \ref TransportRoutines::viscosity_dilute_cyclohexane
+        VISCOSITY_DILUTE_CO2_LAESECKE_JPCRD_2017,             ///< Use \ref TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017
         VISCOSITY_DILUTE_POWERS_OF_T,                         ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_T
         VISCOSITY_DILUTE_POWERS_OF_TR,                        ///< Use \ref TransportRoutines::viscosity_dilute_powers_of_Tr
         VISCOSITY_DILUTE_NOT_SET
@@ -308,6 +310,7 @@ struct ViscosityHigherOrderVariables
         VISCOSITY_HIGHER_ORDER_ETHANE,                 ///< Use \ref TransportRoutines::viscosity_ethane_higher_order_hardcoded
         VISCOSITY_HIGHER_ORDER_BENZENE,                ///< Use \ref TransportRoutines::viscosity_benzene_higher_order_hardcoded
         VISCOSITY_HIGHER_ORDER_TOLUENE,                ///< Use \ref TransportRoutines::viscosity_toluene_higher_order_hardcoded
+        VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017,///< Use \ref TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017
         VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,        ///< Use \ref TransportRoutines::viscosity_higher_order_friction_theory
         VISCOSITY_HIGHER_ORDER_NOT_SET
     };
@@ -561,6 +564,20 @@ class CoolPropFluid
         return EOS().molar_mass;
     };
 };
+
+#if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
+inline int format_as(ViscosityDiluteVariables::ViscosityDiluteType type) {
+    return fmt::underlying(type);
+}
+
+inline int format_as(TransportPropertyData::ViscosityHardcodedEnum viscosity) {
+    return fmt::underlying(viscosity);
+}
+
+inline int format_as(TransportPropertyData::ConductivityHardcodedEnum conductivity) {
+    return fmt::underlying(conductivity);
+}
+#endif
 
 } /* namespace CoolProp */
 #endif /* COOLPROPFLUID_H_ */

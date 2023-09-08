@@ -604,6 +604,28 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, const long i, long* errcode, char* message_buffer,
+                                                         const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->fugacity(i);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
+                                                                    const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->fugacity_coefficient(i);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
 EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long* errcode,
                                                  char* message_buffer, const long buffer_length) {
     *errcode = 0;
