@@ -369,6 +369,28 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
                                                                       const long maxN, long* N, long* errcode, char* message_buffer,
                                                                       const long buffer_length);
 /**
+     * @brief Return the fugacity of the i-th component of the mixture.
+     * @param handle The integer handle for the state class stored in memory
+     * @param i i-th component of the mixture
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return 
+     */
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, const long i, long* errcode, char* message_buffer,
+                                                         const long buffer_length);
+/**
+     * @brief Return the fugacity coefficient of the i-th component of the mixture.
+     * @param handle The integer handle for the state class stored in memory
+     * @param i i-th component of the mixture
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return 
+     */
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
+                                                                      const long buffer_length);
+/**
      * @brief Update the state of the AbstractState
      * @param handle The integer handle for the state class stored in memory
      * @param input_pair The integer value for the input pair obtained from XXXXXXXXXXXXXXXX
