@@ -463,6 +463,72 @@ EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handl
                                                                 char* message_buffer, const long buffer_length);
 
 /**
+    * @brief Calculate the second partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of1 The parameter of which the derivative is being taken
+    * @param Wrt1 The parameter that the derivative is taken with respect to in the first derivative 
+    * @param Constant1 The parameter that is held constant in the first derivative 
+    * @param Wrt2 The parameter that the derivative is taken with respect to in the second derivative 
+    * @param Constant2 The parameter that is held constant in the second derivative 
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+EXPORT_CODE double CONVENTION AbstractState_second_two_phase_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length);
+/**
+    * @brief Calculate the second partial derivative int two-phase region from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of1 The parameter of which the derivative is being taken
+    * @param Wrt1 The parameter that the derivative is taken with respect to in the first derivative 
+    * @param Constant1 The parameter that is held constant in the first derivative 
+    * @param Wrt2 The parameter that the derivative is taken with respect to in the second derivative 
+    * @param Constant2 The parameter that is held constant in the second derivative 
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length);
+
+/**
+    * @brief Calculate the first partial derivative in two-phase region with Spline - Approach from the AbstractState using integer values for the desired parameters
+    Spline Approach "Methods to Increase the Robustness of Finite-Volume FlowModels in Thermodynamic Systems: Sylvain Quoilin, Ian Bell, Adriano Desideri, Pierre Dewallef and Vincent Lemort"
+    * @param handle The integer handle for the state class stored in memory
+    * @x_end constant parameter for defining range of the spline, (usually 0.1 is used, 0..1 is possible)
+    * @param Of The parameter of which the derivative is being taken
+    * @param Wrt The derivative with with respect to this parameter
+    * @param Constant The parameter that is not affected by the derivative
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_splined(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                  const double x_end,long* errcode, char* message_buffer, const long buffer_length);
+/**
+    * @brief Calculate the first partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of The parameter of which the derivative is being taken
+    * @param Wrt The derivative with with respect to this parameter
+    * @param Constant The parameter that is not affected by the derivative
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                  long* errcode, char* message_buffer, const long buffer_length);
+/**
     * @brief Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy)
     * @brief from the AbstractState using pointers as inputs and output to allow array computation.
     * @param handle The integer handle for the state class stored in memory
