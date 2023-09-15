@@ -272,8 +272,7 @@ set(SWIG_DEPENDENCIES
     ${CMAKE_CURRENT_SOURCE_DIR}/include/CoolProp.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/AbstractState.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/Configuration.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/PhaseEnvelope.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/HumidAirProp.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/PhaseEnvelope.h)
 
 set(COOLPROP_APP_SOURCES
     ${APP_SOURCES}

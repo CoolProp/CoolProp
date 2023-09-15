@@ -287,14 +287,10 @@ static MixtureBinaryPairLibrary mixturebinarypairlibrary;
 // A fixed parameter library containing the default values
 static MixtureBinaryPairLibrary mixturebinarypairlibrary_default;
 
-namespace MixParameters {
-
 /// Add a simple mixing rule
 void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule) {
     mixturebinarypairlibrary.add_simple_mixing_rule(identifier1, identifier2, rule);
 }
-
-} /* namespace MixParameters */
 
 std::string get_csv_mixture_binary_pairs() {
 
