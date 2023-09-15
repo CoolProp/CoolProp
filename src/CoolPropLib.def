@@ -11,7 +11,9 @@ EXPORTS
   AbstractState_first_saturation_deriv = _AbstractState_first_saturation_deriv@24
   AbstractState_first_partial_deriv = _AbstractState_first_partial_deriv@28
   AbstractState_second_partial_deriv = _AbstractState_second_partial_deriv@28
-  AbstractState_first_two_phase_deriv= _AbstractState_first_two_phase_deriv@28 
+  AbstractState_second_two_phase_deriv = _AbstractState_second_two_phase_deriv@28
+  AbstractState_first_two_phase_deriv= _AbstractState_first_two_phase_deriv@28
+  AbstractState_first_two_phase_deriv_splined= _AbstractState_first_two_phase_deriv_splined@28 
   AbstractState_specify_phase = _AbstractState_specify_phase@20
   AbstractState_unspecify_phase = _AbstractState_unspecify_phase@16
   AbstractState_update_and_1_out = _AbstractState_update_and_1_out@40
