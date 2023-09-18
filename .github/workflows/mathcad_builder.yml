@@ -22,7 +22,7 @@ jobs:
       run: |
         mkdir "Custom Functions"
         cd "Custom Functions"        
-        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/MCADINCL.H
+        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcadincl.h
         curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcaduser.lib
 
     - name: Configure CMake
