@@ -1,0 +1,42 @@
+name: Windows Installer
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Get dependencies
+      shell: bash
+      run: |
+        mkdir "Custom Functions"
+        cd "Custom Functions"
+        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://github.com/CoolProp/PRIVATE_DEPENDENCIES/raw/main/MathcadPrime/Custom%20Functions/MCADINCL.H
+        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://github.com/CoolProp/PRIVATE_DEPENDENCIES/raw/main/MathcadPrime/Custom%20Functions/mcaduser.lib
+
+    - name: Configure CMake
+      run: cmake -DCOOLPROP_PRIME_MODULE=ON:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="." -B build -S .
+
+    - name: Build
+      run: cmake --build build --target CoolPropMathcadWrapper -j $(nproc) --config $BUILD_TYPE
+
+    #- name: Archive artifacts
+    #  uses: actions/upload-artifact@v3
+    #  with:
+    #      name: MathcadPrime
+    #      path: build/MathcadPrime/bin/custom
