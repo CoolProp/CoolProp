@@ -26,7 +26,7 @@ jobs:
         curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcaduser.lib --output mcaduser.lib
 
     - name: Configure CMake
-      run: cmake -DCOOLPROP_PRIME_MODULE=ON:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${GITHUB_WORKSPACE}" -B build -S .
+      run: cmake -DCOOLPROP_PRIME_MODULE=ON:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${{ github.workspace }}" -B build -S .
 
     - name: Build
       run: | 
