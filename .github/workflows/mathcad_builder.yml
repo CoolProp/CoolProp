@@ -29,10 +29,12 @@ jobs:
       run: cmake -DCOOLPROP_PRIME_MODULE=ON:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="." -B build -S .
 
     - name: Build
-      run: cmake --build build --target CoolPropMathcadWrapper -j $(nproc) --config Release
+      run: | 
+        cmake --build build --target CoolPropMathcadWrapper -j $(nproc) --config Release
+        cmake --build build --target install --config Release
 
-    #- name: Archive artifacts
-    #  uses: actions/upload-artifact@v3
-    #  with:
-    #      name: MathcadPrime
-    #      path: build/MathcadPrime/bin/custom
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      with:
+          name: MathcadPrime
+          path: install_root/MathcadPrime
