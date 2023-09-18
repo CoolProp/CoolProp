@@ -1,4 +1,4 @@
-name: Windows Installer
+name: Mathcad wrapper
 
 on:
   push:
@@ -6,10 +6,6 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
-
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
 
 jobs:
   build:
@@ -25,15 +21,15 @@ jobs:
       shell: bash
       run: |
         mkdir "Custom Functions"
-        cd "Custom Functions"
-        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://github.com/CoolProp/PRIVATE_DEPENDENCIES/raw/main/MathcadPrime/Custom%20Functions/MCADINCL.H
-        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://github.com/CoolProp/PRIVATE_DEPENDENCIES/raw/main/MathcadPrime/Custom%20Functions/mcaduser.lib
+        cd "Custom Functions"        
+        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/MCADINCL.H
+        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcaduser.lib
 
     - name: Configure CMake
       run: cmake -DCOOLPROP_PRIME_MODULE=ON:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="." -B build -S .
 
     - name: Build
-      run: cmake --build build --target CoolPropMathcadWrapper -j $(nproc) --config $BUILD_TYPE
+      run: cmake --build build --target CoolPropMathcadWrapper -j $(nproc) --config Release
 
     #- name: Archive artifacts
     #  uses: actions/upload-artifact@v3
