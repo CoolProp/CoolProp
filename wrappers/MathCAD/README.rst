@@ -4,8 +4,9 @@ CoolProp Wrapper for PTC Mathcad Prime 7.0 or later (64-bit)
 | Copyright Scott Polak and Ian Bell, 2013
 | Updated by Jeff Henning, 2016
 
+.. 
 
-There are two ways to get the CoolProp wrapper add-in for Legacy Mathcad; download the pre-compiled binary from SourceForge or Compile your own.
+There are two ways to get the CoolProp wrapper add-in for Legacy Mathcad; download the pre-compiled binary from SourceForge or Compile your own. 
 
 
 Precompiled Binaries
