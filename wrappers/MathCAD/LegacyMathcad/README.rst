@@ -15,10 +15,10 @@ The binary DLL file (up through v6.4.1) can be downloaded and placed in the Math
 1. Goto the [SourceForge CoolProp](https://sourceforge.net/projects/coolprop/files/) web page.
 2. Browse to the desired version (6.4.1 or older).
 3. Under the MathCAD15 folder, download all three files
-   * Place the `CoolPropMathcadWrapper.DLL` file in the Mathcad 15 installation directory under the `usrefi` directory.
-   * Copy the `CoolProp_EN.xml` file to the `doc\\funcdoc` folder
-4. Restart Mathcad 15. The add-in, `CoolPropMathcadWrapper.DLL` will automatically load the from the `usrefi` directory.
-5. Open the `CoolPropFluidProperties.xmcdz` file in Legacy Mathcad for examples on how to use the functions.
+   * Place the ``CoolPropMathcadWrapper.DLL`` file in the Mathcad 15 installation directory under the ``usrefi`` directory.
+   * Copy the ``CoolProp_EN.xml`` file to the ``doc\\funcdoc`` folder
+4. Restart Mathcad 15. The add-in, ``CoolPropMathcadWrapper.DLL`` will automatically load the from the ``usrefi`` directory.
+5. Open the ``CoolPropFluidProperties.xmcdz`` file in Legacy Mathcad for examples on how to use the functions.
 6. The CoolProp functions will be added to the Insert Functions menu under the CoolProp category for easy insertion into your workbooks.
 
 
