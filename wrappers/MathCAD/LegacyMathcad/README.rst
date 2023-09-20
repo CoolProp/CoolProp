@@ -1,11 +1,12 @@
 CoolProp Wrapper for Mathcad 15 (32-bit)
 ==========================================
 
-| Copyright Scott Polak and Ian Bell, 2013. 
-| Updated by Jeff Henning, 2016.
+| Copyright Scott Polak and Ian Bell, 2013.  
+| Updated by Jeff Henning, 2016.  
 
+ ..
 
-> NOTE: Legacy Mathcad (through version 15) is no longer supported.  PTC has discontinued distribution and licensing of Legacy Mathcad.  Users should now be using only the top level of this wrapper to compile and develop the Mathcad Prime wrapper.  Users who may still have a perpetual license may still be able to compile this wrapper for Legacy Mathcad, but it is not being actively developed or tested and binaries on SourForge ceased with CoolProp 6.4.1.
+ > NOTE: Legacy Mathcad (through version 15) is no longer supported.  PTC has discontinued distribution and licensing of Legacy Mathcad.  Users should now be using only the top level of this wrapper to compile and develop the Mathcad Prime wrapper.  Users who may still have a perpetual license may still be able to compile this wrapper for Legacy Mathcad, but it is not being actively developed or tested and binaries on SourForge ceased with CoolProp 6.4.1. 
 
 There are two ways to get the CoolProp wrapper add-in for Legacy Mathcad.  Download the pre-compiled binary from SourceForge or Compile your own.
 
