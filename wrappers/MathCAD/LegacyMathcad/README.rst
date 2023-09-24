@@ -10,14 +10,14 @@ CoolProp Wrapper for Mathcad 15 (32-bit)
  
 There are two ways to get the CoolProp wrapper add-in for Legacy Mathcad.  Download the pre-compiled binary from SourceForge or Compile your own.
 
-Precompile Binaries
+Precompiled Binaries
 ===================
 The binary DLL file (up through v6.4.1) can be downloaded and placed in the Mathcad installation directory. 
  
 1. Goto the [SourceForge CoolProp](https://sourceforge.net/projects/coolprop/files/) web page. 
-
+ 
 2. Browse to the desired version (6.4.1 or older). 
-
+ 
 3. Under the MathCAD15 folder, download all three files 
 
    * Place the ``CoolPropMathcadWrapper.DLL`` file in the Mathcad 15 installation directory under the ``usrefi`` directory. 
