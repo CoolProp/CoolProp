@@ -6,21 +6,28 @@ CoolProp Wrapper for PTC Mathcad Prime 7.0 or later (64-bit)
 
  ..  
 
-There are two ways to get the CoolProp wrapper add-in for Legacy Mathcad; download the pre-compiled binary from SourceForge or Compile your own. 
+There are two ways to get the CoolProp wrapper add-in for Mathcad Prime; download the pre-compiled binary from SourceForge or Compile your own. 
 
 
 Precompiled Binaries
 ====================
-The binary DLL file (including nightly builds and release versions) can be downloaded and placed in the Mathcad installation directory.
-1. Goto the [SourceForge CoolProp](https://sourceforge.net/projects/coolprop/files/) web page.
-2. Browse to the desired version.
-3. Under the MathCADPrime folder, download all three files
-   * The README.txt files contains these instructions.
-   * Place the ``CoolPropMathcadWrapper.DLL`` file in the Mathcad Prime installation directory under the ``Custom Functions`` directory.
-   * Copy the ``CoolProp_EN.xml`` file to the ``Custom Functions\docs`` folder, creating it if it doesn't exist (this file is optional and for features in development).
-4. Restart Mathcad Prime. The add-in, ``CoolPropMathcadWrapper.DLL`` will automatically load the from the ``Custom Functions`` directory.
-5. Open the ``CoolPropFluidProperties.mcdx`` file (*also found in the Prime folder of this repository*) in Mathcad Prime for function usage examples.
-6. The CoolProp functions will _**not**_ be added to the internal Functions menu as this functionality has not been implemented in PTC Mathcad Prime as of version 9.0.0.0.  Users should refer to the usage ``.mcdx`` file referenced above and/or the companion PDF of that file.
+The binary DLL file (including nightly builds and release versions) can be downloaded and placed in the Mathcad Prime installation directory. 
+
+1. Goto the [SourceForge CoolProp](https://sourceforge.net/projects/coolprop/files/) web page. 
+
+2. Browse to the desired version. 
+
+3. Under the MathCADPrime folder, download all three files 
+
+   * The README.txt files contains these instructions. 
+
+   * Place the ``CoolPropMathcadWrapper.DLL`` file in the Mathcad Prime installation directory under the ``Custom Functions`` directory. 
+
+   * Copy the ``CoolProp_EN.xml`` file to the ``Custom Functions\docs`` folder, creating it if it doesn't exist (this file is optional and for features in development). 
+
+4. Restart Mathcad Prime. The add-in, ``CoolPropMathcadWrapper.DLL`` will automatically load the from the ``Custom Functions`` directory. 
+5. Open the ``CoolPropFluidProperties.mcdx`` file (*also found in the Prime folder of this repository*) in Mathcad Prime for function usage examples. 
+6. The CoolProp functions will _**not**_ be added to the internal Functions menu as this functionality has not been implemented in PTC Mathcad Prime as of version 9.0.0.0.  Users should refer to the usage ``.mcdx`` file referenced above and/or the companion PDF of that file. 
 
 
 Build Your Own
@@ -61,7 +68,9 @@ To Build
              -G "Visual Studio 14 2015 Win64" 
              -DCMAKE_VERBOSE_MAKEFILE=ON
 
-	( *Note: Mathcad Prime is 64-bit, so the 'Win64' option is necessary in the Visual Studio string.* )		 
+	( Note: Replace 'x.0.0.0' with your latest version.                                              )		 
+	( Note: Replace 'Visual Studio 14 2015 Win64'  with your current Visual Studio version.          )		 
+	( Note: Mathcad Prime is 64-bit, so the 'Win64' option is necessary in the Visual Studio string. )		 
 			 
 * **Make the dynamic library (DLL)**::
 
