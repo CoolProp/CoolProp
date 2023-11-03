@@ -30,10 +30,6 @@
 	path = externals/msgpack-c
 	url = https://github.com/msgpack/msgpack-c
 	branch = master
-[submodule "externals/pybind11"]
-	path = externals/pybind11
-	url = https://github.com/pybind/pybind11.git
-	branch = master
 [submodule "externals/rapidjson"]
 	path = externals/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
