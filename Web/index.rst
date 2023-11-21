@@ -69,7 +69,7 @@ Projects Using CoolProp
 * `T-Props <https://play.google.com/store/apps/details?id=com.innoversetech.tprops>`_
 * `PropiedadesDeFluidos <https://personal.us.es/jfc/PropiedadesDeFluidos/descripcion/>`_ (FluidProperties)
 * `CoolPropJavascriptDemo <https://github.com/dvd101x/CoolPropJavascriptDemo>`_
-* `CuadernoDeProblemas <https://personal.us.es/jfc/CuadernoDeProblemas/>`_ (ProblemNotebook)
+* `pSolver <https://personal.us.es/jfc/pSolver/docs/index.html>`_
 
 Main Developers
 ---------------

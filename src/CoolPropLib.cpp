@@ -692,6 +692,64 @@ EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handl
     return _HUGE;
 }
 
+EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->second_partial_deriv(static_cast<CoolProp::parameters>(Of1), static_cast<CoolProp::parameters>(Wrt1),
+                                        static_cast<CoolProp::parameters>(Constant1), static_cast<CoolProp::parameters>(Wrt2),
+                                        static_cast<CoolProp::parameters>(Constant2));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_second_two_phase_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->second_two_phase_deriv(static_cast<CoolProp::parameters>(Of1), static_cast<CoolProp::parameters>(Wrt1),
+                                        static_cast<CoolProp::parameters>(Constant1), static_cast<CoolProp::parameters>(Wrt2),
+                                        static_cast<CoolProp::parameters>(Constant2));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                  long* errcode, char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->first_two_phase_deriv(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt),
+                                         static_cast<CoolProp::parameters>(Constant));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_splined(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                          const double x_end, long* errcode, char* message_buffer,
+                                                                          const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->first_two_phase_deriv_splined(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt),
+                                                 static_cast<CoolProp::parameters>(Constant), x_end);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+
 EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handle, const long input_pair, const double* value1, const double* value2,
                                                                 const long length, double* T, double* p, double* rhomolar, double* hmolar,
                                                                 double* smolar, long* errcode, char* message_buffer, const long buffer_length) {
