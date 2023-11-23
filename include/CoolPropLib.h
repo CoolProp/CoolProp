@@ -801,4 +801,11 @@ EXPORT_CODE double CONVENTION Props(const char* Output, const char Name1, double
     */
 EXPORT_CODE double CONVENTION Props1(const char* FluidName, const char* Output);
 
+EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char*const param, char *return_buffer, const long return_buffer_length, long *errcode, char *message_buffer, const long buffer_length);
+EXPORT_CODE long long CONVENTION AbstractState_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length);
+EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length);
+EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length);
+EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* const fluidName);
+EXPORT_CODE int CONVENTION C_extract_backend(const char* const fluid_string, char* backend, const long backend_length, char* fluid, const long fluid_length);
+
 #endif
