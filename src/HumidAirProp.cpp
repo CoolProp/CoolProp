@@ -76,6 +76,12 @@ enum givens
     GIVEN_ISENTROPIC_EXPONENT
 };
 
+#if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
+int format_as(givens given) {
+    return fmt::underlying(given);
+}
+#endif
+
 void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const std::vector<double>& input_vals, double& T, double& psi_w);
 double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
 double MoleFractionWater(double, double, int, double);

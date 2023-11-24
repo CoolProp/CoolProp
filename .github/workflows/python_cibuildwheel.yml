@@ -49,11 +49,12 @@ jobs:
         platforms: all
         
     - name: Build and test wheels
-      uses: pypa/cibuildwheel@v2.11.3
+      uses: pypa/cibuildwheel@v2.16.2
       env:
         MACOSX_DEPLOYMENT_TARGET: 10.9
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-        CIBW_BEFORE_BUILD: pip install setuptools wheel Cython requests jinja2 pyyaml
+        CIBW_BEFORE_BUILD: >
+          pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant

@@ -21,6 +21,13 @@ bool is_predefined_mixture(const std::string& name, Dictionary& dict);
  */
 std::string get_csv_predefined_mixtures();
 
+/**
+ * @brief Set predefined mixtures at runtime
+ * @param string_data The predefined mixtures, as a JSON-formatted string
+ *
+ */
+void set_predefined_mixtures(const std::string& string_data);
+
 /** \brief Get a string for the given binary pair
  *
  *

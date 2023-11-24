@@ -19,6 +19,42 @@ class FlashRoutines;
 
 class ResidualHelmholtz;
 
+// This class contains the mole fractions for a given mixture. 
+class MoleFractions{
+    private:
+    std::vector<CoolPropDbl> mole_fractions;    ///< The bulk mole fractions of the mixture
+    template <typename T>
+    bool verify_mole_fractions_set(T i) const {
+        if (i >= mole_fractions.size()){
+            throw CoolProp::ValueError("mole fractions are not set for all components");
+        }
+        return true;
+    }
+    public:
+    template <typename T>
+    void resize(T N){
+        return mole_fractions.resize(N);
+    }
+    std::size_t size() const {
+        return mole_fractions.size();
+    }
+    void clear() {
+        mole_fractions.clear();
+    }
+    // operator overloads
+    template<typename T>
+    MoleFractions& operator=(const std::vector<T>& values){
+        mole_fractions = values;
+        return *this;
+    }
+    template <typename T>
+    CoolPropDbl operator[](T i) const {
+        verify_mole_fractions_set(i);
+        return mole_fractions[i];
+    }
+    operator std::vector<CoolPropDbl>& () { return mole_fractions; }
+};
+
 class HelmholtzEOSMixtureBackend : public AbstractState
 {
 
@@ -57,8 +93,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
 
     std::vector<CoolPropFluid> components;      ///< The components that are in use
     bool is_pure_or_pseudopure;                 ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
-    std::vector<CoolPropDbl> mole_fractions;    ///< The bulk mole fractions of the mixture
-    std::vector<double> mole_fractions_double;  ///< A copy of the bulk mole fractions of the mixture stored as doubles
+    MoleFractions mole_fractions;               ///< The bulk mole fractions of the mixture
     std::vector<CoolPropDbl> K,                 ///< The K factors for the components
       lnK;                                      ///< The natural logarithms of the K factors of the components
 
@@ -338,7 +373,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      *
      * @param mole_fractions The vector of mole fractions of the components
      */
-    void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions);
+    void set_mole_fractions(const std::vector<CoolPropDbl>& mf);
 
     const std::vector<CoolPropDbl>& get_mole_fractions() {
         return mole_fractions;
@@ -347,7 +382,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         return mole_fractions;
     };
     std::vector<double>& get_mole_fractions_doubleref(void) {
-        return mole_fractions_double;
+        return mole_fractions;
     }
 
     /** \brief Set the mass fractions

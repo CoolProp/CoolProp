@@ -105,6 +105,8 @@ class TransportRoutines
 
     static CoolPropDbl viscosity_dilute_ethane(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend& HEOS);
+    static CoolPropDbl viscosity_dilute_CO2_LaeseckeJPCRD2017(HelmholtzEOSMixtureBackend& HEOS);
+
 
     /** \brief Viscosity hardcoded for Methanol
      *
@@ -126,6 +128,7 @@ class TransportRoutines
     static CoolPropDbl viscosity_benzene_higher_order_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl viscosity_hexane_higher_order_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl viscosity_heptane_higher_order_hardcoded(HelmholtzEOSMixtureBackend& HEOS);
+    static CoolPropDbl viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017(HelmholtzEOSMixtureBackend& HEOS);
 
     /**
      * @brief Higher-order viscosity term from friction theory of Sergio Quinones-Cisneros
@@ -237,6 +240,8 @@ class TransportRoutines
     static CoolPropDbl conductivity_critical_hardcoded_CO2_ScalabrinJPCRD2006(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_critical_hardcoded_R123(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl conductivity_dilute_hardcoded_CO2(HelmholtzEOSMixtureBackend& HEOS);
+    static CoolPropDbl conductivity_dilute_hardcoded_CO2_HuberJPCRD2016(HelmholtzEOSMixtureBackend& HEOS);
+
     static CoolPropDbl conductivity_dilute_hardcoded_ethane(HelmholtzEOSMixtureBackend& HEOS);
 
     static CoolPropDbl conductivity_dilute_eta0_and_poly(HelmholtzEOSMixtureBackend& HEOS);

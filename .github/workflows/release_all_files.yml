@@ -47,20 +47,21 @@ jobs:
       webdir: ${{ steps.propagate_vars.outputs.webdir }}
 
     steps:
-      - run: echo "BRANCH=${{ (inputs.branch == ''       && 'master')  || inputs.branch }}" >> $GITHUB_ENV
-      - run: echo "TARGET=${{ (env.BRANCH    == 'master' && 'nightly') || env.BRANCH    }}" >> $GITHUB_ENV
-      - run: echo "WEBDIR=${{ (env.BRANCH    == 'master' && 'dev')     || '.'           }}" >> $GITHUB_ENV
-      - run: echo ${{ env.BRANCH }}    
-      - run: echo ${{ env.TARGET }} 
-      - run: echo ${{ env.WEBDIR }} 
-      - run: echo ${BRANCH}
-      - run: echo ${TARGET}
-      - run: echo ${WEBDIR}
+      # Start with the branch or tag for the source code
+      - run: echo "BRANCH=${{ (inputs.branch == ''        && 'master') || inputs.branch }}" >> $GITHUB_ENV
+      # Try to parse the branch as a version number
+      - run: |
+          set +e
+          echo "TARGET=$(echo ${{ env.BRANCH }} | grep -Eo '[0-9]+(\.[0-9]+)*')" >> $GITHUB_ENV
+      # Check whether we could parse it or not, use branch or nightly otherwise
+      - if: "${{ env.TARGET == '' }}"
+        run: echo "TARGET=${{ (env.BRANCH    == 'master'  && 'nightly') || env.BRANCH    }}" >> $GITHUB_ENV
+      - run: echo "WEBDIR=${{ (env.TARGET    == 'nightly' && 'dev')     || '.'           }}" >> $GITHUB_ENV
       - id: propagate_vars
         run: |
-          echo "branch=${{ (inputs.branch == ''       && 'master')  || inputs.branch }}" >> $GITHUB_OUTPUT
-          echo "target=${{ (env.BRANCH    == 'master' && 'nightly') || env.BRANCH    }}" >> $GITHUB_OUTPUT
-          echo "webdir=${{ (env.BRANCH    == 'master' && 'dev')     || '.'           }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ env.BRANCH }}" >> $GITHUB_OUTPUT
+          echo "target=${{ env.TARGET }}" >> $GITHUB_OUTPUT
+          echo "webdir=${{ env.WEBDIR }}" >> $GITHUB_OUTPUT
 
 
   collect_binaries:
@@ -69,7 +70,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        workflow: [library_shared.yml, windows_installer.yml, docs_docker-run.yml] # , python_buildwheels.yml]
+        workflow: [javascript_builder.yml, library_shared.yml, windows_installer.yml, docs_docker-run.yml] # , python_buildwheels.yml]
     uses: ./.github/workflows/release_get_artifact.yml
     with:
       branch: ${{ needs.set_vars.outputs.branch }}

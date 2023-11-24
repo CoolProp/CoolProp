@@ -21,7 +21,7 @@ def copy_files():
     for jsonfile in glob.glob(os.path.join('CoolProp', 'include', '*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
-    copytree(os.path.join(CProot, 'externals/fmtlib/fmt'), os.path.join('CoolProp', 'include', 'fmt'))  # Should be deprecated
+    copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp', 'include', 'fmt'))  # Should be deprecated
     #copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp','include','fmt'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
     print('files copied.')
@@ -341,6 +341,8 @@ if __name__ == '__main__':
     def get_shared_ptr_setter(base_class):
         """
         Get the setter class with the appropriate base class
+
+        DEPRECATED!! shared_ptr is no longer found in weird places after standardization
         """
 
         # See https://stackoverflow.com/a/54518348
@@ -393,13 +395,13 @@ if __name__ == '__main__':
         from Cython.Build import cythonize
         from Cython.Distutils import build_ext
 
-        setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
+        # setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
 
         # This will always generate HTML to show where there are still pythonic bits hiding out
         Cython.Compiler.Options.annotate = True
     else:
         print('Cython will not be used; cy_ext is ' + cy_ext)
-        setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
+        # setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
 
     def find_cpp_sources(root=os.path.join('..', '..', 'src'), extensions=['.cpp'], skip_files=None):
         file_listing = []
@@ -419,8 +421,8 @@ if __name__ == '__main__':
         os.path.join(CProot, 'include'),
         os.path.join(CProot, 'src'),
         os.path.join(CProot, 'externals', 'Eigen'),
-        os.path.join(CProot, 'externals', 'fmtlib'),  # should be deprecated
-        #os.path.join(CProot, 'externals', 'fmtlib','include'),
+        # os.path.join(CProot, 'externals', 'fmtlib'),  # should be deprecated
+        os.path.join(CProot, 'externals', 'fmtlib','include'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     # If the file is run directly without any parameters, clean, build and install

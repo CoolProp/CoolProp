@@ -29,7 +29,7 @@ Target                                                  Operating Systems       
 :ref:`Javascript <Javascript>`                          cross-platform               Works in all internet browsers
 :ref:`Labview <Labview>`                                Windows only
 :ref:`Maple <Maple>`                                    linux, OSX, win              CoolProp is included in Maple 2016
-:ref:`Mathcad <MathCAD>`                                Windows only
+:ref:`Mathcad <Mathcad>`                                Windows only
 :ref:`SMath Studio <SMath>`                             linux, OSX, win
 :ref:`Mathematica <Mathematica>`
 :ref:`FORTRAN <FORTRAN>`                                linux, OSX, win
@@ -125,7 +125,7 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     Octave/index.rst
     Csharp/index.rst
     MATLAB/index.rst
-    MathCAD/index.rst
+    Mathcad/index.rst
     FORTRAN/index.rst
     PHP/index.rst
     EES/index.rst

@@ -9,7 +9,7 @@ from .typedefs cimport *
 include "AbstractState.pxd"
        
 cdef class State:
-    cdef AbstractState pAS
+    cdef public AbstractState pAS
     cdef readonly bytes Fluid, phase
     cdef int iFluid,iParam1,iParam2,iOutput
     cdef double T_, rho_, p_
