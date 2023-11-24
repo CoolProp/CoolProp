@@ -218,3 +218,75 @@ class HyCool50(PureData, DigitalData):
         self.viscosity.xData, self.viscosity.yData, self.viscosity.data = self.getArray(dataID=key, func=funcMu, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
+
+try:
+    import CoolProp.CoolProp as CP
+
+    class Air(PureData, DigitalData):
+        def __init__(self):
+            DigitalData.__init__(self)
+            PureData.__init__(self)
+
+            self.name = "Air"
+            self.description = "Air, gaseous phase at 1 atm (101325 Pa)"
+
+            cp_fluid = "Air"
+            cp_state = CP.AbstractState("HEOS", cp_fluid)
+            p_ref = 101325.0
+
+            references = []
+            references.append(CP.get_BibTeXKey(cp_fluid, "EOS"))
+            references.append(CP.get_BibTeXKey(cp_fluid, "CP0"))
+            references.append(CP.get_BibTeXKey(cp_fluid, "VISCOSITY"))
+            references.append(CP.get_BibTeXKey(cp_fluid, "CONDUCTIVITY"))
+            # references.append(CP.get_BibTeXKey(cp_fluid, "ECS_LENNARD_JONES"))
+            # references.append(CP.get_BibTeXKey(cp_fluid, "ECS_FITS"))
+            # references.append(CP.get_BibTeXKey(cp_fluid, "SURFACE_TENSION"))
+            # references.append(CP.get_BibTeXKey(cp_fluid, "MELTING_LINE"))
+
+            self.reference = "; ".join(references)
+
+            self.Tmax = 200 + 273.15 # cp_state.Tmax()
+            self.Tmin = -50 + 273.15 # cp_state.Tmin()
+            self.TminPsat = self.Tmax
+            self.Tbase = 0.00 + 273.15
+            self.temperature.data = self.getTrange()
+            self.concentration.data = self.getxrange()
+
+
+            def funcRho(T, x):
+                cp_state.update(CP.PT_INPUTS, p_ref, T)
+                return cp_state.rhomass()
+            
+            self.density.xData, self.density.yData, self.density.data = self.getArray(dataID='Rho', func=funcRho, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.density.DEBUG)
+            self.density.source = self.density.SOURCE_EQUATION
+
+
+            def funcCp(T, x):
+                cp_state.update(CP.PT_INPUTS, p_ref, T)
+                return cp_state.cpmass()
+            
+            self.specific_heat.xData, self.specific_heat.yData, self.specific_heat.data = self.getArray(dataID='Cp', func=funcCp, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.specific_heat.DEBUG)
+            self.specific_heat.source = self.specific_heat.SOURCE_EQUATION
+
+
+            def funcMu(T, x):
+                cp_state.update(CP.PT_INPUTS, p_ref, T)
+                return cp_state.viscosity()
+            
+            self.viscosity.xData, self.viscosity.yData, self.viscosity.data = self.getArray(dataID='Mu', func=funcMu, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.viscosity.DEBUG)
+            self.viscosity.source = self.viscosity.SOURCE_EQUATION
+
+
+            def funcCond(T, x):
+                cp_state.update(CP.PT_INPUTS, p_ref, T)
+                return cp_state.conductivity()
+            
+            self.conductivity.xData, self.conductivity.yData, self.conductivity.data = self.getArray(dataID='Cond', func=funcCond, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.conductivity.DEBUG)
+            self.conductivity.source = self.conductivity.SOURCE_EQUATION
+
+
+            
+except ImportError:
+    # Do not handle cases where CoolProp is not installed
+    pass
