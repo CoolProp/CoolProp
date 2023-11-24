@@ -53,6 +53,7 @@ class FoodProtein(PureData, CoefficientData):
         self.Tmin = -40 + 273.15
         self.Tmax = 150 + 273.15
         self.TminPsat = self.Tmax
+        self.Tbase = 0.00 + 273.15
 
         self.conductivity.source = self.conductivity.SOURCE_COEFFS
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
@@ -79,6 +80,7 @@ class FoodFat(PureData, CoefficientData):
         self.Tmin = -40 + 273.15
         self.Tmax = 150 + 273.15
         self.TminPsat = self.Tmax
+        self.Tbase = 0.00 + 273.15
 
         self.conductivity.source = self.conductivity.SOURCE_COEFFS
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
@@ -105,6 +107,7 @@ class FoodCarbohydrate(PureData, CoefficientData):
         self.Tmin = -40 + 273.15
         self.Tmax = 150 + 273.15
         self.TminPsat = self.Tmax
+        self.Tbase = 0.00 + 273.15
 
         self.conductivity.source = self.conductivity.SOURCE_COEFFS
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
@@ -131,6 +134,7 @@ class FoodFiber(PureData, CoefficientData):
         self.Tmin = -40 + 273.15
         self.Tmax = 150 + 273.15
         self.TminPsat = self.Tmax
+        self.Tbase = 0.00 + 273.15
 
         self.conductivity.source = self.conductivity.SOURCE_COEFFS
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
@@ -157,6 +161,7 @@ class FoodAsh(PureData, CoefficientData):
         self.Tmin = -40 + 273.15
         self.Tmax = 150 + 273.15
         self.TminPsat = self.Tmax
+        self.Tbase = 0.00 + 273.15
 
         self.conductivity.source = self.conductivity.SOURCE_COEFFS
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
@@ -183,6 +188,7 @@ class FoodWater(PureData, CoefficientData):
         self.Tmin = -40 + 273.15
         self.Tmax = 150 + 273.15
         self.TminPsat = self.Tmax
+        self.Tbase = 0.00 + 273.15
 
         self.conductivity.source = self.conductivity.SOURCE_COEFFS
         self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL

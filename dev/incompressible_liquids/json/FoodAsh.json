@@ -4,7 +4,7 @@
     "coeffs": "null",
     "type": "notdefined"
   },
-  "Tbase": null,
+  "Tbase": 273.15,
   "Tmax": 423.15,
   "Tmin": 233.14999999999998,
   "TminPsat": 423.15,
