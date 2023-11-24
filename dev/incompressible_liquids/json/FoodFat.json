@@ -4,47 +4,38 @@
     "coeffs": "null",
     "type": "notdefined"
   },
-  "Tbase": 328.15,
+  "Tbase": null,
   "Tmax": 423.15,
   "Tmin": 233.14999999999998,
   "TminPsat": 423.15,
   "conductivity": {
-    "NRMS": 5.155366557234942e-05,
+    "NRMS": null,
     "coeffs": [
       [
-        0.164991559126412
+        0.18071
       ],
       [
-        -0.0002955389603590379
+        -0.00027604
       ],
       [
-        -1.7755904966064483e-07
-      ],
-      [
-        -3.888951150385847e-12
+        -1.7749e-07
       ]
     ],
     "type": "polynomial"
   },
   "density": {
-    "NRMS": 5.049446466330979e-08,
+    "NRMS": null,
     "coeffs": [
       [
-        902.6236500000006
+        925.59
       ],
       [
-        -0.41757002443546604
-      ],
-      [
-        0.0
-      ],
-      [
-        4.337905968607301e-12
+        -4.1757
       ]
     ],
     "type": "polynomial"
   },
-  "description": "Food Fat",
+  "description": "Food fat model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
   "mass2input": {
     "NRMS": null,
     "coeffs": "null",
@@ -56,42 +47,31 @@
     "type": "notdefined"
   },
   "name": "FoodFat",
-  "reference": "2006 ASHRAE Handbook",
+  "reference": "ASHRAE2006",
   "saturation_pressure": {
     "NRMS": null,
-    "coeffs": [
-      -5000.0,
-      60.0,
-      -10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "specific_heat": {
-    "NRMS": 1.5924296666661782e-05,
+    "NRMS": null,
     "coeffs": [
       [
-        2050.708424778518
+        1984.2
       ],
       [
-        0.9451909516028041
+        1.4733
       ],
       [
-        -0.004800714447758092
-      ],
-      [
-        3.3650758464698434e-09
+        -0.0048008
       ]
     ],
     "type": "polynomial"
   },
   "viscosity": {
     "NRMS": null,
-    "coeffs": [
-      500.0,
-      -60.0,
-      10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "volume2input": {
     "NRMS": null,

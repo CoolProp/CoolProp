@@ -4,47 +4,38 @@
     "coeffs": "null",
     "type": "notdefined"
   },
-  "Tbase": 328.15,
+  "Tbase": null,
   "Tmax": 423.15,
   "Tmin": 233.14999999999998,
   "TminPsat": 423.15,
   "conductivity": {
-    "NRMS": 1.63220416937467e-05,
+    "NRMS": null,
     "coeffs": [
       [
-        0.23635882150920315
+        0.17881
       ],
       [
-        0.0008968496145503218
+        0.0011958
       ],
       [
-        -2.7178820528007616e-06
-      ],
-      [
-        -2.3443725487689108e-12
+        -2.7178e-06
       ]
     ],
     "type": "polynomial"
   },
   "density": {
-    "NRMS": 3.137787237757533e-08,
+    "NRMS": null,
     "coeffs": [
       [
-        1301.3880000000013
+        1329.9
       ],
       [
-        -0.5184000213934484
-      ],
-      [
-        -1.1102230246251565e-16
-      ],
-      [
-        1.3356946744178377e-12
+        -5.184
       ]
     ],
     "type": "polynomial"
   },
-  "description": "Food Protein",
+  "description": "Food protein model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
   "mass2input": {
     "NRMS": null,
     "coeffs": "null",
@@ -56,42 +47,31 @@
     "type": "notdefined"
   },
   "name": "FoodProtein",
-  "reference": "2006 ASHRAE Handbook",
+  "reference": "ASHRAE2006",
   "saturation_pressure": {
     "NRMS": null,
-    "coeffs": [
-      -5000.0,
-      60.0,
-      -10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "specific_heat": {
-    "NRMS": 1.4487042470828736e-05,
+    "NRMS": null,
     "coeffs": [
       [
-        2070.717198497075
+        2008.2
       ],
       [
-        1.064473517680024
+        1.2088999999999999
       ],
       [
-        -0.0013128194646023772
-      ],
-      [
-        1.7003854957103106e-09
+        -7312.9
       ]
     ],
     "type": "polynomial"
   },
   "viscosity": {
     "NRMS": null,
-    "coeffs": [
-      500.0,
-      -60.0,
-      10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "volume2input": {
     "NRMS": null,

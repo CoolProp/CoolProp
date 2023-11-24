@@ -4,47 +4,38 @@
     "coeffs": "null",
     "type": "notdefined"
   },
-  "Tbase": 328.15,
+  "Tbase": null,
   "Tmax": 423.15,
   "Tmin": 233.14999999999998,
   "TminPsat": 423.15,
   "conductivity": {
-    "NRMS": 1.4817529491931499e-05,
+    "NRMS": null,
     "coeffs": [
       [
-        0.39788812246207217
+        0.32962
       ],
       [
-        0.0010813545190466157
+        0.0014011
       ],
       [
-        -2.906983872521e-06
-      ],
-      [
-        -3.028174450443993e-12
+        -2.9069e-06
       ]
     ],
     "type": "polynomial"
   },
   "density": {
-    "NRMS": 5.300238877241496e-08,
+    "NRMS": null,
     "coeffs": [
       [
-        2408.3653500000014
+        2423.8
       ],
       [
-        -0.2806300049836171
-      ],
-      [
-        -1.1102230246251565e-16
-      ],
-      [
-        8.847281186517649e-13
+        -2.8063
       ]
     ],
     "type": "polynomial"
   },
-  "description": "Food Ash",
+  "description": "Food ash model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
   "mass2input": {
     "NRMS": null,
     "coeffs": "null",
@@ -56,42 +47,31 @@
     "type": "notdefined"
   },
   "name": "FoodAsh",
-  "reference": "2006 ASHRAE Handbook",
+  "reference": "ASHRAE2006",
   "saturation_pressure": {
     "NRMS": null,
-    "coeffs": [
-      -5000.0,
-      60.0,
-      -10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "specific_heat": {
-    "NRMS": 9.993014943702104e-06,
+    "NRMS": null,
     "coeffs": [
       [
-        1185.3897200225367
+        1092.6
       ],
       [
-        1.484618596439921
+        1.8896
       ],
       [
-        -0.0036814657396397887
-      ],
-      [
-        -2.6417956559097625e-09
+        -0.0036817
       ]
     ],
     "type": "polynomial"
   },
   "viscosity": {
     "NRMS": null,
-    "coeffs": [
-      500.0,
-      -60.0,
-      10.0
-    ],
-    "type": "exponential"
+    "coeffs": "null",
+    "type": "notdefined"
   },
   "volume2input": {
     "NRMS": null,

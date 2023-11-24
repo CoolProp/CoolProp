@@ -64,7 +64,7 @@ class FoodProtein(PureData, CoefficientData):
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        self.specific_heat.coeffs = np.array([[2.0082], [1.2089e-3], [-1.3129-6]])
+        self.specific_heat.coeffs = np.array([[2.0082], [1.2089e-3], [-1.3129-6]]) * 1e3
         
 
 class FoodFat(PureData, CoefficientData):
@@ -90,7 +90,7 @@ class FoodFat(PureData, CoefficientData):
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        self.specific_heat.coeffs = np.array([[1.9842], [1.4733e-3], [-4.8008e-6]])
+        self.specific_heat.coeffs = np.array([[1.9842], [1.4733e-3], [-4.8008e-6]]) * 1e3
 
 
 class FoodCarbohydrate(PureData, CoefficientData):
@@ -116,7 +116,7 @@ class FoodCarbohydrate(PureData, CoefficientData):
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        self.specific_heat.coeffs = np.array([[1.5488], [1.9625e-3], [-5.9399e-6]])
+        self.specific_heat.coeffs = np.array([[1.5488], [1.9625e-3], [-5.9399e-6]]) * 1e3
 
 
 class FoodFiber(PureData, CoefficientData):
@@ -142,7 +142,7 @@ class FoodFiber(PureData, CoefficientData):
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        self.specific_heat.coeffs = np.array([[1.8459], [1.8306e-3], [-4.6509e-6]])
+        self.specific_heat.coeffs = np.array([[1.8459], [1.8306e-3], [-4.6509e-6]]) * 1e3
                                                                       
 
 class FoodAsh(PureData, CoefficientData):
@@ -168,7 +168,7 @@ class FoodAsh(PureData, CoefficientData):
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        self.specific_heat.coeffs = np.array([[1.0926], [1.8896e-3], [-3.6817e-6]])
+        self.specific_heat.coeffs = np.array([[1.0926], [1.8896e-3], [-3.6817e-6]]) * 1e3
 
 
 class FoodWater(PureData, CoefficientData):
@@ -194,4 +194,4 @@ class FoodWater(PureData, CoefficientData):
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        self.specific_heat.coeffs = np.array([[4.1289], [-9.0864e-5], [5.4731e-6]])
+        self.specific_heat.coeffs = np.array([[4.1289], [-9.0864e-5], [5.4731e-6]]) * 1e3
