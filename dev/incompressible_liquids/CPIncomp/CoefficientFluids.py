@@ -65,7 +65,7 @@ class FoodProtein(PureData, CoefficientData):
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
-        self.specific_heat.coeffs = np.array([[2.0082], [1.2089e-3], [-1.3129-6]]) * 1e3
+        self.specific_heat.coeffs = np.array([[2.0082], [1.2089e-3], [-1.3129e-6]]) * 1e3
         
 
 class FoodFat(PureData, CoefficientData):
