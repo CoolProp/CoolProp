@@ -61,7 +61,7 @@ class FoodProtein(PureData, CoefficientData):
 
         self.density.source = self.density.SOURCE_COEFFS
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
-        self.density.coeffs = np.array([[1.3299e3], [-5.1840]])
+        self.density.coeffs = np.array([[1.3299e3], [-5.1840e-1]])
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
@@ -88,7 +88,7 @@ class FoodFat(PureData, CoefficientData):
                                                                          
         self.density.source = self.density.SOURCE_COEFFS
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
-        self.density.coeffs = np.array([[9.2559e2], [-4.1757]])
+        self.density.coeffs = np.array([[9.2559e2], [-4.1757e-1]])
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
@@ -115,7 +115,7 @@ class FoodCarbohydrate(PureData, CoefficientData):
 
         self.density.source = self.density.SOURCE_COEFFS
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
-        self.density.coeffs = np.array([[1.5991e3], [-3.1046]])
+        self.density.coeffs = np.array([[1.5991e3], [-3.1046e-1]])
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
@@ -142,7 +142,7 @@ class FoodFiber(PureData, CoefficientData):
 
         self.density.source = self.density.SOURCE_COEFFS
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
-        self.density.coeffs = np.array([[1.3115e3], [-3.6589]])
+        self.density.coeffs = np.array([[1.3115e3], [-3.6589e-1]])
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
@@ -169,7 +169,7 @@ class FoodAsh(PureData, CoefficientData):
 
         self.density.source = self.density.SOURCE_COEFFS
         self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
-        self.density.coeffs = np.array([[2.4238e3], [-2.8063]])
+        self.density.coeffs = np.array([[2.4238e3], [-2.8063e-1]])
 
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
