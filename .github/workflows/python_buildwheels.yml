@@ -23,7 +23,7 @@ jobs:
         python-version: 3.9.x
         
     - name: Install dependencies
-      run: pip install setuptools wheel 'Cython<3.0' requests jinja2 pyyaml
+      run: pip install setuptools wheel Cython requests jinja2 pyyaml
         
     - name: Build package, sdist
       working-directory: ./wrappers/Python/pypi
@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        python-version: [36, 37, 38, 39, 310, 311]
+        python-version: [36, 37, 38, 39, 310, 311, 312]
         arch: [i686, x86_64, aarch64, ppc64le, s390x]
         exclude:
           - os: ubuntu
@@ -62,7 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows]
-        python-version: [36, 37, 38, 39, 310, 311]
+        python-version: [36, 37, 38, 39, 310, 311, 312]
         arch: [AMD64, x86, ARM64]
         exclude:
           - os: windows
@@ -88,7 +88,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos]
-        python-version: [36, 37, 38, 39, 310, 311]
+        python-version: [36, 37, 38, 39, 310, 311, 312]
         arch: [x86_64, arm64, universal2]
         exclude:
           - os: macos
