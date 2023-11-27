@@ -1029,7 +1029,7 @@ EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* 
 }
 
 
-EXPORT_CODE long long CONVENTION AbstractState_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length) {
+EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length) {
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
@@ -1041,7 +1041,7 @@ EXPORT_CODE long long CONVENTION AbstractState_phase(const long handle, long *er
     return -1;
 }
 
-EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char*const param, char *return_buffer, const long return_buffer_length, long *errcode, char *message_buffer, const long buffer_length) {
+EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char* param, char *return_buffer, const long return_buffer_length, long *errcode, char *message_buffer, const long buffer_length) {
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
@@ -1082,12 +1082,12 @@ EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const l
     return _HUGE;
 }
 
-EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* const fluidName)
+EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName)
 {
     return CoolProp::is_valid_fluid_string(fluidName);
 }
 
-EXPORT_CODE int CONVENTION C_extract_backend(const char* const fluid_string, char* backend, const long backend_length, char* fluid, const long fluid_length)
+EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid, const long fluid_length)
 {
     std::string _fluid, _backend;
     CoolProp::extract_backend(fluid_string, _backend, _fluid);
