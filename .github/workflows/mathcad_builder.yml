@@ -1,6 +1,7 @@
 name: Mathcad wrapper
 
 on:
+  workflow_dispatch:
   push:
     branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
     tags: [ 'v*' ]
