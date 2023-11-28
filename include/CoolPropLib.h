@@ -771,6 +771,31 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long han
      */
 EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
                                                        const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char* param, char* return_buffer,
+                                                             const long return_buffer_length, long* errcode, char* message_buffer,
+                                                             const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long* errcode, char* message_buffer, const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                          const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                         const long buffer_length);
+
 /** 
      * \brief Add fluids as a JSON-formatted string
      * @param backend The backend to which these should be added; e.g. "HEOS", "SRK", "PR"
@@ -780,6 +805,17 @@ EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* 
      */
 EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
                                                const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName);
+
+/**
+ * 
+*/
+EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid,
+                                             const long fluid_length);
 
 // *************************************************************************************
 // *************************************************************************************
@@ -800,12 +836,5 @@ EXPORT_CODE double CONVENTION Props(const char* Output, const char Name1, double
     Works just like \ref CoolProp::Props1SI, but units are in KSI system.  This function is deprecated, no longer supported, and users should transition to using the Props1SI function
     */
 EXPORT_CODE double CONVENTION Props1(const char* FluidName, const char* Output);
-
-EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char* param, char *return_buffer, const long return_buffer_length, long *errcode, char *message_buffer, const long buffer_length);
-EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length);
-EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length);
-EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length);
-EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName);
-EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid, const long fluid_length);
 
 #endif

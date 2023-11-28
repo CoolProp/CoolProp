@@ -1017,6 +1017,58 @@ EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* 
     }
 }
 
+EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long* errcode, char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->phase();
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return -1;
+}
+
+EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char* param, char* return_buffer,
+                                                             const long return_buffer_length, long* errcode, char* message_buffer,
+                                                             const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        std::string temp = AS->fluid_param_string(param);
+        if (temp.size() < static_cast<std::size_t>(return_buffer_length)) {
+            strcpy(return_buffer, temp.c_str());
+        } else {
+            *errcode = 2;
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                          const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->saturated_liquid_keyed_output(static_cast<CoolProp::parameters>(param));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                         const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->saturated_vapor_keyed_output(static_cast<CoolProp::parameters>(param));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
 EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
                                                const long buffer_length) {
     *errcode = 0;
@@ -1028,79 +1080,22 @@ EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* 
     }
 }
 
-
-EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long *errcode, char *message_buffer, const long buffer_length) {
-    *errcode = 0;
-    try {
-        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        return AS->phase();
-    }
-    catch (...) {
-        HandleException(errcode, message_buffer, buffer_length);
-    }
-    return -1;
-}
-
-EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char* param, char *return_buffer, const long return_buffer_length, long *errcode, char *message_buffer, const long buffer_length) {
-    *errcode = 0;
-    try {
-        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        std::string temp = AS->fluid_param_string(param);
-        if (temp.size() < static_cast<std::size_t>(return_buffer_length)) {
-            strcpy(return_buffer, temp.c_str());
-        }
-        else {
-            *errcode = 2;
-        }
-    }
-    catch (...) {
-        HandleException(errcode, message_buffer, buffer_length);
-    }
-}
-EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length)
-{
-    *errcode = 0;
-    try{
-        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        return AS->saturated_liquid_keyed_output(static_cast<CoolProp::parameters>(param));
-    }
-    catch (...) {
-		HandleException(errcode, message_buffer, buffer_length);
-	}
-    return _HUGE;
-}
-EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long *errcode, char *message_buffer, const long buffer_length)
-{
-    *errcode = 0;
-    try{
-        shared_ptr<CoolProp::AbstractState> &AS = handle_manager.get(handle);
-        return AS->saturated_vapor_keyed_output(static_cast<CoolProp::parameters>(param));
-    }
-    catch (...) {
-		HandleException(errcode, message_buffer, buffer_length);
-	}
-    return _HUGE;
-}
-
-EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName)
-{
+EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName) {
     return CoolProp::is_valid_fluid_string(fluidName);
 }
 
-EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid, const long fluid_length)
-{
+EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid,
+                                             const long fluid_length) {
     std::string _fluid, _backend;
     CoolProp::extract_backend(fluid_string, _backend, _fluid);
     if (_backend.size() < static_cast<std::size_t>(backend_length)) {
         strcpy(backend, _backend.c_str());
-    }
-    else {
+    } else {
         return -1;
     }
     if (_fluid.size() < static_cast<std::size_t>(fluid_length)) {
         strcpy(fluid, _fluid.c_str());
-    }
-    else {
+    } else {
         return -1;
     }
     return 0;
