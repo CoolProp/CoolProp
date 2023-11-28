@@ -789,7 +789,7 @@ if(COOLPROP_PRIME_MODULE)
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
   include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
   target_link_libraries(CoolPropMathcadWrapper
-                        "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser")
+                        "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser.lib")
   set_target_properties(CoolPropMathcadWrapper
                         PROPERTIES LINK_FLAGS "/ENTRY:\"DllEntryPoint\"")
   add_dependencies(CoolPropMathcadWrapper generate_headers)
