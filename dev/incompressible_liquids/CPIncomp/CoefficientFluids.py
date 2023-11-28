@@ -201,3 +201,30 @@ class FoodWater(PureData, CoefficientData):
         self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
         self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
         self.specific_heat.coeffs = np.array([[4.1289], [-9.0864e-5], [5.4731e-6]]) * 1e3
+
+
+class FoodIce(PureData, CoefficientData):
+    
+    def __init__(self):
+        CoefficientData.__init__(self)
+        PureData.__init__(self)
+        self.name = "FoodIce"
+        self.description = "Food ice model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)"
+        self.reference = "ASHRAE2006"
+
+        self.Tmin = -40 + 273.15
+        self.Tmax = 150 + 273.15
+        self.TminPsat = self.Tmax
+        self.Tbase = 0.00 + 273.15
+
+        self.conductivity.source = self.conductivity.SOURCE_COEFFS
+        self.conductivity.type = self.conductivity.INCOMPRESSIBLE_POLYNOMIAL
+        self.conductivity.coeffs = np.array([[2.2196], [-6.2489e-3], [1.0154e-4]])
+
+        self.density.source = self.density.SOURCE_COEFFS
+        self.density.type = self.density.INCOMPRESSIBLE_POLYNOMIAL
+        self.density.coeffs = np.array([[9.1689e2], [-1.3071e-1]])
+
+        self.specific_heat.source = self.specific_heat.SOURCE_COEFFS
+        self.specific_heat.type = self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL
+        self.specific_heat.coeffs = np.array([[2.0623], [6.0769e-3]]) * 1e3
