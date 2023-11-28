@@ -17,7 +17,8 @@
 
 namespace CoolProp {
 
-const double CPPOLY_EPSILON = DBL_EPSILON * 100.0;
+constexpr double CPPOLY_EPSILON = DBL_EPSILON * 100.0;
+constexpr double CPPOLY_DELTA = CPPOLY_EPSILON * 10.0;
 
 /// Basic checks for coefficient vectors.
 /** Starts with only the first coefficient dimension
@@ -466,8 +467,8 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
     }
     if ((firstExponent < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON)) {
         //throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ", __FILE__, __LINE__, x_in - x_base));
-        const double x_lo = x_base - 1.001*CPPOLY_EPSILON;
-        const double x_hi = x_base + 1.001*CPPOLY_EPSILON;
+        const double x_lo = x_base - CPPOLY_DELTA;
+        const double x_hi = x_base + CPPOLY_DELTA;
         const double y_lo = evaluate(coefficients, x_lo, firstExponent, x_base);
         const double y_hi = evaluate(coefficients, x_hi, firstExponent, x_base);
         const double m = (y_hi - y_lo)/(x_hi - x_lo);
@@ -515,8 +516,9 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
                                   const double& x_base, const double& y_base) {
     if ((x_exp < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ", __FILE__, __LINE__, x_in - x_base));
-        double x_lo = x_base - 1.001*CPPOLY_EPSILON;
-        double x_hi = x_base + 1.001*CPPOLY_EPSILON;
+        if (this->do_debug()) std::cout << "Interpolating in x-direction for base " << x_base << " and input " << x_in << std::endl;
+        double x_lo = x_base - CPPOLY_DELTA;
+        double x_hi = x_base + CPPOLY_DELTA;
         double z_lo = evaluate(coefficients, x_lo, y_in, x_exp, y_exp, x_base, y_base);
         double z_hi = evaluate(coefficients, x_hi, y_in, x_exp, y_exp, x_base, y_base);
         double dzdx = (z_hi - z_lo)/(x_hi - x_lo);
@@ -524,8 +526,9 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
     }
     if ((y_exp < 0) && (std::abs(y_in - y_base) < CPPOLY_EPSILON)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, y_in-y_base=%f ", __FILE__, __LINE__, y_in - y_base));
-        double y_lo = y_base - 1.001*CPPOLY_EPSILON;
-        double y_hi = y_base + 1.001*CPPOLY_EPSILON;
+        if (this->do_debug()) std::cout << "Interpolating in y-direction for base " << y_base << " and input " << y_in << std::endl;
+        double y_lo = y_base - CPPOLY_DELTA;
+        double y_hi = y_base + CPPOLY_DELTA;
         double z_lo = evaluate(coefficients, x_in, y_lo, x_exp, y_exp, x_base, y_base);
         double z_hi = evaluate(coefficients, x_in, y_hi, x_exp, y_exp, x_base, y_base);
         double dzdy = (z_hi - z_lo)/(y_hi - y_lo);

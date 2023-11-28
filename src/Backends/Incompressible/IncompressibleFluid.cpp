@@ -7,7 +7,8 @@
 #include "PolyMath.h"
 #include <Eigen/Core>
 
-const double INCOMP_EPSILON = DBL_EPSILON * 100.0;
+constexpr double INCOMP_EPSILON = DBL_EPSILON * 100.0;
+constexpr double INCOMP_DELTA = INCOMP_EPSILON * 10.0;
 
 namespace CoolProp {
 
@@ -50,8 +51,8 @@ double IncompressibleFluid::baseExponential(IncompressibleData data, double y, d
     }
     // ... now we know that we are in the danger zone
     // step away from the zero-crossing
-    x_lo -= DBL_EPSILON;
-    x_hi += DBL_EPSILON;
+    x_lo -= INCOMP_DELTA;
+    x_hi += INCOMP_DELTA;
     const double f_lo = fnc(x_lo);
     const double f_hi = fnc(x_hi);
     // Linearize around the zero-crossing
@@ -77,8 +78,8 @@ double IncompressibleFluid::baseLogexponential(IncompressibleData data, double y
     }
     // ... now we know that we are in the danger zone
     // step away from the zero-crossing
-    x_lo -= DBL_EPSILON;
-    x_hi += DBL_EPSILON;
+    x_lo -= INCOMP_DELTA;
+    x_hi += INCOMP_DELTA;
     const double f_lo = fnc(x_lo);
     const double f_hi = fnc(x_hi);
     // Linearize around the zero-crossing
