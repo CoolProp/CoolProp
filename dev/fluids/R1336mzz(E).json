@@ -88,7 +88,7 @@
           "hmolar_units": "J/mol",
           "p": 649.2750000000001,
           "p_units": "Pa",
-          "rhomolar": 9999999999999999,
+          "rhomolar": 5681.7471741845075,
           "rhomolar_units": "mol/m^3",
           "smolar": 99999999999999999999,
           "smolar_units": "J/mol/K"
@@ -100,7 +100,7 @@
           "hmolar_units": "J/mol",
           "p": 649.2750000000001,
           "p_units": "Pa",
-          "rhomolar": 99999999999999,
+          "rhomolar": 1e-10,
           "rhomolar_units": "mol/m^3",
           "smolar": 9999999999999999999,
           "smolar_units": "J/mol/K"
@@ -309,7 +309,7 @@
       "hmolar_units": "J/mol",
       "p": 649.2750000000001,
       "p_units": "Pa",
-      "rhomolar": 9999999999999999,
+      "rhomolar": 5681.7471741845075,
       "rhomolar_units": "mol/m^3",
       "smolar": 99999999999999999999,
       "smolar_units": "J/mol/K"
@@ -321,7 +321,7 @@
       "hmolar_units": "J/mol",
       "p": 649.2750000000001,
       "p_units": "Pa",
-      "rhomolar": 99999999999999,
+      "rhomolar": 1e-10,
       "rhomolar_units": "mol/m^3",
       "smolar": 9999999999999999999,
       "smolar_units": "J/mol/K"
