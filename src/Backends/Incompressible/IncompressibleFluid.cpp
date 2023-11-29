@@ -56,8 +56,7 @@ double IncompressibleFluid::baseExponential(IncompressibleData data, double y, d
     const double f_lo = fnc(x_lo);
     const double f_hi = fnc(x_hi);
     // Linearize around the zero-crossing
-    const double m = (f_hi - f_lo) / (x_hi - x_lo);
-    return m * (x_den - x_lo) + f_lo;
+    return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
 }
 
 /// Base exponential function with logarithmic term
@@ -83,8 +82,7 @@ double IncompressibleFluid::baseLogexponential(IncompressibleData data, double y
     const double f_lo = fnc(x_lo);
     const double f_hi = fnc(x_hi);
     // Linearize around the zero-crossing
-    const double m = (f_hi - f_lo) / (x_hi - x_lo);
-    return m * (x_den - x_lo) + f_lo;    
+    return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
 }
 
 double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z) {

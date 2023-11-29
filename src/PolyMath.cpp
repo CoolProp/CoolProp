@@ -471,8 +471,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
         const double x_hi = x_base + CPPOLY_DELTA;
         const double y_lo = evaluate(coefficients, x_lo, firstExponent, x_base);
         const double y_hi = evaluate(coefficients, x_hi, firstExponent, x_base);
-        const double m = (y_hi - y_lo)/(x_hi - x_lo);
-        return y_lo + m*(x_in - x_lo);
+        return (y_hi - y_lo)/(x_hi - x_lo) * (x_in - x_lo) + y_lo;
     }
 
     Eigen::MatrixXd tmpCoeffs(coefficients);
@@ -517,22 +516,20 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
     if ((x_exp < 0) && (std::abs(x_in - x_base) < CPPOLY_EPSILON)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, x_in-x_base=%f ", __FILE__, __LINE__, x_in - x_base));
         if (this->do_debug()) std::cout << "Interpolating in x-direction for base " << x_base << " and input " << x_in << std::endl;
-        double x_lo = x_base - CPPOLY_DELTA;
-        double x_hi = x_base + CPPOLY_DELTA;
-        double z_lo = evaluate(coefficients, x_lo, y_in, x_exp, y_exp, x_base, y_base);
-        double z_hi = evaluate(coefficients, x_hi, y_in, x_exp, y_exp, x_base, y_base);
-        double dzdx = (z_hi - z_lo)/(x_hi - x_lo);
-        return z_lo + dzdx*(x_in - x_lo);
+        const double x_lo = x_base - CPPOLY_DELTA;
+        const double x_hi = x_base + CPPOLY_DELTA;
+        const double z_lo = evaluate(coefficients, x_lo, y_in, x_exp, y_exp, x_base, y_base);
+        const double z_hi = evaluate(coefficients, x_hi, y_in, x_exp, y_exp, x_base, y_base);
+        return (z_hi - z_lo)/(x_hi - x_lo) * (x_in - x_lo) + z_lo;
     }
     if ((y_exp < 0) && (std::abs(y_in - y_base) < CPPOLY_EPSILON)) {
         // throw ValueError(format("%s (%d): A fraction cannot be evaluated with zero as denominator, y_in-y_base=%f ", __FILE__, __LINE__, y_in - y_base));
         if (this->do_debug()) std::cout << "Interpolating in y-direction for base " << y_base << " and input " << y_in << std::endl;
-        double y_lo = y_base - CPPOLY_DELTA;
-        double y_hi = y_base + CPPOLY_DELTA;
-        double z_lo = evaluate(coefficients, x_in, y_lo, x_exp, y_exp, x_base, y_base);
-        double z_hi = evaluate(coefficients, x_in, y_hi, x_exp, y_exp, x_base, y_base);
-        double dzdy = (z_hi - z_lo)/(y_hi - y_lo);
-        return z_lo + dzdy*(y_in - y_lo);
+        const double y_lo = y_base - CPPOLY_DELTA;
+        const double y_hi = y_base + CPPOLY_DELTA;
+        const double z_lo = evaluate(coefficients, x_in, y_lo, x_exp, y_exp, x_base, y_base);
+        const double z_hi = evaluate(coefficients, x_in, y_hi, x_exp, y_exp, x_base, y_base);
+        return (z_hi - z_lo)/(y_hi - y_lo) * (y_in - y_lo) + z_lo;
     }
 
     Eigen::MatrixXd tmpCoeffs(coefficients);
