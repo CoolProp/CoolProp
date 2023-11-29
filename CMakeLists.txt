@@ -778,7 +778,7 @@ if(COOLPROP_PRIME_MODULE)
   if("${COOLPROP_PRIME_ROOT}" STREQUAL "")
     message(
       FATAL_ERROR
-        "You must provide the path to MathCAD Prime Root directory using something like -DCOOLPROP_PRIME_ROOT=\"C:/Program Files/PTC/Mathcad Prime 3.1\""
+        "You must provide the path to Mathcad Prime Root directory using something like -DCOOLPROP_PRIME_ROOT=\"C:/Program Files/PTC/Mathcad Prime 3.1\""
     )
   else()
     message(STATUS "COOLPROP_PRIME_ROOT: ${COOLPROP_PRIME_ROOT}")
@@ -796,11 +796,11 @@ if(COOLPROP_PRIME_MODULE)
   set_target_properties(CoolPropMathcadWrapper PROPERTIES SUFFIX ".dll" PREFIX
                                                                         "")
   install(TARGETS CoolPropMathcadWrapper
-          DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathCADPrime")
+          DESTINATION "${COOLPROP_INSTALL_PREFIX}/MathcadPrime")
   install(
     FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/CoolPropFluidProperties.mcdx"
-    DESTINATION MathCADPrime)
+    DESTINATION MathcadPrime)
 endif()
 
 if(COOLPROP_MATHCAD15_MODULE)

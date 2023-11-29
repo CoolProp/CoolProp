@@ -7,6 +7,9 @@
 #include "PolyMath.h"
 #include <Eigen/Core>
 
+constexpr double INCOMP_EPSILON = DBL_EPSILON * 100.0;
+constexpr double INCOMP_DELTA = INCOMP_EPSILON * 10.0;
+
 namespace CoolProp {
 
 /// A thermophysical property provider for all properties
@@ -34,18 +37,52 @@ bool IncompressibleFluid::is_pure() {
 double IncompressibleFluid::baseExponential(IncompressibleData data, double y, double ybase) {
     Eigen::VectorXd coeffs = makeVector(data.coeffs);
     size_t r = coeffs.rows(), c = coeffs.cols();
-    if (strict && (r != 3 || c != 1))
+    if (strict && (r != 3 || c != 1)) {
         throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
-    return exp((double)(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2]));
+    }
+
+    // Guard the function against zero denominators in exp((double)(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2]))
+    auto fnc = [&](double x) { return exp((double)(coeffs[0] / (x) - coeffs[2])); } ;
+    double x_den = (y - ybase) + coeffs[1];
+    double x_lo = -INCOMP_EPSILON;
+    double x_hi = +INCOMP_EPSILON;
+    if (x_den < x_lo || x_den > x_hi) {
+        return fnc(x_den);
+    }
+    // ... now we know that we are in the danger zone
+    // step away from the zero-crossing
+    x_lo -= INCOMP_DELTA;
+    x_hi += INCOMP_DELTA;
+    const double f_lo = fnc(x_lo);
+    const double f_hi = fnc(x_hi);
+    // Linearize around the zero-crossing
+    return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
 }
+
 /// Base exponential function with logarithmic term
 double IncompressibleFluid::baseLogexponential(IncompressibleData data, double y, double ybase) {
     Eigen::VectorXd coeffs = makeVector(data.coeffs);
     size_t r = coeffs.rows(), c = coeffs.cols();
-    if (strict && (r != 3 || c != 1))
+    if (strict && (r != 3 || c != 1)) {
         throw ValueError(format("%s (%d): You have to provide a 3,1 matrix of coefficients, not  (%d,%d).", __FILE__, __LINE__, r, c));
-    return exp(
-      (double)(log((double)(1.0 / ((y - ybase) + coeffs[0]) + 1.0 / ((y - ybase) + coeffs[0]) / ((y - ybase) + coeffs[0]))) * coeffs[1] + coeffs[2]));
+    }
+
+    // Guard the function against zero denominators in exp((double)(log((double)(1.0 / ((y - ybase) + coeffs[0]) + 1.0 / ((y - ybase) + coeffs[0]) / ((y - ybase) + coeffs[0]))) * coeffs[1] + coeffs[2]))
+    auto fnc = [&](double x) { return exp((double)(log((double)(1.0 / (x) + 1.0 / (x) / (x))) * coeffs[1] + coeffs[2])); } ;
+    double x_den = (y - ybase) + coeffs[0];
+    double x_lo = -INCOMP_EPSILON;
+    double x_hi = +INCOMP_EPSILON;
+    if (x_den < x_lo || x_den > x_hi) {
+        return fnc(x_den);
+    }
+    // ... now we know that we are in the danger zone
+    // step away from the zero-crossing
+    x_lo -= INCOMP_DELTA;
+    x_hi += INCOMP_DELTA;
+    const double f_lo = fnc(x_lo);
+    const double f_hi = fnc(x_hi);
+    // Linearize around the zero-crossing
+    return (f_hi - f_lo) / (x_hi - x_lo) * (x_den - x_lo) + f_lo;
 }
 
 double IncompressibleFluid::basePolyOffset(IncompressibleData data, double y, double z) {
