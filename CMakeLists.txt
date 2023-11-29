@@ -75,8 +75,8 @@ option(COOLPROP_NO_EXAMPLES
 #        ON)
 
 # Force C++11 since lambdas are used in CPStrings.h
-# Force C++14 since std::make_unique is used in DataStructures.cpp
-set(CMAKE_CXX_STANDARD 14)
+# In the future, we may want to force C++14 since std::make_unique is used in DataStructures.cpp
+set(CMAKE_CXX_STANDARD 11)
 
 # see
 # https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave

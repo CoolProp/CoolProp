@@ -154,10 +154,12 @@ class ParameterInformation
     }
 };
 
-std::unique_ptr<ParameterInformation> parameter_information_p;
+// std::unique_ptr<ParameterInformation> parameter_information_p;
+ParameterInformation* parameter_information_p = nullptr;
 const ParameterInformation& get_parameter_information() {
     if (!parameter_information_p) {
-        parameter_information_p = std::make_unique<ParameterInformation>();
+        //parameter_information_p = std::make_unique<ParameterInformation>();
+        parameter_information_p = new ParameterInformation();
     }
     return *parameter_information_p;
 }
@@ -383,10 +385,12 @@ class PhaseInformation
     }
 };
 
-std::unique_ptr<PhaseInformation> phase_information_p;
+//std::unique_ptr<PhaseInformation> phase_information_p;
+PhaseInformation* phase_information_p = nullptr;
 const PhaseInformation& get_phase_information() {
     if (!phase_information_p) {
-        phase_information_p = std::make_unique<PhaseInformation>();
+        //phase_information_p = std::make_unique<PhaseInformation>();
+        phase_information_p = new PhaseInformation();
     }
     return *phase_information_p;
 }
@@ -454,10 +458,12 @@ public:
     }
 };
 
-std::unique_ptr<SchemeInformation> scheme_information_p;
+//std::unique_ptr<SchemeInformation> scheme_information_p;
+SchemeInformation* scheme_information_p = nullptr;
 const SchemeInformation& get_scheme_information() {
     if (!scheme_information_p) {
-        scheme_information_p = std::make_unique<SchemeInformation>();
+        //scheme_information_p = std::make_unique<SchemeInformation>();
+        scheme_information_p = new SchemeInformation();
     }
     return *scheme_information_p;
 }
@@ -569,10 +575,12 @@ class InputPairInformation
     }
 };
 
-std::unique_ptr<InputPairInformation> input_pair_information_p;
+//std::unique_ptr<InputPairInformation> input_pair_information_p;
+InputPairInformation* input_pair_information_p = nullptr;
 const InputPairInformation& get_input_pair_information() {
     if (!input_pair_information_p) {
-        input_pair_information_p = std::make_unique<InputPairInformation>();
+        //input_pair_information_p = std::make_unique<InputPairInformation>();
+        input_pair_information_p = new InputPairInformation();
     }
     return *input_pair_information_p;
 }
@@ -807,10 +815,12 @@ class BackendInformation
     }
 };
 
-std::unique_ptr<BackendInformation> backend_information_p;
+//std::unique_ptr<BackendInformation> backend_information_p;
+BackendInformation* backend_information_p = nullptr;
 const BackendInformation& get_backend_information() {
     if (!backend_information_p) {
-        backend_information_p = std::make_unique<BackendInformation>();
+        //backend_information_p = std::make_unique<BackendInformation>();
+        backend_information_p = new BackendInformation();
     }
     return *backend_information_p;
 }
