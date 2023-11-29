@@ -2,6 +2,7 @@
 #include "Exceptions.h"
 #include "CoolPropTools.h"
 #include "CoolProp.h"
+#include <memory>
 
 #include <array>
 
@@ -157,23 +158,26 @@ class ParameterInformation
     }
 };
 
-static ParameterInformation parameter_information;
+std::unique_ptr<ParameterInformation> parameter_information_p;
+const ParameterInformation& get_parameter_information() {
+    if (!parameter_information_p) {
+        parameter_information_p = std::make_unique<ParameterInformation>();
+    }
+    return *parameter_information_p;
+}
 
 bool is_trivial_parameter(int key) {
-    // Try to find it
-    std::map<int, bool>::const_iterator it = parameter_information.trivial_map.find(key);
-    // If equal to end, not found
+    auto& parameter_information = get_parameter_information();
+    auto it = parameter_information.trivial_map.find(key);
     if (it != parameter_information.trivial_map.end()) {
-        // Found it, return it
         return it->second;
-    } else {
-        throw ValueError(format("Unable to match the key [%d: %s] in is_trivial_parameter", key, get_parameter_information(key, "short").c_str()));
     }
+    throw ValueError(format("Unable to match the key [%d: %s] in is_trivial_parameter", key, get_parameter_information(key, "short").c_str()));
 }
 
 std::string get_parameter_information(int key, const std::string& info) {
-    std::map<int, std::string>* M;
-
+    const std::map<int, std::string>* M;
+    auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
     if (info == "IO") {
         M = &(parameter_information.IO_map);
@@ -187,19 +191,16 @@ std::string get_parameter_information(int key, const std::string& info) {
         throw ValueError(format("Bad info string [%s] to get_parameter_information", info.c_str()));
     }
 
-    // Try to find it
-    std::map<int, std::string>::const_iterator it = M->find(key);
-    // If equal to end, not found
+    auto it = M->find(key);
     if (it != M->end()) {
-        // Found it, return it
         return it->second;
-    } else {
-        throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, info.c_str()));
     }
+    throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, info.c_str()));
 }
 
 /// Return a list of parameters
 std::string get_csv_parameter_list() {
+    auto& parameter_information = get_parameter_information();
     std::vector<std::string> strings;
     strings.reserve(parameter_information.index_map.size());
     for (const auto& kv : parameter_information.index_map) {
@@ -212,6 +213,7 @@ std::string get_csv_parameter_list() {
 // parameters is_valid_parameter(const std::string& param_name)
 //  [...] if not found: return parameters::INVALID_PARAMETER
 bool is_valid_parameter(const std::string& param_name, parameters& iOutput) {
+    auto& parameter_information = get_parameter_information();
     // Try to find it
     std::map<std::string, int>::const_iterator it = parameter_information.index_map.find(param_name);
     // If equal to end, not found
@@ -387,12 +389,25 @@ class PhaseInformation
         }
     }
 };
-static PhaseInformation phase_information;
+
+std::unique_ptr<PhaseInformation> phase_information_p;
+const PhaseInformation& get_phase_information() {
+    if (!phase_information_p) {
+        phase_information_p = std::make_unique<PhaseInformation>();
+    }
+    return *phase_information_p;
+}
 
 const std::string& get_phase_short_desc(phases phase) {
-    return phase_information.short_desc_map[phase];
+    auto& coolprop_information = get_phase_information();
+    auto iter = coolprop_information.short_desc_map.find(phase);
+    if (iter != coolprop_information.short_desc_map.end()) {
+        return iter->second;
+    }
+    throw ValueError("Cannot find the short phase description.");
 }
 bool is_valid_phase(const std::string& phase_name, phases& iOutput) {
+    auto& phase_information = get_phase_information();
     // Try to find it
     std::map<std::string, phases>::const_iterator it = phase_information.index_map.find(phase_name);
     // If equal to end, not found
@@ -445,15 +460,27 @@ public:
         }
     }
 };
-static SchemeInformation scheme_information;
+
+std::unique_ptr<SchemeInformation> scheme_information_p;
+const SchemeInformation& get_scheme_information() {
+    if (!scheme_information_p) {
+        scheme_information_p = std::make_unique<SchemeInformation>();
+    }
+    return *scheme_information_p;
+}
 
 const std::string& get_scheme_short_desc(schemes scheme) {
-    return scheme_information.short_desc_map[scheme];
+    auto& coolprop_information = get_scheme_information();
+    auto it = coolprop_information.short_desc_map.find(scheme);
+    if (it != coolprop_information.short_desc_map.end()) {
+        return it->second;
+    }
+    throw ValueError("Cannot find the short scheme description.");
 }
 
 bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput) {
-    // Try to find it
-    std::map<std::string, schemes>::const_iterator it = scheme_information.index_map.find(scheme_name);
+    auto& scheme_information = get_scheme_information();
+    auto it = scheme_information.index_map.find(scheme_name);
     // If equal to end, not found
     if (it != scheme_information.index_map.end()){
         // Found, return it
@@ -548,22 +575,38 @@ class InputPairInformation
     }
 };
 
-static InputPairInformation input_pair_information;
+std::unique_ptr<InputPairInformation> input_pair_information_p;
+const InputPairInformation& get_input_pair_information() {
+    if (!input_pair_information_p) {
+        input_pair_information_p = std::make_unique<InputPairInformation>();
+    }
+    return *input_pair_information_p;
+}
 
 input_pairs get_input_pair_index(const std::string& input_pair_name) {
-    auto it = input_pair_information.index_map.find(input_pair_name);
-    if (it != input_pair_information.index_map.end()) {
+    auto& coolprop_information = get_input_pair_information();
+    auto it = coolprop_information.index_map.find(input_pair_name);
+    if (it != coolprop_information.index_map.end()) {
         return it->second;
-    } else {
-        throw ValueError(format("Your input name [%s] is not valid in get_input_pair_index (names are case sensitive)", input_pair_name.c_str()));
     }
+    throw ValueError(format("Your input name [%s] is not valid in get_input_pair_index (names are case sensitive)", input_pair_name.c_str()));
 }
 
 const std::string& get_input_pair_short_desc(input_pairs pair) {
-    return input_pair_information.short_desc_map[pair];
+    auto& coolprop_information = get_input_pair_information();
+    auto it = coolprop_information.short_desc_map.find(pair);
+    if (it != coolprop_information.short_desc_map.end()) {
+        return it->second;
+    }
+    throw ValueError("Cannot find the short input pair description.");
 }
 const std::string& get_input_pair_long_desc(input_pairs pair) {
-    return input_pair_information.long_desc_map[pair];
+    auto& coolprop_information = get_input_pair_information();
+    auto it = coolprop_information.long_desc_map.find(pair);
+    if (it != coolprop_information.long_desc_map.end()) {
+        return it->second;
+    }
+    throw ValueError("Cannot find the long input pair description.");
 }
 void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
     switch (pair) {
@@ -779,10 +822,17 @@ class BackendInformation
     }
 };
 
-static BackendInformation backend_information;
+std::unique_ptr<BackendInformation> backend_information_p;
+const BackendInformation& get_backend_information() {
+    if (!backend_information_p) {
+        backend_information_p = std::make_unique<BackendInformation>();
+    }
+    return *backend_information_p;
+}
 
 /// Convert a string into the enum values
 void extract_backend_families(const std::string& backend_string, backend_families& f1, backend_families& f2) {
+    auto& backend_information = get_backend_information();
     f1 = INVALID_BACKEND_FAMILY;
     f2 = INVALID_BACKEND_FAMILY;
     std::size_t i = backend_string.find('&');
@@ -805,6 +855,7 @@ void extract_backend_families(const std::string& backend_string, backend_familie
 }
 
 void extract_backend_families_string(const std::string& backend_string, backend_families& f1, std::string& f2) {
+    auto& backend_information = get_backend_information();
     backend_families f2_enum;
     extract_backend_families(backend_string, f1, f2_enum);
     std::map<backend_families, std::string>::const_iterator it;
@@ -817,6 +868,7 @@ void extract_backend_families_string(const std::string& backend_string, backend_
 }
 
 std::string get_backend_string(backends backend) {
+    auto& backend_information = get_backend_information();
     std::map<backends, std::string>::const_iterator it;
     it = backend_information.backend_name_map.find(backend);
     if (it != backend_information.backend_name_map.end()) {
