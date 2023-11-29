@@ -1,6 +1,43 @@
 Changelog for CoolProp
 ======================
 
+6.6.0
+-----
+
+Highlights:
+
+* Added R1336mzz(E) from Akasaka-IJT-2023
+* Added wheels for Python 3.12
+* Added new functions to the library interface
+* Include new binaries in the release workflow (Mathcad, Javascript)
+* Fixed the base temperature bug in the compressible backend
+
+Issues closed:
+
+* `#1944 <https://github.com/CoolProp/CoolProp/issues/1944>`_ : coolprop in MathCAD - current version problem
+* `#2198 <https://github.com/CoolProp/CoolProp/issues/2198>`_ : Binary folders have a "v" in their name
+* `#2260 <https://github.com/CoolProp/CoolProp/issues/2260>`_ : manual install files not showing up on soundforge
+* `#2278 <https://github.com/CoolProp/CoolProp/issues/2278>`_ : Javascript Wrapper unable to compiled for version coolprop 6.5.0
+* `#2284 <https://github.com/CoolProp/CoolProp/issues/2284>`_ : Getting fugacity from the shared library
+* `#2295 <https://github.com/CoolProp/CoolProp/issues/2295>`_ : Calculating enthalpy and entropy at exactly the middle value between min and max temperature does not work
+* `#2310 <https://github.com/CoolProp/CoolProp/issues/2310>`_ : Wheels for Python 3.12
+
+Pull requests merged:
+
+* `#2213 <https://github.com/CoolProp/CoolProp/pull/2213>`_ : Use lazy initialization and avoid static objects
+* `#2275 <https://github.com/CoolProp/CoolProp/pull/2275>`_ : CoolProp::apply_simple_mixing_rule missing from SWIG Wrapper
+* `#2279 <https://github.com/CoolProp/CoolProp/pull/2279>`_ : Add javascript to the release script
+* `#2286 <https://github.com/CoolProp/CoolProp/pull/2286>`_ : Add fugacity functions needed for compatability with `CoolProp.jl` pkg
+* `#2291 <https://github.com/CoolProp/CoolProp/pull/2291>`_ : Added second_partial_deriv and  first_two_phase_deriv
+* `#2294 <https://github.com/CoolProp/CoolProp/pull/2294>`_ : Update Mathcad docs for pre-compiled and discontinuation of Legacy Mathcad [skip-ci]
+* `#2296 <https://github.com/CoolProp/CoolProp/pull/2296>`_ : Mathcad Wrapper README Formatting
+* `#2309 <https://github.com/CoolProp/CoolProp/pull/2309>`_ : Addition of EoS JSON of R1336mzz(E) from Akasaka-IJT-2023
+* `#2317 <https://github.com/CoolProp/CoolProp/pull/2317>`_ : New C Interface Functions
+* `#2320 <https://github.com/CoolProp/CoolProp/pull/2320>`_ : Food properties as incompressible liquids + ice
+* `#2322 <https://github.com/CoolProp/CoolProp/pull/2322>`_ : Actions for Mathcad
+* `#2323 <https://github.com/CoolProp/CoolProp/pull/2323>`_ : Incompresible versions of CoolProp fluids
+* `#2324 <https://github.com/CoolProp/CoolProp/pull/2324>`_ : Fix base temperature and composition problems for incompressible fluids
+
 6.5.0
 -----
 
