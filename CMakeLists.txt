@@ -75,7 +75,8 @@ option(COOLPROP_NO_EXAMPLES
 #        ON)
 
 # Force C++11 since lambdas are used in CPStrings.h
-set(CMAKE_CXX_STANDARD 11)
+# Force C++14 since std::make_unique is used in DataStructures.cpp
+set(CMAKE_CXX_STANDARD 14)
 
 # see
 # https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
@@ -1171,10 +1172,6 @@ if(COOLPROP_WINDOWS_PACKAGE)
 endif()
 
 if(COOLPROP_OCTAVE_MODULE)
-
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(CMAKE_CXX_STANDARD 11)
-  endif()
 
   # Must have SWIG and Octave
   find_package(SWIG REQUIRED)
