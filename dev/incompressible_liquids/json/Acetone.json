@@ -1,0 +1,125 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 307.31532668493253,
+  "Tmax": 416.4806533698651,
+  "Tmin": 198.14999999999998,
+  "TminPsat": 416.4806533698651,
+  "conductivity": {
+    "NRMS": null,
+    "coeffs": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 0.001003907946811843,
+    "coeffs": [
+      [
+        775.6208141702908
+      ],
+      [
+        -1.123377606406917
+      ],
+      [
+        -0.0011550084818358675
+      ],
+      [
+        -6.411257141128393e-06
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Acetone, liquid phase at 10 bar",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "Acetone",
+  "reference": "Lemmon-JCED-2006; ; ; ",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": [
+      -5000.0,
+      60.0,
+      -10.0
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.004496558569769559,
+    "coeffs": [
+      [
+        2161.290999517797
+      ],
+      [
+        2.5429347441222636
+      ],
+      [
+        0.012005532887008652
+      ],
+      [
+        2.3020582795756997e-05
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": null,
+    "coeffs": [
+      500.0,
+      -60.0,
+      10.0
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

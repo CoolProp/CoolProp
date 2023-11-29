@@ -584,6 +584,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void) {
             case ViscosityDiluteVariables::VISCOSITY_DILUTE_CYCLOHEXANE:
                 eta_dilute = TransportRoutines::viscosity_dilute_cyclohexane(*this);
                 break;
+            case ViscosityDiluteVariables::VISCOSITY_DILUTE_CO2_LAESECKE_JPCRD_2017:
+                eta_dilute = TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017(*this);
+                break;
             default:
                 throw ValueError(
                   format("dilute viscosity type [%d] is invalid for fluid %s", components[0].transport.viscosity_dilute.type, name().c_str()));
@@ -603,7 +606,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_RAINWATER_FRIEND: {
             CoolPropDbl B_eta_initial = TransportRoutines::viscosity_initial_density_dependence_Rainwater_Friend(*this);
             CoolPropDbl rho = rhomolar();
-            initial_density = eta_dilute * B_eta_initial * rho;
+            initial_density = eta_dilute * B_eta_initial * rho; //TODO: Check units once AMTG
             break;
         }
         case ViscosityInitialDensityVariables::VISCOSITY_INITIAL_DENSITY_EMPIRICAL: {
@@ -640,6 +643,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_background(CoolPropDbl et
             break;
         case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_BENZENE:
             residual = TransportRoutines::viscosity_benzene_higher_order_hardcoded(*this);
+            break;
+        case ViscosityHigherOrderVariables::VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017:
+            residual = TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017(*this);
             break;
         default:
             throw ValueError(
@@ -825,6 +831,9 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
                 break;
             case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2:
                 dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2(*this);
+                break;
+            case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2_HUBER_JPCRD_2016:
+                dilute = TransportRoutines::conductivity_dilute_hardcoded_CO2_HuberJPCRD2016(*this);
                 break;
             case ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_ETHANE:
                 dilute = TransportRoutines::conductivity_dilute_hardcoded_ethane(*this);

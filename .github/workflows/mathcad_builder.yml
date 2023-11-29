@@ -1,0 +1,40 @@
+name: Mathcad wrapper
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Get dependencies
+      shell: bash
+      run: |
+        mkdir "Custom Functions"
+        cd "Custom Functions"        
+        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcadincl.h --output mcadincl.h
+        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcaduser.lib --output mcaduser.lib
+
+    - name: Configure CMake
+      run: cmake -DCOOLPROP_PRIME_MODULE:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${{ github.workspace }}" -B build -S .
+
+    - name: Build
+      run: | 
+        cmake --build build --target CoolPropMathcadWrapper -j $(nproc) --config Release
+        cmake --build build --target install --config Release
+
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      with:
+          name: MathcadPrime
+          path: install_root/MathcadPrime

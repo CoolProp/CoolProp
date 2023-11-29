@@ -27,22 +27,22 @@ ctypedef fused string_or_size_t:
     long
 
 cdef class PyPhaseEnvelopeData:
-    cpdef public bool TypeI
-    cpdef public size_t iTsat_max, ipsat_max, icrit
-    cpdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
-    cpdef public list x, y, K
+    cdef public bool TypeI
+    cdef public size_t iTsat_max, ipsat_max, icrit
+    cdef public list T, p, lnT, lnp, rhomolar_liq, rhomolar_vap, lnrhomolar_liq, lnrhomolar_vap, hmolar_liq, hmolar_vap, smolar_liq, smolar_vap, Q
+    cdef public list x, y, K
 
 cdef class PyGuessesStructure:
-    cpdef public double T, p, rhomolar, hmolar, smolar
-    cpdef public double rhomolar_liq, rhomolar_vap
-    cpdef public list x, y
+    cdef public double T, p, rhomolar, hmolar, smolar
+    cdef public double rhomolar_liq, rhomolar_vap
+    cdef public list x, y
 
 cdef class PyCriticalState:
-    cpdef public double T, p, rhomolar, hmolar, smolar
-    cpdef public bool stable
+    cdef public double T, p, rhomolar, hmolar, smolar
+    cdef public bool stable
 
 cdef class PySpinodalData:
-    cpdef public vector[double] tau, delta, M1
+    cdef public vector[double] tau, delta, M1
 
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping

@@ -604,6 +604,28 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
         HandleException(errcode, message_buffer, buffer_length);
     }
 }
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, const long i, long* errcode, char* message_buffer,
+                                                         const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->fugacity(i);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
+                                                                    const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->fugacity_coefficient(i);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
 EXPORT_CODE void CONVENTION AbstractState_update(const long handle, const long input_pair, const double value1, const double value2, long* errcode,
                                                  char* message_buffer, const long buffer_length) {
     *errcode = 0;
@@ -669,6 +691,64 @@ EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handl
     }
     return _HUGE;
 }
+
+EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->second_partial_deriv(static_cast<CoolProp::parameters>(Of1), static_cast<CoolProp::parameters>(Wrt1),
+                                        static_cast<CoolProp::parameters>(Constant1), static_cast<CoolProp::parameters>(Wrt2),
+                                        static_cast<CoolProp::parameters>(Constant2));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_second_two_phase_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->second_two_phase_deriv(static_cast<CoolProp::parameters>(Of1), static_cast<CoolProp::parameters>(Wrt1),
+                                        static_cast<CoolProp::parameters>(Constant1), static_cast<CoolProp::parameters>(Wrt2),
+                                        static_cast<CoolProp::parameters>(Constant2));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                  long* errcode, char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->first_two_phase_deriv(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt),
+                                         static_cast<CoolProp::parameters>(Constant));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_splined(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                          const double x_end, long* errcode, char* message_buffer,
+                                                                          const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->first_two_phase_deriv_splined(static_cast<CoolProp::parameters>(Of), static_cast<CoolProp::parameters>(Wrt),
+                                                 static_cast<CoolProp::parameters>(Constant), x_end);
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
 
 EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handle, const long input_pair, const double* value1, const double* value2,
                                                                 const long length, double* T, double* p, double* rhomolar, double* hmolar,
@@ -937,6 +1017,58 @@ EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* 
     }
 }
 
+EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long* errcode, char* message_buffer, const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->phase();
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return -1;
+}
+
+EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char* param, char* return_buffer,
+                                                             const long return_buffer_length, long* errcode, char* message_buffer,
+                                                             const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        std::string temp = AS->fluid_param_string(param);
+        if (temp.size() < static_cast<std::size_t>(return_buffer_length)) {
+            strcpy(return_buffer, temp.c_str());
+        } else {
+            *errcode = 2;
+        }
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+}
+
+EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                          const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->saturated_liquid_keyed_output(static_cast<CoolProp::parameters>(param));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
+EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                         const long buffer_length) {
+    *errcode = 0;
+    try {
+        shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
+        return AS->saturated_vapor_keyed_output(static_cast<CoolProp::parameters>(param));
+    } catch (...) {
+        HandleException(errcode, message_buffer, buffer_length);
+    }
+    return _HUGE;
+}
+
 EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
                                                const long buffer_length) {
     *errcode = 0;
@@ -946,4 +1078,25 @@ EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* 
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }
+}
+
+EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName) {
+    return CoolProp::is_valid_fluid_string(fluidName);
+}
+
+EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid,
+                                             const long fluid_length) {
+    std::string _fluid, _backend;
+    CoolProp::extract_backend(fluid_string, _backend, _fluid);
+    if (_backend.size() < static_cast<std::size_t>(backend_length)) {
+        strcpy(backend, _backend.c_str());
+    } else {
+        return -1;
+    }
+    if (_fluid.size() < static_cast<std::size_t>(fluid_length)) {
+        strcpy(fluid, _fluid.c_str());
+    } else {
+        return -1;
+    }
+    return 0;
 }

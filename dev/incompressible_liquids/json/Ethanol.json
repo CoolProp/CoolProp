@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 310.99686247599425,
+  "Tmax": 423.84372495198846,
+  "Tmin": 198.14999999999998,
+  "TminPsat": 423.84372495198846,
+  "conductivity": {
+    "NRMS": 0.0017107297656890421,
+    "coeffs": [
+      [
+        0.16145307059173794
+      ],
+      [
+        -0.00018048281492797662
+      ],
+      [
+        5.99907854419271e-07
+      ],
+      [
+        -4.371086297200755e-09
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 0.002103015441363321,
+    "coeffs": [
+      [
+        775.3701378025174
+      ],
+      [
+        -0.8677162816607029
+      ],
+      [
+        -0.0011392277863346845
+      ],
+      [
+        -9.46879152535528e-06
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Ethanol, liquid phase at 10 bar",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "Ethanol",
+  "reference": "Schroeder-JPCRD-2014; ; Kiselev-IECR-2005; Assael-JPCRD-2013-Ethanol",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": [
+      -5000.0,
+      60.0,
+      -10.0
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.0009046693742307961,
+    "coeffs": [
+      [
+        2536.987743975746
+      ],
+      [
+        8.492882698702205
+      ],
+      [
+        0.028073656822581228
+      ],
+      [
+        -7.904033055905353e-06
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": 0.002344080405126311,
+    "coeffs": [
+      2770.886375961777,
+      79.03716121480323,
+      14.166763789113702
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

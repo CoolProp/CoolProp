@@ -98,6 +98,7 @@ cdef extern from "Backends/Helmholtz/MixtureParameters.h" namespace "CoolProp":
     void _apply_simple_mixing_rule "CoolProp::apply_simple_mixing_rule"(const string &CAS1, const string &CAS2, const string &rule) except +
     void _set_departure_functions "CoolProp::set_departure_functions"(const string &functions) except +
     void _set_interaction_parameters "CoolProp::set_interaction_parameters"(const string &data) except +
+    void _set_predefined_mixtures "CoolProp::set_predefined_mixtures"(const string &data) except +
 
 cdef extern from "Backends/PCSAFT/PCSAFTLibrary.h" namespace "CoolProp":
     string _get_mixture_binary_pair_pcsaft "CoolProp::get_mixture_binary_pair_pcsaft"(const string CAS1, const string CAS2, const string key) except +
@@ -330,7 +331,13 @@ cpdef set_interaction_parameters(data):
     """
     Specify the binary interaction terms as JSON. Python wrapper of C++ function :cpapi:`CoolProp::set_interaction_parameters`
     """
-    _set_interaction_parameters(data)    
+    _set_interaction_parameters(data)   
+
+cpdef set_predefined_mixtures(data):
+    """
+    Specify predefined mixtures as JSON. Python wrapper of C++ function :cpapi:`CoolProp::set_predefined_mixtures`
+    """
+    _set_predefined_mixtures(data)
 
 cpdef double saturation_ancillary(string name, string output, int Q, string input, double value):
     """
@@ -700,20 +707,20 @@ cdef class State:
             self.set_Fluid(_Fluid, backend)
         self.Fluid = Fluid
 
-        # Parse the inputs provided
-        if StateDict is not None:
-            self.update(StateDict)
-
         if phase is None:
             self.phase = b'??'
         else:
             self.phase = phase.encode('ascii')
 
         # Set the phase flag
-        if self.phase.lower() == 'gas':
+        if self.phase.lower() == b'gas':
             self.pAS.specify_phase(constants_header.iphase_gas)
-        elif self.phase.lower() == 'liquid':
+        elif self.phase.lower() == b'liquid':
             self.pAS.specify_phase(constants_header.iphase_liquid)
+
+        # Parse the inputs provided
+        if StateDict is not None:
+            self.update(StateDict)
 
 #     def __reduce__(self):
 #         d={}
@@ -1130,8 +1137,9 @@ cdef class State:
         """
         Make a copy of this State class
         """
-        cdef State S = State(self.Fluid,dict(T=self.T_,D=self.rho_))
-        S.phase = self.phase
+        cdef State S = State(self.Fluid, None, phase=self.phase.decode('ascii')) # None is for the state variables, which we leave empty in order to set the phase
+        # Now we update the state
+        S.update(dict(T=self.T_,D=self.rho_))
         return S
 
 def rebuildState(d):

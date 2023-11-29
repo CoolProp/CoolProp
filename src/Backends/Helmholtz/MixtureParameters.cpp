@@ -16,13 +16,23 @@ class PredefinedMixturesLibrary
     std::map<std::string, Dictionary> predefined_mixture_map;
 
     PredefinedMixturesLibrary() {
+        load_from_string(predefined_mixtures_JSON);
+    }
+
+    void load_from_string(const std::string& str) {
         rapidjson::Document doc;
-
-        doc.Parse<0>(predefined_mixtures_JSON.c_str());
+        doc.Parse<0>(str.c_str());
         if (doc.HasParseError()) {
-            throw ValueError();
+            std::cout << str << std::endl;
+            throw ValueError("Unable to parse predefined mixture string");
         }
+        load_from_JSON(doc);
+    }
 
+    void load_from_JSON(rapidjson::Document & doc){
+        if (!doc.IsArray() || !doc[0].IsObject()){
+            throw ValueError("You must provide an array of objects");
+        }
         // Iterate over the papers in the listing
         for (rapidjson::Value::ValueIterator itr = doc.Begin(); itr != doc.End(); ++itr) {
             // Instantiate the empty dictionary to be filled
@@ -59,6 +69,11 @@ bool is_predefined_mixture(const std::string& name, Dictionary& dict) {
     } else {
         return false;
     }
+}
+
+void set_predefined_mixtures(const std::string& string_data) {
+    // JSON-encoded string for binary interaction parameters
+    predefined_mixtures_library.load_from_string(string_data);
 }
 
 /** \brief A library of binary pair parameters for the mixture

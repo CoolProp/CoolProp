@@ -369,7 +369,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 }
                 return;
             } else {
-                if (get_debug_level() > 0) {
+                if (CoolProp::get_debug_level() > 0) {
                     std::cout << format("%s:%d Unable to load predefined mixture [%s] with ierr: [%d] and herr: [%s]\n", __FILE__, __LINE__, mix,
                                         ierr, herr);
                 }
@@ -2086,7 +2086,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
             } else {
                 throw ValueError(format("For PQ w/ guesses, Q must be either 0 or 1"));
             }
-            if (get_debug_level() > 9) {
+            if (CoolProp::get_debug_level() > 9) {
                 std::cout << format("guesses.T: %g\n", guesses.T);
             }
             if (!ValidNumber(guesses.T)) {
