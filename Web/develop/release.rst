@@ -42,12 +42,16 @@ the CoolProp library.
 	  ``snippet_pulls.rst.txt`` and update the changelog file in
       ``Web/coolprop/changelog.rst``. You might also use the same text for
       the annotated tag / release on GitHub.
-    
+	  
+* **Delete cache**: Delete the cached property plots and consistency plots stored
+  at https://github.com/CoolProp/CoolProp/actions/caches. This forces their 
+  recreation when building the documentation. Recalculating all the consistency
+  plots is our last line of defence when anything goes wrong with an EoS prior
+  to a scheduled release.    
 * **Push to master**: Merge your changes to the *master* branch and wait for the 
   CI system to complete the work. Only proceed if all builds finish successfully.
-  Just to be on the safe side, you may want to trigger the regeneration of the 
-  expensive documentation graphs manually. If anything goes wrong, you should be
-  able to debug the workflows locally using act (https://github.com/nektos/act/).
+  If anything goes wrong, you should be able to debug the workflows locally
+  using act (https://github.com/nektos/act/).
 * **Tag a release**: Tag the master branch for using ``vX.X.X`` and wait once more 
   for all CI actions to complete. Make sure that the Python wheels get uploaded 
   to PyPi automatically.
