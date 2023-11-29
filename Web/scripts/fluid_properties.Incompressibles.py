@@ -92,11 +92,18 @@ for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solu
     Tmax = state.Tmax()
     T = np.linspace(Tmin, Tmax, N)
     for i, Ti in enumerate(T):
-        state.update(CoolProp.PT_INPUTS, p, Ti)
-        Pr[i] = state.Prandtl()
-        la[i] = state.conductivity()
-        mu[i] = state.viscosity()
-        cp[i] = state.cpmass()
+        try:
+            state.update(CoolProp.PT_INPUTS, p, Ti)
+            Pr[i] = state.Prandtl()
+            la[i] = state.conductivity()
+            mu[i] = state.viscosity()
+            cp[i] = state.cpmass()
+        except Exception as e:
+            print(e)
+            Pr[i] = np.NaN
+            la[i] = np.NaN
+            mu[i] = np.NaN
+            cp[i] = np.NaN
     #print(np.min(Pr), np.max(Pr))
     Pr_axis.plot(T - 273.15, Pr)
     la_axis.plot(T - 273.15, la)

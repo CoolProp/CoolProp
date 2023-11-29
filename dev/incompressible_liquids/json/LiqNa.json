@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 1450.0,
+  "Tmax": 2500.0,
+  "Tmin": 400.0,
+  "TminPsat": 400.0,
+  "conductivity": {
+    "NRMS": 2.703067851958419e-05,
+    "coeffs": [
+      [
+        39.652357954542296
+      ],
+      [
+        -0.0283520543358315
+      ],
+      [
+        3.7129446640339625e-06
+      ],
+      [
+        -1.1838256708252004e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 0.012510245084014686,
+    "coeffs": [
+      [
+        672.0767045454262
+      ],
+      [
+        -0.2524942259559509
+      ],
+      [
+        -6.885234330888945e-05
+      ],
+      [
+        -5.679564524241343e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "LiqNa",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "LiqNa",
+  "reference": "LiqNa",
+  "saturation_pressure": {
+    "NRMS": 0.0007472008004592615,
+    "coeffs": [
+      -11758.328842732395,
+      -14.056138686870915,
+      -21.815692362749207
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.0027059884319416837,
+    "coeffs": [
+      [
+        1376.6592261522192
+      ],
+      [
+        0.5205059522205394
+      ],
+      [
+        0.0005791666665749348
+      ],
+      [
+        8.33333333449815e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": 0.006087518657847591,
+    "coeffs": [
+      1477.5936204092418,
+      217.0383167635442,
+      9.835135835300713
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

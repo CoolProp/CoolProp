@@ -97,6 +97,12 @@ struct saturation_PHSU_pure_options
     }
 };
 
+#if !defined(NO_FMTLIB) && FMT_VERSION >= 90000
+inline int format_as(saturation_PHSU_pure_options::specified_variable_options option) {
+    return fmt::underlying(option);
+}
+#endif
+
 void saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl specified_value, saturation_PHSU_pure_options& options);
 
 /* \brief This is a backup saturation_p solver for the case where the Newton solver cannot approach closely enough the solution

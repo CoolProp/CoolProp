@@ -1152,7 +1152,7 @@ class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm
 
     /// Constructor with std::vectors
     IdealHelmholtzGERG2004Sinh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
-      : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(_HUGE), enabled(true) {
+      : n(n), theta(theta), Tc(Tc), _Tr(_HUGE), N(n.size()), enabled(true) {
         assert(n.size() == theta.size());
     }
 
@@ -1184,7 +1184,7 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
 
     /// Constructor with std::vectors
     IdealHelmholtzGERG2004Cosh(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& theta, double Tc)
-      : n(n), theta(theta), Tc(Tc), N(n.size()), _Tr(_HUGE), enabled(true) {
+      : n(n), theta(theta), Tc(Tc), _Tr(_HUGE), N(n.size()), enabled(true) {
         assert(n.size() == theta.size());
     }
 

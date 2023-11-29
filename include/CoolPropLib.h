@@ -371,6 +371,28 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
                                                                       const long maxN, long* N, long* errcode, char* message_buffer,
                                                                       const long buffer_length);
 /**
+     * @brief Return the fugacity of the i-th component of the mixture.
+     * @param handle The integer handle for the state class stored in memory
+     * @param i i-th component of the mixture
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return 
+     */
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, const long i, long* errcode, char* message_buffer,
+                                                         const long buffer_length);
+/**
+     * @brief Return the fugacity coefficient of the i-th component of the mixture.
+     * @param handle The integer handle for the state class stored in memory
+     * @param i i-th component of the mixture
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error code
+     * @param buffer_length The length of the buffer for the error code
+     * @return 
+     */
+EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
+                                                                      const long buffer_length);
+/**
      * @brief Update the state of the AbstractState
      * @param handle The integer handle for the state class stored in memory
      * @param input_pair The integer value for the input pair obtained from XXXXXXXXXXXXXXXX
@@ -442,6 +464,72 @@ EXPORT_CODE double CONVENTION AbstractState_first_saturation_deriv(const long ha
 EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handle, const long Of, const long Wrt, const long Constant, long* errcode,
                                                                 char* message_buffer, const long buffer_length);
 
+/**
+    * @brief Calculate the second partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of1 The parameter of which the derivative is being taken
+    * @param Wrt1 The parameter that the derivative is taken with respect to in the first derivative 
+    * @param Constant1 The parameter that is held constant in the first derivative 
+    * @param Wrt2 The parameter that the derivative is taken with respect to in the second derivative 
+    * @param Constant2 The parameter that is held constant in the second derivative 
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+EXPORT_CODE double CONVENTION AbstractState_second_two_phase_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length);
+/**
+    * @brief Calculate the second partial derivative int two-phase region from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of1 The parameter of which the derivative is being taken
+    * @param Wrt1 The parameter that the derivative is taken with respect to in the first derivative 
+    * @param Constant1 The parameter that is held constant in the first derivative 
+    * @param Wrt2 The parameter that the derivative is taken with respect to in the second derivative 
+    * @param Constant2 The parameter that is held constant in the second derivative 
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
+                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                 const long buffer_length);
+
+/**
+    * @brief Calculate the first partial derivative in two-phase region with Spline - Approach from the AbstractState using integer values for the desired parameters
+    Spline Approach "Methods to Increase the Robustness of Finite-Volume FlowModels in Thermodynamic Systems: Sylvain Quoilin, Ian Bell, Adriano Desideri, Pierre Dewallef and Vincent Lemort"
+    * @param handle The integer handle for the state class stored in memory
+    * @x_end constant parameter for defining range of the spline, (usually 0.1 is used, 0..1 is possible)
+    * @param Of The parameter of which the derivative is being taken
+    * @param Wrt The derivative with with respect to this parameter
+    * @param Constant The parameter that is not affected by the derivative
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_splined(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                  const double x_end,long* errcode, char* message_buffer, const long buffer_length);
+/**
+    * @brief Calculate the first partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
+    * @param handle The integer handle for the state class stored in memory
+    * @param Of The parameter of which the derivative is being taken
+    * @param Wrt The derivative with with respect to this parameter
+    * @param Constant The parameter that is not affected by the derivative
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv(const long handle, const long Of, const long Wrt, const long Constant,
+                                                                  long* errcode, char* message_buffer, const long buffer_length);
 /**
     * @brief Update the state of the AbstractState and get an output value five common outputs (temperature, pressure, molar density, molar enthalpy and molar entropy)
     * @brief from the AbstractState using pointers as inputs and output to allow array computation.
@@ -685,6 +773,31 @@ EXPORT_CODE double CONVENTION AbstractState_keyed_output_satState(const long han
      */
 EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* backend, long* errcode, char* message_buffer,
                                                        const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE void CONVENTION AbstractState_fluid_param_string(const long handle, const char* param, char* return_buffer,
+                                                             const long return_buffer_length, long* errcode, char* message_buffer,
+                                                             const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE int CONVENTION AbstractState_phase(const long handle, long* errcode, char* message_buffer, const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                          const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
+                                                                         const long buffer_length);
+
 /** 
      * \brief Add fluids as a JSON-formatted string
      * @param backend The backend to which these should be added; e.g. "HEOS", "SRK", "PR"
@@ -694,6 +807,17 @@ EXPORT_CODE void CONVENTION AbstractState_backend_name(const long handle, char* 
      */
 EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
                                                const long buffer_length);
+
+/**
+ * 
+*/
+EXPORT_CODE int CONVENTION C_is_valid_fluid_string(const char* fluidName);
+
+/**
+ * 
+*/
+EXPORT_CODE int CONVENTION C_extract_backend(const char* fluid_string, char* backend, const long backend_length, char* fluid,
+                                             const long fluid_length);
 
 // *************************************************************************************
 // *************************************************************************************

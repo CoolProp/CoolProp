@@ -1,0 +1,85 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 273.15,
+  "Tmax": 423.15,
+  "Tmin": 233.14999999999998,
+  "TminPsat": 423.15,
+  "conductivity": {
+    "NRMS": null,
+    "coeffs": [
+      [
+        0.32962
+      ],
+      [
+        0.0014011
+      ],
+      [
+        -2.9069e-06
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": null,
+    "coeffs": [
+      [
+        2423.8
+      ],
+      [
+        -0.28063
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Food ash model from the 2006 ASHRAE Handbook based on data from Choi and Okos (1986)",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "FoodAsh",
+  "reference": "ASHRAE2006",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "specific_heat": {
+    "NRMS": null,
+    "coeffs": [
+      [
+        1092.6
+      ],
+      [
+        1.8896
+      ],
+      [
+        -0.0036817
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

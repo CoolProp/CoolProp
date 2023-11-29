@@ -1,0 +1,53 @@
+name: Javascript library
+
+on:
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_javascript' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container:
+      image: emscripten/emsdk
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Configure CMake
+      shell: bash
+      run: |
+        cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DEMSCRIPTEN_INIT_FLAG:BOOL=OFF -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      # cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DEMSCRIPTEN_INIT_FLAG:BOOL=ON  -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+    - name: Build
+      shell: bash
+      run: |
+        set -x
+        cmake --build build --target install -j $(nproc) --config $BUILD_TYPE        
+
+    - name: Archive artifacts
+      if: ${{ !env.ACT }} # skip during local actions testing
+      uses: actions/upload-artifact@v3
+      with:
+          name: Javascript
+          path: install_root/Javascript
+
+    # - name: Upload TGZ or ZIP to release
+    #   if: contains(github.ref, 'refs/tags')
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     dir: install_root/Javascript
+    #     tag: ${{ github.ref }}
+    #     overwrite: true
+    #     file_glob: false

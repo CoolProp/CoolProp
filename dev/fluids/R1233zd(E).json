@@ -1,27 +1,5 @@
 {
   "ANCILLARIES": {
-    "hL": {
-      "A": [
-        -59081.90149961518,
-        -56.71632899355515,
-        3.4601929994947436,
-        -0.022382015166099334,
-        7.983388457665615e-05,
-        -1.6902202857616328e-07,
-        1.9661600933963034e-10,
-        -9.735546908737005e-14
-      ],
-      "B": [
-        1,
-        -0.0022550755060008
-      ],
-      "Tmax": 439.5,
-      "Tmin": 195.15,
-      "_note": "coefficients are in increasing order; input in K, output in J/mol; value is enthalpy minus hs_anchor enthalpy",
-      "max_abs_error": 271.53420989192637,
-      "max_abs_error_units": "J/mol",
-      "type": "rational_polynomial"
-    },
     "hLV": {
       "A": [
         -5135.181894492507,

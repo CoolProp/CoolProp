@@ -218,3 +218,104 @@ class HyCool50(PureData, DigitalData):
         self.viscosity.xData, self.viscosity.yData, self.viscosity.data = self.getArray(dataID=key, func=funcMu, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.viscosity.DEBUG)
         self.viscosity.source = self.viscosity.SOURCE_EQUATION
         funcMu = None
+
+try:
+    import CoolProp.CoolProp as CP
+
+    def get_coolprop_class_Tp(fluid_name: str, fluid_desc: str, backend_str: str, fluid_str: str, p_ref: float, T_min: float, T_max: float):
+
+        class NewClass(PureData, DigitalData):
+            def __init__(self):
+                DigitalData.__init__(self)
+                PureData.__init__(self)
+
+                self.name = fluid_name
+                self.description = fluid_desc
+
+                cp_state = CP.AbstractState(backend_str, fluid_str)
+
+                references = []
+                references.append(CP.get_BibTeXKey(fluid_str, "EOS"))
+                references.append(CP.get_BibTeXKey(fluid_str, "CP0"))
+                references.append(CP.get_BibTeXKey(fluid_str, "VISCOSITY"))
+                references.append(CP.get_BibTeXKey(fluid_str, "CONDUCTIVITY"))
+                # references.append(CP.get_BibTeXKey(fluid_str, "ECS_LENNARD_JONES"))
+                # references.append(CP.get_BibTeXKey(fluid_str, "ECS_FITS"))
+                # references.append(CP.get_BibTeXKey(fluid_str, "SURFACE_TENSION"))
+                # references.append(CP.get_BibTeXKey(fluid_str, "MELTING_LINE"))
+
+                self.reference = "; ".join(references)
+
+                self.Tmax = min(cp_state.Tmax(), T_max)
+                self.Tmin = max(cp_state.Tmin(), T_min)
+
+                if p_ref < cp_state.p_critical():# and p_ref > cp_state.p_triple():
+                    cp_state.update(CP.PQ_INPUTS, p_ref, 0.0)
+                    # prefer the liquid phase
+                    if self.Tmin < cp_state.T():
+                        self.Tmax = min(self.Tmax, cp_state.T() - 1e-3)
+                    elif self.Tmax > cp_state.T():
+                        self.Tmin = max(self.Tmin, cp_state.T() + 1e-3)
+
+                self.TminPsat = self.Tmax
+                self.Tbase = (self.Tmax + self.Tmin) / 2.0
+                self.temperature.data = self.getTrange()
+                self.concentration.data = self.getxrange()
+
+                def funcRho(T, x):
+                    cp_state.update(CP.PT_INPUTS, p_ref, T)
+                    return cp_state.rhomass()
+                
+                self.density.xData, self.density.yData, self.density.data = self.getArray(dataID='Rho', func=funcRho, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.density.DEBUG)
+                self.density.source = self.density.SOURCE_EQUATION
+
+
+                def funcCp(T, x):
+                    cp_state.update(CP.PT_INPUTS, p_ref, T)
+                    return cp_state.cpmass()
+                
+                self.specific_heat.xData, self.specific_heat.yData, self.specific_heat.data = self.getArray(dataID='Cp', func=funcCp, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.specific_heat.DEBUG)
+                self.specific_heat.source = self.specific_heat.SOURCE_EQUATION
+
+                try:
+                    def funcMu(T, x):
+                        cp_state.update(CP.PT_INPUTS, p_ref, T)
+                        return cp_state.viscosity()
+                    
+                    self.viscosity.xData, self.viscosity.yData, self.viscosity.data = self.getArray(dataID='Mu', func=funcMu, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.viscosity.DEBUG)
+                    self.viscosity.source = self.viscosity.SOURCE_EQUATION
+                except:
+                    pass
+
+                
+                try:
+                    def funcCond(T, x):
+                        cp_state.update(CP.PT_INPUTS, p_ref, T)
+                        return cp_state.conductivity()
+                    
+                    self.conductivity.xData, self.conductivity.yData, self.conductivity.data = self.getArray(dataID='Cond', func=funcCond, x_in=self.temperature.data, y_in=self.concentration.data, DEBUG=self.conductivity.DEBUG)
+                    self.conductivity.source = self.conductivity.SOURCE_EQUATION
+                except:
+                    pass
+
+        return NewClass
+
+    class Air(get_coolprop_class_Tp(fluid_name="Air", fluid_desc="Air, gaseous phase at 1 atm (101325 Pa)", backend_str="HEOS", fluid_str="Air", p_ref=101325.0, T_min=-75 + 273.15, T_max=250 + 273.15)):
+        pass
+
+    class Ethanol(get_coolprop_class_Tp(fluid_name="Ethanol", fluid_desc="Ethanol, liquid phase at 10 bar", backend_str="HEOS", fluid_str="Ethanol", p_ref=10e5, T_min=-75 + 273.15, T_max=250 + 273.15)):
+        pass
+
+    class Acetone(get_coolprop_class_Tp(fluid_name="Acetone", fluid_desc="Acetone, liquid phase at 10 bar", backend_str="HEOS", fluid_str="Acetone", p_ref=10e5, T_min=-75 + 273.15, T_max=250 + 273.15)):
+        pass
+
+    class Hexane(get_coolprop_class_Tp(fluid_name="Hexane",   fluid_desc="Hexane, liquid phase at 10 bar",  backend_str="HEOS", fluid_str="Hexane", p_ref=10e5, T_min=-75 + 273.15, T_max=250 + 273.15)):
+        pass
+
+
+
+
+            
+except ImportError:
+    # Do not handle cases where CoolProp is not installed
+    pass

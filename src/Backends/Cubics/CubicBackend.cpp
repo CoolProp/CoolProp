@@ -17,10 +17,8 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     // If pure, set the mole fractions to be unity
     if (is_pure_or_pseudopure) {
         mole_fractions = std::vector<CoolPropDbl>(1, 1.0);
-        mole_fractions_double = std::vector<double>(1, 1.0);
     } else {
         mole_fractions.clear();
-        mole_fractions_double.clear();
     }
     // Now set the reducing function for the mixture
     Reducing.reset(new ConstantReducingFunction(cubic->get_Tr(), cubic->get_rhor()));
@@ -339,7 +337,7 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
 void CoolProp::AbstractCubicBackend::rho_Tp_cubic(CoolPropDbl T, CoolPropDbl p, int& Nsolns, double& rho0, double& rho1, double& rho2) {
     AbstractCubic* cubic = get_cubic().get();
     double R = cubic->get_R_u();
-    double am = cubic->am_term(cubic->get_Tr() / T, mole_fractions_double, 0);
+    double am = cubic->am_term(cubic->get_Tr() / T, mole_fractions, 0);
     double bm = cubic->bm_term(mole_fractions);
     double cm = cubic->cm_term();
 

@@ -59,6 +59,7 @@ def run_script(path):
             subprocess.check_call('python -u {0}'.format(file_name), cwd=file_path, shell=True)
         elif file_extension.lower() == "sh" or file_extension.lower() == "bsh":
             subprocess.check_call('chmod +x {0}'.format(file_name), cwd=file_path, shell=True)
+            subprocess.check_call('sed -i "s/\r//g" {0}'.format(file_name), cwd=file_path, shell=True)
             subprocess.check_call('./{0}'.format(file_name), cwd=file_path, shell=True)
         else:
             print("Unknown file extension in {0}".format(path))
