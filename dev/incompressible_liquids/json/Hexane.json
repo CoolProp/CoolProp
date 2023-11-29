@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 318.16633879825787,
+  "Tmax": 438.18267759651576,
+  "Tmin": 198.14999999999998,
+  "TminPsat": 438.18267759651576,
+  "conductivity": {
+    "NRMS": 0.0003995287768641099,
+    "coeffs": [
+      [
+        0.11460695989107247
+      ],
+      [
+        -0.000280949681521805
+      ],
+      [
+        5.268383548268454e-07
+      ],
+      [
+        -9.302005284028526e-10
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 0.0020068251251058222,
+    "coeffs": [
+      [
+        637.9711865489224
+      ],
+      [
+        -0.9260678954131932
+      ],
+      [
+        -0.001160934482237086
+      ],
+      [
+        -5.821455250071555e-06
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Hexane, liquid phase at 10 bar",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "Hexane",
+  "reference": "Thol-FPE-2019-alkanes-hexane; ; Michailidou-JPCRD-2013-Hexane; Assael-JPCRD-2013-Hexane",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": [
+      -5000.0,
+      60.0,
+      -10.0
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.006369860782711523,
+    "coeffs": [
+      [
+        2349.776382891306
+      ],
+      [
+        4.3744660425540465
+      ],
+      [
+        0.011937393898858062
+      ],
+      [
+        1.1383498278355362e-05
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": 0.010406255683524131,
+    "coeffs": [
+      2270.150232010228,
+      165.13945679929213,
+      13.008092538765817
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}

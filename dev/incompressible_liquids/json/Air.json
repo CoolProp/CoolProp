@@ -1,0 +1,105 @@
+{
+  "T_freeze": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "Tbase": 360.65,
+  "Tmax": 523.15,
+  "Tmin": 198.14999999999998,
+  "TminPsat": 523.15,
+  "conductivity": {
+    "NRMS": 0.00011341350214211215,
+    "coeffs": [
+      [
+        0.030754271682824127
+      ],
+      [
+        6.98795213954844e-05
+      ],
+      [
+        -3.35034769348712e-08
+      ],
+      [
+        3.7728711330538117e-11
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "density": {
+    "NRMS": 0.004810727683739646,
+    "coeffs": [
+      [
+        0.9731377204938464
+      ],
+      [
+        -0.002673260039587141
+      ],
+      [
+        9.363176076421318e-06
+      ],
+      [
+        -2.7779101420879868e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "description": "Air, gaseous phase at 1 atm (101325 Pa)",
+  "mass2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "mole2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "name": "Air",
+  "reference": "Lemmon-JPCRD-2000; ; Lemmon-IJT-2004; Lemmon-IJT-2004",
+  "saturation_pressure": {
+    "NRMS": null,
+    "coeffs": [
+      -5000.0,
+      60.0,
+      -10.0
+    ],
+    "type": "exponential"
+  },
+  "specific_heat": {
+    "NRMS": 0.0015192579258026188,
+    "coeffs": [
+      [
+        1010.1381836670001
+      ],
+      [
+        0.08724844745590299
+      ],
+      [
+        0.00040064968051053973
+      ],
+      [
+        -8.867789581359177e-08
+      ]
+    ],
+    "type": "polynomial"
+  },
+  "viscosity": {
+    "NRMS": 0.0017310189869592459,
+    "coeffs": [
+      -700.879168909965,
+      216.13711261844045,
+      9.538652479388192
+    ],
+    "type": "exponential"
+  },
+  "volume2input": {
+    "NRMS": null,
+    "coeffs": "null",
+    "type": "notdefined"
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
+}
