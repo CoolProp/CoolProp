@@ -6,7 +6,6 @@ Changelog for CoolProp
 
 Highlights:
 
-* Added R1336mzz(E) from Akasaka-IJT-2023
 * Added wheels for Python 3.12
 * Added new functions to the library interface
 * Include new binaries in the release workflow (Mathcad, Javascript)
@@ -31,7 +30,6 @@ Pull requests merged:
 * `#2291 <https://github.com/CoolProp/CoolProp/pull/2291>`_ : Added second_partial_deriv and  first_two_phase_deriv
 * `#2294 <https://github.com/CoolProp/CoolProp/pull/2294>`_ : Update Mathcad docs for pre-compiled and discontinuation of Legacy Mathcad [skip-ci]
 * `#2296 <https://github.com/CoolProp/CoolProp/pull/2296>`_ : Mathcad Wrapper README Formatting
-* `#2309 <https://github.com/CoolProp/CoolProp/pull/2309>`_ : Addition of EoS JSON of R1336mzz(E) from Akasaka-IJT-2023
 * `#2317 <https://github.com/CoolProp/CoolProp/pull/2317>`_ : New C Interface Functions
 * `#2320 <https://github.com/CoolProp/CoolProp/pull/2320>`_ : Food properties as incompressible liquids + ice
 * `#2322 <https://github.com/CoolProp/CoolProp/pull/2322>`_ : Actions for Mathcad
