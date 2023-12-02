@@ -3,7 +3,7 @@
     "pS": {
       "T_r": 403.53,
       "Tmax": 403.53,
-      "Tmin": 0.0,
+      "Tmin": 100.0,
       "description": "P=Pc*EXP[SUM(Ni*Theta^ti)*Tc/T]",
       "n": [
         -8.2611,
@@ -24,7 +24,7 @@
     "rhoL": {
       "T_r": 403.53,
       "Tmax": 403.53,
-      "Tmin": 0.0,
+      "Tmin": 100.0,
       "description": "D=Dc*[1+SUM(Ni*Theta^ti)]",
       "n": [
         2.1958,
@@ -45,7 +45,7 @@
     "rhoV": {
       "T_r": 403.53,
       "Tmax": 403.53,
-      "Tmin": 0.0,
+      "Tmin": 100,
       "description": "D=Dc*EXP[SUM(Ni*Theta^ti)]",
       "n": [
         -3.1511,
@@ -88,7 +88,7 @@
           "hmolar_units": "J/mol",
           "p": 649.2750000000001,
           "p_units": "Pa",
-          "rhomolar": 5681.7471741845075,
+          "rhomolar": 9615.369562225751,
           "rhomolar_units": "mol/m^3",
           "smolar": 99999999999999999999,
           "smolar_units": "J/mol/K"
@@ -100,7 +100,7 @@
           "hmolar_units": "J/mol",
           "p": 649.2750000000001,
           "p_units": "Pa",
-          "rhomolar": 1e-10,
+          "rhomolar": 0.39054427829920213,
           "rhomolar_units": "mol/m^3",
           "smolar": 9999999999999999999,
           "smolar_units": "J/mol/K"
@@ -309,7 +309,7 @@
       "hmolar_units": "J/mol",
       "p": 649.2750000000001,
       "p_units": "Pa",
-      "rhomolar": 5681.7471741845075,
+      "rhomolar": 9615.369562225751,
       "rhomolar_units": "mol/m^3",
       "smolar": 99999999999999999999,
       "smolar_units": "J/mol/K"
@@ -321,7 +321,7 @@
       "hmolar_units": "J/mol",
       "p": 649.2750000000001,
       "p_units": "Pa",
-      "rhomolar": 1e-10,
+      "rhomolar": 0.39054427829920213,
       "rhomolar_units": "mol/m^3",
       "smolar": 9999999999999999999,
       "smolar_units": "J/mol/K"
