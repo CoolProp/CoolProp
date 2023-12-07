@@ -2196,8 +2196,13 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
         HelmholtzEOSMixtureBackend* HEOS;
         CoolPropDbl T, p, delta, rhor, tau, R_u;
 
+        const double rhomolarmin;
+        //const double rhomolarmax;
+
         dpdrho_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl p)
-          : HEOS(HEOS),
+          : rhomolarmin(1e-14),
+            //rhomolarmax(rhomax),
+            HEOS(HEOS),
             T(T),
             p(p),
             delta(_HUGE),
@@ -2205,16 +2210,22 @@ HelmholtzEOSBackend::StationaryPointReturnFlag HelmholtzEOSMixtureBackend::solve
             tau(HEOS->get_reducing_state().T / T),
             R_u(HEOS->gas_constant()) {}
         double call(double rhomolar) {
+            //temporarily guard against negative densities
+            rhomolar = std::max(rhomolar, rhomolarmin);
             delta = rhomolar / rhor;  // needed for derivative
             HEOS->update_DmolarT_direct(rhomolar, T);
             // dp/drho|T
             return R_u * T * (1 + 2 * delta * HEOS->dalphar_dDelta() + POW2(delta) * HEOS->d2alphar_dDelta2());
         };
         double deriv(double rhomolar) {
+            //temporarily guard against negative densities
+            rhomolar = std::max(rhomolar, rhomolarmin);
             // d2p/drho2|T
             return R_u * T / rhor * (2 * HEOS->dalphar_dDelta() + 4 * delta * HEOS->d2alphar_dDelta2() + POW2(delta) * HEOS->calc_d3alphar_dDelta3());
         };
         double second_deriv(double rhomolar) {
+            //temporarily guard against negative densities
+            rhomolar = std::max(rhomolar, rhomolarmin);
             // d3p/drho3|T
             return R_u * T / POW2(rhor)
                    * (6 * HEOS->d2alphar_dDelta2() + 6 * delta * HEOS->d3alphar_dDelta3() + POW2(delta) * HEOS->calc_d4alphar_dDelta4());
