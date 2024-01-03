@@ -9,7 +9,7 @@
   <version value="${COOLPROP_VERSION}"/>
 
   <dependencies>
-    <l:LibreOffice-minimal-version value="4.0" d:name="LibreOffice 4.0"/>
+    <l:LibreOffice-minimal-version value="4.1" d:name="LibreOffice 4.1"/>
   </dependencies>
 
   <display-name>

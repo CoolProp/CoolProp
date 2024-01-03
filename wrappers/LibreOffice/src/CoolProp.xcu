@@ -281,9 +281,9 @@
 
 
         <!-- BEGIN DESCRIPTION OF GET_FLUID_PARAM_STRING FUNCTION -->
-        <node oor:name="get_fluid_param_string" oor:op="replace">
+        <node oor:name="Get_Fluid_Param_String" oor:op="replace">
           <prop oor:name="DisplayName">
-            <value xml:lang="en">get_fluid_param_string</value>
+            <value xml:lang="en">Get_Fluid_Param_String</value>
           </prop>
 
           <prop oor:name="Description">
@@ -317,9 +317,9 @@
 
 
         <!-- BEGIN DESCRIPTION OF GET_GLOBAL_PARAM_STRING FUNCTION -->
-        <node oor:name="get_global_param_string" oor:op="replace">
+        <node oor:name="Get_Global_Param_String" oor:op="replace">
           <prop oor:name="DisplayName">
-            <value xml:lang="en">get_global_param_string</value>
+            <value xml:lang="en">Get_Global_Param_String</value>
           </prop>
 
           <prop oor:name="Description">

@@ -24,8 +24,8 @@ To build the extension, the LibreOffice SDK must be installed. The tools from th
 
 Run these commands from the CoolProp repository root directory with the correct paths set::
 
-    cmake -DCOOLPROP_LIBREOFFICE_MODULE=ON -DLO_PROGRAM_PATH=/usr/lib/libreoffice/program -DLO_SDK_PATH=/usr/lib/libreoffice/sdk
-    make CoolPropLibreOfficeAddin
+    cmake -B build -S. -DCOOLPROP_LIBREOFFICE_MODULE=ON -DLO_PROGRAM_PATH=/usr/lib/libreoffice/program -DLO_SDK_PATH=/usr/lib/libreoffice/sdk
+    cmake --build build --target install
 
 
 Dependencies (build only):
