@@ -59,6 +59,10 @@
 #    endif
 #endif
 
+#ifndef __cplusplus
+#    include <stdbool.h>
+#endif
+
 // Hack for PowerPC compilation to only use extern "C"
 #if defined(__powerpc__) || defined(EXTERNC)
 #    undef EXPORT_CODE
