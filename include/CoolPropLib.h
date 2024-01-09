@@ -60,7 +60,11 @@
 #endif
 
 #ifndef __cplusplus
-#    include <stdbool.h>
+#    if defined(__STDC_VERSION__)
+#        if (__STDC_VERSION__ >= 199901L)
+#            include <stdbool.h>
+#        endif
+#    endif
 #endif
 
 // Hack for PowerPC compilation to only use extern "C"
