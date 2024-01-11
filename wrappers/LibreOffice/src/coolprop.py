@@ -47,14 +47,14 @@ class CoolPropCalcAddin(unohelper.Base, XCoolProp):
         except Exception as e:
             return str(e)
 
-    def get_fluid_param_string(self, fluid_name, param_name):
+    def Get_Fluid_Param_String(self, fluid_name, param_name):
         """Get fluid parameter string from CoolProp."""
         try:
             return CoolProp.get_fluid_param_string(fluid_name, param_name)
         except Exception as e:
             return str(e)
 
-    def get_global_param_string(self, param_name, split=False):
+    def Get_Global_Param_String(self, param_name, split=False):
         """Get global parameter string from CoolProp.
 
         The split option was added for convenience and can be used to output

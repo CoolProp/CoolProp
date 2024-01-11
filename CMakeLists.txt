@@ -1726,11 +1726,8 @@ if(COOLPROP_LIBREOFFICE_MODULE)
     message(STATUS "LO_SDK_PATH: ${LO_SDK_PATH}")
   endif()
 
-  add_custom_target(CoolPropLibreOfficeAddin)
-
   # set paths for LibreOffice tools
-  set(LO_IDLC "${LO_SDK_PATH}/bin/idlc")
-  set(LO_REGMERGE "${LO_PROGRAM_PATH}/regmerge")
+  set(LO_UNOIDL_WRITE "${LO_SDK_PATH}/bin/unoidl-write")
   set(COOLPROP_LIBREOFFICE_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/LibreOffice")
 
   # set version strings for LibreOffice extension
@@ -1741,8 +1738,10 @@ if(COOLPROP_LIBREOFFICE_MODULE)
     "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/src/scripts/scripts.py.in"
     "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/scripts/scripts.py")
 
+  add_custom_target(CoolPropLibreOfficeAddin ALL DEPENDS CoolProp.oxt)
+    
   add_custom_command(
-    TARGET CoolPropLibreOfficeAddin
+    OUTPUT CoolProp.oxt
     # copy source files to build directory
     COMMAND
       ${CMAKE_COMMAND} ARGS "-E" "copy_directory"
@@ -1752,10 +1751,11 @@ if(COOLPROP_LIBREOFFICE_MODULE)
       ${CMAKE_COMMAND} ARGS "-E" "remove"
       "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/description.xml.in"
       "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/scripts/scripts.py.in"
-    # rebuild the registry database file (rdb)
-    COMMAND ${LO_IDLC} XCoolProp.idl -I. -I${LO_SDK_PATH}/idl -O. XCoolProp.idl
-    COMMAND ${LO_REGMERGE} XCoolProp.rdb /UCR XCoolProp.urd
-    COMMAND ${CMAKE_COMMAND} ARGS "-E" "remove" XCoolProp.urd
+    # build the registry database file (rdb)
+    COMMAND
+      ${LO_UNOIDL_WRITE}
+      ${LO_PROGRAM_PATH}/types.rdb ${LO_PROGRAM_PATH}/types/offapi.rdb
+      XCoolProp.idl XCoolProp.rdb
     # download and bundle latest Python pip package (py2.py3, platform independent)
     COMMAND pip download pip -d pythonpath
     COMMAND 7z x "./pythonpath/pip-*.whl" -y -opythonpath
@@ -1770,14 +1770,15 @@ if(COOLPROP_LIBREOFFICE_MODULE)
       "${COOLPROP_LIBREOFFICE_TMP_DIR}/src/license/."
     # package complete folder to extension
     COMMAND 7z a -tzip "../CoolProp.oxt"
-    # copy example spreadsheet file
-    COMMAND
-      ${CMAKE_COMMAND} ARGS "-E" "copy"
-      "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/TestLibreOffice.ods"
-      "${COOLPROP_LIBREOFFICE_TMP_DIR}/."
     WORKING_DIRECTORY ${COOLPROP_LIBREOFFICE_TMP_DIR}/src
     COMMENT "Building LibreOffice wrapper"
     VERBATIM)
+
+   # install LibreOffice extension and example spreadsheet file
+   install(FILES "${COOLPROP_LIBREOFFICE_TMP_DIR}/CoolProp.oxt"
+           DESTINATION "${COOLPROP_INSTALL_PREFIX}/LibreOffice")
+   install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/LibreOffice/TestLibreOffice.ods"
+           DESTINATION "${COOLPROP_INSTALL_PREFIX}/LibreOffice")
 endif()
 
 if(COOLPROP_JAVASCRIPT_MODULE)

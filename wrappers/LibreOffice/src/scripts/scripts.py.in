@@ -43,7 +43,9 @@ def install_coolprop(*args):
             else:
                 python_bin = sys.executable
             # install CoolProp python package with pip to extension path
-            subprocess.check_output([python_bin, '-m', 'pip', 'install', '--only-binary', ':all:', '--target', python_pkg_path, 'CoolProp==' + COOLPROP_VERSION], cwd=python_pkg_path, stderr=subprocess.STDOUT)        
+            cmd = [python_bin, '-m', 'pip', 'install', '--only-binary', ':all:', '--target', python_pkg_path, 'CoolProp==' + COOLPROP_VERSION]
+            if 'dev' in COOLPROP_VERSION: cmd.extend(['-i', 'https://test.pypi.org/simple/'])
+            subprocess.check_output(cmd, cwd=python_pkg_path, stderr=subprocess.STDOUT)            
             # Copy ABI version tagged library files to plain .so file (Python
             # bundled with LibreOffice on macOS has different ABI naming scheme
             # than CoolProp Python packages from PyPI. If the files will be
