@@ -554,6 +554,52 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                                        info.c_str(), specified_value, error));
         }
     } while (error > 1e-9);
+    // Recalculate error
+    // The result has changed since the last error calculation.
+    // In rare scenarios, the final step can become unstable due to solving a singular
+    // J matrix. This final error check verifies that the solution is still good.
+    // Furthermore, the forced phase of SatL and SatV may have caused errors. We will recalculate them without this assumption.
+    SatL->unspecify_phase();
+    SatV->unspecify_phase();
+    SatL->update(DmolarT_INPUTS, rhoL, T);
+    SatV->update(DmolarT_INPUTS, rhoV, T);
+    negativer[0] = -(deltaV * (1 + deltaV * SatV->dalphar_dDelta()) - deltaL * (1 + deltaL * SatL->dalphar_dDelta()));
+    negativer[1] = -(deltaV * SatV->dalphar_dDelta() + SatV->alphar() + log(deltaV) - deltaL * SatL->dalphar_dDelta() - SatL->alphar() - log(deltaL));
+    switch (options.specified_variable) {
+        case saturation_PHSU_pure_options::IMPOSED_PL:
+            // -r_3 (equate calculated pressure and specified liquid pressure)
+            negativer[2] = -(SatL->p() / specified_value - 1);
+            break;
+        case saturation_PHSU_pure_options::IMPOSED_PV:
+            // -r_3 (equate calculated pressure and specified vapor pressure)
+            negativer[2] = -(SatV->p() / specified_value - 1);
+            break;
+        case saturation_PHSU_pure_options::IMPOSED_HL:
+            // -r_3 (equate calculated liquid enthalpy and specified liquid enthalpy)
+            negativer[2] = -(SatL->hmolar() - specified_value);
+            break;
+        case saturation_PHSU_pure_options::IMPOSED_HV:
+            // -r_3 (equate calculated vapor enthalpy and specified vapor enthalpy)
+            negativer[2] = -(SatV->hmolar() - specified_value);
+            break;
+        case saturation_PHSU_pure_options::IMPOSED_SL:
+            // -r_3 (equate calculated liquid entropy and specified liquid entropy)
+            negativer[2] = -(SatL->smolar() - specified_value);
+            break;
+        case saturation_PHSU_pure_options::IMPOSED_SV:
+            // -r_3 (equate calculated vapor entropy and specified vapor entropy)
+            negativer[2] = -(SatV->smolar() - specified_value);
+            break;
+        default:
+            throw ValueError(format("options.specified_variable to saturation_PHSU_pure [%d] is invalid", options.specified_variable));
+    }
+    error = sqrt(pow(negativer[0], 2) + pow(negativer[1], 2) + pow(negativer[2], 2));
+    // reset the phase for the next update.
+    SatL->specify_phase(iphase_liquid);
+    SatV->specify_phase(iphase_gas);
+    if (error > 1e-8){
+        throw SolutionError(format("saturation_PHSU_pure solver was good, but went bad. Current error is %Lg", error));
+    }
 }
 void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options)
 {
