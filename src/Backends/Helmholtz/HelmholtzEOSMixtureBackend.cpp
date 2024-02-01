@@ -2919,16 +2919,17 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity_coefficient(std::size_t i)
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_fugacity(std::size_t i) {
     x_N_dependency_flag xN_flag = XN_DEPENDENT;
+    CoolPropDbl localFug;
     if (isTwoPhase()) {
         if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for the two-phase properties"));
         if (std::abs(_Q) < DBL_EPSILON) {
-            _hmolar = SatL->fugacity(i);
+            localFug = SatL->fugacity(i);
         } else if (std::abs(_Q - 1) < DBL_EPSILON) {
-            _hmolar = SatV->fugacity(i);
+            localFug = SatV->fugacity(i);
         } else {
-            _hmolar = _Q * SatV->fugacity(i) + (1 - _Q) * SatL->fugacity(i);
+            localFug = _Q * SatV->fugacity(i) + (1 - _Q) * SatL->fugacity(i);
         }
-        return static_cast<CoolPropDbl>(_hmolar);
+        return static_cast<CoolPropDbl>(localFug);
     } else if (isHomogeneousPhase()) {
         return MixtureDerivatives::fugacity_i(*this, i, xN_flag);
     } else {
