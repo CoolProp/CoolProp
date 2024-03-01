@@ -1,6 +1,6 @@
-
+#include <array>
 #ifndef __powerpc__
-#    include <math.h>
+#    include <cmath>
 #    include <complex>
 #    include <iostream>
 static std::complex<double> t1(0.368017112855051e-1, 0.510878114959572e-1);
@@ -35,10 +35,10 @@ double IsothermCompress_Ice(double T, double p) {
 }
 double psub_Ice(double T) {
 #ifndef __powerpc__
-    double a[] = {0, -0.212144006e2, 0.273203819e2, -0.610598130e1};
-    double b[] = {0, 0.333333333e-2, 0.120666667e1, 0.170333333e1};
-    double summer = 0, theta;
-    theta = T / T_t;
+    std::array<double, 4> a{0, -0.212144006e2, 0.273203819e2, -0.610598130e1};
+    std::array<double, 4> b{0, 0.333333333e-2, 0.120666667e1, 0.170333333e1};
+    double summer = 0;
+    const double theta = T / T_t;
     for (int i = 1; i <= 3; i++) {
         summer += a[i] * pow(theta, b[i]);
     }
@@ -50,16 +50,15 @@ double psub_Ice(double T) {
 
 double g_Ice(double T, double p) {
 #ifndef __powerpc__
-    std::complex<double> r2, term1, term2;
-    double g0, theta, pi, pi_0;
-    theta = T / T_t;
-    pi = p / p_t;
-    pi_0 = p_0 / p_t;
-    g0 = g00 * pow(pi - pi_0, 0.0) + g01 * pow(pi - pi_0, 1.0) + g02 * pow(pi - pi_0, 2.0) + g03 * pow(pi - pi_0, 3.0) + g04 * pow(pi - pi_0, 4.0);
-    r2 = r20 * pow(pi - pi_0, 0.0) + r21 * pow(pi - pi_0, 1.0) + r22 * pow(pi - pi_0, 2.0);
+    const double theta = T / T_t;
+    const double pi = p / p_t;
+    const double pi_0 = p_0 / p_t;
+    const double g0 =
+      g00 * pow(pi - pi_0, 0.0) + g01 * pow(pi - pi_0, 1.0) + g02 * pow(pi - pi_0, 2.0) + g03 * pow(pi - pi_0, 3.0) + g04 * pow(pi - pi_0, 4.0);
+    std::complex<double> r2 = r20 * pow(pi - pi_0, 0.0) + r21 * pow(pi - pi_0, 1.0) + r22 * pow(pi - pi_0, 2.0);
     // The two terms of the summation
-    term1 = r1 * ((t1 - theta) * log(t1 - theta) + (t1 + theta) * log(t1 + theta) - 2.0 * t1 * log(t1) - theta * theta / t1);
-    term2 = r2 * ((t2 - theta) * log(t2 - theta) + (t2 + theta) * log(t2 + theta) - 2.0 * t2 * log(t2) - theta * theta / t2);
+    std::complex<double> term1 = r1 * ((t1 - theta) * log(t1 - theta) + (t1 + theta) * log(t1 + theta) - 2.0 * t1 * log(t1) - theta * theta / t1);
+    std::complex<double> term2 = r2 * ((t2 - theta) * log(t2 - theta) + (t2 + theta) * log(t2 + theta) - 2.0 * t2 * log(t2) - theta * theta / t2);
     return g0 - s0 * T_t * theta + T_t * real(term1 + term2);
 #else
     return 1e99;
@@ -68,14 +67,12 @@ double g_Ice(double T, double p) {
 
 double dg_dp_Ice(double T, double p) {
 #ifndef __powerpc__
-    std::complex<double> r2_p;
-    double g0_p, theta, pi, pi_0;
-    theta = T / T_t;
-    pi = p / p_t;
-    pi_0 = p_0 / p_t;
-    g0_p = g01 * 1.0 / p_t * pow(pi - pi_0, 1 - 1.0) + g02 * 2.0 / p_t * pow(pi - pi_0, 2 - 1.0) + g03 * 3.0 / p_t * pow(pi - pi_0, 3 - 1.0)
-           + g04 * 4.0 / p_t * pow(pi - pi_0, 4 - 1.0);
-    r2_p = r21 * 1.0 / p_t * pow(pi - pi_0, 1 - 1.0) + r22 * 2.0 / p_t * pow(pi - pi_0, 2 - 1.0);
+    const double theta = T / T_t;
+    const double pi = p / p_t;
+    const double pi_0 = p_0 / p_t;
+    const double g0_p = g01 * 1.0 / p_t * pow(pi - pi_0, 1 - 1.0) + g02 * 2.0 / p_t * pow(pi - pi_0, 2 - 1.0)
+                        + g03 * 3.0 / p_t * pow(pi - pi_0, 3 - 1.0) + g04 * 4.0 / p_t * pow(pi - pi_0, 4 - 1.0);
+    std::complex<double> r2_p = r21 * 1.0 / p_t * pow(pi - pi_0, 1 - 1.0) + r22 * 2.0 / p_t * pow(pi - pi_0, 2 - 1.0);
     return g0_p + T_t * real(r2_p * ((t2 - theta) * log(t2 - theta) + (t2 + theta) * log(t2 + theta) - 2.0 * t2 * log(t2) - theta * theta / t2));
 #else
     return 1e99;
@@ -84,14 +81,13 @@ double dg_dp_Ice(double T, double p) {
 
 double dg2_dp2_Ice(double T, double p) {
 #ifndef __powerpc__
-    std::complex<double> r2_pp;
-    double g0_pp, theta, pi, pi_0;
-    theta = T / T_t;
-    pi = p / p_t;
-    pi_0 = p_0 / p_t;
-    g0_pp = g02 * 2.0 * (2.0 - 1.0) / p_t / p_t * pow(pi - pi_0, 2.0 - 2.0) + g03 * 3.0 * (3.0 - 1.0) / p_t / p_t * pow(pi - pi_0, 3.0 - 2.0)
-            + g04 * 4.0 * (4.0 - 1.0) / p_t / p_t * pow(pi - pi_0, 4 - 2.0);
-    r2_pp = r22 * 2.0 / p_t / p_t;
+    const double theta = T / T_t;
+    const double pi = p / p_t;
+    const double pi_0 = p_0 / p_t;
+    const double g0_pp = g02 * 2.0 * (2.0 - 1.0) / p_t / p_t * pow(pi - pi_0, 2.0 - 2.0)
+                         + g03 * 3.0 * (3.0 - 1.0) / p_t / p_t * pow(pi - pi_0, 3.0 - 2.0)
+                         + g04 * 4.0 * (4.0 - 1.0) / p_t / p_t * pow(pi - pi_0, 4 - 2.0);
+    std::complex<double> r2_pp = r22 * 2.0 / p_t / p_t;
     return g0_pp + T_t * real(r2_pp * ((t2 - theta) * log(t2 - theta) + (t2 + theta) * log(t2 + theta) - 2.0 * t2 * log(t2) - theta * theta / t2));
 #else
     return 1e99;
@@ -100,15 +96,13 @@ double dg2_dp2_Ice(double T, double p) {
 
 double dg_dT_Ice(double T, double p) {
 #ifndef __powerpc__
-    std::complex<double> r2, term1, term2;
-    double theta, pi, pi_0;
-    theta = T / T_t;
-    pi = p / p_t;
-    pi_0 = p_0 / p_t;
-    r2 = r20 * pow(pi - pi_0, 0.0) + r21 * pow(pi - pi_0, 1.0) + r22 * pow(pi - pi_0, 2.0);
+    const double theta = T / T_t;
+    const double pi = p / p_t;
+    const double pi_0 = p_0 / p_t;
+    std::complex<double> r2 = r20 * pow(pi - pi_0, 0.0) + r21 * pow(pi - pi_0, 1.0) + r22 * pow(pi - pi_0, 2.0);
     // The two terms of the summation
-    term1 = r1 * (-log(t1 - theta) + log(t1 + theta) - 2.0 * theta / t1);
-    term2 = r2 * (-log(t2 - theta) + log(t2 + theta) - 2.0 * theta / t2);
+    std::complex<double> term1 = r1 * (-log(t1 - theta) + log(t1 + theta) - 2.0 * theta / t1);
+    std::complex<double> term2 = r2 * (-log(t2 - theta) + log(t2 + theta) - 2.0 * theta / t2);
     return -s0 + real(term1 + term2);
 #else
     return 1e99;

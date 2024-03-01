@@ -4,7 +4,7 @@
 #include <vector>
 #include <set>
 #include <cfloat>
-#include <stdlib.h>   // For abs
+#include <cstdlib>    // For abs
 #include <algorithm>  // For max
 #include <numeric>
 #include <cmath>
@@ -53,8 +53,9 @@ class Spline
 {
    public:
     /** An empty, invalid spline */
-    Spline() {}
+    Spline() = default;
 
+    // TODO: consider moving implementations to the .cpp file instead
     /** A spline with x and y values */
     Spline(const std::vector<X>& x, const std::vector<Y>& y) {
         if (x.size() != y.size()) {
@@ -67,11 +68,17 @@ class Spline
             return;
         }
 
-        typedef typename std::vector<X>::difference_type size_type;
+        using size_type = typename std::vector<X>::difference_type;
 
         size_type n = y.size() - 1;
 
-        std::vector<Y> b(n), d(n), a(n), c(n + 1), l(n + 1), u(n + 1), z(n + 1);
+        std::vector<Y> b(n);
+        std::vector<Y> d(n);
+        std::vector<Y> a(n);
+        std::vector<Y> c(n + 1);
+        std::vector<Y> l(n + 1);
+        std::vector<Y> u(n + 1);
+        std::vector<Y> z(n + 1);
         std::vector<X> h(n + 1);
 
         l[0] = Y(1);
@@ -100,14 +107,16 @@ class Spline
             mElements.push_back(Element(x[i], y[i], b[i], c[i], d[i]));
         }
     }
-    virtual ~Spline() {}
+    virtual ~Spline() = default;  // TODO why declare a virtual Dtor here?
 
     Y operator[](const X& x) const {
         return interpolate(x);
     }
 
     Y interpolate(const X& x) const {
-        if (mElements.size() == 0) return Y();
+        if (mElements.empty()) {
+            return Y();
+        }
 
         typename std::vector<element_type>::const_iterator it;
         it = std::lower_bound(mElements.begin(), mElements.end(), element_type(x));
@@ -120,7 +129,9 @@ class Spline
 
     /* Evaluate at multiple locations, assuming xx is sorted ascending */
     std::vector<Y> interpolate_vec(const std::vector<X>& xx) const {
-        if (mElements.size() == 0) return std::vector<Y>(xx.size());
+        if (mElements.empty()) {
+            return std::vector<Y>(xx.size());
+        }
 
         typename std::vector<X>::const_iterator it;
         typename std::vector<element_type>::const_iterator it2;
@@ -161,7 +172,7 @@ class Spline
         Y a, b, c, d;
     };
 
-    typedef Element element_type;
+    using element_type = Element;
     std::vector<element_type> mElements;
 };
 
@@ -192,7 +203,8 @@ std::vector<T> linspace(T xmin, T xmax, std::size_t n) {
 template <typename T>
 std::vector<T> log10space(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
-    T logxmin = log10(xmin), logxmax = log10(xmax);
+    T logxmin = log10(xmin);
+    T logxmax = log10(xmax);
 
     for (std::size_t i = 0; i < n; ++i) {
         x[i] = exp((logxmax - logxmin) / (n - 1) * i + logxmin);
@@ -203,7 +215,8 @@ std::vector<T> log10space(T xmin, T xmax, std::size_t n) {
 template <typename T>
 std::vector<T> logspace(T xmin, T xmax, std::size_t n) {
     std::vector<T> x(n, 0.0);
-    T logxmin = log(xmin), logxmax = log(xmax);
+    T logxmin = log(xmin);
+    T logxmax = log(xmax);
 
     for (std::size_t i = 0; i < n; ++i) {
         x[i] = exp((logxmax - logxmin) / (n - 1) * i + logxmin);
@@ -221,8 +234,10 @@ std::vector<T> logspace(T xmin, T xmax, std::size_t n) {
  */
 template <typename T>
 void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
-    T rL, rM, rR;
-    std::size_t N = vec.size(), L = 0, R = N - 1, M = (L + R) / 2;
+    std::size_t N = vec.size();
+    std::size_t L = 0;
+    std::size_t R = N - 1;
+    std::size_t M = (L + R) / 2;
     // Move the right limits in until they are good
     while (!ValidNumber(vec[R])) {
         if (R == 1) {
@@ -237,11 +252,13 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
         }
         L++;
     }
-    rL = vec[L] - val;
-    rR = vec[R] - val;
+    T rL = vec[L] - val;
+    T rR = vec[R] - val;
+    T rM;
     while (R - L > 1) {
         if (!ValidNumber(vec[M])) {
-            std::size_t MR = M, ML = M;
+            std::size_t MR = M;
+            std::size_t ML = M;
             // Move middle-right to the right until it is ok
             while (!ValidNumber(vec[MR])) {
                 if (MR == vec.size() - 1) {
@@ -301,8 +318,10 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
  */
 template <typename T>
 void bisect_segmented_vector_slice(const std::vector<std::vector<T>>& mat, std::size_t j, T val, std::size_t& i) {
-    T rL, rM, rR;
-    std::size_t N = mat[j].size(), L = 0, R = N - 1, M = (L + R) / 2;
+    std::size_t N = mat[j].size();
+    std::size_t L = 0;
+    std::size_t R = N - 1;
+    std::size_t M = (L + R) / 2;
     // Move the right limits in until they are good
     while (!ValidNumber(mat[R][j])) {
         if (R == 1) {
@@ -310,7 +329,7 @@ void bisect_segmented_vector_slice(const std::vector<std::vector<T>>& mat, std::
         }
         R--;
     }
-    rR = mat[R][j] - val;
+    T rR = mat[R][j] - val;
     // Move the left limits in until they are good
     while (!ValidNumber(mat[L][j])) {
         if (L == mat.size() - 1) {
@@ -318,10 +337,12 @@ void bisect_segmented_vector_slice(const std::vector<std::vector<T>>& mat, std::
         }
         L++;
     }
-    rL = mat[L][j] - val;
+    T rL = mat[L][j] - val;
+    T rM;
     while (R - L > 1) {
         if (!ValidNumber(mat[M][j])) {
-            std::size_t MR = M, ML = M;
+            std::size_t MR = M;
+            std::size_t ML = M;
             // Move middle-right to the right until it is ok
             while (!ValidNumber(mat[MR][j])) {
                 if (MR == mat.size() - 1) {
@@ -443,17 +464,19 @@ class SplineClass
    public:
     double a, b, c, d;
     SplineClass() : Nconstraints(0), A(4, std::vector<double>(4, 0)), B(4, 0), a(_HUGE), b(_HUGE), c(_HUGE), d(_HUGE) {}
-    bool build(void);
+    bool build();
     bool add_value_constraint(double x, double y);
     void add_4value_constraints(double x1, double x2, double x3, double x4, double y1, double y2, double y3, double y4);
     bool add_derivative_constraint(double x, double dydx);
-    double evaluate(double x);
+    double evaluate(double x) const;
 };
 
 /// from http://stackoverflow.com/a/5721830/1360263
 template <class T>
 T factorial(T n) {
-    if (n == 0) return 1;
+    if (n == 0) {
+        return 1;
+    }
     return n * factorial(n - 1);
 }
 /// see https://proofwiki.org/wiki/Nth_Derivative_of_Mth_Power
@@ -521,11 +544,10 @@ T CubicInterp(T x0, T x1, T x2, T x3, T f0, T f1, T f2, T f3, T x) {
     Lagrange cubic interpolation as from
     http://nd.edu/~jjwteach/441/PdfNotes/lecture6.pdf
     */
-    T L0, L1, L2, L3;
-    L0 = ((x - x1) * (x - x2) * (x - x3)) / ((x0 - x1) * (x0 - x2) * (x0 - x3));
-    L1 = ((x - x0) * (x - x2) * (x - x3)) / ((x1 - x0) * (x1 - x2) * (x1 - x3));
-    L2 = ((x - x0) * (x - x1) * (x - x3)) / ((x2 - x0) * (x2 - x1) * (x2 - x3));
-    L3 = ((x - x0) * (x - x1) * (x - x2)) / ((x3 - x0) * (x3 - x1) * (x3 - x2));
+    T L0 = ((x - x1) * (x - x2) * (x - x3)) / ((x0 - x1) * (x0 - x2) * (x0 - x3));
+    T L1 = ((x - x0) * (x - x2) * (x - x3)) / ((x1 - x0) * (x1 - x2) * (x1 - x3));
+    T L2 = ((x - x0) * (x - x1) * (x - x3)) / ((x2 - x0) * (x2 - x1) * (x2 - x3));
+    T L3 = ((x - x0) * (x - x1) * (x - x2)) / ((x3 - x0) * (x3 - x1) * (x3 - x2));
     return L0 * f0 + L1 * f1 + L2 * f2 + L3 * f3;
 };
 /** /brief Calculate the first derivative of the function using a cubic interpolation form

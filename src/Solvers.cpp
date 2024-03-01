@@ -1,6 +1,6 @@
 #include <vector>
 #include "Solvers.h"
-#include "math.h"
+#include <cmath>
 #include "MatrixMath.h"
 #include <iostream>
 #include "CoolPropTools.h"
@@ -11,15 +11,15 @@ namespace CoolProp {
 /** \brief Calculate the Jacobian using numerical differentiation by column
  */
 std::vector<std::vector<double>> FuncWrapperND::Jacobian(const std::vector<double>& x) {
-    double epsilon;
     std::size_t N = x.size();
-    std::vector<double> r, xp;
+    std::vector<double> r;
+    std::vector<double> xp;
     std::vector<std::vector<double>> J(N, std::vector<double>(N, 0));
     std::vector<double> r0 = call(x);
     // Build the Jacobian by column
     for (std::size_t i = 0; i < N; ++i) {
         xp = x;
-        epsilon = 0.001 * x[i];
+        double epsilon = 0.001 * x[i];
         xp[i] += epsilon;
         r = call(xp);
 
@@ -50,7 +50,8 @@ functions, each of which take the vector x. The data is managed using std::vecto
 std::vector<double> NDNewtonRaphson_Jacobian(FuncWrapperND* f, const std::vector<double>& x, double tol, int maxiter, double w) {
     int iter = 0;
     f->errstring.clear();
-    std::vector<double> f0, v;
+    std::vector<double> f0;
+    std::vector<double> v;
     std::vector<std::vector<double>> JJ;
     std::vector<double> x0 = x;
     Eigen::VectorXd r(x0.size());
@@ -107,13 +108,13 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
 double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter) {
-    double x, dx, fval = 999;
-    int iter = 1;
     f->errstring.clear();
-    x = x0;
+    double x = x0;
+    int iter = 1;  // TODO: DId you mean f->iter?
+    double fval = 999;
     while (iter < 2 || std::abs(fval) > ftol) {
         fval = f->call(x);
-        dx = -fval / f->deriv(x);
+        double dx = -fval / f->deriv(x);
 
         if (!ValidNumber(fval)) {
             throw ValueError("Residual function in newton returned invalid number");
@@ -150,12 +151,12 @@ http://en.wikipedia.org/wiki/Halley%27s_method
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
 double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, double xtol_rel) {
-    double x, dx, fval = 999, dfdx, d2fdx2;
 
     // Initialize
     f->iter = 0;
     f->errstring.clear();
-    x = x0;
+    double x = x0;
+    double fval = 999;
 
     // The relaxation factor (less than 1 for smaller steps)
     double omega = f->options.get_double("omega", 1.0);
@@ -166,8 +167,8 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
         }
 
         fval = f->call(x);
-        dfdx = f->deriv(x);
-        d2fdx2 = f->second_deriv(x);
+        double dfdx = f->deriv(x);
+        double d2fdx2 = f->second_deriv(x);
 
         if (!ValidNumber(fval)) {
             throw ValueError("Residual function in Halley returned invalid number");
@@ -176,7 +177,7 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
             throw ValueError("Derivative function in Halley returned invalid number");
         };
 
-        dx = -omega * (2 * fval * dfdx) / (2 * POW2(dfdx) - fval * d2fdx2);
+        double dx = -omega * (2 * fval * dfdx) / (2 * POW2(dfdx) - fval * d2fdx2);
 
         x += dx;
 
@@ -210,12 +211,12 @@ http://numbers.computation.free.fr/Constants/Algorithms/newton.ps
  @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
  */
 double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int maxiter, double xtol_rel) {
-    double x, dx, fval = 999, dfdx, d2fdx2, d3fdx3;
+    double fval = 999;
 
     // Initialization
     f->iter = 1;
     f->errstring.clear();
-    x = x0;
+    double x = x0;
 
     // The relaxation factor (less than 1 for smaller steps)
     double omega = f->options.get_double("omega", 1.0);
@@ -226,9 +227,9 @@ double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int
         }
 
         fval = f->call(x);
-        dfdx = f->deriv(x);
-        d2fdx2 = f->second_deriv(x);
-        d3fdx3 = f->third_deriv(x);
+        double dfdx = f->deriv(x);
+        double d2fdx2 = f->second_deriv(x);
+        double d3fdx3 = f->third_deriv(x);
 
         if (!ValidNumber(fval)) {
             throw ValueError("Residual function in Householder4 returned invalid number");
@@ -243,7 +244,7 @@ double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int
             throw ValueError("Third derivative function in Householder4 returned invalid number");
         };
 
-        dx = -omega * fval * (POW2(dfdx) - fval * d2fdx2 / 2.0) / (POW3(dfdx) - fval * dfdx * d2fdx2 + d3fdx3 * POW2(fval) / 6.0);
+        double dx = -omega * fval * (POW2(dfdx) - fval * d2fdx2 / 2.0) / (POW3(dfdx) - fval * dfdx * d2fdx2 + d3fdx3 * POW2(fval) / 6.0);
 
         x += dx;
 
@@ -278,7 +279,14 @@ double Secant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter) {
 #endif
 
     // Initialization
-    double x1 = 0, x2 = 0, x3 = 0, y1 = 0, y2 = 0, x = x0, fval = 999;
+    // TODO: reduce scope of these, perhaps improve naming... I expect x to be returned, yet it's x3
+    double x1 = 0;
+    double x2 = 0;
+    double x3 = 0;
+    double y1 = 0;
+    double y2 = 0;
+    double x = x0;
+    double fval = 999;
     f->iter = 1;
     f->errstring.clear();
 
@@ -356,8 +364,14 @@ In the secant function, a 1-D Newton-Raphson solver is implemented.  An initial 
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
 double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double tol, int maxiter) {
-    double x1 = 0, x2 = 0, x3 = 0, y1 = 0, y2 = 0, x, fval = 999;
-    int iter = 1;
+    double x1 = 0;
+    double x2 = 0;
+    double x3 = 0;
+    double y1 = 0;
+    double y2 = 0;
+    double x;
+    double fval = 999;
+    int iter = 1;  // TODO: did you mean f->iter?
     f->errstring.clear();
     if (std::abs(dx) == 0) {
         f->errstring = "dx cannot be zero";
@@ -490,9 +504,21 @@ at least one solution in the interval [a,b].
 @param maxiter Maximum number of steps allowed.  Will throw a SolutionError if the solution cannot be found
 */
 double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter) {
-    int iter;
+    int iter;  // TODO: did you mean f->iter?
     f->errstring.clear();
-    double fa, fb, c, fc, m, tol, d, e, p, q, s, r;
+    // TODO: reduce scope of these, don't declare them without initialization
+    double fa;
+    double fb;
+    double c;
+    double fc;
+    double m;
+    double tol;
+    double d;
+    double e;
+    double p;
+    double q;
+    double s;
+    double r;
     fa = f->call(a);
     fb = f->call(b);
 

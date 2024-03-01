@@ -1,19 +1,20 @@
 #include "CPnumerics.h"
+
+#include <math.h>
 #include "MatrixMath.h"
 #include <unsupported/Eigen/Polynomials>
 
 double root_sum_square(const std::vector<double>& x) {
     double sum = 0;
-    for (unsigned int i = 0; i < x.size(); i++) {
-        sum += pow(x[i], 2);
+    for (double i : x) {
+        sum += pow(i, 2);
     }
     return sqrt(sum);
 }
 double interp1d(const std::vector<double>* x, const std::vector<double>* y, double x0) {
-    std::size_t i, L, R, M;
-    L = 0;
-    R = (*x).size() - 1;
-    M = (L + R) / 2;
+    std::size_t L = 0;
+    std::size_t R = (*x).size() - 1;
+    std::size_t M = (L + R) / 2;
     // Use interval halving to find the indices which bracket the density of interest
     while (R - L > 1) {
         if (x0 >= (*x)[M]) {
@@ -27,7 +28,7 @@ double interp1d(const std::vector<double>* x, const std::vector<double>* y, doub
             continue;
         }
     }
-    i = L;
+    std::size_t i = L;
     if (i < (*x).size() - 2) {
         // Go "forwards" with the interpolation range
         return QuadInterp((*x)[i], (*x)[i + 1], (*x)[i + 2], (*y)[i], (*y)[i + 1], (*y)[i + 2], x0);
@@ -39,14 +40,12 @@ double interp1d(const std::vector<double>* x, const std::vector<double>* y, doub
 double powInt(double x, int y) {
     // Raise a double to an integer power
     // Overload not provided in math.h
-    int i;
-    double product = 1.0;
-    double x_in;
-    int y_in;
-
     if (y == 0) {
         return 1.0;
     }
+
+    double x_in = 0.0;
+    int y_in = 0;
 
     if (y < 0) {
         x_in = 1 / x;
@@ -60,18 +59,17 @@ double powInt(double x, int y) {
         return x_in;
     }
 
-    product = x_in;
-    for (i = 1; i < y_in; i++) {
+    double product = x_in;
+    for (int i = 1; i < y_in; i++) {
         product = product * x_in;
     }
     return product;
 }
 
 void MatInv_2(double A[2][2], double B[2][2]) {
-    double Det;
     //Using Cramer's Rule to solve
 
-    Det = A[0][0] * A[1][1] - A[1][0] * A[0][1];
+    double Det = A[0][0] * A[1][1] - A[1][0] * A[0][1];
     B[0][0] = 1.0 / Det * A[1][1];
     B[1][1] = 1.0 / Det * A[0][0];
     B[1][0] = -1.0 / Det * A[1][0];
@@ -107,7 +105,7 @@ void solve_cubic(double a, double b, double c, double d, int& N, double& x0, dou
 
     if (DELTA < 0) {
         // One real root
-        double t0;
+        double t0 = NAN;
         if (4 * p * p * p + 27 * q * q > 0 && p < 0) {
             t0 = -2.0 * std::abs(q) / q * sqrt(-p / 3.0) * cosh(1.0 / 3.0 * acosh(-3.0 * std::abs(q) / (2.0 * p) * sqrt(-3.0 / p)));
         } else {
@@ -171,13 +169,15 @@ bool SplineClass::build() {
 }
 bool SplineClass::add_value_constraint(double x, double y) {
     int i = Nconstraints;
-    if (i == 4) return false;
+    if (i == 4) {
+        return false;
+    }
     A[i][0] = x * x * x;
     A[i][1] = x * x;
     A[i][2] = x;
     A[i][3] = 1;
     B[i] = y;
-    Nconstraints++;
+    ++Nconstraints;
     return true;
 }
 void SplineClass::add_4value_constraints(double x1, double x2, double x3, double x4, double y1, double y2, double y3, double y4) {
@@ -188,15 +188,17 @@ void SplineClass::add_4value_constraints(double x1, double x2, double x3, double
 }
 bool SplineClass::add_derivative_constraint(double x, double dydx) {
     int i = Nconstraints;
-    if (i == 4) return false;
+    if (i == 4) {
+        return false;
+    }
     A[i][0] = 3 * x * x;
     A[i][1] = 2 * x;
     A[i][2] = 1;
     A[i][3] = 0;
     B[i] = dydx;
-    Nconstraints++;
+    ++Nconstraints;
     return true;
 }
-double SplineClass::evaluate(double x) {
+double SplineClass::evaluate(double x) const {
     return a * x * x * x + b * x * x + c * x + d;
 }

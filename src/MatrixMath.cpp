@@ -8,7 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <numeric>
-#include <math.h>
+#include <cmath>
 
 namespace CoolProp {}; /* namespace CoolProp */
 
@@ -21,16 +21,14 @@ TEST_CASE("Internal consistency checks and example use cases for MatrixMath.h", 
     bool PRINT = false;
 
     /// Test case for "SylthermXLT" by "Dow Chemicals"
-    std::vector<double> cHeat;
-    cHeat.clear();
-    cHeat.push_back(+1.1562261074E+03);
-    cHeat.push_back(+2.0994549103E+00);
-    cHeat.push_back(+7.7175381057E-07);
-    cHeat.push_back(-3.7008444051E-20);
+    std::vector<double> cHeat{
+      +1.1562261074E+03,
+      +2.0994549103E+00,
+      +7.7175381057E-07,
+      -3.7008444051E-20,
+    };
 
-    std::vector<std::vector<double>> cHeat2D;
-    cHeat2D.push_back(cHeat);
-    cHeat2D.push_back(cHeat);
+    std::vector<std::vector<double>> cHeat2D{cHeat, cHeat};
 
     SECTION("Pretty printing tests") {
 

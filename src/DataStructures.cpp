@@ -1,12 +1,13 @@
-
-
 #include "DataStructures.h"
 #include "Exceptions.h"
 #include "CoolPropTools.h"
 #include "CoolProp.h"
 #include <memory>
 
+#include <array>
+
 namespace CoolProp {
+using std::string;
 
 struct parameter_info
 {
@@ -15,7 +16,8 @@ struct parameter_info
     bool trivial;  ///< True if the input is trivial, and can be directly calculated (constants like critical properties, etc.)
 };
 
-const parameter_info parameter_info_list[] = {
+// TODO: C++17: static constexpr!
+const std::array<parameter_info, 78> parameter_info_list{{
   /// Input/Output parameters
   {iT, "T", "IO", "K", "Temperature", false},
   {iP, "P", "IO", "Pa", "Pressure", false},
@@ -102,7 +104,7 @@ const parameter_info parameter_info_list[] = {
 
   {iPhase, "Phase", "O", "-", "Phase index as a float", false},
 
-};
+}};
 
 class ParameterInformation
 {
@@ -111,14 +113,16 @@ class ParameterInformation
     std::map<int, std::string> short_desc_map, description_map, IO_map, units_map;
     std::map<std::string, int> index_map;
     ParameterInformation() {
-        const parameter_info* const end = parameter_info_list + sizeof(parameter_info_list) / sizeof(parameter_info_list[0]);
-        for (const parameter_info* el = parameter_info_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<int, std::string>(el->key, el->short_desc));
-            IO_map.insert(std::pair<int, std::string>(el->key, el->IO));
-            units_map.insert(std::pair<int, std::string>(el->key, el->units));
-            description_map.insert(std::pair<int, std::string>(el->key, el->description));
-            index_map_insert(el->short_desc, el->key);
-            trivial_map.insert(std::pair<int, bool>(el->key, el->trivial));
+        for (const auto& el : parameter_info_list) {
+            // TODO: in C++17 and above, consider replacing all your maps with a **constexpr** std::array<std::pair<int, std::string_view>>
+            // or std::array<std::pair<parameter_info, std::string_view>> if you make that an enum **class**
+            // for better performance, or just plain std::array<std::string_view> actually since you use an int as a key...
+            short_desc_map.insert(std::pair<int, std::string>(el.key, el.short_desc));
+            IO_map.insert(std::pair<int, std::string>(el.key, el.IO));
+            units_map.insert(std::pair<int, std::string>(el.key, el.units));
+            description_map.insert(std::pair<int, std::string>(el.key, el.description));
+            index_map_insert(el.short_desc, el.key);
+            trivial_map.insert(std::pair<int, bool>(el.key, el.trivial));
         }
         // Backward compatibility aliases
         index_map_insert("D", iDmass);
@@ -177,13 +181,13 @@ std::string get_parameter_information(int key, const std::string& info) {
     const std::map<int, std::string>* M;
     auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
-    if (!info.compare("IO")) {
+    if (info == "IO") {
         M = &(parameter_information.IO_map);
-    } else if (!info.compare("short")) {
+    } else if (info == "short") {
         M = &(parameter_information.short_desc_map);
-    } else if (!info.compare("long")) {
+    } else if (info == "long") {
         M = &(parameter_information.description_map);
-    } else if (!info.compare("units")) {
+    } else if (info == "units") {
         M = &(parameter_information.units_map);
     } else {
         throw ValueError(format("Bad info string [%s] to get_parameter_information", info.c_str()));
@@ -200,11 +204,16 @@ std::string get_parameter_information(int key, const std::string& info) {
 std::string get_csv_parameter_list() {
     auto& parameter_information = get_parameter_information();
     std::vector<std::string> strings;
-    for (std::map<std::string, int>::const_iterator it = parameter_information.index_map.begin(); it != parameter_information.index_map.end(); ++it) {
-        strings.push_back(it->first);
+    strings.reserve(parameter_information.index_map.size());
+    for (const auto& kv : parameter_information.index_map) {
+        strings.push_back(kv.first);
     }
     return strjoin(strings, ",");
 }
+
+// TODO: parameters is an enum that has a INVALID_PARAMETER value, so you can just change the signature to
+// parameters is_valid_parameter(const std::string& param_name)
+//  [...] if not found: return parameters::INVALID_PARAMETER
 bool is_valid_parameter(const std::string& param_name, parameters& iOutput) {
     auto& parameter_information = get_parameter_information();
     // Try to find it
@@ -237,21 +246,23 @@ bool is_valid_first_derivative(const std::string& name, parameters& iOf, paramet
         return false;
     }
 
-    std::size_t i0 = split_at_slash[0].find("(");
-    std::size_t i1 = split_at_slash[0].find(")", i0);
+    std::size_t i0 = split_at_slash[0].find('(');
+    std::size_t i1 = split_at_slash[0].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string num = split_at_slash[0].substr(i0 + 1, i1 - i0 - 1);
 
-    i0 = split_at_slash[1].find("(");
-    i1 = split_at_slash[1].find(")", i0);
+    i0 = split_at_slash[1].find('(');
+    i1 = split_at_slash[1].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string den = split_at_slash[1].substr(i0 + 1, i1 - i0 - 1);
 
-    parameters Of, Wrt, Constant;
+    parameters Of;
+    parameters Wrt;
+    parameters Constant;
     if (is_valid_parameter(num, Of) && is_valid_parameter(den, Wrt) && is_valid_parameter(split_at_bar[1], Constant)) {
         iOf = Of;
         iWrt = Wrt;
@@ -280,21 +291,22 @@ bool is_valid_first_saturation_derivative(const std::string& name, parameters& i
         return false;
     }
 
-    std::size_t i0 = split_at_slash[0].find("(");
-    std::size_t i1 = split_at_slash[0].find(")", i0);
+    std::size_t i0 = split_at_slash[0].find('(');
+    std::size_t i1 = split_at_slash[0].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string num = split_at_slash[0].substr(i0 + 1, i1 - i0 - 1);
 
-    i0 = split_at_slash[1].find("(");
-    i1 = split_at_slash[1].find(")", i0);
+    i0 = split_at_slash[1].find('(');
+    i1 = split_at_slash[1].find(')', i0);
     if (!((i0 > 0) && (i0 != std::string::npos) && (i1 > (i0 + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string den = split_at_slash[1].substr(i0 + 1, i1 - i0 - 1);
 
-    parameters Of, Wrt;
+    parameters Of;
+    parameters Wrt;
     if (is_valid_parameter(num, Of) && is_valid_parameter(den, Wrt) && upper(split_at_bar[1]) == "SIGMA") {
         iOf = Of;
         iWrt = Wrt;
@@ -328,8 +340,8 @@ bool is_valid_second_derivative(const std::string& name, parameters& iOf1, param
     std::string left_of_slash = left_of_bar.substr(0, i);    // "d(d(P)/d(Dmolar)|T)"
     std::string right_of_slash = left_of_bar.substr(i + 1);  // "d(Dmolar)"
 
-    i = left_of_slash.find("(");
-    std::size_t i1 = left_of_slash.rfind(")");
+    i = left_of_slash.find('(');
+    std::size_t i1 = left_of_slash.rfind(')');
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i + 1)) && (i1 != std::string::npos))) {
         return false;
     }
@@ -338,18 +350,14 @@ bool is_valid_second_derivative(const std::string& name, parameters& iOf1, param
         return false;
     }
 
-    i = right_of_slash.find("(");
-    i1 = right_of_slash.rfind(")");
+    i = right_of_slash.find('(');
+    i1 = right_of_slash.rfind(')');
     if (!((i > 0) && (i != std::string::npos) && (i1 > (i + 1)) && (i1 != std::string::npos))) {
         return false;
     }
     std::string den = right_of_slash.substr(i + 1, i1 - i - 1);  // "Dmolar"
-    if (!is_valid_parameter(den, iWrt2)) {
-        return false;
-    }
 
-    // If we haven't quit yet, all is well
-    return true;
+    return is_valid_parameter(den, iWrt2);
 }
 
 struct phase_info
@@ -358,7 +366,7 @@ struct phase_info
     const char *short_desc, *long_desc;
 };
 
-const phase_info phase_info_list[] = {
+const std::array<phase_info, 9> phase_info_list{{
   {iphase_liquid, "phase_liquid", ""},
   {iphase_gas, "phase_gas", ""},
   {iphase_twophase, "phase_twophase", ""},
@@ -368,7 +376,7 @@ const phase_info phase_info_list[] = {
   {iphase_critical_point, "phase_critical_point", "p = pc, T = Tc"},
   {iphase_unknown, "phase_unknown", ""},
   {iphase_not_imposed, "phase_not_imposed", ""},
-};
+}};
 
 class PhaseInformation
 {
@@ -376,11 +384,10 @@ class PhaseInformation
     std::map<phases, std::string> short_desc_map, long_desc_map;
     std::map<std::string, phases> index_map;
     PhaseInformation() {
-        const phase_info* const end = phase_info_list + sizeof(phase_info_list) / sizeof(phase_info_list[0]);
-        for (const phase_info* el = phase_info_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<phases, std::string>(el->key, el->short_desc));
-            long_desc_map.insert(std::pair<phases, std::string>(el->key, el->long_desc));
-            index_map.insert(std::pair<std::string, phases>(el->short_desc, el->key));
+        for (const phase_info& el : phase_info_list) {
+            short_desc_map.insert(std::pair<phases, std::string>(el.key, el.short_desc));
+            long_desc_map.insert(std::pair<phases, std::string>(el.key, el.long_desc));
+            index_map.insert(std::pair<std::string, phases>(el.short_desc, el.key));
         }
     }
 };
@@ -516,7 +523,7 @@ struct input_pair_info
     const char *short_desc, *long_desc;
 };
 
-const input_pair_info input_pair_list[] = {
+const std::array<input_pair_info, 35> input_pair_list{{
   {QT_INPUTS, "QT_INPUTS", "Molar quality, Temperature in K"},
   {QSmolar_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/mol/K"},
   {QSmass_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/kg/K"},
@@ -558,7 +565,7 @@ const input_pair_info input_pair_list[] = {
   {HmolarSmolar_INPUTS, "HmolarSmolar_INPUTS", "Enthalpy in J/mol, Entropy in J/mol/K"},
   {SmassUmass_INPUTS, "SmassUmass_INPUTS", "Entropy in J/kg/K, Internal energy in J/kg"},
   {SmolarUmolar_INPUTS, "SmolarUmolar_INPUTS", "Entropy in J/mol/K, Internal energy in J/mol"},
-};
+}};
 
 class InputPairInformation
 {
@@ -566,11 +573,10 @@ class InputPairInformation
     std::map<input_pairs, std::string> short_desc_map, long_desc_map;
     std::map<std::string, input_pairs> index_map;
     InputPairInformation() {
-        const input_pair_info* const end = input_pair_list + sizeof(input_pair_list) / sizeof(input_pair_list[0]);
-        for (const input_pair_info* el = input_pair_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->short_desc));
-            long_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->long_desc));
-            index_map.insert(std::pair<std::string, input_pairs>(el->short_desc, el->key));
+        for (const input_pair_info& el : input_pair_list) {
+            short_desc_map.insert(std::pair<input_pairs, std::string>(el.key, el.short_desc));
+            long_desc_map.insert(std::pair<input_pairs, std::string>(el.key, el.long_desc));
+            index_map.insert(std::pair<std::string, input_pairs>(el.short_desc, el.key));
         }
     }
 };
@@ -770,24 +776,35 @@ struct backend_info
     backend_families family;
 };
 
-const backend_family_info backend_family_list[] = {
-  {HEOS_BACKEND_FAMILY, "HEOS"},   {REFPROP_BACKEND_FAMILY, "REFPROP"}, {INCOMP_BACKEND_FAMILY, "INCOMP"},   {IF97_BACKEND_FAMILY, "IF97"},
-  {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SRK_BACKEND_FAMILY, "SRK"},
-  {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"}};
+const std::array<backend_family_info, 11> backend_family_list{{
+  {HEOS_BACKEND_FAMILY, "HEOS"},
+  {REFPROP_BACKEND_FAMILY, "REFPROP"},
+  {INCOMP_BACKEND_FAMILY, "INCOMP"},
+  {IF97_BACKEND_FAMILY, "IF97"},
+  {TREND_BACKEND_FAMILY, "TREND"},
+  {TTSE_BACKEND_FAMILY, "TTSE"},
+  {BICUBIC_BACKEND_FAMILY, "BICUBIC"},
+  {SRK_BACKEND_FAMILY, "SRK"},
+  {PR_BACKEND_FAMILY, "PR"},
+  {VTPR_BACKEND_FAMILY, "VTPR"},
+  {PCSAFT_BACKEND_FAMILY, "PCSAFT"},
+}};
 
-const backend_info backend_list[] = {{HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
-                                     {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
-                                     {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
-                                     {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
-                                     {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
-                                     {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
-                                     {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
-                                     {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
-                                     {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
-                                     {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
-                                     {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
-                                     {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
-                                     {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY}};
+const std::array<backend_info, 13> backend_list{{
+  {HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
+  {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
+  {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
+  {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
+  {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
+  {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
+  {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
+  {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
+  {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
+  {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
+  {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
+  {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
+  {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY},
+}};
 
 class BackendInformation
 {
@@ -800,17 +817,15 @@ class BackendInformation
     std::map<std::string, backends> backend_name_map_r;         /// < from backend name to backend
 
     BackendInformation() {
-        const backend_family_info* const family_end = backend_family_list + sizeof(backend_family_list) / sizeof(backend_family_list[0]);
-        for (const backend_family_info* el = backend_family_list; el != family_end; ++el) {
-            family_name_map.insert(std::pair<backend_families, std::string>(el->family, el->name));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el->name, el->family));
+        for (const backend_family_info& el : backend_family_list) {
+            family_name_map.insert(std::pair<backend_families, std::string>(el.family, el.name));
+            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
         }
-        const backend_info* const backend_end = backend_list + sizeof(backend_list) / sizeof(backend_list[0]);
-        for (const backend_info* el = backend_list; el != backend_end; ++el) {
-            backend_family_map.insert(std::pair<backends, backend_families>(el->backend, el->family));
-            backend_name_map.insert(std::pair<backends, std::string>(el->backend, el->name));
-            backend_name_map_r.insert(std::pair<std::string, backends>(el->name, el->backend));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el->name, el->family));
+        for (const backend_info& el : backend_list) {
+            backend_family_map.insert(std::pair<backends, backend_families>(el.backend, el.family));
+            backend_name_map.insert(std::pair<backends, std::string>(el.backend, el.name));
+            backend_name_map_r.insert(std::pair<std::string, backends>(el.name, el.backend));
+            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
         }
     }
 };
@@ -826,43 +841,51 @@ const BackendInformation& get_backend_information() {
 }
 
 /// Convert a string into the enum values
-void extract_backend_families(std::string backend_string, backend_families& f1, backend_families& f2) {
+void extract_backend_families(const std::string& backend_string, backend_families& f1, backend_families& f2) {
     auto& backend_information = get_backend_information();
     f1 = INVALID_BACKEND_FAMILY;
     f2 = INVALID_BACKEND_FAMILY;
-    std::size_t i = backend_string.find("&");
+    std::size_t i = backend_string.find('&');
     std::map<std::string, backend_families>::const_iterator it;
     if (i != std::string::npos) {
         it = backend_information.family_name_map_r.find(backend_string.substr(0, i));  // Before "&"
-        if (it != backend_information.family_name_map_r.end()) f1 = it->second;
+        if (it != backend_information.family_name_map_r.end()) {
+            f1 = it->second;
+        }
         it = backend_information.family_name_map_r.find(backend_string.substr(i + 1));  // After "&"
-        if (it != backend_information.family_name_map_r.end()) f2 = it->second;
+        if (it != backend_information.family_name_map_r.end()) {
+            f2 = it->second;
+        }
     } else {
         it = backend_information.family_name_map_r.find(backend_string);
-        if (it != backend_information.family_name_map_r.end()) f1 = it->second;
+        if (it != backend_information.family_name_map_r.end()) {
+            f1 = it->second;
+        }
     }
 }
 
-void extract_backend_families_string(std::string backend_string, backend_families& f1, std::string& f2) {
+void extract_backend_families_string(const std::string& backend_string, backend_families& f1, std::string& f2) {
     auto& backend_information = get_backend_information();
     backend_families f2_enum;
     extract_backend_families(backend_string, f1, f2_enum);
     std::map<backend_families, std::string>::const_iterator it;
     it = backend_information.family_name_map.find(f2_enum);
-    if (it != backend_information.family_name_map.end())
+    if (it != backend_information.family_name_map.end()) {
         f2 = it->second;
-    else
+    } else {
         f2.clear();
+    }
 }
 
 std::string get_backend_string(backends backend) {
     auto& backend_information = get_backend_information();
     std::map<backends, std::string>::const_iterator it;
     it = backend_information.backend_name_map.find(backend);
-    if (it != backend_information.backend_name_map.end())
+    if (it != backend_information.backend_name_map.end()) {
         return it->second;
-    else
-        return std::string("");
+    }
+
+    return {};
 }
 
 } /* namespace CoolProp */

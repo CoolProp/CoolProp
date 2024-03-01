@@ -362,20 +362,20 @@ class IF97Backend : public AbstractState
                 };
         }
     }
-    /// Return the mass density in kg/m³
+    /// Return the mass density in kg/m^3
     double rhomass(void) {
         return calc_rhomass();
     };
     double calc_rhomass(void) {
         return calc_Flash(iDmass);
     };
-    /// Return the molar density in mol/m³
+    /// Return the molar density in mol/m^3
     double rhomolar(void) {
         return calc_rhomolar();
     };
     double calc_rhomolar(void) {
         return rhomass() / molar_mass();
-    };  /// kg/m³ * mol/kg = mol/m³
+    };  /// kg/m^3 * mol/kg = mol/m^3
 
     /// Return the mass enthalpy in J/kg
     double hmass(void) {
@@ -514,7 +514,7 @@ class IF97Backend : public AbstractState
     double calc_Tmin(void) {
         return IF97::get_Tmin();
     };
-    /// Using this backend, get the critical point density in kg/m³
+    /// Using this backend, get the critical point density in kg/m^3
     /// Replace molar-based AbstractState functions since IF97 is mass based only
     double rhomolar_critical(void) {
         return calc_rhomass_critical() / molar_mass();

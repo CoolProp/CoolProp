@@ -279,10 +279,10 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, Cool
     // Check if a mass based input, convert it to molar units
 
     switch (input_pair) {
-        case DmassT_INPUTS:  ///< Mass density in kg/m^3, Temperature in K
-          //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
-        case SmassT_INPUTS:  ///< Entropy in J/kg/K, Temperature in K
-          //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
+        case DmassT_INPUTS:      ///< Mass density in kg/m^3, Temperature in K
+                                 //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
+        case SmassT_INPUTS:      ///< Entropy in J/kg/K, Temperature in K
+                                 //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
         case DmassP_INPUTS:      ///< Mass density in kg/m^3, Pressure in Pa
         case DmassQ_INPUTS:      ///< Mass density in kg/m^3, molar quality
         case HmassP_INPUTS:      ///< Enthalpy in J/kg, Pressure in Pa
