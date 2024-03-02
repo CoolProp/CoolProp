@@ -500,12 +500,10 @@ class AbstractStateLibrary
 };
 static AbstractStateLibrary handle_manager;
 
-std::mutex AS_mutex;
 EXPORT_CODE long CONVENTION AbstractState_factory(const char* backend, const char* fluids, long* errcode, char* message_buffer,
                                                   const long buffer_length) {
     *errcode = 0;
     try {
-        std::lock_guard<std::mutex> guard(AS_mutex);
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory(backend, fluids));
         return handle_manager.add(AS);
     } catch (...) {
