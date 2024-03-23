@@ -19,6 +19,7 @@
 #include "Backends/Helmholtz/MixtureParameters.h"
 
 #include <string.h>
+#include <mutex>
 
 void str2buf(const std::string& str, char* buf, int n) {
     if (str.size() < static_cast<unsigned int>(n))
@@ -470,21 +471,25 @@ class AbstractStateLibrary
    private:
     std::map<std::size_t, shared_ptr<CoolProp::AbstractState>> ASlibrary;
     long next_handle;
+    std::mutex ASLib_mutex;
 
    public:
     AbstractStateLibrary() : next_handle(0){};
     long add(shared_ptr<CoolProp::AbstractState> AS) {
+        std::lock_guard<std::mutex> guard(ASLib_mutex);
         ASlibrary.insert(std::pair<std::size_t, shared_ptr<CoolProp::AbstractState>>(this->next_handle, AS));
         this->next_handle++;
         return next_handle - 1;
     }
     void remove(long handle) {
+        std::lock_guard<std::mutex> guard(ASLib_mutex);
         std::size_t count_removed = ASlibrary.erase(handle);
         if (count_removed != 1) {
             throw CoolProp::HandleError("could not free handle");
         }
     }
     shared_ptr<CoolProp::AbstractState>& get(long handle) {
+        std::lock_guard<std::mutex> guard(ASLib_mutex);
         std::map<std::size_t, shared_ptr<CoolProp::AbstractState>>::iterator it = ASlibrary.find(handle);
         if (it != ASlibrary.end()) {
             return it->second;
