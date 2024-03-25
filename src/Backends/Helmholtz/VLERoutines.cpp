@@ -597,7 +597,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
     // reset the phase for the next update.
     SatL->specify_phase(iphase_liquid);
     SatV->specify_phase(iphase_gas);
-    if (error > 1e-8){
+    if (error > 1e-8 && max_abs_value(v) > 1e-9){
         throw SolutionError(format("saturation_PHSU_pure solver was good, but went bad. Current error is %Lg", error));
     }
 }
