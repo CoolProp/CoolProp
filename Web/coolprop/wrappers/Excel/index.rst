@@ -62,7 +62,7 @@ Pre-compiled Binaries for OSX
 
 .. warning:: 
 
-  There are now both 32-bit and 64-bit versions of Microsoft Excel on OSX.  You need to make sure that your bitness of the shared library for CoolProp (and perhaps REFPROP) match that of Excel.  
+  There are now both 32-bit and 64-bit versions of Microsoft Excel on OSX.  You need to make sure that your bitness of the shared library for CoolProp (and perhaps REFPROP) match that of Excel. If you are using a M1/M2 Mac with arm64 architecture, you may need to compile your own CoolProp library file (see `User-compiled Binaries`_).
 
 Part 1:
 -------
@@ -76,41 +76,8 @@ Or you can go into Excel->About Excel.  If version is greater than 15.24, you ar
 
 Part 2:
 -------
-We need to convince Microsoft Excel to load our shared library, and it seems the only place it is willing to look for shared libraries is in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``, where ``${USER}`` should be replaced with your user name.  This is because Excel is now sandboxed.
 
-Following http://apple.stackexchange.com/a/106814, save these contents as the file ``~/Library/LaunchAgents/my.startup.plist`` (obviously replace ``ihb`` with the appropriate user name)::
-
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-    <dict>
-    <key>Label</key>
-    <string>my.startup</string>
-    <key>ProgramArguments</key>
-    <array>
-      <string>sh</string>
-      <string>-c</string>
-      <string>launchctl setenv DYLD_LIBRARY_PATH "/Users/ihb/Library/Group Containers/UBF8T346G9.Office"</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    </dict>
-    </plist>
-
-This ``.plist`` will be run as soon as the computer starts, and will set the ``DYLD_LIBRARY_PATH`` environmental variable, and Microsoft Excel will then read this variable, and be willing to load your shared library
-
-Make sure to log out and log back in to have this ``.plist`` take effect.
-
-Part 2a (optional):
--------------------
-If you want to add additional paths to the terminal, you can add a line like this to your ``~/.bash_profile`` for instance to append paths to the ``DYLD_LIBRARY_PATH`` variable. It calls ``launchctl`` to extract the ``DYLD_LIBRARY_PATH`` environment variable and prepends ``/another/path`` to it::
-
-    export DYLD_LIBRARY_PATH="/another/path:`launchctl getenv DYLD_LIBRARY_PATH`"
-
-Part 3:
--------
-
-Download the xlam from :sfdownloads:`MicrosoftExcel` or the development version from :sfnightly:`MicrosoftExcel`.
+Download the xlam from :sfdownloads:`MicrosoftExcel` (if the link is broken, browse to the latest version that has a MicrosoftExcel folder, currently 6.4.1) or the development version from :sfnightly:`MicrosoftExcel`.
 
 Place XLAM file in ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``, where ``${USER}`` should be replaced with your user name
 
@@ -130,16 +97,16 @@ Download pre-compiled release binaries for OSX from :sfdownloads:`shared_library
 
 Place the downloaded file ``libCoolProp.dylib`` in the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``.
 
-Part 4:
+Part 3:
 -------
 
 Open Excel, go to ``Tools/Add-ins...``. In browse, go to the folder listed above with the ``BF8T346G9.Office`` in it. Select CoolProp.xlam.
 
-Part 4b:
+Part 3b:
 --------
 Go to Tools/Macro/Visual_Basic_Editor and open Module 1 in CoolProp.xlam.  Replace all references to “libCoolProp.dylib” with references to "/Users/${USER}/Library/Group Containers/UBF8T346G9.Office/libCoolProp.dylib”, again changing ${USER} to your user name.  Save and close the Visual Basic Editor.
 
-Part 5:
+Part 4:
 -------
 Add this to a cell::
 
@@ -157,14 +124,40 @@ Debugging
 
   the ``i386`` is the important bit, that indicates that the shared library is 32-bit.
 
+* Or, if you have a M1/M2 Mac, you may need to compile your own Coolprop library that for the arm64 architecture. See `User-compiled Binaries`_.
+
+  
 REFPROP support on OSX
 ======================
 
 You can also call REFPROP through the Excel wrapper of CoolProp, but it requires a few tweaks to work properly
 
 1. The refprop dylib (with the correct bitness!), as well as the ``fluids`` and ``mixtures`` folders of REFPROP should be placed in the folder ``refprop`` inside ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office``.  Make sure the shared library is called ``librefprop.dylib``.
-2. An environment variable called ``COOLPROP_REFPROP_PATH`` should be set to the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office/refprop`` (see above about how to do that in a ``.plist`` file).  The CoolProp xlam, on loading, will query this environment variable to determine which path to use for REFPROP.  It seems from my testing that this path MUST be a subfolder of ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office`` due to the sandboxing.
+2. An environment variable called ``COOLPROP_REFPROP_PATH`` should be set to the folder ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office/refprop`` (see next step about how to do that in a ``.plist`` file).  The CoolProp xlam, on loading, will query this environment variable to determine which path to use for REFPROP.  It seems from my testing that this path MUST be a subfolder of ``/Users/${USER}/Library/Group Containers/UBF8T346G9.Office`` due to the sandboxing.
+3. To set the environment variable ``COOLPROP_REFPROP_PATH``, save these contents as the file ``~/Library/LaunchAgents/my.startup.plist`` (obviously replace ``ihb`` with the appropriate user name)::
 
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+    <key>Label</key>
+    <string>my.startup</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>sh</string>
+      <string>-c</string>
+      <string>launchctl setenv COOLPROP_REFPROP_PATH "/Users/ihb/Library/Group Containers/UBF8T346G9.Office/refprop"</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    </dict>
+    </plist>
+
+This ``.plist`` will be run as soon as the computer starts, and will set the ``COOLPROP_REFPROP_PATH`` environmental variable, and Microsoft Excel will then read this variable, and be willing to load the refprop library.
+
+Make sure to log out and log back in to have this ``.plist`` take effect.
+
+   
 User-compiled Binaries
 ======================
 
