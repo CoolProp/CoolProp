@@ -1,10 +1,15 @@
+|CoolProp|_ can be called from MATLAB either through its Python or C interface.
 This document discusses the ``PropsSI`` interface for MATLAB, based on
-the MATLAB⇒Python interface introduced in R2014b.
+the MATLAB⇒Python interface introduced in R2014b. For more information on how
+to call |CoolProp| through the C shared library see |coolprop-mat|_.
+
+.. |coolprop-mat| replace:: ``coolprop-mat``
+.. _coolprop-mat: https://github.com/stephen-young/coolprop-mat
 
 Setup
 =====
 
-Several things are required: 
+Several things are required:
 
 1. A MATLAB release that is R2014b or newer.
 2. A python release with the |numpy|_ and |CoolProp|_ packages installed. If you have several python environments/versions available, make sure that your MATLAB recognizes the desired executable using |pyversion|_.
@@ -19,7 +24,7 @@ Several things are required:
 .. _pyversion: https://www.mathworks.com/help/matlab/ref/pyversion.html
 
 It is not required to follow the MATLAB's `supported python
-versions <https://www.mathworks.com/help/matlab/matlab_external/system-requirements-for-matlab-engine-for-python.html#buijfe8>`__ (this tool was tested with R2015a & R2017a + python 3.6). 
+versions <https://www.mathworks.com/help/matlab/matlab_external/system-requirements-for-matlab-engine-for-python.html#buijfe8>`__ (this tool was tested with R2015a & R2017a + python 3.6).
 
 To confirm that your system is configured correctly, please execute the provided tests file using ``run(CoolPropWrapperTests);`` and verify that it completes with no errors.
 
