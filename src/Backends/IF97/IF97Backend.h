@@ -17,7 +17,8 @@ class IF97Backend : public AbstractState
    protected:
     /// Additional cached elements used only in this backend since the "normal"
     /// backends use only molar units while IF97 uses mass-based units
-    CachedElement _hmass, _rhomass, _smass;
+    CachedElement _hmass, _rhomass, _smass,
+        _reverse;  // Also need a way to flag using the IF97 reverse calcs for h(p,s) and s(p,h)
     /// CachedElement  _hVmass, _hLmass, _sVmass, sLmass;
 
    public:
@@ -59,33 +60,82 @@ class IF97Backend : public AbstractState
         this->_rhomass.clear();
         this->_hmass.clear();
         this->_smass.clear();
+        this->_reverse.clear();
         this->_phase = iphase_not_imposed;
         return true;
     };
 
+    // Set phase based on cached values in _p & _T or, if reverse, from (_p,_smass) or (_p,_hmass)
     void set_phase() {
-        double epsilon = 3.3e-5;                              // IAPWS-IF97 RMS saturated pressure inconsistency
-        if ((std::abs(_T - IF97::Tcrit) < epsilon / 10.0) &&  //            RMS temperature inconsistency ~ epsilon/10
-            (std::abs(_p - IF97::Pcrit) < epsilon)) {         // within epsilon of [Tcrit,Pcrit]
-            _phase = iphase_critical_point;                   //     at critical point
-        } else if (_T >= IF97::Tcrit) {                       // to the right of the critical point
-            if (_p >= IF97::Pcrit) {                          //     above the critical point
-                _phase = iphase_supercritical;
-            } else {  //     below the critical point
-                _phase = iphase_supercritical_gas;
+        double epsilon = 3.3e-5;                                  // IAPWS-IF97 RMS saturated pressure inconsistency
+        if (!_reverse) {
+            if ((std::abs(_T - IF97::Tcrit) < epsilon / 10.0) &&  //            RMS temperature inconsistency ~ epsilon/10
+                (std::abs(_p - IF97::Pcrit) < epsilon)) {         // within epsilon of [Tcrit,Pcrit]
+                _phase = iphase_critical_point;                   //     at critical point
+            } else if (_T > IF97::Tcrit) {                        // to the right of the critical point
+                if (_p > IF97::Pcrit) {                           //     above the critical point pressure
+                    _phase = iphase_supercritical;
+                } else {                                          //     below the critical point pressure
+                    _phase = iphase_supercritical_gas;
+                }
+            } else {                                              // to the left of the critical point
+                if (_p > IF97::Pcrit) {                           //     above the critical point pressure
+                    _phase = iphase_supercritical_liquid;
+                } else {                                          //     at or below critical point pressure
+                    double psat = IF97::psat97(_T);
+                    if (_p > psat * (1.0 + epsilon)) {            //         above the saturation curve
+                        _phase = iphase_liquid;
+                    } else if (_p < psat * (1.0 - epsilon)) {     //         below the saturation curve
+                        _phase = iphase_gas;
+                    } else                                        //         exactly on saturation curve (within 1e-4 %)
+                        _phase = iphase_twophase;
+                }
             }
-        } else {                      // to the left of the critical point
-            if (_p >= IF97::Pcrit) {  //     above the critical point
-                _phase = iphase_supercritical_liquid;
-            } else {  //     below critical point
-                double psat = IF97::psat97(_T);
-                if (_p > psat * (1.0 + epsilon)) {  //         above the saturation curve
-                    _phase = iphase_liquid;
-                } else if (_p < psat * (1.0 - epsilon)) {  //         below the saturation curve
-                    _phase = iphase_gas;
-                } else  //         exactly on saturation curve (within 1e-4 %)
-                    _phase = iphase_twophase;
+        } else {                                                  // Backwards: Determine phase from _p & _smass or _hmass
+            int IF97Region;
+            if (_smass) {                                                   // Get IF97 Region
+                IF97Region = IF97::BackwardRegion(_p, _smass, IF97_SMASS);  //     using p, s
+            } else {
+                IF97Region = IF97::BackwardRegion(_p, _hmass, IF97_HMASS);  //     using p, h
             }
+            switch (IF97Region) {                                 // Convert IF97 Region to CP iPhase
+                case 1:                                           // IF97::REGION1
+                    if (_p <= IF97::Pcrit) {
+                        _phase = iphase_liquid;
+                    } else {
+                        _phase = iphase_supercritical_liquid;
+                    };
+                    break;
+                case 2:                                           // IF97::REGION2
+                    if (_T <= IF97::Tcrit) {
+                        _phase = iphase_gas;
+                    } else {
+                        _phase = iphase_supercritical_gas;
+                    };
+                    break;
+                case 3:                                           // IF97::REGION3
+                    if (_T < IF97::Tsat97(_p)) {
+                        if (_p <= IF97::Pcrit) {
+                            _phase = iphase_liquid;
+                        } else {
+                            _phase = iphase_supercritical_liquid;
+                        };
+                    } else {
+                        if (_T <= IF97::Tcrit) {
+                            _phase = iphase_gas;
+                        } else {
+                            _phase = iphase_supercritical_gas;
+                        }
+                    };
+                    break;
+                case 4:                                           // IF97::REGION4 (Saturation
+                    _phase = iphase_twophase;                     //   already handled but here for completeness 
+                    break;
+                case 5:                                           // IF97::REGION5 or O.B.
+                default:
+                    throw CoolProp::OutOfRangeError("Outside of IF97 Reverse Function Bounds");
+                    break;
+            };
         }
     };
 
@@ -137,16 +187,17 @@ class IF97Backend : public AbstractState
             case HmassP_INPUTS:
                 if (!(_hmass)) _hmass = value1;  // don't set if already set above
                 _p = value2;
+                _reverse = 1.0;                  // only ever set for HP and SP Inputs
                 _T = IF97::T_phmass(_p, _hmass);
+                _Q = -1;                         // Default if not set in 2-Phase Region
                 // ...if in the vapor dome (Region 4), calculate Quality...
                 if (IF97::BackwardRegion(_p, _hmass, IF97_HMASS) == 4) {
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = (H - hLmass) / (hVmass - hLmass);
+                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
-                    _Q = -1;
                     set_phase();
                 };
                 break;
@@ -158,15 +209,17 @@ class IF97Backend : public AbstractState
             case PSmass_INPUTS:
                 _p = value1;
                 if (!(_smass)) _smass = value2;
+                _reverse = 1.0;
                 _T = IF97::T_psmass(_p, _smass);
+                _Q = -1;
+                // ...if in the vapor dome (Region 4), calculate Quality...
                 if (IF97::BackwardRegion(_p, _smass, IF97_SMASS) == 4) {
                     S = _smass;
                     sVmass = IF97::svap_p(_p);
                     sLmass = IF97::sliq_p(_p);
-                    _Q = (S - sLmass) / (sVmass - sLmass);
+                    _Q = std::min(1.0, std::max(0.0, (S - sLmass) / (sVmass - sLmass)));  //bound between 0 and 1
                     _phase = iphase_twophase;
                 } else {
-                    _Q = -1;
                     set_phase();
                 };
                 break;
@@ -185,7 +238,7 @@ class IF97Backend : public AbstractState
                     H = _hmass;
                     hVmass = IF97::hvap_p(_p);
                     hLmass = IF97::hliq_p(_p);
-                    _Q = (H - hLmass) / (hVmass - hLmass);
+                    _Q = std::min(1.0, std::max(0.0, (H - hLmass) / (hVmass - hLmass)));  //bount between 0 and 1
                     _phase = iphase_twophase;
                 } else {
                     _Q = -1;
@@ -362,27 +415,30 @@ class IF97Backend : public AbstractState
                 };
         }
     }
-    /// Return the mass density in kg/m³
+    /// Return the mass density in kg/mÂ³
     double rhomass(void) {
         return calc_rhomass();
     };
     double calc_rhomass(void) {
         return calc_Flash(iDmass);
     };
-    /// Return the molar density in mol/m³
+    /// Return the molar density in mol/mÂ³
     double rhomolar(void) {
         return calc_rhomolar();
     };
     double calc_rhomolar(void) {
         return rhomass() / molar_mass();
-    };  /// kg/m³ * mol/kg = mol/m³
+    };  /// kg/mÂ³ * mol/kg = mol/mÂ³
 
     /// Return the mass enthalpy in J/kg
     double hmass(void) {
         return calc_hmass();
     };
     double calc_hmass(void) {
-        return calc_Flash(iHmass);
+        if (_reverse && _smass)
+            return IF97::hmass_psmass(_p, _smass);  // Special IF97 function for handling reverse h(p,s) evaluation
+        else
+            return calc_Flash(iHmass);
     };
     /// Return the molar enthalpy in J/mol
     double hmolar(void) {
@@ -397,7 +453,10 @@ class IF97Backend : public AbstractState
         return calc_smass();
     };
     double calc_smass(void) {
-        return calc_Flash(iSmass);
+        if (_reverse && _hmass)
+            return IF97::smass_phmass(_p, _hmass);  // Special IF97 function for handling reverse s(p,h) evaluation
+        else
+            return calc_Flash(iSmass);
     };
     /// Return the molar entropy in J/mol/K
     double smolar(void) {
@@ -514,7 +573,7 @@ class IF97Backend : public AbstractState
     double calc_Tmin(void) {
         return IF97::get_Tmin();
     };
-    /// Using this backend, get the critical point density in kg/m³
+    /// Using this backend, get the critical point density in kg/mÂ³
     /// Replace molar-based AbstractState functions since IF97 is mass based only
     double rhomolar_critical(void) {
         return calc_rhomass_critical() / molar_mass();
