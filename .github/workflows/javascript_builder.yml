@@ -26,7 +26,8 @@ jobs:
     - name: Configure CMake
       shell: bash
       run: |
-        cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DEMSCRIPTEN_INIT_FLAG:BOOL=OFF -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      # cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DEMSCRIPTEN_INIT_FLAG:BOOL=OFF -DCMAKE_BUILD_TYPE=$BUILD_TYPE
       # cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCOOLPROP_JAVASCRIPT_MODULE:BOOL=ON -DEMSCRIPTEN_INIT_FLAG:BOOL=ON  -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
     - name: Build

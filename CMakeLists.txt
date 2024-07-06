@@ -1796,12 +1796,12 @@ if(COOLPROP_JAVASCRIPT_MODULE)
   endif()
 
   add_definitions(-sDISABLE_EXCEPTION_CATCHING=0)
-  # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
-  if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
-    set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 0")
-  else()
-    set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 1")
-  endif()
+  # # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
+  # if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
+  #   set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 0")
+  # else()
+  #   set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 1")
+  # endif()
 
   set(CMAKE_EXE_LINKER_FLAGS
       "--bind ${EMSCRIPTEN_INIT_FLAG} -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=0"
