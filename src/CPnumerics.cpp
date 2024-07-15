@@ -200,3 +200,14 @@ bool SplineClass::add_derivative_constraint(double x, double dydx) {
 double SplineClass::evaluate(double x) {
     return a * x * x * x + b * x * x + c * x + d;
 }
+
+double smoothstep(double t, double lo, double hi) {
+    // Scale
+    double xs = (t - lo) / (hi - lo);
+    // Clamp to [0.0, 1.0]
+    double x = (xs < 0.0) ? 0.0 : (xs > 1.0) ? 1.0 : xs;
+    // Smoothstep function (3rd-order)
+    double y = x * x * (3.0 - 2.0 * x);
+    return y;
+}
+

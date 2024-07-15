@@ -226,6 +226,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_first_two_phase_deriv(parameters Of, parameters Wrt, parameters Constant);
     CoolPropDbl calc_second_two_phase_deriv(parameters Of, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
     CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end);
+    CoolPropDbl calc_first_two_phase_deriv_smoothed(parameters Of, parameters Wrt, parameters Constant, parameters sWrt, CoolPropDbl Lsmooth, CoolPropDbl Vsmooth);
 
     CriticalState calc_critical_point(double rho0, double T0);
     /// An overload to make the compiler (clang in this case) happy

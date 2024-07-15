@@ -629,6 +629,9 @@ class AbstractState
     virtual CoolPropDbl calc_first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, CoolPropDbl x_end) {
         throw NotImplementedError("calc_first_two_phase_deriv_splined is not implemented for this backend");
     };
+    virtual CoolPropDbl calc_first_two_phase_deriv_smoothed(parameters Of, parameters Wrt, parameters Constant, parameters sWrt, CoolPropDbl Lsmooth, CoolPropDbl Vsmooth) {
+        throw NotImplementedError("calc_first_two_phase_deriv_smoothed is not implemented for this backend");
+    };
 
     virtual CoolPropDbl calc_saturated_liquid_keyed_output(parameters key) {
         throw NotImplementedError("calc_saturated_liquid_keyed_output is not implemented for this backend");
@@ -1376,6 +1379,27 @@ class AbstractState
     */
     double first_two_phase_deriv_splined(parameters Of, parameters Wrt, parameters Constant, double x_end) {
         return calc_first_two_phase_deriv_splined(Of, Wrt, Constant, x_end);
+    };
+
+    /**
+    * @brief Calculate the first "two-phase" derivative as described by Thorade and Sadaat, EAS, 2013
+    *
+    * Implementing the algorithms and ideas of:
+    * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation",
+    * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
+    *
+    * Discontinuities in first derivatives at saturation lines are smoothed using smoothstep function
+    *
+    * @param Of The parameter to be derived
+    * @param Wrt The parameter that the derivative is taken with respect to
+    * @param Constant The parameter that is held constant
+    * @param sWrt The parameter that smoothing is done with respect to
+    * @param Lsmooth Smoothing amount in the interval [0.0, 1.0] at saturated liquid line
+    * @param Vsmooth Smoothing amount in the interval [0.0, 1.0] at saturated vapour line
+    * @return
+    */
+    double first_two_phase_deriv_smoothed(parameters Of, parameters Wrt, parameters Constant, parameters sWrt, double Lsmooth, double Vsmooth) {
+        return calc_first_two_phase_deriv_smoothed(Of, Wrt, Constant, sWrt, Lsmooth, Vsmooth);
     };
 
     // ----------------------------------------
