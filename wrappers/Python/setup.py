@@ -415,7 +415,7 @@ if __name__ == '__main__':
         return file_listing
 
     # Set variables for C++ sources and include directories
-    sources = find_cpp_sources(os.path.join(CProot, 'src'), '*.cpp')
+    sources = find_cpp_sources(root=os.path.join(CProot, 'src'), extensions=['.cpp'])
     include_dirs = [
         os.path.join(CProot),
         os.path.join(CProot, 'include'),
