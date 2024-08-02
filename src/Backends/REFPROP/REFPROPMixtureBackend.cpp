@@ -522,7 +522,7 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::string& C
 std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) {
 
     int icomp, jcomp;
-    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
 
     icomp = match_CAS(CAS1);
@@ -532,18 +532,18 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
 
     std::string shmodij(hmodij);
-    if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
-    {
+    //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
+    //{
         if (parameter == "model") {
             return shmodij;
         } else {
             throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
             return "";
         }
-    } else {
-        //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
-        return "";
-    }
+    //} else {
+    //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    //    return "";
+    //}
 }
 /// Set binary mixture string value
 void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, const std::size_t j, const std::string& parameter,
@@ -559,7 +559,7 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
     }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
-    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
     char herr[255];
 
@@ -594,7 +594,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
     }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
-    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
     char herr[255];
 
@@ -602,8 +602,8 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
 
     std::string shmodij(hmodij);
-    if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
-    {
+    //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
+    //{
         if (parameter == "betaT") {
             fij[0] = value;
         } else if (parameter == "gammaT") {
@@ -621,9 +621,9 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
         if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
             throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
         }
-    } else {
-        throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
-    }
+    //} else {
+    //    throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    //}
 }
 
 /// Get binary mixture double value (EXPERT USE ONLY!!!)
@@ -639,15 +639,15 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
         throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
     }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1;
-    char hmodij[4], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
+    char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
 
     // Get the current state
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
 
     std::string shmodij(hmodij);
-    if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
-    {
+    //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
+    //{
         double val;
         if (parameter == "betaT") {
             val = fij[0];
@@ -664,10 +664,10 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
             return _HUGE;
         }
         return val;
-    } else {
-        //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
-        return _HUGE;
-    }
+    //} else {
+    //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
+    //    return _HUGE;
+    //}
 }
 void REFPROPMixtureBackend::set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) {
     if (mole_fractions.size() != this->Ncomp) {
