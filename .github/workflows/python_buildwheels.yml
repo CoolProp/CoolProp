@@ -42,7 +42,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        python-version: [36, 37, 38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312]
         arch: [i686, x86_64, aarch64, ppc64le, s390x]
         exclude:
           - os: ubuntu
@@ -63,7 +63,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows]
-        python-version: [36, 37, 38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312]
         arch: [AMD64, x86, ARM64]
         exclude:
           - os: windows
@@ -89,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos]
-        python-version: [36, 37, 38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312]
         arch: [x86_64, arm64, universal2]
         exclude:
           - os: macos
