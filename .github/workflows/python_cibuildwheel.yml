@@ -19,14 +19,14 @@ jobs:
     runs-on: ${{ inputs.os }}-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: 3.9.x
+        python-version: 3.12.x
 
     - name: Install Python dependencies
       run: |
@@ -69,8 +69,10 @@ jobs:
         package-dir: ./wrappers/Python/
         output-dir: Python
 
-    - name: Store artifacts
-      uses: actions/upload-artifact@v3
+    - name: Upload Files
+      uses: actions/upload-artifact@v4
       with:
-        name: Python
-        path: Python
+        name: Python-${{ inputs.os }}
+        path: |
+          ./Python/*.whl
+          ./Python/*.tar.gz
