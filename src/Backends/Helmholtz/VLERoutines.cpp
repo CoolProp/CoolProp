@@ -959,6 +959,11 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend& HE
                 // but only if the limits are being checked
                 if ((rhoL < crit.rhomolar * 0.8 || rhoL > tripleL.rhomolar * 1.2 || rhoV > crit.rhomolar * 1.2 || rhoV < tripleV.rhomolar * 0.8)
                     && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+
+                    if (get_debug_level() > 5) {
+                        std::cout << format("[Maxwell] ancillaries correction T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg rhoc: %g rhoLtrip: %g rhoVtrip: %g\n", T, rhoL, rhoV, crit.rhomolar, tripleL.rhomolar, tripleV.rhomolar );
+                    }
+
                     // Lets assume that liquid density is more or less linear with T
                     rhoL = (crit.rhomolar - tripleL.rhomolar) / (crit.T - tripleL.T) * (T - tripleL.T) + tripleL.rhomolar;
                     // Then we calculate pressure from this density
