@@ -788,6 +788,9 @@ if(COOLPROP_PRIME_MODULE)
   list(APPEND APP_SOURCES
        "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/CoolPropMathcad.cpp")
   add_library(CoolPropMathcadWrapper SHARED ${APP_SOURCES})
+  if(MSVC)
+      target_compile_options(CoolPropMathcadWrapper PUBLIC "/Zc:__cpluplus")
+  endif()
   include_directories("${COOLPROP_PRIME_ROOT}/Custom Functions")
   target_link_libraries(CoolPropMathcadWrapper
                         "${COOLPROP_PRIME_ROOT}/Custom Functions/mcaduser.lib")
