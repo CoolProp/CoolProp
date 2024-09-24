@@ -30,7 +30,7 @@ jobs:
       run: cmake --build build --target install
 
     - name: Archive artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: LibreOffice
           path: install_root/LibreOffice
