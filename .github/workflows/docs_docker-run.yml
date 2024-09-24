@@ -124,7 +124,7 @@ jobs:
     
     - name: Archive TGZ or ZIP artifacts
       if: ${{ !env.ACT }} # skip during local actions testing
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
           name: docs
           path: |
