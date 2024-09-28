@@ -84,7 +84,11 @@ jobs:
       - name: Store artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
+          # Create individual artifacts for each workflow
+          # These will be combined later in release_all_files
+          # suffix will have a "." character embeded, but may be ok;
+          # otherwise we can strip it off the workflow string.
+          name: binaries-${{ inputs.workflow }}
           path: binaries
           retention-days: 1
       

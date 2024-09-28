@@ -104,7 +104,7 @@ jobs:
     - name: Store artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: binaries
+        name: binaries-source
         path: binaries
         retention-days: 1
 
@@ -116,9 +116,14 @@ jobs:
     steps:  
     
     - name: Download binaries
-      uses: actions/download-artifact@v4.1.7
+      uses: actions/download-artifact@v4
       with:
-        name: binaries
+        # Get all unique artifacts starting with "binaries-" per the pattern
+        # per requirements of actions/download-artifact@v4
+        pattern: binaries-*
+        # Allow multiple artifacts matching the patter to be merged
+        # into the same binaries directory.
+        merge-multiple: true
         path: binaries
         
     - name: Create info files
