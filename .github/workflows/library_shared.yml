@@ -76,7 +76,9 @@ jobs:
     - name: Archive artifacts
       uses: actions/upload-artifact@v4
       with:
-          name: shared_library
+          # Upload to unique artifact names tagged with suffix of matrix.os
+          # This is now requried by upload-artifact@v4, but will be merged later
+          name: shared_library-${{ matrix.os }}
           path: install_root/shared_library
 
     # - name: Upload TGZ or ZIP to release
@@ -88,3 +90,18 @@ jobs:
     #     tag: ${{ github.ref }}
     #     overwrite: true
     #     file_glob: false
+
+  merge:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Merge Artifacts
+      uses: actions/upload-artifact/merge@v4
+      with:
+        # Merge all existing artifacts built above that start with pattern "shared_library-*"
+        pattern: shared_library-*
+        # Merge to single "shared_library" artifact
+        name: shared_library
+        # Remove the old individual artifacts once merged
+        delete-merged: true
+        
