@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
 
     - name: Install dependencies
       shell: bash
       # use backports to get libreoffice > 7.3 on ubuntu-lastest (22.04)
-      run: sudo apt-get install -y -t $(lsb_release -cs)-backports libreoffice-dev
+      run: sudo apt-get update -y && sudo apt-get install -y -t $(lsb_release -cs)-backports libreoffice-dev
 
     - name: Configure CMake
       shell: bash
