@@ -159,6 +159,7 @@ cdef class AbstractState:
     cpdef double gibbsmolar_residual(self) except *
     cpdef double hmolar_residual(self) except *
     cpdef double smolar_residual(self) except *
+    cpdef double neff(self) except *
 
 
 

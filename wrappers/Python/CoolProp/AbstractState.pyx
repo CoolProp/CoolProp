@@ -433,6 +433,9 @@ cdef class AbstractState:
     cpdef double smolar_residual(self) except *:
         """ Get the mole-specific residual entropy in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar_residual(void)` """
         return self.thisptr.smolar_residual()
+    cpdef double neff(self) except *:
+        """ Get the effective hardness of interaction - wrapper of c++ function :cpapi:`CoolProp::AbstractState::neff(void)` """
+        return self.thisptr.neff()
 
 
     ## ----------------------------------------

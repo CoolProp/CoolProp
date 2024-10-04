@@ -612,6 +612,14 @@ double AbstractState::smolar_residual(void) {
     if (!_smolar_residual) _smolar_residual = calc_smolar_residual();
     return _smolar_residual;
 }
+double AbstractState::neff(void) {
+    double tau = calc_T_reducing()/_T;
+    double delta = _rhomolar/calc_rhomolar_reducing();
+    double Ar01 = delta*dalphar_dDelta();
+    double Ar11 = tau*delta*d2alphar_dDelta_dTau();
+    double Ar20 = tau*tau*d2alphar_dTau2();
+    return -3.0*(Ar01-Ar11)/Ar20;
+}
 double AbstractState::smolar_excess(void) {
     if (!_smolar_excess) calc_excess_properties();
     return _smolar_excess;

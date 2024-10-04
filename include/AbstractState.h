@@ -159,6 +159,10 @@ class AbstractState
     virtual CoolPropDbl calc_smolar_residual(void) {
         throw NotImplementedError("calc_smolar_residual is not implemented for this backend");
     };
+    /// Using this backend, calculate effective hardness of interaction
+    virtual CoolPropDbl calc_neff(void) {
+        throw NotImplementedError("calc_neff is not implemented for this backend");
+    };
     /// Using this backend, calculate the molar internal energy in J/mol
     virtual CoolPropDbl calc_umolar(void) {
         throw NotImplementedError("calc_umolar is not implemented for this backend");
@@ -1102,6 +1106,8 @@ class AbstractState
     double smolar(void);
     /// Return the residual molar entropy (as a function of temperature and density) in J/mol/K
     double smolar_residual(void);
+    /// Return the effective hardness of interaction
+    double neff(void);
     /// Return the molar entropy in J/kg/K
     double smass(void) {
         return calc_smass();

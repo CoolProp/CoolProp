@@ -155,6 +155,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double gibbsmolar_residual() except +ValueError
         double hmolar_residual() except +ValueError
         double smolar_residual() except +ValueError
+        double neff() except +ValueError
 
         double surface_tension() except +ValueError
         double Prandtl() except +ValueError
