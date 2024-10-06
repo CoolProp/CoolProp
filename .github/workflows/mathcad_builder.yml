@@ -15,7 +15,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
 
@@ -38,5 +38,5 @@ jobs:
     - name: Archive artifacts
       uses: actions/upload-artifact@v4
       with:
-          name: MathcadPrime
+          name: binaries-MathcadPrime
           path: install_root/MathcadPrime
