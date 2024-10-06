@@ -83,6 +83,7 @@ jobs:
     # Doesn't work through the matrix calls to release_get_artifact above and no output results for troubleshooting. 
     uses: ./.github/workflows/mathcad_builder.yml
     # Stores artifact under binaries-MathcadPrime consistent with the other builds
+    secrets: inherit
 
 
   prepare_sources:
