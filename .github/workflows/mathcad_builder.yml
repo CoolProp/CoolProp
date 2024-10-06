@@ -1,16 +1,20 @@
 name: Mathcad wrapper
 
 on:
-  push:
-    branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ 'master', 'main', 'develop' ]
+  # ========= Commenting Pushes and Pull_Requests
+  #push:
+  #  branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
+  #  tags: [ 'v*' ]
+  #pull_request:
+  #  branches: [ 'master', 'main', 'develop' ]
+  # ========= Only going to let tis workflow run when called by the nightly build
+  # ========= TODO: Might need more than this for new version releases
+  workflow_call:
 
 jobs:
   build:
 
-    if: github.event_name != 'push' && github.event_name != 'pull_request'
+    #if: github.event_name != 'push' && github.event_name != 'pull_request'
 
     runs-on: windows-latest
 
