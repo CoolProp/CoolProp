@@ -1995,7 +1995,7 @@ TEST_CASE("Check the PC-SAFT pressure function", "[pcsaft_pressure]") {
     p_calc = CoolProp::PropsSI("P", "T", 298.15, "Dmolar", 9368.903838750752, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
     CHECK(abs((p_calc/p) - 1) < 1e-5);
 
-    p_calc = CoolProp::PropsSI("P", "T", 298.15, "Dmolar", 55740.15826463244, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
+    p_calc = CoolProp::PropsSI("P", "T", 298.15, "Dmolar", 55757.07260200306, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
     CHECK(abs((p_calc/p) - 1) < 1e-5);
 
     p = CoolProp::PropsSI("P", "T", 100., "Q", 0, "PCSAFT::PROPANE");

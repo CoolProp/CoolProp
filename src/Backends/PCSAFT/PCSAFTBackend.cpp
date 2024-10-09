@@ -252,8 +252,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     if (ion_term) {
         for (int i = 0; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] =
-                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
         }
     }
@@ -500,9 +499,9 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
             vector<double> sigma_k(ncomp);
             summ = 0.;
             for (int i = 0; i < ncomp; i++) {
-                chi[i] = 3 / pow(kappa * components[i].getSigma(), 3)
-                         * (1.5 + log(1 + kappa * components[i].getSigma()) - 2 * (1 + kappa * components[i].getSigma())
-                            + 0.5 * pow(1 + kappa * components[i].getSigma(), 2));
+                chi[i] = 3 / pow(kappa * d[i], 3)
+                         * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
+                            + 0.5 * pow(1 + kappa * d[i], 2));
                 summ += mole_fractions[i] * q[i] * q[i] * chi[i] * kappa;
             }
 
@@ -524,8 +523,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     if (ion_term) {
         for (int i = 0; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] =
-                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
                 dd_dt[i] = 0.;
             }
         }
@@ -824,10 +822,10 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
             vector<double> dchikap_dk(ncomp);
             summ = 0.;
             for (int i = 0; i < ncomp; i++) {
-                chi[i] = 3 / pow(kappa * components[i].getSigma(), 3)
-                         * (1.5 + log(1 + kappa * components[i].getSigma()) - 2 * (1 + kappa * components[i].getSigma())
-                            + 0.5 * pow(1 + kappa * components[i].getSigma(), 2));
-                dchikap_dk[i] = -2 * chi[i] + 3 / (1 + kappa * components[i].getSigma());
+                chi[i] = 3 / pow(kappa * d[i], 3)
+                         * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
+                            + 0.5 * pow(1 + kappa * d[i], 2));
+                dchikap_dk[i] = -2 * chi[i] + 3 / (1 + kappa * d[i]);
                 summ += mole_fractions[i] * components[i].getZ() * components[i].getZ();
             }
             dkappa_dt = -0.5 * den * E_CHRG * E_CHRG / kb / _T / _T / (dielc * perm_vac) * summ / kappa;
@@ -869,8 +867,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     if (ion_term) {
         for (int i = 0; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] =
-                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
         }
     }
@@ -1314,10 +1311,10 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
             double summ1 = 0.;
             double summ2 = 0.;
             for (int i = 0; i < ncomp; i++) {
-                chi[i] = 3 / pow(kappa * components[i].getSigma(), 3)
-                         * (1.5 + log(1 + kappa * components[i].getSigma()) - 2 * (1 + kappa * components[i].getSigma())
-                            + 0.5 * pow(1 + kappa * components[i].getSigma(), 2));
-                sigma_k[i] = -2 * chi[i] + 3 / (1 + kappa * components[i].getSigma());
+                chi[i] = 3 / pow(kappa * d[i], 3)
+                         * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
+                            + 0.5 * pow(1 + kappa * d[i], 2));
+                sigma_k[i] = -2 * chi[i] + 3 / (1 + kappa * d[i]);
                 summ1 += q[i] * q[i] * mole_fractions[i] * sigma_k[i];
                 summ2 += mole_fractions[i] * q[i] * q[i];
             }
@@ -1357,8 +1354,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
     if (ion_term) {
         for (int i = 0; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] =
-                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
         }
     }
@@ -1667,10 +1663,10 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
             double chi, sigma_k;
             summ = 0.;
             for (int i = 0; i < ncomp; i++) {
-                chi = 3 / pow(kappa * components[i].getSigma(), 3)
-                      * (1.5 + log(1 + kappa * components[i].getSigma()) - 2 * (1 + kappa * components[i].getSigma())
-                         + 0.5 * pow(1 + kappa * components[i].getSigma(), 2));
-                sigma_k = -2 * chi + 3 / (1 + kappa * components[i].getSigma());
+                chi = 3 / pow(kappa * d[i], 3)
+                      * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
+                         + 0.5 * pow(1 + kappa * d[i], 2));
+                sigma_k = -2 * chi + 3 / (1 + kappa * d[i]);
                 summ += q[i] * q[i] * mole_fractions[i] * sigma_k;
             }
             Zion = -1 * kappa / 24. / PI / kb / _T / (dielc * perm_vac) * summ;
