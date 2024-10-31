@@ -1,8 +1,8 @@
 from __future__ import print_function
 import platform
 import subprocess, shutil, os, sys, glob, tempfile
-from distutils.version import LooseVersion
-from distutils.sysconfig import get_config_var
+from packaging.version import Version
+from sysconfig import get_config_var
 from setuptools.command.build_ext import build_ext
 from multiprocessing import cpu_count
 
@@ -57,13 +57,13 @@ if __name__ == '__main__':
     # libstdc++ which forces is to manipulate the minimum OSX target
     # version when compiling the Cython extensions.
     if sys.platform == 'darwin':
-        osx_target = LooseVersion(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
-        osx_compiler = LooseVersion('0.0')
-        osx_version = LooseVersion('0.0')
+        osx_target = Version(get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+        osx_compiler = Version('0.0')
+        osx_version = Version('0.0')
         FORCE_TARGET = None
         USE_OSX_VERSION = False
         if USE_OSX_VERSION:
-            osx_version = LooseVersion(platform.mac_ver()[0])
+            osx_version = Version(platform.mac_ver()[0])
             print("OSX build detected, targetting {0} on {1}.".format(osx_target, osx_version))
         else:
             import subprocess
@@ -74,7 +74,7 @@ if __name__ == '__main__':
                 except AttributeError: pass
                 line = line.strip()
                 try:
-                    osx_compiler = LooseVersion(line)
+                    osx_compiler = Version(line)
                     if osx_compiler > "1.0" and osx_compiler < "100.0": break
                 except BaseException as be:
                     print('Error getting OSX compile version: ', str(be))
@@ -226,7 +226,7 @@ if __name__ == '__main__':
             raise ValueError('cmake_compiler [' + cmake_compiler + '] is invalid')
 
         # if 'darwin' in sys.platform:
-        #    current_system = LooseVersion(platform.mac_ver()[0])
+        #    current_system = Version(platform.mac_ver()[0])
         #    print("OSX build detected for system {0}".format(current_system))
         #    #if current_system >= '10.9':
         #    #    cmake_config_args += ["-DDARWIN_USE_LIBCPP=ON"]
@@ -288,7 +288,7 @@ if __name__ == '__main__':
             raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
 
         # Handle different Cython versions
-        cython_version = LooseVersion(Cython.__version__)
+        cython_version = str(Version (Cython.__version__))
         print('Cython version: ', cython_version)
 
         if cython_version < '0.20':
@@ -350,7 +350,7 @@ if __name__ == '__main__':
             """ Metaclass for overwriting compilation flags """
 
             def set_shared_ptr_flags(self):
-                from distutils.errors import CompileError
+                from setuptools import CompileErro
 
                 if sys.platform.startswith('win') and sys.version_info <= (3, 0):
                     # Hardcode for windows for python 2.7...
@@ -391,9 +391,8 @@ if __name__ == '__main__':
     if USE_CYTHON:
         print('Cython will be used; cy_ext is ' + cy_ext)
         import Cython.Compiler
-        from Cython.Distutils.extension import Extension
+        from setuptools.extension import Extension
         from Cython.Build import cythonize
-        from Cython.Distutils import build_ext
 
         # setup_kwargs['cmdclass'] = dict(build_ext=get_shared_ptr_setter(build_ext))
 
