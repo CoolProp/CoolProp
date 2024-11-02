@@ -350,7 +350,7 @@ if __name__ == '__main__':
             """ Metaclass for overwriting compilation flags """
 
             def set_shared_ptr_flags(self):
-                from setuptools import CompileErro
+                from setuptools import CompileError
 
                 if sys.platform.startswith('win') and sys.version_info <= (3, 0):
                     # Hardcode for windows for python 2.7...
