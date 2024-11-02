@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.12.x
+        python-version: 3.13.x
         
     - name: Install dependencies
       run: pip install setuptools wheel Cython requests jinja2 pyyaml
@@ -42,7 +42,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312, 313]
         arch: [i686, x86_64, aarch64, ppc64le, s390x]
         exclude:
           - os: ubuntu
@@ -63,7 +63,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312, 313]
         arch: [AMD64, x86, ARM64]
         exclude:
           - os: windows
@@ -89,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312, 313]
         arch: [x86_64, arm64, universal2]
         exclude:
           - os: macos
@@ -125,7 +125,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.12.x
+        python-version: 3.13.x
 
     - name: Install Python dependencies
       run: |
