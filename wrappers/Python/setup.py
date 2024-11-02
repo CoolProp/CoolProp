@@ -288,7 +288,7 @@ if __name__ == '__main__':
             raise ImportError("Cython not found, please install it.  You can do a pip install Cython")
 
         # Handle different Cython versions
-        cython_version = str(Version (Cython.__version__))
+        cython_version = str(Version(Cython.__version__))
         print('Cython version: ', cython_version)
 
         if cython_version < '0.20':
