@@ -68,15 +68,6 @@ jobs:
         exclude:
           - os: windows
             arch: ARM64 # creates problems with msgpack-c
-          - os: windows
-            arch: ARM64
-            python-version: 36
-          - os: windows
-            arch: ARM64
-            python-version: 37
-          - os: windows
-            arch: ARM64
-            python-version: 38
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
