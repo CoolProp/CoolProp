@@ -1,0 +1,4 @@
+C:/Users/Niels Holswilder/source/repos/Housebi/CoolProp/out/build/x64-Debug/CMakeFiles/generate_headers.dir
+C:/Users/Niels Holswilder/source/repos/Housebi/CoolProp/out/build/x64-Debug/CMakeFiles/generate_examples.dir
+C:/Users/Niels Holswilder/source/repos/Housebi/CoolProp/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+C:/Users/Niels Holswilder/source/repos/Housebi/CoolProp/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
