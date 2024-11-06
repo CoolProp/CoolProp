@@ -84,12 +84,6 @@ jobs:
         arch: [x86_64, arm64, universal2]
         exclude:
           - os: macos
-            arch: arm64
-            python-version: 36
-          - os: macos
-            arch: arm64
-            python-version: 37
-          - os: macos
             arch: universal2 # is redundant
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
