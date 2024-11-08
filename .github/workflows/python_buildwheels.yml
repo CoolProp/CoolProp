@@ -20,10 +20,10 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.12.x
+        python-version: 3.13.x
         
     - name: Install dependencies
-      run: pip install setuptools wheel Cython requests jinja2 pyyaml
+      run: pip install setuptools wheel Cython requests jinja2 pyyaml packaging
         
     - name: Build package, sdist
       working-directory: ./wrappers/Python/pypi
@@ -42,7 +42,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312, 313]
         arch: [i686, x86_64, aarch64, ppc64le, s390x]
         exclude:
           - os: ubuntu
@@ -63,20 +63,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312, 313]
         arch: [AMD64, x86, ARM64]
         exclude:
           - os: windows
             arch: ARM64 # creates problems with msgpack-c
-          - os: windows
-            arch: ARM64
-            python-version: 36
-          - os: windows
-            arch: ARM64
-            python-version: 37
-          - os: windows
-            arch: ARM64
-            python-version: 38
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
@@ -89,15 +80,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos]
-        python-version: [38, 39, 310, 311, 312]
+        python-version: [38, 39, 310, 311, 312, 313]
         arch: [x86_64, arm64, universal2]
         exclude:
-          - os: macos
-            arch: arm64
-            python-version: 36
-          - os: macos
-            arch: arm64
-            python-version: 37
           - os: macos
             arch: universal2 # is redundant
     uses: ./.github/workflows/python_cibuildwheel.yml
@@ -125,7 +110,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.12.x
+        python-version: 3.13.x
 
     - name: Install Python dependencies
       run: |
