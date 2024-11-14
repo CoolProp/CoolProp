@@ -571,8 +571,8 @@ class IsoLine(Base2DObject):
             warnings.warn(
               "An error occurred for the critical inputs, skipping it.",
               UserWarning)
-            xcrit = np.NaN
-            ycrit = np.NaN
+            xcrit = np.nan
+            ycrit = np.nan
 
         X = np.empty_like(one)
         Y = np.empty_like(one)
@@ -596,8 +596,8 @@ class IsoLine(Base2DObject):
                 warnings.warn(
                   "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(one[index], two[index], str(index), str(e)),
                   UserWarning)
-                X[index] = np.NaN
-                Y[index] = np.NaN
+                X[index] = np.nan
+                Y[index] = np.nan
                 err = True
         self.x = X; self.y = Y
         return
@@ -655,9 +655,9 @@ class IsoLine(Base2DObject):
                 warnings.warn(
                   "An error occurred for inputs {0:f}, {1:f} with index {2:s}: {3:s}".format(vals[0][index], vals[1][index], str(index), str(e)),
                   UserWarning)
-                vals[2][index] = np.NaN
-                guesses.rhomolar = np.NaN
-                guesses.T = np.NaN
+                vals[2][index] = np.nan
+                guesses.rhomolar = np.nan
+                guesses.T = np.nan
                 err = True
 
         for i, v in enumerate(idxs):
