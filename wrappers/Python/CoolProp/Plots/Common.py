@@ -478,7 +478,7 @@ class IsoLine(Base2DObject):
     VALID_REQ = 5.0 / 100.0
 
     def __init__(self, i_index, x_index, y_index, value=0.0, state=None):
-        super(IsoLine, self).__init__(x_index, y_index, state)
+        super().__init__(x_index, y_index, state)
         self._i_index = _get_index(i_index)
         if value is not None: self.value = value
         else: self._value = None
