@@ -916,6 +916,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
   set(COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL
       "${CMAKE_CURRENT_BINARY_DIR}/32bitDLL_cdecl")
   set(COOLPROP_WINDOWS_PACKAGE_64B_DIR "${CMAKE_CURRENT_BINARY_DIR}/64bitDLL")
+  set(COOLPROP_WINDOWS_PACKAGE_ARM64_DIR "${CMAKE_CURRENT_BINARY_DIR}/arm64bitDLL")
   set(COOLPROP_WINDOWS_PACKAGE_EES_DIR "${CMAKE_CURRENT_BINARY_DIR}/EES")
   set(COOLPROP_WINDOWS_PACKAGE_TMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/InnoScript")
   # Pointers to the sources
@@ -956,6 +957,8 @@ if(COOLPROP_WINDOWS_PACKAGE)
             "${COOLPROP_WINDOWS_PACKAGE_32B_DIR_CDECL}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
             "${COOLPROP_WINDOWS_PACKAGE_64B_DIR}"
+    COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
+            "${COOLPROP_WINDOWS_PACKAGE_ARM64_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
             "${COOLPROP_WINDOWS_PACKAGE_EES_DIR}"
     COMMAND ${CMAKE_COMMAND} ARGS "-E" "make_directory"
@@ -1054,7 +1057,23 @@ if(COOLPROP_WINDOWS_PACKAGE)
       "${COOLPROP_WINDOWS_PACKAGE_64B_DIR}/Release/CoolProp.dll"
       "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_x64.dll"
     WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_64B_DIR}
-    COMMENT "Building the 64bit shared library"
+    COMMENT "Building the 64bit shared library with x86_64 architecture"
+    VERBATIM)
+
+  # Build the 64bit DLL
+  add_custom_command(
+    TARGET COOLPROP_WINDOWS_PACKAGE_SHARED_LIBRARIES
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS "-G${COOLPROP_WINDOWS_PACKAGE_DLL_GEN}"
+            "-Aarm64" "${CMAKE_CURRENT_SOURCE_DIR}" "-DCOOLPROP_SHARED_LIBRARY=ON"
+    COMMAND ${CMAKE_COMMAND} ARGS "--build" "." "--target" "CoolProp" "--config"
+            "Release"
+    COMMAND
+      ${CMAKE_COMMAND} ARGS "-E" "copy"
+      "${COOLPROP_WINDOWS_PACKAGE_ARM64_DIR}/Release/CoolProp.dll"
+      "${COOLPROP_WINDOWS_PACKAGE_TMP_DIR}/source/CoolProp_arm64.dll"
+    WORKING_DIRECTORY ${COOLPROP_WINDOWS_PACKAGE_ARM64_DIR}
+    COMMENT "Building the 64bit shared library with arm64 architecture"
     VERBATIM)
 
   # *************************************************************
