@@ -574,7 +574,7 @@ if(COOLPROP_OBJECT_LIBRARY
     add_library(${LIB_NAME} SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
 	
 	## For arm64 builds, put the shared library in the Windows/64bit__arm64 folder
-	if(MSVC AND ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64"))
+	if(MSVC AND ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "arm64"))
 		set(OUTPUT_FOLDER "shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit__arm64")
 	else()
 		set(OUTPUT_FOLDER "shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}")
