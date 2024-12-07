@@ -575,12 +575,14 @@ if(COOLPROP_OBJECT_LIBRARY
 	
 	## For arm64 builds, put the shared library in the Windows/64bit__arm64 folder
 	if(MSVC AND ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "ARM64"))
-		set(CONVENTION "__arm64")
+		set(OUTPUT_FOLDER "shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit__arm64")
+	else()
+		set(OUTPUT_FOLDER "shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}")
 	endif()
 	
     install(
       TARGETS ${LIB_NAME}
-      DESTINATION shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION}
+      DESTINATION ${OUTPUT_FOLDER}
     )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_HEADER}
             DESTINATION shared_library)
@@ -605,8 +607,8 @@ if(COOLPROP_OBJECT_LIBRARY
                 ${CMAKE_CURRENT_BINARY_DIR}/exports.txt)
       install(
         FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt
-        DESTINATION
-          shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION})
+        DESTINATION ${OUTPUT_FOLDER}
+	  )
 		  
       add_custom_command(
         TARGET ${LIB_NAME}
@@ -615,8 +617,8 @@ if(COOLPROP_OBJECT_LIBRARY
                 ${CMAKE_CURRENT_BINARY_DIR}/headers.txt)
       install(
         FILES ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
-        DESTINATION
-          shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION})
+        DESTINATION ${OUTPUT_FOLDER}
+	  )
     endif()
     # For Linux
     if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
