@@ -67,7 +67,7 @@ jobs:
 
     - name: Configure CMake for 64bit Windows arm64
       if: startsWith(matrix.os, 'windows')
-      run: cmake -B build_arm64 -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -A arm64
+      run: cmake -B build_arm64 -S . -DCMAKE_BUILD_TYPE:STRING=${{ env.BUILD_TYPE }} -DCOOLPROP_SHARED_LIBRARY:BOOL=ON -A ARM64
       
     - name: Build with CMake for 64bit Windows arm64
       if: startsWith(matrix.os, 'windows')
