@@ -601,6 +601,16 @@ if(COOLPROP_OBJECT_LIBRARY
         FILES ${CMAKE_CURRENT_BINARY_DIR}/exports.txt
         DESTINATION
           shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION})
+		  
+      add_custom_command(
+        TARGET ${LIB_NAME}
+        POST_BUILD
+        COMMAND dumpbin /HEADERS $<TARGET_FILE:${LIB_NAME}> >
+                ${CMAKE_CURRENT_BINARY_DIR}/headers.txt)
+      install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
+        DESTINATION
+          shared_library/${CMAKE_SYSTEM_NAME}/${BITNESS}bit${CONVENTION})
     endif()
     # For Linux
     if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
