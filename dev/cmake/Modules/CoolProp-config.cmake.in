@@ -1,0 +1,19 @@
+# Config file for the CoolProp package
+#
+# This package exports the "CoolPropLib" target
+# which should be used to link against it
+#  
+# For backwards compatibility, it also defines the following variables
+#  CoolProp_INCLUDE_DIRS - include directory for CoolProp
+#  CoolProp_LIBRARIES    - libraries to link against
+
+# Load the cmake targets, if not already done
+if(NOT TARGET CoolPropLib)
+  include("${CMAKE_CURRENT_LIST_DIR}/CoolProp-targets.cmake")
+endif()
+
+ 
+# For backwards compatibility, we set these variables pointing 
+# to the coolprop library and include paths
+set(CoolProp_LIBRARIES CoolPropLib)
+get_target_property(CoolProp_INCLUDE_DIRS CoolPropLib INTERFACE_INCLUDE_DIRECTORIES)
