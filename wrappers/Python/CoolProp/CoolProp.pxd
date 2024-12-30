@@ -1,4 +1,3 @@
-from libcpp.string cimport string
 import cython
 cimport cython
 
@@ -14,7 +13,7 @@ cdef class State:
     cdef int iFluid,iParam1,iParam2,iOutput
     cdef double T_, rho_, p_
     
-    cpdef set_Fluid(self, string Fluid, string backend)
+    cpdef set_Fluid(self, Fluid, backend)
     cpdef speed_test(self, int N)
     cpdef update(self, dict params)
     cpdef update_ph(self, double p, double h)
