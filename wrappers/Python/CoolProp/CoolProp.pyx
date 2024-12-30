@@ -127,7 +127,7 @@ cdef ndarray_or_iterable(object input):
 include "HumidAirProp.pyx"
 include "AbstractState.pyx"
 
-def set_reference_state(string FluidName, *args):
+def set_reference_state(FluidName, *args):
     """
     Accepts one of two signatures:
 
@@ -306,13 +306,13 @@ cpdef add_fluids_as_JSON(backend, JSONstring):
     """
     _add_fluids_as_JSON(backend, JSONstring)
 
-cpdef get_global_param_string(string param):
+cpdef get_global_param_string(param):
     return _get_global_param_string(param)
 
 cpdef is_trivial_parameter(int key):
     return _is_trivial_parameter(key)
 
-cpdef get_fluid_param_string(string fluid, string param):
+cpdef get_fluid_param_string(fluid, param):
     return _get_fluid_param_string(fluid, param)
 
 cpdef apply_simple_mixing_rule(CAS1, CAS2, rule):
@@ -495,14 +495,14 @@ cpdef list FluidsList():
     """
     return _get_global_param_string(b"FluidsList").split(',')
 
-cpdef get_aliases(string Fluid):
+cpdef get_aliases(Fluid):
     """
     Return a comma separated string of aliases for the given fluid
     """
     cdef bytes _Fluid = Fluid.encode('ascii')
     return [F for F in _get_fluid_param_string(_Fluid, b'aliases').split(',')]
 
-cpdef string get_REFPROPname(string Fluid):
+cpdef string get_REFPROPname(Fluid):
     """
     Return the REFPROP compatible name for the fluid
 
@@ -520,7 +520,7 @@ cpdef string get_REFPROPname(string Fluid):
     """
     return _get_fluid_param_string(Fluid,b'REFPROP_name')
 
-cpdef string get_BibTeXKey(string Fluid, string key) except *:
+cpdef string get_BibTeXKey(Fluid, key) except *:
     """
     Return the BibTeX key for the given fluid.
 
@@ -595,7 +595,7 @@ cpdef int get_debug_level():
 #
 
 
-cpdef extract_backend(string in_str):
+cpdef extract_backend(in_str):
     """
     A Python wrapper of C++ function :cpapi:`CoolProp::extract_backend` .
     """
@@ -605,7 +605,7 @@ cpdef extract_backend(string in_str):
     return bck, fld
 
 
-cpdef extract_fractions(string flds):
+cpdef extract_fractions(flds):
     """
     A Python wrapper of C++ function :cpapi:`CoolProp::extract_fractions` .
     """
@@ -730,7 +730,7 @@ cdef class State:
 #         d['phase'] = self.phase
 #         return rebuildState,(d,)
 
-    cpdef set_Fluid(self, string Fluid, string backend):
+    cpdef set_Fluid(self, Fluid, backend):
 
         cdef object _Fluid = Fluid
         cdef object _backend = backend
