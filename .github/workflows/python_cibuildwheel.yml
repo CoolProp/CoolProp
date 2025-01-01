@@ -48,12 +48,6 @@ jobs:
       with:
         platforms: all
         
-    - name: Force expansion of boost headers
-      run: |
-        mkdir b 
-        cd b 
-        cmake ..
-        
     - name: Build and test wheels
       uses: pypa/cibuildwheel@v2.21.3
       env:

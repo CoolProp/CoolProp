@@ -5,6 +5,7 @@ from packaging.version import Version
 from sysconfig import get_config_var
 from setuptools.command.build_ext import build_ext
 from multiprocessing import cpu_count
+import shutil
 
 def copy_files():
     def copytree(old, new):
@@ -24,6 +25,13 @@ def copy_files():
     copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp', 'include', 'fmt'))  # Should be deprecated
     #copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp','include','fmt'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
+    
+    here = os.path.dirname(__file__)
+    root = os.path.abspath(here + '/../..')
+    if not os.path.exists(root+'/boost_CoolProp/boost/version.hpp'):
+        print('expanding boost sources')
+        shutil.unpack_archive(root+'/dev/docker/boost_bcp_docker/boost_CoolProp.tar.xz', root)
+    assert(os.path.exists(root+'/boost_CoolProp/boost/version.hpp'))
     print('files copied.')
 
 
