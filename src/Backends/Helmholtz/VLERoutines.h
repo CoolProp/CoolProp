@@ -32,9 +32,11 @@ struct saturation_D_pure_options
     CoolPropDbl omega, rhoL, rhoV, pL, pV;
     int imposed_rho;
     int max_iterations;
+    bool best_guess;
     saturation_D_pure_options() : use_guesses(false), rhoL(_HUGE), rhoV(_HUGE), pL(_HUGE), pV(_HUGE), imposed_rho(0), max_iterations(200) {
         use_logdelta = true;
         omega = 1.0;
+        best_guess = false;
     }  // Defaults
 };
 
