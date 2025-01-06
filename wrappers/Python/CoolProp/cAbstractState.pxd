@@ -186,6 +186,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double first_two_phase_deriv(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant) except+ValueError
         double second_two_phase_deriv(constants_header.parameters Of, constants_header.parameters Wrt1, constants_header.parameters Constant1, constants_header.parameters Wrt2, constants_header.parameters Constant2) except+ValueError
         double first_two_phase_deriv_splined(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except+ValueError
+        double first_two_phase_deriv_smoothed(constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, constants_header.parameters sWrt, double Lsmooth, double Vsmooth) except+ValueError
         void true_critical_point(double &T, double &rho) except +ValueError
 
         double melting_line(int,int,double) except+ValueError
