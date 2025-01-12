@@ -207,7 +207,7 @@ For more information, see the docs: :cpapi:`CoolProp::AbstractState::first_parti
 Two-Phase and Saturation Derivatives
 ------------------------------------
 
-The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in the :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` function, and derivatives along the saturation curve in the functions :cpapi:`CoolProp::AbstractState::first_saturation_deriv` and :cpapi:`CoolProp::AbstractState::second_saturation_deriv`. The functions `CoolProp::AbstractState::first_two_phase_deriv_splined` and `CoolProp::AbstractState::first_two_phase_deriv_smoothed` return two-phase derivatives after smoothing out discontinuities at saturated states using splines :cite:`Quoilin-E-2014` and smoothstep functions, respectively. Here are some examples of using these functions:
+The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in the :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` function, and derivatives along the saturation curve in the functions :cpapi:`CoolProp::AbstractState::first_saturation_deriv` and :cpapi:`CoolProp::AbstractState::second_saturation_deriv`. The functions :cpapi:`CoolProp::AbstractState::first_two_phase_deriv_splined` and :cpapi:`CoolProp::AbstractState::first_two_phase_deriv_smoothed` return two-phase derivatives after smoothing out discontinuities at saturated states using splines :cite:`Quoilin-E-2014` and smoothstep functions, respectively. Here are some examples of using these functions:
     
 .. ipython::
 

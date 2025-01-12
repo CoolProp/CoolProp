@@ -1388,7 +1388,9 @@ class AbstractState
     * Matthis Thorade, Ali Saadat, "Partial derivatives of thermodynamic state properties for dynamic simulation",
     * Environmental Earth Sciences, December 2013, Volume 70, Issue 8, pp 3497-3503
     *
-    * Discontinuities in first derivatives at saturation lines are smoothed using smoothstep function
+    * Discontinuities in first derivatives at saturation lines are smoothed using smoothstep functions.
+    *
+    * \note Not all derivatives are supported! Only those with available unsmoothed two-phase values are supported.
     *
     * @param Of The parameter to be derived
     * @param Wrt The parameter that the derivative is taken with respect to
