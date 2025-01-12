@@ -3,11 +3,14 @@
 
 #include "CoolProp.h"
 #include "AbstractState.h"
-#include "Backends/REFPROP/REFPROPMixtureBackend.h"
-#include <iostream>
 #include <vector>
 #include <memory>
 #include <unordered_map>
+
+namespace CoolProp {
+namespace Plot {
+
+namespace Detail {
 
 template <typename T>
 struct Optional {
@@ -16,15 +19,14 @@ struct Optional {
     T operator*() const { return value; }
     operator bool() const { return has_value_; }
     bool has_value() const { return has_value_; }
+
     T value;
     bool has_value_;
 };
 
-namespace CoolProp {
-namespace Plot {
+const double NaN = std::numeric_limits<double>::quiet_NaN();
 
-
-#define NaN std::numeric_limits<double>::quiet_NaN()
+}
 
 enum class Scale
 {
@@ -109,10 +111,10 @@ inline std::vector<double> generate_ranges(CoolProp::parameters type, double sta
 inline std::shared_ptr<CoolProp::AbstractState> get_critical_point(std::shared_ptr<CoolProp::AbstractState> state)
 {
     CoolProp::CriticalState crit_state;
-    crit_state.T = NaN;
-    crit_state.p = NaN;
-    crit_state.rhomolar = NaN;
-    crit_state.rhomolar = NaN;
+    crit_state.T = Detail::NaN;
+    crit_state.p = Detail::NaN;
+    crit_state.rhomolar = Detail::NaN;
+    crit_state.rhomolar = Detail::NaN;
     crit_state.stable = false;
     try
     {
@@ -284,7 +286,7 @@ struct Range
 };
 
 
-static std::unordered_map<CoolProp::parameters, std::unordered_map<int, Optional<bool>>> xy_switch;
+static std::unordered_map<CoolProp::parameters, std::unordered_map<int, Detail::Optional<bool>>> xy_switch;
 
 class IsoLine
 {
@@ -301,6 +303,8 @@ public:
         this->x_index = x_index;
         this->y_index = y_index;
         this->value = value;
+
+        fill_xy_switch(); // TODO: remove
     }
     size_t size() const
     {
@@ -397,8 +401,8 @@ private:
                 }
                 else
                 {
-                    x[i] = NaN;
-                    y[i] = NaN;
+                    x[i] = Detail::NaN;
+                    y[i] = Detail::NaN;
                     std::cerr << "ERROR" << std::endl;
                 }
             }
@@ -407,7 +411,7 @@ private:
 
     void update_pair(int& ipos, int& xpos, int& ypos, int& pair)
     {
-        Optional<bool> should_switch = xy_switch.at(i_index).at(y_index * 10 + x_index);
+        Detail::Optional<bool> should_switch = xy_switch.at(i_index).at(y_index * 10 + x_index);
         double out1, out2;
         if (!should_switch)
             throw CoolProp::ValueError("This isoline cannot be calculated!");
@@ -480,7 +484,7 @@ private:
                 }
                 catch (...)
                 {
-                    vals[2][i] = NaN;
+                    vals[2][i] = Detail::NaN;
                 }
             }
 
@@ -520,10 +524,6 @@ public:
         this->y_index = y_index;
         this->axis_x_scale_ = dimension_properties(x_index).scale;
         this->axis_y_scale_ = dimension_properties(y_index).scale;
-        bool plot_type_is_ts = (y_index == CoolProp::iT && x_index == CoolProp::iSmass);
-        bool plot_type_is_ph = (y_index == CoolProp::iP && x_index == CoolProp::iHmass);
-        if (!plot_type_is_ts && !plot_type_is_ph)
-            throw CoolProp::ValueError("Unsupported parameter pair for axis requested; only Ts and ph are supported");
         // We are just assuming that all inputs and outputs are in SI units. We
         // take care of any conversions before calling the library and after
         // getting the results.
@@ -542,7 +542,7 @@ public:
         const double HI_FACTOR = 2.25; // Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
         const double LO_FACTOR = 1.01; // Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
         if (tp_limits == "NONE")
-            this->limits = {NaN, NaN, NaN, NaN};
+            this->limits = {Detail::NaN, Detail::NaN, Detail::NaN, Detail::NaN};
         else if (tp_limits == "DEF")
             this->limits = {LO_FACTOR, HI_FACTOR, LO_FACTOR, HI_FACTOR};
         else if (tp_limits == "ACHP")
@@ -590,23 +590,28 @@ public:
 
     std::vector<CoolProp::parameters> supported_dimensions() const
     {
-        // taken from PropertyPlot::calc_isolines when called with iso_type='all'
-        std::vector<CoolProp::parameters> result;
-        for (auto it = xy_switch.begin(); it != xy_switch.end(); ++it)
-        {
-            const CoolProp::parameters quantity = it->first;
-            const std::unordered_map<int, Optional<bool>>& supported = it->second;
-            for (int j = 0; j < supported.size(); ++j)
-            {
-                auto supported_xy = supported.find(y_index * 10 + x_index);
-                if (supported_xy != supported.end() && supported_xy->second.has_value())
-                {
-                    result.push_back(quantity);
-                    break;
-                }
-            }
-        }
-        return result;
+        // static const int TS = CoolProp::iT * 10 + CoolProp::iSmass;
+        // static const int PH = CoolProp::iP * 10 + CoolProp::iHmass;
+        // static const int HS = CoolProp::iHmass * 10 + CoolProp::iSmass;
+        // static const int PS = CoolProp::iP * 10 + CoolProp::iSmass;
+        // static const int PD = CoolProp::iP * 10 + CoolProp::iDmass;
+        // static const int TD = CoolProp::iT * 10 + CoolProp::iDmass;
+        // static const int PT = CoolProp::iP * 10 + CoolProp::iT;
+        // static const int PU = CoolProp::iP * 10 + CoolProp::iUmass;
+        //
+        // xy_switch = {
+        //     {CoolProp::iDmass, {{TS, true }, {PH, true}, {HS, false}, {PS, true }, {PD, {}   }, {TD, {}   }, {PT, false}}},
+        //     {CoolProp::iHmass, {{TS, false}, {PH, {}  }, {HS, {}   }, {PS, true }, {PD, true }, {TD, false}, {PT, false}}},
+        //     {CoolProp::iP,     {{TS, false}, {PH, {}  }, {HS, false}, {PS, {}   }, {PD, {}   }, {TD, false}, {PT, {}  }}} ,
+        //     {CoolProp::iSmass, {{TS, {}   }, {PH, true}, {HS, {}   }, {PS, {}   }, {PD, true }, {TD, false}, {PT, true}}} ,
+        //     {CoolProp::iT,     {{TS, {}   }, {PH, true}, {HS, false}, {PS, false}, {PD, false}, {TD, {}   }, {PT, {}  }}} ,
+        //     {CoolProp::iQ,     {{TS, true }, {PH, true}, {HS, true }, {PS, true }, {PD, true }, {TD, true }, {PT, false}}}
+        // };
+
+        if (x_index == CoolProp::iHmass && y_index == CoolProp::iP) return {CoolProp::iQ, CoolProp::iT, CoolProp::iSmass, CoolProp::iDmass};
+        if (x_index == CoolProp::iP && y_index == CoolProp::iHmass) return {CoolProp::iQ, CoolProp::iT, CoolProp::iSmass, CoolProp::iDmass};
+
+        return {};
     }
 
     void set_dimension_unit(CoolProp::parameters dimension, const std::string& unit)
@@ -663,7 +668,7 @@ public:
     }
 
     // for value under cursor
-    Optional<double> value_at(CoolProp::parameters iso_type, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed)
+    Detail::Optional<double> value_at(CoolProp::parameters iso_type, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed)
     {
         if (iso_type == x_index) return axis_x_value;
         if (iso_type == y_index) return axis_y_value;
