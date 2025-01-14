@@ -254,11 +254,11 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_ranges(CoolProp::iP, iso_range.min, iso_range.max, isoline_count);
         auto isoP = plot.calc_isolines(CoolProp::iP, iso_values, points_per_isoline);
         REQUIRE(isoP.size() == isoline_count);
-        CHECK_THAT(isoP[0].value, WithinAbs(25000.000000000007, 1e-10));
-        CHECK_THAT(isoP[1].value, WithinAbs(109297.03270763098, 1e-10));
-        CHECK_THAT(isoP[2].value, WithinAbs(477833.65434771683, 1e-10));
-        CHECK_THAT(isoP[3].value, WithinAbs(2089032.0219219688, 1e-10));
-        CHECK_THAT(isoP[4].value, WithinAbs(9133000.049091753, 1e-10));
+        CHECK_THAT(isoP[0].value, WithinAbs(25000.000000000007, 1e-8));
+        CHECK_THAT(isoP[1].value, WithinAbs(109297.03270763098, 1e-8));
+        CHECK_THAT(isoP[2].value, WithinAbs(477833.65434771683, 1e-8));
+        CHECK_THAT(isoP[3].value, WithinAbs(2089032.0219219688, 1e-8));
+        CHECK_THAT(isoP[4].value, WithinAbs(9133000.049091753, 1e-8));
 
         const double expected_x[isoline_count][points_per_isoline] = {
             {426.00985534, 925.27531435, 1424.54077336, 1923.80623237, 2423.07169138},

@@ -3,6 +3,7 @@
 
 #include "CoolProp.h"
 #include "AbstractState.h"
+#include "CPnumerics.h"
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -34,27 +35,19 @@ enum class Scale
     Log
 };
 
-struct BaseDimension
-{
-    std::string label;
-    std::string symbol;
-    std::string si_unit;
-    Scale scale;
-};
-
-inline BaseDimension dimension_properties(CoolProp::parameters iso_type)
+inline Scale default_scale(CoolProp::parameters iso_type)
 {
     switch (iso_type)
     {
-        case CoolProp::iDmass: return {"Density",                  "d", "kg/m3",  Scale::Log};
-        case CoolProp::iHmass: return {"Specific Enthalpy",        "h", "J/kg",   Scale::Lin};
-        case CoolProp::iP:     return {"Pressure",                 "p", "Pa",     Scale::Log};
-        case CoolProp::iSmass: return {"Specific Entropy",         "s", "J/kg/K", Scale::Lin};
-        case CoolProp::iT:     return {"Temperature",              "T", "K",      Scale::Lin};
-        case CoolProp::iUmass: return {"Specific Internal Energy", "u", "J/kg",   Scale::Lin};
-        case CoolProp::iQ:     return {"Vapour Quality",           "x", "",       Scale::Lin};
+        case CoolProp::iDmass: return Scale::Log;
+        case CoolProp::iHmass: return Scale::Lin;
+        case CoolProp::iP:     return Scale::Log;
+        case CoolProp::iSmass: return Scale::Lin;
+        case CoolProp::iT:     return Scale::Lin;
+        case CoolProp::iUmass: return Scale::Lin;
+        case CoolProp::iQ:     return Scale::Lin;
 
-        default: return {};
+        default: return Scale::Lin;
     }
 }
 
@@ -73,39 +66,17 @@ inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(std::string 
     return std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, fluids));
 }
 
-inline std::vector<double> linspace(double start, double end, int num)
-{
-    std::vector<double> linspaced;
-    double delta = (end - start) / (num - 1);
-    for (int i = 0; i < num - 1; ++i)
-    {
-        linspaced.push_back(start + delta * i);
-    }
-    linspaced.push_back(end);
-    return linspaced;
-}
-
-inline std::vector<double> logspace(double start, double end, int num, double base=10.0)
-{
-    std::vector<double> linspaced = linspace(start, end, num);
-    for (int i = 0; i < num; ++i)
-    {
-        linspaced[i] = pow(base, linspaced[i]);
-    }
-    return linspaced;
-}
-
 inline std::vector<double> generate_ranges(Scale scale, double start, double end, int num)
 {
     if (scale == Scale::Log)
-        return logspace(log2(start), log2(end), num, 2.0);
+        return logspace(start, end, num);
     else
         return linspace(start, end, num);
 }
 
 inline std::vector<double> generate_ranges(CoolProp::parameters type, double start, double end, int num)
 {
-    return generate_ranges(dimension_properties(type).scale, start, end, num);
+    return generate_ranges(default_scale(type), start, end, num);
 }
 
 inline std::shared_ptr<CoolProp::AbstractState> get_critical_point(std::shared_ptr<CoolProp::AbstractState> state)
@@ -522,8 +493,8 @@ public:
         this->critical_state = Detail::get_critical_point(state);
         this->x_index = x_index;
         this->y_index = y_index;
-        this->axis_x_scale_ = dimension_properties(x_index).scale;
-        this->axis_y_scale_ = dimension_properties(y_index).scale;
+        this->axis_x_scale_ = default_scale(x_index);
+        this->axis_y_scale_ = default_scale(y_index);
         // We are just assuming that all inputs and outputs are in SI units. We
         // take care of any conversions before calling the library and after
         // getting the results.
