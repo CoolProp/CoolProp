@@ -159,98 +159,6 @@ inline std::shared_ptr<CoolProp::AbstractState> get_critical_point(std::shared_p
 
 } // namespace Detail
 
-inline double from_si_value(double value, const std::string& to_unit)
-{
-    // iP
-    if (to_unit == "Pa") return value;
-    if (to_unit == "hPa") return value / 1e2;
-    if (to_unit == "mbar") return value / 1e2;
-    if (to_unit == "psi") return value / 6894.7572931783;
-    if (to_unit == "kPa") return value / 1e3;
-    if (to_unit == "bar") return value / 1e5;
-    if (to_unit == "MPa") return value / 1e6;
-
-    // iT
-    if (to_unit == "K") return value;
-    if (to_unit == "C") return value - 273.15;
-    if (to_unit == "F") return value * 9 / 5 - 459.67;
-
-    // iDmass
-    if (to_unit == "kg/m3") return value;
-    if (to_unit == "g/cm3") return value / 1e3;
-    if (to_unit == "lb/ft3") return value / 16.01846337396;
-
-    // iUmass, iHmass
-    if (to_unit == "J/kg") return value;
-    if (to_unit == "kJ/kg") return value / 1e3;
-    if (to_unit == "MJ/kg") return value / 1e6;
-
-    // iSmass
-    if (to_unit == "J/kgK") return value;
-    if (to_unit == "kJ/kgK") return value / 1e3;
-    if (to_unit == "MJ/kgK") return value / 1e6;
-
-    // iQ
-    if (to_unit == "-") return value;
-    if (to_unit == "%") return value * 100;
-
-    return value;
-}
-
-inline double to_si_value(double value, const std::string& from_unit)
-{
-    // iP
-    if (from_unit == "Pa") return value;
-    if (from_unit == "hPa") return value * 1e2;
-    if (from_unit == "mbar") return value * 1e2;
-    if (from_unit == "psi") return value * 6894.7572931783;
-    if (from_unit == "kPa") return value * 1e3;
-    if (from_unit == "bar") return value * 1e5;
-    if (from_unit == "MPa") return value * 1e6;
-
-    // iT
-    if (from_unit == "K") return value;
-    if (from_unit == "C") return value + 273.15;
-    if (from_unit == "F") return (value + 459.67) * 5 / 9;
-
-    // iDmass
-    if (from_unit == "kg/m3") return value;
-    if (from_unit == "g/cm3") return value * 1e3;
-    if (from_unit == "lb/ft3") return value * 16.01846337396;
-
-    // iUmass, iHmass
-    if (from_unit == "J/kg") return value;
-    if (from_unit == "kJ/kg") return value * 1e3;
-    if (from_unit == "MJ/kg") return value * 1e6;
-
-    // iSmass
-    if (from_unit == "J/kgK") return value;
-    if (from_unit == "kJ/kgK") return value * 1e3;
-    if (from_unit == "MJ/kgK") return value * 1e6;
-
-    // iQ
-    if (from_unit == "-") return value;
-    if (from_unit == "%") return value / 100;
-
-    return value;
-}
-
-inline std::vector<std::string> supported_units(CoolProp::parameters iso_type)
-{
-    switch (iso_type)
-    {
-        case CoolProp::iP: return {"Pa", "hPa", "mbar", "psi", "kPa", "bar", "MPa"};
-        case CoolProp::iT: return {"K", "C", "F"};
-        case CoolProp::iDmass: return {"kg/m3", "g/cm3", "lb/ft3"};
-        case CoolProp::iHmass: return {"J/kg", "kJ/kg", "MJ/kg"};
-        case CoolProp::iSmass: return {"J/kgK", "kJ/kgK", "MJ/kgK"};
-        case CoolProp::iQ: return {"-", "%"};
-        case CoolProp::iUmass: return {"J/kg", "kJ/kg", "MJ/kg"};
-
-        default: return {};
-    }
-}
-
 struct Range
 {
     double min, max;
@@ -466,14 +374,6 @@ private:
             }
         }
     }
-    void convert_units(const std::string& i_unit, const std::string& x_unit, const std::string& y_unit)
-    {
-        for (double& val : x)
-            val = from_si_value(val, x_unit);
-        for (double& val : y)
-            val = from_si_value(val, y_unit);
-        value = from_si_value(value, i_unit);
-    }
 
     friend class PropertyPlot;
 };
@@ -502,14 +402,6 @@ public:
         axis_pair = CoolProp::generate_update_pair(x_index, 0, y_index, 1, out1, out2);
         swap_axis_inputs_for_update = (out1 == 1);
 
-        active_units[CoolProp::iDmass] = "kg/m3";
-        active_units[CoolProp::iHmass] = "J/kg";
-        active_units[CoolProp::iP] =     "Pa";
-        active_units[CoolProp::iSmass] = "J/kg/K";
-        active_units[CoolProp::iT] =     "K";
-        active_units[CoolProp::iUmass] = "J/kg";
-        active_units[CoolProp::iQ] =     "";
-
         const double HI_FACTOR = 2.25; // Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
         const double LO_FACTOR = 1.01; // Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
         if (tp_limits == "NONE")
@@ -530,15 +422,11 @@ public:
     {
         std::vector<double> iso_range;
         if (iso_index == CoolProp::iQ)
+            return {0., 1.};
+        else // TODO: always against iT?
         {
-            return {from_si_value(0., active_units.at(iso_index)),
-                    from_si_value(1., active_units.at(iso_index))};
-        }
-        else
-        {
-            auto limits = get_axis_limits(iso_index, CoolProp::iT);
-            return {from_si_value(limits[0], active_units.at(iso_index)),
-                    from_si_value(limits[1], active_units.at(iso_index))};
+            std::vector<double> range = get_axis_limits(iso_index, CoolProp::iT);
+            return {range[0], range[1]};
         }
     }
 
@@ -550,10 +438,9 @@ public:
         IsoLines lines;
         for (double iso_value : iso_values)
         {
-            IsoLine line(iso_index, x_index, y_index, to_si_value(iso_value, active_units.at(iso_index)), state);
+            IsoLine line(iso_index, x_index, y_index, iso_value, state);
             line.calc_range(ixrange, iyrange);
-            line.convert_units(active_units[iso_index], active_units[x_index], active_units[y_index]);
-            // line.sanitize_data();
+            // TODO: line.sanitize_data();
             lines.push_back(line);
         }
         return lines;
@@ -588,15 +475,6 @@ public:
         return {};
     }
 
-    void set_dimension_unit(CoolProp::parameters dimension, const std::string& unit)
-    {
-        active_units[dimension] = unit;
-    }
-    std::string dimension_unit(CoolProp::parameters dimension)
-    {
-        return active_units[dimension];
-    }
-
     void set_axis_y_scale(Scale scale)
     {
         axis_y_scale_ = scale;
@@ -617,28 +495,20 @@ public:
 
     void set_axis_x_range(Range limits)
     {
-        axis_x_limits.min = to_si_value(limits.min, active_units.at(x_index));
-        axis_x_limits.max = to_si_value(limits.max, active_units.at(x_index));
+        axis_x_limits = limits;
     }
     void set_axis_y_range(Range limits)
     {
-        axis_y_limits.min = to_si_value(limits.min, active_units.at(y_index));
-        axis_y_limits.max = to_si_value(limits.max, active_units.at(y_index));
+        axis_y_limits = limits;
     }
 
     Range axis_x_range() const
     {
-        Range result = axis_x_limits;
-        result.min = from_si_value(result.min, active_units.at(x_index));
-        result.max = from_si_value(result.max, active_units.at(x_index));
-        return result;
+        return axis_x_limits; // TODO: just remove this function
     }
     Range axis_y_range() const
     {
-        Range result = axis_y_limits;
-        result.min = from_si_value(result.min, active_units.at(y_index));
-        result.max = from_si_value(result.max, active_units.at(y_index));
-        return result;
+        return axis_y_limits;
     }
 
     // for value under cursor
@@ -652,16 +522,16 @@ public:
             if (swap_axis_inputs_for_update)
                 std::swap(axis_x_value, axis_y_value);
             state->specify_phase(phase);
-            state->update(axis_pair, to_si_value(axis_x_value, active_units.at(x_index)), to_si_value(axis_y_value, active_units.at(y_index)));
+            state->update(axis_pair, axis_x_value, axis_y_value);
             switch (iso_type)
             {
-                case CoolProp::iT: return from_si_value(state->T(), active_units.at(iso_type));
-                case CoolProp::iP: return from_si_value(state->p(), active_units.at(iso_type));
-                case CoolProp::iDmass: return from_si_value(state->rhomass(), active_units.at(iso_type));
-                case CoolProp::iHmass: return from_si_value(state->hmass(), active_units.at(iso_type));
-                case CoolProp::iSmass: return from_si_value(state->smass(), active_units.at(iso_type));
-                case CoolProp::iUmass: return from_si_value(state->umass(), active_units.at(iso_type));
-                case CoolProp::iQ: return from_si_value(state->Q(), active_units.at(iso_type));
+                case CoolProp::iT: return state->T();
+                case CoolProp::iP: return state->p();
+                case CoolProp::iDmass: return state->rhomass();
+                case CoolProp::iHmass: return state->hmass();
+                case CoolProp::iSmass: return state->smass();
+                case CoolProp::iUmass: return state->umass();
+                case CoolProp::iQ: return state->Q();
                 default: return {};
             }
         }
@@ -683,7 +553,6 @@ private:
     Range axis_y_limits;
     Scale axis_x_scale_;
     Scale axis_y_scale_;
-    std::unordered_map<CoolProp::parameters, std::string> active_units;
 
     Range get_sat_bounds(CoolProp::parameters kind)
     {
