@@ -611,6 +611,9 @@ public:
         if (x_index == CoolProp::iHmass && y_index == CoolProp::iP) return {CoolProp::iQ, CoolProp::iT, CoolProp::iSmass, CoolProp::iDmass};
         if (x_index == CoolProp::iP && y_index == CoolProp::iHmass) return {CoolProp::iQ, CoolProp::iT, CoolProp::iSmass, CoolProp::iDmass};
 
+        if (x_index == CoolProp::iT && y_index == CoolProp::iSmass) return {CoolProp::iQ, CoolProp::iP, CoolProp::iHmass, CoolProp::iDmass};
+        if (x_index == CoolProp::iSmass && y_index == CoolProp::iT) return {CoolProp::iQ, CoolProp::iP, CoolProp::iHmass, CoolProp::iDmass};
+
         return {};
     }
 
