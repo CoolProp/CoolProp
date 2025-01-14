@@ -1,14 +1,3 @@
-/*
- * AbstractState.cpp
- *
- *  Created on: 21 Dec 2013
- *      Author: jowr
- */
-
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "CoolPropPlot.h"
 
 namespace CoolProp {
