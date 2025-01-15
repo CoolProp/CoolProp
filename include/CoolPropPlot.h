@@ -6,26 +6,39 @@
 #include "CPnumerics.h"
 #include <vector>
 #include <memory>
-#include <unordered_map>
+#include <map>
 
 namespace CoolProp {
 namespace Plot {
 
 namespace Detail {
 
-template <typename T>
-struct Optional {
-    Optional(T value) : value(value), has_value_(true) {}
-    Optional() : has_value_(false) {}
-    T operator*() const { return value; }
-    operator bool() const { return has_value_; }
-    bool has_value() const { return has_value_; }
+const double NaN = std::numeric_limits<double>::quiet_NaN();
 
-    T value;
-    bool has_value_;
+enum IsolineSupported
+{
+    No = 0,
+    Yes = 1,
+    Flipped = 2
 };
 
-const double NaN = std::numeric_limits<double>::quiet_NaN();
+static const int TS = CoolProp::iT * 10 + CoolProp::iSmass;
+static const int PH = CoolProp::iP * 10 + CoolProp::iHmass;
+static const int HS = CoolProp::iHmass * 10 + CoolProp::iSmass;
+static const int PS = CoolProp::iP * 10 + CoolProp::iSmass;
+static const int PD = CoolProp::iP * 10 + CoolProp::iDmass;
+static const int TD = CoolProp::iT * 10 + CoolProp::iDmass;
+static const int PT = CoolProp::iP * 10 + CoolProp::iT;
+static const int PU = CoolProp::iP * 10 + CoolProp::iUmass;
+
+static std::map<CoolProp::parameters, std::map<int, IsolineSupported>> xy_switch = {
+    {CoolProp::iDmass, {{TS, Flipped}, {PH, Flipped}, {HS, Yes    }, {PS, Flipped}, {PD, No     }, {TD, No     }, {PT, Yes    }}},
+    {CoolProp::iHmass, {{TS, Yes    }, {PH, No     }, {HS, No     }, {PS, Flipped}, {PD, Flipped}, {TD, Yes    }, {PT, Yes    }}},
+    {CoolProp::iP,     {{TS, Yes    }, {PH, No     }, {HS, Yes    }, {PS, No     }, {PD, No     }, {TD, Yes    }, {PT, No     }}},
+    {CoolProp::iSmass, {{TS, No     }, {PH, Flipped}, {HS, No     }, {PS, No     }, {PD, Flipped}, {TD, Yes    }, {PT, Flipped}}},
+    {CoolProp::iT,     {{TS, No     }, {PH, Flipped}, {HS, Yes    }, {PS, Yes    }, {PD, Yes    }, {TD, No     }, {PT, No     }}},
+    {CoolProp::iQ,     {{TS, Flipped}, {PH, Flipped}, {HS, Flipped}, {PS, Flipped}, {PD, Flipped}, {TD, Flipped}, {PT, Yes    }}}
+};
 
 }
 
@@ -165,8 +178,6 @@ struct Range
 };
 
 
-static std::unordered_map<CoolProp::parameters, std::unordered_map<int, Detail::Optional<bool>>> xy_switch;
-
 class IsoLine
 {
 public:
@@ -183,34 +194,12 @@ public:
         this->y_index = y_index;
         this->value = value;
 
-        fill_xy_switch(); // TODO: remove
     }
     size_t size() const
     {
         return x.size();
     }
 private:
-    void fill_xy_switch()
-    {
-        static const int TS = CoolProp::iT * 10 + CoolProp::iSmass;
-        static const int PH = CoolProp::iP * 10 + CoolProp::iHmass;
-        static const int HS = CoolProp::iHmass * 10 + CoolProp::iSmass;
-        static const int PS = CoolProp::iP * 10 + CoolProp::iSmass;
-        static const int PD = CoolProp::iP * 10 + CoolProp::iDmass;
-        static const int TD = CoolProp::iT * 10 + CoolProp::iDmass;
-        static const int PT = CoolProp::iP * 10 + CoolProp::iT;
-        static const int PU = CoolProp::iP * 10 + CoolProp::iUmass;
-
-        xy_switch = {
-            {CoolProp::iDmass, {{TS, true }, {PH, true}, {HS, false}, {PS, true }, {PD, {}   }, {TD, {}   }, {PT, false}}},
-            {CoolProp::iHmass, {{TS, false}, {PH, {}  }, {HS, {}   }, {PS, true }, {PD, true }, {TD, false}, {PT, false}}},
-            {CoolProp::iP,     {{TS, false}, {PH, {}  }, {HS, false}, {PS, {}   }, {PD, {}   }, {TD, false}, {PT, {}  }}} ,
-            {CoolProp::iSmass, {{TS, {}   }, {PH, true}, {HS, {}   }, {PS, {}   }, {PD, true }, {TD, false}, {PT, true}}} ,
-            {CoolProp::iT,     {{TS, {}   }, {PH, true}, {HS, false}, {PS, false}, {PD, false}, {TD, {}   }, {PT, {}  }}} ,
-            {CoolProp::iQ,     {{TS, true }, {PH, true}, {HS, true }, {PS, true }, {PD, true }, {TD, true }, {PT, false}}}
-        };
-    }
-
     std::shared_ptr<CoolProp::AbstractState> state;
     std::shared_ptr<CoolProp::AbstractState> critical_state;
     CoolProp::parameters x_index;
@@ -290,35 +279,41 @@ private:
 
     void update_pair(int& ipos, int& xpos, int& ypos, int& pair)
     {
-        Detail::Optional<bool> should_switch = xy_switch.at(i_index).at(y_index * 10 + x_index);
+        Detail::IsolineSupported should_switch = Detail::xy_switch.at(i_index).at(y_index * 10 + x_index);
         double out1, out2;
-        if (!should_switch)
-            throw CoolProp::ValueError("This isoline cannot be calculated!");
-        else if (*should_switch == false)
-            pair = CoolProp::generate_update_pair(i_index, 0.0, x_index, 1.0, out1, out2);
-        else if (*should_switch == true)
-            pair = CoolProp::generate_update_pair(i_index, 0.0, y_index, 1.0, out1, out2);
-
+        switch (should_switch)
+        {
+            case Detail::IsolineSupported::No:
+                throw CoolProp::ValueError("This isoline cannot be calculated!");
+                break;
+            case Detail::IsolineSupported::Yes:
+                pair = CoolProp::generate_update_pair(i_index, 0.0, x_index, 1.0, out1, out2);
+                break;
+            case Detail::IsolineSupported::Flipped:
+                pair = CoolProp::generate_update_pair(i_index, 0.0, y_index, 1.0, out1, out2);
+                break;
+        }
         bool should_swap = (out1 != 0.0);
-        if (!(*should_switch) && !should_swap)
+
+        if (should_switch == Detail::IsolineSupported::Yes && !should_swap)
         {
             ipos = 0;
             xpos = 1;
             ypos = 2;
         }
-        else if (*should_switch && !should_swap)
+        else if (should_switch == Detail::IsolineSupported::Flipped && !should_swap)
         {
             ipos = 0;
             xpos = 2;
             ypos = 1;
         }
-        else if (!(*should_switch) && should_swap)
+        else if (should_switch == Detail::IsolineSupported::Yes && should_swap)
         {
             ipos = 1;
             xpos = 0;
             ypos = 2;
         }
-        else if (*should_switch && should_swap)
+        else if (should_switch == Detail::IsolineSupported::Flipped && should_swap)
         {
             ipos = 1;
             xpos = 2;
@@ -448,31 +443,23 @@ public:
 
     std::vector<CoolProp::parameters> supported_dimensions() const
     {
-        // static const int TS = CoolProp::iT * 10 + CoolProp::iSmass;
-        // static const int PH = CoolProp::iP * 10 + CoolProp::iHmass;
-        // static const int HS = CoolProp::iHmass * 10 + CoolProp::iSmass;
-        // static const int PS = CoolProp::iP * 10 + CoolProp::iSmass;
-        // static const int PD = CoolProp::iP * 10 + CoolProp::iDmass;
-        // static const int TD = CoolProp::iT * 10 + CoolProp::iDmass;
-        // static const int PT = CoolProp::iP * 10 + CoolProp::iT;
-        // static const int PU = CoolProp::iP * 10 + CoolProp::iUmass;
-        //
-        // xy_switch = {
-        //     {CoolProp::iDmass, {{TS, true }, {PH, true}, {HS, false}, {PS, true }, {PD, {}   }, {TD, {}   }, {PT, false}}},
-        //     {CoolProp::iHmass, {{TS, false}, {PH, {}  }, {HS, {}   }, {PS, true }, {PD, true }, {TD, false}, {PT, false}}},
-        //     {CoolProp::iP,     {{TS, false}, {PH, {}  }, {HS, false}, {PS, {}   }, {PD, {}   }, {TD, false}, {PT, {}  }}} ,
-        //     {CoolProp::iSmass, {{TS, {}   }, {PH, true}, {HS, {}   }, {PS, {}   }, {PD, true }, {TD, false}, {PT, true}}} ,
-        //     {CoolProp::iT,     {{TS, {}   }, {PH, true}, {HS, false}, {PS, false}, {PD, false}, {TD, {}   }, {PT, {}  }}} ,
-        //     {CoolProp::iQ,     {{TS, true }, {PH, true}, {HS, true }, {PS, true }, {PD, true }, {TD, true }, {PT, false}}}
-        // };
-
-        if (x_index == CoolProp::iHmass && y_index == CoolProp::iP) return {CoolProp::iQ, CoolProp::iT, CoolProp::iSmass, CoolProp::iDmass};
-        if (x_index == CoolProp::iP && y_index == CoolProp::iHmass) return {CoolProp::iQ, CoolProp::iT, CoolProp::iSmass, CoolProp::iDmass};
-
-        if (x_index == CoolProp::iT && y_index == CoolProp::iSmass) return {CoolProp::iQ, CoolProp::iP, CoolProp::iHmass, CoolProp::iDmass};
-        if (x_index == CoolProp::iSmass && y_index == CoolProp::iT) return {CoolProp::iQ, CoolProp::iP, CoolProp::iHmass, CoolProp::iDmass};
-
-        return {};
+        // taken from PropertyPlot::calc_isolines when called with iso_type='all'
+        std::vector<CoolProp::parameters> result;
+        for (auto it = Detail::xy_switch.begin(); it != Detail::xy_switch.end(); ++it)
+        {
+            const CoolProp::parameters quantity = it->first;
+            const std::map<int, Detail::IsolineSupported>& supported = it->second;
+            for (int j = 0; j < supported.size(); ++j)
+            {
+                auto supported_xy = supported.find(y_index * 10 + x_index);
+                if (supported_xy != supported.end() && supported_xy->second != Detail::IsolineSupported::No)
+                {
+                    result.push_back(quantity);
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     void set_axis_y_scale(Scale scale)

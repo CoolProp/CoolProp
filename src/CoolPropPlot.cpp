@@ -41,10 +41,10 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
 
     auto iso_types = plot.supported_dimensions();
     REQUIRE(iso_types.size() == 4);
-    CHECK(iso_types[0] == CoolProp::iQ);
-    CHECK(iso_types[1] == CoolProp::iT);
-    CHECK(iso_types[2] == CoolProp::iSmass);
-    CHECK(iso_types[3] == CoolProp::iDmass);
+    CHECK(iso_types[0] == CoolProp::iT);
+    CHECK(iso_types[1] == CoolProp::iQ);
+    CHECK(iso_types[2] == CoolProp::iDmass);
+    CHECK(iso_types[3] == CoolProp::iSmass);
 
     {
         // Q isolines
@@ -197,10 +197,10 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
 
     auto iso_types = plot.supported_dimensions();
     REQUIRE(iso_types.size() == 4);
-    CHECK(iso_types[0] == CoolProp::iQ);
-    CHECK(iso_types[1] == CoolProp::iP);
-    CHECK(iso_types[2] == CoolProp::iHmass);
-    CHECK(iso_types[3] == CoolProp::iDmass);
+    CHECK(iso_types[0] == CoolProp::iP);
+    CHECK(iso_types[1] == CoolProp::iQ);
+    CHECK(iso_types[2] == CoolProp::iDmass);
+    CHECK(iso_types[3] == CoolProp::iHmass);
 
     {
         // Q isolines
