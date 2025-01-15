@@ -512,7 +512,7 @@ public:
     }
 
     // for value under cursor
-    Detail::Optional<double> value_at(CoolProp::parameters iso_type, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed)
+    double value_at(CoolProp::parameters iso_type, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed)
     {
         if (iso_type == x_index) return axis_x_value;
         if (iso_type == y_index) return axis_y_value;
@@ -532,12 +532,12 @@ public:
                 case CoolProp::iSmass: return state->smass();
                 case CoolProp::iUmass: return state->umass();
                 case CoolProp::iQ: return state->Q();
-                default: return {};
+                default: return Detail::NaN;
             }
         }
         catch (...)
         {
-            return {};
+            return Detail::NaN;
         }
     }
 

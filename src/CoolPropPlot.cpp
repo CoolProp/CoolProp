@@ -17,10 +17,10 @@ using Catch::Matchers::WithinRel;
 TEST_CASE("Check value_at for p-h plots", "[ph_plot]") {
     CoolProp::Plot::PropertyPlot plot("R134a", CoolProp::iP, CoolProp::iHmass, "ACHP");
 
-    CHECK_THAT(*plot.value_at(CoolProp::iP, 300000/*Pa*/, 200000/*J/kg*/), WithinAbs(200000, 1e-10));
-    CHECK_THAT(*plot.value_at(CoolProp::iHmass, 300000, 200000), WithinAbs(300000, 1e-10));
-    CHECK_THAT(*plot.value_at(CoolProp::iT, 300000, 200000), WithinAbs(263.07372753976694, 1e-10));
-    CHECK_THAT(*plot.value_at(CoolProp::iQ, 300000, 200000), WithinAbs(0.55044347874344737, 1e-10));
+    CHECK_THAT(plot.value_at(CoolProp::iP, 300000/*Pa*/, 200000/*J/kg*/), WithinAbs(200000, 1e-10));
+    CHECK_THAT(plot.value_at(CoolProp::iHmass, 300000, 200000), WithinAbs(300000, 1e-10));
+    CHECK_THAT(plot.value_at(CoolProp::iT, 300000, 200000), WithinAbs(263.07372753976694, 1e-10));
+    CHECK_THAT(plot.value_at(CoolProp::iQ, 300000, 200000), WithinAbs(0.55044347874344737, 1e-10));
 }
 
 TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
