@@ -66,20 +66,20 @@ inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(std::string 
     return std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, fluids));
 }
 
-inline std::vector<double> generate_ranges(Scale scale, double start, double end, int num)
+inline std::vector<double> generate_values_in_range(Scale scale, double start, double end, int count)
 {
     if (scale == Scale::Log)
-        return logspace(start, end, num);
+        return logspace(start, end, count);
     else
-        return linspace(start, end, num);
+        return linspace(start, end, count);
 }
 
-inline std::vector<double> generate_ranges(CoolProp::parameters type, double start, double end, int num)
+inline std::vector<double> generate_values_in_range(CoolProp::parameters type, double start, double end, int count)
 {
-    return generate_ranges(default_scale(type), start, end, num);
+    return generate_values_in_range(default_scale(type), start, end, count);
 }
 
-inline std::shared_ptr<CoolProp::AbstractState> get_critical_point(std::shared_ptr<CoolProp::AbstractState> state)
+inline std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::shared_ptr<CoolProp::AbstractState>& state)
 {
     CoolProp::CriticalState crit_state;
     crit_state.T = Detail::NaN;
@@ -432,8 +432,8 @@ public:
 
     IsoLines calc_isolines(CoolProp::parameters iso_index, const std::vector<double>& iso_values, int points)
     {
-        std::vector<double> ixrange = Detail::generate_ranges(axis_x_scale_, axis_x_limits.min, axis_x_limits.max, points);
-        std::vector<double> iyrange = Detail::generate_ranges(axis_y_scale_, axis_y_limits.min, axis_y_limits.max, points);
+        std::vector<double> ixrange = Detail::generate_values_in_range(axis_x_scale_, axis_x_limits.min, axis_x_limits.max, points);
+        std::vector<double> iyrange = Detail::generate_values_in_range(axis_y_scale_, axis_y_limits.min, axis_y_limits.max, points);
 
         IsoLines lines;
         for (double iso_value : iso_values)
