@@ -5,7 +5,6 @@
 #include "AbstractState.h"
 #include "CPnumerics.h"
 #include <vector>
-#include <memory>
 #include <map>
 
 namespace CoolProp {
