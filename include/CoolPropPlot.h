@@ -67,7 +67,7 @@ inline Scale default_scale(CoolProp::parameters key)
 namespace Detail
 {
 
-inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(std::string fluid_ref)
+inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& fluid_ref)
 {
     std::string backend;
     std::string fluids;
@@ -378,13 +378,17 @@ class PropertyPlot
 public:
     CoolProp::parameters xkey;
     CoolProp::parameters ykey;
+    Scale axis_x_scale;
+    Scale axis_y_scale;
+    Range axis_x_range;
+    Range axis_y_range;
 
-    PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, std::string tp_limits)
+    PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits)
         : fluid_name(fluid_name),
           xkey(xkey),
           ykey(ykey),
-          axis_x_scale_(default_scale(xkey)),
-          axis_y_scale_(default_scale(ykey))
+          axis_x_scale(default_scale(xkey)),
+          axis_y_scale(default_scale(ykey))
     {
         this->state = Detail::process_fluid_state(fluid_name);
         this->critical_state = Detail::get_critical_point(state);
@@ -425,8 +429,8 @@ public:
 
     IsoLines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points)
     {
-        std::vector<double> xvals = Detail::generate_values_in_range(axis_x_scale_, axis_x_limits.min, axis_x_limits.max, points);
-        std::vector<double> yvals = Detail::generate_values_in_range(axis_y_scale_, axis_y_limits.min, axis_y_limits.max, points);
+        std::vector<double> xvals = Detail::generate_values_in_range(axis_x_scale, axis_x_range.min, axis_x_range.max, points);
+        std::vector<double> yvals = Detail::generate_values_in_range(axis_y_scale, axis_y_range.min, axis_y_range.max, points);
 
         IsoLines lines;
         for (double val : values)
@@ -451,42 +455,6 @@ public:
                 keys.push_back(it->first);
         }
         return keys;
-    }
-
-    void set_axis_y_scale(Scale scale)
-    {
-        axis_y_scale_ = scale;
-    }
-    Scale axis_y_scale() const
-    {
-        return axis_y_scale_;
-    }
-
-    void set_axis_x_scale(Scale scale)
-    {
-        axis_x_scale_ = scale;
-    }
-    Scale axis_x_scale() const
-    {
-        return axis_x_scale_;
-    }
-
-    void set_axis_x_range(Range limits)
-    {
-        axis_x_limits = limits;
-    }
-    void set_axis_y_range(Range limits)
-    {
-        axis_y_limits = limits;
-    }
-
-    Range axis_x_range() const
-    {
-        return axis_x_limits; // TODO: just remove this function
-    }
-    Range axis_y_range() const
-    {
-        return axis_y_limits;
     }
 
     // for value under cursor
@@ -521,16 +489,11 @@ public:
 
 private:
     std::string fluid_name;
-    std::string graph_type;
     CoolProp::input_pairs axis_pair;
     bool swap_axis_inputs_for_update;
     std::shared_ptr<CoolProp::AbstractState> state;
     std::shared_ptr<CoolProp::AbstractState> critical_state;
     std::vector<double> limits;
-    Range axis_x_limits;
-    Range axis_y_limits;
-    Scale axis_x_scale_;
-    Scale axis_y_scale_;
 
     Range get_sat_bounds(CoolProp::parameters key)
     {
@@ -626,19 +589,19 @@ private:
             }
             if (xkey == this->xkey)
             {
-                axis_x_limits.min = limits[0];
-                axis_x_limits.max = limits[1];
+                axis_x_range.min = limits[0];
+                axis_x_range.max = limits[1];
             }
             if (ykey == this->ykey)
             {
-                axis_y_limits.min = limits[2];
-                axis_y_limits.max = limits[3];
+                axis_y_range.min = limits[2];
+                axis_y_range.max = limits[3];
             }
             return limits;
         }
         else
         {
-            return {axis_x_limits.min, axis_x_limits.max, axis_y_limits.min, axis_y_limits.max};
+            return {axis_x_range.min, axis_x_range.max, axis_y_range.min, axis_y_range.max};
         }
     }
 };

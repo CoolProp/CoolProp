@@ -28,16 +28,16 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
     const int isoline_count = 5;
     const int points_per_isoline = 5;
 
-    CHECK(plot.x_index == CoolProp::iHmass);
-    CHECK(plot.y_index == CoolProp::iP);
+    CHECK(plot.xkey == CoolProp::iHmass);
+    CHECK(plot.ykey == CoolProp::iP);
 
-    CHECK(plot.axis_x_scale() == CoolProp::Plot::Scale::Lin);
-    CHECK(plot.axis_y_scale() == CoolProp::Plot::Scale::Log);
+    CHECK(plot.axis_x_scale == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.axis_y_scale == CoolProp::Plot::Scale::Log);
 
-    CHECK_THAT(plot.axis_x_range().min, WithinAbs(75373.1, 1));
-    CHECK_THAT(plot.axis_x_range().max, WithinAbs(577605, 1));
-    CHECK_THAT(plot.axis_y_range().min, WithinAbs(25000, 1));
-    CHECK_THAT(plot.axis_y_range().max, WithinAbs(9.133e6, 1));
+    CHECK_THAT(plot.axis_x_range.min, WithinAbs(75373.1, 1));
+    CHECK_THAT(plot.axis_x_range.max, WithinAbs(577605, 1));
+    CHECK_THAT(plot.axis_y_range.min, WithinAbs(25000, 1));
+    CHECK_THAT(plot.axis_y_range.max, WithinAbs(9.133e6, 1));
 
     auto iso_types = plot.supported_dimensions();
     REQUIRE(iso_types.size() == 4);
@@ -184,16 +184,16 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
     const int isoline_count = 5;
     const int points_per_isoline = 5;
 
-    CHECK(plot.x_index == CoolProp::iSmass);
-    CHECK(plot.y_index == CoolProp::iT);
+    CHECK(plot.xkey == CoolProp::iSmass);
+    CHECK(plot.ykey == CoolProp::iT);
 
-    CHECK(plot.axis_x_scale() == CoolProp::Plot::Scale::Lin);
-    CHECK(plot.axis_y_scale() == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.axis_x_scale == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.axis_y_scale == CoolProp::Plot::Scale::Lin);
 
-    CHECK_THAT(plot.axis_x_range().min, WithinAbs(426, 1));
-    CHECK_THAT(plot.axis_x_range().max, WithinAbs(2423, 1));
-    CHECK_THAT(plot.axis_y_range().min, WithinAbs(173, 1));
-    CHECK_THAT(plot.axis_y_range().max, WithinAbs(455, 1));
+    CHECK_THAT(plot.axis_x_range.min, WithinAbs(426, 1));
+    CHECK_THAT(plot.axis_x_range.max, WithinAbs(2423, 1));
+    CHECK_THAT(plot.axis_y_range.min, WithinAbs(173, 1));
+    CHECK_THAT(plot.axis_y_range.max, WithinAbs(455, 1));
 
     auto iso_types = plot.supported_dimensions();
     REQUIRE(iso_types.size() == 4);
