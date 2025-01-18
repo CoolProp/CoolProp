@@ -71,7 +71,7 @@ private:
 
     Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state);
 
-    Range get_sat_bounds(CoolProp::parameters key);
+    Range get_sat_bounds(CoolProp::parameters key) const;
     void calc_sat_range(int count);
     void update_pair(int& ipos, int& xpos, int& ypos, int& pair);
     void calc_range(std::vector<double>& xvals, std::vector<double>& yvals);

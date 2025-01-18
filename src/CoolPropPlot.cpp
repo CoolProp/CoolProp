@@ -138,7 +138,7 @@ Isoline::Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::
     this->critical_state_ = Detail::get_critical_point(state);
 }
 
-Range Isoline::get_sat_bounds(CoolProp::parameters key)
+Range Isoline::get_sat_bounds(CoolProp::parameters key) const
 {
     double s = 1e-7;
     double t_small = critical_state_->keyed_output(CoolProp::iT) * s;
@@ -147,33 +147,18 @@ Range Isoline::get_sat_bounds(CoolProp::parameters key)
     double t_triple = state_->trivial_keyed_output(CoolProp::iT_triple);
     double t_min = state_->trivial_keyed_output(CoolProp::iT_min);
     state_->update(CoolProp::QT_INPUTS, 0, std::max(t_triple, t_min) + t_small);
-    double fluid_min, fluid_max;
     if (key == CoolProp::iP)
-    {
-        fluid_min = state_->keyed_output(CoolProp::iP) + p_small;
-        fluid_max = critical_state_->keyed_output(CoolProp::iP) - p_small;
-    }
+        return {state_->keyed_output(CoolProp::iP) + p_small, critical_state_->keyed_output(CoolProp::iP) - p_small};
     else if (key == CoolProp::iT)
-    {
-        fluid_min = state_->keyed_output(CoolProp::iT) + t_small;
-        fluid_max = critical_state_->keyed_output(CoolProp::iT) - t_small;
-    }
+        return {state_->keyed_output(CoolProp::iT) + t_small, critical_state_->keyed_output(CoolProp::iT) - t_small};
     else
-    {
         throw CoolProp::ValueError("Invalid key");
-    }
-    double sat_min = fluid_min;
-    double sat_max = fluid_max;
-    return {sat_min, sat_max};
 }
 
 void Isoline::calc_sat_range(int count)
 {
-    double t_lo, t_hi;
     Range t = get_sat_bounds(CoolProp::iT);
-    t_lo = t.min;
-    t_hi = t.max;
-    std::vector<double> two = ::linspace(t_lo, t_hi, count);
+    std::vector<double> two = ::linspace(t.min, t.max, count);
     std::vector<double> one(two.size(), value);
     CoolProp::input_pairs input_pair = CoolProp::QT_INPUTS;
 
@@ -214,18 +199,13 @@ void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair)
 {
     Detail::IsolineSupported should_switch = Detail::xy_switch.at(key_).at(ykey_ * 10 + xkey_);
     double out1, out2;
-    switch (should_switch)
-    {
-        case Detail::IsolineSupported::No:
-            throw CoolProp::ValueError("This isoline cannot be calculated!");
-            break;
-        case Detail::IsolineSupported::Yes:
-            pair = CoolProp::generate_update_pair(key_, 0.0, xkey_, 1.0, out1, out2);
-            break;
-        case Detail::IsolineSupported::Flipped:
-            pair = CoolProp::generate_update_pair(key_, 0.0, ykey_, 1.0, out1, out2);
-            break;
-    }
+    if (should_switch == Detail::IsolineSupported::No)
+        throw CoolProp::ValueError("This isoline cannot be calculated!");
+    else if (should_switch == Detail::IsolineSupported::Yes)
+        pair = CoolProp::generate_update_pair(key_, 0.0, xkey_, 1.0, out1, out2);
+    else if (should_switch == Detail::IsolineSupported::Flipped)
+        pair = CoolProp::generate_update_pair(key_, 0.0, ykey_, 1.0, out1, out2);
+
     bool should_swap = (out1 != 0.0);
 
     if (should_switch == Detail::IsolineSupported::Yes && !should_swap)
@@ -405,7 +385,6 @@ double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yv
 
 Range PropertyPlot::get_sat_bounds(CoolProp::parameters key) const
 {
-    // TODO: duplicated code from IsoLine
     double s = 1e-7;
     double t_small = critical_state_->keyed_output(CoolProp::iT) * s;
     double p_small = critical_state_->keyed_output(CoolProp::iP) * s;
