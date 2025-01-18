@@ -96,7 +96,7 @@ public:
 
     PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits);
 
-    Range isoline_range(CoolProp::parameters key);
+    Range isoline_range(CoolProp::parameters key) const;
     Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
     std::vector<CoolProp::parameters> supported_isoline_keys() const;
     double value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
@@ -119,11 +119,11 @@ private:
     bool swap_axis_inputs_for_update;
     std::shared_ptr<CoolProp::AbstractState> state;
     std::shared_ptr<CoolProp::AbstractState> critical_state;
-    std::vector<double> limits;
+    Range2D Tp_limits_;
 
-    Range get_sat_bounds(CoolProp::parameters key);
-    void get_Tp_limits(double& T_lo, double& T_hi, double& P_lo, double& P_hi);
-    Range2D get_axis_limits(CoolProp::parameters xkey = CoolProp::parameters::iundefined_parameter, CoolProp::parameters ykey = CoolProp::parameters::iundefined_parameter, bool autoscale = true);
+    Range get_sat_bounds(CoolProp::parameters key) const;
+    Range2D get_Tp_limits() const;
+    Range2D get_axis_limits(CoolProp::parameters xkey = CoolProp::parameters::iundefined_parameter, CoolProp::parameters ykey = CoolProp::parameters::iundefined_parameter, bool autoscale = true) const;
 };
 
 } /* namespace Plot */

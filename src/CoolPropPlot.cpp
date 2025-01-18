@@ -323,13 +323,13 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     const double HI_FACTOR = 2.25; // Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
     const double LO_FACTOR = 1.01; // Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
     if (tp_limits == "NONE")
-        this->limits = {Detail::NaN, Detail::NaN, Detail::NaN, Detail::NaN};
+        this->Tp_limits_ = {{Detail::NaN, Detail::NaN}, {Detail::NaN, Detail::NaN}};
     else if (tp_limits == "DEF")
-        this->limits = {LO_FACTOR, HI_FACTOR, LO_FACTOR, HI_FACTOR};
+        this->Tp_limits_ = {{LO_FACTOR, HI_FACTOR}, {LO_FACTOR, HI_FACTOR}};
     else if (tp_limits == "ACHP")
-        this->limits = {173.15, 493.15, 0.25e5, HI_FACTOR};
+        this->Tp_limits_ = {{173.15, 493.15}, {0.25e5, HI_FACTOR}};
     else if (tp_limits == "ORC")
-        this->limits = {273.15, 673.15, 0.25e5, HI_FACTOR};
+        this->Tp_limits_ = {{273.15, 673.15}, {0.25e5, HI_FACTOR}};
     else
         throw CoolProp::ValueError("Invalid tp_limits");
 
@@ -338,7 +338,7 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     yrange = ranges.y;
 }
 
-Range PropertyPlot::isoline_range(CoolProp::parameters key)
+Range PropertyPlot::isoline_range(CoolProp::parameters key) const
 {
     if (key == CoolProp::iQ)
         return {0, 1};
@@ -404,7 +404,7 @@ double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yv
     }
 }
 
-Range PropertyPlot::get_sat_bounds(CoolProp::parameters key)
+Range PropertyPlot::get_sat_bounds(CoolProp::parameters key) const
 {
     // TODO: duplicated code from IsoLine
     double s = 1e-7;
@@ -422,58 +422,48 @@ Range PropertyPlot::get_sat_bounds(CoolProp::parameters key)
         throw CoolProp::ValueError("Invalid key");
 }
 
-void PropertyPlot::get_Tp_limits(double& T_lo, double& T_hi, double& P_lo, double& P_hi)
+PropertyPlot::Range2D PropertyPlot::get_Tp_limits() const
 {
-    T_lo = limits[0];
-    T_hi = limits[1];
-    P_lo = limits[2];
-    P_hi = limits[3];
-
-    double Ts_lo, Ts_hi;
-    Range Ts = get_sat_bounds(CoolProp::iT);
-    Ts_lo = Ts.min;
-    Ts_hi = Ts.max;
-
-    double Ps_lo, Ps_hi;
-    Range Ps = get_sat_bounds(CoolProp::iP);
-    Ps_lo = Ps.min;
-    Ps_hi = Ps.max;
+    Range t = Tp_limits_.T;
+    Range p = Tp_limits_.p;
+    Range tsat = get_sat_bounds(CoolProp::iT);
+    Range psat = get_sat_bounds(CoolProp::iP);
 
     const double ID_FACTOR = 10.0; // Values below this number are interpreted as factors
-    if (std::isnan(T_lo)) T_lo = 0.0;
-    else if (T_lo < ID_FACTOR) T_lo *= Ts_lo;
-    if (std::isnan(T_hi)) T_hi = 1e6;
-    else if (T_hi < ID_FACTOR) T_hi *= Ts_hi;
-    if (std::isnan(P_lo)) P_lo = 0.0;
-    else if (P_lo < ID_FACTOR) P_lo *= Ps_lo;
-    if (std::isnan(P_hi)) P_hi = 1e10;
-    else if (P_hi < ID_FACTOR) P_hi *= Ps_hi;
+    if (std::isnan(t.min)) t.min = 0.0;
+    else if (t.min < ID_FACTOR) t.min *= tsat.min;
+    if (std::isnan(t.max)) t.max = 1e6;
+    else if (t.max < ID_FACTOR) t.max *= tsat.max;
+    if (std::isnan(p.min)) p.min = 0.0;
+    else if (p.min < ID_FACTOR) p.min *= psat.min;
+    if (std::isnan(p.max)) p.max = 1e10;
+    else if (p.max < ID_FACTOR) p.max *= psat.max;
 
-    try { T_lo = std::max(T_lo, state->trivial_keyed_output(CoolProp::iT_min)); } catch (...) {}
-    try { T_hi = std::min(T_hi, state->trivial_keyed_output(CoolProp::iT_max)); } catch (...) {}
-    try { P_lo = std::max(P_lo, state->trivial_keyed_output(CoolProp::iP_min)); } catch (...) {}
-    try { P_hi = std::min(P_hi, state->trivial_keyed_output(CoolProp::iP_max)); } catch (...) {}
+    try { t.min = std::max(t.min, state->trivial_keyed_output(CoolProp::iT_min)); } catch (...) {}
+    try { t.max = std::min(t.max, state->trivial_keyed_output(CoolProp::iT_max)); } catch (...) {}
+    try { p.min = std::max(p.min, state->trivial_keyed_output(CoolProp::iP_min)); } catch (...) {}
+    try { p.max = std::min(p.max, state->trivial_keyed_output(CoolProp::iP_max)); } catch (...) {}
+    return {t, p};
 }
 
-PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, CoolProp::parameters ykey, bool autoscale)
+PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, CoolProp::parameters ykey, bool autoscale) const
 {
     if (xkey == CoolProp::parameters::iundefined_parameter) xkey = this->xkey;
     if (ykey == CoolProp::parameters::iundefined_parameter) ykey = this->ykey;
 
     if (xkey != this->xkey || ykey != this->ykey || autoscale)
     {
-        double T_lo, T_hi, P_lo, P_hi;
-        get_Tp_limits(T_lo, T_hi, P_lo, P_hi);
+        Range2D tp_limits = get_Tp_limits();
         Range xrange = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
         Range yrange = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
 
-        for (double T : {T_lo, T_hi})
+        for (double T : {tp_limits.T.min, tp_limits.T.max})
         {
-            for (double P : {P_lo, P_hi})
+            for (double p : {tp_limits.p.min, tp_limits.p.max})
             {
                 try
                 {
-                    state->update(CoolProp::PT_INPUTS, P, T);
+                    state->update(CoolProp::PT_INPUTS, p, T);
                     double x = state->keyed_output(xkey);
                     double y = state->keyed_output(ykey);
                     xrange.min = std::min(xrange.min, x);
