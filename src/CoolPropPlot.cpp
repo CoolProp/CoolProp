@@ -6,8 +6,7 @@ namespace Plot {
 
 namespace Detail {
 
-Scale default_scale(CoolProp::parameters key)
-{
+Scale default_scale(CoolProp::parameters key) {
     switch (key)
     {
         case CoolProp::iDmass: return Scale::Log;
@@ -17,13 +16,11 @@ Scale default_scale(CoolProp::parameters key)
         case CoolProp::iT:     return Scale::Lin;
         case CoolProp::iUmass: return Scale::Lin;
         case CoolProp::iQ:     return Scale::Lin;
-
-        default: return Scale::Lin;
+        default:               return Scale::Lin;
     }
 }
 
-inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& fluid_ref)
-{
+inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& fluid_ref) {
     std::string backend;
     std::string fluids;
     CoolProp::extract_backend(fluid_ref, backend, fluids);
@@ -33,8 +30,7 @@ inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::s
     return std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory(backend, fluids));
 }
 
-std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::shared_ptr<CoolProp::AbstractState>& state)
-{
+std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::shared_ptr<CoolProp::AbstractState>& state) {
     CoolProp::CriticalState crit_state;
     crit_state.T = Detail::NaN;
     crit_state.p = Detail::NaN;
@@ -114,16 +110,14 @@ std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::shared_pt
 } /* namespace Detail */
 
 
-std::vector<double> generate_values_in_range(Scale scale, const Range& range, int count)
-{
+std::vector<double> generate_values_in_range(Scale scale, const Range& range, int count) {
     if (scale == Scale::Log)
         return logspace(range.min, range.max, count);
     else
         return linspace(range.min, range.max, count);
 }
 
-std::vector<double> generate_values_in_range(CoolProp::parameters type, const Range& range, int count)
-{
+std::vector<double> generate_values_in_range(CoolProp::parameters type, const Range& range, int count) {
     return generate_values_in_range(Detail::default_scale(type), range, count);
 }
 
@@ -133,13 +127,11 @@ Isoline::Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::
       xkey_(xkey),
       ykey_(ykey),
       value(value),
-      state_(state)
-{
+      state_(state) {
     this->critical_state_ = Detail::get_critical_point(state);
 }
 
-Range Isoline::get_sat_bounds(CoolProp::parameters key) const
-{
+Range Isoline::get_sat_bounds(CoolProp::parameters key) const {
     double s = 1e-7;
     double t_small = critical_state_->keyed_output(CoolProp::iT) * s;
     double p_small = critical_state_->keyed_output(CoolProp::iP) * s;
@@ -155,8 +147,7 @@ Range Isoline::get_sat_bounds(CoolProp::parameters key) const
         throw CoolProp::ValueError("Invalid key");
 }
 
-void Isoline::calc_sat_range(int count)
-{
+void Isoline::calc_sat_range(int count) {
     Range t = get_sat_bounds(CoolProp::iT);
     std::vector<double> two = ::linspace(t.min, t.max, count);
     std::vector<double> one(two.size(), value);
@@ -195,8 +186,7 @@ void Isoline::calc_sat_range(int count)
     }
 }
 
-void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair)
-{
+void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair) {
     Detail::IsolineSupported should_switch = Detail::xy_switch.at(key_).at(ykey_ * 10 + xkey_);
     double out1, out2;
     if (should_switch == Detail::IsolineSupported::No)
@@ -238,8 +228,7 @@ void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair)
     }
 }
 
-void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
-{
+void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals) {
     if (key_ == CoolProp::iQ)
     {
         calc_sat_range(xvals.size());
@@ -287,8 +276,7 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     : xkey(xkey),
       ykey(ykey),
       xscale(Detail::default_scale(xkey)),
-      yscale(Detail::default_scale(ykey))
-{
+      yscale(Detail::default_scale(ykey)) {
     this->state_ = Detail::process_fluid_state(fluid_name);
     this->critical_state_ = Detail::get_critical_point(state_);
 
@@ -301,7 +289,6 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
 
     const double HI_FACTOR = 2.25; // Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
     const double LO_FACTOR = 1.01; // Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
-
     switch (tp_limits)
     {
         case TPLimits::None: this->Tp_limits_ = {{Detail::NaN, Detail::NaN}, {Detail::NaN, Detail::NaN}}; break;
@@ -315,16 +302,14 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     yrange = ranges.y;
 }
 
-Range PropertyPlot::isoline_range(CoolProp::parameters key) const
-{
+Range PropertyPlot::isoline_range(CoolProp::parameters key) const {
     if (key == CoolProp::iQ)
         return {0, 1};
     else
         return get_axis_limits(key, CoolProp::iT).x;
 }
 
-Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const
-{
+Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const {
     std::vector<double> xvals = generate_values_in_range(xscale, xrange, points);
     std::vector<double> yvals = generate_values_in_range(yscale, yrange, points);
 
@@ -338,8 +323,7 @@ Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector
     return lines;
 }
 
-std::vector<CoolProp::parameters> PropertyPlot::supported_isoline_keys() const
-{
+std::vector<CoolProp::parameters> PropertyPlot::supported_isoline_keys() const {
     // taken from PropertyPlot::calc_isolines when called with iso_type='all'
     std::vector<CoolProp::parameters> keys;
     for (auto it = Detail::xy_switch.begin(); it != Detail::xy_switch.end(); ++it)
@@ -352,8 +336,7 @@ std::vector<CoolProp::parameters> PropertyPlot::supported_isoline_keys() const
     return keys;
 }
 
-double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase) const
-{
+double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase) const {
     if (key == xkey) return xvalue;
     if (key == ykey) return yvalue;
 
@@ -381,8 +364,7 @@ double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yv
     }
 }
 
-Range PropertyPlot::get_sat_bounds(CoolProp::parameters key) const
-{
+Range PropertyPlot::get_sat_bounds(CoolProp::parameters key) const {
     double s = 1e-7;
     double t_small = critical_state_->keyed_output(CoolProp::iT) * s;
     double p_small = critical_state_->keyed_output(CoolProp::iP) * s;
@@ -398,8 +380,7 @@ Range PropertyPlot::get_sat_bounds(CoolProp::parameters key) const
         throw CoolProp::ValueError("Invalid key");
 }
 
-PropertyPlot::Range2D PropertyPlot::get_Tp_limits() const
-{
+PropertyPlot::Range2D PropertyPlot::get_Tp_limits() const {
     Range t = Tp_limits_.T;
     Range p = Tp_limits_.p;
     Range tsat = get_sat_bounds(CoolProp::iT);
@@ -422,8 +403,7 @@ PropertyPlot::Range2D PropertyPlot::get_Tp_limits() const
     return {t, p};
 }
 
-PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, CoolProp::parameters ykey, bool autoscale) const
-{
+PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, CoolProp::parameters ykey, bool autoscale) const {
     if (xkey == CoolProp::parameters::iundefined_parameter) xkey = this->xkey;
     if (ykey == CoolProp::parameters::iundefined_parameter) ykey = this->ykey;
 
@@ -468,7 +448,7 @@ PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, C
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
 
-TEST_CASE("Check value_at for p-h plots", "[ph_plot]") {
+TEST_CASE("Check value_at for p-h plots", "[Plot]") {
     CoolProp::Plot::PropertyPlot plot("R134a", CoolProp::iP, CoolProp::iHmass, CoolProp::Plot::TPLimits::Achp);
 
     CHECK_THAT(plot.value_at(CoolProp::iP, 300000/*Pa*/, 200000/*J/kg*/), WithinAbs(200000, 1e-10));
@@ -477,7 +457,7 @@ TEST_CASE("Check value_at for p-h plots", "[ph_plot]") {
     CHECK_THAT(plot.value_at(CoolProp::iQ, 300000, 200000), WithinAbs(0.55044347874344737, 1e-10));
 }
 
-TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
+TEST_CASE("Check that the isolines are the same as from Python", "[Plot]") {
     CoolProp::Plot::PropertyPlot plot("HEOS::R134a", CoolProp::iP, CoolProp::iHmass, CoolProp::Plot::TPLimits::Achp);
     const int isoline_count = 5;
     const int points_per_isoline = 5;
@@ -633,7 +613,7 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
     }
 }
 
-TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
+TEST_CASE("Basic TS Plot has same output as Python", "[Plot]") {
     CoolProp::Plot::PropertyPlot plot("HEOS::R134a", CoolProp::iT, CoolProp::iSmass, CoolProp::Plot::TPLimits::Achp);
     const int isoline_count = 5;
     const int points_per_isoline = 5;
@@ -805,4 +785,4 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
     }
 }
 
-#endif
+#endif /* ENABLE_CATCH */

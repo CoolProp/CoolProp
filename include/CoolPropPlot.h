@@ -56,14 +56,14 @@ inline std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::sh
 
 class Isoline
 {
-public:
+   public:
     std::vector<double> x;
     std::vector<double> y;
     double value;
 
     size_t size() const { return x.size(); };
 
-private:
+   private:
     std::shared_ptr<CoolProp::AbstractState> state_;
     std::shared_ptr<CoolProp::AbstractState> critical_state_;
     CoolProp::parameters xkey_;
@@ -95,7 +95,7 @@ enum class TPLimits
 
 class PropertyPlot
 {
-public:
+   public:
     CoolProp::parameters xkey;
     CoolProp::parameters ykey;
     Scale xscale;
@@ -110,7 +110,7 @@ public:
     std::vector<CoolProp::parameters> supported_isoline_keys() const;
     double value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
 
-private:
+   private:
     struct Range2D
     {
         union
@@ -138,8 +138,3 @@ private:
 } /* namespace CoolProp */
 
 #endif /* COOLPROPPLOT_H_ */
-
-
-
-
-
