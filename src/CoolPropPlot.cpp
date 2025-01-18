@@ -283,7 +283,7 @@ void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
     }
 }
 
-PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits)
+PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, TPLimits tp_limits)
     : xkey(xkey),
       ykey(ykey),
       xscale(Detail::default_scale(xkey)),
@@ -301,16 +301,14 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
 
     const double HI_FACTOR = 2.25; // Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
     const double LO_FACTOR = 1.01; // Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
-    if (tp_limits == "NONE")
-        this->Tp_limits_ = {{Detail::NaN, Detail::NaN}, {Detail::NaN, Detail::NaN}};
-    else if (tp_limits == "DEF")
-        this->Tp_limits_ = {{LO_FACTOR, HI_FACTOR}, {LO_FACTOR, HI_FACTOR}};
-    else if (tp_limits == "ACHP")
-        this->Tp_limits_ = {{173.15, 493.15}, {0.25e5, HI_FACTOR}};
-    else if (tp_limits == "ORC")
-        this->Tp_limits_ = {{273.15, 673.15}, {0.25e5, HI_FACTOR}};
-    else
-        throw CoolProp::ValueError("Invalid tp_limits");
+
+    switch (tp_limits)
+    {
+        case TPLimits::None: this->Tp_limits_ = {{Detail::NaN, Detail::NaN}, {Detail::NaN, Detail::NaN}}; break;
+        case TPLimits::Def:  this->Tp_limits_ = {{LO_FACTOR, HI_FACTOR}, {LO_FACTOR, HI_FACTOR}}; break;
+        case TPLimits::Achp: this->Tp_limits_ = {{173.15, 493.15}, {0.25e5, HI_FACTOR}}; break;
+        case TPLimits::Orc:  this->Tp_limits_ = {{273.15, 673.15}, {0.25e5, HI_FACTOR}}; break;
+    }
 
     Range2D ranges = get_axis_limits();
     xrange = ranges.x;
@@ -471,7 +469,7 @@ using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
 
 TEST_CASE("Check value_at for p-h plots", "[ph_plot]") {
-    CoolProp::Plot::PropertyPlot plot("R134a", CoolProp::iP, CoolProp::iHmass, "ACHP");
+    CoolProp::Plot::PropertyPlot plot("R134a", CoolProp::iP, CoolProp::iHmass, CoolProp::Plot::TPLimits::Achp);
 
     CHECK_THAT(plot.value_at(CoolProp::iP, 300000/*Pa*/, 200000/*J/kg*/), WithinAbs(200000, 1e-10));
     CHECK_THAT(plot.value_at(CoolProp::iHmass, 300000, 200000), WithinAbs(300000, 1e-10));
@@ -480,7 +478,7 @@ TEST_CASE("Check value_at for p-h plots", "[ph_plot]") {
 }
 
 TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
-    CoolProp::Plot::PropertyPlot plot("HEOS::R134a", CoolProp::iP, CoolProp::iHmass, "ACHP");
+    CoolProp::Plot::PropertyPlot plot("HEOS::R134a", CoolProp::iP, CoolProp::iHmass, CoolProp::Plot::TPLimits::Achp);
     const int isoline_count = 5;
     const int points_per_isoline = 5;
 
@@ -636,7 +634,7 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
 }
 
 TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
-    CoolProp::Plot::PropertyPlot plot("HEOS::R134a", CoolProp::iT, CoolProp::iSmass, "ACHP");
+    CoolProp::Plot::PropertyPlot plot("HEOS::R134a", CoolProp::iT, CoolProp::iSmass, CoolProp::Plot::TPLimits::Achp);
     const int isoline_count = 5;
     const int points_per_isoline = 5;
 

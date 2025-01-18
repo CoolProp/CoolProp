@@ -38,7 +38,6 @@ enum IsolineSupported
  const int PD = CoolProp::iP * 10 + CoolProp::iDmass;
  const int TD = CoolProp::iT * 10 + CoolProp::iDmass;
  const int PT = CoolProp::iP * 10 + CoolProp::iT;
- const int PU = CoolProp::iP * 10 + CoolProp::iUmass;
 
  const std::map<CoolProp::parameters, std::map<int, IsolineSupported>> xy_switch = {
     {CoolProp::iDmass, {{TS, Flipped}, {PH, Flipped}, {HS, Yes    }, {PS, Flipped}, {PD, No     }, {TD, No     }, {PT, Yes    }}},
@@ -62,6 +61,8 @@ public:
     std::vector<double> y;
     double value;
 
+    size_t size() const { return x.size(); };
+
 private:
     std::shared_ptr<CoolProp::AbstractState> state_;
     std::shared_ptr<CoolProp::AbstractState> critical_state_;
@@ -84,6 +85,14 @@ using Isolines = std::vector<Isoline>;
 std::vector<double> generate_values_in_range(Scale scale, const Range& range, int count);
 std::vector<double> generate_values_in_range(CoolProp::parameters type, const Range& range, int count);
 
+enum class TPLimits
+{
+    None,
+    Def,
+    Achp,
+    Orc
+};
+
 class PropertyPlot
 {
 public:
@@ -94,7 +103,7 @@ public:
     Range xrange;
     Range yrange;
 
-    PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits);
+    PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, CoolProp::Plot::TPLimits tp_limits = CoolProp::Plot::TPLimits::Def);
 
     Range isoline_range(CoolProp::parameters key) const;
     Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
