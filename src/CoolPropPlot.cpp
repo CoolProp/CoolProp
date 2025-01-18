@@ -1,10 +1,38 @@
 #include "CoolPropPlot.h"
 #include "CoolProp.h"
+#include "CPnumerics.h"
+#include <map>
 
 namespace CoolProp {
 namespace Plot {
 
 namespace Detail {
+
+const double NaN = std::numeric_limits<double>::quiet_NaN();
+
+const int TS = CoolProp::iT * 10 + CoolProp::iSmass;
+const int PH = CoolProp::iP * 10 + CoolProp::iHmass;
+const int HS = CoolProp::iHmass * 10 + CoolProp::iSmass;
+const int PS = CoolProp::iP * 10 + CoolProp::iSmass;
+const int PD = CoolProp::iP * 10 + CoolProp::iDmass;
+const int TD = CoolProp::iT * 10 + CoolProp::iDmass;
+const int PT = CoolProp::iP * 10 + CoolProp::iT;
+
+enum IsolineSupported
+{
+    No = 0,
+    Yes = 1,
+    Flipped = 2
+};
+
+const std::map<CoolProp::parameters, std::map<int, IsolineSupported>> xy_switch = {
+    {CoolProp::iDmass, {{TS, Flipped}, {PH, Flipped}, {HS, Yes    }, {PS, Flipped}, {PD, No     }, {TD, No     }, {PT, Yes    }}},
+    {CoolProp::iHmass, {{TS, Yes    }, {PH, No     }, {HS, No     }, {PS, Flipped}, {PD, Flipped}, {TD, Yes    }, {PT, Yes    }}},
+    {CoolProp::iP,     {{TS, Yes    }, {PH, No     }, {HS, Yes    }, {PS, No     }, {PD, No     }, {TD, Yes    }, {PT, No     }}},
+    {CoolProp::iSmass, {{TS, No     }, {PH, Flipped}, {HS, No     }, {PS, No     }, {PD, Flipped}, {TD, Yes    }, {PT, Flipped}}},
+    {CoolProp::iT,     {{TS, No     }, {PH, Flipped}, {HS, Yes    }, {PS, Yes    }, {PD, Yes    }, {TD, No     }, {PT, No     }}},
+    {CoolProp::iQ,     {{TS, Flipped}, {PH, Flipped}, {HS, Flipped}, {PS, Flipped}, {PD, Flipped}, {TD, Flipped}, {PT, Yes    }}}
+};
 
 Scale default_scale(CoolProp::parameters key) {
     switch (key)
