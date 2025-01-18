@@ -102,6 +102,18 @@ public:
     double value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
 
 private:
+    struct Range2D
+    {
+        union
+        {
+            Range x, T;
+        };
+        union
+        {
+            Range y, p;
+        };
+    };
+
     std::string fluid_name;
     CoolProp::input_pairs axis_pair;
     bool swap_axis_inputs_for_update;
@@ -111,7 +123,7 @@ private:
 
     Range get_sat_bounds(CoolProp::parameters key);
     void get_Tp_limits(double& T_lo, double& T_hi, double& P_lo, double& P_hi);
-    std::vector<double> get_axis_limits(CoolProp::parameters xkey = CoolProp::parameters::iundefined_parameter, CoolProp::parameters ykey = CoolProp::parameters::iundefined_parameter, bool autoscale = true);
+    Range2D get_axis_limits(CoolProp::parameters xkey = CoolProp::parameters::iundefined_parameter, CoolProp::parameters ykey = CoolProp::parameters::iundefined_parameter, bool autoscale = true);
 };
 
 } /* namespace Plot */

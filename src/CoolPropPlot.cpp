@@ -333,18 +333,17 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     else
         throw CoolProp::ValueError("Invalid tp_limits");
 
-    get_axis_limits();
+    Range2D ranges = get_axis_limits();
+    xrange = ranges.x;
+    yrange = ranges.y;
 }
 
 Range PropertyPlot::isoline_range(CoolProp::parameters key)
 {
     if (key == CoolProp::iQ)
-        return {0., 1.};
-    else // TODO: always against iT?
-    {
-        std::vector<double> range = get_axis_limits(key, CoolProp::iT);
-        return {range[0], range[1]};
-    }
+        return {0, 1};
+    else
+        return get_axis_limits(key, CoolProp::iT).x;
 }
 
 Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const
@@ -357,7 +356,6 @@ Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector
     {
         Isoline line(key, xkey, ykey, val, state);
         line.calc_range(xvals, yvals);
-        // TODO: line.sanitize_data();
         lines.push_back(line);
     }
     return lines;
@@ -416,22 +414,12 @@ Range PropertyPlot::get_sat_bounds(CoolProp::parameters key)
     double t_triple = state->trivial_keyed_output(CoolProp::iT_triple);
     double t_min = state->trivial_keyed_output(CoolProp::iT_min);
     state->update(CoolProp::QT_INPUTS, 0, std::max(t_triple, t_min) + t_small);
-    double fluid_min, fluid_max;
     if (key == CoolProp::iP)
-    {
-        fluid_min = state->keyed_output(CoolProp::iP) + p_small;
-        fluid_max = critical_state->keyed_output(CoolProp::iP) - p_small;
-    }
+        return {state->keyed_output(CoolProp::iP) + p_small, critical_state->keyed_output(CoolProp::iP) - p_small};
     else if (key == CoolProp::iT)
-    {
-        fluid_min = state->keyed_output(CoolProp::iT) + t_small;
-        fluid_max = critical_state->keyed_output(CoolProp::iT) - t_small;
-    }
+        return {state->keyed_output(CoolProp::iT) + t_small, critical_state->keyed_output(CoolProp::iT) - t_small};
     else
-    {
         throw CoolProp::ValueError("Invalid key");
-    }
-    return {fluid_min, fluid_max};
 }
 
 void PropertyPlot::get_Tp_limits(double& T_lo, double& T_hi, double& P_lo, double& P_hi)
@@ -467,18 +455,18 @@ void PropertyPlot::get_Tp_limits(double& T_lo, double& T_hi, double& P_lo, doubl
     try { P_hi = std::min(P_hi, state->trivial_keyed_output(CoolProp::iP_max)); } catch (...) {}
 }
 
-std::vector<double> PropertyPlot::get_axis_limits(CoolProp::parameters xkey, CoolProp::parameters ykey, bool autoscale)
+PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, CoolProp::parameters ykey, bool autoscale)
 {
     if (xkey == CoolProp::parameters::iundefined_parameter) xkey = this->xkey;
     if (ykey == CoolProp::parameters::iundefined_parameter) ykey = this->ykey;
 
-    // TODO: double check comparing xkey against ykey is the same as in python
-    if (xkey != this->ykey || ykey != this->ykey || autoscale)
+    if (xkey != this->xkey || ykey != this->ykey || autoscale)
     {
         double T_lo, T_hi, P_lo, P_hi;
-        get_Tp_limits(T_lo, T_hi, P_lo, P_hi); // TODO
-        std::vector<double> limits = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest(),
-                                      std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
+        get_Tp_limits(T_lo, T_hi, P_lo, P_hi);
+        Range xrange = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
+        Range yrange = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
+
         for (double T : {T_lo, T_hi})
         {
             for (double P : {P_lo, P_hi})
@@ -488,29 +476,19 @@ std::vector<double> PropertyPlot::get_axis_limits(CoolProp::parameters xkey, Coo
                     state->update(CoolProp::PT_INPUTS, P, T);
                     double x = state->keyed_output(xkey);
                     double y = state->keyed_output(ykey);
-                    if (x < limits[0]) limits[0] = x;
-                    if (x > limits[1]) limits[1] = x;
-                    if (y < limits[2]) limits[2] = y;
-                    if (y > limits[3]) limits[3] = y;
+                    xrange.min = std::min(xrange.min, x);
+                    xrange.max = std::max(xrange.max, x);
+                    yrange.min = std::min(yrange.min, y);
+                    yrange.max = std::max(yrange.max, y);
                 }
                 catch (...) { }
             }
         }
-        if (xkey == this->xkey)
-        {
-            xrange.min = limits[0];
-            xrange.max = limits[1];
-        }
-        if (ykey == this->ykey)
-        {
-            yrange.min = limits[2];
-            yrange.max = limits[3];
-        }
-        return limits;
+        return {xrange, yrange};
     }
     else
     {
-        return {xrange.min, xrange.max, yrange.min, yrange.max};
+        return {xrange, yrange};
     }
 }
 
