@@ -175,14 +175,14 @@ struct Range
 };
 
 
-class IsoLine
+class Isoline
 {
 public:
     std::vector<double> x;
     std::vector<double> y;
     double value;
 
-    IsoLine(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state)
+    Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state)
         : key(key),
           xkey(xkey),
           ykey(ykey),
@@ -365,21 +365,22 @@ private:
     friend class PropertyPlot;
 };
 
-using IsoLines = std::vector<IsoLine>;
+using Isolines = std::vector<Isoline>;
 
 class PropertyPlot
 {
 public:
     CoolProp::parameters xkey;
     CoolProp::parameters ykey;
-    Scale axis_x_scale;
-    Scale axis_y_scale;
-    Range axis_x_range;
-    Range axis_y_range;
+    Scale xscale;
+    Scale yscale;
+    Range xrange;
+    Range yrange;
 
     PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits);
+
     Range isoline_range(CoolProp::parameters key);
-    IsoLines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
+    Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
     std::vector<CoolProp::parameters> supported_dimensions() const;
     double value_at(CoolProp::parameters key, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
 

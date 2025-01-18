@@ -7,8 +7,8 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     : fluid_name(fluid_name),
       xkey(xkey),
       ykey(ykey),
-      axis_x_scale(Detail::default_scale(xkey)),
-      axis_y_scale(Detail::default_scale(ykey))
+      xscale(Detail::default_scale(xkey)),
+      yscale(Detail::default_scale(ykey))
 {
     this->state = Detail::process_fluid_state(fluid_name);
     this->critical_state = Detail::get_critical_point(state);
@@ -47,15 +47,15 @@ Range PropertyPlot::isoline_range(CoolProp::parameters key)
     }
 }
 
-IsoLines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const
+Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const
 {
-    std::vector<double> xvals = Detail::generate_values_in_range(axis_x_scale, axis_x_range.min, axis_x_range.max, points);
-    std::vector<double> yvals = Detail::generate_values_in_range(axis_y_scale, axis_y_range.min, axis_y_range.max, points);
+    std::vector<double> xvals = Detail::generate_values_in_range(xscale, xrange.min, xrange.max, points);
+    std::vector<double> yvals = Detail::generate_values_in_range(yscale, yrange.min, yrange.max, points);
 
-    IsoLines lines;
+    Isolines lines;
     for (double val : values)
     {
-        IsoLine line(key, xkey, ykey, val, state);
+        Isoline line(key, xkey, ykey, val, state);
         line.calc_range(xvals, yvals);
         // TODO: line.sanitize_data();
         lines.push_back(line);
@@ -198,19 +198,19 @@ std::vector<double> PropertyPlot::get_axis_limits(CoolProp::parameters xkey, Coo
         }
         if (xkey == this->xkey)
         {
-            axis_x_range.min = limits[0];
-            axis_x_range.max = limits[1];
+            xrange.min = limits[0];
+            xrange.max = limits[1];
         }
         if (ykey == this->ykey)
         {
-            axis_y_range.min = limits[2];
-            axis_y_range.max = limits[3];
+            yrange.min = limits[2];
+            yrange.max = limits[3];
         }
         return limits;
     }
     else
     {
-        return {axis_x_range.min, axis_x_range.max, axis_y_range.min, axis_y_range.max};
+        return {xrange.min, xrange.max, yrange.min, yrange.max};
     }
 }
 
@@ -241,15 +241,15 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
     CHECK(plot.xkey == CoolProp::iHmass);
     CHECK(plot.ykey == CoolProp::iP);
 
-    CHECK(plot.axis_x_scale == CoolProp::Plot::Scale::Lin);
-    CHECK(plot.axis_y_scale == CoolProp::Plot::Scale::Log);
+    CHECK(plot.xscale == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.yscale == CoolProp::Plot::Scale::Log);
 
-    CHECK_THAT(plot.axis_x_range.min, WithinAbs(75373.1, 1));
-    CHECK_THAT(plot.axis_x_range.max, WithinAbs(577605, 1));
-    CHECK_THAT(plot.axis_y_range.min, WithinAbs(25000, 1));
-    CHECK_THAT(plot.axis_y_range.max, WithinAbs(9.133e6, 1));
+    CHECK_THAT(plot.xrange.min, WithinAbs(75373.1, 1));
+    CHECK_THAT(plot.xrange.max, WithinAbs(577605, 1));
+    CHECK_THAT(plot.yrange.min, WithinAbs(25000, 1));
+    CHECK_THAT(plot.yrange.max, WithinAbs(9.133e6, 1));
 
-    auto iso_types = plot.supported_dimensions();
+    std::vector<CoolProp::parameters> iso_types = plot.supported_dimensions();
     REQUIRE(iso_types.size() == 4);
     CHECK(iso_types[0] == CoolProp::iT);
     CHECK(iso_types[1] == CoolProp::iQ);
@@ -260,13 +260,13 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         // Q isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iQ);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iQ, iso_range.min, iso_range.max, isoline_count);
-        auto isoQ = plot.calc_isolines(CoolProp::iQ, iso_values, points_per_isoline);
-        REQUIRE(isoQ.size() == isoline_count);
-        CHECK_THAT(isoQ[0].value, WithinAbs(0.0, 1e-10));
-        CHECK_THAT(isoQ[1].value, WithinAbs(0.25, 1e-10));
-        CHECK_THAT(isoQ[2].value, WithinAbs(0.5, 1e-10));
-        CHECK_THAT(isoQ[3].value, WithinAbs(0.75, 1e-10));
-        CHECK_THAT(isoQ[4].value, WithinAbs(1.0, 1e-10));
+        CoolProp::Plot::Isolines q_isolines = plot.calc_isolines(CoolProp::iQ, iso_values, points_per_isoline);
+        REQUIRE(q_isolines.size() == isoline_count);
+        CHECK_THAT(q_isolines[0].value, WithinAbs(0.0, 1e-10));
+        CHECK_THAT(q_isolines[1].value, WithinAbs(0.25, 1e-10));
+        CHECK_THAT(q_isolines[2].value, WithinAbs(0.5, 1e-10));
+        CHECK_THAT(q_isolines[3].value, WithinAbs(0.75, 1e-10));
+        CHECK_THAT(q_isolines[4].value, WithinAbs(1.0, 1e-10));
         const double expected_x[isoline_count][points_per_isoline] = {
             {71455.08256999, 132939.99472497, 198497.0525314, 271576.58908888, 389440.73899019},
             {137326.83116781, 191267.05172013, 248359.90642508, 309538.95484829, 389511.40516519},
@@ -283,8 +283,8 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         };
         for (int i = 0; i < isoline_count; ++i) {
             for (int j = 0; j < points_per_isoline; ++j) {
-                CHECK_THAT(isoQ[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                CHECK_THAT(isoQ[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                CHECK_THAT(q_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                CHECK_THAT(q_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
             }
         }
     }
@@ -292,13 +292,13 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         // T isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iT);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iT, iso_range.min, iso_range.max, isoline_count);
-        auto isoT = plot.calc_isolines(CoolProp::iT, iso_values, points_per_isoline);
-        REQUIRE(isoT.size() == isoline_count);
-        CHECK_THAT(isoT[0].value, WithinAbs(173.15, 1e-10));
-        CHECK_THAT(isoT[1].value, WithinAbs(243.6125, 1e-10));
-        CHECK_THAT(isoT[2].value, WithinAbs(314.075, 1e-10));
-        CHECK_THAT(isoT[3].value, WithinAbs(384.5375, 1e-10));
-        CHECK_THAT(isoT[4].value, WithinAbs(455.0, 1e-10));
+        CoolProp::Plot::Isolines t_isolines = plot.calc_isolines(CoolProp::iT, iso_values, points_per_isoline);
+        REQUIRE(t_isolines.size() == isoline_count);
+        CHECK_THAT(t_isolines[0].value, WithinAbs(173.15, 1e-10));
+        CHECK_THAT(t_isolines[1].value, WithinAbs(243.6125, 1e-10));
+        CHECK_THAT(t_isolines[2].value, WithinAbs(314.075, 1e-10));
+        CHECK_THAT(t_isolines[3].value, WithinAbs(384.5375, 1e-10));
+        CHECK_THAT(t_isolines[4].value, WithinAbs(455.0, 1e-10));
         const double expected_x[isoline_count][points_per_isoline] = {
             {75373.12689908, 75410.99061368, 75576.57734102, 76301.46320034, 79487.71936123},
             {382785.23058756, 161389.44197265, 161516.21527543, 162076.96181603, 164636.92352411},
@@ -315,8 +315,8 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         };
         for (int i = 0; i < isoline_count; ++i) {
             for (int j = 0; j < points_per_isoline; ++j) {
-                CHECK_THAT(isoT[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                CHECK_THAT(isoT[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                CHECK_THAT(t_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                CHECK_THAT(t_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
             }
         }
     }
@@ -324,13 +324,13 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         // S isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iSmass);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iSmass, iso_range.min, iso_range.max, isoline_count);
-        auto isoS = plot.calc_isolines(CoolProp::iSmass, iso_values, points_per_isoline);
-        REQUIRE(isoS.size() == isoline_count);
-        CHECK_THAT(isoS[0].value, WithinAbs(426.0098553415565, 1e-10));
-        CHECK_THAT(isoS[1].value, WithinAbs(925.2753143522199, 1e-10));
-        CHECK_THAT(isoS[2].value, WithinAbs(1424.540773362883, 1e-10));
-        CHECK_THAT(isoS[3].value, WithinAbs(1923.8062323735467, 1e-10));
-        CHECK_THAT(isoS[4].value, WithinAbs(2423.07169138421, 1e-10));
+        CoolProp::Plot::Isolines s_isolines = plot.calc_isolines(CoolProp::iSmass, iso_values, points_per_isoline);
+        REQUIRE(s_isolines.size() == isoline_count);
+        CHECK_THAT(s_isolines[0].value, WithinAbs(426.0098553415565, 1e-10));
+        CHECK_THAT(s_isolines[1].value, WithinAbs(925.2753143522199, 1e-10));
+        CHECK_THAT(s_isolines[2].value, WithinAbs(1424.540773362883, 1e-10));
+        CHECK_THAT(s_isolines[3].value, WithinAbs(1923.8062323735467, 1e-10));
+        CHECK_THAT(s_isolines[4].value, WithinAbs(2423.07169138421, 1e-10));
         const double expected_x[isoline_count][points_per_isoline] = {
             {73758.20064883, 73811.34928194, 74043.68191583, 75058.90103546, 79487.71936135},
             {176257.41124603, 179794.86552304, 180290.38376303, 181487.99233203, 186690.75978367},
@@ -347,11 +347,11 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         };
         for (int i = 0; i < isoline_count; ++i) {
             for (int j = 0; j < points_per_isoline; ++j) {
-                if (std::isnan(isoS[i].x[j]))
+                if (std::isnan(s_isolines[i].x[j]))
                     CHECK(std::isnan(expected_x[i][j]));
                 else
-                    CHECK_THAT(isoS[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                CHECK_THAT(isoS[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                    CHECK_THAT(s_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                CHECK_THAT(s_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
             }
         }
     }
@@ -359,13 +359,13 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         // D isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iDmass);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iDmass, iso_range.min, iso_range.max, isoline_count);
-        auto isoD = plot.calc_isolines(CoolProp::iDmass, iso_values, points_per_isoline);
-        REQUIRE(isoD.size() == isoline_count);
-        CHECK_THAT(isoD[0].value, WithinAbs(0.6749779869915704, 1e-10));
-        CHECK_THAT(isoD[1].value, WithinAbs(4.704765330619733, 1e-10));
-        CHECK_THAT(isoD[2].value, WithinAbs(32.793390662794806, 1e-10));
-        CHECK_THAT(isoD[3].value, WithinAbs(228.57813208316188, 1e-10));
-        CHECK_THAT(isoD[4].value, WithinAbs(1593.2467308391022, 1e-10));
+        CoolProp::Plot::Isolines d_isolines = plot.calc_isolines(CoolProp::iDmass, iso_values, points_per_isoline);
+        REQUIRE(d_isolines.size() == isoline_count);
+        CHECK_THAT(d_isolines[0].value, WithinAbs(0.6749779869915704, 1e-10));
+        CHECK_THAT(d_isolines[1].value, WithinAbs(4.704765330619733, 1e-10));
+        CHECK_THAT(d_isolines[2].value, WithinAbs(32.793390662794806, 1e-10));
+        CHECK_THAT(d_isolines[3].value, WithinAbs(228.57813208316188, 1e-10));
+        CHECK_THAT(d_isolines[4].value, WithinAbs(1593.2467308391022, 1e-10));
         const double expected_x[isoline_count][points_per_isoline] = {
             {5.77604595e+05, 3.65397965e+06, 3.84283606e+07, 4.40954815e+08, 5.22494051e+09},
             {2.02365849e+05, 4.19227802e+05, 1.84512838e+06, 1.78590373e+07, 2.01674048e+08},
@@ -382,8 +382,8 @@ TEST_CASE("Check that the isolines are the same as from Python", "[ph_plot]") {
         };
         for (int i = 0; i < isoline_count; ++i) {
             for (int j = 0; j < points_per_isoline; ++j) {
-                CHECK_THAT(isoD[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                CHECK_THAT(isoD[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                CHECK_THAT(d_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                CHECK_THAT(d_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
             }
         }
     }
@@ -397,15 +397,15 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
     CHECK(plot.xkey == CoolProp::iSmass);
     CHECK(plot.ykey == CoolProp::iT);
 
-    CHECK(plot.axis_x_scale == CoolProp::Plot::Scale::Lin);
-    CHECK(plot.axis_y_scale == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.xscale == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.yscale == CoolProp::Plot::Scale::Lin);
 
-    CHECK_THAT(plot.axis_x_range.min, WithinAbs(426, 1));
-    CHECK_THAT(plot.axis_x_range.max, WithinAbs(2423, 1));
-    CHECK_THAT(plot.axis_y_range.min, WithinAbs(173, 1));
-    CHECK_THAT(plot.axis_y_range.max, WithinAbs(455, 1));
+    CHECK_THAT(plot.xrange.min, WithinAbs(426, 1));
+    CHECK_THAT(plot.xrange.max, WithinAbs(2423, 1));
+    CHECK_THAT(plot.yrange.min, WithinAbs(173, 1));
+    CHECK_THAT(plot.yrange.max, WithinAbs(455, 1));
 
-    auto iso_types = plot.supported_dimensions();
+    std::vector<CoolProp::parameters> iso_types = plot.supported_dimensions();
     REQUIRE(iso_types.size() == 4);
     CHECK(iso_types[0] == CoolProp::iP);
     CHECK(iso_types[1] == CoolProp::iQ);
@@ -416,13 +416,13 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
         // Q isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iQ);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iQ, iso_range.min, iso_range.max, isoline_count);
-        auto isoQ = plot.calc_isolines(CoolProp::iQ, iso_values, points_per_isoline);
-        REQUIRE(isoQ.size() == isoline_count);
-        CHECK_THAT(isoQ[0].value, WithinAbs(0.0, 1e-10));
-        CHECK_THAT(isoQ[1].value, WithinAbs(0.25, 1e-10));
-        CHECK_THAT(isoQ[2].value, WithinAbs(0.5, 1e-10));
-        CHECK_THAT(isoQ[3].value, WithinAbs(0.75, 1e-10));
-        CHECK_THAT(isoQ[4].value, WithinAbs(1.0, 1e-10));
+        CoolProp::Plot::Isolines q_isolines = plot.calc_isolines(CoolProp::iQ, iso_values, points_per_isoline);
+        REQUIRE(q_isolines.size() == isoline_count);
+        CHECK_THAT(q_isolines[0].value, WithinAbs(0.0, 1e-10));
+        CHECK_THAT(q_isolines[1].value, WithinAbs(0.25, 1e-10));
+        CHECK_THAT(q_isolines[2].value, WithinAbs(0.5, 1e-10));
+        CHECK_THAT(q_isolines[3].value, WithinAbs(0.75, 1e-10));
+        CHECK_THAT(q_isolines[4].value, WithinAbs(1.0, 1e-10));
 
         const double expected_x[isoline_count][points_per_isoline] = {
             {412.61753823, 728.71208313, 994.51958846, 1237.3122956, 1561.56967158},
@@ -441,8 +441,8 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
 
         for(int i = 0; i < isoline_count; i++) {
             for(int j = 0; j < points_per_isoline; j++) {
-                CHECK_THAT(isoQ[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                CHECK_THAT(isoQ[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                CHECK_THAT(q_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                CHECK_THAT(q_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
             }
         }
     }
@@ -451,13 +451,13 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
         // P isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iP);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iP, iso_range.min, iso_range.max, isoline_count);
-        auto isoP = plot.calc_isolines(CoolProp::iP, iso_values, points_per_isoline);
-        REQUIRE(isoP.size() == isoline_count);
-        CHECK_THAT(isoP[0].value, WithinAbs(25000.000000000007, 1e-8));
-        CHECK_THAT(isoP[1].value, WithinAbs(109297.03270763098, 1e-8));
-        CHECK_THAT(isoP[2].value, WithinAbs(477833.65434771683, 1e-8));
-        CHECK_THAT(isoP[3].value, WithinAbs(2089032.0219219688, 1e-8));
-        CHECK_THAT(isoP[4].value, WithinAbs(9133000.049091753, 1e-8));
+        CoolProp::Plot::Isolines p_isolines = plot.calc_isolines(CoolProp::iP, iso_values, points_per_isoline);
+        REQUIRE(p_isolines.size() == isoline_count);
+        CHECK_THAT(p_isolines[0].value, WithinAbs(25000.000000000007, 1e-8));
+        CHECK_THAT(p_isolines[1].value, WithinAbs(109297.03270763098, 1e-8));
+        CHECK_THAT(p_isolines[2].value, WithinAbs(477833.65434771683, 1e-8));
+        CHECK_THAT(p_isolines[3].value, WithinAbs(2089032.0219219688, 1e-8));
+        CHECK_THAT(p_isolines[4].value, WithinAbs(9133000.049091753, 1e-8));
 
         const double expected_x[isoline_count][points_per_isoline] = {
             {426.00985534, 925.27531435, 1424.54077336, 1923.80623237, 2423.07169138},
@@ -477,10 +477,10 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
         for(int i = 0; i < isoline_count; i++) {
             for(int j = 0; j < points_per_isoline; j++) {
                 if (std::isnan(expected_y[i][j])) {
-                    CHECK(std::isnan(isoP[i].y[j]));
+                    CHECK(std::isnan(p_isolines[i].y[j]));
                 } else {
-                    CHECK_THAT(isoP[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                    CHECK_THAT(isoP[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                    CHECK_THAT(p_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                    CHECK_THAT(p_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
                 }
             }
         }
@@ -490,13 +490,13 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
         // H isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iHmass);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iHmass, iso_range.min, iso_range.max, isoline_count);
-        auto isoH = plot.calc_isolines(CoolProp::iHmass, iso_values, points_per_isoline);
-        REQUIRE(isoH.size() == isoline_count);
-        CHECK_THAT(isoH[0].value, WithinAbs(75373.12689908482, 1e-10));
-        CHECK_THAT(isoH[1].value, WithinAbs(200930.99391811725, 1e-10));
-        CHECK_THAT(isoH[2].value, WithinAbs(326488.8609371497, 1e-10));
-        CHECK_THAT(isoH[3].value, WithinAbs(452046.72795618215, 1e-10));
-        CHECK_THAT(isoH[4].value, WithinAbs(577604.5949752146, 1e-10));
+        CoolProp::Plot::Isolines h_isolines = plot.calc_isolines(CoolProp::iHmass, iso_values, points_per_isoline);
+        REQUIRE(h_isolines.size() == isoline_count);
+        CHECK_THAT(h_isolines[0].value, WithinAbs(75373.12689908482, 1e-10));
+        CHECK_THAT(h_isolines[1].value, WithinAbs(200930.99391811725, 1e-10));
+        CHECK_THAT(h_isolines[2].value, WithinAbs(326488.8609371497, 1e-10));
+        CHECK_THAT(h_isolines[3].value, WithinAbs(452046.72795618215, 1e-10));
+        CHECK_THAT(h_isolines[4].value, WithinAbs(577604.5949752146, 1e-10));
 
         const double expected_x[isoline_count][points_per_isoline] = {
             {426.00985534, 925.27531435, 1424.54077336, 1923.80623237, 2423.07169138},
@@ -516,10 +516,10 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
         for(int i = 0; i < isoline_count; i++) {
             for(int j = 0; j < points_per_isoline; j++) {
                 if (std::isnan(expected_y[i][j])) {
-                    CHECK(std::isnan(isoH[i].y[j]));
+                    CHECK(std::isnan(h_isolines[i].y[j]));
                 } else {
-                    CHECK_THAT(isoH[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                    CHECK_THAT(isoH[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                    CHECK_THAT(h_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                    CHECK_THAT(h_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
                 }
             }
         }
@@ -529,13 +529,13 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
         // D isolines
         CoolProp::Plot::Range iso_range = plot.isoline_range(CoolProp::iDmass);
         std::vector<double> iso_values = CoolProp::Plot::Detail::generate_values_in_range(CoolProp::iDmass, iso_range.min, iso_range.max, isoline_count);
-        auto isoD = plot.calc_isolines(CoolProp::iDmass, iso_values, points_per_isoline);
-        REQUIRE(isoD.size() == isoline_count);
-        CHECK_THAT(isoD[0].value, WithinAbs(0.6749779869915704, 1e-10));
-        CHECK_THAT(isoD[1].value, WithinAbs(4.704765330619733, 1e-10));
-        CHECK_THAT(isoD[2].value, WithinAbs(32.793390662794806, 1e-10));
-        CHECK_THAT(isoD[3].value, WithinAbs(228.57813208316188, 1e-10));
-        CHECK_THAT(isoD[4].value, WithinAbs(1593.2467308391022, 1e-10));
+        CoolProp::Plot::Isolines d_isolines = plot.calc_isolines(CoolProp::iDmass, iso_values, points_per_isoline);
+        REQUIRE(d_isolines.size() == isoline_count);
+        CHECK_THAT(d_isolines[0].value, WithinAbs(0.6749779869915704, 1e-10));
+        CHECK_THAT(d_isolines[1].value, WithinAbs(4.704765330619733, 1e-10));
+        CHECK_THAT(d_isolines[2].value, WithinAbs(32.793390662794806, 1e-10));
+        CHECK_THAT(d_isolines[3].value, WithinAbs(228.57813208316188, 1e-10));
+        CHECK_THAT(d_isolines[4].value, WithinAbs(1593.2467308391022, 1e-10));
 
         const double expected_x[isoline_count][points_per_isoline] = {
             {524.17387831, 1911.09303198, 2092.95299736, 2262.71394473, 2423.07169138},
@@ -554,8 +554,8 @@ TEST_CASE("Basic TS Plot has same output as Python", "[ts_plot]") {
 
         for(int i = 0; i < isoline_count; i++) {
             for(int j = 0; j < points_per_isoline; j++) {
-                CHECK_THAT(isoD[i].x[j], WithinRel(expected_x[i][j], 1e-8));
-                CHECK_THAT(isoD[i].y[j], WithinRel(expected_y[i][j], 1e-8));
+                CHECK_THAT(d_isolines[i].x[j], WithinRel(expected_x[i][j], 1e-8));
+                CHECK_THAT(d_isolines[i].y[j], WithinRel(expected_y[i][j], 1e-8));
             }
         }
     }
