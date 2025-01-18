@@ -129,34 +129,34 @@ std::vector<double> generate_values_in_range(CoolProp::parameters type, const Ra
 
 
 Isoline::Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state)
-    : key(key),
-      xkey(xkey),
-      ykey(ykey),
+    : key_(key),
+      xkey_(xkey),
+      ykey_(ykey),
       value(value),
-      state(state)
+      state_(state)
 {
-    this->critical_state = Detail::get_critical_point(state);
+    this->critical_state_ = Detail::get_critical_point(state);
 }
 
 Range Isoline::get_sat_bounds(CoolProp::parameters key)
 {
     double s = 1e-7;
-    double t_small = critical_state->keyed_output(CoolProp::iT) * s;
-    double p_small = critical_state->keyed_output(CoolProp::iP) * s;
+    double t_small = critical_state_->keyed_output(CoolProp::iT) * s;
+    double p_small = critical_state_->keyed_output(CoolProp::iP) * s;
 
-    double t_triple = state->trivial_keyed_output(CoolProp::iT_triple);
-    double t_min = state->trivial_keyed_output(CoolProp::iT_min);
-    state->update(CoolProp::QT_INPUTS, 0, std::max(t_triple, t_min) + t_small);
+    double t_triple = state_->trivial_keyed_output(CoolProp::iT_triple);
+    double t_min = state_->trivial_keyed_output(CoolProp::iT_min);
+    state_->update(CoolProp::QT_INPUTS, 0, std::max(t_triple, t_min) + t_small);
     double fluid_min, fluid_max;
     if (key == CoolProp::iP)
     {
-        fluid_min = state->keyed_output(CoolProp::iP) + p_small;
-        fluid_max = critical_state->keyed_output(CoolProp::iP) - p_small;
+        fluid_min = state_->keyed_output(CoolProp::iP) + p_small;
+        fluid_max = critical_state_->keyed_output(CoolProp::iP) - p_small;
     }
     else if (key == CoolProp::iT)
     {
-        fluid_min = state->keyed_output(CoolProp::iT) + t_small;
-        fluid_max = critical_state->keyed_output(CoolProp::iT) - t_small;
+        fluid_min = state_->keyed_output(CoolProp::iT) + t_small;
+        fluid_max = critical_state_->keyed_output(CoolProp::iT) - t_small;
     }
     else
     {
@@ -177,19 +177,19 @@ void Isoline::calc_sat_range(int count)
     std::vector<double> one(two.size(), value);
     CoolProp::input_pairs input_pair = CoolProp::QT_INPUTS;
 
-    double t_crit = critical_state->keyed_output(CoolProp::iT);
-    double p_crit = critical_state->keyed_output(CoolProp::iP);
-    double x_crit = critical_state->keyed_output(xkey);
-    double y_crit = critical_state->keyed_output(ykey);
+    double t_crit = critical_state_->keyed_output(CoolProp::iT);
+    double p_crit = critical_state_->keyed_output(CoolProp::iP);
+    double x_crit = critical_state_->keyed_output(xkey_);
+    double y_crit = critical_state_->keyed_output(ykey_);
     x.resize(one.size());
     y.resize(one.size());
     for (int i = 0; i < one.size(); ++i)
     {
         try
         {
-            state->update(input_pair, one[i], two[i]);
-            x[i] = state->keyed_output(xkey);
-            y[i] = state->keyed_output(ykey);
+            state_->update(input_pair, one[i], two[i]);
+            x[i] = state_->keyed_output(xkey_);
+            y[i] = state_->keyed_output(ykey_);
         }
         catch (...)
         {
@@ -212,7 +212,7 @@ void Isoline::calc_sat_range(int count)
 
 void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair)
 {
-    Detail::IsolineSupported should_switch = Detail::xy_switch.at(key).at(ykey * 10 + xkey);
+    Detail::IsolineSupported should_switch = Detail::xy_switch.at(key_).at(ykey_ * 10 + xkey_);
     double out1, out2;
     switch (should_switch)
     {
@@ -220,10 +220,10 @@ void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair)
             throw CoolProp::ValueError("This isoline cannot be calculated!");
             break;
         case Detail::IsolineSupported::Yes:
-            pair = CoolProp::generate_update_pair(key, 0.0, xkey, 1.0, out1, out2);
+            pair = CoolProp::generate_update_pair(key_, 0.0, xkey_, 1.0, out1, out2);
             break;
         case Detail::IsolineSupported::Flipped:
-            pair = CoolProp::generate_update_pair(key, 0.0, ykey, 1.0, out1, out2);
+            pair = CoolProp::generate_update_pair(key_, 0.0, ykey_, 1.0, out1, out2);
             break;
     }
     bool should_swap = (out1 != 0.0);
@@ -260,7 +260,7 @@ void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair)
 
 void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
 {
-    if (key == CoolProp::iQ)
+    if (key_ == CoolProp::iQ)
     {
         calc_sat_range(xvals.size());
     }
@@ -272,9 +272,9 @@ void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
         std::vector<double> ivals(xvals.size(), value);
         std::vector<int> order = {ipos, xpos, ypos};
         std::vector<CoolProp::parameters> idxs(3);
-        idxs[ipos] = key;
-        idxs[xpos] = xkey;
-        idxs[ypos] = ykey;
+        idxs[ipos] = key_;
+        idxs[xpos] = xkey_;
+        idxs[ypos] = ykey_;
         std::vector<std::vector<double>> vals(3);
         vals[ipos] = ivals;
         vals[xpos] = xvals;
@@ -286,8 +286,8 @@ void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
         {
             try
             {
-                state->update((CoolProp::input_pairs)pair, vals[0][i], vals[1][i]);
-                vals[2][i] = state->keyed_output(idxs[2]);
+                state_->update((CoolProp::input_pairs)pair, vals[0][i], vals[1][i]);
+                vals[2][i] = state_->keyed_output(idxs[2]);
             }
             catch (...)
             {
@@ -297,28 +297,27 @@ void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
 
         for (int i = 0; i < idxs.size(); ++i)
         {
-            if (idxs[i] == xkey) x = vals[i];
-            if (idxs[i] == ykey) y = vals[i];
+            if (idxs[i] == xkey_) x = vals[i];
+            if (idxs[i] == ykey_) y = vals[i];
         }
     }
 }
 
 PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits)
-    : fluid_name(fluid_name),
-      xkey(xkey),
+    : xkey(xkey),
       ykey(ykey),
       xscale(Detail::default_scale(xkey)),
       yscale(Detail::default_scale(ykey))
 {
-    this->state = Detail::process_fluid_state(fluid_name);
-    this->critical_state = Detail::get_critical_point(state);
+    this->state_ = Detail::process_fluid_state(fluid_name);
+    this->critical_state_ = Detail::get_critical_point(state_);
 
     // We are just assuming that all inputs and outputs are in SI units. We
     // take care of any conversions before calling the library and after
     // getting the results.
     int out1, out2;
-    axis_pair = CoolProp::generate_update_pair(xkey, 0, ykey, 1, out1, out2);
-    swap_axis_inputs_for_update = (out1 == 1);
+    axis_pair_ = CoolProp::generate_update_pair(xkey, 0, ykey, 1, out1, out2);
+    swap_axis_inputs_for_update_ = (out1 == 1);
 
     const double HI_FACTOR = 2.25; // Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
     const double LO_FACTOR = 1.01; // Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
@@ -354,7 +353,7 @@ Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector
     Isolines lines;
     for (double val : values)
     {
-        Isoline line(key, xkey, ykey, val, state);
+        Isoline line(key, xkey, ykey, val, state_);
         line.calc_range(xvals, yvals);
         lines.push_back(line);
     }
@@ -382,19 +381,19 @@ double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yv
 
     try
     {
-        if (swap_axis_inputs_for_update)
+        if (swap_axis_inputs_for_update_)
             std::swap(xvalue, yvalue);
-        state->specify_phase(phase);
-        state->update(axis_pair, xvalue, yvalue);
+        state_->specify_phase(phase);
+        state_->update(axis_pair_, xvalue, yvalue);
         switch (key)
         {
-            case CoolProp::iT: return state->T();
-            case CoolProp::iP: return state->p();
-            case CoolProp::iDmass: return state->rhomass();
-            case CoolProp::iHmass: return state->hmass();
-            case CoolProp::iSmass: return state->smass();
-            case CoolProp::iUmass: return state->umass();
-            case CoolProp::iQ: return state->Q();
+            case CoolProp::iT: return state_->T();
+            case CoolProp::iP: return state_->p();
+            case CoolProp::iDmass: return state_->rhomass();
+            case CoolProp::iHmass: return state_->hmass();
+            case CoolProp::iSmass: return state_->smass();
+            case CoolProp::iUmass: return state_->umass();
+            case CoolProp::iQ: return state_->Q();
             default: return Detail::NaN;
         }
     }
@@ -408,16 +407,16 @@ Range PropertyPlot::get_sat_bounds(CoolProp::parameters key) const
 {
     // TODO: duplicated code from IsoLine
     double s = 1e-7;
-    double t_small = critical_state->keyed_output(CoolProp::iT) * s;
-    double p_small = critical_state->keyed_output(CoolProp::iP) * s;
+    double t_small = critical_state_->keyed_output(CoolProp::iT) * s;
+    double p_small = critical_state_->keyed_output(CoolProp::iP) * s;
 
-    double t_triple = state->trivial_keyed_output(CoolProp::iT_triple);
-    double t_min = state->trivial_keyed_output(CoolProp::iT_min);
-    state->update(CoolProp::QT_INPUTS, 0, std::max(t_triple, t_min) + t_small);
+    double t_triple = state_->trivial_keyed_output(CoolProp::iT_triple);
+    double t_min = state_->trivial_keyed_output(CoolProp::iT_min);
+    state_->update(CoolProp::QT_INPUTS, 0, std::max(t_triple, t_min) + t_small);
     if (key == CoolProp::iP)
-        return {state->keyed_output(CoolProp::iP) + p_small, critical_state->keyed_output(CoolProp::iP) - p_small};
+        return {state_->keyed_output(CoolProp::iP) + p_small, critical_state_->keyed_output(CoolProp::iP) - p_small};
     else if (key == CoolProp::iT)
-        return {state->keyed_output(CoolProp::iT) + t_small, critical_state->keyed_output(CoolProp::iT) - t_small};
+        return {state_->keyed_output(CoolProp::iT) + t_small, critical_state_->keyed_output(CoolProp::iT) - t_small};
     else
         throw CoolProp::ValueError("Invalid key");
 }
@@ -439,10 +438,10 @@ PropertyPlot::Range2D PropertyPlot::get_Tp_limits() const
     if (std::isnan(p.max)) p.max = 1e10;
     else if (p.max < ID_FACTOR) p.max *= psat.max;
 
-    try { t.min = std::max(t.min, state->trivial_keyed_output(CoolProp::iT_min)); } catch (...) {}
-    try { t.max = std::min(t.max, state->trivial_keyed_output(CoolProp::iT_max)); } catch (...) {}
-    try { p.min = std::max(p.min, state->trivial_keyed_output(CoolProp::iP_min)); } catch (...) {}
-    try { p.max = std::min(p.max, state->trivial_keyed_output(CoolProp::iP_max)); } catch (...) {}
+    try { t.min = std::max(t.min, state_->trivial_keyed_output(CoolProp::iT_min)); } catch (...) {}
+    try { t.max = std::min(t.max, state_->trivial_keyed_output(CoolProp::iT_max)); } catch (...) {}
+    try { p.min = std::max(p.min, state_->trivial_keyed_output(CoolProp::iP_min)); } catch (...) {}
+    try { p.max = std::min(p.max, state_->trivial_keyed_output(CoolProp::iP_max)); } catch (...) {}
     return {t, p};
 }
 
@@ -463,9 +462,9 @@ PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, C
             {
                 try
                 {
-                    state->update(CoolProp::PT_INPUTS, p, T);
-                    double x = state->keyed_output(xkey);
-                    double y = state->keyed_output(ykey);
+                    state_->update(CoolProp::PT_INPUTS, p, T);
+                    double x = state_->keyed_output(xkey);
+                    double y = state_->keyed_output(ykey);
                     xrange.min = std::min(xrange.min, x);
                     xrange.max = std::max(xrange.max, x);
                     yrange.min = std::min(yrange.min, y);

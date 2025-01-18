@@ -63,11 +63,11 @@ public:
     double value;
 
 private:
-    std::shared_ptr<CoolProp::AbstractState> state;
-    std::shared_ptr<CoolProp::AbstractState> critical_state;
-    CoolProp::parameters xkey;
-    CoolProp::parameters ykey;
-    CoolProp::parameters key;
+    std::shared_ptr<CoolProp::AbstractState> state_;
+    std::shared_ptr<CoolProp::AbstractState> critical_state_;
+    CoolProp::parameters xkey_;
+    CoolProp::parameters ykey_;
+    CoolProp::parameters key_;
 
     Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state);
 
@@ -114,11 +114,10 @@ private:
         };
     };
 
-    std::string fluid_name;
-    CoolProp::input_pairs axis_pair;
-    bool swap_axis_inputs_for_update;
-    std::shared_ptr<CoolProp::AbstractState> state;
-    std::shared_ptr<CoolProp::AbstractState> critical_state;
+    CoolProp::input_pairs axis_pair_;
+    bool swap_axis_inputs_for_update_;
+    std::shared_ptr<CoolProp::AbstractState> state_;
+    std::shared_ptr<CoolProp::AbstractState> critical_state_;
     Range2D Tp_limits_;
 
     Range get_sat_bounds(CoolProp::parameters key) const;
