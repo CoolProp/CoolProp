@@ -51,8 +51,6 @@ enum IsolineSupported
 
 Scale default_scale(CoolProp::parameters key);
 std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& fluid_ref);
-std::vector<double> generate_values_in_range(Scale scale, double start, double end, int count);
-std::vector<double> generate_values_in_range(CoolProp::parameters type, double start, double end, int count);
 inline std::shared_ptr<CoolProp::AbstractState> get_critical_point(const std::shared_ptr<CoolProp::AbstractState>& state);
 
 } /* namespace Detail */
@@ -64,14 +62,14 @@ public:
     std::vector<double> y;
     double value;
 
-    Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state);
-
 private:
     std::shared_ptr<CoolProp::AbstractState> state;
     std::shared_ptr<CoolProp::AbstractState> critical_state;
     CoolProp::parameters xkey;
     CoolProp::parameters ykey;
     CoolProp::parameters key;
+
+    Isoline(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state);
 
     Range get_sat_bounds(CoolProp::parameters key);
     void calc_sat_range(int count);
@@ -82,6 +80,9 @@ private:
 };
 
 using Isolines = std::vector<Isoline>;
+
+std::vector<double> generate_values_in_range(Scale scale, const Range& range, int count);
+std::vector<double> generate_values_in_range(CoolProp::parameters type, const Range& range, int count);
 
 class PropertyPlot
 {
@@ -98,7 +99,7 @@ public:
     Range isoline_range(CoolProp::parameters key);
     Isolines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
     std::vector<CoolProp::parameters> supported_isoline_keys() const;
-    double value_at(CoolProp::parameters key, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
+    double value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
 
 private:
     std::string fluid_name;
