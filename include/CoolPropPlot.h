@@ -47,6 +47,8 @@ enum class Scale
     Log
 };
 
+namespace Detail {
+
 inline Scale default_scale(CoolProp::parameters key)
 {
     switch (key)
@@ -62,10 +64,6 @@ inline Scale default_scale(CoolProp::parameters key)
         default: return Scale::Lin;
     }
 }
-
-
-namespace Detail
-{
 
 inline std::shared_ptr<CoolProp::AbstractState> process_fluid_state(const std::string& fluid_ref)
 {
@@ -184,18 +182,14 @@ public:
     std::vector<double> y;
     double value;
 
-    IsoLine(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, std::shared_ptr<CoolProp::AbstractState> state)
-        : value(value),
-          state(state),
+    IsoLine(CoolProp::parameters key, CoolProp::parameters xkey, CoolProp::parameters ykey, double value, const std::shared_ptr<CoolProp::AbstractState>& state)
+        : key(key),
           xkey(xkey),
           ykey(ykey),
-          key(key)
+          value(value),
+          state(state)
     {
         this->critical_state = Detail::get_critical_point(state);
-    }
-    size_t size() const
-    {
-        return x.size();
     }
 private:
     std::shared_ptr<CoolProp::AbstractState> state;
@@ -383,109 +377,11 @@ public:
     Range axis_x_range;
     Range axis_y_range;
 
-    PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits)
-        : fluid_name(fluid_name),
-          xkey(xkey),
-          ykey(ykey),
-          axis_x_scale(default_scale(xkey)),
-          axis_y_scale(default_scale(ykey))
-    {
-        this->state = Detail::process_fluid_state(fluid_name);
-        this->critical_state = Detail::get_critical_point(state);
-
-        // We are just assuming that all inputs and outputs are in SI units. We
-        // take care of any conversions before calling the library and after
-        // getting the results.
-        int out1, out2;
-        axis_pair = CoolProp::generate_update_pair(xkey, 0, ykey, 1, out1, out2);
-        swap_axis_inputs_for_update = (out1 == 1);
-
-        const double HI_FACTOR = 2.25; // Upper default limits: HI_FACTOR*T_crit and HI_FACTOR*p_crit
-        const double LO_FACTOR = 1.01; // Lower default limits: LO_FACTOR*T_triple and LO_FACTOR*p_triple
-        if (tp_limits == "NONE")
-            this->limits = {Detail::NaN, Detail::NaN, Detail::NaN, Detail::NaN};
-        else if (tp_limits == "DEF")
-            this->limits = {LO_FACTOR, HI_FACTOR, LO_FACTOR, HI_FACTOR};
-        else if (tp_limits == "ACHP")
-            this->limits = {173.15, 493.15, 0.25e5, HI_FACTOR};
-        else if (tp_limits == "ORC")
-            this->limits = {273.15, 673.15, 0.25e5, HI_FACTOR};
-        else
-            throw CoolProp::ValueError("Invalid tp_limits");
-
-        get_axis_limits();
-    }
-
-    Range isoline_range(CoolProp::parameters key)
-    {
-        if (key == CoolProp::iQ)
-            return {0., 1.};
-        else // TODO: always against iT?
-        {
-            std::vector<double> range = get_axis_limits(key, CoolProp::iT);
-            return {range[0], range[1]};
-        }
-    }
-
-    IsoLines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points)
-    {
-        std::vector<double> xvals = Detail::generate_values_in_range(axis_x_scale, axis_x_range.min, axis_x_range.max, points);
-        std::vector<double> yvals = Detail::generate_values_in_range(axis_y_scale, axis_y_range.min, axis_y_range.max, points);
-
-        IsoLines lines;
-        for (double val : values)
-        {
-            IsoLine line(key, xkey, ykey, val, state);
-            line.calc_range(xvals, yvals);
-            // TODO: line.sanitize_data();
-            lines.push_back(line);
-        }
-        return lines;
-    }
-
-    std::vector<CoolProp::parameters> supported_dimensions() const
-    {
-        // taken from PropertyPlot::calc_isolines when called with iso_type='all'
-        std::vector<CoolProp::parameters> keys;
-        for (auto it = Detail::xy_switch.begin(); it != Detail::xy_switch.end(); ++it)
-        {
-            const std::map<int, Detail::IsolineSupported>& supported = it->second;
-            auto supported_xy = supported.find(ykey * 10 + xkey);
-            if (supported_xy != supported.end() && supported_xy->second != Detail::IsolineSupported::No)
-                keys.push_back(it->first);
-        }
-        return keys;
-    }
-
-    // for value under cursor
-    double value_at(CoolProp::parameters key, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed)
-    {
-        if (key == xkey) return axis_x_value;
-        if (key == ykey) return axis_y_value;
-
-        try
-        {
-            if (swap_axis_inputs_for_update)
-                std::swap(axis_x_value, axis_y_value);
-            state->specify_phase(phase);
-            state->update(axis_pair, axis_x_value, axis_y_value);
-            switch (key)
-            {
-                case CoolProp::iT: return state->T();
-                case CoolProp::iP: return state->p();
-                case CoolProp::iDmass: return state->rhomass();
-                case CoolProp::iHmass: return state->hmass();
-                case CoolProp::iSmass: return state->smass();
-                case CoolProp::iUmass: return state->umass();
-                case CoolProp::iQ: return state->Q();
-                default: return Detail::NaN;
-            }
-        }
-        catch (...)
-        {
-            return Detail::NaN;
-        }
-    }
+    PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, const std::string& tp_limits);
+    Range isoline_range(CoolProp::parameters key);
+    IsoLines calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const;
+    std::vector<CoolProp::parameters> supported_dimensions() const;
+    double value_at(CoolProp::parameters key, double axis_x_value, double axis_y_value, CoolProp::phases phase = CoolProp::phases::iphase_not_imposed) const;
 
 private:
     std::string fluid_name;
@@ -495,115 +391,9 @@ private:
     std::shared_ptr<CoolProp::AbstractState> critical_state;
     std::vector<double> limits;
 
-    Range get_sat_bounds(CoolProp::parameters key)
-    {
-        // TODO: duplicated code from IsoLine
-        double s = 1e-7;
-        double t_small = critical_state->keyed_output(CoolProp::iT) * s;
-        double p_small = critical_state->keyed_output(CoolProp::iP) * s;
-
-        double t_triple = state->trivial_keyed_output(CoolProp::iT_triple);
-        double t_min = state->trivial_keyed_output(CoolProp::iT_min);
-        state->update(CoolProp::QT_INPUTS, 0, std::max(t_triple, t_min) + t_small);
-        double fluid_min, fluid_max;
-        if (key == CoolProp::iP)
-        {
-            fluid_min = state->keyed_output(CoolProp::iP) + p_small;
-            fluid_max = critical_state->keyed_output(CoolProp::iP) - p_small;
-        }
-        else if (key == CoolProp::iT)
-        {
-            fluid_min = state->keyed_output(CoolProp::iT) + t_small;
-            fluid_max = critical_state->keyed_output(CoolProp::iT) - t_small;
-        }
-        else
-        {
-            throw CoolProp::ValueError("Invalid key");
-        }
-        double sat_min = fluid_min;
-        double sat_max = fluid_max;
-        return {sat_min, sat_max};
-    }
-
-    void get_Tp_limits(double& T_lo, double& T_hi, double& P_lo, double& P_hi)
-    {
-        T_lo = limits[0];
-        T_hi = limits[1];
-        P_lo = limits[2];
-        P_hi = limits[3];
-
-        double Ts_lo, Ts_hi;
-        Range Ts = get_sat_bounds(CoolProp::iT);
-        Ts_lo = Ts.min;
-        Ts_hi = Ts.max;
-
-        double Ps_lo, Ps_hi;
-        Range Ps = get_sat_bounds(CoolProp::iP);
-        Ps_lo = Ps.min;
-        Ps_hi = Ps.max;
-
-        const double ID_FACTOR = 10.0; // Values below this number are interpreted as factors
-        if (std::isnan(T_lo)) T_lo = 0.0;
-        else if (T_lo < ID_FACTOR) T_lo *= Ts_lo;
-        if (std::isnan(T_hi)) T_hi = 1e6;
-        else if (T_hi < ID_FACTOR) T_hi *= Ts_hi;
-        if (std::isnan(P_lo)) P_lo = 0.0;
-        else if (P_lo < ID_FACTOR) P_lo *= Ps_lo;
-        if (std::isnan(P_hi)) P_hi = 1e10;
-        else if (P_hi < ID_FACTOR) P_hi *= Ps_hi;
-
-        try { T_lo = std::max(T_lo, state->trivial_keyed_output(CoolProp::iT_min)); } catch (...) {}
-        try { T_hi = std::min(T_hi, state->trivial_keyed_output(CoolProp::iT_max)); } catch (...) {}
-        try { P_lo = std::max(P_lo, state->trivial_keyed_output(CoolProp::iP_min)); } catch (...) {}
-        try { P_hi = std::min(P_hi, state->trivial_keyed_output(CoolProp::iP_max)); } catch (...) {}
-    }
-
-    std::vector<double> get_axis_limits(CoolProp::parameters xkey = CoolProp::parameters::iundefined_parameter, CoolProp::parameters ykey = CoolProp::parameters::iundefined_parameter, bool autoscale = true)
-    {
-        if (xkey == CoolProp::parameters::iundefined_parameter) xkey = this->xkey;
-        if (ykey == CoolProp::parameters::iundefined_parameter) ykey = this->ykey;
-
-        // TODO: double check comparing xkey against ykey is the same as in python
-        if (xkey != this->ykey || ykey != this->ykey || autoscale)
-        {
-            double T_lo, T_hi, P_lo, P_hi;
-            get_Tp_limits(T_lo, T_hi, P_lo, P_hi); // TODO
-            std::vector<double> limits = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest(),
-                                          std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
-            for (double T : {T_lo, T_hi})
-            {
-                for (double P : {P_lo, P_hi})
-                {
-                    try
-                    {
-                        state->update(CoolProp::PT_INPUTS, P, T);
-                        double x = state->keyed_output(xkey);
-                        double y = state->keyed_output(ykey);
-                        if (x < limits[0]) limits[0] = x;
-                        if (x > limits[1]) limits[1] = x;
-                        if (y < limits[2]) limits[2] = y;
-                        if (y > limits[3]) limits[3] = y;
-                    }
-                    catch (...) { }
-                }
-            }
-            if (xkey == this->xkey)
-            {
-                axis_x_range.min = limits[0];
-                axis_x_range.max = limits[1];
-            }
-            if (ykey == this->ykey)
-            {
-                axis_y_range.min = limits[2];
-                axis_y_range.max = limits[3];
-            }
-            return limits;
-        }
-        else
-        {
-            return {axis_x_range.min, axis_x_range.max, axis_y_range.min, axis_y_range.max};
-        }
-    }
+    Range get_sat_bounds(CoolProp::parameters key);
+    void get_Tp_limits(double& T_lo, double& T_hi, double& P_lo, double& P_hi);
+    std::vector<double> get_axis_limits(CoolProp::parameters xkey = CoolProp::parameters::iundefined_parameter, CoolProp::parameters ykey = CoolProp::parameters::iundefined_parameter, bool autoscale = true);
 };
 
 } /* namespace Plot */
