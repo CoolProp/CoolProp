@@ -261,12 +261,13 @@ void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
 }
 
 PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, TPLimits tp_limits)
-    : xkey(xkey),
-      ykey(ykey),
-      xscale(Detail::default_scale(xkey)),
-      yscale(Detail::default_scale(ykey)) {
+    : xkey_(xkey),
+      ykey_(ykey) {
     this->state_ = Detail::process_fluid_state(fluid_name);
     this->critical_state_ = Detail::get_critical_point(state_);
+
+    xaxis.scale = Detail::default_scale(xkey);
+    yaxis.scale = Detail::default_scale(ykey);
 
     // We are just assuming that all inputs and outputs are in SI units. We
     // take care of any conversions before calling the library and after
@@ -285,8 +286,8 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     }
 
     Range2D ranges = get_axis_limits();
-    xrange = ranges.x;
-    yrange = ranges.y;
+    xaxis.range = ranges.x;
+    yaxis.range = ranges.y;
 }
 
 Range PropertyPlot::isoline_range(CoolProp::parameters key) const {
@@ -297,12 +298,12 @@ Range PropertyPlot::isoline_range(CoolProp::parameters key) const {
 }
 
 Isolines PropertyPlot::calc_isolines(CoolProp::parameters key, const std::vector<double>& values, int points) const {
-    std::vector<double> xvals = generate_values_in_range(xscale, xrange, points);
-    std::vector<double> yvals = generate_values_in_range(yscale, yrange, points);
+    std::vector<double> xvals = generate_values_in_range(xaxis.scale, xaxis.range, points);
+    std::vector<double> yvals = generate_values_in_range(yaxis.scale, yaxis.range, points);
 
     Isolines lines;
     for (double val : values) {
-        Isoline line(key, xkey, ykey, val, state_);
+        Isoline line(key, xkey_, ykey_, val, state_);
         line.calc_range(xvals, yvals);
         lines.push_back(line);
     }
@@ -314,7 +315,7 @@ std::vector<CoolProp::parameters> PropertyPlot::supported_isoline_keys() const {
     std::vector<CoolProp::parameters> keys;
     for (auto it = Detail::xy_switch.begin(); it != Detail::xy_switch.end(); ++it) {
         const std::map<int, Detail::IsolineSupported>& supported = it->second;
-        auto supported_xy = supported.find(ykey * 10 + xkey);
+        auto supported_xy = supported.find(ykey_ * 10 + xkey_);
         if (supported_xy != supported.end() && supported_xy->second != Detail::IsolineSupported::No)
             keys.push_back(it->first);
     }
@@ -322,8 +323,8 @@ std::vector<CoolProp::parameters> PropertyPlot::supported_isoline_keys() const {
 }
 
 double PropertyPlot::value_at(CoolProp::parameters key, double xvalue, double yvalue, CoolProp::phases phase) const {
-    if (key == xkey) return xvalue;
-    if (key == ykey) return yvalue;
+    if (key == xkey_) return xvalue;
+    if (key == ykey_) return yvalue;
 
     try {
         if (swap_axis_inputs_for_update_)
@@ -390,10 +391,10 @@ PropertyPlot::Range2D PropertyPlot::get_Tp_limits() const {
 }
 
 PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, CoolProp::parameters ykey, bool autoscale) const {
-    if (xkey == CoolProp::parameters::iundefined_parameter) xkey = this->xkey;
-    if (ykey == CoolProp::parameters::iundefined_parameter) ykey = this->ykey;
+    if (xkey == CoolProp::parameters::iundefined_parameter) xkey = this->xkey_;
+    if (ykey == CoolProp::parameters::iundefined_parameter) ykey = this->ykey_;
 
-    if (xkey != this->xkey || ykey != this->ykey || autoscale) {
+    if (xkey != this->xkey_ || ykey != this->ykey_ || autoscale) {
         Range2D tp_limits = get_Tp_limits();
         Range xrange = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
         Range yrange = {std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
@@ -413,7 +414,7 @@ PropertyPlot::Range2D PropertyPlot::get_axis_limits(CoolProp::parameters xkey, C
         }
         return {xrange, yrange};
     } else {
-        return {xrange, yrange};
+        return {xaxis.range, yaxis.range};
     }
 }
 
@@ -442,16 +443,15 @@ TEST_CASE("Check that the isolines are the same as from Python", "[Plot]") {
     const int isoline_count = 5;
     const int points_per_isoline = 5;
 
-    CHECK(plot.xkey == CoolProp::iHmass);
-    CHECK(plot.ykey == CoolProp::iP);
+    // CHECK(plot.xkey_ == CoolProp::iHmass);
+    // CHECK(plot.ykey_ == CoolProp::iP);
 
-    CHECK(plot.xscale == CoolProp::Plot::Scale::Lin);
-    CHECK(plot.yscale == CoolProp::Plot::Scale::Log);
-
-    CHECK_THAT(plot.xrange.min, WithinAbs(75373.1, 1));
-    CHECK_THAT(plot.xrange.max, WithinAbs(577605, 1));
-    CHECK_THAT(plot.yrange.min, WithinAbs(25000, 1));
-    CHECK_THAT(plot.yrange.max, WithinAbs(9.133e6, 1));
+    CHECK(plot.xaxis.scale == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.yaxis.scale == CoolProp::Plot::Scale::Log);
+    CHECK_THAT(plot.xaxis.min, WithinAbs(75373.1, 1));
+    CHECK_THAT(plot.xaxis.max, WithinAbs(577605, 1));
+    CHECK_THAT(plot.yaxis.min, WithinAbs(25000, 1));
+    CHECK_THAT(plot.yaxis.max, WithinAbs(9.133e6, 1));
 
     std::vector<CoolProp::parameters> iso_types = plot.supported_isoline_keys();
     REQUIRE(iso_types.size() == 4);
@@ -602,16 +602,15 @@ TEST_CASE("Basic TS Plot has same output as Python", "[Plot]") {
     const int isoline_count = 5;
     const int points_per_isoline = 5;
 
-    CHECK(plot.xkey == CoolProp::iSmass);
-    CHECK(plot.ykey == CoolProp::iT);
+    // CHECK(plot.xkey_ == CoolProp::iSmass);
+    // CHECK(plot.ykey_ == CoolProp::iT);
 
-    CHECK(plot.xscale == CoolProp::Plot::Scale::Lin);
-    CHECK(plot.yscale == CoolProp::Plot::Scale::Lin);
-
-    CHECK_THAT(plot.xrange.min, WithinAbs(426, 1));
-    CHECK_THAT(plot.xrange.max, WithinAbs(2423, 1));
-    CHECK_THAT(plot.yrange.min, WithinAbs(173, 1));
-    CHECK_THAT(plot.yrange.max, WithinAbs(455, 1));
+    CHECK(plot.xaxis.scale == CoolProp::Plot::Scale::Lin);
+    CHECK(plot.yaxis.scale == CoolProp::Plot::Scale::Lin);
+    CHECK_THAT(plot.xaxis.min, WithinAbs(426, 1));
+    CHECK_THAT(plot.xaxis.max, WithinAbs(2423, 1));
+    CHECK_THAT(plot.yaxis.min, WithinAbs(173, 1));
+    CHECK_THAT(plot.yaxis.max, WithinAbs(455, 1));
 
     std::vector<CoolProp::parameters> iso_types = plot.supported_isoline_keys();
     REQUIRE(iso_types.size() == 4);
@@ -655,7 +654,6 @@ TEST_CASE("Basic TS Plot has same output as Python", "[Plot]") {
             }
         }
     }
-
     {
         // P isolines
         CoolProp::Plot::Range p_range = plot.isoline_range(CoolProp::iP);
@@ -695,7 +693,6 @@ TEST_CASE("Basic TS Plot has same output as Python", "[Plot]") {
             }
         }
     }
-
     {
         // H isolines
         CoolProp::Plot::Range h_range = plot.isoline_range(CoolProp::iHmass);
@@ -735,7 +732,6 @@ TEST_CASE("Basic TS Plot has same output as Python", "[Plot]") {
             }
         }
     }
-
     {
         // D isolines
         CoolProp::Plot::Range d_range = plot.isoline_range(CoolProp::iDmass);

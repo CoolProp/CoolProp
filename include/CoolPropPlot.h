@@ -68,12 +68,18 @@ enum class TPLimits
 class PropertyPlot
 {
    public:
-    CoolProp::parameters xkey;
-    CoolProp::parameters ykey;
-    Scale xscale;
-    Scale yscale;
-    Range xrange;
-    Range yrange;
+    struct Axis
+    {
+        Scale scale;
+        union
+        {
+            Range range;
+            struct
+            {
+                double min, max;
+            };
+        };
+    } xaxis, yaxis;
 
     PropertyPlot(const std::string& fluid_name, CoolProp::parameters ykey, CoolProp::parameters xkey, CoolProp::Plot::TPLimits tp_limits = CoolProp::Plot::TPLimits::Def);
 
@@ -95,6 +101,8 @@ class PropertyPlot
         };
     };
 
+    CoolProp::parameters xkey_;
+    CoolProp::parameters ykey_;
     CoolProp::input_pairs axis_pair_;
     bool swap_axis_inputs_for_update_;
     std::shared_ptr<CoolProp::AbstractState> state_;
