@@ -111,7 +111,7 @@ jobs:
         
     - name: Upload GitHub Pages artifact
       if: ${{ !env.ACT }} # skip during local actions testing
-      uses: actions/upload-pages-artifact@v1
+      uses: actions/upload-pages-artifact@v3
       with:
         path: ./Web/_build/html/
     
@@ -165,4 +165,4 @@ jobs:
       #if: contains(github.ref, 'refs/tags')
       if: ${{ !env.ACT }} # skip during local actions testing
       id: deployment
-      uses: actions/deploy-pages@v1
+      uses: actions/deploy-pages@v4
