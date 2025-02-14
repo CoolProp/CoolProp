@@ -119,7 +119,7 @@ jobs:
 
 
   deploy_files:
-    needs: [set_vars, collect_binaries, prepare_mathcad, prepare_sources]
+    needs: [set_vars, collect_binaries, prepare_sources]  # prepare_mathcad
     name: Deploy collected files
     runs-on: ubuntu-latest
     steps:  
