@@ -1,20 +1,17 @@
 name: Mathcad wrapper
 
 on:
-  # ========= Commenting Pushes and Pull_Requests
-  #push:
-  #  branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
-  #  tags: [ 'v*' ]
-  #pull_request:
-  #  branches: [ 'master', 'main', 'develop' ]
-  # ========= Only going to let tis workflow run when called by the nightly build
-  # ========= TODO: Might need more than this for new version releases
+  # ========= Run on Pushes and Pull_Requests
+  push:
+    branches: [ 'master', 'main', 'develop', 'actions_mathcad' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+  # ========= Run on call from other workflows
   workflow_call:
 
 jobs:
   build:
-
-    #if: github.event_name != 'push' && github.event_name != 'pull_request'
 
     runs-on: windows-latest
 
@@ -23,13 +20,14 @@ jobs:
       with:
         submodules: recursive
 
+    # Get the PTC build library and header in the proper location
     - name: Get dependencies
       shell: bash
       run: |
         mkdir "Custom Functions"
         cd "Custom Functions"        
-        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcadincl.h --output mcadincl.h
-        curl -H "Authorization: token ${{ secrets.COOLPROP_ORG_REPO_TOKEN }}" https://raw.githubusercontent.com/CoolProp/PRIVATE_DEPENDENCIES/main/MathcadPrime/Custom%20Functions/mcaduser.lib --output mcaduser.lib
+        cp ../wrappers/MathCAD/Prime/libs/MCADINCL.H .
+        cp ../wrappers/MathCAD/Prime/libs/mcaduser.lib .
 
     - name: Configure CMake
       run: cmake -DCOOLPROP_PRIME_MODULE:BOOL=ON -DCOOLPROP_PRIME_ROOT:STRING="${{ github.workspace }}" -B build -S .
