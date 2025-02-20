@@ -76,16 +76,6 @@ jobs:
       branch: ${{ needs.set_vars.outputs.branch }}
       workflow: ${{ matrix.workflow }}
 
-# **** Disable Mathcad Build for now.  Secrets not working.  Will Upload manually to formal releases.
-#  prepare_mathcad:
-#    needs: [set_vars]
-    # Call the mathcad_builder workflow here direclty
-    # Doesn't work through the matrix calls to release_get_artifact above and no output results for troubleshooting. 
-#    uses: ./.github/workflows/mathcad_builder.yml
-    # Stores artifact under binaries-MathcadPrime consistent with the other builds
-#    secrets: inherit
-
-
   prepare_sources:
     needs: [set_vars]
     name: Prepare the source code
