@@ -1,6 +1,45 @@
 Changelog for CoolProp
 ======================
 
+6.7.0
+-----
+
+Highlights:
+
+* Added wheels for Python 3.13
+* Added EOS for R-1336mzz(E)
+
+Issues closed:
+
+* `#2307 <https://github.com/CoolProp/CoolProp/issues/2307>`_ : Feature Request: Implementation of the novel Refrigerant R1336mzz(e) into HEOS Backend
+* `#2325 <https://github.com/CoolProp/CoolProp/issues/2325>`_ : HEOS::R1336MZZE does not work properly
+* `#2430 <https://github.com/CoolProp/CoolProp/issues/2430>`_ : Support for python 3.13
+* `#2462 <https://github.com/CoolProp/CoolProp/issues/2462>`_ : Python3.13 getting same error as #1876 Python 3.8 : Error in import #1876
+
+Found 20 prs associated with v6.7.0
+Pull requests merged:
+
+* `#2309 <https://github.com/CoolProp/CoolProp/pull/2309>`_ : Addition of EoS JSON of R1336mzz(E) from Akasaka-IJT-2023
+* `#2329 <https://github.com/CoolProp/CoolProp/pull/2329>`_ : Fix the triple points densities for R-1336mzz(E)
+* `#2341 <https://github.com/CoolProp/CoolProp/pull/2341>`_ : Update build process for LibreOffice wrapper
+* `#2342 <https://github.com/CoolProp/CoolProp/pull/2342>`_ : Include stdbool for C interface
+* `#2347 <https://github.com/CoolProp/CoolProp/pull/2347>`_ : Update CMakeLists.txt
+* `#2351 <https://github.com/CoolProp/CoolProp/pull/2351>`_ : Fix bug introduced by 443a2fd
+* `#2362 <https://github.com/CoolProp/CoolProp/pull/2362>`_ : update Excel-wrapper for Mac docs
+* `#2396 <https://github.com/CoolProp/CoolProp/pull/2396>`_ : Add link to `coolprop-mat` repo
+* `#2402 <https://github.com/CoolProp/CoolProp/pull/2402>`_ : Use temperature dependent hard sphere diameter for ion term in ePC-SAFT
+* `#2404 <https://github.com/CoolProp/CoolProp/pull/2404>`_ : Improve Robustness of IF97 Reverse (P,H) and (P,S) Evaluations Along Saturation Curve
+* `#2415 <https://github.com/CoolProp/CoolProp/pull/2415>`_ : Update index.rst
+* `#2416 <https://github.com/CoolProp/CoolProp/pull/2416>`_ : Bypass Mathcad builder on pushes and PRs
+* `#2418 <https://github.com/CoolProp/CoolProp/pull/2418>`_ : Update the Release Workflow for upload/download-artifact@v4 [skip ci]
+* `#2419 <https://github.com/CoolProp/CoolProp/pull/2419>`_ : Fix libreoffice_builder
+* `#2436 <https://github.com/CoolProp/CoolProp/pull/2436>`_ : Python 3.13 and replace distutils with setuptools PEP 632 – Deprecate distutils
+* `#2439 <https://github.com/CoolProp/CoolProp/pull/2439>`_ : Fix np.NaN for numpy >=2
+* `#2446 <https://github.com/CoolProp/CoolProp/pull/2446>`_ : Fix Plots of log-p-h diagrams
+* `#2450 <https://github.com/CoolProp/CoolProp/pull/2450>`_ : Update msgpack-c and selectively add boost
+* `#2463 <https://github.com/CoolProp/CoolProp/pull/2463>`_ : Support plotting in C++
+* `#2471 <https://github.com/CoolProp/CoolProp/pull/2471>`_ : Get Mathcad Workflow Running Again
+
 6.6.0
 -----
 
