@@ -2018,11 +2018,12 @@ if(COOLPROP_CATCH_MODULE)
 
   # CATCH TEST, compile everything with catch and set test entry point
   add_executable(CatchTestRunner ${APP_SOURCES})
+  add_dependencies(CatchTestRunner generate_headers)
 
   target_link_libraries(CatchTestRunner PRIVATE Catch2::Catch2WithMain)
   target_compile_definitions(CatchTestRunner PRIVATE ENABLE_CATCH)
   if(UNIX)
-    target_link_libraries(CatchTestRunner ${CMAKE_DL_LIBS})
+    target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})
   endif()
 
   include(CTest)
