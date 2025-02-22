@@ -41,7 +41,7 @@ jobs:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        os: [ubuntu]
+        os: [ubuntu-latest]
         python-version: [39, 310, 311, 312, 313]
         arch: [i686, x86_64, ppc64le, s390x]
         exclude:
@@ -76,7 +76,7 @@ jobs:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        os: [windows]
+        os: [windows-latest]
         python-version: [39, 310, 311, 312, 313]
         arch: [AMD64, x86, ARM64]
         #exclude:
@@ -93,7 +93,7 @@ jobs:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        os: [macos]
+        os: [macos-latest]
         python-version: [39, 310, 311, 312, 313]
         arch: [x86_64, arm64, universal2]
         exclude:
