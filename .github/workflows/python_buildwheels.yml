@@ -64,7 +64,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04-arm]
         python-version: [39, 310, 311, 312, 313]
-        arch: [ARM64]
+        arch: [aarch64]
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
