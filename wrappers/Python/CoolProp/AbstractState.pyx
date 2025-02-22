@@ -463,6 +463,9 @@ cdef class AbstractState:
     cpdef double first_two_phase_deriv_splined(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, double x_end) except *:
         """ Get the first two-phase derivative using splines - wrapper of C++ function :cpapi:`CoolProp::AbstractState::first_two_phase_deriv_splined` """
         return self.thisptr.first_two_phase_deriv_splined(Of, Wrt, Constant, x_end)
+    cpdef double first_two_phase_deriv_smoothed(self, constants_header.parameters Of, constants_header.parameters Wrt, constants_header.parameters Constant, constants_header.parameters sWrt, double Lsmooth, double Vsmooth) except *:
+        """ Get the first two-phase derivative using smoothstep function - wrapper of C++ function :cpapi:`CoolProp::AbstractState::first_two_phase_deriv_smoothed` """
+        return self.thisptr.first_two_phase_deriv_smoothed(Of, Wrt, Constant, sWrt, Lsmooth, Vsmooth)
 
     ## ----------------------------------------
     ##        Ancillary curves
