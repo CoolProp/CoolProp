@@ -45,11 +45,11 @@ jobs:
         python-version: [39, 310, 311, 312, 313]
         arch: [i686, x86_64, ppc64le, s390x]
         exclude:
-          - os: ubuntu
+          - os: ubuntu-latest
             arch: i686 # reduce the build time until people ask for the binaries
-          - os: ubuntu
+          - os: ubuntu-latest
             arch: ppc64le # reduce the build time until people ask for the binaries
-          - os: ubuntu
+          - os: ubuntu-latest
             arch: s390x # reduce the build time until people ask for the binaries
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
