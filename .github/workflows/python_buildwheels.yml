@@ -43,7 +43,7 @@ jobs:
       matrix:
         os: [ubuntu]
         python-version: [39, 310, 311, 312, 313]
-        arch: [i686, x86_64, aarch64, ppc64le, s390x]
+        arch: [i686, x86_64, ppc64le, s390x]
         exclude:
           - os: ubuntu
             arch: i686 # reduce the build time until people ask for the binaries
@@ -51,6 +51,20 @@ jobs:
             arch: ppc64le # reduce the build time until people ask for the binaries
           - os: ubuntu
             arch: s390x # reduce the build time until people ask for the binaries
+    uses: ./.github/workflows/python_cibuildwheel.yml
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      arch: ${{ matrix.arch }}
+      
+  python_ubuntu_arm:
+    strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04-arm]
+        python-version: [39, 310, 311, 312, 313]
+        arch: [ARM64]
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
@@ -65,9 +79,9 @@ jobs:
         os: [windows]
         python-version: [39, 310, 311, 312, 313]
         arch: [AMD64, x86, ARM64]
-        exclude:
-          - os: windows
-            arch: ARM64 # creates problems with msgpack-c
+        #exclude:
+        #  - os: windows
+        #    arch: ARM64 # creates problems with msgpack-c
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
       os: ${{ matrix.os }}
@@ -93,7 +107,7 @@ jobs:
   
   merge_wheels:
    runs-on: ubuntu-latest
-   needs: [python_source, python_ubuntu, python_windows, python_macos]
+   needs: [python_source, python_ubuntu, python_ubuntu_arm, python_windows, python_macos]
    steps:
      - name: Merge Artifacts
        uses: actions/upload-artifact/merge@v4
