@@ -443,6 +443,10 @@ if __name__ == '__main__':
         common_args.update(dict(
             extra_compile_args=["-std=c++11"]
         ))
+    if sys.platform == 'win32':
+        common_args.update(dict(
+            extra_compile_args=["/utf-8"]
+        ))
 
     if USE_CYTHON:
         common_args.update(dict(cython_c_in_temp=True,

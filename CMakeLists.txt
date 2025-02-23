@@ -271,6 +271,12 @@ list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib"
 )# should be deprecated
+
+if (MSVC)
+  # fmtlib requires that the utf-8 support be compiled in
+  # TODO: add the fmt target from fmtlib directly which does this 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
+endif()
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
