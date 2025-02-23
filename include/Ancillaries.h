@@ -9,6 +9,15 @@
 
 namespace CoolProp {
 
+struct SaturationAncillaryFunction_invert_options
+{
+    double min_bound = -1;
+    double max_bound = -1;
+    int max_iter = 200;
+    double omega = 1.;
+    bool best_guess = false;
+};
+
 /**
 The surface tension correlation class uses correlations for the surface tension that are all
 of the form
@@ -137,7 +146,7 @@ class SaturationAncillaryFunction
     /// @param min_bound (optional) The minimum value for T; ignored if < 0
     /// @param max_bound (optional) The maximum value for T; ignored if < 0
     /// @returns T The temperature in K
-    double invert(double value, double min_bound = -1, double max_bound = -1);
+    double invert(double value, SaturationAncillaryFunction_invert_options options = SaturationAncillaryFunction_invert_options()) ;
 
     /// Get the minimum temperature in K
     double get_Tmin(void) {
