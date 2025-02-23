@@ -2285,6 +2285,16 @@ TEST_CASE("Check bubble temperatures calculated using PC-SAFT", "[pcsaft_bubble_
     t_calc = CoolProp::PropsSI("T", "P", 2387.42669687, "Q", 0, "PCSAFT::Na+[0.0907304774758426]&Cl-[0.0907304774758426]&WATER[0.818539045048315]");
     CHECK(abs((t_calc / t) - 1) < 1e-2);
 }
+
+TEST_CASE("Github issue #2470", "[pureflash]") {
+    auto fluide = "Nitrogen";
+    auto enthalpy = 67040.57857;    //J / kg
+    auto pressure = 3368965.046;  //Pa
+    std::shared_ptr<CoolProp::AbstractState> AS;
+    AS.reset(AbstractState::factory("HEOS", fluide));
+    CHECK_NOTHROW(AS->update(HmassP_INPUTS, enthalpy, pressure));
+}
+
 TEST_CASE("Github issue #2467", "[pureflash]") {
     auto fluide = "Pentane";
     auto AS = CoolProp::AbstractState::factory("HEOS", fluide);

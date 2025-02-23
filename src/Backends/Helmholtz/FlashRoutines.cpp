@@ -1488,6 +1488,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     } catch (...) {
         try {
             resid.iter = 0;
+            HEOS.unspecify_phase();
             // Halley's method failed, so now we try Brent's method
             Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100);
             // Un-specify the phase of the fluid
