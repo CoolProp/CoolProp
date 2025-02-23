@@ -595,7 +595,7 @@ CoolPropDbl TransportRoutines::viscosity_dilute_cyclohexane(HelmholtzEOSMixtureB
 
 CoolPropDbl TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017(HelmholtzEOSMixtureBackend& HEOS) {
     // From Laesecke, JPRCD, 2016
-    double eta0, eta1, DELTAetar, den, Bstar;
+    double eta0, den;
     double T = HEOS.T();
 
     double a[] = {
