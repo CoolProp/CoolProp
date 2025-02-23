@@ -113,7 +113,7 @@
           "p_units": "Pa",
           "rhomolar": 34400.710123020224,
           "rhomolar_units": "mol/m^3",
-          "smolar": -10.153352171781961,
+          "smolar": -10.153352171781947,
           "smolar_units": "J/mol/K"
         },
         "sat_min_vapor": {
@@ -519,7 +519,7 @@
       "p_units": "Pa",
       "rhomolar": 34400.710123020224,
       "rhomolar_units": "mol/m^3",
-      "smolar": -10.153352171781961,
+      "smolar": -10.153352171781947,
       "smolar_units": "J/mol/K"
     },
     "triple_vapor": {
