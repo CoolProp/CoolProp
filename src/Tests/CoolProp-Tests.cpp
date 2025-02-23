@@ -2285,6 +2285,24 @@ TEST_CASE("Check bubble temperatures calculated using PC-SAFT", "[pcsaft_bubble_
     t_calc = CoolProp::PropsSI("T", "P", 2387.42669687, "Q", 0, "PCSAFT::Na+[0.0907304774758426]&Cl-[0.0907304774758426]&WATER[0.818539045048315]");
     CHECK(abs((t_calc / t) - 1) < 1e-2);
 }
+TEST_CASE("Github issue #2467", "[pureflash]") {
+    auto fluide = "Pentane";
+    auto AS = CoolProp::AbstractState::factory("HEOS", fluide);
+    AS->update(CoolProp::QT_INPUTS, 1, 353.15);
+    double p1 = AS->p();
+    AS->update(CoolProp::QT_INPUTS, 1, 433.15);
+    double p2 = AS->p();
+    AS->update(CoolProp::PT_INPUTS, p1, 393.15);
+    double s1 = AS->smass();
+    CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, p2, s1));
+}
+
+TEST_CASE("Github issue #1870", "[pureflash]") {
+    auto fluide = "Pentane";
+    auto AS = CoolProp::AbstractState::factory("HEOS", fluide);
+    CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 1000000, 1500));
+}
+
 
 TEST_CASE("Check phase determination for PC-SAFT backend", "[pcsaft_phase]") {
     double den = 9033.114209728405;
