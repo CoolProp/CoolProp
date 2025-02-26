@@ -113,7 +113,10 @@ if __name__ == '__main__':
             else:
                 new_v += f"{pre_iden}{pre_v + 1}"
         else:
-            new_v += ".post1"
+            # Ensure that our new number is guaranteed to be unique, 
+            # and monotonic by simply making sure it is one greater
+            # than the current number of matched releases
+            new_v += f".rc{len(matched_releases)+1}"
     else:
         new_v = str(current_v)
 
