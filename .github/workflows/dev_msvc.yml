@@ -17,9 +17,15 @@ on:
   #  branches: [ 'master', 'main', 'develop' ]
   schedule:
     - cron: '15 8 * * 0,4' # Run twice a week
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  # Path to the CMake build directory.
+  build: '${{ github.workspace }}/build'
+  config: 'Release'
 
 jobs:
   analyze:
@@ -56,6 +62,10 @@ jobs:
           cmakeBuildDirectory: ${{github.workspace}}/build
           # Ruleset file that will determine what checks will be run
           ruleset: NativeRecommendedRules.ruleset
+          # Reduce number of SARIF files generated
+          #   Don't need to analyze submodules or code wrappers (can be done separately)
+          #   May have to analyze all the backends separately
+          ignoredIncludePaths: external;wrappers;src/backends
 
       # Upload SARIF file to GitHub Code Scanning Alerts
       - name: Upload SARIF to GitHub
