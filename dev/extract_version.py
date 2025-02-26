@@ -112,11 +112,17 @@ if __name__ == '__main__':
                 new_v += f"{pre_iden}{pre_v}"
             else:
                 new_v += f"{pre_iden}{pre_v + 1}"
+        elif max_v.dev:
+            dev_iden, dev_v = max_v.dev
+            if args.current:
+                new_v += f"{pre_iden}{dev_v}"
+            else:
+                new_v += f"{pre_iden}{dev_v + 1}"
         else:
             # Ensure that our new number is guaranteed to be unique, 
             # and monotonic by simply making sure it is one greater
             # than the current number of matched releases
-            new_v += f".post{len(matched_releases)+1}"
+            new_v += f".dev{len(matched_releases)+1}"
     else:
         new_v = str(current_v)
 
