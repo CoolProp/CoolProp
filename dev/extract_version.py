@@ -116,7 +116,7 @@ if __name__ == '__main__':
             # Ensure that our new number is guaranteed to be unique, 
             # and monotonic by simply making sure it is one greater
             # than the current number of matched releases
-            new_v += f".rc{len(matched_releases)+1}"
+            new_v += f".post{len(matched_releases)+1}"
     else:
         new_v = str(current_v)
 
