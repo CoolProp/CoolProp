@@ -1419,7 +1419,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Unit conversion for REFPROP
             _rhomolar = value1;
             rho_mol_L = 0.001 * value1;  // Want rho in [mol/L] in REFPROP
-            emol = value2; // Want e in J/mol in REFPROP
+            emol = value2;               // Want e in J/mol in REFPROP
 
             // Use flash routine to find properties
             // from REFPROP: subroutine DEFLSH (D,e,z,t,p,Dl,Dv,x,y,q,h,s,cv,cp,w,ierr,herr)
