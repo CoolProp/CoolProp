@@ -62,20 +62,20 @@ jobs:
           cmakeBuildDirectory: ${{github.workspace}}/build
           # Ruleset file that will determine what checks will be run
           ruleset: NativeRecommendedRules.ruleset
-          # Reduce number of SARIF files generated
-          #   Don't need to analyze submodules or code wrappers (can be done separately)
-          #   May have to analyze all the backends separately
-          ignoredIncludePaths: external;wrappers;src/backends
+
 
       # Upload SARIF file to GitHub Code Scanning Alerts
-      - name: Upload SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: ${{ steps.run-analysis.outputs.sarif }}
+      # NOTE: Too many runs (47 cpp files) to upload to Github (LIMIT = 20)
+      #       Commenting and uploading as an artifact below for download
+      #       and viewing off-line.
+      # - name: Upload SARIF to GitHub
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: ${{ steps.run-analysis.outputs.sarif }}
 
       # Upload SARIF file as an Artifact to download and view
-      # - name: Upload SARIF as an Artifact
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: sarif-file
-      #     path: ${{ steps.run-analysis.outputs.sarif }}
+      - name: Upload SARIF as an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sarif-file
+          path: ${{ steps.run-analysis.outputs.sarif }}
