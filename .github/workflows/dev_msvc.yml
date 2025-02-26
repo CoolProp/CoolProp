@@ -55,7 +55,7 @@ jobs:
       #         --config Release
 
       - name: Initialize MSVC Code Analysis
-        uses: microsoft/msvc-code-analysis-action@v3
+        uses: microsoft/msvc-code-analysis-action@v0.0.1
         # Provide a unique ID to access the sarif output path
         id: run-analysis
         with:
