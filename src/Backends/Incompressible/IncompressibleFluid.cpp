@@ -461,7 +461,9 @@ bool IncompressibleFluid::checkP(double T, double p, double x) {
 bool IncompressibleFluid::checkX(double x) {
     if (xmin < 0.0 || xmin > 1.0) throw ValueError("Please specify the minimum concentration between 0 and 1.");
     if (xmax < 0.0 || xmax > 1.0) throw ValueError("Please specify the maximum concentration between 0 and 1.");
-    if ((xmin > x) || (x > xmax)) throw ValueError(format("Your composition %f is not between %f and %f.", x, xmin, xmax));
+    if ((x < xmin * (1 - INCOMP_EPSILON)) || (x > xmax * (1 + INCOMP_EPSILON))) {
+        throw ValueError(format("Your composition %g is not between %g and %g.", x, xmin, xmax));
+    }
     return true;
 }
 
