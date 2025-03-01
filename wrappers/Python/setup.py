@@ -477,7 +477,7 @@ if __name__ == '__main__':
         ext_modules = cythonize(ext_modules, compiler_directives=cython_directives)
 
     try:
-        setup(name='CoolProp',
+        setup(name='coolprop',
                version=version,  # look above for the definition of version variable - don't modify it here
                author="Ian Bell",
                author_email='ian.h.bell@gmail.com',
