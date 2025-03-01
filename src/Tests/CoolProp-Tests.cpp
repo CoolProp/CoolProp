@@ -2313,6 +2313,12 @@ TEST_CASE("Github issue #1870", "[pureflash]") {
     CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 1000000, 1500));
 }
 
+TEST_CASE("Github issue #2447", "[2447]") {
+    double pvap = PropsSI("P", "T", 360 + 273.15, "Q", 0, "INCOMP::S800");
+    double err = std::abs(pvap / 961e3 - 1);
+    CHECK(err < 0.05);
+}
+
 
 TEST_CASE("Check phase determination for PC-SAFT backend", "[pcsaft_phase]") {
     double den = 9033.114209728405;
