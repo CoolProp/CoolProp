@@ -137,10 +137,10 @@ class IncompressibleData(object):
                       coeffs=self.coeffs, DEBUG=self.DEBUG)
 
             elif self.type == IncompressibleData.INCOMPRESSIBLE_LOGEXPONENTIAL:
-                xLen = np.round([len(x) / 1.5])
-                yLen = np.round([len(y) / 1.5])
-                xLen = int(np.min([xLen, 4]))
-                yLen = int(np.min([yLen, 6]))
+                xLen = int(np.round(len(x) / 1.5))
+                yLen = int(np.round(len(y) / 1.5))
+                xLen = min(xLen, 4)
+                yLen = min(yLen, 6)
 
                 if (xLen + yLen) > 2:
                     if self.DEBUG: print("Poor solution found with log exponential, trying once more with exponential polynomial.")

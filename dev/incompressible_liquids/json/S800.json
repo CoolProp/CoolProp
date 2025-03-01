@@ -1,114 +1,114 @@
 {
   "T_freeze": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "Tbase": 4.521500e+02, 
-  "Tmax": 6.711500e+02, 
-  "Tmin": 2.331500e+02, 
-  "TminPsat": 3.071500e+02, 
+  },
+  "Tbase": 452.15,
+  "Tmax": 671.15,
+  "Tmin": 233.14999999999998,
+  "TminPsat": 307.15,
   "conductivity": {
-    "NRMS": 3.511222e-03, 
+    "NRMS": 0.0035112218309123733,
     "coeffs": [
       [
-        1.051015e-01
-      ], 
+        0.10510148969862274
+      ],
       [
-        -1.880140e-04
-      ], 
+        -0.00018801403206687977
+      ],
       [
-        1.894103e-10
-      ], 
+        1.8941027227019867e-10
+      ],
       [
-        -3.884097e-12
+        -3.884096900022244e-12
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "density": {
-    "NRMS": 6.451330e-05, 
+    "NRMS": 6.451329583179039e-05,
     "coeffs": [
       [
-        7.938949e+02
-      ], 
+        793.8948601311903
+      ],
       [
-        -9.273680e-01
-      ], 
+        -0.9273680324374726
+      ],
       [
-        -4.763441e-04
-      ], 
+        -0.0004763441474735508
+      ],
       [
-        -1.674039e-06
+        -1.6740390125088996e-06
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
-  "description": "Syltherm 800", 
+  },
+  "description": "Syltherm 800",
   "mass2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
+  },
   "mole2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "name": "S800", 
-  "reference": "Dow Chemical Company - FLUIDFILE Software accessed May 2017", 
+  },
+  "name": "S800",
+  "reference": "Dow Chemical Company - FLUIDFILE Software accessed May 2017",
   "saturation_pressure": {
-    "NRMS": 7.477874e-03, 
+    "NRMS": 0.007477874377229738,
     "coeffs": [
-      -2.322952e+03, 
-      -1.469809e+02, 
-      -1.396011e+01
-    ], 
+      -2322.9519523099234,
+      -146.9809186369734,
+      -18.565281035789198
+    ],
     "type": "exponential"
-  }, 
+  },
   "specific_heat": {
-    "NRMS": 3.912572e-03, 
+    "NRMS": 0.0039125717630116635,
     "coeffs": [
       [
-        1.880183e+03
-      ], 
+        1880.1830466830477
+      ],
       [
-        1.707853e+00
-      ], 
+        1.7078527551971712
+      ],
       [
-        -5.711126e-06
-      ], 
+        -5.711125775631487e-06
+      ],
       [
-        -4.146361e-08
+        -4.146361457790793e-08
       ]
-    ], 
+    ],
     "type": "polynomial"
-  }, 
+  },
   "viscosity": {
-    "NRMS": 8.195934e-03, 
+    "NRMS": 0.008195934137120053,
     "coeffs": [
       [
-        -6.701381e+00
-      ], 
+        -6.701380616058272
+      ],
       [
-        -9.157252e-03
-      ], 
+        -0.009157252005384878
+      ],
       [
-        1.925359e-05
-      ], 
+        1.9253591888665142e-05
+      ],
       [
-        -5.658791e-08
+        -5.6587908108650406e-08
       ]
-    ], 
+    ],
     "type": "exppolynomial"
-  }, 
+  },
   "volume2input": {
-    "NRMS": null, 
-    "coeffs": "null", 
+    "NRMS": null,
+    "coeffs": "null",
     "type": "notdefined"
-  }, 
-  "xbase": 0.000000e+00, 
-  "xid": "pure", 
-  "xmax": 1.000000e+00, 
-  "xmin": 0.000000e+00
+  },
+  "xbase": 0.0,
+  "xid": "pure",
+  "xmax": 1.0,
+  "xmin": 0.0
 }
