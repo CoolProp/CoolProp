@@ -1418,28 +1418,28 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
         case DmolarUmolar_INPUTS: {
             // Unit conversion for REFPROP
             _rhomolar = value1;
-            rho_mol_L = 0.001 * value1;
-            emol = value2;  // Want rho in [mol/L] in REFPROP
+            rho_mol_L = 0.001 * value1;  // Want rho in [mol/L] in REFPROP
+            emol = value2;               // Want e in J/mol in REFPROP
 
             // Use flash routine to find properties
             // from REFPROP: subroutine DEFLSH (D,e,z,t,p,Dl,Dv,x,y,q,h,s,cv,cp,w,ierr,herr)
             DEFLSHdll(&rho_mol_L, &emol, &(mole_fractions[0]), &_T, &p_kPa, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
                       &(mole_fractions_vap[0]),  // Saturation terms
-                      &q, &hmol, &hmol, &cvmol, &cpmol, &w, &ierr, herr, errormessagelength);
+                      &q, &hmol, &smol, &cvmol, &cpmol, &w, &ierr, herr, errormessagelength);
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("DmolarUmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;
-            if (0) _rhoLmolar = rhoLmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
-            _rhoVmolar = rhoVmol_L * 1000;         // 1000 for conversion from mol/L to mol/m3
+            _rhoLmolar = rhoLmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case DmassUmass_INPUTS: {
             // Call again, but this time with molar units
             // D: [kg/m^3] / [kg/mol] -> [mol/m^3]
-            // U: [J/mol] * [kg/mol] -> [J/mol]
+            // U: [J/kg] * [kg/mol] -> [J/mol]
             update(DmolarUmolar_INPUTS, value1 / (double)_molar_mass, value2 * (double)_molar_mass);
             return;
         }
