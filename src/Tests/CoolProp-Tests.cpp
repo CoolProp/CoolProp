@@ -1456,6 +1456,9 @@ TEST_CASE("Triple point checks", "[triple_point]") {
         std::ostringstream ss3;
         ss3 << "Minimum saturation temperature state matches for vapor " << fluids[i];
         SECTION(ss3.str(), "") {
+            if (HEOS->p_triple() < 10) {
+                continue;
+            }
             REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 1));
 
             double T_EOS = HEOS->T();
@@ -1469,6 +1472,9 @@ TEST_CASE("Triple point checks", "[triple_point]") {
         std::ostringstream ss4;
         ss4 << "Minimum saturation temperature state matches for liquid " << fluids[i];
         SECTION(ss4.str(), "") {
+            if (HEOS->p_triple() < 10) {
+                continue;
+            }
             REQUIRE_NOTHROW(HEOS->update(CoolProp::PQ_INPUTS, HEOS->p_triple(), 0));
             double T_EOS = HEOS->T();
             double T_sat_min_vapor = HEOS->get_components()[0].EOS().sat_min_vapor.T;

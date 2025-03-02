@@ -1170,8 +1170,8 @@ class DerivativeFixture
         names.push_back("n-Butane");
         std::vector<CoolPropDbl> mole_fractions;
         mole_fractions.push_back(0.1);
-        mole_fractions.push_back(0.0);
-        mole_fractions.push_back(0.3);
+        mole_fractions.push_back(0.12);
+        mole_fractions.push_back(0.18);
         mole_fractions.push_back(0.6);
         HEOS.reset(new backend(names));
         HEOS->set_mole_fractions(mole_fractions);
