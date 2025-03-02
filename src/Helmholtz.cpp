@@ -283,6 +283,62 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
     return;
 };
 
+#if ENABLE_CATCH
+mcx::MultiComplex<double> ResidualHelmholtzGeneralizedExponential::one_mcx(const mcx::MultiComplex<double>& tau,
+                                                                           const mcx::MultiComplex<double>& delta) const {
+    //throw CoolProp::NotImplementedError("Nope");
+    mcx::MultiComplex<double> sum00 = 0.0*tau*delta;
+    auto ln_tau = log(tau);
+    auto ln_delta = log(delta);
+    const std::size_t N = elements.size();
+    for (std::size_t i = 0; i < N; ++i) {
+        const ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
+
+        mcx::MultiComplex<double> u = 0.0 * tau * delta;
+        if (delta_li_in_u) {
+            CoolPropDbl ci = el.c, l_double = el.l_double;
+            if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON) {
+                const auto u_increment = -ci * pow(delta, l_double);
+                u += u_increment;
+            }
+        }
+        if (tau_mi_in_u) {
+            CoolPropDbl omegai = el.omega, m_double = el.m_double;
+            if (std::abs(m_double) > 0) {
+                const auto u_increment = -omegai * pow(tau, m_double);
+                u += u_increment;
+            }
+        }
+        if (eta1_in_u) {
+            CoolPropDbl eta1 = el.eta1, epsilon1 = el.epsilon1;
+            if (ValidNumber(eta1)) {
+                u += -eta1 * (delta - epsilon1);
+            }
+        }
+        if (eta2_in_u) {
+            CoolPropDbl eta2 = el.eta2, epsilon2 = el.epsilon2;
+            if (ValidNumber(eta2)) {
+                u += -eta2 * POW2(delta - epsilon2);
+            }
+        }
+        if (beta1_in_u) {
+            CoolPropDbl beta1 = el.beta1, gamma1 = el.gamma1;
+            if (ValidNumber(beta1)) {
+                u += -beta1 * (tau - gamma1);
+            }
+        }
+        if (beta2_in_u) {
+            CoolPropDbl beta2 = el.beta2, gamma2 = el.gamma2;
+            if (ValidNumber(beta2)) {
+                u += -beta2 * POW2(tau - gamma2);
+            }
+        }
+        sum00 += el.n * exp(el.t * ln_tau + el.d * ln_delta + u);
+    }
+    return sum00;
+}
+#endif
+
 void ResidualHelmholtzGeneralizedExponential::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
     el.AddMember("type", "GeneralizedExponential", doc.GetAllocator());
     cpjson::set_double_array("n", n, el, doc);
@@ -535,6 +591,27 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolProp
     }
 }
 
+#if ENABLE_CATCH
+mcx::MultiComplex<double> ResidualHelmholtzNonAnalytic::one_mcx(const mcx::MultiComplex<double>& tau,
+                                                                const mcx::MultiComplex<double>& delta) const {
+
+    mcx::MultiComplex<double> sum00 = 0.0 * tau * delta;
+    for (unsigned int i = 0; i < N; ++i) {
+        const ResidualHelmholtzNonAnalyticElement& el = elements[i];
+        const CoolPropDbl ni = el.n, ai = el.a, bi = el.b, betai = el.beta;
+        const CoolPropDbl Ai = el.A, Bi = el.B, Ci = el.C, Di = el.D;
+
+        const auto theta = (1.0 - tau) + Ai * pow(POW2(delta - 1.0), 1.0 / (2.0 * betai));
+        const auto PSI = exp(-Ci * POW2(delta - 1.0) - Di * POW2(tau - 1.0));
+        const auto DELTA = POW2(theta) + Bi * pow(POW2(delta - 1.0), ai);
+        const auto DELTA_bi = pow(DELTA, bi);
+
+        sum00 += delta * ni * DELTA_bi * PSI;
+    }
+    return sum00;
+}
+#endif
+
 void ResidualHelmholtzGeneralizedCubic::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
     if (!enabled) {
         return;
@@ -675,6 +752,20 @@ void ResidualHelmholtzGaoB::all(const CoolPropDbl& tau, const CoolPropDbl& delta
     }
 }
 
+
+#if ENABLE_CATCH
+mcx::MultiComplex<double> ResidualHelmholtzGaoB::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
+    mcx::MultiComplex<double> sum00 = 0.0;
+    for (std::size_t i = 0; i < static_cast<int>(n.size()); ++i) {
+        auto u = b[i] + beta[i] * (tau-gamma[i])*(tau-gamma[i]);
+        auto Ftau = pow(tau, t[i]) * exp(1.0 / u);
+        auto Fdelta = pow(delta, d[i]) * exp(eta[i] * pow(delta - epsilon[i], 2));
+        sum00 += n[i] * Ftau * Fdelta;
+    }
+    return sum00;
+}
+#endif
+
 ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(const CoolPropDbl Tc, const CoolPropDbl pc, const CoolPropDbl rhomolarc,
                                                              const CoolPropDbl acentric, const CoolPropDbl R)
   : Tc(Tc), pc(pc), rhomolarc(rhomolarc), acentric(acentric), R(R) {
@@ -722,6 +813,12 @@ void ResidualHelmholtzXiangDeiters::all(const CoolPropDbl& tau, const CoolPropDb
     // Add up the contributions
     derivs = derivs + derivs0 + derivs1 * acentric + derivs2 * theta;
 }
+#if ENABLE_CATCH
+mcx::MultiComplex<double> ResidualHelmholtzXiangDeiters::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
+
+    return phi0.one_mcx(tau, delta) + phi1.one_mcx(tau, delta) * acentric + phi2.one_mcx(tau, delta) * theta;
+}
+#endif
 
 void ResidualHelmholtzSAFTAssociating::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
     el.AddMember("type", "ResidualHelmholtzSAFTAssociating", doc.GetAllocator());
@@ -1013,6 +1110,24 @@ void ResidualHelmholtzSAFTAssociating::all(const CoolPropDbl& tau, const CoolPro
                                  - 2 * (pow(X, (int)2) * (X_d * X_dd) - pow(X_d, (int)2) * (X * X_d)) / pow(X, (int)4));
 }
 
+#if ENABLE_CATCH
+mcx::MultiComplex<double> IdealHelmholtzCP0PolyT::one_mcx(const mcx::MultiComplex<double>& tau,
+                                                          const mcx::MultiComplex<double>& delta) const {
+    mcx::MultiComplex<double> sum = 0.0;
+    for (std::size_t i = 0; i < N; ++i) {
+        if (std::abs(t[i]) < 10 * DBL_EPSILON) {
+            sum += c[i] - c[i] * tau / tau0 + c[i] * log(tau / tau0);
+        } else if (std::abs(t[i] + 1) < 10 * DBL_EPSILON) {
+            sum += c[i] * tau / Tc * log(tau0 / tau) + c[i] / Tc * (tau - tau0);
+        } else {
+            sum += -c[i] * pow(Tc, t[i]) * pow(tau, -t[i]) / (t[i] * (t[i] + 1)) - c[i] * pow(T0, t[i] + 1) * tau / (Tc * (t[i] + 1))
+                   + c[i] * pow(T0, t[i]) / t[i];
+        }
+    }
+    return sum;
+}
+#endif
+
 void IdealHelmholtzCP0PolyT::to_json(rapidjson::Value& el, rapidjson::Document& doc) {
     el.AddMember("type", "IdealGasCP0Poly", doc.GetAllocator());
 
@@ -1258,6 +1373,27 @@ void IdealHelmholtzGERG2004Sinh::all(const CoolPropDbl& tau, const CoolPropDbl& 
     derivs.d4alphar_dtau4 += sum40;
 }
 
+#if ENABLE_CATCH
+mcx::MultiComplex<double> IdealHelmholtzGERG2004Sinh::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
+    // Check that the reducing temperature value is provided in the derivs structure
+    CoolPropDbl T_red = _HUGE;
+    if (ValidNumber(_Tr)) {
+        T_red = _Tr;  // Primarily useful for testing
+    } else {
+        throw ValueError("T_red needs to be stored somewhere for GERG2004Cosh");
+    }
+    auto Tci_over_Tr = Tc / T_red;
+    auto diff_abs = [](const mcx::MultiComplex<double>& x) { return sqrt(x * x); };  // differentiable absolute value
+
+    mcx::MultiComplex<double> sum00 = 0.0;
+    for (std::size_t i = 0; i < N; ++i) {
+        auto t = theta[i] * Tci_over_Tr;
+        sum00 += n[i] * log(diff_abs(sinh(t * tau)));
+    }
+    return sum00;
+}
+#endif
+
 void IdealHelmholtzGERG2004Cosh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
     if (!enabled) {
         return;
@@ -1288,6 +1424,28 @@ void IdealHelmholtzGERG2004Cosh::all(const CoolPropDbl& tau, const CoolPropDbl& 
     derivs.d3alphar_dtau3 += sum30;
     derivs.d4alphar_dtau4 += sum40;
 }
+
+#if ENABLE_CATCH
+mcx::MultiComplex<double> IdealHelmholtzGERG2004Cosh::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
+    // Check that the reducing temperature value is provided in the derivs structure
+    CoolPropDbl T_red = _HUGE;
+    if (ValidNumber(_Tr)) {
+        T_red = _Tr;  // Primarily useful for testing
+    } else {
+        throw ValueError("T_red needs to be stored somewhere for GERG2004Cosh");
+    }
+    auto Tci_over_Tr = Tc / T_red;
+    auto diff_abs = [](const mcx::MultiComplex<double>& x) { return sqrt(x * x); };  // differentiable absolute value
+
+    mcx::MultiComplex<double> sum00 = 0.0;
+    for (std::size_t i = 0; i < N; ++i) {
+        auto t = theta[i] * Tci_over_Tr;
+        sum00 += -n[i] * log(diff_abs(cosh(t * tau)));
+    }
+    return sum00;
+}
+#endif
+
 
 //void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
 //    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
@@ -1364,15 +1522,10 @@ class HelmholtzConsistencyFixture
         PR.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_PR));
 
         {
-            CoolPropDbl beta[] = {0.3696, 0.2962}, epsilon[] = {0.4478, 0.44689}, eta[] = {-2.8452, -2.8342}, gamma[] = {1.108, 1.313},
-                        n[] = {-1.6909858, 0.93739074}, t[] = {4.3315, 4.015}, d[] = {1, 1}, b[] = {1.244, 0.6826};
-            GaoB.reset(new CoolProp::ResidualHelmholtzGaoB(
-              std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(t[0])),
-              std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(d[0])), std::vector<CoolPropDbl>(eta, eta + sizeof(eta) / sizeof(eta[0])),
-              std::vector<CoolPropDbl>(beta, beta + sizeof(beta) / sizeof(beta[0])),
-              std::vector<CoolPropDbl>(gamma, gamma + sizeof(gamma) / sizeof(gamma[0])),
-              std::vector<CoolPropDbl>(epsilon, epsilon + sizeof(epsilon) / sizeof(epsilon[0])),
-              std::vector<CoolPropDbl>(b, b + sizeof(b) / sizeof(b[0]))));
+            // Signs of eta are flipped relative to paper from Gao et al., implemented with opposite sign in CoolProp
+            std::vector<CoolPropDbl> beta = {0.3696, 0.2962}, epsilon = {0.4478, 0.44689}, eta = {-2.8452, -2.8342}, gamma = {1.108, 1.313},
+                        n = {-1.6909858, 0.93739074}, t = {4.3315, 4.015}, d = {1, 1}, b = {1.244, 0.6826};
+            GaoB.reset(new CoolProp::ResidualHelmholtzGaoB(n, t, d, eta, beta, gamma, epsilon, b));
         }
 
         XiangDeiters.reset(new CoolProp::ResidualHelmholtzXiangDeiters(300, 4e6, 4000, 0.3, 8.3144621));
@@ -1666,6 +1819,15 @@ class HelmholtzConsistencyFixture
         numerical = (term_plus - term_minus) / (2 * ddelta);
         analytic = term->dDelta_dTau3(tau, delta);
     };
+    double get_analytic_mcx(shared_ptr<CoolProp::BaseHelmholtzTerm> term, CoolPropDbl tau, CoolPropDbl delta, int ntau, int ndelta) {
+        try {
+            using fcn_t = std::function<mcx::MultiComplex<double>(const std::vector<mcx::MultiComplex<double>>&)>;
+            fcn_t f = [&term](const std::vector<mcx::MultiComplex<double>>& x) { return term->one_mcx(x[0], x[1]); };
+            return mcx::diff_mcxN(f, std::vector<double>{tau, delta}, std::vector<int>{ntau, ndelta});
+        } catch (CoolProp::NotImplementedError e) {
+            return _HUGE;
+        }
+    }
     double err(double v1, double v2) {
         if (std::abs(v2) > 1e-15) {
             return std::abs((v1 - v2) / v2);
@@ -1680,6 +1842,22 @@ std::string terms[] = {"Lead",         "LogTau",       "IGPower", "PlanckEinstei
                        "PengRobinson", "XiangDeiters", "GaoB",    "GERG2004Cosh",   "GERG2004Sinh"};
 std::string derivs[] = {"dTau",         "dTau2",        "dTau3", "dDelta",       "dDelta2",       "dDelta3",      "dDelta_dTau",
                         "dDelta_dTau2", "dDelta2_dTau", "dTau4", "dDelta_dTau3", "dDelta2_dTau2", "dDelta3_dTau", "dDelta4"};
+std::map<std::string, std::tuple<int, int>> counts = {
+    {"dTau", {1, 0}},
+    {"dTau2", {2, 0}},
+    {"dTau3", {3, 0}},
+    {"dTau4", {4, 0}},
+    {"dDelta", {0, 1}},
+    {"dDelta2", {0, 2}},
+    {"dDelta3", {0, 3}},
+    {"dDelta4", {0, 4}},
+    {"dDelta_dTau", {1, 1}},
+    {"dDelta_dTau2", {2, 1}},
+    {"dDelta2_dTau", {1, 2}},
+    {"dDelta_dTau3", {3, 1}},
+    {"dDelta2_dTau2", {2, 2}},
+    {"dDelta3_dTau", {1, 3}},
+};
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]") {
     shared_ptr<CoolProp::BaseHelmholtzTerm> term;
@@ -1692,12 +1870,44 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
                     || derivs[j] == "dDelta4")) {
                 continue;
             }
-            call(derivs[j], term, 1.3, 0.9, 1e-6);
+            double tau = 1.3, delta = 0.9;
+            call(derivs[j], term, tau, delta, 1e-5);
+            double alphar = term->base(tau, delta);
+
+            // Do calculations with multicomplex, if the one_mcx function has been implemented
+            auto [ntau, ndelta] = counts.at(derivs[j]);
+            double numerical_mcx = _HUGE;
+            double alphar_mcx = _HUGE;
+            try {
+                numerical_mcx = get_analytic_mcx(term, tau, delta, ntau, ndelta);
+                alphar_mcx = term->one_mcx(tau, delta).real();
+            } catch (std::exception& /* e */) {
+                //std::cout << e.what() << std::endl;
+            }
+            CAPTURE(alphar_mcx);
+            CAPTURE(numerical_mcx);
+
             CAPTURE(derivs[j]);
-            CAPTURE(numerical);
+            CAPTURE(alphar);
+            double numerical_finitediff = numerical;
+            CAPTURE(numerical_finitediff);
             CAPTURE(analytic);
             CAPTURE(terms[i]);
-            CHECK(err(analytic, numerical) < 1e-8);
+            double deriv_tolerance = 1e-9;
+            if (terms[i] == "GERG2004Cosh" || terms[i] == "GERG2004Sinh" || terms[i] == "CP0PolyT") {
+                deriv_tolerance = 1e-7; // due to, I think, a loss in precision in the log function of multicomplex
+            }
+            double val_tolerance = 1e-15;
+            if (terms[i] == "CP0PolyT") {
+                val_tolerance = 1e-10;  // due to, I think, a loss in precision in the log function of multicomplex
+            }
+
+            if (std::isfinite(numerical_mcx)) {
+                CHECK(err(analytic, numerical_mcx) < deriv_tolerance);
+                CHECK(err(alphar, alphar_mcx) < val_tolerance);
+            } else {
+                CHECK(err(analytic, numerical_finitediff) < deriv_tolerance);
+            }
         }
     }
 }

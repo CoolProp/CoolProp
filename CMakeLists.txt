@@ -76,7 +76,7 @@ option(COOLPROP_NO_EXAMPLES
 
 # Force C++11 since lambdas are used in CPStrings.h
 # In the future, we may want to force C++14 since std::make_unique is used in DataStructures.cpp
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 # see
 # https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave
@@ -2031,6 +2031,7 @@ if(COOLPROP_CATCH_MODULE)
   if(UNIX)
     target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})
   endif()
+  target_include_directories(CatchTestRunner PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/externals/multicomplex/multicomplex/include")
 
   include(CTest)
   include(${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2/extras/Catch.cmake)

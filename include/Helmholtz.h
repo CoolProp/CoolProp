@@ -10,6 +10,10 @@
 #include "Backends/Cubics/GeneralizedCubic.h"
 #include "crossplatform_shared_ptr.h"
 
+#if ENABLE_CATCH
+#    include "MultiComplex/MultiComplex.hpp"
+#endif
+
 namespace CoolProp {
 
 // #############################################################################
@@ -285,6 +289,11 @@ class BaseHelmholtzTerm
     };
 
     virtual void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() = 0;
+    #if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
+        throw CoolProp::NotImplementedError("The mcx derivative function was not implemented");
+    }
+    #endif
 };
 
 struct ResidualHelmholtzGeneralizedExponentialElement
@@ -506,6 +515,10 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
 
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
     //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
+
+    #if ENABLE_CATCH
+        virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    #endif
 };
 
 struct ResidualHelmholtzNonAnalyticElement
@@ -546,6 +559,9 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
     };
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+#if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+#endif
 };
 
 class ResidualHelmholtzGeneralizedCubic : public BaseHelmholtzTerm
@@ -593,6 +609,10 @@ class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+
+    #if ENABLE_CATCH
+        virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    #endif
 };
 
 /// The generalized Lee-Kesler formulation of Xiang & Deiters: doi:10.1016/j.ces.2007.11.029
@@ -611,6 +631,9 @@ class ResidualHelmholtzXiangDeiters : public BaseHelmholtzTerm
     ResidualHelmholtzXiangDeiters(const CoolPropDbl Tc, const CoolPropDbl pc, const CoolPropDbl rhomolarc, const CoolPropDbl acentric,
                                   const CoolPropDbl R);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+#if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+#endif
 };
 
 class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
@@ -1135,6 +1158,9 @@ class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+#if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+#endif
 };
 /**
 
@@ -1169,6 +1195,10 @@ class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm
         return enabled;
     };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+
+    #if ENABLE_CATCH
+        virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    #endif
 };
 
 class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
@@ -1201,6 +1231,11 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
         return enabled;
     };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+
+    #if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+    #endif
+
 };
 
 ///// Term in the ideal-gas specific heat equation that is based on Aly-Lee formulation
