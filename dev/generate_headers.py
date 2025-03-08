@@ -72,6 +72,8 @@ def TO_CPP(root_dir, hashes):
     def needs_build(inpath: Path, outpath: Path):
         if not outpath.exists():
             return True
+        if not inpath.exists():
+            raise ValueError(f"{inpath} cannot be found")
         return os.path.getmtime(inpath) > os.path.getmtime(outpath)
     
     for infile, outfile, variable in zvalues:
@@ -348,6 +350,13 @@ def combine_json(root_dir):
                 raise ValueError('unable to decode file %s' % file)
 
             master += [fluid]
+            
+        
+        all_fluids_z = zlib.compress(json.dumps(master).encode('utf-8'))
+        ZDEST = Path(root_dir) / 'dev' / 'all_fluids.json.z'
+        with ZDEST.open('wb') as fp:
+            fp.write(all_fluids_z)
+        print(ZDEST.absolute())
 
         fp = open(os.path.join(root_dir, 'dev', 'all_fluids_verbose.json'), 'w')
         fp.write(json.dumps(master, **json_options))
