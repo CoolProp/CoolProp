@@ -23,7 +23,7 @@ jobs:
         python-version: 3.13.x
         
     - name: Install dependencies
-      run: pip install setuptools wheel Cython requests jinja2 pyyaml packaging
+      run: pip install setuptools wheel Cython requests jinja2 pyyaml packaging gitpython
         
     - name: Build package, sdist
       working-directory: ./wrappers/Python/pypi
