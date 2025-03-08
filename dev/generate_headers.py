@@ -12,6 +12,8 @@ import json
 import hashlib
 import struct
 import glob
+from pathlib import Path
+import pickle 
 
 json_options = {'indent': 2, 'sort_keys': True}
 
@@ -61,10 +63,18 @@ def TO_CPP(root_dir, hashes):
 
     # First we package up the JSON files
     combine_json(root_dir)
+    
+    def needs_build(inpath: Path, outpath: Path):
+        if not outpath.exists():
+            return True
+        return os.path.getmtime(inpath) > os.path.getmtime(outpath)
 
     for infile, outfile, variable in values:
-
-        import json
+        inpath = Path(root_dir) / 'dev' / infile
+        outpath = Path(root_dir) / 'include' / outfile
+        if not needs_build(inpath=inpath, outpath=outpath):
+            print(f'{outpath} is up to date based on file times')
+            continue
 
         # Confirm that the JSON file can be loaded and doesn't have any formatting problems
         with open(os.path.join(root_dir, 'dev', infile), 'r') as fp:
@@ -76,15 +86,15 @@ def TO_CPP(root_dir, hashes):
                 subprocess.call('python -mjson.tool ' + file, shell=True)
                 raise ValueError('unable to decode file %s' % file)
 
-        json = open(os.path.join(root_dir, 'dev', infile), 'r').read().encode('ascii')
+        json_ = open(os.path.join(root_dir, 'dev', infile), 'r').read().encode('ascii')
 
         # convert each character to hex and add a terminating NULL character to end the
         # string, join into a comma separated string
 
         try:
-            h = ["0x{:02x}".format(ord(b)) for b in json] + ['0x00']
+            h = ["0x{:02x}".format(ord(b)) for b in json_] + ['0x00']
         except TypeError:
-            h = ["0x{:02x}".format(int(b)) for b in json] + ['0x00']
+            h = ["0x{:02x}".format(int(b)) for b in json_] + ['0x00']
 
         # Break up the file into lines of 16 hex characters
         chunks = to_chunks(h, 16)
@@ -236,58 +246,100 @@ def gitrev_to_file(root_dir):
     except (subprocess.CalledProcessError, OSError) as err:
         print('err:', err)
 
-
+class DependencyManager:
+    def __init__(self, sources: list[Path], destination: Path, cachefile: Path):
+        self.sources = sources
+        self.destination = Path(destination)
+        self.cachefile = cachefile
+        
+    def needs_build(self):
+        if not self.destination.exists():
+            return True 
+        if not self.cachefile.exists():
+            return True 
+        # Last modified time of destination (which must exist)
+        dest_mtime = os.path.getmtime(self.destination)
+        # Build if any source is newer than destination
+        for source in self.sources:
+            if os.path.getmtime(source) >= dest_mtime:
+                return True
+        # Check source list if cachefile exists
+        if self.cachefile.exists():
+            previous_sources = pickle.load(self.cachefile.open('rb'))['sorted_sources']
+            if sorted(self.sources) != previous_sources:
+                return True
+        return False
+            
+    def write_cache(self):
+        with self.cachefile.open('wb') as fp:
+            pickle.dump(dict(sorted_sources=sorted(self.sources)), fp)
+        
 def combine_json(root_dir):
 
-    master = []
+    depfluids = DependencyManager(destination=os.path.join(root_dir, 'dev', 'all_fluids.json'),
+                                  sources=(Path(root_dir) / 'dev' / 'fluids').glob('*.json'),
+                                  cachefile=Path(__file__).parent / '.fluiddepcache')
+    
+    if depfluids.needs_build():
+        print('fluids JSON need packaging')
+        
+        master = []
 
-    for file in glob.glob(os.path.join(root_dir, 'dev', 'fluids', '*.json')):
+        for file in glob.glob(os.path.join(root_dir, 'dev', 'fluids', '*.json')):
 
-        path, file_name = os.path.split(file)
-        fluid_name = file_name.split('.')[0]
+            path, file_name = os.path.split(file)
+            fluid_name = file_name.split('.')[0]
 
-        try:
-            # Load the fluid file
-            fluid = json.load(open(file, 'r'))
-        except ValueError:
-            print('"python -mjson.tool ' + file + '" returns ->', end='')
-            subprocess.call('python -mjson.tool ' + file, shell=True)
-            raise ValueError('unable to decode file %s' % file)
+            try:
+                # Load the fluid file
+                fluid = json.load(open(file, 'r'))
+            except ValueError:
+                print('"python -mjson.tool ' + file + '" returns ->', end='')
+                subprocess.call('python -mjson.tool ' + file, shell=True)
+                raise ValueError('unable to decode file %s' % file)
 
-        master += [fluid]
+            master += [fluid]
 
-    fp = open(os.path.join(root_dir, 'dev', 'all_fluids_verbose.json'), 'w')
-    fp.write(json.dumps(master, **json_options))
-    fp.close()
+        fp = open(os.path.join(root_dir, 'dev', 'all_fluids_verbose.json'), 'w')
+        fp.write(json.dumps(master, **json_options))
+        fp.close()
 
-    fp = open(os.path.join(root_dir, 'dev', 'all_fluids.json'), 'w')
-    fp.write(json.dumps(master))
-    fp.close()
+        fp = open(os.path.join(root_dir, 'dev', 'all_fluids.json'), 'w')
+        fp.write(json.dumps(master))
+        fp.close()
+        
+        depfluids.write_cache()
 
-    master = []
+    depincomp = DependencyManager(destination=os.path.join(root_dir, 'dev', 'all_incompressibles.json'),
+                                  sources=(Path(root_dir) / 'dev' / 'incompressible_liquids' / 'json').glob('*.json'),
+                                  cachefile=Path(__file__).parent / '.incompdepcache')
+    if depincomp.needs_build():
+        print('incomp JSON need packaging')
+        master = []
 
-    for file in glob.glob(os.path.join(root_dir, 'dev', 'incompressible_liquids', 'json', '*.json')):
+        for file in glob.glob(os.path.join(root_dir, 'dev', 'incompressible_liquids', 'json', '*.json')):
 
-        path, file_name = os.path.split(file)
-        fluid_name = file_name.split('.')[0]
+            path, file_name = os.path.split(file)
+            fluid_name = file_name.split('.')[0]
 
-        try:
-            # Load the fluid file
-            fluid = json.load(open(file, 'r'))
-        except ValueError:
-            print('"python -mjson.tool ' + file + '" returns ->', end='')
-            subprocess.call('python -mjson.tool ' + file, shell=True)
-            raise ValueError('unable to decode file %s' % file)
+            try:
+                # Load the fluid file
+                fluid = json.load(open(file, 'r'))
+            except ValueError:
+                print('"python -mjson.tool ' + file + '" returns ->', end='')
+                subprocess.call('python -mjson.tool ' + file, shell=True)
+                raise ValueError('unable to decode file %s' % file)
 
-        master += [fluid]
+            master += [fluid]
 
-    fp = open(os.path.join(root_dir, 'dev', 'all_incompressibles_verbose.json'), 'w')
-    fp.write(json.dumps(master, **json_options))
-    fp.close()
+        fp = open(os.path.join(root_dir, 'dev', 'all_incompressibles_verbose.json'), 'w')
+        fp.write(json.dumps(master, **json_options))
+        fp.close()
 
-    fp = open(os.path.join(root_dir, 'dev', 'all_incompressibles.json'), 'w')
-    fp.write(json.dumps(master))
-    fp.close()
+        fp = open(os.path.join(root_dir, 'dev', 'all_incompressibles.json'), 'w')
+        fp.write(json.dumps(master))
+        fp.close()
+        depincomp.write_cache()
 
 
 def generate():
