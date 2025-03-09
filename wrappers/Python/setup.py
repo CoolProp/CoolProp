@@ -483,8 +483,19 @@ if __name__ == '__main__':
 
     # See https://stackoverflow.com/a/59364990
     here = str(Path('.').parent.absolute())
+    
+    
     miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c')], 'build_temp': here})
-    import setuptools.command.build_clib
+    from setuptools.command.build_clib import build_clib
+    
+    # This class is needed to work around a bug in build_clib that the temporary folder used as the destination for 
+    # the lib file is not created yet when this gets called in setup, so enforce the folder to be constructed and then
+    # the paths all resolve properly
+    class build_clib_with_foldermaking(build_clib):
+        def build_libraries(self, libraries):
+            if not os.path.exists(self.build_temp):
+                os.makedirs(self.build_temp)
+            build_clib.build_libraries(self, libraries)
     
     try:
         setup(name='coolprop',
@@ -511,7 +522,7 @@ if __name__ == '__main__':
                 "Topic :: Software Development :: Libraries :: Python Modules"
                 ],
                setup_requires=['Cython'],
-               cmdclass={'build_clib': setuptools.command.build_clib.build_clib}, # use our class instead of built-in!
+               cmdclass={'build_clib': build_clib_with_foldermaking}, # use our class instead of built-in!
                **setup_kwargs
                )
     except BaseException as E:
