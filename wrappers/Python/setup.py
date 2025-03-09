@@ -484,6 +484,7 @@ if __name__ == '__main__':
     # See https://stackoverflow.com/a/59364990
     here = str(Path('.').parent.absolute())
     miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c')], 'build_temp': here})
+    import setuptools.command.build_clib
     
     try:
         setup(name='coolprop',
@@ -510,6 +511,7 @@ if __name__ == '__main__':
                 "Topic :: Software Development :: Libraries :: Python Modules"
                 ],
                setup_requires=['Cython'],
+               cmdclass={'build_clib': setuptools.command.build_clib.build_clib}, # use our class instead of built-in!
                **setup_kwargs
                )
     except BaseException as E:
