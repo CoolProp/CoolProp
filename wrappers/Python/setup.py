@@ -428,6 +428,7 @@ if __name__ == '__main__':
         os.path.join(CProot),
         os.path.join(CProot, 'include'),
         os.path.join(CProot, 'src'),
+        os.path.join(CProot, 'dev'),
         os.path.join(CProot, 'externals', 'Eigen'),
         # os.path.join(CProot, 'externals', 'fmtlib'),  # should be deprecated
         os.path.join(CProot, 'externals', 'fmtlib', 'include'),
