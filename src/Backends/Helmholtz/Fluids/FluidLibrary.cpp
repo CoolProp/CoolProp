@@ -7,6 +7,8 @@
 // Use the magic of the incbin library to include binary data in compressed form
 #if defined(_MSC_VER)
 #include "all_fluids_JSON_z.h"
+#else
+#include "incbin.h"
 #endif
 
 INCBIN(all_fluids_JSON_z, "all_fluids.json.z");
