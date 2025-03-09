@@ -443,10 +443,6 @@ if __name__ == '__main__':
 
     common_args = dict(include_dirs=include_dirs,
                        language='c++')
-    if sys.platform == 'darwin':
-        common_args.update(dict(
-            extra_compile_args=["-std=c++11"]
-        ))
     if sys.platform == 'win32':
         common_args.update(dict(
             extra_compile_args=["/utf-8"]
