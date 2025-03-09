@@ -247,7 +247,7 @@ set(COOLPROP_ENABLED_BACKENDS
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # Add the miniz source file
-list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2/miniz.c")
+list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2/miniz.cpp")
 
 # For each enabled backend, grab its files
 foreach(backend ${COOLPROP_ENABLED_BACKENDS})
