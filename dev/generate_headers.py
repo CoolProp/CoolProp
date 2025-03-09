@@ -337,7 +337,7 @@ class DependencyManager:
         
 def combine_json(root_dir):
 
-    depfluids = DependencyManager(destination=os.path.join(root_dir, 'dev', 'all_fluids.json'),
+    depfluids = DependencyManager(destination=os.path.join(root_dir, 'dev', 'all_fluids.json.z'),
                                   sources=(Path(root_dir) / 'dev' / 'fluids').glob('*.json'),
                                   cachefile=Path(__file__).parent / '.fluiddepcache')
     
