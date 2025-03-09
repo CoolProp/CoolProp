@@ -424,7 +424,6 @@ if __name__ == '__main__':
 
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(root=os.path.join(CProot, 'src'), extensions=['.cpp'])
-    sources.append(str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.cpp'))
     include_dirs = [
         os.path.join(CProot),
         os.path.join(CProot, 'include'),
@@ -451,6 +450,9 @@ if __name__ == '__main__':
         common_args.update(dict(
             extra_compile_args=["/utf-8"]
         ))
+        
+    # See https://stackoverflow.com/a/59364990
+    miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c')]})
 
     if USE_CYTHON:
         common_args.update(dict(cython_c_in_temp=True,
@@ -461,12 +463,13 @@ if __name__ == '__main__':
     if STATIC_LIBRARY_BUILT == True:
         CoolProp_module = Extension('CoolProp.CoolProp',
                             [os.path.join('CoolProp', 'CoolProp.' + cy_ext)],
-                            libraries=['CoolProp'],
+                            libraries=['CoolProp',miniz],
                             library_dirs=[static_library_path],
                             **common_args)
     else:
         CoolProp_module = Extension('CoolProp.CoolProp',
                             [os.path.join('CoolProp', 'CoolProp.' + cy_ext)] + sources,
+                            libraries=[miniz],
                             **common_args)
     constants_module = Extension('CoolProp._constants',
                         [os.path.join('CoolProp', '_constants.' + cy_ext)],
