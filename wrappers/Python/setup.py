@@ -6,6 +6,7 @@ from sysconfig import get_config_var
 from setuptools.command.build_ext import build_ext
 from multiprocessing import cpu_count
 import shutil
+from pathlib import Path
 
 def copy_files():
     def copytree(old, new):
