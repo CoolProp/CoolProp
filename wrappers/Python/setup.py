@@ -6,6 +6,7 @@ from sysconfig import get_config_var
 from setuptools.command.build_ext import build_ext
 from multiprocessing import cpu_count
 import shutil
+from pathlib import Path
 
 def copy_files():
     def copytree(old, new):
@@ -427,10 +428,13 @@ if __name__ == '__main__':
         os.path.join(CProot),
         os.path.join(CProot, 'include'),
         os.path.join(CProot, 'src'),
+        os.path.join(CProot, 'dev'),
         os.path.join(CProot, 'externals', 'Eigen'),
         # os.path.join(CProot, 'externals', 'fmtlib'),  # should be deprecated
         os.path.join(CProot, 'externals', 'fmtlib', 'include'),
         os.path.join(CProot, 'boost_CoolProp'),
+        os.path.join(CProot, 'externals', 'incbin'),
+        os.path.join(CProot, 'externals', 'miniz-3.0.2'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
     # If the file is run directly without any parameters, clean, build and install
@@ -463,6 +467,7 @@ if __name__ == '__main__':
     else:
         CoolProp_module = Extension('CoolProp.CoolProp',
                             [os.path.join('CoolProp', 'CoolProp.' + cy_ext)] + sources,
+                            
                             **common_args)
     constants_module = Extension('CoolProp._constants',
                         [os.path.join('CoolProp', '_constants.' + cy_ext)],
@@ -476,6 +481,22 @@ if __name__ == '__main__':
     if USE_CYTHON:
         ext_modules = cythonize(ext_modules, compiler_directives=cython_directives)
 
+    # See https://stackoverflow.com/a/59364990
+    here = str(Path('.').parent.absolute())
+    
+    
+    miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c')], 'build_temp': here})
+    from setuptools.command.build_clib import build_clib
+    
+    # This class is needed to work around a bug in build_clib that the temporary folder used as the destination for 
+    # the lib file is not created yet when this gets called in setup, so enforce the folder to be constructed and then
+    # the paths all resolve properly
+    class build_clib_with_foldermaking(build_clib):
+        def build_libraries(self, libraries):
+            if not os.path.exists(self.build_temp):
+                os.makedirs(self.build_temp)
+            build_clib.build_libraries(self, libraries)
+    
     try:
         setup(name='coolprop',
                version=version,  # look above for the definition of version variable - don't modify it here
@@ -486,6 +507,7 @@ if __name__ == '__main__':
                description="""Open-source thermodynamic and transport properties database""",
                packages=find_packages(),
                ext_modules=ext_modules,
+               libraries=[miniz],
                package_dir={'CoolProp': 'CoolProp', },
                package_data={'CoolProp': ['*.pxd',
                                            'CoolPropBibTeXLibrary.bib',
@@ -500,6 +522,7 @@ if __name__ == '__main__':
                 "Topic :: Software Development :: Libraries :: Python Modules"
                 ],
                setup_requires=['Cython'],
+               cmdclass={'build_clib': build_clib_with_foldermaking}, # use our class instead of built-in!
                **setup_kwargs
                )
     except BaseException as E:

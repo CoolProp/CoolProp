@@ -246,6 +246,9 @@ set(COOLPROP_ENABLED_BACKENDS
 # Get everything in the src/ directory (always), but not recursive
 file(GLOB APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
+# Add the miniz source file
+list(APPEND APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2/miniz.c")
+
 # For each enabled backend, grab its files
 foreach(backend ${COOLPROP_ENABLED_BACKENDS})
   file(GLOB_RECURSE BACKEND_SOURCES
@@ -265,6 +268,12 @@ set(APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
 list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
+list(APPEND APP_INCLUDE_DIRS
+     "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2")
+list(APPEND APP_INCLUDE_DIRS
+     "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
+list(APPEND APP_INCLUDE_DIRS
+     "${CMAKE_CURRENT_SOURCE_DIR}/dev")
 list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp")
 list(APPEND APP_INCLUDE_DIRS
@@ -1840,6 +1849,7 @@ if(COOLPROP_JAVASCRIPT_MODULE)
   endif()
 
   add_definitions(-sDISABLE_EXCEPTION_CATCHING=0)
+  add_definitions(-DCOOLPROP_NO_INCBIN)
   # # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
   # if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
   #   set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 0")

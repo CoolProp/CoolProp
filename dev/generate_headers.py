@@ -14,6 +14,7 @@ import struct
 import glob
 from pathlib import Path
 import pickle 
+import zlib
 
 json_options = {'indent': 2, 'sort_keys': True}
 
@@ -50,6 +51,27 @@ values = [
     ('pcsaft/all_pcsaft_fluids.json', 'all_pcsaft_JSON.h', 'all_pcsaft_JSON'),
     ('pcsaft/mixture_binary_pairs_pcsaft.json', 'mixture_binary_pairs_pcsaft_JSON.h', 'mixture_binary_pairs_pcsaft_JSON')
 ]
+zvalues = [
+    ('all_fluids.json.z', 'all_fluids_JSON_z.h', 'all_fluids_JSON_z'),
+]
+
+incbin_template = r"""/* File generated for use with incbin */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* INCBIN(%SYMBOL%, "all_fluids.json.z"); */
+INCBIN_CONST INCBIN_ALIGN unsigned char g%SYMBOL%Data[] = {
+%DATA%
+};
+INCBIN_CONST INCBIN_ALIGN unsigned char *const g%SYMBOL%End = g%SYMBOL%Data + sizeof(g%SYMBOL%Data);
+INCBIN_CONST unsigned int g%SYMBOL%Size = sizeof(g%SYMBOL%Data);
+
+#ifdef __cplusplus
+}
+#endif
+"""
 
 
 def TO_CPP(root_dir, hashes):
@@ -67,7 +89,46 @@ def TO_CPP(root_dir, hashes):
     def needs_build(inpath: Path, outpath: Path):
         if not outpath.exists():
             return True
+        if not inpath.exists():
+            raise ValueError(f"{inpath} cannot be found")
         return os.path.getmtime(inpath) > os.path.getmtime(outpath)
+    
+    for infile, outfile, variable in zvalues:
+        inpath = Path(root_dir) / 'dev' / infile
+        outpath = Path(root_dir) / 'include' / outfile
+        if not needs_build(inpath=inpath, outpath=outpath):
+            print(f'{outpath} is up to date based on file times')
+            continue
+
+        json_ = inpath.open('rb').read()
+
+        # convert each character to hex and add a terminating NULL character to end the
+        # string, join into a comma separated string
+
+        try:
+            h = ["0x{:02x}".format(ord(b)) for b in json_] + ['0x00']
+        except TypeError:
+            h = ["0x{:02x}".format(int(b)) for b in json_] + ['0x00']
+
+        # Break up the file into lines of 16 hex characters
+        chunks = to_chunks(h, 16)
+
+        # Put the lines back together again
+        # The chunks are joined together with commas, and then EOL are used to join the rest
+        hex_string = ',\n'.join([', '.join(chunk) for chunk in chunks])
+
+        # Check if hash is up to date based on using variable as key
+        if not os.path.isfile(os.path.join(root_dir, 'include', outfile)) or variable not in hashes or (variable in hashes and hashes[variable] != get_hash(hex_string.encode('ascii'))):
+        
+            with (Path(root_dir) / 'include' / outfile).open('w') as fp:
+                fp.write(incbin_template.replace('%SYMBOL%', variable).replace('%DATA%', hex_string))        
+
+            # Store the hash of the data that was written to file (not including the header)
+            hashes[variable] = get_hash(hex_string.encode('ascii'))
+
+            print(os.path.join(root_dir, 'include', outfile) + ' written to file')
+        else:
+            print(outfile + ' is up to date')
 
     for infile, outfile, variable in values:
         inpath = Path(root_dir) / 'dev' / infile
@@ -276,7 +337,7 @@ class DependencyManager:
         
 def combine_json(root_dir):
 
-    depfluids = DependencyManager(destination=os.path.join(root_dir, 'dev', 'all_fluids.json'),
+    depfluids = DependencyManager(destination=os.path.join(root_dir, 'dev', 'all_fluids.json.z'),
                                   sources=(Path(root_dir) / 'dev' / 'fluids').glob('*.json'),
                                   cachefile=Path(__file__).parent / '.fluiddepcache')
     
@@ -299,6 +360,13 @@ def combine_json(root_dir):
                 raise ValueError('unable to decode file %s' % file)
 
             master += [fluid]
+            
+        
+        all_fluids_z = zlib.compress(json.dumps(master).encode('utf-8'))
+        ZDEST = Path(root_dir) / 'dev' / 'all_fluids.json.z'
+        with ZDEST.open('wb') as fp:
+            fp.write(all_fluids_z)
+        print(ZDEST.absolute())
 
         fp = open(os.path.join(root_dir, 'dev', 'all_fluids_verbose.json'), 'w')
         fp.write(json.dumps(master, **json_options))

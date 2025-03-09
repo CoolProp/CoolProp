@@ -1,16 +1,42 @@
 
 #include "FluidLibrary.h"
-#include "all_fluids_JSON.h"  // Makes a std::string variable called all_fluids_JSON
+
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "miniz.h"
+
+#if defined(COOLPROP_NO_INCBIN)
+#    define INCBIN_CONST
+#    define INCBIN_ALIGN
+#    include "all_fluids_JSON_z.h"
+#    undef INCBIN_CONST
+#    undef INCBIN_ALIGN
+#else 
+#include "incbin.h"
+// Use the magic of the incbin library to include binary data in compressed form
+#if defined(_MSC_VER)
+#include "all_fluids_JSON_z.h"
+#else
+
+INCBIN(all_fluids_JSON_z, "all_fluids.json.z");
+#endif
+#endif
 
 namespace CoolProp {
 
 static JSONFluidLibrary library;
 
 void load() {
+    std::vector<unsigned char> outbuffer(gall_fluids_JSON_zSize * 7);
+    uLong outlen = static_cast<uLong>(outbuffer.size());
+    auto code = uncompress(&outbuffer[0], &outlen, gall_fluids_JSON_zData, gall_fluids_JSON_zSize);
+    std::string buf(outbuffer.begin(), outbuffer.begin() + outlen);
+    if (code != 0) {
+        throw ValueError("Unable to uncompress the fluid data from z compressed form");
+    }
+
     rapidjson::Document dd;
     // This json formatted string comes from the all_fluids_JSON.h header which is a C++-escaped version of the JSON file
-    dd.Parse<0>(all_fluids_JSON.c_str());
+    dd.Parse<0>(buf.c_str());
     if (dd.HasParseError()) {
         throw ValueError("Unable to load all_fluids.json");
     } else {
