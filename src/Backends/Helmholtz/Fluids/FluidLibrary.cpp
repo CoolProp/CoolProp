@@ -4,14 +4,22 @@
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "miniz.h"
 
+#if defined(COOLPROP_NO_INCBIN)
+#    define INCBIN_CONST
+#    define INCBIN_ALIGN
+#    include "all_fluids_JSON_z.h"
+#    undef INCBIN_CONST
+#    undef INCBIN_ALIGN
+#else 
+#include "incbin.h"
 // Use the magic of the incbin library to include binary data in compressed form
 #if defined(_MSC_VER)
 #include "all_fluids_JSON_z.h"
 #else
-#include "incbin.h"
-#endif
 
 INCBIN(all_fluids_JSON_z, "all_fluids.json.z");
+#endif
+#endif
 
 namespace CoolProp {
 

@@ -56,7 +56,6 @@ zvalues = [
 ]
 
 incbin_template = r"""/* File generated for use with incbin */
-#include "incbin.h"
 
 #ifdef __cplusplus
 extern "C" {

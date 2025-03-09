@@ -1849,6 +1849,7 @@ if(COOLPROP_JAVASCRIPT_MODULE)
   endif()
 
   add_definitions(-sDISABLE_EXCEPTION_CATCHING=0)
+  add_definitions(-DCOOLPROP_NO_INCBIN)
   # # If you want a monolithic file with no async memory loading, define EMSCRIPTEN_NO_MEMORY_INIT_FILE
   # if(EMSCRIPTEN_NO_MEMORY_INIT_FILE)
   #   set(EMSCRIPTEN_INIT_FLAG "--memory-init-file 0")
