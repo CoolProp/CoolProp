@@ -92,10 +92,10 @@ if __name__ == '__main__':
 
         # allow to override things manually
         if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-            if osx_version >= "10.14":
+            if osx_version >= Version("10.14"):
                 os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
                 print("Assuming that we cannot build for {0} on {1}, resetting target to {2}".format(osx_target, osx_version, os.environ['MACOSX_DEPLOYMENT_TARGET']))
-            if osx_compiler >= "10":
+            if osx_compiler >= Version("10"):
                 os.environ['MACOSX_DEPLOYMENT_TARGET'] = "10.9"
                 print("Assuming that we cannot build for {0} using clang/gcc {1}, resetting target to {2}".format(osx_target, osx_compiler, os.environ['MACOSX_DEPLOYMENT_TARGET']))
 
@@ -335,6 +335,7 @@ if __name__ == '__main__':
             generate_headers.generate()
             del generate_headers
 
+        sys.path.append(str(Path(__file__).parent.absolute()))
         import generate_constants_module
         generate_constants_module.generate()
         del generate_constants_module
@@ -443,14 +444,14 @@ if __name__ == '__main__':
 
     common_args = dict(include_dirs=include_dirs,
                        language='c++')
-    if sys.platform == 'darwin':
-        common_args.update(dict(
-            extra_compile_args=["-std=c++11"]
-        ))
+
+    
     if sys.platform == 'win32':
         common_args.update(dict(
-            extra_compile_args=["/utf-8"]
+            extra_compile_args=["/utf-8", "/std:c++17"]
         ))
+    else:
+        common_args.update(dict(extra_compile_args=["-std=c++17"]))
 
     if USE_CYTHON:
         common_args.update(dict(cython_c_in_temp=True,
@@ -512,16 +513,6 @@ if __name__ == '__main__':
                package_data={'CoolProp': ['*.pxd',
                                            'CoolPropBibTeXLibrary.bib',
                                            'Plots/psyrc'] + recursive_collect_includes()},
-               classifiers=[
-                "Programming Language :: Python",
-                "Development Status :: 4 - Beta",
-                "Environment :: Other Environment",
-                "Intended Audience :: Developers",
-                "License :: OSI Approved :: MIT License",
-                "Operating System :: OS Independent",
-                "Topic :: Software Development :: Libraries :: Python Modules"
-                ],
-               setup_requires=['Cython'],
                cmdclass={'build_clib': build_clib_with_foldermaking}, # use our class instead of built-in!
                **setup_kwargs
                )

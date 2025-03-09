@@ -185,20 +185,8 @@ def TO_CPP(root_dir, hashes):
             print(os.path.join(root_dir, 'include', outfile) + ' written to file')
         else:
             print(outfile + ' is up to date')
-
-
-def version_to_file(root_dir):
-
-    # Parse the CMakeLists.txt file to generate the version
-    """
-    Should have lines like
-    "
-    set (CoolProp_VERSION_MAJOR 5)
-    set (CoolProp_VERSION_MINOR 0)
-    set (CoolProp_VERSION_PATCH 0)
-    "
-    """
-
+            
+def get_version(root_dir):
     lines = open(os.path.join(root_dir, 'CMakeLists.txt'), 'r').readlines()
     # Find the necessary lines
     MAJOR_line = [line for line in lines if ('VERSION_MAJOR' in line and 'MINOR' not in line)]
@@ -212,6 +200,21 @@ def version_to_file(root_dir):
     REVISION = REVISION_line[0].strip().split('VERSION_REVISION')[1].split(')')[0].strip()
     # Generate the strings
     version = '.'.join([MAJOR, MINOR, PATCH]) + REVISION
+    return version
+
+def version_to_file(root_dir):
+
+    # Parse the CMakeLists.txt file to generate the version
+    """
+    Should have lines like
+    "
+    set (CoolProp_VERSION_MAJOR 5)
+    set (CoolProp_VERSION_MINOR 0)
+    set (CoolProp_VERSION_PATCH 0)
+    "
+    """
+
+    version = get_version(root_dir)
 
     # Get the hash of the version
     if 'version' not in hashes or ('version' in hashes and hashes['version'] != get_hash(version.encode('ascii'))):

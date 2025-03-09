@@ -1,1 +1,0 @@
-python setup.py build --compiler=mingw32 install --cmake-compiler mingw --cmake-bitness 64
