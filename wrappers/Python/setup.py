@@ -482,7 +482,8 @@ if __name__ == '__main__':
         ext_modules = cythonize(ext_modules, compiler_directives=cython_directives)
 
     # See https://stackoverflow.com/a/59364990
-    miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c')]})
+    here = str(Path('.').parent.absolute())
+    miniz = ('miniz', {'sources': [str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c')], 'build_temp': here})
     
     try:
         setup(name='coolprop',
