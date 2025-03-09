@@ -424,7 +424,7 @@ if __name__ == '__main__':
 
     # Set variables for C++ sources and include directories
     sources = find_cpp_sources(root=os.path.join(CProot, 'src'), extensions=['.cpp'])
-    sources.append(str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.c'))
+    sources.append(str(Path(CProot) / 'externals' / 'miniz-3.0.2' / 'miniz.cpp'))
     include_dirs = [
         os.path.join(CProot),
         os.path.join(CProot, 'include'),
@@ -443,6 +443,10 @@ if __name__ == '__main__':
 
     common_args = dict(include_dirs=include_dirs,
                        language='c++')
+    if sys.platform == 'darwin':
+        common_args.update(dict(
+            extra_compile_args=["-std=c++11"]
+        ))
     if sys.platform == 'win32':
         common_args.update(dict(
             extra_compile_args=["/utf-8"]
