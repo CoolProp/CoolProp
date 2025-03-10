@@ -62,6 +62,7 @@ cdef class AbstractState:
     cpdef backend_name(self)
     cpdef fluid_names(self)
     cpdef fluid_param_string(self, string key)
+    cpdef set_cubic_alpha_C(self, size_t i, string parameter, double c1, double c2, double c3)
     cpdef set_fluid_parameter_double(self, size_t i, string parameter, double value)
     cpdef double get_fluid_parameter_double(self, size_t i, string parameter) except *
     cpdef change_EOS(self, size_t, string)
