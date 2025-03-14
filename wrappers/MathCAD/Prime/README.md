@@ -17,5 +17,5 @@ To Use
 
 * Restart Mathcad Prime.
 
-* Open the CoolPropFluidProperties.mcdx file in Mathcad Prime; all CoolProp functions should revaluate properly.  If not, press <Ctrl>-F5 to force recalculation of the entire workbook.
+* Open the CoolPropFluidProperties.mcdx file in Mathcad Prime; all CoolProp functions should revaluate properly.  If not, press `<Ctrl>-<F5>` to force recalculation of the entire workbook.
 
