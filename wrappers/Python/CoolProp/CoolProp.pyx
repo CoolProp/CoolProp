@@ -648,6 +648,36 @@ cdef dict paras = {iDmass : 'D',
                    iUmass : 'U'
 }
 
+# From https://cython.readthedocs.io/en/latest/src/tutorial/strings.html
+cdef str _to_str(s):
+    if type(s) is str:
+        # Fast path for most common case(s).
+        return <str>s
+
+    elif isinstance(s, bytes):
+        # Only accept byte strings as text input in Python 2.x, not in Py3.
+        return (<bytes>s).decode('utf8')
+
+    elif isinstance(s, str):
+        # We know from the fast path above that 's' can only be a subtype here.
+        # An evil cast to <str> might still work in some(!) cases,
+        # depending on what the further processing does.  To be safe,
+        # we can always create a copy instead.
+        return str(s)
+
+    else:
+        raise TypeError("Could not convert to str.")
+
+# From https://cython.readthedocs.io/en/latest/src/tutorial/strings.html
+cdef bytes _to_chars(s):
+    
+    if isinstance(s, str):
+        # encode to the specific encoding used inside of the module
+        return (<str>s).encode('utf8')
+    else:
+        raise TypeError("Could not convert to bytes.")
+    return s
+
 cdef dict paras_inverse = {v:k for k,v in paras.iteritems()}
 
 cdef class State:
@@ -693,24 +723,23 @@ cdef class State:
         backend : string
             The CoolProp backend that should be used, one of "HEOS" (default), "REFPROP", "INCOMP", "BRINE", etc.
         """
-        cdef string Fluid = _Fluid
+        cdef str Fluid = _to_str(_Fluid)
 
-
-        if Fluid == b'none':
+        if Fluid == 'none':
             return
         else:
-            if b'::' in <bytes>Fluid:
-                backend, _Fluid = (<bytes>Fluid).split(b'::')
+            if '::' in Fluid:
+                backend, _Fluid = Fluid.split('::')
             elif backend is None:
-                backend = u'?'
+                backend = '?'
 
             self.set_Fluid(_Fluid, backend)
-        self.Fluid = Fluid
+        self.Fluid = _to_chars(Fluid)
 
         if phase is None:
             self.phase = b'??'
         else:
-            self.phase = phase.encode('ascii')
+            self.phase = _to_chars(phase)
 
         # Set the phase flag
         if self.phase.lower() == b'gas':
@@ -732,9 +761,9 @@ cdef class State:
 
     cpdef set_Fluid(self, Fluid, backend):
 
-        cdef object _Fluid = Fluid
-        cdef object _backend = backend
-        cdef bint set_fractions = False
+        cdef str _Fluid = _to_str(Fluid)
+        cdef str _backend = _to_str(backend)
+        cdef bool set_fractions = False
         new_fluid = []
         fracs = []
         if '[' in _Fluid and ']' in _Fluid:
@@ -746,7 +775,7 @@ cdef class State:
             _Fluid = '&'.join(new_fluid)
             set_fractions = True
 
-        self.pAS = AbstractState(_backend, _Fluid)
+        self.pAS = AbstractState(_to_chars(_backend), _to_chars(_Fluid))
         if set_fractions:
             self.pAS.set_mole_fractions(fracs)
 
