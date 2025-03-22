@@ -23,6 +23,9 @@ def copy_files():
     for jsonfile in glob.glob(os.path.join('CoolProp', 'include', '*_JSON.h')):
         print('removing', jsonfile)
         os.remove(jsonfile)
+    for jsonfile in glob.glob(os.path.join('CoolProp', 'include', '*_JSON_z.h')):
+        print('removing', jsonfile)
+        os.remove(jsonfile)
     copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp', 'include', 'fmt'))  # Should be deprecated
     #copytree(os.path.join(CProot, 'externals/fmtlib/include/fmt'), os.path.join('CoolProp','include','fmt'))
     copy2(os.path.join(CProot, 'CoolPropBibTeXLibrary.bib'), os.path.join('CoolProp', 'CoolPropBibTeXLibrary.bib'))
