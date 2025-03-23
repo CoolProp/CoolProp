@@ -34,6 +34,7 @@ Subsequent edits by Ian Bell
 #pragma once
 
 #include <iostream>
+#include <utility>
 
 #include "boost/math/tools/toms748_solve.hpp"
 
@@ -101,6 +102,11 @@ void companion_matrix_transposed(const Eigen::ArrayXd &coeffs, Eigen::MatrixXd &
         A(j + 1, j) = 0.5;
     }
 }
+void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen::MatrixXd &A) {
+    Eigen::ArrayXd coeffs_ = Eigen::Map<const Eigen::ArrayXd>(&coeffs[0], coeffs.size());
+    return companion_matrix_transposed(coeffs_, A);
+}
+
 
 /**
 * @brief Get the L and U matrices needed for transformations between nodes and function values in a Chebyshev expansion
@@ -339,19 +345,19 @@ public:
                         Nd = N - 1; ///< Degree of the derivative expansion
             ArrayType cd(N);
             for (std::size_t r = 0; r <= Nd; ++r) {
-                cd(r) = 0;
+                cd[r] = 0;
                 for (std::size_t k = r + 1; k <= N; ++k) {
                     // Terms where k-r is odd have values, otherwise, they are zero
                     if ((k - r) % 2 == 1) {
-                        cd(r) += 2*k*c(k);
+                        cd[r] += 2*k*c[k];
                     }
                 }
                 // The first term with r = 0 is divided by 2 (the single prime in Mason and Handscomb, p. 34, Eq. 2.52)
                 if (r == 0) {
-                    cd(r) /= 2;
+                    cd[r] /= 2;
                 }
                 // Rescale the values if the range is not [-1,1].  Arrives from the derivative of d(xreal)/d(x_{-1,1})
-                cd(r) /= (m_xmax-m_xmin)/2.0;
+                cd[r] /= (m_xmax-m_xmin)/2.0;
             }
             if (Nderiv == 1) {
                 return cd;
@@ -402,6 +408,13 @@ private:
     const std::vector<ChebyshevExpansion<ArrayType>> m_expansions; ///< The collection of expansions forming the approximation
     const std::vector<double> m_x_at_extrema; ///< The values of the independent variable at the extrema of the expansions
     const std::vector<IntervalMatch> m_monotonic_intervals; ///< The intervals that are monotonic
+
+    Eigen::ArrayXd head(const Eigen::ArrayXd& c, Eigen::Index N) const{
+        return c.head(N);
+    }
+    std::vector<double> head(const std::vector<double>& c, Eigen::Index N) const{
+        return std::vector<double>(c.begin(), c.begin()+N);
+    }
     
     /** Determine the values of x for the extrema where y'(x)=0 according to the expansions
      \param expansions The set of expansions that are to be traversed to identify extrema
@@ -421,8 +434,7 @@ private:
                 }
             }
             if (ilastnonzero != cd.size()-1){
-                Eigen::ArrayXd new_cd = cd.head(ilastnonzero);
-                cd = new_cd;
+                cd = head(cd, ilastnonzero);
             }
             // Then do eigenvalue rootfinding after balancing
             // Define working buffers here to avoid allocations all over the place
@@ -590,6 +602,14 @@ public:
             y(i) = eval(x(i));
         }
     }
+
+    /// A vectorized and templated getter without any allocation or checking
+    template<typename Container>
+    const auto eval_manyC(const Container x[], Container y[], std::size_t N) const {
+        for (auto i = 0U; i < N; ++i){
+            y[i] = eval(x[i]);
+        }
+    }
     
     /// Find the intervals containing the value of y
     const std::vector<IntervalMatch> get_intervals_containing_y(double y) const{
@@ -605,7 +625,7 @@ public:
     /** Solve for (possibly multiple) values of the independent variable x given a value of the dependent variable y
      */
     const auto get_x_for_y(double y, unsigned int bits, std::size_t max_iter, double boundsftol) const {
-        std::vector<std::tuple<double, int>> solns;
+        std::vector<std::pair<double, int>> solns;
         for (const auto& interval: m_monotonic_intervals){
             // Each interval is required to be monotonic internally, so if the value of
             // y is within the y values at the endpoints it is a candidate

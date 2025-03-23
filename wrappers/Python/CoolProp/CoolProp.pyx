@@ -111,13 +111,11 @@ from . cimport constants_header
 from . cimport superancillary as supanc
 from cpython cimport array
 
-cdef extern from "<utility>" namespace "std":
-    void move[T](T& arg)
+from libcpp.utility cimport move 
 
 ctypedef vector[double] ArrayType
 ctypedef supanc.ChebyshevExpansion[ArrayType] ChebExp
-
-
+    
 cdef class ChebyshevExpansion:
     cdef ChebExp* m_exp
 
@@ -140,7 +138,7 @@ cdef class ChebyshevExpansion:
 
     def eval_many(self, double[::1] x, double[::1] y):
         assert x.size == y.size
-        self.m_exp.eval_manyC(&x[0], &y[0], x.shape[0])
+        self.m_exp.eval_manyC(&x[0], &y[0], x.shape[0])    
 
     def solve_for_x(self, double y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol):
         return self.m_exp.solve_for_x(y, a, b, bits, max_iter, boundstytol)
@@ -149,19 +147,40 @@ cdef class ChebyshevExpansion:
         cdef size_t N = y.shape[0]
         return self.m_exp.solve_for_x_manyC(&y[0], N, a, b, bits, max_iter, boundstytol, &x[0], &counts[0])
 
-# ctypedef supanc.ChebyshevApproximation1D[ArrayType] ChebApprox1D
-# cdef class ChebyshevApproximation1D:
-#     cdef supanc.ChebyshevApproximation1D[vector[double]]* thisptr
+ctypedef supanc.ChebyshevApproximation1D[ArrayType] ChebApprox1D
+from cython.operator cimport dereference as deref
 
-#     def __cinit__(self, expansions):
-#         cdef vector[supanc.ChebyshevExpansion[vector[double]]] expansions_copy
-#         # cdef ChebExp expansion
-#         # for expansion in expansions:
-#         #     expansions_copy.push_back(*expansion.m_exp)
-#         self.thisptr = new ChebApprox1D(std_move(expansions_copy))
+cdef class ChebyshevApproximation1D:
+    cdef supanc.ChebyshevApproximation1D[vector[double]]* thisptr
 
-#     # def __dealloc__(self):
-#     #     del self.thisptr
+    def __cinit__(self, expansions):
+        cdef vector[supanc.ChebyshevExpansion[vector[double]]] expansions_copy
+        cdef ChebyshevExpansion expansion
+        for expansion in expansions:
+            expansions_copy.push_back(deref(expansion.m_exp))
+        self.thisptr = new ChebApprox1D(move(expansions_copy))
+
+    def xmin(self):
+        return self.thisptr.xmin
+    
+    def xmax(self):
+        return self.thisptr.xmax
+
+    def is_monotonic(self):
+        return self.thisptr.is_monotonic()
+
+    def eval_many(self, double[::1] x, double[::1] y):
+        assert x.size == y.size
+        self.thisptr.eval_manyC(&x[0], &y[0], x.shape[0])
+
+    def get_x_for_y(self, double y, unsigned int bits, size_t max_iter, double boundstytol):
+        return self.thisptr.get_x_for_y(y, bits, max_iter, boundstytol)
+
+    def monotonic_intervals(self):
+        return self.thisptr.get_monotonic_intervals()
+
+    def __dealloc__(self):
+        del self.thisptr
 
 
 cdef bint iterable(object a):
