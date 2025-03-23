@@ -176,6 +176,11 @@ cdef class ChebyshevApproximation1D:
     def get_x_for_y(self, double y, unsigned int bits, size_t max_iter, double boundstytol):
         return self.thisptr.get_x_for_y(y, bits, max_iter, boundstytol)
 
+    def count_x_for_y_many(self, double[::1] y, unsigned int bits, size_t max_iter, double boundstytol, double[::1] counts):
+        assert y.shape[0] == counts.shape[0]
+        cdef size_t N = y.shape[0]
+        return self.thisptr.count_x_for_y_manyC(&y[0], N, bits, max_iter, boundstytol, &counts[0])
+
     def monotonic_intervals(self):
         return self.thisptr.get_monotonic_intervals()
 

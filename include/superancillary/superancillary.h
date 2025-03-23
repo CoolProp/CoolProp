@@ -654,6 +654,14 @@ public:
             x(i) = get_x_for_y(y(i), bits, max_iter, boundsftol).size();
         }
     }
+
+    /// A vectorized and templated getter (for calling from python)
+    template<typename Container>
+    const auto count_x_for_y_manyC(const Container y[], size_t N, unsigned int bits, std::size_t max_iter, double boundsftol, Container x[]) const {
+        for (auto i = 0U; i < N; ++i){
+            x[i] = get_x_for_y(y[i], bits, max_iter, boundsftol).size();
+        }
+    }
 };
 
 // struct SuperAncillaryTwoPhaseSolution{

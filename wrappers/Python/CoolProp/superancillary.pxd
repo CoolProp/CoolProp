@@ -37,3 +37,4 @@ cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superanc
         const vector[double] m_x_at_extrema # The values of the independent variable at the extrema of the expansions
         const vector[IntervalMatch] get_monotonic_intervals() # The intervals that are monotonic
         vector[pair[double, int]] get_x_for_y(double, unsigned int, size_t, double) const
+        void count_x_for_y_manyC[U](const U[], size_t, unsigned int, size_t, double, U[]) const
