@@ -108,6 +108,62 @@ from .constants import *
 from .constants_header cimport *
 from . cimport constants_header
 
+from . cimport superancillary as supanc
+from cpython cimport array
+
+cdef extern from "<utility>" namespace "std":
+    void move[T](T& arg)
+
+ctypedef vector[double] ArrayType
+ctypedef supanc.ChebyshevExpansion[ArrayType] ChebExp
+
+
+cdef class ChebyshevExpansion:
+    cdef ChebExp* m_exp
+
+    def __cinit__(self, double xmin, double xmax, vector[double] coef):
+        self.m_exp = new ChebExp(xmin, xmax, coef)
+
+    def __dealloc__(self):
+        del self.m_exp
+
+    def xmin(self):
+        return self.m_exp.xmin()
+    
+    def xmax(self):
+        return self.m_exp.xmax()
+
+    def coeff(self):
+        np_array = np.asarray(self.m_exp.coeff() )
+        cdef double[:] view = np_array
+        return view 
+
+    def eval_many(self, double[::1] x, double[::1] y):
+        assert x.size == y.size
+        self.m_exp.eval_manyC(&x[0], &y[0], x.shape[0])
+
+    def solve_for_x(self, double y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol):
+        return self.m_exp.solve_for_x(y, a, b, bits, max_iter, boundstytol)
+
+    def solve_for_x_many(self, double[::1]  y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol, double[::1] x, double [::1] counts):
+        cdef size_t N = y.shape[0]
+        return self.m_exp.solve_for_x_manyC(&y[0], N, a, b, bits, max_iter, boundstytol, &x[0], &counts[0])
+
+# ctypedef supanc.ChebyshevApproximation1D[ArrayType] ChebApprox1D
+# cdef class ChebyshevApproximation1D:
+#     cdef supanc.ChebyshevApproximation1D[vector[double]]* thisptr
+
+#     def __cinit__(self, expansions):
+#         cdef vector[supanc.ChebyshevExpansion[vector[double]]] expansions_copy
+#         # cdef ChebExp expansion
+#         # for expansion in expansions:
+#         #     expansions_copy.push_back(*expansion.m_exp)
+#         self.thisptr = new ChebApprox1D(std_move(expansions_copy))
+
+#     # def __dealloc__(self):
+#     #     del self.thisptr
+
+
 cdef bint iterable(object a):
     """
     If numpy is supported, this function returns true if the argument is a
@@ -126,6 +182,9 @@ cdef ndarray_or_iterable(object input):
 
 include "HumidAirProp.pyx"
 include "AbstractState.pyx"
+
+
+
 
 def set_reference_state(FluidName, *args):
     """
