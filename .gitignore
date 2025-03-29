@@ -8,6 +8,8 @@
 *.DS_Store
 .version
 
+/bld*
+
 /dev/VS2010
 
 /dev/Tickets/oFiles
@@ -68,6 +70,8 @@
 /.vscode/
 
 bld/
+*_z.h 
+*.json.z
 
 compile_commands.json
 cppcheck.txt
