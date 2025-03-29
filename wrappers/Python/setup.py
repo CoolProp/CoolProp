@@ -438,6 +438,7 @@ if __name__ == '__main__':
         os.path.join(CProot, 'externals', 'fmtlib', 'include'),
         os.path.join(CProot, 'boost_CoolProp'),
         os.path.join(CProot, 'externals', 'incbin'),
+        os.path.join(CProot, 'externals', 'nlohmann-json'),
         os.path.join(CProot, 'externals', 'miniz-3.0.2'),
         os.path.join(CProot, 'externals', 'msgpack-c', 'include')]
 
