@@ -37,6 +37,7 @@ Subsequent edits by Ian Bell
 #include <utility>
 
 #include "boost/math/tools/toms748_solve.hpp"
+#include "nlohmann/json.hpp"
 
 namespace CoolProp{
 namespace superancillary{
@@ -136,6 +137,15 @@ auto get_LU_matrices(std::size_t N){
     return std::make_tuple(L, U);
 }
 
+double M_element_norm(const std::vector<double>& x, Eigen::Index M){
+    Eigen::Map<const Eigen::ArrayXd> X(&x[0], x.size());
+    return X.tail(M).matrix().norm() / X.head(M).matrix().norm();
+}
+
+double M_element_norm(const Eigen::ArrayXd& x, Eigen::Index M){
+    return x.tail(M).matrix().norm() / x.head(M).matrix().norm();
+} 
+
 /**
  std::function<double(double)>
  */
@@ -146,9 +156,7 @@ auto dyadic_splitting(const std::size_t N, const Function& func, const double xm
     const std::optional<std::function<void(int, const Container&)>>& callback = std::nullopt) -> Container
 {
     using CE_t = std::decay_t<decltype(Container().front())>;
-    
-    // Convenience function to get the M-element norm
-    auto get_err = [M](const CE_t& ce) { return ce.coeff().tail(M).matrix().norm() / ce.coeff().head(M).matrix().norm(); };
+    using ArrayType = std::decay_t<decltype(CE_t().coeff())>;
     
     Eigen::MatrixXd Lmat, Umat;
     std::tie(Lmat, Umat) = detail::get_LU_matrices(N);
@@ -175,7 +183,13 @@ auto dyadic_splitting(const std::size_t N, const Function& func, const double xm
         if (!c.allFinite() ) {
             throw std::invalid_argument("At least one coefficient is non-finite");
         }
-        return {xmin, xmax, c};
+        if constexpr (std::is_same_v<ArrayType, std::vector<double>>){
+            return {xmin, xmax, std::vector<double>(&c[0], &c[0] + c.size())};
+        }
+        else{
+            // Probably an Eigen::ArrayXd, just pass that into constructor
+            return {xmin, xmax, c};
+        }
     };
     
     // Start off with the full domain from xmin to xmax
@@ -188,7 +202,7 @@ auto dyadic_splitting(const std::size_t N, const Function& func, const double xm
         // Start at the right and move left because insertions will make the length increase
         for (int iexpansion = static_cast<int>(expansions.size())-1; iexpansion >= 0; --iexpansion) {
             auto& expan = expansions[iexpansion];
-            auto err = get_err(expan);
+            auto err = M_element_norm(expan.coeff(), M);
 //            std::cout << "err: " <<  err << std::endl;
             if (err > tol) {
                 // Splitting is required, do a dyadic split
@@ -664,426 +678,442 @@ public:
     }
 };
 
-// struct SuperAncillaryTwoPhaseSolution{
-//     double T, ///< The temperature, in K
-//            q; ///< The vapor quality
-//     std::size_t counter; ///< Counter for how many steps have been taken
-// };
+struct SuperAncillaryTwoPhaseSolution{
+    double T, ///< The temperature, in K
+           q; ///< The vapor quality
+    std::size_t counter; ///< Counter for how many steps have been taken
+};
 
-// /**
+/**
  
-// A superancillary object is formed of a number of one dimensional Chebyshev approximations, one for each phase, property pair.
+A superancillary object is formed of a number of one dimensional Chebyshev approximations, one for each phase, property pair.
  
-//  Loaded from the file are density and pressure as functions of temperature, and a thermodynamic model can be used to build
-//  the
+ Loaded from the file are density and pressure as functions of temperature, and a thermodynamic model can be used to build
+ the
  
-//  */
-// template<typename ArrayType=Eigen::ArrayXd>
-// class SuperAncillary{
-// private:
-//     /// These ones must always be present
-//     ChebyshevApproximation1D<ArrayType> m_rhoL, ///< Approximation of \f$\rho'(T)\f$
-//                                         m_rhoV, ///< Approximation of \f$\rho''(T)\f$
-//                                         m_p, ///< Approximation of \f$p(T)\f$
-//                                         m_invlnp;///< Approximation of \f$T(ln(p))\f$
+ */
+template<typename ArrayType=Eigen::ArrayXd>
+class SuperAncillary{
+private:
+    /// These ones must always be present
+    ChebyshevApproximation1D<ArrayType> m_rhoL, ///< Approximation of \f$\rho'(T)\f$
+                                        m_rhoV, ///< Approximation of \f$\rho''(T)\f$
+                                        m_p, ///< Approximation of \f$p(T)\f$
+                                        m_invlnp;///< Approximation of \f$T(ln(p))\f$
     
-//     // These ones *may* be present
-//     std::optional<ChebyshevApproximation1D<ArrayType>> m_hL, ///< Approximation of \f$h'(T)\f$
-//                                         m_hV, ///< Approximation of \f$h''(T)\f$
-//                                         m_sL, ///< Approximation of \f$s'(T)\f$
-//                                         m_sV, ///< Approximation of \f$s''(T)\f$
-//                                         m_uL, ///< Approximation of \f$u'(T)\f$
-//                                         m_uV; ///< Approximation of \f$u''(T)\f$
+    // These ones *may* be present
+    std::optional<ChebyshevApproximation1D<ArrayType>> m_hL, ///< Approximation of \f$h'(T)\f$
+                                        m_hV, ///< Approximation of \f$h''(T)\f$
+                                        m_sL, ///< Approximation of \f$s'(T)\f$
+                                        m_sV, ///< Approximation of \f$s''(T)\f$
+                                        m_uL, ///< Approximation of \f$u'(T)\f$
+                                        m_uV; ///< Approximation of \f$u''(T)\f$
 
-//     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
-//      \param j The JSON data
-//      \param key The key to be loaded from the superancillary block, probably one of "jexpansions_rhoL", "jexpansions_rhoV", or "jexpansions_p"
-//      */
-//     auto loader(const nlohmann::json &j, const std::string& key){
-//         std::vector<ChebyshevExpansion<ArrayType>> buf;
-//         auto toeig = [](const nlohmann::json &j) -> Eigen::ArrayXd{
-//             auto vec = j.get<std::vector<double>>();
-//             return Eigen::Map<const Eigen::ArrayXd>(&vec[0], vec.size());
-//         };
-//         for (auto& block : j[key]){
-//             buf.emplace_back(block.at("xmin"), block.at("xmax"), toeig(block.at("coef")));
-//         }
-//         return buf;
-//     }
+    /** A convenience function to load a ChebyshevExpansion from a JSON data structure
+     \param j The JSON data
+     \param key The key to be loaded from the superancillary block, probably one of "jexpansions_rhoL", "jexpansions_rhoV", or "jexpansions_p"
+     */
+    auto loader(const nlohmann::json &j, const std::string& key){
+        std::vector<ChebyshevExpansion<ArrayType>> buf;
+
+        // auto toeig = [](const nlohmann::json &j) -> Eigen::ArrayXd{
+        //     auto vec = j.get<std::vector<double>>();
+        //     return Eigen::Map<const Eigen::ArrayXd>(&vec[0], vec.size());
+        // };
+        // for (auto& block : j[key]){
+        //     buf.emplace_back(block.at("xmin"), block.at("xmax"), toeig(block.at("coef")));
+        // }
+        for (auto& block : j[key]){
+            buf.emplace_back(block.at("xmin"), block.at("xmax"), block.at("coef"));
+        }
+        return buf;
+    }
     
-//     /** Make an inverse ChebyshevApproximation1D for T(p)
-//      \param Ndegree The degree of the expansion in each interval. In double precision, 12 to 16 is a good plan if you will not be doing eigenvalue rootfinding. If you will be doing eigenvalue rootfinding, use a lower degree expansion, 8 is good.
-//      */
-//     auto make_invlnp(Eigen::Index Ndegree){
+    /** Make an inverse ChebyshevApproximation1D for T(p)
+     \param Ndegree The degree of the expansion in each interval. In double precision, 12 to 16 is a good plan if you will not be doing eigenvalue rootfinding. If you will be doing eigenvalue rootfinding, use a lower degree expansion, 8 is good.
+     */
+    auto make_invlnp(Eigen::Index Ndegree){
         
-//         auto pmin = m_p.eval(m_p.xmin);
-//         auto pmax = m_p.eval(m_p.xmax);
-//         auto N = m_p.get_expansions().front().coeff().size()-1;
-//         const double EPSILON = std::numeric_limits<double>::epsilon();
+        auto pmin = m_p.eval(m_p.xmin);
+        auto pmax = m_p.eval(m_p.xmax);
+        // auto N = m_p.get_expansions().front().coeff().size()-1;
+        const double EPSILON = std::numeric_limits<double>::epsilon();
         
-//         auto func = [&](long i, long Npts, double lnp) -> double{
-//             double p = exp(lnp);
-//             auto solns = m_p.get_x_for_y(p, 64, 100, 1e-8);
+        auto func = [&](long i, long Npts, double lnp) -> double{
+            double p = exp(lnp);
+            auto solns = m_p.get_x_for_y(p, 64, 100, 1e-8);
             
-//             if (solns.size() != 1){
-//                 if ((i == 0 || i == Npts-1) && ( p > pmin*(1-EPSILON*1000) && p < pmin*(1+EPSILON*1000))){
-//                     return m_p.get_monotonic_intervals()[0].xmin;
-//                 }
-//                 if ((i == 0 || i == Npts-1) && ( p > pmax*(1-EPSILON*1000) && p < pmax*(1+EPSILON*1000))){
-//                     return m_p.get_monotonic_intervals()[0].xmax;
-//                 }
-//                 std::stringstream ss;
-//                 ss << std::setprecision(20) << "Must have one solution for T(p), got " << solns.size() << " for " << p << " Pa; limits are [" << pmin << + " Pa , " << pmax << " Pa]; i is " << i;
-//                 throw std::invalid_argument(ss.str());
-//             }
-//             auto [T, iters] = solns[0];
-//             return T;
-//         };
+            if (solns.size() != 1){
+                if ((i == 0 || i == Npts-1) && ( p > pmin*(1-EPSILON*1000) && p < pmin*(1+EPSILON*1000))){
+                    return m_p.get_monotonic_intervals()[0].xmin;
+                }
+                if ((i == 0 || i == Npts-1) && ( p > pmax*(1-EPSILON*1000) && p < pmax*(1+EPSILON*1000))){
+                    return m_p.get_monotonic_intervals()[0].xmax;
+                }
+                std::stringstream ss;
+                ss << std::setprecision(20) << "Must have one solution for T(p), got " << solns.size() << " for " << p << " Pa; limits are [" << pmin << + " Pa , " << pmax << " Pa]; i is " << i;
+                throw std::invalid_argument(ss.str());
+            }
+            auto [T, iters] = solns[0];
+            return T;
+        };
         
-//         using CE_t = std::vector<ChebyshevExpansion<ArrayType>>;
-//         return detail::dyadic_splitting<decltype(func), CE_t>(Ndegree, func, log(pmin), log(pmax), 3, 1e-12, 26);
-//     }
+        using CE_t = std::vector<ChebyshevExpansion<ArrayType>>;
+        return detail::dyadic_splitting<decltype(func), CE_t>(Ndegree, func, log(pmin), log(pmax), 3, 1e-12, 26);
+    }
     
-//     using PropertyPairs = properties::PropertyPairs; ///< A convenience alias to save some typing
+    // using PropertyPairs = properties::PropertyPairs; ///< A convenience alias to save some typing
     
-// public:
-//     /// Reading in a data structure in the JSON format of https://pubs.aip.org/aip/jpr/article/53/1/013102/3270194
-//     /// which includes sets of Chebyshev expansions for rhoL, rhoV, and p
-//     SuperAncillary(const nlohmann::json &j) :
-//     m_rhoL(std::move(loader(j, "jexpansions_rhoL"))),
-//     m_rhoV(std::move(loader(j, "jexpansions_rhoV"))),
-//     m_p(std::move(loader(j, "jexpansions_p"))),
-//     m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1)))
-//     {};
+public:
+    /// Reading in a data structure in the JSON format of https://pubs.aip.org/aip/jpr/article/53/1/013102/3270194
+    /// which includes sets of Chebyshev expansions for rhoL, rhoV, and p
+    SuperAncillary(const nlohmann::json &j) :
+    m_rhoL(std::move(loader(j, "jexpansions_rhoL"))),
+    m_rhoV(std::move(loader(j, "jexpansions_rhoV"))),
+    m_p(std::move(loader(j, "jexpansions_p"))),
+    m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1)))
+    {};
     
-//     /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
-//      * \param s The string-encoded JSON data for the superancillaries
-//      */
-//     SuperAncillary(const std::string& s) : SuperAncillary(nlohmann::json::parse(s)) {};
+    /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
+     * \param s The string-encoded JSON data for the superancillaries
+     */
+    SuperAncillary(const std::string& s) : SuperAncillary(nlohmann::json::parse(s)) {};
     
-//     /** Get a const reference to a ChebyshevApproximation1D
+    /** Get a const reference to a ChebyshevApproximation1D
      
-//      \param k The key for the property (D,S,H,P,U)
-//      \param Q The vapor quality, either 0 or 1
-//      */
-//     const auto& get_approx1d(char k, short Q) const {
-//         auto get_or_throw = [&](const auto& v) -> const auto& {
-//             if (v){
-//                 return v.value();
-//             }
-//             else{
-//                 throw std::invalid_argument("unable to get the variable "+std::string(1, k)+", make sure it has been added to superancillary");
-//             }
-//         };
-//         switch(k){
-//             case 'P': return m_p;
-//             case 'D': return (Q == 0) ? m_rhoL : m_rhoV;
-//             case 'H': return (Q == 0) ? get_or_throw(m_hL) : get_or_throw(m_hV);
-//             case 'S': return (Q == 0) ? get_or_throw(m_sL) : get_or_throw(m_sV);
-//             case 'U': return (Q == 0) ? get_or_throw(m_uL) : get_or_throw(m_uV);
-//             default: throw std::invalid_argument("Bad key of '" + std::string(1, k) + "'");
-//         }
-//     }
-//     /// Get a const reference to the inverse approximation for T(ln(p))
-//     const auto& get_invlnp(){ return m_invlnp; }
+     \param k The key for the property (D,S,H,P,U)
+     \param Q The vapor quality, either 0 or 1
+     */
+    const auto& get_approx1d(char k, short Q) const {
+        auto get_or_throw = [&](const auto& v) -> const auto& {
+            if (v){
+                return v.value();
+            }
+            else{
+                throw std::invalid_argument("unable to get the variable "+std::string(1, k)+", make sure it has been added to superancillary");
+            }
+        };
+        switch(k){
+            case 'P': return m_p;
+            case 'D': return (Q == 0) ? m_rhoL : m_rhoV;
+            case 'H': return (Q == 0) ? get_or_throw(m_hL) : get_or_throw(m_hV);
+            case 'S': return (Q == 0) ? get_or_throw(m_sL) : get_or_throw(m_sV);
+            case 'U': return (Q == 0) ? get_or_throw(m_uL) : get_or_throw(m_uV);
+            default: throw std::invalid_argument("Bad key of '" + std::string(1, k) + "'");
+        }
+    }
+    /// Get a const reference to the inverse approximation for T(ln(p))
+    const auto& get_invlnp(){ return m_invlnp; }
     
-//     /**
-//      Using the provided function that gives y(T, rho), build the ancillaries for this variable based on the ancillaries for rhoL and rhoV
-//      \param var The key for the property (H,S,U)
-//      \param caller A function that takes temperature and molar density and returns the property of interest, molar enthalpy in the case of H, etc.
-//      */
-//     void add_variable(char var, const std::function<double(double, double)> & caller){
-//         Eigen::MatrixXd Lmat, Umat;
-//         std::tie(Lmat, Umat) = detail::get_LU_matrices(12);
+    /**
+     Using the provided function that gives y(T, rho), build the ancillaries for this variable based on the ancillaries for rhoL and rhoV
+     \param var The key for the property (H,S,U)
+     \param caller A function that takes temperature and molar density and returns the property of interest, molar enthalpy in the case of H, etc.
+     */
+    void add_variable(char var, const std::function<double(double, double)> & caller){
+        Eigen::MatrixXd Lmat, Umat;
+        std::tie(Lmat, Umat) = detail::get_LU_matrices(12);
         
-//         auto builder = [&](char var, auto& variantL, auto& variantV){
-//             std::vector<ChebyshevExpansion<ArrayType>> newexpL, newexpV;
-//             const auto& expsL = get_approx1d('D', 0);
-//             const auto& expsV = get_approx1d('D', 1);
-//             if (expsL.get_expansions().size() != expsV.get_expansions().size()){
-//                 throw std::invalid_argument("L&V are not the same size");
-//             }
-//             for (auto i = 0U; i < expsL.get_expansions().size(); ++i){
-//                 const auto& expL = expsL.get_expansions()[i];
-//                 const auto& expV = expsV.get_expansions()[i];
-//                 const auto& T = expL.get_nodes_realworld();
-//                 // Get the functional values at the Chebyshev nodes
-//                 Eigen::ArrayXd funcL = Umat*expL.coeff().matrix();
-//                 Eigen::ArrayXd funcV = Umat*expV.coeff().matrix();
-//                 // Apply the function inplace to do the transformation
-//                 // of the functional values at the nodes
-//                 for (auto j = 0; j < funcL.size(); ++j){
-//                     funcL(j) = caller(T(j), funcL(j));
-//                     funcV(j) = caller(T(j), funcV(j));
-//                 }
-//                 // And now rebuild the expansions by left-multiplying by the L matrix
-//                 newexpL.emplace_back(expL.xmin(), expL.xmax(), (Lmat*funcL.matrix()).eval());
-//                 newexpV.emplace_back(expV.xmin(), expV.xmax(), (Lmat*funcV.matrix()).eval());
-//             }
+        auto builder = [&](char var, auto& variantL, auto& variantV){
+            std::vector<ChebyshevExpansion<ArrayType>> newexpL, newexpV;
+            const auto& expsL = get_approx1d('D', 0);
+            const auto& expsV = get_approx1d('D', 1);
+            if (expsL.get_expansions().size() != expsV.get_expansions().size()){
+                throw std::invalid_argument("L&V are not the same size");
+            }
+            for (auto i = 0U; i < expsL.get_expansions().size(); ++i){
+                const auto& expL = expsL.get_expansions()[i];
+                const auto& expV = expsV.get_expansions()[i];
+                const auto& T = expL.get_nodes_realworld();
+                // Get the functional values at the Chebyshev nodes
+                Eigen::ArrayXd funcL = Umat*expL.coeff().matrix();
+                Eigen::ArrayXd funcV = Umat*expV.coeff().matrix();
+                // Apply the function inplace to do the transformation
+                // of the functional values at the nodes
+                for (auto j = 0; j < funcL.size(); ++j){
+                    funcL(j) = caller(T(j), funcL(j));
+                    funcV(j) = caller(T(j), funcV(j));
+                }
+                // And now rebuild the expansions by left-multiplying by the L matrix
+                newexpL.emplace_back(expL.xmin(), expL.xmax(), (Lmat*funcL.matrix()).eval());
+                newexpV.emplace_back(expV.xmin(), expV.xmax(), (Lmat*funcV.matrix()).eval());
+            }
             
-//             variantL.emplace(std::move(newexpL));
-//             variantV.emplace(std::move(newexpV));
-//         };
+            variantL.emplace(std::move(newexpL));
+            variantV.emplace(std::move(newexpV));
+        };
         
-//         switch(var){
-//             case 'H': builder(var, m_hL, m_hV); break;
-//             case 'S': builder(var, m_sL, m_sV); break;
-//             case 'U': builder(var, m_uL, m_uV); break;
-//             default: throw std::invalid_argument("nope");
-//         }
-//     }
+        switch(var){
+            case 'H': builder(var, m_hL, m_hV); break;
+            case 'S': builder(var, m_sL, m_sV); break;
+            case 'U': builder(var, m_uL, m_uV); break;
+            default: throw std::invalid_argument("nope");
+        }
+    }
     
-//     /** Given the value of Q in {0,1}, evaluate one of the the ChebyshevApproximation1D
-//      \param T Temperature, in K
-//      \param k Property key, in {D,P,H,S,U}
-//      \param Q Vapor quality, in {0,1}
-//      */
-//     double eval_sat(double T, char k, short Q) const {
-//         if (Q == 1 || Q == 0){
-//             return get_approx1d(k, Q).eval(T);
-//         }
-//         else{
-//             throw std::invalid_argument("invalid_value for Q");
-//         }
-//     }
+    /** Given the value of Q in {0,1}, evaluate one of the the ChebyshevApproximation1D
+     \param T Temperature, in K
+     \param k Property key, in {D,P,H,S,U}
+     \param Q Vapor quality, in {0,1}
+     */
+    double eval_sat(double T, char k, short Q) const {
+        if (Q == 1 || Q == 0){
+            return get_approx1d(k, Q).eval(T);
+        }
+        else{
+            throw std::invalid_argument("invalid_value for Q");
+        }
+    }
     
-//     /**
-//     A vectorized version of eval_sat for wrapping in Python interface and profiling
-//      */
-//     template <typename Container>
-//     void eval_sat_many(const Container& T, char k, short Q, Container& y) const {
-//         if (T.size() != y.size()){ throw std::invalid_argument("x and y are not the same size"); }
-//         const auto& approx = get_approx1d(k, Q);
-//         for (auto i =  0; i < T.size(); ++i){
-//             y(i) = approx.eval(T(i));
-//         }
-//     }
+    /**
+    A vectorized version of eval_sat for wrapping in Python interface and profiling
+     */
+    template <typename Container>
+    void eval_sat_many(const Container& T, char k, short Q, Container& y) const {
+        if (T.size() != y.size()){ throw std::invalid_argument("T and y are not the same size"); }
+        const auto& approx = get_approx1d(k, Q);
+        for (auto i =  0; i < T.size(); ++i){
+            y(i) = approx.eval(T(i));
+        }
+    }
+
+    /**
+    A vectorized version of eval_sat for wrapping in Python interface and profiling
+     */
+    template <typename Container>
+    void eval_sat_manyC(const Container T[], std::size_t N, char k, short Q, Container y[]) const {
+        // if (T.size() != y.size()){ throw std::invalid_argument("T and y are not the same size"); }
+        const auto& approx = get_approx1d(k, Q);
+        for (auto i =  0; i < N; ++i){
+            y[i] = approx.eval(T[i]);
+        }
+    }
     
-//     /** A convenience function to pass off to the ChebyshevApproximation1D and do an inversion calculation for a value of the variable for a saturated state
+    /** A convenience function to pass off to the ChebyshevApproximation1D and do an inversion calculation for a value of the variable for a saturated state
      
-//      \param propval The value of the property
-//      \param k Property key, in {D,P,H,S,U}
-//      \param Q Vapor quality, in {0,1}
-//      \param bits passed to toms748 algorithm
-//      \param max_iter Maximum allowed number of function calls
-//      \param boundsftol A functional value stopping condition to test on the endpoints
-//      */
-//     auto solve_for_T(double propval, char k, bool Q, unsigned int bits=64, unsigned int max_iter=100, double boundsftol=1e-13) const{
-//         return get_approx1d(k, Q).get_x_for_y(propval, bits, max_iter, boundsftol);
-//     }
+     \param propval The value of the property
+     \param k Property key, in {D,P,H,S,U}
+     \param Q Vapor quality, in {0,1}
+     \param bits passed to toms748 algorithm
+     \param max_iter Maximum allowed number of function calls
+     \param boundsftol A functional value stopping condition to test on the endpoints
+     */
+    auto solve_for_T(double propval, char k, bool Q, unsigned int bits=64, unsigned int max_iter=100, double boundsftol=1e-13) const{
+        return get_approx1d(k, Q).get_x_for_y(propval, bits, max_iter, boundsftol);
+    }
     
-//     /** Get the non-iterative vapor quality q given the temperature T and the value of the thermodynamic variable
-//     \param T Temperature, in K
-//     \param propval The value of the given thermodynamic variable
-//     \param k Property key, in {D,P,H,S,U}
-//      \returns The non-iterative vapor quality based on the values from the superancillary functions
-//     */
-//     auto get_vaporquality(double T, double propval, char k) const {
-//         if (k == 'D'){
-//             // Need to special-case here because v = q*v_V + (1-q)*v_V but it is NOT(!!!!) the case that rho = q*rho_V + (1-q)*rho_L
-//             double v_L = 1/get_approx1d('D', 0).eval(T);
-//             double v_V = 1/get_approx1d('D', 1).eval(T);
-//             return (1/propval-v_L)/(v_V-v_L);
-//         }
-//         else{
-//             double L = get_approx1d(k, 0).eval(T);
-//             double V = get_approx1d(k, 1).eval(T);
-//             return (propval-L)/(V-L);
-//         }
-//     }
+    /** Get the non-iterative vapor quality q given the temperature T and the value of the thermodynamic variable
+    \param T Temperature, in K
+    \param propval The value of the given thermodynamic variable
+    \param k Property key, in {D,P,H,S,U}
+     \returns The non-iterative vapor quality based on the values from the superancillary functions
+    */
+    auto get_vaporquality(double T, double propval, char k) const {
+        if (k == 'D'){
+            // Need to special-case here because v = q*v_V + (1-q)*v_V but it is NOT(!!!!) the case that rho = q*rho_V + (1-q)*rho_L
+            double v_L = 1/get_approx1d('D', 0).eval(T);
+            double v_V = 1/get_approx1d('D', 1).eval(T);
+            return (1/propval-v_L)/(v_V-v_L);
+        }
+        else{
+            double L = get_approx1d(k, 0).eval(T);
+            double V = get_approx1d(k, 1).eval(T);
+            return (propval-L)/(V-L);
+        }
+    }
     
-//     /**
-//      \brief Use the inverted pressure superancillary to calculate temperature given pressure
-//      \param p The pressure (not its logarithm!), in Pa
-//      \returns T The temperature, in K
-//      */
-//     auto get_T_from_p(double p) const{
-//         return m_invlnp.eval(log(p));
-//     }
+    /**
+     \brief Use the inverted pressure superancillary to calculate temperature given pressure
+     \param p The pressure (not its logarithm!), in Pa
+     \returns T The temperature, in K
+     */
+    auto get_T_from_p(double p) const{
+        return m_invlnp.eval(log(p));
+    }
     
-//     /**
-//      \brief Return the evaluated value of the thermodynamic variable, given the temperature and vapor quality.
+    /**
+     \brief Return the evaluated value of the thermodynamic variable, given the temperature and vapor quality.
      
-//      \param T Temperature, in K
-//      \param q Vapor quality, in [0,1]
-//      \param k Property key, in {D,P,H,S,U}
-//      */
-//     auto get_yval(double T, double q, char k) const{
+     \param T Temperature, in K
+     \param q Vapor quality, in [0,1]
+     \param k Property key, in {D,P,H,S,U}
+     */
+    auto get_yval(double T, double q, char k) const{
             
-//         if (k == 'D'){
-//             // Need to special-case here because v = q*v_V + (1-q)*v_V but it is NOT(!!!!) the case that rho = q*rho_V + (1-q)*rho_L
-//             double v_L = 1/get_approx1d('D', 0).eval(T);
-//             double v_V = 1/get_approx1d('D', 1).eval(T);
-//             double v = q*v_V + (1-q)*v_L;
-//             return 1/v; // rho = 1/v
-//         }
-//         else{
-//             double L = get_approx1d(k, 0).eval(T);
-//             double V = get_approx1d(k, 1).eval(T);
-//             return q*V + (1-q)*L;
-//         }
-//     }
+        if (k == 'D'){
+            // Need to special-case here because v = q*v_V + (1-q)*v_V but it is NOT(!!!!) the case that rho = q*rho_V + (1-q)*rho_L
+            double v_L = 1/get_approx1d('D', 0).eval(T);
+            double v_V = 1/get_approx1d('D', 1).eval(T);
+            double v = q*v_V + (1-q)*v_L;
+            return 1/v; // rho = 1/v
+        }
+        else{
+            double L = get_approx1d(k, 0).eval(T);
+            double V = get_approx1d(k, 1).eval(T);
+            return q*V + (1-q)*L;
+        }
+    }
     
-//     /// A vectorized version of get_yval for profiling in Python
-//     template <typename Container>
-//     void get_yval_many(const Container& T, char k, const Container& q, Container& y) const{
-//         if (T.size() != y.size() || T.size() != q.size()){ throw std::invalid_argument("T, q, and y are not all the same size"); }
+    /// A vectorized version of get_yval for profiling in Python
+    template <typename Container>
+    void get_yval_many(const Container& T, char k, const Container& q, Container& y) const{
+        if (T.size() != y.size() || T.size() != q.size()){ throw std::invalid_argument("T, q, and y are not all the same size"); }
         
-//         const auto& L = get_approx1d(k, 0);
-//         const auto& V = get_approx1d(k, 1);
+        const auto& L = get_approx1d(k, 0);
+        const auto& V = get_approx1d(k, 1);
         
-//         if (k == 'D'){
-//             for (auto i = 0; i < T.size(); ++i){
-//                 // Need to special-case here because v = q*v_V + (1-q)*v_V but it is NOT(!!!!) the case that rho = q*rho_V + (1-q)*rho_L
-//                 double v_L = 1.0/L.eval(T(i));
-//                 double v_V = 1.0/V.eval(T(i));
-//                 double v = q(i)*v_V + (1-q(i))*v_L;
-//                 y(i) = 1/v;
-//             }
-//         }
-//         else{
-//             for (auto i = 0; i < T.size(); ++i){
-//                 y(i) = q(i)*V.eval(T(i)) + (1-q(i))*L.eval(T(i));
-//             }
-//         }
-//     }
-//     /** Determine all the values of temperature that correspond to intersections with the superancillary function, for both the vapor and liquid phases
-//      \param k Property key, in {D,P,H,S,U}
-//      \param val Value of the thermodynamic variable
-//      \param bits passed to toms748 algorithm
-//      \param max_iter Maximum allowed number of function calls
-//      \param boundsftol A functional value stopping condition to test on the endpoints
-//     */
-//     auto get_all_intersections(const char k, const double val, unsigned int bits, std::size_t max_iter, double boundsftol) const{
-//         const auto& L = get_approx1d(k, 0);
-//         const auto& V = get_approx1d(k, 1);
-//         auto TsatL = L.get_x_for_y(val, bits, max_iter, boundsftol);
-//         const auto TsatV = V.get_x_for_y(val, bits, max_iter, boundsftol);
-//         for (auto &&el : TsatV){
-//             TsatL.push_back(el);
-//         }
-// //        TsatL.insert(TsatL.end(),
-// //                     std::make_move_iterator(TsatV.begin() + TsatV.size()),
-// //                     std::make_move_iterator(TsatV.end()));
-//         return TsatL;
-//     }
+        if (k == 'D'){
+            for (auto i = 0; i < T.size(); ++i){
+                // Need to special-case here because v = q*v_V + (1-q)*v_V but it is NOT(!!!!) the case that rho = q*rho_V + (1-q)*rho_L
+                double v_L = 1.0/L.eval(T(i));
+                double v_V = 1.0/V.eval(T(i));
+                double v = q(i)*v_V + (1-q(i))*v_L;
+                y(i) = 1/v;
+            }
+        }
+        else{
+            for (auto i = 0; i < T.size(); ++i){
+                y(i) = q(i)*V.eval(T(i)) + (1-q(i))*L.eval(T(i));
+            }
+        }
+    }
+    /** Determine all the values of temperature that correspond to intersections with the superancillary function, for both the vapor and liquid phases
+     \param k Property key, in {D,P,H,S,U}
+     \param val Value of the thermodynamic variable
+     \param bits passed to toms748 algorithm
+     \param max_iter Maximum allowed number of function calls
+     \param boundsftol A functional value stopping condition to test on the endpoints
+    */
+    auto get_all_intersections(const char k, const double val, unsigned int bits, std::size_t max_iter, double boundsftol) const{
+        const auto& L = get_approx1d(k, 0);
+        const auto& V = get_approx1d(k, 1);
+        auto TsatL = L.get_x_for_y(val, bits, max_iter, boundsftol);
+        const auto TsatV = V.get_x_for_y(val, bits, max_iter, boundsftol);
+        for (auto &&el : TsatV){
+            TsatL.push_back(el);
+        }
+//        TsatL.insert(TsatL.end(),
+//                     std::make_move_iterator(TsatV.begin() + TsatV.size()),
+//                     std::make_move_iterator(TsatV.end()));
+        return TsatL;
+    }
     
-//     /**
-//     \brief Iterate to find a value of temperature and vapor quality corresponding to the two given thermodynamic variables, if such a solution exists. This is the lower-level function used by the solve_XX methods
+    /**
+    \brief Iterate to find a value of temperature and vapor quality corresponding to the two given thermodynamic variables, if such a solution exists. This is the lower-level function used by the solve_XX methods
      
-//      \note The temperature range must bound the solution, you might need to call get_all_intersections and parse its solutions to construct bounded intervals
-//      \param Tmin Minimum temperature, in K
-//      \param Tmax Maximum temperature, in K
-//      \param ch1 The key for the first variable, in {T,D,P,H,S,U}
-//      \param val1 The value for the first variable
-//      \param ch2 The key for the second variable, in {T,D,P,H,S,U}
-//      \param val2 The value for the second variable
-//      \param bits passed to toms748 algorithm
-//      \param max_iter Maximum allowed number of function calls
-//      \param boundsftol A functional value stopping condition to test on the endpoints
-//      */
-//     std::optional<SuperAncillaryTwoPhaseSolution> iterate_for_Tq_XY(double Tmin, double Tmax, char ch1, double val1, char ch2, double val2, unsigned int bits, std::size_t max_iter, double boundsftol) const {
+     \note The temperature range must bound the solution, you might need to call get_all_intersections and parse its solutions to construct bounded intervals
+     \param Tmin Minimum temperature, in K
+     \param Tmax Maximum temperature, in K
+     \param ch1 The key for the first variable, in {T,D,P,H,S,U}
+     \param val1 The value for the first variable
+     \param ch2 The key for the second variable, in {T,D,P,H,S,U}
+     \param val2 The value for the second variable
+     \param bits passed to toms748 algorithm
+     \param max_iter Maximum allowed number of function calls
+     \param boundsftol A functional value stopping condition to test on the endpoints
+     */
+    std::optional<SuperAncillaryTwoPhaseSolution> iterate_for_Tq_XY(double Tmin, double Tmax, char ch1, double val1, char ch2, double val2, unsigned int bits, std::size_t max_iter, double boundsftol) const {
         
-//         std::size_t counter = 0;
-//         auto f = [&](double T_){
-//             counter++;
-//             double q_fromv1 = get_vaporquality(T_, val1, ch1);
-//             double resid = get_yval(T_, q_fromv1, ch2) - val2;
-//             return resid;
-//         };
-//         using namespace boost::math::tools;
-//         double fTmin = f(Tmin), fTmax = f(Tmax);
+        std::size_t counter = 0;
+        auto f = [&](double T_){
+            counter++;
+            double q_fromv1 = get_vaporquality(T_, val1, ch1);
+            double resid = get_yval(T_, q_fromv1, ch2) - val2;
+            return resid;
+        };
+        using namespace boost::math::tools;
+        double fTmin = f(Tmin), fTmax = f(Tmax);
         
-//         // First we check if we are converged enough (TOMS748 does not stop based on function value)
-//         double T;
+        // First we check if we are converged enough (TOMS748 does not stop based on function value)
+        double T;
         
-//         // A little lambda to make it easier to return
-//         // in different logical branches
-//         auto returner = [&](){
-//             SuperAncillaryTwoPhaseSolution soln;
-//             soln.T = T;
-//             soln.q = get_vaporquality(T, val1, ch1);
-//             soln.counter = counter;
-//             return soln;
-//         };
+        // A little lambda to make it easier to return
+        // in different logical branches
+        auto returner = [&](){
+            SuperAncillaryTwoPhaseSolution soln;
+            soln.T = T;
+            soln.q = get_vaporquality(T, val1, ch1);
+            soln.counter = counter;
+            return soln;
+        };
         
-//         if (std::abs(fTmin) < boundsftol){
-//             T = Tmin; return returner();
-//         }
-//         if (std::abs(fTmax) < boundsftol){
-//             T = Tmax; return returner();
-//         }
-//         if (fTmin*fTmax > 0){
-//             // No sign change, this means that the inputs are not within the two-phase region
-//             // and thus no iteration is needed
-//             return std::nullopt;
-//         }
-//         // Neither bound meets the convergence criterion, we need to iterate on temperature
-//         try{
-//             auto [l, r] = toms748_solve(f, Tmin, Tmax, fTmin, fTmax, eps_tolerance<double>(bits), max_iter);
-//             T = (r+l)/2.0;
-//             return returner();
-//         }
-//         catch(...){
-//             std::cout << "fTmin,fTmax: " << fTmin << "," << fTmax << std::endl;
-//             throw;
-//         }
-//     }
+        if (std::abs(fTmin) < boundsftol){
+            T = Tmin; return returner();
+        }
+        if (std::abs(fTmax) < boundsftol){
+            T = Tmax; return returner();
+        }
+        if (fTmin*fTmax > 0){
+            // No sign change, this means that the inputs are not within the two-phase region
+            // and thus no iteration is needed
+            return std::nullopt;
+        }
+        // Neither bound meets the convergence criterion, we need to iterate on temperature
+        try{
+            auto [l, r] = toms748_solve(f, Tmin, Tmax, fTmin, fTmax, eps_tolerance<double>(bits), max_iter);
+            T = (r+l)/2.0;
+            return returner();
+        }
+        catch(...){
+            std::cout << "fTmin,fTmax: " << fTmin << "," << fTmax << std::endl;
+            throw;
+        }
+    }
     
-//     /**
-//      Given a saturated density and another property other than T, solve for the temperature and vapor quality
-//      \param rho The molar density
-//      \param propval The value of the other property
-//      \param k Property key, in {D,P,H,S,U}
-//      \param bits passed to toms748 algorithm
-//      \param max_iter Maximum allowed number of function calls
-//      \param boundsftol A functional value stopping condition to test on the endpoints
-//      */
-//     std::optional<SuperAncillaryTwoPhaseSolution> solve_for_Tq_DX(const double rho, const double propval, const char k, unsigned int bits, std::size_t max_iter, double boundsftol) const {
+    /**
+     Given a saturated density and another property other than T, solve for the temperature and vapor quality
+     \param rho The molar density
+     \param propval The value of the other property
+     \param k Property key, in {D,P,H,S,U}
+     \param bits passed to toms748 algorithm
+     \param max_iter Maximum allowed number of function calls
+     \param boundsftol A functional value stopping condition to test on the endpoints
+     */
+    std::optional<SuperAncillaryTwoPhaseSolution> solve_for_Tq_DX(const double rho, const double propval, const char k, unsigned int bits, std::size_t max_iter, double boundsftol) const {
         
-//         const auto& Lrho = get_approx1d('D', 0);
-//         const auto& Vrho = get_approx1d('D', 1);
-//         auto Tsat = get_all_intersections(k, propval, bits, max_iter, boundsftol);
-//         std::size_t rhosat_soln_count = Tsat.size();
+        const auto& Lrho = get_approx1d('D', 0);
+        const auto& Vrho = get_approx1d('D', 1);
+        auto Tsat = get_all_intersections(k, propval, bits, max_iter, boundsftol);
+        std::size_t rhosat_soln_count = Tsat.size();
         
-//         std::tuple<double, double> Tsearchrange;
-//         if (rhosat_soln_count == 1){
-//             // Search the complete range from Tmin to the intersection point where rhosat(T) = rho
-//             // obtained just above
-//             Tsearchrange = std::make_tuple(Lrho.xmin*0.999, std::get<0>(Tsat[0]));
-//         }else if (rhosat_soln_count == 2){
-//             double y1 = std::get<0>(Tsat[0]), y2 = std::get<0>(Tsat[1]);
-//             if (y2 < y1){ std::swap(y2, y2); } // Required to be sorted in increasing value
-//             Tsearchrange = std::make_tuple(y1, y2);
-//         }
-//         else{
-//             throw std::invalid_argument("cannot have number of solutions other than 1 or 2; got "+std::to_string(rhosat_soln_count)+" solutions");
-//         }
-//         auto [a, b] = Tsearchrange;
-//         return iterate_for_Tq_XY(a, b, 'D', rho, k, propval, bits, max_iter, boundsftol);
-//     }
+        std::tuple<double, double> Tsearchrange;
+        if (rhosat_soln_count == 1){
+            // Search the complete range from Tmin to the intersection point where rhosat(T) = rho
+            // obtained just above
+            Tsearchrange = std::make_tuple(Lrho.xmin*0.999, std::get<0>(Tsat[0]));
+        }else if (rhosat_soln_count == 2){
+            double y1 = std::get<0>(Tsat[0]), y2 = std::get<0>(Tsat[1]);
+            if (y2 < y1){ std::swap(y2, y2); } // Required to be sorted in increasing value
+            Tsearchrange = std::make_tuple(y1, y2);
+        }
+        else{
+            throw std::invalid_argument("cannot have number of solutions other than 1 or 2; got "+std::to_string(rhosat_soln_count)+" solutions");
+        }
+        auto [a, b] = Tsearchrange;
+        return iterate_for_Tq_XY(a, b, 'D', rho, k, propval, bits, max_iter, boundsftol);
+    }
     
-//     /// A vectorize version of solve_for_Tq_DX for use in the Python interface for profiling
-//     template <typename Container>
-//     void solve_for_Tq_DX_many(const Container& rho, const Container& propval, const char k, unsigned int bits, std::size_t max_iter, double boundsftol, Container& T, Container& q, Container& count){
-//         if (std::set<std::size_t>({rho.size(), propval.size(), T.size(), q.size(), count.size()}).size() != 1){
-//             throw std::invalid_argument("rho, propval, T, q, count are not all the same size");
-//         }
-//         for (auto i = 0U; i < T.size(); ++i){
-//             auto osoln = solve_for_Tq_DX(rho(i), propval(i), k, bits, max_iter, boundsftol);
-//             if (osoln){
-//                 const auto& soln = osoln.value();
-//                 T(i) = soln.T;
-//                 q(i) = soln.q;
-//                 count(i) = soln.counter;
-//             }
-//             else{
-//                 T(i) = -1;
-//                 q(i) = -1;
-//                 count(i) = -1;
-//             }
-//         }
-//     }
+    /// A vectorize version of solve_for_Tq_DX for use in the Python interface for profiling
+    template <typename Container>
+    void solve_for_Tq_DX_many(const Container& rho, const Container& propval, const char k, unsigned int bits, std::size_t max_iter, double boundsftol, Container& T, Container& q, Container& count){
+        if (std::set<std::size_t>({rho.size(), propval.size(), T.size(), q.size(), count.size()}).size() != 1){
+            throw std::invalid_argument("rho, propval, T, q, count are not all the same size");
+        }
+        for (auto i = 0U; i < T.size(); ++i){
+            auto osoln = solve_for_Tq_DX(rho(i), propval(i), k, bits, max_iter, boundsftol);
+            if (osoln){
+                const auto& soln = osoln.value();
+                T(i) = soln.T;
+                q(i) = soln.q;
+                count(i) = soln.counter;
+            }
+            else{
+                T(i) = -1;
+                q(i) = -1;
+                count(i) = -1;
+            }
+        }
+    }
     
 //     /**
 //     The high-level function used to carry out a solution. It handles all the different permutations of variables and delegates to lower-level functions to actually od the calculations
@@ -1269,7 +1299,7 @@ public:
             
 //         }
 //     }
-// };
-// */
+};
+
 }
 }
