@@ -187,6 +187,23 @@ cdef class ChebyshevApproximation1D:
     def __dealloc__(self):
         del self.thisptr
 
+ctypedef supanc.SuperAncillary[ArrayType] SuperAncillary_t
+
+cdef class SuperAncillary:
+    cdef SuperAncillary_t* thisptr
+
+    def __cinit__(self, str json_as_string):
+        self.thisptr = new SuperAncillary_t(json_as_string)
+
+    def eval_sat(self, double T, str prop, short Q):
+        cdef char prop_ = prop[0]
+        return self.thisptr.eval_sat(T, prop_, Q)
+
+    def eval_sat_many(self, double[::1] T, str prop, short Q, double[::1] y):
+        assert T.shape[0] == y.shape[0]
+        cdef char prop_ = prop[0]
+        cdef size_t N = y.shape[0]
+        return self.thisptr.eval_sat_manyC(&T[0], N, prop_, Q, &y[0])
 
 cdef bint iterable(object a):
     """
