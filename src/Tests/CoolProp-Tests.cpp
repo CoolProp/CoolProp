@@ -4,6 +4,8 @@
 #include "DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "superancillary/superancillary.h"
+
 // ############################################
 //                      TESTS
 // ############################################
@@ -2409,6 +2411,49 @@ TEST_CASE("Check that indexes for mixtures are assigned correctly, especially fo
     p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::WATER"); // only parameters for water
     p_extra = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::Na+[0]&Cl-[0]&WATER[1.0]&DIMETHOXYMETHANE[0]"); // same composition, but with mixture of components
     CHECK(abs((p_extra - p)/ p * 100) < 1e-1);
+}
+
+/// A fixture class to 
+class SuperAncillaryFlagFixture{
+private:
+    const configuration_keys m_key = ENABLE_SUPERANCILLARIES;
+    const bool initial_value;
+public:
+    SuperAncillaryFlagFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
+        CoolProp::set_config_bool(m_key, true);
+    }
+    ~SuperAncillaryFlagFixture(){
+        CoolProp::set_config_bool(m_key, initial_value);
+    }
+};
+
+TEST_CASE_METHOD(SuperAncillaryFlagFixture, "Check superancillary for water", "[superanc]") {
+    
+    auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
+    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
+    HelmholtzEOSMixtureBackend& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    BENCHMARK("HEOS rho(T)"){
+        return AS->update(QT_INPUTS, 1.0, 300.0);
+    };
+    BENCHMARK("superanc rho(T)"){
+        return anc.eval_sat(300.0, 'D', 1);
+    };
+    BENCHMARK("IF97 rho(T)"){
+        return IF97->update(QT_INPUTS, 1.0, 300.0);
+    };
+    
+    
+    BENCHMARK("HEOS rho(p)"){
+        return AS->update(PQ_INPUTS, 101325, 1.0);
+    };
+    BENCHMARK("superanc T(p)"){
+        return anc.get_T_from_p(101325);
+    };
+    BENCHMARK("IF97 rho(p)"){
+        return IF97->update(PQ_INPUTS, 101325, 1.0);
+    };
 }
 
 /*

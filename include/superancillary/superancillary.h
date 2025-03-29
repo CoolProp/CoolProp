@@ -88,7 +88,7 @@ static void balance_matrix(const Matrix &A, Matrix &Aprime, Matrix &D) {
     } while (!converged);
 }
 
-void companion_matrix_transposed(const Eigen::ArrayXd &coeffs, Eigen::MatrixXd &A) {
+static void companion_matrix_transposed(const Eigen::ArrayXd &coeffs, Eigen::MatrixXd &A) {
     auto N = coeffs.size() - 1; // degree
     if (A.rows() != N){ throw std::invalid_argument("A.rows() != N"); }
     A.setZero();
@@ -103,7 +103,7 @@ void companion_matrix_transposed(const Eigen::ArrayXd &coeffs, Eigen::MatrixXd &
         A(j + 1, j) = 0.5;
     }
 }
-void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen::MatrixXd &A) {
+static void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen::MatrixXd &A) {
     Eigen::ArrayXd coeffs_ = Eigen::Map<const Eigen::ArrayXd>(&coeffs[0], coeffs.size());
     return companion_matrix_transposed(coeffs_, A);
 }
@@ -117,7 +117,7 @@ void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen::Matri
 * \param N the degree of the expansion (one less than the number of coefficients)
 */
 
-auto get_LU_matrices(std::size_t N){
+static auto get_LU_matrices(std::size_t N){
     Eigen::MatrixXd L(N + 1, N + 1); ///< Matrix of coefficients
     Eigen::MatrixXd U(N + 1, N + 1); ///< Matrix of coefficients
     for (int j = 0; j <= N; ++j) {
@@ -137,12 +137,12 @@ auto get_LU_matrices(std::size_t N){
     return std::make_tuple(L, U);
 }
 
-double M_element_norm(const std::vector<double>& x, Eigen::Index M){
+static double M_element_norm(const std::vector<double>& x, Eigen::Index M){
     Eigen::Map<const Eigen::ArrayXd> X(&x[0], x.size());
     return X.tail(M).matrix().norm() / X.head(M).matrix().norm();
 }
 
-double M_element_norm(const Eigen::ArrayXd& x, Eigen::Index M){
+static double M_element_norm(const Eigen::ArrayXd& x, Eigen::Index M){
     return x.tail(M).matrix().norm() / x.head(M).matrix().norm();
 } 
 
@@ -151,7 +151,7 @@ double M_element_norm(const Eigen::ArrayXd& x, Eigen::Index M){
  */
 
 template<typename Function, typename Container>
-auto dyadic_splitting(const std::size_t N, const Function& func, const double xmin, const double xmax,
+static auto dyadic_splitting(const std::size_t N, const Function& func, const double xmin, const double xmax,
     const int M=3, const double tol=1e-12, const int max_refine_passes = 8,
     const std::optional<std::function<void(int, const Container&)>>& callback = std::nullopt) -> Container
 {
@@ -248,6 +248,11 @@ public:
 
     /// Constructor with bounds and coefficients
     ChebyshevExpansion(double xmin, double xmax, const ArrayType& coeff) : m_xmin(xmin), m_xmax(xmax), m_coeff(coeff){};
+    
+    /// Copy constructor
+    ChebyshevExpansion(const ChebyshevExpansion& ex) = default;
+    ChebyshevExpansion& operator=(ChebyshevExpansion&& ex) = default;
+    ChebyshevExpansion& operator=(const ChebyshevExpansion& ex) = default;
     
     /// Get the minimum value of the independent variable
     const auto xmin() const { return m_xmin; }
@@ -383,6 +388,9 @@ public:
         return c;
     }
 };
+
+static_assert(std::is_move_assignable_v<ChebyshevExpansion<std::vector<double>>>);
+//static_assert(std::is_copy_assignable_v<ChebyshevExpansion<std::vector<double>>>);
 
 /// Data associated with monotonic expansion
 struct MonotonicExpansionMatch{
@@ -560,6 +568,22 @@ public:
         xmax(get_expansions().back().xmax())
     {}
     
+    ChebyshevApproximation1D(const ChebyshevApproximation1D & other) :
+        m_expansions(other.m_expansions),
+        m_x_at_extrema(other.m_x_at_extrema),
+        m_monotonic_intervals(other.m_monotonic_intervals),
+        xmin(other.xmin),
+        xmax(other.xmax)
+    {}
+    
+    ChebyshevApproximation1D& operator=(ChebyshevApproximation1D && other) = default;
+    
+    ChebyshevApproximation1D& operator=(const ChebyshevApproximation1D & other) {
+        ChebyshevApproximation1D newone(other);
+        std::swap(newone, *this);
+        return *this;
+    }
+    
     /// Get a const view on the expansions owned by the approximation instance
     const auto& get_expansions() const { return m_expansions; }
     
@@ -678,6 +702,9 @@ public:
     }
 };
 
+static_assert(std::is_copy_constructible_v<ChebyshevApproximation1D<std::vector<double>>>);
+static_assert(std::is_copy_assignable_v<ChebyshevApproximation1D<std::vector<double>>>);
+
 struct SuperAncillaryTwoPhaseSolution{
     double T, ///< The temperature, in K
            q; ///< The vapor quality
@@ -715,7 +742,7 @@ private:
      */
     auto loader(const nlohmann::json &j, const std::string& key){
         std::vector<ChebyshevExpansion<ArrayType>> buf;
-
+        // If you want to use Eigen...
         // auto toeig = [](const nlohmann::json &j) -> Eigen::ArrayXd{
         //     auto vec = j.get<std::vector<double>>();
         //     return Eigen::Map<const Eigen::ArrayXd>(&vec[0], vec.size());
@@ -1300,6 +1327,9 @@ public:
 //         }
 //     }
 };
+
+static_assert(std::is_copy_constructible_v<SuperAncillary<std::vector<double>>>);
+static_assert(std::is_copy_assignable_v<SuperAncillary<std::vector<double>>>);
 
 }
 }

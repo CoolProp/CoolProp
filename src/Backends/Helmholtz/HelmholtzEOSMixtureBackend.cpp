@@ -1142,6 +1142,44 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax(void) {
     return summer;
 }
 
+void HelmholtzEOSMixtureBackend::update_QT_direct(CoolPropDbl Q, CoolPropDbl T) {
+    _Q = Q;
+    _T = T;
+    FlashRoutines::QT_flash(*this);
+    
+    // Cleanup
+//    bool optional_checks = false;
+//    post_update(optional_checks);
+}
+
+
+void HelmholtzEOSMixtureBackend::update_TDmolarP_direct(CoolPropDbl T, CoolPropDbl rhomolar, CoolPropDbl p) {
+    
+    const CoolPropDbl rhomolar_min = 0;
+    const CoolPropDbl T_min = 0;
+
+    if (rhomolar < rhomolar_min) {
+        throw ValueError(format("The molar density of %f mol/m3 is below the minimum of %f mol/m3", rhomolar, rhomolar_min));
+    }
+
+    if (T < T_min) {
+        throw ValueError(format("The temperature of %f K is below the minimum of %f K", T, T_min));
+    }
+
+    CoolProp::input_pairs pair = DmolarT_INPUTS;
+    // Set up the state
+    pre_update(pair, rhomolar, T);
+
+    _rhomolar = rhomolar;
+    _T = T;
+    _p = p;
+
+    // Cleanup
+    bool optional_checks = false;
+    post_update(optional_checks);
+    
+}
+    
 void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T) {
     // TODO: This is just a quick fix for #878 - should be done more systematically
     const CoolPropDbl rhomolar_min = 0;

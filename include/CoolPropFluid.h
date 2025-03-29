@@ -21,6 +21,7 @@
 #include "Eigen/Core"
 #include "PolyMath.h"
 #include "Ancillaries.h"
+#include "superancillary/superancillary.h"
 
 namespace CoolProp {
 
@@ -439,6 +440,9 @@ class EquationOfState
       BibTeX_CP0;                       ///< The bibtex key for the ideal gas specific heat correlation
     CriticalRegionSplines
       critical_region_splines;  ///< A cubic spline in the form T = f(rho) for saturated liquid and saturated vapor curves in the near-critical region
+    
+    using SuperAncillary_t = superancillary::SuperAncillary<std::vector<double>>;
+    std::optional<SuperAncillary_t> superancillaries; ///< The superancillaries
 
     /// Validate the EOS that was just constructed
     void validate() {
