@@ -342,6 +342,25 @@ void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
 void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     CoolPropDbl T = HEOS._T;
     if (HEOS.is_pure_or_pseudopure) {
+        
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.components[0].EOS().superancillaries){
+            const auto& superanc = HEOS.components[0].EOS().superancillaries.value();
+            CoolPropDbl Tcrit_num = superanc.get_approx1d('D', 0).xmax;
+            if (T > Tcrit_num){
+                throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+            }
+            auto rhoL = superanc.eval_sat(T, 'D', 0);
+            auto rhoV = superanc.eval_sat(T, 'D', 1);
+            auto p = superanc.eval_sat(T, 'P', 1);
+            HEOS.SatL->update_TDmolarP_direct(T, rhoL, p);
+            HEOS.SatV->update_TDmolarP_direct(T, rhoV, p);
+            HEOS._p = p;
+            HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+            HEOS._phase = iphase_twophase;
+            return;
+        }
+        
+        
         // The maximum possible saturation temperature
         // Critical point for pure fluids, slightly different for pseudo-pure, very different for mixtures
         CoolPropDbl Tmax_sat = HEOS.calc_Tmax_sat() + 1e-13;
@@ -353,9 +372,9 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
 
         // Get a reference to keep the code a bit cleaner
         const CriticalRegionSplines& splines = HEOS.components[0].EOS().critical_region_splines;
-
-        // If exactly(ish) at the critical temperature, liquid and vapor have the critial density
+        
         if ((get_config_bool(CRITICAL_WITHIN_1UK) && std::abs(T - Tmax_sat) < 1e-6) || std::abs(T - Tmax_sat) < 1e-12) {
+            // If exactly(ish) at the critical temperature, liquid and vapor have the critial density
             HEOS.SatL->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
             HEOS.SatV->update(DmolarT_INPUTS, HEOS.rhomolar_critical(), HEOS._T);
             HEOS._rhomolar = HEOS.rhomolar_critical();
@@ -567,6 +586,27 @@ void get_Henrys_coeffs_FP(const std::string& CAS, double& A, double& B, double& 
 }
 void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
+        
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.components[0].EOS().superancillaries){
+            const auto& superanc = HEOS.components[0].EOS().superancillaries.value();
+            
+//            CoolPropDbl Tcrit_num = superanc.get_approx1d('D', 0).xmax;
+//            if (T > Tcrit_num){
+//                throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+//            }
+            auto T = superanc.get_T_from_p(HEOS._p);
+            auto rhoL = superanc.eval_sat(T, 'D', 0);
+            auto rhoV = superanc.eval_sat(T, 'D', 1);
+            auto p = HEOS._p;
+            HEOS.SatL->update_TDmolarP_direct(T, rhoL, p);
+            HEOS.SatV->update_TDmolarP_direct(T, rhoV, p);
+            HEOS._T = T;
+            HEOS._p = p;
+            HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+            HEOS._phase = iphase_twophase;
+            return;
+        }
+        
         if (HEOS.components[0].EOS().pseudo_pure) {
             // It is a pseudo-pure mixture
 
