@@ -306,6 +306,8 @@ list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
 list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2")
+     list(APPEND APP_INCLUDE_DIRS
+     "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann-json")
 list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
 list(APPEND APP_INCLUDE_DIRS

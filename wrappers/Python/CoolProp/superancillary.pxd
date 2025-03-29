@@ -1,6 +1,7 @@
 from libcpp cimport bool
 from libcpp.vector cimport vector
 from libcpp.pair cimport pair
+from libcpp.string cimport string
 
 
 cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superancillary":
@@ -38,3 +39,9 @@ cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superanc
         const vector[IntervalMatch] get_monotonic_intervals() # The intervals that are monotonic
         vector[pair[double, int]] get_x_for_y(double, unsigned int, size_t, double) const
         void count_x_for_y_manyC[U](const U[], size_t, unsigned int, size_t, double, U[]) const
+
+    cdef cppclass SuperAncillary[ArrayType]:
+        SuperAncillary(const string&) except +ValueError
+        double eval_sat(double, char, short) except +ValueError
+        void eval_sat_manyC[U](const U[], size_t, char, short, U[]) except +ValueError
+    
