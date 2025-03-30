@@ -194,6 +194,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     virtual void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
         throw ValueError("set_fluid_parameter_double only defined for cubic backends");
     };
+    virtual double get_fluid_parameter_double(const size_t i, const std::string& parameter);
 
     phases calc_phase(void) {
         return _phase;
