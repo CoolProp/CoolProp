@@ -736,8 +736,11 @@ private:
                                         m_uL, ///< Approximation of \f$u'(T)\f$
                                         m_uV; ///< Approximation of \f$u''(T)\f$
     
+    double m_Tmin; ///< The minimum temperature, in K
+    double m_Tcrit_num; ///< The numerical critical temperature, in K
     double m_pmin; ///< The minimum pressure, in Pa
     double m_pmax; ///< The maximum pressure, in Pa
+    
 
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
      \param j The JSON data
@@ -802,6 +805,8 @@ public:
     m_rhoV(std::move(loader(j, "jexpansions_rhoV"))),
     m_p(std::move(loader(j, "jexpansions_p"))),
     m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1))),
+    m_Tmin(m_p.xmin),
+    m_Tcrit_num(j.at("meta").at("Tcrittrue / K")),
     m_pmin(m_p.eval(m_p.xmin)),
     m_pmax(m_p.eval(m_p.xmax))
     {};
@@ -836,8 +841,14 @@ public:
     }
     /// Get a const reference to the inverse approximation for T(ln(p))
     const auto& get_invlnp(){ return m_invlnp; }
+    /// Get the minimum pressure in Pa
     const double get_pmin() const{ return m_pmin; }
+    /// Get the maximum pressure in Pa
     const double get_pmax() const{ return m_pmax; }
+    /// Get the minimum temperature in K
+    const double get_Tmin() const{ return m_Tmin; }
+    /// Get the numerical critical temperature in K
+    const double get_Tcrit_num() const{ return m_Tcrit_num; }
     
     /**
      Using the provided function that gives y(T, rho), build the ancillaries for this variable based on the ancillaries for rhoL and rhoV
