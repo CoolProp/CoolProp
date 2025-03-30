@@ -2462,6 +2462,12 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[su
         return IF97->update(QT_INPUTS, 1.0, 300.0);
     };
     
+    double Tmin = AS->get_fluid_parameter_double(0, "SUPERANC::Tmin");
+    double Tc = AS->get_fluid_parameter_double(0, "SUPERANC::Tcrit_num");
+    double pmin = AS->get_fluid_parameter_double(0, "SUPERANC::pmin");
+    double pmax = AS->get_fluid_parameter_double(0, "SUPERANC::pmax");
+    
+    CHECK_THROWS(AS->get_fluid_parameter_double(1, "SUPERANC::pmax"));
     
     BENCHMARK("HEOS rho(p)"){
         return AS->update(PQ_INPUTS, 101325, 1.0);
