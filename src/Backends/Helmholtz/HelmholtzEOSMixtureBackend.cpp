@@ -257,6 +257,39 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& Pa
     }
 }
 
+double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter){
+    if (i >= N) {
+        throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+    }
+    auto& superanc = components[i].EOS().superancillaries;
+    if (parameter.find("SUPERANC::") == 0){
+        if (superanc){
+            std::string key = parameter.substr(10);
+            if (key == "pmax"){
+                return superanc.value().get_pmax();
+            }
+            else if (key == "pmin"){
+                return superanc.value().get_pmin();
+            }
+            else if (key == "Tmin"){
+                return superanc.value().get_Tmin();
+            }
+            else if (key == "Tcrit_num"){
+                return superanc.value().get_Tcrit_num();
+            }
+            else {
+                throw ValueError(format("Superancillary parameter [%s] is invalid", key.c_str()));
+            }
+        }
+        else{
+            throw ValueError(format("Superancillary not available for this fluid"));
+        }
+    } else {
+        throw ValueError(format("fluid parameter [%s] is invalid", parameter.c_str()));
+    }
+}
+
+
 void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) {
     // bound-check indices
     if (i < 0 || i >= N) {
