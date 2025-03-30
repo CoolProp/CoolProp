@@ -2413,29 +2413,47 @@ TEST_CASE("Check that indexes for mixtures are assigned correctly, especially fo
     CHECK(abs((p_extra - p)/ p * 100) < 1e-1);
 }
 
-/// A fixture class to 
-class SuperAncillaryFlagFixture{
+/// A fixture class to enable superancillaries just for a given test
+class SuperAncillaryOnFixture{
 private:
     const configuration_keys m_key = ENABLE_SUPERANCILLARIES;
     const bool initial_value;
 public:
-    SuperAncillaryFlagFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
+    SuperAncillaryOnFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
         CoolProp::set_config_bool(m_key, true);
     }
-    ~SuperAncillaryFlagFixture(){
+    ~SuperAncillaryOnFixture(){
         CoolProp::set_config_bool(m_key, initial_value);
     }
 };
 
-TEST_CASE_METHOD(SuperAncillaryFlagFixture, "Check superancillary for water", "[superanc]") {
+/// A fixture class to enable superancillaries just for a given test
+class SuperAncillaryOffFixture{
+private:
+    const configuration_keys m_key = ENABLE_SUPERANCILLARIES;
+    const bool initial_value;
+public:
+    SuperAncillaryOffFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
+        CoolProp::set_config_bool(m_key, false);
+    }
+    ~SuperAncillaryOffFixture(){
+        CoolProp::set_config_bool(m_key, initial_value);
+    }
+};
+
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
     
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
     superancillary::SuperAncillary<std::vector<double>> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
-    HelmholtzEOSMixtureBackend& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
     BENCHMARK("HEOS rho(T)"){
         return AS->update(QT_INPUTS, 1.0, 300.0);
+    };
+    BENCHMARK("HEOS update_QT_direct(Q,T)"){
+        return rHEOS.update_QT_direct(1.0, 300.0);
     };
     BENCHMARK("superanc rho(T)"){
         return anc.eval_sat(300.0, 'D', 1);
@@ -2454,6 +2472,39 @@ TEST_CASE_METHOD(SuperAncillaryFlagFixture, "Check superancillary for water", "[
     BENCHMARK("IF97 rho(p)"){
         return IF97->update(PQ_INPUTS, 101325, 1.0);
     };
+}
+
+TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculations with superancillary disabled for water", "[superanc]") {
+    
+    auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
+    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
+    BENCHMARK("HEOS rho(T)"){
+        return AS->update(QT_INPUTS, 1.0, 300.0);
+    };
+    BENCHMARK("superanc rho(T)"){
+        return anc.eval_sat(300.0, 'D', 1);
+    };
+    BENCHMARK("IF97 rho(T)"){
+        return IF97->update(QT_INPUTS, 1.0, 300.0);
+    };
+    
+    BENCHMARK("HEOS rho(p)"){
+        return AS->update(PQ_INPUTS, 101325, 1.0);
+    };
+    BENCHMARK("superanc T(p)"){
+        return anc.get_T_from_p(101325);
+    };
+    BENCHMARK("IF97 rho(p)"){
+        return IF97->update(PQ_INPUTS, 101325, 1.0);
+    };
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check out of bound for superancillary", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS(AS->update(PQ_INPUTS, 100000000001325, 1.0));
+    CHECK_THROWS(AS->update(QT_INPUTS, 1.0, 1000000));
 }
 
 /*
