@@ -341,11 +341,14 @@ void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
 }
 void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     CoolPropDbl T = HEOS._T;
+    CoolPropDbl Q = HEOS._Q;
     if (HEOS.is_pure_or_pseudopure) {
         
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.components[0].EOS().superancillaries){
-            const auto& superanc = HEOS.components[0].EOS().superancillaries.value();
-            CoolPropDbl Tcrit_num = superanc.get_approx1d('D', 0).xmax;
+        auto& optsuperanc = HEOS.components[0].EOS().superancillaries;
+        
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
+            const auto& superanc = optsuperanc.value();
+            CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
             if (T > Tcrit_num){
                 throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
             }
@@ -355,7 +358,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS.SatL->update_TDmolarP_direct(T, rhoL, p);
             HEOS.SatV->update_TDmolarP_direct(T, rhoV, p);
             HEOS._p = p;
-            HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+            HEOS._rhomolar = 1 / (HEOS._Q / rhoV + (1 - HEOS._Q) / rhoL);
             HEOS._phase = iphase_twophase;
             return;
         }
