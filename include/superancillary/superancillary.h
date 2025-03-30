@@ -735,6 +735,9 @@ private:
                                         m_sV, ///< Approximation of \f$s''(T)\f$
                                         m_uL, ///< Approximation of \f$u'(T)\f$
                                         m_uV; ///< Approximation of \f$u''(T)\f$
+    
+    double m_pmin; ///< The minimum pressure, in Pa
+    double m_pmax; ///< The maximum pressure, in Pa
 
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
      \param j The JSON data
@@ -798,7 +801,9 @@ public:
     m_rhoL(std::move(loader(j, "jexpansions_rhoL"))),
     m_rhoV(std::move(loader(j, "jexpansions_rhoV"))),
     m_p(std::move(loader(j, "jexpansions_p"))),
-    m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1)))
+    m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1))),
+    m_pmin(m_p.eval(m_p.xmin)),
+    m_pmax(m_p.eval(m_p.xmax))
     {};
     
     /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
@@ -831,6 +836,8 @@ public:
     }
     /// Get a const reference to the inverse approximation for T(ln(p))
     const auto& get_invlnp(){ return m_invlnp; }
+    const double get_pmin() const{ return m_pmin; }
+    const double get_pmax() const{ return m_pmax; }
     
     /**
      Using the provided function that gives y(T, rho), build the ancillaries for this variable based on the ancillaries for rhoL and rhoV

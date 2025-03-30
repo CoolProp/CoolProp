@@ -589,11 +589,10 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
         
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.components[0].EOS().superancillaries){
             const auto& superanc = HEOS.components[0].EOS().superancillaries.value();
-            
-//            CoolPropDbl Tcrit_num = superanc.get_approx1d('D', 0).xmax;
-//            if (T > Tcrit_num){
-//                throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
-//            }
+            CoolPropDbl pmax_num = superanc.get_pmax();
+            if (HEOS._p > pmax_num){
+                throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
+            }
             auto T = superanc.get_T_from_p(HEOS._p);
             auto rhoL = superanc.eval_sat(T, 'D', 0);
             auto rhoV = superanc.eval_sat(T, 'D', 1);
