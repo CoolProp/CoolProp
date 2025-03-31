@@ -1,13 +1,26 @@
 from __future__ import print_function
 import os.path
 import CoolProp
+import urllib.request
 import subprocess
 import sys
+from pathlib import Path
+from zipfile import ZipFile
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 fluids_path = os.path.join(web_dir, 'fluid_properties', 'fluids')
 plots_path = os.path.join(web_dir, 'fluid_properties', 'fluids', 'Superancillaryplots')
+
+outputversion = '2025.03.30-v2'
+if not Path(f'{outputversion}.zip').exists():
+    print('Downloading the chebyshev output file to ', Path('.').absolute())
+    urllib.request.urlretrieve(f'https://github.com/CoolProp/fastchebpure/archive/refs/tags/{outputversion}.zip', f'{outputversion}.zip')
+
+    with ZipFile(f'{outputversion}.zip') as z:
+        z.extractall('.')
+
+outputcheck = (Path('.') / f'fastchebpure-{outputversion}' / 'outputcheck').absolute()
 
 template = r"""
 import matplotlib
@@ -29,7 +42,7 @@ superanc = CP.SuperAncillary(json.dumps(jSuper))
 RPname = AS.fluid_param_string("REFPROP_name")
 
 # Load extended precision calcs from the release on github
-chk = json.load(open(f'/Users/ianbell/Documents/Code/fastchebpure/outputcheck/{fluid}_check.json'))
+chk = json.load(open('{outputcheck}/{fluid}_check.json'))
 df = pd.DataFrame(chk['data'])
 # df.info() # uncomment to see what fields are available
 
@@ -118,7 +131,7 @@ if not os.path.exists(plots_path):
 
 for fluid in CoolProp.__fluids__:
     print('fluid:', fluid)
-    file_string = template.format(fluid=fluid)
+    file_string = template.format(fluid=fluid, outputcheck=outputcheck)
     file_path = os.path.join(plots_path, fluid + '.py')
     print('Writing to', file_path)
     with open(file_path, 'w') as fp:
