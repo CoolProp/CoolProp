@@ -20,7 +20,11 @@ if not Path(f'{outputversion}.zip').exists():
     with ZipFile(f'{outputversion}.zip') as z:
         z.extractall('.')
 
+    with (Path('.') / f'fastchebpure-{outputversion}' / '.gitignore').open('w') as fp:
+        fp.write("*")
+
 outputcheck = (Path('.') / f'fastchebpure-{outputversion}' / 'outputcheck').absolute()
+
 
 template = r"""
 import matplotlib
