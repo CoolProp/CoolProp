@@ -1256,7 +1256,7 @@ class WetBulbTminSolver : public CoolProp::FuncWrapper1D
     double call(double Ts) {
         //double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
 
-        double psi_w, T;
+        double psi_w, T = Ts;
         //std::vector<givens> inp = { HumidAir::GIVEN_T, HumidAir::GIVEN_RH }; // C++11
         std::vector<givens> inp(2);
         inp[0] = HumidAir::GIVEN_T;

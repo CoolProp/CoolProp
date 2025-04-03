@@ -179,8 +179,8 @@ void Isoline::calc_sat_range(int count) {
             x[i] = state_->keyed_output(xkey_);
             y[i] = state_->keyed_output(ykey_);
         } catch (...) {
-            if (input_pair == CoolProp::QT_INPUTS && abs(two[i] - t_crit) < 1e0
-             || input_pair == CoolProp::PQ_INPUTS && abs(one[i] - p_crit) < 1e2) {
+            if ((input_pair == CoolProp::QT_INPUTS && abs(two[i] - t_crit) < 1e0)
+             || (input_pair == CoolProp::PQ_INPUTS && abs(one[i] - p_crit) < 1e2)) {
                 x[i] = x_crit;
                 y[i] = y_crit;
                 std::cerr << "ERROR near critical inputs" << std::endl;

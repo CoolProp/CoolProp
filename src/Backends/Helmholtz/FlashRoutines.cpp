@@ -2048,10 +2048,10 @@ TEST_CASE("Stability testing", "[stability]") {
     HEOS->set_mole_fractions(z);
 
     HEOS->update(PQ_INPUTS, 101325, 0);
-    double TL = HEOS->T(), rhoL = HEOS->rhomolar();
+    double TL = HEOS->T();
 
     HEOS->update(PQ_INPUTS, 101325, 1);
-    double TV = HEOS->T(), rhoV = HEOS->rhomolar();
+    double TV = HEOS->T();
 
     SECTION("Liquid (feed is stable)") {
         StabilityRoutines::StabilityEvaluationClass stability_tester(*HEOS);

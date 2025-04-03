@@ -534,7 +534,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
 
     Eigen::MatrixXd tmpCoeffs(coefficients);
     Eigen::MatrixXd newCoeffs;
-    size_t r = tmpCoeffs.rows();
+    size_t r;
     size_t c = tmpCoeffs.cols();
     double negExp = 0;  // First we treat the negative exponents
     double posExp = 0;  // then the positive exponents
@@ -1035,7 +1035,6 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(c, d, acc));
         }
 
-        c = 2.0;
         c = poly.solve(matrix, 0.0, d, 0)[0];
         {
             CAPTURE(T);
@@ -1044,7 +1043,6 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(c, T, acc));
         }
 
-        c = 2.0;
         c = poly.solve_limits(matrix, 0.0, d, -50, 750, 0);
         {
             CAPTURE(T);
@@ -1053,7 +1051,6 @@ TEST_CASE("Internal consistency checks and example use cases for PolyMath.cpp", 
             CHECK(check_abs(c, T, acc));
         }
 
-        c = 2.0;
         c = poly.solve_guess(matrix, 0.0, d, 350, 0);
         {
             CAPTURE(T);

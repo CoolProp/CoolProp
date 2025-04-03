@@ -2771,18 +2771,18 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     double x_lo_molar = 1e-8, x_hi_molar = 1e7;
 
     if (x_lo.size() == 1) {
-        rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 2., T);
+//        rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 2., T);
         x_lo_molar = reduced_to_molar(x_lo[0], T);
         x_hi_molar = reduced_to_molar(x_hi[0], T);
         rho = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
     } else if (x_lo.size() <= 3 && !x_lo.empty()) {
         if ((phase == iphase_liquid) || (phase == iphase_supercritical_liquid)) {
-            rho_guess = reduced_to_molar((x_lo.back() + x_hi.back()) / 2., T);
+//            rho_guess = reduced_to_molar((x_lo.back() + x_hi.back()) / 2., T);
             x_lo_molar = reduced_to_molar(x_lo.back(), T);
             x_hi_molar = reduced_to_molar(x_hi.back(), T);
             rho = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
         } else if ((phase == iphase_gas) || (phase == iphase_supercritical_gas) || (phase == iphase_supercritical)) {
-            rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 40., T);  // starting with a lower guess often provides better results
+//            rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 40., T);  // starting with a lower guess often provides better results
             x_lo_molar = reduced_to_molar(x_lo[0], T);
             x_hi_molar = reduced_to_molar(x_hi[0], T);
             rho = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
@@ -2791,7 +2791,6 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         // if multiple roots to check, then find the one with the minimum gibbs energy. Reference: Privat R, Gani R, Jaubert JN. Are safe results obtained when the PC-SAFT equation of state is applied to ordinary pure chemicals?. Fluid Phase Equilibria. 2010 Aug 15;295(1):76-92.
         double g_min = 1e60;
         for (int i = 0; i < x_lo.size(); i++) {
-            rho_guess = reduced_to_molar((x_lo[i] + x_hi[i]) / 2., T);
             x_lo_molar = reduced_to_molar(x_lo[i], T);
             x_hi_molar = reduced_to_molar(x_hi[i], T);
             double rho_i = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
