@@ -228,7 +228,7 @@ void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair) {
 
 void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals) {
     if (key_ == CoolProp::iQ) {
-        calc_sat_range(xvals.size());
+        calc_sat_range(static_cast<int>(xvals.size()));
     } else {
         int ipos, xpos, ypos, pair;
         update_pair(ipos, xpos, ypos, pair);

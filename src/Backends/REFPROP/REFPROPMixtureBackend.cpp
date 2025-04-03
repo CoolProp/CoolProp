@@ -1131,7 +1131,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     SPLNVALdll(&isp, &iderv, &c, &rhoymin, &ierr, herr, errormessagelength);
     iderv = -2;
     SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr, errormessagelength);
-    int nc = this->Ncomp;
+    int nc = static_cast<int>(this->Ncomp);
     double ratio = pow(rhoymax / rhoymin, 1 / double(N));
     for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio) {
         double y;

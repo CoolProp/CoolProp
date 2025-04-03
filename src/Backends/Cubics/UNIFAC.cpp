@@ -6,8 +6,8 @@ void UNIFAC::UNIFACMixture::set_interaction_parameters() {
             if (*itjsgi >= *itisgi) {
                 continue;
             }
-            std::size_t mgi1 = m_sgi_to_mgi.find(*itisgi)->second;
-            std::size_t mgi2 = m_sgi_to_mgi.find(*itjsgi)->second;
+            int mgi1 = static_cast<int>(m_sgi_to_mgi.find(*itisgi)->second);
+            int mgi2 = static_cast<int>(m_sgi_to_mgi.find(*itjsgi)->second);
             // Insert in normal order
             std::pair<std::pair<int, int>, UNIFACLibrary::InteractionParameters> m_pair(std::pair<int, int>(mgi1, mgi2),
                                                                                         library.get_interaction_parameters(mgi1, mgi2));
