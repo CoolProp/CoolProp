@@ -36,6 +36,7 @@ Subsequent edits by Ian Bell
 #include <iostream>
 #include <utility>
 #include <optional>
+#include <Eigen/Dense>
 
 #include "boost/math/tools/toms748_solve.hpp"
 #include "nlohmann/json.hpp"
@@ -165,7 +166,7 @@ static auto dyadic_splitting(const std::size_t N, const Function& func, const do
     auto builder = [&](double xmin, double xmax) -> CE_t{
         
         auto get_nodes_realworld = [N, xmin, xmax]() -> Eigen::ArrayXd{
-            Eigen::ArrayXd nodes  = (Eigen::ArrayXd::LinSpaced(N + 1, 0, N).array()*EIGEN_PI / N).cos();
+            Eigen::ArrayXd nodes  = (Eigen::ArrayXd::LinSpaced(N + 1, 0, static_cast<double>(N)).array()*EIGEN_PI / N).cos();
             return ((xmax - xmin)*nodes + (xmax + xmin))*0.5;
         };
         
@@ -174,7 +175,7 @@ static auto dyadic_splitting(const std::size_t N, const Function& func, const do
         // Apply the function to do the transformation
         // of the functional values at the nodes
         for (auto j = 0L; j < x.size(); ++j){
-            x(j) = func(j, x.size(), x(j));
+            x(j) = func(j, static_cast<long>(x.size()), x(j));
         }
         
         // And now rebuild the expansion by left-multiplying by the L matrix
@@ -677,7 +678,7 @@ public:
                     if (ei.contains_y(y)){
                         const ChebyshevExpansion<ArrayType>& e = m_expansions[ei.idx];
                         auto [xvalue, num_steps] = e.solve_for_x_count(y, ei.xmin, ei.xmax, bits, max_iter, boundsftol);
-                        solns.emplace_back(xvalue, num_steps);
+                        solns.emplace_back(xvalue, static_cast<int>(num_steps));
                     }
                 }
             }
@@ -775,7 +776,7 @@ private:
         
         auto func = [&](long i, long Npts, double lnp) -> double{
             double p = exp(lnp);
-            auto solns = m_p.get_x_for_y(p, 64, 100, 1e-8);
+            auto solns = m_p.get_x_for_y(p, 64, 100U, 1e-8);
             
             if (solns.size() != 1){
                 if ((i == 0 || i == Npts-1) && ( p > pmin*(1-EPSILON*1000) && p < pmin*(1+EPSILON*1000))){
