@@ -332,7 +332,7 @@ public:
         if (std::abs(fa) < boundsytol){ return std::make_tuple(a, std::size_t{1}); }
         double fb = f(b);
         if (std::abs(fb) < boundsytol){ return std::make_tuple(b, std::size_t{2}); }
-        auto [l, r] = toms748_solve(f, a, b, fa, fb, eps_tolerance<double>(bits), max_iter);
+        auto [l, r] = toms748_solve(f, a, b, fa, fb, eps_tolerance<double>(bits), static_cast < boost::math::uintmax_t>(max_iter));
         return std::make_tuple((r+l)/2.0, counter);
     }
     
@@ -1097,7 +1097,7 @@ public:
         }
         // Neither bound meets the convergence criterion, we need to iterate on temperature
         try{
-            auto [l, r] = toms748_solve(f, Tmin, Tmax, fTmin, fTmax, eps_tolerance<double>(bits), max_iter);
+            auto [l, r] = toms748_solve(f, Tmin, Tmax, fTmin, fTmax, eps_tolerance<double>(bits), static_cast<boost::math::uintmax_t>(max_iter));
             T = (r+l)/2.0;
             return returner();
         }
