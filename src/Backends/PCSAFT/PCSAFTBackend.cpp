@@ -244,13 +244,13 @@ CoolPropDbl PCSAFTBackend::calc_pressure(void) {
 }
 
 CoolPropDbl PCSAFTBackend::calc_alphar(void) {
-    int ncomp = N;  // number of components
+    auto ncomp = N;  // number of components
     vector<double> d(ncomp);
-    for (int i = 0; i < ncomp; i++) {
+    for (auto i = 0U; i < ncomp; i++) {
         d[i] = components[i].getSigma() * (1 - 0.12 * exp(-3 * components[i].getU() / _T));
     }
     if (ion_term) {
-        for (int i = 0; i < ncomp; i++) {
+        for (auto i = 0U; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
                 d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
@@ -425,7 +425,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
         for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
-                iA.push_back(it - assoc_num.begin());
+                iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
@@ -437,12 +437,12 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
-        int idxa = 0;
-        int idxi = 0; // index for the ii-th compound
-        int idxj = 0; // index for the jj-th compound
-        for (int i = 0; i < num_sites; i++) {
+        auto idxa = 0UL;
+        auto idxi = 0UL; // index for the ii-th compound
+        auto idxj = 0UL; // index for the jj-th compound
+        for (auto i = 0UL; i < num_sites; i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (int j = 0; j < num_sites; j++) {
+            for (int j = 0UL; j < num_sites; j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -514,14 +514,14 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
 }
 
 CoolPropDbl PCSAFTBackend::calc_dadt(void) {
-    int ncomp = N;  // number of components
+    auto ncomp = N;  // number of components
     vector<double> d(ncomp), dd_dt(ncomp);
-    for (int i = 0; i < ncomp; i++) {
+    for (auto i = 0U; i < ncomp; i++) {
         d[i] = components[i].getSigma() * (1 - 0.12 * exp(-3 * components[i].getU() / _T));
         dd_dt[i] = components[i].getSigma() * -3 * components[i].getU() / _T / _T * 0.12 * exp(-3 * components[i].getU() / _T);
     }
     if (ion_term) {
-        for (int i = 0; i < ncomp; i++) {
+        for (auto i = 0U; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
                 d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
                 dd_dt[i] = 0.;
@@ -741,7 +741,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
-                iA.push_back(it - assoc_num.begin());
+                iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
@@ -754,12 +754,12 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
         vector<double> ddelta_dt(num_sites * num_sites, 0);
-        int idxa = 0;
-        int idxi = 0; // index for the ii-th compound
-        int idxj = 0; // index for the jj-th compound
-        for (int i = 0; i < num_sites; i++) {
+        auto idxa = 0UL;
+        auto idxi = 0UL; // index for the ii-th compound
+        auto idxj = 0UL; // index for the jj-th compound
+        for (auto i = 0UL; i < num_sites; i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (int j = 0; j < num_sites; j++) {
+            for (auto j = 0UL; j < num_sites; j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -859,13 +859,13 @@ CoolPropDbl PCSAFTBackend::calc_smolar_residual(void) {
 }
 
 vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
-    int ncomp = N;  // number of components
+    auto ncomp = N;  // number of components
     vector<double> d(ncomp);
-    for (int i = 0; i < ncomp; i++) {
+    for (auto i = 0U; i < ncomp; i++) {
         d[i] = components[i].getSigma() * (1 - 0.12 * exp(-3 * components[i].getU() / _T));
     }
     if (ion_term) {
-        for (int i = 0; i < ncomp; i++) {
+        for (auto i = 0U; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
                 d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
@@ -1199,7 +1199,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
         for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
-                iA.push_back(it - assoc_num.begin());
+                iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
@@ -1211,12 +1211,12 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
-        int idxa = 0;
-        int idxi = 0; // index for the ii-th compound
-        int idxj = 0; // index for the jj-th compound
-        for (int i = 0; i < num_sites; i++) {
+        auto idxa = 0UL;
+        auto idxi = 0UL; // index for the ii-th compound
+        auto idxj = 0UL; // index for the jj-th compound
+        for (auto i = 0UL; i < num_sites; i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (int j = 0; j < num_sites; j++) {
+            for (auto j = 0UL; j < num_sites; j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1235,12 +1235,12 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
         vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
         int idx_ddelta = 0;
         for (int k = 0; k < ncomp; k++) {
-            int idxi = 0; // index for the ii-th compound
-            int idxj = 0; // index for the jj-th compound
+            auto idxi = 0UL; // index for the ii-th compound
+            auto idxj = 0UL; // index for the jj-th compound
             idxa = 0;
-            for (int i = 0; i < num_sites; i++) {
+            for (auto i = 0UL; i < num_sites; i++) {
                 idxi = iA[i]*ncomp+iA[i];
-                for (int j = 0; j < num_sites; j++) {
+                for (auto j = 0UL; j < num_sites; j++) {
                     idxj = iA[j]*ncomp+iA[j];
                     if (assoc_matrix[idxa] != 0) {
                         double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1346,13 +1346,13 @@ CoolPropDbl PCSAFTBackend::calc_gibbsmolar_residual(void) {
 }
 
 CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
-    int ncomp = N;  // number of components
+    auto ncomp = N;  // number of components
     vector<double> d(ncomp);
-    for (int i = 0; i < ncomp; i++) {
+    for (auto i = 0UL; i < ncomp; i++) {
         d[i] = components[i].getSigma() * (1 - 0.12 * exp(-3 * components[i].getU() / _T));
     }
     if (ion_term) {
-        for (int i = 0; i < ncomp; i++) {
+        for (auto i = 0UL; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
                 d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
@@ -1553,7 +1553,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
         for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
-                iA.push_back(it - assoc_num.begin());
+                iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
@@ -1565,12 +1565,12 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
-        int idxa = 0;
-        int idxi = 0; // index for the ii-th compound
-        int idxj = 0; // index for the jj-th compound
-        for (int i = 0; i < num_sites; i++) {
+        auto idxa = 0UL;
+        auto idxi = 0UL; // index for the ii-th compound
+        auto idxj = 0UL; // index for the jj-th compound
+        for (auto i = 0UL; i < num_sites; i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (int j = 0; j < num_sites; j++) {
+            for (auto j = 0UL; j < num_sites; j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1589,12 +1589,12 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
         vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
         int idx_ddelta = 0;
         for (int k = 0; k < ncomp; k++) {
-            int idxi = 0; // index for the ii-th compound
-            int idxj = 0; // index for the jj-th compound
+            auto idxi = 0UL; // index for the ii-th compound
+            auto idxj = 0UL; // index for the jj-th compound
             idxa = 0;
-            for (int i = 0; i < num_sites; i++) {
+            for (auto i = 0UL; i < num_sites; i++) {
                 idxi = iA[i]*ncomp+iA[i];
-                for (int j = 0; j < num_sites; j++) {
+                for (auto j = 0UL; j < num_sites; j++) {
                     idxj = iA[j]*ncomp+iA[j];
                     if (assoc_matrix[idxa] != 0) {
                         double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -2044,7 +2044,7 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT) {
 
 double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     // Based on the algorithm proposed in H. A. J. Watson, M. Vikse, T. Gundersen, and P. I. Barton, “Reliable Flash Calculations: Part 1. Nonsmooth Inside-Out Algorithms,” Ind. Eng. Chem. Res., vol. 56, no. 4, pp. 960–973, Feb. 2017, doi: 10.1021/acs.iecr.6b03956.
-    int ncomp = N; // number of components
+    auto ncomp = N; // number of components
     double TOL = 1e-8;
     double MAXITER = 200;
 
@@ -2059,12 +2059,12 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
         SolverInnerResid(PCSAFTBackend &PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u)
         : PCSAFT(PCSAFT), kb0(kb0), u(u){}
         CoolPropDbl call(CoolPropDbl R){
-            int ncomp = PCSAFT.components.size();
+            auto ncomp = PCSAFT.components.size();
             double error = 0;
 
             vector<double> pp(ncomp, 0);
             double L = 0;
-            for (int i = 0; i < ncomp; i++) {
+            for (auto i = 0U; i < ncomp; i++) {
                 if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                     pp[i] = PCSAFT.mole_fractions[i] / (1 - R + kb0 * R * exp(u[i]));
                     L += pp[i];
@@ -2306,7 +2306,7 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
 
 double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     // Based on the algorithm proposed in H. A. J. Watson, M. Vikse, T. Gundersen, and P. I. Barton, “Reliable Flash Calculations: Part 1. Nonsmooth Inside-Out Algorithms,” Ind. Eng. Chem. Res., vol. 56, no. 4, pp. 960–973, Feb. 2017, doi: 10.1021/acs.iecr.6b03956.
-    int ncomp = N; // number of components
+    auto ncomp = N; // number of components
     double TOL = 1e-8;
     double MAXITER = 200;
 
@@ -2321,7 +2321,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
         SolverInnerResid(PCSAFTBackend &PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u)
         : PCSAFT(PCSAFT), kb0(kb0), u(u){}
         CoolPropDbl call(CoolPropDbl R){
-            int ncomp = PCSAFT.components.size();
+            auto ncomp = PCSAFT.components.size();
             double error = 0;
 
             vector<double> pp(ncomp, 0);
@@ -2542,7 +2542,7 @@ double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
     Get a quick estimate of the temperature at which VLE occurs
     */
     double t_guess = _HUGE;
-    int ncomp = N; // number of components
+    auto ncomp = N; // number of components
 
     double x_ions = 0.; // overall mole fraction of ions in the system
     for (int i = 0; i < ncomp; i++) {
@@ -2608,10 +2608,10 @@ double PCSAFTBackend::estimate_flash_p(PCSAFTBackend &PCSAFT) {
     Get a quick estimate of the pressure at which VLE occurs
     */
     double p_guess = _HUGE;
-    int ncomp = N; // number of components
+    auto ncomp = N; // number of components
 
     double x_ions = 0.; // overall mole fraction of ions in the system
-    for (int i = 0; i < ncomp; i++) {
+    for (auto i = 0U; i < ncomp; i++) {
         if (PCSAFT.ion_term && PCSAFT.components[i].getZ() != 0) {
             x_ions += PCSAFT.mole_fractions[i];
         }
@@ -2844,11 +2844,11 @@ CoolPropDbl PCSAFTBackend::calc_molar_mass(void) {
 vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, vector<double> delta_ij, double den,
     vector<double> x) {
     /**Iterate over this function in order to solve for XA*/
-    int num_sites = XA_guess.size();
+    auto num_sites = XA_guess.size();
     vector<double> XA = XA_guess;
 
     int idxij = -1; // index for delta_ij
-    for (int i = 0; i < num_sites; i++) {
+    for (auto i = 0U; i < num_sites; i++) {
         double summ = 0.;
         for (int j = 0; j < num_sites; j++) {
             idxij += 1;
@@ -2864,13 +2864,13 @@ vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, vector<double> de
 vector<double> PCSAFTBackend::dXAdt_find(vector<double> delta_ij, double den,
     vector<double> XA, vector<double> ddelta_dt, vector<double> x) {
     /**Solve for the derivative of XA with respect to temperature.*/
-    int num_sites = XA.size();
+    auto num_sites = XA.size();
     Eigen::MatrixXd B = Eigen::MatrixXd::Zero(num_sites, 1);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_sites, num_sites);
 
     double summ;
     int ij = 0;
-    for (int i = 0; i < num_sites; i++) {
+    for (auto i = 0U; i < num_sites; i++) {
         summ = 0;
         for (int j = 0; j < num_sites; j++) {
             B(i) -= x[j]*XA[j]*ddelta_dt[ij];
@@ -2894,16 +2894,16 @@ vector<double> PCSAFTBackend::dXAdx_find(vector<int> assoc_num, vector<double> d
     double den, vector<double> XA, vector<double> ddelta_dx, vector<double> x) {
     /**Solve for the derivative of XA with respect to composition, or actually with respect
     to rho_i (the molar density of component i, which equals x_i * rho).*/
-    int num_sites = XA.size();
-    int ncomp = assoc_num.size();
+    auto num_sites = XA.size();
+    auto ncomp = assoc_num.size();
     Eigen::MatrixXd B(num_sites*ncomp, 1);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_sites*ncomp, num_sites*ncomp);
 
     double sum1, sum2;
     int idx1 = 0;
     int ij = 0;
-    for (int i = 0; i < ncomp; i++) {
-        for (int j = 0; j < num_sites; j++) {
+    for (auto i = 0U; i < ncomp; i++) {
+        for (auto j = 0U; j < num_sites; j++) {
             sum1 = 0;
             for (int k = 0; k < num_sites; k++) {
                 sum1 = sum1 + den*x[k]*(XA[k]*ddelta_dx[i*num_sites*num_sites + j*num_sites + k]);
@@ -2936,9 +2936,9 @@ void PCSAFTBackend::set_assoc_matrix(){
 
     for (int i = 0; i < N; i++){
         vector<std::string> assoc_scheme = components[i].getAssocScheme();
-        int num_sites = 0;
-        int num = assoc_scheme.size();
-        for (int j = 0; j < num; j++) {
+        auto num_sites = 0;
+        auto num = assoc_scheme.size();
+        for (auto j = 0U; j < num; j++) {
             switch(get_scheme_index(assoc_scheme[j])) {
                 case i1: {
                     charge.push_back(0);
