@@ -35,6 +35,7 @@ Subsequent edits by Ian Bell
 
 #include <iostream>
 #include <utility>
+#include <optional>
 
 #include "boost/math/tools/toms748_solve.hpp"
 #include "nlohmann/json.hpp"
