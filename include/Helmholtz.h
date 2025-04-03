@@ -288,7 +288,7 @@ class BaseHelmholtzTerm
         return deriv.d4alphar_ddelta4;
     };
 
-    virtual void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() = 0;
+    virtual void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) = 0;
     #if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
         throw CoolProp::NotImplementedError("The mcx derivative function was not implemented");
@@ -513,7 +513,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
 
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
     //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 
     #if ENABLE_CATCH
@@ -558,7 +558,7 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
         }
     };
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
@@ -608,7 +608,7 @@ class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
     };
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
     #if ENABLE_CATCH
         virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
@@ -630,7 +630,7 @@ class ResidualHelmholtzXiangDeiters : public BaseHelmholtzTerm
     /// Constructor
     ResidualHelmholtzXiangDeiters(const CoolPropDbl Tc, const CoolPropDbl pc, const CoolPropDbl rhomolarc, const CoolPropDbl acentric,
                                   const CoolPropDbl R);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
@@ -1157,7 +1157,7 @@ class IdealHelmholtzCP0PolyT : public BaseHelmholtzTerm
     };
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 #if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
 #endif
@@ -1194,7 +1194,7 @@ class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm
     bool is_enabled() const {
         return enabled;
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
     #if ENABLE_CATCH
         virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
@@ -1230,7 +1230,7 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
     bool is_enabled() const {
         return enabled;
     };
-    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw();
+    void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
     #if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;

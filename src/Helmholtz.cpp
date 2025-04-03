@@ -134,7 +134,7 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
     return;
 };
 */
-void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
+void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu, one_over_delta = 1 / delta,
                 one_over_tau = 1 / tau;  // division is much slower than multiplication, so do one division here
 
@@ -382,7 +382,7 @@ void ResidualHelmholtzNonAnalytic::to_json(rapidjson::Value& el, rapidjson::Docu
     el.AddMember("D", _D, doc.GetAllocator());
 }
 
-void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolPropDbl& delta_in, HelmholtzDerivatives& derivs) throw() {
+void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolPropDbl& delta_in, HelmholtzDerivatives& derivs) {
     if (N == 0) {
         return;
     }
@@ -662,7 +662,7 @@ display(sy.ccode(sy.simplify(sy.diff(Ftau, tau, 3)*tau**3)))
 display(sy.ccode(sy.simplify(sy.diff(Ftau, tau, 4)*tau**4)))
 
 */
-void ResidualHelmholtzGaoB::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
+void ResidualHelmholtzGaoB::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     if (!enabled) {
         return;
     }
@@ -798,7 +798,7 @@ ResidualHelmholtzXiangDeiters::ResidualHelmholtzXiangDeiters(const CoolPropDbl T
     enabled = true;
 };
 
-void ResidualHelmholtzXiangDeiters::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
+void ResidualHelmholtzXiangDeiters::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     if (!enabled) {
         return;
     }
@@ -1270,7 +1270,7 @@ void IdealHelmholtzCP0Constant::all(const CoolPropDbl& tau, const CoolPropDbl& d
     derivs.d3alphar_dtau3 += 2 * cp_over_R / (tau * tau * tau);
     derivs.d4alphar_dtau4 += -6 * cp_over_R / POW4(tau);
 }
-void IdealHelmholtzCP0PolyT::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
+void IdealHelmholtzCP0PolyT::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     if (!enabled) {
         return;
     }
@@ -1342,7 +1342,7 @@ void IdealHelmholtzCP0PolyT::all(const CoolPropDbl& tau, const CoolPropDbl& delt
     }
 }
 
-void IdealHelmholtzGERG2004Sinh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
+void IdealHelmholtzGERG2004Sinh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     if (!enabled) {
         return;
     }
@@ -1394,7 +1394,7 @@ mcx::MultiComplex<double> IdealHelmholtzGERG2004Sinh::one_mcx(const mcx::MultiCo
 }
 #endif
 
-void IdealHelmholtzGERG2004Cosh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
+void IdealHelmholtzGERG2004Cosh::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
     if (!enabled) {
         return;
     }
