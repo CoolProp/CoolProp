@@ -51,8 +51,8 @@ jobs:
     - name: Build and test wheels
       uses: pypa/cibuildwheel@v2.21.3
       env:
-        MACOSX_DEPLOYMENT_TARGET: 10.9
-        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.9 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+        MACOSX_DEPLOYMENT_TARGET: 11.0
+        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: >
           pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
