@@ -1682,7 +1682,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;                     // 1000 for conversion from kPa to Pa
             _rhomolar = rho_mol_L * 1000;          // 1000 for conversion from mol/L to mol/m3
-            if (0) _rhoLmolar = rhoLmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
+            _rhoLmolar = rhoLmol_L * 1000;         // 1000 for conversion from mol/L to mol/m3
             _rhoVmolar = rhoVmol_L * 1000;         // 1000 for conversion from mol/L to mol/m3
             break;
         }
