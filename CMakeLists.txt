@@ -2045,7 +2045,11 @@ if(COOLPROP_CATCH_MODULE)
 
   include(CTest)
   include(${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2/extras/Catch.cmake)
-  catch_discover_tests(CatchTestRunner)
+  
+  if (NOT CMAKE_GENERATOR STREQUAL Xcode)
+    # Test discovery doesn't work in Xcode, due to a signing bug in Xcode which causes disovery to fail: https://github.com/catchorg/Catch2/issues/2411
+    catch_discover_tests(CatchTestRunner DISCOVERY_MODE PRE_TEST)
+  endif()
 
   if(COOLPROP_IWYU)
     find_program(iwyu_path NAMES include-what-you-use iwyu)
