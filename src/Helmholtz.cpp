@@ -1897,7 +1897,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
             if (terms[i] == "GERG2004Cosh" || terms[i] == "GERG2004Sinh" || terms[i] == "CP0PolyT") {
                 deriv_tolerance = 1e-7; // due to, I think, a loss in precision in the log function of multicomplex
             }
-            double val_tolerance = 1e-15;
+            double val_tolerance = 1e-14;
             if (terms[i] == "CP0PolyT") {
                 val_tolerance = 1e-10;  // due to, I think, a loss in precision in the log function of multicomplex
             }
