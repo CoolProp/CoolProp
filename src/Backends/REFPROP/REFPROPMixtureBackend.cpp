@@ -87,6 +87,9 @@ std::optional<std::string> get_envvar(const char* var){
 
 /// Find either FLUIDS or fluids folder relative to the root path provided; return the path
 std::string get_casesensitive_fluids(const std::string& root) {
+    if (get_envvar("COOLPROP_REFPROP_ROOT")){
+        return "";
+    }
     std::string joined = join_path(root, "fluids");
     if (path_exists(joined)) {
         return joined;
