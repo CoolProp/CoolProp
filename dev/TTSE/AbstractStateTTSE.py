@@ -112,7 +112,7 @@ def get_speed_data():
     return locals()
 
 
-table = """.. csv-table:: Execution speed in :math:`\mu` s/call
+table = r""".. csv-table:: Execution speed in :math:`\mu` s/call
    :header: Backend, 2-Phase p-h inputs, 1-phase p-h inputs, 1-phase p-T inputs
    :widths: 30, 30, 30, 40
 
