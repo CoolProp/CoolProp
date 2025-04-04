@@ -22,6 +22,11 @@ find_program(R_EXEC
              NO_DEFAULT_PATH
              NO_CMAKE_PATH
              )
+IF( "${R_EXEC}" STREQUAL "R_EXEC-NOTFOUND")
+    MESSAGE(FATAL_ERROR "The executable R could not be found in the folder ${R_BIN}")
+ENDIF()
+
+
 MESSAGE(STATUS "R_EXEC= ${R_EXEC}")
 # Parse the output of the R path command, removing whitespace
 FUNCTION(chomp arg1 arg2)
