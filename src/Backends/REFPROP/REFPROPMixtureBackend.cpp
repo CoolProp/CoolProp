@@ -126,6 +126,9 @@ std::string get_REFPROP_fluid_path_prefix() {
 #endif
 }
 std::string get_REFPROP_mixtures_path_prefix() {
+    if (get_envvar("COOLPROP_REFPROP_ROOT")){
+        return "";
+    }
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
