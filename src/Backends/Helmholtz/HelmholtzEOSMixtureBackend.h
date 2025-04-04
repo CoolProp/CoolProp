@@ -796,6 +796,7 @@ class ResidualHelmholtz
 
     ResidualHelmholtz(){};
     ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C){};
+    virtual ~ResidualHelmholtz() = default;
 
     ResidualHelmholtz copy() {
         return ResidualHelmholtz(Excess.copy(), CS);
