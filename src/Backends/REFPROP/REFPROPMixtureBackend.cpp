@@ -38,6 +38,7 @@ surface tension                 N/m
 #include "AbstractState.h"
 
 #include <stdlib.h>
+#include <optional>
 #include <string>
 #include <stdio.h>
 #include <iostream>
@@ -73,6 +74,17 @@ char refpropPath[] = "";
 #    pragma error
 #endif
 
+/// Query an environment variable and return in optional if present
+std::optional<std::string> get_envvar(const char* var){
+    char* valptr = getenv(var);
+    if(valptr == nullptr){
+        return std::nullopt;
+    }
+    else{
+        return std::string(valptr);
+    }
+}
+
 /// Find either FLUIDS or fluids folder relative to the root path provided; return the path
 std::string get_casesensitive_fluids(const std::string& root) {
     std::string joined = join_path(root, "fluids");
@@ -88,6 +100,9 @@ std::string get_casesensitive_fluids(const std::string& root) {
     }
 }
 std::string get_REFPROP_fluid_path_prefix() {
+    if (get_envvar("COOLPROP_REFPROP_ROOT")){
+        return "";
+    }
     std::string rpPath = refpropPath;
     // Allow the user to specify an alternative REFPROP path by configuration value
     std::string alt_refprop_path = CoolProp::get_config_string(ALTERNATIVE_REFPROP_PATH);
@@ -215,16 +230,26 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
             std::string err;
+            
+            bool loaded_REFPROP = false;
+            
+            auto root = get_envvar("COOLPROP_REFPROP_ROOT");
             const std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
             const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
-            bool loaded_REFPROP = false;
-            if (!alt_rp_name.empty()) {
-                loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
-            } else {
-                if (alt_rp_path.empty()) {
-                    loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+            
+            if (root){
+                loaded_REFPROP = ::load_REFPROP(err, root.value().c_str(), "");
+                SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
+            }
+            if (!loaded_REFPROP){
+                if (!alt_rp_name.empty()) {
+                    loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
                 } else {
-                    loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                    if (alt_rp_path.empty()) {
+                        loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                    } else {
+                        loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                    }
                 }
             }
 
@@ -238,6 +263,7 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
                 printf("add location of REFPROP to the PATH environment variable or your library path.\n\n");
                 printf("In case you do not use Windows, have a look at https://github.com/jowr/librefprop.so \n");
                 printf("to find instructions on how to compile your own version of the REFPROP library.\n\n");
+                printf("COOLPROP_REFPROP_PATH: %s\n", (root) ? root.value().c_str() : "?");
                 printf("ALTERNATIVE_REFPROP_PATH: %s\n", alt_rp_path.c_str());
                 printf("ERROR: %s\n", err.c_str());
                 _REFPROP_supported = false;
