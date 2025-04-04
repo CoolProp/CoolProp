@@ -396,7 +396,7 @@ class JSONFluidLibrary
             // This is inefficient as we do JSON(rapidjson) -> string -> JSON(nlohmann)
             // which implies two large parsing passes
             std::string s = cpjson::json2string(EOS_json["SUPERANCILLARY"]);
-            EOS.superancillaries = std::move(EquationOfState::SuperAncillary_t(s));
+            EOS.superancillaries = EquationOfState::SuperAncillary_t(s);
         }
 
         EOS.alphar = parse_alphar(EOS_json["alphar"]);
