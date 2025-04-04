@@ -358,7 +358,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
             HEOS.SatL->update_TDmolarP_direct(T, rhoL, p);
             HEOS.SatV->update_TDmolarP_direct(T, rhoV, p);
             HEOS._p = p;
-            HEOS._rhomolar = 1 / (HEOS._Q / rhoV + (1 - HEOS._Q) / rhoL);
+            HEOS._rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
             HEOS._phase = iphase_twophase;
             return;
         }
