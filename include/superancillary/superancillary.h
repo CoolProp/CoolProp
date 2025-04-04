@@ -48,7 +48,7 @@ namespace detail{
 
 // From https://arxiv.org/pdf/1401.5766.pdf (Algorithm #3)
 template<typename Matrix>
-static void balance_matrix(const Matrix &A, Matrix &Aprime, Matrix &D) {
+inline void balance_matrix(const Matrix &A, Matrix &Aprime, Matrix &D) {
     const int p = 2;
     double beta = 2; // Radix base (2?)
     int iter = 0;
@@ -90,7 +90,7 @@ static void balance_matrix(const Matrix &A, Matrix &Aprime, Matrix &D) {
     } while (!converged);
 }
 
-static void companion_matrix_transposed(const Eigen::ArrayXd &coeffs, Eigen::MatrixXd &A) {
+inline void companion_matrix_transposed(const Eigen::ArrayXd &coeffs, Eigen::MatrixXd &A) {
     auto N = coeffs.size() - 1; // degree
     if (A.rows() != N){ throw std::invalid_argument("A.rows() != N"); }
     A.setZero();
@@ -105,7 +105,7 @@ static void companion_matrix_transposed(const Eigen::ArrayXd &coeffs, Eigen::Mat
         A(j + 1, j) = 0.5;
     }
 }
-static void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen::MatrixXd &A) {
+inline void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen::MatrixXd &A) {
     Eigen::ArrayXd coeffs_ = Eigen::Map<const Eigen::ArrayXd>(&coeffs[0], coeffs.size());
     return companion_matrix_transposed(coeffs_, A);
 }
@@ -119,7 +119,7 @@ static void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen
 * \param N the degree of the expansion (one less than the number of coefficients)
 */
 
-static auto get_LU_matrices(std::size_t N){
+inline auto get_LU_matrices(std::size_t N){
     Eigen::MatrixXd L(N + 1, N + 1); ///< Matrix of coefficients
     Eigen::MatrixXd U(N + 1, N + 1); ///< Matrix of coefficients
     for (int j = 0; j <= N; ++j) {
@@ -139,12 +139,12 @@ static auto get_LU_matrices(std::size_t N){
     return std::make_tuple(L, U);
 }
 
-static double M_element_norm(const std::vector<double>& x, Eigen::Index M){
+inline double M_element_norm(const std::vector<double>& x, Eigen::Index M){
     Eigen::Map<const Eigen::ArrayXd> X(&x[0], x.size());
     return X.tail(M).matrix().norm() / X.head(M).matrix().norm();
 }
 
-static double M_element_norm(const Eigen::ArrayXd& x, Eigen::Index M){
+inline double M_element_norm(const Eigen::ArrayXd& x, Eigen::Index M){
     return x.tail(M).matrix().norm() / x.head(M).matrix().norm();
 } 
 
@@ -153,7 +153,7 @@ static double M_element_norm(const Eigen::ArrayXd& x, Eigen::Index M){
  */
 
 template<typename Function, typename Container>
-static auto dyadic_splitting(const std::size_t N, const Function& func, const double xmin, const double xmax,
+inline auto dyadic_splitting(const std::size_t N, const Function& func, const double xmin, const double xmax,
     const int M=3, const double tol=1e-12, const int max_refine_passes = 8,
     const std::optional<std::function<void(int, const Container&)>>& callback = std::nullopt) -> Container
 {
