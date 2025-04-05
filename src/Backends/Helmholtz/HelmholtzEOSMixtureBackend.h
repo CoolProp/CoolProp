@@ -194,6 +194,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     virtual void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
         throw ValueError("set_fluid_parameter_double only defined for cubic backends");
     };
+    virtual double get_fluid_parameter_double(const size_t i, const std::string& parameter);
 
     phases calc_phase(void) {
         return _phase;
@@ -356,6 +357,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      */
     void update_TP_guessrho(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess);
     void update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T);
+    void update_TDmolarP_direct(CoolPropDbl T, CoolPropDbl rhomolarL, CoolPropDbl p);
+    void update_QT_direct(CoolPropDbl Q, CoolPropDbl T);
     void update_HmolarQ_with_guessT(CoolPropDbl hmolar, CoolPropDbl Q, CoolPropDbl Tguess);
 
     /** \brief Set the components of the mixture

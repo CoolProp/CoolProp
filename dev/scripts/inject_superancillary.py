@@ -1,9 +1,12 @@
 from pathlib import Path 
 import json 
-FLUIDS = Path(__file__).parent / 'fluids'
+FLUIDS = Path(__file__).parent.parent / 'fluids'
+print(FLUIDS)
 assert(FLUIDS.exists())
-FASTCHEB_OUT = Path(r"D:\Code\fastchebpure")
+FASTCHEB_OUT = Path(r"/Users/ianbell/Documents/Code/fastchebpure/output")
+assert(FASTCHEB_OUT.exists())
 for path in FASTCHEB_OUT.glob('*.json'):
+    print(path)
     name = path.stem.replace('_exps','')
     contents = json.load(path.open())
     destpath = FLUIDS / f'{name}.json'

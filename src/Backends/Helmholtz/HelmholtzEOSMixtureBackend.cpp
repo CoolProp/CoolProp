@@ -257,6 +257,39 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& Pa
     }
 }
 
+double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter){
+    if (i >= N) {
+        throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+    }
+    auto& superanc = components[i].EOS().superancillaries;
+    if (parameter.find("SUPERANC::") == 0){
+        if (superanc){
+            std::string key = parameter.substr(10);
+            if (key == "pmax"){
+                return superanc.value().get_pmax();
+            }
+            else if (key == "pmin"){
+                return superanc.value().get_pmin();
+            }
+            else if (key == "Tmin"){
+                return superanc.value().get_Tmin();
+            }
+            else if (key == "Tcrit_num"){
+                return superanc.value().get_Tcrit_num();
+            }
+            else {
+                throw ValueError(format("Superancillary parameter [%s] is invalid", key.c_str()));
+            }
+        }
+        else{
+            throw ValueError(format("Superancillary not available for this fluid"));
+        }
+    } else {
+        throw ValueError(format("fluid parameter [%s] is invalid", parameter.c_str()));
+    }
+}
+
+
 void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) {
     // bound-check indices
     if (i < 0 || i >= N) {
@@ -1142,6 +1175,44 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax(void) {
     return summer;
 }
 
+void HelmholtzEOSMixtureBackend::update_QT_direct(CoolPropDbl Q, CoolPropDbl T) {
+    _Q = Q;
+    _T = T;
+    FlashRoutines::QT_flash(*this);
+    
+    // Cleanup
+//    bool optional_checks = false;
+//    post_update(optional_checks);
+}
+
+
+void HelmholtzEOSMixtureBackend::update_TDmolarP_direct(CoolPropDbl T, CoolPropDbl rhomolar, CoolPropDbl p) {
+    
+    const CoolPropDbl rhomolar_min = 0;
+    const CoolPropDbl T_min = 0;
+
+    if (rhomolar < rhomolar_min) {
+        throw ValueError(format("The molar density of %f mol/m3 is below the minimum of %f mol/m3", rhomolar, rhomolar_min));
+    }
+
+    if (T < T_min) {
+        throw ValueError(format("The temperature of %f K is below the minimum of %f K", T, T_min));
+    }
+
+    CoolProp::input_pairs pair = DmolarT_INPUTS;
+    // Set up the state
+    pre_update(pair, rhomolar, T);
+
+    _rhomolar = rhomolar;
+    _T = T;
+    _p = p;
+
+    // Cleanup
+    bool optional_checks = false;
+    post_update(optional_checks);
+    
+}
+    
 void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T) {
     // TODO: This is just a quick fix for #878 - should be done more systematically
     const CoolPropDbl rhomolar_min = 0;
