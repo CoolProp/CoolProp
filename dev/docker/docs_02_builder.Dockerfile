@@ -13,7 +13,7 @@
 
 
 # Use an intermediate container to build REFPROP
-FROM ghcr.io/coolprop/coolprop_docs_01_base:dev as intermediate
+FROM ghcr.io/coolprop/coolprop_docs_01_base:dev AS intermediate
 
 # This ADD block forces a build (invalidates the cache) if the git repo contents have changed, otherwise leaves it untouched.
 # See https://stackoverflow.com/a/39278224
@@ -24,14 +24,16 @@ RUN git clone --recursive https://github.com/usnistgov/REFPROP-cmake /REFPROP-cm
 ADD REFPROP_sources /REFPROP_sources
 
 # Build the sources using the Fortran compiler
-SHELL ["/bin/bash", "-c"] # https://github.com/moby/moby/issues/7281#issuecomment-389440503
+# https://github.com/moby/moby/issues/7281#issuecomment-389440503
+SHELL ["/bin/bash", "-c"] 
 RUN source activate docs && \
     python -c "import numpy; print(numpy.__file__)" && \
     cmake -B /REFPROP-build -S /REFPROP-cmake -DREFPROP_FORTRAN_PATH=/REFPROP_sources/FORTRAN && \
     cmake --build /REFPROP-build
 	
 # Install the REFPROP files
-SHELL ["/bin/bash", "-c"] # https://github.com/moby/moby/issues/7281#issuecomment-389440503
+# https://github.com/moby/moby/issues/7281#issuecomment-389440503
+SHELL ["/bin/bash", "-c"] 
 RUN mkdir -p /opt/refprop && \
     cp /REFPROP-build/librefprop.so /opt/refprop && \
     cp -r /REFPROP_sources/FLUIDS /opt/refprop && \
