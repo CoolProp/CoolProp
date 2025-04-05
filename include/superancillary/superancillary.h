@@ -430,9 +430,9 @@ template<typename ArrayType=Eigen::ArrayXd>
 struct ChebyshevApproximation1D{
 private:
     const double thresh_imag = 1e-15; ///< The threshold below which a complex number is considered to be imaginary
-    const std::vector<ChebyshevExpansion<ArrayType>> m_expansions; ///< The collection of expansions forming the approximation
-    const std::vector<double> m_x_at_extrema; ///< The values of the independent variable at the extrema of the expansions
-    const std::vector<IntervalMatch> m_monotonic_intervals; ///< The intervals that are monotonic
+    std::vector<ChebyshevExpansion<ArrayType>> m_expansions; ///< The collection of expansions forming the approximation
+    std::vector<double> m_x_at_extrema; ///< The values of the independent variable at the extrema of the expansions
+    std::vector<IntervalMatch> m_monotonic_intervals; ///< The intervals that are monotonic
 
     Eigen::ArrayXd head(const Eigen::ArrayXd& c, Eigen::Index N) const{
         return c.head(N);
@@ -557,33 +557,36 @@ private:
         }
         return intervals;
     }
+    double m_xmin, ///< The minimum value of the independent variable
+           m_xmax; ///< The maximum value of the independent variable
     
 public:
-    const double xmin, ///< The minimum value of the independent variable
-                 xmax; ///< The maximum value of the independent variable
     
     // Move constructor given a vector of expansions
     ChebyshevApproximation1D(std::vector<ChebyshevExpansion<ArrayType>> && expansions) :
         m_expansions(std::move(expansions)),
         m_x_at_extrema(determine_extrema(m_expansions, thresh_imag)),
         m_monotonic_intervals(build_monotonic_intervals(m_x_at_extrema)),
-        xmin(get_expansions().front().xmin()),
-        xmax(get_expansions().back().xmax())
+        m_xmin(get_expansions().front().xmin()),
+        m_xmax(get_expansions().back().xmax())
     {}
     
     ChebyshevApproximation1D(const ChebyshevApproximation1D & other) :
         m_expansions(other.m_expansions),
         m_x_at_extrema(other.m_x_at_extrema),
         m_monotonic_intervals(other.m_monotonic_intervals),
-        xmin(other.xmin),
-        xmax(other.xmax)
+        m_xmin(other.xmin()),
+        m_xmax(other.xmax())
     {}
     
     ChebyshevApproximation1D& operator=(ChebyshevApproximation1D && other) = default;
-    
-    ChebyshevApproximation1D& operator=(const ChebyshevApproximation1D & other) {
-        ChebyshevApproximation1D newone(other);
-        std::swap(newone, *this);
+//    ChebyshevApproximation1D& operator=(const ChebyshevApproximation1D& other) = default;
+    ChebyshevApproximation1D& operator=(ChebyshevApproximation1D other) {
+        std::swap(m_expansions, other.m_expansions);
+        std::swap(m_x_at_extrema, other.m_x_at_extrema);
+        std::swap(m_monotonic_intervals, other.m_monotonic_intervals);
+        std::swap(m_xmin, other.m_xmin);
+        std::swap(m_xmax, other.m_xmax);
         return *this;
     }
     
@@ -595,6 +598,12 @@ public:
     
     /// Get a const view on the monotonic intervals identified
     const auto& get_monotonic_intervals() const { return m_monotonic_intervals; }
+    
+    /// Get the minimum x value
+    const auto xmin() const { return m_xmin; }
+    
+    /// Get the maximum x value
+    const auto xmax() const { return m_xmax; }
     
     /// Check whether the function is monotonic, if so some simplifications can be made to
     /// rootfinding in some cases
@@ -741,8 +750,10 @@ private:
     
     double m_Tmin; ///< The minimum temperature, in K
     double m_Tcrit_num; ///< The numerical critical temperature, in K
+    double m_rhocrit_num; ///< The numerical critical density, in mol/m^3
     double m_pmin; ///< The minimum pressure, in Pa
     double m_pmax; ///< The maximum pressure, in Pa
+    
     
 
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
@@ -770,8 +781,8 @@ private:
      */
     auto make_invlnp(Eigen::Index Ndegree){
         
-        auto pmin = m_p.eval(m_p.xmin);
-        auto pmax = m_p.eval(m_p.xmax);
+        auto pmin = m_p.eval(m_p.xmin());
+        auto pmax = m_p.eval(m_p.xmax());
         // auto N = m_p.get_expansions().front().coeff().size()-1;
         const double EPSILON = std::numeric_limits<double>::epsilon();
         
@@ -808,10 +819,11 @@ public:
     m_rhoV(std::move(loader(j, "jexpansions_rhoV"))),
     m_p(std::move(loader(j, "jexpansions_p"))),
     m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1))),
-    m_Tmin(m_p.xmin),
+    m_Tmin(m_p.xmin()),
     m_Tcrit_num(j.at("meta").at("Tcrittrue / K")),
-    m_pmin(m_p.eval(m_p.xmin)),
-    m_pmax(m_p.eval(m_p.xmax))
+    m_pmin(m_p.eval(m_p.xmin())),
+    m_pmax(m_p.eval(m_p.xmax())),
+    m_rhocrit_num(j.at("meta").at("rhocrittrue / mol/m^3"))
     {};
     
     /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
@@ -852,6 +864,8 @@ public:
     const double get_Tmin() const{ return m_Tmin; }
     /// Get the numerical critical temperature in K
     const double get_Tcrit_num() const{ return m_Tcrit_num; }
+    /// Get the numerical critical density in mol/m^3
+    const double get_rhocrit_num() const{ return m_rhocrit_num; }
     
     /**
      Using the provided function that gives y(T, rho), build the ancillaries for this variable based on the ancillaries for rhoL and rhoV

@@ -2513,6 +2513,21 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check out of bound for superancillary
     CHECK_THROWS(AS->update(QT_INPUTS, 1.0, 1000000));
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check Tc & pc", "[superanccrit]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    set_config_bool(ENABLE_SUPERANCILLARIES, true);
+    auto TcSA = AS->T_critical();
+    auto pcSA = AS->p_critical();
+    auto rhocSA = AS->rhomolar_critical();
+    set_config_bool(ENABLE_SUPERANCILLARIES, false);
+    auto TcnonSA = AS->T_critical();
+    auto pcnonSA = AS->p_critical();
+    auto rhocnonSA = AS->rhomolar_critical();
+    CHECK(TcSA != TcnonSA);
+    CHECK(pcSA != pcnonSA);
+    CHECK(rhocSA != rhocnonSA);
+}
+
 /*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 {
