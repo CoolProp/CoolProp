@@ -75,7 +75,7 @@ jobs:
       shell: bash
       run: |
         source activate docs
-        python setup.py bdist_wheel --dist-dir dist cmake=default,64
+        python setup.py bdist_wheel --dist-dir dist
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
         
     - name: Test the installed CoolProp version
