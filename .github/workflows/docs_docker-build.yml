@@ -38,7 +38,7 @@ jobs:
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }} # This uses the permissions of the user who triggered the workflow
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ secrets.DOCKER_TOKEN }}
     
     - name: Extract metadata (tags, labels) for Docker
       id: meta
