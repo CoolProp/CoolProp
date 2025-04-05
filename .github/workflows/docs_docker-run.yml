@@ -18,7 +18,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     
     container:
       image: ghcr.io/coolprop/coolprop_docs_02_builder:dev
