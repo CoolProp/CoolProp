@@ -1073,7 +1073,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void) {
             throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
         }
     } else {
-        return components[0].crit.T;
+        auto& optsuperanc = components[0].EOS().superancillaries;
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
+            const auto& superanc = optsuperanc.value();
+            return superanc.get_Tcrit_num(); // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+        }
+        else{
+            return components[0].crit.T;
+        }
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void) {
@@ -1086,7 +1093,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void) {
             throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
         }
     } else {
-        return components[0].crit.p;
+        auto& optsuperanc = components[0].EOS().superancillaries;
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
+            const auto& superanc = optsuperanc.value();
+            return superanc.get_pmax(); // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+        }
+        else{
+            return components[0].crit.p;
+        }
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void) {
@@ -1099,7 +1113,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void) {
             throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
         }
     } else {
-        return components[0].crit.rhomolar;
+        auto& optsuperanc = components[0].EOS().superancillaries;
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
+            const auto& superanc = optsuperanc.value();
+            return superanc.get_rhocrit_num(); // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+        }
+        else{
+            return components[0].crit.rhomolar;
+        }
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax_sat(void) {
