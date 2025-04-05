@@ -867,7 +867,6 @@ class AbstractState
     virtual const double get_fluid_constant(std::size_t i, parameters param) const {
         throw NotImplementedError("get_fluid_constant is not implemented for this backend");
     };
-    ;
 
     /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
     virtual void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value) {
