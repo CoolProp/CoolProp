@@ -9,6 +9,9 @@
 # to build the docker image. However, you can also use an access 
 # token to manually build the new image and push it to github.
 # 
+# To get the token:
+# github settings for user -> Developer settings -> Personal access tokens -> Tokens (classic) -> New personal access token (classic) -> tick write:packages -> store in the file your_token
+# 
 # $ cat your_token | docker login ghcr.io -u USERNAME --password-stdin
 # $ docker build --file docs_01_base.Dockerfile --tag ghcr.io/coolprop/coolprop_docs_01_base:dev .
 # $ docker push ghcr.io/coolprop/coolprop_docs_01_base:dev

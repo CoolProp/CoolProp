@@ -5,6 +5,9 @@
 # Normally, a CI workflow should take care of executing the commands 
 # to build the docker image. However, you can also use an access 
 # token to manually build the new image and push it to github.
+#
+# To get the token:
+# github settings for user -> Developer settings -> Personal access tokens -> Tokens (classic) -> New personal access token (classic) -> tick write:packages -> store in the file your_token
 # 
 # $ copy the REFPROP sources to the directory of this file.
 # $ cat your_token | docker login ghcr.io -u USERNAME --password-stdin
