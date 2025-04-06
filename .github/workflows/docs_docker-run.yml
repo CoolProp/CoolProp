@@ -89,6 +89,7 @@ jobs:
       shell: bash
       run: |
         source activate docs
+        python -c "import CoolProp; print(CoolProp.__version__)"
         python -c "import CoolProp; print(CoolProp.__gitrevision__)"
         python -c "import CoolProp; print(CoolProp.__file__)"
         
