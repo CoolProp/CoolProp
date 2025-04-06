@@ -23,6 +23,18 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Build REFPROP
+      shell: bash
+      run: |
+        set -x
+        cd .github/workflows
+        chmod +x buildREFPROP.sh
+        ./buildREFPROP.sh
+        pwd
+        echo COOLPROP_REFPROP_ROOT=`pwd`/bld >> $GITHUB_ENV
+      env:
+          REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
+    
     - name: Extract CoolProp version from CMakeLists.txt
       shell: bash
       run: |
