@@ -122,8 +122,8 @@ inline void companion_matrix_transposed(const std::vector<double> &coeffs, Eigen
 inline auto get_LU_matrices(std::size_t N){
     Eigen::MatrixXd L(N + 1, N + 1); ///< Matrix of coefficients
     Eigen::MatrixXd U(N + 1, N + 1); ///< Matrix of coefficients
-    for (int j = 0; j <= N; ++j) {
-        for (int k = j; k <= N; ++k) {
+    for (std::size_t j = 0; j <= N; ++j) {
+        for (std::size_t k = j; k <= N; ++k) {
             double p_j = (j == 0 || j == N) ? 2 : 1;
             double p_k = (k == 0 || k == N) ? 2 : 1;
             double cosjPikN = cos((j*EIGEN_PI*k) / N);
@@ -294,7 +294,7 @@ public:
     /// A vectorized variant in which arrays are C-style, assumed to be of the same length
     template<typename T>
     auto eval_manyC(const T x[], T y[], std::size_t N) const{
-        for (auto i = 0; i < N; ++i){ y[i] = eval(x[i]); }
+        for (std::size_t i = 0; i < N; ++i){ y[i] = eval(x[i]); }
     }
     
     /// A vectorized variant (for use with Python interface)
@@ -353,8 +353,8 @@ public:
     /// A vectorized variant in which arrays are C-style, assumed to be of the same length
     template<typename T>
     auto solve_for_x_manyC(const T y[], std::size_t N, double a, double b, unsigned int bits, std::size_t max_iter, double boundsytol, T x[], T counts[]) const{
-        for (auto i = 0; i < N; ++i){ 
-            std::tie(x[i], counts[i]) = solve_for_x_count(y[i], a, b, bits, max_iter, boundsytol); 
+        for (std::size_t i = 0; i < N; ++i){
+            std::tie(x[i], counts[i]) = solve_for_x_count(y[i], a, b, bits, max_iter, boundsytol);
         }
     }
     
@@ -458,12 +458,12 @@ private:
                     ilastnonzero = i; break;
                 }
             }
-            if (ilastnonzero != cd.size()-1){
+            if (ilastnonzero != static_cast<int>(cd.size()-1)){
                 cd = head(cd, ilastnonzero);
             }
             // Then do eigenvalue rootfinding after balancing
             // Define working buffers here to avoid allocations all over the place
-            if (companion_matrix.rows() != cd.size()-1){
+            if (companion_matrix.rows() != static_cast<int>(cd.size()-1)){
                 companion_matrix.resize(cd.size()-1, cd.size()-1); companion_matrix.setZero();
                 D.resizeLike(companion_matrix); D.setZero();
                 cprime.resizeLike(companion_matrix); cprime.setZero();
@@ -526,12 +526,12 @@ private:
                 return std::make_tuple(a, b);
             };
             
-            for (auto j = 0; j < newx.size()-1; ++j){
+            for (auto j = 0; j < static_cast<int>(newx.size()-1); ++j){
                 double xmin = newx[j], xmax = newx[j+1];
                 IntervalMatch im;
                 // Loop over the expansions that contain one of the values of x
                 // that intersect the interval defined by [xmin, xmax]
-                for (auto i = 0; i < m_expansions.size(); ++i){
+                for (auto i = 0UL; i < m_expansions.size(); ++i){
                     struct A {double xmin, xmax; };
                     auto [a,b] = interval_intersection(m_expansions[i], A{xmin, xmax} );
                     if (a < b){
@@ -821,9 +821,9 @@ public:
     m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1))),
     m_Tmin(m_p.xmin()),
     m_Tcrit_num(j.at("meta").at("Tcrittrue / K")),
+    m_rhocrit_num(j.at("meta").at("rhocrittrue / mol/m^3")),
     m_pmin(m_p.eval(m_p.xmin())),
-    m_pmax(m_p.eval(m_p.xmax())),
-    m_rhocrit_num(j.at("meta").at("rhocrittrue / mol/m^3"))
+    m_pmax(m_p.eval(m_p.xmax()))
     {};
     
     /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
@@ -946,7 +946,7 @@ public:
     void eval_sat_manyC(const Container T[], std::size_t N, char k, short Q, Container y[]) const {
         // if (T.size() != y.size()){ throw std::invalid_argument("T and y are not the same size"); }
         const auto& approx = get_approx1d(k, Q);
-        for (auto i =  0; i < N; ++i){
+        for (std::size_t i =  0; i < N; ++i){
             y[i] = approx.eval(T[i]);
         }
     }
