@@ -32,7 +32,8 @@ cdef extern from "superancillary/superancillary.h" namespace "CoolProp::superanc
     cdef cppclass ChebyshevApproximation1D[ArrayType]:
         ChebyshevApproximation1D(vector[ChebyshevExpansion[ArrayType]]&&) except +ValueError
         bool is_monotonic() const
-        const double xmin, xmax
+        double xmin()
+        double xmax()
         void eval_manyC[U](const U x[], U v[], size_t) const
         const vector[ChebyshevExpansion[ArrayType]] m_expansions # The collection of expansions forming the approximation
         const vector[double] m_x_at_extrema # The values of the independent variable at the extrema of the expansions

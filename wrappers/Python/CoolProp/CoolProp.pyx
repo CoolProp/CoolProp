@@ -161,10 +161,10 @@ cdef class ChebyshevApproximation1D:
         self.thisptr = new ChebApprox1D(move(expansions_copy))
 
     def xmin(self):
-        return self.thisptr.xmin
+        return self.thisptr.xmin()
     
     def xmax(self):
-        return self.thisptr.xmax
+        return self.thisptr.xmax()
 
     def is_monotonic(self):
         return self.thisptr.is_monotonic()
