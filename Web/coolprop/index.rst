@@ -17,3 +17,4 @@ This section includes information about the CoolProp software, listings of input
     PCSAFT.rst
     examples.rst
     changelog.rst
+    SuperAncillary.ipynb
