@@ -16,4 +16,4 @@ cp -r `pwd`/../REFPROP/FLUIDS `pwd`/bld
 cp -r `pwd`/../REFPROP/MIXTURES `pwd`/bld
 
 pip install ctREFPROP
-COOLPROP_REFPROP_ROOT=`pwd`/bld python test_REFPROP.py
+COOLPROP_REFPROP_ROOT=`pwd`/bld python ../test_REFPROP.py
