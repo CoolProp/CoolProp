@@ -31,6 +31,7 @@ jobs:
         chmod +x buildREFPROP.sh
         ./buildREFPROP.sh
         pwd
+        tree `pwd`/bld
         echo COOLPROP_REFPROP_ROOT=`pwd`/bld >> $GITHUB_ENV
       env:
           REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
