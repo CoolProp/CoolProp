@@ -37,14 +37,14 @@ print("Public release  : %s" % "True" if isRelease else "False")
 print("")
 
 if isRelease:
-    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', ''),
-                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', ''),
+    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', f'{release} %s'),
+                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', 'nightly %s'),
                 # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
                 # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
 else:
-    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', ''),
-                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', ''),
+    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', f'{release} %s'),
+                'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', 'nightly %s'),
                 # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
                 # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
