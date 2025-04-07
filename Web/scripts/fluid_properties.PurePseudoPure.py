@@ -30,10 +30,10 @@ bibtexer = getBibtexParser()
 
 bibtex_map = {'EOS': 'EOS',
               'CP0': ':math:`c_{p0}`',
-              'CONDUCTIVITY': ':math:`\lambda`',
-              'VISCOSITY': ':math:`\eta`',
+              'CONDUCTIVITY': r':math:`\lambda`',
+              'VISCOSITY': r':math:`\eta`',
               'MELTING_LINE': 'melt',
-              'SURFACE_TENSION': ':math:`\sigma`'}
+              'SURFACE_TENSION': r':math:`\sigma`'}
 bibtex_keys = ['EOS', 'CP0', 'CONDUCTIVITY', 'VISCOSITY', 'MELTING_LINE', 'SURFACE_TENSION']
 
 fluids_path = os.path.join(web_dir, 'fluid_properties', 'fluids')
