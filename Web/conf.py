@@ -48,7 +48,7 @@ else:
                 # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
                 # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
-print(extlinks)
+print(f'extlinks: {extlinks}')
 import sys, os, datetime
 
 # ~ # If your extensions are in another directory, add it here. If the directory
