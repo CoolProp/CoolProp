@@ -40,14 +40,14 @@ Pr_axis.set_ylabel("Prandtl Number $Pr$")
 # Pr_axis.set_ylim([0,10000])
 # Pr_axis.set_yscale("log")
 la_axis.set_xlabel("Temperature $T$ / deg C")
-la_axis.set_ylabel("Thermal Conductivity $\lambda$ / W/m/K")
+la_axis.set_ylabel(r"Thermal Conductivity $\lambda$ / W/m/K")
 # la_axis.set_ylim([0,1])
 mu_axis.set_xlabel("Temperature $T$ / deg C")
-mu_axis.set_ylabel("Dynamic Viscosity $\mu$ / Pa s")
+mu_axis.set_ylabel(r"Dynamic Viscosity $\mu$ / Pa s")
 # mu_axis.set_ylim([0,1])
 # mu_axis.set_yscale("log")
 cp_axis.set_xlabel("Temperature $T$ / deg C")
-cp_axis.set_ylabel("Isobaric Heat Capacity $c_p$ / J/kg/K")
+cp_axis.set_ylabel(r"Isobaric Heat Capacity $c_p$ / J/kg/K")
 # cp_axis.set_ylim([0,5000])
 
 for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solution__:
@@ -100,10 +100,10 @@ for fluid in CoolProp.__incompressibles_pure__ + CoolProp.__incompressibles_solu
             cp[i] = state.cpmass()
         except Exception as e:
             print(e)
-            Pr[i] = np.NaN
-            la[i] = np.NaN
-            mu[i] = np.NaN
-            cp[i] = np.NaN
+            Pr[i] = np.nan
+            la[i] = np.nan
+            mu[i] = np.nan
+            cp[i] = np.nan
     #print(np.min(Pr), np.max(Pr))
     Pr_axis.plot(T - 273.15, Pr)
     la_axis.plot(T - 273.15, la)
