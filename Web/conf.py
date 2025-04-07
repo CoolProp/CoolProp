@@ -37,18 +37,18 @@ print("Public release  : %s" % "True" if isRelease else "False")
 print("")
 
 if isRelease:
-    extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/' + release + '/%s', ''),
+    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', ''),
                 'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', ''),
                 # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
                 # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
 else:
-    extlinks = {'sfdownloads': ('http://sourceforge.net/projects/coolprop/files/CoolProp/' + release + '/%s', ''),
+    extlinks = {'sfdownloads': (f'http://sourceforge.net/projects/coolprop/files/CoolProp/{release}/%s', ''),
                 'sfnightly': ('http://sourceforge.net/projects/coolprop/files/CoolProp/nightly/%s', ''),
                 # 'bbbinaries' : ('http://www.coolprop.dreamhosters.com:8010/binaries/%s',''),
                 # 'bbsphinx'   : ('http://www.coolprop.dreamhosters.com:8010/sphinx/%s','')
                 }
-
+print(extlinks)
 import sys, os, datetime
 
 # ~ # If your extensions are in another directory, add it here. If the directory
