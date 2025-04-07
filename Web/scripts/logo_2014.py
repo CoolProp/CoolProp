@@ -97,7 +97,7 @@ melt_args = dict(color='orange', lw=lw, solid_capstyle='round')
 sat_args = melt_args.copy()
 
 nm = matplotlib.colors.Normalize(min(DD), max(DD))
-rho_args = dict(cmap=plt.cm.get_cmap('Blues'), norm=nm)
+rho_args = dict(cmap=plt.get_cmap('Blues'), norm=nm)
 
 fig = plt.figure(figsize=(1.0, 1.0))
 ax = fig.add_axes((0.0, 0.0, 1.0, 1.0))
