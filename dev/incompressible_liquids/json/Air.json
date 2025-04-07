@@ -56,7 +56,7 @@
     "type": "notdefined"
   },
   "name": "Air",
-  "reference": "Lemmon-JPCRD-2000; ; Lemmon-IJT-2004; Lemmon-IJT-2004",
+  "reference": "Lemmon-JPCRD-2000; Lemmon-IJT-2004",
   "saturation_pressure": {
     "NRMS": null,
     "coeffs": [

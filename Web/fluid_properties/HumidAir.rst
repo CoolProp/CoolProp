@@ -193,7 +193,7 @@ Table of Inputs/Outputs to HAPropsSI
 ------------------------------------
 
 .. csv-table:: Input/Output parameters
-    :header: "Parameter", "Units", "Input/Output", "Description"
+    :header: "Parameter"; "Units"; "Input/Output"; "Description"
     :widths: 25, 25, 25, 25
     :delim: ;
    
