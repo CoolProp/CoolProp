@@ -1,6 +1,6 @@
 name: docs
 dependencies:
-  - python
+  - python=3.13
   - scipy
   - numpy
   - matplotlib
