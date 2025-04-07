@@ -377,7 +377,7 @@ class DigitalData(SolutionData):
         for i in range(r - 1):
             for j in range(c - 1):
                 z[i + 1, j + 1] = func(x[i], y[j])
-        z[0, 0] = np.NaN
+        z[0, 0] = np.nan
         z[1:, 0] = x
         z[0, 1:] = y
 
