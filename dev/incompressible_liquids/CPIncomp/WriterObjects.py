@@ -581,7 +581,7 @@ class SolutionDataWriter(object):
 
         pos = np.isfinite(B_a)
         pos2 = (B_a > eps)
-        result = np.ones_like(A_a) * np.NAN
+        result = np.ones_like(A_a) * np.nan
 
         result[pos & pos2] = (A_a[pos & pos2] - B_a[pos & pos2]) / B_a[pos & pos2]
 
@@ -1387,7 +1387,7 @@ class SolutionDataWriter(object):
         try:
             n = float(number)
         except:
-            n = np.NAN
+            n = np.nan
             pass
         return n
 
@@ -1566,11 +1566,11 @@ class SolutionDataWriter(object):
                         try:
                             errcolumn[k][i] = float(errcolumn[k][i])
                         except:
-                            errcolumn[k][i] = np.NAN
+                            errcolumn[k][i] = np.nan
                         # try:
                         #    typcolumn[k][i] = float(typcolumn[k][i])
                         # except:
-                        #    typcolumn[k][i] = np.NAN
+                        #    typcolumn[k][i] = np.nan
 
             errcolumns.append(errcolumn)
             typcolumns.append(typcolumn)

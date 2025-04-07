@@ -140,7 +140,7 @@ class SolutionData(object):
         return False
 
     def rho(self, T, p=0.0, x=0.0, c=None):
-        if not self.checkTPX(T, p, x): return np.NAN
+        if not self.checkTPX(T, p, x): return np.nan
         if c is None:
             c = self.density.coeffs
         if self.density.type == self.density.INCOMPRESSIBLE_POLYNOMIAL:
@@ -148,7 +148,7 @@ class SolutionData(object):
         else: raise ValueError("Unknown function.")
 
     def c(self, T, p=0.0, x=0.0, c=None):
-        if not self.checkTPX(T, p, x): return np.NAN
+        if not self.checkTPX(T, p, x): return np.nan
         if c is None:
             c = self.specific_heat.coeffs
         if self.specific_heat.type == self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
@@ -162,7 +162,7 @@ class SolutionData(object):
         return self.c(T, p, x, c)
 
     def u(self, T, p=0.0, x=0.0, c=None):
-        if not self.checkTPX(T, p, x): return np.NAN
+        if not self.checkTPX(T, p, x): return np.nan
         if c is None:
             c = self.specific_heat.coeffs
         if self.specific_heat.type == self.specific_heat.INCOMPRESSIBLE_POLYNOMIAL:
@@ -175,11 +175,11 @@ class SolutionData(object):
         return self.h_u(T, p, x)
 
     def visc(self, T, p=0.0, x=0.0, c=None):
-        if not self.checkTPX(T, p, x): return np.NAN
+        if not self.checkTPX(T, p, x): return np.nan
         return self.viscosity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
 
     def cond(self, T, p=0.0, x=0.0, c=None):
-        if not self.checkTPX(T, p, x): return np.NAN
+        if not self.checkTPX(T, p, x): return np.nan
         return self.conductivity.baseFunction(T, x, self.Tbase, self.xbase, c=c)
 
     def psat(self, T, p=0.0, x=0.0, c=None):

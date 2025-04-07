@@ -257,20 +257,20 @@ class SecCoolSolutionData(DigitalData):
         # TODO: improve this case
         if not os.path.isfile(fullPath):
             arr = np.empty((1, 1))
-            arr[:] = np.NAN
+            arr[:] = np.nan
             return arr
         r, c, res = IncompressibleFitter.shapeArray(np.loadtxt(fullPath, dtype=type('string')))
 #        numbers = res.astype(np.float)
         numbers = np.zeros((r, c))
         for i in range(r):
             for j in range(c):
-                nu = np.NAN
+                nu = np.nan
                 try:
                     nu = float(res[i, j])
                     if i == 0: nu *= 1e-2  # Percent to fraction
                     if j == 0: nu += 273.15  # Celsius to Kelvin
                     if not self.allowNegativeData and nu < 0:
-                        nu = np.NAN  # invalid entries
+                        nu = np.nan  # invalid entries
                 except (ValueError, TypeError) as ve:
                     if False: print("Could not convert entry: {0}".format(ve))
                     if i == 0: nu = 0.0  # Dummy for tables without concentration (TFreeze and Vol2Mass)
@@ -491,12 +491,12 @@ class SecCoolIceData(SecCoolSolutionData):
         numbers = np.zeros((r, c))
         for i in range(r):
             for j in range(c):
-                nu = np.NAN
+                nu = np.nan
                 try:
                     nu = float(res[i, j])
                     if i == 0: nu *= 1e-2  # Percent to fraction
                     if not self.allowNegativeData and nu < 0:
-                        nu = np.NAN  # invalid entries
+                        nu = np.nan  # invalid entries
                 except (ValueError, TypeError) as ve:
                     if False: print("Could not convert entry: {0}".format(ve))
                     if i == 0: nu = 0.0  # Dummy for tables without concentration (TFreeze and Vol2Mass)
