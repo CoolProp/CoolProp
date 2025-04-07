@@ -75,8 +75,12 @@ with open(os.path.join(repo_root_dir, 'Doxyfile'), 'a+') as fp:
 
 # The normal tasks that are carried out each time the script runs
 print("Adding the normal scripts to the task list.")
-add_to_task_list("dev/scripts/examples/LinuxRun.py")
-add_to_task_list("coolprop.tabular.speed.py")
+if sys.platform == "linux":
+    add_to_task_list("dev/scripts/examples/LinuxRun.py")
+elif sys.platform == "darwin":
+    add_to_task_list("dev/scripts/examples/OSXRun.py")
+    
+add_to_task_list("coolprop.tabular.speed.py")    
 add_to_task_list("fluid_properties.phase_envelope.py")
 add_to_task_list("fluid_properties.PurePseudoPure.py")
 add_to_task_list("fluid_properties.Mixtures.py")
