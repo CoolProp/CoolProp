@@ -77,13 +77,6 @@ jobs:
         source activate docs
         python setup.py bdist_wheel --dist-dir dist
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
-
-    - name: Patch cloud_sptheme for modern jinja2 file locations
-      working-directory: ./dev/docker
-      shell: bash
-      run: |
-        source activate docs
-        python patch_cloud_sptheme.py
         
     - name: Test the installed CoolProp version
       shell: bash
