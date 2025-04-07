@@ -74,7 +74,7 @@ if __name__ == '__main__':
     RR = R()
     RR.write('R/Example.R', RR.parse())
     kwargs = dict(stdout=sys.stdout, stderr=sys.stderr, shell=True, cwd='R')
-    subprocess.check_call('cmake ../../../.. -DCOOLPROP_R_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCOOLPROP_NO_EXAMPLES=ON -DR_BIN=/usr/local/bin', **kwargs)
+    subprocess.check_call('cmake ../../../.. -DCOOLPROP_R_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCOOLPROP_NO_EXAMPLES=ON -DR_BIN=/opt/homebrew/bin', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
     with codecs.open('R/Example.out', 'w', encoding='utf-8') as fp:
         tee_call(r'DYLD_LIBRARY_PATH=/opt/refprop Rscript Example.R', fp, shell=True, cwd='R')
