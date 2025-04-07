@@ -299,12 +299,12 @@ def get_Z(X_in, Y_in, fluid, out='S'):
     '''
     X = X_in
     Y = np.power(10.0, Y_in)
-    Z = np.NAN
+    Z = np.nan
     try:
         Z = CP.PropsSI(out, 'H', X, 'P', Y, fluid)
     except(ValueError):
         print("CoolProp failed, returning NAN")
-        Z = np.NAN
+        Z = np.nan
     return Z
 
 
@@ -356,12 +356,12 @@ def get_Z(X_in, Y_in, fluid, out='P'):
     '''
     X = 1.0 / np.power(10.0, X_in)
     Y = Y_in
-    Z = np.NAN
+    Z = np.nan
     try:
         Z = np.log10(CP.PropsSI(out, 'D', X, 'T', Y, fluid))
     except(ValueError):
         print("CoolProp failed, returning NAN")
-        Z = np.NAN
+        Z = np.nan
     return Z
 
 
