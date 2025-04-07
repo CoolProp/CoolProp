@@ -21,3 +21,6 @@ dependencies:
     - cloud_sptheme
     - openpyxl
     - pybtex
+    - pickleshare
+    - nbsphinx
+

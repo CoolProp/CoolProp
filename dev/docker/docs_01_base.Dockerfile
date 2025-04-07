@@ -35,3 +35,7 @@ RUN sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xm
 ADD conda_environment.yml /environment.yml
 RUN conda update -n base -c defaults conda && conda env create -f /environment.yml && conda clean --all --yes
 RUN mkdir -p /opt
+
+# Patch the cloud_sptheme package to fix import paths for jinja2
+ADD patch_cloud_sptheme.py /
+RUN /opt/conda/envs/docs/bin/python /patch_cloud_sptheme.py && rm /patch_cloud_sptheme.py
