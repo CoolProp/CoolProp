@@ -274,9 +274,11 @@ def gitrev_to_file(root_dir):
                              cwd=os.path.abspath(os.path.dirname(__file__)))
             stdout, stderr = p.communicate()
             stdout = stdout.decode('utf-8')
+            stderr = stderr.decode('utf-8')
 
             if p.returncode != 0:
                 print('tried to get git revision from git, but could not (building from zip file?)')
+                print(f'return code: {p.returncode}; stderr: {stderr};  stdout: {stdout}')
                 gitrevision_path = os.path.join(root_dir, 'dev', 'gitrevision.txt')
                 if os.path.exists(gitrevision_path):
                     gitrev = open(gitrevision_path, 'r').read().strip()
