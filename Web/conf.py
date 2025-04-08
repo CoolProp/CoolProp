@@ -18,6 +18,8 @@
 # built documents.
 #
 
+import subprocess
+import sys
 from pathlib import Path 
 import urllib.request
 import zipfile
@@ -76,6 +78,14 @@ else:
         'cpapi': ('_static/doxygen/CoolPropDoxyLink.tag', 'http://www.coolprop.org/dev/_static/doxygen/html')
     }
 
+# Execute all the notebooks
+for dirpath, dirnames, filenames in Path(__file__).parent.walk():
+    for file in filenames:
+        if file.endswith('.ipynb') and '.ipynb_checkpoints' not in str(dirpath):
+            cmd = f'jupyter nbconvert --allow-errors --to notebook --output "{file}" --execute "{file}"'
+            subprocess.check_output(cmd, shell=True, cwd=dirpath)
+
+
 # -- General configuration -----------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
@@ -103,6 +113,7 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               # 'inheritance_diagram',
               # 'numpydoc',
               # 'breathe'
+              "nbsphinx",
               ]
 
 # set path to issue tracker:
