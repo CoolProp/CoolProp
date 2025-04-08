@@ -51,6 +51,13 @@ if __name__ == '__main__':
     if not os.path.exists('Java'): os.mkdir('Java')
     J = Java()
     J.write('Java/Example.java', J.parse())
+    try:
+        subprocess.check_call('java', shell=True)
+    except:
+        print("""You might want to try:
+        brew install openjdk
+        export PATH="/opt/homebrew/opt/openjdk/bin:$PATH""")
+        
     kwargs = dict(stdout=sys.stdout, stderr=sys.stderr, shell=True, cwd='Java')
     subprocess.check_call('cmake ../../../.. -DCOOLPROP_JAVA_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCOOLPROP_NO_EXAMPLES=ON', **kwargs)
     subprocess.check_call('cmake --build .', **kwargs)
