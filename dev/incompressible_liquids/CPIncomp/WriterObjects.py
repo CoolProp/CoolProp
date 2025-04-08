@@ -1381,7 +1381,13 @@ class SolutionDataWriter(object):
         return self.d(name, reportFile)
 
     def getCitation(self, keys):
-        return u":cite:`{0}`".format(keys)
+        try:
+            self.bibtexer.getEntry(key=keys, fmt='plaintext').strip()
+            return f":cite:`{keys}`"
+        except Exception as e:
+            warn(f"Your string \"{keys}\" was not a valid Bibtex key, I will use it directly")
+            return keys
+    
 
     def checkForNumber(self, number):
         try:

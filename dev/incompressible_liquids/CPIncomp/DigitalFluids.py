@@ -244,7 +244,7 @@ try:
                 # references.append(CP.get_BibTeXKey(fluid_str, "SURFACE_TENSION"))
                 # references.append(CP.get_BibTeXKey(fluid_str, "MELTING_LINE"))
 
-                self.reference = "; ".join(references)
+                self.reference = ",".join(set([r for r in references if r]))
 
                 self.Tmax = min(cp_state.Tmax(), T_max)
                 self.Tmin = max(cp_state.Tmin(), T_min)
