@@ -158,4 +158,4 @@ jobs:
       if: ${{ github.event_name != 'pull_request' }}
       env:
         TWINE_USERNAME: __token__
-      run: python -m twine upload --skip-existing Python/*.whl Python/*.tar.gz
+      run: python -m twine upload --verbose --skip-existing Python/*.whl Python/*.tar.gz
