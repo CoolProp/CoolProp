@@ -1238,12 +1238,16 @@ if(COOLPROP_OCTAVE_MODULE)
   set(OCTAVE_WRAP_INCLUDE_DIRS ${INCLUDE_DIR})
   foreach(ITR ${OCTAVE_INCLUDE_DIRS})
     list(APPEND OCTAVE_WRAP_INCLUDE_DIRS ${ITR})
+    # https://stackoverflow.com/questions/7035734/how-do-i-get-the-parent-directory-path-of-a-path-in-cmake
+    get_filename_component(PARENT_DIR ${ITR} DIRECTORY)
+    list(APPEND OCTAVE_WRAP_INCLUDE_DIRS ${PARENT_DIR})
+    message(STATUS "PARENT_DIR: ${PARENT_DIR}")
   endforeach()
-  include_directories(${OCTAVE_INCLUDE_DIRS})
+  include_directories(${OCTAVE_WRAP_INCLUDE_DIRS})
+  message(STATUS "OCTAVE_WRAP_INCLUDE_DIRS: ${OCTAVE_WRAP_INCLUDE_DIRS}")
 
+  # Disable internal error catching and allow swig to do the error catching itself
   add_definitions(-DNO_ERROR_CATCHING)
-
-  #disable internal error catching and allow swig to do the error catching itself
 
   set(I_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolProp.i")
 
@@ -1252,7 +1256,11 @@ if(COOLPROP_OCTAVE_MODULE)
   set_source_files_properties(${I_FILE} PROPERTIES CPLUSPLUS ON)
 
   set(SWIG_MODULE_CoolProp_EXTRA_DEPS ${SWIG_DEPENDENCIES})
-  swig_add_module(CoolProp octave ${I_FILE} ${APP_SOURCES})
+  swig_add_library(
+    CoolProp
+    LANGUAGE octave 
+    SOURCES ${I_FILE} ${APP_SOURCES}
+  )
 
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # We need to see which library to link with on OSX - clang++ or stdc++

@@ -1,225 +1,176 @@
-# Try to find the build flags to compile octave shared objects (oct and mex files)
-# Once done this will define
+# - Find Octave
+# GNU Octave is a high-level interpreted language, primarily intended for numerical computations.
+# available at http://www.gnu.org/software/octave/
 #
-# OCTAVE_VERSION - Version of Octave
-# OCTAVE_FOUND - if Coin3d is found
-# OCTAVE_CXXFLAGS - extra flags
-# OCTAVE_INCLUDE_DIRS - include directories
-# OCTAVE_LINK_DIRS - link directories
-# OCTAVE_LIBRARY_RELEASE - the release version
-# OCTAVE_LIBRARY_DEBUG - the debug version
-# OCTAVE_LIBRARY - a default library, with priority debug.
+# This module defines:
+#  OCTAVE_EXECUTABLE           - octave interpreter
+#  OCTAVE_INCLUDE_DIRS         - include path for mex.h, mexproto.h
+#  OCTAVE_LIBRARIES            - required libraries: octinterp, octave, cruft
+#  OCTAVE_OCTINTERP_LIBRARY    - path to the library octinterp
+#  OCTAVE_OCTAVE_LIBRARY       - path to the library octave
+#  OCTAVE_CRUFT_LIBRARY        - path to the library cruft
+#  OCTAVE_VERSION_STRING       - octave version string
+#  OCTAVE_MAJOR_VERSION        - major version
+#  OCTAVE_MINOR_VERSION        - minor version
+#  OCTAVE_PATCH_VERSION        - patch version
+#  OCTAVE_OCT_FILE_DIR         - object files that will be dynamically loaded
+#  OCTAVE_OCT_LIB_DIR          - oct libraries
+#
+# The macro octave_add_oct allows to create compiled modules.
+# octave_add_oct ( target_name
+#         [SOURCES] source1 [source2 ...]
+#         [LINK_LIBRARIES  lib1 [lib2 ...]]
+#         [EXTENSION ext]
+# )
+#
 
-cmake_minimum_required(VERSION 2.8)
+#=============================================================================
+# Copyright 2013, Julien Schueller
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# The views and conclusions contained in the software and documentation are those
+# of the authors and should not be interpreted as representing official policies,
+# either expressed or implied, of the FreeBSD Project.
+#=============================================================================
 
-IF (WIN32)
-  IF( "$ENV{OCTAVE_ROOT}" STREQUAL "" )
-    message(FATAL_ERROR "On windows, environmental variable OCTAVE_ROOT must be set to folder containing folders bin, include, etc. for octave")
-  ENDIF()
-ENDIF()
+find_program( OCTAVE_CONFIG_EXECUTABLE
+              NAMES octave-config
+            )
 
-set(OCTAVE_BIN)
-IF( "$ENV{OCTAVE_ROOT}" STREQUAL "" )
-ELSE()
-    set(OCTAVE_BIN $ENV{OCTAVE_ROOT}/bin)
-ENDIF()
+if ( OCTAVE_CONFIG_EXECUTABLE )
 
-# use mkoctfile
-set(MKOCTFILE_EXECUTABLE MKOCTFILE_EXECUTABLE-NOTFOUND)
-find_program(MKOCTFILE_EXECUTABLE 
-             NAME mkoctfile 
-             PATHS ${OCTAVE_BIN})
-mark_as_advanced(MKOCTFILE_EXECUTABLE)
+  execute_process ( COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p BINDIR
+                    OUTPUT_VARIABLE OCTAVE_BIN_PATHS
+                    OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-if(MKOCTFILE_EXECUTABLE)
-  set(OCTAVE_FOUND 1)
-  message(STATUS "Found mkoctfile executable")
+  execute_process ( COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p OCTINCLUDEDIR
+                    OUTPUT_VARIABLE OCTAVE_INCLUDE_PATHS
+                    OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-  execute_process(
-    COMMAND ${MKOCTFILE_EXECUTABLE} -p ALL_CXXFLAGS
-    OUTPUT_VARIABLE _mkoctfile_cppflags
-    RESULT_VARIABLE _mkoctfile_failed)
-  string(REGEX REPLACE "[\r\n]" " " _mkoctfile_cppflags "${_mkoctfile_cppflags}")
-  execute_process(
-    COMMAND ${MKOCTFILE_EXECUTABLE} -p INCFLAGS
-    OUTPUT_VARIABLE _mkoctfile_includedir
-    RESULT_VARIABLE _mkoctfile_failed)
-  string(REGEX REPLACE "[\r\n]" " " _mkoctfile_includedir "${_mkoctfile_includedir}")
-  string(REGEX REPLACE "-I" " " _mkoctfile_includedir "${_mkoctfile_includedir}")
-  execute_process(
-    COMMAND ${MKOCTFILE_EXECUTABLE} -p ALL_LDFLAGS
-    OUTPUT_VARIABLE _mkoctfile_ldflags
-    RESULT_VARIABLE _mkoctfile_failed)
-  string(REGEX REPLACE "[\r\n]" " " _mkoctfile_ldflags "${_mkoctfile_ldflags}")
-  execute_process(
-    COMMAND ${MKOCTFILE_EXECUTABLE} -p LFLAGS
-    OUTPUT_VARIABLE _mkoctfile_ldirs
-    RESULT_VARIABLE _mkoctfile_failed)
-    
-  string(REGEX REPLACE "[\r\n]" " " _mkoctfile_ldirs "${_mkoctfile_ldirs}")
-  string(REGEX REPLACE "-L" "" _mkoctfile_ldirs "${_mkoctfile_ldirs}")
-  
-  separate_arguments(_mkoctfile_ldirs)
-    
-  execute_process(
-    COMMAND ${MKOCTFILE_EXECUTABLE} -p LIBS
-    OUTPUT_VARIABLE _mkoctfile_libs
-    RESULT_VARIABLE _mkoctfile_failed)
-  string(REGEX REPLACE "[\r\n]" " " _mkoctfile_libs "${_mkoctfile_libs}")
-  execute_process(
-    COMMAND ${MKOCTFILE_EXECUTABLE} -p OCTAVE_LIBS
-    OUTPUT_VARIABLE _mkoctfile_octlibs
-    RESULT_VARIABLE _mkoctfile_failed)
-  string(REGEX REPLACE "[\r\n]" " " _mkoctfile_octlibs "${_mkoctfile_octlibs}")
-  set(_mkoctfile_libs "${_mkoctfile_libs} ${_mkoctfile_octlibs}")
-    
-  string(REGEX MATCHALL "(^| )-l([./+-_\\a-zA-Z]*)" _mkoctfile_libs "${_mkoctfile_libs}")
-  string(REGEX REPLACE "(^| )-l" "" _mkoctfile_libs "${_mkoctfile_libs}")
+  execute_process ( COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p OCTLIBDIR
+                    OUTPUT_VARIABLE OCTAVE_LIBRARIES_PATHS
+                    OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-#~   string(REGEX MATCHALL "(^| )-L([./+-_\\a-zA-Z]*)" _mkoctfile_ldirs "${_mkoctfile_ldirs}")
-#~   string(REGEX REPLACE "(^| )-L" "" _mkoctfile_ldirs "${_mkoctfile_ldirs}")
+  execute_process ( COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p OCTFILEDIR
+                    OUTPUT_VARIABLE OCTAVE_OCT_FILE_DIR
+                    OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-  string(REGEX REPLACE "(^| )-l([./+-_\\a-zA-Z]*)" " " _mkoctfile_ldflags "${_mkoctfile_ldflags}")
-  string(REGEX REPLACE "(^| )-L([./+-_\\a-zA-Z]*)" " " _mkoctfile_ldflags "${_mkoctfile_ldflags}")
+  execute_process ( COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p OCTLIBDIR
+                    OUTPUT_VARIABLE OCTAVE_OCT_LIB_DIR
+                    OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-  if (WIN32)
-    
-    string(REGEX REPLACE "Program Files " "Program~Files~" _mkoctfile_ldirs "${_mkoctfile_ldirs}")
-    separate_arguments(_mkoctfile_ldirs)
-    string(REGEX REPLACE "Program Files " "Program~Files~" _mkoctfile_includedir "${_mkoctfile_includedir}")
-    separate_arguments(_mkoctfile_includedir)
-    
-    set(includes)
-    foreach(ITR ${_mkoctfile_includedir})
-      #string(REGEX REPLACE "~" " " ITR ${ITR})
-      string(REGEX REPLACE "\"" "" ITR ${ITR})
-      list(APPEND includes ${ITR})
-    endforeach()
-    set(_mkoctfile_includedir ${includes})
-    
-    set(libs)
-    foreach(ITR ${_mkoctfile_ldirs})
-      #string(REGEX REPLACE "~" " " ITR ${ITR})
-      string(REGEX REPLACE "\"" "" ITR ${ITR})
-      list(APPEND libs ${ITR})
-    endforeach()
-    set(_mkoctfile_ldirs ${libs})
-    message(STATUS ${libs})
-    
-  else()
-   separate_arguments(_mkoctfile_includedir)
-  endif()
+  execute_process ( COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -v
+                    OUTPUT_VARIABLE OCTAVE_VERSION_STRING
+                    OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-  set( OCTAVE_CXXFLAGS " ${_mkoctfile_cppflags}" )
-  set( OCTAVE_LINK_FLAGS " ${_mkoctfile_ldflags} " )
-  set( OCTAVE_INCLUDE_DIRS " ${_mkoctfile_includedir}")
-  set( OCTAVE_LINK_DIRS ${_mkoctfile_ldirs})
-  set( OCTAVE_LIBRARY ${_mkoctfile_libs})
-  set( OCTAVE_LIBRARY_RELEASE " ${OCTAVE_LIBRARY} ")
-  set( OCTAVE_LIBRARY_DEBUG " ${OCTAVE_LIBRARY} ")
-else()
-    if (OSX)
-    set(libs)
-    foreach(ITR ${_mkoctfile_ldirs})
-      string(REGEX REPLACE "\"" "" ITR ${ITR})
-      list(APPEND libs ${ITR})
-    endforeach()
-    set(_mkoctfile_ldirs ${libs})
-    endif()	
+  if ( OCTAVE_VERSION_STRING )
+    string ( REGEX REPLACE "([0-9]+)\\..*" "\\1" OCTAVE_MAJOR_VERSION ${OCTAVE_VERSION_STRING} )
+    string ( REGEX REPLACE "[0-9]+\\.([0-9]+).*" "\\1" OCTAVE_MINOR_VERSION ${OCTAVE_VERSION_STRING} )
+    string ( REGEX REPLACE "[0-9]+\\.[0-9]+\\.([0-9]+).*" "\\1" OCTAVE_PATCH_VERSION ${OCTAVE_VERSION_STRING} )
+  endif ()
+endif ()
 
-	message(FATAL_ERROR "Unable to find mkoctfile executable")
-endif()
+find_program( OCTAVE_EXECUTABLE
+              HINTS ${OCTAVE_BIN_PATHS}
+              NAMES octave
+            )
 
-# use octave_config
-set(OCTAVE_CONFIG_EXECUTABLE OCTAVE_CONFIG_EXECUTABLE-NOTFOUND)
-find_program(OCTAVE_CONFIG_EXECUTABLE 
-             NAME octave-config 
-             PATHS ${OCTAVE_BIN})
-mark_as_advanced(OCTAVE_CONFIG_EXECUTABLE)
+find_library( OCTAVE_OCTINTERP_LIBRARY
+              NAMES octinterp liboctinterp
+              HINTS ${OCTAVE_LIBRARIES_PATHS}
+            )
+find_library( OCTAVE_OCTAVE_LIBRARY
+              NAMES octave liboctave
+              HINTS ${OCTAVE_LIBRARIES_PATHS}
+            )
+find_library( OCTAVE_CRUFT_LIBRARY
+              NAMES cruft libcruft
+              HINTS ${OCTAVE_LIBRARIES_PATHS}
+            )
 
-if(OCTAVE_CONFIG_EXECUTABLE)
-  message(STATUS "Found octave-config executable")
-  execute_process(
-    COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -v
-    OUTPUT_VARIABLE OCTAVE_VERSION
-    RESULT_VARIABLE _octave_config_failed)
-  string(REGEX REPLACE "[\r\n]" "" OCTAVE_VERSION "${OCTAVE_VERSION}")    
-  execute_process(
-    COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p CANONICAL_HOST_TYPE
-    OUTPUT_VARIABLE _octave_config_host_type
-    RESULT_VARIABLE _octave_config_failed)
-  string(REGEX REPLACE "[\r\n]" "" _octave_config_host_type "${_octave_config_host_type}")
-  execute_process(
-    COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p API_VERSION
-    OUTPUT_VARIABLE _octave_config_api_version
-    RESULT_VARIABLE _octave_config_failed)
-  string(REGEX REPLACE "[\r\n]" "" _octave_config_api_version "${_octave_config_api_version}")
-  execute_process(
-    COMMAND ${OCTAVE_CONFIG_EXECUTABLE} -p LOCALVEROCTFILEDIR
-    OUTPUT_VARIABLE _octave_config_localveroctfiledir
-    RESULT_VARIABLE _octave_config_failed)
-  string(REGEX REPLACE "[\r\n]" "" _octave_config_localveroctfiledir "${_octave_config_api_version}")
+set ( OCTAVE_LIBRARIES ${OCTAVE_OCTINTERP_LIBRARY} )
+list ( APPEND OCTAVE_LIBRARIES ${OCTAVE_OCTAVE_LIBRARY} )
+if ( ${OCTAVE_CRUFT_LIBRARY} ) 
+  list ( APPEND OCTAVE_LIBRARIES ${OCTAVE_CRUFT_LIBRARY} )
+endif ()
 
-  set( OCTAVE_HOST_TYPE "${_octave_config_host_type}" )
-  set( OCTAVE_API_VERSION "${_octave_config_api_version}" )
-  set( OCTAVE_LOCALVEROCTFILEDIR "${_octave_config_localveroctfiledir}" )
+find_path ( OCTAVE_INCLUDE_DIR
+            NAMES mex.h
+            HINTS ${OCTAVE_INCLUDE_PATHS}
+          )
 
-else()
-  message(FATAL_ERROR "Did not find octave-config executable")
-endif()
+set ( OCTAVE_INCLUDE_DIRS ${OCTAVE_INCLUDE_DIR} )
 
-IF (WIN32)
-  list(APPEND OCTAVE_LINK_DIRS "$ENV{OCTAVE_ROOT}/lib/octave/${OCTAVE_VERSION}")
-  message(STATUS "OCTAVE_LINK_DIRS :: ${OCTAVE_LINK_DIRS}")
-  list(APPEND OCTAVE_INCLUDE_DIRS "$ENV{OCTAVE_ROOT}/include")
-  list(APPEND OCTAVE_INCLUDE_DIRS "$ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION}")
-  list(APPEND OCTAVE_INCLUDE_DIRS "$ENV{OCTAVE_ROOT}/include/octave-${OCTAVE_VERSION}/octave")
-  message(STATUS "OCTAVE_INCLUDE_DIRS :: ${OCTAVE_INCLUDE_DIRS}")
-ENDIF()
+macro ( octave_add_oct FUNCTIONNAME )
+  set ( _CMD SOURCES )
+  set ( _SOURCES )
+  set ( _LINK_LIBRARIES )
+  set ( _EXTENSION )
+  set ( _OCT_EXTENSION oct )
+  foreach ( _ARG ${ARGN})
+    if ( ${_ARG} MATCHES SOURCES )
+      set ( _CMD SOURCES )
+    elseif ( ${_ARG} MATCHES LINK_LIBRARIES  )
+      set ( _CMD LINK_LIBRARIES  )
+    elseif ( ${_ARG} MATCHES EXTENSION )
+      set ( _CMD EXTENSION )
+    else ()
+      if ( ${_CMD} MATCHES SOURCES )
+        list ( APPEND _SOURCES "${_ARG}" )
+      elseif ( ${_CMD} MATCHES LINK_LIBRARIES  )
+        list ( APPEND _LINK_LIBRARIES "${_ARG}" )
+      elseif ( ${_CMD} MATCHES EXTENSION )
+        set ( _OCT_EXTENSION ${_ARG} )
+      endif ()
+    endif ()
+  endforeach ()
+  add_library ( ${FUNCTIONNAME} SHARED ${_SOURCES} )
+  target_link_libraries ( ${FUNCTIONNAME} ${OCTAVE_LIBRARIES} ${_LINK_LIBRARIES} )
+  set_target_properties ( ${FUNCTIONNAME} PROPERTIES
+    PREFIX ""
+    SUFFIX  ".${_OCT_EXTENSION}"
+  )
+endmacro ()
 
-FIND_LIBRARY( OCTAVE_OCTAVE_LIBRARY
-			  NAMES octave liboctave
-			  PATHS ${OCTAVE_LINK_DIRS}				  
-			  NO_DEFAULT_PATH)
-			  
-FIND_LIBRARY( OCTAVE_OCTINTERP_LIBRARY
-			  NAMES octinterp liboctinterp
-			  PATHS ${OCTAVE_LINK_DIRS}				  
-			  NO_DEFAULT_PATH)
-			  
-FIND_LIBRARY( OCTAVE_CRUFT_LIBRARY
-			  NAMES cruft libcruft
-			  PATHS ${OCTAVE_LINK_DIRS}				  
-			  NO_DEFAULT_PATH)			  
+# handle REQUIRED and QUIET options
+include ( FindPackageHandleStandardArgs )
+if ( CMAKE_VERSION LESS 2.8.3 )
+  find_package_handle_standard_args ( Octave DEFAULT_MSG OCTAVE_EXECUTABLE OCTAVE_INCLUDE_DIRS OCTAVE_LIBRARIES OCTAVE_VERSION_STRING )
+else ()
+  find_package_handle_standard_args ( Octave REQUIRED_VARS OCTAVE_EXECUTABLE OCTAVE_INCLUDE_DIRS OCTAVE_LIBRARIES VERSION_VAR OCTAVE_VERSION_STRING )
+endif ()
 
-SET(OCTAVE_LIBRARIES
-  ${OCTAVE_OCTAVE_LIBRARY}
-  ${OCTAVE_OCTINTERP_LIBRARY})
-
-if (OCTAVE_CRUFT_LIBRARY)
-    list(APPEND OCTAVE_LIBRARIES ${OCTAVE_CRUFT_LIBRARY})
-endif()
-				  
-message(STATUS "OCTAVE_VERSION=${OCTAVE_VERSION}" )
-message(STATUS "OCTAVE_OCTAVE_LIBRARY=${OCTAVE_OCTAVE_LIBRARY}")
-message(STATUS "OCTAVE_OCTINTERP_LIBRARY=${OCTAVE_OCTINTERP_LIBRARY}")
-message(STATUS "OCTAVE_CXXFLAGS=${_mkoctfile_cppflags}" )
-message(STATUS "OCTAVE_LINK_FLAGS=${_mkoctfile_ldflags}" )
-message(STATUS "OCTAVE_INCLUDE_DIRS=${_mkoctfile_includedir}")
-message(STATUS "OCTAVE_LINK_DIRS=${_mkoctfile_ldirs}")
-message(STATUS "OCTAVE_LIBRARY=${_mkoctfile_libs}")
-message(STATUS "OCTAVE_LIBRARY_RELEASE=${OCTAVE_LIBRARY} ")
-message(STATUS "OCTAVE_LIBRARY_DEBUG=${OCTAVE_LIBRARY} ")
-message(STATUS "OCTAVE_LIBRARIES=${OCTAVE_LIBRARIES} ")
-
-MARK_AS_ADVANCED(
-    OCTAVE_LIBRARY_FOUND
-    OCTAVE_VERSION
-    OCTAVE_CXXFLAGS
-    OCTAVE_LINK_FLAGS
-    OCTAVE_INCLUDE_DIRS
-    OCTAVE_LINK_DIRS
-    OCTAVE_LIBRARY
-    OCTAVE_LIBRARY_RELEASE
-    OCTAVE_LIBRARY_DEBUG
+mark_as_advanced (
+  OCTAVE_OCT_FILE_DIR
+  OCTAVE_OCT_LIB_DIR
+  OCTAVE_OCTINTERP_LIBRARY
+  OCTAVE_OCTAVE_LIBRARY
+  OCTAVE_CRUFT_LIBRARY
+  OCTAVE_LIBRARIES
+  OCTAVE_INCLUDE_DIR
+  OCTAVE_INCLUDE_DIRS
+  OCTAVE_VERSION_STRING
+  OCTAVE_MAJOR_VERSION
+  OCTAVE_MINOR_VERSION
+  OCTAVE_PATCH_VERSION
 )
