@@ -11,13 +11,12 @@ authors = [
 description = "Open-source thermodynamic and transport properties database"
 readme = "README.rst"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
 	"Programming Language :: Python",
 	"Development Status :: 4 - Beta",
 	"Environment :: Other Environment",
 	"Intended Audience :: Developers",
-	"License :: OSI Approved :: MIT License",
 	"Operating System :: OS Independent",
 	"Topic :: Software Development :: Libraries :: Python Modules"
 ]
