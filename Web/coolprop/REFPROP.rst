@@ -71,6 +71,34 @@ Path Issues
 
 .. warning::
 
+    Due to the difficulties of working with paths in REFPROP, a new (as of version 3.8.0) environment variable is now defined called ``COOLPROP_REFPROP_ROOT``. If you define this environment variable, it will take precedence over any internal configuration variables and will be used to locate and initialize REFPROP. To use this environment variable, the folder structure should look like::
+
+        REFPROP
+        ├── FLUIDS
+        │   ├── 13BUTADIENE.FLD
+        │   ├── 1BUTENE.FLD
+        │   ├── 1BUTYNE.FLD
+        │   ├── ...
+        ├── MIXTURES
+        │   ├── AIR.MIX
+        │   ├── AMARILLO.MIX
+        │   ├── ...
+        └── librefprop.dylib
+
+    and the environment variable ``COOLPROP_REFPROP_ROOT`` should be set to the absolute path of the folder ``REFPROP`` in the above folder structure. After REFPROP is loaded, the ``SETPATHdll`` function will be called with the value of the environment variable ``COOLPROP_REFPROP_ROOT``.
+
+    The shared library that should be in the folder (in the place of ``librefprop.dylib``) depends on the operating system:
+    
+    * mac (darwin, osx): ``librefprop.dylib``
+    * linux: ``librefprop.so``
+    * windows (32-bit): ``REFPROP.DLL``
+    * windows (64-bit, amd64): ``REFPRP64.DLL``
+    * windows (64-bit, arm64): ``REFPRP64.DLL``
+
+    Note that all filenames are case-sensitive on all platforms other than windows (and depending on your setup, sometimes also mac). You can build REFPROP shared library youself with the build system from https://github.com/usnistgov/REFPROP-cmake.
+
+.. warning::
+
     In order for REFPROP to be able to be loaded by CoolProp, the default logic for each operating system is used to load the REFPROP shared library.  This means that on windows, the ``PATH`` environmental variable is searched for the ``REFPROP.dll`` (32-bit applications) or ``REFPRP64.dll`` (64-bit applications). On linux/OSX, the default shared library loading protocol is used.  If your REFPROP is installed in a non-standard location (not on the path), make sure that when you run code that uses REFPROP, that you add (temporarily) the location of the REFPROP shared library to your path or set one of the following configuration variables.
 
 REFPROP needs to be able to find the fluid and mixture files at runtime, at a location specified on your computer.  CoolProp allows you to avoid the pains of decoding REFPROP's internal logic for finding these files by explicitly specifying the path that it should tell REFPROP to look for the fluid files.  
