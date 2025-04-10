@@ -74,6 +74,7 @@ jobs:
       working-directory: ./wrappers/Python/
       shell: bash
       run: |
+        echo "$(git rev-parse HEAD)" > dev/gitrevision.txt
         source activate docs
         python setup.py bdist_wheel --dist-dir dist
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
