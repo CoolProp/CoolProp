@@ -23,6 +23,10 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Workaround bug with checkout in actions
+      run: |
+        git config --global --add safe.directory $GITHUB_WORKSPACE
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
