@@ -17,6 +17,11 @@
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
+
+from pathlib import Path 
+import urllib.request
+import zipfile
+
 import CoolProp
 ver = CoolProp.__version__
 # The short X.Y version.
@@ -109,7 +114,13 @@ index_doc = "index"
 
 numpydoc_show_class_members = False
 
-mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'
+
+zfile = Path("MJ.zip")
+if not zfile.exists():
+    urllib.request.urlretrieve("https://github.com/mathjax/MathJax/archive/master.zip", zfile)
+with zipfile.ZipFile(zfile) as z:
+    z.extractall(path=Path(__file__).parent / '_static')
+mathjax_path = "MathJax-master/es5/tex-mml-chtml.js"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
