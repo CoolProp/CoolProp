@@ -283,7 +283,7 @@ def gitrev_to_file(root_dir):
                 if os.path.exists(gitrevision_path):
                     gitrev = open(gitrevision_path, 'r').read().strip()
                 else:
-                    print('tried to get git revision from ' + gitrevision_path + ', but could not')
+                    print(f'tried to get git revision from {gitrevision_path}, but could not; root_dir is: {root_dir}')
                     gitrev = '???'
             else:
                 gitrev = stdout.strip()
