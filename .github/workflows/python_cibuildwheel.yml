@@ -60,7 +60,7 @@ jobs:
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
         CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
         CIBW_ARCHS_LINUX: ${{ inputs.arch }} # i686 x86_64 aarch64 ppc64le s390x
-        CIBW_TEST_COMMAND: python -c "import CoolProp"
+        CIBW_TEST_COMMAND: python -c "import CoolProp; assert '?' not in CoolProp.__gitrevision__"
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
