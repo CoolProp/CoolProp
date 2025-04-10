@@ -75,12 +75,11 @@ jobs:
         cat $GITHUB_ENV
     
     - name: Build and install wheel using bdist_wheel
-      working-directory: ./wrappers/Python/
       shell: bash
       run: |
         echo "$(git rev-parse HEAD)" > dev/gitrevision.txt
         source activate docs
-        python setup.py bdist_wheel --dist-dir dist
+        pip -vv wheel .
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
         
     - name: Test the installed CoolProp version
