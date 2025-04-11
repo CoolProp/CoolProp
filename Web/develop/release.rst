@@ -65,6 +65,6 @@ the CoolProp library.
       zipped sources.
     - Bump the version number in the CMake file and commit.
     - Announce the new features if you like.
-    - Remove artifacts from TestPYPI with ``pypi-cleanup -t https://test.pypi.org -p coolprop -r '.*rc\d.*' --query-only `` to determine what will be deleted and then with your username to do it
+    - Remove artifacts from TestPYPI with ``pypi-cleanup -t https://test.pypi.org -p coolprop -r '.*post\d.*' --query-only `` to determine what will be deleted and then with your username to do it
 
 That's all folks.
