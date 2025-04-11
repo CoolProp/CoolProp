@@ -23,11 +23,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Workaround bug with checkout in actions
-      if: ${{ runner.os != 'Windows' }}
-      run: |
-        git config --global --add safe.directory $GITHUB_WORKSPACE
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -54,12 +49,14 @@ jobs:
         platforms: all
         
     - name: Build and test wheels
-      uses: pypa/cibuildwheel@v2.21.3
+      uses: pypa/cibuildwheel@v2.23.2
       env:
         MACOSX_DEPLOYMENT_TARGET: 11.0
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD: >
           pip install setuptools wheel Cython requests jinja2 pyyaml
+        CIBW_BEFORE_BUILD_LINUX: >
+          git config --global --add safe.directory "*"
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
