@@ -21,6 +21,15 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: 3.13.x
+
+    - name: Figure out the TestPyPi/PyPi Version
+      shell: bash
+      run: |
+        if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
+          python dev/extract_version.py --pypi --replace-setup-py
+        else
+          python dev/extract_version.py --replace-setup-py
+        fi;
         
     - name: Install dependencies
       run: pip install setuptools wheel Cython requests jinja2 pyyaml packaging
