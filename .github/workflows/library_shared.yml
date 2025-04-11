@@ -26,11 +26,6 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Workaround bug with checkout in actions
-      if: ${{ runner.os != 'Windows' }}
-      run: |
-        git config --global --add safe.directory $GITHUB_WORKSPACE
-
     - uses: actions/setup-python@v4
       with:
         python-version: '3.x'
