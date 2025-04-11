@@ -113,6 +113,8 @@ std::string config_key_description(const std::string& key);
 class ConfigurationItem
 {
    public:
+    ConfigurationDataTypes get_type() const { return type; }
+    
     /// Cast to boolean
     operator bool() const {
         check_data_type(CONFIGURATION_BOOL_TYPE);
@@ -302,6 +304,36 @@ class Configuration
     std::map<configuration_keys, ConfigurationItem>& get_items(void) {
         return items;
     };
+    
+    bool possibly_set_from_env(configuration_keys key){
+        /// Try to get from environment variable with the key name, prefixed by "COOLPROP_"
+        std::string envkey = "COOLPROP_" + config_key_to_string(key);
+        char *envval = getenv(envkey.c_str());
+        if (envval != nullptr){
+            std::cout << envkey << ": " << envval << std::endl;
+            auto tobool = [](const std::string x){
+                if (x == "True" || x == "true"){ return true;}
+                if (x == "False" || x == "false"){ return false;}
+                throw ValueError(x);
+            };
+            switch (get_item(key).get_type()){
+                case ConfigurationDataTypes::CONFIGURATION_STRING_TYPE:
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, envval));
+                    break;
+                case ConfigurationDataTypes::CONFIGURATION_INTEGER_TYPE:
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, std::stoi(envval)));
+                    break;
+                case ConfigurationDataTypes::CONFIGURATION_DOUBLE_TYPE:
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, std::stod(envval)));
+                    break;
+                case ConfigurationDataTypes::CONFIGURATION_BOOL_TYPE:
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, tobool(envval)));
+                    break;
+                default:
+                    throw ValueError("This key has a type that cannot be currently accepted");
+            }
+        }
+    }
 
     /// Set the default values in the configuration
     void set_defaults(void) {
@@ -312,6 +344,12 @@ class Configuration
 #define X(Enum, String, Default, Desc) add_item(ConfigurationItem(Enum, Default));
         CONFIGURATION_KEYS_ENUM
 #undef X
+
+    // See if the variable is already present as environment variable
+#define X(Enum, String, Default, Desc) possibly_set_from_env(Enum);
+        CONFIGURATION_KEYS_ENUM
+#undef X
+        
     };
 };
 

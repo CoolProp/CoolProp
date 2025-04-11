@@ -28,6 +28,10 @@ From all languages, the configuration state can obtained by retrieving the confi
     
 Most modern languages have facilities for interfacing with JSON formatted strings and converting them back and forth with language-specific data structures.  For instance, in python, there is the built-in ``json`` package that converts json-formatted strings to python dictionaries, lists, etc.
 
+Environment Variables
+---------------------
+
+As of version 6.8.0, the functionality of setting configuration variables via environment variables was added. When the program first loads the default configuration variables, it first checks whether an environment variable of the same name, prefixed by ``COOLPROP_`` is already present. If so, the environment variable overwrites the default configuration variable. For instance you could set the environment variable ``COOLPROP_CRITICAL_WITHIN_1UK`` to the string ``"False"`` (or ``"false"`` also works) to change the default value. The environment variables are **ONLY** checked when the program loads.
 
 Configuration Keys
 ------------------
