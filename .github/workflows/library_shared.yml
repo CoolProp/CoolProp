@@ -27,6 +27,7 @@ jobs:
         submodules: recursive
 
     - name: Workaround bug with checkout in actions
+      if: ${{ runner.os != 'Windows' }}
       run: |
         git config --global --add safe.directory $GITHUB_WORKSPACE
 
