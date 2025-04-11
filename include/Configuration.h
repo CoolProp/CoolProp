@@ -3,6 +3,7 @@
 
 #include "Exceptions.h"
 #include "CoolPropTools.h"
+#include <cstdlib>
 
 #if !defined(SWIG)  // Hide this for swig - Swig gets confused
 #    include "rapidjson_include.h"
@@ -308,7 +309,7 @@ class Configuration
     bool possibly_set_from_env(configuration_keys key){
         /// Try to get from environment variable with the key name, prefixed by "COOLPROP_"
         std::string envkey = "COOLPROP_" + config_key_to_string(key);
-        char *envval = getenv(envkey.c_str());
+        char *envval = std::getenv(envkey.c_str());
         if (envval != nullptr){
             std::cout << envkey << ": " << envval << std::endl;
             auto tobool = [](const std::string x){
@@ -330,7 +331,8 @@ class Configuration
                     items.erase(key); items.emplace(key, ConfigurationItem(key, tobool(envval)));
                     break;
                 default:
-                    throw ValueError("This key has a type that cannot be currently accepted");
+                    auto skey = config_key_to_string(key);
+                    throw ValueError("This key ["+skey+"] has a type that cannot be currently accepted");
             }
         }
     }
