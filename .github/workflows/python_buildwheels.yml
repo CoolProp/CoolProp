@@ -21,6 +21,9 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: 3.13.x
+        
+    - name: Install dependencies
+      run: pip install setuptools wheel Cython requests jinja2 pyyaml packaging
 
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
@@ -30,9 +33,6 @@ jobs:
         else
           python dev/extract_version.py --replace-setup-py
         fi;
-        
-    - name: Install dependencies
-      run: pip install setuptools wheel Cython requests jinja2 pyyaml packaging
         
     - name: Build package, sdist
       working-directory: ./wrappers/Python/pypi
