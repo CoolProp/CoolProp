@@ -71,7 +71,7 @@ Path Issues
 
 .. warning::
 
-    Due to the difficulties of working with paths in REFPROP, a new (as of version 3.8.0) environment variable is now defined called ``COOLPROP_REFPROP_ROOT``. If you define this environment variable, it will take precedence over any internal configuration variables and will be used to locate and initialize REFPROP. To use this environment variable, the folder structure should look like::
+    Due to the difficulties of working with paths in REFPROP, a new (as of version 6.8.0) environment variable is now defined called ``COOLPROP_REFPROP_ROOT``. If you define this environment variable, it will take precedence over any internal configuration variables and will be used to locate and initialize REFPROP. To use this environment variable, the folder structure should look like::
 
         REFPROP
         ├── FLUIDS
