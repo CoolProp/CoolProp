@@ -56,7 +56,7 @@ jobs:
         CIBW_BEFORE_BUILD: >
           pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_BEFORE_BUILD_LINUX: >
-          git config --global --add safe.directory "*"
+          pip install setuptools wheel Cython requests jinja2 pyyaml && git config --global --add safe.directory "*"
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
