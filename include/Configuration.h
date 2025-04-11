@@ -309,9 +309,8 @@ class Configuration
     bool possibly_set_from_env(configuration_keys key){
         /// Try to get from environment variable with the key name, prefixed by "COOLPROP_"
         std::string envkey = "COOLPROP_" + config_key_to_string(key);
-        char *envval = std::getenv(envkey.c_str());
-        if (envval != nullptr){
-            std::cout << envkey << ": " << envval << std::endl;
+        const char *envval = std::getenv(envkey.c_str());
+        if (envval){
             auto tobool = [](const std::string x){
                 if (x == "True" || x == "true"){ return true;}
                 if (x == "False" || x == "false"){ return false;}
@@ -332,9 +331,11 @@ class Configuration
                     break;
                 default:
                     auto skey = config_key_to_string(key);
-                    throw ValueError("This key ["+skey+"] has a type that cannot be currently accepted");
+                    throw ValueError("This key ["+skey+"] has the wrong type; value was "+std::string(envval)+" ");
             }
+            return true;
         }
+        return false;
     }
 
     /// Set the default values in the configuration
