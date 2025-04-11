@@ -80,7 +80,7 @@ jobs:
         echo "$(git rev-parse HEAD)" > dev/gitrevision.txt
         source activate docs
         pip -vv wheel .
-        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls dist/*.whl`
+        pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
         
     - name: Test the installed CoolProp version
       shell: bash
