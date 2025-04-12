@@ -327,7 +327,9 @@ class Configuration
                     }
                     catch(...){
                         auto skey = config_key_to_string(key);
-                        throw ValueError("Unable to convert \""+std::string(envval)+"\" to int for key ["+skey+"]");
+                        std::string msg = "Unable to convert \""+std::string(envval)+"\" to int for key ["+skey+"]";
+                        std::cerr << msg << std::endl;
+                        throw ValueError(msg);
                     }
                     items.erase(key); items.emplace(key, ConfigurationItem(key, i));
                     break;
@@ -338,7 +340,9 @@ class Configuration
                     }
                     catch(...){
                         auto skey = config_key_to_string(key);
-                        throw ValueError("Unable to convert \""+std::string(envval)+"\" to double for key ["+skey+"]");
+                        std::string msg = "Unable to convert \""+std::string(envval)+"\" to double for key ["+skey+"]";
+                        std::cerr << msg << std::endl;
+                        throw ValueError(msg);
                     }
                     items.erase(key); items.emplace(key, ConfigurationItem(key, d));
                     break;
@@ -349,7 +353,9 @@ class Configuration
                     }
                     catch(...){
                         auto skey = config_key_to_string(key);
-                        throw ValueError("Unable to convert \""+std::string(envval)+"\" to bool for key ["+skey+"]");
+                        std::string msg = "Unable to convert \""+std::string(envval)+"\" to bool for key ["+skey+"]";
+                        std::cerr << msg << std::endl;
+                        throw ValueError(msg);
                     }
                     items.erase(key); items.emplace(key, ConfigurationItem(key, b));
                     break;
