@@ -340,7 +340,7 @@ class Configuration
                         auto skey = config_key_to_string(key);
                         throw ValueError("Unable to convert \""+std::string(envval)+"\" to double for key ["+skey+"]");
                     }
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, std::stod(envval)));
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, d));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_BOOL_TYPE:
                     int b;
