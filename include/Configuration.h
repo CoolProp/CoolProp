@@ -318,16 +318,40 @@ class Configuration
             };
             switch (get_item(key).get_type()){
                 case ConfigurationDataTypes::CONFIGURATION_STRING_TYPE:
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, envval));
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, std::string(envval)));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_INTEGER_TYPE:
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, std::stoi(envval)));
+                    int i;
+                    try{
+                        i = std::stoi(envval);
+                    }
+                    catch(...){
+                        auto skey = config_key_to_string(key);
+                        throw ValueError("Unable to convert \""+std::string(envval)+"\" to int for key ["+skey+"]");
+                    }
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, i));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_DOUBLE_TYPE:
+                    int d;
+                    try{
+                        d = std::stod(envval);
+                    }
+                    catch(...){
+                        auto skey = config_key_to_string(key);
+                        throw ValueError("Unable to convert \""+std::string(envval)+"\" to double for key ["+skey+"]");
+                    }
                     items.erase(key); items.emplace(key, ConfigurationItem(key, std::stod(envval)));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_BOOL_TYPE:
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, tobool(envval)));
+                    int b;
+                    try{
+                        b = tobool(envval);
+                    }
+                    catch(...){
+                        auto skey = config_key_to_string(key);
+                        throw ValueError("Unable to convert \""+std::string(envval)+"\" to bool for key ["+skey+"]");
+                    }
+                    items.erase(key); items.emplace(key, ConfigurationItem(key, b));
                     break;
                 default:
                     auto skey = config_key_to_string(key);
