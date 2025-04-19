@@ -124,14 +124,16 @@ vel viscosity_validation_data[] = {
   vel("Heptane", "T", 400, "Dmass", 600, "V", 175.94e-6, 1e-3),
   vel("Heptane", "T", 550, "Dmass", 500, "V", 95.105e-6, 1e-3),
 
-  // From Fenghour, JPCRD, 1998
-  vel("CO2", "T", 220, "Dmass", 2.440, "V", 11.06e-6, 1e-3),
-  vel("CO2", "T", 300, "Dmass", 1.773, "V", 15.02e-6, 1e-3),
-  vel("CO2", "T", 800, "Dmass", 0.662, "V", 35.09e-6, 1e-3),
-  vel("CO2", "T", 304, "Dmass", 254.320, "V", 20.99e-6, 1e-2),  // no critical enhancement
-  vel("CO2", "T", 220, "Dmass", 1194.86, "V", 269.37e-6, 1e-3),
-  vel("CO2", "T", 300, "Dmass", 1029.27, "V", 132.55e-6, 1e-3),
-  vel("CO2", "T", 800, "Dmass", 407.828, "V", 48.74e-6, 1e-3),
+  // From Laesecke, JPCRD, 1998: https://pmc.ncbi.nlm.nih.gov/articles/PMC5514612/pdf/nihms869002.pdf
+  vel("CO2", "T", 100, "Dmass", 1e-5, "V", 0.0053757e-3, 1e-4),
+  vel("CO2", "T", 2000, "Dmass", 1e-5, "V", 0.066079e-3, 1e-4),
+  vel("CO2", "T", 10000, "Dmass", 1e-5, "V", 0.17620e-3, 1e-4),
+  vel("CO2", "T", 220, "Dmass", 3, "V", 0.011104e-3, 1e-4),
+  vel("CO2", "T", 225, "Dmass", 1150, "V", 0.22218e-3, 1e-4),
+  vel("CO2", "T", 300, "Dmass", 65, "V", 0.015563e-3, 1e-4),
+  vel("CO2", "T", 300, "Dmass", 1400, "V", 0.50594e-3, 1e-4),
+  vel("CO2", "T", 700, "Dmass", 100, "V", 0.033112e-3, 1e-4),
+  vel("CO2", "T", 700, "Dmass", 1200, "V", 0.22980e-3, 1e-4),
 
   // Tanaka, IJT, 1996
   vel("R123", "T", 265, "Dmass", 1545.8, "V", 627.1e-6, 1e-3),
@@ -442,13 +444,11 @@ vel("ParaHydrogen", "T", 18, "Dmass", 75, "L", 100.52e-3, 1e-4),*/
   vel("R123", "T", 430, "Dmass", 996.35, "L", 45.62e-3, 1e-3),
   vel("R123", "T", 430, "Dmass", 166.9, "L", 21.03e-3, 1e-3),
 
-  // From Scalabrin, JPCRD, 2006
-  vel("CO2", "T", 218, "Q", 0, "L", 181.09e-3, 1e-4),
-  vel("CO2", "T", 218, "Q", 1, "L", 10.837e-3, 1e-4),
-  vel("CO2", "T", 304, "Q", 0, "L", 140.3e-3, 1e-4),
-  vel("CO2", "T", 304, "Q", 1, "L", 217.95e-3, 1e-4),
-  vel("CO2", "T", 225, "Dmass", 0.23555, "L", 11.037e-3, 1e-4),
-  vel("CO2", "T", 275, "Dmass", 1281.64, "L", 238.44e-3, 1e-4),
+  // From Huber, JPCRD, 2016
+  vel("CO2", "T", 250.0, "Dmass", 1e-6, "L", 12.99e-3, 1e-3),
+  vel("CO2", "T", 250.0, "Dmass", 2.0, "L", 13.05e-3, 1e-3),
+  vel("CO2", "T", 250.0, "Dmass", 1058.0, "L", 140.00e-3, 1e-4),
+  vel("CO2", "T", 310.0, "Dmass", 400.0, "L", 73.04e-3, 1e-4),
 
   // From Friend, JPCRD, 1991
   vel("Ethane", "T", 100, "Dmass", 1e-13, "L", 3.46e-3, 1e-2),
