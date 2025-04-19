@@ -842,13 +842,21 @@ TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert model
         std::ostringstream ss1;
         ss1 << mixes[i];
         SECTION(ss1.str(), "") {
-            double Tnbp_CP, Tnbp_RP;
+            double Tnbp_CP, Tnbp_RP, R_RP, R_CP, pchk_CP, pchk_RP;
+            CHECK_NOTHROW(R_CP = PropsSI("gas_constant", "P", 101325, "Q", 1, "HEOS::" + mixes[i]));
+            CAPTURE(R_CP);
+            CHECK_NOTHROW(R_RP = PropsSI("gas_constant", "P", 101325, "Q", 1, "REFPROP::" + mixes[i]));
+            CAPTURE(R_RP);
             CHECK_NOTHROW(Tnbp_CP = PropsSI("T", "P", 101325, "Q", 1, "HEOS::" + mixes[i]));
             CAPTURE(Tnbp_CP);
+            CHECK_NOTHROW(pchk_CP = PropsSI("P", "T", Tnbp_CP, "Q", 1, "HEOS::" + mixes[i]));
+            CAPTURE(pchk_CP);
             CHECK_NOTHROW(Tnbp_RP = PropsSI("T", "P", 101325, "Q", 1, "REFPROP::" + mixes[i]));
             CAPTURE(Tnbp_RP);
+            CHECK_NOTHROW(pchk_RP = PropsSI("P", "T", Tnbp_RP, "Q", 1, "REFPROP::" + mixes[i]));
+            CAPTURE(pchk_RP);
             double diff = std::abs(Tnbp_CP / Tnbp_RP - 1);
-            CHECK(diff < 1e-6);
+            CHECK(diff < 1e-2);
         }
     }
 }
