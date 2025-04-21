@@ -20,6 +20,7 @@ Fluid Information
 
 .. csv-table::
    :header-rows: 1
+   :escape: @
    :widths: 40, 60
    :delim: ;
    :file: {fluid:s}-info.csv
@@ -61,7 +62,6 @@ InChI; {inchi:s}
 InChIKey; {inchikey:s}
 SMILES; {smiles:s}
 ChemSpider ID; {ChemSpider_id:s}
-2D image; .. image:: {twoDurl:s}
 **Limits**;
 Maximum temperature [K];{Tmax:s}
 Maximum pressure [Pa];{pmax:s}
@@ -140,8 +140,8 @@ class FluidInfoTableGenerator(object):
             ''' convert number to nicely formatted string '''
             n = str(n)
             if 'e' in n:
-                n = n.replace('e', ':math:`\times 10^{')
-                n += '}`'
+                l, r = n.split('e')
+                n = rf' :math:`{l}@\times 10^{{{r}}}`'
             else:
                 return n
             return n
