@@ -1382,8 +1382,13 @@ class SolutionDataWriter(object):
 
     def getCitation(self, keys):
         try:
-            self.bibtexer.getEntry(key=keys, fmt='plaintext').strip()
-            return f":cite:`{keys}`"
+            if ',' in keys:
+                for k in keys.split(','):
+                    self.bibtexer.getEntry(key=k.strip(), fmt='plaintext')
+                return f":cite:`{keys}`"
+            else:
+                self.bibtexer.getEntry(key=keys, fmt='plaintext').strip()
+                return f":cite:`{keys}`"
         except Exception as e:
             warn(f"Your string \"{keys}\" was not a valid Bibtex key, I will use it directly")
             return keys
