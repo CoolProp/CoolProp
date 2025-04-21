@@ -6,6 +6,21 @@ High-Level Interface
 
 .. contents:: :depth: 2
 
+Versions
+--------
+
+The version that is currently in use
+
+.. ipython::
+
+    In [1]: import CoolProp; CP = CoolProp.CoolProp
+
+    In [2]: CoolProp.__version__, CP.get_global_param_string("version")
+
+    In [3]: CoolProp.__gitrevision__, CP.get_global_param_string("gitrevision")
+
+
+
 PropsSI function
 ----------------
 
