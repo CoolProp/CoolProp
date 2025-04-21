@@ -1,6 +1,41 @@
 Changelog for CoolProp
 ======================
 
+6.8.0
+-----
+
+Highlights:
+
+* Implement the `COOLPROP_REFPROP_ROOT` environment variable to make REFPROP integration easier
+* Allow the configuration variables to be set via environment variables
+
+Issues closed:
+
+* `#1829 <https://github.com/CoolProp/CoolProp/issues/1829>`_ : CoolProp can't load REFPROP v10 mixtures on Debian 9
+* `#1870 <https://github.com/CoolProp/CoolProp/issues/1870>`_ : n-pentane inconsistency properties
+* `#2400 <https://github.com/CoolProp/CoolProp/issues/2400>`_ : CoolProp not able to compute subcooled liquid MM  properties
+* `#2445 <https://github.com/CoolProp/CoolProp/issues/2445>`_ : Incorrect Enthalpy Value Using CoolProp-REFPROP Wrapper
+* `#2447 <https://github.com/CoolProp/CoolProp/issues/2447>`_ : Incorrect Vapor Pressure Output for INCOMP::S800 (Syltherm 800)
+* `#2472 <https://github.com/CoolProp/CoolProp/issues/2472>`_ : Workflow Python cibuildwheel failing on upload to TestPyPi
+* `#2477 <https://github.com/CoolProp/CoolProp/issues/2477>`_ : How do I programme an isentropic compression to 140°C condensation temperature with Coolprop? (got a ValueError)
+* `#2485 <https://github.com/CoolProp/CoolProp/issues/2485>`_ : 11 fluids in Brines and Solutions have exclusive range check on fraction_max where an inclusive check would be an improvement.
+* `#2488 <https://github.com/CoolProp/CoolProp/issues/2488>`_ : Incompressible fitting code is no longer working
+* `#2497 <https://github.com/CoolProp/CoolProp/issues/2497>`_ : Unicode error in State class with coolprop 6.7.0
+* `#2501 <https://github.com/CoolProp/CoolProp/issues/2501>`_ : Add options for REFPROP PATH to be set by environment variables
+* `#2517 <https://github.com/CoolProp/CoolProp/issues/2517>`_ : Document COOLPROP_REFPROP_ROOT
+* `#2518 <https://github.com/CoolProp/CoolProp/issues/2518>`_ : Fix gitrevision when using pipx run build
+* `#2519 <https://github.com/CoolProp/CoolProp/issues/2519>`_ : Allow all config variables to be overwritten by environment variables at first load
+* `#2520 <https://github.com/CoolProp/CoolProp/issues/2520>`_ : Fix Octave building
+* `#2531 <https://github.com/CoolProp/CoolProp/issues/2531>`_ : Test that __gitrevision__ is being properly populated
+
+Pull requests merged:
+
+* `#2478 <https://github.com/CoolProp/CoolProp/pull/2478>`_ : Bump fmtlib to 11.1.3
+* `#2482 <https://github.com/CoolProp/CoolProp/pull/2482>`_ : Fix a bunch of bugs with D,U inputs in REFPROP backend
+* `#2496 <https://github.com/CoolProp/CoolProp/pull/2496>`_ : Add set_cubic_alpha_C function to python wrapper
+* `#2532 <https://github.com/CoolProp/CoolProp/pull/2532>`_ : Overwrite config with env
+
+
 6.7.0
 -----
 
@@ -16,7 +51,6 @@ Issues closed:
 * `#2430 <https://github.com/CoolProp/CoolProp/issues/2430>`_ : Support for python 3.13
 * `#2462 <https://github.com/CoolProp/CoolProp/issues/2462>`_ : Python3.13 getting same error as #1876 Python 3.8 : Error in import #1876
 
-Found 20 prs associated with v6.7.0
 Pull requests merged:
 
 * `#2309 <https://github.com/CoolProp/CoolProp/pull/2309>`_ : Addition of EoS JSON of R1336mzz(E) from Akasaka-IJT-2023
