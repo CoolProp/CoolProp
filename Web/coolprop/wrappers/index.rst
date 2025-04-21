@@ -29,7 +29,7 @@ Target                                                  Operating Systems       
 :ref:`Javascript <Javascript>`                          cross-platform               Works in all internet browsers
 :ref:`Labview <Labview>`                                Windows only
 :ref:`Maple <Maple>`                                    linux, OSX, win              CoolProp is included in Maple 2016
-:ref:`Mathcad <Mathcad>`                                Windows only
+:ref:`Mathcad <MathCAD>`                                Windows only
 :ref:`SMath Studio <SMath>`                             linux, OSX, win
 :ref:`Mathematica <Mathematica>`
 :ref:`FORTRAN <FORTRAN>`                                linux, OSX, win
