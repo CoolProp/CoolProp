@@ -38,15 +38,15 @@ if __name__ == '__main__':
         tee_call('python Example.py', fp, shell=True, cwd='Python')
     copyfiles('Python', 'py')
 
-    #if not os.path.exists('Octave'): os.mkdir('Octave') 
-    #O = Octave()
-    #O.write('Octave/Example.m', O.parse())
-    #kwargs = dict(stdout=sys.stdout, stderr=sys.stderr, shell=True, cwd='Octave')
-    #subprocess.check_call('cmake ../../../.. -DCOOLPROP_OCTAVE_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCOOLPROP_NO_EXAMPLES=ON', **kwargs)
-    #subprocess.check_call('cmake --build .', **kwargs)
-    #with codecs.open('Octave/Example.out', 'w', encoding='utf-8') as fp:
-    #    tee_call(r'octave Example.m', fp, shell=True, cwd='Octave')
-    #copyfiles('Octave', 'm')
+    if not os.path.exists('Octave'): os.mkdir('Octave') 
+    O = Octave()
+    O.write('Octave/Example.m', O.parse())
+    kwargs = dict(stdout=sys.stdout, stderr=sys.stderr, shell=True, cwd='Octave')
+    subprocess.check_call('cmake ../../../.. -DCOOLPROP_OCTAVE_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCOOLPROP_NO_EXAMPLES=ON', **kwargs)
+    subprocess.check_call('cmake --build .', **kwargs)
+    with codecs.open('Octave/Example.out', 'w', encoding='utf-8') as fp:
+       tee_call(r'octave Example.m', fp, shell=True, cwd='Octave')
+    copyfiles('Octave', 'm')
     #
     if not os.path.exists('Java'): os.mkdir('Java')
     J = Java()
