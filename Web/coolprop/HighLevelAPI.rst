@@ -98,7 +98,7 @@ On each call to ``PropsSI()``, the imposed phase is reset to "not_imposed" as lo
 * If the phase string is not one of the valid phase strings in the table above
 * If the phase string is applied to more than one of the Input key parameters
 
-In addition, for consistency with the low-level interface, the valid phase strings in the table above may be prefixed with either "phase_" or "iphase_" and still be recognized as a valid phase string.
+In addition, for consistency with the low-level interface, the valid phase strings in the table above may be prefixed with either "phase\_" or "iphase\_" and still be recognized as a valid phase string.
 
 .. warning::
 

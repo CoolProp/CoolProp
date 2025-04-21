@@ -14,27 +14,28 @@ Automated Installation
 ----------------------
 As of October 2016, the Excel wrapper for Microsoft Windows can be installed from the Windows package as described on the :ref:`page on installation packages <Installers>`. Please refer to the documentation there for issues related to the installation process on Windows.
 
-.. [#] If you get security warnings after you installed the CoolProp add-in, you can try adding the installation folder to your trusted directories: Got to ``File->Options->Trust Center->Trust Center Settings...->Trusted Locations`` and add the folder where your ``xlam``-file lives. This is most likely ``C:\Users\username\AppData\Roaming\Microsoft\AddIns\``.
+If you get security warnings after you installed the CoolProp add-in, you can try adding the installation folder to your trusted directories: Got to ``File->Options->Trust Center->Trust Center Settings...->Trusted Locations`` and add the folder where your ``xlam``-file lives. This is most likely ``C:\Users\username\AppData\Roaming\Microsoft\AddIns\``.
 
 
 Manual Installation
 -------------------
-For a manual installation,   
 
-1.  Get the shared libraries at :sfdownloads:`shared_library/Windows/32bit__stdcall` and :sfdownloads:`shared_library/Windows/64bit`, put the DLLs into a folder of your choice and rename them to `CoolProp_stdcall.dll` and `CoolProp_x64.dll`. Make sure to add that folder to your path.  Technically you only need the DLL that matches your system architecture (`CoolProp_stdcall.dll` = 32-bit, `CoolProp_x64.dll` = 64-bit), but it can’t hurt to copy both if you don’t know which system architecture version you have.  The Excel macro will select the correct one and use it.
-2.  Download the xla and xlam files from :sfdownloads:`MicrosoftExcel` and activate the add-in from Excel as described below. and copy the files to a convenient accessible location.
-3.  The **TestExcel.xlsx** from :sfdownloads:`MicrosoftExcel` can be copied to a working directory in ``My Documents``.
+* For a manual installation,   
 
+  1.  Get the shared libraries at :sfdownloads:`shared_library/Windows/32bit__stdcall` and :sfdownloads:`shared_library/Windows/64bit`, put the DLLs into a folder of your choice and rename them to `CoolProp_stdcall.dll` and `CoolProp_x64.dll`. Make sure to add that folder to your path.  Technically you only need the DLL that matches your system architecture (`CoolProp_stdcall.dll` = 32-bit, `CoolProp_x64.dll` = 64-bit), but it can’t hurt to copy both if you don’t know which system architecture version you have.  The Excel macro will select the correct one and use it.
+  2.  Download the xla and xlam files from :sfdownloads:`MicrosoftExcel` and activate the add-in from Excel as described below. and copy the files to a convenient accessible location.
+  3.  The **TestExcel.xlsx** from :sfdownloads:`MicrosoftExcel` can be copied to a working directory in ``My Documents``.
+  1.  Open Excel
+  2.  Go to the menu ``File–>Options–>Add-Ins``
+  3.  At the bottom, select ``Manage: Excel Add-ins``, then click the ``Go...`` button
+  4.  Click the ``Browse`` button on the Add-in Manager panel
+  5.  Browse to the file **CoolProp.xlam** you downloaded and select it
+  6.  Make sure the CoolProp Add-in is selected (box checked) and close the Add-in Manager.
+  7.  Open the file **TestExcel.xlsx** and try to re-evaluate one of the cells; the CoolProp formulas should all be working now. (To recalculate the entire worksheet, press ``Ctrl``-``Alt``-``Shift``-``F9`` ) [#]_
 
-1.  Open Excel
-2.  Go to the menu ``File–>Options–>Add-Ins``
-3.  At the bottom, select ``Manage: Excel Add-ins``, then click the ``Go...`` button
-4.  Click the ``Browse`` button on the Add-in Manager panel
-5.  Browse to the file **CoolProp.xlam** you downloaded and select it
-6.  Make sure the CoolProp Add-in is selected (box checked) and close the Add-in Manager.
-7.  Open the file **TestExcel.xlsx** and try to re-evaluate one of the cells; the CoolProp formulas should all be working now. (To recalculate the entire worksheet, press ``Ctrl``-``Alt``-``Shift``-``F9`` ) [#]_
-
-.. [#] **Alternate DLL Location** - Some environments, lock down the folders included in the binary search path for normal users for security reasons.  If this is the case, you will need to put the DLL files in an alternate location (possibly on a shared network location for all users).  Follow the instructions below:
+.. info::
+    
+  **Alternate DLL Location** - Some environments, lock down the folders included in the binary search path for normal users for security reasons.  If this is the case, you will need to put the DLL files in an alternate location (possibly on a shared network location for all users).  Follow the instructions below:
 
   1. Place the CoolProp DLL files in the alternate location
   2. Place the CoolProp xlam file in a writable location and open it.
@@ -48,14 +49,14 @@ For a manual installation,
   6. Save the CoolProp.xlam file.
 
 
-.. [#] If you are having problems with the path to the XLAM in your worksheet appearing as the complete path to the xlam (but not the correct path), you might need to go into ``Data->Update Links`` in Excel, select CoolProp.xlam, and select ``Change Source...`` and select the location of your xlam file.  That should update all the links.
+* If you are having problems with the path to the XLAM in your worksheet appearing as the complete path to the xlam (but not the correct path), you might need to go into ``Data->Update Links`` in Excel, select CoolProp.xlam, and select ``Change Source...`` and select the location of your xlam file.  That should update all the links.
 
- One possible cause of this problem is the security feature of Windows. You can avoid it by manually giving the permission for ordinary access to the xlam file as follows:
+   One possible cause of this problem is the security feature of Windows. You can avoid it by manually giving the permission for ordinary access to the xlam file as follows:
 
- 1. Right-click the xlam file and open Properties.
- 2. There might be a security message "This file came from another computer and ...".
- 3. Check the **Unblock** checkbox (or button other than Windows 10) and click **Apply** at the bottom.
- 4. After confirming the security message has disappeared, click **OK** to exit from Properties.
+   1. Right-click the xlam file and open Properties.
+   2. There might be a security message "This file came from another computer and ...".
+   3. Check the **Unblock** checkbox (or button other than Windows 10) and click **Apply** at the bottom.
+   4. After confirming the security message has disappeared, click **OK** to exit from Properties.
     
 Pre-compiled Binaries for OSX
 =============================

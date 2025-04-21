@@ -39,7 +39,7 @@ the CoolProp library.
       changelog vX.X.X`` where ``vX.X.X`` is the version number of the
       milestone on GitHub.
     - Review the generated text from ``snippet_issues.rst.txt`` and 
-	  ``snippet_pulls.rst.txt`` and update the changelog file in
+	    ``snippet_pulls.rst.txt`` and update the changelog file in
       ``Web/coolprop/changelog.rst``. You might also use the same text for
       the annotated tag / release on GitHub.
 	  
@@ -60,7 +60,7 @@ the CoolProp library.
   binaries to SourceForge. 
 * **Clean up**: If everything went well, you can proceed: 
     - Create a new release on GitHub using the vX.X.X tag. 
-	- Add a note with the download link: https://sourceforge.net/projects/coolprop/files/CoolProp/X.X.X/
+	  - Add a note with the download link: https://sourceforge.net/projects/coolprop/files/CoolProp/X.X.X/
     - Change the default download file on SourceForge to point to the new
       zipped sources.
     - Bump the version number in the CMake file and commit.
