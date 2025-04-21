@@ -102,6 +102,12 @@ style = pybtex.plugin.find_plugin('pybtex.style.formatting', 'plain')()
 backend = pybtex.plugin.find_plugin('pybtex.backends', 'html')()
 parser = pybtex.database.input.bibtex.Parser()
 
+def formula2RST(formula):
+    """
+    See: https://docutils.sourceforge.io/docs/ref/rst/roles.html#subscript
+    """
+    return formula.replace('_{', r'\ :sub:`').replace('}',r'`\ ').replace(r'\ :sub:`1`\ ', '')
+
 
 def entry2html(entry):
     for e in entry:
@@ -164,7 +170,7 @@ class FluidInfoTableGenerator(object):
         ASHRAE = CoolProp.CoolProp.get_fluid_param_string(self.name, "ASHRAE34")
         formula = CoolProp.CoolProp.get_fluid_param_string(self.name, "formula")
         if formula:
-            formula = ':math:`' + formula + '`'
+            formula = formula2RST(formula)
         else:
             formula = 'Not applicable'
         formula = formula.replace('_{1}', '')
