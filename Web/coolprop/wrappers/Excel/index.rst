@@ -25,17 +25,15 @@ Manual Installation
   1.  Get the shared libraries at :sfdownloads:`shared_library/Windows/32bit__stdcall` and :sfdownloads:`shared_library/Windows/64bit`, put the DLLs into a folder of your choice and rename them to `CoolProp_stdcall.dll` and `CoolProp_x64.dll`. Make sure to add that folder to your path.  Technically you only need the DLL that matches your system architecture (`CoolProp_stdcall.dll` = 32-bit, `CoolProp_x64.dll` = 64-bit), but it can’t hurt to copy both if you don’t know which system architecture version you have.  The Excel macro will select the correct one and use it.
   2.  Download the xla and xlam files from :sfdownloads:`MicrosoftExcel` and activate the add-in from Excel as described below. and copy the files to a convenient accessible location.
   3.  The **TestExcel.xlsx** from :sfdownloads:`MicrosoftExcel` can be copied to a working directory in ``My Documents``.
-  1.  Open Excel
-  2.  Go to the menu ``File–>Options–>Add-Ins``
-  3.  At the bottom, select ``Manage: Excel Add-ins``, then click the ``Go...`` button
-  4.  Click the ``Browse`` button on the Add-in Manager panel
-  5.  Browse to the file **CoolProp.xlam** you downloaded and select it
-  6.  Make sure the CoolProp Add-in is selected (box checked) and close the Add-in Manager.
-  7.  Open the file **TestExcel.xlsx** and try to re-evaluate one of the cells; the CoolProp formulas should all be working now. (To recalculate the entire worksheet, press ``Ctrl``-``Alt``-``Shift``-``F9`` ) [#]_
+  4.  Open Excel
+  5.  Go to the menu ``File–>Options–>Add-Ins``
+  6.  At the bottom, select ``Manage: Excel Add-ins``, then click the ``Go...`` button
+  7.  Click the ``Browse`` button on the Add-in Manager panel
+  8.  Browse to the file **CoolProp.xlam** you downloaded and select it
+  9.  Make sure the CoolProp Add-in is selected (box checked) and close the Add-in Manager.
+  10.  Open the file **TestExcel.xlsx** and try to re-evaluate one of the cells; the CoolProp formulas should all be working now. (To recalculate the entire worksheet, press ``Ctrl``-``Alt``-``Shift``-``F9`` ) 
 
-.. info::
-    
-  **Alternate DLL Location** - Some environments, lock down the folders included in the binary search path for normal users for security reasons.  If this is the case, you will need to put the DLL files in an alternate location (possibly on a shared network location for all users).  Follow the instructions below:
+* **Alternate DLL Location** - Some environments, lock down the folders included in the binary search path for normal users for security reasons.  If this is the case, you will need to put the DLL files in an alternate location (possibly on a shared network location for all users).  Follow the instructions below:
 
   1. Place the CoolProp DLL files in the alternate location
   2. Place the CoolProp xlam file in a writable location and open it.

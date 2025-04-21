@@ -23,10 +23,7 @@ the CoolProp library.
   should not be mentioned in the changelog. We have created a script that
   check the issues for you: 
   
-    - Move into the ``dev/scripts`` folder and run
-      ``python milestone2rst.py check vX.X.X``. This command finds the date
-      of the latest release and looks at all issues that have been closed
-      since then. It reports problems such as missing labels.
+    - Move into the ``dev/scripts`` folder and run ``python milestone2rst.py check vX.X.X``. This command finds the date of the latest release and looks at all issues that have been closed since then. It reports problems such as missing labels.
     - Take the time to fix all problems and label issues and PRs.
 
 * **Version**: Edit CMakeLists.txt and remove all qualifiers (alpha, dev,
@@ -35,14 +32,8 @@ the CoolProp library.
 * **Changelog**: Update the changelog and generate a list of closed GitHub
   issues: 
   
-    - Move into the ``dev/scripts`` folder and do ``python milestone2rst.py
-      changelog vX.X.X`` where ``vX.X.X`` is the version number of the
-      milestone on GitHub.
-    - Review the generated text from ``snippet_issues.rst.txt`` and 
-	    ``snippet_pulls.rst.txt`` and update the changelog file in
-      ``Web/coolprop/changelog.rst``. You might also use the same text for
-      the annotated tag / release on GitHub.
-	  
+    - Move into the ``dev/scripts`` folder and do ``python milestone2rst.py changelog vX.X.X`` where ``vX.X.X`` is the version number of the milestone on GitHub.
+    - Review the generated text from ``snippet_issues.rst.txt`` and ``snippet_pulls.rst.txt`` and update the changelog file in ``Web/coolprop/changelog.rst``. You might also use the same text for the annotated tag / release on GitHub.
 * **Delete cache**: Delete the cached property plots and consistency plots stored
   at https://github.com/CoolProp/CoolProp/actions/caches. This forces their 
   recreation when building the documentation. Recalculating all the consistency
