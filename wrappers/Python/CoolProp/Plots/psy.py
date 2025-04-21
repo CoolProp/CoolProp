@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-import cPickle
+import pickle
 from ConfigParser import ConfigParser
 
 import numpy as np
@@ -402,7 +402,7 @@ class UI_Psychrometry(QDialog):
         filename = "%i.pkl" % P
         if os.path.isfile(filename):
             with open(filename, "r") as archivo:
-                data = cPickle.load(archivo)
+                data = pickle.load(archivo)
                 self.status.setText("Loading cached data...")
                 QApplication.processEvents()
         else:
@@ -410,7 +410,7 @@ class UI_Psychrometry(QDialog):
             self.status.setText("Calculating data, be patient...")
             QApplication.processEvents()
             data = PsyCoolprop.calculatePlot(self)
-            cPickle.dump(data, open(filename, "w"))
+            pickle.dump(data, open(filename, "w"))
             self.progressBar.setVisible(False)
         self.status.setText("Plotting...")
         QApplication.processEvents()
