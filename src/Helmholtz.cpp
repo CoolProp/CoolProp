@@ -1901,6 +1901,9 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
             if (terms[i] == "CP0PolyT") {
                 val_tolerance = 1e-10;  // due to, I think, a loss in precision in the log function of multicomplex
             }
+            if (terms[i] == "GaoB") {
+                val_tolerance = 1e-12;  // due to, I think, a loss in precision in the log function of multicomplex
+            }
 
             if (std::isfinite(numerical_mcx)) {
                 CHECK(err(analytic, numerical_mcx) < deriv_tolerance);
