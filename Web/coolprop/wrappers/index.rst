@@ -125,7 +125,7 @@ and explicitly typing "agree" before closing. Then you can use the compiler from
     Octave/index.rst
     Csharp/index.rst
     MATLAB/index.rst
-    Mathcad/index.rst
+    MathCAD/index.rst
     FORTRAN/index.rst
     PHP/index.rst
     EES/index.rst
