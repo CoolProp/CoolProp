@@ -1,4 +1,7 @@
 name: docs
+channels:
+  - conda-forge
+  - defaults
 dependencies:
   - python=3.13
   - scipy
@@ -12,6 +15,11 @@ dependencies:
   - jinja2
   - pyyaml
   - packaging
+  - jupyter
+  - nbconvert
+  - notebook
+  - pandoc
+  - imagemagick
   - pip:
     - cython
     - sphinx

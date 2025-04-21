@@ -26,11 +26,11 @@ RUN apt-get -y -m update && \
         r-base-dev \
         default-jre default-jdk \
         texlive-extra-utils \
-        imagemagick rsync && \
+        rsync && \
     apt-get autoclean
 	
 # Allow ImageMagick to invoke Ghostscript
-RUN sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
+# RUN sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
 
 ADD conda_environment.yml /environment.yml
 RUN conda update -n base -c defaults conda && conda env create -f /environment.yml && conda clean --all --yes
