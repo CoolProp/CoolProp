@@ -32,17 +32,17 @@ jobs:
       with:
         submodules: recursive
     
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       if: ${{ !env.ACT }} # skip during local actions testing
       id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
       with:
         path: |
           ./Web/fluid_properties/fluids/Consistencyplots
-          ./Web/_static/fluid_properties/Incompressibles_reports  
-          ./Web/fluid_properties/Incompressibles_mass-based-fluids
-          ./Web/fluid_properties/Incompressibles_mole-based-fluids
-          ./Web/fluid_properties/Incompressibles_volume-based-fluids
-          ./Web/fluid_properties/Incompressibles_pure-fluids
+          ./Web/_static/fluid_properties/Incompressibles_reports
+          ./Web/fluid_properties/Incompressibles_mass-based-fluids.csv
+          ./Web/fluid_properties/Incompressibles_mole-based-fluids.csv
+          ./Web/fluid_properties/Incompressibles_volume-based-fluids.csv
+          ./Web/fluid_properties/Incompressibles_pure-fluids.csv
           ./Web/scripts/incompressibles_consistency
         key: cached-props
         #key: cached-props-${{ github.sha }}
