@@ -37,9 +37,6 @@ import CoolProp.CoolProp as CP
 
 CP.set_config_bool(CP.ENABLE_SUPERANCILLARIES, False)
 
-from pathlib import Path
-CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, str(Path('~/REFPROP10').expanduser()))
-
 AS = CP.AbstractState('HEOS', "{fluid}")
 
 # Skip pseudo-pure fluids, pure fluids only; pseudo-pure do not have superancillaries
@@ -148,6 +145,8 @@ plt.close()
 """
 if not os.path.exists(plots_path):
     os.makedirs(plots_path)
+
+from pathlib import Path
 
 for fluid in CoolProp.__fluids__:
     print('fluid:', fluid)
