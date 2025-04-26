@@ -41,6 +41,11 @@ from pathlib import Path
 CP.set_config_string(CP.ALTERNATIVE_REFPROP_PATH, str(Path('~/REFPROP10').expanduser()))
 
 AS = CP.AbstractState('HEOS', "{fluid}")
+
+# Skip pseudo-pure fluids, pure fluids only; pseudo-pure do not have superancillaries
+if AS.fluid_param_string("pure") != "true":
+    quit()
+
 jSuper = json.loads(CP.get_fluid_param_string("{fluid}", "JSON"))[0]['EOS'][0]['SUPERANCILLARY']
 superanc = CP.SuperAncillary(json.dumps(jSuper))
 RPname = AS.fluid_param_string("REFPROP_name")
