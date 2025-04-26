@@ -46,7 +46,17 @@ AS = CP.AbstractState('HEOS', "{fluid}")
 if AS.fluid_param_string("pure") != "true":
     quit()
 
-jSuper = json.loads(CP.get_fluid_param_string("{fluid}", "JSON"))[0]['EOS'][0]['SUPERANCILLARY']
+jEOS = json.loads(CP.get_fluid_param_string("{fluid}", "JSON"))[0]['EOS'][0]
+if 'SUPERANCILLARY' not in jEOS:
+    fig = plt.figure()
+    fig.text(0.5, 0.5, 'Superancillary not available')
+    plt.savefig('{fluid:s}.png', dpi = 300)
+    plt.savefig('{fluid:s}.pdf')
+    plt.close()
+    quit()
+else:
+    jSuper = jEOS['SUPERANCILLARY']
+
 superanc = CP.SuperAncillary(json.dumps(jSuper))
 RPname = AS.fluid_param_string("REFPROP_name")
 
