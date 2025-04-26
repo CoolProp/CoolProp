@@ -131,7 +131,8 @@ plt.xlabel(r'$\Theta=(T_{{\rm crit,num}}-T)/T_{{\rm crit,num}}$')
 plt.xscale('log')
 
 plt.suptitle('Superancillary v. Extended Precision')
-plt.savefig('{fluid:s}.png', dpi = 30)
+plt.tight_layout(pad=0.2, rect=(0,0,1,0.95))
+plt.savefig('{fluid:s}.png', dpi = 300)
 plt.savefig('{fluid:s}.pdf')
 plt.close()
 """
