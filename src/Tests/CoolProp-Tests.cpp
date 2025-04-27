@@ -2327,6 +2327,21 @@ TEST_CASE("Github issue #2447", "[2447]") {
     CHECK(err < 0.05);
 }
 
+TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]"){
+    auto TNBP_RP = PropsSI("T", "P", 101325, "Q", 0, "REFPROP::METHANOL");
+    auto TNBP_CP = PropsSI("T", "P", 101325, "Q", 0, "HEOS::METHANOL");
+    CHECK(TNBP_RP == Catch::Approx(TNBP_CP).epsilon(1e-6));
+    
+    auto rhoL_RP = PropsSI("D", "T", 400, "Q", 0, "REFPROP::METHANOL");
+    auto rhoL_CP = PropsSI("D", "T", 400, "Q", 0, "HEOS::METHANOL");
+    CHECK(rhoL_RP == Catch::Approx(rhoL_CP).epsilon(1e-12));
+    
+    auto cp0_RP = PropsSI("CP0MOLAR", "T", 400, "Dmolar", 1e-5, "REFPROP::METHANOL");
+    auto cp0_CP = PropsSI("CP0MOLAR", "T", 400, "Dmolar", 1e-5, "HEOS::METHANOL");
+    CHECK(cp0_RP == Catch::Approx(cp0_CP).epsilon(1e-4));
+    
+}
+
 
 TEST_CASE("Check phase determination for PC-SAFT backend", "[pcsaft_phase]") {
     double den = 9033.114209728405;

@@ -119,6 +119,22 @@ class JSONFluidLibrary
                 assert(n.size() == l.size());
                 assert(n.size() == m.size());
                 alphar.GenExp.add_Lemmon2005(n, d, t, l, m);
+            } else if (!type.compare("ResidualHelmholtzDoubleExponential")) {
+                std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
+                std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
+                std::vector<CoolPropDbl> t = cpjson::get_long_double_array(contribution["t"]);
+                std::vector<CoolPropDbl> gt = cpjson::get_long_double_array(contribution["gt"]);
+                std::vector<CoolPropDbl> lt = cpjson::get_long_double_array(contribution["lt"]);
+                std::vector<CoolPropDbl> gd = cpjson::get_long_double_array(contribution["gd"]);
+                std::vector<CoolPropDbl> ld = cpjson::get_long_double_array(contribution["ld"]);
+                
+                assert(n.size() == d.size());
+                assert(n.size() == t.size());
+                assert(n.size() == gt.size());
+                assert(n.size() == lt.size());
+                assert(n.size() == gd.size());
+                assert(n.size() == ld.size());
+                alphar.GenExp.add_DoubleExponential(n,d,t,gd,ld,gt,lt);
             } else if (!type.compare("ResidualHelmholtzExponential")) {
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);

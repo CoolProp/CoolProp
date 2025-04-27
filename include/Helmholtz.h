@@ -466,6 +466,30 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
         delta_li_in_u = true;
         tau_mi_in_u = true;
     };
+    /** \brief Add and convert a double-exponential term
+     *
+     * Term of the format
+     * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-gd_j\delta^{ld_j}-gt_j\tau^{lt_i})\f$
+     */
+    void add_DoubleExponential(
+       const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& d, const std::vector<CoolPropDbl>& t,
+       const std::vector<CoolPropDbl>& gd, const std::vector<CoolPropDbl>& ld,
+       const std::vector<CoolPropDbl>& gt, const std::vector<CoolPropDbl>& lt) {
+        for (std::size_t i = 0; i < n.size(); ++i) {
+            ResidualHelmholtzGeneralizedExponentialElement el;
+            el.n = n[i];
+            el.d = d[i];
+            el.t = t[i];
+            el.c = gd[i];
+            el.l_double = ld[i];
+            el.l_int = (int)el.l_double;
+            el.omega = gt[i];
+            el.m_double = lt[i];
+            elements.push_back(el);
+        }
+        delta_li_in_u = true;
+        tau_mi_in_u = true;
+    };
 
     void finish() {
         n.resize(elements.size());
