@@ -2528,6 +2528,41 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check Tc & pc", "[superanccrit]") {
     CHECK(rhocSA != rhocnonSA);
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
+    std::array<double, 16> buf15; buf15.fill(0.0);
+    std::array<double, 100> buf100; buf100.fill(0.0);
+    std::vector<CachedElement> cache100(100);
+    for (auto i = 0; i < cache100.size(); ++i){ cache100[i] = _HUGE; }
+    
+    std::vector<std::optional<double>> opt100(100);
+    for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
+    
+    BENCHMARK("memset array15"){
+        memset(buf15.data(), _HUGE, sizeof(buf15));
+        return buf15;
+    };
+    BENCHMARK("fill array15"){
+        buf15.fill(_HUGE);
+        return buf15;
+    };
+    BENCHMARK("memset array100"){
+        memset(buf100.data(), _HUGE, sizeof(buf100));
+        return buf100;
+    };
+    BENCHMARK("fill array100"){
+        buf100.fill(_HUGE);
+        return buf100;
+    };
+    BENCHMARK("fill cache100"){
+        for (auto i = 0; i < cache100.size(); ++i){ cache100[i] = _HUGE; }
+        return cache100;
+    };
+    BENCHMARK("fill opt100"){
+        for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
+        return opt100;
+    };
+}
+
 /*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 {
