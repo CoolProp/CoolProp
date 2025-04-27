@@ -12,7 +12,7 @@ root_dir = os.path.abspath(os.path.join(web_dir, '..'))
 fluids_path = os.path.join(web_dir, 'fluid_properties', 'fluids')
 plots_path = os.path.join(web_dir, 'fluid_properties', 'fluids', 'Superancillaryplots')
 
-outputversion = '2025.04.26'
+outputversion = '2025.04.27'
 if not Path(f'{outputversion}.zip').exists():
     print('Downloading the chebyshev output file to ', Path('.').absolute())
     urllib.request.urlretrieve(f'https://github.com/CoolProp/fastchebpure/archive/refs/tags/{outputversion}.zip', f'{outputversion}.zip')
