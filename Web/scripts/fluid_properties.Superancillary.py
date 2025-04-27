@@ -66,7 +66,7 @@ Tcrit_num = AS.get_fluid_parameter_double(0, "SUPERANC::Tcrit_num")
 T = df['T / K'].to_numpy()
 Theta = (Tcrit_num-T)/Tcrit_num
 
-fig, axes = plt.subplots(3, 1, sharex=True, figsize=(6,12))
+fig, axes = plt.subplots(3, 1, sharex=True, figsize=(3.5,7))
 
 
 plt.sca(axes[0])
