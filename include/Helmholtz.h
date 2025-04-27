@@ -2,6 +2,7 @@
 #ifndef HELMHOLTZ_H
 #define HELMHOLTZ_H
 
+#include <array>
 #include <vector>
 #include "rapidjson_include.h"
 //#include "Eigen/Core"
