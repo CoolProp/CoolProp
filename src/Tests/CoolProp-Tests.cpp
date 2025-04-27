@@ -2486,11 +2486,19 @@ TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculatio
     superancillary::SuperAncillary<std::vector<double>> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto& approxrhoL = anc.get_approx1d('D', 0);
+    
     BENCHMARK("HEOS rho(T)"){
         return AS->update(QT_INPUTS, 1.0, 300.0);
     };
     BENCHMARK("superanc rho(T)"){
         return anc.eval_sat(300.0, 'D', 1);
+    };
+    BENCHMARK("superanc rho(T) with expansion directly"){
+        return approxrhoL.eval(300.0);
+    };
+    BENCHMARK("superanc get_index rho(T)"){
+        return approxrhoL.get_index(300.0);
     };
     BENCHMARK("IF97 rho(T)"){
         return IF97->update(QT_INPUTS, 1.0, 300.0);
