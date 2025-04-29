@@ -4,6 +4,7 @@
 #include "Exceptions.h"
 #include "CoolPropTools.h"
 #include <cstdlib>
+#include <unordered_map>
 
 #if !defined(SWIG)  // Hide this for swig - Swig gets confused
 #    include "rapidjson_include.h"
@@ -275,7 +276,7 @@ class ConfigurationItem
 class Configuration
 {
    protected:
-    std::map<configuration_keys, ConfigurationItem> items;
+    std::unordered_map<configuration_keys, ConfigurationItem> items;
 
    public:
     Configuration() {
@@ -286,7 +287,7 @@ class Configuration
     /// Get an item from the configuration
     ConfigurationItem& get_item(configuration_keys key) {
         // Try to find it
-        std::map<configuration_keys, ConfigurationItem>::iterator it = items.find(key);
+        std::unordered_map<configuration_keys, ConfigurationItem>::iterator it = items.find(key);
         // If equal to end, not found
         if (it != items.end()) {
             // Found, return it
@@ -302,7 +303,7 @@ class Configuration
     };
 
     /// Return a reference to all of the items
-    std::map<configuration_keys, ConfigurationItem>& get_items(void) {
+    std::unordered_map<configuration_keys, ConfigurationItem>& get_items(void) {
         return items;
     };
     

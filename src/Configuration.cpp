@@ -97,8 +97,8 @@ std::string get_config_string(configuration_keys key) {
 }
 void get_config_as_json(rapidjson::Document& doc) {
     // Get the items
-    std::map<configuration_keys, ConfigurationItem> items = config.get_items();
-    for (std::map<configuration_keys, ConfigurationItem>::const_iterator it = items.begin(); it != items.end(); ++it) {
+    std::unordered_map<configuration_keys, ConfigurationItem> items = config.get_items();
+    for (std::unordered_map<configuration_keys, ConfigurationItem>::const_iterator it = items.begin(); it != items.end(); ++it) {
         it->second.add_to_json(doc, doc);
     }
 }
