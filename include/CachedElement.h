@@ -8,6 +8,7 @@
 #ifndef CACHEDELEMENT_H_
 #define CACHEDELEMENT_H_
 
+#include <array>
 #include "CoolPropTools.h"
 #include "DataStructures.h"
 
