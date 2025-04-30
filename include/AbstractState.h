@@ -94,50 +94,53 @@ class AbstractState
     bool isTwoPhase(void) {
         return (this->_phase == iphase_twophase);
     }
+    
+    CacheArray<70> cache;
+    using CAE = CacheArrayElement<double>;
 
     /// Two important points
     SimpleState _critical, _reducing;
 
     /// Molar mass [mol/kg]
-    CachedElement _molar_mass;
+    CAE _molar_mass = cache.next();
 
     /// Universal gas constant [J/mol/K]
-    CachedElement _gas_constant;
+    CAE _gas_constant = cache.next();
 
     /// Bulk values
     double _rhomolar, _T, _p, _Q;
 
-    CachedElement _tau, _delta;
+    CAE _tau = cache.next(), _delta = cache.next();
 
     /// Transport properties
-    CachedElement _viscosity, _conductivity, _surface_tension;
+    CAE _viscosity = cache.next(), _conductivity = cache.next(), _surface_tension = cache.next();
 
-    CachedElement _hmolar, _smolar, _umolar, _logp, _logrhomolar, _cpmolar, _cp0molar, _cvmolar, _speed_sound, _gibbsmolar, _helmholtzmolar;
+    CAE _hmolar = cache.next(), _smolar = cache.next(), _umolar = cache.next(), _logp = cache.next(), _logrhomolar = cache.next(), _cpmolar = cache.next(), _cp0molar = cache.next(), _cvmolar = cache.next(), _speed_sound = cache.next(), _gibbsmolar = cache.next(), _helmholtzmolar = cache.next();
 
     /// Residual properties
-    CachedElement _hmolar_residual, _smolar_residual, _gibbsmolar_residual;
+    CAE _hmolar_residual = cache.next(), _smolar_residual = cache.next(), _gibbsmolar_residual = cache.next();
 
     /// Excess properties
-    CachedElement _hmolar_excess, _smolar_excess, _gibbsmolar_excess, _umolar_excess, _volumemolar_excess, _helmholtzmolar_excess;
+    CAE _hmolar_excess = cache.next(), _smolar_excess = cache.next(), _gibbsmolar_excess = cache.next(), _umolar_excess = cache.next(), _volumemolar_excess = cache.next(), _helmholtzmolar_excess = cache.next();
 
     /// Ancillary values
-    CachedElement _rhoLanc, _rhoVanc, _pLanc, _pVanc, _TLanc, _TVanc;
+    CAE _rhoLanc = cache.next(), _rhoVanc = cache.next(), _pLanc = cache.next(), _pVanc = cache.next(), _TLanc = cache.next(), _TVanc = cache.next();
 
     CachedElement _fugacity_coefficient;
 
     /// Smoothing values
-    CachedElement _rho_spline, _drho_spline_dh__constp, _drho_spline_dp__consth;
+    CAE _rho_spline = cache.next(), _drho_spline_dh__constp = cache.next(), _drho_spline_dp__consth = cache.next();
 
     /// Cached low-level elements for in-place calculation of other properties
-    CachedElement _alpha0, _dalpha0_dTau, _dalpha0_dDelta, _d2alpha0_dTau2, _d2alpha0_dDelta_dTau, _d2alpha0_dDelta2, _d3alpha0_dTau3,
-      _d3alpha0_dDelta_dTau2, _d3alpha0_dDelta2_dTau, _d3alpha0_dDelta3, _alphar, _dalphar_dTau, _dalphar_dDelta, _d2alphar_dTau2,
-      _d2alphar_dDelta_dTau, _d2alphar_dDelta2, _d3alphar_dTau3, _d3alphar_dDelta_dTau2, _d3alphar_dDelta2_dTau, _d3alphar_dDelta3, _d4alphar_dTau4,
-      _d4alphar_dDelta_dTau3, _d4alphar_dDelta2_dTau2, _d4alphar_dDelta3_dTau, _d4alphar_dDelta4;
+    CAE _alpha0 = cache.next(), _dalpha0_dTau = cache.next(), _dalpha0_dDelta = cache.next(), _d2alpha0_dTau2 = cache.next(), _d2alpha0_dDelta_dTau = cache.next(), _d2alpha0_dDelta2 = cache.next(), _d3alpha0_dTau3 = cache.next(),
+      _d3alpha0_dDelta_dTau2 = cache.next(), _d3alpha0_dDelta2_dTau = cache.next(), _d3alpha0_dDelta3 = cache.next(), _alphar = cache.next(), _dalphar_dTau = cache.next(), _dalphar_dDelta = cache.next(), _d2alphar_dTau2 = cache.next(),
+      _d2alphar_dDelta_dTau = cache.next(), _d2alphar_dDelta2 = cache.next(), _d3alphar_dTau3 = cache.next(), _d3alphar_dDelta_dTau2 = cache.next(), _d3alphar_dDelta2_dTau = cache.next(), _d3alphar_dDelta3 = cache.next(), _d4alphar_dTau4 = cache.next(),
+      _d4alphar_dDelta_dTau3 = cache.next(), _d4alphar_dDelta2_dTau2 = cache.next(), _d4alphar_dDelta3_dTau = cache.next(), _d4alphar_dDelta4 = cache.next();
 
-    CachedElement _dalphar_dDelta_lim, _d2alphar_dDelta2_lim, _d2alphar_dDelta_dTau_lim, _d3alphar_dDelta2_dTau_lim;
+    CAE _dalphar_dDelta_lim = cache.next(), _d2alphar_dDelta2_lim = cache.next(), _d2alphar_dDelta_dTau_lim = cache.next(), _d3alphar_dDelta2_dTau_lim = cache.next();
 
     /// Two-Phase variables
-    CachedElement _rhoLmolar, _rhoVmolar;
+    CAE _rhoLmolar = cache.next(), _rhoVmolar = cache.next();
 
     // ----------------------------------------
     // Property accessors to be optionally implemented by the backend
