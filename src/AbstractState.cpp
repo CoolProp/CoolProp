@@ -185,16 +185,7 @@ bool AbstractState::clear_comp_change() {
 bool AbstractState::clear() {
     // Reset all instances of CachedElement and overwrite
     // the internal double values with -_HUGE
-    this->_gas_constant.clear();
-    this->_molar_mass.clear();
-
-    /// Ancillary curve values
-    this->_rhoLanc.clear();
-    this->_rhoVanc.clear();
-    this->_pVanc.clear();
-    this->_pLanc.clear();
-    this->_TVanc.clear();
-    this->_TLanc.clear();
+    cache.clear();
 
     this->_critical.fill(_HUGE);
     this->_reducing.fill(_HUGE);
@@ -204,72 +195,6 @@ bool AbstractState::clear() {
     this->_T = -_HUGE;
     this->_p = -_HUGE;
     this->_Q = -_HUGE;
-    this->_tau.clear();
-    this->_delta.clear();
-
-    this->_umolar.clear();
-    this->_cpmolar.clear();
-    this->_cp0molar.clear();
-    this->_cvmolar.clear();
-    this->_speed_sound.clear();
-    this->_hmolar.clear();
-    this->_smolar.clear();
-    this->_gibbsmolar.clear();
-    this->_helmholtzmolar.clear();
-    this->_logp.clear();
-    this->_logrhomolar.clear();
-
-    this->_hmolar_excess.clear();
-    this->_smolar_excess.clear();
-    this->_gibbsmolar_excess.clear();
-    this->_volumemolar_excess.clear();
-    this->_umolar_excess.clear();
-    this->_helmholtzmolar_excess.clear();
-
-    this->_hmolar_residual.clear();
-    this->_smolar_residual.clear();
-    this->_gibbsmolar_residual.clear();
-
-    /// Smoothing values
-    this->_rho_spline.clear();
-    this->_drho_spline_dh__constp.clear();
-    this->_drho_spline_dp__consth.clear();
-
-    /// Cached low-level elements for in-place calculation of other properties
-    this->_alpha0.clear();
-    this->_dalpha0_dTau.clear();
-    this->_dalpha0_dDelta.clear();
-    this->_d2alpha0_dTau2.clear();
-    this->_d2alpha0_dDelta_dTau.clear();
-    this->_d2alpha0_dDelta2.clear();
-    this->_d3alpha0_dTau3.clear();
-    this->_d3alpha0_dDelta_dTau2.clear();
-    this->_d3alpha0_dDelta2_dTau.clear();
-    this->_d3alpha0_dDelta3.clear();
-    this->_alphar.clear();
-    this->_dalphar_dTau.clear();
-    this->_dalphar_dDelta.clear();
-    this->_d2alphar_dTau2.clear();
-    this->_d2alphar_dDelta_dTau.clear();
-    this->_d2alphar_dDelta2.clear();
-    this->_d3alphar_dTau3.clear();
-    this->_d3alphar_dDelta_dTau2.clear();
-    this->_d3alphar_dDelta2_dTau.clear();
-    this->_d3alphar_dDelta3.clear();
-
-    this->_dalphar_dDelta_lim.clear();
-    this->_d2alphar_dDelta2_lim.clear();
-    this->_d2alphar_dDelta_dTau_lim.clear();
-    this->_d3alphar_dDelta2_dTau_lim.clear();
-
-    /// Two-Phase variables
-    this->_rhoLmolar.clear();
-    this->_rhoVmolar.clear();
-
-    /// Transport properties
-    this->_viscosity.clear();
-    this->_conductivity.clear();
-    this->_surface_tension.clear();
 
     return true;
 }
