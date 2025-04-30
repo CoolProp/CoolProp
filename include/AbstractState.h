@@ -105,7 +105,7 @@ class AbstractState
     CachedElement _gas_constant;
 
     /// Bulk values
-    double _rhomolar, _T, _p, _Q, _R;
+    double _rhomolar, _T, _p, _Q;
 
     CachedElement _tau, _delta;
 
