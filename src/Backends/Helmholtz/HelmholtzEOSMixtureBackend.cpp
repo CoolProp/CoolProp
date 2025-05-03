@@ -1196,33 +1196,59 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax(void) {
     return summer;
 }
 
-void HelmholtzEOSMixtureBackend::update_QT_direct(CoolPropDbl Q, CoolPropDbl T) {
+void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {
+    clear();
     _Q = Q;
     _T = T;
-    FlashRoutines::QT_flash(*this);
+    if (!is_pure_or_pseudopure){
+        throw;
+    }
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES)){
+        throw;
+    }
+    try{
+        auto& optsuperanc = components[0].EOS().superancillaries;
+        if (!optsuperanc){
+            throw;
+        }
+        const auto& superanc = optsuperanc.value();
+        CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
+        if (T > Tcrit_num){
+            throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+        }
+        auto rhoL = superanc.eval_sat(T, 'D', 0);
+        auto rhoV = superanc.eval_sat(T, 'D', 1);
+        auto p = superanc.eval_sat(T, 'P', 1);
+        SatL->update_TDmolarP_direct(T, rhoL, p);
+        SatV->update_TDmolarP_direct(T, rhoV, p);
+        _p = p;
+        _rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
+        _phase = iphase_twophase;
+        return;
+    }
+    catch(...){
+    }
     
     // Cleanup
-//    bool optional_checks = false;
-//    post_update(optional_checks);
+   bool optional_checks = false;
+   post_update(optional_checks);
 }
 
 
 void HelmholtzEOSMixtureBackend::update_TDmolarP_direct(CoolPropDbl T, CoolPropDbl rhomolar, CoolPropDbl p) {
     
-    const CoolPropDbl rhomolar_min = 0;
-    const CoolPropDbl T_min = 0;
+//    const CoolPropDbl rhomolar_min = 0;
+//    const CoolPropDbl T_min = 0;
+//
+//    if (rhomolar < rhomolar_min) {
+//        throw ValueError(format("The molar density of %f mol/m3 is below the minimum of %f mol/m3", rhomolar, rhomolar_min));
+//    }
+//
+//    if (T < T_min) {
+//        throw ValueError(format("The temperature of %f K is below the minimum of %f K", T, T_min));
+//    }
 
-    if (rhomolar < rhomolar_min) {
-        throw ValueError(format("The molar density of %f mol/m3 is below the minimum of %f mol/m3", rhomolar, rhomolar_min));
-    }
-
-    if (T < T_min) {
-        throw ValueError(format("The temperature of %f K is below the minimum of %f K", T, T_min));
-    }
-
-    CoolProp::input_pairs pair = DmolarT_INPUTS;
-    // Set up the state
-    pre_update(pair, rhomolar, T);
+    clear();
 
     _rhomolar = rhomolar;
     _T = T;
