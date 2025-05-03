@@ -1026,6 +1026,13 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
     }
 }
 
+TEST_CASE("R134A saturation bug in dev", "[2545]"){
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134A"));
+    AS->update(QT_INPUTS, 1, 273);
+    double p = AS->p();
+    CHECK(p == Catch::Approx(291215));
+}
+
 TEST_CASE("Tests for solvers in P,H flash using Propane", "[flashdups],[flash],[PH],[consistency]") {
     double hmolar, hmass;
     SECTION("5 times PH with HEOS AbstractState yields same results every time", "") {

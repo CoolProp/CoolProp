@@ -2,6 +2,7 @@
 #ifndef HELMHOLTZ_H
 #define HELMHOLTZ_H
 
+#include <algorithm>
 #include <array>
 #include <vector>
 #include "rapidjson_include.h"
@@ -752,9 +753,7 @@ class BaseHelmholtzContainer
 
    public:
     void clear() {
-        // Memset-ing memory seems to be the most efficient option,
-        // faster than cache.fill(_HUGE)
-        memset(cache.data(), _HUGE, sizeof(cache));
+        std::fill_n(cache.data(), cache.size(), _HUGE);
     };
 
     virtual void empty_the_EOS() = 0;

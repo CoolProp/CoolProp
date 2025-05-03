@@ -8,6 +8,7 @@
 #ifndef CACHEDELEMENT_H_
 #define CACHEDELEMENT_H_
 
+#include <algorithm>
 #include <array>
 #include "CoolPropTools.h"
 #include "DataStructures.h"
@@ -152,7 +153,7 @@ private:
     std::array<bool, N> m_cached;
 public:
     void clear(){
-        memset(m_values.data(), _HUGE, sizeof(m_values));
+        std::fill_n(m_values.data(), m_values.size(), _HUGE);
         memset(m_cached.data(), false, sizeof(m_cached));
     }
     auto factory(std::size_t i){
