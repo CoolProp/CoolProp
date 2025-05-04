@@ -100,6 +100,8 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         mole_fractions = std::vector<CoolPropDbl>(1, 1);
         std::vector<std::vector<double>> ones(1, std::vector<double>(1, 1));
         Reducing = shared_ptr<ReducingFunction>(new GERG2008ReducingFunction(components, ones, ones, ones, ones));
+        _reducing = calc_reducing_state_nocache(mole_fractions);
+        _gas_constant = calc_gas_constant();
     } else {
         // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
         set_mixture_parameters();

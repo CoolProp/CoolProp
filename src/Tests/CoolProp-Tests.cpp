@@ -2550,6 +2550,13 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check Tc & pc", "[superanccrit]") {
     CHECK(rhocSA != rhocnonSA);
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check h_fg", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS(AS->saturated_vapor_keyed_output(iHmolar) - AS->saturated_liquid_keyed_output(iHmolar));
+    AS->update_QT_pure_superanc(1, 300);
+    CHECK_NOTHROW(AS->saturated_vapor_keyed_output(iHmolar) - AS->saturated_liquid_keyed_output(iHmolar));
+}
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
     std::array<double, 16> buf15; buf15.fill(0.0);
     std::array<double, 100> buf100; buf100.fill(0.0);
