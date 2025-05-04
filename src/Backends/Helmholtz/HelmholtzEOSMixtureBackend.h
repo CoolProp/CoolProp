@@ -357,7 +357,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      */
     void update_TP_guessrho(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess);
     void update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T);
-    void update_TDmolarP_direct(CoolPropDbl T, CoolPropDbl rhomolarL, CoolPropDbl p);
+    void update_TDmolarP_unchecked(CoolPropDbl T, CoolPropDbl rhomolarL, CoolPropDbl p);
     void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T);
     void update_HmolarQ_with_guessT(CoolPropDbl hmolar, CoolPropDbl Q, CoolPropDbl Tguess);
 
