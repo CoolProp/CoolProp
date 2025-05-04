@@ -47,6 +47,7 @@ cdef class PySpinodalData:
 cdef class AbstractState:
     cdef cAbstractState.AbstractState *thisptr     # hold a C++ instance which we're wrapping
     cpdef update(self, constants_header.input_pairs iInput1, double Value1, double Value2)
+    cpdef update_QT_pure_superanc(self, double Q, double T)
     cpdef update_with_guesses(self, constants_header.input_pairs iInput1, double Value1, double Value2, PyGuessesStructure guesses)
     cpdef set_mole_fractions(self, vector[double] z)
     cpdef set_mass_fractions(self, vector[double] z)

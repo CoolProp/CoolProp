@@ -838,6 +838,11 @@ class AbstractState
 
     /// Update the state using two state variables
     virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
+    
+    /// Update the state for QT inputs for pure fluids when using the superancillary functions
+    virtual void update_QT_pure_superanc(double Q, double T){
+        throw NotImplementedError("update_QT_pure_superanc is not implemented for this backend");
+    };
 
     /// Update the state using two state variables and providing guess values
     /// Some or all of the guesses will be used - this is backend dependent

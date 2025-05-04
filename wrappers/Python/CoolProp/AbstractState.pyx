@@ -106,6 +106,9 @@ cdef class AbstractState:
     cpdef update(self, constants_header.input_pairs ipair, double Value1, double Value2):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
         self.thisptr.update(ipair, Value1, Value2)
+    cpdef update_QT_pure_superanc(self, double Q, double T):
+        """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
+        self.thisptr.update_QT_pure_superanc(Q, T)
     cpdef update_with_guesses(self, constants_header.input_pairs ipair, double Value1, double Value2, PyGuessesStructure guesses):
         """ Update function - wrapper of c++ function :cpapi:`CoolProp::AbstractState::update` """
         cdef cAbstractState.GuessesStructure _guesses

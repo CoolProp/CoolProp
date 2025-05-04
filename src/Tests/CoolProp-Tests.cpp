@@ -2530,6 +2530,11 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for R410A", "[superanc]"
     CHECK_THROWS(rHEOS.update_QT_pure_superanc(1.0, 300.0));
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for REFPROP", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "WATER"));
+    CHECK_THROWS(AS->update_QT_pure_superanc(1.0, 300.0));
+}
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check Tc & pc", "[superanccrit]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     set_config_bool(ENABLE_SUPERANCILLARIES, true);
