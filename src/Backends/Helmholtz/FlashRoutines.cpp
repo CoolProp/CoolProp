@@ -355,8 +355,8 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
             auto rhoL = superanc.eval_sat(T, 'D', 0);
             auto rhoV = superanc.eval_sat(T, 'D', 1);
             auto p = superanc.eval_sat(T, 'P', 1);
-            HEOS.SatL->update_TDmolarP_direct(T, rhoL, p);
-            HEOS.SatV->update_TDmolarP_direct(T, rhoV, p);
+            HEOS.SatL->update_TDmolarP_unchecked(T, rhoL, p);
+            HEOS.SatV->update_TDmolarP_unchecked(T, rhoV, p);
             HEOS._p = p;
             HEOS._rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
             HEOS._phase = iphase_twophase;
@@ -600,8 +600,8 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
             auto rhoL = superanc.eval_sat(T, 'D', 0);
             auto rhoV = superanc.eval_sat(T, 'D', 1);
             auto p = HEOS._p;
-            HEOS.SatL->update_TDmolarP_direct(T, rhoL, p);
-            HEOS.SatV->update_TDmolarP_direct(T, rhoV, p);
+            HEOS.SatL->update_TDmolarP_unchecked(T, rhoL, p);
+            HEOS.SatV->update_TDmolarP_unchecked(T, rhoV, p);
             HEOS._T = T;
             HEOS._p = p;
             HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());

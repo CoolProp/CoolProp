@@ -1200,16 +1200,16 @@ void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolProp
     clear();
     _Q = Q;
     _T = T;
-    if (!is_pure_or_pseudopure){
-        throw;
+    if (!is_pure()){
+        throw ValueError(format("Is not a pure fluid"));
     }
     if (!get_config_bool(ENABLE_SUPERANCILLARIES)){
-        throw;
+        throw ValueError(format("Superancillaries are not enabled"));
     }
     try{
         auto& optsuperanc = components[0].EOS().superancillaries;
         if (!optsuperanc){
-            throw;
+            throw ValueError(format("Superancillaries not available for this fluid"));
         }
         const auto& superanc = optsuperanc.value();
         CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
@@ -1219,8 +1219,8 @@ void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolProp
         auto rhoL = superanc.eval_sat(T, 'D', 0);
         auto rhoV = superanc.eval_sat(T, 'D', 1);
         auto p = superanc.eval_sat(T, 'P', 1);
-        SatL->update_TDmolarP_direct(T, rhoL, p);
-        SatV->update_TDmolarP_direct(T, rhoV, p);
+        SatL->update_TDmolarP_unchecked(T, rhoL, p);
+        SatV->update_TDmolarP_unchecked(T, rhoV, p);
         _p = p;
         _rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
         _phase = iphase_twophase;
@@ -1235,18 +1235,7 @@ void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolProp
 }
 
 
-void HelmholtzEOSMixtureBackend::update_TDmolarP_direct(CoolPropDbl T, CoolPropDbl rhomolar, CoolPropDbl p) {
-    
-//    const CoolPropDbl rhomolar_min = 0;
-//    const CoolPropDbl T_min = 0;
-//
-//    if (rhomolar < rhomolar_min) {
-//        throw ValueError(format("The molar density of %f mol/m3 is below the minimum of %f mol/m3", rhomolar, rhomolar_min));
-//    }
-//
-//    if (T < T_min) {
-//        throw ValueError(format("The temperature of %f K is below the minimum of %f K", T, T_min));
-//    }
+void HelmholtzEOSMixtureBackend::update_TDmolarP_unchecked(CoolPropDbl T, CoolPropDbl rhomolar, CoolPropDbl p) {
 
     clear();
 
@@ -1255,10 +1244,11 @@ void HelmholtzEOSMixtureBackend::update_TDmolarP_direct(CoolPropDbl T, CoolPropD
     _p = p;
 
     // Cleanup
-    bool optional_checks = false;
-    post_update(optional_checks);
-    
+//    bool optional_checks = false;
+//    post_update(optional_checks);
 }
+
+
     
 void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T) {
     // TODO: This is just a quick fix for #878 - should be done more systematically
@@ -1529,7 +1519,9 @@ void HelmholtzEOSMixtureBackend::post_update(bool optional_checks) {
     _delta = _rhomolar / _reducing.rhomolar;
 
     // Update the terms in the excess contribution
-    residual_helmholtz->Excess.update(_tau, _delta);
+    if (!is_pure_or_pseudopure){
+        residual_helmholtz->Excess.update(_tau, _delta);
+    }
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Bvirial() {
