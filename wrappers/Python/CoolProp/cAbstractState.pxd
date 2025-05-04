@@ -103,6 +103,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         ## Property updater
         ## Uses the indices in CoolProp for the input parameters
         void update(constants_header.input_pairs iInput1, double Value1, double Value2) except +ValueError
+        ## QT inputs for pure fluids with the superancillary functions
+        void update_QT_pure_superanc(double Q, double T) except +ValueError
         ## Uses the indices in CoolProp for the input parameters
         void update_with_guesses(constants_header.input_pairs iInput1, double Value1, double Value2, GuessesStructure) except +ValueError
 
