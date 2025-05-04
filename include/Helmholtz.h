@@ -741,6 +741,7 @@ class BaseHelmholtzContainer
 {
    protected:
     std::array<double, 16> cache;
+    std::array<bool, 16> is_cached;
     constexpr static std::size_t i00 = 0, i01 = 1, i02 = 2, i03 = 3, i04 = 4,
     i10 = 5, i11 = 6, i12 = 7, i13 = 8,
     i20 = 9, i21 = 10, i22 = 11,
@@ -748,12 +749,13 @@ class BaseHelmholtzContainer
     i40 = 14;
     
     bool cache_valid(std::size_t i) const {
-        return std::isfinite(cache[i]);
+        return is_cached[i];
     }
 
    public:
     void clear() {
-        std::fill_n(cache.data(), cache.size(), _HUGE);
+        memset(cache.data(), 0, sizeof(cache));
+        memset(is_cached.data(), false, sizeof(is_cached));
     };
 
     virtual void empty_the_EOS() = 0;
@@ -874,6 +876,7 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
             cache[i03] = derivs.d3alphar_dtau3;
             cache[i21] = derivs.d3alphar_ddelta2_dtau;
             cache[i12] = derivs.d3alphar_ddelta_dtau2;
+            memset(is_cached.data(), true, sizeof(is_cached));
         }
         return derivs;
     };
@@ -1456,6 +1459,7 @@ class IdealHelmholtzContainer : public BaseHelmholtzContainer
             cache[i03] = derivs.d3alphar_dtau3 * _prefactor;
             cache[i21] = derivs.d3alphar_ddelta2_dtau * _prefactor;
             cache[i12] = derivs.d3alphar_ddelta_dtau2 * _prefactor;
+            memset(is_cached.data(), true, sizeof(is_cached));
         }
         return derivs * _prefactor;
     };
