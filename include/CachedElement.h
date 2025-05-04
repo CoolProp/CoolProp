@@ -93,8 +93,8 @@ class CacheArrayElement
 {
     
 private:
-    bool& is_cached;
     NumType& value;
+    bool& is_cached;
     
 public:
     
