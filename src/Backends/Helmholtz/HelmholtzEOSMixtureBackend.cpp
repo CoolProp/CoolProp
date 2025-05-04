@@ -1208,7 +1208,6 @@ void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolProp
     if (!get_config_bool(ENABLE_SUPERANCILLARIES)){
         throw ValueError(format("Superancillaries are not enabled"));
     }
-    try{
         auto& optsuperanc = components[0].EOS().superancillaries;
         if (!optsuperanc){
             throw ValueError(format("Superancillaries not available for this fluid"));
@@ -1226,14 +1225,8 @@ void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolProp
         _p = p;
         _rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
         _phase = iphase_twophase;
-        return;
-    }
-    catch(...){
-    }
     
-    // Cleanup
-   bool optional_checks = false;
-   post_update(optional_checks);
+    post_update(false /*optional_checks*/);
 }
 
 
@@ -1246,8 +1239,8 @@ void HelmholtzEOSMixtureBackend::update_TDmolarP_unchecked(CoolPropDbl T, CoolPr
     _p = p;
 
     // Cleanup
-//    bool optional_checks = false;
-//    post_update(optional_checks);
+    bool optional_checks = false;
+    post_update(optional_checks);
 }
 
 
