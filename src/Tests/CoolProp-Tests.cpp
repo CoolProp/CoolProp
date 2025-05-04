@@ -2449,11 +2449,14 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[su
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    BENCHMARK("HEOS.clear()"){
+        return rHEOS.clear();
+    };
     BENCHMARK("HEOS rho(T)"){
         return AS->update(QT_INPUTS, 1.0, 300.0);
     };
-    BENCHMARK("HEOS update_QT_direct(Q,T)"){
-        return rHEOS.update_QT_direct(1.0, 300.0);
+    BENCHMARK("HEOS update_QT_pure_superanc(Q,T)"){
+        return rHEOS.update_QT_pure_superanc(1.0, 300.0);
     };
     BENCHMARK("superanc rho(T)"){
         return anc.eval_sat(300.0, 'D', 1);
@@ -2521,6 +2524,12 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check out of bound for superancillary
     CHECK_THROWS(AS->update(QT_INPUTS, 1.0, 1000000));
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for R410A", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R410A"));
+    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    CHECK_THROWS(rHEOS.update_QT_pure_superanc(1.0, 300.0));
+}
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check Tc & pc", "[superanccrit]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     set_config_bool(ENABLE_SUPERANCILLARIES, true);
@@ -2539,22 +2548,39 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check Tc & pc", "[superanccrit]") {
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
     std::array<double, 16> buf15; buf15.fill(0.0);
     std::array<double, 100> buf100; buf100.fill(0.0);
+    std::array<bool, 100> bool100; bool100.fill(false);
     std::vector<CachedElement> cache100(100);
     for (auto i = 0; i < cache100.size(); ++i){ cache100[i] = _HUGE; }
     
     std::vector<std::optional<double>> opt100(100);
     for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
     
-    BENCHMARK("memset array15"){
-        memset(buf15.data(), _HUGE, sizeof(buf15));
+    BENCHMARK("memset array15 w/ 0"){
+        std::memset(buf15.data(), 0, sizeof(buf15));
         return buf15;
     };
-    BENCHMARK("fill array15"){
+    BENCHMARK("std::fill_n array15"){
+        std::fill_n(buf15.data(), 15, _HUGE);
+        return buf15;
+    };
+    BENCHMARK("std::fill array15"){
+        std::fill(buf15.begin(), buf15.end(), _HUGE);
+        return buf15;
+    };
+    BENCHMARK("array15.fill()"){
         buf15.fill(_HUGE);
         return buf15;
     };
-    BENCHMARK("memset array100"){
-        memset(buf100.data(), _HUGE, sizeof(buf100));
+    BENCHMARK("memset array100 w/ 0"){
+        memset(buf100.data(), 0, sizeof(buf100));
+        return buf100;
+    };
+    BENCHMARK("memset bool100 w/ 0"){
+        memset(bool100.data(), false, sizeof(bool100));
+        return buf100;
+    };
+    BENCHMARK("std::fill_n array100"){
+        std::fill_n(buf100.data(), 100, _HUGE);
         return buf100;
     };
     BENCHMARK("fill array100"){
