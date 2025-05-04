@@ -163,6 +163,13 @@ EXPORT_CODE long CONVENTION get_parameter_information_string(const char* key, ch
      * @returns error_code 1 = Ok 0 = error
      */
 EXPORT_CODE long CONVENTION get_fluid_param_string(const char* fluid, const char* param, char* Output, int n);
+/**
+     * @param fluid Null-terminated string with the fluid name
+     * @param param Null-terminated string with the parameter of interest
+     *
+     * @returns length of string object to be returned from get_fluid_param_string
+     */
+EXPORT_CODE long CONVENTION get_fluid_param_string_len(const char* fluid, const char* param);
 /** \brief Set configuration string
     * @param key The key to configure
     * @param val The value to set to the key
