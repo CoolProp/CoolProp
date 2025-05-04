@@ -183,8 +183,7 @@ bool AbstractState::clear_comp_change() {
     return true;
 }
 bool AbstractState::clear() {
-    // Reset all instances of CachedElement and overwrite
-    // the internal double values with -_HUGE
+    // Reset all instances of CachedElement
     cache.clear();
 
     this->_critical.fill(_HUGE);
