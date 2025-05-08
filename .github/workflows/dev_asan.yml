@@ -14,6 +14,16 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
+      - name: Build REFPROP
+        shell: bash
+        run: |
+          set -x
+          cd .github/workflows
+          chmod +x buildREFPROP.sh
+          ./buildREFPROP.sh
+          echo COOLPROP_REFPROP_ROOT=`pwd`/gpgREFPROP/REFPROP-cmake/bld >> $GITHUB_ENV
+        env:
+          REFPROP_GPG_PASSPHRASE: ${{ secrets.REFPROP_GPG_PASSPHRASE }}
       - name: checkout submodules
         run: git submodule update --init --recursive
       - name: mkdir
