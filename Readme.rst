@@ -28,7 +28,7 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * Accelerate development of things you really need implemented by posting at `Bountysource <https://www.bountysource.com/teams/coolprop>`_ 
 
-* Check Travis CI for build failures |travisbuilds| and have a look at the coverity stats |coveritystatus|
+* Have a look at the coverity stats |coveritystatus|
 
 .. 
    Downloads and other stats
