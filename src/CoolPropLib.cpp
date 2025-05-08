@@ -25,7 +25,7 @@ void str2buf(const std::string& str, char* buf, int n) {
     if (str.size() < static_cast<unsigned int>(n))
         strcpy(buf, str.c_str());
     else
-        throw CoolProp::ValueError("Buffer size is too small");
+        throw CoolProp::ValueError("Buffer is too small; must be at least " + std::to_string(str.size()) + " characters in size");
 }
 void HandleException(long* errcode, char* message_buffer, const long buffer_length) {
     try {
@@ -401,6 +401,17 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char* fluid, const char
         CoolProp::set_error_string("Undefined error");
     }
     return 0;
+}
+EXPORT_CODE long CONVENTION get_fluid_param_string_len(const char* fluid, const char* param) {
+    try {
+        std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
+        return s.size();
+    } catch (std::exception& e) {
+        CoolProp::set_error_string(e.what());
+    } catch (...) {
+        CoolProp::set_error_string("Undefined error");
+    }
+    return -1;
 }
 EXPORT_CODE void CONVENTION set_config_string(const char* key, const char* val) {
     try {
