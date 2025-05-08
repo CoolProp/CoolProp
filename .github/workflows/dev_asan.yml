@@ -26,5 +26,5 @@ jobs:
         # See: https://github.com/actions/runner-images/issues/6283#issuecomment-1260838338
         run: echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
       - name: run all the compiled Catch tests with address sanitizer
-        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1:verbosity=1 ASAN_SYMBOLIZER_PATH=`brew --prefix`/opt/llvm/bin/llvm-symbolizer ./CatchTestRunner --benchmark-samples 1
+        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1:verbosity=1 ASAN_SYMBOLIZER_PATH=llvm-symbolizer ./CatchTestRunner --benchmark-samples 1
         # ASAN CLI docs here: https://github.com/google/sanitizers/wiki/AddressSanitizerFlags
