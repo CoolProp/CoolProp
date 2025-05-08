@@ -1,0 +1,15 @@
+name: Debug ubuntu with tmate 
+on:
+    workflow_dispatch:
+      inputs:
+        branch:
+          description: 'Branch or tag to retrieve the binaries from'
+          required: false
+          default: 'master'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
