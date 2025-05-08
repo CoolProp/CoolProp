@@ -4,6 +4,8 @@
 #include "DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "superancillary/superancillary.h"
+
 // ############################################
 //                      TESTS
 // ############################################
@@ -2401,6 +2403,202 @@ TEST_CASE("Check that indexes for mixtures are assigned correctly, especially fo
     p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::WATER"); // only parameters for water
     p_extra = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::Na+[0]&Cl-[0]&WATER[1.0]&DIMETHOXYMETHANE[0]"); // same composition, but with mixture of components
     CHECK(abs((p_extra - p)/ p * 100) < 1e-1);
+}
+
+/// A fixture class to enable superancillaries just for a given test
+class SuperAncillaryOnFixture{
+private:
+    const configuration_keys m_key = ENABLE_SUPERANCILLARIES;
+    const bool initial_value;
+public:
+    SuperAncillaryOnFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
+        CoolProp::set_config_bool(m_key, true);
+    }
+    ~SuperAncillaryOnFixture(){
+        CoolProp::set_config_bool(m_key, initial_value);
+    }
+};
+
+/// A fixture class to enable superancillaries just for a given test
+class SuperAncillaryOffFixture{
+private:
+    const configuration_keys m_key = ENABLE_SUPERANCILLARIES;
+    const bool initial_value;
+public:
+    SuperAncillaryOffFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
+        CoolProp::set_config_bool(m_key, false);
+    }
+    ~SuperAncillaryOffFixture(){
+        CoolProp::set_config_bool(m_key, initial_value);
+    }
+};
+
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
+    
+    auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
+    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    BENCHMARK("HEOS.clear()"){
+        return rHEOS.clear();
+    };
+    BENCHMARK("HEOS rho(T)"){
+        return AS->update(QT_INPUTS, 1.0, 300.0);
+    };
+    BENCHMARK("HEOS update_QT_pure_superanc(Q,T)"){
+        return rHEOS.update_QT_pure_superanc(1.0, 300.0);
+    };
+    BENCHMARK("superanc rho(T)"){
+        return anc.eval_sat(300.0, 'D', 1);
+    };
+    BENCHMARK("IF97 rho(T)"){
+        return IF97->update(QT_INPUTS, 1.0, 300.0);
+    };
+    
+    double Tmin = AS->get_fluid_parameter_double(0, "SUPERANC::Tmin");
+    double Tc = AS->get_fluid_parameter_double(0, "SUPERANC::Tcrit_num");
+    double pmin = AS->get_fluid_parameter_double(0, "SUPERANC::pmin");
+    double pmax = AS->get_fluid_parameter_double(0, "SUPERANC::pmax");
+    
+    CHECK_THROWS(AS->get_fluid_parameter_double(1, "SUPERANC::pmax"));
+    
+    BENCHMARK("HEOS rho(p)"){
+        return AS->update(PQ_INPUTS, 101325, 1.0);
+    };
+    BENCHMARK("superanc T(p)"){
+        return anc.get_T_from_p(101325);
+    };
+    BENCHMARK("IF97 rho(p)"){
+        return IF97->update(PQ_INPUTS, 101325, 1.0);
+    };
+}
+
+TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculations with superancillary disabled for water", "[superanc]") {
+    
+    auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
+    superancillary::SuperAncillary<std::vector<double>> anc{json};
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
+    auto& approxrhoL = anc.get_approx1d('D', 0);
+    
+    BENCHMARK("HEOS rho(T)"){
+        return AS->update(QT_INPUTS, 1.0, 300.0);
+    };
+    BENCHMARK("superanc rho(T)"){
+        return anc.eval_sat(300.0, 'D', 1);
+    };
+    BENCHMARK("superanc rho(T) with expansion directly"){
+        return approxrhoL.eval(300.0);
+    };
+    BENCHMARK("superanc get_index rho(T)"){
+        return approxrhoL.get_index(300.0);
+    };
+    BENCHMARK("IF97 rho(T)"){
+        return IF97->update(QT_INPUTS, 1.0, 300.0);
+    };
+    
+    BENCHMARK("HEOS rho(p)"){
+        return AS->update(PQ_INPUTS, 101325, 1.0);
+    };
+    BENCHMARK("superanc T(p)"){
+        return anc.get_T_from_p(101325);
+    };
+    BENCHMARK("IF97 rho(p)"){
+        return IF97->update(PQ_INPUTS, 101325, 1.0);
+    };
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check out of bound for superancillary", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS(AS->update(PQ_INPUTS, 100000000001325, 1.0));
+    CHECK_THROWS(AS->update(QT_INPUTS, 1.0, 1000000));
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for R410A", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R410A"));
+    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    CHECK_THROWS(rHEOS.update_QT_pure_superanc(1.0, 300.0));
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for REFPROP", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "WATER"));
+    CHECK_THROWS(AS->update_QT_pure_superanc(1.0, 300.0));
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check Tc & pc", "[superanccrit]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    set_config_bool(ENABLE_SUPERANCILLARIES, true);
+    auto TcSA = AS->T_critical();
+    auto pcSA = AS->p_critical();
+    auto rhocSA = AS->rhomolar_critical();
+    set_config_bool(ENABLE_SUPERANCILLARIES, false);
+    auto TcnonSA = AS->T_critical();
+    auto pcnonSA = AS->p_critical();
+    auto rhocnonSA = AS->rhomolar_critical();
+    CHECK(TcSA != TcnonSA);
+    CHECK(pcSA != pcnonSA);
+    CHECK(rhocSA != rhocnonSA);
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check h_fg", "[superanc]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    CHECK_THROWS(AS->saturated_vapor_keyed_output(iHmolar) - AS->saturated_liquid_keyed_output(iHmolar));
+    AS->update_QT_pure_superanc(1, 300);
+    CHECK_NOTHROW(AS->saturated_vapor_keyed_output(iHmolar) - AS->saturated_liquid_keyed_output(iHmolar));
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
+    std::array<double, 16> buf15; buf15.fill(0.0);
+    std::array<double, 100> buf100; buf100.fill(0.0);
+    std::array<bool, 100> bool100; bool100.fill(false);
+    std::vector<CachedElement> cache100(100);
+    for (auto i = 0; i < cache100.size(); ++i){ cache100[i] = _HUGE; }
+    
+    std::vector<std::optional<double>> opt100(100);
+    for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
+    
+    BENCHMARK("memset array15 w/ 0"){
+        std::memset(buf15.data(), 0, sizeof(buf15));
+        return buf15;
+    };
+    BENCHMARK("std::fill_n array15"){
+        std::fill_n(buf15.data(), 15, _HUGE);
+        return buf15;
+    };
+    BENCHMARK("std::fill array15"){
+        std::fill(buf15.begin(), buf15.end(), _HUGE);
+        return buf15;
+    };
+    BENCHMARK("array15.fill()"){
+        buf15.fill(_HUGE);
+        return buf15;
+    };
+    BENCHMARK("memset array100 w/ 0"){
+        memset(buf100.data(), 0, sizeof(buf100));
+        return buf100;
+    };
+    BENCHMARK("memset bool100 w/ 0"){
+        memset(bool100.data(), false, sizeof(bool100));
+        return buf100;
+    };
+    BENCHMARK("std::fill_n array100"){
+        std::fill_n(buf100.data(), 100, _HUGE);
+        return buf100;
+    };
+    BENCHMARK("fill array100"){
+        buf100.fill(_HUGE);
+        return buf100;
+    };
+    BENCHMARK("fill cache100"){
+        for (auto i = 0; i < cache100.size(); ++i){ cache100[i] = _HUGE; }
+        return cache100;
+    };
+    BENCHMARK("fill opt100"){
+        for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
+        return opt100;
+    };
 }
 
 /*

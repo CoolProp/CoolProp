@@ -3798,7 +3798,8 @@
       "R1336mzz(E)",
       "(E)-1,1,1,4,4,4-Hexafluoro-2-butene",
       "R1336MZZ(E)",
-      "(e)-1,1,1,4,4,4-hexafluoro-2-butene"
+      "(e)-1,1,1,4,4,4-hexafluoro-2-butene",
+	    "R1336MZZE"
     ],
     "CAS": "66711-86-2",
     "CHEMSPIDER_ID": -1,
@@ -3816,7 +3817,7 @@
     "FORMULA": "C_{4}H_{2}F_{6}",
     "INCHI_KEY": "NLOLSXYRJFEOTA-OWOJBTEDSA-N",
     "INCHI_STRING": "InChI=1S/C4H2F6/c5-3(6,7)1-2-4(8,9)10/h1-2H/b2-1+",
-    "NAME": "R1336MZZE",
+    "NAME": "R1336mzz(E)",
     "REFPROP_NAME": "R1336MZZE",
     "SMILES": "?"
   },

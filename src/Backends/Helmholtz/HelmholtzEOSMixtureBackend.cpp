@@ -100,6 +100,8 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         mole_fractions = std::vector<CoolPropDbl>(1, 1);
         std::vector<std::vector<double>> ones(1, std::vector<double>(1, 1));
         Reducing = shared_ptr<ReducingFunction>(new GERG2008ReducingFunction(components, ones, ones, ones, ones));
+        _reducing = calc_reducing_state_nocache(mole_fractions);
+        _gas_constant = calc_gas_constant();
     } else {
         // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
         set_mixture_parameters();
@@ -256,6 +258,39 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& Pa
         throw ValueError(format("fluid parameter [%s] is invalid", ParamName.c_str()));
     }
 }
+
+double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter){
+    if (i >= N) {
+        throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+    }
+    auto& superanc = components[i].EOS().superancillaries;
+    if (parameter.find("SUPERANC::") == 0){
+        if (superanc){
+            std::string key = parameter.substr(10);
+            if (key == "pmax"){
+                return superanc.value().get_pmax();
+            }
+            else if (key == "pmin"){
+                return superanc.value().get_pmin();
+            }
+            else if (key == "Tmin"){
+                return superanc.value().get_Tmin();
+            }
+            else if (key == "Tcrit_num"){
+                return superanc.value().get_Tcrit_num();
+            }
+            else {
+                throw ValueError(format("Superancillary parameter [%s] is invalid", key.c_str()));
+            }
+        }
+        else{
+            throw ValueError(format("Superancillary not available for this fluid"));
+        }
+    } else {
+        throw ValueError(format("fluid parameter [%s] is invalid", parameter.c_str()));
+    }
+}
+
 
 void HelmholtzEOSMixtureBackend::apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model) {
     // bound-check indices
@@ -1040,7 +1075,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void) {
             throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
         }
     } else {
-        return components[0].crit.T;
+        auto& optsuperanc = components[0].EOS().superancillaries;
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
+            const auto& superanc = optsuperanc.value();
+            return superanc.get_Tcrit_num(); // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+        }
+        else{
+            return components[0].crit.T;
+        }
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void) {
@@ -1053,7 +1095,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void) {
             throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
         }
     } else {
-        return components[0].crit.p;
+        auto& optsuperanc = components[0].EOS().superancillaries;
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
+            const auto& superanc = optsuperanc.value();
+            return superanc.get_pmax(); // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+        }
+        else{
+            return components[0].crit.p;
+        }
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void) {
@@ -1066,7 +1115,14 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void) {
             throw ValueError(format("critical point finding routine found %d critical points", critpts.size()));
         }
     } else {
-        return components[0].crit.rhomolar;
+        auto& optsuperanc = components[0].EOS().superancillaries;
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
+            const auto& superanc = optsuperanc.value();
+            return superanc.get_rhocrit_num(); // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+        }
+        else{
+            return components[0].crit.rhomolar;
+        }
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax_sat(void) {
@@ -1142,6 +1198,53 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_pmax(void) {
     return summer;
 }
 
+void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {
+    clear();
+    _Q = Q;
+    _T = T;
+    if (!is_pure()){
+        throw ValueError(format("Is not a pure fluid"));
+    }
+    if (!get_config_bool(ENABLE_SUPERANCILLARIES)){
+        throw ValueError(format("Superancillaries are not enabled"));
+    }
+    auto& optsuperanc = components[0].EOS().superancillaries;
+    if (!optsuperanc){
+        throw ValueError(format("Superancillaries not available for this fluid"));
+    }
+    const auto& superanc = optsuperanc.value();
+    CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
+    if (T > Tcrit_num){
+        throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+    }
+    auto rhoL = superanc.eval_sat(T, 'D', 0);
+    auto rhoV = superanc.eval_sat(T, 'D', 1);
+    auto p = superanc.eval_sat(T, 'P', 1);
+    SatL->update_TDmolarP_unchecked(T, rhoL, p);
+    SatV->update_TDmolarP_unchecked(T, rhoV, p);
+    _p = p;
+    _rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
+    _phase = iphase_twophase;
+    
+    post_update(false /*optional_checks*/);
+}
+
+
+void HelmholtzEOSMixtureBackend::update_TDmolarP_unchecked(CoolPropDbl T, CoolPropDbl rhomolar, CoolPropDbl p) {
+
+    clear();
+
+    _rhomolar = rhomolar;
+    _T = T;
+    _p = p;
+
+    // Cleanup
+    bool optional_checks = false;
+    post_update(optional_checks);
+}
+
+
+    
 void HelmholtzEOSMixtureBackend::update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T) {
     // TODO: This is just a quick fix for #878 - should be done more systematically
     const CoolPropDbl rhomolar_min = 0;
@@ -1411,7 +1514,9 @@ void HelmholtzEOSMixtureBackend::post_update(bool optional_checks) {
     _delta = _rhomolar / _reducing.rhomolar;
 
     // Update the terms in the excess contribution
-    residual_helmholtz->Excess.update(_tau, _delta);
+    if (!is_pure_or_pseudopure){
+        residual_helmholtz->Excess.update(_tau, _delta);
+    }
 }
 
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_Bvirial() {

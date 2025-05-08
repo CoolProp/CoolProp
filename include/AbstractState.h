@@ -838,6 +838,11 @@ class AbstractState
 
     /// Update the state using two state variables
     virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
+    
+    /// Update the state for QT inputs for pure fluids when using the superancillary functions
+    virtual void update_QT_pure_superanc(double Q, double T){
+        throw NotImplementedError("update_QT_pure_superanc is not implemented for this backend");
+    };
 
     /// Update the state using two state variables and providing guess values
     /// Some or all of the guesses will be used - this is backend dependent
@@ -867,7 +872,6 @@ class AbstractState
     virtual const double get_fluid_constant(std::size_t i, parameters param) const {
         throw NotImplementedError("get_fluid_constant is not implemented for this backend");
     };
-    ;
 
     /// Set binary mixture floating point parameter (EXPERT USE ONLY!!!)
     virtual void set_binary_interaction_double(const std::string& CAS1, const std::string& CAS2, const std::string& parameter, const double value) {
