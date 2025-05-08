@@ -22,9 +22,7 @@ jobs:
         run: cd build && CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Asan -DCOOLPROP_ASAN=ON -DCOOLPROP_CATCH_MODULE=ON
       - name: build all Catch tests
         run: cmake --build build --config Asan
-      - name: Add Homebrew to $PATH
-        # See: https://github.com/actions/runner-images/issues/6283#issuecomment-1260838338
-        run: echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
+      # You can use tmate to log into the running container, which helps to debug paths...
       - name: run all the compiled Catch tests with address sanitizer
-        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1:verbosity=1 ASAN_SYMBOLIZER_PATH=llvm-symbolizer ./CatchTestRunner --benchmark-samples 1
+        run: cd build && ASAN_OPTIONS=detect_stack_use_after_return=1:verbosity=1 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 ./CatchTestRunner --benchmark-samples 1
         # ASAN CLI docs here: https://github.com/google/sanitizers/wiki/AddressSanitizerFlags
