@@ -37,6 +37,10 @@ jobs:
         set -x
         cmake --build build --target install -j $(nproc) --config $BUILD_TYPE
 
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+
     - name: Test
       shell: bash
       run: |
