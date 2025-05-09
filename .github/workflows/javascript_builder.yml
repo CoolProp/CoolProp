@@ -35,7 +35,15 @@ jobs:
       shell: bash
       run: |
         set -x
-        cmake --build build --target install -j $(nproc) --config $BUILD_TYPE        
+        cmake --build build --target install -j $(nproc) --config $BUILD_TYPE
+
+    - name: Test
+      shell: bash
+      run: |
+        set -x
+        cd build
+        cp ../wrappers/Javascript/test_wasm.js .
+        node test_wasm.js
 
     - name: Archive artifacts
       if: ${{ !env.ACT }} # skip during local actions testing
