@@ -42,8 +42,8 @@ jobs:
       run: |
         set -x
         cd build
-        cp ../wrappers/Javascript/test_wasm.js .
-        node test_wasm.js
+        cp ../wrappers/Javascript/test_wasm.mjs .
+        node test_wasm.mjs
 
     - name: Archive artifacts
       if: ${{ !env.ACT }} # skip during local actions testing
