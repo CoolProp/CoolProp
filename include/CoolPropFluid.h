@@ -468,8 +468,8 @@ private:
     /// Set the placeholder string for the superancillaries to allow for lazy construction, particularly important in debug builds
     void set_superancillaries_str(const std::string &s){
         superancillaries_str = s;
-        // Do the construction un-lazily in non-debug builds
-#if defined(NDEBUG)
+        // Do the construction greedily by default, but allow it to be lazy if you want
+#if !defined(LAZY_LOAD_SUPERANCILLARIES)
         get_superanc_optional();
 #endif
     }
