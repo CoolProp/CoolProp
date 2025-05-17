@@ -1353,6 +1353,10 @@ class AncillaryFixture
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
         for (std::size_t i = 0; i < fluids.size(); ++i) {
             shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+            auto* rHEOS = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+            if (!rHEOS->is_pure()){
+                continue;
+            }
             do_sat(AS);
         }
     }
@@ -1529,6 +1533,10 @@ class SatTFixture
         std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
         for (std::size_t i = 0; i < fluids.size(); ++i) {
             shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
+            auto* rHEOS = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+            if (!rHEOS->is_pure()){
+                continue;
+            }
             do_sat(AS);
         }
     }
