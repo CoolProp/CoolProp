@@ -49,6 +49,17 @@ In this figure, we start off with a state point given by T,P and then we calcula
 
 .. image:: Consistencyplots/{fluid:s}.png
 
+Superancillary Plots
+====================
+
+The following figure shows the accuracy of the superancillary functions relative to extended precision calculations carried out in C++ with the teqp library. The results of the iterative calculations with REFPROP and CoolProp are also shown.
+
+.. note::
+
+    You can download the script that generated the following figure here: :download:`(link to script)<Superancillaryplots/{fluid:s}.py>`, right-click the link and then save as... or the equivalent in your browser.  You can also download this figure :download:`as a PDF<Superancillaryplots/{fluid:s}.pdf>`.
+
+.. image:: Superancillaryplots/{fluid:s}.png
+
 """
 
 table_template = """ Parameter, Value

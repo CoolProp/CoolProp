@@ -108,6 +108,103 @@ from .constants import *
 from .constants_header cimport *
 from . cimport constants_header
 
+from . cimport superancillary as supanc
+from cpython cimport array
+
+from libcpp.utility cimport move 
+
+ctypedef vector[double] ArrayType
+ctypedef supanc.ChebyshevExpansion[ArrayType] ChebExp
+    
+cdef class ChebyshevExpansion:
+    cdef ChebExp* m_exp
+
+    def __cinit__(self, double xmin, double xmax, vector[double] coef):
+        self.m_exp = new ChebExp(xmin, xmax, coef)
+
+    def __dealloc__(self):
+        del self.m_exp
+
+    def xmin(self):
+        return self.m_exp.xmin()
+    
+    def xmax(self):
+        return self.m_exp.xmax()
+
+    def coeff(self):
+        np_array = np.asarray(self.m_exp.coeff() )
+        cdef double[:] view = np_array
+        return view 
+
+    def eval_many(self, double[::1] x, double[::1] y):
+        assert x.size == y.size
+        self.m_exp.eval_manyC(&x[0], &y[0], x.shape[0])    
+
+    def solve_for_x(self, double y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol):
+        return self.m_exp.solve_for_x(y, a, b, bits, max_iter, boundstytol)
+
+    def solve_for_x_many(self, double[::1]  y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol, double[::1] x, double [::1] counts):
+        cdef size_t N = y.shape[0]
+        return self.m_exp.solve_for_x_manyC(&y[0], N, a, b, bits, max_iter, boundstytol, &x[0], &counts[0])
+
+ctypedef supanc.ChebyshevApproximation1D[ArrayType] ChebApprox1D
+from cython.operator cimport dereference as deref
+
+cdef class ChebyshevApproximation1D:
+    cdef supanc.ChebyshevApproximation1D[vector[double]]* thisptr
+
+    def __cinit__(self, expansions):
+        cdef vector[supanc.ChebyshevExpansion[vector[double]]] expansions_copy
+        cdef ChebyshevExpansion expansion
+        for expansion in expansions:
+            expansions_copy.push_back(deref(expansion.m_exp))
+        self.thisptr = new ChebApprox1D(move(expansions_copy))
+
+    def xmin(self):
+        return self.thisptr.xmin()
+    
+    def xmax(self):
+        return self.thisptr.xmax()
+
+    def is_monotonic(self):
+        return self.thisptr.is_monotonic()
+
+    def eval_many(self, double[::1] x, double[::1] y):
+        assert x.size == y.size
+        self.thisptr.eval_manyC(&x[0], &y[0], x.shape[0])
+
+    def get_x_for_y(self, double y, unsigned int bits, size_t max_iter, double boundstytol):
+        return self.thisptr.get_x_for_y(y, bits, max_iter, boundstytol)
+
+    def count_x_for_y_many(self, double[::1] y, unsigned int bits, size_t max_iter, double boundstytol, double[::1] counts):
+        assert y.shape[0] == counts.shape[0]
+        cdef size_t N = y.shape[0]
+        return self.thisptr.count_x_for_y_manyC(&y[0], N, bits, max_iter, boundstytol, &counts[0])
+
+    def monotonic_intervals(self):
+        return self.thisptr.get_monotonic_intervals()
+
+    def __dealloc__(self):
+        del self.thisptr
+
+ctypedef supanc.SuperAncillary[ArrayType] SuperAncillary_t
+
+cdef class SuperAncillary:
+    cdef SuperAncillary_t* thisptr
+
+    def __cinit__(self, str json_as_string):
+        self.thisptr = new SuperAncillary_t(json_as_string)
+
+    def eval_sat(self, double T, str prop, short Q):
+        cdef char prop_ = prop[0]
+        return self.thisptr.eval_sat(T, prop_, Q)
+
+    def eval_sat_many(self, double[::1] T, str prop, short Q, double[::1] y):
+        assert T.shape[0] == y.shape[0]
+        cdef char prop_ = prop[0]
+        cdef size_t N = y.shape[0]
+        return self.thisptr.eval_sat_manyC(&T[0], N, prop_, Q, &y[0])
+
 cdef bint iterable(object a):
     """
     If numpy is supported, this function returns true if the argument is a
@@ -126,6 +223,9 @@ cdef ndarray_or_iterable(object input):
 
 include "HumidAirProp.pyx"
 include "AbstractState.pyx"
+
+
+
 
 def set_reference_state(FluidName, *args):
     """

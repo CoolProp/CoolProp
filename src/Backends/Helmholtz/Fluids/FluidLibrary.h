@@ -391,6 +391,12 @@ class JSONFluidLibrary
         // BibTex keys
         EOS.BibTeX_EOS = cpjson::get_string(EOS_json, "BibTeX_EOS");
         EOS.BibTeX_CP0 = cpjson::get_string(EOS_json, "BibTeX_CP0");
+        
+        if (EOS_json.HasMember("SUPERANCILLARY")){
+            // This is inefficient as we do JSON(rapidjson) -> string -> JSON(nlohmann)
+            // which implies two large parsing passes
+            EOS.set_superancillaries_str(cpjson::json2string(EOS_json["SUPERANCILLARY"]));
+        }
 
         EOS.alphar = parse_alphar(EOS_json["alphar"]);
         EOS.alpha0 = parse_alpha0(EOS_json["alpha0"]);

@@ -93,8 +93,8 @@ class CacheArrayElement
 {
     
 private:
-    bool& is_cached;
     NumType& value;
+    bool& is_cached;
     
 public:
     
@@ -153,7 +153,7 @@ private:
     std::array<bool, N> m_cached;
 public:
     void clear(){
-        std::fill_n(m_values.data(), m_values.size(), _HUGE);
+        memset(m_values.data(), 0, sizeof(m_values));
         memset(m_cached.data(), false, sizeof(m_cached));
     }
     auto factory(std::size_t i){
