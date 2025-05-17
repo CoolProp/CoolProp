@@ -2105,6 +2105,10 @@ if(COOLPROP_CATCH_MODULE)
     set_property(TARGET CatchTestRunner PROPERTY CXX_INCLUDE_WHAT_YOU_USE
                                                  ${iwyu_path})
   endif()
+  
+  if(COOLPROP_LAZY_LOAD_SUPERANCILLARIES)
+    target_compile_definitions(CatchTestRunner PRIVATE LAZY_LOAD_SUPERANCILLARIES)
+  endif()
 endif()
 
 if(COOLPROP_CPP_EXAMPLE_TEST)
