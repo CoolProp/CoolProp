@@ -115,8 +115,10 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         SatL.reset(get_copy(false));
         SatL->specify_phase(iphase_liquid);
         linked_states.push_back(SatL);
+        SatL->clear();
         SatV.reset(get_copy(false));
         SatV->specify_phase(iphase_gas);
+        SatV->clear();
         linked_states.push_back(SatV);
     }
 }
