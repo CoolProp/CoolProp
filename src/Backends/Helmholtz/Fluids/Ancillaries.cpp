@@ -341,7 +341,7 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
         std::ostringstream ss2;
         ss2 << "Ensure melting line valid for " << fluids[i] << " @ EOS pmax";
         SECTION(ss2.str(), "") {
-            double actual_T;
+            double actual_T = -_HUGE;
             double EOS_pmax = AS->pmax();
             CAPTURE(EOS_pmax);
             CHECK_NOTHROW(actual_T = AS->melting_line(iT, iP, EOS_pmax));
