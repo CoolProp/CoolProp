@@ -104,6 +104,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     std::vector<CoolProp::CriticalState> _calc_all_critical_points(bool find_critical_points = true);
 
     static void set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2, const std::string& ref);
+    
+    std::optional<EquationOfState::SuperAncillary_t>& get_superanc_optional();
 
    public:
     HelmholtzEOSMixtureBackend();

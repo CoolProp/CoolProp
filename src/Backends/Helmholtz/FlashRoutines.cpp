@@ -344,23 +344,25 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     CoolPropDbl Q = HEOS._Q;
     if (HEOS.is_pure_or_pseudopure) {
         
-        auto& optsuperanc = HEOS.components[0].EOS().superancillaries;
-        
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && optsuperanc){
-            const auto& superanc = optsuperanc.value();
-            CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
-            if (T > Tcrit_num){
-                throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()){
+            auto& optsuperanc = HEOS.get_superanc_optional();
+            if (optsuperanc){
+                auto& superanc = optsuperanc.value();
+                
+                CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
+                if (T > Tcrit_num){
+                    throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
+                }
+                auto rhoL = superanc.eval_sat(T, 'D', 0);
+                auto rhoV = superanc.eval_sat(T, 'D', 1);
+                auto p = superanc.eval_sat(T, 'P', 1);
+                HEOS.SatL->update_TDmolarP_unchecked(T, rhoL, p);
+                HEOS.SatV->update_TDmolarP_unchecked(T, rhoV, p);
+                HEOS._p = p;
+                HEOS._rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
+                HEOS._phase = iphase_twophase;
+                return;
             }
-            auto rhoL = superanc.eval_sat(T, 'D', 0);
-            auto rhoV = superanc.eval_sat(T, 'D', 1);
-            auto p = superanc.eval_sat(T, 'P', 1);
-            HEOS.SatL->update_TDmolarP_unchecked(T, rhoL, p);
-            HEOS.SatV->update_TDmolarP_unchecked(T, rhoV, p);
-            HEOS._p = p;
-            HEOS._rhomolar = 1 / (Q / rhoV + (1 - Q) / rhoL);
-            HEOS._phase = iphase_twophase;
-            return;
         }
         
         
@@ -590,23 +592,26 @@ void get_Henrys_coeffs_FP(const std::string& CAS, double& A, double& B, double& 
 void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
         
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.components[0].EOS().superancillaries){
-            auto& superanc = HEOS.components[0].EOS().superancillaries.value();
-            CoolPropDbl pmax_num = superanc.get_pmax();
-            if (HEOS._p > pmax_num){
-                throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()){
+            auto& optsuperanc = HEOS.get_superanc_optional();
+            if (optsuperanc){
+                auto& superanc = optsuperanc.value();
+                CoolPropDbl pmax_num = superanc.get_pmax();
+                if (HEOS._p > pmax_num){
+                    throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
+                }
+                auto T = superanc.get_T_from_p(HEOS._p);
+                auto rhoL = superanc.eval_sat(T, 'D', 0);
+                auto rhoV = superanc.eval_sat(T, 'D', 1);
+                auto p = HEOS._p;
+                HEOS.SatL->update_TDmolarP_unchecked(T, rhoL, p);
+                HEOS.SatV->update_TDmolarP_unchecked(T, rhoV, p);
+                HEOS._T = T;
+                HEOS._p = p;
+                HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+                HEOS._phase = iphase_twophase;
+                return;
             }
-            auto T = superanc.get_T_from_p(HEOS._p);
-            auto rhoL = superanc.eval_sat(T, 'D', 0);
-            auto rhoV = superanc.eval_sat(T, 'D', 1);
-            auto p = HEOS._p;
-            HEOS.SatL->update_TDmolarP_unchecked(T, rhoL, p);
-            HEOS.SatV->update_TDmolarP_unchecked(T, rhoV, p);
-            HEOS._T = T;
-            HEOS._p = p;
-            HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
-            HEOS._phase = iphase_twophase;
-            return;
         }
         
         if (HEOS.components[0].EOS().pseudo_pure) {

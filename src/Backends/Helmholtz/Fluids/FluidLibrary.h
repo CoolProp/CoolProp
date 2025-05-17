@@ -395,8 +395,7 @@ class JSONFluidLibrary
         if (EOS_json.HasMember("SUPERANCILLARY")){
             // This is inefficient as we do JSON(rapidjson) -> string -> JSON(nlohmann)
             // which implies two large parsing passes
-            std::string s = cpjson::json2string(EOS_json["SUPERANCILLARY"]);
-            EOS.superancillaries = EquationOfState::SuperAncillary_t(s);
+            EOS.set_superancillaries_str(cpjson::json2string(EOS_json["SUPERANCILLARY"]));
         }
 
         EOS.alphar = parse_alphar(EOS_json["alphar"]);
