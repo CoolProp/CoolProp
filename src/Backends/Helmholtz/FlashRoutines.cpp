@@ -591,7 +591,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
         
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.components[0].EOS().superancillaries){
-            const auto& superanc = HEOS.components[0].EOS().superancillaries.value();
+            auto& superanc = HEOS.components[0].EOS().superancillaries.value();
             CoolPropDbl pmax_num = superanc.get_pmax();
             if (HEOS._p > pmax_num){
                 throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
