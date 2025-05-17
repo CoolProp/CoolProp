@@ -2317,7 +2317,14 @@ TEST_CASE("Github issue #2470", "[pureflash]") {
     auto pressure = 3368965.046;  //Pa
     std::shared_ptr<CoolProp::AbstractState> AS;
     AS.reset(AbstractState::factory("HEOS", fluide));
+    AS->update(PQ_INPUTS, pressure, 1);
+    auto Ts = AS->T();
+    AS->specify_phase(iphase_gas);
+    CHECK_NOTHROW(AS->update(PT_INPUTS, pressure, Ts));
+    AS->unspecify_phase();
     CHECK_NOTHROW(AS->update(HmassP_INPUTS, enthalpy, pressure));
+    auto Tfinal = AS->T();
+    CHECK(Tfinal > AS->T_critical());
 }
 
 TEST_CASE("Github issue #2467", "[pureflash]") {
@@ -2517,6 +2524,18 @@ TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculatio
         return IF97->update(PQ_INPUTS, 101325, 1.0);
     };
 }
+
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary functions are available for all pure fluids", "[ancillary]") {
+    for (auto & fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')){
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
+        auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+        if (rHEOS.is_pure()){
+            CAPTURE(fluid);
+            CHECK_NOTHROW(rHEOS.update_QT_pure_superanc(1, rHEOS.T_critical()*0.9999));
+        }
+    }
+};
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check out of bound for superancillary", "[superanc]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));

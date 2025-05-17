@@ -1598,6 +1598,19 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     if (HEOS._p < HEOS.p_triple()) {
                         Tmin = std::max(HEOS.Tmin(), HEOS.Ttriple());
                     } else {
+                        
+                        if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()){
+                            auto& optsuperanc = HEOS.get_superanc_optional();
+                            if (optsuperanc){
+                                auto& superanc = optsuperanc.value();
+                                CoolPropDbl pmax_num = superanc.get_pmax();
+                                if (HEOS._p > pmax_num){
+                                    throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
+                                }
+                                Tmin = superanc.get_T_from_p(HEOS._p)-1e-12;
+                                break;
+                            }
+                        }
                         if (saturation_called) {
                             Tmin = HEOS.SatV->T();
                         } else {
