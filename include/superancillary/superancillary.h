@@ -737,8 +737,7 @@ private:
     /// These ones must always be present
     ChebyshevApproximation1D<ArrayType> m_rhoL, ///< Approximation of \f$\rho'(T)\f$
                                         m_rhoV, ///< Approximation of \f$\rho''(T)\f$
-                                        m_p, ///< Approximation of \f$p(T)\f$
-                                        m_invlnp;///< Approximation of \f$T(ln(p))\f$
+                                        m_p; ///< Approximation of \f$p(T)\f$
     
     // These ones *may* be present
     std::optional<ChebyshevApproximation1D<ArrayType>> m_hL, ///< Approximation of \f$h'(T)\f$
@@ -746,7 +745,8 @@ private:
                                         m_sL, ///< Approximation of \f$s'(T)\f$
                                         m_sV, ///< Approximation of \f$s''(T)\f$
                                         m_uL, ///< Approximation of \f$u'(T)\f$
-                                        m_uV; ///< Approximation of \f$u''(T)\f$
+                                        m_uV, ///< Approximation of \f$u''(T)\f$
+                                        m_invlnp;///< Approximation of \f$T(ln(p))\f$
     
     double m_Tmin; ///< The minimum temperature, in K
     double m_Tcrit_num; ///< The numerical critical temperature, in K
@@ -818,7 +818,6 @@ public:
     m_rhoL(std::move(loader(j, "jexpansions_rhoL"))),
     m_rhoV(std::move(loader(j, "jexpansions_rhoV"))),
     m_p(std::move(loader(j, "jexpansions_p"))),
-    m_invlnp(std::move(make_invlnp(m_p.get_expansions()[0].coeff().size()-1))),
     m_Tmin(m_p.xmin()),
     m_Tcrit_num(j.at("meta").at("Tcrittrue / K")),
     m_rhocrit_num(j.at("meta").at("rhocrittrue / mol/m^3")),
@@ -855,7 +854,15 @@ public:
         }
     }
     /// Get a const reference to the inverse approximation for T(ln(p))
-    const auto& get_invlnp(){ return m_invlnp; }
+    const auto& get_invlnp(){
+        // Lazily construct on the first access
+        if (!m_invlnp){
+            // Degree of expansion is the same as 
+            auto Ndegree = m_p.get_expansions()[0].coeff().size()-1;
+            m_invlnp = make_invlnp(Ndegree);
+        }
+        return m_invlnp;
+    }
     /// Get the minimum pressure in Pa
     const double get_pmin() const{ return m_pmin; }
     /// Get the maximum pressure in Pa
@@ -989,8 +996,8 @@ public:
      \param p The pressure (not its logarithm!), in Pa
      \returns T The temperature, in K
      */
-    auto get_T_from_p(double p) const{
-        return m_invlnp.eval(log(p));
+    auto get_T_from_p(double p) {
+        return get_invlnp().value().eval(log(p));
     }
     
     /**
