@@ -22,7 +22,7 @@ jobs:
     
     container:
       image: ghcr.io/coolprop/coolprop_docs_02_builder:dev
-      options: --user 1001 --group 1001
+      # options: --user 1001 --group 1001
       credentials:
          username: ${{ github.actor }}
          password: ${{ secrets.GITHUB_TOKEN }}
