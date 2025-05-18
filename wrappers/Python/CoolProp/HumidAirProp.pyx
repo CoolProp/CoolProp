@@ -112,7 +112,7 @@ cpdef HAProps(string OutputName, string Input1Name, Input1, string Input2Name, I
     DEPRECATED!!! Used the HAPropsSI function
     """
     
-    if isinstance(Input1, (int, long, float, complex)) and isinstance(Input2, (int, long, float, complex)) and isinstance(Input3, (int, long, float, complex)):
+    if isinstance(Input1, (int, float, complex)) and isinstance(Input2, (int, float, complex)) and isinstance(Input3, (int, long, float, complex)):
         val = _HAProps(OutputName, Input1Name, Input1, Input2Name, Input2, Input3Name, Input3)
     
         if math.isinf(val) or math.isnan(val):

@@ -2442,6 +2442,14 @@ class ConsistencyTestData
     };
 } consistency_data;
 
+TEST_CASE("HAProps tests", "[HAProps]") {
+    Eigen::ArrayXd Tdb = Eigen::ArrayXd::LinSpaced(100, -10, 55) + 273.15;
+    for (auto Tdb_ : Tdb){
+        CAPTURE(Tdb_);
+        CHECK(ValidNumber(HumidAir::HAProps("W", "T", Tdb_, "R", 1, "P", 101.325)));
+    }
+}
+
 /*
  * This test is incredibly slow, which is why it is currently commented out.  Many of the tests also fail
  *
