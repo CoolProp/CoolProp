@@ -306,6 +306,8 @@ list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
 list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.0.2")
+     list(APPEND APP_INCLUDE_DIRS
+     "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann-json")
 list(APPEND APP_INCLUDE_DIRS
      "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
 list(APPEND APP_INCLUDE_DIRS
@@ -2102,6 +2104,10 @@ if(COOLPROP_CATCH_MODULE)
     endif()
     set_property(TARGET CatchTestRunner PROPERTY CXX_INCLUDE_WHAT_YOU_USE
                                                  ${iwyu_path})
+  endif()
+  
+  if(COOLPROP_LAZY_LOAD_SUPERANCILLARIES)
+    target_compile_definitions(CatchTestRunner PRIVATE LAZY_LOAD_SUPERANCILLARIES)
   endif()
 endif()
 

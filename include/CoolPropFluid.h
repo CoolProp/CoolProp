@@ -16,11 +16,14 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <variant>
+#include <optional>
 #include <cassert>
 #include <iterator>
 #include "Eigen/Core"
 #include "PolyMath.h"
 #include "Ancillaries.h"
+#include "superancillary/superancillary.h"
 
 namespace CoolProp {
 
@@ -417,6 +420,13 @@ struct Ancillaries
 */
 class EquationOfState
 {
+public:
+    using SuperAncillary_t = superancillary::SuperAncillary<std::vector<double>>;
+    
+private:
+    std::string superancillaries_str;
+    std::optional<SuperAncillary_t> superancillaries; ///< The superancillaries
+    
    public:
     EquationOfState(){};
     ~EquationOfState(){};
@@ -439,6 +449,32 @@ class EquationOfState
       BibTeX_CP0;                       ///< The bibtex key for the ideal gas specific heat correlation
     CriticalRegionSplines
       critical_region_splines;  ///< A cubic spline in the form T = f(rho) for saturated liquid and saturated vapor curves in the near-critical region
+    
+    /// Get the optional of the populated superancillary
+    std::optional<SuperAncillary_t> & get_superanc_optional(){
+        
+        if (!superancillaries){
+            if (!superancillaries_str.empty()){
+                auto start = std::chrono::high_resolution_clock::now(); // Start time
+                // Now do the parsing pass and replace with the actual superancillary
+                superancillaries.emplace(SuperAncillary_t(superancillaries_str));
+                auto end = std::chrono::high_resolution_clock::now();  // End time
+                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                std::cout << "Execution time: " << duration.count() << " microseconds for " << BibTeX_EOS << std::endl;
+            }
+        }
+        return superancillaries;
+    }
+    /// Set the placeholder string for the superancillaries to allow for lazy construction, particularly important in debug builds
+    void set_superancillaries_str(const std::string &s){
+        superancillaries_str = s;
+        // Do the construction greedily by default, but allow it to be lazy if you want
+#if !defined(LAZY_LOAD_SUPERANCILLARIES)
+        get_superanc_optional();
+#endif
+    }
+    
+    
 
     /// Validate the EOS that was just constructed
     void validate() {

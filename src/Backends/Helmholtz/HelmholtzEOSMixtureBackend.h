@@ -104,6 +104,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     std::vector<CoolProp::CriticalState> _calc_all_critical_points(bool find_critical_points = true);
 
     static void set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2, const std::string& ref);
+    
+    std::optional<EquationOfState::SuperAncillary_t>& get_superanc_optional();
 
    public:
     HelmholtzEOSMixtureBackend();
@@ -194,6 +196,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     virtual void set_fluid_parameter_double(const size_t i, const std::string& parameter, const double value) {
         throw ValueError("set_fluid_parameter_double only defined for cubic backends");
     };
+    virtual double get_fluid_parameter_double(const size_t i, const std::string& parameter);
 
     phases calc_phase(void) {
         return _phase;
@@ -356,6 +359,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      */
     void update_TP_guessrho(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess);
     void update_DmolarT_direct(CoolPropDbl rhomolar, CoolPropDbl T);
+    void update_TDmolarP_unchecked(CoolPropDbl T, CoolPropDbl rhomolarL, CoolPropDbl p);
+    void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T);
     void update_HmolarQ_with_guessT(CoolPropDbl hmolar, CoolPropDbl Q, CoolPropDbl Tguess);
 
     /** \brief Set the components of the mixture

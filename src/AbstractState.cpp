@@ -176,19 +176,18 @@ std::vector<std::string> AbstractState::fluid_names(void) {
 bool AbstractState::clear_comp_change() {
     // Reset all instances of CachedElement and overwrite
     // the internal double values with -_HUGE
-    this->_gas_constant.clear();
     this->_molar_mass.clear();
     this->_critical.fill(_HUGE);
     this->_reducing.fill(_HUGE);
+    calc_reducing_state();
+    this->_gas_constant = calc_gas_constant();
     return true;
 }
 bool AbstractState::clear() {
-    // Reset all instances of CachedElement and overwrite
-    // the internal double values with -_HUGE
+    // Reset all instances of CachedElement
     cache.clear();
 
     this->_critical.fill(_HUGE);
-    this->_reducing.fill(_HUGE);
 
     /// Bulk values
     this->_rhomolar = -_HUGE;
