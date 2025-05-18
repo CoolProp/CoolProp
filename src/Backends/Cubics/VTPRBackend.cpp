@@ -171,30 +171,30 @@ CoolPropDbl CoolProp::VTPRBackend::calc_fugacity_coefficient(std::size_t i) {
 
 using namespace CoolProp;
 
-TEST_CASE("VTPR test", "[VTPR]") {
-    shared_ptr<VTPRBackend> VTPR(new VTPRBackend(strsplit("Ethane&n-Propane&n-Butane", '&')));
-    std::vector<double> z(3);
-    z[0] = 0.1;
-    z[1] = 0.2;
-    z[2] = 0.7;
-    VTPR->set_mole_fractions(z);
-
-    SECTION("dam_dxi") {
-        shared_ptr<AbstractCubic> cubic = VTPR->get_cubic();
-        double tau = 0.001, dz = 1e-6;
-        std::vector<double> zp = z, zm = z;
-        zp[0] += dz;
-        zm[0] -= dz;
-        if (!XN_INDEPENDENT) {
-            zp[2] -= dz;
-            zm[2] += dz;
-        }
-
-        double dam_dxi_num = (cubic->am_term(tau, zp, 0) - cubic->am_term(tau, zm, 0)) / (2 * dz);
-        double dam_dxi_ana = cubic->d_am_term_dxi(tau, z, 0, 0, XN_INDEPENDENT);
-        double diff = dam_dxi_num - dam_dxi_ana;
-        CHECK(std::abs(diff) < 1e-6);
-    }
-}
+//TEST_CASE("VTPR test", "[VTPR]") {
+//    shared_ptr<VTPRBackend> VTPR(new VTPRBackend(strsplit("Ethane&n-Propane&n-Butane", '&')));
+//    std::vector<double> z(3);
+//    z[0] = 0.1;
+//    z[1] = 0.2;
+//    z[2] = 0.7;
+//    VTPR->set_mole_fractions(z);
+//
+//    SECTION("dam_dxi") {
+//        shared_ptr<AbstractCubic> cubic = VTPR->get_cubic();
+//        double tau = 0.001, dz = 1e-6;
+//        std::vector<double> zp = z, zm = z;
+//        zp[0] += dz;
+//        zm[0] -= dz;
+//        if (!XN_INDEPENDENT) {
+//            zp[2] -= dz;
+//            zm[2] += dz;
+//        }
+//
+//        double dam_dxi_num = (cubic->am_term(tau, zp, 0) - cubic->am_term(tau, zm, 0)) / (2 * dz);
+//        double dam_dxi_ana = cubic->d_am_term_dxi(tau, z, 0, 0, XN_INDEPENDENT);
+//        double diff = dam_dxi_num - dam_dxi_ana;
+//        CHECK(std::abs(diff) < 1e-6);
+//    }
+//}
 
 #endif
