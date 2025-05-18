@@ -460,7 +460,7 @@ private:
                 superancillaries.emplace(SuperAncillary_t(superancillaries_str));
                 auto end = std::chrono::high_resolution_clock::now();  // End time
                 auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::cout << "Execution time: " << duration.count() << " microseconds for " << BibTeX_EOS << std::endl;
+                //std::cout << "Execution time: " << duration.count() << " microseconds for " << BibTeX_EOS << std::endl;
             }
         }
         return superancillaries;
