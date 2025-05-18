@@ -403,7 +403,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
         if (!ValidNumber(T)) {
             throw CoolProp::ValueError("Intermediate value for Tdb is invalid");
         }
-    } catch (std::exception& e) {
+    } catch (std::exception& /* e */) {
         T = CoolProp::Brent(Resids, 100, 640, 1e-15, 1e-10, 100);
     }
 

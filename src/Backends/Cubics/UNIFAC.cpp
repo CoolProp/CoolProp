@@ -35,7 +35,7 @@ void UNIFAC::UNIFACMixture::set_interaction_parameter(const std::size_t mgi1, co
     }
 }
 double UNIFAC::UNIFACMixture::get_interaction_parameter(const std::size_t mgi1, const std::size_t mgi2, const std::string& parameter) {
-    std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters>::iterator it = this->interaction.find(std::pair<int, int>(mgi1, mgi2));
+    std::map<std::pair<int, int>, UNIFACLibrary::InteractionParameters>::iterator it = this->interaction.find(std::pair<int, int>(static_cast<int>(mgi1), static_cast<int>(mgi2)));
     if (it == this->interaction.end()) {
         throw CoolProp::ValueError(format("Unable to match mgi-mgi pair: [%d,%d]", static_cast<int>(mgi1), static_cast<int>(mgi1)));
     } else {

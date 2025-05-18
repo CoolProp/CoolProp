@@ -437,12 +437,12 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
-        auto idxa = 0UL;
-        auto idxi = 0UL; // index for the ii-th compound
-        auto idxj = 0UL; // index for the jj-th compound
-        for (auto i = 0UL; i < num_sites; i++) {
+        auto idxa = 0ULL;
+        auto idxi = 0ULL; // index for the ii-th compound
+        auto idxj = 0ULL; // index for the jj-th compound
+        for (auto i = 0; i < num_sites; i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (int j = 0UL; j < num_sites; j++) {
+            for (int j = 0; j < num_sites; j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -754,12 +754,12 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
         vector<double> ddelta_dt(num_sites * num_sites, 0);
-        auto idxa = 0UL;
-        auto idxi = 0UL; // index for the ii-th compound
-        auto idxj = 0UL; // index for the jj-th compound
-        for (auto i = 0UL; i < num_sites; i++) {
+        std::size_t idxa = 0UL;
+        std::size_t idxi = 0UL; // index for the ii-th compound
+        std::size_t idxj = 0UL;  // index for the jj-th compound
+        for (auto i = 0; i < num_sites; i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (auto j = 0UL; j < num_sites; j++) {
+            for (auto j = 0; j < num_sites; j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1211,12 +1211,12 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
-        auto idxa = 0UL;
-        auto idxi = 0UL; // index for the ii-th compound
-        auto idxj = 0UL; // index for the jj-th compound
-        for (auto i = 0UL; i < num_sites; i++) {
+        std::size_t idxa = 0UL;
+        std::size_t idxi = 0UL;  // index for the ii-th compound
+        std::size_t idxj = 0UL;  // index for the jj-th compound
+        for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (auto j = 0UL; j < num_sites; j++) {
+            for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1235,12 +1235,12 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
         vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
         int idx_ddelta = 0;
         for (int k = 0; k < ncomp; k++) {
-            auto idxi = 0UL; // index for the ii-th compound
-            auto idxj = 0UL; // index for the jj-th compound
+            std::size_t idxi = 0UL; // index for the ii-th compound
+            std::size_t idxj = 0UL;  // index for the jj-th compound
             idxa = 0;
-            for (auto i = 0UL; i < num_sites; i++) {
+            for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
                 idxi = iA[i]*ncomp+iA[i];
-                for (auto j = 0UL; j < num_sites; j++) {
+                for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
                     idxj = iA[j]*ncomp+iA[j];
                     if (assoc_matrix[idxa] != 0) {
                         double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1565,12 +1565,12 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA (num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
-        auto idxa = 0UL;
-        auto idxi = 0UL; // index for the ii-th compound
-        auto idxj = 0UL; // index for the jj-th compound
-        for (auto i = 0UL; i < num_sites; i++) {
+        std::size_t idxa = 0UL;
+        std::size_t idxi = 0UL;  // index for the ii-th compound
+        std::size_t idxj = 0UL;  // index for the jj-th compound
+        for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
             idxi = iA[i]*ncomp+iA[i];
-            for (auto j = 0UL; j < num_sites; j++) {
+            for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
                 idxj = iA[j]*ncomp+iA[j];
                 if (assoc_matrix[idxa] != 0) {
                     double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1589,12 +1589,12 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
         vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
         int idx_ddelta = 0;
         for (int k = 0; k < ncomp; k++) {
-            auto idxi = 0UL; // index for the ii-th compound
-            auto idxj = 0UL; // index for the jj-th compound
+            std::size_t idxi = 0UL;  // index for the ii-th compound
+            std::size_t idxj = 0UL;  // index for the jj-th compound
             idxa = 0;
-            for (auto i = 0UL; i < num_sites; i++) {
+            for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
                 idxi = iA[i]*ncomp+iA[i];
-                for (auto j = 0UL; j < num_sites; j++) {
+                for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
                     idxj = iA[j]*ncomp+iA[j];
                     if (assoc_matrix[idxa] != 0) {
                         double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
@@ -1874,8 +1874,7 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
                 SatL->_T = _T; SatV->_T = _T;
                 try {
                     flash_QT(*this);
-                }
-                catch (const SolutionError& ex) {
+                } catch (const SolutionError& /* ex */) {
                     phase = iphase_supercritical;
                     break;
                 }
@@ -1916,7 +1915,7 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
             SatV->_T = _T;
             try {
                 flash_QT(*this);
-            } catch (const SolutionError& ex) {
+            } catch (const SolutionError& /* ex */) {
                 phase = iphase_supercritical;
                 break;
             }
@@ -1964,9 +1963,9 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
         p_guess = estimate_flash_p(PCSAFT);
         p = outerTQ(p_guess, PCSAFT);
         solution_found = true;
+    } catch (const SolutionError& /* ex */) {
+    } catch (const ValueError& /* ex */) {
     }
-    catch (const SolutionError& ex) {}
-    catch (const ValueError& ex) {}
 
     // if solution hasn't been found, try cycling through a range of pressures
     if (!solution_found) {
@@ -1978,9 +1977,9 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
             try {
                 p = outerTQ(pow(10, p_guess), PCSAFT);
                 solution_found = true;
-            } catch (const SolutionError& ex) {
+            } catch (const SolutionError& /* ex */) {
                 p_guess += p_step;
-            } catch (const ValueError& ex) {
+            } catch (const ValueError& /* ex */) {
                 p_guess += p_step;
             }
         }
@@ -2005,9 +2004,9 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT) {
         t_guess = estimate_flash_t(PCSAFT);
         t = outerPQ(t_guess, PCSAFT);
         solution_found = true;
+    } catch (const SolutionError& /* ex */) {
+    } catch (const ValueError& /* ex */) {
     }
-    catch (const SolutionError& ex) {}
-    catch (const ValueError& ex) {}
 
     // if solution hasn't been found, try calling the flash function directly with a range of initial temperatures
     if (!solution_found) {
@@ -2023,9 +2022,9 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT) {
             try {
                 t = outerPQ(t_guess, PCSAFT);
                 solution_found = true;
-            } catch (const SolutionError& ex) {
+            } catch (const SolutionError& /* ex */) {
                 t_guess -= t_step;
-            } catch (const ValueError& ex) {
+            } catch (const ValueError& /* ex */) {
                 t_guess -= t_step;
             }
         }
@@ -2046,7 +2045,7 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     // Based on the algorithm proposed in H. A. J. Watson, M. Vikse, T. Gundersen, and P. I. Barton, “Reliable Flash Calculations: Part 1. Nonsmooth Inside-Out Algorithms,” Ind. Eng. Chem. Res., vol. 56, no. 4, pp. 960–973, Feb. 2017, doi: 10.1021/acs.iecr.6b03956.
     auto ncomp = N; // number of components
     double TOL = 1e-8;
-    double MAXITER = 200;
+    int MAXITER = 200;
 
     // Define the residual to be driven to zero
     class SolverInnerResid : public FuncWrapper1D
@@ -2308,7 +2307,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     // Based on the algorithm proposed in H. A. J. Watson, M. Vikse, T. Gundersen, and P. I. Barton, “Reliable Flash Calculations: Part 1. Nonsmooth Inside-Out Algorithms,” Ind. Eng. Chem. Res., vol. 56, no. 4, pp. 960–973, Feb. 2017, doi: 10.1021/acs.iecr.6b03956.
     auto ncomp = N; // number of components
     double TOL = 1e-8;
-    double MAXITER = 200;
+    int MAXITER = 200;
 
     // Define the residual to be driven to zero
     class SolverInnerResid : public FuncWrapper1D
@@ -2590,7 +2589,7 @@ double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
             double intercept = std::log10(p1) - slope * (1/t);
             t_guess = slope / (std::log10(PCSAFT._p) - intercept);
             guess_found = true;
-        } catch (const SolutionError& ex) {
+        } catch (const SolutionError& /* ex */) {
             t_start -= t_step;
         }
     }

@@ -154,7 +154,7 @@ void add_fluids_as_JSON(const std::string& JSON) {
         } else {
             try {
                 library.add_many(dd);
-            } catch (std::exception& e) {
+            } catch (std::exception& /* e */) {
                 throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str()));
             }
         }

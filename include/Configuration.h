@@ -1,7 +1,6 @@
 #ifndef COOLPROP_CONFIGURATION
 #define COOLPROP_CONFIGURATION
 
-#define _CRT_SECURE_NO_WARNINGS
 #include "Exceptions.h"
 #include "CoolPropTools.h"
 #include <cstdlib>
