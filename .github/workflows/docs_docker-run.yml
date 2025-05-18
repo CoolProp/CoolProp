@@ -74,7 +74,7 @@ jobs:
     - name: Build and install wheel using bdist_wheel
       shell: bash
       run: |
-        git config --global --add safe.directory .
+        git config --global --add safe.directory /__w/CoolProp/CoolProp
         echo "$(git rev-parse HEAD)" > dev/gitrevision.txt
         source activate docs
         pip -vv wheel .
