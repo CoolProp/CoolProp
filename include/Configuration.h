@@ -336,7 +336,7 @@ class Configuration
                     items.erase(key); items.emplace(key, ConfigurationItem(key, i));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_DOUBLE_TYPE:
-                    int d;
+                    double d;
                     try{
                         d = std::stod(envval);
                     }
@@ -349,7 +349,7 @@ class Configuration
                     items.erase(key); items.emplace(key, ConfigurationItem(key, d));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_BOOL_TYPE:
-                    int b;
+                    bool b;
                     try{
                         b = tobool(envval);
                     }
