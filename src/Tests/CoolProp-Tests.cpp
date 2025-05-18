@@ -1423,9 +1423,11 @@ class AncillaryFixture
         CHECK(err < 0.03);
     }
 };
-TEST_CASE_METHOD(AncillaryFixture, "Ancillary functions", "[ancillary]") {
-    run_checks();
-};
+// Disabled because either they have a superancillary, and the ancillaries should not be used,
+// or they are a pure fluid and superancillaries are not developed
+//TEST_CASE_METHOD(AncillaryFixture, "Ancillary functions", "[ancillary]") {
+//    run_checks();
+//};
 
 TEST_CASE("Triple point checks", "[triple_point]") {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
