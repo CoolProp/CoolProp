@@ -11,6 +11,7 @@
 #include "CachedElement.h"
 #include "Backends/Cubics/GeneralizedCubic.h"
 #include "crossplatform_shared_ptr.h"
+#include "CPnumerics.h"
 
 #if ENABLE_CATCH
 #    include "MultiComplex/MultiComplex.hpp"
@@ -740,8 +741,8 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
 class BaseHelmholtzContainer
 {
    protected:
-    std::array<double, 16> cache;
-    std::array<bool, 16> is_cached;
+    std::array<double, 16> cache = create_filled_array<double, N>(_HUGE);
+    std::array<bool, 16> is_cached = create_filled_array<bool, N>(false);
     constexpr static std::size_t i00 = 0, i01 = 1, i02 = 2, i03 = 3, i04 = 4,
     i10 = 5, i11 = 6, i12 = 7, i13 = 8,
     i20 = 9, i21 = 10, i22 = 11,

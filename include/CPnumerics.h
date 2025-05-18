@@ -8,6 +8,7 @@
 #include <algorithm>  // For max
 #include <numeric>
 #include <cmath>
+#include <array>
 #include "PlatformDetermination.h"
 #include "CPstrings.h"
 #include "Exceptions.h"
@@ -20,6 +21,13 @@
 #        define _HUGE HUGE
 #    endif
 #endif
+
+template <typename T, size_t N>
+std::array<T, N> create_filled_array(T value) {
+    std::array<T, N> arr;
+    arr.fill(value);
+    return arr;
+}
 
 inline bool ValidNumber(double x) {
     // Idea from http://www.johndcook.com/IEEE_exceptions_in_cpp.html

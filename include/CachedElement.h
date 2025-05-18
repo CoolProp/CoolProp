@@ -12,6 +12,7 @@
 #include <array>
 #include "CoolPropTools.h"
 #include "DataStructures.h"
+#include "CPnumerics.h"
 
 namespace CoolProp {
 
@@ -147,11 +148,14 @@ public:
 
 template<int N>
 class CacheArray{
+
 private:
+
     std::size_t inext = 0;
-    std::array<double, N> m_values;
-    std::array<bool, N> m_cached;
-public:
+    std::array<double, N> m_values = create_filled_array<double, N>(_HUGE);
+    std::array<bool, N> m_cached = create_filled_array<bool, N>(false);
+
+   public:
     void clear(){
         memset(m_values.data(), 0, sizeof(m_values));
         memset(m_cached.data(), false, sizeof(m_cached));
