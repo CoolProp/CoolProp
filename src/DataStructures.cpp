@@ -11,11 +11,11 @@ namespace CoolProp {
 struct parameter_info
 {
     int key;
-    const char *short_desc, *IO, *units, *description;
+    std::string short_desc, IO, units, description;
     bool trivial;  ///< True if the input is trivial, and can be directly calculated (constants like critical properties, etc.)
 };
 
-const parameter_info parameter_info_list[] = {
+const std::vector<parameter_info> parameter_info_list = {
   /// Input/Output parameters
   {iT, "T", "IO", "K", "Temperature", false},
   {iP, "P", "IO", "Pa", "Pressure", false},
@@ -111,14 +111,13 @@ class ParameterInformation
     std::map<int, std::string> short_desc_map, description_map, IO_map, units_map;
     std::map<std::string, int> index_map;
     ParameterInformation() {
-        const parameter_info* const end = parameter_info_list + sizeof(parameter_info_list) / sizeof(parameter_info_list[0]);
-        for (const parameter_info* el = parameter_info_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<int, std::string>(el->key, el->short_desc));
-            IO_map.insert(std::pair<int, std::string>(el->key, el->IO));
-            units_map.insert(std::pair<int, std::string>(el->key, el->units));
-            description_map.insert(std::pair<int, std::string>(el->key, el->description));
-            index_map_insert(el->short_desc, el->key);
-            trivial_map.insert(std::pair<int, bool>(el->key, el->trivial));
+        for (auto& el : parameter_info_list) {
+            short_desc_map.insert(std::pair<int, std::string>(el.key, el.short_desc));
+            IO_map.insert(std::pair<int, std::string>(el.key, el.IO));
+            units_map.insert(std::pair<int, std::string>(el.key, el.units));
+            description_map.insert(std::pair<int, std::string>(el.key, el.description));
+            index_map_insert(el.short_desc, el.key);
+            trivial_map.insert(std::pair<int, bool>(el.key, el.trivial));
         }
         // Backward compatibility aliases
         index_map_insert("D", iDmass);
@@ -198,8 +197,8 @@ std::string get_parameter_information(int key, const std::string& info) {
 std::string get_csv_parameter_list() {
     auto& parameter_information = get_parameter_information();
     std::vector<std::string> strings;
-    for (std::map<std::string, int>::const_iterator it = parameter_information.index_map.begin(); it != parameter_information.index_map.end(); ++it) {
-        strings.push_back(it->first);
+    for (auto& it : parameter_information.index_map) {
+        strings.push_back(it.first);
     }
     return strjoin(strings, ",");
 }
@@ -752,34 +751,36 @@ void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
 struct backend_family_info
 {
     backend_families family;
-    const char* name;
+    std::string name;
 };
 
 struct backend_info
 {
     backends backend;
-    const char* name;
+    std::string name;
     backend_families family;
 };
 
-const backend_family_info backend_family_list[] = {
+const std::vector<backend_family_info> backend_family_list = {
   {HEOS_BACKEND_FAMILY, "HEOS"},   {REFPROP_BACKEND_FAMILY, "REFPROP"}, {INCOMP_BACKEND_FAMILY, "INCOMP"},   {IF97_BACKEND_FAMILY, "IF97"},
   {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SRK_BACKEND_FAMILY, "SRK"},
   {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"}};
 
-const backend_info backend_list[] = {{HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
-                                     {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
-                                     {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
-                                     {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
-                                     {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
-                                     {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
-                                     {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
-                                     {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
-                                     {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
-                                     {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
-                                     {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
-                                     {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
-                                     {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY}};
+const std::vector<backend_info> backend_list = {
+    {HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
+    {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
+    {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
+    {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
+    {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
+    {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
+    {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
+    {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
+    {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
+    {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
+    {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
+    {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
+    {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY}
+};
 
 class BackendInformation
 {
@@ -792,17 +793,15 @@ class BackendInformation
     std::map<std::string, backends> backend_name_map_r;         /// < from backend name to backend
 
     BackendInformation() {
-        const backend_family_info* const family_end = backend_family_list + sizeof(backend_family_list) / sizeof(backend_family_list[0]);
-        for (const backend_family_info* el = backend_family_list; el != family_end; ++el) {
-            family_name_map.insert(std::pair<backend_families, std::string>(el->family, el->name));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el->name, el->family));
+        for (auto& el : backend_family_list) {
+            family_name_map.insert(std::pair<backend_families, std::string>(el.family, el.name));
+            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
         }
-        const backend_info* const backend_end = backend_list + sizeof(backend_list) / sizeof(backend_list[0]);
-        for (const backend_info* el = backend_list; el != backend_end; ++el) {
-            backend_family_map.insert(std::pair<backends, backend_families>(el->backend, el->family));
-            backend_name_map.insert(std::pair<backends, std::string>(el->backend, el->name));
-            backend_name_map_r.insert(std::pair<std::string, backends>(el->name, el->backend));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el->name, el->family));
+        for (auto& el : backend_list) {
+            backend_family_map.insert(std::pair<backends, backend_families>(el.backend, el.family));
+            backend_name_map.insert(std::pair<backends, std::string>(el.backend, el.name));
+            backend_name_map_r.insert(std::pair<std::string, backends>(el.name, el.backend));
+            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
         }
     }
 };
@@ -860,6 +859,10 @@ std::string get_backend_string(backends backend) {
 #ifdef ENABLE_CATCH
 #    include <catch2/catch_all.hpp>
 #    include <sstream>
+
+TEST_CASE("Check that csv list of parameters is possible", "[parameter_list]") {
+    CHECK_NOTHROW(CoolProp::get_csv_parameter_list());
+}
 
 TEST_CASE("Check that all parameters are described", "") {
     for (int i = 1; i < CoolProp::iundefined_parameter; ++i) {
