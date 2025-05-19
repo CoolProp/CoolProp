@@ -425,7 +425,7 @@ public:
     
 private:
     std::string superancillaries_str;
-    std::optional<SuperAncillary_t> superancillaries; ///< The superancillaries
+    std::optional<SuperAncillary_t> superancillaries = std::nullopt; ///< The superancillaries
     
    public:
     EquationOfState(){};
@@ -465,6 +465,7 @@ private:
         }
         return superancillaries;
     }
+    
     /// Set the placeholder string for the superancillaries to allow for lazy construction, particularly important in debug builds
     void set_superancillaries_str(const std::string &s){
         superancillaries_str = s;
