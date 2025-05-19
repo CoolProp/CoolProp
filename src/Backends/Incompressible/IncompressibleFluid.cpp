@@ -655,7 +655,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
 
     SECTION("Test case for Methanol from SecCool") {
 
-        CoolProp::IncompressibleFluid CH3OH = CoolProp::get_incompressible_fluid("CH3OH");
+        CoolProp::IncompressibleFluid CH3OH = CoolProp::get_incompressible_fluid("MMA2");
 
         // Prepare the results and compare them to the calculated values
         double acc = 0.0001;
@@ -694,9 +694,9 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK_THROWS(CH3OH.h(T, p, x));
         CHECK_THROWS(CH3OH.u(T, p, x));
 
-        // Compare v
-        expected = 0.0023970245009602097;
-        actual = CH3OH.visc(T, p, x) / 1e3;
+        // Compare viscosity
+        expected = 0.0023970245009602097; // Pa-s   // Melinder 3.48 mPas @ 24.87 wt%, 0C
+        actual = CH3OH.visc(T, p, x);
         {
             CAPTURE(T);
             CAPTURE(p);

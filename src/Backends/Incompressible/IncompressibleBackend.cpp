@@ -580,7 +580,7 @@ double IncompressibleBackend::calc_dhdpatTx(double T, double rho, double drhodTa
 #    include "TestObjects.h"
 
 TEST_CASE("Internal consistency checks and example use cases for the incompressible backend", "[IncompressibleBackend]") {
-    CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("Methanol");
+    CoolProp::IncompressibleFluid fluid = CoolProp::get_incompressible_fluid("MMA2");
     CoolProp::IncompressibleBackend backend = CoolProp::IncompressibleBackend(&fluid);
 
     SECTION("Test case for Methanol from SecCool") {
