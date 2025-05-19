@@ -2317,8 +2317,7 @@ TEST_CASE("Github issue #2470", "[pureflash]") {
     auto fluide = "Nitrogen";
     auto enthalpy = 67040.57857;    //J / kg
     auto pressure = 3368965.046;  //Pa
-    std::shared_ptr<CoolProp::AbstractState> AS;
-    AS.reset(AbstractState::factory("HEOS", fluide));
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", fluide));
     AS->update(PQ_INPUTS, pressure, 1);
     auto Ts = AS->T();
     AS->specify_phase(iphase_gas);
@@ -2331,7 +2330,7 @@ TEST_CASE("Github issue #2470", "[pureflash]") {
 
 TEST_CASE("Github issue #2467", "[pureflash]") {
     auto fluide = "Pentane";
-    auto AS = CoolProp::AbstractState::factory("HEOS", fluide);
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", fluide));
     AS->update(CoolProp::QT_INPUTS, 1, 353.15);
     double p1 = AS->p();
     AS->update(CoolProp::QT_INPUTS, 1, 433.15);
@@ -2343,7 +2342,7 @@ TEST_CASE("Github issue #2467", "[pureflash]") {
 
 TEST_CASE("Github issue #1870", "[pureflash]") {
     auto fluide = "Pentane";
-    auto AS = CoolProp::AbstractState::factory("HEOS", fluide);
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", fluide));
     CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 1000000, 1500));
 }
 
