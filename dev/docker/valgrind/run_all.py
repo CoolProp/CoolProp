@@ -11,4 +11,4 @@ with open('stdout') as fp:
             tags.append(tag)
 
 for tag in tags:
-    subprocess.call('valgrind --tool=memcheck --error-limit=no --track-origins=yes ./CatchTestRunner '+tag, shell=True, cwd='.')
+    subprocess.call('valgrind --tool=memcheck --error-limit=no --track-origins=yes --leak-check=full --show-leak-kinds=all ./CatchTestRunner '+tag, shell=True, cwd='.')
