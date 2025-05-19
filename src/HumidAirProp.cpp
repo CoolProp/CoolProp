@@ -2278,14 +2278,14 @@ struct hel
         this->out = out;
     };
 };
-hel table_A11[] = {hel("T", 473.15, "W", 0.00, "P", 101325, "B", 45.07 + 273.15), hel("T", 473.15, "W", 0.00, "P", 101325, "V", 1.341),
+std::vector<hel> table_A11 = {hel("T", 473.15, "W", 0.00, "P", 101325, "B", 45.07 + 273.15), hel("T", 473.15, "W", 0.00, "P", 101325, "V", 1.341),
                    hel("T", 473.15, "W", 0.00, "P", 101325, "H", 202520),         hel("T", 473.15, "W", 0.00, "P", 101325, "S", 555.8),
                    hel("T", 473.15, "W", 0.50, "P", 101325, "B", 81.12 + 273.15), hel("T", 473.15, "W", 0.50, "P", 101325, "V", 2.416),
                    hel("T", 473.15, "W", 0.50, "P", 101325, "H", 1641400),        hel("T", 473.15, "W", 0.50, "P", 101325, "S", 4829.5),
                    hel("T", 473.15, "W", 1.00, "P", 101325, "B", 88.15 + 273.15), hel("T", 473.15, "W", 1.00, "P", 101325, "V", 3.489),
                    hel("T", 473.15, "W", 1.00, "P", 101325, "H", 3079550),        hel("T", 473.15, "W", 1.00, "P", 101325, "S", 8889.0)};
 
-hel table_A12[] = {hel("T", 473.15, "W", 0.00, "P", 1e6, "B", 90.47 + 273.15),
+std::vector<hel> table_A12 = {hel("T", 473.15, "W", 0.00, "P", 1e6, "B", 90.47 + 273.15),
                    hel("T", 473.15, "W", 0.00, "P", 1e6, "V", 0.136),
                    hel("T", 473.15, "W", 0.00, "P", 1e6, "H", 201940),
 //                   hel("T", 473.15, "W", 0.00, "P", 1e6, "S", -101.1),   Using CoolProp 4.2, this value seems incorrect from report
@@ -2298,7 +2298,7 @@ hel table_A12[] = {hel("T", 473.15, "W", 0.00, "P", 1e6, "B", 90.47 + 273.15),
                    hel("T", 473.15, "W", 1.00, "P", 1e6, "H", 3050210),
                    hel("T", 473.15, "W", 1.00, "P", 1e6, "S", 7141.3)};
 
-hel table_A15[] = {
+std::vector<hel> table_A15 = {
   hel("T", 473.15, "W", 0.10, "P", 1e7, "B", 188.92 + 273.15), hel("T", 473.15, "W", 0.10, "P", 1e7, "V", 0.016),
   hel("T", 473.15, "W", 0.10, "P", 1e7, "H", 473920),          hel("T", 473.15, "W", 0.10, "P", 1e7, "S", -90.1),
   hel("T", 473.15, "W", 0.10, "P", 1e7, "R", 0.734594),
@@ -2310,9 +2310,6 @@ class HAPropsConsistencyFixture
     std::vector<hel> inputs;
     std::string in1, in2, in3, out;
     double v1, v2, v3, expected, actual;
-    void set_table(hel h[], int nrow) {
-        inputs = std::vector<hel>(h, h + nrow);
-    };
     void set_values(hel& h) {
         this->in1 = h.in1;
         this->in2 = h.in2;
@@ -2330,7 +2327,7 @@ class HAPropsConsistencyFixture
 
 TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]") {
     SECTION("Table A.15") {
-        set_table(table_A15, 5);
+        inputs = table_A15;
         for (std::size_t i = 0; i < inputs.size(); ++i) {
             set_values(inputs[i]);
             call();
@@ -2349,7 +2346,7 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]") 
         }
     }
     SECTION("Table A.11") {
-        set_table(table_A11, 12);
+        inputs = table_A11;
         for (std::size_t i = 0; i < inputs.size(); ++i) {
             set_values(inputs[i]);
             call();
@@ -2368,7 +2365,7 @@ TEST_CASE_METHOD(HAPropsConsistencyFixture, "ASHRAE RP1485 Tables", "[RP1485]") 
         }
     }
     SECTION("Table A.12") {
-        set_table(table_A12, 12);
+        inputs = table_A12;
         for (std::size_t i = 0; i < inputs.size(); ++i) {
             set_values(inputs[i]);
             call();
