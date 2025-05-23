@@ -76,8 +76,7 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
-    env:
-      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
+      TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
       
   python_ubuntu_arm:
     needs: set-version
@@ -93,8 +92,7 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
-    env:
-      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
+      TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
       
   python_windows:
     needs: set-version
@@ -113,8 +111,7 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
-    env:
-      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
+      TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
   
   python_macos:
     needs: set-version
@@ -133,8 +130,7 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
-    env:
-      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
+      TESTPYPI_VERSION: ${{ needs.set-version.outputs.testpypiversion }}
   
   merge_wheels:
    runs-on: ubuntu-latest

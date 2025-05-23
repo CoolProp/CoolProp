@@ -12,6 +12,9 @@ on:
       arch:
         required: true
         type: string
+      TESTPYPI_VERSION:
+        required: true 
+        type: string
 
 jobs:
 
@@ -40,7 +43,7 @@ jobs:
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
           python dev/extract_version.py --pypi --replace-setup-py
         else
-          python dev/extract_version.py --replace-setup-py --version "${{ env.TESTPYPI_VERSION }}"
+          python dev/extract_version.py --replace-setup-py --version "${{ inputs.TESTPYPI_VERSION }}"
         fi;
         
     - name: Set up QEMU
