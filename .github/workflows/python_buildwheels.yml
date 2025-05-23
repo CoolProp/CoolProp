@@ -8,7 +8,17 @@ on:
     branches: [ 'master', 'main', 'develop' ]
 
 jobs:
+  set-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.testpypiversion }}
+    steps:
+      - name: Set version for testpypi
+        id: set
+        run: echo "testpypiversion=$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+  
   python_source:
+    needs: set-version
     name: Build source package
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +41,7 @@ jobs:
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
           python dev/extract_version.py --pypi --replace-setup-py
         else
-          python dev/extract_version.py --replace-setup-py
+          python dev/extract_version.py --replace-setup-py --version "${{ needs.set-version.outputs.testpypiversion }}"
         fi;
         
     - name: Build package, sdist
@@ -46,6 +56,7 @@ jobs:
           ./Python/*.tar.gz
 
   python_ubuntu:
+    needs: set-version
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
@@ -65,8 +76,11 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
+    env:
+      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
       
   python_ubuntu_arm:
+    needs: set-version
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
@@ -79,8 +93,11 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
+    env:
+      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
       
   python_windows:
+    needs: set-version
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
@@ -96,8 +113,11 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
+    env:
+      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
   
   python_macos:
+    needs: set-version
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
@@ -113,6 +133,8 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       arch: ${{ matrix.arch }}
+    env:
+      TESTPYPI_VERSION: "${{ needs.set-version.outputs.testpypiversion }}"
   
   merge_wheels:
    runs-on: ubuntu-latest
