@@ -11,7 +11,7 @@ jobs:
   set-version:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.set.outputs.testpypiversion }}
+      testpypiversion: ${{ steps.set.outputs.testpypiversion }}
     steps:
       - name: Set version for testpypi
         id: set
