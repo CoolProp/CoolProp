@@ -90,6 +90,8 @@ if __name__ == '__main__':
     parser.add_argument("--replace-setup-py", default=False,
                         action='store_true',
                         help="Do replacement in setup.py")
+    
+    parser.add_argument("--version", type=str, help="Use this version")
 
     args = parser.parse_args()
     current_v = parse_cmake_version_info()
@@ -120,17 +122,20 @@ if __name__ == '__main__':
             else:
                 new_v += f"post{dev_v + 1}"
         else:
-            def generate_version():
-                def now(utc=True):
-                    if utc:
-                        return datetime.datetime.now(datetime.UTC)
-                    return datetime.now()
-                return now().strftime("%Y%m%d%H%M%S")
-            # Ensure that our new number is guaranteed to be unique, 
-            # so use a chronologic numbering scheme to avoid the insanity 
-            # of trying to figure out what is an acceptable version for 
-            # upload to testpypi
-            new_v += f".post{generate_version()}"
+            if args.version:
+                new_v += f'.post{args.version}'
+            else:
+                def generate_version():
+                    def now(utc=True):
+                        if utc:
+                            return datetime.datetime.now(datetime.UTC)
+                        return datetime.now()
+                    return now().strftime("%Y%m%d%H%M%S")
+                # Ensure that our new number is guaranteed to be unique, 
+                # so use a chronologic numbering scheme to avoid the insanity 
+                # of trying to figure out what is an acceptable version for 
+                # upload to testpypi
+                new_v += f".post{generate_version()}"
     else:
         new_v = str(current_v)
 
