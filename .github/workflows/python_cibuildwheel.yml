@@ -23,6 +23,12 @@ jobs:
     runs-on: ${{ inputs.os }}
 
     steps:
+    - name: Show the context for this job
+      env:
+        EVENT_CONTEXT: ${{ toJSON(github.event) }}
+      run: |
+        echo $EVENT_CONTEXT
+
     - uses: actions/checkout@v4.2.2
       with:
         submodules: recursive
