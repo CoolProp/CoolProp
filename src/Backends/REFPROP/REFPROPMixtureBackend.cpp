@@ -1286,6 +1286,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                     throw ValueError(format("PT: %s", herr).c_str());
                 }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                if (get_config_bool(REFPROP_USE_QMASS)) {
+                    double _qmass, _wliq, _wvap;
+                    std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                    QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                             &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                             &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                        throw ValueError(format("PT: %s", herr).c_str());
+                    } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                    q = _qmass;
+                }
             } else {
                 //c  inputs:
                 //c        t--temperature [K]
@@ -1345,6 +1356,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                     throw ValueError(format("DmolarT: %s", herr).c_str());
                 }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                if (get_config_bool(REFPROP_USE_QMASS)) {
+                    double _qmass, _wliq, _wvap;
+                    std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                    QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), // inputs
+                        &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                        &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                        throw ValueError(format("DmolarT: %s", herr).c_str());
+                    } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                    q = _qmass;
+                }
             } else {
                 // phase is imposed
                 // Calculate everything else
@@ -1377,6 +1399,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("DmolarP: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("DmolarP: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _rhomolar = value1;
@@ -1405,6 +1438,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("DmolarHmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("DmolarHmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;
@@ -1433,6 +1477,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("DmolarSmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("DmolarSmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;
@@ -1461,6 +1516,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("DmolarUmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("DmolarUmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;
@@ -1488,6 +1554,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("HmolarPmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("HmolarPr: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value2;
@@ -1516,6 +1593,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("PSmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("PSmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1545,6 +1633,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("PUmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("PUmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = value1;
@@ -1572,6 +1671,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("HmolarSmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("HmolarSmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;              // 1000 for conversion from kPa to Pa
@@ -1601,6 +1711,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("SmolarUmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("SmolarUmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;              // 1000 for conversion from kPa to Pa
@@ -1638,6 +1759,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("SmolarT: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("SmolarT: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;              // 1000 for conversion from kPa to Pa
@@ -1674,6 +1806,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("HmolarT: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("HmolarT: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;              // 1000 for conversion from kPa to Pa
@@ -1710,6 +1853,17 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
                 throw ValueError(format("TUmolar: %s", herr).c_str());
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (get_config_bool(REFPROP_USE_QMASS)) {
+                double _qmass, _wliq, _wvap;
+                std::vector<double> _mass_fractions_liq(Ncomp), _mass_fractions_vap(Ncomp);
+                QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),        // inputs
+                         &_qmass, &(_mass_fractions_liq[0]), &(_mass_fractions_vap[0]), // mass fractions
+                         &_wliq, &_wvap, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("TUmolar: %s", herr).c_str());
+                } // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+                q = _qmass;
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;                     // 1000 for conversion from kPa to Pa
@@ -1790,7 +1944,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 //     kq--flag specifying units for input quality
                 //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
                 //         kq = 2 quality on MASS basis [mass vapor/total mass]
-                int kq = 1;
+                int kq = get_config_bool(REFPROP_USE_QMASS) ? 2 : 1;
                 ierr = 0;
                 // Use flash routine to find properties
                 PQFLSHdll(&p_kPa, &q, &(mole_fractions[0]), &kq, &_T, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
@@ -1854,7 +2008,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 kq = 1 quality on MOLAR basis [moles vapor/total moles]
                 kq = 2 quality on MASS basis [mass vapor/total mass]
                 */
-                int kq = 1;
+                int kq = get_config_bool(REFPROP_USE_QMASS) ? 2 : 1;
                 TQFLSHdll(&_T, &q, &(mole_fractions[0]), &kq, &p_kPa, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
                           &(mole_fractions_vap[0]),                 // Saturation terms
                           &emol, &hmol, &smol, &cvmol, &cpmol, &w,  // Other thermodynamic terms
