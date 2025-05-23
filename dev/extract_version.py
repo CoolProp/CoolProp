@@ -1,3 +1,4 @@
+import datetime
 import argparse
 import re
 import requests
@@ -119,10 +120,17 @@ if __name__ == '__main__':
             else:
                 new_v += f"post{dev_v + 1}"
         else:
+            def generate_version():
+                def now(utc=True):
+                    if utc:
+                        return datetime.datetime.now(datetime.UTC)
+                    return datetime.now()
+                return now().strftime("%Y%m%d%H%M%S")
             # Ensure that our new number is guaranteed to be unique, 
-            # and monotonic by simply making sure it is one greater
-            # than the current number of matched releases
-            new_v += f".post{len(matched_releases)+1}"
+            # so use a chronologic numbering scheme to avoid the insanity 
+            # of trying to figure out what is an acceptable version for 
+            # upload to testpypi
+            new_v += f".post{generate_version()}"
     else:
         new_v = str(current_v)
 
