@@ -132,7 +132,7 @@ if __name__ == '__main__':
     new_v = version.Version(new_v)
     if args.replace_setup_py:
         remote = "PyPi" if args.pypi else "TestPyPi"
-        print(f"Found next available version on {remote}: {new_v}")
+        print(f"Version to be injected on {remote}: {new_v}")
 
         replace_setup_py(new_v=new_v)
     else:
