@@ -459,6 +459,10 @@ double AbstractState::keyed_output(parameters key) {
             return PIP();
         case ifundamental_derivative_of_gas_dynamics:
             return fundamental_derivative_of_gas_dynamics();
+        case iTau:
+            return _reducing.T/_T;
+        case iDelta:
+            return _rhomolar/_reducing.rhomolar;
         default:
             throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output", key, get_parameter_information(key, "short").c_str()));
     }

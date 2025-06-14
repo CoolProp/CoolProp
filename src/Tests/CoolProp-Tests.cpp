@@ -2352,6 +2352,13 @@ TEST_CASE("Github issue #2447", "[2447]") {
     CHECK(err < 0.05);
 }
 
+TEST_CASE("Github issue #2558", "[2558]") {
+    double Tau = CoolProp::PropsSI("Tau", "Dmolar|gas", 200.0, "T", 300.0, "CarbonDioxide[0.5]&Hydrogen[0.5]");
+    double Delta = CoolProp::PropsSI("Delta", "Dmolar|gas", 200.0, "T", 300.0, "CarbonDioxide[0.5]&Hydrogen[0.5]");
+    CHECK(std::isfinite(Tau));
+    CHECK(std::isfinite(Delta));
+}
+
 TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]"){
     auto TNBP_RP = PropsSI("T", "P", 101325, "Q", 0, "REFPROP::METHANOL");
     auto TNBP_CP = PropsSI("T", "P", 101325, "Q", 0, "HEOS::METHANOL");
