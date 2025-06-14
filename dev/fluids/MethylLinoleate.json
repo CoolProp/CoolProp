@@ -232,147 +232,6 @@
           "smolar_units": "J/mol/K"
         }
       },
-      "T_max": 1000,
-      "T_max_units": "K",
-      "Ttriple": 238.1,
-      "Ttriple_units": "K",
-      "acentric": 0.8054063870556485,
-      "acentric_units": "-",
-      "alpha0": [
-        {
-          "a1": -1,
-          "a2": 0,
-          "type": "IdealGasHelmholtzLead"
-        },
-        {
-          "a": -1,
-          "type": "IdealGasHelmholtzLogTau"
-        },
-        {
-          "T0": 298,
-          "Tc": 799,
-          "c": [
-            22.97031008102499
-          ],
-          "t": [
-            0.020213
-          ],
-          "type": "IdealGasHelmholtzCP0PolyT"
-        },
-        {
-          "n": [
-            52.60358084073167,
-            34.54482738049993,
-            38.72236264672008
-          ],
-          "t": [
-            3.81991239048811,
-            0.9344568210262828,
-            2.032953692115144
-          ],
-          "type": "IdealGasHelmholtzPlanckEinstein"
-        },
-        {
-          "a1": 56.2531140679551,
-          "a2": -23.9733038177064,
-          "reference": "NBP",
-          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
-        }
-      ],
-      "alphar": [
-        {
-          "d": [
-            4,
-            1,
-            1,
-            3,
-            1,
-            3,
-            2,
-            2,
-            7
-          ],
-          "l": [
-            0,
-            0,
-            0,
-            0,
-            2,
-            2,
-            1,
-            2,
-            1
-          ],
-          "n": [
-            0.03183187,
-            1.927286,
-            -3.685053,
-            0.08449312,
-            -0.9766643,
-            -0.4323178,
-            2.00047,
-            -1.75203,
-            -0.01726895
-          ],
-          "t": [
-            1,
-            0.2,
-            1.2,
-            1,
-            2.2,
-            2.5,
-            1.8,
-            1.92,
-            1.47
-          ],
-          "type": "ResidualHelmholtzPower"
-        },
-        {
-          "beta": [
-            0.9,
-            0.65,
-            0.75
-          ],
-          "d": [
-            1,
-            1,
-            3
-          ],
-          "epsilon": [
-            0.79,
-            0.9,
-            0.76
-          ],
-          "eta": [
-            1.1,
-            1.6,
-            1.1
-          ],
-          "gamma": [
-            1.14,
-            0.65,
-            0.77
-          ],
-          "n": [
-            2.116515,
-            -0.7884271,
-            -0.3811699
-          ],
-          "t": [
-            1.7,
-            2.3,
-            2.1
-          ],
-          "type": "ResidualHelmholtzGaussian"
-        }
-      ],
-      "gas_constant": 8.314472,
-      "gas_constant_units": "J/mol/K",
-      "molar_mass": 0.29447206,
-      "molar_mass_units": "kg/mol",
-      "p_max": 50000000,
-      "p_max_units": "Pa",
-      "pseudo_pure": false,
       "SUPERANCILLARY": {
         "crit_anc": {
           "Tc / K": 799.0001945392406,
@@ -4575,7 +4434,148 @@
           "gas_constant / J/mol/K": 8.314472,
           "rhocrittrue / mol/m^3": 808.3985998779517
         }
-      }
+      },
+      "T_max": 1000,
+      "T_max_units": "K",
+      "Ttriple": 238.1,
+      "Ttriple_units": "K",
+      "acentric": 0.8054063870556485,
+      "acentric_units": "-",
+      "alpha0": [
+        {
+          "a1": -1,
+          "a2": 0,
+          "type": "IdealGasHelmholtzLead"
+        },
+        {
+          "a": -1,
+          "type": "IdealGasHelmholtzLogTau"
+        },
+        {
+          "T0": 298,
+          "Tc": 799,
+          "c": [
+            22.97031008102499
+          ],
+          "t": [
+            0.020213
+          ],
+          "type": "IdealGasHelmholtzCP0PolyT"
+        },
+        {
+          "n": [
+            52.60358084073167,
+            34.54482738049993,
+            38.72236264672008
+          ],
+          "t": [
+            3.81991239048811,
+            0.9344568210262828,
+            2.032953692115144
+          ],
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        },
+        {
+          "a1": 56.2531140679551,
+          "a2": -23.9733038177064,
+          "reference": "NBP",
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+        }
+      ],
+      "alphar": [
+        {
+          "d": [
+            4,
+            1,
+            1,
+            3,
+            1,
+            3,
+            2,
+            2,
+            7
+          ],
+          "l": [
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            1,
+            2,
+            1
+          ],
+          "n": [
+            0.03183187,
+            1.927286,
+            -3.685053,
+            0.08449312,
+            -0.9766643,
+            -0.4323178,
+            2.00047,
+            -1.75203,
+            -0.01726895
+          ],
+          "t": [
+            1,
+            0.2,
+            1.2,
+            1,
+            2.2,
+            2.5,
+            1.8,
+            1.92,
+            1.47
+          ],
+          "type": "ResidualHelmholtzPower"
+        },
+        {
+          "beta": [
+            0.9,
+            0.65,
+            0.75
+          ],
+          "d": [
+            1,
+            1,
+            3
+          ],
+          "epsilon": [
+            0.79,
+            0.9,
+            0.76
+          ],
+          "eta": [
+            1.1,
+            1.6,
+            1.1
+          ],
+          "gamma": [
+            1.14,
+            0.65,
+            0.77
+          ],
+          "n": [
+            2.116515,
+            -0.7884271,
+            -0.3811699
+          ],
+          "t": [
+            1.7,
+            2.3,
+            2.1
+          ],
+          "type": "ResidualHelmholtzGaussian"
+        }
+      ],
+      "gas_constant": 8.314472,
+      "gas_constant_units": "J/mol/K",
+      "molar_mass": 0.29447206,
+      "molar_mass_units": "kg/mol",
+      "p_max": 50000000,
+      "p_max_units": "Pa",
+      "pseudo_pure": false
     }
   ],
   "INFO": {

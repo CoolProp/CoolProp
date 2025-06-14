@@ -221,170 +221,6 @@
           "smolar_units": "J/mol/K"
         }
       },
-      "T_max": 1000,
-      "T_max_units": "K",
-      "Ttriple": 218.65,
-      "Ttriple_units": "K",
-      "acentric": 1.142605258673496,
-      "acentric_units": "-",
-      "alpha0": [
-        {
-          "a1": -1,
-          "a2": 0,
-          "type": "IdealGasHelmholtzLead"
-        },
-        {
-          "a": -1,
-          "type": "IdealGasHelmholtzLogTau"
-        },
-        {
-          "T0": 298,
-          "Tc": 772,
-          "c": [
-            9.572622290387171
-          ],
-          "t": [
-            0.214648
-          ],
-          "type": "IdealGasHelmholtzCP0PolyT"
-        },
-        {
-          "n": [
-            34.92452677692582,
-            9.794043446174333,
-            57.11499178781286
-          ],
-          "t": [
-            1.571554404145078,
-            0.7496787564766839,
-            3.626670984455958
-          ],
-          "type": "IdealGasHelmholtzPlanckEinstein"
-        },
-        {
-          "a1": 49.2444711864376,
-          "a2": -21.5426591230667,
-          "reference": "NBP",
-          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
-        }
-      ],
-      "alphar": [
-        {
-          "d": [
-            4,
-            1,
-            1,
-            2,
-            3,
-            1,
-            3,
-            2,
-            2,
-            7
-          ],
-          "l": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            2,
-            2,
-            1,
-            2,
-            1
-          ],
-          "n": [
-            0.04070829,
-            2.412375,
-            -3.756194,
-            -0.1526466,
-            0.04682918,
-            -1.470958,
-            -0.76455,
-            1.908964,
-            -1.629366,
-            -0.01242073
-          ],
-          "t": [
-            1,
-            0.15,
-            1.24,
-            1.6,
-            1.28,
-            2.9,
-            3.15,
-            2.16,
-            2.8,
-            1.4
-          ],
-          "type": "ResidualHelmholtzPower"
-        },
-        {
-          "beta": [
-            0.9,
-            0.65,
-            0.75
-          ],
-          "d": [
-            1,
-            1,
-            3
-          ],
-          "epsilon": [
-            0.79,
-            0.9,
-            0.76
-          ],
-          "eta": [
-            1.1,
-            1.6,
-            1.1
-          ],
-          "gamma": [
-            1.14,
-            0.65,
-            0.77
-          ],
-          "n": [
-            2.180707,
-            -0.7537264,
-            -0.4347781
-          ],
-          "t": [
-            2.5,
-            3,
-            3.1
-          ],
-          "type": "ResidualHelmholtzGaussian"
-        }
-      ],
-      "critical_region_splines": {
-        "T_max": 772.0,
-        "T_min": 771.9954317177073,
-        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K",
-        "cL": [
-          -7.06979551641186e-10,
-          -5.571201614845291e-05,
-          0.0959322410965671,
-          731.1432812971636
-        ],
-        "cV": [
-          2.442004237931142e-08,
-          -0.0001196088172901947,
-          0.15009438984004297,
-          715.8397616487149
-        ],
-        "rhomolar_max": 856.2121900411788,
-        "rhomolar_min": 838.4061393625097
-      },
-      "gas_constant": 8.314472,
-      "gas_constant_units": "J/mol/K",
-      "molar_mass": 0.29245618,
-      "molar_mass_units": "kg/mol",
-      "p_max": 50000000,
-      "p_max_units": "Pa",
-      "pseudo_pure": false,
       "SUPERANCILLARY": {
         "crit_anc": {
           "Tc / K": 772.0000022320153,
@@ -4644,7 +4480,171 @@
           "gas_constant / J/mol/K": 8.314472,
           "rhocrittrue / mol/m^3": 847.300023899048
         }
-      }
+      },
+      "T_max": 1000,
+      "T_max_units": "K",
+      "Ttriple": 218.65,
+      "Ttriple_units": "K",
+      "acentric": 1.142605258673496,
+      "acentric_units": "-",
+      "alpha0": [
+        {
+          "a1": -1,
+          "a2": 0,
+          "type": "IdealGasHelmholtzLead"
+        },
+        {
+          "a": -1,
+          "type": "IdealGasHelmholtzLogTau"
+        },
+        {
+          "T0": 298,
+          "Tc": 772,
+          "c": [
+            9.572622290387171
+          ],
+          "t": [
+            0.214648
+          ],
+          "type": "IdealGasHelmholtzCP0PolyT"
+        },
+        {
+          "n": [
+            34.92452677692582,
+            9.794043446174333,
+            57.11499178781286
+          ],
+          "t": [
+            1.571554404145078,
+            0.7496787564766839,
+            3.626670984455958
+          ],
+          "type": "IdealGasHelmholtzPlanckEinstein"
+        },
+        {
+          "a1": 49.2444711864376,
+          "a2": -21.5426591230667,
+          "reference": "NBP",
+          "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
+        }
+      ],
+      "alphar": [
+        {
+          "d": [
+            4,
+            1,
+            1,
+            2,
+            3,
+            1,
+            3,
+            2,
+            2,
+            7
+          ],
+          "l": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            1,
+            2,
+            1
+          ],
+          "n": [
+            0.04070829,
+            2.412375,
+            -3.756194,
+            -0.1526466,
+            0.04682918,
+            -1.470958,
+            -0.76455,
+            1.908964,
+            -1.629366,
+            -0.01242073
+          ],
+          "t": [
+            1,
+            0.15,
+            1.24,
+            1.6,
+            1.28,
+            2.9,
+            3.15,
+            2.16,
+            2.8,
+            1.4
+          ],
+          "type": "ResidualHelmholtzPower"
+        },
+        {
+          "beta": [
+            0.9,
+            0.65,
+            0.75
+          ],
+          "d": [
+            1,
+            1,
+            3
+          ],
+          "epsilon": [
+            0.79,
+            0.9,
+            0.76
+          ],
+          "eta": [
+            1.1,
+            1.6,
+            1.1
+          ],
+          "gamma": [
+            1.14,
+            0.65,
+            0.77
+          ],
+          "n": [
+            2.180707,
+            -0.7537264,
+            -0.4347781
+          ],
+          "t": [
+            2.5,
+            3,
+            3.1
+          ],
+          "type": "ResidualHelmholtzGaussian"
+        }
+      ],
+      "critical_region_splines": {
+        "T_max": 772.0,
+        "T_min": 771.9954317177073,
+        "_note": "Coefficients for the critical cubic spline.  T = c[0]*rho^3 + c[1]*rho^2 + c[2]*rho + c[3] with rho in mol/m^3 and T in K",
+        "cL": [
+          -7.06979551641186e-10,
+          -5.571201614845291e-05,
+          0.0959322410965671,
+          731.1432812971636
+        ],
+        "cV": [
+          2.442004237931142e-08,
+          -0.0001196088172901947,
+          0.15009438984004297,
+          715.8397616487149
+        ],
+        "rhomolar_max": 856.2121900411788,
+        "rhomolar_min": 838.4061393625097
+      },
+      "gas_constant": 8.314472,
+      "gas_constant_units": "J/mol/K",
+      "molar_mass": 0.29245618,
+      "molar_mass_units": "kg/mol",
+      "p_max": 50000000,
+      "p_max_units": "Pa",
+      "pseudo_pure": false
     }
   ],
   "INFO": {
