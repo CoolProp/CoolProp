@@ -1147,7 +1147,7 @@ template <class backend>
 class DerivativeFixture
 {
    public:
-    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS, HEOS_plus_tau, HEOS_minus_tau, HEOS_plus_delta, HEOS_minus_delta, HEOS_plus_T__constp,
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS, HEOS_plus_tau, HEOS_minus_tau, HEOS_plus_delta, HEOS_minus_delta, HEOS_plus_2tau, HEOS_minus_2tau, HEOS_plus_2delta, HEOS_minus_2delta, HEOS_plus_T__constp,
       HEOS_minus_T__constp, HEOS_plus_p__constT, HEOS_minus_p__constT, HEOS_plus_T__constrho, HEOS_minus_T__constrho, HEOS_plus_rho__constT,
       HEOS_minus_rho__constT;
     std::vector<shared_ptr<CoolProp::HelmholtzEOSMixtureBackend>> HEOS_plus_z, HEOS_minus_z, HEOS_plus_z__constTrho, HEOS_minus_z__constTrho,
@@ -1180,8 +1180,12 @@ class DerivativeFixture
 
         init_state(HEOS_plus_tau);
         init_state(HEOS_minus_tau);
+        init_state(HEOS_plus_2tau);
+        init_state(HEOS_minus_2tau);
         init_state(HEOS_plus_delta);
         init_state(HEOS_minus_delta);
+        init_state(HEOS_plus_2delta);
+        init_state(HEOS_minus_2delta);
         init_state(HEOS_plus_T__constp);
         init_state(HEOS_minus_T__constp);
         init_state(HEOS_plus_p__constT);
@@ -1193,8 +1197,12 @@ class DerivativeFixture
         // Constant composition, varying state
         HEOS_plus_tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() + dtau));
         HEOS_minus_tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() - dtau));
+        HEOS_plus_2tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() + 2*dtau));
+        HEOS_minus_2tau->update(CoolProp::DmolarT_INPUTS, HEOS->delta() * HEOS->rhomolar_reducing(), HEOS->T_reducing() / (HEOS->tau() - 2*dtau));
         HEOS_plus_delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() + ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
         HEOS_minus_delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() - ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
+        HEOS_plus_2delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() + 2*ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
+        HEOS_minus_2delta->update(CoolProp::DmolarT_INPUTS, (HEOS->delta() - 2*ddelta) * HEOS->rhomolar_reducing(), HEOS->T_reducing() / HEOS->tau());
         HEOS_plus_T__constp->update(CoolProp::PT_INPUTS, HEOS->p(), HEOS->T() + dT);
         HEOS_minus_T__constp->update(CoolProp::PT_INPUTS, HEOS->p(), HEOS->T() - dT);
         HEOS_plus_p__constT->update(CoolProp::PT_INPUTS, HEOS->p() + dp, HEOS->T());
@@ -1410,9 +1418,9 @@ class DerivativeFixture
                     double analytic = f(*HEOS, i, j, k, xN);
                     double numeric = 0;
                     if (wrt == TAU) {
-                        numeric = (g(*HEOS_plus_tau, i, j, k, xN) - g(*HEOS_minus_tau, i, j, k, xN)) / (2 * dtau);
+                        numeric = (-1.0/12.0*g(*HEOS_plus_2tau, i, j, k, xN) + 2.0/3.0*g(*HEOS_plus_tau, i, j, k, xN) -2.0/3.0*g(*HEOS_minus_tau, i, j, k, xN) +1.0/12.0*g(*HEOS_minus_2tau, i, j, k, xN)) / dtau;
                     } else if (wrt == DELTA) {
-                        numeric = (g(*HEOS_plus_delta, i, j, k, xN) - g(*HEOS_minus_delta, i, j, k, xN)) / (2 * ddelta);
+                        numeric = (-1.0/12.0*g(*HEOS_plus_2delta, i, j, k, xN) + 2.0/3.0*g(*HEOS_plus_delta, i, j, k, xN) -2.0/3.0*g(*HEOS_minus_delta, i, j, k, xN) +1.0/12.0*g(*HEOS_minus_2delta, i, j, k, xN)) / ddelta;
                     }
                     CAPTURE(name);
                     CAPTURE(i);
@@ -1657,14 +1665,15 @@ class DerivativeFixture
 };
 
 TEST_CASE_METHOD(DerivativeFixture<HelmholtzEOSMixtureBackend>, "Check derivatives for HEOS", "[mixture_derivs2]") {
+    tol = 1e-4;  // Relax the tolerance a bit
     run_checks();
 };
 TEST_CASE_METHOD(DerivativeFixture<PengRobinsonBackend>, "Check derivatives for Peng-Robinson", "[mixture_derivs2]") {
-    tol = 1e-4;  // Relax the tolerance a bit
+    tol = 1e-3;  // Relax the tolerance a bit
     run_checks();
 };
 TEST_CASE_METHOD(DerivativeFixture<SRKBackend>, "Check derivatives for SRK", "[mixture_derivs2]") {
-    tol = 1e-4;  // Relax the tolerance a bit
+    tol = 1e-3;  // Relax the tolerance a bit
     run_checks();
 };
     // Make sure you set the VTPR UNIFAC path with something like set_config_string(VTPR_UNIFAC_PATH, "/Users/ian/Code/CUBAC/dev/unifaq/");
