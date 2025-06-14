@@ -215,6 +215,9 @@ import cloud_sptheme as csp
 html_theme = "cloud"
     # NOTE: there is also a red-colored version named "redcloud"
 
+
+html_theme = "sphinxawesome_theme"
+
 # ... some contents omitted ...
 
 # set the theme path to point to cloud's theme data

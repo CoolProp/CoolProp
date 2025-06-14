@@ -79,6 +79,7 @@ jobs:
         source activate docs
         pip -vv wheel .
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
+        pip install sphinxawesome-theme
         
     - name: Test the installed CoolProp version
       shell: bash
@@ -148,7 +149,7 @@ jobs:
   deploy:
     # Add a dependency to the build job
     needs: build
-    # Do not deploy intermediate builds
+    # Do not deploy branches other than main or master
     if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
