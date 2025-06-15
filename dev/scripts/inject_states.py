@@ -1,3 +1,4 @@
+from pathlib import Path
 import sys, os
 import json, CoolProp, sys
 
@@ -24,6 +25,7 @@ def inject_hsanchor(fluid, i, json_data):
           "smolar": sanchor_molar,
           "smolar_units": "J/mol/K"
     }
+    print(json_data['EOS'][i]['STATES']['hs_anchor'])
 
 
 def inject_triples(fluid, i, json_data):
@@ -115,7 +117,7 @@ def inject_acentric(fluid, i, json_data):
 
 
 def inject_states(fluid):
-    fluid_path = '../fluids/' + fluid + '.json'
+    fluid_path = Path(__file__).parent.parent / 'fluids' / f'{fluid}.json'
 
     # AS =
 
@@ -137,7 +139,5 @@ def inject_states(fluid):
         fp.write(json.dumps(json_data, **json_options))
 
 if __name__ == '__main__':
-
-
-    for fld in ['MD2M','MD3M','MD4M','R1243zf','R1234ze(Z)','Neon','HydrogenChloride','HeavyWater']:
-      inject_states(fld)
+    for fld in ['R40', 'DiethylEther', 'Helium','Methanol','R1233zd(E)','OrthoHydrogen']:
+        inject_states(fld)

@@ -327,7 +327,7 @@ class JSONFluidLibrary
                 CoolPropDbl a1 = cpjson::get_double(contribution, "a1");
                 CoolPropDbl a2 = cpjson::get_double(contribution, "a2");
                 std::string reference = cpjson::get_string(contribution, "reference");
-                alpha0.EnthalpyEntropyOffsetCore = IdealHelmholtzEnthalpyEntropyOffset(a1, a2, reference);
+                alpha0.EnthalpyEntropyOffsetCore.set(a1, a2, reference);
             } else {
                 std::cout << format("Unsupported ideal-gas Helmholtz type: %s\n", type.c_str());
                 //throw ValueError(format("Unsupported ideal-gas Helmholtz type: %s",type.c_str()));

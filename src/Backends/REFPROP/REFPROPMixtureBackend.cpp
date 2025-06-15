@@ -2268,12 +2268,20 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
 
             shared_ptr<CoolProp::AbstractState> S1(CoolProp::AbstractState::factory("HEOS", (*it)));
             double Tr = S1->T_critical();
+            double RCP = S1->gas_constant();
             CHECK_NOTHROW(S1->update(CoolProp::QT_INPUTS, 0, 0.9 * Tr));
             double h_CP = S1->hmass();
             double s_CP = S1->smass();
+            auto j = S1->fluid_param_string("JSON");
+            rapidjson::Document doc;
+            doc.Parse<0>(j.c_str());
+            auto& v = doc[0]["EOS"][0]["alpha0"];
+            auto s = cpjson::to_string(v);
+            CAPTURE(s);
 
             shared_ptr<CoolProp::AbstractState> S2(CoolProp::AbstractState::factory("REFPROP", RPName));
             CHECK_NOTHROW(S2->update(CoolProp::QT_INPUTS, 0, 0.9 * Tr));
+            double RRP = S2->gas_constant();
             double h_RP = S2->hmass();
             double s_RP = S2->smass();
 
@@ -2283,6 +2291,8 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
             CAPTURE(format("%0.16f", delta_a2));
 
             CAPTURE(Name);
+            CAPTURE(RRP);
+            CAPTURE(RCP);
             CAPTURE(RPName);
             CAPTURE(h_CP);
             CAPTURE(h_RP);
