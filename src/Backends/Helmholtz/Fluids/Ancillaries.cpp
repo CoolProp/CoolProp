@@ -1,6 +1,7 @@
 #include "Ancillaries.h"
 #include "DataStructures.h"
 #include "AbstractState.h"
+#include "Configuration.h"
 
 #if defined(ENABLE_CATCH)
 
@@ -193,7 +194,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                 MeltingLinePiecewiseSimonSegment& part = simon.parts[i];
                 //  p = part.p_0 + part.a*(pow(T/part.T_0,part.c)-1);
                 CoolPropDbl T = pow((value - part.p_0) / part.a + 1, 1 / part.c) * part.T_0;
-                if (T >= part.T_0 && T <= part.T_max) {
+                if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS) || (T >= part.T_0 && T <= part.T_max)) {
                     return T;
                 }
             }
@@ -343,6 +344,14 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
         SECTION(ss2.str(), "") {
             double actual_T = -_HUGE;
             double EOS_pmax = AS->pmax();
+            double T_pmax_required = -1;
+            try{
+                CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
+                T_pmax_required = AS->melting_line(iT, iP, EOS_pmax);
+            }
+            catch(...){}
+            CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, false);
+            CAPTURE(T_pmax_required);
             CAPTURE(EOS_pmax);
             CHECK_NOTHROW(actual_T = AS->melting_line(iT, iP, EOS_pmax));
             CAPTURE(actual_T);
