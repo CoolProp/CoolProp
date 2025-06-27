@@ -81,8 +81,9 @@ else:
 # Execute all the notebooks
 for dirpath, dirnames, filenames in Path(__file__).parent.walk():
     for file in filenames:
-        if file.endswith('.ipynb') and '.ipynb_checkpoints' not in str(dirpath):
+        if file.endswith('.ipynb') and '.ipynb_checkpoints' not in str(dirpath) and '_build' not in str(dirpath):
             cmd = f'jupyter nbconvert --allow-errors --to notebook --output "{file}" --execute "{file}"'
+            print(f"About to run: {cmd} in {dirpath}")
             subprocess.check_output(cmd, shell=True, cwd=dirpath)
 
 
@@ -101,14 +102,6 @@ extensions = ['IPython.sphinxext.ipython_console_highlighting',
               'sphinxcontrib.doxylink',
               'matplotlib.sphinxext.plot_directive',
               'edit_on_github',  # see https://gist.github.com/mgedmin/6052926#file-edit_on_github-pyb
-
-              # cloud's extensions
-            # 'cloud_sptheme.ext.autodoc_sections',
-            'cloud_sptheme.ext.index_styling',
-            'cloud_sptheme.ext.relbar_toc',
-            # 'cloud_sptheme.ext.escaped_samp_literals',
-            'cloud_sptheme.ext.issue_tracker',
-            # 'cloud_sptheme.ext.table_styling',
 
               # 'inheritance_diagram',
               # 'numpydoc',
@@ -206,32 +199,40 @@ try:
 except:
     print('unable to import cloud_sptheme as csp; try a "pip install cloud_sptheme"')
 
-# import Cloud
-import cloud_sptheme as csp
+
 
 # ... some contents omitted ...
 
 # set the html theme
-html_theme = "cloud"
-    # NOTE: there is also a red-colored version named "redcloud"
+html_theme = "pydata_sphinx_theme"
 
-# ... some contents omitted ...
-
-# set the theme path to point to cloud's theme data
-html_theme_path = [csp.get_theme_dir()]
-
-# [optional] set some of the options listed above...
-html_theme_options = {"roottarget": "index",
-                       "max_width": "13in",
-                       "logotarget": "index",
-                       "googleanalytics_id": "UA-53205480-2",
-                       "default_layout_text_size": "85%",
-                       "table_style_default_align": "left"
-                       }
-
+html_theme_options = {
+    "navbar_center": ["navbar-center.html"],
+}
 edit_on_github_project = 'CoolProp/CoolProp'
 edit_on_github_branch = 'master'
 edit_on_github_path_prefix = 'Web'
+
+                    # import Cloud
+                    # import cloud_sptheme as csp
+                    # #html_theme = "cloud"
+                    #     # NOTE: there is also a red-colored version named "redcloud"
+
+                    # # ... some contents omitted ...
+
+                    # # set the theme path to point to cloud's theme data
+                    # html_theme_path = [csp.get_theme_dir()]
+
+                    # # [optional] set some of the options listed above...
+                    # html_theme_options = {"roottarget": "index",
+                    #                        "max_width": "13in",
+                    #                        "logotarget": "index",
+                    #                        "googleanalytics_id": "UA-53205480-2",
+                    #                        "default_layout_text_size": "85%",
+                    #                        "table_style_default_align": "left"
+                    #                        }
+
+                    
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
