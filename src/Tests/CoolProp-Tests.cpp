@@ -5,6 +5,7 @@
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "superancillary/superancillary.h"
+#include <map>
 
 // ############################################
 //                      TESTS
@@ -1920,42 +1921,119 @@ TEST_CASE("Check the second two-phase derivative", "[second_two_phase_deriv]") {
 }
 
 TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phase_deriv_splined]") {
-    const int number_of_pairs = 4;
-    struct pair
-    {
-        parameters p1, p2, p3;
-    };
-    pair pairs[number_of_pairs] = {{iDmass, iP, iHmass}, {iDmolar, iP, iHmolar}, {iDmolar, iHmolar, iP}, {iDmass, iHmass, iP}};
-    shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
-    for (std::size_t i = 0; i < number_of_pairs; ++i) {
-        // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-        std::ostringstream ss1;
-        ss1 << "for (" << get_parameter_information(pairs[i].p1, "short") << ", " << get_parameter_information(pairs[i].p2, "short") << ", "
-            << get_parameter_information(pairs[i].p3, "short") << ")";
-        SECTION(ss1.str(), "") {
-            AS->update(QT_INPUTS, 0.2, 300);
-            CoolPropDbl numerical;
-            CoolPropDbl analytical = AS->first_two_phase_deriv_splined(pairs[i].p1, pairs[i].p2, pairs[i].p3, 0.3);
-            CAPTURE(analytical);
+    /**
+     
+    A. Take the code from https://github.com/ibell/coolprop...
+    B. Apply this diff
+     
+     diff --git a/CMakeLists.txt b/CMakeLists.txt
+     index 5c639f9c..e3e25c68 100644
+     --- a/CMakeLists.txt
+     +++ b/CMakeLists.txt
+     @@ -82,3 +82,7 @@ if (COOLPROP_STATIC_LIBRARY)
+      else()
+          add_library(${app_name} SHARED ${APP_SOURCES})
+      endif()
+     +
+     +
+     +add_executable(main main.cpp)
+     +target_link_libraries(main CoolProp)
+     diff --git a/main.cpp b/main.cpp
+     index 526d0090..863956ed 100644
+     --- a/main.cpp
+     +++ b/main.cpp
+     @@ -1,9 +1,18 @@
+      #include "CoolProp.h"
+     +#include "CPState.h"
+      #include <iostream>
+      #include <stdlib.h>
+      
+      int main()
+      {
+     +    CoolPropStateClassSI state("n-Propane");
+     +    double rho_spline, dsplinedh, dsplinedp;
+     +    state.update(iT, 300, iQ, 0.2);
+     +    state.rho_smoothed(0.3, rho_spline, dsplinedh, dsplinedp);
+     +    double p_ = state.p();
+     +    double h_ = state.h();
+     +
+     +
+          double T = Props("T","H",246.532409342343,"P",1896.576573868160,"R410A");
+          std::cout << T << std::endl;
+     -}
+     \ No newline at end of file
+     +}
+     
+    C. cmake -B bld -S .
+    D. cmake --build bld
+    E. stdout has the values for the derivatives in mass-based units
+     */
+    
+    using paramtuple = std::tuple<parameters, parameters, parameters>;
+    
+    SECTION("Compared with reference data"){
+        
+        std::map<paramtuple, double> pairs = {
+            {{iDmass, iP, iHmass}, 0.00056718665544440146},
+            {{iDmass, iHmass, iP}, -0.0054665229407696173},
+            {{iDmass, iDmass, iDmass}, 179.19799206447755}
+        };
+        
+        std::unique_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+        for (auto& [pair, expected_value]: pairs) {
+            // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+            std::ostringstream ss1;
+            auto& [p1, p2, p3] = pair;
+            ss1 << "for (" << get_parameter_information(p1, "short") << ", " << get_parameter_information(p2, "short") << ", "
+                << get_parameter_information(p3, "short") << ")";
+            double x_end = 0.3;
+            SECTION(ss1.str(), "") {
+                AS->update(QT_INPUTS, 0.2, 300);
+                CoolPropDbl analytical = AS->first_two_phase_deriv_splined(p1, p2, p3, x_end);
+                CAPTURE(analytical);
+                CHECK(std::abs(expected_value / analytical - 1) < 1e-8);
+            }
+        }
+    }
+    SECTION("Finite diffs"){
+        std::vector<paramtuple> pairs = {{iDmass, iHmass, iP}, {iDmolar, iHmolar, iP}};//, {iDmass, iHmass, iP}};
+        std::unique_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+        for (auto& pair: pairs) {
+            // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+            std::ostringstream ss1;
+            auto& [p1, p2, p3] = pair;
+            ss1 << "for (" << get_parameter_information(p1, "short") << ", " << get_parameter_information(p2, "short") << ", "
+                << get_parameter_information(p3, "short") << ")";
+            double x_end = 0.3;
+            SECTION(ss1.str(), "") {
+                AS->update(QT_INPUTS, 0.2, 300);
+                CoolPropDbl numerical;
+                CoolPropDbl analytical = AS->first_two_phase_deriv_splined(p1, p2, p3, x_end);
+                CAPTURE(analytical);
 
-            CoolPropDbl out1, out2;
-            CoolPropDbl v2base, v3base;
-            v2base = AS->keyed_output(pairs[i].p2);
-            v3base = AS->keyed_output(pairs[i].p3);
-            CoolPropDbl v2plus = v2base * 1.00001;
-            CoolPropDbl v2minus = v2base * 0.99999;
+                CoolPropDbl out1, out2;
+                CoolPropDbl v2base, v3base;
+                v2base = AS->keyed_output(p2);
+                v3base = AS->keyed_output(p3);
+                CoolPropDbl v2plus = v2base * 1.00001;
+                CoolPropDbl v2minus = v2base * 0.99999;
 
-            CoolProp::input_pairs input_pair1 = generate_update_pair(pairs[i].p2, v2plus, pairs[i].p3, v3base, out1, out2);
-            AS->update(input_pair1, out1, out2);
-            CoolPropDbl v1 = AS->first_two_phase_deriv_splined(pairs[i].p1, pairs[i].p1, pairs[i].p1, 0.3);
+                // Get the density (molar or specific) for the second variable shifted up with the third variable
+                // held constant
+                CoolProp::input_pairs input_pair1 = generate_update_pair(p2, v2plus, p3, v3base, out1, out2);
+                AS->update(input_pair1, out1, out2);
+                CoolPropDbl D1 = AS->first_two_phase_deriv_splined(p1, p1, p1, x_end);
 
-            CoolProp::input_pairs input_pair2 = generate_update_pair(pairs[i].p2, v2minus, pairs[i].p3, v3base, out1, out2);
-            AS->update(input_pair2, out1, out2);
-            CoolPropDbl v2 = AS->first_two_phase_deriv_splined(pairs[i].p1, pairs[i].p1, pairs[i].p1, 0.3);
+                // Get the density (molar or specific) for the second variable shifted down with the third variable
+                // held constant
+                CoolProp::input_pairs input_pair2 = generate_update_pair(p2, v2minus, p3, v3base, out1, out2);
+                AS->update(input_pair2, out1, out2);
+                CoolPropDbl D2 = AS->first_two_phase_deriv_splined(p1, p1, p1, x_end);
 
-            numerical = (v1 - v2) / (v2plus - v2minus);
-            CAPTURE(numerical);
-            CHECK(std::abs(numerical / analytical - 1) < 1e-8);
+                numerical = (D1 - D2) / (v2plus - v2minus);
+                CAPTURE(numerical);
+                CHECK(std::abs(numerical / analytical - 1) < 1e-8);
+            }
         }
     }
 }
