@@ -52,8 +52,8 @@
     X(HENRYS_LAW_TO_GENERATE_VLE_GUESSES, "HENRYS_LAW_TO_GENERATE_VLE_GUESSES", false,                                                               \
       "If true, when doing water-based mixture dewpoint calculations, use Henry's Law to generate guesses for liquid-phase composition")             \
     X(PHASE_ENVELOPE_STARTING_PRESSURE_PA, "PHASE_ENVELOPE_STARTING_PRESSURE_PA", 100.0, "Starting pressure [Pa] for phase envelope construction")   \
-    X(R_U_CODATA, "R_U_CODATA", 8.3144598,                                                                                                           \
-      "The value for the ideal gas constant in J/mol/K according to CODATA 2014.  This value is used to harmonize all the ideal gas constants. "     \
+    X(R_U_CODATA, "R_U_CODATA", 8.31446261815324,                                                                                                    \
+      "The value for the ideal gas constant in J/mol/K according to CODATA 2022.  This value is used to harmonize all the ideal gas constants. "     \
       "This is especially important in the critical region.")                                                                                        \
     X(VTPR_UNIFAC_PATH, "VTPR_UNIFAC_PATH", "", "The path to the directory containing the UNIFAC JSON files.  Should be slash terminated")           \
     X(SPINODAL_MINIMUM_DELTA, "SPINODAL_MINIMUM_DELTA", 0.5,                                                                                         \
