@@ -33,6 +33,10 @@ void load() {
     if (code != 0) {
         throw ValueError("Unable to uncompress the fluid data from z compressed form");
     }
+    
+    if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")){
+        std::cout << "CoolProp: superancillaries have been disabled because the COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY environment variable has been defined" << std::endl;
+    }
 
     rapidjson::Document dd;
     // This json formatted string comes from the all_fluids_JSON.h header which is a C++-escaped version of the JSON file
