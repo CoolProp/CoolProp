@@ -2576,6 +2576,22 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[su
     };
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmark class construction", "[superanc]") {
+    
+    BENCHMARK("Water [SA]"){
+        return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    };
+    BENCHMARK("R410A [no SA]"){
+        return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R410A"));
+    };
+    BENCHMARK("propane [SA]"){
+        return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+    };
+    BENCHMARK("air, pseudo-pure [SA]"){
+        return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Air"));
+    };
+}
+
 TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculations with superancillary disabled for water", "[superanc]") {
     
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
