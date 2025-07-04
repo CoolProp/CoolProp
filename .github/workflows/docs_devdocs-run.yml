@@ -1,0 +1,26 @@
+name: Run devdocs deployment
+
+on:
+  push:
+    branches: [ 'master', 'main']
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ 'master', 'main']
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Fire devdocs
+      shell: bash
+      run: |
+        curl -X POST https://api.github.com/repos/CoolProp/devdocs/dispatches \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: token ${{ secrets.DEVDOCS_RUN_PAT }}" \
+        -d '{"event_type":"triggered-by-CoolProp-main","client_payload":{"example":"data"}}'
+
+  
