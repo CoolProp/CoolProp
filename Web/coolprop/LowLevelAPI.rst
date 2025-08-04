@@ -207,7 +207,7 @@ For more information, see the docs: :cpapi:`CoolProp::AbstractState::first_parti
 Two-Phase and Saturation Derivatives
 ------------------------------------
 
-The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in the :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` function, and derivatives along the saturation curve in the functions :cpapi:`CoolProp::AbstractState::first_saturation_deriv` and :cpapi:`CoolProp::AbstractState::second_saturation_deriv`.  Here are some examples of using these functions:
+The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in the :cpapi:`CoolProp::AbstractState::first_two_phase_deriv` function, and derivatives along the saturation curve in the functions :cpapi:`CoolProp::AbstractState::first_saturation_deriv` and :cpapi:`CoolProp::AbstractState::second_saturation_deriv`. The functions :cpapi:`CoolProp::AbstractState::first_two_phase_deriv_splined` and :cpapi:`CoolProp::AbstractState::first_two_phase_deriv_smoothed` return two-phase derivatives after smoothing out discontinuities at saturated states using splines :cite:`Quoilin-E-2014` and smoothstep functions, respectively. Here are some examples of using these functions:
     
 .. ipython::
 
@@ -235,6 +235,9 @@ The two-phase derivatives of Thorade :cite:`Thorade-EES-2013` are implemented in
     # The d(Dmass)/d(Hmass)|P two-phase derivative using splines
     In [0]: HEOS.first_two_phase_deriv_splined(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, 0.3)
     
+    # The d(Dmass)/d(Hmass)|P two-phase derivative using smoothstep functions
+    In [0]: HEOS.first_two_phase_deriv_smoothed(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, CoolProp.iQ, 0.3, 0.0)
+
 An example of plotting these derivatives is here:
 
 .. plot::
@@ -259,7 +262,15 @@ An example of plotting these derivatives is here:
         y.append(AS.first_partial_deriv(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP))
     plt.plot(x, y, label = 'Subcooled')
 
-    # Two-phase derivatives (normal and splined)
+    # Two-phase derivatives (smoothed)
+    x, y1 = [], []
+    for Q in np.linspace(0, 0.3, 1000):
+        AS.update(CoolProp.PQ_INPUTS, 101325, Q)
+        x.append(AS.Q())
+        y1.append(AS.first_two_phase_deriv_smoothed(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, CoolProp.iQ, 0.3, 0.0))
+    plt.plot(x, y1, label = 'Two-phase (smoothed)')
+
+    # Two-phase derivatives (splined)
     x, y1 = [], []
     for Q in np.linspace(0, 0.3, 1000):
         AS.update(CoolProp.PQ_INPUTS, 101325, Q)
@@ -267,7 +278,7 @@ An example of plotting these derivatives is here:
         y1.append(AS.first_two_phase_deriv_splined(CoolProp.iDmass, CoolProp.iHmass, CoolProp.iP, 0.3))
     plt.plot(x, y1, label = 'Two-phase (splined)')
 
-    # Two-phase derivatives (normal and splined)
+    # Two-phase derivatives (normal)
     x, y1 = [], []
     for Q in np.linspace(0.0, 0.6, 1000):
         AS.update(CoolProp.PQ_INPUTS, 101325, Q)
