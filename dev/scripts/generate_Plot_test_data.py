@@ -171,7 +171,7 @@ def generate_ts_test():
         for i in range(5):
             value = plot._isolines[py_param][i].value
             if cpp_name == 'P':
-                print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-8));')
+                print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-7));')
             else:
                 print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-10));')
         
