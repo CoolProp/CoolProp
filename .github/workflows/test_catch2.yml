@@ -75,7 +75,7 @@ jobs:
 
     # TODO: pick one style, for now I'm doing this so I can report zero new failures compared to catch1
     - name: Rerun failed Tests in CatchTestRunner directly
-      if: failure()
+      # if: failure()
       working-directory: ./build
       shell: bash
       # Execute tests defined by the CMake configuration.
