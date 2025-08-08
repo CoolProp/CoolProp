@@ -24,6 +24,7 @@
 #    define thread_local
 #endif
 
+/*
 // see http://stackoverflow.com/questions/18298280/how-to-declare-a-variable-as-thread-local-portably
 #ifndef thread_local
 #    if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
@@ -32,7 +33,7 @@
 #        define thread_local __declspec(thread)
 #    elif defined(__ISAPPLE__) && (defined(__llvm__) || defined(__clang__)) && !__has_feature(cxx_thread_local)
 #        define thread_local
-/* note that ICC (linux) and Clang are covered by __GNUC__ */
+// note that ICC (linux) and Clang are covered by __GNUC__ 
 #    elif defined __GNUC__ || defined __SUNPRO_C || defined __xlC__
 #        define thread_local __thread
 #    else
@@ -40,6 +41,7 @@
 //          #define thread_local
 #    endif
 #endif
+*/
 
 #define COOLPROPDBL_MAPS_TO_DOUBLE
 #ifdef COOLPROPDBL_MAPS_TO_DOUBLE
