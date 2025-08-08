@@ -14,7 +14,7 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * There is also a bleeding edge nightly build of the `development version <http://sourceforge.net/projects/coolprop/files/CoolProp/nightly>`_ .
 
-* The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <http://www.coolprop.org/dev>`_  
+* The documentation is available for the `latest release <http://www.coolprop.org>`_ and the `development version <https://coolprop.github.io/devdocs/>`_  
 
 * For any kind of question regarding CoolProp and its usage, you can ask the `CoolProp Discussions <https://github.com/CoolProp/CoolProp/discussions>`_
 
