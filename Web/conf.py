@@ -121,10 +121,10 @@ numpydoc_show_class_members = False
 
 zfile = Path("MJ.zip")
 if not zfile.exists():
-    urllib.request.urlretrieve("https://github.com/mathjax/MathJax/archive/master.zip", zfile)
+    urllib.request.urlretrieve("https://github.com/mathjax/MathJax/archive/refs/tags/4.0.0.zip", zfile)
 with zipfile.ZipFile(zfile) as z:
     z.extractall(path=Path(__file__).parent / '_static')
-mathjax_path = "MathJax-master/es5/tex-mml-chtml.js"
+mathjax_path = "MathJax-master/tex-mml-chtml.js"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
