@@ -1,6 +1,50 @@
 Changelog for CoolProp
 ======================
 
+7.0.0
+-----
+
+Highlights:
+
+* [BREAKING] Added superancillary functions for all pure fluids with multiparameter EOS; see docs: https://www.coolprop.org/coolprop/SuperAncillary.html . Huge speedup for some properties!
+* [BREAKING] Changed EOS for methanol to match that in REFPROP 
+* Finally(!) got the Catch2 tests to all pass
+* Update docs to use the pydata sphinx theme 
+* Improvements and changes to javascript wrapping
+* Moved docs to be hosted on GitHub Pages (fixed https issues)
+* Update rapidjson to final commit to ensure all libraries use the same symbols
+
+Issues closed:
+
+* `#2350 <https://github.com/CoolProp/CoolProp/issues/2350>`_ : coolprop.org doesn't support HTTPS
+* `#2395 <https://github.com/CoolProp/CoolProp/issues/2395>`_ : Helium saturation routine bug
+* `#2409 <https://github.com/CoolProp/CoolProp/issues/2409>`_ : Can't open `https://coolprop.org` redirected to `https://.sourceforge.net/` end in "Site not found"
+* `#2451 <https://github.com/CoolProp/CoolProp/issues/2451>`_ : Glitches with cyclopentane in CoolProp 6.6.0
+* `#2484 <https://github.com/CoolProp/CoolProp/issues/2484>`_ : Catch2 workflow Fails on PRs and Pushes
+* `#2512 <https://github.com/CoolProp/CoolProp/issues/2512>`_ : CoolProp fails to import when cadquery is imported first
+* `#2535 <https://github.com/CoolProp/CoolProp/issues/2535>`_ : PC-SAFT test failures for electrolytes
+* `#2536 <https://github.com/CoolProp/CoolProp/issues/2536>`_ : Script to generate test points for plotting
+* `#2538 <https://github.com/CoolProp/CoolProp/issues/2538>`_ : Switch Methanol to the same EOS as in REFPROP
+* `#2540 <https://github.com/CoolProp/CoolProp/issues/2540>`_ : use std::array for cache in Helmholtz terms
+* `#2541 <https://github.com/CoolProp/CoolProp/issues/2541>`_ : A way to get required buffer size for `get_fluid_param_string`
+* `#2546 <https://github.com/CoolProp/CoolProp/issues/2546>`_ : Restore asan tests action
+* `#2558 <https://github.com/CoolProp/CoolProp/issues/2558>`_ : querying `Tau` and `Delta` from multicomponent models fails
+* `#2559 <https://github.com/CoolProp/CoolProp/issues/2559>`_ : Logo missing for docs
+* `#2563 <https://github.com/CoolProp/CoolProp/issues/2563>`_ : Switch universal gas constant to the final number
+* `#2568 <https://github.com/CoolProp/CoolProp/issues/2568>`_ : Performance Regression in C# Bindings: HAPropsSI and Refrigerant PropsSI in 6.8.0/6.8.1dev
+* `#2570 <https://github.com/CoolProp/CoolProp/issues/2570>`_ : Fire devdocs on every commit to main/master
+* `#2571 <https://github.com/CoolProp/CoolProp/issues/2571>`_ : Profile AbstractState construction and add ENVVAR to disable superancillary entirely
+
+Pull requests merged:
+
+* `#2511 <https://github.com/CoolProp/CoolProp/pull/2511>`_ : Superancillaries for pure fluids
+* `#2544 <https://github.com/CoolProp/CoolProp/pull/2544>`_ : Implement the array-based caching in AbstractState.
+* `#2548 <https://github.com/CoolProp/CoolProp/pull/2548>`_ : Add an action to run asan
+* `#2551 <https://github.com/CoolProp/CoolProp/pull/2551>`_ : Modernize (and test!) embind wrapping for Javascript
+* `#2562 <https://github.com/CoolProp/CoolProp/pull/2562>`_ : Switch to pydata theme
+* `#2580 <https://github.com/CoolProp/CoolProp/pull/2580>`_ : Export additional JavaScript functions
+* `#2585 <https://github.com/CoolProp/CoolProp/pull/2585>`_ : Update rapidjson to latest trunk to align with python-rapidjson
+
 6.8.0
 -----
 
