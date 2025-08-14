@@ -1771,77 +1771,136 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         if (!is_pure_or_pseudopure) {
             throw ValueError("possibly two-phase inputs not supported for mixtures for now");
         }
-
-        // Actually have to use saturation information sadly
-        // For the given pressure, find the saturation state
-        // Run the saturation routines to determine the saturation densities and pressures
-        HelmholtzEOSMixtureBackend HEOS(components);
-        HEOS._p = this->_p;
-        HEOS._Q = 0;  // ?? What is the best to do here? Doesn't matter for our purposes since pure fluid
-        FlashRoutines::PQ_flash(HEOS);
-
-        // We called the saturation routines, so HEOS.SatL and HEOS.SatV are now updated
-        // with the saturated liquid and vapor values, which can therefore be used in
-        // the other solvers
-        saturation_called = true;
-
-        CoolPropDbl Q;
-
-        if (other == iT) {
-            if (value < HEOS.SatL->T() - 100 * DBL_EPSILON) {
+        
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()){
+            auto& optsuperanc = get_superanc_optional();
+            // Superancillaries are enabled and available, they will be used to determine the phase
+            if (optsuperanc){
+                auto& superanc = optsuperanc.value();
+                CoolPropDbl pmax_num = superanc.get_pmax();
+                if (_p > pmax_num){
+                    throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", _p, pmax_num));
+                }
+                auto T = superanc.get_T_from_p(_p);
+                auto rhoL = superanc.eval_sat(T, 'D', 0);
+                auto rhoV = superanc.eval_sat(T, 'D', 1);
+                auto p = _p;
+                
+                SatL->update_TDmolarP_unchecked(T, rhoL, p);
+                SatV->update_TDmolarP_unchecked(T, rhoV, p);
+                double Q;
+                switch (other) {
+                    case iDmolar:
+                        Q = (1 / value - 1 / SatL->rhomolar()) / (1 / SatV->rhomolar() - 1 / SatL->rhomolar());
+                        break;
+                    case iSmolar:
+                        Q = (value - SatL->smolar()) / (SatV->smolar() - SatL->smolar());
+                        break;
+                    case iHmolar:
+                        Q = (value - SatL->hmolar()) / (SatV->hmolar() - SatL->hmolar());
+                        break;
+                    case iUmolar:
+                        Q = (value - SatL->umolar()) / (SatV->umolar() - SatL->umolar());
+                        break;
+                    default:
+                        throw ValueError(format("bad input for other"));
+                }
+                _Q = Q;
+                _T = T;
+                _p = p;
+                _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
+                _phase = iphase_twophase;
+                if (Q < -1e-9) {
+                    this->_phase = iphase_liquid;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = -1000;
+                    return;
+                } else if (Q > 1 + 1e-9) {
+                    this->_phase = iphase_gas;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = 1000;
+                    return;
+                } else {
+                    this->_phase = iphase_twophase;
+                }
+                return;
+            }
+        }
+        else{
+            
+            // Actually have to use saturation information sadly
+            // For the given pressure, find the saturation state
+            // Run the saturation routines to determine the saturation densities and pressures
+            HelmholtzEOSMixtureBackend HEOS(components);
+            HEOS._p = this->_p;
+            HEOS._Q = 0;  // ?? What is the best to do here? Doesn't matter for our purposes since pure fluid
+            FlashRoutines::PQ_flash(HEOS);
+            
+            // We called the saturation routines, so HEOS.SatL and HEOS.SatV are now updated
+            // with the saturated liquid and vapor values, which can therefore be used in
+            // the other solvers
+            saturation_called = true;
+            
+            CoolPropDbl Q;
+            
+            if (other == iT) {
+                if (value < HEOS.SatL->T() - 100 * DBL_EPSILON) {
+                    this->_phase = iphase_liquid;
+                    _Q = -1000;
+                    return;
+                } else if (value > HEOS.SatV->T() + 100 * DBL_EPSILON) {
+                    this->_phase = iphase_gas;
+                    _Q = 1000;
+                    return;
+                } else {
+                    this->_phase = iphase_twophase;
+                }
+            }
+            switch (other) {
+                case iDmolar:
+                    Q = (1 / value - 1 / HEOS.SatL->rhomolar()) / (1 / HEOS.SatV->rhomolar() - 1 / HEOS.SatL->rhomolar());
+                    break;
+                case iSmolar:
+                    Q = (value - HEOS.SatL->smolar()) / (HEOS.SatV->smolar() - HEOS.SatL->smolar());
+                    break;
+                case iHmolar:
+                    Q = (value - HEOS.SatL->hmolar()) / (HEOS.SatV->hmolar() - HEOS.SatL->hmolar());
+                    break;
+                case iUmolar:
+                    Q = (value - HEOS.SatL->umolar()) / (HEOS.SatV->umolar() - HEOS.SatL->umolar());
+                    break;
+                default:
+                    throw ValueError(format("bad input for other"));
+            }
+            // TODO: Check the speed penalty of these calls
+            // Update the states
+            if (this->SatL) this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T());
+            if (this->SatV) this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T());
+            // Update the two-Phase variables
+            _rhoLmolar = HEOS.SatL->rhomolar();
+            _rhoVmolar = HEOS.SatV->rhomolar();
+            
+            //
+            if (Q < -1e-9) {
                 this->_phase = iphase_liquid;
                 _Q = -1000;
                 return;
-            } else if (value > HEOS.SatV->T() + 100 * DBL_EPSILON) {
+            } else if (Q > 1 + 1e-9) {
                 this->_phase = iphase_gas;
                 _Q = 1000;
                 return;
             } else {
                 this->_phase = iphase_twophase;
             }
-        }
-        switch (other) {
-            case iDmolar:
-                Q = (1 / value - 1 / HEOS.SatL->rhomolar()) / (1 / HEOS.SatV->rhomolar() - 1 / HEOS.SatL->rhomolar());
-                break;
-            case iSmolar:
-                Q = (value - HEOS.SatL->smolar()) / (HEOS.SatV->smolar() - HEOS.SatL->smolar());
-                break;
-            case iHmolar:
-                Q = (value - HEOS.SatL->hmolar()) / (HEOS.SatV->hmolar() - HEOS.SatL->hmolar());
-                break;
-            case iUmolar:
-                Q = (value - HEOS.SatL->umolar()) / (HEOS.SatV->umolar() - HEOS.SatL->umolar());
-                break;
-            default:
-                throw ValueError(format("bad input for other"));
-        }
-        // TODO: Check the speed penalty of these calls
-        // Update the states
-        if (this->SatL) this->SatL->update(DmolarT_INPUTS, HEOS.SatL->rhomolar(), HEOS.SatL->T());
-        if (this->SatV) this->SatV->update(DmolarT_INPUTS, HEOS.SatV->rhomolar(), HEOS.SatV->T());
-        // Update the two-Phase variables
-        _rhoLmolar = HEOS.SatL->rhomolar();
-        _rhoVmolar = HEOS.SatV->rhomolar();
-
-        //
-        if (Q < -1e-9) {
-            this->_phase = iphase_liquid;
-            _Q = -1000;
+            
+            _Q = Q;
+            // Load the outputs
+            _T = _Q * HEOS.SatV->T() + (1 - _Q) * HEOS.SatL->T();
+            _rhomolar = 1 / (_Q / HEOS.SatV->rhomolar() + (1 - _Q) / HEOS.SatL->rhomolar());
             return;
-        } else if (Q > 1 + 1e-9) {
-            this->_phase = iphase_gas;
-            _Q = 1000;
-            return;
-        } else {
-            this->_phase = iphase_twophase;
         }
-
-        _Q = Q;
-        // Load the outputs
-        _T = _Q * HEOS.SatV->T() + (1 - _Q) * HEOS.SatL->T();
-        _rhomolar = 1 / (_Q / HEOS.SatV->rhomolar() + (1 - _Q) / HEOS.SatL->rhomolar());
-        return;
     } else if (_p < components[0].EOS().ptriple * 0.9999) {
         if (other == iT) {
             if (_T > std::max(Tmin(), Ttriple())) {

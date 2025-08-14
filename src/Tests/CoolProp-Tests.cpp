@@ -2678,6 +2678,25 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check h_fg", "[superanc]") {
     CHECK_NOTHROW(AS->saturated_vapor_keyed_output(iHmolar) - AS->saturated_liquid_keyed_output(iHmolar));
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression; on", "[2438]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    BENCHMARK("HP regression"){
+        AS->update(HmassP_INPUTS, 300e3, 70e5);
+        return AS;
+    };
+    AS->update(HmassP_INPUTS, 300e3, 70e5);
+    std::cout << AS->Q() << std::endl;
+}
+TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression; off", "[2438]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    BENCHMARK("HP regression"){
+        AS->update(HmassP_INPUTS, 300e3, 70e5);
+        return AS;
+    };
+    AS->update(HmassP_INPUTS, 300e3, 70e5);
+    std::cout << AS->Q() << std::endl;
+}
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
     std::array<double, 16> buf15; buf15.fill(0.0);
     std::array<double, 100> buf100; buf100.fill(0.0);
