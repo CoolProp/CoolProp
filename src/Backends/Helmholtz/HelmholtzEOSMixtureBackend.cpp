@@ -2041,21 +2041,45 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 auto& superanc = optsuperanc.value();
                 auto rhoL = superanc.eval_sat(_T, 'D', 0);
                 auto rhoV = superanc.eval_sat(_T, 'D', 1);
-                auto p = superanc.eval_sat(_T, 'P', 1);
+                auto psat = superanc.eval_sat(_T, 'P', 1);
                 
-                if (other == iP && (std::abs(p/value-1) < 1e-6)){
-                    throw ValueError(
-                        format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 1e-4 %% of given p [%Lg Pa]", p, _T, value)
-                    );
+                if (other == iP){
+                    if (value < psat) {
+                        _phase = iphase_gas;
+                        _Q = -1000;
+                    } else if (value > psat) {
+                        _phase = iphase_liquid;
+                        _Q = 1000;
+                    }
+                    else if (std::abs(psat/value-1) < 1e-6){
+                        throw ValueError(
+                                         format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 1e-4 %% of given p [%Lg Pa]", psat, _T, value)
+                                         );
+                    }
+                    return;
+                }
+                double Q = -1;
+                if (other == iDmolar){
+                    // Special case density as an input
+                    Q = (1 / value - 1 / rhoL) / (1 / rhoV - 1 / rhoL);
+                    if (Q <= 0) {
+                        _phase = iphase_liquid;
+                        _Q = -1000;
+                    } else if (Q >= 1) {
+                        _phase = iphase_gas;
+                        _Q = 1000;
+                    } else {
+                        _phase = iphase_twophase;
+                        _p = psat;
+                        this->_Q = Q;
+                    }
+                    return;
                 }
                 
-                SatL->update_TDmolarP_unchecked(_T, rhoL, p);
-                SatV->update_TDmolarP_unchecked(_T, rhoV, p);
-                double Q;
+                SatL->update_TDmolarP_unchecked(_T, rhoL, psat);
+                SatV->update_TDmolarP_unchecked(_T, rhoV, psat);
+                
                 switch (other) {
-                    case iDmolar:
-                        Q = (1 / value - 1 / SatL->rhomolar()) / (1 / SatV->rhomolar() - 1 / SatL->rhomolar());
-                        break;
                     case iSmolar:
                         Q = (value - SatL->smolar()) / (SatV->smolar() - SatL->smolar());
                         break;
@@ -2068,10 +2092,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                     default:
                         throw ValueError(format("bad input for other"));
                 }
-                _Q = Q;
-                _p = p;
-                _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
-                _phase = iphase_twophase;
+                
                 if (Q < -1e-9) {
                     this->_phase = iphase_liquid;
                     SatL->clear();
@@ -2086,10 +2107,14 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                     return;
                 } else {
                     this->_phase = iphase_twophase;
+                    _p = psat;
+                    _rhomolar = 1 / (_Q / rhoV + (1 - _Q) / rhoL);
+                    _Q = Q;
+                    return;
                 }
-                return;
             }
         }
+        
         // Start to think about the saturation stuff
         // First try to use the ancillary equations if you are far enough away
         // You know how accurate the ancillary equations are thanks to using CoolProp code to refit them
