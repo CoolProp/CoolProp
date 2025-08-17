@@ -1772,7 +1772,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             throw ValueError("possibly two-phase inputs not supported for mixtures for now");
         }
         
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()){
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure() && other != iT){
             auto& optsuperanc = get_superanc_optional();
             // Superancillaries are enabled and available, they will be used to determine the phase
             if (optsuperanc){
