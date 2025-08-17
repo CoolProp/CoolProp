@@ -1772,7 +1772,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             throw ValueError("possibly two-phase inputs not supported for mixtures for now");
         }
         
-        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure() && other != iT){
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()){
             auto& optsuperanc = get_superanc_optional();
             // Superancillaries are enabled and available, they will be used to determine the phase
             if (optsuperanc){
@@ -1786,6 +1786,19 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 auto rhoV = superanc.eval_sat(T, 'D', 1);
                 auto p = _p;
                 
+                if (other == iT) {
+                    if (value < T - 100 * DBL_EPSILON) {
+                        this->_phase = iphase_liquid;
+                        _Q = -1000;
+                        return;
+                    } else if (value > T + 100 * DBL_EPSILON) {
+                        this->_phase = iphase_gas;
+                        _Q = 1000;
+                        return;
+                    } else {
+                        this->_phase = iphase_twophase;
+                    }
+                }
                 SatL->update_TDmolarP_unchecked(T, rhoL, p);
                 SatV->update_TDmolarP_unchecked(T, rhoV, p);
                 double Q;
