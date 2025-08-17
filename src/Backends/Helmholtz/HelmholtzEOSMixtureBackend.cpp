@@ -2034,6 +2034,62 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         }
     } else if (_T < _crit.T)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
+        if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()){
+            auto& optsuperanc = get_superanc_optional();
+            // Superancillaries are enabled and available, they will be used to determine the phase
+            if (optsuperanc){
+                auto& superanc = optsuperanc.value();
+                auto rhoL = superanc.eval_sat(_T, 'D', 0);
+                auto rhoV = superanc.eval_sat(_T, 'D', 1);
+                auto p = superanc.eval_sat(_T, 'P', 1);
+                
+                if (other == iP && (std::abs(p/value-1) < 1e-6)){
+                    throw ValueError(
+                        format("Saturation pressure [%g Pa] corresponding to T [%g K] is within 1e-4 %% of given p [%Lg Pa]", p, _T, value)
+                    );
+                }
+                
+                SatL->update_TDmolarP_unchecked(_T, rhoL, p);
+                SatV->update_TDmolarP_unchecked(_T, rhoV, p);
+                double Q;
+                switch (other) {
+                    case iDmolar:
+                        Q = (1 / value - 1 / SatL->rhomolar()) / (1 / SatV->rhomolar() - 1 / SatL->rhomolar());
+                        break;
+                    case iSmolar:
+                        Q = (value - SatL->smolar()) / (SatV->smolar() - SatL->smolar());
+                        break;
+                    case iHmolar:
+                        Q = (value - SatL->hmolar()) / (SatV->hmolar() - SatL->hmolar());
+                        break;
+                    case iUmolar:
+                        Q = (value - SatL->umolar()) / (SatV->umolar() - SatL->umolar());
+                        break;
+                    default:
+                        throw ValueError(format("bad input for other"));
+                }
+                _Q = Q;
+                _p = p;
+                _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
+                _phase = iphase_twophase;
+                if (Q < -1e-9) {
+                    this->_phase = iphase_liquid;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = -1000;
+                    return;
+                } else if (Q > 1 + 1e-9) {
+                    this->_phase = iphase_gas;
+                    SatL->clear();
+                    SatV->clear();
+                    _Q = 1000;
+                    return;
+                } else {
+                    this->_phase = iphase_twophase;
+                }
+                return;
+            }
+        }
         // Start to think about the saturation stuff
         // First try to use the ancillary equations if you are far enough away
         // You know how accurate the ancillary equations are thanks to using CoolProp code to refit them

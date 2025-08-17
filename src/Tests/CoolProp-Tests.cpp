@@ -2697,6 +2697,30 @@ TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression; off", "[2438
     std::cout << AS->Q() << std::endl;
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression for TS; on", "[2438]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    double T = 298.0;
+    AS->update(QT_INPUTS, 1, T);
+    auto sL = AS->saturated_liquid_keyed_output(iSmolar);
+    auto sV = AS->saturated_vapor_keyed_output(iSmolar);
+    BENCHMARK("ST regression"){
+        AS->update(SmolarT_INPUTS, (sL + sV)/2, T);
+        return AS;
+    };
+}
+
+TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression for TS; off", "[2438]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    double T = 298.0;
+    AS->update(QT_INPUTS, 1, T);
+    auto sL = AS->saturated_liquid_keyed_output(iSmolar);
+    auto sV = AS->saturated_vapor_keyed_output(iSmolar);
+    BENCHMARK("ST regression"){
+        AS->update(SmolarT_INPUTS, (sL + sV)/2, T);
+        return AS;
+    };
+}
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
     std::array<double, 16> buf15; buf15.fill(0.0);
     std::array<double, 100> buf100; buf100.fill(0.0);
