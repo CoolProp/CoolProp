@@ -69,7 +69,8 @@ double SaturationAncillaryFunction::evaluate(double T) {
         }
     }
 }
-double SaturationAncillaryFunction::invert(double value, double min_bound, double max_bound) {
+double SaturationAncillaryFunction::invert(double value,
+    SaturationAncillaryFunction_invert_options options) {
     // Invert the ancillary curve to get the temperature as a function of the output variable
     // Define the residual to be driven to zero
     class solver_resid : public FuncWrapper1D
@@ -86,7 +87,10 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
         }
     };
     solver_resid resid(this, value);
+    resid.options.add_number("omega", options.omega);
     std::string errstring;
+    double min_bound = options.min_bound;
+    double max_bound = options.max_bound;
     if (min_bound < 0) {
         min_bound = Tmin - 0.01;
     }
@@ -97,9 +101,10 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
     try {
         // Safe to expand the domain a little bit to lower temperature, absolutely cannot exceed Tmax
         // because then you get (negative number)^(double) which is undefined.
-        return Brent(resid, min_bound, max_bound, DBL_EPSILON, 1e-10, 100);
+        return Brent(resid, min_bound, max_bound, DBL_EPSILON, 1e-10, options.max_iter);
     } catch (...) {
-        return ExtrapolatingSecant(resid,max_bound, -0.01, 1e-12, 100);
+        double T = ExtrapolatingSecant(resid,max_bound, -0.01, 1e-12, options.max_iter, options.best_guess);
+        return T;
     }
 }
 
