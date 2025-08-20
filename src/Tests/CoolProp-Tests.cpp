@@ -2437,6 +2437,12 @@ TEST_CASE("Github issue #2558", "[2558]") {
     CHECK(std::isfinite(Delta));
 }
 
+TEST_CASE("Github issue #2491", "[2491]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "Xenon"));
+    CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, 59867.351071950761, 5835843.7305891514));
+    CHECK(std::isfinite(AS->rhomolar()));
+}
+
 TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]"){
     auto TNBP_RP = PropsSI("T", "P", 101325, "Q", 0, "REFPROP::METHANOL");
     auto TNBP_CP = PropsSI("T", "P", 101325, "Q", 0, "HEOS::METHANOL");
