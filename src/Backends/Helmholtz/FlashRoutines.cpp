@@ -1528,7 +1528,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     solver_resid resid(&HEOS, HEOS._p, value, other, Tmin, Tmax);
 
     try {
-        // First try to use Halley's method (including two derivatives)
+        // First try to use Halley's method (including two derivatives) starting at Tmin
         Halley(resid, Tmin, 1e-12, 100);
         if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
             throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
@@ -1536,33 +1536,45 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
         // Un-specify the phase of the fluid
         HEOS.unspecify_phase();
     } catch (...) {
-        try {
+        try{
             resid.iter = 0;
-            // HEOS.unspecify_phase(); Tried to fix #2470, but this breaks a lot of other things
-            // Halley's method failed, so now we try Brent's method
-            Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100);
+            // First try to use Newton's method (including one derivative) starting at Tmax
+            Halley(resid, Tmax, 1e-12, 100);
+            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
+                throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+            }
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();
-        } catch (...) {
-            // Un-specify the phase of the fluid
-            HEOS.unspecify_phase();
-
-            // Determine why you were out of range if you can
-            //
-            CoolPropDbl eos0 = resid.eos0, eos1 = resid.eos1;
-            std::string name = get_parameter_information(other, "short");
-            std::string units = get_parameter_information(other, "units");
-            if (eos1 > eos0 && value > eos1) {
-                throw ValueError(
-                  format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is above the maximum value of %0.12Lg %s",
-                         name.c_str(), value, units.c_str(), eos1, units.c_str()));
+        }
+        catch(...){
+            try {
+                resid.iter = 0;
+                // HEOS.unspecify_phase(); Tried to fix #2470, but this breaks a lot of other things
+                // Halley's method failed, so now we try Brent's method
+                Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100);
+                // Un-specify the phase of the fluid
+                HEOS.unspecify_phase();
+            } catch (...) {
+                // Un-specify the phase of the fluid
+                HEOS.unspecify_phase();
+                
+                // Determine why you were out of range if you can
+                //
+                CoolPropDbl eos0 = resid.eos0, eos1 = resid.eos1;
+                std::string name = get_parameter_information(other, "short");
+                std::string units = get_parameter_information(other, "units");
+                if (eos1 > eos0 && value > eos1) {
+                    throw ValueError(
+                                     format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is above the maximum value of %0.12Lg %s",
+                                            name.c_str(), value, units.c_str(), eos1, units.c_str()));
+                }
+                if (eos1 > eos0 && value < eos0) {
+                    throw ValueError(
+                                     format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is below the minimum value of %0.12Lg %s",
+                                            name.c_str(), value, units.c_str(), eos0, units.c_str()));
+                }
+                throw;
             }
-            if (eos1 > eos0 && value < eos0) {
-                throw ValueError(
-                  format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is below the minimum value of %0.12Lg %s",
-                         name.c_str(), value, units.c_str(), eos0, units.c_str()));
-            }
-            throw;
         }
     }
 }
@@ -1623,18 +1635,34 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     break;
                 }
                 case iphase_liquid: {
-                    if (saturation_called) {
-                        Tmax = HEOS.SatL->T();
-                    } else {
-                        Tmax = HEOS._TLanc.pt() + 0.01;
-                    }
-
+                    
                     // Sometimes the minimum pressure for the melting line is a bit above the triple point pressure
                     if (HEOS.has_melting_line() && HEOS._p > HEOS.calc_melting_line(iP_min, -1, -1)) {
                         Tmin = HEOS.calc_melting_line(iT, iP, HEOS._p) - 1e-3;
                     } else {
                         Tmin = HEOS.Tmin() - 1e-3;
                     }
+                    
+                    if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()){
+                        auto& optsuperanc = HEOS.get_superanc_optional();
+                        if (optsuperanc){
+                            auto& superanc = optsuperanc.value();
+                            CoolPropDbl pmax_num = superanc.get_pmax();
+                            if (HEOS._p > pmax_num){
+                                throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
+                            }
+                            Tmax = superanc.get_T_from_p(HEOS._p)+1e-12;
+                            break;
+                        }
+                    }
+                    
+                    if (saturation_called) {
+                        Tmax = HEOS.SatL->T();
+                    } else {
+                        Tmax = HEOS._TLanc.pt() + 0.01;
+                    }
+
+                    
                     break;
                 }
                 case iphase_supercritical_liquid:
