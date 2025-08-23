@@ -1781,26 +1781,27 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 if (_p > pmax_num){
                     throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", _p, pmax_num));
                 }
-                auto T = superanc.get_T_from_p(_p);
-                auto rhoL = superanc.eval_sat(T, 'D', 0);
-                auto rhoV = superanc.eval_sat(T, 'D', 1);
-                auto p = _p;
+                auto Tsat = superanc.get_T_from_p(_p);
+                auto rhoL = superanc.eval_sat(Tsat, 'D', 0);
+                auto rhoV = superanc.eval_sat(Tsat, 'D', 1);
                 
                 if (other == iT) {
-                    if (value < T - 100 * DBL_EPSILON) {
+                    if (value < Tsat - 100 * DBL_EPSILON) {
                         this->_phase = iphase_liquid;
                         _Q = -1000;
-                        return;
-                    } else if (value > T + 100 * DBL_EPSILON) {
+                    } else if (value > Tsat + 100 * DBL_EPSILON) {
                         this->_phase = iphase_gas;
                         _Q = 1000;
-                        return;
                     } else {
-                        this->_phase = iphase_twophase;
+                        _phase = iphase_twophase;
                     }
+                    if (_phase != iphase_twophase){
+                        recalculate_singlephase_phase();
+                    }
+                    return;
                 }
-                SatL->update_TDmolarP_unchecked(T, rhoL, p);
-                SatV->update_TDmolarP_unchecked(T, rhoV, p);
+                SatL->update_TDmolarP_unchecked(Tsat, rhoL, _p);
+                SatV->update_TDmolarP_unchecked(Tsat, rhoV, _p);
                 double Q;
                 switch (other) {
                     case iDmolar:
@@ -1818,25 +1819,26 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     default:
                         throw ValueError(format("bad input for other"));
                 }
-                _Q = Q;
-                _T = T;
-                _p = p;
-                _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
+
                 _phase = iphase_twophase;
                 if (Q < -1e-9) {
                     this->_phase = iphase_liquid;
                     SatL->clear();
                     SatV->clear();
                     _Q = -1000;
-                    return;
                 } else if (Q > 1 + 1e-9) {
                     this->_phase = iphase_gas;
                     SatL->clear();
                     SatV->clear();
                     _Q = 1000;
-                    return;
                 } else {
+                    _Q = Q;
+                    _T = Tsat;
+                    _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
                     this->_phase = iphase_twophase;
+                }
+                if (_phase != iphase_twophase){
+                    recalculate_singlephase_phase();
                 }
                 return;
             }
@@ -2076,15 +2078,17 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         _phase = iphase_twophase;
                         _p = psat;
                         this->_Q = Q;
-                        SatL->update(DmolarT_INPUTS, rhoL, _T);
-                        SatV->update(DmolarT_INPUTS, rhoV, _T);
+                        SatL->update_TDmolarP_unchecked(_T, rhoL, psat);
+                        SatV->update_TDmolarP_unchecked(_T, rhoV, psat);
                     }
                     _rhomolar = value;
                     return;
                 }
 
-                SatL->update(DmolarT_INPUTS, rhoL, _T);
-                SatV->update(DmolarT_INPUTS, rhoV, _T);
+                SatL->update_TDmolarP_unchecked(_T, rhoL, psat);
+                SatL->specify_phase(iphase_liquid);
+                SatV->update_TDmolarP_unchecked(_T, rhoV, psat);
+                SatV->specify_phase(iphase_gas);
                 
                 switch (other) {
                     case iDmolar:
