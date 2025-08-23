@@ -31,6 +31,14 @@ jobs:
     - uses: actions/checkout@v4.2.2
       with:
         submodules: recursive
+        fetch-depth: 0  # Fetch all history for git revision info
+    
+    - name: Set up Git
+      run: |
+        git config --global --add safe.directory $GITHUB_WORKSPACE
+        # Get the full git revision hash
+        git rev-parse HEAD > dev/gitrevision.txt
+        echo "Git revision: $(cat dev/gitrevision.txt)"
     
     - uses: actions/cache@v4
       if: ${{ !env.ACT }} # skip during local actions testing
@@ -74,9 +82,10 @@ jobs:
     - name: Build and install wheel using bdist_wheel
       shell: bash
       run: |
-        git config --global --add safe.directory /__w/CoolProp/CoolProp
-        echo "$(git rev-parse HEAD)" > dev/gitrevision.txt
         source activate docs
+        # Ensure the gitrevision.txt is used for the build
+        python dev/generate_headers.py
+        # Build and install the wheel
         pip -vv wheel .
         pip install -vvv --force-reinstall --ignore-installed --upgrade --no-index `ls *.whl`
         pip install pydata-sphinx-theme
