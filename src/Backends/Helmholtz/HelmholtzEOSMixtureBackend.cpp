@@ -2082,7 +2082,6 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         _phase = iphase_liquid;
                         _Q = 1000;
                     }
-                    recalculate_singlephase_phase();
                     return;
                 }
                 double Q = -1;
