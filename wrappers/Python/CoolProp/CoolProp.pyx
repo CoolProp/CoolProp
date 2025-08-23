@@ -595,12 +595,17 @@ cpdef list FluidsList():
     """
     return _get_global_param_string(b"FluidsList").split(',')
 
+from re import split as re_split
+
 cpdef get_aliases(Fluid):
     """
-    Return a comma separated string of aliases for the given fluid
+    Return a list of aliases for the given fluid.
+    Uses regex to properly handle cases like '1,2-dichloroethane' where the comma
+    is part of the chemical name rather than a separator.
     """
     cdef bytes _Fluid = Fluid.encode('ascii')
-    return [F for F in _get_fluid_param_string(_Fluid, b'aliases').split(',')]
+    # Use negative lookbehind to avoid splitting on commas that follow a digit
+    return [F.strip() for F in re_split(r'(?<!,\d),', _get_fluid_param_string(_Fluid, b'aliases'))]
 
 cpdef string get_REFPROPname(Fluid):
     """
