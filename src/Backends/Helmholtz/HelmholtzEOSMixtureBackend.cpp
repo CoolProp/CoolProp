@@ -2091,9 +2091,6 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 SatV->specify_phase(iphase_gas);
                 
                 switch (other) {
-                    case iDmolar:
-                        Q = (1/value - 1/SatL->rhomolar()) / (1/SatV->rhomolar() - 1/SatL->rhomolar());
-                        break;
                     case iSmolar:
                         Q = (value - SatL->smolar()) / (SatV->smolar() - SatL->smolar());
                         break;
