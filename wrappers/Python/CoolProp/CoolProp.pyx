@@ -605,7 +605,7 @@ cpdef get_aliases(Fluid):
     """
     cdef bytes _Fluid = Fluid.encode('ascii')
     # Use negative lookbehind to avoid splitting on commas that follow a digit
-    return [F.strip() for F in re_split(r'(?<!,\d),', _get_fluid_param_string(_Fluid, b'aliases'))]
+    return _get_fluid_param_string(_Fluid, b'aliases_bar').split('|')
 
 cpdef string get_REFPROPname(Fluid):
     """
