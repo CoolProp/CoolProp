@@ -1554,13 +1554,24 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
     // Maximum saturation temperature - Equal to critical pressure for pure fluids
     CoolPropDbl psat_max = calc_pmax_sat();
+    
+    double T_crit_ = T_critical(), p_crit_ = p_critical(), rhomolar_crit_ = rhomolar_critical();
+    auto smolar_critical = [this, &T_crit_, &rhomolar_crit_](){
+        return this->calc_smolar_nocache(T_crit_, rhomolar_crit_);
+    };
+    auto hmolar_critical = [this, &T_crit_, &rhomolar_crit_](){
+        return this->calc_hmolar_nocache(T_crit_, rhomolar_crit_);
+    };
+    auto umolar_critical = [this, &T_crit_, &rhomolar_crit_](){
+        return this->calc_umolar_nocache(T_crit_, rhomolar_crit_);
+    };
 
     // Check supercritical pressure
     if (_p > psat_max) {
         _Q = 1e9;
         switch (other) {
             case iT: {
-                if (_T > _crit.T) {
+                if (_T > T_crit_) {
                     this->_phase = iphase_supercritical;
                     return;
                 } else {
@@ -1569,7 +1580,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iDmolar: {
-                if (_rhomolar < _crit.rhomolar) {
+                if (_rhomolar < rhomolar_crit_) {
                     this->_phase = iphase_supercritical_gas;
                     return;
                 } else {
@@ -1578,7 +1589,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iSmolar: {
-                if (_smolar.pt() > _crit.smolar) {
+                if (_smolar.pt() > smolar_critical()) {
                     this->_phase = iphase_supercritical_gas;
                     return;
                 } else {
@@ -1587,7 +1598,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iHmolar: {
-                if (_hmolar.pt() > _crit.hmolar) {
+                if (_hmolar.pt() > hmolar_critical()) {
                     this->_phase = iphase_supercritical_gas;
                     return;
                 } else {
@@ -1596,7 +1607,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iUmolar: {
-                if (_umolar.pt() > _crit.umolar) {
+                if (_umolar.pt() > umolar_critical()) {
                     this->_phase = iphase_supercritical_gas;
                     return;
                 } else {
@@ -1998,19 +2009,30 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     if (!ValidNumber(value)) {
         throw ValueError(format("value to T_phase_determination_pure_or_pseudopure is invalid"));
     };
+    
+    double T_crit_ = T_critical(), p_crit_ = p_critical(), rhomolar_crit_ = rhomolar_critical();
+    auto smolar_critical = [this, &T_crit_, &rhomolar_crit_](){
+        return this->calc_smolar_nocache(T_crit_, rhomolar_crit_);
+    };
+    auto hmolar_critical = [this, &T_crit_, &rhomolar_crit_](){
+        return this->calc_hmolar_nocache(T_crit_, rhomolar_crit_);
+    };
+    auto umolar_critical = [this, &T_crit_, &rhomolar_crit_](){
+        return this->calc_umolar_nocache(T_crit_, rhomolar_crit_);
+    };
 
     // T is known, another input P, T, H, S, U is given (all molar)
-    if (_T < _crit.T && _p > _crit.p) {
+    if (_T < T_crit_ && _p > p_crit_) {
         // Only ever true if (other = iP); otherwise _p = -HUGE
         _phase = iphase_supercritical_liquid;
-    } else if (std::abs(_T - _crit.T) < 10 * DBL_EPSILON)  // Exactly at Tcrit
+    } else if (std::abs(_T - T_crit_) < 10 * DBL_EPSILON)  // Exactly at Tcrit
     {
         switch (other) {
             case iDmolar:
-                if (std::abs(_rhomolar - _crit.rhomolar) < 10 * DBL_EPSILON) {
+                if (std::abs(_rhomolar - rhomolar_crit_) < 10 * DBL_EPSILON) {
                     _phase = iphase_critical_point;
                     break;
-                } else if (_rhomolar > _crit.rhomolar) {
+                } else if (_rhomolar > rhomolar_crit_) {
                     _phase = iphase_supercritical_liquid;
                     break;
                 } else {
@@ -2018,10 +2040,10 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                     break;
                 }
             case iP: {
-                if (std::abs(_p - _crit.p) < 10 * DBL_EPSILON) {
+                if (std::abs(_p - p_crit_) < 10 * DBL_EPSILON) {
                     _phase = iphase_critical_point;
                     break;
-                } else if (_p > _crit.p) {
+                } else if (_p > p_crit_) {
                     _phase = iphase_supercritical_liquid;
                     break;
                 } else {
@@ -2032,7 +2054,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
             default:
                 throw ValueError(format("T=Tcrit; invalid input for other to T_phase_determination_pure_or_pseudopure"));
         }
-    } else if (_T < _crit.T)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
+    } else if (_T < T_crit_)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()){
             auto& optsuperanc = get_superanc_optional();
@@ -2060,6 +2082,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                         _phase = iphase_liquid;
                         _Q = 1000;
                     }
+                    recalculate_singlephase_phase();
                     return;
                 }
                 double Q = -1;
@@ -2314,12 +2337,12 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         _p = _Q * HEOS.SatV->p() + (1 - _Q) * HEOS.SatL->p();
         _rhomolar = 1 / (_Q / HEOS.SatV->rhomolar() + (1 - _Q) / HEOS.SatL->rhomolar());
         return;
-    } else if (_T > _crit.T && _T > components[0].EOS().Ttriple)  // Supercritical or Supercritical Gas Region
+    } else if (_T > T_crit_ && _T > components[0].EOS().Ttriple)  // Supercritical or Supercritical Gas Region
     {
         _Q = 1e9;
         switch (other) {
             case iP: {
-                if (_p > _crit.p) {
+                if (_p > p_crit_) {
                     this->_phase = iphase_supercritical;
                     return;
                 } else {
@@ -2328,7 +2351,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iDmolar: {
-                if (_rhomolar > _crit.rhomolar) {
+                if (_rhomolar > rhomolar_crit_) {
                     this->_phase = iphase_supercritical_liquid;
                     return;
                 } else {
@@ -2337,7 +2360,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iSmolar: {
-                if (_smolar.pt() > _crit.smolar) {
+                if (_smolar.pt() > smolar_critical()) {
                     this->_phase = iphase_supercritical_gas;
                     return;
                 } else {
@@ -2346,7 +2369,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iHmolar: {
-                if (_hmolar.pt() > _crit.hmolar) {
+                if (_hmolar.pt() > hmolar_critical()) {
                     this->_phase = iphase_supercritical_gas;
                     return;
                 } else {
@@ -2355,7 +2378,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                 }
             }
             case iUmolar: {
-                if (_umolar.pt() > _crit.umolar) {
+                if (_umolar.pt() > umolar_critical()) {
                     this->_phase = iphase_supercritical_gas;
                     return;
                 } else {
