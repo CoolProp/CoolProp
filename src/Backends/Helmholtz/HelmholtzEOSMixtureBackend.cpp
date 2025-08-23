@@ -202,6 +202,8 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& Pa
         return cpfluid.name;
     } else if (!ParamName.compare("aliases")) {
         return strjoin(cpfluid.aliases, get_config_string(LIST_STRING_DELIMITER));
+    } else if (!ParamName.compare("aliases_bar")) {
+        return strjoin(cpfluid.aliases, "|");
     } else if (!ParamName.compare("CAS") || !ParamName.compare("CAS_number")) {
         return cpfluid.CAS;
     } else if (!ParamName.compare("formula")) {
