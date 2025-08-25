@@ -3718,6 +3718,76 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
     return _HUGE;
 }
 
+CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_smoothed(parameters Of, parameters Wrt, parameters Constant,
+                                                                            parameters sWrt, CoolPropDbl Lsmooth, CoolPropDbl Vsmooth) {
+    // Limits of smoothing amount
+    const CoolPropDbl SMIN = 0.0;
+    const CoolPropDbl SMAX = 1.0;
+
+    if (_phase != iphase_twophase) throw ValueError("state is not two-phase");
+    if ((Lsmooth < SMIN) || (Lsmooth > SMAX))
+        throw CoolProp::OutOfRangeError(format("Input smoothing amount at saturated liquid line [Lsmooth] must be between [%f] and [%f]", SMIN, SMAX));
+    if ((Vsmooth < SMIN) || (Vsmooth > SMAX))
+        throw CoolProp::OutOfRangeError(format("Input smoothing amount at saturated vapour line [Vsmooth] must be between [%f] and [%f]", SMIN, SMAX));
+    if ((Lsmooth + Vsmooth) > SMAX)
+        throw CoolProp::OutOfRangeError(format("Sum of input smoothing amounts [Lsmooth + Vsmooth] must be less than or equal to [%f]", SMAX));
+    if (!this->SatL || !this->SatV)
+        throw ValueError("saturation properties are needed for calc_first_two_phase_deriv_smoothed");
+
+    // Limits of parameter for smoothing function
+    const CoolPropDbl XMIN = 0.0;
+    const CoolPropDbl XMAX = 1.0;
+
+    // Parameter for smoothing function
+    CoolPropDbl x = 0.0;
+    // Vapor quality is not available from saturation properties; therefore the conditional statement.
+    if (sWrt == iQ) x = _Q;
+    else {
+        // Values of fluid state parameter with respect to which smoothing is applied
+        // Value at current state
+        CoolPropDbl sWrtCurrentValue = keyed_output(sWrt);
+        // Value at saturated liquid state
+        CoolPropDbl sWrtSatLValue = SatL->keyed_output(sWrt);
+        // Value at saturated vapour state
+        CoolPropDbl sWrtSatVValue = SatV->keyed_output(sWrt);
+        // The following reduces to vapour quality for properties like iHmolar, iHmass, iSmolar etc.
+        // But not in cases of iDmolar and iDmass
+        x = (sWrtCurrentValue - sWrtSatLValue) / (sWrtSatVValue - sWrtSatLValue);
+    }
+    // Clamp
+    x = (x < XMIN) ? XMIN : (x > XMAX) ? XMAX : x;
+
+    // Interval limits without smoothing
+    CoolPropDbl nsxmin = XMIN + Lsmooth;
+    CoolPropDbl nsxmax = XMAX - Vsmooth;
+
+    // Two-phase derivative
+    CoolPropDbl dOf_dWrt_C2p = first_two_phase_deriv(Of, Wrt, Constant);
+
+    // Values outside smoothed regions
+    if (!((x < nsxmin) || (x > nsxmax))) return dOf_dWrt_C2p; 
+
+    // Derivative value for extended single phase
+    CoolPropDbl dOf_dWrt_C1p = 0.0;
+    // Smoothing factor
+    CoolPropDbl s = 0.0;
+
+    // Near saturated liquid state
+    if (x < nsxmin) {
+        dOf_dWrt_C1p = SatL->first_partial_deriv(Of, Wrt, Constant);
+        s = smoothstep(x, XMIN, nsxmin);
+    }
+    // Near saturated vapour state
+    if (x > nsxmax) {
+        dOf_dWrt_C1p = SatV->first_partial_deriv(Of, Wrt, Constant);
+        s = smoothstep(x, XMAX, nsxmax);
+    }
+
+    // Smoothed derivative
+    CoolPropDbl dOf_dWrt_C = (1.0 - s) * dOf_dWrt_C1p + s * dOf_dWrt_C2p;
+    return dOf_dWrt_C;
+}
+
 CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double rho0, double T0) {
     class Resid : public FuncWrapperND
     {

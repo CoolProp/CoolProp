@@ -530,6 +530,25 @@ EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long hand
 EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_splined(const long handle, const long Of, const long Wrt, const long Constant,
                                                                   const double x_end,long* errcode, char* message_buffer, const long buffer_length);
 /**
+    * @brief Calculate the first partial derivative in two-phase region with smoothing from the AbstractState using integer values for the desired parameters
+      Discontinuities in first derivatives at saturation lines are smoothed using smoothstep function
+    * @param handle The integer handle for the state class stored in memory
+    * @x_end constant parameter for defining range of the spline, (usually 0.1 is used, 0..1 is possible)
+    * @param Of The parameter of which the derivative is being taken
+    * @param Wrt The derivative is with respect to this parameter
+    * @param Constant The parameter that is not affected by the derivative
+    * @param sWrt The parameter that smoothing is done with respect to
+    * @param Lsmooth Smoothing amount in the interval [0.0, 1.0] at saturated liquid line
+    * @param Vsmooth Smoothing amount in the interval [0.0, 1.0] at saturated vapour line
+    * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+    * @param message_buffer A buffer for the error code
+    * @param buffer_length The length of the buffer for the error code
+    * @return
+    */
+EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_smoothed(const long handle, const long Of, const long Wrt, const long Constant, const long sWrt,
+                                                                           const double Lsmooth, const double Vsmooth, long* errcode, char* message_buffer,
+                                                                           const long buffer_length);
+/**
     * @brief Calculate the first partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
     * @param handle The integer handle for the state class stored in memory
     * @param Of The parameter of which the derivative is being taken

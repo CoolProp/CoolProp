@@ -480,6 +480,7 @@ void MatInv_2(double A[2][2], double B[2][2]);
 double root_sum_square(const std::vector<double>& x);
 double interp1d(const std::vector<double>* x, const std::vector<double>* y, double x0);
 double powInt(double x, int y);
+double smoothstep(double t, double lo, double hi);
 
 template <class T>
 T POW2(T x) {
