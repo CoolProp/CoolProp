@@ -73,7 +73,7 @@ class FuncWrapperND
 double Brent(FuncWrapper1D* f, double a, double b, double macheps, double t, int maxiter);
 double Secant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter);
 double BoundedSecant(FuncWrapper1D* f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter);
-double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter);
+double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double ftol, int maxiter, bool best_guess);
 double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter);
 double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12);
 double Householder4(FuncWrapper1DWithThreeDerivs* f, double x0, double ftol, int maxiter, double xtol_rel = 1e-12);
@@ -86,8 +86,8 @@ inline double Secant(FuncWrapper1D& f, double x0, double dx, double ftol, int ma
     return Secant(&f, x0, dx, ftol, maxiter);
 }
 
-inline double ExtrapolatingSecant(FuncWrapper1D& f, double x0, double dx, double ftol, int maxiter){
-    return ExtrapolatingSecant(&f, x0, dx, ftol, maxiter);
+inline double ExtrapolatingSecant(FuncWrapper1D& f, double x0, double dx, double ftol, int maxiter, bool best_guess){
+    return ExtrapolatingSecant(&f, x0, dx, ftol, maxiter, best_guess);
 }
 inline double BoundedSecant(FuncWrapper1D& f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter){
     return BoundedSecant(&f, x0, xmin, xmax, dx, ftol, maxiter);
