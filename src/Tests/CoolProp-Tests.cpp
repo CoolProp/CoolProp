@@ -2443,6 +2443,43 @@ TEST_CASE("Github issue #2491", "[2491]") {
     CHECK(std::isfinite(AS->rhomolar()));
 }
 
+template <typename T>
+std::vector<T> linspace(T start, T end, int num) {
+    std::vector<T> linspaced;
+    if (num <= 0) {
+        return linspaced; // Return empty vector for invalid num
+    }
+    if (num == 1) {
+        linspaced.push_back(start);
+        return linspaced;
+    }
+
+    T step = (end - start) / (num - 1);
+    for (int i = 0; i < num; ++i) {
+        linspaced.push_back(start + step * i);
+    }
+    return linspaced;
+}
+
+TEST_CASE("Github issue #2582", "[2582]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "CO2"));
+    double pc = AS->p_critical();
+    AS->update(PQ_INPUTS, 73.33e5, 0);
+    double hmass_liq = AS->saturated_liquid_keyed_output(iHmass);
+    double hmass_vap = AS->saturated_vapor_keyed_output(iHmass);
+    std::cout << pc << std::endl;
+    std::cout << hmass_liq << std::endl;
+    std::cout << hmass_vap << std::endl;
+    for (auto hmass: linspace(100e3, 700e3, 1000)){
+        CAPTURE(hmass);
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 73.76e5));
+    }
+    for (auto hmass: linspace(100e3, 700e3, 1000)){
+        CAPTURE(hmass);
+        CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 73.33e5));
+    }
+}
+
 TEST_CASE("CoolProp.jl tests", "[2598]") {
 //    // Whoah, actually quite a few change meaningfully
 //    SECTION("Check pcrit doesn't change too much with SA on"){
