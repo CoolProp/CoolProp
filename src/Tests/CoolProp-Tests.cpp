@@ -2443,6 +2443,13 @@ TEST_CASE("Github issue #2491", "[2491]") {
     CHECK(std::isfinite(AS->rhomolar()));
 }
 
+TEST_CASE("Github issue #2608", "[2608]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "CO2"));
+    double pc = AS->p_critical();
+    AS->specify_phase(iphase_gas);
+    CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 73.8e5, 1840.68));
+}
+
 template <typename T>
 std::vector<T> linspace(T start, T end, int num) {
     std::vector<T> linspaced;
@@ -2467,9 +2474,9 @@ TEST_CASE("Github issue #2582", "[2582]") {
     AS->update(PQ_INPUTS, 73.33e5, 0);
     double hmass_liq = AS->saturated_liquid_keyed_output(iHmass);
     double hmass_vap = AS->saturated_vapor_keyed_output(iHmass);
-    std::cout << pc << std::endl;
-    std::cout << hmass_liq << std::endl;
-    std::cout << hmass_vap << std::endl;
+//    std::cout << pc << std::endl;
+//    std::cout << hmass_liq << std::endl;
+//    std::cout << hmass_vap << std::endl;
     for (auto hmass: linspace(100e3, 700e3, 1000)){
         CAPTURE(hmass);
         CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 73.76e5));
