@@ -2446,8 +2446,16 @@ TEST_CASE("Github issue #2491", "[2491]") {
 TEST_CASE("Github issue #2608", "[2608]") {
     std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "CO2"));
     double pc = AS->p_critical();
-    AS->specify_phase(iphase_gas);
-    CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 73.8e5, 1840.68));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 73.8e5, 218.048));
+    SECTION("Without phase"){
+        AS->unspecify_phase();
+        CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 73.8e5, 1840.68));
+    }
+    SECTION("With phase"){
+        AS->specify_phase(iphase_supercritical_gas);
+        CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 73.8e5, 1840.68));
+        AS->unspecify_phase();
+    }
 }
 
 template <typename T>
