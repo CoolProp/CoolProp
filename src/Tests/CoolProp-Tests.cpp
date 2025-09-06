@@ -2495,6 +2495,53 @@ TEST_CASE("Github issue #2582", "[2582]") {
     }
 }
 
+TEST_CASE("Github issue #2594", "[2594]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "CO2"));
+    auto p = 7377262.928140703;
+    double pc = AS->p_critical();
+    AS->update(PQ_INPUTS, p, 0);
+    double Tsat = AS->T();
+    double rholiq = AS->rhomolar();
+    double umass_liq = AS->saturated_liquid_keyed_output(iUmass);
+    double umass_vap = AS->saturated_vapor_keyed_output(iUmass);
+//    std::cout << std::setprecision(20) << pc << std::endl;
+//    std::cout << umass_liq << std::endl;
+//    std::cout << umass_vap << std::endl;
+    
+    auto umass = 314719.5306503257;
+//    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+//    bool sat_called = false;
+//    auto MM = AS->molar_mass();
+//    rHEOS.p_phase_determination_pure_or_pseudopure(iUmolar, umass*MM, sat_called);
+//    CHECK(rHEOS.phase() == iphase_liquid);
+    
+    AS->update(DmolarP_INPUTS, rholiq, p);
+    double rho1 = AS->rhomolar();
+    double T1 = AS->T();
+    double dumolardT_P = AS->first_partial_deriv(iUmolar, iT, iP);
+    double dpdrho_T = AS->first_partial_deriv(iP, iDmolar, iT);
+//    double dumassdT_P = AS->first_partial_deriv(iUmass, iT, iP);
+    
+    AS->specify_phase(iphase_liquid);
+    AS->update(PT_INPUTS, p, Tsat);
+    double rho2 = AS->rhomolar();
+    double T2 = AS->T();
+    double dpdrho_T_imposed = AS->first_partial_deriv(iP, iDmolar, iT);	
+    double dumolardT_P_imposed = AS->first_partial_deriv(iUmolar, iT, iP);
+//    double dumassdT_P_imposed = AS->first_partial_deriv(iUmass, iT, iP);
+    AS->unspecify_phase();
+    
+    CHECK_NOTHROW(AS->update(CoolProp::PUmass_INPUTS, p, umass));
+    
+    BENCHMARK("dp/drho|T"){
+        return AS->first_partial_deriv(iP, iDmolar, iT);
+    };
+    BENCHMARK("du/dT|p"){
+        return AS->first_partial_deriv(iUmolar, iT, iP);
+    };
+}
+
+
 TEST_CASE("CoolProp.jl tests", "[2598]") {
 //    // Whoah, actually quite a few change meaningfully
 //    SECTION("Check pcrit doesn't change too much with SA on"){

@@ -21,6 +21,7 @@ class FuncWrapper1D
     std::string errstring;
     Dictionary options;
     int iter;
+    int verbosity = 0;
     FuncWrapper1D() : errcode(0), errstring(""), iter(0) {};
     virtual ~FuncWrapper1D(){};
     virtual double call(double) = 0;

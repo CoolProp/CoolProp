@@ -1494,6 +1494,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
 
             // Store the value of density
             rhomolar = HEOS->rhomolar();
+            
+            if (verbosity > 0 && iter == 0){
+                std::cout << format("T: %0.15g rho: %0.15g eos: %0.15g", T, rhomolar, eos);
+            }
 
             // Difference between the two is to be driven to zero
             CoolPropDbl r = eos - value;
@@ -1526,10 +1530,57 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
         }
     };
     solver_resid resid(&HEOS, HEOS._p, value, other, Tmin, Tmax);
+    
+    class resid_2D : public FuncWrapperND{
+    public:
+        HelmholtzEOSMixtureBackend* HEOS;
+        CoolPropDbl value, p;
+        parameters other;
+        int iter;
+        std::vector<std::vector<double>> J = {{-1.0, -1.0},{-1.0, -1.0}};
+        
+        resid_2D(HelmholtzEOSMixtureBackend* HEOS, double p, CoolPropDbl value, parameters other, double Tmin, double Tmax)
+        : HEOS(HEOS),
+        p(p),
+        value(value),
+        other(other),
+        iter(0){}
+        std::vector<double> call(const std::vector<double>&x) override{
+            double T = x[0], rhomolar = x[1];
+            HEOS->update_DmolarT_direct(rhomolar, T);
+            J[0][0] = HEOS->first_partial_deriv(iP, iT, iDmolar)/p;
+            J[0][1] = HEOS->first_partial_deriv(iP, iDmolar, iT)/p;
+            J[1][0] = HEOS->first_partial_deriv(other, iT, iDmolar);
+            J[1][1] = HEOS->first_partial_deriv(other, iDmolar, iT);
+            
+            return {(HEOS->p()-p)/p, HEOS->keyed_output(other) - value};
+        }
+        std::vector<std::vector<double>> Jacobian(const std::vector<double>&/*x*/) override{
+            // pre-calculated in call function
+            return J;
+        }
+    };
+    resid_2D solver_resid2d(&HEOS, HEOS._p, value, other, Tmin, Tmax);
+    
+    // Get functional values at the bounds
+    HEOS.update(PT_INPUTS, HEOS._p, Tmin);
+    double val_Tmin = HEOS.keyed_output(other);
+    double rhomolar_Tmin = HEOS.rhomolar();
+    double err_Tmin = std::abs(val_Tmin - value);
+    HEOS.update(PT_INPUTS, HEOS._p, Tmax);
+    double val_Tmax = HEOS.keyed_output(other);
+    double rhomolar_Tmax = HEOS.rhomolar();
+    double err_Tmax = std::abs(val_Tmax - value);
+    
+    double Tstart = (err_Tmin < err_Tmax) ? Tmin : Tmax;
+    double rhomolarstart = (err_Tmin < err_Tmax) ? rhomolar_Tmin : rhomolar_Tmax;
 
     try {
-        // First try to use Halley's method (including two derivatives) starting at Tmin
-        Halley(resid, Tmin, 1e-12, 100);
+        // First try to use Halley's method (including two derivatives) starting at the limit with the smaller deviation
+        if (get_debug_level() > 0){
+            resid.verbosity = 1;
+        }
+        Halley(resid, Tstart, 1e-12, 100);
         if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
             throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
         }
@@ -1537,19 +1588,26 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
         HEOS.unspecify_phase();
     } catch (...) {
         try{
+            if (get_debug_level() > 0){
+                std::cout << resid.errstring << std::endl;
+                resid.verbosity = 1;
+            }
             resid.iter = 0;
-            // First try to use Newton's method (including one derivative) starting at Tmax
-            Halley(resid, Tmax, 1e-12, 100);
-            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
-                throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+            std::vector<double> x0 = {Tmax, rhomolarstart};
+            NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
+            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(solver_resid2d.HEOS->T())) || solver_resid2d.HEOS->phase() != phase) {
+                throw ValueError("2D Newton method was unable to find a solution in HSU_P_flash_singlephase_Brent");
             }
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();
         }
         catch(...){
             try {
+                if (get_debug_level() > 0){
+                    std::cout << resid.errstring << std::endl;
+                    std::cout << resid.rhomolar0 << std::endl;
+                }
                 resid.iter = 0;
-                // HEOS.unspecify_phase(); Tried to fix #2470, but this breaks a lot of other things
                 // Halley's method failed, so now we try Brent's method
                 Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100);
                 // Un-specify the phase of the fluid
@@ -1622,7 +1680,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                                 if (HEOS._p > pmax_num){
                                     throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
                                 }
-                                Tmin = superanc.get_T_from_p(HEOS._p)-1e-12;
+                                Tmin = superanc.get_T_from_p(HEOS._p);
                                 break;
                             }
                         }
@@ -1651,7 +1709,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                             if (HEOS._p > pmax_num){
                                 throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
                             }
-                            Tmax = superanc.get_T_from_p(HEOS._p)+1e-12;
+                            Tmax = superanc.get_T_from_p(HEOS._p);
                             break;
                         }
                     }
