@@ -2443,6 +2443,38 @@ TEST_CASE("Github issue #2491", "[2491]") {
     CHECK(std::isfinite(AS->rhomolar()));
 }
 
+TEST_CASE("CoolProp.jl tests", "[2598]") {
+//    // Whoah, actually quite a few change meaningfully
+//    SECTION("Check pcrit doesn't change too much with SA on"){
+//        auto init = get_config_bool(ENABLE_SUPERANCILLARIES);
+//        for (auto fluid : strsplit(get_global_param_string("fluids_list"), ',')){
+//            CAPTURE(fluid);
+//            set_config_bool(ENABLE_SUPERANCILLARIES, true); auto pcrit_SA = Props1SI(fluid, "pcrit");
+//            set_config_bool(ENABLE_SUPERANCILLARIES, false); auto pcrit_noSA = Props1SI(fluid, "pcrit");
+//            CAPTURE(pcrit_SA - pcrit_noSA);
+//            CHECK(std::abs(pcrit_SA/pcrit_noSA-1) < 1E-2);
+//        }
+//        set_config_bool(ENABLE_SUPERANCILLARIES, init);
+//    }
+    
+    for (auto fluid : strsplit(get_global_param_string("fluids_list"), ',')){
+        auto pcrit = Props1SI(fluid, "pcrit");
+        auto Tcrit = Props1SI(fluid, "Tcrit");
+        CAPTURE(fluid);
+        CAPTURE(PhaseSI("P", pcrit+50000, "T", Tcrit+3, fluid));
+        CAPTURE(PhaseSI("P", pcrit+50000, "T", Tcrit-3, fluid));
+        CAPTURE(PhaseSI("P", pcrit-50000, "T", Tcrit+3, fluid));
+        
+        CAPTURE(PropsSI("Q", "P", pcrit+50000, "T", Tcrit+3, fluid));
+        CAPTURE(PropsSI("Q", "P", pcrit+50000, "T", Tcrit-3, fluid));
+        CAPTURE(PropsSI("Q", "P", pcrit-50000, "T", Tcrit+3, fluid));
+        
+        CHECK(PhaseSI("P", pcrit+50000, "T", Tcrit+3, fluid)=="supercritical");
+        CHECK(PhaseSI("P", pcrit+50000, "T", Tcrit-3, fluid)=="supercritical_liquid");
+        CHECK(PhaseSI("P", pcrit-50000, "T", Tcrit+3, fluid)=="supercritical_gas");
+    }
+}
+
 TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]"){
     auto TNBP_RP = PropsSI("T", "P", 101325, "Q", 0, "REFPROP::METHANOL");
     auto TNBP_CP = PropsSI("T", "P", 101325, "Q", 0, "HEOS::METHANOL");
