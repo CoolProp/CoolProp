@@ -1576,7 +1576,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     double rhomolarstart = (err_Tmin < err_Tmax) ? rhomolar_Tmin : rhomolar_Tmax;
 
     try {
-        // First try to use Halley's method (including two derivatives) starting at the limit with the smaller deviation
+        // First try to use Halley's method (including two derivatives) starting at the limit with the smaller residual
         if (get_debug_level() > 0){
             resid.verbosity = 1;
         }
@@ -1593,7 +1593,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
                 resid.verbosity = 1;
             }
             resid.iter = 0;
-            std::vector<double> x0 = {Tmax, rhomolarstart};
+            std::vector<double> x0 = {Tstart, rhomolarstart};
             NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
             if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(solver_resid2d.HEOS->T())) || solver_resid2d.HEOS->phase() != phase) {
                 throw ValueError("2D Newton method was unable to find a solution in HSU_P_flash_singlephase_Brent");
