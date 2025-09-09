@@ -1587,7 +1587,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             // to converge for any continuous function, and take the optimal step among bisection
             // and higher-order methods
             resid.iter = 0;
-            std::size_t max_iter = 100;
+            boost::math::uintmax_t max_iter = 100;
             
             auto f = [&resid](const double T){ return resid.call(T); };
             // Want 44 bits to be correct, tolerance is 2^(1-bits) ::
