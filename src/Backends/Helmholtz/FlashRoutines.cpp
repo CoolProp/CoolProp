@@ -1536,7 +1536,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     class resid_2D : public FuncWrapperND{
     public:
         HelmholtzEOSMixtureBackend* HEOS;
-        CoolPropDbl value, p;
+        CoolPropDbl p, value;
         parameters other;
         int iter;
         std::vector<std::vector<double>> J = {{-1.0, -1.0},{-1.0, -1.0}};
@@ -1566,25 +1566,24 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     
     // Get residual values at the bounds
     double resid_Tmin = resid.call(Tmin);
-    double val_Tmin = HEOS.keyed_output(other);
     double rhomolar_Tmin = HEOS.rhomolar();
     
     double resid_Tmax = resid.call(Tmax);
-    double val_Tmax = HEOS.keyed_output(other);
     double rhomolar_Tmax = HEOS.rhomolar();
     
     // For the derivative-based methods, figure out which point to start from
-    double Tstart = (resid_Tmin < resid_Tmax) ? Tmin : Tmax;
-    double rhomolarstart = (resid_Tmin < resid_Tmax) ? rhomolar_Tmin : rhomolar_Tmax;
+    bool use_min = std::abs(resid_Tmin) < std::abs(resid_Tmax);
+    double Tstart = use_min ? Tmin : Tmax;
+    double rhomolarstart = use_min ? rhomolar_Tmin : rhomolar_Tmax;
 
     try {
         if (get_debug_level() > 0){
             resid.verbosity = 1;
         }
-        if (resid_Tmin*resid_Tmax){
+        if (resid_Tmin*resid_Tmax < 0){
             // The residual values bound zero, use the TOMS748 method (no derivatives)
             //
-            // It is like a supercharged version of Brent's method, which is pratically guaranteed
+            // It is like a supercharged version of Brent's method, which is practically guaranteed
             // to converge for any continuous function, and take the optimal step among bisection
             // and higher-order methods
             resid.iter = 0;
@@ -1595,12 +1594,13 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             // >>> 2**(1-44)
             // 1.1368683772161603e-13
             auto [l, r] = toms748_solve(f, Tmin, Tmax, resid_Tmin, resid_Tmax, boost::math::tools::eps_tolerance<double>(44), max_iter);
-            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
-                throw ValueError("TOMS748 method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T()))) {
+                throw ValueError(format("TOMS748 method yielded out of bound T of %g", static_cast<CoolPropDbl>(resid.HEOS->T())));
             }
             
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();
+            HEOS.recalculate_singlephase_phase();
         }
         else{
             resid.iter = 0;
@@ -1610,13 +1610,17 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             }
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();
+            HEOS.recalculate_singlephase_phase();
         }
     } catch (...) {
         try{
+            double p_critical_ = HEOS.p_critical();
+            if (0.95*p_critical_ > HEOS._p || HEOS._p > p_critical_){
+                throw;
+            }
             if (get_debug_level() > 0){
                 std::cout << resid.errstring << std::endl;
             }
-            resid.iter = 0;
             std::vector<double> x0 = {Tstart, rhomolarstart};
             NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
             if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(solver_resid2d.HEOS->T())) || solver_resid2d.HEOS->phase() != phase) {
@@ -1624,6 +1628,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             }
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();
+            HEOS.recalculate_singlephase_phase();
         }
         catch(...){
             if (get_debug_level() > 0){
