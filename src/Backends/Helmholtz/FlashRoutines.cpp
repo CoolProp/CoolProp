@@ -10,6 +10,8 @@
 #    include "Backends/Cubics/CubicBackend.h"
 #endif
 
+#include "boost/math/tools/toms748_solve.hpp"
+
 namespace CoolProp {
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
@@ -1562,35 +1564,57 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
     };
     resid_2D solver_resid2d(&HEOS, HEOS._p, value, other, Tmin, Tmax);
     
-    // Get functional values at the bounds
-    HEOS.update(PT_INPUTS, HEOS._p, Tmin);
+    // Get residual values at the bounds
+    double resid_Tmin = resid.call(Tmin);
     double val_Tmin = HEOS.keyed_output(other);
     double rhomolar_Tmin = HEOS.rhomolar();
-    double err_Tmin = std::abs(val_Tmin - value);
-    HEOS.update(PT_INPUTS, HEOS._p, Tmax);
+    
+    double resid_Tmax = resid.call(Tmax);
     double val_Tmax = HEOS.keyed_output(other);
     double rhomolar_Tmax = HEOS.rhomolar();
-    double err_Tmax = std::abs(val_Tmax - value);
     
-    double Tstart = (err_Tmin < err_Tmax) ? Tmin : Tmax;
-    double rhomolarstart = (err_Tmin < err_Tmax) ? rhomolar_Tmin : rhomolar_Tmax;
+    // For the derivative-based methods, figure out which point to start from
+    double Tstart = (resid_Tmin < resid_Tmax) ? Tmin : Tmax;
+    double rhomolarstart = (resid_Tmin < resid_Tmax) ? rhomolar_Tmin : rhomolar_Tmax;
 
     try {
-        // First try to use Halley's method (including two derivatives) starting at the limit with the smaller residual
         if (get_debug_level() > 0){
             resid.verbosity = 1;
         }
-        Halley(resid, Tstart, 1e-12, 100);
-        if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
-            throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+        if (resid_Tmin*resid_Tmax){
+            // The residual values bound zero, use the TOMS748 method (no derivatives)
+            //
+            // It is like a supercharged version of Brent's method, which is pratically guaranteed
+            // to converge for any continuous function, and take the optimal step among bisection
+            // and higher-order methods
+            resid.iter = 0;
+            std::size_t max_iter = 100;
+            
+            auto f = [&resid](const double T){ return resid.call(T); };
+            // Want 44 bits to be correct, tolerance is 2^(1-bits) ::
+            // >>> 2**(1-44)
+            // 1.1368683772161603e-13
+            auto [l, r] = toms748_solve(f, Tmin, Tmax, resid_Tmin, resid_Tmax, boost::math::tools::eps_tolerance<double>(44), max_iter);
+            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
+                throw ValueError("TOMS748 method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+            }
+            
+            // Un-specify the phase of the fluid
+            HEOS.unspecify_phase();
         }
-        // Un-specify the phase of the fluid
-        HEOS.unspecify_phase();
+        else{
+            resid.iter = 0;
+            Halley(resid, Tstart, 1e-12, 100);
+            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
+                throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+            }
+            // Un-specify the phase of the fluid
+            HEOS.unspecify_phase();
+        }
     } catch (...) {
         try{
             if (get_debug_level() > 0){
                 std::cout << resid.errstring << std::endl;
-                resid.verbosity = 1;
             }
             resid.iter = 0;
             std::vector<double> x0 = {Tstart, rhomolarstart};
@@ -1602,37 +1626,28 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
             HEOS.unspecify_phase();
         }
         catch(...){
-            try {
-                if (get_debug_level() > 0){
-                    std::cout << resid.errstring << std::endl;
-                    std::cout << resid.rhomolar0 << std::endl;
-                }
-                resid.iter = 0;
-                // Halley's method failed, so now we try Brent's method
-                Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100);
-                // Un-specify the phase of the fluid
-                HEOS.unspecify_phase();
-            } catch (...) {
-                // Un-specify the phase of the fluid
-                HEOS.unspecify_phase();
-                
-                // Determine why you were out of range if you can
-                //
-                CoolPropDbl eos0 = resid.eos0, eos1 = resid.eos1;
-                std::string name = get_parameter_information(other, "short");
-                std::string units = get_parameter_information(other, "units");
-                if (eos1 > eos0 && value > eos1) {
-                    throw ValueError(
-                                     format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is above the maximum value of %0.12Lg %s",
-                                            name.c_str(), value, units.c_str(), eos1, units.c_str()));
-                }
-                if (eos1 > eos0 && value < eos0) {
-                    throw ValueError(
-                                     format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is below the minimum value of %0.12Lg %s",
-                                            name.c_str(), value, units.c_str(), eos0, units.c_str()));
-                }
-                throw;
+            if (get_debug_level() > 0){
+                std::cout << resid.errstring << std::endl;
             }
+            // Un-specify the phase of the fluid
+            HEOS.unspecify_phase();
+            
+            // Determine why you were out of range if you can
+            //
+            CoolPropDbl eos0 = resid.eos0, eos1 = resid.eos1;
+            std::string name = get_parameter_information(other, "short");
+            std::string units = get_parameter_information(other, "units");
+            if (eos1 > eos0 && value > eos1) {
+                throw ValueError(
+                                 format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is above the maximum value of %0.12Lg %s",
+                                        name.c_str(), value, units.c_str(), eos1, units.c_str()));
+            }
+            if (eos1 > eos0 && value < eos0) {
+                throw ValueError(
+                                 format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is below the minimum value of %0.12Lg %s",
+                                        name.c_str(), value, units.c_str(), eos0, units.c_str()));
+            }
+            throw;
         }
     }
 }
