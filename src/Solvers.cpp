@@ -107,17 +107,25 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
 double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter) {
-    double x, dx, fval = 999;
-    int iter = 1;
+    double x, dx, dfdx, fval = 999;
+    
+    // Initialize
+    f->iter = 0;
     f->errstring.clear();
     x = x0;
-    while (iter < 2 || std::abs(fval) > ftol) {
+    while (f->iter < maxiter || std::abs(fval) > ftol) {
         fval = f->call(x);
-        dx = -fval / f->deriv(x);
+        dfdx = f->deriv(x);
+        dx = -fval / dfdx;
 
         if (!ValidNumber(fval)) {
+            f->errstring = "Residual function in newton returned invalid number";
             throw ValueError("Residual function in newton returned invalid number");
         };
+        
+        if (f->verbosity > 0){
+            std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g", f->iter, x, dx, fval, dfdx) << std::endl;
+        }
 
         x += dx;
 
@@ -125,11 +133,11 @@ double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter) {
             return x;
         }
 
-        if (iter > maxiter) {
-            f->errstring = "reached maximum number of iterations";
+        if (f->iter > maxiter) {
+            f->errstring = "Newton reached maximum number of iterations";
             throw SolutionError(format("Newton reached maximum number of iterations"));
         }
-        iter = iter + 1;
+        f->iter++;
     }
     return x;
 }
@@ -162,7 +170,9 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
 
     while (f->iter < 2 || std::abs(fval) > ftol) {
         if (f->input_not_in_range(x)) {
-            throw ValueError(format("Input [%g] is out of range", x));
+            std::string msg = format("Input [%0.15g] is out of range", x);
+            f->errstring = msg;
+            throw ValueError(msg);
         }
 
         fval = f->call(x);
@@ -170,22 +180,30 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
         d2fdx2 = f->second_deriv(x);
 
         if (!ValidNumber(fval)) {
+            f->errstring = "Residual function in Halley returned invalid number";
             throw ValueError("Residual function in Halley returned invalid number");
         };
         if (!ValidNumber(dfdx)) {
+            f->errstring = "Derivative function in Halley returned invalid number";
             throw ValueError("Derivative function in Halley returned invalid number");
         };
 
         dx = -omega * (2 * fval * dfdx) / (2 * POW2(dfdx) - fval * d2fdx2);
 
+        if (f->verbosity > 0){
+            std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g, d2fdx2: %g", f->iter, x, dx, fval, dfdx, d2fdx2) << std::endl;
+        }
+        
         x += dx;
+        
+        
 
         if (std::abs(dx / x) < xtol_rel) {
             return x;
         }
 
         if (f->iter > maxiter) {
-            f->errstring = "reached maximum number of iterations";
+            f->errstring = "Halley reached maximum number of iterations";
             throw SolutionError(format("Halley reached maximum number of iterations"));
         }
         f->iter += 1;

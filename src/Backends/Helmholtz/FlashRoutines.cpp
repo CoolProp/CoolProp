@@ -10,6 +10,8 @@
 #    include "Backends/Cubics/CubicBackend.h"
 #endif
 
+#include "boost/math/tools/toms748_solve.hpp"
+
 namespace CoolProp {
 
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
@@ -1494,6 +1496,10 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
 
             // Store the value of density
             rhomolar = HEOS->rhomolar();
+            
+            if (verbosity > 0 && iter == 0){
+                std::cout << format("T: %0.15g rho: %0.15g eos: %0.15g", T, rhomolar, eos);
+            }
 
             // Difference between the two is to be driven to zero
             CoolPropDbl r = eos - value;
@@ -1526,55 +1532,127 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
         }
     };
     solver_resid resid(&HEOS, HEOS._p, value, other, Tmin, Tmax);
+    
+    class resid_2D : public FuncWrapperND{
+    public:
+        HelmholtzEOSMixtureBackend* HEOS;
+        CoolPropDbl p, value;
+        parameters other;
+        int iter;
+        std::vector<std::vector<double>> J = {{-1.0, -1.0},{-1.0, -1.0}};
+        
+        resid_2D(HelmholtzEOSMixtureBackend* HEOS, double p, CoolPropDbl value, parameters other, double Tmin, double Tmax)
+        : HEOS(HEOS),
+        p(p),
+        value(value),
+        other(other),
+        iter(0){}
+        std::vector<double> call(const std::vector<double>&x) override{
+            double T = x[0], rhomolar = x[1];
+            HEOS->update_DmolarT_direct(rhomolar, T);
+            J[0][0] = HEOS->first_partial_deriv(iP, iT, iDmolar)/p;
+            J[0][1] = HEOS->first_partial_deriv(iP, iDmolar, iT)/p;
+            J[1][0] = HEOS->first_partial_deriv(other, iT, iDmolar);
+            J[1][1] = HEOS->first_partial_deriv(other, iDmolar, iT);
+            
+            return {(HEOS->p()-p)/p, HEOS->keyed_output(other) - value};
+        }
+        std::vector<std::vector<double>> Jacobian(const std::vector<double>&/*x*/) override{
+            // pre-calculated in call function
+            return J;
+        }
+    };
+    resid_2D solver_resid2d(&HEOS, HEOS._p, value, other, Tmin, Tmax);
+    
+    // Get residual values at the bounds
+    double resid_Tmin = resid.call(Tmin);
+    double rhomolar_Tmin = HEOS.rhomolar();
+    
+    double resid_Tmax = resid.call(Tmax);
+    double rhomolar_Tmax = HEOS.rhomolar();
+    
+    // For the derivative-based methods, figure out which point to start from
+    bool use_min = std::abs(resid_Tmin) < std::abs(resid_Tmax);
+    double Tstart = use_min ? Tmin : Tmax;
+    double rhomolarstart = use_min ? rhomolar_Tmin : rhomolar_Tmax;
 
     try {
-        // First try to use Halley's method (including two derivatives) starting at Tmin
-        Halley(resid, Tmin, 1e-12, 100);
-        if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
-            throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+        if (get_debug_level() > 0){
+            resid.verbosity = 1;
         }
-        // Un-specify the phase of the fluid
-        HEOS.unspecify_phase();
-    } catch (...) {
-        try{
+        if (resid_Tmin*resid_Tmax < 0){
+            // The residual values bound zero, use the TOMS748 method (no derivatives)
+            //
+            // It is like a supercharged version of Brent's method, which is practically guaranteed
+            // to converge for any continuous function, and take the optimal step among bisection
+            // and higher-order methods
             resid.iter = 0;
-            // First try to use Newton's method (including one derivative) starting at Tmax
-            Halley(resid, Tmax, 1e-12, 100);
+            boost::math::uintmax_t max_iter = 100;
+            
+            auto f = [&resid](const double T){ return resid.call(T); };
+            // Want 44 bits to be correct, tolerance is 2^(1-bits) ::
+            // >>> 2**(1-44)
+            // 1.1368683772161603e-13
+            auto [l, r] = toms748_solve(f, Tmin, Tmax, resid_Tmin, resid_Tmax, boost::math::tools::eps_tolerance<double>(44), max_iter);
+            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T()))) {
+                throw ValueError(format("TOMS748 method yielded out of bound T of %g", static_cast<CoolPropDbl>(resid.HEOS->T())));
+            }
+            
+            // Un-specify the phase of the fluid
+            HEOS.unspecify_phase();
+            HEOS.recalculate_singlephase_phase();
+        }
+        else{
+            resid.iter = 0;
+            Halley(resid, Tstart, 1e-12, 100);
             if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(resid.HEOS->T())) || resid.HEOS->phase() != phase) {
                 throw ValueError("Halley's method was unable to find a solution in HSU_P_flash_singlephase_Brent");
             }
             // Un-specify the phase of the fluid
             HEOS.unspecify_phase();
+            HEOS.recalculate_singlephase_phase();
         }
-        catch(...){
-            try {
-                resid.iter = 0;
-                // HEOS.unspecify_phase(); Tried to fix #2470, but this breaks a lot of other things
-                // Halley's method failed, so now we try Brent's method
-                Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-12, 100);
-                // Un-specify the phase of the fluid
-                HEOS.unspecify_phase();
-            } catch (...) {
-                // Un-specify the phase of the fluid
-                HEOS.unspecify_phase();
-                
-                // Determine why you were out of range if you can
-                //
-                CoolPropDbl eos0 = resid.eos0, eos1 = resid.eos1;
-                std::string name = get_parameter_information(other, "short");
-                std::string units = get_parameter_information(other, "units");
-                if (eos1 > eos0 && value > eos1) {
-                    throw ValueError(
-                                     format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is above the maximum value of %0.12Lg %s",
-                                            name.c_str(), value, units.c_str(), eos1, units.c_str()));
-                }
-                if (eos1 > eos0 && value < eos0) {
-                    throw ValueError(
-                                     format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is below the minimum value of %0.12Lg %s",
-                                            name.c_str(), value, units.c_str(), eos0, units.c_str()));
-                }
+    } catch (...) {
+        try{
+            double p_critical_ = HEOS.p_critical();
+            if (0.95*p_critical_ > HEOS._p || HEOS._p > p_critical_){
                 throw;
             }
+            if (get_debug_level() > 0){
+                std::cout << resid.errstring << std::endl;
+            }
+            std::vector<double> x0 = {Tstart, rhomolarstart};
+            NDNewtonRaphson_Jacobian(&solver_resid2d, x0, 1e-12, 20, 1.0);
+            if (!is_in_closed_range(Tmin, Tmax, static_cast<CoolPropDbl>(solver_resid2d.HEOS->T())) || solver_resid2d.HEOS->phase() != phase) {
+                throw ValueError("2D Newton method was unable to find a solution in HSU_P_flash_singlephase_Brent");
+            }
+            // Un-specify the phase of the fluid
+            HEOS.unspecify_phase();
+            HEOS.recalculate_singlephase_phase();
+        }
+        catch(...){
+            if (get_debug_level() > 0){
+                std::cout << resid.errstring << std::endl;
+            }
+            // Un-specify the phase of the fluid
+            HEOS.unspecify_phase();
+            
+            // Determine why you were out of range if you can
+            //
+            CoolPropDbl eos0 = resid.eos0, eos1 = resid.eos1;
+            std::string name = get_parameter_information(other, "short");
+            std::string units = get_parameter_information(other, "units");
+            if (eos1 > eos0 && value > eos1) {
+                throw ValueError(
+                                 format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is above the maximum value of %0.12Lg %s",
+                                        name.c_str(), value, units.c_str(), eos1, units.c_str()));
+            }
+            if (eos1 > eos0 && value < eos0) {
+                throw ValueError(
+                                 format("HSU_P_flash_singlephase_Brent could not find a solution because %s [%Lg %s] is below the minimum value of %0.12Lg %s",
+                                        name.c_str(), value, units.c_str(), eos0, units.c_str()));
+            }
+            throw;
         }
     }
 }
@@ -1622,7 +1700,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                                 if (HEOS._p > pmax_num){
                                     throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
                                 }
-                                Tmin = superanc.get_T_from_p(HEOS._p)-1e-12;
+                                Tmin = superanc.get_T_from_p(HEOS._p);
                                 break;
                             }
                         }
@@ -1651,7 +1729,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                             if (HEOS._p > pmax_num){
                                 throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", HEOS._p, pmax_num));
                             }
-                            Tmax = superanc.get_T_from_p(HEOS._p)+1e-12;
+                            Tmax = superanc.get_T_from_p(HEOS._p);
                             break;
                         }
                     }
