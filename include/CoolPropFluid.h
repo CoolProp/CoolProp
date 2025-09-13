@@ -432,11 +432,11 @@ private:
         
         if (!superancillaries){
             if (!superancillaries_str.empty()){
-                auto start = std::chrono::high_resolution_clock::now(); // Start time
+//                auto start = std::chrono::high_resolution_clock::now(); // Start time
                 // Now do the parsing pass and replace with the actual superancillary
                 superancillaries.emplace(SuperAncillary_t(superancillaries_str));
-                auto end = std::chrono::high_resolution_clock::now();  // End time
-                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+//                auto end = std::chrono::high_resolution_clock::now();  // End time
+//                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
                 //std::cout << "Execution time: " << duration.count() << " microseconds for " << BibTeX_EOS << std::endl;
             }
         }
