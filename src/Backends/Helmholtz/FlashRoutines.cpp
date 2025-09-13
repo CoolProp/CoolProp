@@ -1582,6 +1582,7 @@ void FlashRoutines::HSU_P_flash_singlephase_Brent(HelmholtzEOSMixtureBackend& HE
         }
         if (resid_Tmin*resid_Tmax < 0){
             // The residual values bound zero, use the TOMS748 method (no derivatives)
+            // See: https://www.boost.org/doc/libs/1_58_0/libs/math/doc/html/math_toolkit/internals1/roots2.html#math_toolkit.internals1.roots2.algorithm_toms_748_alefeld_potra
             //
             // It is like a supercharged version of Brent's method, which is practically guaranteed
             // to converge for any continuous function, and take the optimal step among bisection
