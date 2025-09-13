@@ -1635,17 +1635,17 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 if (_p > pmax_num){
                     throw ValueError(format("Pressure to PQ_flash [%0.8Lg Pa] may not be above the numerical critical point of %0.15Lg Pa", _p, pmax_num));
                 }
-                auto T = superanc.get_T_from_p(_p);
-                auto rhoL = superanc.eval_sat(T, 'D', 0);
-                auto rhoV = superanc.eval_sat(T, 'D', 1);
-                auto p = _p;
+                auto Tsat = superanc.get_T_from_p(_p);
+                auto rhoL = superanc.eval_sat(Tsat, 'D', 0);
+                auto rhoV = superanc.eval_sat(Tsat, 'D', 1);
+                auto psat = _p;
                 
                 if (other == iT) {
-                    if (value < T - 100 * DBL_EPSILON) {
+                    if (value < Tsat - 100 * DBL_EPSILON) {
                         this->_phase = iphase_liquid;
                         _Q = -1000;
                         return;
-                    } else if (value > T + 100 * DBL_EPSILON) {
+                    } else if (value > Tsat + 100 * DBL_EPSILON) {
                         this->_phase = iphase_gas;
                         _Q = 1000;
                         return;
@@ -1653,8 +1653,8 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                         this->_phase = iphase_twophase;
                     }
                 }
-                SatL->update_TDmolarP_unchecked(T, rhoL, p);
-                SatV->update_TDmolarP_unchecked(T, rhoV, p);
+                SatL->update_TDmolarP_unchecked(Tsat, rhoL, psat);
+                SatV->update_TDmolarP_unchecked(Tsat, rhoV, psat);
                 double Q;
                 switch (other) {
                     case iDmolar:
@@ -1672,21 +1672,25 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     default:
                         throw ValueError(format("bad input for other"));
                 }
+                // Start off by setting variables based on
                 _Q = Q;
-                _T = T;
-                _p = p;
+                _T = Tsat;
                 _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
                 _phase = iphase_twophase;
                 if (Q < -1e-9) {
                     this->_phase = iphase_liquid;
                     SatL->clear();
                     SatV->clear();
+                    _T = _HUGE;
+                    _rhomolar = _HUGE;
                     _Q = -1000;
                     return;
                 } else if (Q > 1 + 1e-9) {
                     this->_phase = iphase_gas;
                     SatL->clear();
                     SatV->clear();
+                    _T = _HUGE;
+                    _rhomolar = _HUGE;
                     _Q = 1000;
                     return;
                 } else {
