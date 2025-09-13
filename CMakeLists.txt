@@ -2109,6 +2109,9 @@ if(COOLPROP_CATCH_MODULE)
   
   if(COOLPROP_LAZY_LOAD_SUPERANCILLARIES)
     target_compile_definitions(CatchTestRunner PRIVATE LAZY_LOAD_SUPERANCILLARIES)
+  else()
+    # lazy load superancillaries by default in debug mode
+    target_compile_definitions(CatchTestRunner PUBLIC $<$<CONFIG:Debug>:LAZY_LOAD_SUPERANCILLARIES>)
   endif()
 endif()
 
