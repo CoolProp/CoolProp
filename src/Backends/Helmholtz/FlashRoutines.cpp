@@ -1197,7 +1197,7 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             {
                 try
                 {
-                    if (HEOS._rhomolar > HEOS._crit.rhomolar)
+                    if (HEOS._rhomolar > HEOS.rhomolar_critical())
                     {
                         optionsD.imposed_rho = SaturationSolvers::saturation_D_pure_options::IMPOSED_RHOL;
                         SaturationSolvers::saturation_D_pure(HEOS, HEOS._rhomolar, optionsD);
@@ -1813,11 +1813,13 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
         }
     };
     solver_resid resid(&HEOS, T, value, other);
+    
+    double T_critical_ = HEOS.T_critical();
 
     // Supercritical temperature
-    if (HEOS._T > HEOS._crit.T) {
+    if (HEOS._T > T_critical_) {
         CoolPropDbl yc, ymin, y;
-        CoolPropDbl rhoc = HEOS.components[0].crit.rhomolar;
+        CoolPropDbl rhoc = HEOS.rhomolar_critical();
         CoolPropDbl rhomin = 1e-10;
 
         // Determine limits for the other variable
@@ -1939,9 +1941,10 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
     if (HEOS.imposed_phase_index != iphase_not_imposed) {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;
+        double T_critical_ = HEOS.T_critical();
         // The remaining code in this branch was added to set some needed parameters if phase is imposed,
         // since HEOS.T_phase_determination_pure_or_pseudopure() is not being called.
-        if (HEOS._T < HEOS._crit.T)  //
+        if (HEOS._T < T_critical_)  //
         {
             HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
             HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
@@ -1998,7 +2001,7 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 HEOS._Q = -1000;
             } else
                 throw ValueError(format("Temperature specified is not the imposed phase region."));
-        } else if (HEOS._T > HEOS._crit.T && HEOS._T > HEOS.components[0].EOS().Ttriple) {
+        } else if (HEOS._T > T_critical_ && HEOS._T > HEOS.components[0].EOS().Ttriple) {
             HEOS._Q = 1e9;
         }
     } else {
