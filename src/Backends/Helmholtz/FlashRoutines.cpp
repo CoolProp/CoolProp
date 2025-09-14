@@ -1818,12 +1818,12 @@ void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend&
     };
     solver_resid resid(&HEOS, T, value, other);
     
-    double T_critical_ = HEOS.T_critical();
+    double T_critical_ = (HEOS.is_pure_or_pseudopure) ? HEOS.T_critical() : HEOS._crit.T;
 
     // Supercritical temperature
     if (HEOS._T > T_critical_) {
         CoolPropDbl yc, ymin, y;
-        CoolPropDbl rhoc = HEOS.rhomolar_critical();
+        CoolPropDbl rhoc = (HEOS.is_pure_or_pseudopure) ? HEOS.rhomolar_critical() : HEOS._crit.rhomolar;
         CoolPropDbl rhomin = 1e-10;
 
         // Determine limits for the other variable
