@@ -1942,11 +1942,12 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
     if (HEOS.imposed_phase_index != iphase_not_imposed) {
         // Use the phase defined by the imposed phase
         HEOS._phase = HEOS.imposed_phase_index;
-        double T_critical_ = HEOS.T_critical();
+        double T_critical_ = (HEOS.is_pure_or_pseudopure) ? HEOS.T_critical() : HEOS._crit.T ;
         // The remaining code in this branch was added to set some needed parameters if phase is imposed,
         // since HEOS.T_phase_determination_pure_or_pseudopure() is not being called.
         if (HEOS._T < T_critical_)  //
         {
+            // TODO: is it a bug that this branch can be accessed for mixtures?
             HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
             HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
             if (HEOS._phase == iphase_liquid) {
