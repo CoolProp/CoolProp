@@ -213,6 +213,9 @@ void FlashRoutines::DP_flash(HelmholtzEOSMixtureBackend& HEOS) {
             } else {
                 throw ValueError("I should never get here");
             }
+            if (!std::isfinite(T0)){
+                throw ValueError("Starting value of T0 is not valid in DP_flash");
+            }
             // Then, do the solver using the full EOS
             solver_DP_resid resid(&HEOS, HEOS.rhomolar(), HEOS.p());
             std::string errstr;

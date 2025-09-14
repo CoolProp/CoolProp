@@ -1672,28 +1672,22 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                     default:
                         throw ValueError(format("bad input for other"));
                 }
-                // Start off by setting variables based on
-                _Q = Q;
-                _T = Tsat;
-                _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
-                _phase = iphase_twophase;
+                // Start off by setting variables based on assumption that the state is two-phase
                 if (Q < -1e-9) {
                     this->_phase = iphase_liquid;
                     SatL->clear();
                     SatV->clear();
-                    _T = _HUGE;
-                    _rhomolar = _HUGE;
                     _Q = -1000;
-                    return;
+                    _TLanc = Tsat;
                 } else if (Q > 1 + 1e-9) {
                     this->_phase = iphase_gas;
                     SatL->clear();
                     SatV->clear();
-                    _T = _HUGE;
-                    _rhomolar = _HUGE;
                     _Q = 1000;
-                    return;
                 } else {
+                    _T = Tsat;
+                    _Q = Q;
+                    _rhomolar = 1 / (_Q / SatV->rhomolar() + (1 - _Q) / SatL->rhomolar());
                     this->_phase = iphase_twophase;
                 }
                 return;
