@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, absolute_import
+import os
 
 
 import matplotlib.pyplot as plt
@@ -119,7 +120,7 @@ class ConsistencyFigure(object):
             if pair not in not_implemented_solvers and pair not in additional_skips:
                 errors.append(ax.consistency_check_singlephase())
                 if pair not in no_two_phase_solvers:
-                    ax.consistency_check_twophase()
+                    errors.append(ax.consistency_check_twophase())
             else:
                 ax.cross_out_axis()
 
@@ -357,6 +358,9 @@ class ConsistencyAxis(object):
                     myprint(1, 'consistency', VE)
                     continue
 
+                x = self.to_axis_units(xparam, self.state_PT.keyed_output(xkey))
+                y = self.to_axis_units(yparam, self.state_PT.keyed_output(ykey))
+
                 _exception = False
                 tic2 = timeit.default_timer()
                 try:
@@ -364,12 +368,9 @@ class ConsistencyAxis(object):
                     self.state.update(pairkey, val1, val2)
                     toc2 = timeit.default_timer()
                 except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
+                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2, x=x, y=y))
                     myprint(1, 'update(1p)', self.pair, 'P', p, 'T', T, 'D', self.state_PT.keyed_output(CP.iDmolar), '{0:18.16g}, {1:18.16g}'.format(self.state_PT.keyed_output(key1), self.state_PT.keyed_output(key2)), VE)
                     _exception = True
-
-                x = self.to_axis_units(xparam, self.state_PT.keyed_output(xkey))
-                y = self.to_axis_units(yparam, self.state_PT.keyed_output(ykey))
 
                 if not _exception:
                     # Check the error on the density
@@ -444,18 +445,18 @@ class ConsistencyAxis(object):
                     myprint(1, 'consistency', VE)
                     continue
 
+                x = self.to_axis_units(xparam, self.state_QT.keyed_output(xkey))
+                y = self.to_axis_units(yparam, self.state_QT.keyed_output(ykey))
+
                 _exception = False
                 try:
                     val1, val2 = self.state_QT.keyed_output(key1), self.state_QT.keyed_output(key2)
                     state.update(pairkey, val1, val2)
                 except ValueError as VE:
-                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2))
+                    data.append(dict(err=str(VE), cls="EXCEPTION", type="update", in1=param1, val1=val1, in2=param2, val2=val2, x=x, y=y))
                     myprint(1, 'update_QT', T, q)
                     myprint(1, 'update', param1, self.state_QT.keyed_output(key1), param2, self.state_QT.keyed_output(key2), VE)
-                    _exception = True
-
-                x = self.to_axis_units(xparam, self.state_QT.keyed_output(xkey))
-                y = self.to_axis_units(yparam, self.state_QT.keyed_output(ykey))
+                    _exception = True                
 
                 if not _exception:
                     # Check the error on the density
@@ -477,11 +478,17 @@ class ConsistencyAxis(object):
         excep = df[df.cls == 'EXCEPTION']
         badphase = df[df.cls == 'BAD_PHASE']
 
-        self.ax.plot(bad.x, bad.y, 'r+', ms=3)
-        self.ax.plot(good.x, good.y, 'k.', ms=1)
-        self.ax.plot(excep.x, excep.y, 'rx', ms=3)
-        self.ax.plot(badphase.x, badphase.y, 'o', ms=3, mfc='none')
+        if not bad.empty:
+            self.ax.plot(bad.x, bad.y, 'r+', ms=3)
+        if not good.empty:
+            self.ax.plot(good.x, good.y, 'k.', ms=1)
+        if not excep.empty: 
+            self.ax.plot(excep.x, excep.y, 'rx', ms=3)
+        if not badphase.empty:
+            self.ax.plot(badphase.x, badphase.y, 'o', ms=3, mfc='none')
         print('2-phase took ' + str(toc - tic) + ' s for ' + self.pair)
+
+        return df[df.cls != 'GOOD']
 
     def cross_out_axis(self):
         xlims = self.ax.get_xlim()
@@ -499,18 +506,43 @@ class ConsistencyAxis(object):
 
         self.ax.text(x, y, 'Not\nImplemented', ha='center', va='center', bbox=dict(fc='white'))
 
+def do_one_fluid(fluid):
+    tic = timeit.default_timer()
+    # skips = ['DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar', 'HmolarSmolar']
+    ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=[], NT_1phase=200, Np_1phase=200, NT_2phase=20, NQ_2phase=20)
+    ff.errors.to_csv('StandardErrors' + fluid + '.csv')
+    ff.errors['fluid'] = fluid
+    toc = timeit.default_timer()
+    print('Time to build:', toc - tic, 'seconds')
+    # ff.add_to_pdf(PVT)
+    ff.savefig(fluid + '.png')
+    ff.savefig(fluid + '.pdf')
+    plt.close(ff.fig)
+    return ff.errors
 
 if __name__ == '__main__':
+
+    # Use process_map to apply the function in parallel with a progress bar
+    from tqdm.contrib.concurrent import process_map
+    fluids = CP.__fluids__
+    # fluids = ['R134a']
+    all_errors = process_map(do_one_fluid, fluids, max_workers=2)
+    pandas.concat(all_errors, sort=True).to_csv('AllErrors.csv')
+    quit()
+
     PVT = PdfPages('Consistency.pdf')
     CP.CoolProp.set_debug_level(0)
     open('timelog.txt', 'w')
+    all_errors = []
     with open('timelog.txt', 'a+', buffering=1) as fp:
-        for fluid in ['METHANOL']:  # CP.__fluids__:
+        for fluid in CP.__fluids__:
             tic = timeit.default_timer()
             skips = ['DmolarHmolar', 'DmolarSmolar', 'DmolarUmolar', 'HmolarSmolar']
             skips = []
-            ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=skips)  # , NT_1phase = 10, Np_1phase = 10, NT_2phase = 100, NQ_2phase = 0)
-            ff.errors.to_excel('Errors' + fluid + '.xlsx')
+            ff = ConsistencyFigure(fluid, backend='HEOS', additional_skips=skips, NT_1phase = 200, Np_1phase = 200, NT_2phase = 20, NQ_2phase = 20)
+            ff.errors.to_csv('StandardErrors' + fluid + '.csv')
+            ff.errors['fluid'] = fluid
+            all_errors.append(ff.errors)
             toc = timeit.default_timer()
             print('Time to build:', toc - tic, 'seconds')
             ff.add_to_pdf(PVT)
@@ -520,3 +552,4 @@ if __name__ == '__main__':
             fp.write('Time to build: {0} seconds for {1}\n'.format(toc - tic, fluid))
             del ff
     PVT.close()
+    
