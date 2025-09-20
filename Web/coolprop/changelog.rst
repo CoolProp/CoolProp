@@ -1,6 +1,35 @@
 Changelog for CoolProp
 ======================
 
+7.1.0
+-----
+
+Highlights:
+
+* Fixed performance regression for P+{H,S,U} and T+{H,S,U,D} caused by copies being made of the superancillary data structures
+* Flash routine tuning to improve robustness in the critical region
+
+Issues closed:
+
+* `#2491 <https://github.com/CoolProp/CoolProp/issues/2491>`_ : Xenon properties near the critical point
+* `#2582 <https://github.com/CoolProp/CoolProp/issues/2582>`_ : ExternalMedia CoolProp C02 : error in TestBasePropertiesTranscritical.mo (same problem with Helium)
+* `#2587 <https://github.com/CoolProp/CoolProp/issues/2587>`_ : Handling of comma in 1,2dichloroethane in CP.get_aliases in Python wrapper
+* `#2588 <https://github.com/CoolProp/CoolProp/issues/2588>`_ : gitrevision missing in docs
+* `#2591 <https://github.com/CoolProp/CoolProp/issues/2591>`_ : Performance regression for P, {D,H,S,U} in two-phase
+* `#2592 <https://github.com/CoolProp/CoolProp/issues/2592>`_ : Performance regression for T, {H,S,U,D} when two-phase
+* `#2594 <https://github.com/CoolProp/CoolProp/issues/2594>`_ : Low-level interface CO2 transcritical phase problem
+* `#2598 <https://github.com/CoolProp/CoolProp/issues/2598>`_ : PhaseSI broken in v7
+* `#2606 <https://github.com/CoolProp/CoolProp/issues/2606>`_ : Cannot use 'import.meta' outside a module (at coolprop.js:1:474)
+* `#2612 <https://github.com/CoolProp/CoolProp/issues/2612>`_ : Debugger crashing when breakpoints are set on Python 3.13
+
+Pull requests merged:
+
+* `#2601 <https://github.com/CoolProp/CoolProp/pull/2601>`_ : Always recalculate the critical point to be consistent with the use (…
+* `#2604 <https://github.com/CoolProp/CoolProp/pull/2604>`_ : Fix/docs gitrevision
+* `#2613 <https://github.com/CoolProp/CoolProp/pull/2613>`_ : Disable profiling by default with flag to enable
+* `#2619 <https://github.com/CoolProp/CoolProp/pull/2619>`_ : Fix consistency plots
+
+
 7.0.0
 -----
 
