@@ -5,11 +5,10 @@
 # metadata for CoolProp               #
 #######################################
 
-# Project version
-set(COOLPROP_VERSION_MAJOR 7)
-set(COOLPROP_VERSION_MINOR 1)
-set(COOLPROP_VERSION_PATCH 0)
-set(COOLPROP_VERSION_REVISION )
+# Note: COOLPROP_VERSION_MAJOR/MINOR/PATCH/REVISION are defined in main CMakeLists.txt
+# for backwards compatibility with dev/generate_headers.py which parses CMakeLists.txt
+
+# Compose version string
 set(COOLPROP_VERSION
     "${COOLPROP_VERSION_MAJOR}.${COOLPROP_VERSION_MINOR}.${COOLPROP_VERSION_PATCH}${COOLPROP_VERSION_REVISION}"
 )

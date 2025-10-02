@@ -26,7 +26,13 @@ include(cmake/Options.cmake)
 # Compiler configuration
 include(cmake/Compiler.cmake)
 
-# Project version and metadata
+# Project version (kept in main file for backwards compatibility with dev/generate_headers.py)
+set(COOLPROP_VERSION_MAJOR 7)
+set(COOLPROP_VERSION_MINOR 1)
+set(COOLPROP_VERSION_PATCH 0)
+set(COOLPROP_VERSION_REVISION )
+
+# Project metadata
 include(cmake/Version.cmake)
 
 # Project declaration
