@@ -3000,8 +3000,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_smolar(void) {
 
         // Calculate derivatives if needed, or just use cached values
         auto ders = this->calc_all_alpha0_derivs_nocache(mole_fractions, _tau, _delta, _reducing.T, _reducing.rhomolar);
-        CoolPropDbl da0_dTau = ders.dalphar_dtau;
-        CoolPropDbl a0 = ders.alphar;
+        CoolPropDbl da0_dTau = ders.dalphar_dtau; // Note: while the naming here refers to alphar for historical reasons, it is actually the ideal-gas part
+        CoolPropDbl a0 = ders.alphar; // Note: while the naming here refers to alphar for historical reasons, it is actually the ideal-gas part
         
         CoolPropDbl ar = alphar();
         CoolPropDbl dar_dTau = dalphar_dTau();
