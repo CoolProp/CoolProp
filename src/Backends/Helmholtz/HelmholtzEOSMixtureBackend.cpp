@@ -2999,9 +2999,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_smolar(void) {
         _tau = _reducing.T / _T;
 
         // Calculate derivatives if needed, or just use cached values
-        CoolPropDbl da0_dTau = dalpha0_dTau();
+        auto ders = this->calc_all_alpha0_derivs_nocache(mole_fractions, _tau, _delta, _reducing.T, _reducing.rhomolar);
+        CoolPropDbl da0_dTau = ders.dalphar_dtau;
+        CoolPropDbl a0 = ders.alphar;
+        
         CoolPropDbl ar = alphar();
-        CoolPropDbl a0 = alpha0();
         CoolPropDbl dar_dTau = dalphar_dTau();
         CoolPropDbl R_u = gas_constant();
 
@@ -3373,6 +3375,30 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         return summer;
     }
 }
+
+HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_all_alpha0_derivs_nocache(const std::vector<CoolPropDbl>& mole_fractions,
+                                                                  const CoolPropDbl& tau, const CoolPropDbl& delta, const CoolPropDbl& Tr,
+                                                                  const CoolPropDbl& rhor) {
+    CoolPropDbl val;
+    if (components.size() == 0) {
+        throw ValueError("No alpha0 derivatives are available");
+    }
+    if (is_pure_or_pseudopure) {
+        EquationOfState& E = components[0].EOS();
+        // In the case of cubics, we need to use the shifted tau^*=Tc/T and delta^*=rho/rhoc
+        // rather than tau=Tr/T and delta=rho/rhor
+        // For multiparameter EOS, this changes nothing because Tc/Tr = 1 and rhoc/rhor = 1
+        double Tc = get_fluid_constant(0, iT_reducing), rhomolarc = get_fluid_constant(0, irhomolar_reducing);
+
+        // Cache the reducing temperature in some terms that need it (GERG-2004 models)
+        E.alpha0.set_Tred(Tc);
+        double taustar = Tc / Tr * tau, deltastar = rhor / rhomolarc * delta;
+        return E.alpha0.all(taustar, deltastar, false);
+    } else {
+        throw ValueError("method not supported for mixtures (yet)");
+    }
+}
+
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar(void) {
     calc_all_alphar_deriv_cache(mole_fractions, _tau, _delta);
     return static_cast<CoolPropDbl>(_alphar);

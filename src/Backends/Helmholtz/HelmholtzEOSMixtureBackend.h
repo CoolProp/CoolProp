@@ -591,6 +591,9 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     */
     CoolPropDbl calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
                                           const CoolPropDbl& delta, const CoolPropDbl& Tr, const CoolPropDbl& rhor);
+    
+    HelmholtzDerivatives calc_all_alpha0_derivs_nocache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
+                                          const CoolPropDbl& delta, const CoolPropDbl& Tr, const CoolPropDbl& rhor);
 
     virtual void calc_reducing_state(void);
     virtual SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl>& mole_fractions);
