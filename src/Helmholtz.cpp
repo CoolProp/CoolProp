@@ -1212,53 +1212,30 @@ void IdealHelmholtzPower::all(const CoolPropDbl& tau, const CoolPropDbl& delta, 
     }
 }
 void IdealHelmholtzPlanckEinsteinGeneralized::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
-    // First pre-calculate exp(theta[i]*tau) for each contribution; used in each term
-    std::vector<double> expthetatau(N);
-    for (std::size_t i = 0; i < N; ++i) {
-        expthetatau[i] = exp(theta[i] * tau);
-    }
-
+    
     if (!enabled) {
         return;
     }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * log(c[i] + d[i] * expthetatau[i]);
-        }
-        derivs.alphar += s;
+    
+    CoolPropDbl s00 = 0, s01 = 0, s02 = 0, s03 = 0, s04 = 0;
+    
+    for (std::size_t i = 0; i < N; ++i) {
+        const CoolPropDbl expthetataui = exp(theta[i] * tau);
+        const CoolPropDbl para = c[i] + d[i] * expthetataui;
+        
+        s00 += n[i] * log(para);
+        s01 += n[i] * theta[i] * d[i] * expthetataui / para;
+        s02 += n[i] * POW2(theta[i]) * c[i] * d[i] * expthetataui / POW2(para);
+        s03 += n[i] * POW3(theta[i]) * c[i] * d[i] * (c[i] - d[i] * expthetataui) * expthetataui / POW3(para);
+        const CoolPropDbl bracket = 6 * POW3(d[i]) * POW3(expthetataui) - 12 * d[i] * d[i] * para * POW2(expthetataui)
+                                    + 7 * d[i] * POW2(para) * expthetataui - POW3(para);
+        s04 += -n[i] * d[i] * POW4(theta[i]) * bracket * expthetataui / POW4(para);
     }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * theta[i] * d[i] * expthetatau[i] / (c[i] + d[i] * expthetatau[i]);
-        }
-        derivs.dalphar_dtau += s;
-    }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * POW2(theta[i]) * c[i] * d[i] * expthetatau[i] / pow(c[i] + d[i] * expthetatau[i], 2);
-        }
-        derivs.d2alphar_dtau2 += s;
-    }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            s += n[i] * POW3(theta[i]) * c[i] * d[i] * (c[i] - d[i] * expthetatau[i]) * expthetatau[i] / pow(c[i] + d[i] * expthetatau[i], 3);
-        }
-        derivs.d3alphar_dtau3 += s;
-    }
-    {
-        CoolPropDbl s = 0;
-        for (std::size_t i = 0; i < N; ++i) {
-            const CoolPropDbl para = c[i] + d[i] * expthetatau[i];
-            const CoolPropDbl bracket = 6 * POW3(d[i]) * POW3(expthetatau[i]) - 12 * d[i] * d[i] * para * POW2(expthetatau[i])
-                                        + 7 * d[i] * POW2(para) * expthetatau[i] - POW3(para);
-            s += -n[i] * d[i] * pow(theta[i], 4) * bracket * expthetatau[i] / pow(c[i] + d[i] * expthetatau[i], 4);
-        }
-        derivs.d4alphar_dtau4 += s;
-    }
+    derivs.alphar += s00;
+    derivs.dalphar_dtau += s01;
+    derivs.d2alphar_dtau2 += s02;
+    derivs.d3alphar_dtau3 += s03;
+    derivs.d4alphar_dtau4 += s04;
 }
 void IdealHelmholtzCP0Constant::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
     if (!enabled) {
