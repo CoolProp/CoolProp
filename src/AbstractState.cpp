@@ -371,18 +371,30 @@ double AbstractState::keyed_output(parameters key) {
             return hmolar();
         case iHmolar_residual:
             return hmolar_residual();
+        case iHmolar_idealgas:
+            return hmolar_idealgas();
         case iHmass:
             return hmass();
+        case iHmass_idealgas:
+            return hmass_idealgas();
         case iSmolar:
             return smolar();
         case iSmolar_residual:
             return smolar_residual();
+        case iSmolar_idealgas:
+            return smolar_idealgas();
         case iSmass:
             return smass();
+        case iSmass_idealgas:
+            return smass_idealgas();
         case iUmolar:
             return umolar();
+        case iUmolar_idealgas:
+            return umolar_idealgas();
         case iUmass:
             return umass();
+        case iUmass_idealgas:
+            return umass_idealgas();
         case iGmolar:
             return gibbsmolar();
         case iGmolar_residual:
@@ -526,6 +538,12 @@ double AbstractState::hmolar_residual(void) {
     if (!_hmolar_residual) _hmolar_residual = calc_hmolar_residual();
     return _hmolar_residual;
 }
+double AbstractState::hmolar_idealgas(void) {
+    return gas_constant()*T()*(1 + tau()*dalpha0_dTau());
+}
+double AbstractState::hmass_idealgas(void) {
+    return hmolar_idealgas()/molar_mass();
+}
 double AbstractState::hmolar_excess(void) {
     if (!_hmolar_excess) calc_excess_properties();
     return _hmolar_excess;
@@ -537,6 +555,12 @@ double AbstractState::smolar(void) {
 double AbstractState::smolar_residual(void) {
     if (!_smolar_residual) _smolar_residual = calc_smolar_residual();
     return _smolar_residual;
+}
+double AbstractState::smolar_idealgas(void) {
+    return gas_constant()*(tau()*dalpha0_dTau() - alpha0());
+}
+double AbstractState::smass_idealgas(void) {
+    return smolar_idealgas()/molar_mass();
 }
 double AbstractState::neff(void) {
     double tau = calc_T_reducing()/_T;
@@ -557,6 +581,12 @@ double AbstractState::umolar(void) {
 double AbstractState::umolar_excess(void) {
     if (!_umolar_excess) calc_excess_properties();
     return _umolar_excess;
+}
+double AbstractState::umolar_idealgas(void) {
+    return gas_constant()*T()*(tau()*dalpha0_dTau());
+}
+double AbstractState::umass_idealgas(void) {
+    return umolar_idealgas()/molar_mass();
 }
 double AbstractState::gibbsmolar(void) {
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();

@@ -163,7 +163,12 @@ cdef class AbstractState:
     cpdef double smolar_residual(self) except *
     cpdef double neff(self) except *
 
-
+    cpdef double hmolar_idealgas(self) except *
+    cpdef double hmass_idealgas(self) except *
+    cpdef double smolar_idealgas(self) except *
+    cpdef double smass_idealgas(self) except *
+    cpdef double umolar_idealgas(self) except *
+    cpdef double umass_idealgas(self) except *
 
 
     cpdef double molar_mass(self) except *

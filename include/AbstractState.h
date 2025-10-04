@@ -1099,6 +1099,10 @@ class AbstractState
     double hmolar(void);
     /// Return the residual molar enthalpy in J/mol
     double hmolar_residual(void);
+    /// Return the ideal gas molar enthalpy in J/mol
+    double hmolar_idealgas(void);
+    /// Return the ideal gas specific enthalpy in J/kg
+    double hmass_idealgas(void);
     /// Return the mass enthalpy in J/kg
     double hmass(void) {
         return calc_hmass();
@@ -1113,6 +1117,10 @@ class AbstractState
     double smolar(void);
     /// Return the residual molar entropy (as a function of temperature and density) in J/mol/K
     double smolar_residual(void);
+    /// Return the ideal gas molar entropy in J/mol/K
+    double smolar_idealgas(void);
+    /// Return the ideal gas specific entropy in J/kg/K
+    double smass_idealgas(void);
     /// Return the effective hardness of interaction
     double neff(void);
     /// Return the molar entropy in J/kg/K
@@ -1137,6 +1145,10 @@ class AbstractState
     double umass_excess(void) {
         return calc_umass_excess();
     };
+    /// Return the ideal gas molar internal energy in J/mol
+    double umolar_idealgas(void);
+    /// Return the ideal gas specific internal energy in J/kg
+    double umass_idealgas(void);
     /// Return the molar constant pressure specific heat in J/mol/K
     double cpmolar(void);
     /// Return the mass constant pressure specific heat in J/kg/K

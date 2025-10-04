@@ -444,6 +444,25 @@ cdef class AbstractState:
         """ Get the effective hardness of interaction - wrapper of c++ function :cpapi:`CoolProp::AbstractState::neff(void)` """
         return self.thisptr.neff()
 
+    cpdef double umolar_idealgas(self) except *:
+        """ Get the mole-specific ideal gas internal energy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umolar_idealgas(void)` """
+        return self.thisptr.umolar_idealgas()
+    cpdef double umass_idealgas(self) except *:
+        """ Get the mass-specific ideal gas internal energy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::umass_idealgas(void)` """
+        return self.thisptr.umass_idealgas()
+    cpdef double hmolar_idealgas(self) except *:
+        """ Get the mole-specific ideal gas enthalpy in J/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmolar_idealgas(void)` """
+        return self.thisptr.hmolar_idealgas()
+    cpdef double hmass_idealgas(self) except *:
+        """ Get the mass-specific ideal gas enthalpy in J/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::hmass_idealgas(void)` """
+        return self.thisptr.hmass_idealgas()
+    cpdef double smolar_idealgas(self) except *:
+        """ Get the mole-specific ideal gas entropy in J/mol/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smolar_idealgas(void)` """
+        return self.thisptr.smolar_idealgas()
+    cpdef double smass_idealgas(self) except *:
+        """ Get the mass-specific ideal gas entropy in J/kg/K - wrapper of c++ function :cpapi:`CoolProp::AbstractState::smass_idealgas(void)` """
+        return self.thisptr.smass_idealgas()
+
 
     ## ----------------------------------------
     ##        Derivatives

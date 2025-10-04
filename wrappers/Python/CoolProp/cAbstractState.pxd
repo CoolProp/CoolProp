@@ -160,6 +160,13 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double smolar_residual() except +ValueError
         double neff() except +ValueError
 
+        double hmolar_idealgas() except +ValueError
+        double hmass_idealgas() except +ValueError
+        double smolar_idealgas() except +ValueError
+        double smass_idealgas() except +ValueError
+        double umolar_idealgas() except +ValueError
+        double umass_idealgas() except +ValueError
+
         double surface_tension() except +ValueError
         double Prandtl() except +ValueError
         double Bvirial() except +ValueError
