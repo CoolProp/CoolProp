@@ -2777,12 +2777,25 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             return rhomolar;
         } else if (phase == iphase_supercritical_liquid) {
             CoolPropDbl rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
-            // Next we try with a Brent method bounded solver since the function is 1-1
-            double rhomolar = Brent(resid, rhoLancval * 0.99, rhomolar_critical() * 4, DBL_EPSILON, 1e-8, 100);
-            if (!ValidNumber(rhomolar)) {
-                throw ValueError();
+            CoolPropDbl rhoLtripleancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(Ttriple()));
+            
+            // Next we try with a Brent method bounded solver since the function should be 1-1 in most cases
+            // But some EOS have a maximum in pressure so if rhoc*4 is after the maximum in pressure, this method will fail
+            // and fall back to a narrower range of densities
+            try{
+                double rhomolar = Brent(resid, rhoLancval * 0.99, rhomolar_critical() * 4, DBL_EPSILON, 1e-8, 100);
+                if (!ValidNumber(rhomolar)) {
+                    throw ValueError();
+                }
+                return rhomolar;
             }
-            return rhomolar;
+            catch(...){
+                double rhomolar = Brent(resid, rhoLancval * 0.99, rhoLtripleancval*1.1, DBL_EPSILON, 1e-8, 100);
+                if (!ValidNumber(rhomolar)) {
+                    throw ValueError();
+                }
+                return rhomolar;
+            }
         }
     }
 

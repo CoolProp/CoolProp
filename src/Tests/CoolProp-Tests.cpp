@@ -2458,6 +2458,25 @@ TEST_CASE("Github issue #2608", "[2608]") {
     }
 }
 
+TEST_CASE("Github issue #2622", "[2622]") {
+    auto h5 = 233250;
+    auto p5 = 5e6;
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "R123"));
+    double pc = AS->p_critical();
+    CAPTURE(pc);
+    double Tt = AS->Ttriple();
+    CAPTURE(Tt);
+
+    /// Update at just below the triple point temp
+    AS->update(PT_INPUTS, p5, 165.999);
+    
+    AS->update(HmassP_INPUTS, h5, p5);
+    double A = AS->T();
+    CAPTURE(A);
+}
+
+
+
 template <typename T>
 std::vector<T> linspace(T start, T end, int num) {
     std::vector<T> linspaced;
