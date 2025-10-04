@@ -2963,6 +2963,8 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]"){
         CAPTURE(AS->hmass_idealgas()-h_kJkg*1e3);
         CAPTURE(AS->smass_idealgas());
         CAPTURE(AS->smass_idealgas()-s_kJkgK*1e3);
+        CAPTURE(AS->umass_idealgas());
+        CAPTURE(AS->umass_idealgas()-u_kJkg*1e3);
     }
     
 }
