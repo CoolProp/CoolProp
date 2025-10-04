@@ -3395,7 +3395,47 @@ HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_all_alpha0_derivs_nocache(
         double taustar = Tc / Tr * tau, deltastar = rhor / rhomolarc * delta;
         return E.alpha0.all(taustar, deltastar, false);
     } else {
-        throw ValueError("method not supported for mixtures (yet)");
+        HelmholtzDerivatives ders;
+        
+        // See Table B5, GERG 2008 from Kunz Wagner, JCED, 2012
+        std::size_t N = mole_fractions.size();
+        CoolPropDbl summer_00=0, summer_01=0, summer_10=0, summer_02=0, summer_11=0, summer_20=0;
+        CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
+        CoolPropDbl Rmix = gas_constant();
+        for (unsigned int i = 0; i < N; ++i) {
+
+            rho_ci = get_fluid_constant(i, irhomolar_critical);
+            T_ci = get_fluid_constant(i, iT_critical);
+            CoolPropDbl Rcomponent = get_fluid_constant(i, igas_constant);
+            tau_i = T_ci * tau / Tr;
+            delta_i = delta * rhor / rho_ci;
+            CoolPropDbl Rratio = Rcomponent / Rmix;
+
+            // Cache the reducing temperature in some terms that need it (GERG-2004 models)
+            components[i].EOS().alpha0.set_Tred(Tr);
+            {
+                // All the ideal-gas derivatives for the pure component
+                auto pure = components[i].EOS().alpha0.all(tau_i, delta_i);
+                
+                double logxi = (std::abs(mole_fractions[i]) > DBL_EPSILON) ? log(mole_fractions[i]) : 0;
+                // Note: you see alphar here, that is a book-keeping artifact, it is really alpha for ideal gas
+                summer_00 += mole_fractions[i] * Rratio * (pure.alphar + logxi);
+                summer_01 += mole_fractions[i] * Rratio * rhor / rho_ci * pure.dalphar_ddelta;
+                summer_10 += mole_fractions[i] * Rratio * T_ci / Tr * pure.dalphar_dtau;
+                summer_02 += mole_fractions[i] * Rratio * pow(rhor / rho_ci, 2) * pure.d2alphar_ddelta2;
+                summer_11 += mole_fractions[i] * Rratio * rhor / rho_ci * T_ci / Tr * pure.d2alphar_ddelta_dtau;
+                summer_20 += mole_fractions[i] * Rratio * pow(T_ci / Tr, 2) * pure.d2alphar_dtau2;
+            }
+        }
+        // Note: you see alphar here, that is a book-keeping artifact, it is really alpha for ideal gas
+        ders.alphar = summer_00;
+        ders.dalphar_ddelta = summer_01;
+        ders.dalphar_dtau = summer_10;
+        ders.d2alphar_ddelta2 = summer_02;
+        ders.d2alphar_ddelta_dtau = summer_11;
+        ders.d2alphar_dtau2 = summer_20;
+        
+        return ders;
     }
 }
 
