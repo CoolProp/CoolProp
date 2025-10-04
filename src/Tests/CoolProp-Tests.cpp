@@ -2833,6 +2833,18 @@ TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression; off", "[2438
     AS->update(HmassP_INPUTS, 300e3, 70e5);
     std::cout << AS->Q() << std::endl;
 }
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression for TS; on", "[2438saontime]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+    double T = 298.0;
+    AS->update(QT_INPUTS, 1, T);
+    auto sL = AS->saturated_liquid_keyed_output(iSmolar);
+    auto sV = AS->saturated_vapor_keyed_output(iSmolar);
+    auto N = 1000000U;
+    for (auto i = 0; i < N; ++i){
+        AS->update(SmolarT_INPUTS, (sL + sV)/2 + i*1e-14, T);
+    }
+    CHECK(AS->T() != 0);
+}
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression for TS; on", "[2438]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
