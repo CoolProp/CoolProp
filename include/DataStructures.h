@@ -105,6 +105,9 @@ enum parameters
     iHmolar_residual,  ///< The residual molar enthalpy
     iSmolar_residual,  ///< The residual molar entropy (as a function of temperature and density)
     iGmolar_residual,  ///< The residual molar Gibbs energy
+    iHmolar_idealgas,  ///< The ideal gas molar enthalpy
+    iSmolar_idealgas,  ///< The ideal gas molar entropy
+    iUmolar_idealgas,  ///< The ideal gas molar internal energy
 
     // Mass specific thermodynamic properties
     iDmass,          ///< Mass-based density
@@ -116,6 +119,9 @@ enum parameters
     iUmass,          ///< Mass-based internal energy
     iGmass,          ///< Mass-based Gibbs energy
     iHelmholtzmass,  ///< Mass-based Helmholtz energy
+    iHmass_idealgas,  ///< The ideal gas specific enthalpy
+    iSmass_idealgas,  ///< The ideal gas specific entropy
+    iUmass_idealgas,  ///< The ideal gas specific internal energy
 
     // Transport properties
     iviscosity,        ///< Viscosity
