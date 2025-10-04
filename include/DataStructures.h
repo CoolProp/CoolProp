@@ -428,6 +428,9 @@ const std::string& get_input_pair_long_desc(input_pairs pair);
 /// Split an input pair into parameters for the two parts that form the pair
 void split_input_pair(input_pairs pair, parameters& p1, parameters& p2);
 
+extern void apply_simple_mixing_rule(const std::string& identifier1, const std::string& identifier2, const std::string& rule);
+extern void set_interaction_parameters(const std::string& string_data);
+
 extern std::string get_mixture_binary_pair_data(const std::string& CAS1, const std::string& CAS2, const std::string& param);
 extern void set_mixture_binary_pair_data(const std::string& CAS1, const std::string& CAS2, const std::string& param, const double val);
 extern std::string get_mixture_binary_pair_pcsaft(const std::string& CAS1, const std::string& CAS2, const std::string& param);
