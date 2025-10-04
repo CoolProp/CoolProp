@@ -481,12 +481,12 @@ bool is_valid_scheme(const std::string& scheme_name, schemes& iOutput) {
     }
 }
 
-schemes get_scheme_index(const std::string& param_name) {
+schemes get_scheme_index(const std::string& scheme_name) {
     schemes iScheme;
-    if (is_valid_scheme(param_name, iScheme)) {
+    if (is_valid_scheme(scheme_name, iScheme)) {
         return iScheme;
     } else {
-        throw ValueError(format("Your input name [%s] is not valid in get_scheme_index (names are case sensitive)", param_name.c_str()));
+        throw ValueError(format("Your input name [%s] is not valid in get_scheme_index (names are case sensitive)", scheme_name.c_str()));
     }
 }
 

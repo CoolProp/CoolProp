@@ -610,7 +610,7 @@ std::vector<std::vector<double>> PropsSImulti(const std::vector<std::string>& Ou
 #endif
     return std::vector<std::vector<double>>();
 }
-double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2, const std::string& Ref) {
+double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2, const std::string& FluidName) {
 #if !defined(NO_ERROR_CATCHING)
     try {
 #endif
@@ -619,7 +619,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
         // Here is the real code that is inside the try block
 
         std::string backend, fluid;
-        extract_backend(Ref, backend, fluid);
+        extract_backend(FluidName, backend, fluid);
         std::vector<double> fractions(1, 1.0);
         // extract_fractions checks for has_fractions_in_string / has_solution_concentration; no need to double check
         std::string fluid_string = extract_fractions(fluid, fractions);
@@ -644,7 +644,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
     } catch (const std::exception& e) {
         set_error_string(
           e.what()
-          + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str()));
+          + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2, FluidName.c_str()));
 #    if defined(PROPSSI_ERROR_STDOUT)
         std::cout << e.what() << std::endl;
 #    endif
@@ -864,12 +864,12 @@ TEST_CASE("Check inputs to Props1SI", "[Props1SI],[PropsSI]") {
 };
 #endif
 
-bool is_valid_fluid_string(const std::string& input_fluid_string) {
+bool is_valid_fluid_string(const std::string& fluidstring) {
     try {
         std::string backend, fluid;
         std::vector<double> fractions;
         // First try to extract backend and fractions
-        extract_backend(input_fluid_string, backend, fluid);
+        extract_backend(fluidstring, backend, fluid);
         std::string fluid_string = extract_fractions(fluid, fractions);
         // We are going to let the factory function load the state
         shared_ptr<AbstractState> State(AbstractState::factory(backend, fluid_string));
@@ -889,9 +889,9 @@ double saturation_ancillary(const std::string& fluid_name, const std::string& ou
 
     return HEOS.saturation_ancillary(iOutput, Q, iInput, value);
 }
-void set_reference_stateS(const std::string& fluid_string, const std::string& reference_state) {
+void set_reference_stateS(const std::string& FluidName, const std::string& reference_state) {
     std::string backend, fluid;
-    extract_backend(fluid_string, backend, fluid);
+    extract_backend(FluidName, backend, fluid);
     if (backend == "REFPROP") {
 
         int ierr = 0, ixflag = 1;
@@ -968,8 +968,8 @@ void set_reference_stateS(const std::string& fluid_string, const std::string& re
         }
     }
 }
-void set_reference_stateD(const std::string& Ref, double T, double rhomolar, double hmolar0, double smolar0) {
-    std::vector<std::string> _comps(1, Ref);
+void set_reference_stateD(const std::string& FluidName, double T, double rhomolar, double hmolar0, double smolar0) {
+    std::vector<std::string> _comps(1, FluidName);
     CoolProp::HelmholtzEOSMixtureBackend HEOS(_comps);
 
     HEOS.update(DmolarT_INPUTS, rhomolar, T);
@@ -979,7 +979,7 @@ void set_reference_stateD(const std::string& Ref, double T, double rhomolar, dou
     double deltas = HEOS.smolar() - smolar0;  // offset from specified entropy in J/mol/K
     double delta_a1 = deltas / (HEOS.gas_constant());
     double delta_a2 = -deltah / (HEOS.gas_constant() * HEOS.get_reducing_state().T);
-    set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "custom");
+    set_fluid_enthalpy_entropy_offset(FluidName, delta_a1, delta_a2, "custom");
 }
 
 std::string get_global_param_string(const std::string& ParamName) {

@@ -74,10 +74,8 @@ struct HelmholtzDerivatives
 #undef X
         return _new;
     }
-    HelmholtzDerivatives() {
+    HelmholtzDerivatives() : tau(0.0), delta(0.0), T_red(_HUGE), rhomolar_red(_HUGE) {
         reset(0.0);
-        T_red = _HUGE;
-        rhomolar_red = _HUGE;
     };
     /// Retrieve a single value based on the number of derivatives with respect to tau and delta
     double get(std::size_t itau, std::size_t idelta) {
