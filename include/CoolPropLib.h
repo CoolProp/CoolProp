@@ -105,7 +105,7 @@ EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, co
      *
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
-EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Ref);
+EXPORT_CODE double CONVENTION PropsSI(const char* Output, const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName);
 /**
      *\overload
      *\sa \ref CoolProp::PropsSImulti(const std::vector<std::string>& Outputs, const std::string& Name1, const std::vector<double>& Prop1,
@@ -137,7 +137,7 @@ EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1,
      *
      * \note This function returns the phase string in pre-allocated phase variable.  If buffer is not large enough, no copy is made
      */
-EXPORT_CODE long CONVENTION PhaseSI(const char* Name1, double Prop1, const char* Name2, double Prop2, const char* Ref, char* phase, int n);
+EXPORT_CODE long CONVENTION PhaseSI(const char* Name1, double Prop1, const char* Name2, double Prop2, const char* FluidName, char* phase, int n);
 
 /**
      *\overload
@@ -155,7 +155,7 @@ EXPORT_CODE long CONVENTION get_global_param_string(const char* param, char* Out
      *
      * @returns error_code 1 = Ok 0 = error
      */
-EXPORT_CODE long CONVENTION get_parameter_information_string(const char* key, char* Output, int n);
+EXPORT_CODE long CONVENTION get_parameter_information_string(const char* param, char* Output, int n);
 /**
      * \overload
      * \sa \ref CoolProp::get_fluid_param_string
@@ -219,7 +219,7 @@ EXPORT_CODE int CONVENTION set_reference_stateD(const char* Ref, double T, doubl
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
 EXPORT_CODE void CONVENTION propssi_(const char* Output, const char* Name1, const double* Prop1, const char* Name2, const double* Prop2,
-                                     const char* Ref, double* output);
+                                     const char* FluidName, double* output);
 
 /// Convert from degrees Fahrenheit to Kelvin (useful primarily for testing)
 EXPORT_CODE double CONVENTION F2K(double T_F);
@@ -234,7 +234,7 @@ EXPORT_CODE long CONVENTION get_param_index(const char* param);
      *
      * @returns index The index as a long.  If input is invalid, returns -1
      */
-EXPORT_CODE long CONVENTION get_input_pair_index(const char* param);
+EXPORT_CODE long CONVENTION get_input_pair_index(const char* pair);
 /** \brief Redirect all output that would go to console (stdout) to a file
      */
 EXPORT_CODE long CONVENTION redirect_stdout(const char* file);

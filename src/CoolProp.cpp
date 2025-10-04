@@ -153,7 +153,7 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
             // with the configuration variable FLOAT_PUNCTUATION to change the locale to something more convenient for you (e.g., a ',')
             // See also http://en.cppreference.com/w/cpp/locale/numpunct/decimal_point
             std::stringstream ssfraction(fraction);
-            char c = get_config_string(FLOAT_PUNCTUATION)[0];
+            const char c = get_config_string(FLOAT_PUNCTUATION)[0];
             ssfraction.imbue(std::locale(ssfraction.getloc(), new delim(c)));
             double f;
             ssfraction >> f;
@@ -228,7 +228,7 @@ void _PropsSI_initialize(const std::string& backend, const std::vector<std::stri
     } else if (fluid_names.size() == 1) {
         if (has_fractions_in_string(fluid_names[0]) || has_solution_concentration(fluid_names[0])) {
             // Extract fractions from the string
-            std::string fluid_string = extract_fractions(fluid_names[0], fractions);
+            const std::string fluid_string = extract_fractions(fluid_names[0], fractions);
             // Set the pointer - we are going to use the extracted fractions
             fractions_ptr = &fractions;
             // Reset the state
@@ -319,7 +319,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     if (in1.size() != in2.size()) {
         throw ValueError(format("lengths of in1 [%d] and in2 [%d] are not the same", in1.size(), in2.size()));
     }
-    bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
+    const bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
     // If all trivial outputs, never do a state update
     bool all_trivial_outputs = true;
     for (std::size_t j = 0; j < output_parameters.size(); ++j) {
@@ -362,8 +362,8 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     GuessesStructure guesses;
 
     // Resize the output matrix
-    std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
-    std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
+    const std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
+    const std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
     IO.resize(N1, std::vector<double>(N2, _HUGE));
 
     // Throw an error if at the end, there were no successes
@@ -498,7 +498,7 @@ bool StripPhase(std::string& Name, shared_ptr<AbstractState>& State)
     std::vector<std::string> strVec = strsplit(Name, '|');  // Split input key string in to vector containing input key [0] and phase string [1]
     if (strVec.size() > 1) {                                // If there is a phase string (contains "|" character)
         // Check for invalid backends for setting phase in PropsSI
-        std::string strBackend = State->backend_name();
+        const std::string strBackend = State->backend_name();
         if (strBackend == get_backend_string(INCOMP_BACKEND))
             throw ValueError("Cannot set phase on Incompressible Fluid; always liquid phase");  // incompressible fluids are always "liquid".
         if (strBackend == get_backend_string(IF97_BACKEND))
@@ -555,10 +555,10 @@ void _PropsSImulti(const std::vector<std::string>& Outputs, const std::string& N
     }
 
     //strip any imposed phase from input key strings here
-    std::string N1 = Name1;                  // Make Non-constant copy of Name1 that we can modify
-    std::string N2 = Name2;                  // Make Non-constant copy of Name2 that we can modify
-    bool HasPhase1 = StripPhase(N1, State);  // strip phase string from first name if needed
-    bool HasPhase2 = StripPhase(N2, State);  // strip phase string from second name if needed
+    std::string N1 = Name1;                        // Make Non-constant copy of Name1 that we can modify
+    std::string N2 = Name2;                        // Make Non-constant copy of Name2 that we can modify
+    const bool HasPhase1 = StripPhase(N1, State);  // strip phase string from first name if needed
+    const bool HasPhase2 = StripPhase(N2, State);  // strip phase string from second name if needed
     if (HasPhase1 && HasPhase2)              // if both Names have a phase string, don't allow it.
         throw ValueError("Phase can only be specified on one of the input key strings");
 
@@ -622,7 +622,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
         extract_backend(FluidName, backend, fluid);
         std::vector<double> fractions(1, 1.0);
         // extract_fractions checks for has_fractions_in_string / has_solution_concentration; no need to double check
-        std::string fluid_string = extract_fractions(fluid, fractions);
+        const std::string fluid_string = extract_fractions(fluid, fractions);
         std::vector<std::vector<double>> IO;
         _PropsSImulti(strsplit(Output, '&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend,
                       strsplit(fluid_string, '&'), fractions, IO);
@@ -633,7 +633,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
             throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str()));
         }
 
-        double val = IO[0][0];
+        const double val = IO[0][0];
 
         if (get_debug_level() > 1) {
             std::cout << format("_PropsSI will return %g", val) << std::endl;
@@ -810,8 +810,8 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
  ****************************************************/
 
 double Props1SI(std::string FluidName, std::string Output) {
-    bool valid_fluid1 = is_valid_fluid_string(FluidName);
-    bool valid_fluid2 = is_valid_fluid_string(Output);
+    const bool valid_fluid1 = is_valid_fluid_string(FluidName);
+    const bool valid_fluid2 = is_valid_fluid_string(Output);
     if (valid_fluid1 && valid_fluid2) {
         set_error_string(format("Both inputs to Props1SI [%s,%s] are valid fluids", Output.c_str(), FluidName.c_str()));
         return _HUGE;
@@ -826,7 +826,7 @@ double Props1SI(std::string FluidName, std::string Output) {
     }
 
     // First input is the fluid, second input is the input parameter
-    double val1 = PropsSI(Output, "", 0, "", 0, FluidName);
+    const double val1 = PropsSI(Output, "", 0, "", 0, FluidName);
     if (!ValidNumber(val1)) {
         set_error_string(format("Unable to use input parameter [%s] in Props1SI for fluid %s; error was %s", Output.c_str(), FluidName.c_str(),
                                 get_global_param_string("errstring").c_str()));

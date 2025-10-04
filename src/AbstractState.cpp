@@ -9,8 +9,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include <stdlib.h>
-#include "math.h"
+#include <cstdlib>
+#include <cmath>
 #include "AbstractState.h"
 #include "DataStructures.h"
 #include "Backends/IF97/IF97Backend.h"
@@ -62,7 +62,7 @@ class IF97BackendGenerator : public AbstractStateGenerator
    public:
     AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
         if (fluid_names.size() == 1) {         // Check that fluid_names[0] has only one component
-            std::string str = fluid_names[0];  // Check that the fluid name is an alias for "Water"
+            const std::string str = fluid_names[0];  // Check that the fluid name is an alias for "Water"
             if ((upper(str) == "WATER") || (upper(str) == "H2O")) {
                 return new IF97Backend();
             } else {
@@ -146,16 +146,16 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
 #if !defined(NO_TABULAR_BACKENDS)
     else if (f1 == TTSE_BACKEND_FAMILY) {
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(f2, fluid_names));
+        const shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new TTSEBackend(AS);
     } else if (f1 == BICUBIC_BACKEND_FAMILY) {
         // Will throw if there is a problem with this backend
-        shared_ptr<AbstractState> AS(factory(f2, fluid_names));
+        const shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new BicubicBackend(AS);
     }
 #endif
     else if (!backend.compare("?") || backend.empty()) {
-        std::size_t idel = fluid_names[0].find("::");
+        const std::size_t idel = fluid_names[0].find("::");
         // Backend has not been specified, and we have to figure out what the backend is by parsing the string
         if (idel == std::string::npos)  // No '::' found, no backend specified, try HEOS, otherwise a failure
         {
@@ -220,7 +220,7 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, Cool
             molar_mass();
 
             // Molar mass (just for compactness of the following switch)
-            CoolPropDbl mm = static_cast<CoolPropDbl>(_molar_mass);
+            const auto mm = static_cast<CoolPropDbl>(_molar_mass);
 
             switch (input_pair) {
                 case DmassT_INPUTS:
@@ -563,11 +563,11 @@ double AbstractState::smass_idealgas(void) {
     return smolar_idealgas() / molar_mass();
 }
 double AbstractState::neff(void) {
-    double tau = calc_T_reducing() / _T;
-    double delta = _rhomolar / calc_rhomolar_reducing();
-    double Ar01 = delta * dalphar_dDelta();
-    double Ar11 = tau * delta * d2alphar_dDelta_dTau();
-    double Ar20 = tau * tau * d2alphar_dTau2();
+    const double tau = calc_T_reducing() / _T;
+    const double delta = _rhomolar / calc_rhomolar_reducing();
+    const double Ar01 = delta * dalphar_dDelta();
+    const double Ar11 = tau * delta * d2alphar_dDelta_dTau();
+    const double Ar20 = tau * tau * d2alphar_dTau2();
     return -3.0 * (Ar01 - Ar11) / Ar20;
 }
 double AbstractState::smolar_excess(void) {
@@ -707,7 +707,7 @@ double AbstractState::fundamental_derivative_of_gas_dynamics() {
 
 // Get the derivatives of the parameters in the partial derivative with respect to T and rho
 void get_dT_drho(AbstractState& AS, parameters index, CoolPropDbl& dT, CoolPropDbl& drho) {
-    CoolPropDbl T = AS.T(), rho = AS.rhomolar(), rhor = AS.rhomolar_reducing(), Tr = AS.T_reducing(), dT_dtau = -pow(T, 2) / Tr,
+    const CoolPropDbl T = AS.T(), rho = AS.rhomolar(), rhor = AS.rhomolar_reducing(), Tr = AS.T_reducing(), dT_dtau = -pow(T, 2) / Tr,
                 R = AS.gas_constant(), delta = rho / rhor, tau = Tr / T;
 
     switch (index) {
@@ -774,11 +774,11 @@ void get_dT_drho(AbstractState& AS, parameters index, CoolPropDbl& dT, CoolPropD
         case iGmass:
         case iGmolar: {
             // dg/dT|rho
-            double dTau_dT = 1 / dT_dtau;
+            const double dTau_dT = 1 / dT_dtau;
             dT = R * AS.T() * (AS.dalpha0_dTau() + AS.dalphar_dTau() + AS.delta() * AS.d2alphar_dDelta_dTau()) * dTau_dT
                  + R * (1 + AS.alpha0() + AS.alphar() + AS.delta() * AS.dalphar_dDelta());
             // dg/drho|T
-            double dDelta_drho = 1 / rhor;
+            const double dDelta_drho = 1 / rhor;
             drho = AS.T() * R * (AS.dalpha0_dDelta() + AS.dalphar_dDelta() + AS.delta() * AS.d2alphar_dDelta2() + AS.dalphar_dDelta()) * dDelta_drho;
             if (index == iGmass) {
                 // dg/drho|T / drhomass/drhomolar where drhomass/drhomolar = mole mass
@@ -852,20 +852,20 @@ void get_dT_drho(AbstractState& AS, parameters index, CoolPropDbl& dT, CoolPropD
         }
         case ispeed_sound: {
             //dwdT
-            double aa = 1.0 + delta * AS.dalphar_dDelta() - delta * tau * AS.d2alphar_dDelta_dTau();
-            double bb = pow(tau, 2) * (AS.d2alpha0_dTau2() + AS.d2alphar_dTau2());
-            double daa_dTau = -delta * tau * AS.d3alphar_dDelta_dTau2();
-            double dbb_dTau = pow(tau, 2) * (AS.d3alpha0_dTau3() + AS.d3alphar_dTau3()) + 2.0 * tau * (AS.d2alpha0_dTau2() + AS.d2alphar_dTau2());
-            double w = AS.speed_sound();
+            const double aa = 1.0 + delta * AS.dalphar_dDelta() - delta * tau * AS.d2alphar_dDelta_dTau();
+            const double bb = pow(tau, 2) * (AS.d2alpha0_dTau2() + AS.d2alphar_dTau2());
+            const double daa_dTau = -delta * tau * AS.d3alphar_dDelta_dTau2();
+            const double dbb_dTau = pow(tau, 2) * (AS.d3alpha0_dTau3() + AS.d3alphar_dTau3()) + 2.0 * tau * (AS.d2alpha0_dTau2() + AS.d2alphar_dTau2());
+            const double w = AS.speed_sound();
             dT = 1.0 / 2.0 / w / T
                  * (pow(w, 2)
                     - R * Tr / AS.molar_mass()
                         * (2.0 * delta * AS.d2alphar_dDelta_dTau() + pow(delta, 2) * AS.d3alphar_dDelta2_dTau()
                            - (2 * aa / bb * daa_dTau - pow(aa / bb, 2) * dbb_dTau)));
             //dwdrho
-            double daa_dDelta =
+            const double daa_dDelta =
               AS.dalphar_dDelta() + delta * AS.d2alphar_dDelta2() - tau * (AS.d2alphar_dDelta_dTau() + delta * AS.d3alphar_dDelta2_dTau());
-            double dbb_dDelta = pow(tau, 2) * (AS.d3alpha0_dDelta_dTau2() + AS.d3alphar_dDelta_dTau2());
+            const double dbb_dDelta = pow(tau, 2) * (AS.d3alpha0_dDelta_dTau2() + AS.d3alphar_dDelta_dTau2());
             drho = R * T / 2.0 / AS.molar_mass() / w / rhor
                    * (2.0 * (AS.dalphar_dDelta() + delta * AS.d2alphar_dDelta2())
                       + (2.0 * delta * AS.d2alphar_dDelta2() + pow(delta, 2) * AS.d3alphar_dDelta3())
@@ -877,7 +877,7 @@ void get_dT_drho(AbstractState& AS, parameters index, CoolPropDbl& dT, CoolPropD
     }
 }
 void get_dT_drho_second_derivatives(AbstractState& AS, int index, CoolPropDbl& dT2, CoolPropDbl& drho_dT, CoolPropDbl& drho2) {
-    CoolPropDbl T = AS.T(), rho = AS.rhomolar(), rhor = AS.rhomolar_reducing(), Tr = AS.T_reducing(), R = AS.gas_constant(), delta = rho / rhor,
+    const CoolPropDbl T = AS.T(), rho = AS.rhomolar(), rhor = AS.rhomolar_reducing(), Tr = AS.T_reducing(), R = AS.gas_constant(), delta = rho / rhor,
                 tau = Tr / T;
 
     // Here we use T and rho as independent variables since derivations are already done by Thorade, 2013,
