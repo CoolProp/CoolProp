@@ -11,15 +11,15 @@ namespace CoolProp {
 
 struct PCSAFTValues
 {
-    CoolPropDbl m;       ///< Number of segments
-    CoolPropDbl sigma;   ///< Segment diameter (1/Angstrom)
-    CoolPropDbl u;       ///< Dispersion energy divided by Boltzmann constant (K)
-    CoolPropDbl uAB;     ///< Association energy (K)
-    CoolPropDbl volA;    ///< Association volume
-    std::vector<std::string> assocScheme; ///< The type of association for each associating functional group (see Huang and Radosz 1990)
-    CoolPropDbl dipm;    ///< Dipole moment (Debye)
-    CoolPropDbl dipnum;  ///< Number of dipole moments per molecule
-    CoolPropDbl z;       ///< Charge of the compound
+    CoolPropDbl m;                         ///< Number of segments
+    CoolPropDbl sigma;                     ///< Segment diameter (1/Angstrom)
+    CoolPropDbl u;                         ///< Dispersion energy divided by Boltzmann constant (K)
+    CoolPropDbl uAB;                       ///< Association energy (K)
+    CoolPropDbl volA;                      ///< Association volume
+    std::vector<std::string> assocScheme;  ///< The type of association for each associating functional group (see Huang and Radosz 1990)
+    CoolPropDbl dipm;                      ///< Dipole moment (Debye)
+    CoolPropDbl dipnum;                    ///< Number of dipole moments per molecule
+    CoolPropDbl z;                         ///< Charge of the compound
 };
 
 class PCSAFTFluid
@@ -32,9 +32,9 @@ class PCSAFTFluid
     PCSAFTValues params;
 
    public:
-    PCSAFTFluid(){};
+    PCSAFTFluid() {};
     PCSAFTFluid(rapidjson::Value::ValueIterator itr);
-    ~PCSAFTFluid(){};
+    ~PCSAFTFluid() {};
 
     std::string getName() const {
         return name;

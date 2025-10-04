@@ -434,25 +434,17 @@ struct scheme_info
 };
 
 const scheme_info scheme_info_list[] = {
-    { i1,                "1"},
-    { i2a,               "2A"},
-    { i2b,               "2B"},
-    { i3a,               "3A"},
-    { i3b,               "3B"},
-    { i4a,               "4A"},
-    { i4b,               "4B"},
-    { i4c,               "4C"},
+  {i1, "1"}, {i2a, "2A"}, {i2b, "2B"}, {i3a, "3A"}, {i3b, "3B"}, {i4a, "4A"}, {i4b, "4B"}, {i4c, "4C"},
 };
 
-class SchemeInformation {
-public:
+class SchemeInformation
+{
+   public:
     std::map<schemes, std::string> short_desc_map;
     std::map<std::string, schemes> index_map;
-    SchemeInformation()
-    {
+    SchemeInformation() {
         const scheme_info* const end = scheme_info_list + sizeof(scheme_info_list) / sizeof(scheme_info_list[0]);
-        for (const scheme_info* el = scheme_info_list; el != end; ++el)
-        {
+        for (const scheme_info* el = scheme_info_list; el != end; ++el) {
             short_desc_map.insert(std::pair<schemes, std::string>(el->key, el->short_desc));
             index_map.insert(std::pair<std::string, schemes>(el->short_desc, el->key));
         }
@@ -476,27 +468,25 @@ const std::string& get_scheme_short_desc(schemes scheme) {
     throw ValueError("Cannot find the short scheme description.");
 }
 
-bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput) {
+bool is_valid_scheme(const std::string& scheme_name, schemes& iOutput) {
     auto& scheme_information = get_scheme_information();
     auto it = scheme_information.index_map.find(scheme_name);
     // If equal to end, not found
-    if (it != scheme_information.index_map.end()){
+    if (it != scheme_information.index_map.end()) {
         // Found, return it
         iOutput = static_cast<schemes>(it->second);
         return true;
-    }
-    else{
+    } else {
         return false;
     }
 }
 
-schemes get_scheme_index(const std::string &param_name) {
+schemes get_scheme_index(const std::string& param_name) {
     schemes iScheme;
-    if (is_valid_scheme(param_name, iScheme)){
+    if (is_valid_scheme(param_name, iScheme)) {
         return iScheme;
-    }
-    else{
-        throw ValueError(format("Your input name [%s] is not valid in get_scheme_index (names are case sensitive)",param_name.c_str()));
+    } else {
+        throw ValueError(format("Your input name [%s] is not valid in get_scheme_index (names are case sensitive)", param_name.c_str()));
     }
 }
 
@@ -772,21 +762,19 @@ const std::vector<backend_family_info> backend_family_list = {
   {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SRK_BACKEND_FAMILY, "SRK"},
   {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"}};
 
-const std::vector<backend_info> backend_list = {
-    {HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
-    {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
-    {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
-    {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
-    {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
-    {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
-    {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
-    {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
-    {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
-    {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
-    {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
-    {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
-    {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY}
-};
+const std::vector<backend_info> backend_list = {{HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
+                                                {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
+                                                {REFPROP_BACKEND_PURE, "REFPROPBackend", REFPROP_BACKEND_FAMILY},
+                                                {REFPROP_BACKEND_MIX, "REFPROPMixtureBackend", REFPROP_BACKEND_FAMILY},
+                                                {INCOMP_BACKEND, "IncompressibleBackend", INCOMP_BACKEND_FAMILY},
+                                                {IF97_BACKEND, "IF97Backend", IF97_BACKEND_FAMILY},
+                                                {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
+                                                {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
+                                                {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
+                                                {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
+                                                {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
+                                                {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
+                                                {PCSAFT_BACKEND, "PCSAFTBackend", PCSAFT_BACKEND_FAMILY}};
 
 class BackendInformation
 {

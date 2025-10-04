@@ -345,7 +345,7 @@ CoolPropDbl TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCR
     double Tt = HEOS.Ttriple(), rho_tL = 1178.53;
     double Tr = HEOS.T() / Tt, rhor = HEOS.rhomass() / rho_tL;
     // Eq. (9) from Laesecke, JPCRD, 2017
-    double eta_tL = pow(rho_tL, 2.0/3.0) * sqrt(HEOS.gas_constant() * Tt) / (pow(HEOS.molar_mass(), 1.0/6.0) * 84446887.43579945);
+    double eta_tL = pow(rho_tL, 2.0 / 3.0) * sqrt(HEOS.gas_constant() * Tt) / (pow(HEOS.molar_mass(), 1.0 / 6.0) * 84446887.43579945);
     // Eq. (8) from Laesecke, JPCRD, 2017
     double residual = eta_tL * (c1 * Tr * pow(rhor, 3) + (pow(rhor, 2) + pow(rhor, gamma)) / (Tr - c2));
     return residual;
@@ -598,11 +598,11 @@ CoolPropDbl TransportRoutines::viscosity_dilute_CO2_LaeseckeJPCRD2017(HelmholtzE
     double eta0, den;
     double T = HEOS.T();
 
-    double a[] = {
-        1749.354893188350, -369.069300007128, 5423856.34887691, -2.21283852168356, -269503.247933569, 73145.021531826, 5.34368649509278};
-    
+    double a[] = {1749.354893188350, -369.069300007128, 5423856.34887691, -2.21283852168356, -269503.247933569, 73145.021531826, 5.34368649509278};
+
     // Eq. (4) from Laesecke, JPRCD, 2016
-    den = a[0] + a[1] * pow(T, 1.0/6.0) + a[2] * exp(a[3] * pow(T, 1.0/3.0)) + (a[4] + a[5] * pow(T, 1.0/3.0)) / exp(pow(T, 1.0 / 3.0)) + a[6] * sqrt(T);
+    den = a[0] + a[1] * pow(T, 1.0 / 6.0) + a[2] * exp(a[3] * pow(T, 1.0 / 3.0)) + (a[4] + a[5] * pow(T, 1.0 / 3.0)) / exp(pow(T, 1.0 / 3.0))
+          + a[6] * sqrt(T);
     eta0 = 0.0010055 * sqrt(T) / den;  // [Pa-s]
     return eta0;
 }
@@ -826,11 +826,11 @@ CoolPropDbl TransportRoutines::conductivity_dilute_hardcoded_CO2(HelmholtzEOSMix
 CoolPropDbl TransportRoutines::conductivity_dilute_hardcoded_CO2_HuberJPCRD2016(HelmholtzEOSMixtureBackend& HEOS) {
 
     double tau = HEOS.tau();
-    double l[]={0.0151874307, 0.0280674040, 0.0228564190, -0.00741624210};
+    double l[] = {0.0151874307, 0.0280674040, 0.0228564190, -0.00741624210};
     // Huber 2016 Eq. (3)
-    double lambda_0 = pow(tau, -0.5)/(l[0] + l[1] * tau + l[2] * pow(tau, 2) + l[3] * pow(tau, 3)); // [mW/m/K]
-    
-    return lambda_0/1000;
+    double lambda_0 = pow(tau, -0.5) / (l[0] + l[1] * tau + l[2] * pow(tau, 2) + l[3] * pow(tau, 3));  // [mW/m/K]
+
+    return lambda_0 / 1000;
 }
 
 CoolPropDbl TransportRoutines::conductivity_dilute_hardcoded_ethane(HelmholtzEOSMixtureBackend& HEOS) {

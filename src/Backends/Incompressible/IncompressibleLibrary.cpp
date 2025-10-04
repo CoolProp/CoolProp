@@ -334,11 +334,11 @@ JSONIncompressibleLibrary::JSONIncompressibleLibrary() {
 };
 
 /// Default destructor
-JSONIncompressibleLibrary::~JSONIncompressibleLibrary(){
-  //    freeClear(fluid_map);
-  //      fluid_map.clear();
-  //    name_vector.clear();
-  //    string_to_index_map.clear();
+JSONIncompressibleLibrary::~JSONIncompressibleLibrary() {
+    //    freeClear(fluid_map);
+    //      fluid_map.clear();
+    //    name_vector.clear();
+    //    string_to_index_map.clear();
 };
 
 /// A general function to parse the json files that hold the coefficient matrices

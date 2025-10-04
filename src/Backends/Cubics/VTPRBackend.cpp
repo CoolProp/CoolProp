@@ -106,13 +106,13 @@ void CoolProp::VTPRBackend::set_binary_interaction_double(const std::size_t i, c
     // bound-check indices
     if (i < 0 || i >= N) {
         if (j < 0 || j >= N) {
-            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
-            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
     } else if (j < 0 || j >= N) {
-        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
-    }    
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
+    }
     cubic->set_interaction_parameter(i, j, parameter, value);
     for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
         (*it)->set_binary_interaction_double(i, j, parameter, value);
@@ -127,13 +127,13 @@ double CoolProp::VTPRBackend::get_binary_interaction_double(const std::size_t i,
     // bound-check indices
     if (i < 0 || i >= N) {
         if (j < 0 || j >= N) {
-            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N-1));
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, N - 1));
         } else {
-            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N-1));
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
         }
     } else if (j < 0 || j >= N) {
-        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N-1));
-    }    
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, N - 1));
+    }
     return cubic->get_interaction_parameter(i, j, parameter);
 };
 

@@ -73,7 +73,7 @@ class Dictionary
     string_vectors_map string_vectors;
 
    public:
-    Dictionary(){};
+    Dictionary() {};
     bool is_empty(void) const {
         return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();
     }

@@ -177,9 +177,9 @@ TEST_CASE("Integrate y'=y", "[ODEIntegrator]") {
             return std::vector<double>(1, 1);
         }
 
-        virtual void pre_step_callback(){};
+        virtual void pre_step_callback() {};
 
-        virtual void post_deriv_callback(){};
+        virtual void post_deriv_callback() {};
 
         virtual void post_step_callback(double t, double h, std::vector<double>& y) {
             this->t.push_back(t);

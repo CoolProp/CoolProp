@@ -107,7 +107,6 @@ class TransportRoutines
     static CoolPropDbl viscosity_dilute_cyclohexane(HelmholtzEOSMixtureBackend& HEOS);
     static CoolPropDbl viscosity_dilute_CO2_LaeseckeJPCRD2017(HelmholtzEOSMixtureBackend& HEOS);
 
-
     /** \brief Viscosity hardcoded for Methanol
      *
      * From Xiang et al., A New Reference Correlation for the Viscosity of Methanol, J. Phys. Chem. Ref. Data, Vol. 35, No. 4, 2006

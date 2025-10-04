@@ -56,12 +56,11 @@ struct HelmholtzDerivatives
 #undef X
     CoolPropDbl tau, delta, T_red, rhomolar_red;
 
-    void reset(CoolPropDbl v) {
+    void reset(CoolPropDbl v){
 #define X(name) name = v;
-        LIST_OF_DERIVATIVE_VARIABLES
+      LIST_OF_DERIVATIVE_VARIABLES
 #undef X
-    }
-    HelmholtzDerivatives operator+(const HelmholtzDerivatives& other) const {
+    } HelmholtzDerivatives operator+(const HelmholtzDerivatives& other) const {
         HelmholtzDerivatives _new;
 #define X(name) _new.name = name + other.name;
         LIST_OF_DERIVATIVE_VARIABLES
@@ -168,8 +167,8 @@ struct HelmholtzDerivatives
 class BaseHelmholtzTerm
 {
    public:
-    BaseHelmholtzTerm(){};
-    virtual ~BaseHelmholtzTerm(){};
+    BaseHelmholtzTerm() {};
+    virtual ~BaseHelmholtzTerm() {};
 
     /// Returns the base, non-dimensional, Helmholtz energy term (no derivatives) [-]
     /** @param tau Reciprocal reduced temperature where \f$\tau=T_c / T\f$
@@ -292,11 +291,11 @@ class BaseHelmholtzTerm
     };
 
     virtual void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) = 0;
-    #if ENABLE_CATCH
+#if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
         throw CoolProp::NotImplementedError("The mcx derivative function was not implemented");
     }
-    #endif
+#endif
 };
 
 struct ResidualHelmholtzGeneralizedExponentialElement
@@ -360,7 +359,7 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     std::vector<ResidualHelmholtzGeneralizedExponentialElement> elements;
     // Default Constructor
     ResidualHelmholtzGeneralizedExponential()
-      : delta_li_in_u(false), tau_mi_in_u(false), eta1_in_u(false), eta2_in_u(false), beta1_in_u(false), beta2_in_u(false), finished(false), N(0){};
+      : delta_li_in_u(false), tau_mi_in_u(false), eta1_in_u(false), eta2_in_u(false), beta1_in_u(false), beta2_in_u(false), finished(false), N(0) {};
     /** \brief Add and convert an old-style power (polynomial) term to generalized form
 	 *
 	 * Term of the format
@@ -474,10 +473,9 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
      * Term of the format
      * \f$ \alpha^r=\displaystyle\sum_i n_i \delta^{d_i} \tau^{t_i} \exp(-gd_j\delta^{ld_j}-gt_j\tau^{lt_i})\f$
      */
-    void add_DoubleExponential(
-       const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& d, const std::vector<CoolPropDbl>& t,
-       const std::vector<CoolPropDbl>& gd, const std::vector<CoolPropDbl>& ld,
-       const std::vector<CoolPropDbl>& gt, const std::vector<CoolPropDbl>& lt) {
+    void add_DoubleExponential(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& d, const std::vector<CoolPropDbl>& t,
+                               const std::vector<CoolPropDbl>& gd, const std::vector<CoolPropDbl>& ld, const std::vector<CoolPropDbl>& gt,
+                               const std::vector<CoolPropDbl>& lt) {
         for (std::size_t i = 0; i < n.size(); ++i) {
             ResidualHelmholtzGeneralizedExponentialElement el;
             el.n = n[i];
@@ -543,9 +541,9 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
     //void allEigen(const CoolPropDbl &tau, const CoolPropDbl &delta, HelmholtzDerivatives &derivs) throw();
 
-    #if ENABLE_CATCH
-        virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
-    #endif
+#if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+#endif
 };
 
 struct ResidualHelmholtzNonAnalyticElement
@@ -564,7 +562,7 @@ class ResidualHelmholtzNonAnalytic : public BaseHelmholtzTerm
         N = 0;
     };
     /// Destructor. No implementation
-    ~ResidualHelmholtzNonAnalytic(){};
+    ~ResidualHelmholtzNonAnalytic() {};
     /// Constructor
     ResidualHelmholtzNonAnalytic(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& a, const std::vector<CoolPropDbl>& b,
                                  const std::vector<CoolPropDbl>& beta, const std::vector<CoolPropDbl>& A, const std::vector<CoolPropDbl>& B,
@@ -637,9 +635,9 @@ class ResidualHelmholtzGaoB : public BaseHelmholtzTerm
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
-    #if ENABLE_CATCH
-        virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
-    #endif
+#if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+#endif
 };
 
 /// The generalized Lee-Kesler formulation of Xiang & Deiters: doi:10.1016/j.ces.2007.11.029
@@ -715,7 +713,7 @@ class ResidualHelmholtzSAFTAssociating : public BaseHelmholtzTerm
     bool disabled;
 
     //Destructor. No Implementation
-    ~ResidualHelmholtzSAFTAssociating(){};
+    ~ResidualHelmholtzSAFTAssociating() {};
 
     void to_json(rapidjson::Value& el, rapidjson::Document& doc);
 
@@ -743,12 +741,9 @@ class BaseHelmholtzContainer
    protected:
     std::array<double, 16> cache = create_filled_array<double, 16>(_HUGE);
     std::array<bool, 16> is_cached = create_filled_array<bool, 16>(false);
-    constexpr static std::size_t i00 = 0, i01 = 1, i02 = 2, i03 = 3, i04 = 4,
-    i10 = 5, i11 = 6, i12 = 7, i13 = 8,
-    i20 = 9, i21 = 10, i22 = 11,
-    i30 = 12, i31 = 13,
-    i40 = 14;
-    
+    constexpr static std::size_t i00 = 0, i01 = 1, i02 = 2, i03 = 3, i04 = 4, i10 = 5, i11 = 6, i12 = 7, i13 = 8, i20 = 9, i21 = 10, i22 = 11,
+                                 i30 = 12, i31 = 13, i40 = 14;
+
     bool cache_valid(std::size_t i) const {
         return is_cached[i];
     }
@@ -1018,9 +1013,9 @@ class IdealHelmholtzPower : public BaseHelmholtzTerm
     bool enabled;
 
    public:
-    IdealHelmholtzPower() : N(0), enabled(false){};
+    IdealHelmholtzPower() : N(0), enabled(false) {};
     // Constructor
-    IdealHelmholtzPower(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& t) : n(n), t(t), N(n.size()), enabled(true){};
+    IdealHelmholtzPower(const std::vector<CoolPropDbl>& n, const std::vector<CoolPropDbl>& t) : n(n), t(t), N(n.size()), enabled(true) {};
 
     bool is_enabled() const {
         return enabled;
@@ -1137,7 +1132,7 @@ class IdealHelmholtzCP0Constant : public BaseHelmholtzTerm
     };
 
     /// Destructor
-    ~IdealHelmholtzCP0Constant(){};
+    ~IdealHelmholtzCP0Constant() {};
 
     bool is_enabled() const {
         return enabled;
@@ -1220,9 +1215,9 @@ class IdealHelmholtzGERG2004Sinh : public BaseHelmholtzTerm
     };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
-    #if ENABLE_CATCH
-        virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
-    #endif
+#if ENABLE_CATCH
+    virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
+#endif
 };
 
 class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
@@ -1256,10 +1251,9 @@ class IdealHelmholtzGERG2004Cosh : public BaseHelmholtzTerm
     };
     void all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) override;
 
-    #if ENABLE_CATCH
+#if ENABLE_CATCH
     virtual mcx::MultiComplex<double> one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const override;
-    #endif
-
+#endif
 };
 
 ///// Term in the ideal-gas specific heat equation that is based on Aly-Lee formulation
@@ -1412,7 +1406,7 @@ class IdealHelmholtzContainer : public BaseHelmholtzContainer
     IdealHelmholtzGERG2004Cosh GERG2004Cosh;
     IdealHelmholtzGERG2004Sinh GERG2004Sinh;
 
-    IdealHelmholtzContainer() : _prefactor(1.0){};
+    IdealHelmholtzContainer() : _prefactor(1.0) {};
 
     void set_prefactor(double prefactor) {
         _prefactor = prefactor;

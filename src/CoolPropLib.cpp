@@ -228,10 +228,10 @@ EXPORT_CODE void CONVENTION Props1SImulti(const char* Outputs, char* backend, co
         if (_result.size() == 0) {
             *resdim1 = 0;
         } else {
-            if (_result.size() > *resdim1)
+            if (_result.size() > static_cast<size_t>(*resdim1))
                 throw CoolProp::ValueError(format("Result vector [%d] is bigger than allocated memory [%d]", _result[0].size(), *resdim1));
-            *resdim1 = _result[0].size();
-            for (int i = 0; i < _result[0].size(); i++) {
+            *resdim1 = static_cast<long>(_result[0].size());
+            for (size_t i = 0; i < _result[0].size(); i++) {
                 result[i] = _result[0][i];
             }
         }
@@ -275,13 +275,13 @@ EXPORT_CODE void CONVENTION PropsSImulti(const char* Outputs, const char* Name1,
             *resdim1 = 0;
             *resdim2 = 0;
         } else {
-            if (_result.size() > *resdim1 || _result[0].size() > *resdim2)
+            if (_result.size() > static_cast<size_t>(*resdim1) || _result[0].size() > static_cast<size_t>(*resdim2))
                 throw CoolProp::ValueError(
                   format("Result matrix [%d x %d] is bigger than allocated memory [%d x %d]", _result.size(), _result[0].size(), *resdim1, *resdim2));
-            *resdim1 = _result.size();
-            *resdim2 = _result[0].size();
-            for (int i = 0; i < _result.size(); i++) {
-                for (int j = 0; j < _result[i].size(); j++) {
+            *resdim1 = static_cast<long>(_result.size());
+            *resdim2 = static_cast<long>(_result[0].size());
+            for (size_t i = 0; i < _result.size(); i++) {
+                for (size_t j = 0; j < _result[i].size(); j++) {
                     result[j + _result[i].size() * i] = _result[i][j];
                 }
             }
@@ -405,7 +405,7 @@ EXPORT_CODE long CONVENTION get_fluid_param_string(const char* fluid, const char
 EXPORT_CODE long CONVENTION get_fluid_param_string_len(const char* fluid, const char* param) {
     try {
         std::string s = CoolProp::get_fluid_param_string(std::string(fluid), std::string(param));
-        return s.size();
+        return static_cast<long>(s.size());
     } catch (std::exception& e) {
         CoolProp::set_error_string(e.what());
     } catch (...) {
@@ -485,7 +485,7 @@ class AbstractStateLibrary
     std::mutex ASLib_mutex;
 
    public:
-    AbstractStateLibrary() : next_handle(0){};
+    AbstractStateLibrary() : next_handle(0) {};
     long add(shared_ptr<CoolProp::AbstractState> AS) {
         std::lock_guard<std::mutex> guard(ASLib_mutex);
         ASlibrary.insert(std::pair<std::size_t, shared_ptr<CoolProp::AbstractState>>(this->next_handle, AS));
@@ -573,7 +573,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions(const long handle, 
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         std::vector<double> _fractions = AS->get_mole_fractions();
-        *N = _fractions.size();
+        *N = static_cast<long>(_fractions.size());
         if (*N <= maxN) {
             for (int i = 0; i < *N; i++)
                 fractions[i] = _fractions[i];
@@ -608,7 +608,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_mole_fractions_satState(const long
                                               "quality [%g] is within two-phase region (0 <= quality <= 1)",
                                               static_cast<double>(quality)));
         }
-        *N = _fractions.size();
+        *N = static_cast<long>(_fractions.size());
         if (*N <= maxN) {
             for (int i = 0; i < *N; i++) {
                 fractions[i] = _fractions[i];
@@ -632,7 +632,7 @@ EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, cons
     return _HUGE;
 }
 EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
-                                                                    const long buffer_length) {
+                                                                     const long buffer_length) {
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
@@ -724,14 +724,14 @@ EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long hand
 }
 
 EXPORT_CODE double CONVENTION AbstractState_second_two_phase_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
-                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
-                                                                 const long buffer_length) {
+                                                                   const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                   const long buffer_length) {
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         return AS->second_two_phase_deriv(static_cast<CoolProp::parameters>(Of1), static_cast<CoolProp::parameters>(Wrt1),
-                                        static_cast<CoolProp::parameters>(Constant1), static_cast<CoolProp::parameters>(Wrt2),
-                                        static_cast<CoolProp::parameters>(Constant2));
+                                          static_cast<CoolProp::parameters>(Constant1), static_cast<CoolProp::parameters>(Wrt2),
+                                          static_cast<CoolProp::parameters>(Constant2));
     } catch (...) {
         HandleException(errcode, message_buffer, buffer_length);
     }
@@ -764,7 +764,6 @@ EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_splined(const 
     }
     return _HUGE;
 }
-
 
 EXPORT_CODE void CONVENTION AbstractState_update_and_common_out(const long handle, const long input_pair, const double* value1, const double* value2,
                                                                 const long length, double* T, double* p, double* rhomolar, double* hmolar,
@@ -903,21 +902,21 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
     }
 }
 
-EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents, double* T,
-                                                                  double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y,
-                                                                  long* actual_length, long* actual_components, long* errcode, char* message_buffer,
-                                                                  const long buffer_length) {
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents,
+                                                                                double* T, double* p, double* rhomolar_vap, double* rhomolar_liq,
+                                                                                double* x, double* y, long* actual_length, long* actual_components,
+                                                                                long* errcode, char* message_buffer, const long buffer_length) {
     *errcode = 0;
     try {
         shared_ptr<CoolProp::AbstractState>& AS = handle_manager.get(handle);
         CoolProp::PhaseEnvelopeData pe = AS->get_phase_envelope_data();
-        *actual_length = pe.T.size();
+        *actual_length = static_cast<long>(pe.T.size());
         if (pe.T.size() > static_cast<std::size_t>(length)) {
             throw CoolProp::ValueError(format("Length of phase envelope vectors [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(pe.T.size()), static_cast<int>(length)));
         }
-        *actual_components = pe.x.size();
-        if (*actual_components > static_cast<std::size_t>(maxComponents)) {
+        *actual_components = static_cast<long>(pe.x.size());
+        if (static_cast<std::size_t>(*actual_components) > static_cast<std::size_t>(maxComponents)) {
             throw CoolProp::ValueError(format("Length of phase envelope composition vectors [%d] is greater than allocated buffer length [%d]",
                                               static_cast<int>(*actual_components), static_cast<int>(maxComponents)));
         }
@@ -926,7 +925,7 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(
             *(p + i) = pe.p[i];
             *(rhomolar_vap + i) = pe.rhomolar_vap[i];
             *(rhomolar_liq + i) = pe.rhomolar_liq[i];
-            for (std::size_t j = 0; j < *actual_components; ++j) {
+            for (std::size_t j = 0; j < static_cast<std::size_t>(*actual_components); ++j) {
                 *(x + i * *actual_components + j) = pe.x[j][i];
                 *(y + i * *actual_components + j) = pe.y[j][i];
             }

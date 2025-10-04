@@ -141,7 +141,7 @@ class IncompressibleFluid
         strict = true;
         xid = IFRAC_UNDEFINED;
     };
-    virtual ~IncompressibleFluid(){};
+    virtual ~IncompressibleFluid() {};
 
     std::string getName() const {
         return name;

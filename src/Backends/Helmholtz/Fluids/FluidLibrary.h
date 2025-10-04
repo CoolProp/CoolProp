@@ -127,14 +127,14 @@ class JSONFluidLibrary
                 std::vector<CoolPropDbl> lt = cpjson::get_long_double_array(contribution["lt"]);
                 std::vector<CoolPropDbl> gd = cpjson::get_long_double_array(contribution["gd"]);
                 std::vector<CoolPropDbl> ld = cpjson::get_long_double_array(contribution["ld"]);
-                
+
                 assert(n.size() == d.size());
                 assert(n.size() == t.size());
                 assert(n.size() == gt.size());
                 assert(n.size() == lt.size());
                 assert(n.size() == gd.size());
                 assert(n.size() == ld.size());
-                alphar.GenExp.add_DoubleExponential(n,d,t,gd,ld,gt,lt);
+                alphar.GenExp.add_DoubleExponential(n, d, t, gd, ld, gt, lt);
             } else if (!type.compare("ResidualHelmholtzExponential")) {
                 std::vector<CoolPropDbl> n = cpjson::get_long_double_array(contribution["n"]);
                 std::vector<CoolPropDbl> d = cpjson::get_long_double_array(contribution["d"]);
@@ -391,11 +391,10 @@ class JSONFluidLibrary
         // BibTex keys
         EOS.BibTeX_EOS = cpjson::get_string(EOS_json, "BibTeX_EOS");
         EOS.BibTeX_CP0 = cpjson::get_string(EOS_json, "BibTeX_CP0");
-        
-        if (EOS_json.HasMember("SUPERANCILLARY")){
-            if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")){
-            }
-            else{
+
+        if (EOS_json.HasMember("SUPERANCILLARY")) {
+            if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")) {
+            } else {
                 // This is inefficient as we do JSON(rapidjson) -> string -> JSON(nlohmann)
                 // which implies two large parsing passes
                 EOS.set_superancillaries_str(cpjson::json2string(EOS_json["SUPERANCILLARY"]));
@@ -806,8 +805,7 @@ class JSONFluidLibrary
             if (!target.compare("CO2")) {
                 fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2;
                 return;
-            } 
-            else if (!target.compare("CarbonDioxideHuberJPCRD2016")) {
+            } else if (!target.compare("CarbonDioxideHuberJPCRD2016")) {
                 fluid.transport.conductivity_dilute.type = CoolProp::ConductivityDiluteVariables::CONDUCTIVITY_DILUTE_CO2_HUBER_JPCRD_2016;
                 return;
             } else if (!target.compare("Ethane")) {

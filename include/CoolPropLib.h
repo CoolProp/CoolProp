@@ -404,7 +404,7 @@ EXPORT_CODE double CONVENTION AbstractState_get_fugacity(const long handle, cons
      * @return 
      */
 EXPORT_CODE double CONVENTION AbstractState_get_fugacity_coefficient(const long handle, const long i, long* errcode, char* message_buffer,
-                                                                      const long buffer_length);
+                                                                     const long buffer_length);
 /**
      * @brief Update the state of the AbstractState
      * @param handle The integer handle for the state class stored in memory
@@ -492,8 +492,8 @@ EXPORT_CODE double CONVENTION AbstractState_first_partial_deriv(const long handl
     */
 
 EXPORT_CODE double CONVENTION AbstractState_second_two_phase_deriv(const long handle, const long Of1, const long Wrt1, const long Constant1,
-                                                                 const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
-                                                                 const long buffer_length);
+                                                                   const long Wrt2, const long Constant2, long* errcode, char* message_buffer,
+                                                                   const long buffer_length);
 /**
     * @brief Calculate the second partial derivative int two-phase region from the AbstractState using integer values for the desired parameters
     * @param handle The integer handle for the state class stored in memory
@@ -526,9 +526,9 @@ EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long hand
     * @return
     */
 
-
 EXPORT_CODE double CONVENTION AbstractState_first_two_phase_deriv_splined(const long handle, const long Of, const long Wrt, const long Constant,
-                                                                  const double x_end,long* errcode, char* message_buffer, const long buffer_length);
+                                                                          const double x_end, long* errcode, char* message_buffer,
+                                                                          const long buffer_length);
 /**
     * @brief Calculate the first partial derivative in homogeneous phases from the AbstractState using integer values for the desired parameters
     * @param handle The integer handle for the state class stored in memory
@@ -714,10 +714,10 @@ EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data(const long han
      *
      * @note If there is an error in an update call for one of the inputs, no change in the output array will be made
      */
-EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents, double* T,
-                                                                  double* p, double* rhomolar_vap, double* rhomolar_liq, double* x, double* y,
-                                                                  long* actual_length, long* actual_components, long* errcode, char* message_buffer,
-                                                                  const long buffer_length);
+EXPORT_CODE void CONVENTION AbstractState_get_phase_envelope_data_checkedMemory(const long handle, const long length, const long maxComponents,
+                                                                                double* T, double* p, double* rhomolar_vap, double* rhomolar_liq,
+                                                                                double* x, double* y, long* actual_length, long* actual_components,
+                                                                                long* errcode, char* message_buffer, const long buffer_length);
 
 /**
      * @brief Build the spinodal

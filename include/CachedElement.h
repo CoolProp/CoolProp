@@ -32,36 +32,35 @@ namespace CoolProp {
  };
  */
 
-
 class CachedElement
 {
-    
-private:
+
+   private:
     bool is_cached = false;
     double value;
-    
-public:
+
+   public:
     /// Default constructor
     CachedElement() {
         this->clear();
     };
-    
+
     /// Function to carry out the caching
     void _do_cache(double value) {
         this->value = value;
         this->is_cached = true;
     }
-    
+
     /// Assignment operator - sets the value and sets the flag
     void operator=(const double& value) {
         _do_cache(value);
     };
-    
+
     /// Cast to boolean, for checking if cached
     operator bool() {
         return is_cached;
     };
-    
+
     /// Cast to double, for returning value
     operator double() {
         if (is_cached) {
@@ -89,35 +88,34 @@ public:
     }
 };
 
-template<typename NumType>
+template <typename NumType>
 class CacheArrayElement
 {
-    
-private:
+
+   private:
     NumType& value;
     bool& is_cached;
-    
-public:
-    
+
+   public:
     // Constructor with value
     CacheArrayElement(NumType& val, bool& is_cached) : value(val), is_cached(is_cached) {};
-    
+
     /// Function to carry out the caching
     void _do_cache(double value) {
         this->value = value;
         this->is_cached = true;
     }
-    
+
     /// Assignment operator - sets the value and sets the flag
     void operator=(const double& value) {
         _do_cache(value);
     };
-    
+
     /// Cast to boolean, for checking if cached
     operator bool() {
         return is_cached;
     };
-    
+
     /// Cast to double, for returning value
     operator double() {
         if (is_cached) {
@@ -145,26 +143,25 @@ public:
     }
 };
 
+template <int N>
+class CacheArray
+{
 
-template<int N>
-class CacheArray{
-
-private:
-
+   private:
     std::size_t inext = 0;
     std::array<double, N> m_values = create_filled_array<double, N>(_HUGE);
     std::array<bool, N> m_cached = create_filled_array<bool, N>(false);
 
    public:
-    void clear(){
+    void clear() {
         memset(m_values.data(), 0, sizeof(m_values));
         memset(m_cached.data(), false, sizeof(m_cached));
     }
-    auto factory(std::size_t i){
+    auto factory(std::size_t i) {
         return CacheArrayElement<double>(m_values[i], m_cached[i]);
     }
-    auto next(){
-        if (inext > N){
+    auto next() {
+        if (inext > N) {
             throw ValueError("No more cache elements available");
         }
         auto el = factory(inext);

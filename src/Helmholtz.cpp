@@ -287,7 +287,7 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
 mcx::MultiComplex<double> ResidualHelmholtzGeneralizedExponential::one_mcx(const mcx::MultiComplex<double>& tau,
                                                                            const mcx::MultiComplex<double>& delta) const {
     //throw CoolProp::NotImplementedError("Nope");
-    mcx::MultiComplex<double> sum00 = 0.0*tau*delta;
+    mcx::MultiComplex<double> sum00 = 0.0 * tau * delta;
     auto ln_tau = log(tau);
     auto ln_delta = log(delta);
     const std::size_t N = elements.size();
@@ -592,8 +592,7 @@ void ResidualHelmholtzNonAnalytic::all(const CoolPropDbl& tau_in, const CoolProp
 }
 
 #if ENABLE_CATCH
-mcx::MultiComplex<double> ResidualHelmholtzNonAnalytic::one_mcx(const mcx::MultiComplex<double>& tau,
-                                                                const mcx::MultiComplex<double>& delta) const {
+mcx::MultiComplex<double> ResidualHelmholtzNonAnalytic::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
 
     mcx::MultiComplex<double> sum00 = 0.0 * tau * delta;
     for (unsigned int i = 0; i < N; ++i) {
@@ -752,12 +751,11 @@ void ResidualHelmholtzGaoB::all(const CoolPropDbl& tau, const CoolPropDbl& delta
     }
 }
 
-
 #if ENABLE_CATCH
 mcx::MultiComplex<double> ResidualHelmholtzGaoB::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
     mcx::MultiComplex<double> sum00 = 0.0;
     for (std::size_t i = 0; i < static_cast<int>(n.size()); ++i) {
-        auto u = b[i] + beta[i] * (tau-gamma[i])*(tau-gamma[i]);
+        auto u = b[i] + beta[i] * (tau - gamma[i]) * (tau - gamma[i]);
         auto Ftau = pow(tau, t[i]) * exp(1.0 / u);
         auto Fdelta = pow(delta, d[i]) * exp(eta[i] * pow(delta - epsilon[i], 2));
         sum00 += n[i] * Ftau * Fdelta;
@@ -1111,8 +1109,7 @@ void ResidualHelmholtzSAFTAssociating::all(const CoolPropDbl& tau, const CoolPro
 }
 
 #if ENABLE_CATCH
-mcx::MultiComplex<double> IdealHelmholtzCP0PolyT::one_mcx(const mcx::MultiComplex<double>& tau,
-                                                          const mcx::MultiComplex<double>& delta) const {
+mcx::MultiComplex<double> IdealHelmholtzCP0PolyT::one_mcx(const mcx::MultiComplex<double>& tau, const mcx::MultiComplex<double>& delta) const {
     mcx::MultiComplex<double> sum = 0.0;
     for (std::size_t i = 0; i < N; ++i) {
         if (std::abs(t[i]) < 10 * DBL_EPSILON) {
@@ -1212,23 +1209,23 @@ void IdealHelmholtzPower::all(const CoolPropDbl& tau, const CoolPropDbl& delta, 
     }
 }
 void IdealHelmholtzPlanckEinsteinGeneralized::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) throw() {
-    
+
     if (!enabled) {
         return;
     }
-    
+
     CoolPropDbl s00 = 0, s01 = 0, s02 = 0, s03 = 0, s04 = 0;
-    
+
     for (std::size_t i = 0; i < N; ++i) {
         const CoolPropDbl expthetataui = exp(theta[i] * tau);
         const CoolPropDbl para = c[i] + d[i] * expthetataui;
-        
+
         s00 += n[i] * log(para);
         s01 += n[i] * theta[i] * d[i] * expthetataui / para;
         s02 += n[i] * POW2(theta[i]) * c[i] * d[i] * expthetataui / POW2(para);
         s03 += n[i] * POW3(theta[i]) * c[i] * d[i] * (c[i] - d[i] * expthetataui) * expthetataui / POW3(para);
-        const CoolPropDbl bracket = 6 * POW3(d[i]) * POW3(expthetataui) - 12 * d[i] * d[i] * para * POW2(expthetataui)
-                                    + 7 * d[i] * POW2(para) * expthetataui - POW3(para);
+        const CoolPropDbl bracket =
+          6 * POW3(d[i]) * POW3(expthetataui) - 12 * d[i] * d[i] * para * POW2(expthetataui) + 7 * d[i] * POW2(para) * expthetataui - POW3(para);
         s04 += -n[i] * d[i] * POW4(theta[i]) * bracket * expthetataui / POW4(para);
     }
     derivs.alphar += s00;
@@ -1423,7 +1420,6 @@ mcx::MultiComplex<double> IdealHelmholtzGERG2004Cosh::one_mcx(const mcx::MultiCo
 }
 #endif
 
-
 //void IdealHelmholtzCP0AlyLee::to_json(rapidjson::Value &el, rapidjson::Document &doc){
 //    el.AddMember("type","IdealGasHelmholtzCP0AlyLee",doc.GetAllocator());
 //    rapidjson::Value _n(rapidjson::kArrayType);
@@ -1501,7 +1497,7 @@ class HelmholtzConsistencyFixture
         {
             // Signs of eta are flipped relative to paper from Gao et al., implemented with opposite sign in CoolProp
             std::vector<CoolPropDbl> beta = {0.3696, 0.2962}, epsilon = {0.4478, 0.44689}, eta = {-2.8452, -2.8342}, gamma = {1.108, 1.313},
-                        n = {-1.6909858, 0.93739074}, t = {4.3315, 4.015}, d = {1, 1}, b = {1.244, 0.6826};
+                                     n = {-1.6909858, 0.93739074}, t = {4.3315, 4.015}, d = {1, 1}, b = {1.244, 0.6826};
             GaoB.reset(new CoolProp::ResidualHelmholtzGaoB(n, t, d, eta, beta, gamma, epsilon, b));
         }
 
@@ -1820,20 +1816,9 @@ std::string terms[] = {"Lead",         "LogTau",       "IGPower", "PlanckEinstei
 std::string derivs[] = {"dTau",         "dTau2",        "dTau3", "dDelta",       "dDelta2",       "dDelta3",      "dDelta_dTau",
                         "dDelta_dTau2", "dDelta2_dTau", "dTau4", "dDelta_dTau3", "dDelta2_dTau2", "dDelta3_dTau", "dDelta4"};
 std::map<std::string, std::tuple<int, int>> counts = {
-    {"dTau", {1, 0}},
-    {"dTau2", {2, 0}},
-    {"dTau3", {3, 0}},
-    {"dTau4", {4, 0}},
-    {"dDelta", {0, 1}},
-    {"dDelta2", {0, 2}},
-    {"dDelta3", {0, 3}},
-    {"dDelta4", {0, 4}},
-    {"dDelta_dTau", {1, 1}},
-    {"dDelta_dTau2", {2, 1}},
-    {"dDelta2_dTau", {1, 2}},
-    {"dDelta_dTau3", {3, 1}},
-    {"dDelta2_dTau2", {2, 2}},
-    {"dDelta3_dTau", {1, 3}},
+  {"dTau", {1, 0}},         {"dTau2", {2, 0}},        {"dTau3", {3, 0}},         {"dTau4", {4, 0}},        {"dDelta", {0, 1}},
+  {"dDelta2", {0, 2}},      {"dDelta3", {0, 3}},      {"dDelta4", {0, 4}},       {"dDelta_dTau", {1, 1}},  {"dDelta_dTau2", {2, 1}},
+  {"dDelta2_dTau", {1, 2}}, {"dDelta_dTau3", {3, 1}}, {"dDelta2_dTau2", {2, 2}}, {"dDelta3_dTau", {1, 3}},
 };
 
 TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[helmholtz]") {
@@ -1872,7 +1857,7 @@ TEST_CASE_METHOD(HelmholtzConsistencyFixture, "Helmholtz energy derivatives", "[
             CAPTURE(terms[i]);
             double deriv_tolerance = 1e-9;
             if (terms[i] == "GERG2004Cosh" || terms[i] == "GERG2004Sinh" || terms[i] == "CP0PolyT") {
-                deriv_tolerance = 1e-7; // due to, I think, a loss in precision in the log function of multicomplex
+                deriv_tolerance = 1e-7;  // due to, I think, a loss in precision in the log function of multicomplex
             }
             double val_tolerance = 1e-14;
             if (terms[i] == "CP0PolyT") {

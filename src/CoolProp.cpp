@@ -117,7 +117,7 @@ bool has_solution_concentration(const std::string& fluid_string) {
 struct delim : std::numpunct<char>
 {
     char m_c;
-    delim(char c) : m_c(c){};
+    delim(char c) : m_c(c) {};
     char do_decimal_point() const {
         return m_c;
     }
@@ -836,13 +836,13 @@ double Props1SI(std::string FluidName, std::string Output) {
     }
 }
 
-std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend, const std::vector<std::string>& fluids, const std::vector<double>& fractions) {
+std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend,
+                                               const std::vector<std::string>& fluids, const std::vector<double>& fractions) {
     std::vector<double> zero_vector(1, 0.);
     std::vector<std::vector<double>> val1 = PropsSImulti(Outputs, "", zero_vector, "", zero_vector, backend, fluids, fractions);
     // error handling is done in PropsSImulti, val1 will be an empty vector if an error occured
     return val1;
 }
-
 
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to Props1SI", "[Props1SI],[PropsSI]") {
@@ -1102,8 +1102,8 @@ std::string PhaseSI(const std::string& Name1, double Prop1, const std::string& N
         if (strError != "") {                                                       //     if error string is not empty,
             strPhase.append(": " + strError);                                       //        append it to the phase string.
         }
-        return strPhase;                                             //     return the "unknown" phase string
-    }                                                                // else
+        return strPhase;  //     return the "unknown" phase string
+    }  // else
     std::size_t Phase_int = static_cast<std::size_t>(Phase_double);  //     convert returned phase to int
     return phase_lookup_string(static_cast<phases>(Phase_int));      //     return phase as a string
 }

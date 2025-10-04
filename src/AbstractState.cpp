@@ -201,10 +201,10 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, Cool
     // Check if a mass based input, convert it to molar units
 
     switch (input_pair) {
-        case DmassT_INPUTS:  ///< Mass density in kg/m^3, Temperature in K
-          //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
-        case SmassT_INPUTS:  ///< Entropy in J/kg/K, Temperature in K
-          //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
+        case DmassT_INPUTS:      ///< Mass density in kg/m^3, Temperature in K
+                                 //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
+        case SmassT_INPUTS:      ///< Entropy in J/kg/K, Temperature in K
+                                 //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
         case DmassP_INPUTS:      ///< Mass density in kg/m^3, Pressure in Pa
         case DmassQ_INPUTS:      ///< Mass density in kg/m^3, molar quality
         case HmassP_INPUTS:      ///< Enthalpy in J/kg, Pressure in Pa
@@ -472,9 +472,9 @@ double AbstractState::keyed_output(parameters key) {
         case ifundamental_derivative_of_gas_dynamics:
             return fundamental_derivative_of_gas_dynamics();
         case iTau:
-            return _reducing.T/_T;
+            return _reducing.T / _T;
         case iDelta:
-            return _rhomolar/_reducing.rhomolar;
+            return _rhomolar / _reducing.rhomolar;
         default:
             throw ValueError(format("This input [%d: \"%s\"] is not valid for keyed_output", key, get_parameter_information(key, "short").c_str()));
     }
@@ -563,12 +563,12 @@ double AbstractState::smass_idealgas(void) {
     return smolar_idealgas()/molar_mass();
 }
 double AbstractState::neff(void) {
-    double tau = calc_T_reducing()/_T;
-    double delta = _rhomolar/calc_rhomolar_reducing();
-    double Ar01 = delta*dalphar_dDelta();
-    double Ar11 = tau*delta*d2alphar_dDelta_dTau();
-    double Ar20 = tau*tau*d2alphar_dTau2();
-    return -3.0*(Ar01-Ar11)/Ar20;
+    double tau = calc_T_reducing() / _T;
+    double delta = _rhomolar / calc_rhomolar_reducing();
+    double Ar01 = delta * dalphar_dDelta();
+    double Ar11 = tau * delta * d2alphar_dDelta_dTau();
+    double Ar20 = tau * tau * d2alphar_dTau2();
+    return -3.0 * (Ar01 - Ar11) / Ar20;
 }
 double AbstractState::smolar_excess(void) {
     if (!_smolar_excess) calc_excess_properties();

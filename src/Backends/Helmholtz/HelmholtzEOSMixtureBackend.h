@@ -19,20 +19,22 @@ class FlashRoutines;
 
 class ResidualHelmholtz;
 
-// This class contains the mole fractions for a given mixture. 
-class MoleFractions{
-    private:
-    std::vector<CoolPropDbl> mole_fractions;    ///< The bulk mole fractions of the mixture
+// This class contains the mole fractions for a given mixture.
+class MoleFractions
+{
+   private:
+    std::vector<CoolPropDbl> mole_fractions;  ///< The bulk mole fractions of the mixture
     template <typename T>
     bool verify_mole_fractions_set(T i) const {
-        if (i >= mole_fractions.size()){
+        if (i >= mole_fractions.size()) {
             throw CoolProp::ValueError("mole fractions are not set for all components");
         }
         return true;
     }
-    public:
+
+   public:
     template <typename T>
-    void resize(T N){
+    void resize(T N) {
         return mole_fractions.resize(N);
     }
     std::size_t size() const {
@@ -42,8 +44,8 @@ class MoleFractions{
         mole_fractions.clear();
     }
     // operator overloads
-    template<typename T>
-    MoleFractions& operator=(const std::vector<T>& values){
+    template <typename T>
+    MoleFractions& operator=(const std::vector<T>& values) {
         mole_fractions = values;
         return *this;
     }
@@ -52,7 +54,9 @@ class MoleFractions{
         verify_mole_fractions_set(i);
         return mole_fractions[i];
     }
-    operator std::vector<CoolPropDbl>& () { return mole_fractions; }
+    operator std::vector<CoolPropDbl>&() {
+        return mole_fractions;
+    }
 };
 
 class HelmholtzEOSMixtureBackend : public AbstractState
@@ -91,11 +95,11 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         }
     };
 
-    std::vector<CoolPropFluid> components;      ///< The components that are in use
-    bool is_pure_or_pseudopure;                 ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
-    MoleFractions mole_fractions;               ///< The bulk mole fractions of the mixture
-    std::vector<CoolPropDbl> K,                 ///< The K factors for the components
-      lnK;                                      ///< The natural logarithms of the K factors of the components
+    std::vector<CoolPropFluid> components;  ///< The components that are in use
+    bool is_pure_or_pseudopure;             ///< A flag for whether the substance is a pure or pseudo-pure fluid (true) or a mixture (false)
+    MoleFractions mole_fractions;           ///< The bulk mole fractions of the mixture
+    std::vector<CoolPropDbl> K,             ///< The K factors for the components
+      lnK;                                  ///< The natural logarithms of the K factors of the components
 
     SimpleState _crit;
     std::size_t N;  ///< Number of components
@@ -104,7 +108,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     std::vector<CoolProp::CriticalState> _calc_all_critical_points(bool find_critical_points = true);
 
     static void set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2, const std::string& ref);
-    
+
     std::optional<EquationOfState::SuperAncillary_t>& get_superanc_optional();
 
    public:
@@ -116,7 +120,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     // Copy over the reducing and departure terms to all linked states (recursively)
     void sync_linked_states(const HelmholtzEOSMixtureBackend* const);
 
-    virtual ~HelmholtzEOSMixtureBackend(){};
+    virtual ~HelmholtzEOSMixtureBackend() {};
     std::string backend_name(void) {
         return get_backend_string(HEOS_BACKEND_MIX);
     }
@@ -591,9 +595,9 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     */
     CoolPropDbl calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
                                           const CoolPropDbl& delta, const CoolPropDbl& Tr, const CoolPropDbl& rhor);
-    
+
     HelmholtzDerivatives calc_all_alpha0_derivs_nocache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
-                                          const CoolPropDbl& delta, const CoolPropDbl& Tr, const CoolPropDbl& rhor);
+                                                        const CoolPropDbl& delta, const CoolPropDbl& Tr, const CoolPropDbl& rhor);
 
     virtual void calc_reducing_state(void);
     virtual SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl>& mole_fractions);
@@ -802,8 +806,8 @@ class ResidualHelmholtz
     ExcessTerm Excess;
     CorrespondingStatesTerm CS;
 
-    ResidualHelmholtz(){};
-    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C){};
+    ResidualHelmholtz() {};
+    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C) {};
     virtual ~ResidualHelmholtz() = default;
 
     ResidualHelmholtz copy() {

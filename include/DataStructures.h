@@ -224,10 +224,10 @@ phases get_phase_index(const std::string& param_name);
 /// Return true if passed PC-SAFT association scheme name is valid, otherwise false
 /// @param scheme_name The association scheme string to be checked ("2B" for instance)
 /// @param iOutput Gets updated with the schemes enum value if scheme_name is found
-bool is_valid_scheme(const std::string &scheme_name, schemes &iOutput);
+bool is_valid_scheme(const std::string& scheme_name, schemes& iOutput);
 
 /// Return the enum key corresponding to the association scheme name ("2B" for instance)
-schemes get_scheme_index(const std::string &scheme_name);
+schemes get_scheme_index(const std::string& scheme_name);
 
 /// Returns true if the input is trivial (constants, critical parameters, etc.)
 bool is_trivial_parameter(int key);
