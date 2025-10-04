@@ -4,6 +4,7 @@
 #include "DataStructures.h"
 #include "../Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "../Backends/Helmholtz/HelmholtzEOSBackend.h"
+#include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "superancillary/superancillary.h"
 #include <map>
 
@@ -2920,6 +2921,50 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[cach
         for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
         return opt100;
     };
+}
+std::vector<std::tuple<double, double, double, double>> MSA22values = {
+    {200, 199.97, 142.56, 1.29559},
+    {300, 300.19, 214.07, 1.70203},
+    {400, 400.98, 286.16, 1.99194},
+    {500, 503.02, 359.49, 2.21952},
+};
+
+TEST_CASE("Ideal gas thermodynamic properties", "[2589]"){
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Air"));
+    shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Air"));
+    
+    auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(AS.get());
+    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    
+    AS->specify_phase(iphase_gas);
+    RP->specify_phase(iphase_gas);
+    
+    double pig = 101325;
+
+    // Moran & Shapiro Table A-22 reference is h(T=0) = 0, but that doesn't play nicely
+    // with tau=Tc/T = oo and delta = 0/rhor = 0
+    
+    for (auto [T_K, h_kJkg, u_kJkg, s_kJkgK] : MSA22values){
+        double rho = pig/(AS->gas_constant()*T_K); // ideal-gas molar density assuming Z=1
+        AS->update(DmolarT_INPUTS, rho, T_K);
+        RP->update(DmolarT_INPUTS, rho, T_K);
+        
+        CHECK(AS->smass_idealgas()/AS->gas_constant() == Catch::Approx(RP->smass_idealgas()/AS->gas_constant()));
+        CHECK(AS->hmass_idealgas()/AS->gas_constant() == Catch::Approx(RP->hmass_idealgas()/AS->gas_constant()));
+        
+        std::vector<double> mf(20, 1.0);
+        auto o = rRP.call_THERM0dll(T_K, rho/1e3, mf);
+        CHECK(o.hmol_Jmol == RP->hmolar_idealgas());
+        CHECK(o.smol_JmolK == RP->smolar_idealgas());
+        CHECK(o.umol_Jmol == RP->umolar_idealgas());
+        
+        CAPTURE(T_K);
+        CAPTURE(AS->hmass_idealgas());
+        CAPTURE(AS->hmass_idealgas()-h_kJkg*1e3);
+        CAPTURE(AS->smass_idealgas());
+        CAPTURE(AS->smass_idealgas()-s_kJkgK*1e3);
+    }
+    
 }
 
 /*
