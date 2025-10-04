@@ -2954,9 +2954,9 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]"){
         
         std::vector<double> mf(20, 1.0);
         auto o = rRP.call_THERM0dll(T_K, rho/1e3, mf);
-        CHECK(o.hmol_Jmol == RP->hmolar_idealgas());
-        CHECK(o.smol_JmolK == RP->smolar_idealgas());
-        CHECK(o.umol_Jmol == RP->umolar_idealgas());
+        CHECK(o.hmol_Jmol == Catch::Approx(RP->hmolar_idealgas()).epsilon(1e-12));
+        CHECK(o.smol_JmolK == Catch::Approx(RP->smolar_idealgas()).epsilon(1e-12));
+        CHECK(o.umol_Jmol == Catch::Approx(RP->umolar_idealgas()).epsilon(1e-12));
         
         CAPTURE(T_K);
         CAPTURE(AS->hmass_idealgas());
