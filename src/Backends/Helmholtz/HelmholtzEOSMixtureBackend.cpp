@@ -2109,9 +2109,9 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
                     _rhomolar = value;
                     return;
                 }
-
-                SatL->update(DmolarT_INPUTS, rhoL, _T);
-                SatV->update(DmolarT_INPUTS, rhoV, _T);
+                
+                SatL->update_TDmolarP_unchecked(_T, rhoL, psat);
+                SatV->update_TDmolarP_unchecked(_T, rhoV, psat);
                 
                 switch (other) {
                     case iDmolar:
