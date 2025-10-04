@@ -3,21 +3,48 @@ CoolProp wrapper for FLUENT
 
 Contributors
 ------------
-Primary CoolProp Developer: Ian Bell, University of Liege, Belgium (ian.h.bell@gmail.com)
-FLUENT experts: Joris Degroote and Iva Papes, University of Gent, Belgium
-Others Contributors : Frederic Sonnino, AREVA company (frederic.sonnino1@areva.com)
-Second release: October , 2017
+- Primary CoolProp Developer: Ian Bell, University of Liege, Belgium (ian.h.bell@gmail.com)
+- FLUENT experts: Joris Degroote and Iva Papes, University of Gent, Belgium
+- Other Contributors: 
+   - Frederic Sonnino, AREVA company (frederic.sonnino1@areva.com)
+   - Omar Zaki, University of Illinois at Urbana-Champaign (Omarz2@illinois.edu)
+
+Windows
+---------------
+1. Download CoolProp Shared Library (https://sourceforge.net/projects/coolprop/files/CoolProp/)
+   
+   a. Open the Link above
+   b. Select the CoolProp version you wish to use
+   c. Open *shared_library* Folder
+   d. Download the file *CoolPropLib.h*
+   e. Open *Windows* Folder
+   f. Select the version you would like to use in your code; most likely, you will need the *64bit* version
+   g. Download *CoolProp.dll* and *CoolProp.lib* files
+
+2. Place the three files (*CoolProp.dll*, *CoolProp.lib*, and *CoolPropLib.h*) in the same folder as your working folder.
+
+3. Select *User-Defined* tab -> *Functions* -> *Compiled*
+
+4. Using the window, include your UDF source file as .cpp; You can find an example UDF file in this folder named *Example_windows_UDF.cpp*
+   a. Make sure the UDF cpp file has "*#include "CoolPropLib.h*"
+   b. Make sure the UDF cpp file has "*#pragma comment(lib, "XX//XX//CoolProp.lib")*" which includes the CoolProp lib file into the compilation process. Make sure that the path of *CoolProp.lib* is the correct **absolute** path
+
+5. Using the window, include *CoolPropLib.h* file you downloaded eariler in the *Header Files* section
+6. Build the UDF DLL, then load it
+7. Test functionality through *User-Defined* tab -> *Excute on Demand* -> select *test::libudf* -> Click Execute
+
+Linux
+------------
 
 Requirements
-------------
-A linux version of FLUENT
-g++
-python 2.7
-cmake >2.8
+~~~~~~~~~~~~
+* A linux version of FLUENT
+* g++
+* python 2.7
+* cmake >2.8
 
 To Build
---------
-
+~~~~~~~~~~~~
 Let us call the main directory where the Fluent case and the fluent wrapper is (coolprop/wrappers/Fluent) as CUSTOM_DIRECTORY.
 
 1. Make sure you are in the CUSTOM_DIRECTORY
