@@ -2148,7 +2148,7 @@ void REFPROPMixtureBackend::calc_ideal_curve(const std::string& type, std::vecto
     }
 };
 
-THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double> &mole_fractions){
+THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double>& mole_fractions) {
     /*
       subroutineTHERM0dll(T, D, z, P0, e0, h0, s0, Cv0, Cp00, w0, a0, g0)
     Compute ideal-gas thermal quantities as a function of temperature, density, and composition from core functions.
@@ -2170,12 +2170,13 @@ THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_
     g0 [double ,out] :: Gibbs free energy [J/mol]
      */
     THERM0dllOutputs o;
-    if (mole_fractions.size() != 20){
+    if (mole_fractions.size() != 20) {
         throw ValueError("mole fractions must be of size 20");
     }
     std::vector<double> mf = mole_fractions;
-    
-    THERM0dll(&T, &rho_mol_dm3, &(mf[0]), &o.p_kPa, &o.umol_Jmol, &o.hmol_Jmol, &o.smol_JmolK, &o.cvmol_JmolK, &o.cpmol_JmolK, &o.w_ms, &o.amol_Jmol, &o.gmol_Jmol);
+
+    THERM0dll(&T, &rho_mol_dm3, &(mf[0]), &o.p_kPa, &o.umol_Jmol, &o.hmol_Jmol, &o.smol_JmolK, &o.cvmol_JmolK, &o.cpmol_JmolK, &o.w_ms, &o.amol_Jmol,
+              &o.gmol_Jmol);
     return o;
 }
 

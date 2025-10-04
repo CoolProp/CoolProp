@@ -110,15 +110,15 @@ enum parameters
     iUmolar_idealgas,  ///< The ideal gas molar internal energy
 
     // Mass specific thermodynamic properties
-    iDmass,          ///< Mass-based density
-    iHmass,          ///< Mass-based enthalpy
-    iSmass,          ///< Mass-based entropy
-    iCpmass,         ///< Mass-based constant-pressure specific heat
-    iCp0mass,        ///< Mass-based ideal-gas specific heat
-    iCvmass,         ///< Mass-based constant-volume specific heat
-    iUmass,          ///< Mass-based internal energy
-    iGmass,          ///< Mass-based Gibbs energy
-    iHelmholtzmass,  ///< Mass-based Helmholtz energy
+    iDmass,           ///< Mass-based density
+    iHmass,           ///< Mass-based enthalpy
+    iSmass,           ///< Mass-based entropy
+    iCpmass,          ///< Mass-based constant-pressure specific heat
+    iCp0mass,         ///< Mass-based ideal-gas specific heat
+    iCvmass,          ///< Mass-based constant-volume specific heat
+    iUmass,           ///< Mass-based internal energy
+    iGmass,           ///< Mass-based Gibbs energy
+    iHelmholtzmass,   ///< Mass-based Helmholtz energy
     iHmass_idealgas,  ///< The ideal gas specific enthalpy
     iSmass_idealgas,  ///< The ideal gas specific entropy
     iUmass_idealgas,  ///< The ideal gas specific internal energy

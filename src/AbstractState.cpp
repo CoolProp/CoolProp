@@ -539,10 +539,10 @@ double AbstractState::hmolar_residual(void) {
     return _hmolar_residual;
 }
 double AbstractState::hmolar_idealgas(void) {
-    return gas_constant()*T()*(1 + tau()*dalpha0_dTau());
+    return gas_constant() * T() * (1 + tau() * dalpha0_dTau());
 }
 double AbstractState::hmass_idealgas(void) {
-    return hmolar_idealgas()/molar_mass();
+    return hmolar_idealgas() / molar_mass();
 }
 double AbstractState::hmolar_excess(void) {
     if (!_hmolar_excess) calc_excess_properties();
@@ -557,10 +557,10 @@ double AbstractState::smolar_residual(void) {
     return _smolar_residual;
 }
 double AbstractState::smolar_idealgas(void) {
-    return gas_constant()*(tau()*dalpha0_dTau() - alpha0());
+    return gas_constant() * (tau() * dalpha0_dTau() - alpha0());
 }
 double AbstractState::smass_idealgas(void) {
-    return smolar_idealgas()/molar_mass();
+    return smolar_idealgas() / molar_mass();
 }
 double AbstractState::neff(void) {
     double tau = calc_T_reducing() / _T;
@@ -583,10 +583,10 @@ double AbstractState::umolar_excess(void) {
     return _umolar_excess;
 }
 double AbstractState::umolar_idealgas(void) {
-    return gas_constant()*T()*(tau()*dalpha0_dTau());
+    return gas_constant() * T() * (tau() * dalpha0_dTau());
 }
 double AbstractState::umass_idealgas(void) {
-    return umolar_idealgas()/molar_mass();
+    return umolar_idealgas() / molar_mass();
 }
 double AbstractState::gibbsmolar(void) {
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
