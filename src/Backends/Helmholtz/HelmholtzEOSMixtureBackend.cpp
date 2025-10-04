@@ -4229,12 +4229,15 @@ void HelmholtzEOSMixtureBackend::set_reference_stateS(const std::string& referen
 void HelmholtzEOSMixtureBackend::set_reference_stateD(double T, double rhomolar, double hmolar0, double smolar0) {
     for (std::size_t i = 0; i < components.size(); ++i) {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<CoolPropFluid>(1, components[i]));
-
-        HEOS.update(DmolarT_INPUTS, rhomolar, T);
+        
+        // Skip the cache and phase calculation because we are given a temperature and density directly;
+        // just evaluate the EOS
+        double hmolar = calc_hmolar_nocache(T, rhomolar);
+        double smolar = calc_smolar_nocache(T, rhomolar);
 
         // Get current values for the enthalpy and entropy
-        double deltah = HEOS.hmolar() - hmolar0;  // offset from specified enthalpy in J/mol
-        double deltas = HEOS.smolar() - smolar0;  // offset from specified entropy in J/mol/K
+        double deltah = hmolar - hmolar0;  // offset from specified enthalpy in J/mol
+        double deltas = smolar - smolar0;  // offset from specified entropy in J/mol/K
         double delta_a1 = deltas / (HEOS.gas_constant());
         double delta_a2 = -deltah / (HEOS.gas_constant() * HEOS.get_reducing_state().T);
         set_fluid_enthalpy_entropy_offset(components[i], delta_a1, delta_a2, "custom");
