@@ -1229,7 +1229,7 @@ class SuperAncillary
         if (rhosat_soln_count == 1) {
             // Search the complete range from Tmin to the intersection point where rhosat(T) = rho
             // obtained just above
-            Tsearchrange = std::make_tuple(Lrho.xmin * 0.999, std::get<0>(Tsat[0]));
+            Tsearchrange = std::make_tuple(Lrho.xmin() * 0.999, std::get<0>(Tsat[0]));
         } else if (rhosat_soln_count == 2) {
             double y1 = std::get<0>(Tsat[0]), y2 = std::get<0>(Tsat[1]);
             if (y2 < y1) {

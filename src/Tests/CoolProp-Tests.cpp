@@ -2884,6 +2884,116 @@ TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression for TS; off",
     };
 }
 
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Saturated vapor DS", "[2486]") {
+    
+    static auto AS = shared_ptr<CoolProp::AbstractState>(
+                                                         CoolProp::AbstractState::factory("HEOS", "Water")
+                                                         );
+    
+    auto T_K = GENERATE(from_range(linspace(273.16, 647.095, static_cast<std::size_t>(100000))));
+    
+    CAPTURE(T_K);
+//    set_debug_level(100);
+    AS->update(QT_INPUTS, 0.5, T_K);
+    
+    auto rhoV = AS->saturated_vapor_keyed_output(iDmolar);
+    auto sV = AS->saturated_vapor_keyed_output(iSmolar);
+    auto hV = AS->saturated_vapor_keyed_output(iHmolar);
+    AS->update(DmolarSmolar_INPUTS, rhoV, sV);
+    CHECK(AS->rhomolar() == Catch::Approx(rhoV));
+    CHECK(AS->hmolar() == Catch::Approx(hV));
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Saturated liquid DS", "[2486]") {
+    
+    static auto AS = shared_ptr<CoolProp::AbstractState>(
+        CoolProp::AbstractState::factory("HEOS", "Water")
+    );
+
+    auto T_K = GENERATE(from_range(linspace(273.16, 647.095, static_cast<std::size_t>(100000))));
+
+//    set_debug_level(100);
+    AS->update(QT_INPUTS, 0.5, T_K);
+    
+    auto rhoL = AS->saturated_liquid_keyed_output(iDmolar);
+    auto sL = AS->saturated_liquid_keyed_output(iSmolar);
+    auto hL = AS->saturated_liquid_keyed_output(iHmolar);
+    CAPTURE(T_K);
+    CAPTURE(rhoL);
+    CAPTURE(sL);
+    AS->update(DmolarSmolar_INPUTS, rhoL, sL);
+    CHECK(AS->rhomolar() == Catch::Approx(rhoL));
+    CHECK(AS->hmolar() == Catch::Approx(hL));
+}
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "bench", "[2486]") {
+    static auto AS = shared_ptr<CoolProp::AbstractState>(
+        CoolProp::AbstractState::factory("HEOS", "Water")
+    );
+    double T_K = 300.1;
+    AS->update(QT_INPUTS, 0.5, T_K);
+    
+    auto rhomolar = AS->rhomolar();
+    auto smolar = AS->smolar();
+    auto sL = AS->saturated_liquid_keyed_output(iSmolar);
+    auto sV = AS->saturated_vapor_keyed_output(iSmolar);
+    auto rhoL = AS->saturated_liquid_keyed_output(iDmolar);
+    auto rhoV = AS->saturated_vapor_keyed_output(iDmolar);
+    auto hL = AS->saturated_liquid_keyed_output(iHmolar);
+    
+    BENCHMARK("DS bench 2phase") {
+        AS->update(DmolarSmolar_INPUTS, rhomolar, (sL + sV) / 2);
+        return AS->hmolar();
+    };
+    
+    double q1 = -0.00001;
+    auto v = (1-q1)/rhoL + q1/rhoV;
+    std::cout << rhoL << ":" << rhoV << ":" << 1/v << std::endl;
+    BENCHMARK("DS regression 1phase ") {
+//        set_debug_level(100);
+        AS->update(DmolarSmolar_INPUTS, 1/v, (1-q1)*sL + q1*sV);
+        return AS->rhomolar();
+    };
+    
+//    double o = 0.0;
+//    auto N = 1000000U;
+//    for (auto i = 0U; i < N; ++i){
+//        AS->update(DmolarSmolar_INPUTS, rhomolar+1*1e-14, (sL + sV) / 2);
+//        o += AS->hmolar();
+//    }
+//    std::cout << o << std::endl;
+}
+
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression for DS; off", "[DS2phase]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "PROPANE"));
+    double T = 273.17;
+    AS->update(QT_INPUTS, 0.5, T);
+    auto sL = AS->saturated_liquid_keyed_output(iSmolar);
+    auto sV = AS->saturated_vapor_keyed_output(iSmolar);
+    double rhomolar = AS->rhomolar();
+    
+    BENCHMARK("DS regression 2phase") {
+        AS->update(DmolarSmolar_INPUTS, rhomolar, (sL + sV) / 2);
+        return AS->rhomolar();
+    };
+    
+    double q1 = -0.1;
+    BENCHMARK("DS regression 1phase ") {
+        AS->update(DmolarSmolar_INPUTS, rhomolar, ((1-q1)*sL + q1*sV));
+        return AS->rhomolar();
+    };
+    
+//    double o = 0.0;
+//    auto N = 1000000U;
+//    for (auto i = 0U; i < N; ++i){
+//        AS->update(DmolarSmolar_INPUTS, rhomolar+1*1e-14, (sL + sV) / 2);
+//        o += AS->hmolar();
+//    }
+//    std::cout << o << std::endl;
+    
+}
+
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
     std::array<double, 16> buf15;
     buf15.fill(0.0);
