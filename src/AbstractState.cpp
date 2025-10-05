@@ -154,7 +154,7 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         return new BicubicBackend(AS);
     }
 #endif
-    else if (!backend.compare("?") || backend.empty()) {
+    else if (backend == "?" || backend.empty()) {
         const std::size_t idel = fluid_names[0].find("::");
         // Backend has not been specified, and we have to figure out what the backend is by parsing the string
         if (idel == std::string::npos)  // No '::' found, no backend specified, try HEOS, otherwise a failure
@@ -170,7 +170,7 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         throw ValueError(format("Invalid backend name [%s] to factory function", backend.c_str()));
     }
 }
-std::vector<std::string> AbstractState::fluid_names(void) {
+std::vector<std::string> AbstractState::fluid_names() {
     return calc_fluid_names();
 }
 bool AbstractState::clear_comp_change() {
@@ -480,89 +480,89 @@ double AbstractState::keyed_output(parameters key) {
     }
 }
 
-double AbstractState::tau(void) {
+double AbstractState::tau() {
     if (!_tau) _tau = calc_reciprocal_reduced_temperature();
     return _tau;
 }
-double AbstractState::delta(void) {
+double AbstractState::delta() {
     if (!_delta) _delta = calc_reduced_density();
     return _delta;
 }
-double AbstractState::Tmin(void) {
+double AbstractState::Tmin() {
     return calc_Tmin();
 }
-double AbstractState::Tmax(void) {
+double AbstractState::Tmax() {
     return calc_Tmax();
 }
-double AbstractState::Ttriple(void) {
+double AbstractState::Ttriple() {
     return calc_Ttriple();
 }
-double AbstractState::pmax(void) {
+double AbstractState::pmax() {
     return calc_pmax();
 }
-double AbstractState::T_critical(void) {
+double AbstractState::T_critical() {
     return calc_T_critical();
 }
-double AbstractState::T_reducing(void) {
+double AbstractState::T_reducing() {
     if (!ValidNumber(_reducing.T)) {
         calc_reducing_state();
     }
     return _reducing.T;
 }
-double AbstractState::p_critical(void) {
+double AbstractState::p_critical() {
     return calc_p_critical();
 }
-double AbstractState::p_triple(void) {
+double AbstractState::p_triple() {
     return calc_p_triple();
 }
-double AbstractState::rhomolar_critical(void) {
+double AbstractState::rhomolar_critical() {
     return calc_rhomolar_critical();
 }
-double AbstractState::rhomass_critical(void) {
+double AbstractState::rhomass_critical() {
     return calc_rhomolar_critical() * molar_mass();
 }
-double AbstractState::rhomolar_reducing(void) {
+double AbstractState::rhomolar_reducing() {
     if (!ValidNumber(_reducing.rhomolar)) {
         calc_reducing_state();
     }
     return _reducing.rhomolar;
 }
-double AbstractState::rhomass_reducing(void) {
+double AbstractState::rhomass_reducing() {
     return rhomolar_reducing() * molar_mass();
 }
-double AbstractState::hmolar(void) {
+double AbstractState::hmolar() {
     if (!_hmolar) _hmolar = calc_hmolar();
     return _hmolar;
 }
-double AbstractState::hmolar_residual(void) {
+double AbstractState::hmolar_residual() {
     if (!_hmolar_residual) _hmolar_residual = calc_hmolar_residual();
     return _hmolar_residual;
 }
-double AbstractState::hmolar_idealgas(void) {
+double AbstractState::hmolar_idealgas() {
     return gas_constant() * T() * (1 + tau() * dalpha0_dTau());
 }
-double AbstractState::hmass_idealgas(void) {
+double AbstractState::hmass_idealgas() {
     return hmolar_idealgas() / molar_mass();
 }
-double AbstractState::hmolar_excess(void) {
+double AbstractState::hmolar_excess() {
     if (!_hmolar_excess) calc_excess_properties();
     return _hmolar_excess;
 }
-double AbstractState::smolar(void) {
+double AbstractState::smolar() {
     if (!_smolar) _smolar = calc_smolar();
     return _smolar;
 }
-double AbstractState::smolar_residual(void) {
+double AbstractState::smolar_residual() {
     if (!_smolar_residual) _smolar_residual = calc_smolar_residual();
     return _smolar_residual;
 }
-double AbstractState::smolar_idealgas(void) {
+double AbstractState::smolar_idealgas() {
     return gas_constant() * (tau() * dalpha0_dTau() - alpha0());
 }
-double AbstractState::smass_idealgas(void) {
+double AbstractState::smass_idealgas() {
     return smolar_idealgas() / molar_mass();
 }
-double AbstractState::neff(void) {
+double AbstractState::neff() {
     const double tau = calc_T_reducing() / _T;
     const double delta = _rhomolar / calc_rhomolar_reducing();
     const double Ar01 = delta * dalphar_dDelta();
@@ -570,68 +570,68 @@ double AbstractState::neff(void) {
     const double Ar20 = tau * tau * d2alphar_dTau2();
     return -3.0 * (Ar01 - Ar11) / Ar20;
 }
-double AbstractState::smolar_excess(void) {
+double AbstractState::smolar_excess() {
     if (!_smolar_excess) calc_excess_properties();
     return _smolar_excess;
 }
-double AbstractState::umolar(void) {
+double AbstractState::umolar() {
     if (!_umolar) _umolar = calc_umolar();
     return _umolar;
 }
-double AbstractState::umolar_excess(void) {
+double AbstractState::umolar_excess() {
     if (!_umolar_excess) calc_excess_properties();
     return _umolar_excess;
 }
-double AbstractState::umolar_idealgas(void) {
+double AbstractState::umolar_idealgas() {
     return gas_constant() * T() * (tau() * dalpha0_dTau());
 }
-double AbstractState::umass_idealgas(void) {
+double AbstractState::umass_idealgas() {
     return umolar_idealgas() / molar_mass();
 }
-double AbstractState::gibbsmolar(void) {
+double AbstractState::gibbsmolar() {
     if (!_gibbsmolar) _gibbsmolar = calc_gibbsmolar();
     return _gibbsmolar;
 }
-double AbstractState::gibbsmolar_residual(void) {
+double AbstractState::gibbsmolar_residual() {
     if (!_gibbsmolar_residual) _gibbsmolar_residual = calc_gibbsmolar_residual();
     return _gibbsmolar_residual;
 }
-double AbstractState::gibbsmolar_excess(void) {
+double AbstractState::gibbsmolar_excess() {
     if (!_gibbsmolar_excess) calc_excess_properties();
     return _gibbsmolar_excess;
 }
-double AbstractState::helmholtzmolar(void) {
+double AbstractState::helmholtzmolar() {
     if (!_helmholtzmolar) _helmholtzmolar = calc_helmholtzmolar();
     return _helmholtzmolar;
 }
-double AbstractState::helmholtzmolar_excess(void) {
+double AbstractState::helmholtzmolar_excess() {
     if (!_helmholtzmolar_excess) calc_excess_properties();
     return _helmholtzmolar_excess;
 }
-double AbstractState::volumemolar_excess(void) {
+double AbstractState::volumemolar_excess() {
     if (!_volumemolar_excess) calc_excess_properties();
     return _volumemolar_excess;
 }
-double AbstractState::cpmolar(void) {
+double AbstractState::cpmolar() {
     if (!_cpmolar) _cpmolar = calc_cpmolar();
     return _cpmolar;
 }
-double AbstractState::cp0molar(void) {
+double AbstractState::cp0molar() {
     return calc_cpmolar_idealgas();
 }
-double AbstractState::cvmolar(void) {
+double AbstractState::cvmolar() {
     if (!_cvmolar) _cvmolar = calc_cvmolar();
     return _cvmolar;
 }
-double AbstractState::speed_sound(void) {
+double AbstractState::speed_sound() {
     if (!_speed_sound) _speed_sound = calc_speed_sound();
     return _speed_sound;
 }
-double AbstractState::viscosity(void) {
+double AbstractState::viscosity() {
     if (!_viscosity) _viscosity = calc_viscosity();
     return _viscosity;
 }
-double AbstractState::conductivity(void) {
+double AbstractState::conductivity() {
     if (!_conductivity) _conductivity = calc_conductivity();
     return _conductivity;
 }
@@ -644,15 +644,15 @@ double AbstractState::acentric_factor() {
 double AbstractState::saturation_ancillary(parameters param, int Q, parameters given, double value) {
     return calc_saturation_ancillary(param, Q, given, value);
 }
-double AbstractState::surface_tension(void) {
+double AbstractState::surface_tension() {
     if (!_surface_tension) _surface_tension = calc_surface_tension();
     return _surface_tension;
 }
-double AbstractState::molar_mass(void) {
+double AbstractState::molar_mass() {
     if (!_molar_mass) _molar_mass = calc_molar_mass();
     return _molar_mass;
 }
-double AbstractState::gas_constant(void) {
+double AbstractState::gas_constant() {
     if (!_gas_constant) _gas_constant = calc_gas_constant();
     return _gas_constant;
 }
@@ -675,28 +675,28 @@ double AbstractState::chemical_potential(std::size_t i) {
 void AbstractState::build_phase_envelope(const std::string& type) {
     calc_phase_envelope(type);
 }
-double AbstractState::isothermal_compressibility(void) {
+double AbstractState::isothermal_compressibility() {
     return 1.0 / _rhomolar * first_partial_deriv(iDmolar, iP, iT);
 }
-double AbstractState::isobaric_expansion_coefficient(void) {
+double AbstractState::isobaric_expansion_coefficient() {
     return -1.0 / _rhomolar * first_partial_deriv(iDmolar, iT, iP);
 }
-double AbstractState::isentropic_expansion_coefficient(void) {
+double AbstractState::isentropic_expansion_coefficient() {
     return _rhomolar / _p * first_partial_deriv(iP, iDmolar, iSmolar);
 }
-double AbstractState::Bvirial(void) {
+double AbstractState::Bvirial() {
     return calc_Bvirial();
 }
-double AbstractState::Cvirial(void) {
+double AbstractState::Cvirial() {
     return calc_Cvirial();
 }
-double AbstractState::dBvirial_dT(void) {
+double AbstractState::dBvirial_dT() {
     return calc_dBvirial_dT();
 }
-double AbstractState::dCvirial_dT(void) {
+double AbstractState::dCvirial_dT() {
     return calc_dCvirial_dT();
 }
-double AbstractState::compressibility_factor(void) {
+double AbstractState::compressibility_factor() {
     return calc_compressibility_factor();
 }
 

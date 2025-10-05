@@ -901,17 +901,19 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
         const char* refstate = reference_state.c_str();
         if (strlen(refstate) > 3) {
             if (reference_state == "ASHRAE") {
-                strcpy(hrf, "ASH");
+                strncpy(hrf, "ASH", sizeof(hrf) - 1);
+                hrf[sizeof(hrf) - 1] = '\0';
             } else {
                 throw ValueError(format("Reference state string [%s] is more than 3 characters long", reference_state.c_str()));
             }
         } else {
-            strcpy(hrf, refstate);
+            strncpy(hrf, refstate, sizeof(hrf) - 1);
+            hrf[sizeof(hrf) - 1] = '\0';
         }
         REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
     } else if (backend == "HEOS" || backend == "?") {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
-        if (!reference_state.compare("IIR")) {
+        if (reference_state == "IIR") {
             if (HEOS.Ttriple() > 273.15) {
                 throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K", HEOS.Ttriple()));
             }
@@ -927,7 +929,7 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
-        } else if (!reference_state.compare("ASHRAE")) {
+        } else if (reference_state == "ASHRAE") {
             if (HEOS.Ttriple() > 233.15) {
                 throw ValueError(format("Cannot use ASHRAE reference state; Ttriple [%Lg] is greater than than 233.15 K", HEOS.Ttriple()));
             }
@@ -943,7 +945,7 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
-        } else if (!reference_state.compare("NBP")) {
+        } else if (reference_state == "NBP") {
             if (HEOS.p_triple() > 101325) {
                 throw ValueError(format("Cannot use NBP reference state; p_triple [%Lg Pa] is greater than than 101325 Pa", HEOS.p_triple()));
             }
@@ -959,9 +961,9 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
-        } else if (!reference_state.compare("DEF")) {
+        } else if (reference_state == "DEF") {
             set_fluid_enthalpy_entropy_offset(fluid, 0, 0, "DEF");
-        } else if (!reference_state.compare("RESET")) {
+        } else if (reference_state == "RESET") {
             set_fluid_enthalpy_entropy_offset(fluid, 0, 0, "RESET");
         } else {
             throw ValueError(format("Reference state string is invalid: [%s]", reference_state.c_str()));
@@ -983,31 +985,31 @@ void set_reference_stateD(const std::string& FluidName, double T, double rhomola
 }
 
 std::string get_global_param_string(const std::string& ParamName) {
-    if (!ParamName.compare("version")) {
+    if (ParamName == "version") {
         return version;
-    } else if (!ParamName.compare("gitrevision")) {
+    } else if (ParamName == "gitrevision") {
         return gitrevision;
-    } else if (!ParamName.compare("errstring")) {
+    } else if (ParamName == "errstring") {
         std::string temp = error_string;
         error_string = "";
         return temp;
-    } else if (!ParamName.compare("warnstring")) {
+    } else if (ParamName == "warnstring") {
         std::string temp = warning_string;
         warning_string = "";
         return temp;
-    } else if (!ParamName.compare("FluidsList") || !ParamName.compare("fluids_list") || !ParamName.compare("fluidslist")) {
+    } else if (ParamName == "FluidsList" || ParamName == "fluids_list" || ParamName == "fluidslist") {
         return get_fluid_list();
-    } else if (!ParamName.compare("incompressible_list_pure")) {
+    } else if (ParamName == "incompressible_list_pure") {
         return get_incompressible_list_pure();
-    } else if (!ParamName.compare("incompressible_list_solution")) {
+    } else if (ParamName == "incompressible_list_solution") {
         return get_incompressible_list_solution();
-    } else if (!ParamName.compare("mixture_binary_pairs_list")) {
+    } else if (ParamName == "mixture_binary_pairs_list") {
         return get_csv_mixture_binary_pairs();
-    } else if (!ParamName.compare("parameter_list")) {
+    } else if (ParamName == "parameter_list") {
         return get_csv_parameter_list();
-    } else if (!ParamName.compare("predefined_mixtures")) {
+    } else if (ParamName == "predefined_mixtures") {
         return get_csv_predefined_mixtures();
-    } else if (!ParamName.compare("HOME")) {
+    } else if (ParamName == "HOME") {
         return get_home_dir();
     } else if (ParamName == "REFPROP_version") {
         return REFPROPMixtureBackend::version();

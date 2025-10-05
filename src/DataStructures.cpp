@@ -180,13 +180,13 @@ std::string get_parameter_information(int key, const std::string& info) {
     const std::map<int, std::string>* M;
     auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
-    if (!info.compare("IO")) {
+    if (info == "IO") {
         M = &(parameter_information.IO_map);
-    } else if (!info.compare("short")) {
+    } else if (info == "short") {
         M = &(parameter_information.short_desc_map);
-    } else if (!info.compare("long")) {
+    } else if (info == "long") {
         M = &(parameter_information.description_map);
-    } else if (!info.compare("units")) {
+    } else if (info == "units") {
         M = &(parameter_information.units_map);
     } else {
         throw ValueError(format("Bad info string [%s] to get_parameter_information", info.c_str()));

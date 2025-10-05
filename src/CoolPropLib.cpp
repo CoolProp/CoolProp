@@ -22,10 +22,12 @@
 #include <mutex>
 
 void str2buf(const std::string& str, char* buf, int n) {
-    if (str.size() < static_cast<unsigned int>(n))
-        strcpy(buf, str.c_str());
-    else
+    if (str.size() < static_cast<unsigned int>(n)) {
+        strncpy(buf, str.c_str(), n - 1);
+        buf[n - 1] = '\0';
+    } else {
         throw CoolProp::ValueError("Buffer is too small; must be at least " + std::to_string(str.size()) + " characters in size");
+    }
 }
 void HandleException(long* errcode, char* message_buffer, const long buffer_length) {
     try {
