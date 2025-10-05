@@ -97,7 +97,7 @@ class PackablePhaseEnvelopeData : public PhaseEnvelopeData
    public:
     int revision;
 
-    PackablePhaseEnvelopeData() : revision(0){};
+    PackablePhaseEnvelopeData() : revision(0) {};
 
     void copy_from_nonpackable(const PhaseEnvelopeData& PED) {
 /* Use X macros to auto-generate the copying */
@@ -106,7 +106,7 @@ class PackablePhaseEnvelopeData : public PhaseEnvelopeData
 #undef X
 /* Use X macros to auto-generate the copying */
 #define X(name) name = PED.name;
-        PHASE_ENVELOPE_MATRICES
+          PHASE_ENVELOPE_MATRICES
 #undef X
     };
 
@@ -123,7 +123,7 @@ class PackablePhaseEnvelopeData : public PhaseEnvelopeData
 #undef X
 /* Use X macros to auto-generate the packing code; each will look something like: matrices.insert(std::pair<std::string, std::vector<std::vector<CoolPropDbl> > >("T", T)); */
 #define X(name) matrices.insert(std::pair<std::string, std::vector<std::vector<double>>>(#name, name));
-        PHASE_ENVELOPE_MATRICES
+          PHASE_ENVELOPE_MATRICES
 #undef X
     };
     std::map<std::string, std::vector<double>>::iterator get_vector_iterator(const std::string& name) {
@@ -1035,7 +1035,7 @@ class TabularDataLibrary
     std::map<std::string, TabularDataSet> data;
 
    public:
-    TabularDataLibrary(){};
+    TabularDataLibrary() {};
     std::string path_to_tables(shared_ptr<CoolProp::AbstractState>& AS) {
         std::vector<std::string> fluids = AS->fluid_names();
         std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();

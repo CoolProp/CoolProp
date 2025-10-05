@@ -28,7 +28,7 @@ class CoolPropBaseError : public std::exception
         eDirectorySize
     };
     CoolPropBaseError(const std::string& err, ErrCode code) throw() : m_code(code), m_err(err) {}
-    ~CoolPropBaseError() throw(){};
+    ~CoolPropBaseError() throw() {};
     virtual const char* what() const throw() {
         return m_err.c_str();
     }

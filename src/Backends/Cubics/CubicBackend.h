@@ -95,7 +95,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
                 throw ValueError(format("I don't know what to do with this fluid constant: %s", get_parameter_information(param, "short").c_str()));
         }
     }
-    
+
     /// Return a string from the backend for the mixture/fluid
     std::string fluid_param_string(const std::string&);
     /// Calculate the gas constant in J/mol/K
@@ -292,7 +292,7 @@ class PengRobinsonBackend : public AbstractCubicBackend
 {
 
    public:
-    PengRobinsonBackend(){};  // Default constructor (make sure you know what you are doing)
+    PengRobinsonBackend() {};  // Default constructor (make sure you know what you are doing)
     PengRobinsonBackend(const std::vector<double>& Tc, const std::vector<double>& pc, const std::vector<double>& acentric, double R_u,
                         bool generate_SatL_and_SatV = true) {
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
@@ -341,7 +341,7 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
     CubicResidualHelmholtz() {
         ACB = NULL;
     };
-    CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB){};
+    CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB) {};
 
     // copy assignment
     CubicResidualHelmholtz& operator=(CubicResidualHelmholtz& other) {

@@ -1030,7 +1030,7 @@ TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]"
     }
 }
 
-TEST_CASE("R134A saturation bug in dev", "[2545]"){
+TEST_CASE("R134A saturation bug in dev", "[2545]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134A"));
     AS->update(QT_INPUTS, 1, 273);
     double p = AS->p();
@@ -1358,7 +1358,7 @@ class AncillaryFixture
         for (std::size_t i = 0; i < fluids.size(); ++i) {
             shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
             auto* rHEOS = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-            if (!rHEOS->is_pure()){
+            if (!rHEOS->is_pure()) {
                 continue;
             }
             do_sat(AS);
@@ -1540,7 +1540,7 @@ class SatTFixture
         for (std::size_t i = 0; i < fluids.size(); ++i) {
             shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluids[i]));
             auto* rHEOS = dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-            if (!rHEOS->is_pure()){
+            if (!rHEOS->is_pure()) {
                 continue;
             }
             do_sat(AS);
@@ -1969,19 +1969,17 @@ TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phas
     D. cmake --build bld
     E. stdout has the values for the derivatives in mass-based units
      */
-    
+
     using paramtuple = std::tuple<parameters, parameters, parameters>;
-    
-    SECTION("Compared with reference data"){
-        
-        std::map<paramtuple, double> pairs = {
-            {{iDmass, iP, iHmass}, 0.00056718665544440146},
-            {{iDmass, iHmass, iP}, -0.0054665229407696173},
-            {{iDmass, iDmass, iDmass}, 179.19799206447755}
-        };
-        
+
+    SECTION("Compared with reference data") {
+
+        std::map<paramtuple, double> pairs = {{{iDmass, iP, iHmass}, 0.00056718665544440146},
+                                              {{iDmass, iHmass, iP}, -0.0054665229407696173},
+                                              {{iDmass, iDmass, iDmass}, 179.19799206447755}};
+
         std::unique_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
-        for (auto& [pair, expected_value]: pairs) {
+        for (auto& [pair, expected_value] : pairs) {
             // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
             std::ostringstream ss1;
             auto& [p1, p2, p3] = pair;
@@ -1996,10 +1994,10 @@ TEST_CASE("Check the first two-phase derivative using splines", "[first_two_phas
             }
         }
     }
-    SECTION("Finite diffs"){
-        std::vector<paramtuple> pairs = {{iDmass, iHmass, iP}, {iDmolar, iHmolar, iP}};//, {iDmass, iHmass, iP}};
+    SECTION("Finite diffs") {
+        std::vector<paramtuple> pairs = {{iDmass, iHmass, iP}, {iDmolar, iHmolar, iP}};  //, {iDmass, iHmass, iP}};
         std::unique_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
-        for (auto& pair: pairs) {
+        for (auto& pair : pairs) {
             // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
             std::ostringstream ss1;
             auto& [p1, p2, p3] = pair;
@@ -2090,16 +2088,16 @@ TEST_CASE("Check the PC-SAFT pressure function", "[pcsaft_pressure]") {
     CHECK(abs((p_calc / p) - 1) < 1e-5);
 
     p_calc = CoolProp::PropsSI("P", "T", 274., "Dmolar", 55530.40675319466, "PCSAFT::WATER");
-    CHECK(abs((p_calc/p) - 1) < 1e-5);
+    CHECK(abs((p_calc / p) - 1) < 1e-5);
 
-    p_calc = CoolProp::PropsSI("P", "T", 305., "Dmolar", 16965.6697209874,"PCSAFT::ACETIC ACID");
-    CHECK(abs((p_calc/p) - 1) < 1e-5);
+    p_calc = CoolProp::PropsSI("P", "T", 305., "Dmolar", 16965.6697209874, "PCSAFT::ACETIC ACID");
+    CHECK(abs((p_calc / p) - 1) < 1e-5);
 
     p_calc = CoolProp::PropsSI("P", "T", 240., "Dmolar", 15955.50941242, "PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((p_calc/p) - 1) < 1e-5);
+    CHECK(abs((p_calc / p) - 1) < 1e-5);
 
     p_calc = CoolProp::PropsSI("P", "T", 298.15, "Dmolar", 9368.903838750752, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
-    CHECK(abs((p_calc/p) - 1) < 1e-5);
+    CHECK(abs((p_calc / p) - 1) < 1e-5);
 
     //p_calc = CoolProp::PropsSI("P", "T", 298.15, "Dmolar", 55757.07260200306, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
     //CHECK(abs((p_calc/p) - 1) < 1e-5);
@@ -2121,20 +2119,21 @@ TEST_CASE("Check the PC-SAFT density function", "[pcsaft_density]") {
     den_calc = CoolProp::PropsSI("Dmolar", "T|liquid", 274., "P", 101325, "PCSAFT::WATER");
     CHECK(abs((den_calc / den) - 1) < 1e-5);
 
-    den = 17240.; // source: DIPPR correlation
-    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",305.,"P",101325,"PCSAFT::ACETIC ACID");
-    CHECK(abs((den_calc/den) - 1) < 2e-2);
+    den = 17240.;  // source: DIPPR correlation
+    den_calc = CoolProp::PropsSI("Dmolar", "T|liquid", 305., "P", 101325, "PCSAFT::ACETIC ACID");
+    CHECK(abs((den_calc / den) - 1) < 2e-2);
 
     den = 15955.509146801696;
-    den_calc = CoolProp::PropsSI("Dmolar","T|liquid",240.,"P",101325,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((den_calc/den) - 1) < 1e-5);
+    den_calc = CoolProp::PropsSI("Dmolar", "T|liquid", 240., "P", 101325, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((den_calc / den) - 1) < 1e-5);
 
     den = 9368.90368306872;
     den_calc = CoolProp::PropsSI("Dmolar", "T|liquid", 298.15, "P", 101325, "PCSAFT::METHANOL[0.055]&CYCLOHEXANE[0.945]");
     CHECK(abs((den_calc / den) - 1) < 1e-5);
 
     den = 55740.157290833515;
-    den_calc = CoolProp::PropsSI("Dmolar", "T|liquid", 298.15, "P", 101325, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
+    den_calc =
+      CoolProp::PropsSI("Dmolar", "T|liquid", 298.15, "P", 101325, "PCSAFT::Na+[0.010579869455908]&Cl-[0.010579869455908]&WATER[0.978840261088184]");
     CHECK(abs((den_calc / den) - 1) < 1e-5);
 
     den = 16621.0;
@@ -2150,8 +2149,8 @@ TEST_CASE("Check the PC-SAFT density function", "[pcsaft_density]") {
     CHECK(abs((den_calc / den) - 1) < 1e-2);
 
     den = 623.59;
-    den_calc = CoolProp::PropsSI("Dmolar","T|liquid", 430,"P", 2000000, "PCSAFT::PROPANE");
-    CHECK(abs((den_calc/den) - 1) < 1e-2);
+    den_calc = CoolProp::PropsSI("Dmolar", "T|liquid", 430, "P", 2000000, "PCSAFT::PROPANE");
+    CHECK(abs((den_calc / den) - 1) < 1e-2);
 }
 
 TEST_CASE("Check the PC-SAFT residual enthalpy function", "[pcsaft_enthalpy]") {
@@ -2164,20 +2163,20 @@ TEST_CASE("Check the PC-SAFT residual enthalpy function", "[pcsaft_enthalpy]") {
     CHECK(abs((h_calc / h) - 1) < 1e-5);
 
     h = -38925.302571456035;
-    h_calc = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 16655.853047419932,"PCSAFT::ACETIC ACID");
-    CHECK(abs((h_calc/h) - 1) < 1e-5);
+    h_calc = CoolProp::PropsSI("Hmolar_residual", "T|liquid", 325., "Dmolar", 16655.853047419932, "PCSAFT::ACETIC ACID");
+    CHECK(abs((h_calc / h) - 1) < 1e-5);
 
     h = -15393.870073928741;
     h_calc = CoolProp::PropsSI("Hmolar_residual", "T|gas", 325., "Dmolar", 85.70199446609787, "PCSAFT::ACETIC ACID");
     CHECK(abs((h_calc / h) - 1) < 1e-5);
 
     h = -18242.128097841978;
-    h_calc = CoolProp::PropsSI("Hmolar_residual","T|liquid",325.,"Dmolar", 13141.475980937616,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((h_calc/h) - 1) < 1e-5);
+    h_calc = CoolProp::PropsSI("Hmolar_residual", "T|liquid", 325., "Dmolar", 13141.475980937616, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((h_calc / h) - 1) < 1e-5);
 
     h = -93.819615173017169;
-    h_calc = CoolProp::PropsSI("Hmolar_residual","T|gas",325.,"Dmolar", 37.963459290365265,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((h_calc/h) - 1) < 1e-5);
+    h_calc = CoolProp::PropsSI("Hmolar_residual", "T|gas", 325., "Dmolar", 37.963459290365265, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((h_calc / h) - 1) < 1e-5);
 
     // checks based on values from the HEOS backend
     h = CoolProp::PropsSI("Hmolar_residual", "T|liquid", 325., "Dmolar", 8983.377722763931, "HEOS::TOLUENE");
@@ -2208,20 +2207,20 @@ TEST_CASE("Check the PC-SAFT residual entropy function", "[pcsaft_entropy]") {
     CHECK(abs((s_calc / s) - 1) < 1e-5);
 
     s = -47.42736805661422;
-    s_calc = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 16655.853047419932,"PCSAFT::ACETIC ACID");
-    CHECK(abs((s_calc/s) - 1) < 1e-5);
+    s_calc = CoolProp::PropsSI("Smolar_residual", "T|liquid", 325., "Dmolar", 16655.853047419932, "PCSAFT::ACETIC ACID");
+    CHECK(abs((s_calc / s) - 1) < 1e-5);
 
     s = -34.0021996393859;
     s_calc = CoolProp::PropsSI("Smolar_residual", "T|gas", 325., "Dmolar", 85.70199446609787, "PCSAFT::ACETIC ACID");
     CHECK(abs((s_calc / s) - 1) < 1e-5);
 
     s = -26.42525828195748;
-    s_calc = CoolProp::PropsSI("Smolar_residual","T|liquid",325.,"Dmolar", 13141.475980937616,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((s_calc/s) - 1) < 1e-5);
+    s_calc = CoolProp::PropsSI("Smolar_residual", "T|liquid", 325., "Dmolar", 13141.475980937616, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((s_calc / s) - 1) < 1e-5);
 
     s = -0.08427662199177874;
-    s_calc = CoolProp::PropsSI("Smolar_residual","T|gas",325.,"Dmolar", 37.963459290365265,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((s_calc/s) - 1) < 1e-5);
+    s_calc = CoolProp::PropsSI("Smolar_residual", "T|gas", 325., "Dmolar", 37.963459290365265, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((s_calc / s) - 1) < 1e-5);
 
     // checks based on values from the HEOS backend
     s = CoolProp::PropsSI("Smolar_residual", "T|liquid", 325., "Dmolar", 8983.377722763931, "HEOS::TOLUENE");
@@ -2251,20 +2250,20 @@ TEST_CASE("Check the PC-SAFT residual gibbs energy function", "[pcsaft_gibbs]") 
     CHECK(abs((g_calc / g) - 1) < 1e-5);
 
     g = -7038.128334100866;
-    g_calc = CoolProp::PropsSI("Gmolar_residual","T|liquid",325.,"Dmolar", 16655.853314424,"PCSAFT::ACETIC ACID");
-    CHECK(abs((g_calc/g) - 1) < 1e-5);
+    g_calc = CoolProp::PropsSI("Gmolar_residual", "T|liquid", 325., "Dmolar", 16655.853314424, "PCSAFT::ACETIC ACID");
+    CHECK(abs((g_calc / g) - 1) < 1e-5);
 
     g = -2109.4916554917604;
     g_calc = CoolProp::PropsSI("Gmolar_residual", "T|gas", 325., "Dmolar", 85.70199446609787, "PCSAFT::ACETIC ACID");
     CHECK(abs((g_calc / g) - 1) < 1e-5);
 
     g = 6178.973332408309;
-    g_calc = CoolProp::PropsSI("Gmolar_residual","T|liquid",325.,"Dmolar", 13141.47619110254,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((g_calc/g) - 1) < 1e-5);
+    g_calc = CoolProp::PropsSI("Gmolar_residual", "T|liquid", 325., "Dmolar", 13141.47619110254, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((g_calc / g) - 1) < 1e-5);
 
     g = -33.038791982589615;
-    g_calc = CoolProp::PropsSI("Gmolar_residual","T|gas",325.,"Dmolar", 37.96344503293008,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((g_calc/g) - 1) < 1e-5);
+    g_calc = CoolProp::PropsSI("Gmolar_residual", "T|gas", 325., "Dmolar", 37.96344503293008, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((g_calc / g) - 1) < 1e-5);
 }
 
 TEST_CASE("Check vapor pressures calculated using PC-SAFT", "[pcsaft_vapor_pressure]") {
@@ -2281,8 +2280,8 @@ TEST_CASE("Check vapor pressures calculated using PC-SAFT", "[pcsaft_vapor_press
     CHECK(abs((vp_calc / vp) - 1) < 1e-3);
 
     vp = 622763.506195;
-    vp_calc = CoolProp::PropsSI("P","T", 300.,"Q", 0,"PCSAFT::DIMETHYL ETHER");
-    CHECK(abs((vp_calc/vp) - 1) < 1e-3);
+    vp_calc = CoolProp::PropsSI("P", "T", 300., "Q", 0, "PCSAFT::DIMETHYL ETHER");
+    CHECK(abs((vp_calc / vp) - 1) < 1e-3);
 
     // This test doesn't pass yet. The flash algorithm for the PC-SAFT backend is not yet robust enough.
     // vp = 1.7551e-4;
@@ -2305,9 +2304,9 @@ TEST_CASE("Check PC-SAFT interaction parameter functions", "[pcsaft_binary_inter
     CHECK(atof(get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij").c_str()) == -0.127);
 }
 
-TEST_CASE("Check bubble pressures calculated using PC-SAFT", "[pcsaft_bubble_pressure]")
-{
-    double vp = 1816840.45112607; // source: H.-M. Lin, H. M. Sebastian, J. J. Simnick, and K.-C. Chao, “Gas-liquid equilibrium in binary mixtures of methane with N-decane, benzene, and toluene,” J. Chem. Eng. Data, vol. 24, no. 2, pp. 146–149, Apr. 1979.
+TEST_CASE("Check bubble pressures calculated using PC-SAFT", "[pcsaft_bubble_pressure]") {
+    double vp =
+      1816840.45112607;  // source: H.-M. Lin, H. M. Sebastian, J. J. Simnick, and K.-C. Chao, “Gas-liquid equilibrium in binary mixtures of methane with N-decane, benzene, and toluene,” J. Chem. Eng. Data, vol. 24, no. 2, pp. 146–149, Apr. 1979.
     double vp_calc = CoolProp::PropsSI("P", "T", 421.05, "Q", 0, "PCSAFT::METHANE[0.0252]&BENZENE[0.9748]");
     CHECK(abs((vp_calc / vp) - 1) < 1e-3);
 
@@ -2325,8 +2324,7 @@ TEST_CASE("Check bubble pressures calculated using PC-SAFT", "[pcsaft_bubble_pre
     std::string CAS_aacid = "64-19-7";
     try {
         get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij");
-    }
-    catch (...) {
+    } catch (...) {
         set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.127);
     }
 
@@ -2339,8 +2337,8 @@ TEST_CASE("Check bubble pressures calculated using PC-SAFT", "[pcsaft_bubble_pre
     CHECK(abs((vp_calc / vp) - 1) < 2e-2);
 
     vp = 2387.42669687;
-    vp_calc = CoolProp::PropsSI("P","T", 298.15,"Q", 0,"PCSAFT::Na+[0.0907304774758426]&Cl-[0.0907304774758426]&WATER[0.818539045048315]");
-    CHECK(abs((vp_calc/vp) - 1) < 0.23);
+    vp_calc = CoolProp::PropsSI("P", "T", 298.15, "Q", 0, "PCSAFT::Na+[0.0907304774758426]&Cl-[0.0907304774758426]&WATER[0.818539045048315]");
+    CHECK(abs((vp_calc / vp) - 1) < 0.23);
 }
 
 TEST_CASE("Check bubble temperatures calculated using PC-SAFT", "[pcsaft_bubble_temperature]") {
@@ -2370,12 +2368,11 @@ TEST_CASE("Check bubble temperatures calculated using PC-SAFT", "[pcsaft_bubble_
     CHECK(abs((t_calc / t) - 1) < 1e-3);
 
     // set binary interaction parameter, if not already set
-    std::string CAS_water = get_fluid_param_string("WATER","CAS");
+    std::string CAS_water = get_fluid_param_string("WATER", "CAS");
     std::string CAS_aacid = "64-19-7";
     try {
         get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij");
-    }
-    catch (...) {
+    } catch (...) {
         set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.127);
     }
 
@@ -2394,7 +2391,7 @@ TEST_CASE("Check bubble temperatures calculated using PC-SAFT", "[pcsaft_bubble_
 
 TEST_CASE("Github issue #2470", "[pureflash]") {
     auto fluide = "Nitrogen";
-    auto enthalpy = 67040.57857;    //J / kg
+    auto enthalpy = 67040.57857;  //J / kg
     auto pressure = 3368965.046;  //Pa
     std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", fluide));
     AS->update(PQ_INPUTS, pressure, 1);
@@ -2448,11 +2445,11 @@ TEST_CASE("Github issue #2608", "[2608]") {
     std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "CO2"));
     double pc = AS->p_critical();
     CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 73.8e5, 218.048));
-    SECTION("Without phase"){
+    SECTION("Without phase") {
         AS->unspecify_phase();
         CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 73.8e5, 1840.68));
     }
-    SECTION("With phase"){
+    SECTION("With phase") {
         AS->specify_phase(iphase_supercritical_gas);
         CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 73.8e5, 1840.68));
         AS->unspecify_phase();
@@ -2470,19 +2467,17 @@ TEST_CASE("Github issue #2622", "[2622]") {
 
     /// Update at just below the triple point temp
     AS->update(PT_INPUTS, p5, 165.999);
-    
+
     AS->update(HmassP_INPUTS, h5, p5);
     double A = AS->T();
     CAPTURE(A);
 }
 
-
-
 template <typename T>
 std::vector<T> linspace(T start, T end, int num) {
     std::vector<T> linspaced;
     if (num <= 0) {
-        return linspaced; // Return empty vector for invalid num
+        return linspaced;  // Return empty vector for invalid num
     }
     if (num == 1) {
         linspaced.push_back(start);
@@ -2502,14 +2497,14 @@ TEST_CASE("Github issue #2582", "[2582]") {
     AS->update(PQ_INPUTS, 73.33e5, 0);
     double hmass_liq = AS->saturated_liquid_keyed_output(iHmass);
     double hmass_vap = AS->saturated_vapor_keyed_output(iHmass);
-//    std::cout << pc << std::endl;
-//    std::cout << hmass_liq << std::endl;
-//    std::cout << hmass_vap << std::endl;
-    for (auto hmass: linspace(100e3, 700e3, 1000)){
+    //    std::cout << pc << std::endl;
+    //    std::cout << hmass_liq << std::endl;
+    //    std::cout << hmass_vap << std::endl;
+    for (auto hmass : linspace(100e3, 700e3, 1000)) {
         CAPTURE(hmass);
         CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 73.76e5));
     }
-    for (auto hmass: linspace(100e3, 700e3, 1000)){
+    for (auto hmass : linspace(100e3, 700e3, 1000)) {
         CAPTURE(hmass);
         CHECK_NOTHROW(AS->update(CoolProp::HmassP_INPUTS, hmass, 73.33e5));
     }
@@ -2524,91 +2519,88 @@ TEST_CASE("Github issue #2594", "[2594]") {
     double rholiq = AS->rhomolar();
     double umass_liq = AS->saturated_liquid_keyed_output(iUmass);
     double umass_vap = AS->saturated_vapor_keyed_output(iUmass);
-//    std::cout << std::setprecision(20) << pc << std::endl;
-//    std::cout << umass_liq << std::endl;
-//    std::cout << umass_vap << std::endl;
-    
+    //    std::cout << std::setprecision(20) << pc << std::endl;
+    //    std::cout << umass_liq << std::endl;
+    //    std::cout << umass_vap << std::endl;
+
     auto umass = 314719.5306503257;
-//    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-//    bool sat_called = false;
-//    auto MM = AS->molar_mass();
-//    rHEOS.p_phase_determination_pure_or_pseudopure(iUmolar, umass*MM, sat_called);
-//    CHECK(rHEOS.phase() == iphase_liquid);
-    
+    //    auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
+    //    bool sat_called = false;
+    //    auto MM = AS->molar_mass();
+    //    rHEOS.p_phase_determination_pure_or_pseudopure(iUmolar, umass*MM, sat_called);
+    //    CHECK(rHEOS.phase() == iphase_liquid);
+
     AS->update(DmolarP_INPUTS, rholiq, p);
     double rho1 = AS->rhomolar();
     double T1 = AS->T();
     double dumolardT_P = AS->first_partial_deriv(iUmolar, iT, iP);
     double dpdrho_T = AS->first_partial_deriv(iP, iDmolar, iT);
-//    double dumassdT_P = AS->first_partial_deriv(iUmass, iT, iP);
-    
+    //    double dumassdT_P = AS->first_partial_deriv(iUmass, iT, iP);
+
     AS->specify_phase(iphase_liquid);
     AS->update(PT_INPUTS, p, Tsat);
     double rho2 = AS->rhomolar();
     double T2 = AS->T();
-    double dpdrho_T_imposed = AS->first_partial_deriv(iP, iDmolar, iT);	
+    double dpdrho_T_imposed = AS->first_partial_deriv(iP, iDmolar, iT);
     double dumolardT_P_imposed = AS->first_partial_deriv(iUmolar, iT, iP);
-//    double dumassdT_P_imposed = AS->first_partial_deriv(iUmass, iT, iP);
+    //    double dumassdT_P_imposed = AS->first_partial_deriv(iUmass, iT, iP);
     AS->unspecify_phase();
-    
+
     CHECK_NOTHROW(AS->update(CoolProp::PUmass_INPUTS, p, umass));
-    
-    BENCHMARK("dp/drho|T"){
+
+    BENCHMARK("dp/drho|T") {
         return AS->first_partial_deriv(iP, iDmolar, iT);
     };
-    BENCHMARK("du/dT|p"){
+    BENCHMARK("du/dT|p") {
         return AS->first_partial_deriv(iUmolar, iT, iP);
     };
 }
 
-
 TEST_CASE("CoolProp.jl tests", "[2598]") {
-//    // Whoah, actually quite a few change meaningfully
-//    SECTION("Check pcrit doesn't change too much with SA on"){
-//        auto init = get_config_bool(ENABLE_SUPERANCILLARIES);
-//        for (auto fluid : strsplit(get_global_param_string("fluids_list"), ',')){
-//            CAPTURE(fluid);
-//            set_config_bool(ENABLE_SUPERANCILLARIES, true); auto pcrit_SA = Props1SI(fluid, "pcrit");
-//            set_config_bool(ENABLE_SUPERANCILLARIES, false); auto pcrit_noSA = Props1SI(fluid, "pcrit");
-//            CAPTURE(pcrit_SA - pcrit_noSA);
-//            CHECK(std::abs(pcrit_SA/pcrit_noSA-1) < 1E-2);
-//        }
-//        set_config_bool(ENABLE_SUPERANCILLARIES, init);
-//    }
-    
-    for (auto fluid : strsplit(get_global_param_string("fluids_list"), ',')){
+    //    // Whoah, actually quite a few change meaningfully
+    //    SECTION("Check pcrit doesn't change too much with SA on"){
+    //        auto init = get_config_bool(ENABLE_SUPERANCILLARIES);
+    //        for (auto fluid : strsplit(get_global_param_string("fluids_list"), ',')){
+    //            CAPTURE(fluid);
+    //            set_config_bool(ENABLE_SUPERANCILLARIES, true); auto pcrit_SA = Props1SI(fluid, "pcrit");
+    //            set_config_bool(ENABLE_SUPERANCILLARIES, false); auto pcrit_noSA = Props1SI(fluid, "pcrit");
+    //            CAPTURE(pcrit_SA - pcrit_noSA);
+    //            CHECK(std::abs(pcrit_SA/pcrit_noSA-1) < 1E-2);
+    //        }
+    //        set_config_bool(ENABLE_SUPERANCILLARIES, init);
+    //    }
+
+    for (auto fluid : strsplit(get_global_param_string("fluids_list"), ',')) {
         auto pcrit = Props1SI(fluid, "pcrit");
         auto Tcrit = Props1SI(fluid, "Tcrit");
         CAPTURE(fluid);
-        CAPTURE(PhaseSI("P", pcrit+50000, "T", Tcrit+3, fluid));
-        CAPTURE(PhaseSI("P", pcrit+50000, "T", Tcrit-3, fluid));
-        CAPTURE(PhaseSI("P", pcrit-50000, "T", Tcrit+3, fluid));
-        
-        CAPTURE(PropsSI("Q", "P", pcrit+50000, "T", Tcrit+3, fluid));
-        CAPTURE(PropsSI("Q", "P", pcrit+50000, "T", Tcrit-3, fluid));
-        CAPTURE(PropsSI("Q", "P", pcrit-50000, "T", Tcrit+3, fluid));
-        
-        CHECK(PhaseSI("P", pcrit+50000, "T", Tcrit+3, fluid)=="supercritical");
-        CHECK(PhaseSI("P", pcrit+50000, "T", Tcrit-3, fluid)=="supercritical_liquid");
-        CHECK(PhaseSI("P", pcrit-50000, "T", Tcrit+3, fluid)=="supercritical_gas");
+        CAPTURE(PhaseSI("P", pcrit + 50000, "T", Tcrit + 3, fluid));
+        CAPTURE(PhaseSI("P", pcrit + 50000, "T", Tcrit - 3, fluid));
+        CAPTURE(PhaseSI("P", pcrit - 50000, "T", Tcrit + 3, fluid));
+
+        CAPTURE(PropsSI("Q", "P", pcrit + 50000, "T", Tcrit + 3, fluid));
+        CAPTURE(PropsSI("Q", "P", pcrit + 50000, "T", Tcrit - 3, fluid));
+        CAPTURE(PropsSI("Q", "P", pcrit - 50000, "T", Tcrit + 3, fluid));
+
+        CHECK(PhaseSI("P", pcrit + 50000, "T", Tcrit + 3, fluid) == "supercritical");
+        CHECK(PhaseSI("P", pcrit + 50000, "T", Tcrit - 3, fluid) == "supercritical_liquid");
+        CHECK(PhaseSI("P", pcrit - 50000, "T", Tcrit + 3, fluid) == "supercritical_gas");
     }
 }
 
-TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]"){
+TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]") {
     auto TNBP_RP = PropsSI("T", "P", 101325, "Q", 0, "REFPROP::METHANOL");
     auto TNBP_CP = PropsSI("T", "P", 101325, "Q", 0, "HEOS::METHANOL");
     CHECK(TNBP_RP == Catch::Approx(TNBP_CP).epsilon(1e-6));
-    
+
     auto rhoL_RP = PropsSI("D", "T", 400, "Q", 0, "REFPROP::METHANOL");
     auto rhoL_CP = PropsSI("D", "T", 400, "Q", 0, "HEOS::METHANOL");
     CHECK(rhoL_RP == Catch::Approx(rhoL_CP).epsilon(1e-12));
-    
+
     auto cp0_RP = PropsSI("CP0MOLAR", "T", 400, "Dmolar", 1e-5, "REFPROP::METHANOL");
     auto cp0_CP = PropsSI("CP0MOLAR", "T", 400, "Dmolar", 1e-5, "HEOS::METHANOL");
     CHECK(cp0_RP == Catch::Approx(cp0_CP).epsilon(1e-4));
-    
 }
-
 
 TEST_CASE("Check phase determination for PC-SAFT backend", "[pcsaft_phase]") {
     double den = 9033.114209728405;
@@ -2624,174 +2616,176 @@ TEST_CASE("Check phase determination for PC-SAFT backend", "[pcsaft_phase]") {
     CHECK(phase == get_phase_index("phase_gas"));
 }
 
-TEST_CASE("Check that indexes for mixtures are assigned correctly, especially for the association term", "[pcsaft_indexes]")
-{
+TEST_CASE("Check that indexes for mixtures are assigned correctly, especially for the association term", "[pcsaft_indexes]") {
     // The tests are performed by adding parameters for extra compounds that actually
     // are not present in the system and ensuring that the properties of the fluid do not change.
 
     // Binary mixture: water-acetic acid
-        // set binary interaction parameter, if not already set
-    std::string CAS_water = get_fluid_param_string("WATER","CAS");
+    // set binary interaction parameter, if not already set
+    std::string CAS_water = get_fluid_param_string("WATER", "CAS");
     std::string CAS_aacid = "64-19-7";
     try {
         get_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij");
-    }
-    catch (...) {
+    } catch (...) {
         set_mixture_binary_pair_pcsaft(CAS_water, CAS_aacid, "kij", -0.127);
     }
 
     double t = 413.5385;
     double rho = 15107.481234283325;
-    double p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::ACETIC ACID"); // only parameters for acetic acid
-    double p_extra = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::ACETIC ACID[1.0]&WATER[0]"); // same composition, but with mixture parameters
-    CHECK(abs((p_extra - p)/ p * 100) < 1e-1);
+    double p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::ACETIC ACID");  // only parameters for acetic acid
+    double p_extra =
+      CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::ACETIC ACID[1.0]&WATER[0]");  // same composition, but with mixture parameters
+    CHECK(abs((p_extra - p) / p * 100) < 1e-1);
 
     // Binary mixture: water-furfural
-    t = 400; // K
+    t = 400;  // K
     // p = 34914.37778265716; // Pa
     rho = 10657.129498214763;
-    p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::FURFURAL"); // only parameters for furfural
-    p_extra = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::WATER[0]&FURFURAL[1.0]"); // same composition, but with mixture of components
-    CHECK(abs((p_extra - p)/ p * 100) < 1e-1);
+    p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::FURFURAL");                      // only parameters for furfural
+    p_extra = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::WATER[0]&FURFURAL[1.0]");  // same composition, but with mixture of components
+    CHECK(abs((p_extra - p) / p * 100) < 1e-1);
 
     // Mixture: NaCl in water with random 4th component
-    t = 298.15; // K
+    t = 298.15;  // K
     // p = 3153.417688548272; // Pa
     rho = 55320.89616248148;
-    p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::WATER"); // only parameters for water
-    p_extra = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::Na+[0]&Cl-[0]&WATER[1.0]&DIMETHOXYMETHANE[0]"); // same composition, but with mixture of components
-    CHECK(abs((p_extra - p)/ p * 100) < 1e-1);
+    p = CoolProp::PropsSI("P", "T", t, "Dmolar", rho, "PCSAFT::WATER");  // only parameters for water
+    p_extra = CoolProp::PropsSI("P", "T", t, "Dmolar", rho,
+                                "PCSAFT::Na+[0]&Cl-[0]&WATER[1.0]&DIMETHOXYMETHANE[0]");  // same composition, but with mixture of components
+    CHECK(abs((p_extra - p) / p * 100) < 1e-1);
 }
 
 /// A fixture class to enable superancillaries just for a given test
-class SuperAncillaryOnFixture{
-private:
+class SuperAncillaryOnFixture
+{
+   private:
     const configuration_keys m_key = ENABLE_SUPERANCILLARIES;
     const bool initial_value;
-public:
+
+   public:
     SuperAncillaryOnFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
         CoolProp::set_config_bool(m_key, true);
     }
-    ~SuperAncillaryOnFixture(){
+    ~SuperAncillaryOnFixture() {
         CoolProp::set_config_bool(m_key, initial_value);
     }
 };
 
 /// A fixture class to enable superancillaries just for a given test
-class SuperAncillaryOffFixture{
-private:
+class SuperAncillaryOffFixture
+{
+   private:
     const configuration_keys m_key = ENABLE_SUPERANCILLARIES;
     const bool initial_value;
-public:
+
+   public:
     SuperAncillaryOffFixture() : initial_value(CoolProp::get_config_bool(m_key)) {
         CoolProp::set_config_bool(m_key, false);
     }
-    ~SuperAncillaryOffFixture(){
+    ~SuperAncillaryOffFixture() {
         CoolProp::set_config_bool(m_key, initial_value);
     }
 };
 
-
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary for water", "[superanc]") {
-    
+
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
     superancillary::SuperAncillary<std::vector<double>> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-    BENCHMARK("HEOS.clear()"){
+    BENCHMARK("HEOS.clear()") {
         return rHEOS.clear();
     };
-    BENCHMARK("HEOS rho(T)"){
+    BENCHMARK("HEOS rho(T)") {
         return AS->update(QT_INPUTS, 1.0, 300.0);
     };
-    BENCHMARK("HEOS update_QT_pure_superanc(Q,T)"){
+    BENCHMARK("HEOS update_QT_pure_superanc(Q,T)") {
         return rHEOS.update_QT_pure_superanc(1.0, 300.0);
     };
-    BENCHMARK("superanc rho(T)"){
+    BENCHMARK("superanc rho(T)") {
         return anc.eval_sat(300.0, 'D', 1);
     };
-    BENCHMARK("IF97 rho(T)"){
+    BENCHMARK("IF97 rho(T)") {
         return IF97->update(QT_INPUTS, 1.0, 300.0);
     };
-    
+
     double Tmin = AS->get_fluid_parameter_double(0, "SUPERANC::Tmin");
     double Tc = AS->get_fluid_parameter_double(0, "SUPERANC::Tcrit_num");
     double pmin = AS->get_fluid_parameter_double(0, "SUPERANC::pmin");
     double pmax = AS->get_fluid_parameter_double(0, "SUPERANC::pmax");
-    
+
     CHECK_THROWS(AS->get_fluid_parameter_double(1, "SUPERANC::pmax"));
-    
-    BENCHMARK("HEOS rho(p)"){
+
+    BENCHMARK("HEOS rho(p)") {
         return AS->update(PQ_INPUTS, 101325, 1.0);
     };
-    BENCHMARK("superanc T(p)"){
+    BENCHMARK("superanc T(p)") {
         return anc.get_T_from_p(101325);
     };
-    BENCHMARK("IF97 rho(p)"){
+    BENCHMARK("IF97 rho(p)") {
         return IF97->update(PQ_INPUTS, 101325, 1.0);
     };
 }
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmark class construction", "[superanc]") {
-    
-    BENCHMARK("Water [SA]"){
+
+    BENCHMARK("Water [SA]") {
         return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     };
-    BENCHMARK("R410A [no SA]"){
+    BENCHMARK("R410A [no SA]") {
         return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R410A"));
     };
-    BENCHMARK("propane [SA]"){
+    BENCHMARK("propane [SA]") {
         return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
     };
-    BENCHMARK("air, pseudo-pure [SA]"){
+    BENCHMARK("air, pseudo-pure [SA]") {
         return shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Air"));
     };
 }
 
 TEST_CASE_METHOD(SuperAncillaryOffFixture, "Check superancillary-like calculations with superancillary disabled for water", "[superanc]") {
-    
+
     auto json = nlohmann::json::parse(get_fluid_param_string("WATER", "JSON"))[0].at("EOS")[0].at("SUPERANCILLARY");
     superancillary::SuperAncillary<std::vector<double>> anc{json};
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
     shared_ptr<CoolProp::AbstractState> IF97(CoolProp::AbstractState::factory("IF97", "Water"));
     auto& approxrhoL = anc.get_approx1d('D', 0);
-    
-    BENCHMARK("HEOS rho(T)"){
+
+    BENCHMARK("HEOS rho(T)") {
         return AS->update(QT_INPUTS, 1.0, 300.0);
     };
-    BENCHMARK("superanc rho(T)"){
+    BENCHMARK("superanc rho(T)") {
         return anc.eval_sat(300.0, 'D', 1);
     };
-    BENCHMARK("superanc rho(T) with expansion directly"){
+    BENCHMARK("superanc rho(T) with expansion directly") {
         return approxrhoL.eval(300.0);
     };
-    BENCHMARK("superanc get_index rho(T)"){
+    BENCHMARK("superanc get_index rho(T)") {
         return approxrhoL.get_index(300.0);
     };
-    BENCHMARK("IF97 rho(T)"){
+    BENCHMARK("IF97 rho(T)") {
         return IF97->update(QT_INPUTS, 1.0, 300.0);
     };
-    
-    BENCHMARK("HEOS rho(p)"){
+
+    BENCHMARK("HEOS rho(p)") {
         return AS->update(PQ_INPUTS, 101325, 1.0);
     };
-    BENCHMARK("superanc T(p)"){
+    BENCHMARK("superanc T(p)") {
         return anc.get_T_from_p(101325);
     };
-    BENCHMARK("IF97 rho(p)"){
+    BENCHMARK("IF97 rho(p)") {
         return IF97->update(PQ_INPUTS, 101325, 1.0);
     };
 }
 
-
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary functions are available for all pure fluids", "[ancillary]") {
-    for (auto & fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')){
+    for (auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", fluid));
         auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-        if (rHEOS.is_pure()){
+        if (rHEOS.is_pure()) {
             CAPTURE(fluid);
-            CHECK_NOTHROW(rHEOS.update_QT_pure_superanc(1, rHEOS.T_critical()*0.9999));
+            CHECK_NOTHROW(rHEOS.update_QT_pure_superanc(1, rHEOS.T_critical() * 0.9999));
         }
     }
 };
@@ -2837,7 +2831,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check h_fg", "[superanc]") {
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression; on", "[2438]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
-    BENCHMARK("HP regression"){
+    BENCHMARK("HP regression") {
         AS->update(HmassP_INPUTS, 300e3, 70e5);
         return AS;
     };
@@ -2846,7 +2840,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression; on", "[2438]"
 }
 TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression; off", "[2438]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "CO2"));
-    BENCHMARK("HP regression"){
+    BENCHMARK("HP regression") {
         AS->update(HmassP_INPUTS, 300e3, 70e5);
         return AS;
     };
@@ -2860,8 +2854,8 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression for TS; on", "
     auto sL = AS->saturated_liquid_keyed_output(iSmolar);
     auto sV = AS->saturated_vapor_keyed_output(iSmolar);
     auto N = 1000000U;
-    for (auto i = 0; i < N; ++i){
-        AS->update(SmolarT_INPUTS, (sL + sV)/2 + i*1e-14, T);
+    for (auto i = 0; i < N; ++i) {
+        AS->update(SmolarT_INPUTS, (sL + sV) / 2 + i * 1e-14, T);
     }
     CHECK(AS->T() != 0);
 }
@@ -2872,8 +2866,8 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Performance regression for TS; on", "
     AS->update(QT_INPUTS, 1, T);
     auto sL = AS->saturated_liquid_keyed_output(iSmolar);
     auto sV = AS->saturated_vapor_keyed_output(iSmolar);
-    BENCHMARK("ST regression"){
-        AS->update(SmolarT_INPUTS, (sL + sV)/2, T);
+    BENCHMARK("ST regression") {
+        AS->update(SmolarT_INPUTS, (sL + sV) / 2, T);
         return AS;
     };
 }
@@ -2884,108 +2878,118 @@ TEST_CASE_METHOD(SuperAncillaryOffFixture, "Performance regression for TS; off",
     AS->update(QT_INPUTS, 1, T);
     auto sL = AS->saturated_liquid_keyed_output(iSmolar);
     auto sV = AS->saturated_vapor_keyed_output(iSmolar);
-    BENCHMARK("ST regression"){
-        AS->update(SmolarT_INPUTS, (sL + sV)/2, T);
+    BENCHMARK("ST regression") {
+        AS->update(SmolarT_INPUTS, (sL + sV) / 2, T);
         return AS;
     };
 }
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Benchmarking caching options", "[caching]") {
-    std::array<double, 16> buf15; buf15.fill(0.0);
-    std::array<double, 100> buf100; buf100.fill(0.0);
-    std::array<bool, 100> bool100; bool100.fill(false);
+    std::array<double, 16> buf15;
+    buf15.fill(0.0);
+    std::array<double, 100> buf100;
+    buf100.fill(0.0);
+    std::array<bool, 100> bool100;
+    bool100.fill(false);
     std::vector<CachedElement> cache100(100);
-    for (auto i = 0; i < cache100.size(); ++i){ cache100[i] = _HUGE; }
-    
+    for (auto i = 0; i < cache100.size(); ++i) {
+        cache100[i] = _HUGE;
+    }
+
     std::vector<std::optional<double>> opt100(100);
-    for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
-    
-    BENCHMARK("memset array15 w/ 0"){
+    for (auto i = 0; i < opt100.size(); ++i) {
+        opt100[i] = _HUGE;
+    }
+
+    BENCHMARK("memset array15 w/ 0") {
         std::memset(buf15.data(), 0, sizeof(buf15));
         return buf15;
     };
-    BENCHMARK("std::fill_n array15"){
+    BENCHMARK("std::fill_n array15") {
         std::fill_n(buf15.data(), 15, _HUGE);
         return buf15;
     };
-    BENCHMARK("std::fill array15"){
+    BENCHMARK("std::fill array15") {
         std::fill(buf15.begin(), buf15.end(), _HUGE);
         return buf15;
     };
-    BENCHMARK("array15.fill()"){
+    BENCHMARK("array15.fill()") {
         buf15.fill(_HUGE);
         return buf15;
     };
-    BENCHMARK("memset array100 w/ 0"){
+    BENCHMARK("memset array100 w/ 0") {
         memset(buf100.data(), 0, sizeof(buf100));
         return buf100;
     };
-    BENCHMARK("memset bool100 w/ 0"){
+    BENCHMARK("memset bool100 w/ 0") {
         memset(bool100.data(), false, sizeof(bool100));
         return buf100;
     };
-    BENCHMARK("std::fill_n array100"){
+    BENCHMARK("std::fill_n array100") {
         std::fill_n(buf100.data(), 100, _HUGE);
         return buf100;
     };
-    BENCHMARK("fill array100"){
+    BENCHMARK("fill array100") {
         buf100.fill(_HUGE);
         return buf100;
     };
-    BENCHMARK("fill cache100"){
-        for (auto i = 0; i < cache100.size(); ++i){ cache100[i] = _HUGE; }
+    BENCHMARK("fill cache100") {
+        for (auto i = 0; i < cache100.size(); ++i) {
+            cache100[i] = _HUGE;
+        }
         return cache100;
     };
-    BENCHMARK("fill opt100"){
-        for (auto i = 0; i < opt100.size(); ++i){ opt100[i] = _HUGE; }
+    BENCHMARK("fill opt100") {
+        for (auto i = 0; i < opt100.size(); ++i) {
+            opt100[i] = _HUGE;
+        }
         return opt100;
     };
 }
 std::vector<std::tuple<double, double, double, double>> MSA22values = {
-    {200, 199.97, 142.56, 1.29559},
-    {300, 300.19, 214.07, 1.70203},
-    {400, 400.98, 286.16, 1.99194},
-    {500, 503.02, 359.49, 2.21952},
+  {200, 199.97, 142.56, 1.29559},
+  {300, 300.19, 214.07, 1.70203},
+  {400, 400.98, 286.16, 1.99194},
+  {500, 503.02, 359.49, 2.21952},
 };
 
-TEST_CASE("Ideal gas thermodynamic properties", "[2589]"){
+TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Air"));
     shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Air"));
-    
+
     auto& rRP = *dynamic_cast<REFPROPMixtureBackend*>(AS.get());
     auto& rHEOS = *dynamic_cast<HelmholtzEOSMixtureBackend*>(AS.get());
-    
+
     AS->specify_phase(iphase_gas);
     RP->specify_phase(iphase_gas);
-    
+
     double pig = 101325;
 
     // Moran & Shapiro Table A-22 reference is h(T=0) = 0, but that doesn't play nicely
     // with tau=Tc/T = oo and delta = 0/rhor = 0
-    
-    for (auto [T_K, h_kJkg, u_kJkg, s_kJkgK] : MSA22values){
-        double rho = pig/(AS->gas_constant()*T_K); // ideal-gas molar density assuming Z=1
+
+    for (auto [T_K, h_kJkg, u_kJkg, s_kJkgK] : MSA22values) {
+        double rho = pig / (AS->gas_constant() * T_K);  // ideal-gas molar density assuming Z=1
         AS->update(DmolarT_INPUTS, rho, T_K);
         RP->update(DmolarT_INPUTS, rho, T_K);
-        
-        CHECK(AS->smass_idealgas()/AS->gas_constant() == Catch::Approx(RP->smass_idealgas()/AS->gas_constant()));
-        CHECK(AS->hmass_idealgas()/AS->gas_constant() == Catch::Approx(RP->hmass_idealgas()/AS->gas_constant()));
-        
+
+        CHECK(AS->smass_idealgas() / AS->gas_constant() == Catch::Approx(RP->smass_idealgas() / AS->gas_constant()));
+        CHECK(AS->hmass_idealgas() / AS->gas_constant() == Catch::Approx(RP->hmass_idealgas() / AS->gas_constant()));
+
         std::vector<double> mf(20, 1.0);
-        auto o = rRP.call_THERM0dll(T_K, rho/1e3, mf);
+        auto o = rRP.call_THERM0dll(T_K, rho / 1e3, mf);
         CHECK(o.hmol_Jmol == Catch::Approx(RP->hmolar_idealgas()).epsilon(1e-12));
         CHECK(o.smol_JmolK == Catch::Approx(RP->smolar_idealgas()).epsilon(1e-12));
         CHECK(o.umol_Jmol == Catch::Approx(RP->umolar_idealgas()).epsilon(1e-12));
-        
+
         CAPTURE(T_K);
         CAPTURE(AS->hmass_idealgas());
-        CAPTURE(AS->hmass_idealgas()-h_kJkg*1e3);
+        CAPTURE(AS->hmass_idealgas() - h_kJkg * 1e3);
         CAPTURE(AS->smass_idealgas());
-        CAPTURE(AS->smass_idealgas()-s_kJkgK*1e3);
+        CAPTURE(AS->smass_idealgas() - s_kJkgK * 1e3);
         CAPTURE(AS->umass_idealgas());
-        CAPTURE(AS->umass_idealgas()-u_kJkg*1e3);
+        CAPTURE(AS->umass_idealgas() - u_kJkg * 1e3);
     }
-    
 }
 
 /*

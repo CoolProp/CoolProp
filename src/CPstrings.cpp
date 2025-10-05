@@ -37,7 +37,7 @@ std::string format(const char* fmt, ...) {
         static void delarray(char* p) {
             delete[] p;
         }
-    };                                                           // to use delete[]
+    };  // to use delete[]
     shared_ptr<char> buffer(new char[size], deleter::delarray);  // I'd prefer unique_ptr, but it's only available since c++11
     va_list vl;
     va_start(vl, fmt);

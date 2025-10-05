@@ -377,7 +377,7 @@ class newton_raphson_twophase
         beta(_HUGE),
         N(0),
         logging(false),
-        Nsteps(0){};
+        Nsteps(0) {};
 
     void resize(unsigned int N);
 
@@ -489,7 +489,7 @@ class newton_raphson_saturation
     Eigen::VectorXd r, err_rel;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
-    newton_raphson_saturation(){};
+    newton_raphson_saturation() {};
 
     void resize(std::size_t N);
 
@@ -556,7 +556,7 @@ class PTflash_twophase
     PTflash_twophase_options& IO;
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
-    PTflash_twophase(HelmholtzEOSMixtureBackend& HEOS, PTflash_twophase_options& IO) : HEOS(HEOS), IO(IO){};
+    PTflash_twophase(HelmholtzEOSMixtureBackend& HEOS, PTflash_twophase_options& IO) : HEOS(HEOS), IO(IO) {};
 
     /** \brief Call the Newton-Raphson Solver to solve the equilibrium conditions
          *
@@ -607,7 +607,7 @@ class StabilityEvaluationClass
         m_T(-1),
         m_p(-1),
         _stable(false),
-        debug(false){};
+        debug(false) {};
     /** \brief Specify T&P, otherwise they are loaded the HEOS instance
          */
     void set_TP(double T, double p) {

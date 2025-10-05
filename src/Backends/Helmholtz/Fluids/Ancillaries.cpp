@@ -99,7 +99,7 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
         // because then you get (negative number)^(double) which is undefined.
         return Brent(resid, min_bound, max_bound, DBL_EPSILON, 1e-10, 100);
     } catch (...) {
-        return ExtrapolatingSecant(resid,max_bound, -0.01, 1e-12, 100);
+        return ExtrapolatingSecant(resid, max_bound, -0.01, 1e-12, 100);
     }
 }
 
@@ -205,7 +205,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInTrSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p){};
+                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);
@@ -233,7 +233,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInThetaSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p){};
+                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);
@@ -345,11 +345,11 @@ TEST_CASE("Tests for values from melting lines", "[melting]") {
             double actual_T = -_HUGE;
             double EOS_pmax = AS->pmax();
             double T_pmax_required = -1;
-            try{
+            try {
                 CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
                 T_pmax_required = AS->melting_line(iT, iP, EOS_pmax);
+            } catch (...) {
             }
-            catch(...){}
             CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, false);
             CAPTURE(T_pmax_required);
             CAPTURE(EOS_pmax);

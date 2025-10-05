@@ -108,7 +108,7 @@ In the newton function, a 1-D Newton-Raphson solver is implemented using exact s
 */
 double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter) {
     double x, dx, dfdx, fval = 999;
-    
+
     // Initialize
     f->iter = 0;
     f->errstring.clear();
@@ -122,8 +122,8 @@ double Newton(FuncWrapper1DWithDeriv* f, double x0, double ftol, int maxiter) {
             f->errstring = "Residual function in newton returned invalid number";
             throw ValueError("Residual function in newton returned invalid number");
         };
-        
-        if (f->verbosity > 0){
+
+        if (f->verbosity > 0) {
             std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g", f->iter, x, dx, fval, dfdx) << std::endl;
         }
 
@@ -190,13 +190,11 @@ double Halley(FuncWrapper1DWithTwoDerivs* f, double x0, double ftol, int maxiter
 
         dx = -omega * (2 * fval * dfdx) / (2 * POW2(dfdx) - fval * d2fdx2);
 
-        if (f->verbosity > 0){
+        if (f->verbosity > 0) {
             std::cout << format("i: %d, x: %0.15g, dx: %g, f: %g, dfdx: %g, d2fdx2: %g", f->iter, x, dx, fval, dfdx, d2fdx2) << std::endl;
         }
-        
+
         x += dx;
-        
-        
 
         if (std::abs(dx / x) < xtol_rel) {
             return x;
@@ -429,62 +427,77 @@ Note that this is different than the Secant function because if something goes o
 @param maxiter Maximum number of iterations
 @returns If no errors are found, the solution, otherwise the value _HUGE, the value for infinity
 */
-double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter)
-{
-    #if defined(COOLPROP_DEEP_DEBUG)
+double ExtrapolatingSecant(FuncWrapper1D* f, double x0, double dx, double tol, int maxiter) {
+#if defined(COOLPROP_DEEP_DEBUG)
     static std::vector<double> xlog, flog;
-    xlog.clear(); flog.clear();
-    #endif
+    xlog.clear();
+    flog.clear();
+#endif
 
     // Initialization
-    double x1=0,x2=0,x3=0,y0=0,y1=0,y2=0,x=x0,fval=999;
-    f->iter=1;
+    double x1 = 0, x2 = 0, x3 = 0, y0 = 0, y1 = 0, y2 = 0, x = x0, fval = 999;
+    f->iter = 1;
     f->errstring.clear();
-    
+
     // The relaxation factor (less than 1 for smaller steps)
     double omega = f->options.get_double("omega", 1.0);
 
-    if (std::abs(dx)==0){ f->errstring="dx cannot be zero"; return _HUGE;}
-    while (f->iter<=2 || std::abs(fval)>tol)
-    {
-        if (f->iter==1){x1=x0; x=x1;}
-        if (f->iter==2){x2=x0+dx; x=x2;}
-        if (f->iter>2) {x=x2;}
-        
-            if (f->input_not_in_range(x)){
-                throw ValueError(format("Input [%g] is out of range",x));
-            }
-
-            fval = f->call(x);
-
-            #if defined(COOLPROP_DEEP_DEBUG)
-                xlog.push_back(x);
-                flog.push_back(fval);
-            #endif
-
-            if (!ValidNumber(fval)){
-                if (f->iter==1){return x;}
-                else {return x2-omega*y1/(y1-y0)*(x2-x1);}
-            };
-        if (f->iter==1){y1=fval;}
-        if (f->iter>1)
-        {
-            double deltax = x2-x1;
-            if (std::abs(deltax)<1e-14){
-                return x;
-            }
-            y2=fval;
-            double deltay = y2-y1;
-            if (f->iter > 2 && std::abs(deltay)<1e-14){
-                return x;
-            }
-            x3=x2-omega*y2/(y2-y1)*(x2-x1);
-            y0=y1;y1=y2; x1=x2; x2=x3;
-
+    if (std::abs(dx) == 0) {
+        f->errstring = "dx cannot be zero";
+        return _HUGE;
+    }
+    while (f->iter <= 2 || std::abs(fval) > tol) {
+        if (f->iter == 1) {
+            x1 = x0;
+            x = x1;
         }
-        if (f->iter>maxiter)
-        {
-            f->errstring=std::string("reached maximum number of iterations");
+        if (f->iter == 2) {
+            x2 = x0 + dx;
+            x = x2;
+        }
+        if (f->iter > 2) {
+            x = x2;
+        }
+
+        if (f->input_not_in_range(x)) {
+            throw ValueError(format("Input [%g] is out of range", x));
+        }
+
+        fval = f->call(x);
+
+#if defined(COOLPROP_DEEP_DEBUG)
+        xlog.push_back(x);
+        flog.push_back(fval);
+#endif
+
+        if (!ValidNumber(fval)) {
+            if (f->iter == 1) {
+                return x;
+            } else {
+                return x2 - omega * y1 / (y1 - y0) * (x2 - x1);
+            }
+        };
+        if (f->iter == 1) {
+            y1 = fval;
+        }
+        if (f->iter > 1) {
+            double deltax = x2 - x1;
+            if (std::abs(deltax) < 1e-14) {
+                return x;
+            }
+            y2 = fval;
+            double deltay = y2 - y1;
+            if (f->iter > 2 && std::abs(deltay) < 1e-14) {
+                return x;
+            }
+            x3 = x2 - omega * y2 / (y2 - y1) * (x2 - x1);
+            y0 = y1;
+            y1 = y2;
+            x1 = x2;
+            x2 = x3;
+        }
+        if (f->iter > maxiter) {
+            f->errstring = std::string("reached maximum number of iterations");
             throw SolutionError(format("Secant reached maximum number of iterations"));
         }
         f->iter += 1;

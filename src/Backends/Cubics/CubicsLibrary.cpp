@@ -74,17 +74,17 @@ class CubicsLibraryClass
             // Add/Replace name->JSONstring mapping to easily pull out if the user wants it
             // Convert fuid_json to a string and store it in the map.
             std::pair<std::map<std::string, std::string>::iterator, bool> addJson;
-            addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name),cpjson::json2string(*itr)));
+            addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name), cpjson::json2string(*itr)));
             if (addJson.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 JSONstring_map.erase(addJson.first);
-                addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name),cpjson::json2string(*itr)));
+                addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name), cpjson::json2string(*itr)));
                 if (get_debug_level() > 0) {
                     std::cout << "added the cubic fluid: " + val.name << std::endl;
                 }
                 assert(addJson.second == true);
             }
-            
+
             counter++;
         }
         return counter;
@@ -103,7 +103,7 @@ class CubicsLibraryClass
             } else {
                 throw ValueError(format("Fluid identifier [%s] was not found in CubicsLibrary", uppercase_identifier.c_str()));
             }
-        } 
+        }
         // Then, load the fluids we would like to add
         rapidjson::Document doc;
         cpjson::JSON_string_to_rapidjson(it->second, doc);

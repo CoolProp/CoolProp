@@ -51,7 +51,7 @@ struct ComponentGroup
 {
     int count;
     UNIFACLibrary::Group group;
-    ComponentGroup(const int count, const UNIFACLibrary::Group group) : count(count), group(group){};
+    ComponentGroup(const int count, const UNIFACLibrary::Group group) : count(count), group(group) {};
 };
 
 /// A structure containing the groups and additional information for a component
@@ -95,7 +95,7 @@ struct UNIFACParameterLibrary
     void populate(rapidjson::Value& group_data, rapidjson::Value& interaction_data, rapidjson::Value& decomp_data);
 
    public:
-    UNIFACParameterLibrary() : m_populated(false){};
+    UNIFACParameterLibrary() : m_populated(false) {};
 
     /// Return true if library has been populated
     bool is_populated() {

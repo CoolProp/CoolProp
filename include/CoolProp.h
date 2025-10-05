@@ -32,8 +32,9 @@ double Props1SI(std::string FluidName, std::string Output);
      * @param backend The string representation of the backend (HEOS, REFPROP, INCOMP, etc.)
      * @param fluids The fluid name(s)
      * @param fractions The fractions (molar, mass, volume, etc.) of the components
-     */     
-std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend, const std::vector<std::string>& fluids, const std::vector<double>& fractions);
+     */
+std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend,
+                                               const std::vector<std::string>& fluids, const std::vector<double>& fractions);
 /// Return a value that depends on the thermodynamic state
 /// @param Output The output parameter, one of "T","D","H",etc.
 /// @param Name1 The first state variable name, one of "T","D","H",etc.

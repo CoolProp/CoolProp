@@ -378,7 +378,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
         BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) {
             pp_water = psi_w * p;
         };
-        ~BrentSolverResids(){};
+        ~BrentSolverResids() {};
 
         double call(double T) {
             double p_ws;
@@ -1598,7 +1598,6 @@ class HAProps_T_Residual : public CoolProp::FuncWrapper1D
     }
 };
 
-
 /// Calculate T (dry bulb temp) and psi_w (water mole fraction) given the pair of inputs
 void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const std::vector<double>& input_vals, double& T, double& psi_w) {
     if (CoolProp::get_debug_level() > 0) {
@@ -2279,24 +2278,20 @@ struct hel
     };
 };
 std::vector<hel> table_A11 = {hel("T", 473.15, "W", 0.00, "P", 101325, "B", 45.07 + 273.15), hel("T", 473.15, "W", 0.00, "P", 101325, "V", 1.341),
-                   hel("T", 473.15, "W", 0.00, "P", 101325, "H", 202520),         hel("T", 473.15, "W", 0.00, "P", 101325, "S", 555.8),
-                   hel("T", 473.15, "W", 0.50, "P", 101325, "B", 81.12 + 273.15), hel("T", 473.15, "W", 0.50, "P", 101325, "V", 2.416),
-                   hel("T", 473.15, "W", 0.50, "P", 101325, "H", 1641400),        hel("T", 473.15, "W", 0.50, "P", 101325, "S", 4829.5),
-                   hel("T", 473.15, "W", 1.00, "P", 101325, "B", 88.15 + 273.15), hel("T", 473.15, "W", 1.00, "P", 101325, "V", 3.489),
-                   hel("T", 473.15, "W", 1.00, "P", 101325, "H", 3079550),        hel("T", 473.15, "W", 1.00, "P", 101325, "S", 8889.0)};
+                              hel("T", 473.15, "W", 0.00, "P", 101325, "H", 202520),         hel("T", 473.15, "W", 0.00, "P", 101325, "S", 555.8),
+                              hel("T", 473.15, "W", 0.50, "P", 101325, "B", 81.12 + 273.15), hel("T", 473.15, "W", 0.50, "P", 101325, "V", 2.416),
+                              hel("T", 473.15, "W", 0.50, "P", 101325, "H", 1641400),        hel("T", 473.15, "W", 0.50, "P", 101325, "S", 4829.5),
+                              hel("T", 473.15, "W", 1.00, "P", 101325, "B", 88.15 + 273.15), hel("T", 473.15, "W", 1.00, "P", 101325, "V", 3.489),
+                              hel("T", 473.15, "W", 1.00, "P", 101325, "H", 3079550),        hel("T", 473.15, "W", 1.00, "P", 101325, "S", 8889.0)};
 
-std::vector<hel> table_A12 = {hel("T", 473.15, "W", 0.00, "P", 1e6, "B", 90.47 + 273.15),
-                   hel("T", 473.15, "W", 0.00, "P", 1e6, "V", 0.136),
-                   hel("T", 473.15, "W", 0.00, "P", 1e6, "H", 201940),
-//                   hel("T", 473.15, "W", 0.00, "P", 1e6, "S", -101.1),   Using CoolProp 4.2, this value seems incorrect from report
-                   hel("T", 473.15, "W", 0.50, "P", 1e6, "B", 148.49 + 273.15),
-                   hel("T", 473.15, "W", 0.50, "P", 1e6, "V", 0.243),
-                   hel("T", 473.15, "W", 0.50, "P", 1e6, "H", 1630140),
-                   hel("T", 473.15, "W", 0.50, "P", 1e6, "S", 3630.2),
-                   hel("T", 473.15, "W", 1.00, "P", 1e6, "B", 159.92 + 273.15),
-                   hel("T", 473.15, "W", 1.00, "P", 1e6, "V", 0.347),
-                   hel("T", 473.15, "W", 1.00, "P", 1e6, "H", 3050210),
-                   hel("T", 473.15, "W", 1.00, "P", 1e6, "S", 7141.3)};
+std::vector<hel> table_A12 = {
+  hel("T", 473.15, "W", 0.00, "P", 1e6, "B", 90.47 + 273.15), hel("T", 473.15, "W", 0.00, "P", 1e6, "V", 0.136),
+  hel("T", 473.15, "W", 0.00, "P", 1e6, "H", 201940),
+  //                   hel("T", 473.15, "W", 0.00, "P", 1e6, "S", -101.1),   Using CoolProp 4.2, this value seems incorrect from report
+  hel("T", 473.15, "W", 0.50, "P", 1e6, "B", 148.49 + 273.15), hel("T", 473.15, "W", 0.50, "P", 1e6, "V", 0.243),
+  hel("T", 473.15, "W", 0.50, "P", 1e6, "H", 1630140), hel("T", 473.15, "W", 0.50, "P", 1e6, "S", 3630.2),
+  hel("T", 473.15, "W", 1.00, "P", 1e6, "B", 159.92 + 273.15), hel("T", 473.15, "W", 1.00, "P", 1e6, "V", 0.347),
+  hel("T", 473.15, "W", 1.00, "P", 1e6, "H", 3050210), hel("T", 473.15, "W", 1.00, "P", 1e6, "S", 7141.3)};
 
 std::vector<hel> table_A15 = {
   hel("T", 473.15, "W", 0.10, "P", 1e7, "B", 188.92 + 273.15), hel("T", 473.15, "W", 0.10, "P", 1e7, "V", 0.016),
@@ -2441,7 +2436,7 @@ class ConsistencyTestData
 
 TEST_CASE("HAProps tests", "[HAProps]") {
     Eigen::ArrayXd Tdb = Eigen::ArrayXd::LinSpaced(100, -10, 55) + 273.15;
-    for (auto Tdb_ : Tdb){
+    for (auto Tdb_ : Tdb) {
         CAPTURE(Tdb_);
         CHECK(ValidNumber(HumidAir::HAProps("W", "T", Tdb_, "R", 1, "P", 101.325)));
     }

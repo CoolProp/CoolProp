@@ -75,19 +75,18 @@ char refpropPath[] = "";
 #endif
 
 /// Query an environment variable and return in optional if present
-std::optional<std::string> get_envvar(const char* var){
+std::optional<std::string> get_envvar(const char* var) {
     char* valptr = getenv(var);
-    if(valptr == nullptr){
+    if (valptr == nullptr) {
         return std::nullopt;
-    }
-    else{
+    } else {
         return std::string(valptr);
     }
 }
 
 /// Find either FLUIDS or fluids folder relative to the root path provided; return the path
 std::string get_casesensitive_fluids(const std::string& root) {
-    if (get_envvar("COOLPROP_REFPROP_ROOT")){
+    if (get_envvar("COOLPROP_REFPROP_ROOT")) {
         return "";
     }
     std::string joined = join_path(root, "fluids");
@@ -103,7 +102,7 @@ std::string get_casesensitive_fluids(const std::string& root) {
     }
 }
 std::string get_REFPROP_fluid_path_prefix() {
-    if (get_envvar("COOLPROP_REFPROP_ROOT")){
+    if (get_envvar("COOLPROP_REFPROP_ROOT")) {
         return "";
     }
     std::string rpPath = refpropPath;
@@ -129,7 +128,7 @@ std::string get_REFPROP_fluid_path_prefix() {
 #endif
 }
 std::string get_REFPROP_mixtures_path_prefix() {
-    if (get_envvar("COOLPROP_REFPROP_ROOT")){
+    if (get_envvar("COOLPROP_REFPROP_ROOT")) {
         return "";
     }
     std::string rpPath = refpropPath;
@@ -236,18 +235,18 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
             // Function names were defined in "REFPROP_lib.h",
             // This platform theoretically supports Refprop.
             std::string err;
-            
+
             bool loaded_REFPROP = false;
-            
+
             auto root = get_envvar("COOLPROP_REFPROP_ROOT");
             const std::string alt_rp_path = get_config_string(ALTERNATIVE_REFPROP_PATH);
             const std::string alt_rp_name = get_config_string(ALTERNATIVE_REFPROP_LIBRARY_PATH);
-            
-            if (root){
+
+            if (root) {
                 loaded_REFPROP = ::load_REFPROP(err, root.value().c_str(), "");
                 SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
             }
-            if (!loaded_REFPROP){
+            if (!loaded_REFPROP) {
                 if (!alt_rp_name.empty()) {
                     loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
                 } else {
@@ -566,12 +565,12 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-        if (parameter == "model") {
-            return shmodij;
-        } else {
-            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-            return "";
-        }
+    if (parameter == "model") {
+        return shmodij;
+    } else {
+        throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        return "";
+    }
     //} else {
     //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //    return "";
@@ -583,12 +582,12 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
     // bound-check indices
     if (i < 0 || i >= Ncomp) {
         if (j < 0 || j >= Ncomp) {
-            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp-1));
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp - 1));
         } else {
-            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp-1));
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp - 1));
         }
     } else if (j < 0 || j >= Ncomp) {
-        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp - 1));
     }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
     char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
@@ -618,12 +617,12 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     // bound-check indices
     if (i < 0 || i >= Ncomp) {
         if (j < 0 || j >= Ncomp) {
-            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp-1));
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp - 1));
         } else {
-            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp-1));
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp - 1));
         }
     } else if (j < 0 || j >= Ncomp) {
-        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp - 1));
     }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
     char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
@@ -636,23 +635,23 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-        if (parameter == "betaT") {
-            fij[0] = value;
-        } else if (parameter == "gammaT") {
-            fij[1] = value;
-        } else if (parameter == "betaV") {
-            fij[2] = value;
-        } else if (parameter == "gammaV") {
-            fij[3] = value;
-        } else if (parameter == "Fij") {
-            fij[4] = value;
-        } else {
-            throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
-        }
-        SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
-        if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-            throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
-        }
+    if (parameter == "betaT") {
+        fij[0] = value;
+    } else if (parameter == "gammaT") {
+        fij[1] = value;
+    } else if (parameter == "betaV") {
+        fij[2] = value;
+    } else if (parameter == "gammaV") {
+        fij[3] = value;
+    } else if (parameter == "Fij") {
+        fij[4] = value;
+    } else {
+        throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
+    }
+    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+        throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
+    }
     //} else {
     //    throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //}
@@ -663,12 +662,12 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     // bound-check indices
     if (i < 0 || i >= Ncomp) {
         if (j < 0 || j >= Ncomp) {
-            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp-1));
+            throw ValueError(format("Both indices i [%d] and j [%d] are out of bounds. Must be between 0 and %d.", i, j, Ncomp - 1));
         } else {
-            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp-1));
+            throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, Ncomp - 1));
         }
     } else if (j < 0 || j >= Ncomp) {
-        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp-1));
+        throw ValueError(format("Index j [%d] is out of bounds. Must be between 0 and %d.", j, Ncomp - 1));
     }
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1;
     char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
@@ -680,22 +679,22 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-        double val;
-        if (parameter == "betaT") {
-            val = fij[0];
-        } else if (parameter == "gammaT") {
-            val = fij[1];
-        } else if (parameter == "betaV") {
-            val = fij[2];
-        } else if (parameter == "gammaV") {
-            val = fij[3];
-        } else if (parameter == "Fij") {
-            val = fij[4];
-        } else {
-            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-            return _HUGE;
-        }
-        return val;
+    double val;
+    if (parameter == "betaT") {
+        val = fij[0];
+    } else if (parameter == "gammaT") {
+        val = fij[1];
+    } else if (parameter == "betaV") {
+        val = fij[2];
+    } else if (parameter == "gammaV") {
+        val = fij[3];
+    } else if (parameter == "Fij") {
+        val = fij[4];
+    } else {
+        throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        return _HUGE;
+    }
+    return val;
     //} else {
     //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //    return _HUGE;
@@ -1241,7 +1240,7 @@ phases REFPROPMixtureBackend::GetRPphase() {
             }
         } else {                       // RefProp might return Q = 920 for Metastable
             RPphase = iphase_unknown;  // but CoolProp doesn't have an enumerator for this state,
-        }                              // so it's unknown as well.
+        }  // so it's unknown as well.
 
         if ((_Q == 999) || (_Q == -997)) {                                // One last check for _Q == 999||-997 (Supercritical)
             RPphase = iphase_supercritical;                               // T >= Tcrit AND P >= Pcrit
@@ -1712,10 +1711,10 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
 
             // Set all cache values that can be set with unit conversion to SI
-            _p = p_kPa * 1000;                     // 1000 for conversion from kPa to Pa
-            _rhomolar = rho_mol_L * 1000;          // 1000 for conversion from mol/L to mol/m3
-            _rhoLmolar = rhoLmol_L * 1000;         // 1000 for conversion from mol/L to mol/m3
-            _rhoVmolar = rhoVmol_L * 1000;         // 1000 for conversion from mol/L to mol/m3
+            _p = p_kPa * 1000;              // 1000 for conversion from kPa to Pa
+            _rhomolar = rho_mol_L * 1000;   // 1000 for conversion from mol/L to mol/m3
+            _rhoLmolar = rhoLmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
             break;
         }
         case TUmass_INPUTS: {
@@ -2072,7 +2071,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     {
        public:
         const std::vector<double> z;
-        wrapper(const std::vector<double>& z) : z(z){};
+        wrapper(const std::vector<double>& z) : z(z) {};
         std::vector<double> call(const std::vector<double>& x) {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;
@@ -2149,7 +2148,7 @@ void REFPROPMixtureBackend::calc_ideal_curve(const std::string& type, std::vecto
     }
 };
 
-THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double> &mole_fractions){
+THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double>& mole_fractions) {
     /*
       subroutineTHERM0dll(T, D, z, P0, e0, h0, s0, Cv0, Cp00, w0, a0, g0)
     Compute ideal-gas thermal quantities as a function of temperature, density, and composition from core functions.
@@ -2171,12 +2170,13 @@ THERM0dllOutputs REFPROPMixtureBackend::call_THERM0dll(double T, double rho_mol_
     g0 [double ,out] :: Gibbs free energy [J/mol]
      */
     THERM0dllOutputs o;
-    if (mole_fractions.size() != 20){
+    if (mole_fractions.size() != 20) {
         throw ValueError("mole fractions must be of size 20");
     }
     std::vector<double> mf = mole_fractions;
-    
-    THERM0dll(&T, &rho_mol_dm3, &(mf[0]), &o.p_kPa, &o.umol_Jmol, &o.hmol_Jmol, &o.smol_JmolK, &o.cvmol_JmolK, &o.cpmol_JmolK, &o.w_ms, &o.amol_Jmol, &o.gmol_Jmol);
+
+    THERM0dll(&T, &rho_mol_dm3, &(mf[0]), &o.p_kPa, &o.umol_Jmol, &o.hmol_Jmol, &o.smol_JmolK, &o.cvmol_JmolK, &o.cpmol_JmolK, &o.w_ms, &o.amol_Jmol,
+              &o.gmol_Jmol);
     return o;
 }
 

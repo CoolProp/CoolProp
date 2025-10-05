@@ -16,7 +16,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         HelmholtzEOSMixtureBackend* HEOS;
         CoolPropDbl T, desired_p;
 
-        inner_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl desired_p) : HEOS(HEOS), T(T), desired_p(desired_p){};
+        inner_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl desired_p) : HEOS(HEOS), T(T), desired_p(desired_p) {};
         double call(double rhomolar_liq) {
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             CoolPropDbl calc_p = HEOS->SatL->p();
@@ -36,7 +36,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         CoolPropDbl rhomolar_crit;
 
         outer_resid(HelmholtzEOSMixtureBackend& HEOS, CoolProp::parameters ykey, CoolPropDbl y)
-          : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()){};
+          : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()) {};
         double call(double rhomolar_vap) {
             // Calculate the other variable (T->p or p->T) for given vapor density
             CoolPropDbl T, p, rhomolar_liq;
@@ -83,7 +83,7 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend& HEOS,
         CoolPropDbl T, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
-          : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
+          : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
         double call(double p) {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
@@ -128,7 +128,7 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend& HEOS,
         CoolPropDbl p, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
-          : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
+          : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
         double call(double T) {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
@@ -597,12 +597,11 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
     // reset the phase for the next update.
     SatL->specify_phase(iphase_liquid);
     SatV->specify_phase(iphase_gas);
-    if (error > 1e-8 && max_abs_value(v) > 1e-9){
+    if (error > 1e-8 && max_abs_value(v) > 1e-9) {
         throw SolutionError(format("saturation_PHSU_pure solver was good, but went bad. Current error is %Lg", error));
     }
 }
-void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options)
-{
+void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options) {
     /*
     This function is inspired by the method of Akasaka:
 
@@ -708,41 +707,46 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, Cool
 
         if (options.imposed_rho == saturation_D_pure_options::IMPOSED_RHOL) {
             if (options.use_logdelta)
-                deltaV = exp(log(deltaV)+omega*v[1]);
-            else
-            {
-                if (deltaV + omega*v[1] <= 0) {omega = 0.5*deltaV/v[1];} // gone off track, take a smaller step
-                if (tau + omega*v[0] <= 0) {omega = 0.5*tau/v[0];}
-                deltaV += omega*v[1];
+                deltaV = exp(log(deltaV) + omega * v[1]);
+            else {
+                if (deltaV + omega * v[1] <= 0) {
+                    omega = 0.5 * deltaV / v[1];
+                }  // gone off track, take a smaller step
+                if (tau + omega * v[0] <= 0) {
+                    omega = 0.5 * tau / v[0];
+                }
+                deltaV += omega * v[1];
             }
-        }
-        else
-        {
+        } else {
             if (options.use_logdelta)
-                deltaL = exp(log(deltaL)+omega*v[1]);
-            else
-            {
-                if (deltaL + omega*v[1] <= 0) {omega = 0.5*deltaL/v[1];} // gone off track, take a smaller step
-                if (tau + omega*v[0] <= 0) {omega = 0.5*tau/v[0];}
-                deltaL += omega*v[1];
+                deltaL = exp(log(deltaL) + omega * v[1]);
+            else {
+                if (deltaL + omega * v[1] <= 0) {
+                    omega = 0.5 * deltaL / v[1];
+                }  // gone off track, take a smaller step
+                if (tau + omega * v[0] <= 0) {
+                    omega = 0.5 * tau / v[0];
+                }
+                deltaL += omega * v[1];
             }
         }
 
-        tau += omega*v[0];
+        tau += omega * v[0];
 
-        rhoL = deltaL*reduce.rhomolar;
-        rhoV = deltaV*reduce.rhomolar;
-        T = reduce.T/tau;
+        rhoL = deltaL * reduce.rhomolar;
+        rhoV = deltaV * reduce.rhomolar;
+        T = reduce.T / tau;
 
-        p_error = (pL-pV)/pL;
+        p_error = (pL - pV) / pL;
 
         error = sqrt(pow(r[0], 2) + pow(r[1], 2));
         iter++;
         if (T < 0) {
             throw SolutionError(format("saturation_D_pure solver T < 0"));
         }
-        if (iter > options.max_iterations){
-            throw SolutionError(format("saturation_D_pure solver did not converge after %d iterations with rho: %g mol/m^3",options.max_iterations,rhomolar));
+        if (iter > options.max_iterations) {
+            throw SolutionError(
+              format("saturation_D_pure solver did not converge after %d iterations with rho: %g mol/m^3", options.max_iterations, rhomolar));
         }
     } while (error > 1e-9);
     CoolPropDbl p_error_limit = 1e-3;
@@ -961,7 +965,9 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend& HE
                     && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
 
                     if (get_debug_level() > 5) {
-                        std::cout << format("[Maxwell] ancillaries correction T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg rhoc: %g rhoLtrip: %g rhoVtrip: %g\n", T, rhoL, rhoV, crit.rhomolar, tripleL.rhomolar, tripleV.rhomolar );
+                        std::cout << format(
+                          "[Maxwell] ancillaries correction T: %0.16Lg rhoL: %0.16Lg rhoV: %0.16Lg rhoc: %g rhoLtrip: %g rhoVtrip: %g\n", T, rhoL,
+                          rhoV, crit.rhomolar, tripleL.rhomolar, tripleV.rhomolar);
                     }
 
                     // Lets assume that liquid density is more or less linear with T
@@ -1722,7 +1728,7 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
     const std::vector<double>&z, &lnK;
 
    public:
-    RachfordRiceResidual(const std::vector<double>& z, const std::vector<double>& lnK) : z(z), lnK(lnK){};
+    RachfordRiceResidual(const std::vector<double>& z, const std::vector<double>& lnK) : z(z), lnK(lnK) {};
     double call(double beta) {
         return FlashRoutines::g_RachfordRice(z, lnK, beta);
     }

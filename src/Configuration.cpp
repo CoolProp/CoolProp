@@ -67,8 +67,8 @@ configuration_keys config_string_to_key(const std::string& s) {
 
 std::unique_ptr<Configuration> pconfig;
 /// A helper function to ensure that configuration is not accessed before it is initialized (was formerly static)
-Configuration* _get_config(){
-    if (!pconfig){
+Configuration* _get_config() {
+    if (!pconfig) {
         pconfig = std::make_unique<Configuration>();
     }
     return pconfig.get();

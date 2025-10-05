@@ -94,7 +94,7 @@ class AbstractState
     bool isTwoPhase(void) {
         return (this->_phase == iphase_twophase);
     }
-    
+
     CacheArray<70> cache;
     using CAE = CacheArrayElement<double>;
 
@@ -115,13 +115,16 @@ class AbstractState
     /// Transport properties
     CAE _viscosity = cache.next(), _conductivity = cache.next(), _surface_tension = cache.next();
 
-    CAE _hmolar = cache.next(), _smolar = cache.next(), _umolar = cache.next(), _logp = cache.next(), _logrhomolar = cache.next(), _cpmolar = cache.next(), _cp0molar = cache.next(), _cvmolar = cache.next(), _speed_sound = cache.next(), _gibbsmolar = cache.next(), _helmholtzmolar = cache.next();
+    CAE _hmolar = cache.next(), _smolar = cache.next(), _umolar = cache.next(), _logp = cache.next(), _logrhomolar = cache.next(),
+        _cpmolar = cache.next(), _cp0molar = cache.next(), _cvmolar = cache.next(), _speed_sound = cache.next(), _gibbsmolar = cache.next(),
+        _helmholtzmolar = cache.next();
 
     /// Residual properties
     CAE _hmolar_residual = cache.next(), _smolar_residual = cache.next(), _gibbsmolar_residual = cache.next();
 
     /// Excess properties
-    CAE _hmolar_excess = cache.next(), _smolar_excess = cache.next(), _gibbsmolar_excess = cache.next(), _umolar_excess = cache.next(), _volumemolar_excess = cache.next(), _helmholtzmolar_excess = cache.next();
+    CAE _hmolar_excess = cache.next(), _smolar_excess = cache.next(), _gibbsmolar_excess = cache.next(), _umolar_excess = cache.next(),
+        _volumemolar_excess = cache.next(), _helmholtzmolar_excess = cache.next();
 
     /// Ancillary values
     CAE _rhoLanc = cache.next(), _rhoVanc = cache.next(), _pLanc = cache.next(), _pVanc = cache.next(), _TLanc = cache.next(), _TVanc = cache.next();
@@ -132,12 +135,16 @@ class AbstractState
     CAE _rho_spline = cache.next(), _drho_spline_dh__constp = cache.next(), _drho_spline_dp__consth = cache.next();
 
     /// Cached low-level elements for in-place calculation of other properties
-    CAE _alpha0 = cache.next(), _dalpha0_dTau = cache.next(), _dalpha0_dDelta = cache.next(), _d2alpha0_dTau2 = cache.next(), _d2alpha0_dDelta_dTau = cache.next(), _d2alpha0_dDelta2 = cache.next(), _d3alpha0_dTau3 = cache.next(),
-      _d3alpha0_dDelta_dTau2 = cache.next(), _d3alpha0_dDelta2_dTau = cache.next(), _d3alpha0_dDelta3 = cache.next(), _alphar = cache.next(), _dalphar_dTau = cache.next(), _dalphar_dDelta = cache.next(), _d2alphar_dTau2 = cache.next(),
-      _d2alphar_dDelta_dTau = cache.next(), _d2alphar_dDelta2 = cache.next(), _d3alphar_dTau3 = cache.next(), _d3alphar_dDelta_dTau2 = cache.next(), _d3alphar_dDelta2_dTau = cache.next(), _d3alphar_dDelta3 = cache.next(), _d4alphar_dTau4 = cache.next(),
-      _d4alphar_dDelta_dTau3 = cache.next(), _d4alphar_dDelta2_dTau2 = cache.next(), _d4alphar_dDelta3_dTau = cache.next(), _d4alphar_dDelta4 = cache.next();
+    CAE _alpha0 = cache.next(), _dalpha0_dTau = cache.next(), _dalpha0_dDelta = cache.next(), _d2alpha0_dTau2 = cache.next(),
+        _d2alpha0_dDelta_dTau = cache.next(), _d2alpha0_dDelta2 = cache.next(), _d3alpha0_dTau3 = cache.next(), _d3alpha0_dDelta_dTau2 = cache.next(),
+        _d3alpha0_dDelta2_dTau = cache.next(), _d3alpha0_dDelta3 = cache.next(), _alphar = cache.next(), _dalphar_dTau = cache.next(),
+        _dalphar_dDelta = cache.next(), _d2alphar_dTau2 = cache.next(), _d2alphar_dDelta_dTau = cache.next(), _d2alphar_dDelta2 = cache.next(),
+        _d3alphar_dTau3 = cache.next(), _d3alphar_dDelta_dTau2 = cache.next(), _d3alphar_dDelta2_dTau = cache.next(),
+        _d3alphar_dDelta3 = cache.next(), _d4alphar_dTau4 = cache.next(), _d4alphar_dDelta_dTau3 = cache.next(),
+        _d4alphar_dDelta2_dTau2 = cache.next(), _d4alphar_dDelta3_dTau = cache.next(), _d4alphar_dDelta4 = cache.next();
 
-    CAE _dalphar_dDelta_lim = cache.next(), _d2alphar_dDelta2_lim = cache.next(), _d2alphar_dDelta_dTau_lim = cache.next(), _d3alphar_dDelta2_dTau_lim = cache.next();
+    CAE _dalphar_dDelta_lim = cache.next(), _d2alphar_dDelta2_lim = cache.next(), _d2alphar_dDelta_dTau_lim = cache.next(),
+        _d3alphar_dDelta2_dTau_lim = cache.next();
 
     /// Two-Phase variables
     CAE _rhoLmolar = cache.next(), _rhoVmolar = cache.next();
@@ -697,7 +704,7 @@ class AbstractState
     AbstractState() : _fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown) {
         clear();
     }
-    virtual ~AbstractState(){};
+    virtual ~AbstractState() {};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
@@ -838,9 +845,9 @@ class AbstractState
 
     /// Update the state using two state variables
     virtual void update(CoolProp::input_pairs input_pair, double Value1, double Value2) = 0;
-    
+
     /// Update the state for QT inputs for pure fluids when using the superancillary functions
-    virtual void update_QT_pure_superanc(double Q, double T){
+    virtual void update_QT_pure_superanc(double Q, double T) {
         throw NotImplementedError("update_QT_pure_superanc is not implemented for this backend");
     };
 
@@ -1615,7 +1622,7 @@ class AbstractStateGenerator
 {
    public:
     virtual AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) = 0;
-    virtual ~AbstractStateGenerator(){};
+    virtual ~AbstractStateGenerator() {};
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not

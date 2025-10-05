@@ -51,7 +51,7 @@ class UNIFACMixture
     std::vector<ComponentData> pure_data;
 
    public:
-    UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary& library, const double T_r) : library(library), T_r(T_r){};
+    UNIFACMixture(const UNIFACLibrary::UNIFACParameterLibrary& library, const double T_r) : library(library), T_r(T_r) {};
 
     /**
         * \brief Set all the interaction parameters between groups

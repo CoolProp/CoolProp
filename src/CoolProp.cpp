@@ -117,7 +117,7 @@ bool has_solution_concentration(const std::string& fluid_string) {
 struct delim : std::numpunct<char>
 {
     char m_c;
-    delim(char c) : m_c(c){};
+    delim(char c) : m_c(c) {};
     char do_decimal_point() const {
         return m_c;
     }
@@ -153,7 +153,7 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
             // with the configuration variable FLOAT_PUNCTUATION to change the locale to something more convenient for you (e.g., a ',')
             // See also http://en.cppreference.com/w/cpp/locale/numpunct/decimal_point
             std::stringstream ssfraction(fraction);
-            char c = get_config_string(FLOAT_PUNCTUATION)[0];
+            const char c = get_config_string(FLOAT_PUNCTUATION)[0];
             ssfraction.imbue(std::locale(ssfraction.getloc(), new delim(c)));
             double f;
             ssfraction >> f;
@@ -228,7 +228,7 @@ void _PropsSI_initialize(const std::string& backend, const std::vector<std::stri
     } else if (fluid_names.size() == 1) {
         if (has_fractions_in_string(fluid_names[0]) || has_solution_concentration(fluid_names[0])) {
             // Extract fractions from the string
-            std::string fluid_string = extract_fractions(fluid_names[0], fractions);
+            const std::string fluid_string = extract_fractions(fluid_names[0], fractions);
             // Set the pointer - we are going to use the extracted fractions
             fractions_ptr = &fractions;
             // Reset the state
@@ -319,7 +319,7 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     if (in1.size() != in2.size()) {
         throw ValueError(format("lengths of in1 [%d] and in2 [%d] are not the same", in1.size(), in2.size()));
     }
-    bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
+    const bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
     // If all trivial outputs, never do a state update
     bool all_trivial_outputs = true;
     for (std::size_t j = 0; j < output_parameters.size(); ++j) {
@@ -362,8 +362,8 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     GuessesStructure guesses;
 
     // Resize the output matrix
-    std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
-    std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
+    const std::size_t N1 = std::max(static_cast<std::size_t>(1), in1.size());
+    const std::size_t N2 = std::max(static_cast<std::size_t>(1), output_parameters.size());
     IO.resize(N1, std::vector<double>(N2, _HUGE));
 
     // Throw an error if at the end, there were no successes
@@ -498,7 +498,7 @@ bool StripPhase(std::string& Name, shared_ptr<AbstractState>& State)
     std::vector<std::string> strVec = strsplit(Name, '|');  // Split input key string in to vector containing input key [0] and phase string [1]
     if (strVec.size() > 1) {                                // If there is a phase string (contains "|" character)
         // Check for invalid backends for setting phase in PropsSI
-        std::string strBackend = State->backend_name();
+        const std::string strBackend = State->backend_name();
         if (strBackend == get_backend_string(INCOMP_BACKEND))
             throw ValueError("Cannot set phase on Incompressible Fluid; always liquid phase");  // incompressible fluids are always "liquid".
         if (strBackend == get_backend_string(IF97_BACKEND))
@@ -555,10 +555,10 @@ void _PropsSImulti(const std::vector<std::string>& Outputs, const std::string& N
     }
 
     //strip any imposed phase from input key strings here
-    std::string N1 = Name1;                  // Make Non-constant copy of Name1 that we can modify
-    std::string N2 = Name2;                  // Make Non-constant copy of Name2 that we can modify
-    bool HasPhase1 = StripPhase(N1, State);  // strip phase string from first name if needed
-    bool HasPhase2 = StripPhase(N2, State);  // strip phase string from second name if needed
+    std::string N1 = Name1;                        // Make Non-constant copy of Name1 that we can modify
+    std::string N2 = Name2;                        // Make Non-constant copy of Name2 that we can modify
+    const bool HasPhase1 = StripPhase(N1, State);  // strip phase string from first name if needed
+    const bool HasPhase2 = StripPhase(N2, State);  // strip phase string from second name if needed
     if (HasPhase1 && HasPhase2)              // if both Names have a phase string, don't allow it.
         throw ValueError("Phase can only be specified on one of the input key strings");
 
@@ -610,7 +610,7 @@ std::vector<std::vector<double>> PropsSImulti(const std::vector<std::string>& Ou
 #endif
     return std::vector<std::vector<double>>();
 }
-double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2, const std::string& Ref) {
+double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2, const std::string& FluidName) {
 #if !defined(NO_ERROR_CATCHING)
     try {
 #endif
@@ -619,10 +619,10 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
         // Here is the real code that is inside the try block
 
         std::string backend, fluid;
-        extract_backend(Ref, backend, fluid);
+        extract_backend(FluidName, backend, fluid);
         std::vector<double> fractions(1, 1.0);
         // extract_fractions checks for has_fractions_in_string / has_solution_concentration; no need to double check
-        std::string fluid_string = extract_fractions(fluid, fractions);
+        const std::string fluid_string = extract_fractions(fluid, fractions);
         std::vector<std::vector<double>> IO;
         _PropsSImulti(strsplit(Output, '&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend,
                       strsplit(fluid_string, '&'), fractions, IO);
@@ -633,7 +633,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
             throw ValueError(format("output should be 1x1; error was %s", get_global_param_string("errstring").c_str()));
         }
 
-        double val = IO[0][0];
+        const double val = IO[0][0];
 
         if (get_debug_level() > 1) {
             std::cout << format("_PropsSI will return %g", val) << std::endl;
@@ -644,7 +644,7 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
     } catch (const std::exception& e) {
         set_error_string(
           e.what()
-          + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2, Ref.c_str()));
+          + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2, FluidName.c_str()));
 #    if defined(PROPSSI_ERROR_STDOUT)
         std::cout << e.what() << std::endl;
 #    endif
@@ -810,8 +810,8 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
  ****************************************************/
 
 double Props1SI(std::string FluidName, std::string Output) {
-    bool valid_fluid1 = is_valid_fluid_string(FluidName);
-    bool valid_fluid2 = is_valid_fluid_string(Output);
+    const bool valid_fluid1 = is_valid_fluid_string(FluidName);
+    const bool valid_fluid2 = is_valid_fluid_string(Output);
     if (valid_fluid1 && valid_fluid2) {
         set_error_string(format("Both inputs to Props1SI [%s,%s] are valid fluids", Output.c_str(), FluidName.c_str()));
         return _HUGE;
@@ -826,7 +826,7 @@ double Props1SI(std::string FluidName, std::string Output) {
     }
 
     // First input is the fluid, second input is the input parameter
-    double val1 = PropsSI(Output, "", 0, "", 0, FluidName);
+    const double val1 = PropsSI(Output, "", 0, "", 0, FluidName);
     if (!ValidNumber(val1)) {
         set_error_string(format("Unable to use input parameter [%s] in Props1SI for fluid %s; error was %s", Output.c_str(), FluidName.c_str(),
                                 get_global_param_string("errstring").c_str()));
@@ -836,13 +836,13 @@ double Props1SI(std::string FluidName, std::string Output) {
     }
 }
 
-std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend, const std::vector<std::string>& fluids, const std::vector<double>& fractions) {
+std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& Outputs, const std::string& backend,
+                                               const std::vector<std::string>& fluids, const std::vector<double>& fractions) {
     std::vector<double> zero_vector(1, 0.);
     std::vector<std::vector<double>> val1 = PropsSImulti(Outputs, "", zero_vector, "", zero_vector, backend, fluids, fractions);
     // error handling is done in PropsSImulti, val1 will be an empty vector if an error occured
     return val1;
 }
-
 
 #if defined(ENABLE_CATCH)
 TEST_CASE("Check inputs to Props1SI", "[Props1SI],[PropsSI]") {
@@ -864,12 +864,12 @@ TEST_CASE("Check inputs to Props1SI", "[Props1SI],[PropsSI]") {
 };
 #endif
 
-bool is_valid_fluid_string(const std::string& input_fluid_string) {
+bool is_valid_fluid_string(const std::string& fluidstring) {
     try {
         std::string backend, fluid;
         std::vector<double> fractions;
         // First try to extract backend and fractions
-        extract_backend(input_fluid_string, backend, fluid);
+        extract_backend(fluidstring, backend, fluid);
         std::string fluid_string = extract_fractions(fluid, fractions);
         // We are going to let the factory function load the state
         shared_ptr<AbstractState> State(AbstractState::factory(backend, fluid_string));
@@ -889,9 +889,9 @@ double saturation_ancillary(const std::string& fluid_name, const std::string& ou
 
     return HEOS.saturation_ancillary(iOutput, Q, iInput, value);
 }
-void set_reference_stateS(const std::string& fluid_string, const std::string& reference_state) {
+void set_reference_stateS(const std::string& FluidName, const std::string& reference_state) {
     std::string backend, fluid;
-    extract_backend(fluid_string, backend, fluid);
+    extract_backend(FluidName, backend, fluid);
     if (backend == "REFPROP") {
 
         int ierr = 0, ixflag = 1;
@@ -901,17 +901,19 @@ void set_reference_stateS(const std::string& fluid_string, const std::string& re
         const char* refstate = reference_state.c_str();
         if (strlen(refstate) > 3) {
             if (reference_state == "ASHRAE") {
-                strcpy(hrf, "ASH");
+                strncpy(hrf, "ASH", sizeof(hrf) - 1);
+                hrf[sizeof(hrf) - 1] = '\0';
             } else {
                 throw ValueError(format("Reference state string [%s] is more than 3 characters long", reference_state.c_str()));
             }
         } else {
-            strcpy(hrf, refstate);
+            strncpy(hrf, refstate, sizeof(hrf) - 1);
+            hrf[sizeof(hrf) - 1] = '\0';
         }
         REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
     } else if (backend == "HEOS" || backend == "?") {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
-        if (!reference_state.compare("IIR")) {
+        if (reference_state == "IIR") {
             if (HEOS.Ttriple() > 273.15) {
                 throw ValueError(format("Cannot use IIR reference state; Ttriple [%Lg] is greater than 273.15 K", HEOS.Ttriple()));
             }
@@ -927,7 +929,7 @@ void set_reference_stateS(const std::string& fluid_string, const std::string& re
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
-        } else if (!reference_state.compare("ASHRAE")) {
+        } else if (reference_state == "ASHRAE") {
             if (HEOS.Ttriple() > 233.15) {
                 throw ValueError(format("Cannot use ASHRAE reference state; Ttriple [%Lg] is greater than than 233.15 K", HEOS.Ttriple()));
             }
@@ -943,7 +945,7 @@ void set_reference_stateS(const std::string& fluid_string, const std::string& re
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
-        } else if (!reference_state.compare("NBP")) {
+        } else if (reference_state == "NBP") {
             if (HEOS.p_triple() > 101325) {
                 throw ValueError(format("Cannot use NBP reference state; p_triple [%Lg Pa] is greater than than 101325 Pa", HEOS.p_triple()));
             }
@@ -959,17 +961,17 @@ void set_reference_stateS(const std::string& fluid_string, const std::string& re
             if (get_debug_level() > 0) {
                 std::cout << format("set offsets to %0.15g and %0.15g\n", delta_a1, delta_a2);
             }
-        } else if (!reference_state.compare("DEF")) {
+        } else if (reference_state == "DEF") {
             set_fluid_enthalpy_entropy_offset(fluid, 0, 0, "DEF");
-        } else if (!reference_state.compare("RESET")) {
+        } else if (reference_state == "RESET") {
             set_fluid_enthalpy_entropy_offset(fluid, 0, 0, "RESET");
         } else {
             throw ValueError(format("Reference state string is invalid: [%s]", reference_state.c_str()));
         }
     }
 }
-void set_reference_stateD(const std::string& Ref, double T, double rhomolar, double hmolar0, double smolar0) {
-    std::vector<std::string> _comps(1, Ref);
+void set_reference_stateD(const std::string& FluidName, double T, double rhomolar, double hmolar0, double smolar0) {
+    std::vector<std::string> _comps(1, FluidName);
     CoolProp::HelmholtzEOSMixtureBackend HEOS(_comps);
 
     HEOS.update(DmolarT_INPUTS, rhomolar, T);
@@ -979,35 +981,35 @@ void set_reference_stateD(const std::string& Ref, double T, double rhomolar, dou
     double deltas = HEOS.smolar() - smolar0;  // offset from specified entropy in J/mol/K
     double delta_a1 = deltas / (HEOS.gas_constant());
     double delta_a2 = -deltah / (HEOS.gas_constant() * HEOS.get_reducing_state().T);
-    set_fluid_enthalpy_entropy_offset(Ref, delta_a1, delta_a2, "custom");
+    set_fluid_enthalpy_entropy_offset(FluidName, delta_a1, delta_a2, "custom");
 }
 
 std::string get_global_param_string(const std::string& ParamName) {
-    if (!ParamName.compare("version")) {
+    if (ParamName == "version") {
         return version;
-    } else if (!ParamName.compare("gitrevision")) {
+    } else if (ParamName == "gitrevision") {
         return gitrevision;
-    } else if (!ParamName.compare("errstring")) {
+    } else if (ParamName == "errstring") {
         std::string temp = error_string;
         error_string = "";
         return temp;
-    } else if (!ParamName.compare("warnstring")) {
+    } else if (ParamName == "warnstring") {
         std::string temp = warning_string;
         warning_string = "";
         return temp;
-    } else if (!ParamName.compare("FluidsList") || !ParamName.compare("fluids_list") || !ParamName.compare("fluidslist")) {
+    } else if (ParamName == "FluidsList" || ParamName == "fluids_list" || ParamName == "fluidslist") {
         return get_fluid_list();
-    } else if (!ParamName.compare("incompressible_list_pure")) {
+    } else if (ParamName == "incompressible_list_pure") {
         return get_incompressible_list_pure();
-    } else if (!ParamName.compare("incompressible_list_solution")) {
+    } else if (ParamName == "incompressible_list_solution") {
         return get_incompressible_list_solution();
-    } else if (!ParamName.compare("mixture_binary_pairs_list")) {
+    } else if (ParamName == "mixture_binary_pairs_list") {
         return get_csv_mixture_binary_pairs();
-    } else if (!ParamName.compare("parameter_list")) {
+    } else if (ParamName == "parameter_list") {
         return get_csv_parameter_list();
-    } else if (!ParamName.compare("predefined_mixtures")) {
+    } else if (ParamName == "predefined_mixtures") {
         return get_csv_predefined_mixtures();
-    } else if (!ParamName.compare("HOME")) {
+    } else if (ParamName == "HOME") {
         return get_home_dir();
     } else if (ParamName == "REFPROP_version") {
         return REFPROPMixtureBackend::version();
@@ -1102,8 +1104,8 @@ std::string PhaseSI(const std::string& Name1, double Prop1, const std::string& N
         if (strError != "") {                                                       //     if error string is not empty,
             strPhase.append(": " + strError);                                       //        append it to the phase string.
         }
-        return strPhase;                                             //     return the "unknown" phase string
-    }                                                                // else
+        return strPhase;  //     return the "unknown" phase string
+    }  // else
     std::size_t Phase_int = static_cast<std::size_t>(Phase_double);  //     convert returned phase to int
     return phase_lookup_string(static_cast<phases>(Phase_int));      //     return phase as a string
 }

@@ -30,7 +30,7 @@ inline std::string vecstring_to_string(const std::vector<std::string>& a) {
 class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
 {
    public:
-    HelmholtzEOSBackend(){};
+    HelmholtzEOSBackend() {};
     HelmholtzEOSBackend(CoolPropFluid Fluid) {
         set_components(std::vector<CoolPropFluid>(1, Fluid));
     };
@@ -61,7 +61,7 @@ class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
             std::cout << "successfully set up state" << std::endl;
         }
     };
-    virtual ~HelmholtzEOSBackend(){};
+    virtual ~HelmholtzEOSBackend() {};
     std::string backend_name(void) {
         return get_backend_string(HEOS_BACKEND_PURE);
     }

@@ -10,15 +10,15 @@
 #    include "all_fluids_JSON_z.h"
 #    undef INCBIN_CONST
 #    undef INCBIN_ALIGN
-#else 
-#include "incbin.h"
-// Use the magic of the incbin library to include binary data in compressed form
-#if defined(_MSC_VER)
-#include "all_fluids_JSON_z.h"
 #else
+#    include "incbin.h"
+// Use the magic of the incbin library to include binary data in compressed form
+#    if defined(_MSC_VER)
+#        include "all_fluids_JSON_z.h"
+#    else
 
 INCBIN(all_fluids_JSON_z, "all_fluids.json.z");
-#endif
+#    endif
 #endif
 
 namespace CoolProp {
@@ -33,9 +33,11 @@ void load() {
     if (code != 0) {
         throw ValueError("Unable to uncompress the fluid data from z compressed form");
     }
-    
-    if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")){
-        std::cout << "CoolProp: superancillaries have been disabled because the COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY environment variable has been defined" << std::endl;
+
+    if (getenv("COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY")) {
+        std::cout << "CoolProp: superancillaries have been disabled because the COOLPROP_DISABLE_SUPERANCILLARIES_ENTIRELY environment variable has "
+                     "been defined"
+                  << std::endl;
     }
 
     rapidjson::Document dd;

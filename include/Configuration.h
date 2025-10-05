@@ -75,7 +75,7 @@
     X(VTPR_ALWAYS_RELOAD_LIBRARY, "VTPR_ALWAYS_RELOAD_LIBRARY", false,                                                                               \
       "If true, the library will always be reloaded, no matter what is currently loaded")                                                            \
     X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.")  \
-    X(ENABLE_SUPERANCILLARIES, "ENABLE_SUPERANCILLARIES", true, "If true, the superancillary functions will be used for VLE of pure fluids")        \
+    X(ENABLE_SUPERANCILLARIES, "ENABLE_SUPERANCILLARIES", true, "If true, the superancillary functions will be used for VLE of pure fluids")         \
     X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")
 
 // Use preprocessor to create the Enum
@@ -116,8 +116,10 @@ std::string config_key_description(const std::string& key);
 class ConfigurationItem
 {
    public:
-    ConfigurationDataTypes get_type() const { return type; }
-    
+    ConfigurationDataTypes get_type() const {
+        return type;
+    }
+
     /// Cast to boolean
     operator bool() const {
         check_data_type(CONFIGURATION_BOOL_TYPE);
@@ -283,7 +285,7 @@ class Configuration
     Configuration() {
         set_defaults();
     };
-    ~Configuration(){};
+    ~Configuration() {};
 
     /// Get an item from the configuration
     ConfigurationItem& get_item(configuration_keys key) {
@@ -307,63 +309,68 @@ class Configuration
     std::unordered_map<configuration_keys, ConfigurationItem>& get_items(void) {
         return items;
     };
-    
-    bool possibly_set_from_env(configuration_keys key){
+
+    bool possibly_set_from_env(configuration_keys key) {
         /// Try to get from environment variable with the key name, prefixed by "COOLPROP_"
         std::string envkey = "COOLPROP_" + config_key_to_string(key);
-        const char *envval = std::getenv(envkey.c_str());
-        if (envval){
-            auto tobool = [](const std::string x){
-                if (x == "True" || x == "true"){ return true;}
-                if (x == "False" || x == "false"){ return false;}
+        const char* envval = std::getenv(envkey.c_str());
+        if (envval) {
+            auto tobool = [](const std::string x) {
+                if (x == "True" || x == "true") {
+                    return true;
+                }
+                if (x == "False" || x == "false") {
+                    return false;
+                }
                 throw ValueError(x);
             };
-            switch (get_item(key).get_type()){
+            switch (get_item(key).get_type()) {
                 case ConfigurationDataTypes::CONFIGURATION_STRING_TYPE:
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, std::string(envval)));
+                    items.erase(key);
+                    items.emplace(key, ConfigurationItem(key, std::string(envval)));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_INTEGER_TYPE:
                     int i;
-                    try{
+                    try {
                         i = std::stoi(envval);
-                    }
-                    catch(...){
+                    } catch (...) {
                         auto skey = config_key_to_string(key);
-                        std::string msg = "Unable to convert \""+std::string(envval)+"\" to int for key ["+skey+"]";
+                        std::string msg = "Unable to convert \"" + std::string(envval) + "\" to int for key [" + skey + "]";
                         std::cerr << msg << std::endl;
                         throw ValueError(msg);
                     }
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, i));
+                    items.erase(key);
+                    items.emplace(key, ConfigurationItem(key, i));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_DOUBLE_TYPE:
                     double d;
-                    try{
+                    try {
                         d = std::stod(envval);
-                    }
-                    catch(...){
+                    } catch (...) {
                         auto skey = config_key_to_string(key);
-                        std::string msg = "Unable to convert \""+std::string(envval)+"\" to double for key ["+skey+"]";
+                        std::string msg = "Unable to convert \"" + std::string(envval) + "\" to double for key [" + skey + "]";
                         std::cerr << msg << std::endl;
                         throw ValueError(msg);
                     }
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, d));
+                    items.erase(key);
+                    items.emplace(key, ConfigurationItem(key, d));
                     break;
                 case ConfigurationDataTypes::CONFIGURATION_BOOL_TYPE:
                     bool b;
-                    try{
+                    try {
                         b = tobool(envval);
-                    }
-                    catch(...){
+                    } catch (...) {
                         auto skey = config_key_to_string(key);
-                        std::string msg = "Unable to convert \""+std::string(envval)+"\" to bool for key ["+skey+"]";
+                        std::string msg = "Unable to convert \"" + std::string(envval) + "\" to bool for key [" + skey + "]";
                         std::cerr << msg << std::endl;
                         throw ValueError(msg);
                     }
-                    items.erase(key); items.emplace(key, ConfigurationItem(key, b));
+                    items.erase(key);
+                    items.emplace(key, ConfigurationItem(key, b));
                     break;
                 default:
                     auto skey = config_key_to_string(key);
-                    throw ValueError("This key ["+skey+"] has the wrong type; value was "+std::string(envval)+" ");
+                    throw ValueError("This key [" + skey + "] has the wrong type; value was " + std::string(envval) + " ");
             }
             return true;
         }
@@ -382,9 +389,9 @@ class Configuration
 
     // See if the variable is already present as environment variable
 #define X(Enum, String, Default, Desc) possibly_set_from_env(Enum);
-        CONFIGURATION_KEYS_ENUM
+          CONFIGURATION_KEYS_ENUM
 #undef X
-        
+
     };
 };
 

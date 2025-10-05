@@ -25,13 +25,13 @@ class AbstractCubicAlphaFunction
       sqrt_Tr_Tci;          ///< The sqrt of the (constant) reducing temperature divided by the critical temperature of the pure component
     std::vector<double> c;  ///< The vector of constants
    public:
-    virtual ~AbstractCubicAlphaFunction(){};
+    virtual ~AbstractCubicAlphaFunction() {};
     virtual double term(double tau, std::size_t itau) = 0;
     void set_Tr_over_Tci(double Tr_over_Tci) {
         this->Tr_over_Tci = Tr_over_Tci;
         this->sqrt_Tr_Tci = sqrt(Tr_over_Tci);
     };
-    AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)){};
+    AbstractCubicAlphaFunction(double a0, double Tr_over_Tci) : a0(a0), Tr_over_Tci(Tr_over_Tci), sqrt_Tr_Tci(sqrt(Tr_over_Tci)) {};
 };
 
 /// An implementation of AbstractCubicAlphaFunction for the baseline alpha function of PR or SRK
@@ -100,7 +100,7 @@ class AbstractCubic
     AbstractCubic(std::vector<double> Tc, std::vector<double> pc, std::vector<double> acentric, double R_u, double Delta_1, double Delta_2,
                   std::vector<double> C1 = std::vector<double>(), std::vector<double> C2 = std::vector<double>(),
                   std::vector<double> C3 = std::vector<double>());
-    virtual ~AbstractCubic(){};
+    virtual ~AbstractCubic() {};
     /// Set the constants for the Mathias-Copeman alpha function, or if C1,C2,C3 are all empty, set the default alpha model
     void set_alpha(const std::vector<double>& C1, const std::vector<double>& C2, const std::vector<double>& C3);
     /// Set the alpha function for the i-th component

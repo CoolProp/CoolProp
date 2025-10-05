@@ -60,6 +60,9 @@ Checks: |
   -readability-function-cognitive-complexity,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -modernize-use-override,
+  -readability-identifier-length,
+  -bugprone-easily-swappable-parameters,
+  -readability-math-missing-parentheses,
 
 WarningsAsErrors: '*'
 HeaderFilterRegex: '*'

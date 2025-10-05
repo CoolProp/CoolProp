@@ -42,7 +42,7 @@ struct CriticalRegionSplines
     double T_min, T_max, rhomolar_min, rhomolar_max;
     std::vector<double> cL, cV;
     bool enabled;
-    CriticalRegionSplines() : T_min(_HUGE), T_max(_HUGE), rhomolar_min(_HUGE), rhomolar_max(_HUGE), enabled(false){};
+    CriticalRegionSplines() : T_min(_HUGE), T_max(_HUGE), rhomolar_min(_HUGE), rhomolar_max(_HUGE), enabled(false) {};
 
     const void get_densities(double T, double rho_min, double rho_crit, double rho_max, double& rhoL, double& rhoV) const {
         int Nsoln = -1, Ngood = 0;
@@ -288,15 +288,15 @@ struct ViscosityHigherOrderVariables
 {
     enum ViscosityHigherOrderEnum
     {
-        VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND,  ///< Use \ref TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand
-        VISCOSITY_HIGHER_ORDER_HYDROGEN,               ///< Use \ref TransportRoutines::viscosity_hydrogen_higher_order_hardcoded
-        VISCOSITY_HIGHER_ORDER_HEXANE,                 ///< Use \ref TransportRoutines::viscosity_hexane_higher_order_hardcoded
-        VISCOSITY_HIGHER_ORDER_HEPTANE,                ///< Use \ref TransportRoutines::viscosity_heptane_higher_order_hardcoded
-        VISCOSITY_HIGHER_ORDER_ETHANE,                 ///< Use \ref TransportRoutines::viscosity_ethane_higher_order_hardcoded
-        VISCOSITY_HIGHER_ORDER_BENZENE,                ///< Use \ref TransportRoutines::viscosity_benzene_higher_order_hardcoded
-        VISCOSITY_HIGHER_ORDER_TOLUENE,                ///< Use \ref TransportRoutines::viscosity_toluene_higher_order_hardcoded
-        VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017,///< Use \ref TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017
-        VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,        ///< Use \ref TransportRoutines::viscosity_higher_order_friction_theory
+        VISCOSITY_HIGHER_ORDER_BATSCHINKI_HILDEBRAND,    ///< Use \ref TransportRoutines::viscosity_higher_order_modified_Batschinski_Hildebrand
+        VISCOSITY_HIGHER_ORDER_HYDROGEN,                 ///< Use \ref TransportRoutines::viscosity_hydrogen_higher_order_hardcoded
+        VISCOSITY_HIGHER_ORDER_HEXANE,                   ///< Use \ref TransportRoutines::viscosity_hexane_higher_order_hardcoded
+        VISCOSITY_HIGHER_ORDER_HEPTANE,                  ///< Use \ref TransportRoutines::viscosity_heptane_higher_order_hardcoded
+        VISCOSITY_HIGHER_ORDER_ETHANE,                   ///< Use \ref TransportRoutines::viscosity_ethane_higher_order_hardcoded
+        VISCOSITY_HIGHER_ORDER_BENZENE,                  ///< Use \ref TransportRoutines::viscosity_benzene_higher_order_hardcoded
+        VISCOSITY_HIGHER_ORDER_TOLUENE,                  ///< Use \ref TransportRoutines::viscosity_toluene_higher_order_hardcoded
+        VISCOSITY_HIGHER_ORDER_CO2_LAESECKE_JPCRD_2017,  ///< Use \ref TransportRoutines::viscosity_CO2_higher_order_hardcoded_LaeseckeJPCRD2017
+        VISCOSITY_HIGHER_ORDER_FRICTION_THEORY,          ///< Use \ref TransportRoutines::viscosity_higher_order_friction_theory
         VISCOSITY_HIGHER_ORDER_NOT_SET
     };
     ViscosityHigherOrderEnum type = VISCOSITY_HIGHER_ORDER_NOT_SET;
@@ -399,13 +399,13 @@ struct Ancillaries
 */
 class EquationOfState
 {
-public:
+   public:
     using SuperAncillary_t = superancillary::SuperAncillary<std::vector<double>>;
-    
-private:
+
+   private:
     std::string superancillaries_str;
-    std::optional<SuperAncillary_t> superancillaries = std::nullopt; ///< The superancillaries
-    
+    std::optional<SuperAncillary_t> superancillaries = std::nullopt;  ///< The superancillaries
+
    public:
     SimpleState reduce,  ///< Reducing state used for the EOS (usually, but not always, the critical point)
       sat_min_liquid,    ///< The saturated liquid state at the minimum saturation temperature
@@ -426,33 +426,31 @@ private:
       BibTeX_CP0;                       ///< The bibtex key for the ideal gas specific heat correlation
     CriticalRegionSplines
       critical_region_splines;  ///< A cubic spline in the form T = f(rho) for saturated liquid and saturated vapor curves in the near-critical region
-    
+
     /// Get the optional of the populated superancillary
-    std::optional<SuperAncillary_t> & get_superanc_optional(){
-        
-        if (!superancillaries){
-            if (!superancillaries_str.empty()){
-//                auto start = std::chrono::high_resolution_clock::now(); // Start time
+    std::optional<SuperAncillary_t>& get_superanc_optional() {
+
+        if (!superancillaries) {
+            if (!superancillaries_str.empty()) {
+                //                auto start = std::chrono::high_resolution_clock::now(); // Start time
                 // Now do the parsing pass and replace with the actual superancillary
                 superancillaries.emplace(SuperAncillary_t(superancillaries_str));
-//                auto end = std::chrono::high_resolution_clock::now();  // End time
-//                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                //                auto end = std::chrono::high_resolution_clock::now();  // End time
+                //                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
                 //std::cout << "Execution time: " << duration.count() << " microseconds for " << BibTeX_EOS << std::endl;
             }
         }
         return superancillaries;
     }
-    
+
     /// Set the placeholder string for the superancillaries to allow for lazy construction, particularly important in debug builds
-    void set_superancillaries_str(const std::string &s){
+    void set_superancillaries_str(const std::string& s) {
         superancillaries_str = s;
         // Do the construction greedily by default, but allow it to be lazy if you want
 #if !defined(LAZY_LOAD_SUPERANCILLARIES)
         get_superanc_optional();
 #endif
     }
-    
-    
 
     /// Validate the EOS that was just constructed
     void validate() {
@@ -542,13 +540,13 @@ class CoolPropFluid
     CoolPropFluid() : ECS_qd(-_HUGE) {
         this->ChemSpider_id = -1;
     };
-    ~CoolPropFluid(){};
+    ~CoolPropFluid() {};
     const EquationOfState& EOS() const {
         return EOSVector[0];
     }  ///< Get a reference to the equation of state
     EquationOfState& EOS() {
         return EOSVector[0];
-    }                                        ///< Get a reference to the equation of state
+    }  ///< Get a reference to the equation of state
     std::vector<EquationOfState> EOSVector;  ///< The equations of state that could be used for this fluid
 
     std::string name;  ///< The name of the fluid

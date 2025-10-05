@@ -25,7 +25,7 @@ struct CubicsValues
     std::string alpha_type;            ///< The type of alpha function
     std::vector<double> alpha_coeffs;  ///< The vector of coefficients for the alpha function
     IdealHelmholtzContainer alpha0;    ///< The ideal Helmholtz energy
-    CubicsValues() : rhomolarc(-1){};
+    CubicsValues() : rhomolarc(-1) {};
 };
 
 /**

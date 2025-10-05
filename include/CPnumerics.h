@@ -709,5 +709,4 @@ double asinh(double value) {
 #    undef EOS
 #endif
 
-
 #endif

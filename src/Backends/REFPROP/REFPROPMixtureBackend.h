@@ -15,16 +15,17 @@
 
 namespace CoolProp {
 
-struct THERM0dllOutputs{
-    double p_kPa; /// Pressure [kPa]
-    double umol_Jmol; /// Internal energy [J/mol]
-    double hmol_Jmol; /// Enthalpy [J/mol]
-    double smol_JmolK; /// Entropy [J/mol-K]
-    double cvmol_JmolK; /// Isochoric heat capacity [J/mol-K]
-    double cpmol_JmolK; /// Isobaric heat capacity [J/mol-K]
-    double w_ms; /// Speed of sound [m/s]
-    double amol_Jmol; ///Helmholtz energy [J/mol]
-    double gmol_Jmol; /// Gibbs free energy [J/mol]
+struct THERM0dllOutputs
+{
+    double p_kPa;        /// Pressure [kPa]
+    double umol_Jmol;    /// Internal energy [J/mol]
+    double hmol_Jmol;    /// Enthalpy [J/mol]
+    double smol_JmolK;   /// Entropy [J/mol-K]
+    double cvmol_JmolK;  /// Isochoric heat capacity [J/mol-K]
+    double cpmol_JmolK;  /// Isobaric heat capacity [J/mol-K]
+    double w_ms;         /// Speed of sound [m/s]
+    double amol_Jmol;    ///Helmholtz energy [J/mol]
+    double gmol_Jmol;    /// Gibbs free energy [J/mol]
 };
 
 class REFPROPMixtureBackend : public AbstractState
@@ -263,9 +264,9 @@ class REFPROPMixtureBackend : public AbstractState
     CoolPropDbl calc_Tmax(void);
     /// Calculate the minimum temperature
     CoolPropDbl calc_Tmin(void);
-    
+
     /// Call into the THERM0dll method and return outputs as a struct. REFPROP must already be setup
-    THERM0dllOutputs call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double> &mole_fractions);
+    THERM0dllOutputs call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double>& mole_fractions);
 
     /// Calculate the residual entropy in J/mol/K (should be a uniquely negative quantity)
     CoolPropDbl calc_smolar_residual(void) {

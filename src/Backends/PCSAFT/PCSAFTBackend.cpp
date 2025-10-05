@@ -62,7 +62,7 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<std::string>& component_names, bo
     assoc_term = false;
     water_present = false;
     water_idx = 0;
-    for (unsigned int i = 0; i < N; ++i){
+    for (unsigned int i = 0; i < N; ++i) {
         components[i] = PCSAFTLibrary::get_library().get(component_names[i]);
         // Determining which PC-SAFT terms should be used
         if (components[i].getZ() != 0) {
@@ -130,7 +130,7 @@ PCSAFTBackend::PCSAFTBackend(const std::vector<PCSAFTFluid>& components_in, bool
     assoc_term = false;
     water_present = false;
     water_idx = 0;
-    for (unsigned int i = 0; i < N; ++i){
+    for (unsigned int i = 0; i < N; ++i) {
         if (components[i].getZ() != 0) {
             ion_term = true;
         }
@@ -252,7 +252,8 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     if (ion_term) {
         for (auto i = 0U; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] =
+                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
         }
     }
@@ -263,7 +264,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     double summ;
     for (int i = 0; i < 4; i++) {
         summ = 0;
-        for (int j = 0; j < ncomp; j++) {
+        for (size_t j = 0; j < ncomp; j++) {
             summ += mole_fractions[j] * components[j].getM() * pow(d[j], i);
         }
         zeta[i] = PI / 6 * den * summ;
@@ -271,7 +272,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
 
     double eta = zeta[3];
     double m_avg = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         m_avg += mole_fractions[i] * components[i].getM();
     }
 
@@ -281,8 +282,8 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     double m2es3 = 0.;
     double m2e2s3 = 0.;
     int idx = -1;
-    for (int i = 0; i < ncomp; i++) {
-        for (int j = 0; j < ncomp; j++) {
+    for (size_t i = 0; i < ncomp; i++) {
+        for (size_t j = 0; j < ncomp; j++) {
             idx += 1;
             s_ij[idx] = (components[i].getSigma() + components[j].getSigma()) / 2.;
             if (ion_term) {
@@ -314,12 +315,12 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
                      * (3 * zeta[1] * zeta[2] / (1 - zeta[3]) + pow(zeta[2], 3.) / (zeta[3] * pow(1 - zeta[3], 2))
                         + (pow(zeta[2], 3.) / pow(zeta[3], 2.) - zeta[0]) * log(1 - zeta[3]));
 
-    static double a0[7] = { 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084 };
-    static double a1[7] = { -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930 };
-    static double a2[7] = { -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368 };
-    static double b0[7] = { 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612 };
-    static double b1[7] = { -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346 };
-    static double b2[7] = { 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585 };
+    static double a0[7] = {0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084};
+    static double a1[7] = {-0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930};
+    static double a2[7] = {-0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368};
+    static double b0[7] = {0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612};
+    static double b1[7] = {-0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346};
+    static double b2[7] = {0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585};
 
     vector<double> a(7, 0);
     vector<double> b(7, 0);
@@ -339,7 +340,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
                    + (1 - m_avg) * (20 * eta - 27 * eta * eta + 12 * pow(eta, 3) - 2 * pow(eta, 4)) / pow((1 - eta) * (2 - eta), 2.0));
 
     summ = 0.0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         summ += mole_fractions[i] * (components[i].getM() - 1) * log(ghs[i * ncomp + i]);
     }
 
@@ -365,7 +366,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
 
         const static double conv = 7242.702976750923;  // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
 
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             dipmSQ[i] = pow(components[i].getDipm(), 2.) / (components[i].getM() * components[i].getU() * pow(components[i].getSigma(), 3.)) * conv;
         }
 
@@ -375,23 +376,24 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
         double J2, J3;
         double m_ij;
         double m_ijk;
-        for (int i = 0; i < ncomp; i++) {
-            for (int j = 0; j < ncomp; j++) {
+        for (size_t i = 0; i < ncomp; i++) {
+            for (size_t j = 0; j < ncomp; j++) {
                 m_ij = sqrt(components[i].getM() * components[j].getM());
                 if (m_ij > 2) {
                     m_ij = 2;
                 }
                 J2 = 0.;
                 for (int l = 0; l < 5; l++) {
-                    adip[l] = a0dip[l] + (m_ij-1)/m_ij*a1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*a2dip[l];
-                    bdip[l] = b0dip[l] + (m_ij-1)/m_ij*b1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*b2dip[l];
-                    J2 += (adip[l] + bdip[l]*e_ij[i*ncomp+j]/_T)*pow(eta, l); // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                    adip[l] = a0dip[l] + (m_ij - 1) / m_ij * a1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * a2dip[l];
+                    bdip[l] = b0dip[l] + (m_ij - 1) / m_ij * b1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * b2dip[l];
+                    J2 += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T)
+                          * pow(eta, l);  // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
                 }
                 A2 += mole_fractions[i] * mole_fractions[j] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3)
                       * pow(s_ij[j * ncomp + j], 3) / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum() * dipmSQ[i]
                       * dipmSQ[j] * J2;
 
-                for (int k = 0; k < ncomp; k++) {
+                for (size_t k = 0; k < ncomp; k++) {
                     m_ijk = pow((components[i].getM() * components[j].getM() * components[k].getM()), 1 / 3.);
                     if (m_ijk > 2) {
                         m_ijk = 2;
@@ -412,8 +414,8 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
         A2 = -PI * den * A2;
         A3 = -4 / 3. * PI * PI * den * den * A3;
 
-        if (A2 != 0) { // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
-            ares_polar = A2/(1-A3/A2);
+        if (A2 != 0) {  // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
+            ares_polar = A2 / (1 - A3 / A2);
         }
     }
 
@@ -421,38 +423,38 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     double ares_assoc = 0.;
     if (assoc_term) {
         int num_sites = 0;
-        vector<int> iA; //indices of associating compounds
-        for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        vector<int> iA;  //indices of associating compounds
+        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
-        vector<double> x_assoc(num_sites); // mole fractions of only the associating compounds
+        vector<double> x_assoc(num_sites);  // mole fractions of only the associating compounds
         for (int i = 0; i < num_sites; i++) {
             x_assoc[i] = mole_fractions[iA[i]];
         }
 
         // these indices are necessary because we are only using 1D vectors
-        vector<double> XA (num_sites, 0);
+        vector<double> XA(num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
         auto idxa = 0ULL;
-        auto idxi = 0ULL; // index for the ii-th compound
-        auto idxj = 0ULL; // index for the jj-th compound
+        auto idxi = 0ULL;  // index for the ii-th compound
+        auto idxj = 0ULL;  // index for the jj-th compound
         for (auto i = 0; i < num_sites; i++) {
-            idxi = iA[i]*ncomp+iA[i];
+            idxi = iA[i] * ncomp + iA[i];
             for (int j = 0; j < num_sites; j++) {
-                idxj = iA[j]*ncomp+iA[j];
+                idxj = iA[j] * ncomp + iA[j];
                 if (assoc_matrix[idxa] != 0) {
-                    double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
-                    double volABij = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
-                        s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
-                    delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij;
+                    double eABij = (components[iA[i]].getUAB() + components[iA[j]].getUAB()) / 2.;
+                    double volABij = sqrt(components[iA[i]].getVolA() * components[iA[j]].getVolA())
+                                     * pow(sqrt(s_ij[idxi] * s_ij[idxj]) / (0.5 * (s_ij[idxi] + s_ij[idxj])), 3);
+                    delta_ij[idxa] = ghs[iA[i] * ncomp + iA[j]] * (exp(eABij / _T) - 1) * pow(s_ij[iA[i] * ncomp + iA[j]], 3) * volABij;
                 }
                 idxa += 1;
             }
-            XA[i] = (-1 + sqrt(1+8*den*delta_ij[i*num_sites+i]))/(4*den*delta_ij[i*num_sites+i]);
+            XA[i] = (-1 + sqrt(1 + 8 * den * delta_ij[i * num_sites + i])) / (4 * den * delta_ij[i * num_sites + i]);
             if (!std::isfinite(XA[i])) {
                 XA[i] = 0.02;
             }
@@ -475,7 +477,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
 
         ares_assoc = 0.;
         for (int i = 0; i < num_sites; i++) {
-            ares_assoc += mole_fractions[iA[i]]*(log(XA[i])-0.5*XA[i] + 0.5);
+            ares_assoc += mole_fractions[iA[i]] * (log(XA[i]) - 0.5 * XA[i] + 0.5);
         }
     }
 
@@ -483,12 +485,12 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     double ares_ion = 0.;
     if (ion_term) {
         vector<double> q(ncomp);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             q[i] = components[i].getZ() * E_CHRG;
         }
 
         summ = 0.;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             summ += components[i].getZ() * components[i].getZ() * mole_fractions[i];
         }
         double kappa =
@@ -498,10 +500,8 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
             vector<double> chi(ncomp);
             vector<double> sigma_k(ncomp);
             summ = 0.;
-            for (int i = 0; i < ncomp; i++) {
-                chi[i] = 3 / pow(kappa * d[i], 3)
-                         * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
-                            + 0.5 * pow(1 + kappa * d[i], 2));
+            for (size_t i = 0; i < ncomp; i++) {
+                chi[i] = 3 / pow(kappa * d[i], 3) * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i]) + 0.5 * pow(1 + kappa * d[i], 2));
                 summ += mole_fractions[i] * q[i] * q[i] * chi[i] * kappa;
             }
 
@@ -523,7 +523,8 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     if (ion_term) {
         for (auto i = 0U; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] =
+                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
                 dd_dt[i] = 0.;
             }
         }
@@ -535,7 +536,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     double summ;
     for (int i = 0; i < 4; i++) {
         summ = 0;
-        for (int j = 0; j < ncomp; j++) {
+        for (size_t j = 0; j < ncomp; j++) {
             summ += mole_fractions[j] * components[j].getM() * pow(d[j], i);
         }
         zeta[i] = PI / 6 * den * summ;
@@ -544,7 +545,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     vector<double> dzeta_dt(4, 0);
     for (int i = 1; i < 4; i++) {
         summ = 0;
-        for (int j = 0; j < ncomp; j++) {
+        for (size_t j = 0; j < ncomp; j++) {
             summ += mole_fractions[j] * components[j].getM() * i * dd_dt[j] * pow(d[j], (i - 1));
         }
         dzeta_dt[i] = PI / 6 * den * summ;
@@ -552,7 +553,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
 
     double eta = zeta[3];
     double m_avg = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         m_avg += mole_fractions[i] * components[i].getM();
     }
 
@@ -564,8 +565,8 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     double m2e2s3 = 0.;
     double ddij_dt;
     int idx = -1;
-    for (int i = 0; i < ncomp; i++) {
-        for (int j = 0; j < ncomp; j++) {
+    for (size_t i = 0; i < ncomp; i++) {
+        for (size_t j = 0; j < ncomp; j++) {
             idx += 1;
             s_ij[idx] = (components[i].getSigma() + components[j].getSigma()) / 2.;
             if (ion_term) {
@@ -585,32 +586,34 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
                 }
             }
             m2es3 = m2es3 + mole_fractions[i] * mole_fractions[j] * components[i].getM() * components[j].getM() * e_ij[idx] / _T * pow(s_ij[idx], 3);
-            m2e2s3 = m2e2s3 + mole_fractions[i] * mole_fractions[j] * components[i].getM() * components[j].getM() * pow(e_ij[idx] / _T, 2) * pow(s_ij[idx], 3);
-            ghs[idx] = 1 / (1-zeta[3]) + (d[i]*d[j]/(d[i]+d[j]))*3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
-                    pow(d[i]*d[j]/(d[i]+d[j]), 2)*2*zeta[2]*zeta[2]/pow(1-zeta[3], 3);
-            ddij_dt = (d[i]*d[j]/(d[i]+d[j]))*(dd_dt[i]/d[i]+dd_dt[j]/d[j]-(dd_dt[i]+dd_dt[j])/(d[i]+d[j]));
-            dghs_dt[idx] = dzeta_dt[3]/pow(1-zeta[3], 2.)
-                + 3*(ddij_dt*zeta[2]+(d[i]*d[j]/(d[i]+d[j]))*dzeta_dt[2])/pow(1-zeta[3], 2.)
-                + 4*(d[i]*d[j]/(d[i]+d[j]))*zeta[2]*(1.5*dzeta_dt[3]+ddij_dt*zeta[2]
-                + (d[i]*d[j]/(d[i]+d[j]))*dzeta_dt[2])/pow(1-zeta[3], 3.)
-                + 6*pow((d[i]*d[j]/(d[i]+d[j]))*zeta[2], 2.)*dzeta_dt[3]/pow(1-zeta[3], 4.);
+            m2e2s3 =
+              m2e2s3
+              + mole_fractions[i] * mole_fractions[j] * components[i].getM() * components[j].getM() * pow(e_ij[idx] / _T, 2) * pow(s_ij[idx], 3);
+            ghs[idx] = 1 / (1 - zeta[3]) + (d[i] * d[j] / (d[i] + d[j])) * 3 * zeta[2] / (1 - zeta[3]) / (1 - zeta[3])
+                       + pow(d[i] * d[j] / (d[i] + d[j]), 2) * 2 * zeta[2] * zeta[2] / pow(1 - zeta[3], 3);
+            ddij_dt = (d[i] * d[j] / (d[i] + d[j])) * (dd_dt[i] / d[i] + dd_dt[j] / d[j] - (dd_dt[i] + dd_dt[j]) / (d[i] + d[j]));
+            dghs_dt[idx] = dzeta_dt[3] / pow(1 - zeta[3], 2.)
+                           + 3 * (ddij_dt * zeta[2] + (d[i] * d[j] / (d[i] + d[j])) * dzeta_dt[2]) / pow(1 - zeta[3], 2.)
+                           + 4 * (d[i] * d[j] / (d[i] + d[j])) * zeta[2]
+                               * (1.5 * dzeta_dt[3] + ddij_dt * zeta[2] + (d[i] * d[j] / (d[i] + d[j])) * dzeta_dt[2]) / pow(1 - zeta[3], 3.)
+                           + 6 * pow((d[i] * d[j] / (d[i] + d[j])) * zeta[2], 2.) * dzeta_dt[3] / pow(1 - zeta[3], 4.);
         }
     }
 
-    double dadt_hs = 1/zeta[0]*(3*(dzeta_dt[1]*zeta[2] + zeta[1]*dzeta_dt[2])/(1-zeta[3])
-        + 3*zeta[1]*zeta[2]*dzeta_dt[3]/pow(1-zeta[3], 2.)
-        + 3*pow(zeta[2], 2.)*dzeta_dt[2]/zeta[3]/pow(1-zeta[3], 2.)
-        + pow(zeta[2],3.)*dzeta_dt[3]*(3*zeta[3]-1)/pow(zeta[3], 2.)/pow(1-zeta[3], 3.)
-        + (3*pow(zeta[2], 2.)*dzeta_dt[2]*zeta[3] - 2*pow(zeta[2], 3.)*dzeta_dt[3])/pow(zeta[3], 3.)
-        * log(1-zeta[3])
-        + (zeta[0]-pow(zeta[2],3)/pow(zeta[3],2.))*dzeta_dt[3]/(1-zeta[3]));
+    double dadt_hs =
+      1 / zeta[0]
+      * (3 * (dzeta_dt[1] * zeta[2] + zeta[1] * dzeta_dt[2]) / (1 - zeta[3]) + 3 * zeta[1] * zeta[2] * dzeta_dt[3] / pow(1 - zeta[3], 2.)
+         + 3 * pow(zeta[2], 2.) * dzeta_dt[2] / zeta[3] / pow(1 - zeta[3], 2.)
+         + pow(zeta[2], 3.) * dzeta_dt[3] * (3 * zeta[3] - 1) / pow(zeta[3], 2.) / pow(1 - zeta[3], 3.)
+         + (3 * pow(zeta[2], 2.) * dzeta_dt[2] * zeta[3] - 2 * pow(zeta[2], 3.) * dzeta_dt[3]) / pow(zeta[3], 3.) * log(1 - zeta[3])
+         + (zeta[0] - pow(zeta[2], 3) / pow(zeta[3], 2.)) * dzeta_dt[3] / (1 - zeta[3]));
 
-    static double a0[7] = { 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084 };
-    static double a1[7] = { -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930 };
-    static double a2[7] = { -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368 };
-    static double b0[7] = { 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612 };
-    static double b1[7] = { -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346 };
-    static double b2[7] = { 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585 };
+    static double a0[7] = {0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084};
+    static double a1[7] = {-0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930};
+    static double a2[7] = {-0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368};
+    static double b0[7] = {0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612};
+    static double b1[7] = {-0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346};
+    static double b2[7] = {0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585};
 
     vector<double> a(7, 0);
     vector<double> b(7, 0);
@@ -637,7 +640,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     double dC1_dt = C2 * dzeta_dt[3];
 
     summ = 0.;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         summ += mole_fractions[i] * (components[i].getM() - 1) * dghs_dt[i * ncomp + i] / ghs[i * ncomp + i];
     }
 
@@ -665,7 +668,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
 
         const static double conv = 7242.702976750923;  // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
 
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             dipmSQ[i] = pow(components[i].getDipm(), 2.) / (components[i].getM() * components[i].getU() * pow(components[i].getSigma(), 3.)) * conv;
         }
 
@@ -675,8 +678,8 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         double J2, J3, dJ2_dt, dJ3_dt;
         double m_ij;
         double m_ijk;
-        for (int i = 0; i < ncomp; i++) {
-            for (int j = 0; j < ncomp; j++) {
+        for (size_t i = 0; i < ncomp; i++) {
+            for (size_t j = 0; j < ncomp; j++) {
                 m_ij = sqrt(components[i].getM() * components[j].getM());
                 if (m_ij > 2) {
                     m_ij = 2;
@@ -686,10 +689,10 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
                 for (int l = 0; l < 5; l++) {
                     adip[l] = a0dip[l] + (m_ij - 1) / m_ij * a1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * a2dip[l];
                     bdip[l] = b0dip[l] + (m_ij - 1) / m_ij * b1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * b2dip[l];
-                    J2 += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T) * pow(eta, l); // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                    J2 += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T)
+                          * pow(eta, l);  // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
                     dJ2_dt += adip[l] * l * pow(eta, l - 1) * dzeta_dt[3]
-                        + bdip[l] * e_ij[j * ncomp + j] * (1 / _T * l * pow(eta, l - 1) * dzeta_dt[3]
-                        - 1 / pow(_T, 2.) * pow(eta, l));
+                              + bdip[l] * e_ij[j * ncomp + j] * (1 / _T * l * pow(eta, l - 1) * dzeta_dt[3] - 1 / pow(_T, 2.) * pow(eta, l));
                 }
                 A2 += mole_fractions[i] * mole_fractions[j] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3)
                       * pow(s_ij[j * ncomp + j], 3) / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum() * dipmSQ[i]
@@ -698,7 +701,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
                           * pow(s_ij[j * ncomp + j], 3) / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum()
                           * dipmSQ[i] * dipmSQ[j] * (dJ2_dt / pow(_T, 2) - 2 * J2 / pow(_T, 3));
 
-                for (int k = 0; k < ncomp; k++) {
+                for (size_t k = 0; k < ncomp; k++) {
                     m_ijk = pow((components[i].getM() * components[j].getM() * components[k].getM()), 1 / 3.);
                     if (m_ijk > 2) {
                         m_ijk = 2;
@@ -728,7 +731,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         dA2_dt = -PI * den * dA2_dt;
         dA3_dt = -4 / 3. * PI * PI * den * den * dA3_dt;
 
-        if (A2 != 0) { // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
+        if (A2 != 0) {  // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
             dadt_polar = (dA2_dt - 2 * A3 / A2 * dA2_dt + dA3_dt) / pow(1 - A3 / A2, 2.);
         }
     }
@@ -737,42 +740,42 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     double dadt_assoc = 0.;
     if (assoc_term) {
         int num_sites = 0;
-        vector<int> iA; //indices of associating compounds
-        for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        vector<int> iA;  //indices of associating compounds
+        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
-        vector<double> x_assoc(num_sites); // mole fractions of only the associating compounds
+        vector<double> x_assoc(num_sites);  // mole fractions of only the associating compounds
         for (int i = 0; i < num_sites; i++) {
             x_assoc[i] = mole_fractions[iA[i]];
         }
 
         // these indices are necessary because we are only using 1D vectors
-        vector<double> XA (num_sites, 0);
+        vector<double> XA(num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
         vector<double> ddelta_dt(num_sites * num_sites, 0);
         std::size_t idxa = 0UL;
-        std::size_t idxi = 0UL; // index for the ii-th compound
+        std::size_t idxi = 0UL;  // index for the ii-th compound
         std::size_t idxj = 0UL;  // index for the jj-th compound
         for (auto i = 0; i < num_sites; i++) {
-            idxi = iA[i]*ncomp+iA[i];
+            idxi = iA[i] * ncomp + iA[i];
             for (auto j = 0; j < num_sites; j++) {
-                idxj = iA[j]*ncomp+iA[j];
+                idxj = iA[j] * ncomp + iA[j];
                 if (assoc_matrix[idxa] != 0) {
-                    double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
-                    double volABij = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
-                        s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
-                    delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij;
-                    ddelta_dt[idxa] = pow(s_ij[idxj],3)*volABij*(-eABij/pow(_T,2)
-                        *exp(eABij/_T)*ghs[iA[i]*ncomp+iA[j]] + dghs_dt[iA[i]*ncomp+iA[j]]
-                        *(exp(eABij/_T)-1));
+                    double eABij = (components[iA[i]].getUAB() + components[iA[j]].getUAB()) / 2.;
+                    double volABij = sqrt(components[iA[i]].getVolA() * components[iA[j]].getVolA())
+                                     * pow(sqrt(s_ij[idxi] * s_ij[idxj]) / (0.5 * (s_ij[idxi] + s_ij[idxj])), 3);
+                    delta_ij[idxa] = ghs[iA[i] * ncomp + iA[j]] * (exp(eABij / _T) - 1) * pow(s_ij[iA[i] * ncomp + iA[j]], 3) * volABij;
+                    ddelta_dt[idxa] =
+                      pow(s_ij[idxj], 3) * volABij
+                      * (-eABij / pow(_T, 2) * exp(eABij / _T) * ghs[iA[i] * ncomp + iA[j]] + dghs_dt[iA[i] * ncomp + iA[j]] * (exp(eABij / _T) - 1));
                 }
                 idxa += 1;
             }
-            XA[i] = (-1 + sqrt(1+8*den*delta_ij[i*num_sites+i]))/(4*den*delta_ij[i*num_sites+i]);
+            XA[i] = (-1 + sqrt(1 + 8 * den * delta_ij[i * num_sites + i])) / (4 * den * delta_ij[i * num_sites + i]);
             if (!std::isfinite(XA[i])) {
                 XA[i] = 0.02;
             }
@@ -797,7 +800,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         dXA_dt = dXAdt_find(delta_ij, den, XA, ddelta_dt, x_assoc);
 
         for (int i = 0; i < num_sites; i++) {
-            dadt_assoc += mole_fractions[iA[i]]*(1/XA[i]-0.5)*dXA_dt[i];
+            dadt_assoc += mole_fractions[iA[i]] * (1 / XA[i] - 0.5) * dXA_dt[i];
         }
     }
 
@@ -805,12 +808,12 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     double dadt_ion = 0.;
     if (ion_term) {
         vector<double> q(ncomp);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             q[i] = components[i].getZ() * E_CHRG;
         }
 
         summ = 0.;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             summ += components[i].getZ() * components[i].getZ() * mole_fractions[i];
         }
         double kappa =
@@ -821,17 +824,15 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
             vector<double> chi(ncomp);
             vector<double> dchikap_dk(ncomp);
             summ = 0.;
-            for (int i = 0; i < ncomp; i++) {
-                chi[i] = 3 / pow(kappa * d[i], 3)
-                         * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
-                            + 0.5 * pow(1 + kappa * d[i], 2));
+            for (size_t i = 0; i < ncomp; i++) {
+                chi[i] = 3 / pow(kappa * d[i], 3) * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i]) + 0.5 * pow(1 + kappa * d[i], 2));
                 dchikap_dk[i] = -2 * chi[i] + 3 / (1 + kappa * d[i]);
                 summ += mole_fractions[i] * components[i].getZ() * components[i].getZ();
             }
             dkappa_dt = -0.5 * den * E_CHRG * E_CHRG / kb / _T / _T / (dielc * perm_vac) * summ / kappa;
 
             summ = 0.;
-            for (int i = 0; i < ncomp; i++) {
+            for (size_t i = 0; i < ncomp; i++) {
                 summ += mole_fractions[i] * q[i] * q[i] * (dchikap_dk[i] * dkappa_dt / _T - kappa * chi[i] / _T / _T);
             }
             dadt_ion = -1 / 12. / PI / kb / (dielc * perm_vac) * summ;
@@ -867,7 +868,8 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     if (ion_term) {
         for (auto i = 0U; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] =
+                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
         }
     }
@@ -878,7 +880,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     double summ;
     for (int i = 0; i < 4; i++) {
         summ = 0;
-        for (int j = 0; j < ncomp; j++) {
+        for (size_t j = 0; j < ncomp; j++) {
             summ += mole_fractions[j] * components[j].getM() * pow(d[j], i);
         }
         zeta[i] = PI / 6 * den * summ;
@@ -886,7 +888,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
 
     double eta = zeta[3];
     double m_avg = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         m_avg += mole_fractions[i] * components[i].getM();
     }
 
@@ -897,50 +899,52 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     double m2es3 = 0.;
     double m2e2s3 = 0.;
     int idx = -1;
-    for (int i = 0; i < ncomp; i++) {
-       for (int j = 0; j < ncomp; j++) {
-           idx += 1;
-           s_ij[idx] = (components[i].getSigma() + components[j].getSigma())/2.;
-           if (ion_term) {
-               if (components[i].getZ()*components[j].getZ() <= 0) { // for two cations or two anions e_ij is kept at zero to avoid dispersion between like ions (see Held et al. 2014)
-                   if (k_ij.empty()) {
-                       e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
-                   }
-                   else {
-                       e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
-                   }
-               }
-           } else {
-               if (k_ij.empty()) {
-                   e_ij[idx] = sqrt(components[i].getU()*components[j].getU());
-               }
-               else {
-                   e_ij[idx] = sqrt(components[i].getU()*components[j].getU())*(1 - (k_ij[idx] + k_ijT[idx] * _T));
-               }
-           }
-           m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/_T*pow(s_ij[idx], 3);
-           m2e2s3 = m2e2s3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*pow(e_ij[idx]/_T,2)*pow(s_ij[idx], 3);
-           ghs[idx] = 1/(1-zeta[3]) + (d[i]*d[j]/(d[i]+d[j]))*3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
-                   pow(d[i]*d[j]/(d[i]+d[j]), 2)*2*zeta[2]*zeta[2]/pow(1-zeta[3], 3);
-           denghs[idx] = zeta[3]/(1-zeta[3])/(1-zeta[3]) +
-               (d[i]*d[j]/(d[i]+d[j]))*(3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
-               6*zeta[2]*zeta[3]/pow(1-zeta[3], 3)) +
-               pow(d[i]*d[j]/(d[i]+d[j]), 2)*(4*zeta[2]*zeta[2]/pow(1-zeta[3], 3) +
-               6*zeta[2]*zeta[2]*zeta[3]/pow(1-zeta[3], 4));
-       }
+    for (size_t i = 0; i < ncomp; i++) {
+        for (size_t j = 0; j < ncomp; j++) {
+            idx += 1;
+            s_ij[idx] = (components[i].getSigma() + components[j].getSigma()) / 2.;
+            if (ion_term) {
+                if (components[i].getZ() * components[j].getZ()
+                    <= 0) {  // for two cations or two anions e_ij is kept at zero to avoid dispersion between like ions (see Held et al. 2014)
+                    if (k_ij.empty()) {
+                        e_ij[idx] = sqrt(components[i].getU() * components[j].getU());
+                    } else {
+                        e_ij[idx] = sqrt(components[i].getU() * components[j].getU()) * (1 - (k_ij[idx] + k_ijT[idx] * _T));
+                    }
+                }
+            } else {
+                if (k_ij.empty()) {
+                    e_ij[idx] = sqrt(components[i].getU() * components[j].getU());
+                } else {
+                    e_ij[idx] = sqrt(components[i].getU() * components[j].getU()) * (1 - (k_ij[idx] + k_ijT[idx] * _T));
+                }
+            }
+            m2es3 = m2es3 + mole_fractions[i] * mole_fractions[j] * components[i].getM() * components[j].getM() * e_ij[idx] / _T * pow(s_ij[idx], 3);
+            m2e2s3 =
+              m2e2s3
+              + mole_fractions[i] * mole_fractions[j] * components[i].getM() * components[j].getM() * pow(e_ij[idx] / _T, 2) * pow(s_ij[idx], 3);
+            ghs[idx] = 1 / (1 - zeta[3]) + (d[i] * d[j] / (d[i] + d[j])) * 3 * zeta[2] / (1 - zeta[3]) / (1 - zeta[3])
+                       + pow(d[i] * d[j] / (d[i] + d[j]), 2) * 2 * zeta[2] * zeta[2] / pow(1 - zeta[3], 3);
+            denghs[idx] =
+              zeta[3] / (1 - zeta[3]) / (1 - zeta[3])
+              + (d[i] * d[j] / (d[i] + d[j])) * (3 * zeta[2] / (1 - zeta[3]) / (1 - zeta[3]) + 6 * zeta[2] * zeta[3] / pow(1 - zeta[3], 3))
+              + pow(d[i] * d[j] / (d[i] + d[j]), 2)
+                  * (4 * zeta[2] * zeta[2] / pow(1 - zeta[3], 3) + 6 * zeta[2] * zeta[2] * zeta[3] / pow(1 - zeta[3], 4));
+        }
     }
 
-    double ares_hs = 1/zeta[0]*(3*zeta[1]*zeta[2]/(1-zeta[3]) + pow(zeta[2], 3.)/(zeta[3]*pow(1-zeta[3],2))
-           + (pow(zeta[2], 3.)/pow(zeta[3], 2.) - zeta[0])*log(1-zeta[3]));
-    double Zhs = zeta[3]/(1-zeta[3]) + 3.*zeta[1]*zeta[2]/zeta[0]/(1.-zeta[3])/(1.-zeta[3]) +
-       (3.*pow(zeta[2], 3.) - zeta[3]*pow(zeta[2], 3.))/zeta[0]/pow(1.-zeta[3], 3.);
+    double ares_hs = 1 / zeta[0]
+                     * (3 * zeta[1] * zeta[2] / (1 - zeta[3]) + pow(zeta[2], 3.) / (zeta[3] * pow(1 - zeta[3], 2))
+                        + (pow(zeta[2], 3.) / pow(zeta[3], 2.) - zeta[0]) * log(1 - zeta[3]));
+    double Zhs = zeta[3] / (1 - zeta[3]) + 3. * zeta[1] * zeta[2] / zeta[0] / (1. - zeta[3]) / (1. - zeta[3])
+                 + (3. * pow(zeta[2], 3.) - zeta[3] * pow(zeta[2], 3.)) / zeta[0] / pow(1. - zeta[3], 3.);
 
-    static double a0[7] = { 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084 };
-    static double a1[7] = { -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930 };
-    static double a2[7] = { -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368 };
-    static double b0[7] = { 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612 };
-    static double b1[7] = { -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346 };
-    static double b2[7] = { 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585 };
+    static double a0[7] = {0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084};
+    static double a1[7] = {-0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930};
+    static double a2[7] = {-0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368};
+    static double b0[7] = {0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612};
+    static double b1[7] = {-0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346};
+    static double b2[7] = {0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585};
 
     vector<double> a(7, 0);
     vector<double> b(7, 0);
@@ -967,7 +971,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
                    + (1 - m_avg) * (2 * pow(eta, 3) + 12 * eta * eta - 48 * eta + 40) / pow((1 - eta) * (2 - eta), 3.0));
 
     summ = 0.0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         summ += mole_fractions[i] * (components[i].getM() - 1) * log(ghs[i * ncomp + i]);
     }
 
@@ -975,7 +979,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     double ares_disp = -2 * PI * den * I1 * m2es3 - PI * den * m_avg * C1 * I2 * m2e2s3;
 
     summ = 0.0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         summ += mole_fractions[i] * (components[i].getM() - 1) / ghs[i * ncomp + i] * denghs[i * ncomp + i];
     }
 
@@ -986,11 +990,11 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     vector<double> dahs_dx(ncomp, 0);
     vector<double> dzeta_dx(4, 0);
     idx = -1;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         for (int l = 0; l < 4; l++) {
             dzeta_dx[l] = PI / 6. * den * components[i].getM() * pow(d[i], l);
         }
-        for (int j = 0; j < ncomp; j++) {
+        for (size_t j = 0; j < ncomp; j++) {
             idx += 1;
             dghsii_dx[idx] =
               dzeta_dx[3] / (1 - zeta[3]) / (1 - zeta[3])
@@ -1013,7 +1017,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     vector<double> dadisp_dx(ncomp, 0);
     vector<double> dahc_dx(ncomp, 0);
     double dzeta3_dx, daa_dx, db_dx, dI1_dx, dI2_dx, dm2es3_dx, dm2e2s3_dx, dC1_dx;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         dzeta3_dx = PI / 6. * den * components[i].getM() * pow(d[i], 3);
         dI1_dx = 0.0;
         dI2_dx = 0.0;
@@ -1025,7 +1029,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
             dI1_dx += a[l] * l * dzeta3_dx * pow(eta, l - 1) + daa_dx * pow(eta, l);
             dI2_dx += b[l] * l * dzeta3_dx * pow(eta, l - 1) + db_dx * pow(eta, l);
         }
-        for (int j = 0; j < ncomp; j++) {
+        for (size_t j = 0; j < ncomp; j++) {
             dm2es3_dx += mole_fractions[j] * components[j].getM() * (e_ij[i * ncomp + j] / _T) * pow(s_ij[i * ncomp + j], 3);
             dm2e2s3_dx += mole_fractions[j] * components[j].getM() * pow(e_ij[i * ncomp + j] / _T, 2) * pow(s_ij[i * ncomp + j], 3);
             dahc_dx[i] += mole_fractions[j] * (components[j].getM() - 1) / ghs[j * ncomp + j] * dghsii_dx[i * ncomp + j];
@@ -1045,8 +1049,8 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
 
     vector<double> mu_hc(ncomp, 0);
     vector<double> mu_disp(ncomp, 0);
-    for (int i = 0; i < ncomp; i++) {
-        for (int j = 0; j < ncomp; j++) {
+    for (size_t i = 0; i < ncomp; i++) {
+        for (size_t j = 0; j < ncomp; j++) {
             mu_hc[i] += mole_fractions[j] * dahc_dx[j];
             mu_disp[i] += mole_fractions[j] * dadisp_dx[j];
         }
@@ -1057,136 +1061,144 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     // Dipole term (Gross and Vrabec term) --------------------------------------
     vector<double> mu_polar(ncomp, 0);
     if (polar_term) {
-       double A2 = 0.;
-       double A3 = 0.;
-       double dA2_det = 0.;
-       double dA3_det = 0.;
-       vector<double> dA2_dx(ncomp, 0);
-       vector<double> dA3_dx(ncomp, 0);
+        double A2 = 0.;
+        double A3 = 0.;
+        double dA2_det = 0.;
+        double dA3_det = 0.;
+        vector<double> dA2_dx(ncomp, 0);
+        vector<double> dA3_dx(ncomp, 0);
 
-       static double a0dip[5] = { 0.3043504, -0.1358588, 1.4493329, 0.3556977, -2.0653308 };
-       static double a1dip[5] = { 0.9534641, -1.8396383, 2.0131180, -7.3724958, 8.2374135 };
-       static double a2dip[5] = { -1.1610080, 4.5258607, 0.9751222, -12.281038, 5.9397575 };
-       static double b0dip[5] = { 0.2187939, -1.1896431, 1.1626889, 0, 0 };
-       static double b1dip[5] = { -0.5873164, 1.2489132, -0.5085280, 0, 0 };
-       static double b2dip[5] = { 3.4869576, -14.915974, 15.372022, 0, 0 };
-       static double c0dip[5] = { -0.0646774, 0.1975882, -0.8087562, 0.6902849, 0 };
-       static double c1dip[5] = { -0.9520876, 2.9924258, -2.3802636, -0.2701261, 0 };
-       static double c2dip[5] = { -0.6260979, 1.2924686, 1.6542783, -3.4396744, 0 };
+        static double a0dip[5] = {0.3043504, -0.1358588, 1.4493329, 0.3556977, -2.0653308};
+        static double a1dip[5] = {0.9534641, -1.8396383, 2.0131180, -7.3724958, 8.2374135};
+        static double a2dip[5] = {-1.1610080, 4.5258607, 0.9751222, -12.281038, 5.9397575};
+        static double b0dip[5] = {0.2187939, -1.1896431, 1.1626889, 0, 0};
+        static double b1dip[5] = {-0.5873164, 1.2489132, -0.5085280, 0, 0};
+        static double b2dip[5] = {3.4869576, -14.915974, 15.372022, 0, 0};
+        static double c0dip[5] = {-0.0646774, 0.1975882, -0.8087562, 0.6902849, 0};
+        static double c1dip[5] = {-0.9520876, 2.9924258, -2.3802636, -0.2701261, 0};
+        static double c2dip[5] = {-0.6260979, 1.2924686, 1.6542783, -3.4396744, 0};
 
-       const static double conv = 7242.702976750923; // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
+        const static double conv = 7242.702976750923;  // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
 
-       vector<double> dipmSQ (ncomp, 0);
-       for (int i = 0; i < ncomp; i++) {
-           dipmSQ[i] = pow(components[i].getDipm(), 2.)/(components[i].getM()*components[i].getU()*pow(components[i].getSigma(),3.))*conv;
-       }
+        vector<double> dipmSQ(ncomp, 0);
+        for (size_t i = 0; i < ncomp; i++) {
+            dipmSQ[i] = pow(components[i].getDipm(), 2.) / (components[i].getM() * components[i].getU() * pow(components[i].getSigma(), 3.)) * conv;
+        }
 
-       vector<double> adip (5, 0);
-       vector<double> bdip (5, 0);
-       vector<double> cdip (5, 0);
-       double J2, dJ2_det, detJ2_det, J3, dJ3_det, detJ3_det;
-       double m_ij;
-       double m_ijk;
-       for (int i = 0; i < ncomp; i++) {
-           for (int j = 0; j < ncomp; j++) {
-               m_ij = sqrt(components[i].getM()*components[j].getM());
-               if (m_ij > 2) {
-                   m_ij = 2;
-               }
-               J2 = 0.;
-               dJ2_det = 0.;
-               detJ2_det = 0.;
-               for (int l = 0; l < 5; l++) {
-                   adip[l] = a0dip[l] + (m_ij-1)/m_ij*a1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*a2dip[l];
-                   bdip[l] = b0dip[l] + (m_ij-1)/m_ij*b1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*b2dip[l];
-                   J2 += (adip[l] + bdip[l]*e_ij[i*ncomp+j]/_T)*pow(eta, l); // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
-                   dJ2_det += (adip[l] + bdip[l]*e_ij[i*ncomp+j]/_T)*l*pow(eta, l-1);
-                   detJ2_det += (adip[l] + bdip[l]*e_ij[i*ncomp+j]/_T)*(l+1)*pow(eta, l);
-               }
-               A2 += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)/
-                   pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*J2;
-               dA2_det += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*
-                   pow(s_ij[j*ncomp+j],3)/pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*detJ2_det;
-               if (i == j) {
-                   dA2_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)
-                       /pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*
-                       (mole_fractions[i]*mole_fractions[j]*dJ2_det*PI/6.*den*components[i].getM()*pow(d[i],3) + 2*mole_fractions[j]*J2);
-               }
-               else {
-                   dA2_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)
-                       /pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*
-                       (mole_fractions[i]*mole_fractions[j]*dJ2_det*PI/6.*den*components[i].getM()*pow(d[i],3) + mole_fractions[j]*J2);
-               }
+        vector<double> adip(5, 0);
+        vector<double> bdip(5, 0);
+        vector<double> cdip(5, 0);
+        double J2, dJ2_det, detJ2_det, J3, dJ3_det, detJ3_det;
+        double m_ij;
+        double m_ijk;
+        for (size_t i = 0; i < ncomp; i++) {
+            for (size_t j = 0; j < ncomp; j++) {
+                m_ij = sqrt(components[i].getM() * components[j].getM());
+                if (m_ij > 2) {
+                    m_ij = 2;
+                }
+                J2 = 0.;
+                dJ2_det = 0.;
+                detJ2_det = 0.;
+                for (int l = 0; l < 5; l++) {
+                    adip[l] = a0dip[l] + (m_ij - 1) / m_ij * a1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * a2dip[l];
+                    bdip[l] = b0dip[l] + (m_ij - 1) / m_ij * b1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * b2dip[l];
+                    J2 += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T)
+                          * pow(eta, l);  // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                    dJ2_det += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T) * l * pow(eta, l - 1);
+                    detJ2_det += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T) * (l + 1) * pow(eta, l);
+                }
+                A2 += mole_fractions[i] * mole_fractions[j] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3)
+                      * pow(s_ij[j * ncomp + j], 3) / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum() * dipmSQ[i]
+                      * dipmSQ[j] * J2;
+                dA2_det += mole_fractions[i] * mole_fractions[j] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3)
+                           * pow(s_ij[j * ncomp + j], 3) / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum()
+                           * dipmSQ[i] * dipmSQ[j] * detJ2_det;
+                if (i == j) {
+                    dA2_dx[i] += e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3) * pow(s_ij[j * ncomp + j], 3)
+                                 / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum() * dipmSQ[i] * dipmSQ[j]
+                                 * (mole_fractions[i] * mole_fractions[j] * dJ2_det * PI / 6. * den * components[i].getM() * pow(d[i], 3)
+                                    + 2 * mole_fractions[j] * J2);
+                } else {
+                    dA2_dx[i] += e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3) * pow(s_ij[j * ncomp + j], 3)
+                                 / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum() * dipmSQ[i] * dipmSQ[j]
+                                 * (mole_fractions[i] * mole_fractions[j] * dJ2_det * PI / 6. * den * components[i].getM() * pow(d[i], 3)
+                                    + mole_fractions[j] * J2);
+                }
 
-               for (int k = 0; k < ncomp; k++) {
-                   m_ijk = pow((components[i].getM()*components[j].getM()*components[k].getM()),1/3.);
-                   if (m_ijk > 2) {
-                       m_ijk = 2;
-                   }
-                   J3 = 0.;
-                   dJ3_det = 0.;
-                   detJ3_det = 0.;
-                   for (int l = 0; l < 5; l++) {
-                       cdip[l] = c0dip[l] + (m_ijk-1)/m_ijk*c1dip[l] + (m_ijk-1)/m_ijk*(m_ijk-2)/m_ijk*c2dip[l];
-                       J3 += cdip[l]*pow(eta, l);
-                       dJ3_det += cdip[l]*l*pow(eta, (l-1));
-                       detJ3_det += cdip[l]*(l+2)*pow(eta, (l+1));
-                   }
-                   A3 += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
-                       pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
-                       s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
-                       dipmSQ[j]*dipmSQ[k]*J3;
-                   dA3_det += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
-                       pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
-                       s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
-                       dipmSQ[j]*dipmSQ[k]*detJ3_det;
-                   if ((i == j) && (i == k)) {
-                       dA3_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*pow(s_ij[i*ncomp+i],3)
-                           *pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/s_ij[j*ncomp+k]
-                           *components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*dipmSQ[j]
-                           *dipmSQ[k]*(mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*dJ3_det*PI/6.*den*components[i].getM()*pow(d[i],3)
-                           + 3*mole_fractions[j]*mole_fractions[k]*J3);
-                   }
-                   else if ((i == j) || (i == k)) {
-                       dA3_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*pow(s_ij[i*ncomp+i],3)
-                           *pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/s_ij[j*ncomp+k]
-                           *components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*dipmSQ[j]
-                           *dipmSQ[k]*(mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*dJ3_det*PI/6.*den*components[i].getM()*pow(d[i],3)
-                           + 2*mole_fractions[j]*mole_fractions[k]*J3);
-                   }
-                   else {
-                       dA3_dx[i] += e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*pow(s_ij[i*ncomp+i],3)
-                           *pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/s_ij[j*ncomp+k]
-                           *components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*dipmSQ[j]
-                           *dipmSQ[k]*(mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*dJ3_det*PI/6.*den*components[i].getM()*pow(d[i],3)
-                           + mole_fractions[j]*mole_fractions[k]*J3);
-                   }
-               }
-           }
-       }
+                for (size_t k = 0; k < ncomp; k++) {
+                    m_ijk = pow((components[i].getM() * components[j].getM() * components[k].getM()), 1 / 3.);
+                    if (m_ijk > 2) {
+                        m_ijk = 2;
+                    }
+                    J3 = 0.;
+                    dJ3_det = 0.;
+                    detJ3_det = 0.;
+                    for (int l = 0; l < 5; l++) {
+                        cdip[l] = c0dip[l] + (m_ijk - 1) / m_ijk * c1dip[l] + (m_ijk - 1) / m_ijk * (m_ijk - 2) / m_ijk * c2dip[l];
+                        J3 += cdip[l] * pow(eta, l);
+                        dJ3_det += cdip[l] * l * pow(eta, (l - 1));
+                        detJ3_det += cdip[l] * (l + 2) * pow(eta, (l + 1));
+                    }
+                    A3 += mole_fractions[i] * mole_fractions[j] * mole_fractions[k] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T
+                          * e_ij[k * ncomp + k] / _T * pow(s_ij[i * ncomp + i], 3) * pow(s_ij[j * ncomp + j], 3) * pow(s_ij[k * ncomp + k], 3)
+                          / s_ij[i * ncomp + j] / s_ij[i * ncomp + k] / s_ij[j * ncomp + k] * components[i].getDipnum() * components[j].getDipnum()
+                          * components[k].getDipnum() * dipmSQ[i] * dipmSQ[j] * dipmSQ[k] * J3;
+                    dA3_det += mole_fractions[i] * mole_fractions[j] * mole_fractions[k] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T
+                               * e_ij[k * ncomp + k] / _T * pow(s_ij[i * ncomp + i], 3) * pow(s_ij[j * ncomp + j], 3) * pow(s_ij[k * ncomp + k], 3)
+                               / s_ij[i * ncomp + j] / s_ij[i * ncomp + k] / s_ij[j * ncomp + k] * components[i].getDipnum()
+                               * components[j].getDipnum() * components[k].getDipnum() * dipmSQ[i] * dipmSQ[j] * dipmSQ[k] * detJ3_det;
+                    if ((i == j) && (i == k)) {
+                        dA3_dx[i] +=
+                          e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * e_ij[k * ncomp + k] / _T * pow(s_ij[i * ncomp + i], 3)
+                          * pow(s_ij[j * ncomp + j], 3) * pow(s_ij[k * ncomp + k], 3) / s_ij[i * ncomp + j] / s_ij[i * ncomp + k]
+                          / s_ij[j * ncomp + k] * components[i].getDipnum() * components[j].getDipnum() * components[k].getDipnum() * dipmSQ[i]
+                          * dipmSQ[j] * dipmSQ[k]
+                          * (mole_fractions[i] * mole_fractions[j] * mole_fractions[k] * dJ3_det * PI / 6. * den * components[i].getM() * pow(d[i], 3)
+                             + 3 * mole_fractions[j] * mole_fractions[k] * J3);
+                    } else if ((i == j) || (i == k)) {
+                        dA3_dx[i] +=
+                          e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * e_ij[k * ncomp + k] / _T * pow(s_ij[i * ncomp + i], 3)
+                          * pow(s_ij[j * ncomp + j], 3) * pow(s_ij[k * ncomp + k], 3) / s_ij[i * ncomp + j] / s_ij[i * ncomp + k]
+                          / s_ij[j * ncomp + k] * components[i].getDipnum() * components[j].getDipnum() * components[k].getDipnum() * dipmSQ[i]
+                          * dipmSQ[j] * dipmSQ[k]
+                          * (mole_fractions[i] * mole_fractions[j] * mole_fractions[k] * dJ3_det * PI / 6. * den * components[i].getM() * pow(d[i], 3)
+                             + 2 * mole_fractions[j] * mole_fractions[k] * J3);
+                    } else {
+                        dA3_dx[i] +=
+                          e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * e_ij[k * ncomp + k] / _T * pow(s_ij[i * ncomp + i], 3)
+                          * pow(s_ij[j * ncomp + j], 3) * pow(s_ij[k * ncomp + k], 3) / s_ij[i * ncomp + j] / s_ij[i * ncomp + k]
+                          / s_ij[j * ncomp + k] * components[i].getDipnum() * components[j].getDipnum() * components[k].getDipnum() * dipmSQ[i]
+                          * dipmSQ[j] * dipmSQ[k]
+                          * (mole_fractions[i] * mole_fractions[j] * mole_fractions[k] * dJ3_det * PI / 6. * den * components[i].getM() * pow(d[i], 3)
+                             + mole_fractions[j] * mole_fractions[k] * J3);
+                    }
+                }
+            }
+        }
 
-       A2 = -PI*den*A2;
-       A3 = -4/3.*PI*PI*den*den*A3;
-       dA2_det = -PI*den/eta*dA2_det;
-       dA3_det = -4/3.*PI*PI*den/eta*den/eta*dA3_det;
-       for (int i = 0; i < ncomp; i++) {
-           dA2_dx[i] = -PI*den*dA2_dx[i];
-           dA3_dx[i] = -4/3.*PI*PI*den*den*dA3_dx[i];
-       }
+        A2 = -PI * den * A2;
+        A3 = -4 / 3. * PI * PI * den * den * A3;
+        dA2_det = -PI * den / eta * dA2_det;
+        dA3_det = -4 / 3. * PI * PI * den / eta * den / eta * dA3_det;
+        for (size_t i = 0; i < ncomp; i++) {
+            dA2_dx[i] = -PI * den * dA2_dx[i];
+            dA3_dx[i] = -4 / 3. * PI * PI * den * den * dA3_dx[i];
+        }
 
-       vector<double> dapolar_dx(ncomp);
-       for (int i = 0; i < ncomp; i++) {
-           dapolar_dx[i] = (dA2_dx[i]*(1-A3/A2) + (dA3_dx[i]*A2 - A3*dA2_dx[i])/A2)/pow(1-A3/A2,2);
-       }
+        vector<double> dapolar_dx(ncomp);
+        for (size_t i = 0; i < ncomp; i++) {
+            dapolar_dx[i] = (dA2_dx[i] * (1 - A3 / A2) + (dA3_dx[i] * A2 - A3 * dA2_dx[i]) / A2) / pow(1 - A3 / A2, 2);
+        }
 
-        if (A2 != 0) { // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
-            double ares_polar = A2/(1-A3/A2);
-            double Zpolar = eta*((dA2_det*(1-A3/A2)+(dA3_det*A2-A3*dA2_det)/A2)/(1-A3/A2)/(1-A3/A2));
-            for (int i = 0; i < ncomp; i++) {
-               for (int j = 0; j < ncomp; j++) {
-                   mu_polar[i] += mole_fractions[j]*dapolar_dx[j];
-               }
-               mu_polar[i] = ares_polar + Zpolar + dapolar_dx[i] - mu_polar[i];
+        if (A2 != 0) {  // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
+            double ares_polar = A2 / (1 - A3 / A2);
+            double Zpolar = eta * ((dA2_det * (1 - A3 / A2) + (dA3_det * A2 - A3 * dA2_det) / A2) / (1 - A3 / A2) / (1 - A3 / A2));
+            for (size_t i = 0; i < ncomp; i++) {
+                for (size_t j = 0; j < ncomp; j++) {
+                    mu_polar[i] += mole_fractions[j] * dapolar_dx[j];
+                }
+                mu_polar[i] = ares_polar + Zpolar + dapolar_dx[i] - mu_polar[i];
             }
         }
     }
@@ -1195,38 +1207,38 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     vector<double> mu_assoc(ncomp, 0);
     if (assoc_term) {
         int num_sites = 0;
-        vector<int> iA; //indices of associating compounds
-        for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        vector<int> iA;  //indices of associating compounds
+        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
-        vector<double> x_assoc(num_sites); // mole fractions of only the associating compounds
+        vector<double> x_assoc(num_sites);  // mole fractions of only the associating compounds
         for (int i = 0; i < num_sites; i++) {
             x_assoc[i] = mole_fractions[iA[i]];
         }
 
         // these indices are necessary because we are only using 1D vectors
-        vector<double> XA (num_sites, 0);
+        vector<double> XA(num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
         std::size_t idxa = 0UL;
         std::size_t idxi = 0UL;  // index for the ii-th compound
         std::size_t idxj = 0UL;  // index for the jj-th compound
         for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
-            idxi = iA[i]*ncomp+iA[i];
+            idxi = iA[i] * ncomp + iA[i];
             for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
-                idxj = iA[j]*ncomp+iA[j];
+                idxj = iA[j] * ncomp + iA[j];
                 if (assoc_matrix[idxa] != 0) {
-                    double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
-                    double volABij = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
-                        s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
-                    delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij;
+                    double eABij = (components[iA[i]].getUAB() + components[iA[j]].getUAB()) / 2.;
+                    double volABij = sqrt(components[iA[i]].getVolA() * components[iA[j]].getVolA())
+                                     * pow(sqrt(s_ij[idxi] * s_ij[idxj]) / (0.5 * (s_ij[idxi] + s_ij[idxj])), 3);
+                    delta_ij[idxa] = ghs[iA[i] * ncomp + iA[j]] * (exp(eABij / _T) - 1) * pow(s_ij[iA[i] * ncomp + iA[j]], 3) * volABij;
                 }
                 idxa += 1;
             }
-            XA[i] = (-1 + sqrt(1+8*den*delta_ij[i*num_sites+i]))/(4*den*delta_ij[i*num_sites+i]);
+            XA[i] = (-1 + sqrt(1 + 8 * den * delta_ij[i * num_sites + i])) / (4 * den * delta_ij[i * num_sites + i]);
             if (!std::isfinite(XA[i])) {
                 XA[i] = 0.02;
             }
@@ -1234,24 +1246,26 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
 
         vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
         int idx_ddelta = 0;
-        for (int k = 0; k < ncomp; k++) {
-            std::size_t idxi = 0UL; // index for the ii-th compound
+        for (size_t k = 0; k < ncomp; k++) {
+            std::size_t idxi = 0UL;  // index for the ii-th compound
             std::size_t idxj = 0UL;  // index for the jj-th compound
             idxa = 0;
             for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
-                idxi = iA[i]*ncomp+iA[i];
+                idxi = iA[i] * ncomp + iA[i];
                 for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
-                    idxj = iA[j]*ncomp+iA[j];
+                    idxj = iA[j] * ncomp + iA[j];
                     if (assoc_matrix[idxa] != 0) {
-                        double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
-                        double volABij = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
-                            s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
-                        double dghsd_dx = PI/6.*components[k].getM()*(pow(d[k], 3)/(1-zeta[3])/(1-zeta[3]) + 3*d[iA[i]]*d[iA[j]]/
-                            (d[iA[i]]+d[iA[j]])*(d[k]*d[k]/(1-zeta[3])/(1-zeta[3])+2*pow(d[k], 3)*
-                            zeta[2]/pow(1-zeta[3], 3)) + 2*pow((d[iA[i]]*d[iA[j]]/(d[iA[i]]+d[iA[j]])), 2)*
-                            (2*d[k]*d[k]*zeta[2]/pow(1-zeta[3], 3)+3*(pow(d[k], 3)*zeta[2]*zeta[2]
-                            /pow(1-zeta[3], 4))));
-                        ddelta_dx[idx_ddelta] = dghsd_dx*(exp(eABij/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij;
+                        double eABij = (components[iA[i]].getUAB() + components[iA[j]].getUAB()) / 2.;
+                        double volABij = sqrt(components[iA[i]].getVolA() * components[iA[j]].getVolA())
+                                         * pow(sqrt(s_ij[idxi] * s_ij[idxj]) / (0.5 * (s_ij[idxi] + s_ij[idxj])), 3);
+                        double dghsd_dx =
+                          PI / 6. * components[k].getM()
+                          * (pow(d[k], 3) / (1 - zeta[3]) / (1 - zeta[3])
+                             + 3 * d[iA[i]] * d[iA[j]] / (d[iA[i]] + d[iA[j]])
+                                 * (d[k] * d[k] / (1 - zeta[3]) / (1 - zeta[3]) + 2 * pow(d[k], 3) * zeta[2] / pow(1 - zeta[3], 3))
+                             + 2 * pow((d[iA[i]] * d[iA[j]] / (d[iA[i]] + d[iA[j]])), 2)
+                                 * (2 * d[k] * d[k] * zeta[2] / pow(1 - zeta[3], 3) + 3 * (pow(d[k], 3) * zeta[2] * zeta[2] / pow(1 - zeta[3], 4))));
+                        ddelta_dx[idx_ddelta] = dghsd_dx * (exp(eABij / _T) - 1) * pow(s_ij[iA[i] * ncomp + iA[j]], 3) * volABij;
                     }
                     idx_ddelta += 1;
                     idxa += 1;
@@ -1274,19 +1288,19 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
             }
         }
 
-        vector<double> dXA_dx(num_sites*ncomp, 0);
+        vector<double> dXA_dx(num_sites * ncomp, 0);
         dXA_dx = dXAdx_find(assoc_num, delta_ij, den, XA, ddelta_dx, x_assoc);
 
         int ij = 0;
-        for (int i = 0; i < ncomp; i++) {
-           for (int j = 0; j < num_sites; j++) {
-               mu_assoc[i] += mole_fractions[iA[j]]*den*dXA_dx[ij]*(1/XA[j]-0.5);
-               ij += 1;
-           }
+        for (size_t i = 0; i < ncomp; i++) {
+            for (int j = 0; j < num_sites; j++) {
+                mu_assoc[i] += mole_fractions[iA[j]] * den * dXA_dx[ij] * (1 / XA[j] - 0.5);
+                ij += 1;
+            }
         }
 
         for (int i = 0; i < num_sites; i++) {
-           mu_assoc[iA[i]] += log(XA[i]) - 0.5*XA[i] + 0.5;
+            mu_assoc[iA[i]] += log(XA[i]) - 0.5 * XA[i] + 0.5;
         }
     }
 
@@ -1294,12 +1308,12 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     vector<double> mu_ion(ncomp, 0);
     if (ion_term) {
         vector<double> q(ncomp);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             q[i] = components[i].getZ() * E_CHRG;
         }
 
         summ = 0.;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             summ += components[i].getZ() * components[i].getZ() * mole_fractions[i];
         }
         double kappa =
@@ -1310,16 +1324,14 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
             vector<double> sigma_k(ncomp);
             double summ1 = 0.;
             double summ2 = 0.;
-            for (int i = 0; i < ncomp; i++) {
-                chi[i] = 3 / pow(kappa * d[i], 3)
-                         * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
-                            + 0.5 * pow(1 + kappa * d[i], 2));
+            for (size_t i = 0; i < ncomp; i++) {
+                chi[i] = 3 / pow(kappa * d[i], 3) * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i]) + 0.5 * pow(1 + kappa * d[i], 2));
                 sigma_k[i] = -2 * chi[i] + 3 / (1 + kappa * d[i]);
                 summ1 += q[i] * q[i] * mole_fractions[i] * sigma_k[i];
                 summ2 += mole_fractions[i] * q[i] * q[i];
             }
 
-            for (int i = 0; i < ncomp; i++) {
+            for (size_t i = 0; i < ncomp; i++) {
                 mu_ion[i] = -q[i] * q[i] * kappa / 24. / PI / kb / _T / (dielc * perm_vac) * (2 * chi[i] + summ1 / summ2);
             }
         }
@@ -1329,7 +1341,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
 
     vector<double> mu(ncomp, 0);
     vector<CoolPropDbl> fugcoef(ncomp, 0);
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         mu[i] = mu_hc[i] + mu_disp[i] + mu_polar[i] + mu_assoc[i] + mu_ion[i];
         fugcoef[i] = exp(mu[i] - log(Z));  // the fugacity coefficients
     }
@@ -1354,7 +1366,8 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
     if (ion_term) {
         for (auto i = 0UL; i < ncomp; i++) {
             if (components[i].getZ() != 0) {
-                d[i] = components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
+                d[i] =
+                  components[i].getSigma() * (1 - 0.12);  // for ions the diameter is assumed to be temperature independent (see Held et al. 2014)
             }
         }
     }
@@ -1365,7 +1378,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
     double summ;
     for (int i = 0; i < 4; i++) {
         summ = 0;
-        for (int j = 0; j < ncomp; j++) {
+        for (size_t j = 0; j < ncomp; j++) {
             summ += mole_fractions[j] * components[j].getM() * pow(d[j], i);
         }
         zeta[i] = PI / 6 * den * summ;
@@ -1373,19 +1386,19 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
 
     double eta = zeta[3];
     double m_avg = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         m_avg += mole_fractions[i] * components[i].getM();
     }
 
-    vector<double> ghs (ncomp*ncomp, 0);
-    vector<double> denghs (ncomp*ncomp, 0);
-    vector<double> e_ij (ncomp*ncomp, 0);
-    vector<double> s_ij (ncomp*ncomp, 0);
+    vector<double> ghs(ncomp * ncomp, 0);
+    vector<double> denghs(ncomp * ncomp, 0);
+    vector<double> e_ij(ncomp * ncomp, 0);
+    vector<double> s_ij(ncomp * ncomp, 0);
     double m2es3 = 0.;
     double m2e2s3 = 0.;
     int idx = -1;
-    for (int i = 0; i < ncomp; i++) {
-        for (int j = 0; j < ncomp; j++) {
+    for (size_t i = 0; i < ncomp; i++) {
+        for (size_t j = 0; j < ncomp; j++) {
             idx += 1;
             s_ij[idx] = (components[i].getSigma() + components[j].getSigma()) / 2.;
             if (ion_term) {
@@ -1404,27 +1417,29 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
                     e_ij[idx] = sqrt(components[i].getU() * components[j].getU()) * (1 - (k_ij[idx] + k_ijT[idx] * _T));
                 }
             }
-            m2es3 = m2es3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*e_ij[idx]/_T*pow(s_ij[idx], 3);
-            m2e2s3 = m2e2s3 + mole_fractions[i]*mole_fractions[j]*components[i].getM()*components[j].getM()*pow(e_ij[idx]/_T,2)*pow(s_ij[idx], 3);
-            ghs[idx] = 1/(1-zeta[3]) + (d[i]*d[j]/(d[i]+d[j]))*3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
-                    pow(d[i]*d[j]/(d[i]+d[j]), 2)*2*zeta[2]*zeta[2]/pow(1-zeta[3], 3);
-            denghs[idx] = zeta[3]/(1-zeta[3])/(1-zeta[3]) +
-                (d[i]*d[j]/(d[i]+d[j]))*(3*zeta[2]/(1-zeta[3])/(1-zeta[3]) +
-                6*zeta[2]*zeta[3]/pow(1-zeta[3], 3)) +
-                pow(d[i]*d[j]/(d[i]+d[j]), 2)*(4*zeta[2]*zeta[2]/pow(1-zeta[3], 3) +
-                6*zeta[2]*zeta[2]*zeta[3]/pow(1-zeta[3], 4));
+            m2es3 = m2es3 + mole_fractions[i] * mole_fractions[j] * components[i].getM() * components[j].getM() * e_ij[idx] / _T * pow(s_ij[idx], 3);
+            m2e2s3 =
+              m2e2s3
+              + mole_fractions[i] * mole_fractions[j] * components[i].getM() * components[j].getM() * pow(e_ij[idx] / _T, 2) * pow(s_ij[idx], 3);
+            ghs[idx] = 1 / (1 - zeta[3]) + (d[i] * d[j] / (d[i] + d[j])) * 3 * zeta[2] / (1 - zeta[3]) / (1 - zeta[3])
+                       + pow(d[i] * d[j] / (d[i] + d[j]), 2) * 2 * zeta[2] * zeta[2] / pow(1 - zeta[3], 3);
+            denghs[idx] =
+              zeta[3] / (1 - zeta[3]) / (1 - zeta[3])
+              + (d[i] * d[j] / (d[i] + d[j])) * (3 * zeta[2] / (1 - zeta[3]) / (1 - zeta[3]) + 6 * zeta[2] * zeta[3] / pow(1 - zeta[3], 3))
+              + pow(d[i] * d[j] / (d[i] + d[j]), 2)
+                  * (4 * zeta[2] * zeta[2] / pow(1 - zeta[3], 3) + 6 * zeta[2] * zeta[2] * zeta[3] / pow(1 - zeta[3], 4));
         }
     }
 
     double Zhs = zeta[3] / (1 - zeta[3]) + 3. * zeta[1] * zeta[2] / zeta[0] / (1. - zeta[3]) / (1. - zeta[3])
                  + (3. * pow(zeta[2], 3.) - zeta[3] * pow(zeta[2], 3.)) / zeta[0] / pow(1. - zeta[3], 3.);
 
-    static double a0[7] = { 0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084 };
-    static double a1[7] = { -0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930 };
-    static double a2[7] = { -0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368 };
-    static double b0[7] = { 0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612 };
-    static double b1[7] = { -0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346 };
-    static double b2[7] = { 0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585 };
+    static double a0[7] = {0.9105631445, 0.6361281449, 2.6861347891, -26.547362491, 97.759208784, -159.59154087, 91.297774084};
+    static double a1[7] = {-0.3084016918, 0.1860531159, -2.5030047259, 21.419793629, -65.255885330, 83.318680481, -33.746922930};
+    static double a2[7] = {-0.0906148351, 0.4527842806, 0.5962700728, -1.7241829131, -4.1302112531, 13.776631870, -8.6728470368};
+    static double b0[7] = {0.7240946941, 2.2382791861, -4.0025849485, -21.003576815, 26.855641363, 206.55133841, -355.60235612};
+    static double b1[7] = {-0.5755498075, 0.6995095521, 3.8925673390, -17.215471648, 192.67226447, -161.82646165, -165.20769346};
+    static double b2[7] = {0.0976883116, -0.2557574982, -9.1558561530, 20.642075974, -38.804430052, 93.626774077, -29.666905585};
 
     vector<double> a(7, 0);
     vector<double> b(7, 0);
@@ -1449,8 +1464,8 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
                    + (1 - m_avg) * (2 * pow(eta, 3) + 12 * eta * eta - 48 * eta + 40) / pow((1 - eta) * (2 - eta), 3.0));
 
     summ = 0.0;
-    for (int i = 0; i < ncomp; i++) {
-        summ += mole_fractions[i]*(components[i].getM()-1)/ghs[i*ncomp + i]*denghs[i*ncomp + i];
+    for (size_t i = 0; i < ncomp; i++) {
+        summ += mole_fractions[i] * (components[i].getM() - 1) / ghs[i * ncomp + i] * denghs[i * ncomp + i];
     }
 
     double Zid = 1.0;
@@ -1482,13 +1497,13 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
 
         const static double conv = 7242.702976750923;  // conversion factor, see the note below Table 2 in Gross and Vrabec 2006
 
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             dipmSQ[i] = pow(components[i].getDipm(), 2.) / (components[i].getM() * components[i].getU() * pow(components[i].getSigma(), 3.)) * conv;
         }
 
         double m_ij;
-        for (int i = 0; i < ncomp; i++) {
-            for (int j = 0; j < ncomp; j++) {
+        for (size_t i = 0; i < ncomp; i++) {
+            for (size_t j = 0; j < ncomp; j++) {
                 m_ij = sqrt(components[i].getM() * components[j].getM());
                 if (m_ij > 2) {
                     m_ij = 2;
@@ -1496,22 +1511,25 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
                 J2 = 0.;
                 detJ2_det = 0.;
                 for (int l = 0; l < 5; l++) {
-                    adip[l] = a0dip[l] + (m_ij-1)/m_ij*a1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*a2dip[l];
-                    bdip[l] = b0dip[l] + (m_ij-1)/m_ij*b1dip[l] + (m_ij-1)/m_ij*(m_ij-2)/m_ij*b2dip[l];
-                    J2 += (adip[l] + bdip[l]*e_ij[i*ncomp+j]/_T)*pow(eta, l); // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
-                    detJ2_det += (adip[l] + bdip[l]*e_ij[i*ncomp+j]/_T)*(l+1)*pow(eta, l);
+                    adip[l] = a0dip[l] + (m_ij - 1) / m_ij * a1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * a2dip[l];
+                    bdip[l] = b0dip[l] + (m_ij - 1) / m_ij * b1dip[l] + (m_ij - 1) / m_ij * (m_ij - 2) / m_ij * b2dip[l];
+                    J2 += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T)
+                          * pow(eta, l);  // i*ncomp+j needs to be used for e_ij because it is formatted as a 1D vector
+                    detJ2_det += (adip[l] + bdip[l] * e_ij[i * ncomp + j] / _T) * (l + 1) * pow(eta, l);
                 }
-                A2 += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)/
-                    pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*J2;
-                dA2_det += mole_fractions[i]*mole_fractions[j]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*pow(s_ij[i*ncomp+i],3)*
-                    pow(s_ij[j*ncomp+j],3)/pow(s_ij[i*ncomp+j],3)*components[i].getDipnum()*components[j].getDipnum()*dipmSQ[i]*dipmSQ[j]*detJ2_det;
+                A2 += mole_fractions[i] * mole_fractions[j] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3)
+                      * pow(s_ij[j * ncomp + j], 3) / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum() * dipmSQ[i]
+                      * dipmSQ[j] * J2;
+                dA2_det += mole_fractions[i] * mole_fractions[j] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T * pow(s_ij[i * ncomp + i], 3)
+                           * pow(s_ij[j * ncomp + j], 3) / pow(s_ij[i * ncomp + j], 3) * components[i].getDipnum() * components[j].getDipnum()
+                           * dipmSQ[i] * dipmSQ[j] * detJ2_det;
             }
         }
 
         double m_ijk;
-        for (int i = 0; i < ncomp; i++) {
-            for (int j = 0; j < ncomp; j++) {
-                for (int k = 0; k < ncomp; k++) {
+        for (size_t i = 0; i < ncomp; i++) {
+            for (size_t j = 0; j < ncomp; j++) {
+                for (size_t k = 0; k < ncomp; k++) {
                     m_ijk = pow((components[i].getM() * components[j].getM() * components[k].getM()), 1 / 3.);
                     if (m_ijk > 2) {
                         m_ijk = 2;
@@ -1519,29 +1537,29 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
                     J3 = 0.;
                     detJ3_det = 0.;
                     for (int l = 0; l < 5; l++) {
-                        cdip[l] = c0dip[l] + (m_ijk-1)/m_ijk*c1dip[l] + (m_ijk-1)/m_ijk*(m_ijk-2)/m_ijk*c2dip[l];
-                        J3 += cdip[l]*pow(eta, l);
-                        detJ3_det += cdip[l]*(l+2)*pow(eta, (l+1));
+                        cdip[l] = c0dip[l] + (m_ijk - 1) / m_ijk * c1dip[l] + (m_ijk - 1) / m_ijk * (m_ijk - 2) / m_ijk * c2dip[l];
+                        J3 += cdip[l] * pow(eta, l);
+                        detJ3_det += cdip[l] * (l + 2) * pow(eta, (l + 1));
                     }
-                    A3 += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
-                        pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
-                        s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
-                        dipmSQ[j]*dipmSQ[k]*J3;
-                    dA3_det += mole_fractions[i]*mole_fractions[j]*mole_fractions[k]*e_ij[i*ncomp+i]/_T*e_ij[j*ncomp+j]/_T*e_ij[k*ncomp+k]/_T*
-                        pow(s_ij[i*ncomp+i],3)*pow(s_ij[j*ncomp+j],3)*pow(s_ij[k*ncomp+k],3)/s_ij[i*ncomp+j]/s_ij[i*ncomp+k]/
-                        s_ij[j*ncomp+k]*components[i].getDipnum()*components[j].getDipnum()*components[k].getDipnum()*dipmSQ[i]*
-                        dipmSQ[j]*dipmSQ[k]*detJ3_det;
+                    A3 += mole_fractions[i] * mole_fractions[j] * mole_fractions[k] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T
+                          * e_ij[k * ncomp + k] / _T * pow(s_ij[i * ncomp + i], 3) * pow(s_ij[j * ncomp + j], 3) * pow(s_ij[k * ncomp + k], 3)
+                          / s_ij[i * ncomp + j] / s_ij[i * ncomp + k] / s_ij[j * ncomp + k] * components[i].getDipnum() * components[j].getDipnum()
+                          * components[k].getDipnum() * dipmSQ[i] * dipmSQ[j] * dipmSQ[k] * J3;
+                    dA3_det += mole_fractions[i] * mole_fractions[j] * mole_fractions[k] * e_ij[i * ncomp + i] / _T * e_ij[j * ncomp + j] / _T
+                               * e_ij[k * ncomp + k] / _T * pow(s_ij[i * ncomp + i], 3) * pow(s_ij[j * ncomp + j], 3) * pow(s_ij[k * ncomp + k], 3)
+                               / s_ij[i * ncomp + j] / s_ij[i * ncomp + k] / s_ij[j * ncomp + k] * components[i].getDipnum()
+                               * components[j].getDipnum() * components[k].getDipnum() * dipmSQ[i] * dipmSQ[j] * dipmSQ[k] * detJ3_det;
                 }
             }
         }
 
-        A2 = -PI*den*A2;
-        A3 = -4/3.*PI*PI*den*den*A3;
-        dA2_det = -PI*den/eta*dA2_det;
-        dA3_det = -4/3.*PI*PI*den/eta*den/eta*dA3_det;
+        A2 = -PI * den * A2;
+        A3 = -4 / 3. * PI * PI * den * den * A3;
+        dA2_det = -PI * den / eta * dA2_det;
+        dA3_det = -4 / 3. * PI * PI * den / eta * den / eta * dA3_det;
 
-        if (A2 != 0) { // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
-              Zpolar = eta*((dA2_det*(1-A3/A2)+(dA3_det*A2-A3*dA2_det)/A2)/(1-A3/A2)/(1-A3/A2));
+        if (A2 != 0) {  // when the mole fraction of the polar compounds is 0 then A2 = 0 and division by 0 occurs
+            Zpolar = eta * ((dA2_det * (1 - A3 / A2) + (dA3_det * A2 - A3 * dA2_det) / A2) / (1 - A3 / A2) / (1 - A3 / A2));
         }
     }
 
@@ -1549,38 +1567,38 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
     double Zassoc = 0;
     if (assoc_term) {
         int num_sites = 0;
-        vector<int> iA; //indices of associating compounds
-        for(std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
+        vector<int> iA;  //indices of associating compounds
+        for (std::vector<int>::iterator it = assoc_num.begin(); it != assoc_num.end(); ++it) {
             num_sites += *it;
             for (int i = 0; i < *it; i++) {
                 iA.push_back(static_cast<int>(it - assoc_num.begin()));
             }
         }
 
-        vector<double> x_assoc(num_sites); // mole fractions of only the associating compounds
+        vector<double> x_assoc(num_sites);  // mole fractions of only the associating compounds
         for (int i = 0; i < num_sites; i++) {
             x_assoc[i] = mole_fractions[iA[i]];
         }
 
         // these indices are necessary because we are only using 1D vectors
-        vector<double> XA (num_sites, 0);
+        vector<double> XA(num_sites, 0);
         vector<double> delta_ij(num_sites * num_sites, 0);
         std::size_t idxa = 0UL;
         std::size_t idxi = 0UL;  // index for the ii-th compound
         std::size_t idxj = 0UL;  // index for the jj-th compound
         for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
-            idxi = iA[i]*ncomp+iA[i];
+            idxi = iA[i] * ncomp + iA[i];
             for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
-                idxj = iA[j]*ncomp+iA[j];
+                idxj = iA[j] * ncomp + iA[j];
                 if (assoc_matrix[idxa] != 0) {
-                    double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
-                    double volABij = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
-                        s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
-                    delta_ij[idxa] = ghs[iA[i]*ncomp+iA[j]]*(exp(eABij/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij;
+                    double eABij = (components[iA[i]].getUAB() + components[iA[j]].getUAB()) / 2.;
+                    double volABij = sqrt(components[iA[i]].getVolA() * components[iA[j]].getVolA())
+                                     * pow(sqrt(s_ij[idxi] * s_ij[idxj]) / (0.5 * (s_ij[idxi] + s_ij[idxj])), 3);
+                    delta_ij[idxa] = ghs[iA[i] * ncomp + iA[j]] * (exp(eABij / _T) - 1) * pow(s_ij[iA[i] * ncomp + iA[j]], 3) * volABij;
                 }
                 idxa += 1;
             }
-            XA[i] = (-1 + sqrt(1+8*den*delta_ij[i*num_sites+i]))/(4*den*delta_ij[i*num_sites+i]);
+            XA[i] = (-1 + sqrt(1 + 8 * den * delta_ij[i * num_sites + i])) / (4 * den * delta_ij[i * num_sites + i]);
             if (!std::isfinite(XA[i])) {
                 XA[i] = 0.02;
             }
@@ -1588,24 +1606,26 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
 
         vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
         int idx_ddelta = 0;
-        for (int k = 0; k < ncomp; k++) {
+        for (size_t k = 0; k < ncomp; k++) {
             std::size_t idxi = 0UL;  // index for the ii-th compound
             std::size_t idxj = 0UL;  // index for the jj-th compound
             idxa = 0;
             for (auto i = 0UL; i < static_cast<std::size_t>(num_sites); i++) {
-                idxi = iA[i]*ncomp+iA[i];
+                idxi = iA[i] * ncomp + iA[i];
                 for (auto j = 0UL; j < static_cast<std::size_t>(num_sites); j++) {
-                    idxj = iA[j]*ncomp+iA[j];
+                    idxj = iA[j] * ncomp + iA[j];
                     if (assoc_matrix[idxa] != 0) {
-                        double eABij = (components[iA[i]].getUAB()+components[iA[j]].getUAB())/2.;
-                        double volABij = sqrt(components[iA[i]].getVolA()*components[iA[j]].getVolA())*pow(sqrt(s_ij[idxi]*
-                            s_ij[idxj])/(0.5*(s_ij[idxi]+s_ij[idxj])), 3);
-                        double dghsd_dx = PI/6.*components[k].getM()*(pow(d[k], 3)/(1-zeta[3])/(1-zeta[3]) + 3*d[iA[i]]*d[iA[j]]/
-                            (d[iA[i]]+d[iA[j]])*(d[k]*d[k]/(1-zeta[3])/(1-zeta[3])+2*pow(d[k], 3)*
-                            zeta[2]/pow(1-zeta[3], 3)) + 2*pow((d[iA[i]]*d[iA[j]]/(d[iA[i]]+d[iA[j]])), 2)*
-                            (2*d[k]*d[k]*zeta[2]/pow(1-zeta[3], 3)+3*(pow(d[k], 3)*zeta[2]*zeta[2]
-                            /pow(1-zeta[3], 4))));
-                        ddelta_dx[idx_ddelta] = dghsd_dx*(exp(eABij/_T)-1)*pow(s_ij[iA[i]*ncomp+iA[j]], 3)*volABij;
+                        double eABij = (components[iA[i]].getUAB() + components[iA[j]].getUAB()) / 2.;
+                        double volABij = sqrt(components[iA[i]].getVolA() * components[iA[j]].getVolA())
+                                         * pow(sqrt(s_ij[idxi] * s_ij[idxj]) / (0.5 * (s_ij[idxi] + s_ij[idxj])), 3);
+                        double dghsd_dx =
+                          PI / 6. * components[k].getM()
+                          * (pow(d[k], 3) / (1 - zeta[3]) / (1 - zeta[3])
+                             + 3 * d[iA[i]] * d[iA[j]] / (d[iA[i]] + d[iA[j]])
+                                 * (d[k] * d[k] / (1 - zeta[3]) / (1 - zeta[3]) + 2 * pow(d[k], 3) * zeta[2] / pow(1 - zeta[3], 3))
+                             + 2 * pow((d[iA[i]] * d[iA[j]] / (d[iA[i]] + d[iA[j]])), 2)
+                                 * (2 * d[k] * d[k] * zeta[2] / pow(1 - zeta[3], 3) + 3 * (pow(d[k], 3) * zeta[2] * zeta[2] / pow(1 - zeta[3], 4))));
+                        ddelta_dx[idx_ddelta] = dghsd_dx * (exp(eABij / _T) - 1) * pow(s_ij[iA[i] * ncomp + iA[j]], 3) * volABij;
                     }
                     idx_ddelta += 1;
                     idxa += 1;
@@ -1628,14 +1648,14 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
             }
         }
 
-        vector<double> dXA_dx(num_sites*ncomp, 0);
+        vector<double> dXA_dx(num_sites * ncomp, 0);
         dXA_dx = dXAdx_find(assoc_num, delta_ij, den, XA, ddelta_dx, x_assoc);
 
         summ = 0.;
         int ij = 0;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             for (int j = 0; j < num_sites; j++) {
-                summ += mole_fractions[i]*den*mole_fractions[iA[j]]*(1/XA[j]-0.5)*dXA_dx[ij];
+                summ += mole_fractions[i] * den * mole_fractions[iA[j]] * (1 / XA[j] - 0.5) * dXA_dx[ij];
                 ij += 1;
             }
         }
@@ -1647,12 +1667,12 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
     double Zion = 0;
     if (ion_term) {
         vector<double> q(ncomp);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             q[i] = components[i].getZ() * E_CHRG;
         }
 
         summ = 0.;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             summ += pow(components[i].getZ(), 2.) * mole_fractions[i];
         }
 
@@ -1662,10 +1682,8 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
         if (kappa != 0) {
             double chi, sigma_k;
             summ = 0.;
-            for (int i = 0; i < ncomp; i++) {
-                chi = 3 / pow(kappa * d[i], 3)
-                      * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i])
-                         + 0.5 * pow(1 + kappa * d[i], 2));
+            for (size_t i = 0; i < ncomp; i++) {
+                chi = 3 / pow(kappa * d[i], 3) * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i]) + 0.5 * pow(1 + kappa * d[i], 2));
                 sigma_k = -2 * chi + 3 / (1 + kappa * d[i]);
                 summ += q[i] * q[i] * mole_fractions[i] * sigma_k;
             }
@@ -1730,15 +1748,14 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
     if (SatV->mole_fractions.empty()) {
         SatV->set_mole_fractions(mole_fractions);
         double summ = 0;
-        for (int i = 0; i < N; i++) {
-            if (SatV->components[i].getZ() != 0) { // we make the assumption that ions do not appear in the vapor phase
+        for (size_t i = 0; i < N; i++) {
+            if (SatV->components[i].getZ() != 0) {  // we make the assumption that ions do not appear in the vapor phase
                 SatV->mole_fractions[i] = 0;
-            }
-            else {
+            } else {
                 summ += SatV->mole_fractions[i];
             }
         }
-        for (int i = 0; i < N; i++) {
+        for (size_t i = 0; i < N; i++) {
             SatV->mole_fractions[i] = SatV->mole_fractions[i] / summ;
         }
     }
@@ -1798,14 +1815,18 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
             flash_PQ(*this);
             break;
         case DmolarT_INPUTS:
-            _rhomolar = value1; _T = value2;
-            SatL->_rhomolar = value1; SatV->_rhomolar = value1;
-            SatL->_T = value2; SatV->_T = value2;
+            _rhomolar = value1;
+            _T = value2;
+            SatL->_rhomolar = value1;
+            SatV->_rhomolar = value1;
+            SatL->_T = value2;
+            SatV->_T = value2;
             if (water_present) {
                 components[water_idx].calc_water_sigma(_T);
                 SatL->components[water_idx].calc_water_sigma(_T);
                 SatV->components[water_idx].calc_water_sigma(_T);
-                dielc = dielc_water(_T); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+                dielc = dielc_water(
+                  _T);  // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
                 SatL->dielc = dielc_water(_T);
                 SatV->dielc = dielc_water(_T);
             }
@@ -1852,26 +1873,28 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
 
     double p_input, rho_input;
     double p_bub, p_dew, p_equil;
-    switch(input_pair)
-    {
+    switch (input_pair) {
         case PT_INPUTS:
-            p_input = _p; rho_input = _rhomolar;
+            p_input = _p;
+            rho_input = _rhomolar;
             // first try to estimate without a full flash calculation
             _Q = 0;
-            SatL->_Q = _Q; SatV->_Q = _Q;
-            SatL->_T = _T; SatV->_T = _T;
+            SatL->_Q = _Q;
+            SatV->_Q = _Q;
+            SatL->_T = _T;
+            SatV->_T = _T;
             p_equil = estimate_flash_p(*this);
             if (p_input > 1.6 * p_equil) {
                 phase = iphase_liquid;
-            }
-            else if (p_input < 0.5 * p_equil) {
+            } else if (p_input < 0.5 * p_equil) {
                 phase = iphase_gas;
-            }
-            else {
+            } else {
                 // if the pressure is too close to the estimated bubble point, then do a full flash calculation to determine the phase
                 _Q = 0;
-                SatL->_Q = _Q; SatV->_Q = _Q;
-                SatL->_T = _T; SatV->_T = _T;
+                SatL->_Q = _Q;
+                SatV->_Q = _Q;
+                SatL->_T = _T;
+                SatV->_T = _T;
                 try {
                     flash_QT(*this);
                 } catch (const SolutionError& /* ex */) {
@@ -1879,34 +1902,34 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
                     break;
                 }
                 p_bub = _p;
-                _p = p_input; _rhomolar = rho_input;
+                _p = p_input;
+                _rhomolar = rho_input;
                 if (_p > p_bub) {
                     phase = iphase_liquid;
-                }
-                else if (_p == p_bub) {
+                } else if (_p == p_bub) {
                     phase = iphase_twophase;
-                }
-                else {
+                } else {
                     _Q = 1;
-                    SatL->_Q = _Q; SatV->_Q = _Q;
+                    SatL->_Q = _Q;
+                    SatV->_Q = _Q;
                     flash_QT(*this);
                     p_dew = _p;
-                    _p = p_input; _rhomolar = rho_input;
+                    _p = p_input;
+                    _rhomolar = rho_input;
                     if (_p < p_dew) {
                         phase = iphase_gas;
-                    }
-                    else if ((_p <= p_bub) && (_p >= p_dew)) {
+                    } else if ((_p <= p_bub) && (_p >= p_dew)) {
                         phase = iphase_twophase;
-                    }
-                    else{
-                    	phase = iphase_unknown;
+                    } else {
+                        phase = iphase_unknown;
                     }
                 }
             }
             break;
         case DmolarT_INPUTS:
             double rho_bub, rho_dew;
-            p_input = _p; rho_input = _rhomolar;
+            p_input = _p;
+            rho_input = _rhomolar;
 
             _Q = 0;
             SatL->_Q = _Q;
@@ -1954,8 +1977,7 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
     return phase;
 }
 
-
-void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
+void PCSAFTBackend::flash_QT(PCSAFTBackend& PCSAFT) {
     bool solution_found = false;
     double p_guess = 0;
     double p = 0;
@@ -1969,7 +1991,7 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
 
     // if solution hasn't been found, try cycling through a range of pressures
     if (!solution_found) {
-        double p_lbound = -6; // here we're using log10 of the pressure
+        double p_lbound = -6;  // here we're using log10 of the pressure
         double p_ubound = 9;
         double p_step = 0.1;
         p_guess = p_lbound;
@@ -1991,12 +2013,11 @@ void PCSAFTBackend::flash_QT(PCSAFTBackend &PCSAFT) {
 
     // Load the outputs
     PCSAFT._p = p;
-    PCSAFT._rhomolar = 1/(PCSAFT._Q/PCSAFT.SatV->_rhomolar + (1 - PCSAFT._Q)/PCSAFT.SatL->_rhomolar);
+    PCSAFT._rhomolar = 1 / (PCSAFT._Q / PCSAFT.SatV->_rhomolar + (1 - PCSAFT._Q) / PCSAFT.SatL->_rhomolar);
     PCSAFT._phase = iphase_twophase;
 }
 
-
-void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT) {
+void PCSAFTBackend::flash_PQ(PCSAFTBackend& PCSAFT) {
     bool solution_found = false;
     double t_guess = 0;
     double t = 0;
@@ -2036,28 +2057,26 @@ void PCSAFTBackend::flash_PQ(PCSAFTBackend &PCSAFT) {
 
     // Load the outputs
     PCSAFT._T = t;
-    PCSAFT._rhomolar = 1/(PCSAFT._Q/PCSAFT.SatV->_rhomolar + (1 - PCSAFT._Q)/PCSAFT.SatL->_rhomolar);
+    PCSAFT._rhomolar = 1 / (PCSAFT._Q / PCSAFT.SatV->_rhomolar + (1 - PCSAFT._Q) / PCSAFT.SatL->_rhomolar);
     PCSAFT._phase = iphase_twophase;
 }
 
-
-double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
+double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend& PCSAFT) {
     // Based on the algorithm proposed in H. A. J. Watson, M. Vikse, T. Gundersen, and P. I. Barton, “Reliable Flash Calculations: Part 1. Nonsmooth Inside-Out Algorithms,” Ind. Eng. Chem. Res., vol. 56, no. 4, pp. 960–973, Feb. 2017, doi: 10.1021/acs.iecr.6b03956.
-    auto ncomp = N; // number of components
+    auto ncomp = N;  // number of components
     double TOL = 1e-8;
     int MAXITER = 200;
 
     // Define the residual to be driven to zero
     class SolverInnerResid : public FuncWrapper1D
     {
-    public:
-        PCSAFTBackend &PCSAFT;
+       public:
+        PCSAFTBackend& PCSAFT;
         CoolPropDbl kb0;
         vector<CoolPropDbl> u;
 
-        SolverInnerResid(PCSAFTBackend &PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u)
-        : PCSAFT(PCSAFT), kb0(kb0), u(u){}
-        CoolPropDbl call(CoolPropDbl R){
+        SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(u) {}
+        CoolPropDbl call(CoolPropDbl R) {
             auto ncomp = PCSAFT.components.size();
             double error = 0;
 
@@ -2078,8 +2097,8 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
         };
     };
 
-    double x_ions = 0.; // overall mole fraction of ions in the system
-    for (int i = 0; i < ncomp; i++) {
+    double x_ions = 0.;  // overall mole fraction of ions in the system
+    for (size_t i = 0; i < ncomp; i++) {
         if (PCSAFT.ion_term && PCSAFT.components[i].getZ() != 0) {
             x_ions += PCSAFT.mole_fractions[i];
         }
@@ -2091,7 +2110,7 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     double Tprime = t_guess + 1;
     double t = t_guess;
 
-    PCSAFT.SatL->_T = t; // _T must be updated because the density calculation depends on it
+    PCSAFT.SatL->_T = t;  // _T must be updated because the density calculation depends on it
     PCSAFT.SatV->_T = t;
 
     // calculate sigma for water, if it is present
@@ -2099,7 +2118,8 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
         PCSAFT.components[water_idx].calc_water_sigma(t);
         PCSAFT.SatL->components[water_idx].calc_water_sigma(t);
         PCSAFT.SatV->components[water_idx].calc_water_sigma(t);
-        PCSAFT.dielc = dielc_water(t); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+        PCSAFT.dielc =
+          dielc_water(t);  // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
         PCSAFT.SatL->dielc = dielc_water(t);
         PCSAFT.SatV->dielc = dielc_water(t);
     }
@@ -2115,8 +2135,8 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
 
     double xv_sum = 0;
     double xl_sum = 0;
-    for (int i = 0; i < ncomp; i++) {
-        if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) { // this if statement sets k to 0 for ionic components
+    for (size_t i = 0; i < ncomp; i++) {
+        if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {  // this if statement sets k to 0 for ionic components
             k[i] = fugcoef_l[i] / fugcoef_v[i];
         } else {
             k[i] = 0;
@@ -2128,13 +2148,13 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     }
 
     if (xv_sum != 1) {
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             PCSAFT.SatV->mole_fractions[i] = PCSAFT.SatV->mole_fractions[i] / xv_sum;
         }
     }
 
     if (xl_sum != 1) {
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             PCSAFT.SatL->mole_fractions[i] = PCSAFT.SatL->mole_fractions[i] / xl_sum;
         }
     }
@@ -2143,18 +2163,19 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(t, PCSAFT.SatV->_p, iphase_gas);
     fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         k[i] = fugcoef_l[i] / fugcoef_v[i];
     }
 
-    PCSAFT.SatL->_T = Tprime; // _T must be updated because the density calculation depends on it
+    PCSAFT.SatL->_T = Tprime;  // _T must be updated because the density calculation depends on it
     PCSAFT.SatV->_T = Tprime;
 
     if (PCSAFT.water_present) {
         PCSAFT.components[water_idx].calc_water_sigma(Tprime);
         PCSAFT.SatL->components[water_idx].calc_water_sigma(Tprime);
         PCSAFT.SatV->components[water_idx].calc_water_sigma(Tprime);
-        PCSAFT.dielc = dielc_water(Tprime); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+        PCSAFT.dielc = dielc_water(
+          Tprime);  // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
         PCSAFT.SatL->dielc = dielc_water(Tprime);
         PCSAFT.SatV->dielc = dielc_water(Tprime);
     }
@@ -2162,20 +2183,20 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(Tprime, PCSAFT.SatV->_p, iphase_gas);
     fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         kprime[i] = fugcoef_l[i] / fugcoef_v[i];
     }
 
     vector<double> t_weight(ncomp);
     double t_sum = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double dlnk_dt = (kprime[i] - k[i]) / (Tprime - t);
         t_weight[i] = PCSAFT.SatV->mole_fractions[i] * dlnk_dt / (1 + PCSAFT._Q * (k[i] - 1));
         t_sum += t_weight[i];
     }
 
     double kb = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double wi = t_weight[i] / t_sum;
         if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
             kb += wi * std::log(k[i]);
@@ -2184,14 +2205,14 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     kb = std::exp(kb);
 
     t_sum = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double dlnk_dt = (kprime[i] - k[i]) / (Tprime - t);
         t_weight[i] = PCSAFT.SatV->mole_fractions[i] * dlnk_dt / (1 + PCSAFT._Q * (kprime[i] - 1));
         t_sum += t_weight[i];
     }
 
     double kbprime = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double wi = t_weight[i] / t_sum;
         if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
             kbprime += wi * std::log(kprime[i]);
@@ -2200,13 +2221,13 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     kbprime = std::exp(kbprime);
     double kb0 = kbprime;
 
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         u[i] = std::log(k[i] / kb);
         uprime[i] = std::log(kprime[i] / kbprime);
     }
 
-    double B = std::log(kbprime / kb) / (1/Tprime - 1/t);
-    double A = std::log(kb) - B * (1/t - 1/Tref);
+    double B = std::log(kbprime / kb) / (1 / Tprime - 1 / t);
+    double A = std::log(kb) - B * (1 / t - 1 / Tref);
 
     // solve
     SolverInnerResid resid(*this, kb0, u);
@@ -2229,7 +2250,7 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
 
         double pp_sum = 0;
         double eupp_sum = 0;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             pp[i] = PCSAFT.mole_fractions[i] / (1 - R + kb0 * R * std::exp(u[i]));
             if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 pp_sum += pp[i];
@@ -2239,29 +2260,28 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
         kb = pp_sum / eupp_sum;
 
         t = 1 / (1 / Tref + (std::log(kb) - A) / B);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             if (x_ions == 0) {
                 PCSAFT.SatL->mole_fractions[i] = pp[i] / pp_sum;
                 PCSAFT.SatV->mole_fractions[i] = std::exp(u[i]) * pp[i] / eupp_sum;
-            }
-            else if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
+            } else if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 PCSAFT.SatL->mole_fractions[i] = pp[i] / pp_sum * (1 - x_ions / (1 - PCSAFT._Q));
                 PCSAFT.SatV->mole_fractions[i] = std::exp(u[i]) * pp[i] / eupp_sum;
-            }
-            else {
+            } else {
                 PCSAFT.SatL->mole_fractions[i] = PCSAFT.mole_fractions[i] / (1 - PCSAFT._Q);
                 PCSAFT.SatV->mole_fractions[i] = 0;
             }
         }
 
-        PCSAFT.SatL->_T = t; // _T must be updated because the density calculation depends on it
+        PCSAFT.SatL->_T = t;  // _T must be updated because the density calculation depends on it
         PCSAFT.SatV->_T = t;
 
         if (PCSAFT.water_present) {
             PCSAFT.components[water_idx].calc_water_sigma(t);
             PCSAFT.SatL->components[water_idx].calc_water_sigma(t);
             PCSAFT.SatV->components[water_idx].calc_water_sigma(t);
-            PCSAFT.dielc = dielc_water(t); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+            PCSAFT.dielc = dielc_water(
+              t);  // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
             PCSAFT.SatL->dielc = dielc_water(t);
             PCSAFT.SatV->dielc = dielc_water(t);
         }
@@ -2269,21 +2289,21 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
         vector<CoolPropDbl> fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
         PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(t, PCSAFT._p, iphase_gas);
         vector<CoolPropDbl> fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             k[i] = fugcoef_l[i] / fugcoef_v[i];
             u[i] = std::log(k[i] / kb);
         }
 
         if (itr == 0) {
-            B = std::log(kbprime / kb) / (1/Tprime - 1/t);
+            B = std::log(kbprime / kb) / (1 / Tprime - 1 / t);
             if (B > 0) {
                 throw SolutionError("B > 0 in outerPQ");
             }
         }
-        A = std::log(kb) - B * (1/t - 1/Tref);
+        A = std::log(kb) - B * (1 / t - 1 / Tref);
 
         maxdif = std::abs(A - A_old);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 double dif = std::abs(u[i] - u_old[i]);
                 if (dif > maxdif) {
@@ -2302,31 +2322,29 @@ double PCSAFTBackend::outerPQ(double t_guess, PCSAFTBackend &PCSAFT) {
     return t;
 }
 
-
-double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
+double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend& PCSAFT) {
     // Based on the algorithm proposed in H. A. J. Watson, M. Vikse, T. Gundersen, and P. I. Barton, “Reliable Flash Calculations: Part 1. Nonsmooth Inside-Out Algorithms,” Ind. Eng. Chem. Res., vol. 56, no. 4, pp. 960–973, Feb. 2017, doi: 10.1021/acs.iecr.6b03956.
-    auto ncomp = N; // number of components
+    auto ncomp = N;  // number of components
     double TOL = 1e-8;
     int MAXITER = 200;
 
     // Define the residual to be driven to zero
     class SolverInnerResid : public FuncWrapper1D
     {
-    public:
-        PCSAFTBackend &PCSAFT;
+       public:
+        PCSAFTBackend& PCSAFT;
         CoolPropDbl kb0;
         vector<CoolPropDbl> u;
 
-        SolverInnerResid(PCSAFTBackend &PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u)
-        : PCSAFT(PCSAFT), kb0(kb0), u(u){}
-        CoolPropDbl call(CoolPropDbl R){
+        SolverInnerResid(PCSAFTBackend& PCSAFT, CoolPropDbl kb0, vector<CoolPropDbl> u) : PCSAFT(PCSAFT), kb0(kb0), u(u) {}
+        CoolPropDbl call(CoolPropDbl R) {
             auto ncomp = PCSAFT.components.size();
             double error = 0;
 
             vector<double> pp(ncomp, 0);
             double L = 0;
 
-            for (int i = 0; i < ncomp; i++) {
+            for (size_t i = 0; i < ncomp; i++) {
                 if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                     pp[i] = PCSAFT.mole_fractions[i] / (1 - R + kb0 * R * exp(u[i]));
                     L += pp[i];
@@ -2341,8 +2359,8 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
         };
     };
 
-    double x_ions = 0.; // overall mole fraction of ions in the system
-    for (int i = 0; i < ncomp; i++) {
+    double x_ions = 0.;  // overall mole fraction of ions in the system
+    for (size_t i = 0; i < ncomp; i++) {
         if (PCSAFT.ion_term && PCSAFT.components[i].getZ() != 0) {
             x_ions += PCSAFT.mole_fractions[i];
         }
@@ -2352,7 +2370,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     vector<double> k(ncomp, 0), u(ncomp, 0), kprime(ncomp, 0), uprime(ncomp, 0);
     double Pref = p_guess - 0.01 * p_guess;
     double Pprime = p_guess + 0.01 * p_guess;
-    if (p_guess > 1e6) { // when close to the critical pressure then we need to have Pprime be less than p_guess
+    if (p_guess > 1e6) {  // when close to the critical pressure then we need to have Pprime be less than p_guess
         Pprime = p_guess - 0.005 * p_guess;
     }
     double p = p_guess;
@@ -2368,8 +2386,8 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
 
     double xv_sum = 0;
     double xl_sum = 0;
-    for (int i = 0; i < ncomp; i++) {
-        if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) { // this if statement sets k to 0 for ionic components
+    for (size_t i = 0; i < ncomp; i++) {
+        if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {  // this if statement sets k to 0 for ionic components
             k[i] = fugcoef_l[i] / fugcoef_v[i];
         } else {
             k[i] = 0;
@@ -2381,13 +2399,13 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     }
 
     if (xv_sum != 1) {
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             PCSAFT.SatV->mole_fractions[i] = PCSAFT.SatV->mole_fractions[i] / xv_sum;
         }
     }
 
     if (xl_sum != 1) {
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             PCSAFT.SatL->mole_fractions[i] = PCSAFT.SatL->mole_fractions[i] / xl_sum;
         }
     }
@@ -2396,7 +2414,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(PCSAFT._T, p, iphase_gas);
     fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         k[i] = fugcoef_l[i] / fugcoef_v[i];
         u[i] = std::log(k[i] / kb);
     }
@@ -2405,20 +2423,20 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
     PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(PCSAFT._T, Pprime, iphase_gas);
     fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         kprime[i] = fugcoef_l[i] / fugcoef_v[i];
     }
 
     vector<double> t_weight(ncomp);
     double t_sum = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double dlnk_dt = (kprime[i] - k[i]) / (Pprime - p);
         t_weight[i] = PCSAFT.SatV->mole_fractions[i] * dlnk_dt / (1 + PCSAFT._Q * (k[i] - 1));
         t_sum += t_weight[i];
     }
 
     double kb = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double wi = t_weight[i] / t_sum;
         if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
             kb += wi * std::log(k[i]);
@@ -2427,14 +2445,14 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     kb = std::exp(kb);
 
     t_sum = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double dlnk_dt = (kprime[i] - k[i]) / (Pprime - p);
         t_weight[i] = PCSAFT.SatV->mole_fractions[i] * dlnk_dt / (1 + PCSAFT._Q * (kprime[i] - 1));
         t_sum += t_weight[i];
     }
 
     double kbprime = 0;
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         double wi = t_weight[i] / t_sum;
         if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
             kbprime += wi * std::log(kprime[i]);
@@ -2443,13 +2461,13 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     kbprime = std::exp(kbprime);
     double kb0 = kbprime;
 
-    for (int i = 0; i < ncomp; i++) {
+    for (size_t i = 0; i < ncomp; i++) {
         u[i] = std::log(k[i] / kb);
         uprime[i] = std::log(kprime[i] / kbprime);
     }
 
-    double B = std::log(kbprime / kb) / (1/Pprime - 1/p);
-    double A = std::log(kb) - B * (1/p - 1/Pref);
+    double B = std::log(kbprime / kb) / (1 / Pprime - 1 / p);
+    double A = std::log(kb) - B * (1 / p - 1 / Pref);
 
     if (B < 0) {
         throw SolutionError("B < 0 in outerTQ");
@@ -2476,7 +2494,7 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
 
         double pp_sum = 0;
         double eupp_sum = 0;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             pp[i] = PCSAFT.mole_fractions[i] / (1 - R + kb0 * R * std::exp(u[i]));
             if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 pp_sum += pp[i];
@@ -2486,16 +2504,14 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
         kb = pp_sum / eupp_sum;
 
         p = 1 / (1 / Pref + (std::log(kb) - A) / B);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             if (x_ions == 0) {
                 PCSAFT.SatL->mole_fractions[i] = pp[i] / pp_sum;
                 PCSAFT.SatV->mole_fractions[i] = std::exp(u[i]) * pp[i] / eupp_sum;
-            }
-            else if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
-                PCSAFT.SatL->mole_fractions[i] = pp[i] / pp_sum * (1 - x_ions/(1 - PCSAFT._Q));
+            } else if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
+                PCSAFT.SatL->mole_fractions[i] = pp[i] / pp_sum * (1 - x_ions / (1 - PCSAFT._Q));
                 PCSAFT.SatV->mole_fractions[i] = std::exp(u[i]) * pp[i] / eupp_sum;
-            }
-            else {
+            } else {
                 PCSAFT.SatL->mole_fractions[i] = PCSAFT.mole_fractions[i] / (1 - PCSAFT._Q);
                 PCSAFT.SatV->mole_fractions[i] = 0;
             }
@@ -2505,18 +2521,18 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
         vector<CoolPropDbl> fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
         PCSAFT.SatV->_rhomolar = PCSAFT.SatV->solver_rho_Tp(PCSAFT._T, p, iphase_gas);
         vector<CoolPropDbl> fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             k[i] = fugcoef_l[i] / fugcoef_v[i];
             u[i] = std::log(k[i] / kb);
         }
 
         if (itr == 0) {
-            B = std::log(kbprime / kb) / (1/Pprime - 1/p);
+            B = std::log(kbprime / kb) / (1 / Pprime - 1 / p);
         }
-        A = std::log(kb) - B * (1/p - 1/Pref);
+        A = std::log(kb) - B * (1 / p - 1 / Pref);
 
         maxdif = std::abs(A - A_old);
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 double dif = std::abs(u[i] - u_old[i]);
                 if (dif > maxdif) {
@@ -2536,15 +2552,15 @@ double PCSAFTBackend::outerTQ(double p_guess, PCSAFTBackend &PCSAFT) {
     return p;
 }
 
-double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
+double PCSAFTBackend::estimate_flash_t(PCSAFTBackend& PCSAFT) {
     /**
     Get a quick estimate of the temperature at which VLE occurs
     */
     double t_guess = _HUGE;
-    auto ncomp = N; // number of components
+    auto ncomp = N;  // number of components
 
-    double x_ions = 0.; // overall mole fraction of ions in the system
-    for (int i = 0; i < ncomp; i++) {
+    double x_ions = 0.;  // overall mole fraction of ions in the system
+    for (size_t i = 0; i < ncomp; i++) {
         if (PCSAFT.ion_term && PCSAFT.components[i].getZ() != 0) {
             x_ions += PCSAFT.mole_fractions[i];
         }
@@ -2564,7 +2580,7 @@ double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
         double Tprime = t_start - 50;
         double t = t_start;
 
-        PCSAFT.SatL->_T = t; // _T must be updated because the density calculation depends on it
+        PCSAFT.SatL->_T = t;  // _T must be updated because the density calculation depends on it
         PCSAFT.SatV->_T = t;
 
         // calculate sigma for water, if it is present
@@ -2572,7 +2588,8 @@ double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
             PCSAFT.components[water_idx].calc_water_sigma(t);
             PCSAFT.SatL->components[water_idx].calc_water_sigma(t);
             PCSAFT.SatV->components[water_idx].calc_water_sigma(t);
-            PCSAFT.dielc = dielc_water(t); // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
+            PCSAFT.dielc = dielc_water(
+              t);  // Right now only aqueous mixtures are supported. Other solvents could be modeled by replacing the dielc_water function.
             PCSAFT.SatL->dielc = dielc_water(t);
             PCSAFT.SatV->dielc = dielc_water(t);
         }
@@ -2582,11 +2599,11 @@ double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
             PCSAFT.SatL->_T = Tprime;
             PCSAFT.SatV->_T = Tprime;
             double p2 = estimate_flash_p(PCSAFT);
-            PCSAFT.SatL->_T = t; // reset to initial value
+            PCSAFT.SatL->_T = t;  // reset to initial value
             PCSAFT.SatV->_T = t;
 
-            double slope = (std::log10(p1) - std::log10(p2)) / (1/t - 1/Tprime);
-            double intercept = std::log10(p1) - slope * (1/t);
+            double slope = (std::log10(p1) - std::log10(p2)) / (1 / t - 1 / Tprime);
+            double intercept = std::log10(p1) - slope * (1 / t);
             t_guess = slope / (std::log10(PCSAFT._p) - intercept);
             guess_found = true;
         } catch (const SolutionError& /* ex */) {
@@ -2601,15 +2618,14 @@ double PCSAFTBackend::estimate_flash_t(PCSAFTBackend &PCSAFT) {
     return t_guess;
 }
 
-
-double PCSAFTBackend::estimate_flash_p(PCSAFTBackend &PCSAFT) {
+double PCSAFTBackend::estimate_flash_p(PCSAFTBackend& PCSAFT) {
     /**
     Get a quick estimate of the pressure at which VLE occurs
     */
     double p_guess = _HUGE;
-    auto ncomp = N; // number of components
+    auto ncomp = N;  // number of components
 
-    double x_ions = 0.; // overall mole fraction of ions in the system
+    double x_ions = 0.;  // overall mole fraction of ions in the system
     for (auto i = 0U; i < ncomp; i++) {
         if (PCSAFT.ion_term && PCSAFT.components[i].getZ() != 0) {
             x_ions += PCSAFT.mole_fractions[i];
@@ -2634,14 +2650,13 @@ double PCSAFTBackend::estimate_flash_p(PCSAFTBackend &PCSAFT) {
         vector<double> fugcoef_l = PCSAFT.SatL->calc_fugacity_coefficients();
         vector<double> fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
 
-
         double xv_sum = 0;
         double xl_sum = 0;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 k[i] = fugcoef_l[i] / fugcoef_v[i];
             } else {
-                k[i] = 0; // set k to 0 for ionic components
+                k[i] = 0;  // set k to 0 for ionic components
             }
             PCSAFT.SatL->mole_fractions[i] = PCSAFT.mole_fractions[i] / (1 + PCSAFT._Q * (k[i] - 1));
             xl_sum += PCSAFT.SatL->mole_fractions[i];
@@ -2650,13 +2665,13 @@ double PCSAFTBackend::estimate_flash_p(PCSAFTBackend &PCSAFT) {
         }
 
         if (xv_sum != 1) {
-            for (int i = 0; i < ncomp; i++) {
+            for (size_t i = 0; i < ncomp; i++) {
                 PCSAFT.SatV->mole_fractions[i] = PCSAFT.SatV->mole_fractions[i] / xv_sum;
             }
         }
 
         if (xl_sum != 1) {
-            for (int i = 0; i < ncomp; i++) {
+            for (size_t i = 0; i < ncomp; i++) {
                 PCSAFT.SatL->mole_fractions[i] = PCSAFT.SatL->mole_fractions[i] / xl_sum;
             }
         }
@@ -2671,7 +2686,7 @@ double PCSAFTBackend::estimate_flash_p(PCSAFTBackend &PCSAFT) {
         fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
         double numer = 0;
         double denom = 0;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 numer += PCSAFT.SatL->mole_fractions[i] * fugcoef_l[i];
                 denom += PCSAFT.SatV->mole_fractions[i] * fugcoef_v[i];
@@ -2689,7 +2704,7 @@ double PCSAFTBackend::estimate_flash_p(PCSAFTBackend &PCSAFT) {
         fugcoef_v = PCSAFT.SatV->calc_fugacity_coefficients();
         numer = 0;
         denom = 0;
-        for (int i = 0; i < ncomp; i++) {
+        for (size_t i = 0; i < ncomp; i++) {
             if (!PCSAFT.ion_term || PCSAFT.components[i].getZ() == 0) {
                 numer += PCSAFT.SatL->mole_fractions[i] * fugcoef_l[i];
                 denom += PCSAFT.SatV->mole_fractions[i] * fugcoef_v[i];
@@ -2736,7 +2751,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     // split into grid and find bounds for each root
     vector<double> x_lo, x_hi;
     int num_pts = 20;
-    double limit_lower = -8; // first use a log scale for the low density region
+    double limit_lower = -8;  // first use a log scale for the low density region
     double limit_upper = -1;
     double rho_guess = 1e-13;
     double rho_guess_prev = rho_guess;
@@ -2752,7 +2767,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
         rho_guess_prev = rho_guess;
     }
 
-    limit_lower = 0.1; // for the high density region the log scale is not needed
+    limit_lower = 0.1;  // for the high density region the log scale is not needed
     limit_upper = 0.7405;
     for (int i = 0; i < num_pts; i++) {
         rho_guess = (limit_upper - limit_lower) / (double)num_pts * i + limit_lower;
@@ -2770,18 +2785,18 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     double x_lo_molar = 1e-8, x_hi_molar = 1e7;
 
     if (x_lo.size() == 1) {
-//        rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 2., T);
+        //        rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 2., T);
         x_lo_molar = reduced_to_molar(x_lo[0], T);
         x_hi_molar = reduced_to_molar(x_hi[0], T);
         rho = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
     } else if (x_lo.size() <= 3 && !x_lo.empty()) {
         if ((phase == iphase_liquid) || (phase == iphase_supercritical_liquid)) {
-//            rho_guess = reduced_to_molar((x_lo.back() + x_hi.back()) / 2., T);
+            //            rho_guess = reduced_to_molar((x_lo.back() + x_hi.back()) / 2., T);
             x_lo_molar = reduced_to_molar(x_lo.back(), T);
             x_hi_molar = reduced_to_molar(x_hi.back(), T);
             rho = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
         } else if ((phase == iphase_gas) || (phase == iphase_supercritical_gas) || (phase == iphase_supercritical)) {
-//            rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 40., T);  // starting with a lower guess often provides better results
+            //            rho_guess = reduced_to_molar((x_lo[0] + x_hi[0]) / 40., T);  // starting with a lower guess often provides better results
             x_lo_molar = reduced_to_molar(x_lo[0], T);
             x_hi_molar = reduced_to_molar(x_hi[0], T);
             rho = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
@@ -2789,7 +2804,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     } else if (x_lo.size() > 3) {
         // if multiple roots to check, then find the one with the minimum gibbs energy. Reference: Privat R, Gani R, Jaubert JN. Are safe results obtained when the PC-SAFT equation of state is applied to ordinary pure chemicals?. Fluid Phase Equilibria. 2010 Aug 15;295(1):76-92.
         double g_min = 1e60;
-        for (int i = 0; i < x_lo.size(); i++) {
+        for (size_t i = 0; i < x_lo.size(); i++) {
             x_lo_molar = reduced_to_molar(x_lo[i], T);
             x_hi_molar = reduced_to_molar(x_hi[i], T);
             double rho_i = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
@@ -2838,29 +2853,25 @@ CoolPropDbl PCSAFTBackend::calc_molar_mass(void) {
     return summer;
 }
 
-
-vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, vector<double> delta_ij, double den,
-    vector<double> x) {
+vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, vector<double> delta_ij, double den, vector<double> x) {
     /**Iterate over this function in order to solve for XA*/
     auto num_sites = XA_guess.size();
     vector<double> XA = XA_guess;
 
-    int idxij = -1; // index for delta_ij
+    int idxij = -1;  // index for delta_ij
     for (auto i = 0U; i < num_sites; i++) {
         double summ = 0.;
         for (int j = 0; j < num_sites; j++) {
             idxij += 1;
-            summ += den*x[j]*XA_guess[j]*delta_ij[idxij];
+            summ += den * x[j] * XA_guess[j] * delta_ij[idxij];
         }
-        XA[i] = 1./(1.+summ);
+        XA[i] = 1. / (1. + summ);
     }
 
     return XA;
 }
 
-
-vector<double> PCSAFTBackend::dXAdt_find(vector<double> delta_ij, double den,
-    vector<double> XA, vector<double> ddelta_dt, vector<double> x) {
+vector<double> PCSAFTBackend::dXAdt_find(vector<double> delta_ij, double den, vector<double> XA, vector<double> ddelta_dt, vector<double> x) {
     /**Solve for the derivative of XA with respect to temperature.*/
     auto num_sites = XA.size();
     Eigen::MatrixXd B = Eigen::MatrixXd::Zero(num_sites, 1);
@@ -2871,15 +2882,15 @@ vector<double> PCSAFTBackend::dXAdt_find(vector<double> delta_ij, double den,
     for (auto i = 0U; i < num_sites; i++) {
         summ = 0;
         for (int j = 0; j < num_sites; j++) {
-            B(i) -= x[j]*XA[j]*ddelta_dt[ij];
-            A(i,j) = x[j]*delta_ij[ij];
-            summ += x[j]*XA[j]*delta_ij[ij];
+            B(i) -= x[j] * XA[j] * ddelta_dt[ij];
+            A(i, j) = x[j] * delta_ij[ij];
+            summ += x[j] * XA[j] * delta_ij[ij];
             ij += 1;
         }
-        A(i,i) = pow(1+den*summ, 2.)/den;
+        A(i, i) = pow(1 + den * summ, 2.) / den;
     }
 
-    Eigen::MatrixXd solution = A.lu().solve(B); //Solves linear system of equations
+    Eigen::MatrixXd solution = A.lu().solve(B);  //Solves linear system of equations
     vector<double> dXA_dt(num_sites);
     for (int i = 0; i < num_sites; i++) {
         dXA_dt[i] = solution(i);
@@ -2887,15 +2898,14 @@ vector<double> PCSAFTBackend::dXAdt_find(vector<double> delta_ij, double den,
     return dXA_dt;
 }
 
-
-vector<double> PCSAFTBackend::dXAdx_find(vector<int> assoc_num, vector<double> delta_ij,
-    double den, vector<double> XA, vector<double> ddelta_dx, vector<double> x) {
+vector<double> PCSAFTBackend::dXAdx_find(vector<int> assoc_num, vector<double> delta_ij, double den, vector<double> XA, vector<double> ddelta_dx,
+                                         vector<double> x) {
     /**Solve for the derivative of XA with respect to composition, or actually with respect
     to rho_i (the molar density of component i, which equals x_i * rho).*/
     auto num_sites = XA.size();
     auto ncomp = assoc_num.size();
-    Eigen::MatrixXd B(num_sites*ncomp, 1);
-    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_sites*ncomp, num_sites*ncomp);
+    Eigen::MatrixXd B(num_sites * ncomp, 1);
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_sites * ncomp, num_sites * ncomp);
 
     double sum1, sum2;
     int idx1 = 0;
@@ -2904,40 +2914,40 @@ vector<double> PCSAFTBackend::dXAdx_find(vector<int> assoc_num, vector<double> d
         for (auto j = 0U; j < num_sites; j++) {
             sum1 = 0;
             for (int k = 0; k < num_sites; k++) {
-                sum1 = sum1 + den*x[k]*(XA[k]*ddelta_dx[i*num_sites*num_sites + j*num_sites + k]);
-                A(ij,i*num_sites+k) = XA[j]*XA[j]*den*x[k]*delta_ij[j*num_sites+k];
+                sum1 = sum1 + den * x[k] * (XA[k] * ddelta_dx[i * num_sites * num_sites + j * num_sites + k]);
+                A(ij, i * num_sites + k) = XA[j] * XA[j] * den * x[k] * delta_ij[j * num_sites + k];
             }
 
             sum2 = 0;
             for (int l = 0; l < assoc_num[i]; l++) {
-                sum2 = sum2 + XA[idx1+l]*delta_ij[idx1*num_sites+l*num_sites+j];
+                sum2 = sum2 + XA[idx1 + l] * delta_ij[idx1 * num_sites + l * num_sites + j];
             }
 
-            A(ij,ij) = A(ij,ij) + 1;
-            B(ij) = -1*XA[j]*XA[j]*(sum1 + sum2);
+            A(ij, ij) = A(ij, ij) + 1;
+            B(ij) = -1 * XA[j] * XA[j] * (sum1 + sum2);
             ij += 1;
         }
         idx1 += assoc_num[i];
     }
 
-    Eigen::MatrixXd solution = A.lu().solve(B); //Solves linear system of equations
-    vector<double> dXA_dx(num_sites*ncomp);
-    for (int i = 0; i < num_sites*ncomp; i++) {
+    Eigen::MatrixXd solution = A.lu().solve(B);  //Solves linear system of equations
+    vector<double> dXA_dx(num_sites * ncomp);
+    for (int i = 0; i < num_sites * ncomp; i++) {
         dXA_dx[i] = solution(i);
     }
     return dXA_dx;
 }
 
+void PCSAFTBackend::set_assoc_matrix() {
+    vector<int>
+      charge;  // whether the association site has a partial positive charge (i.e. hydrogen), negative charge, or elements of both (e.g. for acids modelled as type 1)
 
-void PCSAFTBackend::set_assoc_matrix(){
-    vector<int> charge; // whether the association site has a partial positive charge (i.e. hydrogen), negative charge, or elements of both (e.g. for acids modelled as type 1)
-
-    for (int i = 0; i < N; i++){
+    for (int i = 0; i < N; i++) {
         vector<std::string> assoc_scheme = components[i].getAssocScheme();
         auto num_sites = 0;
         auto num = assoc_scheme.size();
         for (auto j = 0U; j < num; j++) {
-            switch(get_scheme_index(assoc_scheme[j])) {
+            switch (get_scheme_index(assoc_scheme[j])) {
                 case i1: {
                     charge.push_back(0);
                     num_sites += 1;
@@ -2997,20 +3007,16 @@ void PCSAFTBackend::set_assoc_matrix(){
         for (std::vector<int>::iterator i2 = charge.begin(); i2 != charge.end(); i2++) {
             if (*i1 == 0 || *i2 == 0) {
                 assoc_matrix.push_back(1);
-            }
-            else if (*i1 == 1 && *i2 == -1) {
+            } else if (*i1 == 1 && *i2 == -1) {
                 assoc_matrix.push_back(1);
-            }
-            else if (*i1 == -1 && *i2 == 1) {
+            } else if (*i1 == -1 && *i2 == 1) {
                 assoc_matrix.push_back(1);
-            }
-            else {
+            } else {
                 assoc_matrix.push_back(0);
             }
         }
     }
 }
-
 
 double PCSAFTBackend::dielc_water(double t) {
     /**

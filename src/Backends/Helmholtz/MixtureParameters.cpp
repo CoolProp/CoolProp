@@ -29,8 +29,8 @@ class PredefinedMixturesLibrary
         load_from_JSON(doc);
     }
 
-    void load_from_JSON(rapidjson::Document & doc){
-        if (!doc.IsArray() || !doc[0].IsObject()){
+    void load_from_JSON(rapidjson::Document& doc) {
+        if (!doc.IsArray() || !doc[0].IsObject()) {
             throw ValueError("You must provide an array of objects");
         }
         // Iterate over the papers in the listing
@@ -778,7 +778,7 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
                         dep.e.push_back(string2double(bits[3]));
                     }
                     if (dep.Nspecial > 0) {
-                        if (dep.a.size() - 1 < dep.Npower) {
+                        if (dep.a.size() - 1 < static_cast<size_t>(dep.Npower)) {
                             dep.eta.push_back(0);
                             dep.epsilon.push_back(0);
                             dep.beta.push_back(0);

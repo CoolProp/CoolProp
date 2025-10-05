@@ -5,7 +5,7 @@
 #include "Exceptions.h"
 #include <algorithm>
 
-bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, double tend, double hmin, double hmax, double eps_allowed,
+bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed,
                                   double step_relax) {
     // Get the starting array of variables of integration
     std::vector<double> xold = ode.get_initial_array();
@@ -13,11 +13,11 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
 
     // Start at an index of 0
     int Itheta = 0;
-    double t0 = tstart;
+    double t0 = tmin;
     double h = hmin;
 
     // Figure out if t is increasing or decreasing in the integration and set a flag
-    bool forwards_integration = ((tend - tstart) > 0);
+    bool forwards_integration = ((tmax - tmin) > 0);
     // If backwards integration, flip the sign of the step
     if (!forwards_integration) {
         h *= -1;
@@ -45,13 +45,13 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
 
             // If the step would go beyond the end of the region of integration,
             // just take a step to the end of the region of integration
-            if (forwards_integration && (t0 + h > tend)) {
+            if (forwards_integration && (t0 + h > tmax)) {
                 disableAdaptive = true;
-                h = tend - t0;
+                h = tmax - t0;
             }
-            if (!forwards_integration && (t0 + h < tend)) {
+            if (!forwards_integration && (t0 + h < tmax)) {
                 disableAdaptive = true;
-                h = tend - t0;
+                h = tmax - t0;
             }
 
             ode.pre_step_callback();
@@ -152,13 +152,13 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tstart, dou
         }
 
         // Overshot the end, oops...  That's an error
-        if (forwards_integration && (t0 - tend > +1e-3)) {
-            throw CoolProp::ValueError(format("t0 - tend [%g] > 1e-3", t0 - tend));
+        if (forwards_integration && (t0 - tmax > +1e-3)) {
+            throw CoolProp::ValueError(format("t0 - tmax [%g] > 1e-3", t0 - tmax));
         }
-        if (!forwards_integration && (t0 - tend < -1e-3)) {
-            throw CoolProp::ValueError(format("t0 - tend [%g] < -1e-3", t0 - tend));
+        if (!forwards_integration && (t0 - tmax < -1e-3)) {
+            throw CoolProp::ValueError(format("t0 - tmax [%g] < -1e-3", t0 - tmax));
         }
-    } while (((forwards_integration) && t0 < tend - 1e-10) || ((!forwards_integration) && t0 > tend + 1e-10));
+    } while (((forwards_integration) && t0 < tmax - 1e-10) || ((!forwards_integration) && t0 > tmax + 1e-10));
 
     // No termination was requested
     return false;
@@ -177,9 +177,9 @@ TEST_CASE("Integrate y'=y", "[ODEIntegrator]") {
             return std::vector<double>(1, 1);
         }
 
-        virtual void pre_step_callback(){};
+        virtual void pre_step_callback() {};
 
-        virtual void post_deriv_callback(){};
+        virtual void post_deriv_callback() {};
 
         virtual void post_step_callback(double t, double h, std::vector<double>& y) {
             this->t.push_back(t);

@@ -23,7 +23,7 @@ class FuncWrapper1D
     int iter;
     int verbosity = 0;
     FuncWrapper1D() : errcode(0), errstring(""), iter(0) {};
-    virtual ~FuncWrapper1D(){};
+    virtual ~FuncWrapper1D() {};
     virtual double call(double) = 0;
     /**
      * /brief A function for checking whether the input is in range;
@@ -58,8 +58,8 @@ class FuncWrapperND
    public:
     int errcode;
     std::string errstring;
-    FuncWrapperND() : errcode(0), errstring(""){};
-    virtual ~FuncWrapperND(){};
+    FuncWrapperND() : errcode(0), errstring("") {};
+    virtual ~FuncWrapperND() {};
     virtual std::vector<double> call(const std::vector<double>&) = 0;  // must be provided
     virtual std::vector<std::vector<double>> Jacobian(const std::vector<double>&);
 };
@@ -87,10 +87,10 @@ inline double Secant(FuncWrapper1D& f, double x0, double dx, double ftol, int ma
     return Secant(&f, x0, dx, ftol, maxiter);
 }
 
-inline double ExtrapolatingSecant(FuncWrapper1D& f, double x0, double dx, double ftol, int maxiter){
+inline double ExtrapolatingSecant(FuncWrapper1D& f, double x0, double dx, double ftol, int maxiter) {
     return ExtrapolatingSecant(&f, x0, dx, ftol, maxiter);
 }
-inline double BoundedSecant(FuncWrapper1D& f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter){
+inline double BoundedSecant(FuncWrapper1D& f, double x0, double xmin, double xmax, double dx, double ftol, int maxiter) {
     return BoundedSecant(&f, x0, xmin, xmax, dx, ftol, maxiter);
 }
 inline double Newton(FuncWrapper1DWithDeriv& f, double x0, double ftol, int maxiter) {

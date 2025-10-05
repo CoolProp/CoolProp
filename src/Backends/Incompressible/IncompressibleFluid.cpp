@@ -42,7 +42,7 @@ double IncompressibleFluid::baseExponential(IncompressibleData data, double y, d
     }
 
     // Guard the function against zero denominators in exp((double)(coeffs[0] / ((y - ybase) + coeffs[1]) - coeffs[2]))
-    auto fnc = [&](double x) { return exp((double)(coeffs[0] / (x) - coeffs[2])); } ;
+    auto fnc = [&](double x) { return exp((double)(coeffs[0] / (x)-coeffs[2])); };
     double x_den = (y - ybase) + coeffs[1];
     double x_lo = -INCOMP_EPSILON;
     double x_hi = +INCOMP_EPSILON;
@@ -68,7 +68,7 @@ double IncompressibleFluid::baseLogexponential(IncompressibleData data, double y
     }
 
     // Guard the function against zero denominators in exp((double)(log((double)(1.0 / ((y - ybase) + coeffs[0]) + 1.0 / ((y - ybase) + coeffs[0]) / ((y - ybase) + coeffs[0]))) * coeffs[1] + coeffs[2]))
-    auto fnc = [&](double x) { return exp((double)(log((double)(1.0 / (x) + 1.0 / (x) / (x))) * coeffs[1] + coeffs[2])); } ;
+    auto fnc = [&](double x) { return exp((double)(log((double)(1.0 / (x) + 1.0 / (x) / (x))) * coeffs[1] + coeffs[2])); };
     double x_den = (y - ybase) + coeffs[0];
     double x_lo = -INCOMP_EPSILON;
     double x_hi = +INCOMP_EPSILON;
@@ -695,7 +695,7 @@ TEST_CASE("Internal consistency checks and example use cases for the incompressi
         CHECK_THROWS(CH3OH.u(T, p, x));
 
         // Compare viscosity
-        expected = 0.0023970245009602097; // Pa-s   // Melinder 3.48 mPas @ 24.87 wt%, 0C
+        expected = 0.0023970245009602097;  // Pa-s   // Melinder 3.48 mPas @ 24.87 wt%, 0C
         actual = CH3OH.visc(T, p, x);
         {
             CAPTURE(T);
