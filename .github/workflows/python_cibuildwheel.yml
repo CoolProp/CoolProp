@@ -76,7 +76,7 @@ jobs:
         CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         CIBW_MANYLINUX_I686_IMAGE: manylinux2014
         CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-        CIBW_SKIP: "pp*"
+        # CIBW_SKIP: "pp*"
         CIBW_TEST_SKIP: "*-macosx_arm64 *-win_arm64"
       with:
         package-dir: ./wrappers/Python/
