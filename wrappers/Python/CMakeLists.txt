@@ -17,6 +17,60 @@ find_package(Cython REQUIRED)
 # Set root directory
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 
+# ============================================================================
+# Generate headers and constants (must happen before building)
+# ============================================================================
+
+# Generate C++ headers from JSON files
+message(STATUS "Generating CoolProp headers...")
+execute_process(
+    COMMAND ${Python_EXECUTABLE} "${ROOT_DIR}/dev/generate_headers.py"
+    WORKING_DIRECTORY "${ROOT_DIR}/dev"
+    RESULT_VARIABLE GENERATE_HEADERS_RESULT
+)
+if(NOT GENERATE_HEADERS_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to generate headers")
+endif()
+
+# Generate Cython constants module
+message(STATUS "Generating Cython constants module...")
+execute_process(
+    COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/generate_constants_module.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    RESULT_VARIABLE GENERATE_CONSTANTS_RESULT
+)
+if(NOT GENERATE_CONSTANTS_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to generate constants module")
+endif()
+
+# ============================================================================
+# Copy headers and other files needed for packaging
+# ============================================================================
+
+message(STATUS "Copying headers for packaging...")
+
+# Remove old include directory if it exists
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include")
+    file(REMOVE_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include")
+endif()
+
+# Copy main include directory
+file(COPY "${ROOT_DIR}/include/"
+     DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include"
+     PATTERN "*_JSON.h" EXCLUDE
+     PATTERN "*_JSON_z.h" EXCLUDE
+)
+
+# Copy fmtlib headers
+file(COPY "${ROOT_DIR}/externals/fmtlib/include/fmt"
+     DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include"
+)
+
+# Copy BibTeX library
+file(COPY "${ROOT_DIR}/CoolPropBibTeXLibrary.bib"
+     DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp"
+)
+
 # Add the main CoolProp sources
 file(GLOB_RECURSE COOLPROP_SOURCES
     "${ROOT_DIR}/src/*.cpp"
