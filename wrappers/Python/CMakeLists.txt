@@ -5,6 +5,9 @@ project(${SKBUILD_PROJECT_NAME} LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set position independent code (required for shared libraries)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Add cmake directory to module path
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
