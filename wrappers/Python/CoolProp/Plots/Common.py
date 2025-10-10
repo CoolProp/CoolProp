@@ -889,7 +889,7 @@ consider replacing it with \"_get_sat_bounds\".",
         dim = self._system[CoolProp.iP]
         limits[2] = dim.to_SI(limits[2])
         limits[3] = dim.to_SI(limits[3])
-        self.limits = limits
+        self.limits = tuple(limits)
 
     def get_Tp_limits(self):
         """Get the limits for the graphs in temperature and pressure, based on
