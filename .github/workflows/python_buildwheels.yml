@@ -62,7 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: [39, 310, 311, 312, 313]
+        python-version: [39, 310, 311, 312, 313, 314]
         arch: [i686, x86_64, ppc64le, s390x]
         exclude:
           - os: ubuntu-latest
@@ -85,7 +85,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04-arm]
-        python-version: [39, 310, 311, 312, 313]
+        python-version: [39, 310, 311, 312, 313, 314]
         arch: [aarch64]
     uses: ./.github/workflows/python_cibuildwheel.yml
     with:
@@ -101,7 +101,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest]
-        python-version: [39, 310, 311, 312, 313]
+        python-version: [39, 310, 311, 312, 313, 314]
         arch: [AMD64, x86, ARM64]
         #exclude:
         #  - os: windows
@@ -120,7 +120,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest]
-        python-version: [39, 310, 311, 312, 313]
+        python-version: [39, 310, 311, 312, 313, 314]
         arch: [x86_64, arm64, universal2]
         exclude:
           - os: macos-latest
