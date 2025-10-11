@@ -39,14 +39,15 @@ jobs:
       shell: bash
       run: |
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          python dev/extract_version.py --pypi --replace-setup-py
+          python dev/extract_version.py --pypi --replace-version
         else
-          python dev/extract_version.py --replace-setup-py --version "${{ needs.set-version.outputs.testpypiversion }}"
+          python dev/extract_version.py --replace-version --version "${{ needs.set-version.outputs.testpypiversion }}"
         fi;
-        
+
     - name: Build package, sdist
-      working-directory: ./wrappers/Python/pypi
-      run: python prepare_pypi.py --dist-dir=${GITHUB_WORKSPACE}/Python
+      run: |
+        pip install build
+        python -m build --sdist --outdir ${GITHUB_WORKSPACE}/Python
 
     - name: Store artifacts
       uses: actions/upload-artifact@v4

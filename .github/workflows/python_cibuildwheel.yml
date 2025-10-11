@@ -47,9 +47,9 @@ jobs:
       shell: bash
       run: |
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          python dev/extract_version.py --pypi --replace-setup-py
+          python dev/extract_version.py --pypi --replace-version
         else
-          python dev/extract_version.py --replace-setup-py --version "${{ inputs.TESTPYPI_VERSION }}"
+          python dev/extract_version.py --replace-version --version "${{ inputs.TESTPYPI_VERSION }}"
         fi;
         
     - name: Set up QEMU
