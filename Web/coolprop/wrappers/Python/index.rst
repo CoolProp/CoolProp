@@ -79,6 +79,33 @@ install, use::
 
     conda install conda-forge::coolprop
 
+Using uv (fast Python package manager)
+---------------------------------------
+
+`uv <https://docs.astral.sh/uv/>`__ is an extremely fast Python package and project manager written in Rust.
+To use CoolProp with uv::
+
+    # Install CoolProp in the current environment
+    uv pip install CoolProp
+
+    # Or create a new project with CoolProp
+    uv init my-project
+    cd my-project
+    uv add CoolProp
+
+    # Run a script with CoolProp (uv will automatically manage the environment)
+    uv run python my_script.py
+
+For development from source::
+
+    # Clone and install in development mode
+    git clone https://github.com/CoolProp/CoolProp --recursive
+    cd CoolProp
+    uv pip install -e . --no-build-isolation
+
+Nightly builds
+--------------
+
 If you dare, you can also try the latest nightly release from :sfnightly:`Python`
 or get it directly from the development server using::
 
