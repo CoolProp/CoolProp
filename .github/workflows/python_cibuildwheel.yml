@@ -47,9 +47,9 @@ jobs:
       shell: bash
       run: |
         if [[ "$GITHUB_REF" == *"refs/tags"* ]]; then
-          python dev/extract_version.py --pypi --replace-setup-py
+          python dev/extract_version.py --pypi --replace-version
         else
-          python dev/extract_version.py --replace-setup-py --version "${{ inputs.TESTPYPI_VERSION }}"
+          python dev/extract_version.py --replace-version --version "${{ inputs.TESTPYPI_VERSION }}"
         fi;
         
     - name: Set up QEMU
@@ -63,10 +63,8 @@ jobs:
       env:
         MACOSX_DEPLOYMENT_TARGET: 11.0
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-        CIBW_BEFORE_BUILD: >
-          python -m pip install setuptools wheel Cython requests jinja2 pyyaml
         CIBW_BEFORE_BUILD_LINUX: >
-          python -m pip install setuptools wheel Cython requests jinja2 pyyaml && git config --global --add safe.directory "*"
+          git config --global --add safe.directory "*"
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
@@ -79,7 +77,7 @@ jobs:
         # CIBW_SKIP: "pp*"
         CIBW_TEST_SKIP: "*-macosx_arm64 *-win_arm64"
       with:
-        package-dir: ./wrappers/Python/
+        package-dir: .
         output-dir: Python
 
     - name: Upload Files

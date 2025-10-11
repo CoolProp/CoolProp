@@ -1,34 +1,98 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm", "cython"]
-build-backend = "backend"
-backend-path = ["_py_backend"]
+requires = ["scikit-build-core>=0.10", "cython>=0.29"]
+build-backend = "scikit_build_core.build"
 
 [project]
-name = "coolprop"
+name = "CoolProp"
 authors = [
     {name = "Ian Bell", email = "ian.h.bell@gmail.com"},
 ]
 description = "Open-source thermodynamic and transport properties database"
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.8"
-license = "MIT"
+license = {text = "MIT"}
 classifiers = [
-	"Programming Language :: Python",
-	"Development Status :: 4 - Beta",
-	"Environment :: Other Environment",
-	"Intended Audience :: Developers",
-	"Operating System :: OS Independent",
-	"Topic :: Software Development :: Libraries :: Python Modules"
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Development Status :: 4 - Beta",
+    "Environment :: Other Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
-    "cython",
-	"numpy",
-	"setuptools"
+    "numpy>=1.20",
 ]
 dynamic = ["version"]
 
-[tool.setuptools.dynamic]
-version = {attr = "_py_backend.__version__"}
+[project.urls]
+Homepage = "http://www.coolprop.org"
+Documentation = "http://www.coolprop.org"
+Repository = "https://github.com/CoolProp/CoolProp"
+"Bug Tracker" = "https://github.com/CoolProp/CoolProp/issues"
 
-[tool.setuptools.packages.find]
-where = ["wrappers/Python"]
+[tool.scikit-build]
+# Minimum version of CMake to use
+cmake.version = ">=3.15"
+
+# Build type
+cmake.build-type = "Release"
+
+# Set CMake source directory to wrappers/Python
+cmake.source-dir = "wrappers/Python"
+
+# Build directory for incremental builds
+build-dir = "build/{wheel_tag}"
+
+# Enable verbose output for debugging (set to true if needed)
+build.verbose = false
+
+# Include .version file in sdist
+sdist.include = [".version"]
+
+# Exclude unnecessary files from the wheel
+wheel.exclude = [
+    "**/*.pyc",
+    "**/*.pyo",
+    "**/__pycache__",
+    "**/.git*",
+    "**/*.cpp",  # Exclude generated C++ from Cython
+]
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = ".version"
+regex = "(?P<value>.*)"
+
+[tool.cibuildwheel]
+# Build for multiple Python versions (CPython only)
+build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
+
+# Skip musllinux for now
+skip = "*-musllinux_*"
+
+# Test command
+test-command = "python -c \"import CoolProp; print(CoolProp.__version__); CoolProp.CoolProp.PropsSI('T', 'P', 101325, 'Q', 0, 'Water')\""
+test-requires = ["numpy"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+# Set deployment target for macOS (Big Sur and later)
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]

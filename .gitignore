@@ -30,6 +30,8 @@
 /wrappers/Python/CoolProp/_constants.*
 /wrappers/Python/CoolProp/constants*
 /wrappers/Python/CoolProp/HumidAirProp.html
+/wrappers/Python/CoolProp/include/
+/wrappers/Python/CoolProp/CoolPropBibTeXLibrary.bib
 /wrappers/Excel/CoolProp_x64.dll
 /wrappers/Excel/CoolProp.dll
 

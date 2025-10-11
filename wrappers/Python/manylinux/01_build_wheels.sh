@@ -1,36 +1,29 @@
 #!/bin/bash
 
-SETUP_PY_ARGS="$1"
-
 # Stop on errors
-set -ex 
+set -ex
 
 # Get the directory containing this script
 # see http://stackoverflow.com/a/246128/1360263
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# # Build the .tar.gz with the sources
-# pushd ${DIR}/../pypi
-# source /py27/bin/activate
-# python prepare_pypi.py --dist-dir=`pwd`/../dist
-# deactivate
-# popd 
-
-pushd ${DIR}/..
+# Move to repository root (two levels up from wrappers/Python/manylinux)
+pushd ${DIR}/../../..
 
 for PYBIN in /py*; do
     source ${PYBIN}/bin/activate
     c++ --version
-    python setup.py bdist_wheel ${SETUP_PY_ARGS}
+    # Use pip wheel with scikit-build-core
+    python -m pip wheel --no-deps --no-build-isolation -w dist .
     deactivate
 done
 
 # Bundle external shared libraries into the wheels
 for whl in dist/*.whl; do
     # auditwheel comes in base image
-    auditwheel repair $whl -w ../../install_root/Python
+    auditwheel repair $whl -w wrappers/Python/install_root
 done
 
-popd 
+popd
 
 exit 0
