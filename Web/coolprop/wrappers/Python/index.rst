@@ -105,8 +105,15 @@ For development from source::
     # Create a virtual environment (recommended)
     uv venv
 
-    # Install in editable mode (allows incremental rebuilds)
-    uv pip install -ve . --python .venv/bin/python
+    # Install build dependencies
+    uv pip install --python .venv/bin/python scikit-build-core cython
+
+    # Install in editable mode with incremental build support
+    uv pip install -ve . --python .venv/bin/python --no-build-isolation
+
+**Important**: The ``--no-build-isolation`` flag is required for incremental builds to work properly.
+Without it, each build will use a temporary isolated environment with different paths, causing CMake
+to reconfigure and rebuild all files even when only one file changed.
 
 Nightly builds
 --------------
@@ -144,22 +151,37 @@ Using pip::
     # Install in editable mode
     pip install -ve .
 
-Using uv (recommended for faster builds)::
+Using uv (recommended for faster builds and better dependency management)::
 
-    # With a virtual environment
+    # Create a virtual environment
     uv venv
-    uv pip install -ve . --python .venv/bin/python
+
+    # Install build dependencies first (required for --no-build-isolation)
+    uv pip install --python .venv/bin/python scikit-build-core cython
+
+    # Install in editable mode with incremental build support
+    uv pip install -ve . --python .venv/bin/python --no-build-isolation
 
 When you modify C++ source files, trigger an incremental rebuild::
 
-    # With pip
+    # With pip (incremental builds work automatically)
     pip install -ve .
 
-    # With uv
-    uv pip install -ve . --python .venv/bin/python
+    # With uv (must use --no-build-isolation for incremental builds)
+    uv pip install -ve . --python .venv/bin/python --no-build-isolation
 
 The build system (scikit-build-core with CMake/Ninja) will automatically detect which files
 have changed and only recompile those files, making the rebuild much faster than a full rebuild.
+
+**Incremental Build Performance**:
+
+* Without ``--no-build-isolation``: Each build uses a fresh isolated environment, causing CMake
+  to reconfigure and rebuild all ~60 source files (~50 seconds)
+* With ``--no-build-isolation``: CMake reuses the existing build directory and only rebuilds
+  changed files (~4 seconds for a single file change)
+
+**Note**: If you use ``--no-build-isolation``, you must manually install the build dependencies
+(``scikit-build-core`` and ``cython``) in your virtual environment first.
 
 Local installation
 ------------------

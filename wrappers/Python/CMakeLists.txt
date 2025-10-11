@@ -21,58 +21,74 @@ find_package(Cython REQUIRED)
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 
 # ============================================================================
-# Generate headers and constants (must happen before building)
+# Generate headers and constants (only when dependencies change)
 # ============================================================================
 
-# Generate C++ headers from JSON files
-message(STATUS "Generating CoolProp headers...")
-execute_process(
+# Collect all JSON files that trigger header regeneration
+file(GLOB FLUID_JSON_FILES "${ROOT_DIR}/dev/fluids/*.json")
+file(GLOB INCOMP_JSON_FILES "${ROOT_DIR}/dev/incompressible_liquids/json/*.json")
+file(GLOB CUBIC_JSON_FILES "${ROOT_DIR}/dev/cubics/*.json")
+file(GLOB PCSAFT_JSON_FILES "${ROOT_DIR}/dev/pcsaft/*.json")
+file(GLOB MIXTURE_JSON_FILES "${ROOT_DIR}/dev/mixtures/*.json")
+
+# Generate C++ headers from JSON files (only when inputs change)
+# The generate_headers.py script has its own timestamp checking, so this
+# won't unnecessarily regenerate files
+add_custom_command(
+    OUTPUT
+        "${ROOT_DIR}/include/all_fluids_JSON.h"
+        "${ROOT_DIR}/include/all_fluids_JSON_z.h"
+        "${ROOT_DIR}/include/cpversion.h"
+        "${ROOT_DIR}/include/gitrevision.h"
     COMMAND ${Python_EXECUTABLE} "${ROOT_DIR}/dev/generate_headers.py"
     WORKING_DIRECTORY "${ROOT_DIR}/dev"
-    RESULT_VARIABLE GENERATE_HEADERS_RESULT
+    DEPENDS
+        "${ROOT_DIR}/dev/generate_headers.py"
+        "${ROOT_DIR}/CMakeLists.txt"
+        ${FLUID_JSON_FILES}
+        ${INCOMP_JSON_FILES}
+        ${CUBIC_JSON_FILES}
+        ${PCSAFT_JSON_FILES}
+        ${MIXTURE_JSON_FILES}
+    COMMENT "Generating CoolProp headers from JSON files..."
 )
-if(NOT GENERATE_HEADERS_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to generate headers")
-endif()
 
-# Generate Cython constants module
-message(STATUS "Generating Cython constants module...")
-execute_process(
+# Create a custom target that depends on generated headers
+add_custom_target(generate_headers_target
+    DEPENDS
+        "${ROOT_DIR}/include/all_fluids_JSON.h"
+        "${ROOT_DIR}/include/all_fluids_JSON_z.h"
+        "${ROOT_DIR}/include/cpversion.h"
+        "${ROOT_DIR}/include/gitrevision.h"
+)
+
+# Generate Cython constants module (only when dependencies change)
+add_custom_command(
+    OUTPUT
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants.py"
     COMMAND ${Python_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/generate_constants_module.py"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    RESULT_VARIABLE GENERATE_CONSTANTS_RESULT
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/generate_constants_module.py"
+        "${ROOT_DIR}/include/DataStructures.h"
+        "${ROOT_DIR}/include/Configuration.h"
+    COMMENT "Generating Cython constants module..."
 )
-if(NOT GENERATE_CONSTANTS_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to generate constants module")
-endif()
+
+# Create a custom target for constants generation
+add_custom_target(generate_constants_target
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants.py"
+)
 
 # ============================================================================
-# Copy headers and other files needed for packaging
+# Headers are used directly from ROOT_DIR for building (better dependency tracking)
+# They will be copied to the package during the install phase
 # ============================================================================
-
-message(STATUS "Copying headers for packaging...")
-
-# Remove old include directory if it exists
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include")
-    file(REMOVE_RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include")
-endif()
-
-# Copy main include directory
-file(COPY "${ROOT_DIR}/include/"
-     DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include"
-     PATTERN "*_JSON.h" EXCLUDE
-     PATTERN "*_JSON_z.h" EXCLUDE
-)
-
-# Copy fmtlib headers
-file(COPY "${ROOT_DIR}/externals/fmtlib/include/fmt"
-     DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include"
-)
-
-# Copy BibTeX library
-file(COPY "${ROOT_DIR}/CoolPropBibTeXLibrary.bib"
-     DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp"
-)
 
 # Add the main CoolProp sources
 file(GLOB_RECURSE COOLPROP_SOURCES
@@ -135,7 +151,10 @@ add_custom_command(
     COMMAND ${Python_EXECUTABLE} -m cython ${CYTHON_FLAGS}
         -o "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/_constants.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/_constants.pyx"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
+        generate_constants_target
     COMMENT "Cythonizing _constants.pyx"
 )
 
@@ -144,6 +163,9 @@ Python_add_library(CoolProp_module MODULE WITH_SOABI
     "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/CoolProp.cpp"
     ${COOLPROP_SOURCES}
 )
+
+# Make sure generated headers exist before compiling
+add_dependencies(CoolProp_module generate_headers_target)
 
 target_include_directories(CoolProp_module PRIVATE
     ${COOLPROP_INCLUDE_DIRS}
@@ -203,14 +225,26 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/"
     PATTERN "*.pyc" EXCLUDE
 )
 
-# Install include files if they exist
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include")
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/include/"
-        DESTINATION CoolProp/include
-        FILES_MATCHING
-        PATTERN "*.h"
-        PATTERN "*.hpp"
-        PATTERN "*_JSON.h" EXCLUDE
-        PATTERN "*_JSON_z.h" EXCLUDE
-    )
-endif()
+# Install header files directly from ROOT_DIR (for packaging)
+# These are copied at install time, not during build, to avoid
+# triggering unnecessary rebuilds
+install(DIRECTORY "${ROOT_DIR}/include/"
+    DESTINATION CoolProp/include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.hpp"
+    PATTERN "*_JSON.h" EXCLUDE
+    PATTERN "*_JSON_z.h" EXCLUDE
+)
+
+# Install fmtlib headers (for packaging)
+install(DIRECTORY "${ROOT_DIR}/externals/fmtlib/include/fmt"
+    DESTINATION CoolProp/include
+    FILES_MATCHING
+    PATTERN "*.h"
+)
+
+# Install BibTeX library
+install(FILES "${ROOT_DIR}/CoolPropBibTeXLibrary.bib"
+    DESTINATION CoolProp
+)

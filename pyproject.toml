@@ -56,7 +56,7 @@ cmake.source-dir = "wrappers/Python"
 build-dir = "build/{wheel_tag}"
 
 # Enable verbose output for debugging (set to true if needed)
-build.verbose = false
+build.verbose = true
 
 # Include .version file in sdist
 sdist.include = [".version"]
