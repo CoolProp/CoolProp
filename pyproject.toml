@@ -44,7 +44,7 @@ Repository = "https://github.com/CoolProp/CoolProp"
 
 [tool.scikit-build]
 # Minimum version of CMake to use
-cmake.minimum-version = "3.15"
+cmake.version = ">=3.15"
 
 # Build directory for incremental builds
 build-dir = "build/{wheel_tag}"
@@ -56,7 +56,10 @@ cmake.build-type = "Release"
 cmake.source-dir = "wrappers/Python"
 
 # Enable verbose output for debugging (set to true if needed)
-cmake.verbose = false
+build.verbose = false
+
+# Include .version file in sdist
+sdist.include = [".version"]
 
 # Exclude unnecessary files from the wheel
 wheel.exclude = [

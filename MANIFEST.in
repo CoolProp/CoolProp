@@ -2,4 +2,5 @@ recursive-include src *.*
 recursive-include include *.*
 recursive-include externals *
 include dev/gitrevision.txt
+include .version
 include *.*
