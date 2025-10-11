@@ -367,8 +367,8 @@ class ChebyshevExpansion
     }
 
     /// A vectorized variant (for use with Python interface)
-    template <typename T>
-    auto solve_for_x_many(const T& y, double a, double b, unsigned int bits, std::size_t max_iter, double boundsytol, T& x, T& counts) const {
+    template <typename T, typename CountsT>
+    auto solve_for_x_many(const T& y, double a, double b, unsigned int bits, std::size_t max_iter, double boundsytol, T& x, CountsT& counts) const {
         if (x.size() != y.size()) {
             throw std::invalid_argument("x and y are not the same size");
         }
@@ -378,9 +378,9 @@ class ChebyshevExpansion
     }
 
     /// A vectorized variant in which arrays are C-style, assumed to be of the same length
-    template <typename T>
+    template <typename T, typename CountsT>
     auto solve_for_x_manyC(const T y[], std::size_t N, double a, double b, unsigned int bits, std::size_t max_iter, double boundsytol, T x[],
-                           T counts[]) const {
+                           CountsT counts[]) const {
         for (std::size_t i = 0; i < N; ++i) {
             std::tie(x[i], counts[i]) = solve_for_x_count(y[i], a, b, bits, max_iter, boundsytol);
         }
