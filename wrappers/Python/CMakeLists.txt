@@ -51,6 +51,7 @@ add_custom_command(
         ${PCSAFT_JSON_FILES}
         ${MIXTURE_JSON_FILES}
     COMMENT "Generating CoolProp headers from JSON files..."
+    VERBATIM
 )
 
 # Create a custom target that depends on generated headers
@@ -75,6 +76,7 @@ add_custom_command(
         "${ROOT_DIR}/include/DataStructures.h"
         "${ROOT_DIR}/include/Configuration.h"
     COMMENT "Generating Cython constants module..."
+    VERBATIM
 )
 
 # Create a custom target for constants generation
@@ -143,6 +145,7 @@ add_custom_command(
         "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
     COMMENT "Cythonizing CoolProp.pyx"
+    VERBATIM
 )
 
 # Generate _constants module
@@ -156,6 +159,7 @@ add_custom_command(
         "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
         generate_constants_target
     COMMENT "Cythonizing _constants.pyx"
+    VERBATIM
 )
 
 # Create CoolProp extension module
