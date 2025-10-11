@@ -33,7 +33,6 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.20",
-    "pdsim",
 ]
 dynamic = ["version"]
 
@@ -97,6 +96,3 @@ archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
-
-[tool.uv.sources]
-pdsim = { path = "../pdsim" }
