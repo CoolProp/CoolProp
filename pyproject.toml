@@ -88,6 +88,8 @@ test-requires = ["numpy"]
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
+# Set deployment target for macOS (Big Sur and later)
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
