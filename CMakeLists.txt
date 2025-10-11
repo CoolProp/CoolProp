@@ -362,13 +362,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       "${CMAKE_CURRENT_SOURCE_DIR}/dev/cmake/Modules/")
 
 message(STATUS "Looking for Python")
-find_package(Python COMPONENTS Interpreter)
-if(Python_Interpreter_FOUND)
-	set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
-endif()
-if(NOT PYTHON_EXECUTABLE)
-  message(WARNING "Could not find Python, be prepared for errors.")
-endif()
+find_package(Python REQUIRED COMPONENTS Interpreter)
+set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 
 if(CMAKE_DL_LIBS)
   find_package(${CMAKE_DL_LIBS} REQUIRED)
