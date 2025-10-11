@@ -33,6 +33,7 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.20",
+    "pdsim",
 ]
 dynamic = ["version"]
 
@@ -46,14 +47,14 @@ Repository = "https://github.com/CoolProp/CoolProp"
 # Minimum version of CMake to use
 cmake.version = ">=3.15"
 
-# Build directory for incremental builds
-build-dir = "build/{wheel_tag}"
-
 # Build type
 cmake.build-type = "Release"
 
 # Set CMake source directory to wrappers/Python
 cmake.source-dir = "wrappers/Python"
+
+# Build directory for incremental builds
+build-dir = "build/{wheel_tag}"
 
 # Enable verbose output for debugging (set to true if needed)
 build.verbose = false
@@ -76,11 +77,11 @@ input = ".version"
 regex = "(?P<value>.*)"
 
 [tool.cibuildwheel]
-# Build for multiple Python versions
+# Build for multiple Python versions (CPython only)
 build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 
-# Skip PyPy and musllinux for now
-skip = "pp* *-musllinux_*"
+# Skip musllinux for now
+skip = "*-musllinux_*"
 
 # Test command
 test-command = "python -c \"import CoolProp; print(CoolProp.__version__); CoolProp.CoolProp.PropsSI('T', 'P', 101325, 'Q', 0, 'Water')\""
@@ -96,3 +97,6 @@ archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
+
+[tool.uv.sources]
+pdsim = { path = "../pdsim" }
