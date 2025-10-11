@@ -51,6 +51,7 @@ add_custom_command(
         ${PCSAFT_JSON_FILES}
         ${MIXTURE_JSON_FILES}
     COMMENT "Generating CoolProp headers from JSON files..."
+    VERBATIM
 )
 
 # Create a custom target that depends on generated headers
@@ -75,6 +76,7 @@ add_custom_command(
         "${ROOT_DIR}/include/DataStructures.h"
         "${ROOT_DIR}/include/Configuration.h"
     COMMENT "Generating Cython constants module..."
+    VERBATIM
 )
 
 # Create a custom target for constants generation
@@ -141,8 +143,12 @@ add_custom_command(
     COMMAND ${Python_EXECUTABLE} -m cython ${CYTHON_FLAGS}
         -o "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/CoolProp.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
+        generate_constants_target
     COMMENT "Cythonizing CoolProp.pyx"
+    VERBATIM
 )
 
 # Generate _constants module
@@ -156,6 +162,7 @@ add_custom_command(
         "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
         generate_constants_target
     COMMENT "Cythonizing _constants.pyx"
+    VERBATIM
 )
 
 # Create CoolProp extension module
@@ -164,8 +171,8 @@ Python_add_library(CoolProp_module MODULE WITH_SOABI
     ${COOLPROP_SOURCES}
 )
 
-# Make sure generated headers exist before compiling
-add_dependencies(CoolProp_module generate_headers_target)
+# Make sure generated headers and constants exist before compiling
+add_dependencies(CoolProp_module generate_headers_target generate_constants_target)
 
 target_include_directories(CoolProp_module PRIVATE
     ${COOLPROP_INCLUDE_DIRS}
