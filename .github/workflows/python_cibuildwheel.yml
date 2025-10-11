@@ -41,7 +41,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install requests packaging
+        python -m pip install requests packaging ninja
 
     - name: Figure out the TestPyPi/PyPi Version
       shell: bash
@@ -64,6 +64,7 @@ jobs:
         MACOSX_DEPLOYMENT_TARGET: 11.0
         CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
         CIBW_BEFORE_BUILD_LINUX: >
+          pip install ninja &&
           git config --global --add safe.directory "*"
         CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
         CIBW_BUILD: cp${{ inputs.python-version }}-*
