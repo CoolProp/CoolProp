@@ -70,10 +70,17 @@ wheel.exclude = [
     "**/*.cpp",  # Exclude generated C++ from Cython
 ]
 
+# Derived from https://scikit-build-core.readthedocs.io/en/latest/configuration/dynamic.html#regex
 [tool.scikit-build.metadata.version]
 provider = "scikit_build_core.metadata.regex"
-input = ".version"
-regex = "(?P<value>.*)"
+input = "CMakeLists.txt"
+regex = '''(?sx)
+set\(COOLPROP_VERSION_MAJOR\s+(?P<major>\d+)\).*?
+set\(COOLPROP_VERSION_MINOR\s+(?P<minor>\d+)\).*?
+set\(COOLPROP_VERSION_PATCH\s+(?P<patch>\d+)\).*?
+set\(COOLPROP_VERSION_REVISION\s+(?P<dev>\w*)\).*?
+'''
+result = "{major}.{minor}.{patch}{dev}"
 
 [tool.cibuildwheel]
 # Build for multiple Python versions (CPython only)
