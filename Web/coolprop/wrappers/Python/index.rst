@@ -98,10 +98,15 @@ To use CoolProp with uv::
 
 For development from source::
 
-    # Clone and install in development mode
+    # Clone the repository
     git clone https://github.com/CoolProp/CoolProp --recursive
     cd CoolProp
-    uv pip install -e . --no-build-isolation
+
+    # Create a virtual environment (recommended)
+    uv venv
+
+    # Install in editable mode (allows incremental rebuilds)
+    uv pip install -ve . --python .venv/bin/python
 
 Nightly builds
 --------------
@@ -128,10 +133,33 @@ To build and install from source::
     # Install (pip will automatically handle the build)
     pip install .
 
-For development installations with incremental builds::
+Development with Editable Install
+++++++++++++++++++++++++++++++++++
 
-    # Editable install - rebuilds only changed files
-    pip install -e . --no-build-isolation
+An editable install (also known as "development mode") allows you to make changes to the C++
+source code and have them take effect after a simple rebuild, without reinstalling the package.
+
+Using pip::
+
+    # Install in editable mode
+    pip install -ve .
+
+Using uv (recommended for faster builds)::
+
+    # With a virtual environment
+    uv venv
+    uv pip install -ve . --python .venv/bin/python
+
+When you modify C++ source files, trigger an incremental rebuild::
+
+    # With pip
+    pip install -ve .
+
+    # With uv
+    uv pip install -ve . --python .venv/bin/python
+
+The build system (scikit-build-core with CMake/Ninja) will automatically detect which files
+have changed and only recompile those files, making the rebuild much faster than a full rebuild.
 
 Local installation
 ------------------
