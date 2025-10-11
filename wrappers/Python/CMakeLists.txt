@@ -143,7 +143,10 @@ add_custom_command(
     COMMAND ${Python_EXECUTABLE} -m cython ${CYTHON_FLAGS}
         -o "${CMAKE_CURRENT_BINARY_DIR}/CoolProp/CoolProp.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/CoolProp.pyx"
+        "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/constants_header.pxd"
+        generate_constants_target
     COMMENT "Cythonizing CoolProp.pyx"
     VERBATIM
 )
@@ -168,8 +171,8 @@ Python_add_library(CoolProp_module MODULE WITH_SOABI
     ${COOLPROP_SOURCES}
 )
 
-# Make sure generated headers exist before compiling
-add_dependencies(CoolProp_module generate_headers_target)
+# Make sure generated headers and constants exist before compiling
+add_dependencies(CoolProp_module generate_headers_target generate_constants_target)
 
 target_include_directories(CoolProp_module PRIVATE
     ${COOLPROP_INCLUDE_DIRS}
