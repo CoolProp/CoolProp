@@ -89,65 +89,51 @@ Manual installation
 
 Compilation of the python wrapper requires a few :ref:`common wrapper pre-requisites <wrapper_common_prereqs>`
 
-On all platforms, if it is not already there, you need Cython to be installed::
+CoolProp uses a modern build system based on CMake via scikit-build-core. The build dependencies
+(including Cython and CMake) are automatically installed by pip.
 
-    sudo pip install Cython
-
-Then, follow the commands::
+To build and install from source::
 
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
-    cd CoolProp/wrappers/Python
-    # Start the installation
-    sudo python setup.py install
+    cd CoolProp
+    # Install (pip will automatically handle the build)
+    pip install .
 
-If you would like to install CoolProp just for a given version of Python (for
-example if ``python`` links to ``python3.4`` and you also have a ``python2.7``
-executable), simply use this version of python to execute the ``setup.py``
-script::
+For development installations with incremental builds::
 
-    sudo python2.7 setup.py install
-
-If you have multiple versions of Visual Studio installed and need to specify the version to use and choice of 32-bit or 64-bit compilation, you can use::
-
-    # 64-bit using VS2008 on Pytnon 2.7
-    sudo python setup.py install --cmake-compiler vc9 --cmake-bitness 64
-
-or, equivalently::
-
-    sudo python setup.py install cmake=vc9,64
-
-Omitting the cmake options will use the default (latest) compiler on the machine.
-
+    # Editable install - rebuilds only changed files
+    pip install -e . --no-build-isolation
 
 Local installation
 ------------------
 
-If you prefer not to be sudoer when compiling coolprop on Linux/MacOS, you can
-also install it locally using the ``--user`` switch::
+If you prefer not to install system-wide, you can install locally using the ``--user`` flag::
 
     # Check out the sources for CoolProp
     git clone https://github.com/CoolProp/CoolProp --recursive
     # Move into the folder you just created
-    cd CoolProp/wrappers/Python
-    # Start the installation
-    python setup.py install --user
+    cd CoolProp
+    # Install locally
+    pip install --user .
 
-For Pyzo users
---------------
+For specific Python versions
+-----------------------------
 
-Suppose the directory containing pyzo is on your Desktop in
-``~/Desktop/pyzo2014a/``. Then you can install CoolProp to be used within pyzo
-by following the same lines as above::
+If you have multiple Python versions installed, use the specific Python's pip::
 
-    # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
-    # Move into the folder you just created
-    cd CoolProp/wrappers/Python
-    # Start the installation (~/Desktop/pyzo2014a/ to be changed according to
-    # your effective installation)
-    sudo ~/Desktop/pyzo2014a/bin/python setup.py install
+    # For Python 3.11 specifically
+    python3.11 -m pip install .
+
+Building with specific compilers
+---------------------------------
+
+You can control CMake options via environment variables::
+
+    # Example: Specify a different C++ compiler
+    export CXX=/usr/bin/g++-11
+    pip install .
 
 Usage
 =====

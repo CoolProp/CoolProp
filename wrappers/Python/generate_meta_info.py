@@ -152,10 +152,8 @@ f.write(template.render(**local_info))
 f.close()
 
 template = """
-pushd wrappers\Python
-"%PYTHON%" setup.py install
+"%PYTHON%" -m pip install . --no-deps --no-build-isolation -vv
 if errorlevel 1 exit 1
-popd
 
 :: Add more build steps here, if they are necessary.
 
@@ -170,9 +168,7 @@ f.write(template)
 f.close()
 
 template = """
-pushd wrappers/Python
-$PYTHON setup.py install
-popd
+$PYTHON -m pip install . --no-deps --no-build-isolation -vv
 
 # Add more build steps here, if they are necessary.
 
