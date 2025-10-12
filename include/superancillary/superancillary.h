@@ -749,8 +749,8 @@ struct ChebyshevApproximation1D
     }
 
     /// A vectorized and templated getter (for calling from python)
-    template <typename Container>
-    const auto count_x_for_y_many(const Container& y, unsigned int bits, std::size_t max_iter, double boundsftol, Container& x) const {
+    template <typename YContainer, typename CountContainer>
+    const auto count_x_for_y_many(const YContainer& y, unsigned int bits, std::size_t max_iter, double boundsftol, CountContainer& x) const {
         if (x.size() != y.size()) {
             throw std::invalid_argument("x and y are not the same size");
         }
@@ -760,8 +760,9 @@ struct ChebyshevApproximation1D
     }
 
     /// A vectorized and templated getter (for calling from python)
-    template <typename Container>
-    const auto count_x_for_y_manyC(const Container y[], size_t N, unsigned int bits, std::size_t max_iter, double boundsftol, Container x[]) const {
+    template <typename YContainer, typename CountContainer>
+    const auto count_x_for_y_manyC(const YContainer y[], size_t N, unsigned int bits, std::size_t max_iter, double boundsftol,
+                                   CountContainer x[]) const {
         for (auto i = 0U; i < N; ++i) {
             x[i] = get_x_for_y(y[i], bits, max_iter, boundsftol).size();
         }
