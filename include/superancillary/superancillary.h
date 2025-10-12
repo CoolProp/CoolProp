@@ -761,7 +761,8 @@ struct ChebyshevApproximation1D
 
     /// A vectorized and templated getter (for calling from python)
     template <typename YContainer, typename CountContainer>
-    const auto count_x_for_y_manyC(const YContainer y[], size_t N, unsigned int bits, std::size_t max_iter, double boundsftol, CountContainer x[]) const {
+    const auto count_x_for_y_manyC(const YContainer y[], size_t N, unsigned int bits, std::size_t max_iter, double boundsftol,
+                                   CountContainer x[]) const {
         for (auto i = 0U; i < N; ++i) {
             x[i] = get_x_for_y(y[i], bits, max_iter, boundsftol).size();
         }
