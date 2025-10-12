@@ -559,7 +559,7 @@ void _PropsSImulti(const std::vector<std::string>& Outputs, const std::string& N
     std::string N2 = Name2;                        // Make Non-constant copy of Name2 that we can modify
     const bool HasPhase1 = StripPhase(N1, State);  // strip phase string from first name if needed
     const bool HasPhase2 = StripPhase(N2, State);  // strip phase string from second name if needed
-    if (HasPhase1 && HasPhase2)              // if both Names have a phase string, don't allow it.
+    if (HasPhase1 && HasPhase2)                    // if both Names have a phase string, don't allow it.
         throw ValueError("Phase can only be specified on one of the input key strings");
 
     try {
@@ -610,7 +610,8 @@ std::vector<std::vector<double>> PropsSImulti(const std::vector<std::string>& Ou
 #endif
     return std::vector<std::vector<double>>();
 }
-double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2, const std::string& FluidName) {
+double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2,
+               const std::string& FluidName) {
 #if !defined(NO_ERROR_CATCHING)
     try {
 #endif
@@ -642,9 +643,9 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
         // END OF TRY
 #if !defined(NO_ERROR_CATCHING)
     } catch (const std::exception& e) {
-        set_error_string(
-          e.what()
-          + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2, FluidName.c_str()));
+        set_error_string(e.what()
+                         + format(" : PropsSI(\"%s\",\"%s\",%0.10g,\"%s\",%0.10g,\"%s\")", Output.c_str(), Name1.c_str(), Prop1, Name2.c_str(), Prop2,
+                                  FluidName.c_str()));
 #    if defined(PROPSSI_ERROR_STDOUT)
         std::cout << e.what() << std::endl;
 #    endif

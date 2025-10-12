@@ -61,7 +61,7 @@ class IF97BackendGenerator : public AbstractStateGenerator
 {
    public:
     AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) {
-        if (fluid_names.size() == 1) {         // Check that fluid_names[0] has only one component
+        if (fluid_names.size() == 1) {               // Check that fluid_names[0] has only one component
             const std::string str = fluid_names[0];  // Check that the fluid name is an alias for "Water"
             if ((upper(str) == "WATER") || (upper(str) == "H2O")) {
                 return new IF97Backend();
@@ -708,7 +708,7 @@ double AbstractState::fundamental_derivative_of_gas_dynamics() {
 // Get the derivatives of the parameters in the partial derivative with respect to T and rho
 void get_dT_drho(AbstractState& AS, parameters index, CoolPropDbl& dT, CoolPropDbl& drho) {
     const CoolPropDbl T = AS.T(), rho = AS.rhomolar(), rhor = AS.rhomolar_reducing(), Tr = AS.T_reducing(), dT_dtau = -pow(T, 2) / Tr,
-                R = AS.gas_constant(), delta = rho / rhor, tau = Tr / T;
+                      R = AS.gas_constant(), delta = rho / rhor, tau = Tr / T;
 
     switch (index) {
         case iT:
@@ -855,7 +855,8 @@ void get_dT_drho(AbstractState& AS, parameters index, CoolPropDbl& dT, CoolPropD
             const double aa = 1.0 + delta * AS.dalphar_dDelta() - delta * tau * AS.d2alphar_dDelta_dTau();
             const double bb = pow(tau, 2) * (AS.d2alpha0_dTau2() + AS.d2alphar_dTau2());
             const double daa_dTau = -delta * tau * AS.d3alphar_dDelta_dTau2();
-            const double dbb_dTau = pow(tau, 2) * (AS.d3alpha0_dTau3() + AS.d3alphar_dTau3()) + 2.0 * tau * (AS.d2alpha0_dTau2() + AS.d2alphar_dTau2());
+            const double dbb_dTau =
+              pow(tau, 2) * (AS.d3alpha0_dTau3() + AS.d3alphar_dTau3()) + 2.0 * tau * (AS.d2alpha0_dTau2() + AS.d2alphar_dTau2());
             const double w = AS.speed_sound();
             dT = 1.0 / 2.0 / w / T
                  * (pow(w, 2)
@@ -878,7 +879,7 @@ void get_dT_drho(AbstractState& AS, parameters index, CoolPropDbl& dT, CoolPropD
 }
 void get_dT_drho_second_derivatives(AbstractState& AS, int index, CoolPropDbl& dT2, CoolPropDbl& drho_dT, CoolPropDbl& drho2) {
     const CoolPropDbl T = AS.T(), rho = AS.rhomolar(), rhor = AS.rhomolar_reducing(), Tr = AS.T_reducing(), R = AS.gas_constant(), delta = rho / rhor,
-                tau = Tr / T;
+                      tau = Tr / T;
 
     // Here we use T and rho as independent variables since derivations are already done by Thorade, 2013,
     // Partial derivatives of thermodynamic state propertiesfor dynamic simulation, DOI 10.1007/s12665-013-2394-z
