@@ -145,7 +145,7 @@ cdef class ChebyshevExpansion:
 
     def solve_for_x_many(self, double[::1]  y, double a, double b, unsigned int bits, size_t max_iter, double boundstytol, double[::1] x, size_t [::1] counts):
         cdef size_t N = y.shape[0]
-        return self.m_exp.solve_for_x_manyC[double, size_t](&y[0], N, a, b, bits, max_iter, boundstytol, &x[0], &counts[0])
+        self.m_exp.solve_for_x_manyC[double, size_t](&y[0], N, a, b, bits, max_iter, boundstytol, &x[0], &counts[0])
 
 ctypedef supanc.ChebyshevApproximation1D[ArrayType] ChebApprox1D
 from cython.operator cimport dereference as deref
@@ -179,7 +179,7 @@ cdef class ChebyshevApproximation1D:
     def count_x_for_y_many(self, double[::1] y, unsigned int bits, size_t max_iter, double boundstytol, size_t[::1] counts):
         assert y.shape[0] == counts.shape[0]
         cdef size_t N = y.shape[0]
-        return self.thisptr.count_x_for_y_manyC[double, size_t](&y[0], N, bits, max_iter, boundstytol, &counts[0])
+        self.thisptr.count_x_for_y_manyC[double, size_t](&y[0], N, bits, max_iter, boundstytol, &counts[0])
 
     def monotonic_intervals(self):
         return self.thisptr.get_monotonic_intervals()
