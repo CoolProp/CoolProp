@@ -1,6 +1,36 @@
 Changelog for CoolProp
 ======================
 
+7.2.0
+-----
+
+Highlights:
+
+* Added support for python 3.14
+* Modernized the build system to use scikit-build-core, and supports uv now too 
+* Added methods for ideal gas properties
+* More tweaks to iterative routines
+
+Issues closed:
+
+* `#2589 <https://github.com/CoolProp/CoolProp/issues/2589>`_ : Properties of Air as an Ideal Gas
+* `#2622 <https://github.com/CoolProp/CoolProp/issues/2622>`_ : R123 1phase PY issue
+
+Pull requests merged:
+
+* `#2579 <https://github.com/CoolProp/CoolProp/pull/2579>`_ : Improvements to mixture pair management
+* `#2624 <https://github.com/CoolProp/CoolProp/pull/2624>`_ : Add Windows Instructions and example for Fluent Wrapper
+* `#2625 <https://github.com/CoolProp/CoolProp/pull/2625>`_ : Faster alpha0
+* `#2626 <https://github.com/CoolProp/CoolProp/pull/2626>`_ : Add Ideal gas methods
+* `#2627 <https://github.com/CoolProp/CoolProp/pull/2627>`_ : Add fallback method for density solver for bad EOS
+* `#2628 <https://github.com/CoolProp/CoolProp/pull/2628>`_ : CI add InnoSetup
+* `#2630 <https://github.com/CoolProp/CoolProp/pull/2630>`_ : Python 3.14 support?
+* `#2631 <https://github.com/CoolProp/CoolProp/pull/2631>`_ : RST->MD
+* `#2632 <https://github.com/CoolProp/CoolProp/pull/2632>`_ : Modernize Python build system to use scikit-build-core
+* `#2633 <https://github.com/CoolProp/CoolProp/pull/2633>`_ : Fix header gen on windows
+
+
+
 7.1.0
 -----
 
