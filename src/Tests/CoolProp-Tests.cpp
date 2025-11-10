@@ -2444,7 +2444,7 @@ TEST_CASE("Github issue #2491", "[2491]") {
 TEST_CASE("Github issue #2608", "[2608]") {
     std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "CO2"));
     double pc = AS->p_critical();
-    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 73.8e5, 218.048));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 73.8e5, 218.050));
     SECTION("Without phase") {
         AS->unspecify_phase();
         CHECK_NOTHROW(AS->update(CoolProp::PSmass_INPUTS, 73.8e5, 1840.68));
@@ -2989,6 +2989,15 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
         CAPTURE(AS->smass_idealgas() - s_kJkgK * 1e3);
         CAPTURE(AS->umass_idealgas());
         CAPTURE(AS->umass_idealgas() - u_kJkg * 1e3);
+    }
+}
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Phase for solid water should throw", "[2639]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    for (auto p_Pa : linspace(AS->p_triple()*1.0001, AS->pmax(), 1000)){
+        CAPTURE(p_Pa);
+        auto Tm = AS->melting_line(iT, iP, p_Pa);
+        CAPTURE(Tm);
+        CHECK_THROWS(AS->update(PT_INPUTS, p_Pa, -5+Tm));
     }
 }
 
