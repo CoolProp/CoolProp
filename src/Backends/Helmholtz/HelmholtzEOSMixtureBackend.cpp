@@ -1646,6 +1646,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                                     throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
                                 }
                             }
+                            _phase = iphase_liquid;
                         }
                         else{
                             _phase = iphase_liquid;
