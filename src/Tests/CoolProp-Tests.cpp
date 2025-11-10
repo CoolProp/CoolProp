@@ -2991,6 +2991,15 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
         CAPTURE(AS->umass_idealgas() - u_kJkg * 1e3);
     }
 }
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Phase for solid water should throw", "[2639]") {
+    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    for (auto p_Pa : linspace(AS->p_triple()*1.0001, AS->pmax(), 1000)){
+        CAPTURE(p_Pa);
+        auto Tm = AS->melting_line(iT, iP, p_Pa);
+        CAPTURE(Tm);
+        CHECK_THROWS(AS->update(PT_INPUTS, p_Pa, -5+Tm));
+    }
+}
 
 /*
 TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")

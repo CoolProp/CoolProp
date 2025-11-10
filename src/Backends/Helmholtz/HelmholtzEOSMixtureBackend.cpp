@@ -1558,6 +1558,15 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         _Q = 1e9;
         switch (other) {
             case iT: {
+                {
+                    // Check for the presence of the melting line
+                    if (other == iT){
+                        double Tm = melting_line(iT, iP, _p);
+                        if (_T < Tm - 0.001) {
+                            throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
+                        }
+                    }
+                }
                 if (_T > T_crit_) {
                     this->_phase = iphase_supercritical;
                     return;
@@ -1628,7 +1637,14 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
                 if (other == iT) {
                     if (value < Tsat - 100 * DBL_EPSILON) {
-                        this->_phase = iphase_liquid;
+                        double Tm = melting_line(iT, iP, _p);
+                        if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
+                            _phase = iphase_liquid;
+                        } else {
+                            if (_T < Tm - 0.001) {
+                                throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
+                            }
+                        }
                         _Q = -1000;
                         return;
                     } else if (value > Tsat + 100 * DBL_EPSILON) {
@@ -2004,6 +2020,14 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     auto smolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_smolar_nocache(T_crit_, rhomolar_crit_); };
     auto hmolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_hmolar_nocache(T_crit_, rhomolar_crit_); };
     auto umolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_umolar_nocache(T_crit_, rhomolar_crit_); };
+    
+    // Check for the presence of the melting line
+    if (other == iP){
+        double Tm = melting_line(iT, iP, value);
+        if (_T < Tm - 0.001) {
+            throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
+        }
+    }
 
     // T is known, another input P, T, H, S, U is given (all molar)
     if (_T < T_crit_ && _p > p_crit_) {
