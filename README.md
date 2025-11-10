@@ -18,10 +18,10 @@ It was originally developed by Ian Bell, at the time a post-doc at the Universit
 
 * ... you might also find answers in our [FAQ](https://github.com/CoolProp/CoolProp/blob/master/FAQ.md)
 
+* If you found a bug or have an issue that requires the developers to become active, please file an issue in our [issue tracker](https://github.com/CoolProp/CoolProp/issues)
+
 * [Contributions](https://github.com/CoolProp/CoolProp/blob/master/.github/CONTRIBUTING.md) to this project are welcomed and encouraged! If you wish to [contribute](https://github.com/CoolProp/CoolProp/blob/master/.github/CONTRIBUTING.md) bug fixes, patches, or new features, wrappers, or material properties, please submit a Pull Request with your code.
 
 * If you are new to Git and Github, please see the [CoolProp Wiki](https://github.com/CoolProp/CoolProp/wiki) for guidance on becoming a contributor to the project.
-
-* Accelerate development of things you really need implemented by posting at [Bountysource](https://www.bountysource.com/teams/coolprop)
 
 * Have a look at the coverity stats [![Coverity Scan Build Status](https://scan.coverity.com/projects/4375/badge.svg)](https://scan.coverity.com/projects/coolprop)
