@@ -195,6 +195,8 @@ bool AbstractState::clear() {
     this->_p = -_HUGE;
     this->_Q = -_HUGE;
 
+    this->_Qmass.clear();
+
     return true;
 }
 void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, CoolPropDbl& value1, CoolPropDbl& value2) {

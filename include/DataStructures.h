@@ -281,7 +281,9 @@ enum input_pairs
 {
     INPUT_PAIR_INVALID = 0,  // Default (invalid) value
     QT_INPUTS,               ///< Molar quality, Temperature in K
+    QmassT_INPUTS,           ///< Mass quality, Temperature in K
     PQ_INPUTS,               ///< Pressure in Pa, Molar quality
+    PQmass_INPUTS,           ///< Pressure in Pa, Mass quality
     QSmolar_INPUTS,          ///< Molar quality, Entropy in J/mol/K
     QSmass_INPUTS,           ///< Molar quality, Entropy in J/kg/K
     HmolarQ_INPUTS,          ///< Enthalpy in J/mol, Molar quality

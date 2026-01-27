@@ -247,15 +247,15 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
                 SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
             }
             if (!loaded_REFPROP) {
-                if (!alt_rp_name.empty()) {
-                    loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
+            if (!alt_rp_name.empty()) {
+                loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
+            } else {
+                if (alt_rp_path.empty()) {
+                    loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
                 } else {
-                    if (alt_rp_path.empty()) {
-                        loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
-                    } else {
-                        loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
-                    }
+                    loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
                 }
+            }
             }
 
             if (loaded_REFPROP) {
@@ -329,6 +329,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         mole_fractions.resize(ncmax);
         mole_fractions_liq.resize(ncmax);
         mole_fractions_vap.resize(ncmax);
+        mass_fractions.resize(ncmax);
+        mass_fractions_liq.resize(ncmax);
+        mass_fractions_vap.resize(ncmax);        
         return;
     } else {
         int ierr = 0;
@@ -379,6 +382,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 mole_fractions.resize(ncmax);
                 mole_fractions_liq.resize(ncmax);
                 mole_fractions_vap.resize(ncmax);
+                mass_fractions.resize(ncmax);
+                mass_fractions_liq.resize(ncmax);
+                mass_fractions_vap.resize(ncmax);                
                 LoadedREFPROPRef = mix;
                 cached_component_string = mix;
                 this->fluid_names.clear();
@@ -454,6 +460,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 mole_fractions.resize(ncmax);
                 mole_fractions_liq.resize(ncmax);
                 mole_fractions_vap.resize(ncmax);
+                mass_fractions.resize(ncmax);
+                mass_fractions_liq.resize(ncmax);
+                mass_fractions_vap.resize(ncmax);                
                 LoadedREFPROPRef = _components_joined;
                 cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5) {
@@ -565,12 +574,12 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-    if (parameter == "model") {
-        return shmodij;
-    } else {
-        throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-        return "";
-    }
+        if (parameter == "model") {
+            return shmodij;
+        } else {
+            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+            return "";
+        }
     //} else {
     //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //    return "";
@@ -635,23 +644,23 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-    if (parameter == "betaT") {
-        fij[0] = value;
-    } else if (parameter == "gammaT") {
-        fij[1] = value;
-    } else if (parameter == "betaV") {
-        fij[2] = value;
-    } else if (parameter == "gammaV") {
-        fij[3] = value;
-    } else if (parameter == "Fij") {
-        fij[4] = value;
-    } else {
-        throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
-    }
-    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
-    if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
-    }
+        if (parameter == "betaT") {
+            fij[0] = value;
+        } else if (parameter == "gammaT") {
+            fij[1] = value;
+        } else if (parameter == "betaV") {
+            fij[2] = value;
+        } else if (parameter == "gammaV") {
+            fij[3] = value;
+        } else if (parameter == "Fij") {
+            fij[4] = value;
+        } else {
+            throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
+        }
+        SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+        if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+            throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
+        }
     //} else {
     //    throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //}
@@ -679,22 +688,22 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-    double val;
-    if (parameter == "betaT") {
-        val = fij[0];
-    } else if (parameter == "gammaT") {
-        val = fij[1];
-    } else if (parameter == "betaV") {
-        val = fij[2];
-    } else if (parameter == "gammaV") {
-        val = fij[3];
-    } else if (parameter == "Fij") {
-        val = fij[4];
-    } else {
-        throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-        return _HUGE;
-    }
-    return val;
+        double val;
+        if (parameter == "betaT") {
+            val = fij[0];
+        } else if (parameter == "gammaT") {
+            val = fij[1];
+        } else if (parameter == "betaV") {
+            val = fij[2];
+        } else if (parameter == "gammaV") {
+            val = fij[3];
+        } else if (parameter == "Fij") {
+            val = fij[4];
+        } else {
+            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+            return _HUGE;
+        }
+        return val;
     //} else {
     //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //    return _HUGE;
@@ -939,6 +948,30 @@ CoolPropDbl REFPROPMixtureBackend::calc_molar_mass(void) {
     WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol);  // returns mole mass in kg/kmol
     _molar_mass = wmm_kg_kmol / 1000;             // kg/mol
     return static_cast<CoolPropDbl>(_molar_mass.pt());
+};
+CoolPropDbl REFPROPMixtureBackend::calc_Qmass(void) {
+    // Convert molar quality to mass quality using REFPROP's QMASS function
+    this->check_loaded_fluid();
+    double q = _Q;  // molar quality
+    double qkg = _HUGE, mmliq = _HUGE, mmvap = _HUGE;
+    int ierr = 0;
+    char herr[errormessagelength + 1];
+    
+    // Need temporary arrays for mass fractions output
+    //std::vector<CoolPropDbl> mass_fractions_liq(mole_fractions_long_double.size());
+    //std::vector<CoolPropDbl> mass_fractions_vap(mole_fractions_long_double.size());
+    
+    // QMASSdll(qmol, xliq, xvap, qkg, wliq, wvap, mmliq, mmvap, ierr, herr, herr_length)
+    // Convert mole quality to mass quality using the mole fractions from the last flash calculation
+    //QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &qkg, &mass_fractions_liq[0], &mass_fractions_vap[0], &mmliq, &mmvap, &ierr, herr, errormessagelength);
+
+    QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);
+    
+    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+        throw ValueError(format("Qmass: %s", herr).c_str());
+    }
+    
+    return static_cast<CoolPropDbl>(qkg);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void) {
     double b;
@@ -1258,7 +1291,8 @@ phases REFPROPMixtureBackend::GetRPphase() {
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
     this->check_loaded_fluid();
     double rho_mol_L = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE,
-           q = _HUGE, mm = _HUGE, p_kPa = _HUGE, hjt = _HUGE;
+           q = _HUGE, mm = _HUGE, p_kPa = _HUGE, hjt = _HUGE,
+           qkg = _HUGE, mmliq = _HUGE, mmvap = _HUGE;
     int ierr = 0;
     char herr[errormessagelength + 1] = " ";
 
@@ -1809,6 +1843,75 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
             break;
         }
+        case PQmass_INPUTS: {
+
+            // Unit conversion for REFPROP
+            p_kPa = 0.001 * value1;
+            qkg = value2;  // Want p in [kPa] in REFPROP
+
+            int iFlsh = 0, iGuess = 0, ierr = 0;
+            if (std::abs(qkg) < 1e-10) {
+                iFlsh = 3;  // bubble point
+            } else if (std::abs(qkg - 1) < 1e-10) {
+                iFlsh = 4;  // dew point
+            }
+            if (iFlsh != 0) {
+                // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
+                SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                         &(mole_fractions_vap[0]), &q, &ierr, herr, errormessagelength);
+                if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    ierr = 0;
+                    // SATPdll(p, z, kph, T, Dl, Dv, x, y, ierr, herr)
+                    //
+                    //kph--Phase flag : 1 - Input x is liquid composition(bubble point)
+                    //                - 1 - Force calculation in the liquid phase even if T<Ttrp
+                    //                  2 - Input x is vapor composition(dew point)
+                    //                - 2 - Force calculation in the vapor phase even if T<Ttrp
+                    //                  3 - Input x is liquid composition along the freezing line(melting line)
+                    //                  4 - Input x is vapor composition along the sublimation line
+                    SATPdll(&_p, &(mole_fractions[0]), &iFlsh, &_T, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &ierr,
+                            herr, errormessagelength);
+                    rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
+                }
+                if (ierr <= 0L) {
+                    // Calculate everything else
+                    THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+                }
+            }
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD) || iFlsh == 0) {
+                // From REFPROP:
+                //additional input--only for TQFLSH and PQFLSH
+                //     kq--flag specifying units for input quality
+                //         kq = 1 quality on MOLAR basis [moles vapor/total moles]
+                //         kq = 2 quality on MASS basis [mass vapor/total mass]
+                int kq = 2;
+                ierr = 0;
+                // Use flash routine to find properties
+                PQFLSHdll(&p_kPa, &qkg, &(mole_fractions[0]), &kq, &_T, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                          &(mole_fractions_vap[0]),                 // Saturation terms
+                          &emol, &hmol, &smol, &cvmol, &cpmol, &w,  // Other thermodynamic terms
+                          &ierr, herr, errormessagelength);         // Error terms
+
+                _Qmass = qkg;
+                // Convert mass quality to mole quality (q is not a cached variable)
+                //XMASSdll(&(mole_fractions[0]), &(mass_fractions[0]), &mm);
+                XMASSdll(&(mole_fractions_liq[0]), &(mass_fractions_liq[0]), &mmliq);
+                XMASSdll(&(mole_fractions_vap[0]), &(mass_fractions_vap[0]), &mmvap);
+                q = (qkg / mmvap) / ((qkg / mmvap) + ((1.0 - qkg) / mmliq)); // gives the same as below
+                //QMOLEdll(&qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);            
+            }
+
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                throw ValueError(format("PQ: %s", herr).c_str());
+            }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+
+            // Set all cache values that can be set with unit conversion to SI
+            _p = value1;
+            _rhomolar = rho_mol_L * 1000;   // 1000 for conversion from mol/L to mol/m3
+            _rhoLmolar = rhoLmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
+            break;
+        }
         case QT_INPUTS: {
             // Unit conversion for REFPROP
             q = value1;
@@ -1871,6 +1974,77 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
             break;
         }
+        case QmassT_INPUTS: {
+            // Unit conversion for REFPROP
+            qkg = value1;
+            _T = value2;
+
+            // Use flash routine to find properties
+            int iFlsh = 0, iGuess = 0;
+            if (std::abs(qkg) < 1e-10) {
+                iFlsh = 1;  // bubble point with T given
+            } else if (std::abs(qkg - 1) < 1e-10) {
+                iFlsh = 2;  // dew point with T given
+            }
+            if (iFlsh != 0) {
+                // SATTP (t,p,x,iFlsh,iGuess,d,Dl,Dv,xliq,xvap,q,ierr,herr)
+                SATTPdll(&_T, &p_kPa, &(mole_fractions[0]), &iFlsh, &iGuess, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                         &(mole_fractions_vap[0]), &q, &ierr, herr, errormessagelength);
+
+                if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    ierr = 0;
+                    // SATTdll(T, z, kph, P, Dl, Dv, x, y, ierr, herr)
+                    //
+                    //kph--Phase flag : 1 - Input x is liquid composition(bubble point)
+                    //                - 1 - Force calculation in the liquid phase even if T<Ttrp
+                    //                  2 - Input x is vapor composition(dew point)
+                    //                - 2 - Force calculation in the vapor phase even if T<Ttrp
+                    //                  3 - Input x is liquid composition along the freezing line(melting line)
+                    //                  4 - Input x is vapor composition along the sublimation line
+                    SATTdll(&_T, &(mole_fractions[0]), &iFlsh, &p_kPa, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),
+                            &ierr, herr, errormessagelength);
+                    rho_mol_L = (iFlsh == 1) ? rhoLmol_L : rhoVmol_L;
+                }
+                if (ierr <= 0L) {
+                    // Calculate everything else since we were able to carry out a flash call
+                    THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+                }
+            }
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD) || iFlsh == 0) {
+                ierr = 0;
+                /* From REFPROP:
+                additional input--only for TQFLSH and PQFLSH
+                kq--flag specifying units for input quality
+                kq = 1 quality on MOLAR basis [moles vapor/total moles]
+                kq = 2 quality on MASS basis [mass vapor/total mass]
+                */
+                int kq = 2;
+                TQFLSHdll(&_T, &qkg, &(mole_fractions[0]), &kq, &p_kPa, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                          &(mole_fractions_vap[0]),                 // Saturation terms
+                          &emol, &hmol, &smol, &cvmol, &cpmol, &w,  // Other thermodynamic terms
+                          &ierr, herr, errormessagelength);         // Error terms
+
+                _Qmass = qkg;
+                // Convert mass quality to mole quality (q is not a cached variable)
+                //XMASSdll(&(mole_fractions[0]), &(mass_fractions[0]), &mm);
+                XMASSdll(&(mole_fractions_liq[0]), &(mass_fractions_liq[0]), &mmliq);
+                XMASSdll(&(mole_fractions_vap[0]), &(mass_fractions_vap[0]), &mmvap);
+                q = (qkg / mmvap) / ((qkg / mmvap) + ((1.0 - qkg) / mmliq)); // gives the same as below
+                //QMOLEdll(&qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);            
+
+            }
+
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                throw ValueError(format("TQ(%s): %s", LoadedREFPROPRef.c_str(), herr).c_str());
+            }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());
+
+            // Set all cache values that can be set with unit conversion to SI
+            _p = p_kPa * 1000;              // 1000 for conversion from kPa to Pa
+            _rhomolar = rho_mol_L * 1000;   // 1000 for conversion from mol/L to mol/m3
+            _rhoLmolar = rhoLmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
+            _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
+            break;
+        }        
         default: {
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
         }

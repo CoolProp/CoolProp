@@ -42,6 +42,7 @@ class REFPROPMixtureBackend : public AbstractState
     std::vector<CoolPropDbl> mole_fractions_long_double;  // read-only
     std::vector<double> mole_fractions, mass_fractions;
     std::vector<double> mole_fractions_liq, mole_fractions_vap;
+    std::vector<double> mass_fractions_liq, mass_fractions_vap;
     std::vector<std::string> fluid_names;
 
     /// Call the PHIXdll function in the dll
@@ -245,6 +246,9 @@ class REFPROPMixtureBackend : public AbstractState
     CoolPropDbl calc_acentric_factor(void);
     CoolPropDbl calc_gas_constant(void);
     CoolPropDbl calc_dipole_moment(void);
+
+    /// Calculate the vapor quality on mass basis (kg/kg); Qmass = 0 for saturated liquid
+    CoolPropDbl calc_Qmass(void);
 
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double& T, double& rho);

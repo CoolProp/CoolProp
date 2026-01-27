@@ -110,6 +110,8 @@ class AbstractState
     /// Bulk values
     double _rhomolar, _T, _p, _Q;
 
+    CachedElement _Qmass;
+
     CAE _tau = cache.next(), _delta = cache.next();
 
     /// Transport properties
@@ -264,6 +266,10 @@ class AbstractState
     /// Using this backend, calculate the phase identification parameter (PIP)
     virtual CoolPropDbl calc_PIP(void) {
         throw NotImplementedError("calc_PIP is not implemented for this backend");
+    };
+    /// Using this backend, calculate the mass quality
+    virtual CoolPropDbl calc_Qmass(void) {
+        throw NotImplementedError("calc_Qmass is not implemented for this backend");
     };
 
     // Excess properties
@@ -1081,6 +1087,13 @@ class AbstractState
     /// Return the vapor quality (mol/mol); Q = 0 for saturated liquid
     double Q(void) {
         return _Q;
+    };
+    /// Return the vapor quality on mass basis (kg/kg); Qmass = 0 for saturated liquid
+    double Qmass(void) {
+        if (!_Qmass) {
+            _Qmass = calc_Qmass();
+        }
+        return _Qmass;
     };
     /// Return the reciprocal of the reduced temperature (\f$\tau = T_c/T\f$)
     double tau(void);

@@ -507,6 +507,7 @@ struct input_pair_info
 
 const input_pair_info input_pair_list[] = {
   {QT_INPUTS, "QT_INPUTS", "Molar quality, Temperature in K"},
+  {QmassT_INPUTS, "QT_INPUTS", "Mass quality, Temperature in K"},
   {QSmolar_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/mol/K"},
   {QSmass_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/kg/K"},
   {HmolarQ_INPUTS, "HQ_INPUTS", "Enthalpy in J/mol, Molar quality"},
@@ -515,6 +516,7 @@ const input_pair_info input_pair_list[] = {
   {DmolarQ_INPUTS, "DmolarQ_INPUTS", "Molar density in mol/m^3, Molar quality"},
 
   {PQ_INPUTS, "PQ_INPUTS", "Pressure in Pa, Molar quality"},
+  {PQmass_INPUTS, "PQmass_INPUTS", "Pressure in Pa, Mass quality"},
 
   {PT_INPUTS, "PT_INPUTS", "Pressure in Pa, Temperature in K"},
 
