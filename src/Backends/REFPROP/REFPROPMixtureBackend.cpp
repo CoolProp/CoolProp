@@ -247,15 +247,15 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
                 SETPATHdll(const_cast<char*>(root.value().c_str()), 400);
             }
             if (!loaded_REFPROP) {
-            if (!alt_rp_name.empty()) {
-                loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
-            } else {
-                if (alt_rp_path.empty()) {
-                    loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                if (!alt_rp_name.empty()) {
+                    loaded_REFPROP = ::load_REFPROP(err, "", alt_rp_name);
                 } else {
-                    loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                    if (alt_rp_path.empty()) {
+                        loaded_REFPROP = ::load_REFPROP(err, refpropPath, "");
+                    } else {
+                        loaded_REFPROP = ::load_REFPROP(err, alt_rp_path, "");
+                    }
                 }
-            }
             }
 
             if (loaded_REFPROP) {
@@ -331,7 +331,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         mole_fractions_vap.resize(ncmax);
         mass_fractions.resize(ncmax);
         mass_fractions_liq.resize(ncmax);
-        mass_fractions_vap.resize(ncmax);        
+        mass_fractions_vap.resize(ncmax);
         return;
     } else {
         int ierr = 0;
@@ -384,7 +384,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 mole_fractions_vap.resize(ncmax);
                 mass_fractions.resize(ncmax);
                 mass_fractions_liq.resize(ncmax);
-                mass_fractions_vap.resize(ncmax);                
+                mass_fractions_vap.resize(ncmax);
                 LoadedREFPROPRef = mix;
                 cached_component_string = mix;
                 this->fluid_names.clear();
@@ -462,7 +462,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 mole_fractions_vap.resize(ncmax);
                 mass_fractions.resize(ncmax);
                 mass_fractions_liq.resize(ncmax);
-                mass_fractions_vap.resize(ncmax);                
+                mass_fractions_vap.resize(ncmax);
                 LoadedREFPROPRef = _components_joined;
                 cached_component_string = _components_joined;
                 if (CoolProp::get_debug_level() > 5) {
@@ -574,12 +574,12 @@ std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::stri
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-        if (parameter == "model") {
-            return shmodij;
-        } else {
-            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-            return "";
-        }
+    if (parameter == "model") {
+        return shmodij;
+    } else {
+        throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        return "";
+    }
     //} else {
     //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //    return "";
@@ -644,23 +644,23 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-        if (parameter == "betaT") {
-            fij[0] = value;
-        } else if (parameter == "gammaT") {
-            fij[1] = value;
-        } else if (parameter == "betaV") {
-            fij[2] = value;
-        } else if (parameter == "gammaV") {
-            fij[3] = value;
-        } else if (parameter == "Fij") {
-            fij[4] = value;
-        } else {
-            throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
-        }
-        SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
-        if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-            throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
-        }
+    if (parameter == "betaT") {
+        fij[0] = value;
+    } else if (parameter == "gammaT") {
+        fij[1] = value;
+    } else if (parameter == "betaV") {
+        fij[2] = value;
+    } else if (parameter == "gammaV") {
+        fij[3] = value;
+    } else if (parameter == "Fij") {
+        fij[4] = value;
+    } else {
+        throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
+    }
+    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+        throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
+    }
     //} else {
     //    throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //}
@@ -688,22 +688,22 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-        double val;
-        if (parameter == "betaT") {
-            val = fij[0];
-        } else if (parameter == "gammaT") {
-            val = fij[1];
-        } else if (parameter == "betaV") {
-            val = fij[2];
-        } else if (parameter == "gammaV") {
-            val = fij[3];
-        } else if (parameter == "Fij") {
-            val = fij[4];
-        } else {
-            throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
-            return _HUGE;
-        }
-        return val;
+    double val;
+    if (parameter == "betaT") {
+        val = fij[0];
+    } else if (parameter == "gammaT") {
+        val = fij[1];
+    } else if (parameter == "betaV") {
+        val = fij[2];
+    } else if (parameter == "gammaV") {
+        val = fij[3];
+    } else if (parameter == "Fij") {
+        val = fij[4];
+    } else {
+        throw ValueError(format(" I don't know what to do with your parameter [%s]", parameter.c_str()));
+        return _HUGE;
+    }
+    return val;
     //} else {
     //    //throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
     //    return _HUGE;
@@ -956,21 +956,22 @@ CoolPropDbl REFPROPMixtureBackend::calc_Qmass(void) {
     double qkg = _HUGE, mmliq = _HUGE, mmvap = _HUGE;
     int ierr = 0;
     char herr[errormessagelength + 1];
-    
+
     // Need temporary arrays for mass fractions output
     //std::vector<CoolPropDbl> mass_fractions_liq(mole_fractions_long_double.size());
     //std::vector<CoolPropDbl> mass_fractions_vap(mole_fractions_long_double.size());
-    
+
     // QMASSdll(qmol, xliq, xvap, qkg, wliq, wvap, mmliq, mmvap, ierr, herr, herr_length)
     // Convert mole quality to mass quality using the mole fractions from the last flash calculation
     //QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &qkg, &mass_fractions_liq[0], &mass_fractions_vap[0], &mmliq, &mmvap, &ierr, herr, errormessagelength);
 
-    QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);
-    
+    QMASSdll(&q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &mmliq, &mmvap, &ierr,
+             herr, errormessagelength);
+
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
         throw ValueError(format("Qmass: %s", herr).c_str());
     }
-    
+
     return static_cast<CoolPropDbl>(qkg);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void) {
@@ -1291,8 +1292,7 @@ phases REFPROPMixtureBackend::GetRPphase() {
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
     this->check_loaded_fluid();
     double rho_mol_L = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE,
-           q = _HUGE, mm = _HUGE, p_kPa = _HUGE, hjt = _HUGE,
-           qkg = _HUGE, mmliq = _HUGE, mmvap = _HUGE;
+           q = _HUGE, mm = _HUGE, p_kPa = _HUGE, hjt = _HUGE, qkg = _HUGE, mmliq = _HUGE, mmvap = _HUGE;
     int ierr = 0;
     char herr[errormessagelength + 1] = " ";
 
@@ -1897,8 +1897,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 //XMASSdll(&(mole_fractions[0]), &(mass_fractions[0]), &mm);
                 XMASSdll(&(mole_fractions_liq[0]), &(mass_fractions_liq[0]), &mmliq);
                 XMASSdll(&(mole_fractions_vap[0]), &(mass_fractions_vap[0]), &mmvap);
-                q = (qkg / mmvap) / ((qkg / mmvap) + ((1.0 - qkg) / mmliq)); // gives the same as below
-                //QMOLEdll(&qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);            
+                q = (qkg / mmvap) / ((qkg / mmvap) + ((1.0 - qkg) / mmliq));  // gives the same as below
+                //QMOLEdll(&qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);
             }
 
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
@@ -2029,9 +2029,8 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
                 //XMASSdll(&(mole_fractions[0]), &(mass_fractions[0]), &mm);
                 XMASSdll(&(mole_fractions_liq[0]), &(mass_fractions_liq[0]), &mmliq);
                 XMASSdll(&(mole_fractions_vap[0]), &(mass_fractions_vap[0]), &mmvap);
-                q = (qkg / mmvap) / ((qkg / mmvap) + ((1.0 - qkg) / mmliq)); // gives the same as below
-                //QMOLEdll(&qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);            
-
+                q = (qkg / mmvap) / ((qkg / mmvap) + ((1.0 - qkg) / mmliq));  // gives the same as below
+                //QMOLEdll(&qkg, &(mass_fractions_liq[0]), &(mass_fractions_vap[0]), &q, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]), &mmliq, &mmvap, &ierr, herr, errormessagelength);
             }
 
             if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
@@ -2044,7 +2043,7 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             _rhoLmolar = rhoLmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
             _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
             break;
-        }        
+        }
         default: {
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
         }
