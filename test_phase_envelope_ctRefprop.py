@@ -66,16 +66,16 @@ def test_phase_envelope_R410A():
 
 
 if __name__ == "__main__":
-    test_phase_envelope_R410A()
+    # test_phase_envelope_R410A()
 
-    # RP = REFPROPFunctionLibrary(os.environ['RPPREFIX'])
-    # RP.SETPATHdll(os.environ['RPPREFIX'])
-    # RP.RPVersion()
+    RP = REFPROPFunctionLibrary(os.environ["RPPREFIX"])
+    RP.SETPATHdll(os.environ["RPPREFIX"])
+    RP.RPVersion()
 
-    # # Legacy
-    # r = RP.SETMIXTUREdll("R410A.MIX")
-    # mix = r[0]
-    # mw =RP.WMOLdll(mix)
+    # Legacy
+    r = RP.SETMIXTUREdll("R410A.MIX")
+    mix = r[0]
+    mw = RP.WMOLdll(mix)
     # r = RP.TPRHOdll(250, 100, mix, 2, 10, 10)
     # r = RP.THERMdll(250, r.D, mix)
     # r = RP.TPFLSHdll(250, 1e2, mix)
@@ -86,8 +86,21 @@ if __name__ == "__main__":
     # print(f"Pv={r[0]:.6f} kPa, Dv={r[1]:.12f} mol/L, Dl={r[2]:.6f} mol/L")
     # r = RP.THERMdll(278.15, r.Dv, mix)
     # print(f"P={r[0]:.6f} kPa")
-    # r = RP.PQFLSHdll(1e2, 0.5, mix, 2)
-    # #print(f"P={r[0]:.6f} kPa")
+    r = RP.PQFLSHdll(1e2, 0.5, mix, 2)
+    print(f"  Saturation temperature (mass basis): {r.T:.12f} K")
+    print(f"  Mole density: {r.D:.12f} kmol/m3")
+    print(f"  Mass density: {r.D * mw:.12f} kg/m3")
+    ykg = RP.XMASSdll(r.y).xkg
+    xkg = RP.XMASSdll(r.x).xkg
+    _r = RP.QMOLEdll(0.5, xkg, ykg)
+    print(f"  Molar quality: {_r.qmol:.12f} -")
+    print(f"  Mass quality: {0.5:.12f} -")
+
+    _r = RP.SURFTdll(r.T, r.D, mix)
+    r = RP.STNdll(r.T, r.Dl, r.Dv, r.x, r.y)
+
+    print(f"S={_r.sigma:.10f} mN/m")
+    print(f"S={r.sigma:.10f} mN/m")
 
     # #print(f"  Saturation pressure (Q=1): {r.P:.10f} kPa")
     # print(f"  Vapor density: {r.D:.10f} mol/m³")

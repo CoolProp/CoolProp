@@ -57,5 +57,16 @@ def test_phase_envelope_R410A():
 
 
 if __name__ == "__main__":
-    success = test_phase_envelope_R410A()
-    exit(0 if success else 1)
+    # test_phase_envelope_R410A()
+
+    AS: AbstractState = AbstractState("REFPROP", "R410A.MIX")
+    AS.update(CP.PQmass_INPUTS, 1e5, 0.5)  # Saturated vapor (q=0.5 in molar basis)
+    print(f"  Saturation temperature (molar basis): {AS.T():.12f} K")
+    print(f"  Mole density: {AS.rhomolar() / 1e3:.12f} kmol/m3")
+    print(f"  Mass density: {AS.rhomass():.12f} kg/m3")
+    print(f"  Molar quality: {AS.Q():.12f} -")
+    print(f"  Mass quality: {AS.Qmass():.12f} -")
+
+    print(f"S={AS.surface_tension():.12f} -")
+
+    print("Done")

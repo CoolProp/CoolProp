@@ -1098,9 +1098,19 @@ CoolPropDbl REFPROPMixtureBackend::calc_surface_tension(void) {
     double sigma, rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
     char herr[255];
-    SURFTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
-             &sigma,                                 // Outputs
-             &ierr, herr, errormessagelength);       // Error message
+
+    // Use STNdll if liquid and vapor densities are available, otherwise use SURFTdll
+    if (_rhoLmolar && _rhoVmolar) {
+        double rhoL_mol_L = 0.001 * static_cast<double>(_rhoLmolar), rhoV_mol_L = 0.001 * static_cast<double>(_rhoVmolar);
+        STNdll(&_T, &rhoL_mol_L, &rhoV_mol_L, &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),  // Inputs
+               &sigma,                                                                             // Outputs
+               &ierr, herr, errormessagelength);                                                   // Error message
+    } else {
+        SURFTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
+                 &sigma,                                 // Outputs
+                 &ierr, herr, errormessagelength);       // Error message
+    }
+
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
         throw ValueError(format("%s", herr).c_str());
     }

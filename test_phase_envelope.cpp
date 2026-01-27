@@ -52,6 +52,8 @@ int main() {
         std::cout << "  Molar quality: " << std::setprecision(12) << AS->Q() << " -" << std::endl;
         std::cout << "  Mass quality: " << std::setprecision(12) << AS->Qmass() << " -" << std::endl;
 
+        std::cout << "  Surface Tension: " << std::setprecision(12) << AS->surface_tension() << " -" << std::endl;
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "ERROR: " << e.what() << std::endl;
