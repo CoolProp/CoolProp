@@ -323,6 +323,8 @@ if (MSVC)
   # fmtlib requires that the utf-8 support be compiled in
   # TODO: add the fmt target from fmtlib directly which does this 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 -D_CRT_SECURE_NO_WARNINGS")
+  # Add /bigobj for Debug builds to handle large object files
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /bigobj")
 endif()
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -2228,3 +2230,13 @@ endif()
 #include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CoolProp")
 #FILE(GLOB coolprop_files "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/*.cpp")
 #add_library(coolprop STATIC ${coolprop_files})
+
+# Test executable for phase envelope
+add_executable(test_phase_envelope "${CMAKE_CURRENT_SOURCE_DIR}/test_phase_envelope.cpp" ${APP_SOURCES})
+add_dependencies(test_phase_envelope generate_headers)
+if(MSVC)
+  target_compile_options(test_phase_envelope PRIVATE /bigobj)
+endif()
+if(UNIX)
+  target_link_libraries(test_phase_envelope ${CMAKE_DL_LIBS})
+endif()
