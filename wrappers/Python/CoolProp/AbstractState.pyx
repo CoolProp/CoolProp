@@ -253,6 +253,9 @@ cdef class AbstractState:
     cpdef double Q(self) except *:
         """ Get the vapor quality in mol/mol - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Q(void)` """
         return self.thisptr.Q()
+    cpdef double Qmass(self) except *:
+        """ Get the vapor quality in kg/kg - wrapper of c++ function :cpapi:`CoolProp::AbstractState::Qmass(void)` """
+        return self.thisptr.Qmass()
     cpdef double rhomolar(self) except *:
         """ Get the density in mol/m^3 - wrapper of c++ function :cpapi:`CoolProp::AbstractState::rhomolar(void)` """
         return self.thisptr.rhomolar()

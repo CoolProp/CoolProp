@@ -234,7 +234,6 @@ name = "coolprop"
 version = "7.2.1.dev0"
 source = { editable = "." }
 dependencies = [
-    { name = "ctrefprop" },
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "numpy", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and python_full_version < '3.14'" },
@@ -243,6 +242,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "ctrefprop" },
     { name = "matplotlib", version = "3.7.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "matplotlib", version = "3.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -255,13 +255,11 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "ctrefprop", specifier = ">=0.10.5" },
-    { name = "numpy", specifier = ">=1.20" },
-]
+requires-dist = [{ name = "numpy", specifier = ">=1.20" }]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "ctrefprop", specifier = ">=0.10.5" },
     { name = "matplotlib", specifier = ">=3.7.5" },
     { name = "pandas", specifier = ">=2.0.3" },
     { name = "scipy", specifier = ">=1.10.1" },
