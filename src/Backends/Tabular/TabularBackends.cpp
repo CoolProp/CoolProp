@@ -1248,6 +1248,14 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
+        case DmolarUmolar_INPUTS: {
+            // Delegate to the virtual flash_DmolarUmolar() which SBTL overrides with a
+            // pure-table Newton iteration; other backends fall back to the EOS.
+            _rhomolar = val1;
+            _umolar = val2;
+            flash_DmolarUmolar(val1, val2);
+            break;
+        }
         default:
             throw ValueError("Sorry, but this set of inputs is not supported for Tabular backend");
     }
