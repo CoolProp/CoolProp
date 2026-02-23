@@ -23,7 +23,7 @@ For each cell :math:`[x_i, x_{i+1}] \times [y_j, y_{j+1}]`, the property :math:`
 
 The 9 coefficients :math:`a_{mn}` are obtained by fitting a degree-2 Lagrange polynomial through the 3×3 stencil of node values centred at cell :math:`(i,j)`.  The polynomial agrees exactly with the tabulated values at all nine stencil nodes.
 
-Compared to bicubic interpolation — which fits a degree-3 polynomial by matching both values and derivatives at the four cell corners — SBTL requires only node values.  Table construction is therefore faster.  Inversion (finding :math:`\hat{x}` given a target :math:`z` and known :math:`\hat{y}`) reduces to a 1-D quadratic equation solved analytically — no iteration is required.
+Compared to bicubic interpolation — which fits a degree-3 polynomial by matching both values and derivatives at the four cell corners — SBTL requires only node values.  Table construction is therefore faster and inversion (finding :math:`\hat{x}` given a target :math:`z` and known :math:`\hat{y}`) reduces to a 1-D quadratic equation solved analytically.  The trade-off is that the lower polynomial degree makes SBTL somewhat less accurate than BICUBIC for pressure–enthalpy and pressure–temperature lookups; both backends are substantially more accurate than TTSE.  The main advantage of SBTL over BICUBIC is the dedicated DU-space tables described below.
 
 ``DmolarUmolar_INPUTS`` — Direct Flash
 ---------------------------------------
@@ -57,7 +57,7 @@ Here is a simple comparison of accuracy: density is obtained for R245fa using th
 
     In [6]: print(HEOS.rhomolar(), TTSE.rhomolar(), BICU.rhomolar(), SBTL.rhomolar())
 
-A more complete comparison of accuracy can be obtained from the following figure for R245fa.
+The figure below shows density errors for ``HmassP_INPUTS`` across the single-phase region of R245fa.  SBTL is less accurate than BICUBIC here because the degree-2 polynomial captures less curvature than degree-3; both are substantially better than TTSE.  The primary use case for SBTL — ``DmolarUmolar_INPUTS`` — is shown separately below.
 
 .. plot::
 
@@ -146,6 +146,88 @@ The ``DmolarUmolar_INPUTS`` fast path can also be checked by round-tripping thro
     In [9]: SBTL.update(CoolProp.DmolarUmolar_INPUTS, D, U)
 
     In [10]: print('T:', SBTL.T(), '  p:', SBTL.p())
+
+The figure below gives a comprehensive view of SBTL accuracy for ``DmolarUmolar_INPUTS`` across the single-phase liquid and gas regions of R245fa.  The saturation dome (black curve) separates liquid (upper-left, high density) from gas (lower-right, low density).
+
+.. note::
+
+    Relative pressure error is large for compressed liquid states at low pressure (upper-left corner), where the equation of state is nearly incompressible: a small change in density corresponds to a large pressure change, so any fixed-resolution table will show elevated :math:`\Delta p / p`.  Temperature accuracy is good throughout.
+
+.. plot::
+
+    import CoolProp
+    import CoolProp.CoolProp as CP
+    import matplotlib.pyplot as plt
+    import matplotlib.colors as colors
+    import numpy as np
+    import random
+
+    Ref = 'R245fa'
+
+    SBTL = CoolProp.AbstractState('SBTL&HEOS', Ref)
+    EOS  = CoolProp.AbstractState('HEOS',      Ref)
+
+    Ttpl  = EOS.Ttriple()
+    Tcrit = EOS.T_critical()
+    Tmax  = EOS.Tmax()
+    ptpl  = EOS.p_triple()
+    pmax  = CP.PropsSI(Ref, 'pmax')
+
+    # Saturation dome in (u_mass, rho_mass) space
+    T_sat  = np.linspace(Ttpl + 0.1, Tcrit - 0.01, 300)
+    u_satL = np.zeros_like(T_sat); rho_satL = np.zeros_like(T_sat)
+    u_satV = np.zeros_like(T_sat); rho_satV = np.zeros_like(T_sat)
+    for k, T in enumerate(T_sat):
+        EOS.update(CP.QT_INPUTS, 0, T)
+        u_satL[k] = EOS.umass() / 1000; rho_satL[k] = EOS.rhomass()
+        EOS.update(CP.QT_INPUTS, 1, T)
+        u_satV[k] = EOS.umass() / 1000; rho_satV[k] = EOS.rhomass()
+
+    # Random single-phase test points
+    random.seed(1)
+    UUU, RHO, errT, errp = [], [], [], []
+    attempts = 0
+    while len(UUU) < 20000 and attempts < 300000:
+        attempts += 1
+        T = random.uniform(Ttpl + 1, Tmax)
+        P = 10**random.uniform(np.log10(ptpl * 1.01), np.log10(pmax))
+        try:
+            EOS.update(CP.PT_INPUTS, P, T)
+            if EOS.phase() == CP.iphase_twophase:
+                continue
+            D = EOS.rhomolar(); U = EOS.umolar()
+            SBTL.update(CP.DmolarUmolar_INPUTS, D, U)
+            errT.append(abs(SBTL.T() / T  - 1) * 100)
+            errp.append(abs(SBTL.p() / P  - 1) * 100)
+            UUU.append(EOS.umass() / 1000)
+            RHO.append(EOS.rhomass())
+        except:
+            pass
+
+    UUU = np.array(UUU); RHO = np.array(RHO)
+    errT = np.array(errT); errp = np.array(errp)
+
+    fig = plt.figure(figsize=(10, 5))
+    ax1 = fig.add_axes((0.09, 0.12, 0.38, 0.80))
+    ax2 = fig.add_axes((0.57, 0.12, 0.38, 0.80))
+
+    cNorm = colors.LogNorm(vmin=1e-8, vmax=1e-1)
+    kw = dict(s=4, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
+    SC = ax1.scatter(UUU, RHO, c=errT, **kw)
+    ax2.scatter(UUU, RHO, c=errp, **kw)
+
+    for ax, title in zip([ax1, ax2],
+                         [r'Error in $T(D,U)$', r'Error in $p(D,U)$']):
+        ax.plot(u_satL, rho_satL, 'k', lw=3)
+        ax.plot(u_satV, rho_satV, 'k', lw=3)
+        ax.set_yscale('log')
+        ax.set_xlabel('Specific internal energy [kJ/kg]')
+        ax.set_ylabel(r'Density [kg/m$^3$]')
+        ax.set_title(title)
+
+    cbar_ax = fig.add_axes([0.97, 0.15, 0.02, 0.70])
+    CB = fig.colorbar(SC, cax=cbar_ax)
+    CB.set_label(r'Relative error $\times\,100$ [%]')
 
 Speed comparison
 ----------------
