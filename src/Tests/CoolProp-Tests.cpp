@@ -2473,6 +2473,20 @@ TEST_CASE("Github issue #2622", "[2622]") {
     CAPTURE(A);
 }
 
+TEST_CASE("Github issue #2673", "[2673]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("PR", "nButane"));
+    CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 101325, 350));
+    double rhomolar = AS->rhomolar();
+    double rhomass = AS->rhomass();
+    
+    AS->update(CoolProp::DmolarT_INPUTS, rhomolar, 350);
+    
+    CHECK_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rhomolar, 350));
+    CHECK_NOTHROW(AS->update(CoolProp::DmolarT_INPUTS, rhomass, 350));
+    
+    CHECK(std::isfinite(AS->rhomolar()));
+}
+
 template <typename T>
 std::vector<T> linspace(T start, T end, int num) {
     std::vector<T> linspaced;

@@ -86,49 +86,58 @@ void DUGasTable::set_limits() {
     ymax = static_cast<double>(AS->umolar()) * 1.01;
 }
 
+// ---------------------------------------------------------------------------
+// Helper: cubic Lagrange basis polynomial coefficients for 4 non-uniform nodes
+// ---------------------------------------------------------------------------
+//
+// Given 4 node positions px[0..3], computes cx[k][m] = coefficient of ξ^m in
+// L_k(ξ), for k=0..3 and m=0..3.  L_k is the unique cubic polynomial satisfying
+// L_k(px[k])=1 and L_k(px[m])=0 for m≠k.
+//
+// Algorithm: for each k, build the product ∏_{m≠k}(ξ - px[m]) by polynomial
+// multiplication (working from high degree to low to avoid in-place aliasing),
+// then divide by the scalar denominator ∏_{m≠k}(px[k] - px[m]).
+static void lagrange_cubic_basis(const double px[4], double cx[4][4]) {
+    for (int k = 0; k < 4; ++k) {
+        double poly[4] = {1.0, 0.0, 0.0, 0.0};  // running polynomial (starts as 1)
+        double denom = 1.0;
+        for (int m = 0; m < 4; ++m) {
+            if (m == k) continue;
+            denom *= (px[k] - px[m]);
+            // Multiply poly by (ξ - px[m]): new_poly[d] = old_poly[d-1] - px[m]*old_poly[d]
+            // Iterate high-to-low so that poly[d-1] is still the old value when poly[d] is updated.
+            for (int d = 3; d >= 1; --d)
+                poly[d] = poly[d - 1] - px[m] * poly[d];
+            poly[0] *= -px[m];
+        }
+        for (int d = 0; d < 4; ++d) cx[k][d] = poly[d] / denom;
+    }
+}
+
 /**
- * @brief Build bi-quadratic SBTL coefficients.
+ * @brief Build SBTL polynomial coefficients from node values.
  *
- * For cell (i, j) spanning [xvec[i], xvec[i+1]] × [yvec[j], yvec[j+1]], the
- * interpolating polynomial uses the 3×3 stencil of node values centred at node (i, j):
+ * @param table    The grid table to process.
+ * @param coeffs   Output coefficient array (sized (Nx-1)×(Ny-1)).
+ * @param nstencil Stencil width: 3 (degree-2, 9 coefficients per cell, default)
+ *                 or 4 (degree-3, 16 coefficients per cell).
  *
- *   nodes in x: i-1, i, i+1
- *   nodes in y: j-1, j, j+1
+ * For nstencil=3 (bi-quadratic):
+ *   Stencil nodes in x: i-1, i, i+1  (normalized positions: -rx, 0, 1)
+ *   Coefficient layout: alpha[m*3+n]  for m,n ∈ {0,1,2}
+ *   Boundary cells: i=0 or j=0 are invalid.
  *
- * Normalized coordinates: ξ = (x-xvec[i])/(xvec[i+1]-xvec[i]) ∈ [0,1]
- *                          η = (y-yvec[j])/(yvec[j+1]-yvec[j]) ∈ [0,1]
+ * For nstencil=4 (bi-cubic):
+ *   Stencil nodes in x: i-1, i, i+1, i+2  (normalized: -rx, 0, 1, 1+sx)
+ *   Coefficient layout: alpha[m*4+n]  for m,n ∈ {0,1,2,3}
+ *   Boundary cells: i=0, i≥Nx-2, j=0, or j≥Ny-2 are invalid.
  *
- * The stencil nodes have normalized positions:
- *   ξ_{i-1} = -rx  where rx = (xvec[i]-xvec[i-1])/(xvec[i+1]-xvec[i])
- *   ξ_i     =  0
- *   ξ_{i+1} = +1
- * (and analogously for η with ry).
- *
- * 1D Lagrange basis at {-rx, 0, 1}:
- *   L₀(ξ) = ξ(ξ-1) / (rx(rx+1))
- *   L₁(ξ) = -(ξ+rx)(ξ-1) / rx
- *   L₂(ξ) = ξ(ξ+rx) / (1+rx)
- *
- * Cell validity (first pass):
- *   - Cells at i=0 or j=0 are invalid (no left/below stencil node).
- *   - Cells where any stencil node value is non-finite are invalid.
- *   - Cells where the stencil density ratio max/min > 100 are invalid
- *     (stencil spans a liquid-vapor phase boundary).
- *     This check is skipped for DU tables (xkey == iDmolar) since density
- *     is a grid axis and can't straddle the phase boundary within a cell.
- *
- * Second pass: computes polynomial coefficients for valid cells.
- *
- * Third pass (subdomain decomposition):
- *   Each invalid cell receives TWO alternates:
- *   - Primary alternate   (alt_i/alt_j):   nearest valid LIQUID cell (lower T direction)
- *   - Secondary alternate (alt_i2/alt_j2): nearest valid VAPOR cell  (higher T direction)
- *
- *   This implements the SBTL subdomain decomposition: queries in the liquid subdomain
- *   always use the liquid alternate, and vapor queries always use the vapor alternate.
- *   No cell ever straddles the phase boundary in either subdomain.
+ * Passes:
+ *   1. Validity: boundary cells, non-finite stencil nodes, phase-boundary check.
+ *   2. Coefficients: Lagrange basis products.
+ *   3. Subdomain decomposition: assign liquid/vapor alternates to invalid cells.
  */
-void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
+void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs, int nstencil) {
     if (!coeffs.empty()) {
         return;
     }
@@ -139,50 +148,131 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
     // (Nx-1) × (Ny-1) cells
     coeffs.resize(table.Nx - 1, std::vector<CellCoeffs>(table.Ny - 1));
 
-    // -----------------------------------------------------------------------
-    // First pass: determine cell validity
-    // -----------------------------------------------------------------------
-    for (std::size_t i = 0; i < table.Nx - 1; ++i) {
-        for (std::size_t j = 0; j < table.Ny - 1; ++j) {
-            // Need i-1 and j-1 stencil nodes
-            if (i == 0 || j == 0) {
-                coeffs[i][j].set_invalid();
-                continue;
-            }
+    // For nstencil=4, tracks whether each valid cell uses degree-3 (true) or
+    // fell back to degree-2 (false).  Allocated regardless of nstencil to
+    // keep the second-pass indexing uniform.
+    std::vector<std::vector<bool>> use_cubic(table.Nx - 1, std::vector<bool>(table.Ny - 1, false));
 
-            // Check all stencil nodes are finite for all tracked properties
-            bool all_valid = true;
-            for (int k = 0; k < param_count && all_valid; ++k) {
-                parameters param = param_list[k];
-                if (param == table.xkey || param == table.ykey) continue;
-                std::vector<std::vector<double>>* f = sbtl_get_field(table, param);
-                for (int di = -1; di <= 1 && all_valid; ++di) {
-                    for (int dj = -1; dj <= 1 && all_valid; ++dj) {
-                        if (!ValidNumber((*f)[i + di][j + dj])) {
-                            all_valid = false;
+    // Returns true when the (hi_off+2)×(hi_off+2) stencil rooted at cell (i,j)
+    // is entirely finite and does not cross a phase boundary.
+    // hi_off=1 → 3×3, hi_off=2 → 4×4.
+    // Caller must guarantee i≥1, j≥1, i+hi_off < Nx, j+hi_off < Ny.
+    auto stencil_ok = [&](std::size_t i, std::size_t j, int hi_off) -> bool {
+        for (int k = 0; k < param_count; ++k) {
+            parameters param = param_list[k];
+            if (param == table.xkey || param == table.ykey) continue;
+            std::vector<std::vector<double>>* f = sbtl_get_field(table, param);
+            for (int di = -1; di <= hi_off; ++di)
+                for (int dj = -1; dj <= hi_off; ++dj)
+                    if (!ValidNumber((*f)[i + di][j + dj])) return false;
+        }
+        // Phase-boundary check: the stencil must not straddle the saturation dome.
+        // Skip for DU tables (density is a grid axis — no cross-phase stencil issue).
+        //
+        // Near the critical point, the liquid/gas density ratio can be as small as
+        // 1.5-2 (vs the old 100× threshold), so ratio-based detection fails there.
+        // Instead, for SUBCRITICAL stencils, check that all nodes are on the SAME
+        // side of rho_crit (liquid vs vapor).
+        //
+        // For SUPERCRITICAL stencils (any T-node ≥ T_crit for pT tables, or any
+        // P-node ≥ P_crit for pH tables), the saturation curve doesn't exist —
+        // fall back to a 100× ratio safety check instead.
+        if (table.xkey != iDmolar && table.ykey != iDmolar) {
+            if (table.AS) {
+                const double rho_crit = static_cast<double>(table.AS->rhomolar_critical());
+
+                // Determine whether the stencil is in the subcritical region.
+                // Subcritical for pT tables:  all T-nodes < T_crit
+                // Subcritical for pH tables:  all P-nodes < P_crit
+                bool use_phase_check = false;
+                if (table.xkey == iT) {
+                    // pT table: subcritical if every T-stencil node < T_crit
+                    const double T_crit = static_cast<double>(table.AS->T_critical());
+                    use_phase_check = true;
+                    for (int di = -1; di <= hi_off && use_phase_check; ++di)
+                        if (table.xvec[i + di] >= T_crit) use_phase_check = false;
+                } else if (table.ykey == iP) {
+                    // pH (or similar) table: subcritical if every P-stencil node < P_crit
+                    const double P_crit = static_cast<double>(table.AS->p_critical());
+                    use_phase_check = true;
+                    for (int dj = -1; dj <= hi_off && use_phase_check; ++dj)
+                        if (table.yvec[j + dj] >= P_crit) use_phase_check = false;
+                }
+
+                if (use_phase_check) {
+                    // Subcritical stencil: all nodes must be in the same phase.
+                    bool has_liquid = false, has_vapor = false;
+                    for (int di = -1; di <= hi_off; ++di) {
+                        for (int dj = -1; dj <= hi_off; ++dj) {
+                            const double v = table.rhomolar[i + di][j + dj];
+                            if (v > rho_crit) has_liquid = true;
+                            else has_vapor = true;
                         }
                     }
+                    if (has_liquid && has_vapor) return false;
+                } else {
+                    // Supercritical stencil: no phase boundary — density ratio safety check
+                    double rho_min = 1e300, rho_max = 0.0;
+                    for (int di = -1; di <= hi_off; ++di) {
+                        for (int dj = -1; dj <= hi_off; ++dj) {
+                            double v = table.rhomolar[i + di][j + dj];
+                            if (v < rho_min) rho_min = v;
+                            if (v > rho_max) rho_max = v;
+                        }
+                    }
+                    if (rho_max > 100.0 * rho_min) return false;
                 }
-            }
-
-            // Phase-boundary check: if the stencil density range spans more than
-            // 100× (liquid vs vapor density), the stencil crosses a phase boundary.
-            // Skip for DU tables (xkey == iDmolar) since density is a grid axis.
-            if (all_valid && table.xkey != iDmolar && table.ykey != iDmolar) {
+            } else {
+                // AS unavailable: use density ratio check
                 double rho_min = 1e300, rho_max = 0.0;
-                for (int di = -1; di <= 1; ++di) {
-                    for (int dj = -1; dj <= 1; ++dj) {
+                for (int di = -1; di <= hi_off; ++di) {
+                    for (int dj = -1; dj <= hi_off; ++dj) {
                         double v = table.rhomolar[i + di][j + dj];
                         if (v < rho_min) rho_min = v;
                         if (v > rho_max) rho_max = v;
                     }
                 }
-                if (rho_max > 100.0 * rho_min) {
-                    all_valid = false;
-                }
+                if (rho_max > 100.0 * rho_min) return false;
+            }
+        }
+        return true;
+    };
+
+    // -----------------------------------------------------------------------
+    // First pass: determine cell validity
+    //
+    // For nstencil=4: try 4×4 stencil first (degree-3); if it fails due to a
+    // phase-boundary node, fall back to 3×3 (degree-2) before marking invalid.
+    // This prevents the saturation-dome cells from becoming fully invalid and
+    // being redirected to distant alternates that cause large extrapolation errors.
+    // -----------------------------------------------------------------------
+    for (std::size_t i = 0; i < table.Nx - 1; ++i) {
+        for (std::size_t j = 0; j < table.Ny - 1; ++j) {
+            // Minimum boundary for a 3×3 stencil: need node i-1 (i≥1) and j-1 (j≥1)
+            if (i == 0 || j == 0) {
+                coeffs[i][j].set_invalid();
+                continue;
             }
 
-            if (all_valid) {
+            bool cell_valid = false;
+
+            if (nstencil == 4) {
+                // Try 4×4 (degree-3) first — requires nodes up to i+2, j+2
+                bool can_4x4 = (i + 2 < table.Nx) && (j + 2 < table.Ny);
+                if (can_4x4 && stencil_ok(i, j, 2)) {
+                    use_cubic[i][j] = true;
+                    cell_valid = true;
+                } else if (stencil_ok(i, j, 1)) {
+                    // 4×4 failed or out-of-bounds — fall back to 3×3 (degree-2)
+                    use_cubic[i][j] = false;
+                    cell_valid = true;
+                }
+            } else {
+                // nstencil=3: 3×3 stencil only
+                cell_valid = stencil_ok(i, j, 1);
+            }
+
+            if (cell_valid) {
                 coeffs[i][j].set_valid();
                 coeffs[i][j].dx_dxhat = table.xvec[i + 1] - table.xvec[i];
                 coeffs[i][j].dy_dyhat = table.yvec[j + 1] - table.yvec[j];
@@ -207,44 +297,81 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
             for (std::size_t j = 0; j < table.Ny - 1; ++j) {
                 if (!coeffs[i][j].valid()) continue;
 
-                // Spacing ratios for the stencil (=1 for uniform grid, ≠1 for log-spaced pressure)
-                double rx = (table.xvec[i] - table.xvec[i - 1]) / (table.xvec[i + 1] - table.xvec[i]);
-                double ry = (table.yvec[j] - table.yvec[j - 1]) / (table.yvec[j + 1] - table.yvec[j]);
+                if (nstencil == 4 && use_cubic[i][j]) {
+                    // ---- Degree-3 (bi-cubic): 4×4 stencil, 16 coefficients ----
+                    // Normalized positions of the 4 stencil nodes in x: {-rx, 0, 1, 1+sx}
+                    double rx = (table.xvec[i]     - table.xvec[i - 1]) / (table.xvec[i + 1] - table.xvec[i]);
+                    double sx = (table.xvec[i + 2] - table.xvec[i + 1]) / (table.xvec[i + 1] - table.xvec[i]);
+                    double ry = (table.yvec[j]     - table.yvec[j - 1]) / (table.yvec[j + 1] - table.yvec[j]);
+                    double sy = (table.yvec[j + 2] - table.yvec[j + 1]) / (table.yvec[j + 1] - table.yvec[j]);
 
-                // z[k][l]: k=0 → node i-1, k=1 → node i, k=2 → node i+1 (same for l/j)
-                double z[3][3];
-                for (int di = -1; di <= 1; ++di) {
-                    for (int dj = -1; dj <= 1; ++dj) {
-                        z[di + 1][dj + 1] = (*f)[i + di][j + dj];
-                    }
-                }
+                    double px[4] = {-rx, 0.0, 1.0, 1.0 + sx};
+                    double py[4] = {-ry, 0.0, 1.0, 1.0 + sy};
 
-                // Lagrange basis coefficients: cx[k][m] = coeff of ξ^m in L_k(ξ)
-                double cx[3][3], cy[3][3];
-                cx[0][0] = 0.0;  cx[0][1] = -1.0 / (rx * (rx + 1.0));  cx[0][2] = 1.0 / (rx * (rx + 1.0));
-                cx[1][0] = 1.0;  cx[1][1] = (1.0 - rx) / rx;           cx[1][2] = -1.0 / rx;
-                cx[2][0] = 0.0;  cx[2][1] = rx / (1.0 + rx);           cx[2][2] = 1.0 / (1.0 + rx);
+                    // z[k][l]: k=0 → node i-1, k=1 → node i, k=2 → node i+1, k=3 → node i+2
+                    double z[4][4];
+                    for (int di = -1; di <= 2; ++di)
+                        for (int dj = -1; dj <= 2; ++dj)
+                            z[di + 1][dj + 1] = (*f)[i + di][j + dj];
 
-                cy[0][0] = 0.0;  cy[0][1] = -1.0 / (ry * (ry + 1.0));  cy[0][2] = 1.0 / (ry * (ry + 1.0));
-                cy[1][0] = 1.0;  cy[1][1] = (1.0 - ry) / ry;           cy[1][2] = -1.0 / ry;
-                cy[2][0] = 0.0;  cy[2][1] = ry / (1.0 + ry);           cy[2][2] = 1.0 / (1.0 + ry);
+                    // Cubic Lagrange basis: cx[k][m] = coeff of ξ^m in L_k(ξ)
+                    double cx[4][4], cy[4][4];
+                    lagrange_cubic_basis(px, cx);
+                    lagrange_cubic_basis(py, cy);
 
-                // a_{mn} = Σ_{k,l} z[k][l] · cx[k][m] · cy[l][n]
-                std::vector<double> alpha(9, 0.0);
-                for (int m = 0; m < 3; ++m) {
-                    for (int n = 0; n < 3; ++n) {
-                        double val = 0.0;
-                        for (int kk = 0; kk < 3; ++kk) {
-                            if (cx[kk][m] == 0.0) continue;
-                            for (int ll = 0; ll < 3; ++ll) {
-                                val += z[kk][ll] * cx[kk][m] * cy[ll][n];
+                    // a_{mn} = Σ_{k,l} z[k][l] · cx[k][m] · cy[l][n]
+                    std::vector<double> alpha(16, 0.0);
+                    for (int m = 0; m < 4; ++m) {
+                        for (int n = 0; n < 4; ++n) {
+                            double val = 0.0;
+                            for (int kk = 0; kk < 4; ++kk) {
+                                if (cx[kk][m] == 0.0) continue;
+                                for (int ll = 0; ll < 4; ++ll)
+                                    val += z[kk][ll] * cx[kk][m] * cy[ll][n];
                             }
+                            alpha[m * 4 + n] = val;
                         }
-                        alpha[m * 3 + n] = val;
                     }
-                }
+                    coeffs[i][j].set(param, alpha);
 
-                coeffs[i][j].set(param, alpha);
+                } else {
+                    // ---- Degree-2 (bi-quadratic): 3×3 stencil, 9 coefficients ----
+                    // Used for nstencil=3 tables (DU tables) and as the degree-3
+                    // fallback for nstencil=4 cells near the saturation dome.
+                    double rx = (table.xvec[i] - table.xvec[i - 1]) / (table.xvec[i + 1] - table.xvec[i]);
+                    double ry = (table.yvec[j] - table.yvec[j - 1]) / (table.yvec[j + 1] - table.yvec[j]);
+
+                    // z[k][l]: k=0 → node i-1, k=1 → node i, k=2 → node i+1
+                    double z[3][3];
+                    for (int di = -1; di <= 1; ++di)
+                        for (int dj = -1; dj <= 1; ++dj)
+                            z[di + 1][dj + 1] = (*f)[i + di][j + dj];
+
+                    // Lagrange basis coefficients: cx[k][m] = coeff of ξ^m in L_k(ξ)
+                    double cx[3][3], cy[3][3];
+                    cx[0][0] = 0.0;  cx[0][1] = -1.0 / (rx * (rx + 1.0));  cx[0][2] = 1.0 / (rx * (rx + 1.0));
+                    cx[1][0] = 1.0;  cx[1][1] = (1.0 - rx) / rx;           cx[1][2] = -1.0 / rx;
+                    cx[2][0] = 0.0;  cx[2][1] = rx / (1.0 + rx);           cx[2][2] = 1.0 / (1.0 + rx);
+
+                    cy[0][0] = 0.0;  cy[0][1] = -1.0 / (ry * (ry + 1.0));  cy[0][2] = 1.0 / (ry * (ry + 1.0));
+                    cy[1][0] = 1.0;  cy[1][1] = (1.0 - ry) / ry;           cy[1][2] = -1.0 / ry;
+                    cy[2][0] = 0.0;  cy[2][1] = ry / (1.0 + ry);           cy[2][2] = 1.0 / (1.0 + ry);
+
+                    // a_{mn} = Σ_{k,l} z[k][l] · cx[k][m] · cy[l][n]
+                    std::vector<double> alpha(9, 0.0);
+                    for (int m = 0; m < 3; ++m) {
+                        for (int n = 0; n < 3; ++n) {
+                            double val = 0.0;
+                            for (int kk = 0; kk < 3; ++kk) {
+                                if (cx[kk][m] == 0.0) continue;
+                                for (int ll = 0; ll < 3; ++ll)
+                                    val += z[kk][ll] * cx[kk][m] * cy[ll][n];
+                            }
+                            alpha[m * 3 + n] = val;
+                        }
+                    }
+                    coeffs[i][j].set(param, alpha);
+                }
             }
         }
     }
@@ -483,8 +610,11 @@ double SBTLBackend::fast_sat_lookup_vapor(parameters param, double p) const {
  * second coordinate).  For DU tables (ykey == iUmolar) the detection is skipped
  * and the primary alternate is used unconditionally.
  */
-void SBTLBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
+void SBTLBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs_arg,
                                                    double x, double y, std::size_t& i, std::size_t& j) {
+    // Use SBTL's own coefficient arrays for pT/pH tables, falling back to the
+    // passed argument for DU tables (which are already private to SBTL).
+    const auto& coeffs = sbtl_coeffs_for(table, coeffs_arg);
     table.find_native_nearest_good_cell(x, y, i, j);
     if (!coeffs[i][j].valid()) {
         // Determine query phase from the saturation table (for pure fluids at subcritical P).
@@ -570,9 +700,10 @@ void SBTLBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& 
     }
 }
 
-void SBTLBackend::find_nearest_neighbor(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
+void SBTLBackend::find_nearest_neighbor(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs_arg,
                                         const parameters variable1, const double value1, const parameters otherkey, const double otherval,
                                         std::size_t& i, std::size_t& j) {
+    const auto& coeffs = sbtl_coeffs_for(table, coeffs_arg);
     table.find_nearest_neighbor(variable1, value1, otherkey, otherval, i, j);
     const CellCoeffs& cell = coeffs[i][j];
     if (!cell.valid()) {
@@ -619,23 +750,36 @@ double SBTLBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData&
 }
 
 // ---------------------------------------------------------------------------
-// Bi-quadratic polynomial evaluation
+// Polynomial evaluation — degree-2 (9 coefficients) or degree-3 (16 coefficients)
 // ---------------------------------------------------------------------------
 
-double SBTLBackend::evaluate_single_phase(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
+double SBTLBackend::evaluate_single_phase(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs_arg,
                                           const parameters output, const double x, const double y, const std::size_t i, const std::size_t j) {
+    const auto& coeffs = sbtl_coeffs_for(table, coeffs_arg);
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(output);
 
-    double xi = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
+    double xi  = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
     double eta = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
-    double eta2 = eta * eta;
 
-    double B0 = alpha[0] + alpha[1] * eta + alpha[2] * eta2;
-    double B1 = alpha[3] + alpha[4] * eta + alpha[5] * eta2;
-    double B2 = alpha[6] + alpha[7] * eta + alpha[8] * eta2;
-
-    double val = B0 + B1 * xi + B2 * xi * xi;
+    double val;
+    if (alpha.size() == 9) {
+        // Degree-2 (bi-quadratic): z = Σ_{m,n=0}^{2} alpha[m*3+n] xi^m eta^n
+        double eta2 = eta * eta;
+        double B0 = alpha[0] + alpha[1] * eta + alpha[2] * eta2;
+        double B1 = alpha[3] + alpha[4] * eta + alpha[5] * eta2;
+        double B2 = alpha[6] + alpha[7] * eta + alpha[8] * eta2;
+        val = B0 + B1 * xi + B2 * xi * xi;
+    } else {
+        // Degree-3 (bi-cubic): z = Σ_{m,n=0}^{3} alpha[m*4+n] xi^m eta^n
+        double xi2 = xi * xi, xi3 = xi2 * xi;
+        double eta2 = eta * eta, eta3 = eta2 * eta;
+        double B0 = alpha[ 0] + alpha[ 1] * eta + alpha[ 2] * eta2 + alpha[ 3] * eta3;
+        double B1 = alpha[ 4] + alpha[ 5] * eta + alpha[ 6] * eta2 + alpha[ 7] * eta3;
+        double B2 = alpha[ 8] + alpha[ 9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+        double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
+        val = B0 + B1 * xi + B2 * xi2 + B3 * xi3;
+    }
 
     switch (output) {
         case iT:      _T = val;        break;
@@ -654,28 +798,50 @@ double SBTLBackend::evaluate_single_phase(const SinglePhaseGriddedTableData& tab
 // Analytical derivatives dz/dx and dz/dy via chain rule
 // ---------------------------------------------------------------------------
 
-double SBTLBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs,
+double SBTLBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs_arg,
                                                      parameters output, double x, double y, std::size_t i, std::size_t j, std::size_t Nx,
                                                      std::size_t Ny) {
+    const auto& coeffs = sbtl_coeffs_for(table, coeffs_arg);
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(output);
 
-    double xi = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
+    double xi  = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
     double eta = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
-    double eta2 = eta * eta;
 
     if (Nx == 1 && Ny == 0) {
         if (output == table.xkey) return 1.0;
         if (output == table.ykey) return 0.0;
-        double B1 = alpha[3] + alpha[4] * eta + alpha[5] * eta2;
-        double B2 = alpha[6] + alpha[7] * eta + alpha[8] * eta2;
-        double dzdxi = B1 + 2.0 * B2 * xi;
+        double dzdxi;
+        if (alpha.size() == 9) {
+            double eta2 = eta * eta;
+            double B1 = alpha[3] + alpha[4] * eta + alpha[5] * eta2;
+            double B2 = alpha[6] + alpha[7] * eta + alpha[8] * eta2;
+            dzdxi = B1 + 2.0 * B2 * xi;
+        } else {
+            double xi2 = xi * xi;
+            double eta2 = eta * eta, eta3 = eta2 * eta;
+            double B1 = alpha[ 4] + alpha[ 5] * eta + alpha[ 6] * eta2 + alpha[ 7] * eta3;
+            double B2 = alpha[ 8] + alpha[ 9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+            double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
+            dzdxi = B1 + 2.0 * B2 * xi + 3.0 * B3 * xi2;
+        }
         return dzdxi / (table.xvec[i + 1] - table.xvec[i]);
     } else if (Ny == 1 && Nx == 0) {
         if (output == table.ykey) return 1.0;
         if (output == table.xkey) return 0.0;
-        double dzdeta = (alpha[1] + 2.0 * alpha[2] * eta) + (alpha[4] + 2.0 * alpha[5] * eta) * xi
-                        + (alpha[7] + 2.0 * alpha[8] * eta) * xi * xi;
+        double dzdeta;
+        if (alpha.size() == 9) {
+            double eta2 = eta * eta;
+            dzdeta = (alpha[1] + 2.0 * alpha[2] * eta) + (alpha[4] + 2.0 * alpha[5] * eta) * xi
+                     + (alpha[7] + 2.0 * alpha[8] * eta) * xi * xi;
+        } else {
+            double xi2 = xi * xi, xi3 = xi2 * xi;
+            double eta2 = eta * eta;
+            dzdeta = (alpha[ 1] + 2.0 * alpha[ 2] * eta + 3.0 * alpha[ 3] * eta2)
+                   + (alpha[ 5] + 2.0 * alpha[ 6] * eta + 3.0 * alpha[ 7] * eta2) * xi
+                   + (alpha[ 9] + 2.0 * alpha[10] * eta + 3.0 * alpha[11] * eta2) * xi2
+                   + (alpha[13] + 2.0 * alpha[14] * eta + 3.0 * alpha[15] * eta2) * xi3;
+        }
         return dzdeta / (table.yvec[j + 1] - table.yvec[j]);
     } else {
         throw ValueError("Invalid Nx/Ny in SBTLBackend::evaluate_single_phase_derivative");
@@ -683,37 +849,68 @@ double SBTLBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData
 }
 
 // ---------------------------------------------------------------------------
-// Inversion via analytical quadratic formula
+// Inversion: quadratic formula (degree-2) or Newton from quadratic seed (degree-3)
 // ---------------------------------------------------------------------------
 
-void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
+void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs_arg,
                                         parameters other_key, double other, double y, std::size_t i, std::size_t j) {
+    const auto& coeffs = sbtl_coeffs_for(table, coeffs_arg);
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(other_key);
 
-    double eta = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
+    double eta  = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
     double eta2 = eta * eta;
 
-    double A = alpha[6] + alpha[7] * eta + alpha[8] * eta2;
-    double B = alpha[3] + alpha[4] * eta + alpha[5] * eta2;
-    double C = alpha[0] + alpha[1] * eta + alpha[2] * eta2 - other;
-
-    double xi = _HUGE;
-    if (std::abs(A) < 1e-14 * std::abs(B)) {
-        if (std::abs(B) > 1e-14) {
-            xi = -C / B;
+    double xi;
+    if (alpha.size() == 9) {
+        // Degree-2: solve A*xi^2 + B*xi + C = 0 analytically
+        double A = alpha[6] + alpha[7] * eta + alpha[8] * eta2;
+        double B = alpha[3] + alpha[4] * eta + alpha[5] * eta2;
+        double C = alpha[0] + alpha[1] * eta + alpha[2] * eta2 - other;
+        if (std::abs(A) < 1e-14 * std::abs(B)) {
+            if (std::abs(B) > 1e-14)
+                xi = -C / B;
+            else
+                throw ValueError("Degenerate quadratic in SBTLBackend::invert_single_phase_x");
         } else {
-            throw ValueError("Degenerate quadratic in SBTLBackend::invert_single_phase_x");
+            double disc = B * B - 4.0 * A * C;
+            if (disc < 0.0) disc = 0.0;
+            double sqrtD = std::sqrt(disc);
+            double xi1 = (-B + sqrtD) / (2.0 * A);
+            double xi2 = (-B - sqrtD) / (2.0 * A);
+            xi = (std::min(std::abs(xi1), std::abs(xi1 - 1.0)) <= std::min(std::abs(xi2), std::abs(xi2 - 1.0))) ? xi1 : xi2;
         }
     } else {
-        double disc = B * B - 4.0 * A * C;
-        if (disc < 0.0) disc = 0.0;
-        double sqrtD = std::sqrt(disc);
-        double xi1 = (-B + sqrtD) / (2.0 * A);
-        double xi2 = (-B - sqrtD) / (2.0 * A);
-        double d1 = std::min(std::abs(xi1), std::abs(xi1 - 1.0));
-        double d2 = std::min(std::abs(xi2), std::abs(xi2 - 1.0));
-        xi = (d1 <= d2) ? xi1 : xi2;
+        // Degree-3: solve D3*xi^3 + A*xi^2 + B*xi + C = 0 via Newton from quadratic seed
+        double eta3 = eta2 * eta;
+        double D3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
+        double A  = alpha[ 8] + alpha[ 9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+        double B  = alpha[ 4] + alpha[ 5] * eta + alpha[ 6] * eta2 + alpha[ 7] * eta3;
+        double C  = alpha[ 0] + alpha[ 1] * eta + alpha[ 2] * eta2 + alpha[ 3] * eta3 - other;
+
+        // Quadratic seed (ignore D3 term)
+        double xi_seed;
+        if (std::abs(A) < 1e-14 * std::abs(B)) {
+            xi_seed = std::abs(B) > 1e-14 ? -C / B : 0.5;
+        } else {
+            double disc = B * B - 4.0 * A * C;
+            if (disc < 0.0) disc = 0.0;
+            double sq = std::sqrt(disc);
+            double x1 = (-B + sq) / (2.0 * A);
+            double x2 = (-B - sq) / (2.0 * A);
+            xi_seed = (std::min(std::abs(x1), std::abs(x1 - 1.0)) <= std::min(std::abs(x2), std::abs(x2 - 1.0))) ? x1 : x2;
+        }
+
+        // Newton refinement (converges in 2–3 iterations for smooth thermodynamic data)
+        xi = xi_seed;
+        for (int iter = 0; iter < 6; ++iter) {
+            double fval  = ((D3 * xi + A) * xi + B) * xi + C;
+            double dfval = (3.0 * D3 * xi + 2.0 * A) * xi + B;
+            if (std::abs(dfval) < 1e-30) break;
+            double dxi = fval / dfval;
+            xi -= dxi;
+            if (std::abs(dxi) < 1e-13 * (1.0 + std::abs(xi))) break;
+        }
     }
 
     double val = xi * (table.xvec[i + 1] - table.xvec[i]) + table.xvec[i];
@@ -726,34 +923,65 @@ void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table
     }
 }
 
-void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
+void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs_arg,
                                         parameters other_key, double other, double x, std::size_t i, std::size_t j) {
+    const auto& coeffs = sbtl_coeffs_for(table, coeffs_arg);
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(other_key);
 
-    double xi = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
+    double xi  = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
     double xi2 = xi * xi;
 
-    double A = alpha[2] + alpha[5] * xi + alpha[8] * xi2;
-    double B = alpha[1] + alpha[4] * xi + alpha[7] * xi2;
-    double C = alpha[0] + alpha[3] * xi + alpha[6] * xi2 - other;
-
-    double eta = _HUGE;
-    if (std::abs(A) < 1e-14 * std::abs(B)) {
-        if (std::abs(B) > 1e-14) {
-            eta = -C / B;
+    double eta;
+    if (alpha.size() == 9) {
+        // Degree-2: solve A*eta^2 + B*eta + C = 0 analytically
+        double A = alpha[2] + alpha[5] * xi + alpha[8] * xi2;
+        double B = alpha[1] + alpha[4] * xi + alpha[7] * xi2;
+        double C = alpha[0] + alpha[3] * xi + alpha[6] * xi2 - other;
+        if (std::abs(A) < 1e-14 * std::abs(B)) {
+            if (std::abs(B) > 1e-14)
+                eta = -C / B;
+            else
+                throw ValueError("Degenerate quadratic in SBTLBackend::invert_single_phase_y");
         } else {
-            throw ValueError("Degenerate quadratic in SBTLBackend::invert_single_phase_y");
+            double disc = B * B - 4.0 * A * C;
+            if (disc < 0.0) disc = 0.0;
+            double sqrtD = std::sqrt(disc);
+            double e1 = (-B + sqrtD) / (2.0 * A);
+            double e2 = (-B - sqrtD) / (2.0 * A);
+            eta = (std::min(std::abs(e1), std::abs(e1 - 1.0)) <= std::min(std::abs(e2), std::abs(e2 - 1.0))) ? e1 : e2;
         }
     } else {
-        double disc = B * B - 4.0 * A * C;
-        if (disc < 0.0) disc = 0.0;
-        double sqrtD = std::sqrt(disc);
-        double eta1 = (-B + sqrtD) / (2.0 * A);
-        double eta2_val = (-B - sqrtD) / (2.0 * A);
-        double d1 = std::min(std::abs(eta1), std::abs(eta1 - 1.0));
-        double d2 = std::min(std::abs(eta2_val), std::abs(eta2_val - 1.0));
-        eta = (d1 <= d2) ? eta1 : eta2_val;
+        // Degree-3: solve D3*eta^3 + A*eta^2 + B*eta + C = 0 via Newton from quadratic seed
+        double xi3 = xi2 * xi;
+        double D3 = alpha[ 3] + alpha[ 7] * xi + alpha[11] * xi2 + alpha[15] * xi3;
+        double A  = alpha[ 2] + alpha[ 6] * xi + alpha[10] * xi2 + alpha[14] * xi3;
+        double B  = alpha[ 1] + alpha[ 5] * xi + alpha[ 9] * xi2 + alpha[13] * xi3;
+        double C  = alpha[ 0] + alpha[ 4] * xi + alpha[ 8] * xi2 + alpha[12] * xi3 - other;
+
+        // Quadratic seed (ignore D3 term)
+        double eta_seed;
+        if (std::abs(A) < 1e-14 * std::abs(B)) {
+            eta_seed = std::abs(B) > 1e-14 ? -C / B : 0.5;
+        } else {
+            double disc = B * B - 4.0 * A * C;
+            if (disc < 0.0) disc = 0.0;
+            double sq = std::sqrt(disc);
+            double e1 = (-B + sq) / (2.0 * A);
+            double e2 = (-B - sq) / (2.0 * A);
+            eta_seed = (std::min(std::abs(e1), std::abs(e1 - 1.0)) <= std::min(std::abs(e2), std::abs(e2 - 1.0))) ? e1 : e2;
+        }
+
+        // Newton refinement
+        eta = eta_seed;
+        for (int iter = 0; iter < 6; ++iter) {
+            double fval  = ((D3 * eta + A) * eta + B) * eta + C;
+            double dfval = (3.0 * D3 * eta + 2.0 * A) * eta + B;
+            if (std::abs(dfval) < 1e-30) break;
+            double deta = fval / dfval;
+            eta -= deta;
+            if (std::abs(deta) < 1e-13 * (1.0 + std::abs(eta))) break;
+        }
     }
 
     double val = eta * (table.yvec[j + 1] - table.yvec[j]) + table.yvec[j];
