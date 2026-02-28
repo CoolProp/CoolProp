@@ -1664,19 +1664,30 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
         // Need to iterate to find dry bulb temperature since temperature is not provided
         if ((key = get_input_key(input_keys, GIVEN_HUMRAT)) >= 0) {
         }  // Humidity ratio is given
-        else if ((key = get_input_key(input_keys, GIVEN_RH)) >= 0) {
-        }  // Relative humidity is given
+        // Prefer T_dp over R as main key when both are present: T_dp determines psi_w directly
+        // without requiring dry-bulb T, so it gives better iteration bounds.
         else if ((key = get_input_key(input_keys, GIVEN_TDP)) >= 0) {
         }  // Dewpoint temperature is given
+        else if ((key = get_input_key(input_keys, GIVEN_RH)) >= 0) {
+        }  // Relative humidity is given
         else {
             throw CoolProp::ValueError(
               "Sorry, but currently at least one of the variables as an input to HAPropsSI() must be temperature, relative humidity, humidity ratio, "
               "or dewpoint\n  Eventually will add a 2-D NR solver to find T and psi_w simultaneously, but not included now");
         }
-        // Don't allow inputs that have two water inputs
+        // Two water-content inputs are normally invalid, but two combinations uniquely
+        // determine dry-bulb temperature because one fixes psi_w directly (independent of T)
+        // while relative humidity provides the T-dependent equation to solve:
+        //   T_dp + R : psi_w from T_dp, solve R(T, p, psi_w) = R_target  (issue #2670)
+        //   W   + R : psi_w from W,   solve R(T, p, psi_w) = R_target
+        // W + T_dp is NOT valid: both fix psi_w independently, so T is unconstrained.
         int number_of_water_content_inputs =
           (get_input_key(input_keys, GIVEN_HUMRAT) >= 0) + (get_input_key(input_keys, GIVEN_RH) >= 0) + (get_input_key(input_keys, GIVEN_TDP) >= 0);
-        if (number_of_water_content_inputs > 1) {
+        bool has_humrat = get_input_key(input_keys, GIVEN_HUMRAT) >= 0;
+        bool has_rh = get_input_key(input_keys, GIVEN_RH) >= 0;
+        bool has_tdp = get_input_key(input_keys, GIVEN_TDP) >= 0;
+        bool valid_two_water = has_rh && (has_tdp || has_humrat) && !(has_tdp && has_humrat);
+        if (number_of_water_content_inputs > 1 && !valid_two_water) {
             throw CoolProp::ValueError(
               "Sorry, but cannot provide two inputs that are both water-content (humidity ratio, relative humidity, absolute humidity");
         }

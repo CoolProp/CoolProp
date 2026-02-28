@@ -18,6 +18,7 @@
 #    include <catch2/catch_all.hpp>
 #    include "CoolPropTools.h"
 #    include "CoolProp.h"
+#    include "HumidAirProp.h"
 
 using namespace CoolProp;
 
@@ -837,6 +838,50 @@ class HumidAirDewpointFixture
 //TEST_CASE_METHOD(HumidAirDewpointFixture, "Humid air dewpoint calculations", "[humid_air_dewpoint]") {
 //    run_checks();
 //}
+
+TEST_CASE("HAPropsSI two-water-content inputs that uniquely determine dry-bulb temperature (issue #2670)", "[humid_air][2670]") {
+    // When one water-content input fixes psi_w independently of T and the other is
+    // relative humidity (which depends on T), the system has a unique solution for T.
+    // Note: HAPropsSI catches all exceptions internally and returns _HUGE on error,
+    // so we test ValidNumber() rather than CHECK_THROWS / CHECK_NOTHROW.
+    double p = 101325.0;
+    double T_dp = 283.15;  // 10 °C dew-point
+    double R = 0.8;        // 80 % relative humidity
+
+    SECTION("T_dp + R gives dry-bulb temperature") {
+        // This combination was broken in v6.3.0.
+        double T_drybulb = HumidAir::HAPropsSI("T", "D", T_dp, "R", R, "P", p);
+        CHECK(ValidNumber(T_drybulb));
+        CHECK(T_drybulb >= T_dp - 1e-6);
+
+        // Cross-check: round-trip T_dp == DewPoint(T_drybulb, R, P)
+        double T_dp_check = HumidAir::HAPropsSI("D", "T", T_drybulb, "R", R, "P", p);
+        CHECK(ValidNumber(T_dp_check));
+        CHECK(std::abs(T_dp_check - T_dp) < 1e-4);
+    }
+
+    SECTION("W + R gives dry-bulb temperature") {
+        // Derive W from the known T_dp + R state so we can verify consistency.
+        double W = HumidAir::HAPropsSI("W", "D", T_dp, "R", R, "P", p);
+        REQUIRE(ValidNumber(W));
+
+        double T_drybulb = HumidAir::HAPropsSI("T", "W", W, "R", R, "P", p);
+        CHECK(ValidNumber(T_drybulb));
+        CHECK(T_drybulb >= T_dp - 1e-6);
+
+        // Cross-check R round-trip
+        double R_check = HumidAir::HAPropsSI("R", "T", T_drybulb, "W", W, "P", p);
+        CHECK(ValidNumber(R_check));
+        CHECK(std::abs(R_check - R) < 1e-6);
+    }
+
+    SECTION("W + T_dp returns invalid (both fix psi_w, T is unconstrained)") {
+        double W = HumidAir::HAPropsSI("W", "D", T_dp, "R", R, "P", p);
+        REQUIRE(ValidNumber(W));
+        double result = HumidAir::HAPropsSI("T", "W", W, "D", T_dp, "P", p);
+        CHECK(!ValidNumber(result));
+    }
+}
 
 TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert models in REFPROP", "[Gernert]") {
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
