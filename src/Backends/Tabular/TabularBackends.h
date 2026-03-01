@@ -915,17 +915,22 @@ class CellCoeffs
 {
    private:
     std::size_t alt_i, alt_j;
+    std::size_t alt_i2, alt_j2;  ///< Second alternate (vapor-side) for phase-boundary cells
     bool _valid, _has_valid_neighbor;
+    bool _has_alt2;  ///< True if a vapor-side alternate has been set
 
    public:
     double dx_dxhat, dy_dyhat;
     CellCoeffs() {
         _valid = false;
         _has_valid_neighbor = false;
+        _has_alt2 = false;
         dx_dxhat = _HUGE;
         dy_dyhat = _HUGE;
         alt_i = 9999999;
         alt_j = 9999999;
+        alt_i2 = 9999999;
+        alt_j2 = 9999999;
     }
     std::vector<double> T, rhomolar, hmolar, p, smolar, umolar;
     /// Return a const reference to the desired matrix
@@ -1002,6 +1007,25 @@ class CellCoeffs
     /// Returns true if cell is invalid and it has valid neighbor
     bool has_valid_neighbor() const {
         return _has_valid_neighbor;
+    }
+    /// Set the vapor-side alternate cell (used by SBTL for phase-boundary cells)
+    void set_alternate2(std::size_t i, std::size_t j) {
+        alt_i2 = i;
+        alt_j2 = j;
+        _has_alt2 = true;
+    }
+    /// Get the vapor-side alternate cell
+    void get_alternate2(std::size_t& i, std::size_t& j) const {
+        if (_has_alt2) {
+            i = alt_i2;
+            j = alt_j2;
+        } else {
+            throw ValueError("No vapor-side alternate");
+        }
+    }
+    /// Returns true if a vapor-side alternate has been set
+    bool has_valid_neighbor2() const {
+        return _has_alt2;
     }
 };
 
@@ -1222,6 +1246,61 @@ class TabularBackend : public AbstractState
     ///
     virtual void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                        parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
+
+    /// Flash from (D, T) inputs.  Default: EOS.  SBTL overrides with DT-table forward evaluation.
+    virtual void flash_DmolarT(CoolPropDbl D, CoolPropDbl T) {
+        this->AS->update(DmolarT_INPUTS, D, T);
+        _T = static_cast<double>(this->AS->T());
+        _p = static_cast<double>(this->AS->p());
+        _Q = static_cast<double>(this->AS->Q());
+        _phase = this->AS->phase();
+        if (_phase != iphase_twophase) {
+            using_single_phase_table = true;
+            selected_table = SELECTED_PT_TABLE;
+            find_native_nearest_good_indices(dataset->single_phase_logpT, dataset->coeffs_pT,
+                                             _T, _p, cached_single_phase_i, cached_single_phase_j);
+            recalculate_singlephase_phase();
+        } else {
+            using_single_phase_table = false;
+            if (!is_mixture) {
+                std::size_t iL = std::numeric_limits<std::size_t>::max();
+                std::size_t iV = std::numeric_limits<std::size_t>::max();
+                CoolPropDbl zL = 0, zV = 0;
+                dataset->pure_saturation.is_inside(iP, static_cast<double>(_p), iDmolar,
+                                                   static_cast<double>(D), iL, iV, zL, zV);
+                cached_saturation_iL = iL;
+                cached_saturation_iV = iV;
+            }
+        }
+    }
+
+    /// Flash from (D, U) inputs.  Default: EOS.  SBTL overrides with a pure-table Newton iteration (no EOS calls).
+    virtual void flash_DmolarUmolar(CoolPropDbl D, CoolPropDbl U) {
+        this->AS->update(DmolarUmolar_INPUTS, D, U);
+        _T = static_cast<double>(this->AS->T());
+        _p = static_cast<double>(this->AS->p());
+        _Q = static_cast<double>(this->AS->Q());
+        _phase = this->AS->phase();
+
+        if (_phase != iphase_twophase) {
+            using_single_phase_table = true;
+            selected_table = SELECTED_PT_TABLE;
+            find_native_nearest_good_indices(dataset->single_phase_logpT, dataset->coeffs_pT, _T, _p,
+                                             cached_single_phase_i, cached_single_phase_j);
+            recalculate_singlephase_phase();
+        } else {
+            using_single_phase_table = false;
+            if (!is_mixture) {
+                std::size_t iL = std::numeric_limits<std::size_t>::max();
+                std::size_t iV = std::numeric_limits<std::size_t>::max();
+                CoolPropDbl zL = 0, zV = 0;
+                dataset->pure_saturation.is_inside(iP, static_cast<double>(_p), iDmolar,
+                                                   static_cast<double>(D), iL, iV, zL, zV);
+                cached_saturation_iL = iL;
+                cached_saturation_iV = iV;
+            }
+        }
+    }
 
     phases calc_phase(void) {
         return _phase;
