@@ -10,6 +10,46 @@ namespace CoolProp {
 // ---------------------------------------------------------------------------
 // DU-space table subclasses — forward evaluations of T(D,U) and P(D,U)
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// DT-space table subclasses — forward evaluations of P(D,T), H(D,T), S(D,T)
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Liquid-phase DT table: D ∈ [D_crit, D_L(T_triple)×1.10], T ∈ [T_triple, T_max×1.499]
+ *
+ * D is linearly spaced (liquid range ~3–4×).
+ * P(D,T), H(D,T), S(D,T), U(D,T) are smooth functions of (D,T) in the single-phase
+ * liquid region — no saturation-dome crossing, no inversion needed.
+ */
+class DTLiquidTable : public SinglePhaseGriddedTableData
+{
+   public:
+    DTLiquidTable() {
+        xkey = iDmolar;
+        ykey = iT;
+        logx = false;  // D ratio liquid: ~3–4×, linear OK
+        logy = false;
+    }
+    void set_limits() override;
+};
+
+/**
+ * @brief Gas-phase DT table: D ∈ [D_V(T_triple)×0.999, D_crit], T ∈ [T_triple, T_max×1.499]
+ *
+ * D is log-spaced because the gas density range spans many orders of magnitude.
+ * P(D,T), H(D,T), S(D,T), U(D,T) are smooth functions in the single-phase gas region.
+ */
+class DTGasTable : public SinglePhaseGriddedTableData
+{
+   public:
+    DTGasTable() {
+        xkey = iDmolar;
+        ykey = iT;
+        logx = true;   // D ratio gas: large range, log spacing essential
+        logy = false;
+    }
+    void set_limits() override;
+};
 
 /**
  * @brief Liquid-phase DU table: D ∈ [D_crit, D_L(T_triple)], U ∈ [U_L(T_triple), U(T_max, D_crit)]
@@ -71,7 +111,10 @@ class SBTLBackend : public TabularBackend
 {
    public:
     /// Constructor: loads or builds tables, then computes bi-quadratic coefficients
-    SBTLBackend(shared_ptr<CoolProp::AbstractState> AS) : TabularBackend(AS), du_tables_built(false), sat_cache_built(false) {
+    SBTLBackend(shared_ptr<CoolProp::AbstractState> AS)
+      : TabularBackend(AS), du_tables_built(false), sat_cache_built(false),
+        dt_tables_built(false), _dt_flash_active(false),
+        _dt_tbl_ptr(nullptr), _dt_coeff_ptr(nullptr) {
         imposed_phase_index = iphase_not_imposed;
         if (!this->AS->get_mole_fractions().empty()) {
             check_tables();
@@ -80,6 +123,7 @@ class SBTLBackend : public TabularBackend
             is_mixture = (this->AS->get_mole_fractions().size() > 1);
             if (!is_mixture) {
                 build_du_tables();
+                build_dt_tables();
             }
         }
     }
@@ -181,6 +225,31 @@ class SBTLBackend : public TabularBackend
     /// tables so that T(D,U) and P(D,U) are direct forward evaluations — no iteration.
     void flash_DmolarUmolar(CoolPropDbl D, CoolPropDbl U);
 
+    // -----------------------------------------------------------------------
+    // D,T flash: direct DT-table forward evaluation (no inversion)
+    // -----------------------------------------------------------------------
+
+    /// Override the base-class DmolarT flash to use dedicated DT-space polynomial
+    /// tables where P(D,T), H(D,T), S(D,T), U(D,T) are direct forward evaluations.
+    /// This avoids the ill-conditioned D(T,P)→P inversion near the saturation boundary.
+    void flash_DmolarT(CoolPropDbl D, CoolPropDbl T);
+
+    /// Reset _dt_flash_active before every update so stale values never persist.
+    void update(CoolProp::input_pairs input_pair, double val1, double val2);
+
+    // -----------------------------------------------------------------------
+    // Property accessors that respect the DT-flash cache
+    // -----------------------------------------------------------------------
+    /// When _dt_flash_active is set (DmolarT flash was last), return the value
+    /// cached directly from the DT table instead of evaluating the pT table,
+    /// which might point to an extrapolated cell after a DT→pT mapping.
+    CoolPropDbl calc_hmolar(void);
+    CoolPropDbl calc_smolar(void);
+    CoolPropDbl calc_umolar(void);
+    CoolPropDbl calc_cpmolar(void);
+    CoolPropDbl calc_cvmolar(void);
+    CoolPropDbl calc_rhomolar(void);
+
    private:
     // SBTL's own pT and pH polynomial coefficients — stored separately from
     // dataset->coeffs_ph/pT (which BICUBIC also uses) to prevent conflicts when
@@ -233,6 +302,28 @@ class SBTLBackend : public TabularBackend
     double fast_sat_lookup(parameters param, double p) const;
     /// O(1) saturation vapor property lookup at pressure p using the precomputed cache.
     double fast_sat_lookup_vapor(parameters param, double p) const;
+
+    // Dedicated (D, T)-space tables for direct P(D,T), H(D,T), S(D,T), U(D,T) evaluation.
+    // Avoids the ill-conditioned inversion D(T,P)→P near the saturation boundary.
+    DTLiquidTable dt_liquid;
+    DTGasTable    dt_gas;
+    std::vector<std::vector<CellCoeffs>> coeffs_dt_liquid;
+    std::vector<std::vector<CellCoeffs>> coeffs_dt_gas;
+    bool dt_tables_built;
+
+    // State cache for flash_DmolarT: set true after a DT flash, cleared on next update().
+    // When active, calc_hmolar/smolar/umolar/rhomolar return cached DT values directly.
+    bool   _dt_flash_active;
+    double _dt_hmolar;  // cached H from DT table [J/mol]
+    double _dt_smolar;  // cached S from DT table [J/mol/K]
+    double _dt_umolar;  // cached U from DT table [J/mol]
+    std::size_t _dt_i;  // DT table cell row index
+    std::size_t _dt_j;  // DT table cell column index
+    SinglePhaseGriddedTableData*              _dt_tbl_ptr;    // pointer to active DT table
+    std::vector<std::vector<CellCoeffs>>*     _dt_coeff_ptr;  // pointer to active DT coeffs
+
+    /// Build the liquid and gas DT tables and compute their SBTL coefficients.
+    void build_dt_tables();
 };
 
 }  // namespace CoolProp
