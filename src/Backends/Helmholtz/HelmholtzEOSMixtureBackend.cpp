@@ -263,21 +263,21 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& Pa
     }
 }
 
-std::optional<EquationOfState::SuperAncillary_t>& HelmholtzEOSMixtureBackend::get_superanc_optional() {
+std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::get_superanc_optional() {
     if (!is_pure()) {
         throw CoolProp::ValueError("Only available for pure (and not pseudo-pure) fluids");
     }
-    return components[0].EOS().get_superanc_optional();
+    return components[0].EOS().get_superanc();
 }
 
 double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
-    auto& optsuperanc = get_superanc_optional();
+    auto superanc_ptr = get_superanc_optional();
     if (parameter.find("SUPERANC::") == 0) {
-        auto& superanc = optsuperanc.value();
-        if (optsuperanc) {
+        if (superanc_ptr) {
+            auto& superanc = *superanc_ptr;
             std::string key = parameter.substr(10);
             if (key == "pmax") {
                 return superanc.get_pmax();
@@ -1082,9 +1082,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void) {
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto& optsuperanc = get_superanc_optional();
-            if (optsuperanc) {
-                return optsuperanc.value().get_Tcrit_num();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+            auto superanc_ptr = get_superanc_optional();
+            if (superanc_ptr) {
+                return superanc_ptr->get_Tcrit_num();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
             }
         }
         return components[0].crit.T;
@@ -1101,9 +1101,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void) {
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto& optsuperanc = get_superanc_optional();
-            if (optsuperanc) {
-                return optsuperanc.value().get_pmax();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+            auto superanc_ptr = get_superanc_optional();
+            if (superanc_ptr) {
+                return superanc_ptr->get_pmax();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
             }
         }
         return components[0].crit.p;
@@ -1120,9 +1120,9 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void) {
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto& optsuperanc = get_superanc_optional();
-            if (optsuperanc) {
-                return optsuperanc.value().get_rhocrit_num();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
+            auto superanc_ptr = get_superanc_optional();
+            if (superanc_ptr) {
+                return superanc_ptr->get_rhocrit_num();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
             }
         }
         return components[0].crit.rhomolar;
@@ -1211,12 +1211,12 @@ void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolProp
     if (!get_config_bool(ENABLE_SUPERANCILLARIES)) {
         throw ValueError(format("Superancillaries are not enabled"));
     }
-    auto& optsuperanc = get_superanc_optional();
-    if (!optsuperanc) {
+    auto superanc_ptr = get_superanc_optional();
+    if (!superanc_ptr) {
         throw ValueError(format("Superancillaries not available for this fluid"));
     }
 
-    auto& superanc = optsuperanc.value();
+    auto& superanc = *superanc_ptr;
     CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
     if (T > Tcrit_num) {
         throw ValueError(format("Temperature to QT_flash [%0.8Lg K] may not be above the numerical critical point of %0.15Lg K", T, Tcrit_num));
@@ -1621,10 +1621,10 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
         // First try the superancillaries, use them to determine the state if you can
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto& optsuperanc = get_superanc_optional();
+            auto superanc_ptr = get_superanc_optional();
             // Superancillaries are enabled and available, they will be used to determine the phase
-            if (optsuperanc) {
-                auto& superanc = optsuperanc.value();
+            if (superanc_ptr) {
+                auto& superanc = *superanc_ptr;
                 CoolPropDbl pmax_num = superanc.get_pmax();
                 if (_p > pmax_num) {
                     throw ValueError(
@@ -2071,10 +2071,10 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     } else if (_T < T_crit_)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto& optsuperanc = get_superanc_optional();
+            auto superanc_ptr = get_superanc_optional();
             // Superancillaries are enabled and available, they will be used to determine the phase
-            if (optsuperanc) {
-                auto& superanc = optsuperanc.value();
+            if (superanc_ptr) {
+                auto& superanc = *superanc_ptr;
                 auto rhoL = superanc.eval_sat(_T, 'D', 0);
                 auto rhoV = superanc.eval_sat(_T, 'D', 1);
                 auto psat = superanc.eval_sat(_T, 'P', 1);
