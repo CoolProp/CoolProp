@@ -1247,8 +1247,34 @@ class TabularBackend : public AbstractState
     virtual void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                        parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
 
-    /// Flash from (D, U) inputs.  The default implementation uses the underlying EOS.
-    /// SBTL overrides this with a pure-table Newton iteration (no EOS calls).
+    /// Flash from (D, T) inputs.  Default: EOS.  SBTL overrides with DT-table forward evaluation.
+    virtual void flash_DmolarT(CoolPropDbl D, CoolPropDbl T) {
+        this->AS->update(DmolarT_INPUTS, D, T);
+        _T = static_cast<double>(this->AS->T());
+        _p = static_cast<double>(this->AS->p());
+        _Q = static_cast<double>(this->AS->Q());
+        _phase = this->AS->phase();
+        if (_phase != iphase_twophase) {
+            using_single_phase_table = true;
+            selected_table = SELECTED_PT_TABLE;
+            find_native_nearest_good_indices(dataset->single_phase_logpT, dataset->coeffs_pT,
+                                             _T, _p, cached_single_phase_i, cached_single_phase_j);
+            recalculate_singlephase_phase();
+        } else {
+            using_single_phase_table = false;
+            if (!is_mixture) {
+                std::size_t iL = std::numeric_limits<std::size_t>::max();
+                std::size_t iV = std::numeric_limits<std::size_t>::max();
+                CoolPropDbl zL = 0, zV = 0;
+                dataset->pure_saturation.is_inside(iP, static_cast<double>(_p), iDmolar,
+                                                   static_cast<double>(D), iL, iV, zL, zV);
+                cached_saturation_iL = iL;
+                cached_saturation_iV = iV;
+            }
+        }
+    }
+
+    /// Flash from (D, U) inputs.  Default: EOS.  SBTL overrides with a pure-table Newton iteration (no EOS calls).
     virtual void flash_DmolarUmolar(CoolPropDbl D, CoolPropDbl U) {
         this->AS->update(DmolarUmolar_INPUTS, D, U);
         _T = static_cast<double>(this->AS->T());

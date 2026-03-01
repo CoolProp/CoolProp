@@ -87,6 +87,55 @@ void DUGasTable::set_limits() {
 }
 
 // ---------------------------------------------------------------------------
+// DT table set_limits() implementations
+// ---------------------------------------------------------------------------
+
+/**
+ * Liquid DT table bounds:
+ *   x (D): D_crit  →  D_L(T_triple) × 1.10   [liquid density at coldest state]
+ *   y (T): T_triple  →  T_max × 1.499
+ *
+ * Mirrors DULiquidTable::set_limits() except the second axis is T, not U.
+ */
+void DTLiquidTable::set_limits() {
+    if (!AS) throw ValueError("DTLiquidTable: AS is not set");
+    const double T_triple = static_cast<double>(std::max(AS->Ttriple(), AS->Tmin()));
+
+    // Minimum density: D_crit (lower bound of the liquid-like region)
+    xmin = static_cast<double>(AS->rhomolar_critical());
+
+    // Maximum density: saturated liquid at triple point + 10% margin.
+    // Same rationale as DULiquidTable: avoid melting-line crossing for water.
+    AS->update(QT_INPUTS, 0, T_triple);
+    xmax = static_cast<double>(AS->rhomolar()) * 1.10;
+
+    ymin = T_triple;
+    ymax = static_cast<double>(AS->Tmax()) * 1.499;
+}
+
+/**
+ * Gas DT table bounds:
+ *   x (D): D_V(T_triple) × 0.999  →  D_crit   [log-spaced: large ratio]
+ *   y (T): T_triple  →  T_max × 1.499
+ */
+void DTGasTable::set_limits() {
+    if (!AS) throw ValueError("DTGasTable: AS is not set");
+    const double T_triple = static_cast<double>(std::max(AS->Ttriple(), AS->Tmin()));
+
+    // Minimum density: slightly below saturated vapor at triple point.
+    // Use ×0.99 (not ×0.999) to cover states with D slightly below D_V(T_triple),
+    // e.g. superheated vapor just below the saturation dome at T_triple.
+    AS->update(QT_INPUTS, 1, T_triple);
+    xmin = static_cast<double>(AS->rhomolar()) * 0.99;
+
+    // Maximum density: D_crit
+    xmax = static_cast<double>(AS->rhomolar_critical());
+
+    ymin = T_triple;
+    ymax = static_cast<double>(AS->Tmax()) * 1.499;
+}
+
+// ---------------------------------------------------------------------------
 // Helper: cubic Lagrange basis polynomial coefficients for 4 non-uniform nodes
 // ---------------------------------------------------------------------------
 //
@@ -483,6 +532,67 @@ void SBTLBackend::build_du_tables() {
 
     build_sat_cache();
     du_tables_built = true;
+}
+
+// ---------------------------------------------------------------------------
+// DT table builder helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Post-process a DT table: set hmolar, smolar, p, umolar to _HUGE for all nodes
+ * whose (D, T) lies in the two-phase region.
+ *
+ * During build(), the HEOS AS may be in a liquid-phase context (left there by the
+ * preceding DU table build), causing DmolarT flashes for states near the saturation
+ * boundary to converge to the metastable-liquid root (Q = -1) instead of detecting
+ * two-phase.  These "metastable" nodes get finite values, so build() doesn't mark
+ * them as _HUGE, and build_sbtl_coeffs considers them valid.  When a stencil includes
+ * both metastable and true-liquid nodes, the fitted polynomial gives large errors.
+ *
+ * Fix: use the accurate tabular saturation curve (PureFluidSaturationTableData) to
+ * identify and invalidate two-phase nodes independently of the EOS Q() value.
+ */
+static void invalidate_twophase_dt_nodes(SinglePhaseGriddedTableData& tbl,
+                                          PureFluidSaturationTableData& sat) {
+    for (std::size_t i = 0; i < tbl.Nx; ++i) {
+        const double D = tbl.xvec[i];
+        for (std::size_t j = 0; j < tbl.Ny; ++j) {
+            const double T = tbl.yvec[j];
+            std::size_t iL = 0, iV = 0;
+            CoolPropDbl D_sat_L = 0, D_sat_V = 0;
+            // is_inside returns true when D is between D_sat_V(T) and D_sat_L(T),
+            // i.e., the state is two-phase.
+            bool two_phase = sat.is_inside(iT, T, iDmolar, D, iL, iV, D_sat_L, D_sat_V);
+            if (two_phase) {
+                tbl.hmolar[i][j] = _HUGE;
+                tbl.smolar[i][j] = _HUGE;
+                tbl.p[i][j]      = _HUGE;
+                tbl.umolar[i][j] = _HUGE;
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// DT table builder
+// ---------------------------------------------------------------------------
+
+void SBTLBackend::build_dt_tables() {
+    if (dt_tables_built) return;
+
+    dt_liquid.AS = this->AS;
+    dt_liquid.set_limits();
+    dt_liquid.build(this->AS);
+    invalidate_twophase_dt_nodes(dt_liquid, dataset->pure_saturation);
+    build_sbtl_coeffs(dt_liquid, coeffs_dt_liquid);  // nstencil=3 (degree-2, forward eval only)
+
+    dt_gas.AS = this->AS;
+    dt_gas.set_limits();
+    dt_gas.build(this->AS);
+    invalidate_twophase_dt_nodes(dt_gas, dataset->pure_saturation);
+    build_sbtl_coeffs(dt_gas, coeffs_dt_gas);
+
+    dt_tables_built = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -925,6 +1035,8 @@ void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table
 
 void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs_arg,
                                         parameters other_key, double other, double x, std::size_t i, std::size_t j) {
+    // NOTE: DmolarT_INPUTS no longer flows through this function.
+    // flash_DmolarT() handles it via dedicated DT-space table forward evaluation.
     const auto& coeffs = sbtl_coeffs_for(table, coeffs_arg);
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(other_key);
@@ -1160,6 +1272,227 @@ void SBTLBackend::flash_DmolarUmolar(CoolPropDbl D_in, CoolPropDbl U_in) {
     cached_single_phase_i = pT_i;
     cached_single_phase_j = pT_j;
     recalculate_singlephase_phase();
+}
+
+// ---------------------------------------------------------------------------
+// D,T flash: direct DT-table forward evaluation
+//
+// This replaces the old pT-table inversion path (invert_single_phase_y) for
+// DmolarT inputs.  The old path was catastrophically wrong near the saturation
+// boundary because:
+//   1. D(T,P) in the pT table is non-monotonic (gas | _HUGE | liquid).
+//   2. Inverting D(T,P)→P is ill-conditioned for liquids (nearly incompressible).
+//   3. The resulting pT cell straddled the saturation dome → alternates were
+//      several pressure steps away → Lagrange polynomial evaluated at η≈-1.85.
+//
+// The fix mirrors flash_DmolarUmolar: use dedicated (D,T)-space tables where
+// P(D,T), H(D,T), S(D,T), U(D,T) are stored as forward evaluations.
+//
+// Algorithm:
+//   1. Phase detection via pure_saturation.is_inside(iT, T, iDmolar, D, ...)
+//   2. Two-phase: use lever rule for Q; P from saturation table.
+//   3. Single-phase: forward evaluation from DT table.
+//      Map (T, P) to pT table cell for transport properties.
+// ---------------------------------------------------------------------------
+void SBTLBackend::flash_DmolarT(CoolPropDbl D_in, CoolPropDbl T_in) {
+    _dt_flash_active = false;
+    const double D = static_cast<double>(D_in);
+    const double T = static_cast<double>(T_in);
+    _rhomolar = D;
+    _T = T;
+
+    // ---- Phase detection ----
+    std::size_t iL = std::numeric_limits<std::size_t>::max();
+    std::size_t iV = std::numeric_limits<std::size_t>::max();
+    CoolPropDbl zL = 0, zV = 0;
+    bool is_two_phase = false;
+    if (!is_mixture) {
+        is_two_phase = dataset->pure_saturation.is_inside(iT, T, iDmolar, D, iL, iV, zL, zV);
+    }
+
+    if (is_two_phase) {
+        using_single_phase_table = false;
+        // Lever rule on specific volume: Q = (v - v_L) / (v_V - v_L)
+        // zL = D_sat_liquid, zV = D_sat_vapor (both returned by is_inside for iDmolar)
+        double vL = 1.0 / static_cast<double>(zL);
+        double vV = 1.0 / static_cast<double>(zV);
+        double dv = vV - vL;
+        _Q = (std::abs(dv) > 1e-30) ? ((1.0 / D - vL) / dv) : 0.5;
+        _Q = std::max(0.0, std::min(1.0, static_cast<double>(_Q)));
+        _p = dataset->pure_saturation.evaluate(iP, T, _Q, iL, iV);
+        _phase = iphase_twophase;
+        cached_saturation_iL = iL;
+        cached_saturation_iV = iV;
+        return;
+    }
+
+    // ---- Single-phase: forward evaluation from DT table ----
+    const double D_crit = static_cast<double>(this->AS->rhomolar_critical());
+    bool use_liquid = (D > D_crit);
+    SinglePhaseGriddedTableData* dt_tbl_ptr;
+    std::vector<std::vector<CellCoeffs>>* dt_coeff_ptr;
+    if (use_liquid) {
+        dt_tbl_ptr   = &dt_liquid;
+        dt_coeff_ptr = &coeffs_dt_liquid;
+    } else {
+        dt_tbl_ptr   = &dt_gas;
+        dt_coeff_ptr = &coeffs_dt_gas;
+    }
+    SinglePhaseGriddedTableData& dt_tbl   = *dt_tbl_ptr;
+    std::vector<std::vector<CellCoeffs>>& dt_coeff = *dt_coeff_ptr;
+
+    // Bounds check: the DT table stencil requires j>=1 (i.e. T > ymin = T_triple)
+    // and i>=1 (i.e. D strictly inside (xmin, xmax)).
+    // For out-of-range queries, use a full EOS call and cache the results so that
+    // calc_hmolar/smolar/umolar return EOS values rather than extrapolating the pT table
+    // (the pT table has the same j=0 boundary issue at T=T_triple).
+    const bool T_in_range = (T > dt_tbl.ymin && T < dt_tbl.ymax);
+    const bool D_in_range = (D > dt_tbl.xmin && D < dt_tbl.xmax);
+    if (!T_in_range || !D_in_range) {
+        // Direct EOS call — caches h, s, u so calc_* return accurate values
+        // even when the pT stencil would extrapolate at the table boundary.
+        AS->update(DmolarT_INPUTS, D_in, T_in);
+        _p          = static_cast<double>(AS->p());
+        _dt_hmolar  = static_cast<double>(AS->hmolar());
+        _dt_smolar  = static_cast<double>(AS->smolar());
+        _dt_umolar  = static_cast<double>(AS->umolar());
+        _dt_tbl_ptr   = nullptr;   // signals calc_cvmolar/calc_cpmolar to use AS
+        _dt_coeff_ptr = nullptr;
+        _dt_flash_active = true;
+
+        _Q     = static_cast<double>(AS->Q());
+        _phase = AS->phase();
+        if (_phase != iphase_twophase) {
+            using_single_phase_table = true;
+            selected_table = SELECTED_PT_TABLE;
+            find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT,
+                                             _T, _p, cached_single_phase_i, cached_single_phase_j);
+            recalculate_singlephase_phase();
+        } else {
+            using_single_phase_table = false;
+            std::size_t satL = std::numeric_limits<std::size_t>::max();
+            std::size_t satV = std::numeric_limits<std::size_t>::max();
+            CoolPropDbl zL = 0, zV = 0;
+            dataset->pure_saturation.is_inside(iP, _p, iDmolar, D, satL, satV, zL, zV);
+            cached_saturation_iL = satL;
+            cached_saturation_iV = satV;
+        }
+        return;
+    }
+
+    // Check that the natural cell (the one containing (D,T)) is valid before using it.
+    // Cells near the saturation boundary straddle the two-phase region: some grid nodes
+    // are in the two-phase region (recorded as _HUGE), making the cell invalid.
+    // Using the alternate cell for such states means extrapolating the polynomial well
+    // outside its support region, producing large errors (up to 17% for Water near sat.).
+    // Fall back to EOS for these boundary cells; the error is then zero.
+    {
+        std::size_t i_nat = 0, j_nat = 0;
+        dt_tbl.find_native_nearest_good_cell(D, T, i_nat, j_nat);
+        if (!dt_coeff[i_nat][j_nat].valid()) {
+            AS->update(DmolarT_INPUTS, D_in, T_in);
+            _p          = static_cast<double>(AS->p());
+            _dt_hmolar  = static_cast<double>(AS->hmolar());
+            _dt_smolar  = static_cast<double>(AS->smolar());
+            _dt_umolar  = static_cast<double>(AS->umolar());
+            _dt_tbl_ptr   = nullptr;
+            _dt_coeff_ptr = nullptr;
+            _dt_flash_active = true;
+            _Q     = static_cast<double>(AS->Q());
+            _phase = AS->phase();
+            using_single_phase_table = true;
+            selected_table = SELECTED_PT_TABLE;
+            find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT,
+                                             _T, _p, cached_single_phase_i, cached_single_phase_j);
+            recalculate_singlephase_phase();
+            return;
+        }
+    }
+
+    std::size_t i = 0, j = 0;
+    find_native_nearest_good_indices(dt_tbl, dt_coeff, D, T, i, j);
+
+    _p          = evaluate_single_phase(dt_tbl, dt_coeff, iP,      D, T, i, j);
+    _dt_hmolar  = evaluate_single_phase(dt_tbl, dt_coeff, iHmolar, D, T, i, j);
+    _dt_smolar  = evaluate_single_phase(dt_tbl, dt_coeff, iSmolar, D, T, i, j);
+    _dt_umolar  = evaluate_single_phase(dt_tbl, dt_coeff, iUmolar, D, T, i, j);
+    _dt_i       = i;
+    _dt_j       = j;
+    _dt_tbl_ptr   = dt_tbl_ptr;
+    _dt_coeff_ptr = dt_coeff_ptr;
+    _dt_flash_active = true;
+
+    // Map (T, P) to the pT table for transport properties (viscosity, conductivity).
+    // These are looked up via the pT table path so we still need a valid pT cell.
+    using_single_phase_table = true;
+    selected_table = SELECTED_PT_TABLE;
+    find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT,
+                                     _T, _p, cached_single_phase_i, cached_single_phase_j);
+    recalculate_singlephase_phase();
+}
+
+// ---------------------------------------------------------------------------
+// update() override: reset the DT-flash cache before each update
+// ---------------------------------------------------------------------------
+void SBTLBackend::update(CoolProp::input_pairs input_pair, double val1, double val2) {
+    _dt_flash_active = false;
+    TabularBackend::update(input_pair, val1, val2);
+}
+
+// ---------------------------------------------------------------------------
+// Property accessors: return DT-cached values when _dt_flash_active is set
+// ---------------------------------------------------------------------------
+CoolPropDbl SBTLBackend::calc_hmolar(void) {
+    if (_dt_flash_active) return static_cast<CoolPropDbl>(_dt_hmolar);
+    return TabularBackend::calc_hmolar();
+}
+CoolPropDbl SBTLBackend::calc_smolar(void) {
+    if (_dt_flash_active) return static_cast<CoolPropDbl>(_dt_smolar);
+    return TabularBackend::calc_smolar();
+}
+CoolPropDbl SBTLBackend::calc_umolar(void) {
+    if (_dt_flash_active) return static_cast<CoolPropDbl>(_dt_umolar);
+    return TabularBackend::calc_umolar();
+}
+CoolPropDbl SBTLBackend::calc_rhomolar(void) {
+    if (_dt_flash_active) return static_cast<CoolPropDbl>(_rhomolar);
+    return TabularBackend::calc_rhomolar();
+}
+
+/// cv = T × (∂s/∂T)|_D — computed from the DT polynomial derivative
+CoolPropDbl SBTLBackend::calc_cvmolar(void) {
+    if (_dt_flash_active) {
+        if (_dt_tbl_ptr == nullptr) return TabularBackend::calc_cvmolar();
+        double dsdT = evaluate_single_phase_derivative(
+            *_dt_tbl_ptr, *_dt_coeff_ptr,
+            iSmolar, static_cast<double>(_rhomolar), static_cast<double>(_T),
+            _dt_i, _dt_j, 0, 1);
+        return static_cast<CoolPropDbl>(static_cast<double>(_T) * dsdT);
+    }
+    return TabularBackend::calc_cvmolar();
+}
+
+/// cp = cv + T/D² × (∂P/∂T|_D)² / (−∂P/∂D|_T) — from DT polynomial derivatives
+CoolPropDbl SBTLBackend::calc_cpmolar(void) {
+    if (_dt_flash_active) {
+        if (_dt_tbl_ptr == nullptr) return TabularBackend::calc_cpmolar();
+        const double Td = static_cast<double>(_T);
+        const double Dd = static_cast<double>(_rhomolar);
+        double dsdT = evaluate_single_phase_derivative(
+            *_dt_tbl_ptr, *_dt_coeff_ptr,
+            iSmolar, Dd, Td, _dt_i, _dt_j, 0, 1);
+        double cv = Td * dsdT;
+        double dPdT = evaluate_single_phase_derivative(
+            *_dt_tbl_ptr, *_dt_coeff_ptr,
+            iP, Dd, Td, _dt_i, _dt_j, 0, 1);
+        double dPdD = evaluate_single_phase_derivative(
+            *_dt_tbl_ptr, *_dt_coeff_ptr,
+            iP, Dd, Td, _dt_i, _dt_j, 1, 0);
+        if (std::abs(dPdD) < 1e-30) return static_cast<CoolPropDbl>(cv);
+        double D2 = Dd * Dd;
+        return static_cast<CoolPropDbl>(cv + Td * dPdT * dPdT / (D2 * (-dPdD)));
+    }
+    return TabularBackend::calc_cpmolar();
 }
 
 }  // namespace CoolProp

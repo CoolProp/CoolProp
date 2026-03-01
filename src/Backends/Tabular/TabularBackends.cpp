@@ -1102,26 +1102,11 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             }
             break;
         }
-        case SmolarT_INPUTS:
-        case DmolarT_INPUTS: {
-            CoolPropDbl otherval;
-            parameters otherkey;
-            switch (input_pair) {
-                case SmolarT_INPUTS:
-                    _smolar = val1;
-                    _T = val2;
-                    otherval = val1;
-                    otherkey = iSmolar;
-                    break;
-                case DmolarT_INPUTS:
-                    _rhomolar = val1;
-                    _T = val2;
-                    otherval = val1;
-                    otherkey = iDmolar;
-                    break;
-                default:
-                    throw ValueError("Bad (impossible) pair");
-            }
+        case SmolarT_INPUTS: {
+            _smolar = val1;
+            _T = val2;
+            CoolPropDbl otherval = val1;
+            parameters otherkey = iSmolar;
 
             using_single_phase_table = true;  // Use the table (or first guess is that it is single-phase)!
             std::size_t iL = std::numeric_limits<std::size_t>::max(), iV = std::numeric_limits<std::size_t>::max();
@@ -1152,11 +1137,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
             }
             if (is_two_phase) {
                 using_single_phase_table = false;
-                if (otherkey == iDmolar) {
-                    _Q = (1 / otherval - 1 / zL) / (1 / zV - 1 / zL);
-                } else {
-                    _Q = (otherval - zL) / (zV - zL);
-                }
+                _Q = (otherval - zL) / (zV - zL);
                 if (!is_in_closed_range(0.0, 1.0, static_cast<double>(_Q))) {
                     throw ValueError(format("vapor quality is not in (0,1) for %s: %g T: %g", get_parameter_information(otherkey, "short").c_str(),
                                             otherval, static_cast<double>(_T)));
@@ -1181,11 +1162,19 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                 // Find and cache the indices i, j
                 find_nearest_neighbor(single_phase_logpT, dataset->coeffs_pT, iT, _T, otherkey, otherval, cached_single_phase_i,
                                       cached_single_phase_j);
-                // Now find the y variable (Dmolar or Smolar in this case)
+                // Now find the y variable (Smolar in this case)
                 invert_single_phase_y(single_phase_logpT, dataset->coeffs_pT, otherkey, otherval, _T, cached_single_phase_i, cached_single_phase_j);
                 // Recalculate the phase
                 recalculate_singlephase_phase();
             }
+            break;
+        }
+        case DmolarT_INPUTS: {
+            // Delegate to the virtual flash_DmolarT() which SBTL overrides with a
+            // pure-table forward evaluation; other backends fall back to the EOS.
+            _rhomolar = val1;
+            _T = val2;
+            flash_DmolarT(val1, val2);
             break;
         }
         case PQ_INPUTS: {
