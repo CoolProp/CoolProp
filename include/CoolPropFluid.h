@@ -404,7 +404,7 @@ class EquationOfState
 
    private:
     std::string superancillaries_str;
-    std::optional<SuperAncillary_t> superancillaries = std::nullopt;  ///< The superancillaries
+    std::shared_ptr<SuperAncillary_t> superancillaries;  ///< The superancillaries
 
    public:
     SimpleState reduce,  ///< Reducing state used for the EOS (usually, but not always, the critical point)
@@ -427,18 +427,12 @@ class EquationOfState
     CriticalRegionSplines
       critical_region_splines;  ///< A cubic spline in the form T = f(rho) for saturated liquid and saturated vapor curves in the near-critical region
 
-    /// Get the optional of the populated superancillary
-    std::optional<SuperAncillary_t>& get_superanc_optional() {
-
-        if (!superancillaries) {
-            if (!superancillaries_str.empty()) {
-                //                auto start = std::chrono::high_resolution_clock::now(); // Start time
-                // Now do the parsing pass and replace with the actual superancillary
-                superancillaries.emplace(SuperAncillary_t(superancillaries_str));
-                //                auto end = std::chrono::high_resolution_clock::now();  // End time
-                //                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                //std::cout << "Execution time: " << duration.count() << " microseconds for " << BibTeX_EOS << std::endl;
-            }
+    /// Get a shared_ptr to the populated superancillary (nullptr if unavailable).
+    /// The shared_ptr is constructed lazily on first call and then shared among all
+    /// copies of this EOS object, making CoolPropFluid copying O(1).
+    std::shared_ptr<SuperAncillary_t> get_superanc() {
+        if (!superancillaries && !superancillaries_str.empty()) {
+            superancillaries = std::make_shared<SuperAncillary_t>(superancillaries_str);
         }
         return superancillaries;
     }
@@ -448,7 +442,7 @@ class EquationOfState
         superancillaries_str = s;
         // Do the construction greedily by default, but allow it to be lazy if you want
 #if !defined(LAZY_LOAD_SUPERANCILLARIES)
-        get_superanc_optional();
+        get_superanc();
 #endif
     }
 

@@ -354,9 +354,9 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
 
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto& optsuperanc = HEOS.get_superanc_optional();
-            if (optsuperanc) {
-                auto& superanc = optsuperanc.value();
+            auto superanc_ptr = HEOS.get_superanc_optional();
+            if (superanc_ptr) {
+                auto& superanc = *superanc_ptr;
 
                 CoolPropDbl Tcrit_num = superanc.get_Tcrit_num();
                 if (T > Tcrit_num) {
@@ -602,9 +602,9 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
 
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto& optsuperanc = HEOS.get_superanc_optional();
-            if (optsuperanc) {
-                auto& superanc = optsuperanc.value();
+            auto superanc_ptr = HEOS.get_superanc_optional();
+            if (superanc_ptr) {
+                auto& superanc = *superanc_ptr;
                 CoolPropDbl pmax_num = superanc.get_pmax();
                 if (HEOS._p > pmax_num) {
                     throw ValueError(
@@ -1690,9 +1690,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     } else {
 
                         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                            auto& optsuperanc = HEOS.get_superanc_optional();
-                            if (optsuperanc) {
-                                auto& superanc = optsuperanc.value();
+                            auto superanc_ptr = HEOS.get_superanc_optional();
+                            if (superanc_ptr) {
+                                auto& superanc = *superanc_ptr;
                                 CoolPropDbl pmax_num = superanc.get_pmax();
                                 if (HEOS._p > pmax_num) {
                                     throw ValueError(
@@ -1721,9 +1721,9 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     }
 
                     if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                        auto& optsuperanc = HEOS.get_superanc_optional();
-                        if (optsuperanc) {
-                            auto& superanc = optsuperanc.value();
+                        auto superanc_ptr = HEOS.get_superanc_optional();
+                        if (superanc_ptr) {
+                            auto& superanc = *superanc_ptr;
                             CoolPropDbl pmax_num = superanc.get_pmax();
                             if (HEOS._p > pmax_num) {
                                 throw ValueError(format(
