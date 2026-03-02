@@ -759,7 +759,8 @@ struct backend_info
 
 const std::vector<backend_family_info> backend_family_list = {
   {HEOS_BACKEND_FAMILY, "HEOS"},   {REFPROP_BACKEND_FAMILY, "REFPROP"}, {INCOMP_BACKEND_FAMILY, "INCOMP"},   {IF97_BACKEND_FAMILY, "IF97"},
-  {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SRK_BACKEND_FAMILY, "SRK"},
+  {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SBTL_BACKEND_FAMILY, "SBTL"},
+  {SRK_BACKEND_FAMILY, "SRK"},
   {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"}};
 
 const std::vector<backend_info> backend_list = {{HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
@@ -771,6 +772,7 @@ const std::vector<backend_info> backend_list = {{HEOS_BACKEND_PURE, "HelmholtzEO
                                                 {TREND_BACKEND, "TRENDBackend", TREND_BACKEND_FAMILY},
                                                 {TTSE_BACKEND, "TTSEBackend", TTSE_BACKEND_FAMILY},
                                                 {BICUBIC_BACKEND, "BicubicBackend", BICUBIC_BACKEND_FAMILY},
+                                                {SBTL_BACKEND, "SBTLBackend", SBTL_BACKEND_FAMILY},
                                                 {SRK_BACKEND, "SRKBackend", SRK_BACKEND_FAMILY},
                                                 {PR_BACKEND, "PengRobinsonBackend", PR_BACKEND_FAMILY},
                                                 {VTPR_BACKEND, "VTPRBackend", VTPR_BACKEND_FAMILY},
