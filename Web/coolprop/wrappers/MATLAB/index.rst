@@ -54,6 +54,12 @@ Then you can calculate the normal boiling point temperature of water::
 
 Similar approaches are possible for the low-level interface. Addition of docs documenting how to use the low-level interface in MATLAB would be welcome.  Also, more advanced wrappers for MATLAB are available, and are stored on github: https://github.com/CoolProp/CoolProp/tree/master/wrappers/MATLAB
 
+MEX Function
+==========
+By far, MEX function is the fastest way for MATLAB to access C/C++ libraries. If you are working on a performance sensitive application and the Python wrapper overhead is significant in MATLAB, you can also compile a MEX function that calls CoolProp compiled shared library (.dll, .so, etc.). Examples can be found in `this repository <https://github.com/luzechao/CoolPropMEX>`_. This repo contains a pre-compiled MEX function and the dll associated with that for Windows-x64 `(see release) <https://github.com/luzechao/CoolPropMEX/releases>`_.
+
+If you need to compile MEX interface on your platform, you will need some familiarity with how to use CMake and how to compile CoolProp. You can use the repo above as a reference.
+
 .. _low_level_high_level_matlab: 
 
 Calling Low-Level interface through DLL
