@@ -374,6 +374,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
             strcpy(mix, _components_joined_raw);
 
             SETMIXdll(mix, hmx_bnc, reference_state, &N, component_string, &(x[0]), &ierr, herr, 255, 255, 3, 10000, 255);
+            int ixflag = 2;
+            double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
+            SETREFdll(reference_state, &ixflag, &(x[0]), &h0, &s0, &t0, &p0, &ierr, herr, 3, 255);
             if (static_cast<int>(ierr) <= 0) {
                 this->Ncomp = N;
                 mole_fractions.resize(ncmax);
