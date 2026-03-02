@@ -82,9 +82,9 @@ The figure below shows density errors for ``HmassP_INPUTS`` across the single-ph
     import random
 
     fig = plt.figure(figsize=(14, 5))
-    ax1 = fig.add_axes((0.06, 0.12, 0.26, 0.80))
-    ax2 = fig.add_axes((0.38, 0.12, 0.26, 0.80))
-    ax3 = fig.add_axes((0.70, 0.12, 0.26, 0.80))
+    ax1 = fig.add_axes((0.05, 0.12, 0.24, 0.80))
+    ax2 = fig.add_axes((0.35, 0.12, 0.24, 0.80))
+    ax3 = fig.add_axes((0.65, 0.12, 0.24, 0.80))
 
     Ref = 'R245fa'
 
@@ -142,7 +142,7 @@ The figure below shows density errors for ``HmassP_INPUTS`` across the single-ph
         ax.set_xlabel('Enthalpy [kJ/kg]')
         ax.set_ylabel('Pressure [kPa]')
 
-    cbar_ax = fig.add_axes([0.97, 0.15, 0.02, 0.70])
+    cbar_ax = fig.add_axes([0.91, 0.15, 0.025, 0.70])
     CB = fig.colorbar(SC, cax=cbar_ax)
     CB.set_label(r'$(\rho/\rho_{\rm EOS}-1)\times 100$ [%]')
 
@@ -219,8 +219,8 @@ The figure below gives a comprehensive view of SBTL accuracy for ``DmolarUmolar_
     errT = np.array(errT); errp = np.array(errp)
 
     fig = plt.figure(figsize=(10, 5))
-    ax1 = fig.add_axes((0.09, 0.12, 0.38, 0.80))
-    ax2 = fig.add_axes((0.57, 0.12, 0.38, 0.80))
+    ax1 = fig.add_axes((0.08, 0.12, 0.35, 0.80))
+    ax2 = fig.add_axes((0.54, 0.12, 0.35, 0.80))
 
     cNorm = colors.LogNorm(vmin=1e-8, vmax=1e-1)
     kw = dict(s=4, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
@@ -236,7 +236,7 @@ The figure below gives a comprehensive view of SBTL accuracy for ``DmolarUmolar_
         ax.set_ylabel(r'Density [kg/m$^3$]')
         ax.set_title(title)
 
-    cbar_ax = fig.add_axes([0.97, 0.15, 0.02, 0.70])
+    cbar_ax = fig.add_axes([0.91, 0.15, 0.025, 0.70])
     CB = fig.colorbar(SC, cax=cbar_ax)
     CB.set_label(r'Relative error $\times\,100$ [%]')
 
@@ -296,7 +296,7 @@ The plot below shows the same temperature error data for ``DmolarUmolar_INPUTS``
     errT    = np.array(errT)
 
     fig = plt.figure(figsize=(6, 5))
-    ax  = fig.add_axes((0.14, 0.12, 0.76, 0.80))
+    ax  = fig.add_axes((0.13, 0.12, 0.68, 0.80))
 
     cNorm = colors.LogNorm(vmin=1e-8, vmax=1e-1)
     kw = dict(s=4, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
@@ -308,7 +308,7 @@ The plot below shows the same temperature error data for ``DmolarUmolar_INPUTS``
     ax.set_ylabel(r'Molar density [mol/m$^3$]')
     ax.set_title(r'Error in $T(D,U)$ — molar $(D,\,U)$ coordinates')
 
-    cbar_ax = fig.add_axes([0.92, 0.15, 0.03, 0.70])
+    cbar_ax = fig.add_axes([0.83, 0.15, 0.03, 0.70])
     CB = fig.colorbar(SC, cax=cbar_ax)
     CB.set_label(r'Relative error $\times\,100$ [%]')
 
@@ -375,8 +375,8 @@ The figure below gives a comprehensive view of SBTL accuracy for ``DmolarT_INPUT
     errP = np.array(errP); errH = np.array(errH)
 
     fig = plt.figure(figsize=(10, 5))
-    ax1 = fig.add_axes((0.09, 0.12, 0.38, 0.80))
-    ax2 = fig.add_axes((0.57, 0.12, 0.38, 0.80))
+    ax1 = fig.add_axes((0.08, 0.12, 0.35, 0.80))
+    ax2 = fig.add_axes((0.54, 0.12, 0.35, 0.80))
 
     cNorm = colors.LogNorm(vmin=1e-8, vmax=1e-1)
     kw = dict(s=4, edgecolors='none', cmap=plt.get_cmap('jet'), norm=cNorm)
@@ -392,7 +392,7 @@ The figure below gives a comprehensive view of SBTL accuracy for ``DmolarT_INPUT
         ax.set_ylabel(r'Density [kg/m$^3$]')
         ax.set_title(title)
 
-    cbar_ax = fig.add_axes([0.97, 0.15, 0.02, 0.70])
+    cbar_ax = fig.add_axes([0.91, 0.15, 0.025, 0.70])
     CB = fig.colorbar(SC, cax=cbar_ax)
     CB.set_label(r'Relative error $\times\,100$ [%]')
 
