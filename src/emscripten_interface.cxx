@@ -43,7 +43,8 @@ EMSCRIPTEN_BINDINGS(humid_air_bindings) {
 }
 
 CoolProp::AbstractState* factory(const std::string& backend, const std::string& fluid_names) {
-    return CoolProp::AbstractState::factory(backend, strsplit(fluid_names, '&'));
+    // Use the brace-aware string overload so JSON suffixes like Water{"EOS":"X"} are handled correctly
+    return CoolProp::AbstractState::factory(backend, fluid_names);
 }
 
 // Binding code

@@ -47,6 +47,7 @@
 #include "Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "Backends/Cubics/CubicsLibrary.h"
 #include "Backends/PCSAFT/PCSAFTLibrary.h"
+#include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 
 #if defined(ENABLE_CATCH)
 #    include <catch2/catch_all.hpp>
@@ -92,7 +93,11 @@ void extract_backend(std::string fluid_string, std::string& backend, std::string
     if (fluid_string.find("REFPROP-") == 0) {
         fluid_string.replace(0, 8, "REFPROP::");
     }
-    if (has_backend_in_string(fluid_string, i)) {
+    // Only search for '::' in the portion before the first '{' so that '::' inside
+    // a JSON value like Water{"key":"some::value"} is not mistaken for a backend prefix.
+    auto brace_pos = fluid_string.find('{');
+    std::string search_region = (brace_pos == std::string::npos) ? fluid_string : fluid_string.substr(0, brace_pos);
+    if (has_backend_in_string(search_region, i)) {
         // Part without the ::
         backend = fluid_string.substr(0, i);
         // Fluid name after the ::
@@ -210,6 +215,51 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
     }
 }
 
+/// Strips a `{...}` suffix from a single component token.
+/// Returns {clean_name, json_string}.  If the token starts with `{`, name is empty (bare JSON = mixture-level config).
+static std::pair<std::string, std::string> extract_component_config(const std::string& token) {
+    auto brace_pos = token.find('{');
+    if (brace_pos == std::string::npos) {
+        return {token, ""};
+    }
+    return {token.substr(0, brace_pos), token.substr(brace_pos)};
+}
+
+struct FluidStringComponents
+{
+    std::vector<std::string> fluid_names;     ///< Clean fluid names (no JSON suffix)
+    std::vector<std::string> component_json;  ///< Per-component JSON strings (parallel to fluid_names)
+    std::string mixture_json;                 ///< From bare JSON token, e.g. {"mixing_rule":"HV"}
+};
+
+/// Parse a fluid string that may contain embedded JSON config, e.g.
+///   Water{"EOS":"Wagner-JPCRD-2002"}
+///   Water{"EOS":"X"}&Ethanol{"EOS":"Y"}
+///   Water&Ethanol&{"mixing_rule":"HV"}
+static FluidStringComponents parse_fluid_string(const std::string& s) {
+    FluidStringComponents result;
+    std::vector<std::string> tokens = strsplit_brace_aware(s, '&');
+    int bare_json_count = 0;
+    for (const auto& token : tokens) {
+        if (token.empty()) continue;
+        auto name_json = extract_component_config(token);
+        const std::string& name = name_json.first;
+        const std::string& json = name_json.second;
+        if (name.empty()) {
+            // Bare JSON token = mixture-level config
+            ++bare_json_count;
+            if (bare_json_count > 1) {
+                throw ValueError("parse_fluid_string: multiple bare JSON tokens in: " + s);
+            }
+            result.mixture_json = json;
+        } else {
+            result.fluid_names.push_back(name);
+            result.component_json.push_back(json);
+        }
+    }
+    return result;
+}
+
 void _PropsSI_initialize(const std::string& backend, const std::vector<std::string>& fluid_names, const std::vector<double>& z,
                          shared_ptr<AbstractState>& State) {
 
@@ -247,6 +297,7 @@ void _PropsSI_initialize(const std::string& backend, const std::vector<std::stri
     } else {  // The only path where fractions_ptr stays NULL
         throw ValueError("fractions_ptr is NULL");
     }
+
     if (!State->available_in_high_level()) {
         throw ValueError(
           "This AbstractState derived class cannot be used in the high-level interface; see www.coolprop.org/dev/coolprop/LowLevelAPI.html");
@@ -621,12 +672,25 @@ double PropsSI(const std::string& Output, const std::string& Name1, double Prop1
 
         std::string backend, fluid;
         extract_backend(FluidName, backend, fluid);
+        // Parse per-component JSON configs (e.g. {"EOS":"Wagner-JPCRD-2002"}) before fraction extraction
+        // to avoid interaction with the "[fraction]" bracket syntax used by extract_fractions.
+        FluidStringComponents parsed = parse_fluid_string(fluid);
+        if (!parsed.mixture_json.empty()) {
+            throw NotImplementedError("Mixture-level JSON config in fluid string is not yet implemented");
+        }
+        std::string clean_fluid = strjoin(parsed.fluid_names, "&");
         std::vector<double> fractions(1, 1.0);
         // extract_fractions checks for has_fractions_in_string / has_solution_concentration; no need to double check
-        const std::string fluid_string = extract_fractions(fluid, fractions);
+        const std::string fluid_string = extract_fractions(clean_fluid, fractions);
+        // Re-attach JSON suffixes to the clean names so the HEOS constructors can
+        // apply EOS config at construction time (before set_components).
+        std::vector<std::string> fluid_names = strsplit(fluid_string, '&');
+        for (std::size_t i = 0; i < fluid_names.size() && i < parsed.component_json.size(); ++i) {
+            fluid_names[i] += parsed.component_json[i];
+        }
         std::vector<std::vector<double>> IO;
         _PropsSImulti(strsplit(Output, '&'), Name1, std::vector<double>(1, Prop1), Name2, std::vector<double>(1, Prop2), backend,
-                      strsplit(fluid_string, '&'), fractions, IO);
+                      fluid_names, fractions, IO);
         if (IO.empty()) {
             throw ValueError(get_global_param_string("errstring").c_str());
         }
@@ -1072,6 +1136,44 @@ TEST_CASE("Check inputs to get_fluid_param_string", "[get_fluid_param_string]") 
     CHECK(CoolProp::get_fluid_param_string("Water", "pure") == "true");
     CHECK(CoolProp::get_fluid_param_string("R410A", "pure") == "false");
 };
+#endif
+
+#if defined(ENABLE_CATCH)
+TEST_CASE("JSON fluid-string config (EOS selection)", "[json_config]") {
+    SECTION("Single fluid, default EOS matches explicit EOS selection") {
+        double T1 = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "Water");
+        double T2 = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "Water{\"EOS\":\"Wagner-JPCRD-2002\"}");
+        REQUIRE(std::abs(T1 - T2) < 1e-6);
+    }
+    SECTION("Bad EOS key returns invalid (PropsSI catches internally)") {
+        // PropsSI swallows exceptions and returns _HUGE; verify the result is non-finite
+        double T = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "Water{\"EOS\":\"NONEXISTENT\"}");
+        REQUIRE(!ValidNumber(T));
+    }
+    SECTION("Invalid JSON returns invalid (PropsSI catches internally)") {
+        double T = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "Water{not-json}");
+        REQUIRE(!ValidNumber(T));
+    }
+    SECTION("Explicit EOS selection via HEOS backend prefix") {
+        double T1 = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "HEOS::Water");
+        double T2 = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "HEOS::Water{\"EOS\":\"Wagner-JPCRD-2002\"}");
+        REQUIRE(std::abs(T1 - T2) < 1e-6);
+    }
+    SECTION("EOS selection by index matches selection by BibTeX key") {
+        double T_bibtex = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "Water{\"EOS\":\"Wagner-JPCRD-2002\"}");
+        double T_index  = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "Water{\"EOS_index\":0}");
+        REQUIRE(std::abs(T_bibtex - T_index) < 1e-6);
+    }
+    SECTION("Bad EOS index returns invalid") {
+        double T = CoolProp::PropsSI("T", "P", 101325.0, "Q", 0.0, "Water{\"EOS_index\":9999}");
+        REQUIRE(!ValidNumber(T));
+    }
+    SECTION("AbstractState factory string overload applies EOS config at construction") {
+        // JSON config is parsed by the HEOS constructor; EOS is selected before set_components
+        std::unique_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water{\"EOS\":\"Wagner-JPCRD-2002\"}"));
+        REQUIRE(AS != nullptr);
+    }
+}
 #endif
 
 std::string phase_lookup_string(phases Phase) {

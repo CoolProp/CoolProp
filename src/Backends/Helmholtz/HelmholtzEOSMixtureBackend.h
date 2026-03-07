@@ -191,6 +191,20 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// Apply a simple mixing rule
     void apply_simple_mixing_rule(std::size_t i, std::size_t j, const std::string& model);
 
+    /// Select the EOS for component \a component_idx by its zero-based index into \c EOSVector.
+    /// Throws ValueError if the index is out of range.
+    void select_eos_by_index(std::size_t component_idx, std::size_t eos_idx);
+
+    /// Select the EOS for component \a component_idx by its BibTeX key (e.g. "Wagner-JPCRD-2002").
+    /// Throws ValueError listing available keys if \a bibtex_key is not found.
+    void select_eos_by_bibtex(std::size_t component_idx, const std::string& bibtex_key);
+
+    /// Parse a JSON config string (e.g. `{"EOS":"Wagner-JPCRD-2002"}`) and set
+    /// \a fluid.selected_EOS_index accordingly.  Called from constructors before
+    /// set_components() so the reducing function is built with the correct EOS.
+    /// Supported keys: "EOS" (BibTeX string), "EOS_index" (non-negative integer).
+    static void apply_json_to_fluid(CoolPropFluid& fluid, const std::string& json_str);
+
     // Set the cubic alpha function's constants:
     virtual void set_cubic_alpha_C(const size_t i, const std::string& parameter, const double c1, const double c2, const double c3) {
         throw ValueError("set_cubic_alpha_C only defined for cubic backends");
