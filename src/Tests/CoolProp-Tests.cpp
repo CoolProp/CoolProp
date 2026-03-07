@@ -2444,6 +2444,8 @@ TEST_CASE("Github issue #2491", "[2491]") {
 TEST_CASE("Github issue #2608", "[2608]") {
     std::shared_ptr<CoolProp::AbstractState> AS(AbstractState::factory("HEOS", "CO2"));
     double pc = AS->p_critical();
+    // 218.048 K was updated to 218.050 K: the new melting line check now rejects inputs
+    // below Tmelt(p), and at p=73.8e5 Pa CO2's melting temperature is ~218.049 K.
     CHECK_NOTHROW(AS->update(CoolProp::PT_INPUTS, 73.8e5, 218.050));
     SECTION("Without phase") {
         AS->unspecify_phase();
@@ -2992,8 +2994,8 @@ TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
     }
 }
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Phase for solid water should throw", "[2639]") {
-    shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
-    for (auto p_Pa : linspace(AS->p_triple()*1.0001, AS->pmax(), 1000)){
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    for (auto p_Pa : linspace(AS->p_triple() * 1.0001, AS->pmax(), 1000)) {
         CAPTURE(p_Pa);
         auto Tm = AS->melting_line(iT, iP, p_Pa);
         CAPTURE(Tm);

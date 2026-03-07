@@ -354,7 +354,7 @@ void FlashRoutines::QT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
 
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto superanc_ptr = HEOS.get_superanc_optional();
+            auto superanc_ptr = HEOS.get_superanc();
             if (superanc_ptr) {
                 auto& superanc = *superanc_ptr;
 
@@ -602,7 +602,7 @@ void FlashRoutines::PQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
 
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-            auto superanc_ptr = HEOS.get_superanc_optional();
+            auto superanc_ptr = HEOS.get_superanc();
             if (superanc_ptr) {
                 auto& superanc = *superanc_ptr;
                 CoolPropDbl pmax_num = superanc.get_pmax();
@@ -1690,7 +1690,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     } else {
 
                         if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                            auto superanc_ptr = HEOS.get_superanc_optional();
+                            auto superanc_ptr = HEOS.get_superanc();
                             if (superanc_ptr) {
                                 auto& superanc = *superanc_ptr;
                                 CoolPropDbl pmax_num = superanc.get_pmax();
@@ -1721,7 +1721,7 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
                     }
 
                     if (get_config_bool(ENABLE_SUPERANCILLARIES) && HEOS.is_pure()) {
-                        auto superanc_ptr = HEOS.get_superanc_optional();
+                        auto superanc_ptr = HEOS.get_superanc();
                         if (superanc_ptr) {
                             auto& superanc = *superanc_ptr;
                             CoolPropDbl pmax_num = superanc.get_pmax();

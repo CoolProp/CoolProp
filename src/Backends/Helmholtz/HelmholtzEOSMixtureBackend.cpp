@@ -263,7 +263,7 @@ std::string HelmholtzEOSMixtureBackend::fluid_param_string(const std::string& Pa
     }
 }
 
-std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::get_superanc_optional() {
+std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::get_superanc() {
     if (!is_pure()) {
         throw CoolProp::ValueError("Only available for pure (and not pseudo-pure) fluids");
     }
@@ -274,7 +274,7 @@ double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, co
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
     }
-    auto superanc_ptr = get_superanc_optional();
+    auto superanc_ptr = get_superanc();
     if (parameter.find("SUPERANC::") == 0) {
         if (superanc_ptr) {
             auto& superanc = *superanc_ptr;
@@ -1082,7 +1082,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_T_critical(void) {
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc_optional();
+            auto superanc_ptr = get_superanc();
             if (superanc_ptr) {
                 return superanc_ptr->get_Tcrit_num();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
             }
@@ -1101,7 +1101,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_p_critical(void) {
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc_optional();
+            auto superanc_ptr = get_superanc();
             if (superanc_ptr) {
                 return superanc_ptr->get_pmax();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
             }
@@ -1120,7 +1120,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_rhomolar_critical(void) {
         }
     } else {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc_optional();
+            auto superanc_ptr = get_superanc();
             if (superanc_ptr) {
                 return superanc_ptr->get_rhocrit_num();  // from the numerical critical point satisfying dp/drho|T = d2p/drho2|T = 0
             }
@@ -1211,7 +1211,7 @@ void HelmholtzEOSMixtureBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolProp
     if (!get_config_bool(ENABLE_SUPERANCILLARIES)) {
         throw ValueError(format("Superancillaries are not enabled"));
     }
-    auto superanc_ptr = get_superanc_optional();
+    auto superanc_ptr = get_superanc();
     if (!superanc_ptr) {
         throw ValueError(format("Superancillaries not available for this fluid"));
     }
@@ -1558,13 +1558,11 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
         _Q = 1e9;
         switch (other) {
             case iT: {
-                {
-                    // Check for the presence of the melting line
-                    if (other == iT && has_melting_line()){
-                        double Tm = melting_line(iT, iP, _p);
-                        if (_T < Tm - 0.001) {
-                            throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
-                        }
+                // Check for the presence of the melting line
+                if (has_melting_line()) {
+                    double Tm = melting_line(iT, iP, _p);
+                    if (_T < Tm - 0.001) {
+                        throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
                     }
                 }
                 if (_T > T_crit_) {
@@ -1621,7 +1619,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
         // First try the superancillaries, use them to determine the state if you can
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc_optional();
+            auto superanc_ptr = get_superanc();
             // Superancillaries are enabled and available, they will be used to determine the phase
             if (superanc_ptr) {
                 auto& superanc = *superanc_ptr;
@@ -1637,20 +1635,13 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
 
                 if (other == iT) {
                     if (value < Tsat - 100 * DBL_EPSILON) {
-                        if (has_melting_line()){
+                        if (has_melting_line() && !get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
                             double Tm = melting_line(iT, iP, _p);
-                            if (get_config_bool(DONT_CHECK_PROPERTY_LIMITS)) {
-                                _phase = iphase_liquid;
-                            } else {
-                                if (_T < Tm - 0.001) {
-                                    throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
-                                }
+                            if (_T < Tm - 0.001) {
+                                throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
                             }
-                            _phase = iphase_liquid;
                         }
-                        else{
-                            _phase = iphase_liquid;
-                        }
+                        _phase = iphase_liquid;
                         _Q = -1000;
                         return;
                     } else if (value > Tsat + 100 * DBL_EPSILON) {
@@ -2071,7 +2062,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     } else if (_T < T_crit_)  // Gas, 2-Phase, Liquid, or Supercritical Liquid Region
     {
         if (get_config_bool(ENABLE_SUPERANCILLARIES) && is_pure()) {
-            auto superanc_ptr = get_superanc_optional();
+            auto superanc_ptr = get_superanc();
             // Superancillaries are enabled and available, they will be used to determine the phase
             if (superanc_ptr) {
                 auto& superanc = *superanc_ptr;
