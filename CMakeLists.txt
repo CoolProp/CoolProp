@@ -868,6 +868,7 @@ if(COOLPROP_PRIME_MODULE)
   install(
     FILES
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/CoolPropFluidProperties.mcdx"
+      "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/MathCAD/Prime/README.md"
     DESTINATION MathcadPrime)
 endif()
 
