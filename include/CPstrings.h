@@ -90,9 +90,6 @@ FMT_VARIADIC(std::string, format, const char*)
 // Missing string split - like in Python
 std::vector<std::string> strsplit(const std::string& s, char del);
 
-/// Split on `del` only when not inside curly braces `{}`.
-/// Throws ValueError if brace depth goes negative (unmatched `}`).
-std::vector<std::string> strsplit_brace_aware(const std::string& s, char del);
 
 inline std::string upper(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);

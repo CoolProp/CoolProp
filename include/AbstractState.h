@@ -706,42 +706,9 @@ class AbstractState
     }
     virtual ~AbstractState() {};
 
-    /// A factory function to return a pointer to a new-allocated instance of one of the backends.
-    /**
-     * @brief Convenience overload that accepts a '&' delimited fluid-name string, optionally with
-     *        per-component JSON config suffixes (e.g. `Water{"EOS":"Wagner-JPCRD-2002"}`).
-     *        JSON suffixes are stripped before the fluid name is looked up; the returned backend
-     *        is constructed with clean names only.
-     *
-     *        **EOS config is NOT applied here** — this overload is a thin wrapper around the
-     *        vector overload and cannot include backend-specific headers without circular
-     *        dependencies.  Config is applied by the high-level PropsSI path.  Low-level callers
-     *        that need EOS selection should call `HelmholtzEOSMixtureBackend::select_eos_by_bibtex`
-     *        or `::select_eos_by_index` on the returned pointer after casting.
-     * @param backend The backend in use, one of "HEOS", "REFPROP", etc.
-     * @param fluid_names Fluid names as a '&' delimited string, optionally with JSON suffixes
-     * @return
-     */
+    /// Convenience overload: splits \a fluid_names on '&' and delegates to the vector overload.
     static AbstractState* factory(const std::string& backend, const std::string& fluid_names) {
-        // Split brace-aware so that '&' inside JSON values is not treated as a component delimiter
-        std::vector<std::string> tokens = strsplit_brace_aware(fluid_names, '&');
-        std::vector<std::string> result_names;
-        // For HEOS, pass JSON suffixes through to the constructors so EOS selection
-        // happens at construction time (before set_components builds the reducing function).
-        // Bare JSON tokens (mixture-level config, brace_pos==0) are always stripped.
-        // For all other backends, strip JSON suffixes unconditionally.
-        const bool is_heos = (backend == "HEOS" || backend == "?" || backend.empty());
-        for (const auto& token : tokens) {
-            if (token.empty()) continue;
-            auto brace_pos = token.find('{');
-            if (brace_pos == 0) continue;  // bare JSON token — not a fluid name
-            if (is_heos) {
-                result_names.push_back(token);  // keep JSON suffix; HEOS ctors strip it
-            } else {
-                result_names.push_back(brace_pos == std::string::npos ? token : token.substr(0, brace_pos));
-            }
-        }
-        return factory(backend, result_names);
+        return factory(backend, strsplit(fluid_names, '&'));
     };
 
     /**

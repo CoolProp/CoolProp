@@ -67,16 +67,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend() {
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV) {
     std::vector<CoolPropFluid> components(component_names.size());
     for (unsigned int i = 0; i < components.size(); ++i) {
-        // Strip optional JSON config suffix (e.g. Water{"EOS":"Wagner-JPCRD-2002"})
-        auto brace_pos = component_names[i].find('{');
-        const std::string name =
-          (brace_pos == std::string::npos) ? component_names[i] : component_names[i].substr(0, brace_pos);
-        const std::string json_str =
-          (brace_pos == std::string::npos) ? std::string() : component_names[i].substr(brace_pos);
-        components[i] = get_library().get(name);
-        // Pre-set selected_EOS_index before set_components so the reducing function
-        // is built from the correct EOS on the first (and only) construction pass.
-        apply_json_to_fluid(components[i], json_str);
+        components[i] = get_library().get(component_names[i]);
     }
 
     // Reset the residual Helmholtz energy class
@@ -408,44 +399,6 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t
     }
 };
 
-void HelmholtzEOSMixtureBackend::apply_json_to_fluid(CoolPropFluid& fluid, const std::string& json_str) {
-    if (json_str.empty()) return;
-    rapidjson::Document doc;
-    doc.Parse(json_str.c_str());
-    if (doc.HasParseError()) {
-        throw ValueError(format("JSON config for fluid \"%s\" is invalid: %s", fluid.name.c_str(), json_str.c_str()));
-    }
-    if (!doc.IsObject()) {
-        throw ValueError(format("JSON config for fluid \"%s\" must be a JSON object: %s", fluid.name.c_str(), json_str.c_str()));
-    }
-    if (doc.HasMember("EOS") && doc["EOS"].IsString()) {
-        const std::string bibtex_key = doc["EOS"].GetString();
-        for (std::size_t k = 0; k < fluid.EOSVector.size(); ++k) {
-            if (fluid.EOSVector[k].BibTeX_EOS == bibtex_key) {
-                fluid.selected_EOS_index = k;
-                return;
-            }
-        }
-        std::string available;
-        for (std::size_t k = 0; k < fluid.EOSVector.size(); ++k) {
-            if (k > 0) available += ", ";
-            available += fluid.EOSVector[k].BibTeX_EOS;
-        }
-        throw ValueError(format("EOS with BibTeX key \"%s\" not found for fluid \"%s\". Available: [%s]",
-                                bibtex_key.c_str(), fluid.name.c_str(), available.c_str()));
-    } else if (doc.HasMember("EOS_index") && doc["EOS_index"].IsInt()) {
-        int idx = doc["EOS_index"].GetInt();
-        if (idx < 0) {
-            throw ValueError(format("EOS_index for fluid \"%s\" must be non-negative, got %d", fluid.name.c_str(), idx));
-        }
-        std::size_t eos_idx = static_cast<std::size_t>(idx);
-        if (eos_idx >= fluid.EOSVector.size()) {
-            throw ValueError(format("EOS_index [%d] is out of range for fluid \"%s\" (have %d EOS variants)",
-                                    idx, fluid.name.c_str(), static_cast<int>(fluid.EOSVector.size())));
-        }
-        fluid.selected_EOS_index = eos_idx;
-    }
-}
 
 void HelmholtzEOSMixtureBackend::select_eos_by_index(std::size_t component_idx, std::size_t eos_idx) {
     if (component_idx >= components.size()) {

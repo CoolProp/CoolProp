@@ -41,20 +41,7 @@ std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& O
 /// @param Prop1 The first state variable value
 /// @param Name2 The second state variable name, one of "T","D","H",etc.
 /// @param Prop2 The second state variable value
-/// @param FluidName The fluid name, optionally with an embedded JSON config suffix.
-///
-/// The FluidName parameter accepts an optional JSON object suffix on each component to select
-/// model parameters at construction time.  Currently supported JSON keys:
-///
-///   - **"EOS"** — BibTeX key of the equation of state to use, e.g. "Wagner-JPCRD-2002".
-///     Available keys can be enumerated with `get_fluid_param_string(fluid, "BibTeX-EOS")`.
-///
-/// Examples (the JSON suffix immediately follows the fluid name, no space):
-///   Water{"EOS":"Wagner-JPCRD-2002"}
-///   Water{"EOS":"X"}&Ethanol{"EOS":"Y"}
-///
-/// EOS selection is a construction-time-only operation; the index is locked for the lifetime
-/// of the resulting state object.
+/// @param FluidName The fluid name
 double PropsSI(const std::string& Output, const std::string& Name1, double Prop1, const std::string& Name2, double Prop2,
                const std::string& FluidName);
 
