@@ -282,6 +282,13 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     /// Change the equation of state for one component
     void calc_change_EOS(const std::size_t i, const std::string& EOS_name);
 
+    void calc_select_eos_by_index(std::size_t component_idx, std::size_t eos_idx) override {
+        select_eos_by_index(component_idx, eos_idx);
+    };
+    void calc_select_eos_by_bibtex(std::size_t component_idx, const std::string& bibtex_key) override {
+        select_eos_by_bibtex(component_idx, bibtex_key);
+    };
+
     const CoolProp::SimpleState& calc_state(const std::string& state);
 
     virtual const double get_fluid_constant(std::size_t i, parameters param) const {

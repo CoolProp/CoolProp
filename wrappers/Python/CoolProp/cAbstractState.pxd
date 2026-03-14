@@ -51,6 +51,8 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         void unspecify_phase() except +ValueError
 
         void change_EOS(const size_t, const string &) except +ValueError
+        void select_eos_by_index(size_t, size_t) except +ValueError
+        void select_eos_by_bibtex(size_t, const string &) except +ValueError
 
         void set_binary_interaction_double(const string, const string &, const string &, const double s) except +ValueError
         void set_binary_interaction_string(const string &, const string &, const string &, const string &) except +ValueError

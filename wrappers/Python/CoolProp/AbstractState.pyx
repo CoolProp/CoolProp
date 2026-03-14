@@ -63,6 +63,31 @@ cdef class AbstractState:
         """ Change the EOS for one component - wrapper of c++ function :cpapi:`CoolProp::AbstractState::change_EOS` """
         self.thisptr.change_EOS(i, EOS_name)
 
+    cpdef select_eos_by_index(self, size_t component_idx, size_t eos_idx):
+        """
+        Select the equation of state for a component by its zero-based index into the fluid's EOSVector (HEOS backend only).
+
+        Must be called before any ``update()``; call ``clear()`` if the state has already been updated.
+
+        :param component_idx: Component index (0 for pure fluids)
+        :param eos_idx: Zero-based index into the fluid's list of equations of state
+        :raises ValueError: if *eos_idx* is out of range or the backend does not support EOS selection
+        """
+        self.thisptr.select_eos_by_index(component_idx, eos_idx)
+
+    cpdef select_eos_by_bibtex(self, size_t component_idx, string bibtex_key):
+        """
+        Select the equation of state for a component by its BibTeX key (HEOS backend only).
+
+        Must be called before any ``update()``; call ``clear()`` if the state has already been updated.
+
+        :param component_idx: Component index (0 for pure fluids)
+        :param bibtex_key: BibTeX key of the desired EOS, e.g. ``"Wagner-JPCRD-2002"``
+        :raises ValueError: if *bibtex_key* is not found (error message lists available keys)
+                            or the backend does not support EOS selection
+        """
+        self.thisptr.select_eos_by_bibtex(component_idx, bibtex_key)
+
     cpdef apply_simple_mixing_rule(self, size_t i, size_t j, string model):
         """ Apply a simple mixing rule - wrapper of c++ function :cpapi:`CoolProp::AbstractState::apply_simple_mixing_rule` """
         self.thisptr.apply_simple_mixing_rule(i, j, model)

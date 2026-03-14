@@ -700,6 +700,16 @@ class AbstractState
         throw NotImplementedError("calc_change_EOS is not implemented for this backend");
     };
 
+    /// Select the EOS for a component by its zero-based index into EOSVector
+    virtual void calc_select_eos_by_index(std::size_t component_idx, std::size_t eos_idx) {
+        throw NotImplementedError("calc_select_eos_by_index is not implemented for this backend");
+    };
+
+    /// Select the EOS for a component by its BibTeX key (e.g. "Wagner-JPCRD-2002")
+    virtual void calc_select_eos_by_bibtex(std::size_t component_idx, const std::string& bibtex_key) {
+        throw NotImplementedError("calc_select_eos_by_bibtex is not implemented for this backend");
+    };
+
    public:
     AbstractState() : _fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown) {
         clear();
@@ -1472,6 +1482,25 @@ class AbstractState
     /// \note Calls the calc_change_EOS function of the implementation
     void change_EOS(const std::size_t i, const std::string& EOS_name) {
         calc_change_EOS(i, EOS_name);
+    }
+
+    /// \brief Select the EOS for a component by its zero-based index into EOSVector (HEOS backend only)
+    /// @param component_idx Index of the component (0 for pure fluids)
+    /// @param eos_idx Zero-based index into the fluid's EOSVector
+    /// \note Must be called before any update(); call clear() if called on a previously-updated state.
+    /// \note Calls the calc_select_eos_by_index function of the implementation
+    void select_eos_by_index(std::size_t component_idx, std::size_t eos_idx) {
+        calc_select_eos_by_index(component_idx, eos_idx);
+    }
+
+    /// \brief Select the EOS for a component by its BibTeX key (HEOS backend only)
+    /// @param component_idx Index of the component (0 for pure fluids)
+    /// @param bibtex_key BibTeX key of the desired EOS (e.g. "Wagner-JPCRD-2002")
+    /// \note Must be called before any update(); call clear() if called on a previously-updated state.
+    ///       Throws ValueError listing available keys if bibtex_key is not found.
+    /// \note Calls the calc_select_eos_by_bibtex function of the implementation
+    void select_eos_by_bibtex(std::size_t component_idx, const std::string& bibtex_key) {
+        calc_select_eos_by_bibtex(component_idx, bibtex_key);
     }
 
     // ----------------------------------------
