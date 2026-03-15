@@ -1,5 +1,4 @@
 #include "AbstractState.h"
-#include <memory>
 #include "Solvers.h"
 #include "CoolPropTools.h"
 #include <string>
