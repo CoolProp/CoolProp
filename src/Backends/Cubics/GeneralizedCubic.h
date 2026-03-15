@@ -13,7 +13,8 @@
 
 #include <vector>
 #include <cmath>
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 #include "Exceptions.h"
 
 /// An abstract alpha function for the EOS, defining the interface for the alpha function

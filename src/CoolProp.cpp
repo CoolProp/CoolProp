@@ -218,7 +218,7 @@ void _PropsSI_initialize(const std::string& backend, const std::vector<std::stri
     }
 
     std::vector<double> fractions(1, 1.0);            // Default to one component, unity fraction
-    const std::vector<double>* fractions_ptr = NULL;  // Pointer to the array to be used;
+    const std::vector<double>* fractions_ptr = nullptr;  // Pointer to the array to be used;
 
     if (fluid_names.size() > 1) {
         // Set the pointer - we are going to use the supplied fractions; they must be provided
@@ -244,8 +244,8 @@ void _PropsSI_initialize(const std::string& backend, const std::vector<std::stri
             // Reset the state
             State.reset(AbstractState::factory(backend, fluid_names));
         }
-    } else {  // The only path where fractions_ptr stays NULL
-        throw ValueError("fractions_ptr is NULL");
+    } else {  // The only path where fractions_ptr stays nullptr
+        throw ValueError("fractions_ptr is nullptr");
     }
     if (!State->available_in_high_level()) {
         throw ValueError(

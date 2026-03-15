@@ -11,6 +11,7 @@
 #include "CPnumerics.h"
 #include "Exceptions.h"
 #include <map>
+#include <string_view>
 namespace CoolProp {
 
 struct SimpleState
@@ -61,7 +62,7 @@ struct SsatSimpleState : public SimpleState
 /// The structure is taken directly from the AbstractState class.
 //
 // !! If you add a parameter, update the map in the corresponding CPP file !!
-enum parameters
+enum parameters : int
 {
     INVALID_PARAMETER = 0,
 
@@ -179,7 +180,7 @@ enum parameters
 // !! Also update phase_lookup_string() in CoolProp.cpp                    !!
 
 /// These are constants for the phases of the fluid
-enum phases
+enum phases : int
 {
     iphase_liquid,                ///< Subcritical liquid
     iphase_supercritical,         ///< Supercritical (p > pc, T > Tc)
@@ -208,10 +209,10 @@ enum schemes
 /// Return information about the parameter
 /// @param key The key, one of iT, iP, etc.
 /// @param info The thing you want, one of "IO" ("IO" if input/output, "O" if output only), "short" (very short description), "long" (a longer description), "units"
-std::string get_parameter_information(int key, const std::string& info);
+[[nodiscard]] std::string get_parameter_information(int key, std::string_view info);
 
 /// Return the enum key corresponding to the parameter name ("Dmolar" for instance)
-parameters get_parameter_index(const std::string& param_name);
+[[nodiscard]] parameters get_parameter_index(const std::string& param_name);
 
 /// Return true if passed phase name is valid, otherwise false
 /// @param phase_name The phase name string to be checked ("phase_liquid" for instance)
@@ -277,7 +278,7 @@ enum fluid_types
 
 // !! If you add a parameter, update the map in the corresponding CPP file !!
 /// These are input pairs that can be used for the update function (in each pair, input keys are sorted alphabetically)
-enum input_pairs
+enum input_pairs : int
 {
     INPUT_PAIR_INVALID = 0,  // Default (invalid) value
     QT_INPUTS,               ///< Molar quality, Temperature in K
@@ -341,7 +342,7 @@ inline bool match_pair(parameters key1, parameters key2, parameters x1, paramete
  * @return pair, or INPUT_PAIR_INVALID if not valid
  */
 template <class T>
-CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T& out1, T& out2) throw() {
+[[nodiscard]] CoolProp::input_pairs generate_update_pair(parameters key1, T value1, parameters key2, T value2, T& out1, T& out2) noexcept {
     CoolProp::input_pairs pair;
     bool swap;
 
@@ -444,7 +445,7 @@ extern void set_mixture_binary_pair_pcsaft(const std::string& CAS1, const std::s
 
 /// The structure is taken directly from the AbstractState class.
 // !! If you add a parameter, update the map in the corresponding CPP file !!
-enum backend_families
+enum backend_families : int
 {
     INVALID_BACKEND_FAMILY = 0,
     HEOS_BACKEND_FAMILY,
@@ -459,7 +460,7 @@ enum backend_families
     VTPR_BACKEND_FAMILY,
     PCSAFT_BACKEND_FAMILY
 };
-enum backends
+enum backends : int
 {
     INVALID_BACKEND = 0,
     HEOS_BACKEND_PURE,

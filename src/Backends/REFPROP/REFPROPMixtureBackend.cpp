@@ -43,7 +43,8 @@ surface tension                 N/m
 #include <stdio.h>
 #include <iostream>
 #include <cassert>
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 #include <stdlib.h>
 
 #if defined(_MSC_VER)

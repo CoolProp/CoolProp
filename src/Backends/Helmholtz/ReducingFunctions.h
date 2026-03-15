@@ -9,7 +9,8 @@
 
 #include <vector>
 #include "CoolPropFluid.h"
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 
 namespace CoolProp {
 

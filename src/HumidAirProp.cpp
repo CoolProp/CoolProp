@@ -5,6 +5,7 @@
 #endif
 
 #include <memory>
+using std::shared_ptr;
 
 #include "HumidAirProp.h"
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
@@ -12,7 +13,6 @@
 #include "CoolPropTools.h"
 #include "Ice.h"
 #include "CoolProp.h"
-#include "crossplatform_shared_ptr.h"
 #include "Exceptions.h"
 #include "Configuration.h"
 

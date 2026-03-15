@@ -12,7 +12,8 @@
 #include "Exceptions.h"
 #include "DataStructures.h"
 #include "PhaseEnvelope.h"
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 
 #include <numeric>
 
@@ -1635,7 +1636,7 @@ class GeneratorInitializer
 {
    public:
     GeneratorInitializer(backend_families bf) {
-        register_backend(bf, shared_ptr<AbstractStateGenerator>(new T()));
+        register_backend(bf, std::make_shared<T>());
     };
 };
 

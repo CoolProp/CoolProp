@@ -99,7 +99,7 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
     if (is_pure_or_pseudopure) {
         mole_fractions = std::vector<CoolPropDbl>(1, 1);
         std::vector<std::vector<double>> ones(1, std::vector<double>(1, 1));
-        Reducing = shared_ptr<ReducingFunction>(new GERG2008ReducingFunction(components, ones, ones, ones, ones));
+        Reducing = std::make_shared<GERG2008ReducingFunction>(components, ones, ones, ones, ones);
         _reducing = calc_reducing_state_nocache(mole_fractions);
         _gas_constant = calc_gas_constant();
     } else {
@@ -137,8 +137,8 @@ void HelmholtzEOSMixtureBackend::sync_linked_states(const HelmholtzEOSMixtureBac
         Reducing.reset(source->Reducing->copy());
     }
     // Recurse into linked states of the class
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        it->get()->sync_linked_states(source);
+    for (auto& state : linked_states) {
+        state->sync_linked_states(source);
     }
 }
 HelmholtzEOSMixtureBackend* HelmholtzEOSMixtureBackend::get_copy(bool generate_SatL_and_SatV) {
@@ -162,8 +162,8 @@ void HelmholtzEOSMixtureBackend::set_mass_fractions(const std::vector<CoolPropDb
         sum_moles += tmp;
     }
     std::vector<CoolPropDbl> mole_fractions;
-    for (std::vector<CoolPropDbl>::iterator it = moles.begin(); it != moles.end(); ++it) {
-        mole_fractions.push_back(*it / sum_moles);
+    for (const auto& m : moles) {
+        mole_fractions.push_back(m / sum_moles);
     }
     this->set_mole_fractions(mole_fractions);
 };
@@ -171,9 +171,9 @@ void HelmholtzEOSMixtureBackend::resize(std::size_t N) {
     this->mole_fractions.resize(N);
     this->K.resize(N);
     this->lnK.resize(N);
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        it->get()->N = N;
-        it->get()->resize(N);
+    for (auto& state : linked_states) {
+        state->N = N;
+        state->resize(N);
     }
 }
 void HelmholtzEOSMixtureBackend::recalculate_singlephase_phase() {
@@ -347,8 +347,8 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_double(const std::size_t
         Reducing->set_binary_interaction_double(i, j, parameter, value);
     }
     /// Also set the parameters in the managed pointers for other states
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        it->get()->set_binary_interaction_double(i, j, parameter, value);
+    for (auto& state : linked_states) {
+        state->set_binary_interaction_double(i, j, parameter, value);
     }
 };
 /// Get binary mixture floating point parameter for this instance
@@ -393,8 +393,8 @@ void HelmholtzEOSMixtureBackend::set_binary_interaction_string(const std::size_t
         throw ValueError(format("Cannot process this string parameter [%s] in set_binary_interaction_string", parameter.c_str()));
     }
     /// Also set the parameters in the managed pointers for other states
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        it->get()->set_binary_interaction_string(i, j, parameter, value);
+    for (auto& state : linked_states) {
+        state->set_binary_interaction_string(i, j, parameter, value);
     }
 };
 

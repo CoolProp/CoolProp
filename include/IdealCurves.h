@@ -1,5 +1,5 @@
 #include "AbstractState.h"
-#include "crossplatform_shared_ptr.h"
+#include <memory>
 #include "Solvers.h"
 #include "CoolPropTools.h"
 #include <string>

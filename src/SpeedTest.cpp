@@ -1,8 +1,8 @@
 #include <memory>
+using std::shared_ptr;
 #include "SpeedTest.h"
 #include "AbstractState.h"
 #include "DataStructures.h"
-#include "crossplatform_shared_ptr.h"
 
 #include <time.h>
 

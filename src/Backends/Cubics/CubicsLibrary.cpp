@@ -53,11 +53,11 @@ class CubicsLibraryClass
                 val.alpha0 = JSONFluidLibrary::parse_alpha0((*itr)["alpha0"]);
             }
             std::pair<std::map<std::string, CubicsValues>::iterator, bool> ret;
-            ret = fluid_map.insert(std::pair<std::string, CubicsValues>(upper(val.name), val));
+            ret = fluid_map.emplace(upper(val.name), val);
             if (ret.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 fluid_map.erase(ret.first);
-                ret = fluid_map.insert(std::pair<std::string, CubicsValues>(upper(val.name), val));
+                ret = fluid_map.emplace(upper(val.name), val);
                 if (get_debug_level() > 0) {
                     std::cout << "added the cubic fluid: " + val.name << std::endl;
                 }
@@ -67,18 +67,18 @@ class CubicsLibraryClass
             for (std::vector<std::string>::const_iterator it = val.aliases.begin(); it != val.aliases.end(); ++it) {
                 if (aliases_map.find(*it) == aliases_map.end()) {
                     // It's not already in aliases map
-                    aliases_map.insert(std::pair<std::string, std::string>(*it, upper(val.name)));
+                    aliases_map.emplace(*it, upper(val.name));
                 }
             }
 
             // Add/Replace name->JSONstring mapping to easily pull out if the user wants it
             // Convert fuid_json to a string and store it in the map.
             std::pair<std::map<std::string, std::string>::iterator, bool> addJson;
-            addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name), cpjson::json2string(*itr)));
+            addJson = JSONstring_map.emplace(upper(val.name), cpjson::json2string(*itr));
             if (addJson.second == false && get_config_bool(OVERWRITE_FLUIDS)) {
                 // Already there, see http://www.cplusplus.com/reference/map/map/insert/
                 JSONstring_map.erase(addJson.first);
-                addJson = JSONstring_map.insert(std::pair<std::string, std::string>(upper(val.name), cpjson::json2string(*itr)));
+                addJson = JSONstring_map.emplace(upper(val.name), cpjson::json2string(*itr));
                 if (get_debug_level() > 0) {
                     std::cout << "added the cubic fluid: " + val.name << std::endl;
                 }

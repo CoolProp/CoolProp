@@ -118,12 +118,12 @@ class ParameterInformation
     std::map<std::string, int> index_map;
     ParameterInformation() {
         for (auto& el : parameter_info_list) {
-            short_desc_map.insert(std::pair<int, std::string>(el.key, el.short_desc));
-            IO_map.insert(std::pair<int, std::string>(el.key, el.IO));
-            units_map.insert(std::pair<int, std::string>(el.key, el.units));
-            description_map.insert(std::pair<int, std::string>(el.key, el.description));
+            short_desc_map.emplace(el.key, el.short_desc);
+            IO_map.emplace(el.key, el.IO);
+            units_map.emplace(el.key, el.units);
+            description_map.emplace(el.key, el.description);
             index_map_insert(el.short_desc, el.key);
-            trivial_map.insert(std::pair<int, bool>(el.key, el.trivial));
+            trivial_map.emplace(el.key, el.trivial);
         }
         // Backward compatibility aliases
         index_map_insert("D", iDmass);
@@ -154,8 +154,8 @@ class ParameterInformation
 
    private:
     void index_map_insert(const std::string& desc, int key) {
-        index_map.insert(std::pair<std::string, int>(desc, key));
-        index_map.insert(std::pair<std::string, int>(upper(desc), key));
+        index_map.emplace(desc, key);
+        index_map.emplace(upper(desc), key);
     }
 };
 
@@ -176,7 +176,7 @@ bool is_trivial_parameter(int key) {
     throw ValueError(format("Unable to match the key [%d: %s] in is_trivial_parameter", key, get_parameter_information(key, "short").c_str()));
 }
 
-std::string get_parameter_information(int key, const std::string& info) {
+std::string get_parameter_information(int key, std::string_view info) {
     const std::map<int, std::string>* M;
     auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
@@ -189,14 +189,14 @@ std::string get_parameter_information(int key, const std::string& info) {
     } else if (info == "units") {
         M = &(parameter_information.units_map);
     } else {
-        throw ValueError(format("Bad info string [%s] to get_parameter_information", info.c_str()));
+        throw ValueError(format("Bad info string [%s] to get_parameter_information", std::string(info).c_str()));
     }
 
     auto it = M->find(key);
     if (it != M->end()) {
         return it->second;
     }
-    throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, info.c_str()));
+    throw ValueError(format("Unable to match the key [%d] in get_parameter_information for info [%s]", key, std::string(info).c_str()));
 }
 
 /// Return a list of parameters
@@ -381,9 +381,9 @@ class PhaseInformation
     PhaseInformation() {
         const phase_info* const end = phase_info_list + sizeof(phase_info_list) / sizeof(phase_info_list[0]);
         for (const phase_info* el = phase_info_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<phases, std::string>(el->key, el->short_desc));
-            long_desc_map.insert(std::pair<phases, std::string>(el->key, el->long_desc));
-            index_map.insert(std::pair<std::string, phases>(el->short_desc, el->key));
+            short_desc_map.emplace(el->key, el->short_desc);
+            long_desc_map.emplace(el->key, el->long_desc);
+            index_map.emplace(el->short_desc, el->key);
         }
     }
 };
@@ -445,8 +445,8 @@ class SchemeInformation
     SchemeInformation() {
         const scheme_info* const end = scheme_info_list + sizeof(scheme_info_list) / sizeof(scheme_info_list[0]);
         for (const scheme_info* el = scheme_info_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<schemes, std::string>(el->key, el->short_desc));
-            index_map.insert(std::pair<std::string, schemes>(el->short_desc, el->key));
+            short_desc_map.emplace(el->key, el->short_desc);
+            index_map.emplace(el->short_desc, el->key);
         }
     }
 };
@@ -557,9 +557,9 @@ class InputPairInformation
     InputPairInformation() {
         const input_pair_info* const end = input_pair_list + sizeof(input_pair_list) / sizeof(input_pair_list[0]);
         for (const input_pair_info* el = input_pair_list; el != end; ++el) {
-            short_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->short_desc));
-            long_desc_map.insert(std::pair<input_pairs, std::string>(el->key, el->long_desc));
-            index_map.insert(std::pair<std::string, input_pairs>(el->short_desc, el->key));
+            short_desc_map.emplace(el->key, el->short_desc);
+            long_desc_map.emplace(el->key, el->long_desc);
+            index_map.emplace(el->short_desc, el->key);
         }
     }
 };
@@ -788,14 +788,14 @@ class BackendInformation
 
     BackendInformation() {
         for (auto& el : backend_family_list) {
-            family_name_map.insert(std::pair<backend_families, std::string>(el.family, el.name));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
+            family_name_map.emplace(el.family, el.name);
+            family_name_map_r.emplace(el.name, el.family);
         }
         for (auto& el : backend_list) {
-            backend_family_map.insert(std::pair<backends, backend_families>(el.backend, el.family));
-            backend_name_map.insert(std::pair<backends, std::string>(el.backend, el.name));
-            backend_name_map_r.insert(std::pair<std::string, backends>(el.name, el.backend));
-            family_name_map_r.insert(std::pair<std::string, backend_families>(el.name, el.family));
+            backend_family_map.emplace(el.backend, el.family);
+            backend_name_map.emplace(el.backend, el.name);
+            backend_name_map_r.emplace(el.name, el.backend);
+            family_name_map_r.emplace(el.name, el.family);
         }
     }
 };

@@ -12,7 +12,8 @@
 #include "DataStructures.h"
 #include "Exceptions.h"
 #include "float.h"
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 #include "AbstractState.h"
 #include "Exceptions.h"
 #include "Configuration.h"

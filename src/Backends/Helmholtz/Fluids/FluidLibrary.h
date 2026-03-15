@@ -5,7 +5,8 @@
 #include "CoolPropFluid.h"
 
 #include "rapidjson_include.h"
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 
 #include <map>
 #include <algorithm>
