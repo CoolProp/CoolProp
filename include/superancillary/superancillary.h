@@ -33,7 +33,7 @@ Subsequent edits by Ian Bell
 
 #pragma once
 
-#include <iostream>
+#include <cstdio>
 #include <utility>
 #include <optional>
 #include <Eigen/Dense>
@@ -1204,7 +1204,7 @@ class SuperAncillary
             T = (r + l) / 2.0;
             return returner();
         } catch (...) {
-            std::cout << "fTmin,fTmax: " << fTmin << "," << fTmax << std::endl;
+            fprintf(stderr, "fTmin,fTmax: %g,%g\n", fTmin, fTmax);
             throw;
         }
     }
