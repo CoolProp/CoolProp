@@ -61,9 +61,9 @@ enum EC
 
 // table of error messages
 // As of Mathcad Prime 10, these are now actually returned as Custom Error: messages
-char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Interrupted",
+char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Insufficient Memory",
-                                               "Argument must be real",
+                                               "Interrupted",
                                                "Invalid Fluid String",
                                                "Invalid predefined mixture or Binary Interaction Parameters Missing",
                                                "IF97 Backend supports pure \"Water\" only",
@@ -85,7 +85,7 @@ char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Interrupted",
                                                "Temperature-Pressure inputs in 2-phase region; use TQ or PQ",
                                                "At least one of the inputs must be [T], [R], [W], or [Tdp]",
                                                "Could not match binary pair",
-                                               "Missing at least one set of binary interaction parameters. Use get_global_param_string(\"errstring\") for more info.",
+                                               "Missing at least one set of binary interaction parameters.",
                                                "Mixing rule must be \"linear\" or \"Lorentz-Berthelot\".",
                                                "Specified binary pair already exists.",
                                                "CoolProp Issue: Use get_global_param_string(\"errstring\") for more info.",
@@ -273,52 +273,59 @@ LRESULT CP_Props1SI(LPCOMPLEXSCALAR Prop,  // pointer to the result
     return 0;
 }
 
-// Helper: centralize text-matching logic for PropsSI error handling
-static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Prop1Name, CoolProp::parameters& key1)
+// Helper: centralize text-matching logic for PropsSI and PhaseSI error handling
+static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Prop1Name, CoolProp::parameters& key1, const unsigned int o )
 {
+    // Parameter "o" is passed as a parameter # offset between PropsSI (6 parameters) and PhaseSI (5 parameters and no output string)
+    // PropsSI calls this routine with o = 0u (zero), while PhaseSI calls this routhine with o = 1u.
     auto contains = [&](const char* s) { return emsg.find(s) != std::string::npos; };
     unsigned int errPos = 0;
 
     if (contains("Input pair variable is invalid")) {
-        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u : 4u;
+        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u-o : 4u-0;
         return MAKELRESULT(BAD_PARAMETER, errPos);
     }
-    if (contains("Input Name1")) return MAKELRESULT(BAD_PARAMETER, 2);
-    if (contains("Input Name2")) return MAKELRESULT(BAD_PARAMETER, 4);
-    if (contains("Phase can only be specified on one")) return MAKELRESULT(ONLY_ONE_PHASE_SPEC, 4);
+    if (contains("Input Name1")) return MAKELRESULT(BAD_PARAMETER, 2-o);
+    if (contains("Input Name2")) return MAKELRESULT(BAD_PARAMETER, 4-o);
+    if (contains("Phase can only be specified on one")) return MAKELRESULT(ONLY_ONE_PHASE_SPEC, 4-o);
     if (contains("valid phase")) {
-        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u : 4u;
+        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u-o : 4u-o;
         return MAKELRESULT(BAD_PHASE, errPos);
     }
-    if (contains("This pair of inputs")) return MAKELRESULT(BAD_INPUT_PAIR, 2);
-    if (contains("Input vapor quality")) return (Prop1Name == "Q") ? MAKELRESULT(BAD_QUAL, 3) : MAKELRESULT(BAD_QUAL, 5);
+    if (contains("This pair of inputs")) return MAKELRESULT(BAD_INPUT_PAIR, 2-o);
+    if (contains("Input vapor quality")) return (Prop1Name == "Q") ? MAKELRESULT(BAD_QUAL, 3-o) : MAKELRESULT(BAD_QUAL, 5-o);
     if (contains("Output string is invalid")) return MAKELRESULT(BAD_PARAMETER, 1);
     if (contains("not valid in two phase region")) return MAKELRESULT(TWO_PHASE, 1);
     if (contains("only defined within the two-phase")) return MAKELRESULT(NON_TWO_PHASE, 1);
     if (contains("not implemented")) return MAKELRESULT(NOT_AVAIL, 1);
 
     if (contains("Initialize failed")) {
-        if (contains("Could not match the binary pair")) return MAKELRESULT(MISSING_BINARY_PAIR, 6);
+        errPos = 6u -o;
+        if (contains("Could not match the binary pair")) return MAKELRESULT(MISSING_BINARY_PAIR, errPos);
         if (contains("REFPROP")) {
-            if (contains("cannot use")) return MAKELRESULT(NO_REFPROP, 6);
-            return MAKELRESULT(BAD_FLUID, 6);
+            if (contains("cannot use")) return MAKELRESULT(NO_REFPROP, errPos);
+            return MAKELRESULT(BAD_FLUID, errPos);
         }
-        if (contains("IF97")) return MAKELRESULT(BAD_IF97_FLUID, 6);
-        return MAKELRESULT(BAD_FLUID, 6);
+        if (contains("IF97")) return MAKELRESULT(BAD_IF97_FLUID, errPos);
+        return MAKELRESULT(BAD_FLUID, errPos);
     }
 
-    if (contains("Temperature")) return (Prop1Name == "T") ? MAKELRESULT(T_OUT_OF_RANGE, 3) : MAKELRESULT(T_OUT_OF_RANGE, 5);
-    if (contains("Saturation pressure")) return (Prop1Name == "P") ? MAKELRESULT(TP_SATURATION, 3) : MAKELRESULT(TP_SATURATION, 5);
-    if (contains("Pressure")) return (Prop1Name == "P") ? MAKELRESULT(P_OUT_OF_RANGE, 3) : MAKELRESULT(P_OUT_OF_RANGE, 5);
-    if (contains("Enthalpy") || contains("solution because Hmolar"))
-        return ((Prop1Name == "H") || (Prop1Name == "Hmolar")) ? MAKELRESULT(H_OUT_OF_RANGE, 3) : MAKELRESULT(H_OUT_OF_RANGE, 5);
-    if (contains("Entropy") || contains("solution because Smolar"))
-        return ((Prop1Name == "S") || (Prop1Name == "Smolar")) ? MAKELRESULT(S_OUT_OF_RANGE, 3) : MAKELRESULT(S_OUT_OF_RANGE, 5);
+    if (contains("Temperature") || contains("below Tmelt(p)"))        // Casess where temperture is out of range.
+        return (Prop1Name == "T") ? MAKELRESULT(T_OUT_OF_RANGE, 3u - o) : MAKELRESULT(T_OUT_OF_RANGE, 5u - o);
+    if (contains("Saturation pressure"))                              // Cases at saturation for T-P
+        return (Prop1Name == "P") ? MAKELRESULT(TP_SATURATION, 3u - o) : MAKELRESULT(TP_SATURATION, 5u - o);
+    if (contains("Pressure") || contains("melting line T(p)"))        // Cases where pressure is out of range
+        return (Prop1Name == "P") ? MAKELRESULT(P_OUT_OF_RANGE, 3u-o) : MAKELRESULT(P_OUT_OF_RANGE, 5u-o);
+    if (contains("Enthalpy") || contains("solution because Hmolar"))  // Cases where enthalpy is out of range
+        return ((Prop1Name == "H") || (Prop1Name == "Hmolar")) ? MAKELRESULT(H_OUT_OF_RANGE, 3u-o) : MAKELRESULT(H_OUT_OF_RANGE, 5u-o);
+    if (contains("Entropy") || contains("solution because Smolar"))   // Cases where intropy is out of range
+        return ((Prop1Name == "S") || (Prop1Name == "Smolar")) ? MAKELRESULT(S_OUT_OF_RANGE, 3u-o) : MAKELRESULT(S_OUT_OF_RANGE, 5u-o);
 
+    // Untrapped error, return generic error code and have user check get_global_param_string("errstring") for details
     return MAKELRESULT(UNKNOWN, 1);
 }
 
-// this code executes the user function CP_PropsSI, which is a wrapper for
+// This code executes the user function CP_PropsSI, which is a wrapper for
 // the CoolProp.PropsSI() function, used to extract a fluid-specific parameter that is dependent on the state
 LRESULT CP_PropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
                    LPCMCSTRING OutputName,       // string with a valid CoolProp OutputName
@@ -342,7 +349,7 @@ LRESULT CP_PropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
     r = CheckRealOrError(InputProp2, 5);
     if (r) return r;
 
-    // pass the arguments to the CoolProp.Props() function
+    // pass the arguments to the CoolProp.PropsSI() function
     Prop->real = CoolProp::PropsSI(OutputName->str, InputName1->str, InputProp1->real, InputName2->str, InputProp2->real, FluidName->str);
 
     // Note: PropsSI does not throw exceptions, but instead
@@ -351,11 +358,60 @@ LRESULT CP_PropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
     if (!ValidNumber(Prop->real)) {
         std::string emsg = CoolProp::get_global_param_string("errstring");
         CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
-        return HandlePropsSIError(emsg, Prop1Name, key1);
+        return HandlePropsSIError(emsg, Prop1Name, key1,0u);
     }
     // normal return
     return 0;
 }
+
+// This code executes the user function CP_PhaseSI, which is a wrapper for
+// the CoolProp.PhaseSI() function, used to the fluid phase dependent on the state
+LRESULT CP_PhaseSI(LPMCSTRING PhaseStr,          // output (CoolProp phase string)
+                   LPCMCSTRING InputName1,       // CoolProp InputName1
+                   LPCCOMPLEXSCALAR InputProp1,  // CoolProp InputProp1
+                   LPCMCSTRING InputName2,       // CoolProp InputName2
+                   LPCCOMPLEXSCALAR InputProp2,  // CoolProp InputProp2
+                   LPCMCSTRING FluidName)        // CoolProp Fluid
+{
+    std::string ph;
+    std::string Prop1Name(InputName1->str);
+    std::string Prop2Name(InputName2->str);
+    std::string FluidString = FluidName->str;
+    CoolProp::parameters key1;
+
+    // check that the first scalar argument is real
+    LRESULT r = CheckRealOrError(InputProp1, 3);
+    if (r) return r;
+
+    // check that the second scalar argument is real
+    r = CheckRealOrError(InputProp2, 5);
+    if (r) return r;
+
+    // pass the arguments to the CoolProp.phaseSI() function
+    ph = CoolProp::PhaseSI(InputName1->str, InputProp1->real, InputName2->str, InputProp2->real, FluidName->str);
+
+    // Note: PhaseSI does not throw exceptions, but instead appends the global parameter "errstring"
+    // to the returned phase string if there is an error and returns "unknown" for the phase string.
+    //
+    // Use string search to see if PhaseSI failed with an error message (appended ": <error>")...
+    if (ph.find("unknown:") != std::string::npos) {
+        std::string emsg = ph.substr(ph.find(":")+2,ph.length()-ph.find(":")+2);
+        CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
+        // Use PropsSI error handling logic to determine the specific error message but with adjusted argument
+        // positions for PhaseSI (which has no OutputName argument and thus shifts the positions of the InputName
+        // and InputProp arguments by 1)
+        return HandlePropsSIError(emsg, Prop1Name, key1, 1u);
+    }
+
+    // Must use MathcadAllocate(size) so Mathcad can track and release, using Helper routine above
+    char* c = AllocMathcadString(ph);
+    // assign the string to the function's output parameter
+    PhaseStr->str = c;
+
+    // normal return
+    return 0;
+}
+
 
 // this code executes the user function CP_HAPropsSI, which is a wrapper for
 // the CoolProp.HAPropsSI() function, used to extract humid air properties in base-SI units
@@ -591,6 +647,17 @@ FUNCTIONINFO PropsSI = {
   {MC_STRING, MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                // Argument types
 };
 
+FUNCTIONINFO PhaseSI = {
+  "PhaseSI",                                                                                  // Name by which Mathcad will recognize the function
+  "Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name",               // Description of input parameters
+  "Returns the fluid phase, dependent on the fluid state",                                    // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_PhaseSI,                                                                    // Pointer to the function code.
+  MC_STRING,                                                                                  // Returns a Mathcad String
+  5,                                                                                          // Number of arguments
+  {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                           // Argument types
+};
+
+
 FUNCTIONINFO HAPropsSI = {
   "HAPropsSI",  // Name by which Mathcad will recognize the function
   "Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Input Name 3, Input Property 3",  // Description of input parameters
@@ -656,6 +723,7 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &RefState);
             CreateUserFunction(hDLL, &Props1SI);
             CreateUserFunction(hDLL, &PropsSI);
+            CreateUserFunction(hDLL, &PhaseSI);
             CreateUserFunction(hDLL, &HAPropsSI);
             CreateUserFunction(hDLL, &GetMixtureData);
             CreateUserFunction(hDLL, &SetMixtureData);
