@@ -41,10 +41,10 @@ CubicsValues get_cubic_values(const std::string& identifier);
 /** \brief Add an array of fluids to the cubics library (as a JSON-formatted string)
          * @param JSON A JSON-formatted string with the fluid information
          */
-void add_fluids_as_JSON(const std::string& JSON);
+void add_fluids_as_JSON(const std::string_view& JSON);
 
 /// Get the schema used to validate the cubic fluids
-std::string get_cubic_fluids_schema();
+std::string_view get_cubic_fluids_schema();
 
 /// Get a csv separated list of fluid names that are loaded
 std::string get_cubic_fluids_list();

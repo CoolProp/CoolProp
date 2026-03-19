@@ -1015,11 +1015,11 @@ std::string get_global_param_string(const std::string& ParamName) {
     } else if (ParamName == "REFPROP_version") {
         return REFPROPMixtureBackend::version();
     } else if (ParamName == "cubic_fluids_schema") {
-        return CoolProp::CubicLibrary::get_cubic_fluids_schema();
+        return std::string{CoolProp::CubicLibrary::get_cubic_fluids_schema()};
     } else if (ParamName == "cubic_fluids_list") {
         return CoolProp::CubicLibrary::get_cubic_fluids_list();
     } else if (ParamName == "pcsaft_fluids_schema") {
-        return CoolProp::PCSAFTLibrary::get_pcsaft_fluids_schema();
+        return std::string{CoolProp::PCSAFTLibrary::get_pcsaft_fluids_schema()};
     } else {
         throw ValueError(format("Input parameter [%s] is invalid", ParamName.c_str()));
     }

@@ -178,7 +178,7 @@ def TO_CPP(root_dir, hashes):
             output += '// JSON file encoded in binary form\n'
             output += 'static constexpr char ' + variable + '_binary[] = {\n' + hex_string + '\n};' + '\n\n'
             output += '// Combined into a single std::string \n'
-            output += 'static constexpr std::string_view {v:s}({v:s}_binary);'.format(v=variable)
+            output += 'static constexpr std::string_view {v:s}(std::begin({v:s}_binary), std::size({v:s}_binary));'.format(v=variable)
 
             # Write it to file
             f = open(os.path.join(root_dir, 'include', outfile), 'w')

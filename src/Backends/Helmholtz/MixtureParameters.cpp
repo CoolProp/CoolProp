@@ -19,9 +19,9 @@ class PredefinedMixturesLibrary
         load_from_string(predefined_mixtures_JSON);
     }
 
-    void load_from_string(const std::string& str) {
+    void load_from_string(const std::string_view& str) {
         rapidjson::Document doc;
-        doc.Parse<0>(str.c_str());
+        doc.Parse<0>(str.data(), str.size());
         if (doc.HasParseError()) {
             std::cout << str << std::endl;
             throw ValueError("Unable to parse predefined mixture string");
@@ -92,9 +92,9 @@ class MixtureBinaryPairLibrary
         return m_binary_pair_map;
     };
 
-    void load_from_string(const std::string& str) {
+    void load_from_string(const std::string_view& str) {
         rapidjson::Document doc;
-        doc.Parse<0>(str.c_str());
+        doc.Parse<0>(str.data(), str.size());
         if (doc.HasParseError()) {
             std::cout << str << std::endl;
             throw ValueError("Unable to parse binary interaction function string");
@@ -416,9 +416,9 @@ class MixtureDepartureFunctionsLibrary
         return m_departure_function_map;
     };
 
-    void load_from_string(const std::string& str) {
+    void load_from_string(const std::string_view& str) {
         rapidjson::Document doc;
-        doc.Parse<0>(str.c_str());
+        doc.Parse<0>(str.data(), str.size());
         if (doc.HasParseError()) {
             std::cout << str << std::endl;
             throw ValueError("Unable to parse departure function string");

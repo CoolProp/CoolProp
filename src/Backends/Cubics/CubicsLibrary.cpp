@@ -140,7 +140,7 @@ class CubicsLibraryClass
 };
 static CubicsLibraryClass library;
 
-void add_fluids_as_JSON(const std::string& JSON) {
+void add_fluids_as_JSON(const std::string_view& JSON) {
     // First we validate the json string against the schema;
     std::string errstr;
     cpjson::schema_validation_code val_code = cpjson::validate_schema(cubic_fluids_schema_JSON, JSON, errstr);
@@ -148,7 +148,7 @@ void add_fluids_as_JSON(const std::string& JSON) {
     if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
         rapidjson::Document dd;
 
-        dd.Parse<0>(JSON.c_str());
+        dd.Parse<0>(JSON.data(), JSON.size());
         if (dd.HasParseError()) {
             throw ValueError("Cubics JSON is not valid JSON");
         } else {
@@ -169,7 +169,7 @@ std::string get_fluid_as_JSONstring(const std::string& identifier) {
 CubicLibrary::CubicsValues get_cubic_values(const std::string& identifier) {
     return library.get(identifier);
 }
-std::string get_cubic_fluids_schema() {
+std::string_view get_cubic_fluids_schema() {
     return cubic_fluids_schema_JSON;
 }
 std::string get_cubic_fluids_list() {

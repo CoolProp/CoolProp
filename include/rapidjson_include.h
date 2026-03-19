@@ -310,19 +310,19 @@ enum schema_validation_code
 /**
      * Validate a JSON-formatted string against a JSON-formatted schema string
      */
-inline schema_validation_code validate_schema(const std::string& schemaJson, const std::string& inputJson, std::string& errstr) {
+inline schema_validation_code validate_schema(const std::string_view& schemaJson, const std::string_view& inputJson, std::string& errstr) {
     rapidjson::Document sd;
-    sd.Parse(schemaJson.c_str());
+    sd.Parse(schemaJson.data(), schemaJson.size());
     if (sd.HasParseError()) {
-        errstr = format("Invalid schema: %s\n", schemaJson.c_str());
+        errstr = format("Invalid schema: %s\n", schemaJson);
         return SCHEMA_INVALID_JSON;
     }
     rapidjson::SchemaDocument schema(sd);  // Compile a Document to SchemaDocument
 
     rapidjson::Document d;
-    d.Parse(inputJson.c_str());
+    d.Parse(inputJson.data(), inputJson.size());
     if (d.HasParseError()) {
-        errstr = format("Invalid input json: %s\n", inputJson.c_str());
+        errstr = format("Invalid input json: %s\n", inputJson);
         return INPUT_INVALID_JSON;
     }
 

@@ -26,7 +26,7 @@ class PCSAFTLibraryClass
     std::map<std::vector<std::string>, std::vector<Dictionary>> m_binary_pair_map;
 
     void load_from_JSON(rapidjson::Document& doc);
-    void load_from_string(const std::string& str);
+    void load_from_string(const std::string_view& str);
 
    public:
     PCSAFTLibraryClass();
@@ -51,10 +51,10 @@ class PCSAFTLibraryClass
 /** \brief Add an array of fluids to the PC-SAFT library (as a JSON-formatted string)
  * @param JSON A JSON-formatted string with the fluid information
  */
-void add_fluids_as_JSON(const std::string& JSON);
+void add_fluids_as_JSON(const std::string_view& JSON);
 
 /// Get the schema used to validate the PC-SAFT fluids
-std::string get_pcsaft_fluids_schema();
+std::string_view get_pcsaft_fluids_schema();
 
 PCSAFTLibraryClass& get_library(void);
 }  // namespace PCSAFTLibrary
