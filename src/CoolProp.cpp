@@ -577,7 +577,8 @@ void _PropsSImulti(const std::vector<std::string>& Outputs, const std::string& N
         throw ValueError(format("Output parameter parsing failed; error: %s", e.what()));
     }
 
-    // Calculate the output(s).  In the case of a failure, all values will be filled with _HUGE
+    // Calculate the output(s).  In the case of a failure, individual values will be filled with _HUGE
+    // Exception: If there is only one input and one output (like from PropsSI), the output will be cleared and IO.empty() will be true
     _PropsSI_outputs(State, output_parameters, input_pair, v1, v2, IO);
 }
 
@@ -841,7 +842,7 @@ std::vector<std::vector<double>> Props1SImulti(const std::vector<std::string>& O
                                                const std::vector<std::string>& fluids, const std::vector<double>& fractions) {
     std::vector<double> zero_vector(1, 0.);
     std::vector<std::vector<double>> val1 = PropsSImulti(Outputs, "", zero_vector, "", zero_vector, backend, fluids, fractions);
-    // error handling is done in PropsSImulti, val1 will be an empty vector if an error occured
+    // error handling is done in PropsSImulti, val1 will be an empty vector if an error occurred
     return val1;
 }
 
