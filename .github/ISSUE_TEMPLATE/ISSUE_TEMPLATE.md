@@ -1,3 +1,11 @@
+---
+name: General Issue Report
+about: Report a general issue, ask a question, or propose a feature.
+title: "[ISSUE] "
+labels: ["needs-triage"]
+assignees: ''
+---
+
 Do you want to ask a question? Are you looking for technical support? For any kind of question regarding CoolProp and its usage, you can ask the [CoolProp user group](https://goo.gl/Pa7FBT)
 
 If you have an issue to report, please continue and fill out the applicable sections below.  The details provided will help to resolve this issue as quickly as possible.
