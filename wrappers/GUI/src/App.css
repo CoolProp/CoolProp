@@ -1,0 +1,421 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  background: #f0f0f0;
+  color: #1a1a1a;
+}
+
+/* ── Layout ─────────────────────────────────────────── */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-header {
+  background: #1c2b3a;
+  color: #fff;
+  padding: 0 16px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 2px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  padding: 8px 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.tab-btn.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.seg-ctrl {
+  margin-left: auto;
+  display: flex;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.seg-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.seg-btn:hover {
+  color: #fff;
+}
+
+.seg-btn.active {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.app-main {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.placeholder {
+  color: #888;
+  text-align: center;
+  padding: 60px;
+}
+
+/* ── Form primitives ─────────────────────────────────── */
+
+select,
+input[type="number"],
+input[type="text"] {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 7px;
+  font-size: 13px;
+  background: #fff;
+  height: 28px;
+}
+
+select:focus,
+input:focus {
+  outline: none;
+  border-color: #3d7edd;
+  box-shadow: 0 0 0 2px rgba(61, 126, 221, 0.2);
+}
+
+button.primary {
+  background: #3d7edd;
+  color: #fff;
+  border: none;
+  padding: 0 16px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+button.primary:hover {
+  background: #2f68c3;
+}
+
+button.primary:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+.error-msg {
+  color: #c0392b;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.field-group label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ── PropertyCalculator ──────────────────────────────── */
+
+.calc-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  height: 100%;
+}
+
+.calc-controls {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calc-controls select,
+.calc-controls input {
+  width: 100%;
+}
+
+.calc-results {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: auto;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.results-table th {
+  background: #f5f5f5;
+  border-bottom: 2px solid #ddd;
+  padding: 7px 12px;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.results-table td {
+  padding: 5px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.results-table tr:last-child td {
+  border-bottom: none;
+}
+
+.results-table td.num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-family: "Menlo", "Consolas", monospace;
+}
+
+.results-table td.unit {
+  color: #666;
+  padding-left: 6px;
+}
+
+/* ── Modal dialog ────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  width: 460px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 18px;
+  color: #1a1a1a;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.field-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.field-row input,
+.field-row select {
+  width: 100%;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid #ccc;
+  color: #444;
+  padding: 0 14px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-secondary:hover {
+  background: #f0f0f0;
+}
+
+.readonly-value {
+  height: 28px;
+  line-height: 28px;
+  padding: 0 2px;
+  font-size: 13px;
+  color: #555;
+}
+
+/* ── HumidAirCalculator ──────────────────────────────── */
+
+.ha-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  height: 100%;
+}
+
+.ha-left {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.ha-left .calc-controls select,
+.ha-left .calc-controls input {
+  width: 100%;
+}
+
+.ha-chart {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+/* ── SaturationTable ─────────────────────────────────── */
+
+.sat-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sat-controls {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.sat-controls .field-group {
+  min-width: 120px;
+}
+
+.sat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.sat-info-fluid {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.sat-info-detail {
+  font-size: 11px;
+  color: #666;
+}
+
+.sat-status {
+  font-size: 12px;
+  color: #888;
+  align-self: center;
+}
+
+.sat-table-wrap {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.sat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sat-table th {
+  background: #f5f5f5;
+  border-bottom: 2px solid #ddd;
+  padding: 6px 10px;
+  text-align: right;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.sat-table th:first-child {
+  text-align: left;
+}
+
+.sat-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: "Menlo", "Consolas", monospace;
+}
+
+.sat-table tr:last-child td {
+  border-bottom: none;
+}
