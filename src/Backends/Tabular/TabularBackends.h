@@ -7,7 +7,6 @@
 #include "crossplatform_shared_ptr.h"
 #include "Exceptions.h"
 #include "CoolProp.h"
-#include <sstream>
 #include "Configuration.h"
 #include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 

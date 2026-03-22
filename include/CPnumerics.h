@@ -12,6 +12,7 @@
 #include "PlatformDetermination.h"
 #include "CPstrings.h"
 #include "Exceptions.h"
+#include <iostream>  // for std::cerr in Spline
 
 #if defined(HUGE_VAL) && !defined(_HUGE)
 #    define _HUGE HUGE_VAL

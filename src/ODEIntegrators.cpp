@@ -4,6 +4,7 @@
 #include "CPstrings.h"
 #include "Exceptions.h"
 #include <algorithm>
+#include <iostream>
 
 bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed,
                                   double step_relax) {

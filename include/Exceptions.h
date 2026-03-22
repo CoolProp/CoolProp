@@ -4,7 +4,7 @@
 #define CPEXCEPTIONS_H
 
 #include <exception>
-#include <iostream>
+#include <string>
 
 namespace CoolProp {
 
