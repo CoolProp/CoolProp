@@ -542,7 +542,7 @@ static JSONIncompressibleLibrary library;
 void load_incompressible_library() {
     rapidjson::Document dd;
     // This json formatted string comes from the all_incompressibles_JSON.h header which is a C++-escaped version of the JSON file
-    dd.Parse<0>(all_incompressibles_JSON.c_str());
+    dd.Parse<0>(all_incompressibles_JSON.data(), all_incompressibles_JSON.size());
     if (dd.HasParseError()) {
         throw ValueError("Unable to load all_incompressibles_JSON.json");
     } else {

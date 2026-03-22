@@ -66,7 +66,7 @@ PCSAFTFluid& PCSAFTLibraryClass::get(std::size_t key) {
     }
 };
 
-void add_fluids_as_JSON(const std::string& JSON) {
+void add_fluids_as_JSON(const std::string_view& JSON) {
     // First we validate the json string against the schema;
     std::string errstr;
     cpjson::schema_validation_code val_code = cpjson::validate_schema(pcsaft_fluids_schema_JSON, JSON, errstr);
@@ -75,7 +75,7 @@ void add_fluids_as_JSON(const std::string& JSON) {
     if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
         rapidjson::Document dd;
 
-        dd.Parse<0>(JSON.c_str());
+        dd.Parse<0>(JSON.data(), JSON.size());
         if (dd.HasParseError()) {
             throw ValueError("Unable to load all_pcsaft_JSON.json");
         } else {
@@ -196,7 +196,7 @@ int PCSAFTLibraryClass::add_many(rapidjson::Value& listing) {
     return counter;
 };
 
-std::string get_pcsaft_fluids_schema() {
+std::string_view get_pcsaft_fluids_schema() {
     return pcsaft_fluids_schema_JSON;
 }
 
@@ -373,9 +373,9 @@ void PCSAFTLibraryClass::load_from_JSON(rapidjson::Document& doc) {
     }
 }
 
-void PCSAFTLibraryClass::load_from_string(const std::string& str) {
+void PCSAFTLibraryClass::load_from_string(const std::string_view& str) {
     rapidjson::Document doc;
-    doc.Parse<0>(str.c_str());
+    doc.Parse<0>(str.data(), str.size());
     if (doc.HasParseError()) {
         throw ValueError("Unable to parse PC-SAFT binary interaction parameter string");
     }
