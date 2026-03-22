@@ -1,0 +1,339 @@
+import { useState, useCallback, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import Plot from "react-plotly.js";
+
+// ── Input parameter definitions ───────────────────────────────────────────────
+
+interface HAInputDef {
+  name: string;   // HAPropsSI key
+  label: string;  // display label
+  unit: string;
+  defaultVal: string;
+}
+
+const HA_INPUTS: HAInputDef[] = [
+  { name: "T", label: "Dry-bulb temp",  unit: "K",      defaultVal: "293.15" },
+  { name: "R", label: "Rel. humidity",  unit: "0–1",    defaultVal: "0.5"    },
+  { name: "W", label: "Humidity ratio", unit: "kg/kg_da", defaultVal: "0.0073" },
+  { name: "D", label: "Dew-point",      unit: "K",      defaultVal: "282"    },
+  { name: "B", label: "Wet-bulb",       unit: "K",      defaultVal: "287"    },
+];
+
+// ── Output definitions ────────────────────────────────────────────────────────
+
+interface HAOutputDef {
+  key: string;
+  label: string;
+  unit: string;
+}
+
+const HA_OUTPUTS: HAOutputDef[] = [
+  { key: "T",   label: "Dry-bulb temp",   unit: "K"          },
+  { key: "B",   label: "Wet-bulb",        unit: "K"          },
+  { key: "D",   label: "Dew-point",       unit: "K"          },
+  { key: "R",   label: "Rel. humidity",   unit: "–"          },
+  { key: "W",   label: "Humidity ratio",  unit: "kg/kg_da"   },
+  { key: "H",   label: "Enthalpy",        unit: "J/kg_da"    },
+  { key: "S",   label: "Entropy",         unit: "J/kg_da·K"  },
+  { key: "V",   label: "Specific volume", unit: "m³/kg_da"   },
+  { key: "C",   label: "Cp",              unit: "J/kg_da·K"  },
+  { key: "M",   label: "Viscosity",       unit: "Pa·s"       },
+  { key: "K",   label: "Conductivity",    unit: "W/m·K"      },
+];
+
+const OUTPUT_KEYS = HA_OUTPUTS.map((o) => o.key);
+
+// ── Psychrometric chart helpers ───────────────────────────────────────────────
+
+const T_RANGE = { min: 233.15, max: 333.15, n: 60 };
+
+/** Compute W (humidity ratio) from T and R at pressure P (default 101325 Pa). */
+async function computeW(T: number, R: number, P = 101325): Promise<number | null> {
+  try {
+    const res = await invoke<Record<string, number>>("compute_humid_air", {
+      n1: "P", v1: P,
+      n2: "T", v2: T,
+      n3: "R", v3: R,
+      outputs: ["W"],
+    });
+    return res["W"] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function HumidAirCalculator() {
+  const [pressure, setPressure] = useState("101325");
+  const [input2Idx, setInput2Idx] = useState(0); // index into HA_INPUTS (T by default)
+  const [input3Idx, setInput3Idx] = useState(1); // index into HA_INPUTS (R by default)
+  const [v2, setV2] = useState(HA_INPUTS[0].defaultVal);
+  const [v3, setV3] = useState(HA_INPUTS[1].defaultVal);
+
+  const [results, setResults] = useState<Record<string, number> | null>(null);
+  const [calcError, setCalcError] = useState<string | null>(null);
+  const [computing, setComputing] = useState(false);
+
+  // Chart traces: iso-RH lines + saturation curve, computed once on mount
+  const [isoTraces, setIsoTraces] = useState<Plotly.Data[]>([]);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const chartReady = useRef(false);
+
+  // Build chart background once
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const RH_LEVELS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+      const Ts: number[] = [];
+      for (let i = 0; i < T_RANGE.n; i++) {
+        Ts.push(T_RANGE.min + (i / (T_RANGE.n - 1)) * (T_RANGE.max - T_RANGE.min));
+      }
+
+      const traces: Plotly.Data[] = [];
+
+      for (const R of RH_LEVELS) {
+        const xs: number[] = [];
+        const ys: number[] = [];
+        for (const T of Ts) {
+          const W = await computeW(T, R);
+          if (W !== null && W >= 0) {
+            xs.push(T);
+            ys.push(W);
+          }
+        }
+        if (cancelled) return;
+        if (xs.length === 0) continue;
+
+        const isSat = R === 1.0;
+        const color = isSat ? "#1c2b3a" : "#bbb";
+        const width = isSat ? 1.5 : 1;
+
+        // Line trace
+        traces.push({
+          x: xs,
+          y: ys,
+          type: "scatter",
+          mode: "lines",
+          line: { color, width },
+          showlegend: false,
+          hoverinfo: "skip",
+        } as Plotly.Data);
+
+        // Label at rightmost point
+        const labelText = isSat ? "Sat." : `${Math.round(R * 100)}%`;
+        traces.push({
+          x: [xs[xs.length - 1]],
+          y: [ys[ys.length - 1]],
+          type: "scatter",
+          mode: "text",
+          text: [labelText],
+          textposition: "middle right",
+          textfont: { size: 10, color },
+          showlegend: false,
+          hoverinfo: "skip",
+        } as Plotly.Data);
+      }
+
+      if (!cancelled) {
+        if (traces.length === 0) {
+          setChartError("Failed to compute psychrometric chart background.");
+        } else {
+          setIsoTraces(traces);
+          chartReady.current = true;
+        }
+      }
+    })().catch((e: unknown) => {
+      if (!cancelled) setChartError(String(e));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleInput2Change = (idx: number) => {
+    setInput2Idx(idx);
+    setV2(HA_INPUTS[idx].defaultVal);
+  };
+
+  const handleInput3Change = (idx: number) => {
+    setInput3Idx(idx);
+    setV3(HA_INPUTS[idx].defaultVal);
+  };
+
+  const compute = useCallback(async () => {
+    const in2 = HA_INPUTS[input2Idx];
+    const in3 = HA_INPUTS[input3Idx];
+    if (in2.name === in3.name) {
+      setCalcError(`Input 2 and Input 3 are both "${in2.label}" — they must be different.`);
+      return;
+    }
+    setComputing(true);
+    setCalcError(null);
+    try {
+      const res = await invoke<Record<string, number>>("compute_humid_air", {
+        n1: "P",     v1: parseFloat(pressure),
+        n2: in2.name, v2: parseFloat(v2),
+        n3: in3.name, v3: parseFloat(v3),
+        outputs: OUTPUT_KEYS,
+      });
+      setResults(res);
+    } catch (e) {
+      setCalcError(String(e));
+    } finally {
+      setComputing(false);
+    }
+  }, [pressure, input2Idx, input3Idx, v2, v3]);
+
+  // State point trace (shown when results exist)
+  const stateTrace: Plotly.Data | null =
+    results && results["T"] !== undefined && results["W"] !== undefined
+      ? {
+          x: [results["T"]],
+          y: [results["W"]],
+          type: "scatter",
+          mode: "markers",
+          marker: { color: "#e74c3c", size: 10, symbol: "circle" },
+          showlegend: false,
+          hovertemplate: "T=%{x:.2f} K<br>W=%{y:.5f} kg/kg<extra></extra>",
+        }
+      : null;
+
+  const plotData: Plotly.Data[] = stateTrace
+    ? [...isoTraces, stateTrace]
+    : isoTraces;
+
+  const in2 = HA_INPUTS[input2Idx];
+  const in3 = HA_INPUTS[input3Idx];
+
+  return (
+    <div className="ha-layout">
+      {/* ── Left panel: inputs + results ── */}
+      <div className="ha-left">
+        <div className="calc-controls">
+          <div className="field-group">
+            <label>P (Pa)</label>
+            <input
+              type="number"
+              value={pressure}
+              onChange={(e) => setPressure(e.target.value)}
+            />
+          </div>
+
+          <div className="field-group">
+            <label>Input 2</label>
+            <select
+              value={input2Idx}
+              onChange={(e) => handleInput2Change(Number(e.target.value))}
+            >
+              {HA_INPUTS.map((inp, i) => (
+                <option key={inp.name} value={i}>
+                  {inp.label} ({inp.name})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label>
+              {in2.label} ({in2.unit})
+            </label>
+            <input
+              type="number"
+              value={v2}
+              onChange={(e) => setV2(e.target.value)}
+            />
+          </div>
+
+          <div className="field-group">
+            <label>Input 3</label>
+            <select
+              value={input3Idx}
+              onChange={(e) => handleInput3Change(Number(e.target.value))}
+            >
+              {HA_INPUTS.map((inp, i) => (
+                <option key={inp.name} value={i}>
+                  {inp.label} ({inp.name})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label>
+              {in3.label} ({in3.unit})
+            </label>
+            <input
+              type="number"
+              value={v3}
+              onChange={(e) => setV3(e.target.value)}
+            />
+          </div>
+
+          <button
+            className="primary"
+            onClick={compute}
+            disabled={computing}
+          >
+            {computing ? "Computing…" : "Calculate"}
+          </button>
+
+          {calcError && <div className="error-msg">{calcError}</div>}
+        </div>
+
+        {results && (
+          <div className="calc-results" style={{ marginTop: 12 }}>
+            <table className="results-table">
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th style={{ textAlign: "right" }}>Value</th>
+                  <th>Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {HA_OUTPUTS.map(({ key, label, unit }) => {
+                  const val = results[key];
+                  const display =
+                    val !== undefined ? val.toPrecision(7) : "—";
+                  return (
+                    <tr key={key}>
+                      <td>{label}</td>
+                      <td className="num">{display}</td>
+                      <td className="unit">{unit}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Right panel: psychrometric chart ── */}
+      <div className="ha-chart">
+        {chartError && (
+          <div className="error-msg" style={{ padding: 16 }}>{chartError}</div>
+        )}
+        <Plot
+          data={plotData}
+          layout={{
+            margin: { l: 60, r: 70, t: 30, b: 50 },
+            xaxis: {
+              title: { text: "Dry-bulb temperature (K)" },
+              range: [T_RANGE.min, T_RANGE.max + 8],
+            },
+            yaxis: {
+              title: { text: "Humidity ratio W (kg/kg_da)" },
+              rangemode: "tozero",
+            },
+            plot_bgcolor: "#fafafa",
+            paper_bgcolor: "#fff",
+            font: { size: 12 },
+          }}
+          config={{ responsive: true, displayModeBar: false }}
+          style={{ width: "100%", height: "100%" }}
+          useResizeHandler
+        />
+      </div>
+    </div>
+  );
+}
