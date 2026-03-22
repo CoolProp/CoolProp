@@ -354,12 +354,14 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
             T_min_valid = ValidNumber(r_min);
         }
     }
-    // We will do a secant call if the values at T_min and T_max have the same sign
+    // We will do a bounded secant call if the values at T_min and T_max have the same sign.
+    // Using BoundedSecant (instead of unbounded Secant) prevents the solver from wandering
+    // above T_max toward T_sat where WetbulbTemperature becomes singular (issue #2690).
     if (r_min * r_max > 0) {
         if (std::abs(r_min) < std::abs(r_max)) {
-            T = CoolProp::Secant(BSR, T_min, 0.01 * T_min, 1e-7, 50);
+            T = CoolProp::BoundedSecant(BSR, T_min, T_min, T_max, 0.01 * T_min, 1e-7, 50);
         } else {
-            T = CoolProp::Secant(BSR, T_max, -0.01 * T_max, 1e-7, 50);
+            T = CoolProp::BoundedSecant(BSR, T_max, T_min, T_max, -0.01 * T_max, 1e-7, 50);
         }
     } else {
         double mach_eps = 1e-15, tol = 1e-10;
@@ -1297,10 +1299,13 @@ double WetbulbTemperature(double T, double p, double psi_w) {
 
     double return_val;
     try {
-        return_val = Brent(WBS, Tmax + 1, 100, DBL_EPSILON, 1e-12, 50);
+        // Upper bound is Tmax (= T_db for T_db < Tsat, else Tsat).
+        // Using Tmax+1 would evaluate WBS at T_sat when T_db = T_sat-1, causing
+        // p_s_wb >= p and division-by-zero in the humidity ratio calculation (issue #2690).
+        return_val = Brent(WBS, Tmax, 100, DBL_EPSILON, 1e-12, 50);
 
         // Solution obtained is out of range (T>Tmax)
-        if (return_val > Tmax + 1) {
+        if (return_val > Tmax) {
             throw CoolProp::ValueError();
         }
     } catch (...) {
@@ -1721,7 +1726,14 @@ void _HAPropsSI_inputs(double p, const std::vector<givens>& input_keys, const st
                     throw CoolProp::ValueError("For dry air, dewpoint is an invalid input variable\n");
                 }
             } else {
-                T_max = CoolProp::PropsSI("T", "P", p, "Q", 0, "Water") - 1;
+                Water->update(CoolProp::PQ_INPUTS, p, 0);
+                T_max = Water->T() - 1;
+                // For wetbulb or enthalpy secondary inputs, the solution T_db may exceed T_sat(P)
+                // when the air is very dry (low RelHum). WetbulbTemperature handles T_db > T_sat
+                // correctly via its fallback solver, so allow T_max up to 640 K (issue #2690).
+                if (SecondaryInputKey == GIVEN_TWB || SecondaryInputKey == GIVEN_ENTHALPY) {
+                    T_max = 640;
+                }
             }
         }
         // Minimum drybulb temperature is the drybulb temperature corresponding to saturated air for the humidity ratio
