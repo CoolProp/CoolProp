@@ -15,6 +15,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: Build REFPROP
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         shell: bash
         run: |
           set -x
