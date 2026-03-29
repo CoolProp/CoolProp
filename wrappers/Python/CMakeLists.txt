@@ -111,7 +111,7 @@ set(COOLPROP_INCLUDE_DIRS
     ${ROOT_DIR}/boost_CoolProp
     ${ROOT_DIR}/externals/incbin
     ${ROOT_DIR}/externals/nlohmann-json
-    ${ROOT_DIR}/externals/miniz-3.0.2
+    ${ROOT_DIR}/externals/miniz-3.1.1
     ${ROOT_DIR}/externals/msgpack-c/include
 )
 
@@ -125,8 +125,8 @@ if(NOT EXISTS "${ROOT_DIR}/boost_CoolProp/boost/version.hpp")
 endif()
 
 # Build miniz as a static library
-add_library(miniz STATIC "${ROOT_DIR}/externals/miniz-3.0.2/miniz.c")
-target_include_directories(miniz PUBLIC "${ROOT_DIR}/externals/miniz-3.0.2")
+add_library(miniz STATIC "${ROOT_DIR}/externals/miniz-3.1.1/miniz.c")
+target_include_directories(miniz PUBLIC "${ROOT_DIR}/externals/miniz-3.1.1")
 
 # Cythonize the .pyx files
 set(CYTHON_FLAGS
