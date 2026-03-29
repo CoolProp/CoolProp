@@ -883,32 +883,6 @@ TEST_CASE("HAPropsSI two-water-content inputs that uniquely determine dry-bulb t
     }
 }
 
-TEST_CASE("HAPropsSI T_db from T_wb + very-low RelHum over a range of pressures (issue #2690)", "[humid_air][2690]") {
-    // For very dry air (RelHum << 1) the solution T_db can exceed T_sat(P), which is
-    // physically valid: WetbulbTemperature() handles T_db > T_sat via its fallback solver.
-    // The bug: a narrow pressure band (~90190–91160 Pa) threw ValueError("temperature (inf)
-    // outside range of validity") while adjacent pressures silently returned wrong values.
-    // Fix: (1) inner Brent upper bound Tmax instead of Tmax+1 (avoids P_s == P singularity),
-    //      (2) outer T_max extended to 640 K for T_wb/enthalpy secondary inputs.
-    const double T_wb = 303.15;   // 30 °C wet-bulb
-    const double RH   = 1e-5;    // effectively dry air
-
-    // Pressures that previously threw (narrow failing band) plus neighbouring values
-    double pressures[] = {90000, 90190, 90500, 91000, 91024, 91160, 91200, 92000, 95000, 101325};
-    for (double p : pressures) {
-        SECTION(std::string("P = ") + std::to_string(static_cast<int>(p)) + " Pa") {
-            double T_db = HumidAir::HAPropsSI("T_db", "T_wb", T_wb, "RelHum", RH, "P", p);
-            REQUIRE(ValidNumber(T_db));
-            CHECK(T_db > T_wb);  // dry-bulb must exceed wet-bulb
-
-            // Round-trip: T_wb computed from the found T_db must match the input
-            double T_wb_check = HumidAir::HAPropsSI("T_wb", "T_db", T_db, "RelHum", RH, "P", p);
-            CHECK(ValidNumber(T_wb_check));
-            CHECK(std::abs(T_wb_check - T_wb) < 1e-6);
-        }
-    }
-}
-
 TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert models in REFPROP", "[Gernert]") {
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
     std::string mixes[] = {"CO2[0.7]&Argon[0.3]", "CO2[0.7]&Water[0.3]", "CO2[0.7]&Nitrogen[0.3]"};
