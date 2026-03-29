@@ -884,6 +884,92 @@ TEST_CASE("HAPropsSI two-water-content inputs that uniquely determine dry-bulb t
 }
 
 // ============================================================
+// Virial cache correctness: calc_all_virials must match individual keyed_output
+// ============================================================
+
+TEST_CASE("calc_all_virials matches individual keyed_output for Air and Water",
+          "[humid_air][virial_cache]") {
+    // Verify that HelmholtzEOSMixtureBackend::calc_all_virials() — which calls
+    // residual_helmholtz->all() once and extracts all four virial quantities —
+    // produces bit-identical results to the original approach of four separate
+    // update_DmolarT_direct + keyed_output calls.
+    //
+    // Reference values are generated on the fly using the original code path;
+    // no hard-coded constants are needed.
+
+    const double Tvals[] = {213.15, 233.15, 253.15, 273.15, 293.15,
+                             313.15, 333.15, 353.15, 373.15, 400.0};
+    const int NT = static_cast<int>(sizeof(Tvals) / sizeof(Tvals[0]));
+
+    SECTION("Air") {
+        HelmholtzEOSBackend air("Air");
+        for (int i = 0; i < NT; ++i) {
+            const double T = Tvals[i];
+            CAPTURE(T);
+
+            // Reference: original one-at-a-time path
+            air.specify_phase(CoolProp::iphase_gas);
+            air.update(CoolProp::DmolarT_INPUTS, 1e-12, T);
+            air.unspecify_phase();
+            double B_ref    = air.keyed_output(CoolProp::iBvirial);
+            double dBdT_ref = air.keyed_output(CoolProp::idBvirial_dT);
+            double C_ref    = air.keyed_output(CoolProp::iCvirial);
+            double dCdT_ref = air.keyed_output(CoolProp::idCvirial_dT);
+
+            // New path: single EOS evaluation
+            double B, dBdT, C, dCdT;
+            air.calc_all_virials(T, B, dBdT, C, dCdT);
+
+            CHECK(B    == Catch::Approx(B_ref).epsilon(1e-12));
+            CHECK(dBdT == Catch::Approx(dBdT_ref).epsilon(1e-12));
+            CHECK(C    == Catch::Approx(C_ref).epsilon(1e-12));
+            CHECK(dCdT == Catch::Approx(dCdT_ref).epsilon(1e-12));
+        }
+    }
+
+    SECTION("Water") {
+        HelmholtzEOSBackend water("Water");
+        for (int i = 0; i < NT; ++i) {
+            const double T = Tvals[i];
+            CAPTURE(T);
+
+            water.specify_phase(CoolProp::iphase_gas);
+            water.update(CoolProp::DmolarT_INPUTS, 1e-12, T);
+            water.unspecify_phase();
+            double B_ref    = water.keyed_output(CoolProp::iBvirial);
+            double dBdT_ref = water.keyed_output(CoolProp::idBvirial_dT);
+            double C_ref    = water.keyed_output(CoolProp::iCvirial);
+            double dCdT_ref = water.keyed_output(CoolProp::idCvirial_dT);
+
+            double B, dBdT, C, dCdT;
+            water.calc_all_virials(T, B, dBdT, C, dCdT);
+
+            CHECK(B    == Catch::Approx(B_ref).epsilon(1e-12));
+            CHECK(dBdT == Catch::Approx(dBdT_ref).epsilon(1e-12));
+            CHECK(C    == Catch::Approx(C_ref).epsilon(1e-12));
+            CHECK(dCdT == Catch::Approx(dCdT_ref).epsilon(1e-12));
+        }
+    }
+
+    SECTION("HAPropsSI results unchanged across temperatures") {
+        // The virial cache must not alter observable HAPropsSI outputs.
+        // Use two different T values back-to-back to also exercise cache invalidation.
+        const double P = 101325.0;
+        const double W = 0.007294;
+
+        // Compute at T1, then T2, then T1 again — the last must match the first.
+        double H_T1_a = HumidAir::HAPropsSI("H", "T", 293.15, "W", W, "P", P);
+        double H_T2   = HumidAir::HAPropsSI("H", "T", 333.15, "W", W, "P", P);
+        double H_T1_b = HumidAir::HAPropsSI("H", "T", 293.15, "W", W, "P", P);
+        (void)H_T2;
+
+        CHECK(H_T1_a == H_T1_b);  // cache re-fill must give identical result
+        CHECK(H_T1_a > 0.0);
+        CHECK(H_T2 > H_T1_a);     // enthalpy increases with T
+    }
+}
+
+// ============================================================
 // Comprehensive Humid Air Validation Tests
 // Based on ASHRAE RP-1485 scenarios from HAValidation.py.
 //

@@ -151,62 +151,36 @@ static double MM_Water(void) {
     check_fluid_instantiation();
     return Water->keyed_output(CoolProp::imolar_mass);
 }
-static double B_Air(double T) {
+// Virial coefficient cache: for a given T, all four HEOS-derived virials for
+// Air and Water are computed in two calls to calc_all_virials(), each of which
+// calls residual_helmholtz->all() exactly once.  This replaces the previous
+// 8 × (update_DmolarT_direct + keyed_output) pattern that ran all() 12 times
+// per property evaluation.
+// Not thread-safe — consistent with the existing Air/Water singleton model.
+static struct {
+    double T;
+    double B_a, dBdT_a, C_a, dCdT_a;
+    double B_w, dBdT_w, C_w, dCdT_w;
+} s_virial_cache = {-1.0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+static void fill_virial_cache(double T) {
+    if (T == s_virial_cache.T) return;
     check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::iBvirial);
+    Air->calc_all_virials(T, s_virial_cache.B_a, s_virial_cache.dBdT_a,
+                              s_virial_cache.C_a, s_virial_cache.dCdT_a);
+    Water->calc_all_virials(T, s_virial_cache.B_w, s_virial_cache.dBdT_w,
+                                s_virial_cache.C_w, s_virial_cache.dCdT_w);
+    s_virial_cache.T = T;
 }
-static double dBdT_Air(double T) {
-    check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::idBvirial_dT);
-}
-static double B_Water(double T) {
-    check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::iBvirial);
-}
-static double dBdT_Water(double T) {
-    check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::idBvirial_dT);
-}
-static double C_Air(double T) {
-    check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::iCvirial);
-}
-static double dCdT_Air(double T) {
-    check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::idCvirial_dT);
-}
-static double C_Water(double T) {
-    check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::iCvirial);
-}
-static double dCdT_Water(double T) {
-    check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::idCvirial_dT);
-}
+
+static double B_Air(double T)     { fill_virial_cache(T); return s_virial_cache.B_a;    }
+static double dBdT_Air(double T)  { fill_virial_cache(T); return s_virial_cache.dBdT_a; }
+static double B_Water(double T)   { fill_virial_cache(T); return s_virial_cache.B_w;    }
+static double dBdT_Water(double T){ fill_virial_cache(T); return s_virial_cache.dBdT_w; }
+static double C_Air(double T)     { fill_virial_cache(T); return s_virial_cache.C_a;    }
+static double dCdT_Air(double T)  { fill_virial_cache(T); return s_virial_cache.dCdT_a; }
+static double C_Water(double T)   { fill_virial_cache(T); return s_virial_cache.C_w;    }
+static double dCdT_Water(double T){ fill_virial_cache(T); return s_virial_cache.dCdT_w; }
 void UseVirialCorrelations(int flag) {
     if (flag == 0 || flag == 1) {
         FlagUseVirialCorrelations = flag;

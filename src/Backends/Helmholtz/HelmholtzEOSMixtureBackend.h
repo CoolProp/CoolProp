@@ -410,6 +410,10 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_Cvirial(void);
     CoolPropDbl calc_dBvirial_dT(void);
     CoolPropDbl calc_dCvirial_dT(void);
+    /// Compute all four virial quantities B, dB/dT, C, dC/dT in a single EOS evaluation.
+    void calc_all_virials(CoolPropDbl T_in,
+                          CoolPropDbl& B, CoolPropDbl& dBdT,
+                          CoolPropDbl& C, CoolPropDbl& dCdT);
 
     CoolPropDbl calc_pressure(void);
     CoolPropDbl calc_cvmolar(void);

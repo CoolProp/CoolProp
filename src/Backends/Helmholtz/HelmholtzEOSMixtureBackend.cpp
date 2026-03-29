@@ -1536,6 +1536,21 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_dCvirial_dT() {
     CoolPropDbl dtau_dT = -red.T / pow(_T, 2);
     return 1 / pow(red.rhomolar, 2) * calc_alphar_deriv_nocache(1, 2, mole_fractions, _tau, 1e-12) * dtau_dT;
 }
+void HelmholtzEOSMixtureBackend::calc_all_virials(CoolPropDbl T_in,
+                                                   CoolPropDbl& B, CoolPropDbl& dBdT,
+                                                   CoolPropDbl& C, CoolPropDbl& dCdT) {
+    SimpleState red = get_reducing_state();
+    CoolPropDbl tau = red.T / T_in;
+    CoolPropDbl dtau_dT = -red.T / (T_in * T_in);
+    // Single residual_helmholtz->all() call: yields all four virial derivatives at once.
+    // Avoids 3 redundant EOS evaluations compared to calling calc_Bvirial/calc_Cvirial
+    // and their T-derivatives separately.
+    HelmholtzDerivatives derivs = residual_helmholtz->all(*this, mole_fractions, tau, 1e-12, false);
+    B    = derivs.get(0, 1) / red.rhomolar;
+    dBdT = derivs.get(1, 1) / red.rhomolar * dtau_dT;
+    C    = derivs.get(0, 2) / (red.rhomolar * red.rhomolar);
+    dCdT = derivs.get(1, 2) / (red.rhomolar * red.rhomolar) * dtau_dT;
+}
 void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int other, CoolPropDbl value, bool& saturation_called) {
     /*
     Determine the phase given p and one other state variable
