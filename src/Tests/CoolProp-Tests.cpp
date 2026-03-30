@@ -970,6 +970,89 @@ TEST_CASE("calc_all_virials matches individual keyed_output for Air and Water",
 }
 
 // ============================================================
+// Alpha0 cache correctness: calc_alpha0_and_dTau must match individual keyed_output
+// ============================================================
+
+TEST_CASE("calc_alpha0_and_dTau matches individual keyed_output for Air and Water",
+          "[humid_air][alpha0_cache]") {
+    // Verify that HelmholtzEOSMixtureBackend::calc_alpha0_and_dTau() — which calls
+    // alpha0.all() once for both a0 and da0_dtau — produces the same values as the
+    // original approach of calling update() + keyed_output() separately.
+    //
+    // a0 is evaluated at delta=1 (rho = rho_reducing), so the reference update also
+    // uses rho_reducing to ensure ln(delta)=0 for alpha0 → apples-to-apples.
+    // da0_dtau is purely tau-dependent (no delta), so it matches at any density.
+
+    const double Tvals[] = {213.15, 233.15, 253.15, 273.15, 293.15,
+                             313.15, 333.15, 353.15, 373.15, 400.0};
+    const int NT = static_cast<int>(sizeof(Tvals) / sizeof(Tvals[0]));
+
+    SECTION("Air") {
+        HelmholtzEOSBackend air("Air");
+        double rho_red = air.keyed_output(CoolProp::irhomolar_reducing);
+        for (int i = 0; i < NT; ++i) {
+            const double T = Tvals[i];
+            CAPTURE(T);
+
+            // Reference: update at reducing density (delta=1) so alpha0 = f(tau)
+            air.specify_phase(CoolProp::iphase_gas);
+            air.update(CoolProp::DmolarT_INPUTS, rho_red, T);
+            air.unspecify_phase();
+            double da0_dtau_ref = air.keyed_output(CoolProp::idalpha0_dtau_constdelta);
+            double a0_ref       = air.keyed_output(CoolProp::ialpha0);
+
+            // New path: single alpha0.all() call
+            double a0, da0_dtau;
+            air.calc_alpha0_and_dTau(T, a0, da0_dtau);
+
+            CHECK(da0_dtau == Catch::Approx(da0_dtau_ref).epsilon(1e-12));
+            CHECK(a0       == Catch::Approx(a0_ref).epsilon(1e-12));
+        }
+    }
+
+    SECTION("Water") {
+        HelmholtzEOSBackend water("Water");
+        double rho_red = water.keyed_output(CoolProp::irhomolar_reducing);
+        for (int i = 0; i < NT; ++i) {
+            const double T = Tvals[i];
+            CAPTURE(T);
+
+            water.specify_phase(CoolProp::iphase_gas);
+            water.update(CoolProp::DmolarT_INPUTS, rho_red, T);
+            water.unspecify_phase();
+            double da0_dtau_ref = water.keyed_output(CoolProp::idalpha0_dtau_constdelta);
+            double a0_ref       = water.keyed_output(CoolProp::ialpha0);
+
+            double a0, da0_dtau;
+            water.calc_alpha0_and_dTau(T, a0, da0_dtau);
+
+            CHECK(da0_dtau == Catch::Approx(da0_dtau_ref).epsilon(1e-12));
+            CHECK(a0       == Catch::Approx(a0_ref).epsilon(1e-12));
+        }
+    }
+
+    SECTION("da0_dtau is density-independent") {
+        // Verify da0_dtau from calc_alpha0_and_dTau matches keyed_output at an arbitrary
+        // density (not rho_reducing) — confirms no accidental delta dependence.
+        HelmholtzEOSBackend air("Air");
+        for (int i = 0; i < NT; ++i) {
+            const double T = Tvals[i];
+            CAPTURE(T);
+
+            air.specify_phase(CoolProp::iphase_gas);
+            air.update(CoolProp::DmolarT_INPUTS, 1e-12, T);  // near-zero density
+            air.unspecify_phase();
+            double da0_dtau_ref = air.keyed_output(CoolProp::idalpha0_dtau_constdelta);
+
+            double a0, da0_dtau;
+            air.calc_alpha0_and_dTau(T, a0, da0_dtau);
+
+            CHECK(da0_dtau == Catch::Approx(da0_dtau_ref).epsilon(1e-12));
+        }
+    }
+}
+
+// ============================================================
 // Comprehensive Humid Air Validation Tests
 // Based on ASHRAE RP-1485 scenarios from HAValidation.py.
 //

@@ -414,6 +414,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_all_virials(CoolPropDbl T_in,
                           CoolPropDbl& B, CoolPropDbl& dBdT,
                           CoolPropDbl& C, CoolPropDbl& dCdT);
+    /// Compute ideal-gas alpha0 at delta=1 (f(tau)) and dalpha0/dtau without a state update.
+    void calc_alpha0_and_dTau(CoolPropDbl T_in, CoolPropDbl& a0, CoolPropDbl& da0_dtau);
 
     CoolPropDbl calc_pressure(void);
     CoolPropDbl calc_cvmolar(void);

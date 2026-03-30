@@ -1551,6 +1551,30 @@ void HelmholtzEOSMixtureBackend::calc_all_virials(CoolPropDbl T_in,
     C    = derivs.get(0, 2) / (red.rhomolar * red.rhomolar);
     dCdT = derivs.get(1, 2) / (red.rhomolar * red.rhomolar) * dtau_dT;
 }
+void HelmholtzEOSMixtureBackend::calc_alpha0_and_dTau(CoolPropDbl T_in,
+                                                       CoolPropDbl& a0, CoolPropDbl& da0_dtau) {
+    SimpleState red = get_reducing_state();
+    CoolPropDbl tau = red.T / T_in;
+    // delta=1.0 → ln(delta)=0, so a0 = f(tau) (pure temperature part of ideal-gas Helmholtz).
+    // da0_dtau (= dalpha0/dtau) is independent of delta, so delta=1 is always correct.
+    // For pure/pseudopure fluids, call alpha0.all() once so all ideal-gas terms are
+    // accumulated in a single pass — same strategy as calc_all_virials for the residual.
+    if (is_pure_or_pseudopure) {
+        EquationOfState& E = components[0].EOS();
+        // For pure/pseudopure fluids Tc = Tr (get_fluid_constant == get_reducing_state().T),
+        // so taustar = tau and deltastar = 1.0.  No tau-scaling needed on output.
+        // set_Tred is required for GERG-2004 sinh/cosh terms.
+        E.alpha0.set_Tred(red.T);
+        HelmholtzDerivatives derivs = E.alpha0.all(tau, 1.0, false);
+        a0       = derivs.alphar;
+        da0_dtau = derivs.dalphar_dtau;
+    } else {
+        // Mixture fallback: two separate calls (Air and Water are both pure, so this path
+        // is not used for humid-air calculations).
+        a0       = calc_alpha0_deriv_nocache(0, 0, mole_fractions, tau, 1.0, red.T, red.rhomolar);
+        da0_dtau = calc_alpha0_deriv_nocache(1, 0, mole_fractions, tau, 1.0, red.T, red.rhomolar);
+    }
+}
 void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int other, CoolPropDbl value, bool& saturation_called) {
     /*
     Determine the phase given p and one other state variable
