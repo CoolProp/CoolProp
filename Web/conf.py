@@ -277,6 +277,9 @@ assert(Path(html_logo).exists())
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# 3Dmol.js — required for the interactive molecule viewers on fluid pages
+html_js_files = ['https://3dmol.org/build/3Dmol-min.js']
+
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 #html_last_updated_fmt = '%b %d, %Y'
