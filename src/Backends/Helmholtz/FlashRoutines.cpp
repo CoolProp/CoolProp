@@ -1810,24 +1810,132 @@ void FlashRoutines::HSU_P_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             HEOS.recalculate_singlephase_phase();
         }
     } else {
-        if (HEOS.PhaseEnvelope.built) {
-            // Determine whether you are inside or outside
-            SimpleState closest_state;
-            std::size_t iclosest;
-            bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
+        HSU_P_flash_mixtures(HEOS, other, value);
+    }
+}
 
-            if (!twophase) {
-                PY_singlephase_flash_resid resid(HEOS, HEOS._p, other, value);
-                // If that fails, try a bounded solver
-                Brent(resid, closest_state.T + 10, 1000, DBL_EPSILON, 1e-10, 100);
-                HEOS.unspecify_phase();
-            } else {
-                throw ValueError("two-phase solution for Y");
-            }
+void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, parameters other, CoolPropDbl value) {
+    // Solve for T such that Y(T, P, z) = value where Y is one of H, S, or U.
+    // At fixed P and z these properties are continuous and monotonically
+    // increasing in T (Cp > 0 in single-phase; Q increases with T through
+    // two-phase), so a bounded 1-D solver is reliable.
 
-        } else {
-            throw ValueError("phase envelope must be built to carry out HSU_P_flash for mixture");
+    // Temperature bounds from component triple-point and critical data.
+    const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions();
+    CoolPropDbl Tmin = 1e10, T_pseudo_crit = 0;
+    for (std::size_t i = 0; i < z.size(); ++i) {
+        CoolPropDbl Tt = HEOS.get_fluid_constant(i, iT_triple);
+        if (Tt < Tmin) Tmin = Tt;
+        T_pseudo_crit += z[i] * HEOS.get_fluid_constant(i, iT_critical);
+    }
+    CoolPropDbl Tmax = 5.0 * T_pseudo_crit;
+
+    // Helper lambda: evaluate the residual, return false if evaluation throws
+    auto try_eval = [](PY_flash_resid& resid, double T, double& r) -> bool {
+        try {
+            r = resid.call(T);
+            return true;
+        } catch (...) {
+            return false;
         }
+    };
+
+    // Helper lambda: binary-search for the edge of the valid evaluation
+    // region between a failing and a working bound.
+    auto bracket_validity = [&try_eval](PY_flash_resid& resid,
+                                        CoolPropDbl& T_fail, CoolPropDbl& T_ok,
+                                        double& r_ok, bool fail_is_lo) {
+        CoolPropDbl a = std::min(T_fail, T_ok), b = std::max(T_fail, T_ok);
+        for (int iter = 0; iter < 50; ++iter) {
+            CoolPropDbl mid = 0.5 * (a + b);
+            double r_mid;
+            if (try_eval(resid, mid, r_mid)) {
+                if (fail_is_lo) { b = mid; } else { a = mid; }
+                T_fail = mid; r_ok = r_mid;
+            } else {
+                if (fail_is_lo) { a = mid; } else { b = mid; }
+            }
+            if (b - a < 0.01) break;
+        }
+    };
+
+    if (HEOS.PhaseEnvelope.built) {
+        // Use the phase envelope for fast phase determination
+        SimpleState closest_state;
+        std::size_t iclosest;
+        bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, other, value, iclosest, closest_state);
+
+        if (!twophase) {
+            // Single-phase: determine whether gas or liquid from the
+            // closest point on the envelope, then impose the phase so
+            // the inner PT flash skips stability analysis.
+            phases phase_to_use = (closest_state.Q > 0.5) ? iphase_gas : iphase_liquid;
+            HEOS.specify_phase(phase_to_use);
+            PY_flash_resid resid(HEOS, HEOS._p, other, value);
+            // Gas solutions lie above the envelope T; liquid below.
+            CoolPropDbl T_lo = (phase_to_use == iphase_gas) ? closest_state.T : Tmin;
+            CoolPropDbl T_hi = (phase_to_use == iphase_gas) ? Tmax : closest_state.T;
+            Brent(resid, T_lo, T_hi, DBL_EPSILON, 1e-10, 100);
+            HEOS.unspecify_phase();
+        } else {
+            // Two-phase: use the general residual that preserves
+            // the two-phase state produced by PT_flash_mixtures.
+            PY_flash_resid resid(HEOS, HEOS._p, other, value);
+            double r_lo, r_hi;
+            if (!try_eval(resid, Tmin, r_lo) || !try_eval(resid, Tmax, r_hi) || r_lo * r_hi > 0) {
+                throw ValueError(
+                  format("HSU_P_flash (mixture, two-phase): could not bracket solution between Tmin=%Lg and Tmax=%Lg", Tmin, Tmax));
+            }
+            Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+        }
+
+    } else if (HEOS.imposed_phase_index != iphase_not_imposed) {
+        // Phase is imposed by the caller – honour it so that
+        // the inner PT flash skips stability analysis.
+        PY_flash_resid resid(HEOS, HEOS._p, other, value);
+        CoolPropDbl T_lo = Tmin, T_hi = Tmax;
+        double r_lo, r_hi;
+        bool ok_lo = try_eval(resid, T_lo, r_lo);
+        bool ok_hi = try_eval(resid, T_hi, r_hi);
+
+        // If a bound fails, binary-search for the validity edge.
+        if (!ok_lo && ok_hi) {
+            bracket_validity(resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
+            ok_lo = true;
+        } else if (ok_lo && !ok_hi) {
+            bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
+            ok_hi = true;
+        }
+        if (!ok_lo || !ok_hi || r_lo * r_hi > 0) {
+            throw ValueError(
+              format("HSU_P_flash (mixture, imposed phase): could not bracket solution between Tmin=%Lg and Tmax=%Lg", T_lo, T_hi));
+        }
+        Brent(resid, T_lo, T_hi, DBL_EPSILON, 1e-10, 100);
+        HEOS.unspecify_phase();
+
+    } else {
+        // No phase envelope, no imposed phase – blind flash.
+        // Each evaluation uses PT_flash_mixtures which performs
+        // stability analysis to decide single-phase vs two-phase.
+        PY_flash_resid resid(HEOS, HEOS._p, other, value);
+        CoolPropDbl T_lo = Tmin, T_hi = Tmax;
+        double r_lo = _HUGE, r_hi = _HUGE;
+        bool ok_lo = try_eval(resid, T_lo, r_lo);
+        bool ok_hi = try_eval(resid, T_hi, r_hi);
+
+        // If a bound fails, binary-search for the validity edge.
+        if (!ok_lo && ok_hi) {
+            bracket_validity(resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
+            ok_lo = true;
+        } else if (ok_lo && !ok_hi) {
+            bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
+            ok_hi = true;
+        }
+        if (!ok_lo || !ok_hi || r_lo * r_hi > 0) {
+            throw ValueError(
+              format("HSU_P_flash (mixture, blind): could not bracket solution between Tmin=%Lg and Tmax=%Lg", T_lo, T_hi));
+        }
+        Brent(resid, T_lo, T_hi, DBL_EPSILON, 1e-10, 100);
     }
 }
 void FlashRoutines::solver_for_rho_given_T_oneof_HSU(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl value, parameters other) {
