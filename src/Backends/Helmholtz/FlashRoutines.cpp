@@ -1892,8 +1892,55 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
     } else if (HEOS.imposed_phase_index != iphase_not_imposed) {
         // Phase is imposed by the caller – honour it so that
         // the inner PT flash skips stability analysis.
-        PY_flash_resid resid(HEOS, HEOS._p, other, value);
+
         CoolPropDbl T_lo = Tmin, T_hi = Tmax;
+
+        if (HEOS.imposed_phase_index == iphase_twophase) {
+            // For two-phase, the bracket must stay inside the VLE region,
+            // otherwise the Wilson-based PT flash diverges.  Estimate
+            // bubble-point and dew-point T at the given P using Wilson
+            // K-factors: K_i = (Pc_i/P) * exp(5.373*(1+w_i)*(1-Tc_i/T)).
+            std::size_t N = z.size();
+            std::vector<CoolPropDbl> Tc(N), Pc(N), omega(N);
+            for (std::size_t i = 0; i < N; ++i) {
+                Tc[i]    = HEOS.get_fluid_constant(i, iT_critical);
+                Pc[i]    = HEOS.get_fluid_constant(i, iP_critical);
+                omega[i] = HEOS.get_fluid_constant(i, iacentric_factor);
+            }
+            CoolPropDbl P = HEOS._p;
+            // Bubble: sum(z_i * K_i(T)) - 1 = 0   (negative at low T, positive at high T)
+            auto f_bub = [&](double T) {
+                double s = 0;
+                for (std::size_t i = 0; i < N; ++i)
+                    s += z[i] * (Pc[i] / P) * exp(5.373 * (1 + omega[i]) * (1 - Tc[i] / T));
+                return s - 1;
+            };
+            // Dew: 1 - sum(z_i / K_i(T)) = 0      (negative at low T, positive at high T)
+            auto f_dew = [&](double T) {
+                double s = 0;
+                for (std::size_t i = 0; i < N; ++i)
+                    s += z[i] / ((Pc[i] / P) * exp(5.373 * (1 + omega[i]) * (1 - Tc[i] / T)));
+                return 1 - s;
+            };
+            // Bisect for bubble-point T
+            CoolPropDbl a = Tmin, b = Tmax;
+            for (int iter = 0; iter < 100; ++iter) {
+                CoolPropDbl mid = 0.5 * (a + b);
+                (f_bub(mid) < 0) ? a = mid : b = mid;
+                if (b - a < 0.01) break;
+            }
+            T_lo = 0.5 * (a + b);
+            // Bisect for dew-point T
+            a = Tmin; b = Tmax;
+            for (int iter = 0; iter < 100; ++iter) {
+                CoolPropDbl mid = 0.5 * (a + b);
+                (f_dew(mid) < 0) ? a = mid : b = mid;
+                if (b - a < 0.01) break;
+            }
+            T_hi = 0.5 * (a + b);
+        }
+
+        PY_flash_resid resid(HEOS, HEOS._p, other, value);
         double r_lo, r_hi;
         bool ok_lo = try_eval(resid, T_lo, r_lo);
         bool ok_hi = try_eval(resid, T_hi, r_hi);
