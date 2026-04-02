@@ -44,6 +44,7 @@ Web/fluid_properties/fluids/molecule_sdf/
 
 /wrappers/Labview/CoolProp.dll
 /Web/_static/doxygen
+/Web/_static/3Dmol-min.js
 /Web/Fluids
 /doc-v5
 /dev/all_fluids_verbose.json

@@ -278,7 +278,11 @@ assert(Path(html_logo).exists())
 html_static_path = ['_static']
 
 # 3Dmol.js — required for the interactive molecule viewers on fluid pages
-html_js_files = ['https://3dmol.org/build/3Dmol-min.js']
+# Download locally to avoid CORS issues when docs are served from file:// or a local server
+_3dmol_js = Path(__file__).parent / '_static' / '3Dmol-min.js'
+if not _3dmol_js.exists():
+    urllib.request.urlretrieve('https://3dmol.org/build/3Dmol-min.js', _3dmol_js)
+html_js_files = ['3Dmol-min.js']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
