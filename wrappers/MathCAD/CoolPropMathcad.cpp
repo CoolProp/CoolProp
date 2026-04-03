@@ -3,7 +3,6 @@
 
 #include <string>
 #include <cstring>
-// #include <sstream>
 
 #ifndef NOMINMAX  // Kill windows' horrible min() and max() macros
 #    define NOMINMAX
@@ -20,6 +19,7 @@ enum
 #include "CoolProp.h"
 #include "DataStructures.h"
 #include "HumidAirProp.h"
+#include <Backends/Helmholtz/MixtureParameters.h>
 
 // Setup Dialog Window for debugging
 HWND hwndDlg;  // Generic Dialog handle for pop-up message boxes (MessageBox) when needed
@@ -71,7 +71,7 @@ char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Interrupted",
                                                "Only one column allowed in input array",
                                                "Invalid Fluid String",
-                                               "Invalid predefined mixture or Binary Interaction Parameters Missing",
+                                               "Invalid predefined mixture",
                                                "IF97 Backend supports pure \"Water\" only",
                                                "Invalid Parameter String",
                                                "Invalid Phase String",
@@ -187,10 +187,10 @@ static inline char FindDelimiter(std::string instr) {
    }
 
 
-// this code executes the user function CP_get_global_param_string, which is a wrapper for
+// This code executes the user function CP_get_global_param_string, which is a wrapper for
 // the CoolProp.get_global_param_string() function, used to get a global string parameter from CoolProp
 static LRESULT CP_get_global_param_string(LPMCSTRING ParamValue,  // output (value of parameter)
-                                   LPCMCSTRING ParamName)  // name of parameter (string) to retrieve
+                                          LPCMCSTRING ParamName)  // name of parameter (string) to retrieve
 {
     std::string s;
     // Invoke the std::string form of get_global_param_string() function, save result to a new string s
@@ -214,7 +214,7 @@ static LRESULT CP_get_global_param_string(LPMCSTRING ParamValue,  // output (val
     return 0;
 }
 
-// this code executes the user function CP_get_fluid_param_string, which is a wrapper for
+// This code executes the user function CP_get_fluid_param_string, which is a wrapper for
 // the CoolProp.get_fluid_param_string() function, used to get a fluid string parameter from CoolProp
 static LRESULT CP_get_fluid_param_string(LPMCSTRING ParamValue,  // output (value of parameter)
                                   LPCMCSTRING FluidName,  // name of fluid (string) to retrieve
@@ -245,7 +245,7 @@ static LRESULT CP_get_fluid_param_string(LPMCSTRING ParamValue,  // output (valu
     return 0;
 }
 
-// this code executes the user function CP_set_reference_state, which is a wrapper for
+// This code executes the user function CP_set_reference_state, which is a wrapper for
 // the CoolProp.set_reference_stateS() function, used to set the H/S reference states
 // based on a standard state string of "IIR", "ASHRAE", "NBP", or "DEF".
 static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy value)
@@ -282,12 +282,14 @@ static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy v
 }
 
   // Helper: centralize text-matching logic for Props1SI error handling
-  static LRESULT HandleProps1SIError(const std::string& emsg, const std::string& FluidString, const std::string& PropNameBrackets)
+  static LRESULT HandleProps1SIError(const std::string& emsg, const std::string& FluidString, const std::string& PropName)
   {
     auto contains = [&](const char* s) { return emsg.find(s) != std::string::npos; };
+    std::string mixName = "";  // Temp variable to hold the name of the mixture string argument for error checking, if needed
     unsigned int errPos = 0;  // Temp variable to hold the position of the error argument for returning to Mathcad, if needed
-      // Check for "valid fluid" error first, since it is the most common error and can have multiple causes
-      // that require parsing the error message to determine the specific error type and position.
+
+    // Check for "valid fluid" error first, since it is the most common error and can have multiple causes
+    // that require parsing the error message to determine the specific error type and position.
     if (contains("valid fluid")) {
         if (contains("Neither input")) {
             if (contains("REFPROP")) {  // REFPROP or REFPROP Fluid not found
@@ -298,16 +300,28 @@ static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy v
                 errPos = (FluidString.find("IF97") != std::string::npos) ? 1u : 2u;
                 return MAKELRESULT(BAD_IF97_FLUID, errPos);
             }
-            std::string fluid_l = lower(FluidString);
-            if (fluid_l.find(".mix") != std::string::npos) return MAKELRESULT(BAD_MIXTURE, 1);  // Mixture string error position 1
-            std::string prop_l = lower(PropNameBrackets);
-            if (prop_l.find(".mix") != std::string::npos) return MAKELRESULT(BAD_MIXTURE, 2);  // Mixture string error position 2
+            if (lower(FluidString).find(".mix") != std::string::npos) {  // Mixture string error position 1
+                errPos = 1u;
+                mixName = FluidString;
+            } else if (lower(PropName).find(".mix") != std::string::npos) {  // Mixture string error position 2
+                errPos = 2u;
+                mixName = PropName;
+            }
+            if (!mixName.empty()) {
+                Dictionary dict;
+                if (!CoolProp::is_predefined_mixture(mixName, dict))  // Mixture string was used, but not found in CoolProp's predefined mixtures
+                    return MAKELRESULT(BAD_MIXTURE, errPos);
+                else
+                    return MAKELRESULT(MISSING_BINARY_PAIR, errPos); // Likely missing a binary interaction pair.
+            }
             return MAKELRESULT(BAD_FLUID, 1);
         } else {  // "Both inputs"
             return MAKELRESULT(BAD_PARAMETER, 2);
         }
     }
     // Check for "invalid parameter" errors next...
+    // The parameter name will be surrounded by brackets in the error message, so add brackets to the parameter name for searching
+    std::string PropNameBrackets = "[" + PropName + "]";
     if (contains("Unable to use")) {
         errPos = (emsg.find(PropNameBrackets) != std::string::npos) ? 2u : 1u;
         if (contains("Output string is invalid")) return MAKELRESULT(BAD_PARAMETER, errPos);
@@ -315,20 +329,19 @@ static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy v
         if (contains("No outputs")) return MAKELRESULT(NOT_AVAIL, errPos);
         return MAKELRESULT(UNKNOWN, errPos);
     }
-    //
+    // Otherwise, un-trapped error. Return generic error code and have user check get_global_param_string("errstring") for details
     return MAKELRESULT(UNKNOWN, 1);
 }
 
 
-// this code executes the user function CP_Props1SI, which is a wrapper for
+// This code executes the user function CP_Props1SI, which is a wrapper for
 // the CoolProp.PropsSI() function, used to simply extract a
 // fluid-specific parameter that is not dependent on the state
 static LRESULT CP_Props1SI(LPCOMPLEXSCALAR Prop,  // pointer to the result
-                    LPCMCSTRING Fluid,     // string with a valid CoolProp fluid name
-                    LPCMCSTRING PropName)  // a fluid property
+                           LPCMCSTRING Fluid,     // string with a valid CoolProp fluid name
+                           LPCMCSTRING PropName)  // a fluid property
 {
-    std::string PropNameBrackets(PropName->str);
-    PropNameBrackets = "[" + PropNameBrackets + "]";
+    std::string PropStr(PropName->str);
     std::string FluidString = Fluid->str;
 
     // pass the arguments to the CoolProp.Props1() function
@@ -340,7 +353,7 @@ static LRESULT CP_Props1SI(LPCOMPLEXSCALAR Prop,  // pointer to the result
     if (!ValidNumber(Prop->real)) {
         std::string emsg = CoolProp::get_global_param_string("errstring");
         CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
-        return HandleProps1SIError(emsg, FluidString, PropNameBrackets);
+        return HandleProps1SIError(emsg, FluidString, PropStr);
     }
 
     // normal return
@@ -351,13 +364,14 @@ static LRESULT CP_Props1SI(LPCOMPLEXSCALAR Prop,  // pointer to the result
 static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Prop1Name, const unsigned int o )
 {
     // Parameter "o" is passed as a parameter # offset between PropsSI (6 parameters) and PhaseSI (5 parameters and no output string)
-    // PropsSI calls this routine with o = 0u (zero), while PhaseSI calls this routhine with o = 1u.
+    // PropsSI calls this routine with o = 0u (zero), while PhaseSI calls this routine with o = 1u.
     auto contains = [&](const char* s) { return emsg.find(s) != std::string::npos; };
     unsigned int errPos = 0;
     CoolProp::parameters key1;
 
+    // Check for invalid input pair specification first.
     if (contains("Input pair variable is invalid")) {
-        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u-o : 4u-0;
+        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u - o : 4u - o;
         return MAKELRESULT(BAD_PARAMETER, errPos);
     }
     if (contains("Input Name1")) return MAKELRESULT(BAD_PARAMETER, 2-o);
@@ -374,6 +388,8 @@ static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Pr
     if (contains("only defined within the two-phase")) return MAKELRESULT(NON_TWO_PHASE, 1);
     if (contains("not implemented")) return MAKELRESULT(NOT_AVAIL, 1);
 
+    // Check for invalid fluid errors next.
+    if (contains("Predefined mixture") && contains("not found")) return MAKELRESULT(BAD_MIXTURE, 6u-o);
     if (contains("Initialize failed")) {
         errPos = 6u -o;
         if (contains("Could not match the binary pair")) return MAKELRESULT(MISSING_BINARY_PAIR, errPos);
@@ -385,7 +401,8 @@ static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Pr
         return MAKELRESULT(BAD_FLUID, errPos);
     }
 
-    if (contains("Temperature") || contains("below Tmelt(p)"))        // Casess where temperture is out of range.
+    // Check for out of range errors next.
+    if (contains("Temperature") || contains("below Tmelt(p)"))        // Cases where temperature is out of range.
         return (Prop1Name == "T") ? MAKELRESULT(T_OUT_OF_RANGE, 3u - o) : MAKELRESULT(T_OUT_OF_RANGE, 5u - o);
     if (contains("Saturation pressure"))                              // Cases at saturation for T-P
         return (Prop1Name == "P") ? MAKELRESULT(TP_SATURATION, 3u - o) : MAKELRESULT(TP_SATURATION, 5u - o);
@@ -393,10 +410,10 @@ static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Pr
         return (Prop1Name == "P") ? MAKELRESULT(P_OUT_OF_RANGE, 3u-o) : MAKELRESULT(P_OUT_OF_RANGE, 5u-o);
     if (contains("Enthalpy") || contains("solution because Hmolar"))  // Cases where enthalpy is out of range
         return ((Prop1Name == "H") || (Prop1Name == "Hmolar")) ? MAKELRESULT(H_OUT_OF_RANGE, 3u-o) : MAKELRESULT(H_OUT_OF_RANGE, 5u-o);
-    if (contains("Entropy") || contains("solution because Smolar"))   // Cases where intropy is out of range
+    if (contains("Entropy") || contains("solution because Smolar"))   // Cases where entropy is out of range
         return ((Prop1Name == "S") || (Prop1Name == "Smolar")) ? MAKELRESULT(S_OUT_OF_RANGE, 3u-o) : MAKELRESULT(S_OUT_OF_RANGE, 5u-o);
 
-    // Untrapped error, return generic error code and have user check get_global_param_string("errstring") for details
+    // Un-trapped error, return generic error code and have user check get_global_param_string("errstring") for details
     return MAKELRESULT(UNKNOWN, 1);
 }
 
@@ -568,7 +585,7 @@ static LRESULT CP_PhaseSI(LPMCSTRING PhaseStr,          // output (CoolProp phas
 }
 
 
-// this code executes the user function CP_HAPropsSI, which is a wrapper for
+// This code executes the user function CP_HAPropsSI, which is a wrapper for
 // the CoolProp.HAPropsSI() function, used to extract humid air properties in base-SI units
 static LRESULT CP_HAPropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
                      LPCMCSTRING OutputName,       // string with a valid CoolProp Output Name
@@ -633,6 +650,10 @@ static LRESULT CP_HAPropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the resu
     return 0;
 }
 
+// ********************************************************************************************************
+//   Pseudo-Low-Level Functions for mixture information & settings
+// ********************************************************************************************************
+
 // this code executes the user function CP_get_mixture_binary_pair_data, which is a wrapper for
 // the CoolProp.get_mixture_binary_pair_data() function, used to get the requested binary pair
 // interaction parameter (always returned as a string).
@@ -665,7 +686,92 @@ static LRESULT CP_get_mixture_binary_pair_data(LPMCSTRING Value,  // output stri
     return 0;
 }
 
-// this code executes the user function CP_apply_simple_mixing_rule, which is a wrapper for
+// Helper: centralize check for predefined-mixture-not-found error messages
+static inline bool PredefinedMixtureNotFound(const std::string& emsg) {
+    return (emsg.find("Predefined mixture") != std::string::npos && emsg.find("not found") != std::string::npos);
+}
+
+// Return semicolon-delimited fluid names for a predefined mixture
+static LRESULT CP_get_predefined_mixture_fluids(LPMCSTRING Comps,         // output string (semicolon-delimited fluid names)
+                                                LPCMCSTRING MixtureName)  // name of predefined mixture (with or without .mix)
+{
+    std::string s;
+    try {
+        std::string key = MixtureName->str;
+        if ((key.find(".mix") == std::string::npos) && (key.find(".MIX") == std::string::npos)) key += ".mix";
+
+        Dictionary dict;
+        if (!CoolProp::is_predefined_mixture(key, dict)) {
+            throw CoolProp::ValueError(format("Predefined mixture [%s] not found", key.c_str()));
+        }
+
+        const std::vector<std::string>& fluids = dict.get_string_vector("fluids");
+        s = strjoin(fluids, ";");
+    } catch (const CoolProp::ValueError& e) {
+        std::string emsg(e.what());
+        CoolProp::set_error_string(emsg);
+        if (PredefinedMixtureNotFound(emsg))
+            return MAKELRESULT(BAD_MIXTURE, 1);
+        else
+            return MAKELRESULT(UNKNOWN, 1);
+    } catch (...) {
+        CoolProp::set_error_string("Unknown error retrieving predefined mixture fluids");
+        return MAKELRESULT(UNKNOWN, 1);
+    }
+
+    char* c = AllocMathcadString(s);
+    Comps->str = c;
+    return 0;
+}
+
+// Return a column vector of mole fractions for a predefined mixture
+static LRESULT CP_get_predefined_mixture_mole_fractions(LPCOMPLEXARRAY Dest,      // output column vector of mole fractions
+                                                        LPCMCSTRING MixtureName)  // name of predefined mixture (with or without .mix)
+{
+    std::vector<std::vector<double>> Vec;
+    try {
+        std::string key = MixtureName->str;
+        if ((key.find(".mix") == std::string::npos) && (key.find(".MIX") == std::string::npos)) key += ".mix";
+
+        Dictionary dict;
+        if (!CoolProp::is_predefined_mixture(key, dict)) {
+            throw CoolProp::ValueError(format("Predefined mixture [%s] not found", key.c_str()));
+        }
+
+        const std::vector<double>& mf = dict.get_double_vector("mole_fractions");
+        // Convert to vector-of-vectors with one column
+        Vec.reserve(mf.size());
+        for (std::size_t i = 0; i < mf.size(); ++i) {
+            Vec.push_back(std::vector<double>(1, mf[i]));
+        }
+    } catch (const CoolProp::ValueError& e) {
+        std::string emsg(e.what());
+        CoolProp::set_error_string(emsg);
+        if (PredefinedMixtureNotFound(emsg)) {
+            return MAKELRESULT(BAD_MIXTURE, 1);
+        }
+        return MAKELRESULT(UNKNOWN, 1);
+    } catch (...) {
+        std::string emsg("Unknown error retrieving predefined mixture mole fractions");
+        CoolProp::set_error_string(emsg);
+        return MAKELRESULT(UNKNOWN, 1);
+    }
+
+    if (Vec.empty()) {
+        // No mole fractions found -> return mixture error
+        std::string emsg("No mole fractions found for specified predefined mixture");
+        CoolProp::set_error_string(emsg);
+        return MAKELRESULT(BAD_MIXTURE, 1);
+    }
+
+    LRESULT rc = AllocateToMathcadArray(Dest, Vec);
+    if (rc) return rc;
+
+    return 0;
+}
+
+
+// This code executes the user function CP_apply_simple_mixing_rule, which is a wrapper for
 // the CoolProp.apply_simple_mixing_rule() function, used to set the mixing rule for a
 // specific binary pair.
 static LRESULT CP_apply_simple_mixing_rule(LPMCSTRING Msg,    // output string (verification message)
@@ -705,7 +811,7 @@ static LRESULT CP_apply_simple_mixing_rule(LPMCSTRING Msg,    // output string (
     return 0;
 }
 
-// this code executes the user function CP_set_mixture_binary_pair_data, which is a wrapper for
+// This code executes the user function CP_set_mixture_binary_pair_data, which is a wrapper for
 // the CoolProp.set_mixture_binary_pair_data() function, used to set the mixing rule for a
 // specific binary pair.
 static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // output string (verification message)
@@ -747,7 +853,10 @@ static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // outpu
     return 0;
 }
 
-// fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
+// ********************************************************************************************************
+// Fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
+// ********************************************************************************************************
+
 FUNCTIONINFO PropsParam = {
   "get_global_param_string",                                 // Name by which Mathcad will recognize the function
   "Name of the parameter to retrieve",                       // Description of input parameters
@@ -758,7 +867,6 @@ FUNCTIONINFO PropsParam = {
   {MC_STRING}                                                // Argument types
 };
 
-// fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
 FUNCTIONINFO FluidParam = {
   "get_fluid_param_string",                                  // Name by which Mathcad will recognize the function
   "Fluid, Name of the parameter to retrieve",                // Description of input parameters
@@ -769,7 +877,6 @@ FUNCTIONINFO FluidParam = {
   {MC_STRING, MC_STRING}                                     // Argument types
 };
 
-// fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
 FUNCTIONINFO RefState = {
   "set_reference_state",                                           // Name by which Mathcad will recognize the function
   "Fluid, Reference State String",                                 // Description of input parameters
@@ -780,7 +887,6 @@ FUNCTIONINFO RefState = {
   {MC_STRING, MC_STRING}                                           // Argument types
 };
 
-// fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
 FUNCTIONINFO Props1SI = {
   "Props1SI",                                                                                     // Name by which Mathcad will recognize the function
   "Fluid, Property Name",                                                                         // Description of input parameters
@@ -791,7 +897,6 @@ FUNCTIONINFO Props1SI = {
   {MC_STRING, MC_STRING}                                                                          // Argument types
 };
 
-// fill out a FUNCTIONINFO structure with the information needed for registering the function with Mathcad
 FUNCTIONINFO PropsSI = {
   "PropsSI",                                                                                  // Name by which Mathcad will recognize the function
   "Output Name, Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name",  // Description of input parameters
@@ -821,7 +926,6 @@ FUNCTIONINFO PhaseSI = {
   5,                                                                                          // Number of arguments
   {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                           // Argument types
 };
-
 
 FUNCTIONINFO HAPropsSI = {
   "HAPropsSI",  // Name by which Mathcad will recognize the function
@@ -863,10 +967,37 @@ FUNCTIONINFO SetMixtureData = {
   {MC_STRING, MC_STRING, MC_STRING, COMPLEX_SCALAR}           // Argument types
 };
 
+FUNCTIONINFO GetPredefFluids = {
+  "get_predefined_mixture_fluids",                                      // Name by which Mathcad will recognize the function
+  "MixtureName",                                                        // Description of input parameters
+  "Returns semicolon-delimited fluid names in the predefined mixture",  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_predefined_mixture_fluids,                        // Pointer to the function code.
+  MC_STRING,                                                            // Returns a Mathcad string
+  1,                                                                    // Number of arguments
+  {MC_STRING}                                                           // Argument types
+};
+
+FUNCTIONINFO GetPredefMoleFracs = {
+  "get_predefined_mixture_fractions",                                      // Name by which Mathcad will recognize the function
+  "MixtureName",                                                           // Description of input parameters
+  "Returns a column vector of mole fractions for the predefined mixture",  // description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_get_predefined_mixture_mole_fractions,                   // Pointer to the function code.
+  COMPLEX_ARRAY,                                                           // Returns a Mathcad complex array
+  1,                                                                       // Number of arguments
+  {MC_STRING}                                                              // Argument types
+};
+
+
 // ************************************************************************************
 // DLL entry point code.
 // ************************************************************************************
-// The _CRT_INIT function is needed if you are using Microsoft's WIN32 compiler
+// Note 1: The _CRT_INIT function is needed if using Microsoft's WIN32 library and you want to use the C runtime library,
+//         which we do for string handling and other utilities.  If you are using a different compiler or setup,
+//         this may not be needed. It is only defined here if _WIN32 is defined.
+// Note 2: The the _CRT_INIT function is not called directly in our code, but is instead called by the DllEntryPoint function
+// Note 3: MS IntelliSense will warn "VCR001 Definition for _CRT_INIT not found", but this warning can be safely
+//         ignored as a known false positive.  To disable, got to Tools > Options > Text Editor > C/C++ > IntelliSense and
+//         set "Create declaration/definition suggestion level" to "Refactoring only".
 #ifdef _WIN32
 extern "C" BOOL WINAPI _CRT_INIT(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpReserved);
 #endif
@@ -894,6 +1025,9 @@ extern "C" BOOL WINAPI DllEntryPoint(HINSTANCE hDLL, DWORD dwReason, LPVOID lpRe
             CreateUserFunction(hDLL, &GetMixtureData);
             CreateUserFunction(hDLL, &SetMixtureData);
             CreateUserFunction(hDLL, &ApplyMixingRule);
+            // Register the new helper functions for predefined mixtures
+            CreateUserFunction(hDLL, &GetPredefFluids);
+            CreateUserFunction(hDLL, &GetPredefMoleFracs);
             break;
 
         case DLL_THREAD_ATTACH:
