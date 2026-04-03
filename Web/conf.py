@@ -126,6 +126,14 @@ with zipfile.ZipFile(zfile) as z:
     z.extractall(path=Path(__file__).parent / '_static')
 mathjax_path = "MathJax-4.0.0/tex-mml-chtml.js"
 assert (Path(__file__).parent / '_static' / mathjax_path).exists()
+# Disable the SRE accessibility features that use fetch() to load mathmaps JSON files.
+# Those fetch() calls are blocked by CORS when the docs are viewed from file:// URLs.
+mathjax3_config = {
+    'options': {
+        'enableExplorer': False,
+        'enableAssistiveMml': False,
+    }
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
