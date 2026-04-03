@@ -290,7 +290,10 @@ html_static_path = ['_static']
 _3dmol_js = Path(__file__).parent / '_static' / '3Dmol-min.js'
 if not _3dmol_js.exists():
     urllib.request.urlretrieve('https://3dmol.org/build/3Dmol-min.js', _3dmol_js)
-html_js_files = ['3Dmol-min.js']
+# Priority 450 ensures 3Dmol-min.js loads before require.js (added by sphinx.ext.mathjax
+# at priority 500). If 3Dmol loads after require.js, its AMD detection kicks in and
+# define([], factory) is called but never executed, silently preventing $3Dmol from being set.
+html_js_files = [('3Dmol-min.js', {'priority': 450})]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
