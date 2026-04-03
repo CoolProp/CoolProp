@@ -177,13 +177,7 @@ class IncompressibleBackend : public AbstractState
     */
     CoolPropDbl PSmass_flash(CoolPropDbl p, CoolPropDbl smass);
 
-    //    /// Calculate T given pressure and internal energy
-    //    /**
-    //    @param umass The mass internal energy in J/kg
-    //    @param p The pressure in Pa
-    //    @returns T The temperature in K
-    //    */
-    //    CoolPropDbl PUmass_flash(CoolPropDbl p, CoolPropDbl umass);
+    // CoolPropDbl PUmass_flash(CoolPropDbl p, CoolPropDbl umass);  // not implemented
 
     /// We start with the functions that do not need a reference state
     CoolPropDbl calc_rhomass(void) {

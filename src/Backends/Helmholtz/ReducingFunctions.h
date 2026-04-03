@@ -256,12 +256,12 @@ class GERG2008ReducingFunction : public ReducingFunction
     CoolPropDbl Tr(const std::vector<CoolPropDbl>& x) const;
 
     /** \brief The derivative of reducing temperature with respect to gammaT
-     * Calculated from \ref dYr_gamma with \f$T = Y\f$
+     * Calculated from dYr_gamma with \f$T = Y\f$
      */
     CoolPropDbl dTr_dgammaT(const std::vector<CoolPropDbl>& x) const;
 
     /** \brief The derivative of reducing temperature with respect to betaT
-     * Calculated from \ref dYr_beta with \f$T = Y\f$
+     * Calculated from dYr_beta with \f$T = Y\f$
      */
     CoolPropDbl dTr_dbetaT(const std::vector<CoolPropDbl>& x) const;
 
@@ -321,12 +321,12 @@ class GERG2008ReducingFunction : public ReducingFunction
     CoolPropDbl rhormolar(const std::vector<CoolPropDbl>& x) const;
 
     /** \brief The derivative of reducing density with respect to gammaV
-     * Calculated from \ref dYr_gamma with \f$v = Y\f$
+     * Calculated from dYr_gamma with \f$v = Y\f$
      */
     CoolPropDbl drhormolar_dgammaV(const std::vector<CoolPropDbl>& x) const;
 
     /** \brief The derivative of reducing density with respect to betaV
-     * Calculated from \ref dYr_beta with \f$v = Y\f$
+     * Calculated from dYr_beta with \f$v = Y\f$
      */
     CoolPropDbl drhormolar_dbetaV(const std::vector<CoolPropDbl>& x) const;
 

@@ -144,9 +144,10 @@ class BicubicBackend : public TabularBackend
          * @brief Evaluate the single-phase transport properties using linear interpolation.  Works well except for near the critical point
          * @param table A reference to the table to be used
          * @param output The output parameter, viscosity or conductivity
-         * @param x The
-         * @param y
-         * @return
+         * @param x The first independent variable value
+         * @param y The second independent variable value
+         * @param i The row index into the table
+         * @param j The column index into the table
          */
     double evaluate_single_phase_transport(SinglePhaseGriddedTableData& table, parameters output, double x, double y, std::size_t i, std::size_t j);
 
@@ -163,6 +164,7 @@ class BicubicBackend : public TabularBackend
          * @param coeffs The matrix of coefficients to be used
          * @param other_key The x variable
          * @param other The value of the x-ish variable to be used to find d
+         * @param y The value of the y-coordinate to be used
          * @param i The x-coordinate of the cell
          * @param j The y-coordinate of the cell
          */

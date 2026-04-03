@@ -303,7 +303,7 @@ void bisect_vector(const std::vector<T>& vec, T val, std::size_t& i) {
  * @brief Use bisection to find the inputs that bisect the value you want, the trick
  * here is that this function is allowed to have "holes" where parts of the the array are
  * also filled with invalid numbers for which ValidNumber(x) is false
- * @param matrix The vector to be bisected
+ * @param mat The vector to be bisected
  * @param j The index of the matric in the off-grain dimension
  * @param val The value to be found
  * @param i The index to the left of the final point; i and i+1 bound the value

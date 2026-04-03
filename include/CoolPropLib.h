@@ -150,7 +150,7 @@ EXPORT_CODE long CONVENTION PhaseSI(const char* Name1, double Prop1, const char*
 EXPORT_CODE long CONVENTION get_global_param_string(const char* param, char* Output, int n);
 /**
      * \overload
-     * \sa \ref CoolProp::get_parameter_information_string
+     * \sa CoolProp::get_parameter_information_string
      * \note This function returns the output string in pre-allocated char buffer.  If buffer is not large enough, no copy is made
      *
      * @returns error_code 1 = Ok 0 = error
@@ -265,7 +265,7 @@ EXPORT_CODE double CONVENTION saturation_ancillary(const char* fluid_name, const
 // ---------------------------------
 
 /** \brief DLL wrapper of the HAPropsSI function
-     * \sa \ref HumidAir::HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
+     * \sa HumidAir::HAPropsSI
      *
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
@@ -282,7 +282,7 @@ EXPORT_CODE double CONVENTION HAPropsSI(const char* Output, const char* Name1, d
 EXPORT_CODE double CONVENTION cair_sat(double T);
 
 /** \brief FORTRAN 77 style wrapper of the HAPropsSI function
-     * \sa \ref HumidAir::HAPropsSI(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
+     * \sa HumidAir::HAPropsSI
      *
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
@@ -292,7 +292,7 @@ EXPORT_CODE void CONVENTION hapropssi_(const char* Output, const char* Name1, co
 /** \brief DLL wrapper of the HAProps function
      *
      * \warning DEPRECATED!!
-     * \sa \ref HumidAir::HAProps(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
+     * \sa HumidAir::HAProps
      *
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
@@ -302,7 +302,7 @@ EXPORT_CODE double CONVENTION HAProps(const char* Output, const char* Name1, dou
 /** \brief FORTRAN 77 style wrapper of the HAProps function
      *
      * \warning DEPRECATED!!
-     * \sa \ref HumidAir::HAProps(const char *OutputName, const char *Input1Name, double Input1, const char *Input2Name, double Input2, const char *Input3Name, double Input3);
+     * \sa HumidAir::HAProps
      *
      * \note If there is an error, a huge value will be returned, you can get the error message by doing something like get_global_param_string("errstring",output)
      */
@@ -516,7 +516,7 @@ EXPORT_CODE double CONVENTION AbstractState_second_partial_deriv(const long hand
     * @brief Calculate the first partial derivative in two-phase region with Spline - Approach from the AbstractState using integer values for the desired parameters
     Spline Approach "Methods to Increase the Robustness of Finite-Volume FlowModels in Thermodynamic Systems: Sylvain Quoilin, Ian Bell, Adriano Desideri, Pierre Dewallef and Vincent Lemort"
     * @param handle The integer handle for the state class stored in memory
-    * @x_end constant parameter for defining range of the spline, (usually 0.1 is used, 0..1 is possible)
+    * @param x_end constant parameter for defining range of the spline, (usually 0.1 is used, 0..1 is possible)
     * @param Of The parameter of which the derivative is being taken
     * @param Wrt The derivative with with respect to this parameter
     * @param Constant The parameter that is not affected by the derivative
@@ -811,12 +811,13 @@ EXPORT_CODE double CONVENTION AbstractState_saturated_liquid_keyed_output(const 
 EXPORT_CODE double CONVENTION AbstractState_saturated_vapor_keyed_output(const long handle, const long param, long* errcode, char* message_buffer,
                                                                          const long buffer_length);
 
-/** 
+/**
      * \brief Add fluids as a JSON-formatted string
      * @param backend The backend to which these should be added; e.g. "HEOS", "SRK", "PR"
      * @param fluidstring The JSON-formatted string
-     * @return
-     *
+     * @param errcode The errorcode that is returned (0 = no error, !0 = error)
+     * @param message_buffer A buffer for the error message
+     * @param buffer_length The length of the buffer for the error message
      */
 EXPORT_CODE void CONVENTION add_fluids_as_JSON(const char* backend, const char* fluidstring, long* errcode, char* message_buffer,
                                                const long buffer_length);

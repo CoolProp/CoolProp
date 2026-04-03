@@ -386,12 +386,6 @@ double IncompressibleBackend::smass_ref(void) {
     return _smass_ref;
 }
 
-/// Calculate T given pressure and density
-/**
-@param rhomass The mass density in kg/m^3
-@param p The pressure in Pa
-@returns T The temperature in K
-*/
 CoolPropDbl IncompressibleBackend::DmassP_flash(CoolPropDbl rhomass, CoolPropDbl p) {
     return fluid->T_rho(rhomass, p, _fractions[0]);
 }
