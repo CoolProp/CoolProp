@@ -1804,7 +1804,24 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
     }
 }
 
+// Helper function to check if REFPROP is available. If not, we skip the test cases that require REFPROP
+namespace {
+    bool is_refprop_available() {
+        try {
+            double val = Props1SI("REFPROP::Nitrogen", "molemass");
+            return ValidNumber(val);
+        } catch (...) {
+            return false;
+        }
+    }
+}
+
+
 TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
+    if (!is_refprop_available()) {
+        SKIP("REFPROP backend not available in this environment");
+    }
+
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
     for (std::size_t i = 0; i < fluids.size(); ++i) {
         std::ostringstream ss1;
@@ -1822,6 +1839,10 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
     }
 }
 TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]") {
+    if (!is_refprop_available()) {
+        SKIP("REFPROP backend not available in this environment");
+    }
+
     SECTION("REFPROP-", "") {
         double val = Props1SI("REFPROP-Water", "Tcrit");
         std::string err = get_global_param_string("errstring");
@@ -3078,6 +3099,10 @@ TEST_CASE("CoolProp.jl tests", "[2598]") {
 }
 
 TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]") {
+    if (!is_refprop_available()) {
+        SKIP("REFPROP backend not available in this environment");
+    }
+
     auto TNBP_RP = PropsSI("T", "P", 101325, "Q", 0, "REFPROP::METHANOL");
     auto TNBP_CP = PropsSI("T", "P", 101325, "Q", 0, "HEOS::METHANOL");
     CHECK(TNBP_RP == Catch::Approx(TNBP_CP).epsilon(1e-6));
