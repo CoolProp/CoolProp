@@ -2,6 +2,9 @@ import CoolProp
 CP = CoolProp.CoolProp
 import os
 import codecs
+import re
+import urllib.request
+import urllib.error
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..'))
@@ -15,7 +18,7 @@ fluid_template = u""".. _fluid_{fluid:s}:
 {references:s}
 {aliases:s}
 
-Fluid Information
+{molecule_viewer_rst:s}Fluid Information
 =================
 
 .. csv-table::
@@ -112,6 +115,92 @@ import pybtex
 style = pybtex.plugin.find_plugin('pybtex.style.formatting', 'plain')()
 backend = pybtex.plugin.find_plugin('pybtex.backends', 'html')()
 parser = pybtex.database.input.bibtex.Parser()
+
+_INCHIKEY_RE = re.compile(r'^[A-Z]{14}-[A-Z]{10}-[A-Z]$')
+
+
+def fetch_pubchem_sdf(inchikey, cache_dir):
+    """
+    Fetch SDF from PubChem for *inchikey*, trying 3-D conformer first then 2-D.
+    Results are cached in *cache_dir* so subsequent runs never hit the network.
+    Returns (sdf_string, is_3d) or (None, None) when unavailable.
+    """
+    os.makedirs(cache_dir, exist_ok=True)
+    for record_type, is_3d in (('3d', True), ('2d', False)):
+        cache_path = os.path.join(cache_dir, f'{inchikey}_{record_type}.sdf')
+        fail_flag  = cache_path + '.failed'
+        if os.path.exists(cache_path):
+            with open(cache_path, 'r', encoding='utf-8') as fh:
+                return fh.read(), is_3d
+        if os.path.exists(fail_flag):
+            continue
+        url = (f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey/'
+               f'{inchikey}/SDF?record_type={record_type}')
+        try:
+            with urllib.request.urlopen(url, timeout=15) as resp:
+                content = resp.read().decode('utf-8')
+            with open(cache_path, 'w', encoding='utf-8') as fh:
+                fh.write(content)
+            print(f'  fetched {record_type.upper()} SDF for {inchikey}')
+            return content, is_3d
+        except Exception as exc:
+            print(f'  PubChem {record_type.upper()} SDF unavailable for {inchikey}: {exc}')
+            open(fail_flag, 'w').close()
+    return None, None
+
+
+def generate_3dmol_rst(fluid, sdf_data, is_3d):
+    """
+    Return an RST string containing a ``.. raw:: html`` block with an embedded
+    interactive py3Dmol viewer.  The SDF data is inlined as a JS template
+    literal so no external file serving is required.
+    """
+    # Escape SDF content for safe embedding inside a JS template literal
+    sdf_js = sdf_data.replace('\\', '\\\\').replace('`', '\\`').replace('${', '\\${')
+    dim_label = '3D conformer' if is_3d else '2D structure'
+
+    html = (
+        f'<div class="molecule-viewer" style="text-align:center;margin:1em 0;">\n'
+        f'  <div id="mol3d_{fluid}" style="width:400px;height:320px;'
+        f'position:relative;display:inline-block;border:1px solid #ccc;border-radius:6px;"></div>\n'
+        f'  <p style="margin-top:0.4em;color:#666;font-size:0.85em;">\n'
+        f'    {fluid} \u2014 {dim_label} (interactive: click and drag to rotate)\n'
+        f'  </p>\n'
+        f'</div>\n'
+        f'<script>\n'
+        f'(function() {{\n'
+        f'  var sdf = `{sdf_js}`;\n'
+        f'  function init() {{\n'
+        f'    if (typeof $3Dmol === "undefined") {{ setTimeout(init, 150); return; }}\n'
+        f'    var v = $3Dmol.createViewer(\n'
+        f'      document.getElementById("mol3d_{fluid}"),\n'
+        f'      {{backgroundColor: "white"}});\n'
+        f'    v.addModel(sdf, "sdf");\n'
+        f'    v.setStyle({{}}, {{stick: {{radius: 0.15}}, sphere: {{scale: 0.3}}}});\n'
+        f'    v.zoomTo();\n'
+        f'    v.resize();\n'
+        f'    v.render();\n'
+        f'  }}\n'
+        f'  if (document.readyState === "loading") {{\n'
+        f'    document.addEventListener("DOMContentLoaded", init);\n'
+        f'  }} else {{\n'
+        f'    init();\n'
+        f'  }}\n'
+        f'}})();\n'
+        f'</script>'
+    )
+
+    indented = '\n'.join('   ' + line for line in html.split('\n'))
+    return (
+        'Molecular Structure\n'
+        '===================\n'
+        '\n'
+        '.. raw:: html\n'
+        '\n'
+        f'{indented}\n'
+        '\n'
+    )
+
 
 def formula2RST(formula):
     """
@@ -249,11 +338,21 @@ class FluidGenerator(object):
         if references:
             references = 'References\n==========\n' + references + '\n'
 
+        # Generate interactive 3-D molecule viewer (py3Dmol via PubChem SDF)
+        molecule_viewer_rst = ''
+        inchikey = CoolProp.CoolProp.get_fluid_param_string(self.fluid, "INCHIKEY")
+        if inchikey and _INCHIKEY_RE.match(inchikey):
+            sdf_cache = os.path.join(path, 'molecule_sdf')
+            sdf_data, is_3d = fetch_pubchem_sdf(inchikey, sdf_cache)
+            if sdf_data:
+                molecule_viewer_rst = generate_3dmol_rst(self.fluid, sdf_data, is_3d)
+
         # Write RST file for fluid
         out = fluid_template.format(aliases=aliases,
                                     fluid=self.fluid,
                                     fluid_stars='*' * len(self.fluid),
-                                    references=references
+                                    references=references,
+                                    molecule_viewer_rst=molecule_viewer_rst
                                     )
 
         with codecs.open(os.path.join(path, self.fluid + '.rst'), 'w', encoding='utf-8') as fp:
