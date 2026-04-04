@@ -1807,22 +1807,6 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
     }
 }
 
-// Helper function to check if REFPROP is available. If not, we skip the test cases that require REFPROP
-// Might not be needed.  See if we can use REFPROPMixtureBackend::REFPROP_supported() instead, but this is
-// a more direct test of whether REFPROPMixtureBackend can actually call REFPROPMixtureBackend::REFPROPMixtureBackend()
-// without throwing an exception
-namespace {
-    bool is_refprop_available() {
-        try {
-            double val = Props1SI("REFPROP::Nitrogen", "molemass");
-            return ValidNumber(val);
-        } catch (...) {
-            return false;
-        }
-    }
-}
-
-
 TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
     if (!REFPROPMixtureBackend::REFPROP_supported()) {
         SKIP("REFPROP backend not available in this environment");
