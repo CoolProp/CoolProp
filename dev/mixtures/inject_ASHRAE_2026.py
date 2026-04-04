@@ -15,7 +15,7 @@ def _get_molar_mass(component):
         return CP.PropsSI('M', component)
     except Exception:
         if component == 'R143b':
-            return 0.084041
+            return 0.084041 # From R143a, which has the same molar mass because they are isomers
         if component == 'RE170':
             return CP.PropsSI('M', 'DME')
         if component == 'R1132a':
