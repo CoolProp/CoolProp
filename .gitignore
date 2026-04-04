@@ -55,6 +55,7 @@
 /include/pcsaft_fluids_schema_JSON.h
 /include/version.h
 /include/catch.hpp
+/install_root/
 /build*/
 /dev/hashes.json
 /include/cpversion.h

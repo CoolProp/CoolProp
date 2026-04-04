@@ -1329,7 +1329,7 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
 
 TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert models in REFPROP", "[Gernert]") {
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
-    if (!_REFPROP_supported) {
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
         SKIP("REFPROP backend not available in this environment. Skipping Gernert test.");
     }
     std::string mixes[] = {"CO2[0.7]&Argon[0.3]", "CO2[0.7]&Water[0.3]", "CO2[0.7]&Nitrogen[0.3]"};
@@ -1808,7 +1808,7 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
 }
 
 // Helper function to check if REFPROP is available. If not, we skip the test cases that require REFPROP
-// Might not be needed.  See if we can use REFPROPMixtureBackend::_REFPROP_supported instead, but this is
+// Might not be needed.  See if we can use REFPROPMixtureBackend::REFPROP_supported() instead, but this is
 // a more direct test of whether REFPROPMixtureBackend can actually call REFPROPMixtureBackend::REFPROPMixtureBackend()
 // without throwing an exception
 namespace {
@@ -1824,7 +1824,7 @@ namespace {
 
 
 TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
-    if (!_REFPROP_supported) {
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
         SKIP("REFPROP backend not available in this environment");
     }
 
@@ -1845,7 +1845,7 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
     }
 }
 TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]") {
-    if (!_REFPROP_supported) {
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
         SKIP("REFPROP backend not available in this environment");
     }
 
@@ -3105,7 +3105,7 @@ TEST_CASE("CoolProp.jl tests", "[2598]") {
 }
 
 TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]") {
-    if (!is_refprop_available()) {
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
         SKIP("REFPROP backend not available in this environment");
     }
 
@@ -3323,6 +3323,9 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for R410A", "[superanc]"
 }
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for REFPROP", "[superanc]") {
+    if (!REFPROPMixtureBackend::REFPROP_supported()) {
+        SKIP("REFPROP backend not available in this environment");
+    }
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "WATER"));
     CHECK_THROWS(AS->update_QT_pure_superanc(1.0, 300.0));
 }
@@ -3474,6 +3477,10 @@ std::vector<std::tuple<double, double, double, double>> MSA22values = {
 };
 
 TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
+    if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
+        SKIP("REFPROPMixtureBackend is supported in this environment, so skipping ideal gas test");
+    }
+
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Air"));
     shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Air"));
 

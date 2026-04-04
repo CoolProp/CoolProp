@@ -705,9 +705,15 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         CHECK(ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "R410A.mix")));
     };
     SECTION("Single state, single output, predefined mixture from REFPROP") {
+        if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
+            SKIP("REFPROPMixtureBackend is supported in this environment, so skipping REFPROP PropsSI test.");
+        }
         CHECK(ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "REFPROP::R410A.MIX")));
     };
     SECTION("Single state, single output, bad predefined mixture from REFPROP") {
+        if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
+            SKIP("REFPROPMixtureBackend is supported in this environment, so skipping REFPROP PropsSI test.");
+        }
         CHECK(!ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "REFPROP::RRRRRR.mix")));
     };
     SECTION("Predefined mixture") {

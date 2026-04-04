@@ -2224,6 +2224,10 @@ void REFPROP_SETREF(char hrf[3], int ixflag, double x0[1], double& h0, double& s
 #    include <catch2/catch_all.hpp>
 
 TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
+    if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
+        SKIP("REFPROP backend not available in this environment");
+    }
+
     SECTION("Saturation densities agree within 0.5% at T/Tc = 0.9") {
         std::vector<std::string> ss = strsplit(CoolProp::get_global_param_string("FluidsList"), ',');
 
@@ -2339,6 +2343,10 @@ TEST_CASE("Check REFPROP and CoolProp values agree", "[REFPROP]") {
 }
 
 TEST_CASE("Check trivial inputs for REFPROP work", "[REFPROP_trivial]") {
+    if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
+        SKIP("REFPROP backend not available in this environment");
+    }
+
     const int num_inputs = 6;
     std::string inputs[num_inputs] = {"T_triple", "T_critical", "p_critical", "molar_mass", "rhomolar_critical", "rhomass_critical"};
     for (int i = 0; i < num_inputs; ++i) {
@@ -2357,6 +2365,9 @@ TEST_CASE("Check trivial inputs for REFPROP work", "[REFPROP_trivial]") {
 }
 
 TEST_CASE("Check PHI0 derivatives", "[REFPROP_PHI0]") {
+    if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
+        SKIP("REFPROP backend not available in this environment");
+    }
 
     const int num_inputs = 3;
     std::string inputs[num_inputs] = {"DALPHA0_DDELTA_CONSTTAU", "D2ALPHA0_DDELTA2_CONSTTAU", "D3ALPHA0_DDELTA3_CONSTTAU"};
