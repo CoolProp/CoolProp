@@ -1329,6 +1329,9 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
 
 TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert models in REFPROP", "[Gernert]") {
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+    if (!_REFPROP_supported) {
+        SKIP("REFPROP backend not available in this environment. Skipping Gernert test.");
+    }
     std::string mixes[] = {"CO2[0.7]&Argon[0.3]", "CO2[0.7]&Water[0.3]", "CO2[0.7]&Nitrogen[0.3]"};
     for (int i = 0; i < 3; ++i) {
         const char* ykey = mixes[i].c_str();
@@ -1805,6 +1808,9 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
 }
 
 // Helper function to check if REFPROP is available. If not, we skip the test cases that require REFPROP
+// Might not be needed.  See if we can use REFPROPMixtureBackend::_REFPROP_supported instead, but this is
+// a more direct test of whether REFPROPMixtureBackend can actually call REFPROPMixtureBackend::REFPROPMixtureBackend()
+// without throwing an exception
 namespace {
     bool is_refprop_available() {
         try {
@@ -1818,7 +1824,7 @@ namespace {
 
 
 TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
-    if (!is_refprop_available()) {
+    if (!_REFPROP_supported) {
         SKIP("REFPROP backend not available in this environment");
     }
 
@@ -1839,7 +1845,7 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
     }
 }
 TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]") {
-    if (!is_refprop_available()) {
+    if (!_REFPROP_supported) {
         SKIP("REFPROP backend not available in this environment");
     }
 
