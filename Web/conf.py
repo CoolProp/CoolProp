@@ -20,9 +20,24 @@
 
 import subprocess
 import sys
-from pathlib import Path 
+from pathlib import Path
 import urllib.request
 import zipfile
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
+def _download(url, dest):
+    """Download url to dest with automatic retries on transient failures."""
+    session = requests.Session()
+    session.mount("https://", HTTPAdapter(max_retries=Retry(
+        total=5, backoff_factor=2, status_forcelist=[429, 500, 502, 503, 504]
+    )))
+    response = session.get(url, timeout=60)
+    response.raise_for_status()
+    Path(dest).write_bytes(response.content)
 
 import CoolProp
 ver = CoolProp.__version__
@@ -121,7 +136,7 @@ numpydoc_show_class_members = False
 
 zfile = Path("MJ.zip")
 if not zfile.exists():
-    urllib.request.urlretrieve("https://github.com/mathjax/MathJax/archive/refs/tags/4.0.0.zip", zfile)
+    _download("https://github.com/mathjax/MathJax/archive/refs/tags/4.0.0.zip", zfile)
 with zipfile.ZipFile(zfile) as z:
     z.extractall(path=Path(__file__).parent / '_static')
 mathjax_path = "MathJax-4.0.0/tex-mml-chtml.js"
@@ -289,7 +304,7 @@ html_static_path = ['_static']
 # Download locally to avoid CORS issues when docs are served from file:// or a local server
 _3dmol_js = Path(__file__).parent / '_static' / '3Dmol-min.js'
 if not _3dmol_js.exists():
-    urllib.request.urlretrieve('https://3dmol.org/build/3Dmol-min.js', _3dmol_js)
+    _download('https://3dmol.org/build/3Dmol-min.js', _3dmol_js)
 # Priority 450 ensures 3Dmol-min.js loads before require.js (added by sphinx.ext.mathjax
 # at priority 500). If 3Dmol loads after require.js, its AMD detection kicks in and
 # define([], factory) is called but never executed, silently preventing $3Dmol from being set.
