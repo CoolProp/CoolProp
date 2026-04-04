@@ -380,7 +380,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
 
     /** \brief Set the mole fractions
      *
-     * @param mole_fractions The vector of mole fractions of the components
+     * @param mf The vector of mole fractions of the components
      */
     void set_mole_fractions(const std::vector<CoolPropDbl>& mf);
 

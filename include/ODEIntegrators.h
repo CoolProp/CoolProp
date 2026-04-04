@@ -25,6 +25,7 @@ class AbstractODEIntegrator
 /**
      @brief Use the adaptive Runge-Kutta integrator to integrate a system of differential equations
 
+     @param ode The ODE integrator instance that implements the required callbacks
      @param tmin Starting value of the independent variable.  ``t`` is in the closed range [``tmin``, ``tmax``]
      @param tmax Ending value for the independent variable.  ``t`` is in the closed range [``tmin``, ``tmax``]
      @param hmin Minimum step size, something like 1e-5 usually is good.  Don't make this too big or you may not be able to get a stable solution

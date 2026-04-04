@@ -126,6 +126,7 @@ bool is_valid_fluid_string(const std::string& fluidstring);
 /** \brief Add fluids as a JSON-formatted string
      *
      * @param backend The backend to which these should be added; e.g. "HEOS", "SRK", "PR"
+     * @param fluidstring The JSON-formatted string containing the fluid data
      * @returns output Returns true if the fluids were able to be added
      *
      */

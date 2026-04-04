@@ -226,7 +226,7 @@ inline double saturation_preconditioner(HelmholtzEOSMixtureBackend& HEOS, double
      * \f[
      * \sum_i \frac{x_i(K_i-1)}{1 - \beta + \beta K_i} = 0
      * \f]
-     * When \f$T\f$ is known for \f$\beta=0$, \f$p\f$can be obtained from
+     * When \f$T\f$ is known for \f$\beta=0\f$, \f$p\f$ can be obtained from
      * \f[
      * -1+\sum_i K_ix_i=0,
      * \f]

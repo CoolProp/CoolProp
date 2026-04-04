@@ -133,7 +133,7 @@ class TransportRoutines
      * @brief Higher-order viscosity term from friction theory of Sergio Quinones-Cisneros
      *
      * Several functional forms have been proposed and this function attempts to handle all of them
-     * \f$ \eta_{HO} = \kappa_ap_a + \kappa_r\Delta p_r + \kappa_i p_{id}+\kappa_{aa}p_a^2 + \kappa_{drdr}\Delta p_r^2 + \kappa_{rr}p_{r}^2 + \kappa_{ii}p_{id}^2 +\kappa_{rrr}p_r^3 + \kappa_{aaa}p_a^3
+     * \f[ \eta_{HO} = \kappa_ap_a + \kappa_r\Delta p_r + \kappa_i p_{id}+\kappa_{aa}p_a^2 + \kappa_{drdr}\Delta p_r^2 + \kappa_{rr}p_{r}^2 + \kappa_{ii}p_{id}^2 +\kappa_{rrr}p_r^3 + \kappa_{aaa}p_a^3 \f]
      *
      * Watch out that sometimes it is \f$\Delta p_r\f$ and other times it is \f$p_r\f$!
      *
@@ -141,7 +141,7 @@ class TransportRoutines
 	 *
      * \f[ p_r = T \frac{\partial p}{\partial T}\right|_{\rho}/1e5 \f]
      * \f[ p_a = p - p_r \f]
-     * \f[ p_{id} = \rho R T \f] / 1e5 \f]
+     * \f[ p_{id} = \rho R T / 1e5 \f]
      * \f[ \Delta p_r = p_r - p_{id} \f]
      * \f[ \psi_1 = \exp(\tau)-c_1 \f]
      * \f[ \psi_2 = \exp(\tau^2)-c_2 \f]

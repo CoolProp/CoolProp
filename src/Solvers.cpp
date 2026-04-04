@@ -40,10 +40,9 @@ for a given value of x.  The pointer to the class FuncWrapperND that is passed i
 functions, each of which take the vector x. The data is managed using std::vector<double> vectors
 
 @param f A pointer to an subclass of the FuncWrapperND class that implements the call() and Jacobian() functions
-@param x0 The initial guess value for the solution
+@param x The initial guess value for the solution
 @param tol The root-sum-square of the errors from each of the components
 @param maxiter The maximum number of iterations
-@param errstring  A string with the returned error.  If the length of errstring is zero, no errors were found
 @param w A relaxation multiplier on the step size, multiplying the normal step size
 @returns If no errors are found, the solution.  Otherwise, _HUGE, the value for infinity
 */

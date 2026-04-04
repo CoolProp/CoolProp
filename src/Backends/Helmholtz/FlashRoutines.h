@@ -142,7 +142,9 @@ class FlashRoutines
 
     /// A generic flash routine for the pairs (D,H), (D,S), and (D,U) for twophase state.  Similar analysis is needed
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param rhomolar_spec The specified molar density [mol/m^3]
     /// @param other The index for the other input from CoolProp::parameters; allowed values are iP, iHmolar, iSmolar, iUmolar
+    /// @param value The value of the other input
     static void HSU_D_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar_spec, parameters other, CoolPropDbl value);
 
     /// A generic flash routine for the pairs (D,P), (D,H), (D,S), and (D,U).  Similar analysis is needed

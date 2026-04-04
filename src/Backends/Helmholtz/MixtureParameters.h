@@ -40,7 +40,6 @@ std::string get_mixture_binary_pair_data(const std::string& CAS1, const std::str
  * @param CAS2 The CAS # for the second fluid (order matters!)
  * @param param The parameter you want to set
  * @param val The value of the parameter
- * @return None
  */
 void set_mixture_binary_pair_data(const std::string& CAS1, const std::string& CAS2, const std::string& param, const double val);
 
