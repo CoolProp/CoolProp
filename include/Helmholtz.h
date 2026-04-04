@@ -10,7 +10,8 @@
 #include "time.h"
 #include "CachedElement.h"
 #include "Backends/Cubics/GeneralizedCubic.h"
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 #include "CPnumerics.h"
 
 #if ENABLE_CATCH

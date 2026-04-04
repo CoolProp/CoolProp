@@ -366,8 +366,7 @@ std::string CoolProp::TabularBackend::path_to_tables(void) {
 void CoolProp::TabularBackend::write_tables() {
     std::string path_to_tables = this->path_to_tables();
     make_dirs(path_to_tables);
-    bool loaded = false;
-    dataset = library.get_set_of_tables(this->AS, loaded);
+    dataset = library.get_set_of_tables(this->AS).first;
     PackablePhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     SinglePhaseGriddedTableData& single_phase_logph = dataset->single_phase_logph;
@@ -378,9 +377,9 @@ void CoolProp::TabularBackend::write_tables() {
     write_table(phase_envelope, path_to_tables, "phase_envelope");
 }
 void CoolProp::TabularBackend::load_tables() {
-    bool loaded = false;
-    dataset = library.get_set_of_tables(this->AS, loaded);
-    if (loaded == false) {
+    auto [ds, loaded] = library.get_set_of_tables(this->AS);
+    dataset = ds;
+    if (!loaded) {
         throw UnableToLoadError("Could not load tables");
     }
     if (get_debug_level() > 0) {
@@ -1239,7 +1238,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                     pL = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iL);
                     pV = PhaseEnvelopeRoutines::evaluate(phase_envelope, iP, iT, _T, iV);
                 } else {
-                    pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
+                    (void)pure_saturation.is_inside(iT, _T, iQ, _Q, iL, iV, pL, pV);
                 }
                 _p = _Q * pV + (1 - _Q) * pL;
                 cached_saturation_iL = iL;
@@ -1296,21 +1295,21 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>&
     tables_loaded = true;
 }
 
-/// Return the set of tabular datasets
-CoolProp::TabularDataSet* CoolProp::TabularDataLibrary::get_set_of_tables(shared_ptr<AbstractState>& AS, bool& loaded) {
+/// Return the set of tabular datasets and whether tables were already loaded
+std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set_of_tables(shared_ptr<AbstractState>& AS) {
     const std::string path = path_to_tables(AS);
     // Try to find tabular set if it is already loaded
     std::map<std::string, TabularDataSet>::iterator it = data.find(path);
     // It is already in the map, return it
     if (it != data.end()) {
-        loaded = it->second.tables_loaded;
-        return &(it->second);
+        return {&(it->second), it->second.tables_loaded};
     }
     // It is not in the map, build it
     else {
         TabularDataSet set;
         data.insert(std::pair<std::string, TabularDataSet>(path, set));
         TabularDataSet& dataset = data[path];
+        bool loaded = false;
         try {
             if (!dataset.tables_loaded) {
                 dataset.load_tables(path, AS);
@@ -1319,7 +1318,7 @@ CoolProp::TabularDataSet* CoolProp::TabularDataLibrary::get_set_of_tables(shared
         } catch (std::exception&) {
             loaded = false;
         }
-        return &(dataset);
+        return {&(dataset), loaded};
     }
 }
 
@@ -1330,7 +1329,7 @@ void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, 
     const bool debug = get_debug_level() > 5 || false;
     const int param_count = 6;
     parameters param_list[param_count] = {iDmolar, iT, iSmolar, iHmolar, iP, iUmolar};
-    std::vector<std::vector<double>>*f = NULL, *fx = NULL, *fy = NULL, *fxy = NULL;
+    std::vector<std::vector<double>>*f = nullptr, *fx = nullptr, *fy = nullptr, *fxy = nullptr;
 
     clock_t t1 = clock();
 
@@ -1479,13 +1478,13 @@ class TabularFixture
    public:
     TabularFixture() {}
     void setup() {
-        if (ASHEOS.get() == NULL) {
+        if (ASHEOS.get() == nullptr) {
             ASHEOS.reset(CoolProp::AbstractState::factory("HEOS", "Water"));
         }
-        if (ASTTSE.get() == NULL) {
+        if (ASTTSE.get() == nullptr) {
             ASTTSE.reset(CoolProp::AbstractState::factory("TTSE&HEOS", "Water"));
         }
-        if (ASBICUBIC.get() == NULL) {
+        if (ASBICUBIC.get() == nullptr) {
             ASBICUBIC.reset(CoolProp::AbstractState::factory("BICUBIC&HEOS", "Water"));
         }
     }

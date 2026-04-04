@@ -72,7 +72,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     shared_ptr<HelmholtzEOSMixtureBackend> critical_state;        ///< A temporary state used for calculations of the critical point(s)
     /// Update the state class used to calculate the tangent-plane-distance
     virtual void add_TPD_state() {
-        if (TPD_state.get() == NULL) {
+        if (TPD_state.get() == nullptr) {
             bool sat_states = false;
             TPD_state.reset(get_copy(sat_states));
             linked_states.push_back(TPD_state);
@@ -80,7 +80,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     };
     /// Update the state class used to calculate the critical point(s)
     virtual void add_critical_state() {
-        if (critical_state.get() == NULL) {
+        if (critical_state.get() == nullptr) {
             bool sat_states = true;
             critical_state.reset(get_copy(sat_states));
             linked_states.push_back(critical_state);
@@ -88,7 +88,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     };
     /// Update the state class used to calculate the critical point(s)
     virtual void add_transient_pure_state() {
-        if (transient_pure_state.get() == NULL) {
+        if (transient_pure_state.get() == nullptr) {
             bool sat_states = true;
             transient_pure_state.reset(get_copy(sat_states));
             linked_states.push_back(transient_pure_state);

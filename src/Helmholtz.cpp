@@ -1472,7 +1472,8 @@ IdealHelmholtzEnthalpyEntropyOffset EnthalpyEntropyOffset;
 #ifdef ENABLE_CATCH
 #    include <math.h>
 #    include <catch2/catch_all.hpp>
-#    include "crossplatform_shared_ptr.h"
+#    include <memory>
+    using std::shared_ptr;
 
 class HelmholtzConsistencyFixture
 {

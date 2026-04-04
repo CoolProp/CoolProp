@@ -11,9 +11,11 @@ void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGridd
     table.find_native_nearest_good_cell(x, y, i, j);
     const CellCoeffs& cell = coeffs[i][j];
     if (!cell.valid()) {
-        if (cell.has_valid_neighbor()) {
+        if (auto alt = cell.get_alternate()) {
             // Get new good neighbor
-            cell.get_alternate(i, j);
+            auto [ai, aj] = *alt;
+            i = ai;
+            j = aj;
         } else {
             if (!cell.valid()) {
                 throw ValueError(format("Cell is invalid and has no good neighbors for x = %g, y= %g", x, y));
@@ -29,9 +31,11 @@ void CoolProp::BicubicBackend::find_nearest_neighbor(SinglePhaseGriddedTableData
     table.find_nearest_neighbor(variable1, value1, otherkey, otherval, i, j);
     const CellCoeffs& cell = coeffs[i][j];
     if (!cell.valid()) {
-        if (cell.has_valid_neighbor()) {
+        if (auto alt = cell.get_alternate()) {
             // Get new good neighbor
-            cell.get_alternate(i, j);
+            auto [ai, aj] = *alt;
+            i = ai;
+            j = aj;
         } else {
             if (!cell.valid()) {
                 throw ValueError(format("Cell is invalid and has no good neighbors for x = %g, y = %g", value1, otherval));

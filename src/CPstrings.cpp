@@ -1,5 +1,6 @@
 #include "CPstrings.h"
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 #include <cstdio>
 #include <vector>
 #include <string>
@@ -53,7 +54,6 @@ std::string format(const char* fmt, ...) {
 
 #if defined(ENABLE_CATCH)
 
-#    include "crossplatform_shared_ptr.h"
 #    include <catch2/catch_all.hpp>
 #    include "CoolPropTools.h"
 #    include "CoolProp.h"

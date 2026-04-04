@@ -50,15 +50,7 @@ typedef double CoolPropDbl;
 typedef long double CoolPropDbl;
 #endif
 
-/// Define the deprecated macro to give compile-time warnings
-#ifdef __GNUC__
-#    define DEPRECATED(func) func __attribute__((deprecated))
-#elif defined(_MSC_VER)
-#    define DEPRECATED(func) __declspec(deprecated) func
-#else
-#    pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-#    define DEPRECATED(func) func
-#endif
+// DEPRECATED macro removed; use [[deprecated("message")]] directly instead.
 
 class Dictionary
 {
@@ -84,7 +76,7 @@ class Dictionary
         numbers.erase(s1);
         numbers.insert(std::pair<std::string, double>(s1, d));
     }
-    bool has_number(const std::string& s1) {
+    [[nodiscard]] bool has_number(const std::string& s1) {
         return numbers.find(s1) != numbers.end();
     }
     void add_double_vector(const std::string& s1, const std::vector<double>& d) {

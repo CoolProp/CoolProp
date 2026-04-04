@@ -1295,7 +1295,7 @@ class DerivativeFixture
         other->set_mole_fractions(HEOS->get_mole_fractions());
         other->specify_phase(CoolProp::iphase_gas);  // Something homogeneous
     }
-    void zero(const std::string& name, zero_mole_fraction_pointer f, zero_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void zero(const std::string& name, zero_mole_fraction_pointer f, zero_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         double analytic = f(*HEOS, xN);
         double numeric = 0;
         if (wrt == TAU) {
@@ -1311,7 +1311,7 @@ class DerivativeFixture
         CAPTURE(error);
         CHECK(error < tol);
     }
-    void one(const std::string& name, one_mole_fraction_pointer f, one_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void one(const std::string& name, one_mole_fraction_pointer f, one_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         for (int i = 0; i < 4; ++i) {
             double analytic = f(*HEOS, i, xN);
             double numeric = 0;
@@ -1364,7 +1364,7 @@ class DerivativeFixture
             CHECK(error < tol);
         }
     }
-    void two(const std::string& name, two_mole_fraction_pointer f, two_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void two(const std::string& name, two_mole_fraction_pointer f, two_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 double analytic = f(*HEOS, i, j, xN);
@@ -1413,7 +1413,7 @@ class DerivativeFixture
             }
         }
     }
-    void three(const std::string& name, three_mole_fraction_pointer f, three_mole_fraction_pointer g = NULL, derivative wrt = NO_DERIV) {
+    void three(const std::string& name, three_mole_fraction_pointer f, three_mole_fraction_pointer g = nullptr, derivative wrt = NO_DERIV) {
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 for (int k = 0; k < 4; ++k) {

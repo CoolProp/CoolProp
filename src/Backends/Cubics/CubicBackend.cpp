@@ -601,8 +601,8 @@ void CoolProp::AbstractCubicBackend::set_binary_interaction_double(const std::si
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        (*it)->set_binary_interaction_double(i, j, parameter, value);
+    for (auto& state : linked_states) {
+        state->set_binary_interaction_double(i, j, parameter, value);
     }
 };
 double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter) {
@@ -625,16 +625,16 @@ double CoolProp::AbstractCubicBackend::get_binary_interaction_double(const std::
 
 void CoolProp::AbstractCubicBackend::copy_all_alpha_functions(AbstractCubicBackend* donor) {
     get_cubic()->set_all_alpha_functions(donor->get_cubic()->get_all_alpha_functions());
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->copy_all_alpha_functions(this);
     }
 }
 
 void CoolProp::AbstractCubicBackend::copy_k(AbstractCubicBackend* donor) {
     get_cubic()->set_kmat(donor->get_cubic()->get_kmat());
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->copy_k(this);
     }
 }
@@ -645,8 +645,8 @@ void CoolProp::AbstractCubicBackend::copy_internals(AbstractCubicBackend& donor)
     this->components = donor.components;
     this->set_alpha_from_components();
     this->set_alpha0_from_components();
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->components = donor.components;
         ACB->set_alpha_from_components();
         ACB->set_alpha0_from_components();
@@ -666,8 +666,8 @@ void CoolProp::AbstractCubicBackend::set_cubic_alpha_C(const size_t i, const std
     } else {
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
-    for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+    for (auto& state : linked_states) {
+        AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
         ACB->set_cubic_alpha_C(i, parameter, c1, c2, c3);
     }
 }
@@ -680,14 +680,14 @@ void CoolProp::AbstractCubicBackend::set_fluid_parameter_double(const size_t i, 
     // Set the volume translation parrameter, currently applied to the whole fluid, not to components.
     if (parameter == "c" || parameter == "cm" || parameter == "c_m") {
         get_cubic()->set_cm(value);
-        for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+        for (auto& state : linked_states) {
+            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
     } else if (parameter == "Q" || parameter == "Qk" || parameter == "Q_k") {
         get_cubic()->set_Q_k(i, value);
-        for (std::vector<shared_ptr<HelmholtzEOSMixtureBackend>>::iterator it = linked_states.begin(); it != linked_states.end(); ++it) {
-            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(it->get());
+        for (auto& state : linked_states) {
+            AbstractCubicBackend* ACB = static_cast<AbstractCubicBackend*>(state.get());
             ACB->set_fluid_parameter_double(i, parameter, value);
         }
     } else {

@@ -14,7 +14,7 @@
 
 #if defined(ENABLE_CATCH)
 
-#    include "crossplatform_shared_ptr.h"
+#    include <memory>
 #    include <catch2/catch_all.hpp>
 #    include "CoolPropTools.h"
 #    include "CoolProp.h"

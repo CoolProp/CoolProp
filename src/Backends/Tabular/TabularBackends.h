@@ -4,9 +4,12 @@
 #include "AbstractState.h"
 #include "CPmsgpack.h"
 #include <msgpack/fbuffer.hpp>
-#include "crossplatform_shared_ptr.h"
+#include <memory>
+using std::shared_ptr;
 #include "Exceptions.h"
 #include "CoolProp.h"
+#include <optional>
+#include <sstream>
 #include "Configuration.h"
 #include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
 
@@ -257,37 +260,19 @@ class PureFluidSaturationTableData
 
          \note If PQ or QT are inputs, yL and yV will correspond to the other main variable: p->T or T->p
          */
-    bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t& iL, std::size_t& iV, CoolPropDbl& yL,
+    [[nodiscard]] bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t& iL, std::size_t& iV, CoolPropDbl& yL,
                    CoolPropDbl& yV) {
-        std::vector<double>*yvecL = NULL, *yvecV = NULL;
-        switch (other) {
-            case iT:
-                yvecL = &TL;
-                yvecV = &TV;
-                break;
-            case iHmolar:
-                yvecL = &hmolarL;
-                yvecV = &hmolarV;
-                break;
-            case iQ:
-                yvecL = &TL;
-                yvecV = &TV;
-                break;
-            case iSmolar:
-                yvecL = &smolarL;
-                yvecV = &smolarV;
-                break;
-            case iUmolar:
-                yvecL = &umolarL;
-                yvecV = &umolarV;
-                break;
-            case iDmolar:
-                yvecL = &rhomolarL;
-                yvecV = &rhomolarV;
-                break;
-            default:
-                throw ValueError("invalid input for other in is_inside");
-        }
+        auto [yvecL, yvecV] = [&]() -> std::pair<std::vector<double>*, std::vector<double>*> {
+            switch (other) {
+                case iT:     return {&TL, &TV};
+                case iHmolar: return {&hmolarL, &hmolarV};
+                case iQ:     return {&TL, &TV};
+                case iSmolar: return {&smolarL, &smolarV};
+                case iUmolar: return {&umolarL, &umolarV};
+                case iDmolar: return {&rhomolarL, &rhomolarV};
+                default:     throw ValueError("invalid input for other in is_inside");
+            }
+        }();
 
         // Trivial checks
         if (main == iP) {
@@ -825,7 +810,7 @@ class LogPHTable : public SinglePhaseGriddedTableData
         logx = false;
     };
     void set_limits() {
-        if (this->AS.get() == NULL) {
+        if (this->AS.get() == nullptr) {
             throw ValueError("AS is not yet set");
         }
         CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
@@ -877,7 +862,7 @@ class LogPTTable : public SinglePhaseGriddedTableData
         ymax = _HUGE;
     };
     void set_limits() {
-        if (this->AS.get() == NULL) {
+        if (this->AS.get() == nullptr) {
             throw ValueError("AS is not yet set");
         }
         CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
@@ -972,7 +957,7 @@ class CellCoeffs
         }
     };
     /// Returns true if the cell coefficients seem to have been calculated properly
-    bool valid() const {
+    [[nodiscard]] bool valid() const {
         return _valid;
     };
     /// Call this function to set the valid flag to true
@@ -989,18 +974,12 @@ class CellCoeffs
         alt_j = j;
         _has_valid_neighbor = true;
     }
-    /// Get neighboring(alternate) cell to be used if this cell is invalid
-    void get_alternate(std::size_t& i, std::size_t& j) const {
+    /// Get neighboring (alternate) cell indices, or nullopt if none exists
+    [[nodiscard]] std::optional<std::pair<std::size_t, std::size_t>> get_alternate() const {
         if (_has_valid_neighbor) {
-            i = alt_i;
-            j = alt_j;
-        } else {
-            throw ValueError("No valid neighbor");
+            return std::make_pair(alt_i, alt_j);
         }
-    }
-    /// Returns true if cell is invalid and it has valid neighbor
-    bool has_valid_neighbor() const {
-        return _has_valid_neighbor;
+        return std::nullopt;
     }
 };
 
@@ -1049,8 +1028,8 @@ class TabularDataLibrary
         }
         return table_directory + AS->backend_name() + "(" + strjoin(components, "&") + ")";
     }
-    /// Return a pointer to the set of tabular datasets
-    TabularDataSet* get_set_of_tables(shared_ptr<AbstractState>& AS, bool& loaded);
+    /// Return a pointer to the set of tabular datasets and whether tables were already loaded
+    std::pair<TabularDataSet*, bool> get_set_of_tables(shared_ptr<AbstractState>& AS);
 };
 
 /**
@@ -1090,13 +1069,13 @@ class TabularBackend : public AbstractState
         cached_single_phase_j = std::numeric_limits<std::size_t>::max();
         cached_saturation_iL = std::numeric_limits<std::size_t>::max();
         cached_saturation_iV = std::numeric_limits<std::size_t>::max();
-        z = NULL;
-        dzdx = NULL;
-        dzdy = NULL;
-        d2zdx2 = NULL;
-        d2zdxdy = NULL;
-        d2zdy2 = NULL;
-        dataset = NULL;
+        z = nullptr;
+        dzdx = nullptr;
+        dzdy = nullptr;
+        d2zdx2 = nullptr;
+        d2zdxdy = nullptr;
+        d2zdy2 = nullptr;
+        dataset = nullptr;
         imposed_phase_index = iphase_not_imposed;
     };
 
@@ -1276,8 +1255,8 @@ class TabularBackend : public AbstractState
         return AS->molar_mass();
     };
 
-    CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
-    CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
+    [[nodiscard]] CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
+    [[nodiscard]] CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 
     /// Returns the path to the tables that shall be written
     std::string path_to_tables(void);
@@ -1346,11 +1325,7 @@ class TabularBackend : public AbstractState
                 }
                 /// Check directory size
                 std::string table_path = path_to_tables();
-#if defined(__ISWINDOWS__)
-                double directory_size_in_GB = CalculateDirSize(std::wstring(table_path.begin(), table_path.end())) / POW3(1024.0);
-#else
                 double directory_size_in_GB = CalculateDirSize(table_path) / POW3(1024.0);
-#endif
                 double allowed_size_in_GB = get_config_double(MAXIMUM_TABLE_DIRECTORY_SIZE_IN_GB);
                 if (get_debug_level() > 0) {
                     std::cout << "Tabular directory size is " << directory_size_in_GB << " GB\n";

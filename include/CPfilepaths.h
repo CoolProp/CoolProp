@@ -19,12 +19,10 @@ std::string join_path(const std::string& one, const std::string& two);
 /// Make directory and all required intermediate directories
 void make_dirs(std::string file_path);
 
-/// Get the size of a directory in bytes
-#if defined(__ISWINDOWS__)
-unsigned long long CalculateDirSize(const std::wstring& path, std::vector<std::wstring>* errVect = NULL);
-#else
+/// Get the size of a directory in bytes.
+/// Uses std::filesystem on modern platforms (Windows, Linux, macOS).
+/// Legacy Android/powerpc stub returns 0.
 unsigned long long CalculateDirSize(const std::string& path);
-#endif
 
 // Get all the contents of a file and dump into a STL string
 // Thanks to http://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring

@@ -2,9 +2,9 @@
 #define EXCESSHE_FUNCTIONS_H
 
 #include <memory>
+using std::shared_ptr;
 #include <vector>
 #include "CoolPropFluid.h"
-#include "crossplatform_shared_ptr.h"
 #include "Helmholtz.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 
