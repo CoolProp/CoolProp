@@ -739,18 +739,18 @@ class BaseHelmholtzContainer
 {
    protected:
     std::array<double, 16> cache = create_filled_array<double, 16>(_HUGE);
-    std::array<bool, 16> is_cached = create_filled_array<bool, 16>(false);
+    std::array<uint64_t, 16> m_slot_gen = create_filled_array<uint64_t, 16>(0ULL);
+    uint64_t m_gen = 1;
     constexpr static std::size_t i00 = 0, i01 = 1, i02 = 2, i03 = 3, i04 = 4, i10 = 5, i11 = 6, i12 = 7, i13 = 8, i20 = 9, i21 = 10, i22 = 11,
                                  i30 = 12, i31 = 13, i40 = 14;
 
     bool cache_valid(std::size_t i) const {
-        return is_cached[i];
+        return m_slot_gen[i] == m_gen;
     }
 
    public:
     void clear() {
-        memset(cache.data(), 0, sizeof(cache));
-        memset(is_cached.data(), false, sizeof(is_cached));
+        ++m_gen;
     };
 
     virtual void empty_the_EOS() = 0;
@@ -871,7 +871,7 @@ class ResidualHelmholtzContainer : public BaseHelmholtzContainer
             cache[i03] = derivs.d3alphar_dtau3;
             cache[i21] = derivs.d3alphar_ddelta2_dtau;
             cache[i12] = derivs.d3alphar_ddelta_dtau2;
-            memset(is_cached.data(), true, sizeof(is_cached));
+            for (std::size_t i = 0; i < 16; ++i) m_slot_gen[i] = m_gen;
         }
         return derivs;
     };
@@ -1453,7 +1453,7 @@ class IdealHelmholtzContainer : public BaseHelmholtzContainer
             cache[i03] = derivs.d3alphar_dtau3 * _prefactor;
             cache[i21] = derivs.d3alphar_ddelta2_dtau * _prefactor;
             cache[i12] = derivs.d3alphar_ddelta_dtau2 * _prefactor;
-            memset(is_cached.data(), true, sizeof(is_cached));
+            for (std::size_t i = 0; i < 16; ++i) m_slot_gen[i] = m_gen;
         }
         return derivs * _prefactor;
     };

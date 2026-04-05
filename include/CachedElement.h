@@ -94,16 +94,18 @@ class CacheArrayElement
 
    private:
     NumType& value;
-    bool& is_cached;
+    uint64_t& slot_gen;
+    uint64_t& current_gen;
 
    public:
     // Constructor with value
-    CacheArrayElement(NumType& val, bool& is_cached) : value(val), is_cached(is_cached) {};
+    CacheArrayElement(NumType& val, uint64_t& slot_gen, uint64_t& current_gen)
+      : value(val), slot_gen(slot_gen), current_gen(current_gen) {};
 
     /// Function to carry out the caching
     void _do_cache(double value) {
         this->value = value;
-        this->is_cached = true;
+        this->slot_gen = this->current_gen;
     }
 
     /// Assignment operator - sets the value and sets the flag
@@ -113,12 +115,12 @@ class CacheArrayElement
 
     /// Cast to boolean, for checking if cached
     operator bool() {
-        return is_cached;
+        return slot_gen == current_gen;
     };
 
     /// Cast to double, for returning value
     operator double() {
-        if (is_cached) {
+        if (slot_gen == current_gen) {
             return static_cast<double>(value);
         } else {
             throw std::exception();
@@ -126,16 +128,16 @@ class CacheArrayElement
     }
 #ifndef COOLPROPDBL_MAPS_TO_DOUBLE
     operator CoolPropDbl() {
-        if (is_cached) {
+        if (slot_gen == current_gen) {
             return value;
         } else {
             throw std::exception();
         }
     }
 #endif
-    /// Clear the flag and the value
+    /// Clear the flag and the value (invalidate single slot)
     void clear() {
-        is_cached = false;
+        slot_gen = current_gen - 1;
         this->value = _HUGE;
     };
     NumType& pt() {
@@ -150,15 +152,15 @@ class CacheArray
    private:
     std::size_t inext = 0;
     std::array<double, N> m_values = create_filled_array<double, N>(_HUGE);
-    std::array<bool, N> m_cached = create_filled_array<bool, N>(false);
+    std::array<uint64_t, N> m_slot_gen = create_filled_array<uint64_t, N>(0ULL);
+    uint64_t m_gen = 1;  // slots init to 0, so all invalid from the start
 
    public:
     void clear() {
-        memset(m_values.data(), 0, sizeof(m_values));
-        memset(m_cached.data(), false, sizeof(m_cached));
+        ++m_gen;
     }
     auto factory(std::size_t i) {
-        return CacheArrayElement<double>(m_values[i], m_cached[i]);
+        return CacheArrayElement<double>(m_values[i], m_slot_gen[i], m_gen);
     }
     auto next() {
         if (inext > N) {
