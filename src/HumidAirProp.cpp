@@ -212,8 +212,8 @@ static struct {
 static void calc_ideal_gas_alpha0(CoolProp::HelmholtzEOSMixtureBackend* fluid, double T,
                                    double& a0, double& da0_dtau) {
     const auto& comps = fluid->get_components();
-    if (comps.size() != 1 || comps[0].EOS().pseudo_pure) {
-        throw CoolProp::ValueError("calc_ideal_gas_alpha0 only supports pure/pseudopure fluids");
+    if (comps.size() != 1) {
+        throw CoolProp::ValueError("calc_ideal_gas_alpha0 only supports single-component fluids");
     }
     CoolProp::SimpleState red = fluid->get_reducing_state();
     double tau = red.T / T;
