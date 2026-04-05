@@ -244,6 +244,23 @@ Same idea for the volume
     \boxed{\gamma_v = \dfrac{v_{c0}+v_{c1}+\zeta_{01}}{\frac{1}{4}\left(\frac{1}{\rho_{c,i}^{1/3}}+\frac{1}{\rho_{c,j}^{1/3}}\right)^{3}}}
 
 
+Predefined mixtures
+-------------------
+
+CoolProp ships with 154 predefined mixtures that can be used directly by name using the ``.mix`` suffix.  For example::
+
+    CoolProp.PropsSI('H','T',300,'P',101325,'Air.mix')
+
+or via the low-level interface::
+
+    AS = CoolProp.AbstractState('HEOS','Air.mix')
+
+The table below lists all available predefined mixtures with their components and mole fractions.  The *Notes* column indicates mixtures that cannot currently be evaluated: either the mixture is not present in the compiled interaction-parameter library, or a required binary interaction parameter pair is missing.
+
+.. csv-table:: Predefined mixtures included in CoolProp
+   :header-rows: 1
+   :file: PredefinedMixtures.csv
+
 Binary pairs
 ------------
 

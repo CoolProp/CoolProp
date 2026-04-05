@@ -185,6 +185,7 @@ There are a number of setup scripts that have to be run to generate dynamic cont
     python fluid_properties.phase_envelope.py
     python fluid_properties.PurePseudoPure.py
     python fluid_properties.Mixtures.py
+    python fluid_properties.PredefinedMixtures.py
     python coolprop.parametric_table.py
     python coolprop.configuration.py
     # The next three scripts can take a while to run
