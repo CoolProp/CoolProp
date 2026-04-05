@@ -2092,6 +2092,492 @@ void SaturationSolvers::PTflash_twophase::build_arrays() {
     }
     this->error_rms = r.norm();
 }
+// ==========================================================================
+// GDEM-accelerated Successive Substitution
+// ==========================================================================
+
+SaturationSolvers::GDEMSuccessiveSubstitution::GDEMSuccessiveSubstitution(HelmholtzEOSMixtureBackend& HEOS)
+  : converged(false),
+    unstable(false),
+    rhomolar_liq(-1),
+    rhomolar_vap(-1),
+    iterations(0),
+    HEOS(HEOS),
+    z(HEOS.get_mole_fractions_doubleref()),
+    T(HEOS.T()),
+    p(HEOS.p()),
+    N(static_cast<int>(HEOS.get_mole_fractions_doubleref().size())) {}
+
+double SaturationSolvers::GDEMSuccessiveSubstitution::estimate_lambda(
+  const std::deque<std::vector<double>>& history) {
+    int q = static_cast<int>(history.size());
+    if (q < 2) return 0.0;
+    int sz = static_cast<int>(history[0].size());
+    if (q == 2) {
+        // Simplified Aitken: λ = Δ^k · Δ^{k-1} / ||Δ^{k-1}||²
+        double dot = 0.0, norm_sq = 0.0;
+        for (int i = 0; i < sz; ++i) {
+            dot += history[1][i] * history[0][i];
+            norm_sq += history[0][i] * history[0][i];
+        }
+        return (norm_sq > 1e-100) ? dot / norm_sq : 0.0;
+    }
+    // Full Gupta et al. (1988) matrix form for q >= 3:
+    // Build (q-1)×(q-1) matrix A and vector b, solve A·c = b, λ = Σ c_i
+    int M = q - 1;
+    Eigen::MatrixXd A(M, M);
+    Eigen::VectorXd b(M);
+    const auto& delta_latest = history[q - 1];
+    for (int i = 0; i < M; ++i) {
+        double bi = 0.0;
+        for (int k = 0; k < sz; ++k) bi += history[i][k] * delta_latest[k];
+        b(i) = bi;
+        for (int j = i; j < M; ++j) {
+            double aij = 0.0;
+            for (int k = 0; k < sz; ++k) aij += history[i][k] * history[j][k];
+            A(i, j) = A(j, i) = aij;
+        }
+    }
+    Eigen::VectorXd c = A.colPivHouseholderQr().solve(b);
+    return c.sum();  // λ_dom = Σ c_j
+}
+
+std::vector<double> SaturationSolvers::GDEMSuccessiveSubstitution::one_ss_step() {
+    // Solve Rachford-Rice for beta given current lnK
+    double g0 = 0.0, g1 = 0.0;
+    for (int i = 0; i < N; ++i) {
+        K[i] = exp(lnK[i]);
+        g0 += z[i] * (K[i] - 1.0);
+        g1 += z[i] * (1.0 - 1.0 / K[i]);
+    }
+    double beta;
+    if (g0 < 0.0) {
+        beta = 0.0;
+    } else if (g1 > 0.0) {
+        beta = 1.0;
+    } else {
+        RachfordRiceResidual resid(z, lnK);
+        beta = Brent(resid, 0.0, 1.0, DBL_EPSILON, 1e-10, 100);
+    }
+    x.resize(N);
+    y.resize(N);
+    SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
+    normalize_vector(x);
+    normalize_vector(y);
+
+    // Update densities
+    HEOS.SatL->set_mole_fractions(x);
+    HEOS.SatL->calc_reducing_state();
+    HEOS.SatV->set_mole_fractions(y);
+    HEOS.SatV->calc_reducing_state();
+    rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(T, p, 0.9 / HEOS.SatL->SRK_covolume());
+    rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(T, p, 0.9 / HEOS.SatV->SRK_covolume());
+    HEOS.SatL->update_DmolarT_direct(rhomolar_liq, T);
+    HEOS.SatV->update_DmolarT_direct(rhomolar_vap, T);
+
+    // Compute new lnK from fugacity coefficients and delta
+    std::vector<double> delta(N);
+    for (int i = 0; i < N; ++i) {
+        double lnK_new = log(HEOS.SatL->fugacity_coefficient(i) / HEOS.SatV->fugacity_coefficient(i));
+        delta[i] = lnK_new - lnK[i];
+        lnK[i] = lnK_new;
+        K[i] = exp(lnK[i]);
+    }
+    return delta;
+}
+
+void SaturationSolvers::GDEMSuccessiveSubstitution::run(const GDEMOptions& opts) {
+    converged = false;
+    unstable = false;
+    iterations = 0;
+
+    lnK.resize(N);
+    K.resize(N);
+    for (int i = 0; i < N; ++i) {
+        lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, T, p, i);
+        K[i] = exp(lnK[i]);
+    }
+
+    // Pre-compute bulk fugacities for TPD evaluation
+    double rho_bulk = HEOS.solver_rho_Tp_global(T, p, 0.9 / HEOS.SRK_covolume());
+    HEOS.update_DmolarT_direct(rho_bulk, T);
+    std::vector<double> fugacity_bulk(N);
+    for (int i = 0; i < N; ++i) {
+        fugacity_bulk[i] = HEOS.fugacity(i);
+    }
+
+    std::deque<std::vector<double>> delta_history;
+
+    for (int iter = 0; iter < opts.max_iterations; ++iter) {
+        std::vector<double> delta = one_ss_step();
+        delta_history.push_back(delta);
+        if (static_cast<int>(delta_history.size()) > opts.q_history) {
+            delta_history.pop_front();
+        }
+        ++iterations;
+
+        // Convergence check: max |Δ ln K_i|
+        double max_delta = 0.0;
+        for (int i = 0; i < N; ++i) max_delta = std::max(max_delta, std::abs(delta[i]));
+
+        // TPD check at both trial compositions
+        double tpd_x = 0.0, tpd_y = 0.0;
+        for (int i = 0; i < N; ++i) {
+            tpd_x += x[i] * log(HEOS.SatL->fugacity(i) / fugacity_bulk[i]);
+            tpd_y += y[i] * log(HEOS.SatV->fugacity(i) / fugacity_bulk[i]);
+        }
+        if (tpd_x < -1e-10 || tpd_y < -1e-10) {
+            unstable = true;
+            return;
+        }
+
+        if (max_delta < opts.tol_lnK) {
+            converged = true;
+            return;
+        }
+
+        // GDEM acceleration every q_history steps once we have enough history
+        if (opts.accelerate && static_cast<int>(delta_history.size()) == opts.q_history
+            && (iter + 1) % opts.q_history == 0)
+        {
+            double lambda = estimate_lambda(delta_history);
+            if (std::abs(lambda) < 0.99 && lambda != 0.0) {
+                double factor = lambda / (1.0 - lambda);
+                for (int i = 0; i < N; ++i) {
+                    lnK[i] += factor * delta[i];
+                    K[i] = exp(lnK[i]);
+                }
+                delta_history.clear();  // Reset history after acceleration step
+            }
+        }
+    }
+    // Max iterations reached — check final TPD to classify
+    double tpd_x = 0.0, tpd_y = 0.0;
+    for (int i = 0; i < N; ++i) {
+        tpd_x += x[i] * log(HEOS.SatL->fugacity(i) / fugacity_bulk[i]);
+        tpd_y += y[i] * log(HEOS.SatV->fugacity(i) / fugacity_bulk[i]);
+    }
+    if (tpd_x < -1e-10 || tpd_y < -1e-10) {
+        unstable = true;
+    } else {
+        throw CoolProp::ValueError(
+          format("GDEMSuccessiveSubstitution: did not converge after %d iterations", opts.max_iterations));
+    }
+}
+
+// ==========================================================================
+// HELD Algorithm — Pereira & Jackson, Comput. Chem. Eng. 36 (2012) 99–118
+// ==========================================================================
+
+StabilityRoutines::HELDStabilityClass::HELDStabilityClass(HelmholtzEOSMixtureBackend& HEOS)
+  : rhomolar_liq_seed(-1),
+    rhomolar_vap_seed(-1),
+    HEOS(HEOS),
+    z(HEOS.get_mole_fractions_doubleref()),
+    T(HEOS.T()),
+    p(HEOS.p()),
+    N(static_cast<int>(HEOS.get_mole_fractions_doubleref().size())) {}
+
+void StabilityRoutines::HELDStabilityClass::compute_bulk_fugacities() {
+    // Update HEOS to bulk state to get fugacities ln f_i(z)
+    double rho_bulk = HEOS.solver_rho_Tp_global(T, p, 0.9 / HEOS.SRK_covolume());
+    HEOS.update_DmolarT_direct(rho_bulk, T);
+    lnfug_bulk.resize(N);
+    for (int i = 0; i < N; ++i) {
+        lnfug_bulk[i] = log(MixtureDerivatives::fugacity_i(HEOS, i, XN_DEPENDENT));
+    }
+}
+
+std::vector<double> StabilityRoutines::HELDStabilityClass::compute_residual(
+  const std::vector<double>& w, double& rho_out, double& tpd_out,
+  const std::vector<TPDFStationary>& known_pts, double tunnel_eps)
+{
+    // Set trial composition and compute density
+    HEOS.SatL->set_mole_fractions(w);
+    HEOS.SatL->calc_reducing_state();
+    rho_out = HEOS.SatL->solver_rho_Tp_global(T, p, 0.9 / HEOS.SatL->SRK_covolume());
+    HEOS.SatL->update_DmolarT_direct(rho_out, T);
+
+    // Compute ln f_i(w) and tpd via Gibbs-Duhem: ∂tpd/∂w_j = ln f_j(w) - ln f_j(z)
+    std::vector<double> lnfug_trial(N);
+    tpd_out = 0.0;
+    for (int i = 0; i < N; ++i) {
+        lnfug_trial[i] = log(MixtureDerivatives::fugacity_i(*HEOS.SatL, i, XN_DEPENDENT));
+        tpd_out += w[i] * (lnfug_trial[i] - lnfug_bulk[i]);
+    }
+
+    // Standard stationarity residual (size N-1):
+    //   r(j) = (ln f_j(w) - ln f_{N-1}(w)) - (ln f_j(z) - ln f_{N-1}(z))
+    // This is zero at every stationary point of tpd on the (N-1)-simplex.
+    std::vector<double> r(N - 1);
+    for (int j = 0; j < N - 1; ++j) {
+        r[j] = (lnfug_trial[j] - lnfug_trial[N - 1]) - (lnfug_bulk[j] - lnfug_bulk[N - 1]);
+    }
+
+    // Tunneling correction (Pereira & Jackson, 2012, §3):
+    //   Stationarity of F = tpd/P on the simplex adds:
+    //   r(j) -= (tpd/P_s) * 2 * [(w_j - w*_j^s) - (w_{N-1} - w*_{N-1}^s)]
+    // per known stationary point s with P_s = Σ_i(w_i - w*_i^s)² + ε.
+    for (const auto& sp : known_pts) {
+        double P_s = tunnel_eps;
+        for (int i = 0; i < N; ++i) {
+            double d = w[i] - sp.w[i];
+            P_s += d * d;
+        }
+        double F_s = tpd_out / P_s;
+        for (int j = 0; j < N - 1; ++j) {
+            r[j] -= F_s * 2.0 * ((w[j] - sp.w[j]) - (w[N - 1] - sp.w[N - 1]));
+        }
+    }
+    return r;
+}
+
+bool StabilityRoutines::HELDStabilityClass::find_stationary_point(
+  std::vector<double> w, const HELDOptions& opts,
+  const std::vector<TPDFStationary>& known_pts, TPDFStationary& result)
+{
+    const double h_fd = 1e-6;  // Finite-difference step size for Jacobian
+    Eigen::MatrixXd J_mat(N - 1, N - 1);
+    Eigen::VectorXd r_vec(N - 1), step_vec(N - 1);
+
+    // Ensure w is a valid simplex point
+    for (auto& wi : w) wi = std::max(wi, 1e-10);
+    {
+        double s = std::accumulate(w.begin(), w.end(), 0.0);
+        for (auto& wi : w) wi /= s;
+    }
+
+    for (int iter = 0; iter < opts.max_newton_iters; ++iter) {
+        double rho_w, tpd_w;
+        std::vector<double> r = compute_residual(w, rho_w, tpd_w, known_pts, opts.tunnel_eps);
+
+        for (int j = 0; j < N - 1; ++j) r_vec(j) = r[j];
+
+        if (r_vec.norm() < opts.tol_newton) {
+            // When using tunneling (known_pts non-empty), verify this is a TRUE stationary
+            // point of tpdf (not merely a stationary point of the tunneled F).
+            // Compute the un-tunneled residual; if too large the point is spurious.
+            if (!known_pts.empty()) {
+                double rho_chk, tpd_chk;
+                std::vector<double> r_std = compute_residual(w, rho_chk, tpd_chk, {}, opts.tunnel_eps);
+                Eigen::Map<const Eigen::VectorXd> r_std_v(r_std.data(), N - 1);
+                if (r_std_v.norm() > 100.0 * opts.tol_newton) return false;  // Spurious
+            }
+            result.w = w;
+            result.tpd = tpd_w;
+            result.rhomolar = rho_w;
+            result.is_trivial = is_trivial(w);
+            return true;
+        }
+
+        // Finite-difference Jacobian: perturb w_k (k=0..N-2), w_{N-1} adjusts
+        for (int k = 0; k < N - 1; ++k) {
+            // w+ : increase w_k, decrease w_{N-1}
+            std::vector<double> wp = w, wm = w;
+            wp[k] += h_fd;
+            wp[N - 1] -= h_fd;
+            wm[k] -= h_fd;
+            wm[N - 1] += h_fd;
+            for (auto& wi : wp) wi = std::max(wi, 1e-10);
+            for (auto& wi : wm) wi = std::max(wi, 1e-10);
+            {
+                double s = std::accumulate(wp.begin(), wp.end(), 0.0);
+                for (auto& wi : wp) wi /= s;
+            }
+            {
+                double s = std::accumulate(wm.begin(), wm.end(), 0.0);
+                for (auto& wi : wm) wi /= s;
+            }
+            double rho_dummy, tpd_dummy;
+            std::vector<double> rp = compute_residual(wp, rho_dummy, tpd_dummy, known_pts, opts.tunnel_eps);
+            std::vector<double> rm = compute_residual(wm, rho_dummy, tpd_dummy, known_pts, opts.tunnel_eps);
+            for (int j = 0; j < N - 1; ++j) {
+                J_mat(j, k) = (rp[j] - rm[j]) / (2.0 * h_fd);
+            }
+        }
+
+        // Newton step
+        step_vec = J_mat.colPivHouseholderQr().solve(-r_vec);
+
+        // Back-tracking line search to keep w inside the simplex
+        double alpha = 1.0;
+        std::vector<double> w_new(N);
+        for (int attempt = 0; attempt < 12; ++attempt) {
+            for (int j = 0; j < N - 1; ++j) w_new[j] = w[j] + alpha * step_vec(j);
+            w_new[N - 1] = 1.0 - std::accumulate(w_new.begin(), w_new.end() - 1, 0.0);
+            bool valid = true;
+            for (int i = 0; i < N; ++i) {
+                if (w_new[i] < 1e-12) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid) break;
+            alpha *= 0.5;
+        }
+        // Project to simplex
+        for (auto& wi : w_new) wi = std::max(wi, 1e-10);
+        {
+            double s = std::accumulate(w_new.begin(), w_new.end(), 0.0);
+            for (auto& wi : w_new) wi /= s;
+        }
+        w = w_new;
+    }
+    return false;  // Newton did not converge
+}
+
+std::vector<std::vector<double>> StabilityRoutines::HELDStabilityClass::random_simplex_points(
+  int n, unsigned int seed) const
+{
+    // Uniform distribution on (N-1)-simplex via sorted uniform spacings
+    std::vector<std::vector<double>> pts;
+    pts.reserve(n);
+    // Simple LCG pseudo-random number generator (avoids <random> header dependency)
+    unsigned int rng = seed;
+    auto lcg_rand = [&]() -> double {
+        rng = rng * 1664525u + 1013904223u;
+        return static_cast<double>(rng) / static_cast<double>(0xFFFFFFFFu);
+    };
+    for (int p = 0; p < n; ++p) {
+        std::vector<double> u(N - 1);
+        for (auto& ui : u) ui = lcg_rand();
+        std::sort(u.begin(), u.end());
+        std::vector<double> w(N);
+        w[0] = u[0];
+        for (int i = 1; i < N - 1; ++i) w[i] = u[i] - u[i - 1];
+        w[N - 1] = 1.0 - u[N - 2];
+        pts.push_back(w);
+    }
+    return pts;
+}
+
+bool StabilityRoutines::HELDStabilityClass::is_trivial(const std::vector<double>& w, double tol) const {
+    double diff = 0.0;
+    for (int i = 0; i < N; ++i) diff += std::abs(w[i] - z[i]);
+    return diff < tol;
+}
+
+bool StabilityRoutines::HELDStabilityClass::is_duplicate(
+  const std::vector<double>& w, const std::vector<TPDFStationary>& pts, double tol) const
+{
+    for (const auto& sp : pts) {
+        double diff = 0.0;
+        for (int i = 0; i < N; ++i) diff += std::abs(w[i] - sp.w[i]);
+        if (diff < tol) return true;
+    }
+    return false;
+}
+
+void StabilityRoutines::HELDStabilityClass::run_tunneling_stage(const HELDOptions& opts) {
+    stationary_points.clear();
+
+    for (int pass = 0; pass < opts.max_tunneling_passes; ++pass) {
+        // Build starting compositions: Wilson vapor/liquid + random
+        std::vector<std::vector<double>> starts;
+        {
+            std::vector<double> wv(N), wl(N);
+            double sv = 0.0, sl = 0.0;
+            for (int i = 0; i < N; ++i) {
+                double Ki = exp(SaturationSolvers::Wilson_lnK_factor(HEOS, T, p, i));
+                wv[i] = z[i] * Ki;
+                wl[i] = z[i] / Ki;
+                sv += wv[i];
+                sl += wl[i];
+            }
+            for (int i = 0; i < N; ++i) {
+                wv[i] /= sv;
+                wl[i] /= sl;
+            }
+            starts.push_back(wv);
+            starts.push_back(wl);
+        }
+        auto rnd = random_simplex_points(opts.n_random_starts, opts.random_seed + pass * 13337u);
+        starts.insert(starts.end(), rnd.begin(), rnd.end());
+
+        bool new_found = false;
+        for (const auto& w0 : starts) {
+            // Early exit once instability is confirmed
+            for (const auto& sp : stationary_points) {
+                if (!sp.is_trivial && sp.tpd < -1e-10) goto done;
+            }
+            {
+                TPDFStationary result;
+                if (!find_stationary_point(w0, opts, stationary_points, result)) continue;
+                if (result.is_trivial) continue;
+                if (is_duplicate(result.w, stationary_points)) continue;
+                stationary_points.push_back(result);
+                new_found = true;
+                if (!result.is_trivial && result.tpd < -1e-10) goto done;
+            }
+        }
+        if (!new_found) break;  // No new stationary points: all found
+    }
+done:;
+}
+
+bool StabilityRoutines::HELDStabilityClass::identify_phases() {
+    // Find all non-trivial stationary points with tpd < 0
+    bool has_negative = false;
+    for (const auto& sp : stationary_points) {
+        if (!sp.is_trivial && sp.tpd < -1e-10) {
+            has_negative = true;
+            break;
+        }
+    }
+    if (!has_negative) return false;  // Stable
+
+    // Classify by density relative to bulk
+    double rho_bulk = HEOS.solver_rho_Tp_global(T, p, 0.9 / HEOS.SRK_covolume());
+    HEOS.update_DmolarT_direct(rho_bulk, T);
+
+    const TPDFStationary* liq_best = nullptr;
+    const TPDFStationary* vap_best = nullptr;
+    double tpd_liq_min = 0.0, tpd_vap_min = 0.0;
+
+    for (const auto& sp : stationary_points) {
+        if (sp.is_trivial) continue;
+        if (sp.rhomolar >= rho_bulk) {
+            // Liquid-like
+            if (!liq_best || sp.tpd < tpd_liq_min) {
+                liq_best = &sp;
+                tpd_liq_min = sp.tpd;
+            }
+        } else {
+            // Vapor-like
+            if (!vap_best || sp.tpd < tpd_vap_min) {
+                vap_best = &sp;
+                tpd_vap_min = sp.tpd;
+            }
+        }
+    }
+
+    if (liq_best && vap_best) {
+        x_seed = liq_best->w;
+        rhomolar_liq_seed = liq_best->rhomolar;
+        y_seed = vap_best->w;
+        rhomolar_vap_seed = vap_best->rhomolar;
+    } else if (liq_best) {
+        x_seed = liq_best->w;
+        rhomolar_liq_seed = liq_best->rhomolar;
+        y_seed = z;
+        rhomolar_vap_seed = rho_bulk;
+    } else if (vap_best) {
+        y_seed = vap_best->w;
+        rhomolar_vap_seed = vap_best->rhomolar;
+        x_seed = z;
+        rhomolar_liq_seed = rho_bulk;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+bool StabilityRoutines::HELDStabilityClass::run(const HELDOptions& opts) {
+    compute_bulk_fugacities();
+    run_tunneling_stage(opts);
+    return !identify_phases();  // identify_phases returns false if stable
+}
+
 } /* namespace CoolProp*/
 
 #if defined(ENABLE_CATCH)

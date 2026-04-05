@@ -54,30 +54,94 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         }
     } else {
         if (HEOS.imposed_phase_index == iphase_not_imposed) {
-            // Blind flash call
-            // Following the strategy of Gernert, 2014
-            StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
-            if (!stability_tester.is_stable()) {
-                // There is a phase split and liquid and vapor phases are formed
-                CoolProp::SaturationSolvers::PTflash_twophase_options o;
-                stability_tester.get_liq(o.x, o.rhomolar_liq);
-                stability_tester.get_vap(o.y, o.rhomolar_vap);
-                o.z = HEOS.get_mole_fractions();
-                o.T = HEOS.T();
-                o.p = HEOS.p();
-                o.omega = 1.0;
+            // Blind flash — three-tier reliability cascade:
+            //   Tier 1 (fast): Wilson SS + TPD → Newton-Raphson  [Gernert 2014]
+            //   Tier 2 (robust SS): GDEM-accelerated SS → Newton-Raphson [Gupta 1988]
+            //   Tier 3 (most reliable): HELD tunneling stability test [Pereira 2012]
+            //
+            // Helper lambda to finalize a detected two-phase split
+            auto finish_twophase = [&](CoolProp::SaturationSolvers::PTflash_twophase_options& o) {
                 CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
                 solver.solve();
                 HEOS._phase = iphase_twophase;
-                HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);  // All vapor qualities are the same (these are the residuals in the solver)
-                HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
-            } else {
-                // It's single-phase
-                double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
-                HEOS.update_DmolarT_direct(rho, HEOS.T());
-                HEOS._Q = -1;
-                HEOS._phase = iphase_liquid;
+                HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
+                HEOS._rhomolar = 1.0 / (HEOS._Q / HEOS.SatV->rhomolar() + (1.0 - HEOS._Q) / HEOS.SatL->rhomolar());
+            };
+
+            // --- Tier 1: existing Wilson-SS + TPD stability tester ---
+            bool tier1_ok = false;
+            try {
+                StabilityRoutines::StabilityEvaluationClass stability_tester(HEOS);
+                if (!stability_tester.is_stable()) {
+                    CoolProp::SaturationSolvers::PTflash_twophase_options o;
+                    stability_tester.get_liq(o.x, o.rhomolar_liq);
+                    stability_tester.get_vap(o.y, o.rhomolar_vap);
+                    o.z = HEOS.get_mole_fractions();
+                    o.T = HEOS.T();
+                    o.p = HEOS.p();
+                    o.omega = 1.0;
+                    finish_twophase(o);
+                } else {
+                    double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+                    HEOS.update_DmolarT_direct(rho, HEOS.T());
+                    HEOS._Q = -1;
+                    HEOS._phase = iphase_liquid;
+                }
+                tier1_ok = true;
+            } catch (...) {
+                // Tier 1 failed — fall through to Tier 2
             }
+            if (tier1_ok) goto pt_flash_done;
+
+            // --- Tier 2: GDEM-accelerated successive substitution ---
+            {
+                bool tier2_ok = false;
+                try {
+                    SaturationSolvers::GDEMSuccessiveSubstitution gdem(HEOS);
+                    gdem.run();
+                    if (gdem.unstable) {
+                        CoolProp::SaturationSolvers::PTflash_twophase_options o;
+                        gdem.get_liq(o.x, o.rhomolar_liq);
+                        gdem.get_vap(o.y, o.rhomolar_vap);
+                        o.z = HEOS.get_mole_fractions();
+                        o.T = HEOS.T();
+                        o.p = HEOS.p();
+                        o.omega = 1.0;
+                        finish_twophase(o);
+                    } else {
+                        double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+                        HEOS.update_DmolarT_direct(rho, HEOS.T());
+                        HEOS._Q = -1;
+                        HEOS._phase = iphase_liquid;
+                    }
+                    tier2_ok = true;
+                } catch (...) {
+                    // Tier 2 failed — fall through to Tier 3 (HELD)
+                }
+                if (tier2_ok) goto pt_flash_done;
+            }
+
+            // --- Tier 3: HELD tunneling stability + Newton-Raphson ---
+            {
+                StabilityRoutines::HELDStabilityClass held(HEOS);
+                bool stable = held.run();
+                if (!stable) {
+                    CoolProp::SaturationSolvers::PTflash_twophase_options o;
+                    held.get_liq(o.x, o.rhomolar_liq);
+                    held.get_vap(o.y, o.rhomolar_vap);
+                    o.z = HEOS.get_mole_fractions();
+                    o.T = HEOS.T();
+                    o.p = HEOS.p();
+                    o.omega = 1.0;
+                    finish_twophase(o);
+                } else {
+                    double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
+                    HEOS.update_DmolarT_direct(rho, HEOS.T());
+                    HEOS._Q = -1;
+                    HEOS._phase = iphase_liquid;
+                }
+            }
+            pt_flash_done:;
         } else {
             // It's single-phase, and phase is imposed
             double rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());

@@ -3,6 +3,7 @@
 #define VLEROUTINES_H
 
 #include "HelmholtzEOSMixtureBackend.h"
+#include <deque>
 
 namespace CoolProp {
 
@@ -574,6 +575,65 @@ class PTflash_twophase
          */
     void build_arrays();
 };
+// -------------------------------------------------------------------------
+// GDEM-accelerated successive substitution
+// -------------------------------------------------------------------------
+
+/** Options for GDEM-accelerated successive substitution */
+struct GDEMOptions {
+    int q_history;       ///< SS steps accumulated before each acceleration (typically 3)
+    int max_iterations;  ///< Maximum total SS iterations
+    double tol_lnK;      ///< Convergence: max |Δ ln K_i| < tol_lnK
+    bool accelerate;     ///< Apply GDEM acceleration (false = plain extended SS)
+    GDEMOptions() : q_history(3), max_iterations(200), tol_lnK(1e-9), accelerate(true) {}
+};
+
+/** \brief GDEM-accelerated successive substitution for PT stability/flash
+ *
+ * Applies GDEM (General Dominant Eigenvalue Method) acceleration to the
+ * K-factor successive substitution loop.  Significantly reduces iterations
+ * near mixture critical points and azeotropes where plain SS converges slowly.
+ *
+ * References:
+ *   - Mehra et al., AIChE J. 29(3) (1983)
+ *   - Gupta et al., Fluid Phase Equilib. 40(1–2) (1988)
+ */
+class GDEMSuccessiveSubstitution {
+   public:
+    bool converged;       ///< Converged to a stationary point of the K-factors
+    bool unstable;        ///< tpd < 0 detected → two-phase split present
+    double rhomolar_liq;  ///< Liquid density [mol/m³]
+    double rhomolar_vap;  ///< Vapor density [mol/m³]
+    std::vector<double> x, y;  ///< Liquid / vapor compositions
+    int iterations;
+
+    explicit GDEMSuccessiveSubstitution(HelmholtzEOSMixtureBackend& HEOS);
+
+    /** \brief Run GDEM-SS from Wilson K-factor initialization */
+    void run(const GDEMOptions& opts = GDEMOptions());
+
+    void get_liq(std::vector<double>& x_out, double& rho_out) const {
+        x_out = x;
+        rho_out = rhomolar_liq;
+    }
+    void get_vap(std::vector<double>& y_out, double& rho_out) const {
+        y_out = y;
+        rho_out = rhomolar_vap;
+    }
+
+   private:
+    HelmholtzEOSMixtureBackend& HEOS;
+    const std::vector<double>& z;
+    double T, p;
+    int N;
+    std::vector<double> lnK, K;
+
+    /// Estimate dominant eigenvalue from history of correction vectors (Gupta 1988)
+    static double estimate_lambda(const std::deque<std::vector<double>>& history);
+    /// Perform one SS step: update lnK in place, return delta = lnK_new - lnK_old
+    std::vector<double> one_ss_step();
+};
+
 };  // namespace SaturationSolvers
 
 namespace StabilityRoutines {
@@ -653,6 +713,88 @@ class StabilityEvaluationClass
         y = this->y;
         rhomolar = rhomolar_vap;
     }
+};
+
+// -------------------------------------------------------------------------
+// HELD algorithm (Pereira & Jackson, Comput. Chem. Eng. 36, 2012, 99-118)
+// -------------------------------------------------------------------------
+
+/** Options for the HELD stability algorithm */
+struct HELDOptions {
+    int n_random_starts;       ///< Random starting compositions per tunneling pass
+    int max_tunneling_passes;  ///< Max outer tunneling iterations
+    int max_newton_iters;      ///< Newton iterations per stationary-point search
+    double tol_newton;         ///< Convergence: L2-norm of residual < tol_newton
+    double tunnel_eps;         ///< Regularization in tunneling denominator P
+    unsigned int random_seed;  ///< Seed for random starting compositions
+    HELDOptions()
+      : n_random_starts(8), max_tunneling_passes(8), max_newton_iters(30),
+        tol_newton(1e-8), tunnel_eps(1e-10), random_seed(42) {}
+};
+
+/** \brief A stationary point of the tangent-plane distance function (TPDF) */
+struct TPDFStationary {
+    std::vector<double> w;  ///< Composition (size N)
+    double tpd;             ///< TPDF value; negative → mixture is unstable
+    double rhomolar;        ///< Molar density [mol/m³]
+    bool is_trivial;        ///< True if w ≈ z (trivial stationary point)
+};
+
+/** \brief HELD stability evaluator (Pereira & Jackson, 2012)
+ *
+ * Three-stage algorithm:
+ *   1. Tunneling — Newton + tunneling denominator finds ALL TPDF stationary points
+ *   2. Phase ID  — classifies stationary points as liquid-like / vapor-like seeds
+ *   3. Convergence — delegates to existing PTflash_twophase NR solver
+ *
+ * Reference: Pereira & Jackson, Comput. Chem. Eng. 36 (2012) 99–118
+ */
+class HELDStabilityClass {
+   public:
+    std::vector<TPDFStationary> stationary_points;
+    std::vector<double> x_seed, y_seed;
+    double rhomolar_liq_seed, rhomolar_vap_seed;
+
+    explicit HELDStabilityClass(HelmholtzEOSMixtureBackend& HEOS);
+
+    /** \brief Run HELD; returns true if stable, false if phase split detected */
+    bool run(const HELDOptions& opts = HELDOptions());
+
+    void get_liq(std::vector<double>& x_out, double& rho_out) const {
+        x_out = x_seed;
+        rho_out = rhomolar_liq_seed;
+    }
+    void get_vap(std::vector<double>& y_out, double& rho_out) const {
+        y_out = y_seed;
+        rho_out = rhomolar_vap_seed;
+    }
+
+   private:
+    HelmholtzEOSMixtureBackend& HEOS;
+    const std::vector<double>& z;
+    double T, p;
+    int N;
+    std::vector<double> lnfug_bulk;  ///< Pre-computed ln f_i(z) at bulk state
+
+    void compute_bulk_fugacities();
+    void run_tunneling_stage(const HELDOptions& opts);
+
+    bool find_stationary_point(std::vector<double> w0, const HELDOptions& opts,
+                               const std::vector<TPDFStationary>& known_pts,
+                               TPDFStationary& result);
+
+    std::vector<double> compute_residual(const std::vector<double>& w, double& rho_out,
+                                          double& tpd_out,
+                                          const std::vector<TPDFStationary>& known_pts,
+                                          double tunnel_eps);
+
+    bool identify_phases();
+
+    std::vector<std::vector<double>> random_simplex_points(int n, unsigned int seed) const;
+
+    bool is_trivial(const std::vector<double>& w, double tol = 1e-4) const;
+    bool is_duplicate(const std::vector<double>& w,
+                       const std::vector<TPDFStationary>& pts, double tol = 1e-4) const;
 };
 
 }; /* namespace StabilityRoutines*/
