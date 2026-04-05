@@ -247,7 +247,9 @@ Same idea for the volume
 Predefined mixtures
 -------------------
 
-CoolProp ships with 154 predefined mixtures that can be used directly by name using the ``.mix`` suffix.  For example::
+.. include:: PredefinedMixturesCount.rst
+
+CoolProp ships with |predefined_mixture_count| predefined mixtures that can be used directly by name using the ``.mix`` suffix.  For example::
 
     CoolProp.PropsSI('H','T',300,'P',101325,'Air.mix')
 
