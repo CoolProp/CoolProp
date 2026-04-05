@@ -1946,8 +1946,6 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
         if (HEOS._T < T_critical_)  //
         {
             // TODO: is it a bug that this branch can be accessed for mixtures?
-            HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
-            HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
             if (HEOS._phase == iphase_liquid) {
                 HEOS._Q = -1000;
             } else if (HEOS._phase == iphase_gas) {
@@ -1956,6 +1954,9 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                 // Actually have to use saturation information sadly
                 // For the given temperature, find the saturation state
                 // Run the saturation routines to determine the saturation densities and pressures
+                // Ancillary densities are only needed here (two-phase) and for supercritical_liquid below.
+                HEOS._rhoVanc = HEOS.components[0].ancillaries.rhoV.evaluate(HEOS._T);
+                HEOS._rhoLanc = HEOS.components[0].ancillaries.rhoL.evaluate(HEOS._T);
                 HelmholtzEOSMixtureBackend HEOS1(HEOS.components);
                 SaturationSolvers::saturation_T_pure_options options;
                 SaturationSolvers::saturation_T_pure(HEOS1, HEOS._T, options);

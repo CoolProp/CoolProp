@@ -101,6 +101,7 @@ void HelmholtzEOSMixtureBackend::set_components(const std::vector<CoolPropFluid>
         std::vector<std::vector<double>> ones(1, std::vector<double>(1, 1));
         Reducing = std::make_shared<GERG2008ReducingFunction>(components, ones, ones, ones, ones);
         _reducing = calc_reducing_state_nocache(mole_fractions);
+        _crit = _reducing;
         _gas_constant = calc_gas_constant();
     } else {
         // Set the mixture parameters - binary pair reducing functions, departure functions, F_ij, etc.
@@ -1321,12 +1322,12 @@ void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs& input_pair, C
     // If the inputs are in mass units, convert them to molar units
     mass_to_molar_inputs(input_pair, value1, value2);
 
-    // Set the mole-fraction weighted gas constant for the mixture
-    // (or the pure/pseudo-pure fluid) if it hasn't been set yet
-    gas_constant();
-
-    // Calculate and cache the reducing state
-    calc_reducing_state();
+    // For mixtures, refresh the reducing state and gas constant (composition-dependent).
+    // For pure fluids these were set once in set_components() and never change.
+    if (!is_pure_or_pseudopure) {
+        gas_constant();
+        calc_reducing_state();
+    }
 }
 
 void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
@@ -1485,20 +1486,15 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
 }
 
 void HelmholtzEOSMixtureBackend::post_update(bool optional_checks) {
-    // Check the values that must always be set
-    //if (_p < 0){ throw ValueError("p is less than zero");}
-    if (!ValidNumber(_p)) {
-        throw ValueError("p is not a valid number");
-    }
-    //if (_T < 0){ throw ValueError("T is less than zero");}
-    if (!ValidNumber(_T)) {
-        throw ValueError("T is not a valid number");
-    }
-    if (_rhomolar < 0) {
-        throw ValueError("rhomolar is less than zero");
-    }
-    if (!ValidNumber(_rhomolar)) {
-        throw ValueError("rhomolar is not a valid number");
+    // Check the values that must always be set.
+    // Use bitwise | (not logical ||) so all sub-conditions are evaluated
+    // without short-circuiting: one branch prediction point instead of four,
+    // and the CPU can compute the conditions in parallel.
+    if ((!ValidNumber(_p)) | (!ValidNumber(_T)) | (_rhomolar < 0) | (!ValidNumber(_rhomolar))) {
+        if (!ValidNumber(_p))        throw ValueError("p is not a valid number");
+        if (!ValidNumber(_T))        throw ValueError("T is not a valid number");
+        if (_rhomolar < 0)           throw ValueError("rhomolar is less than zero");
+        if (!ValidNumber(_rhomolar)) throw ValueError("rhomolar is not a valid number");
     }
 
     if (optional_checks) {

@@ -187,7 +187,7 @@ bool AbstractState::clear() {
     // Reset all instances of CachedElement
     cache.clear();
 
-    this->_critical.fill(_HUGE);
+    // _critical is composition-dependent and cleared by clear_comp_change(); skip here.
 
     /// Bulk values
     this->_rhomolar = -_HUGE;
