@@ -163,13 +163,33 @@ static struct {
     double B_w, dBdT_w, C_w, dCdT_w;
 } s_virial_cache = {-1.0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+/// Compute all four virial quantities B, dB/dT, C, dC/dT in a single residual EOS evaluation,
+/// evaluated in the delta→0 limit (delta=1e-12), without triggering a full state update.
+///
+/// The delta→0 limit is specific to the virial expansion: B = lim(αr/δ, δ→0)/ρr and
+/// C = lim(αr/δ², δ→0)/ρr².  Evaluating at delta=1e-12 approximates this limit to machine
+/// precision for fluids with analytic αr.  This function is located in HumidAirProp.cpp
+/// because the delta→0 specialisation is only needed for the humid-air virial calculations.
+static void calc_all_virials(CoolProp::HelmholtzEOSMixtureBackend* fluid, double T,
+                              double& B, double& dBdT, double& C, double& dCdT) {
+    CoolProp::SimpleState red = fluid->get_reducing_state();
+    double tau = red.T / T;
+    double dtau_dT = -red.T / (T * T);
+    CoolProp::HelmholtzDerivatives derivs =
+        fluid->residual_helmholtz->all(*fluid, fluid->get_mole_fractions(), tau, 1e-12, false);
+    B    = derivs.get(0, 1) / red.rhomolar;
+    dBdT = derivs.get(1, 1) / red.rhomolar * dtau_dT;
+    C    = derivs.get(0, 2) / (red.rhomolar * red.rhomolar);
+    dCdT = derivs.get(1, 2) / (red.rhomolar * red.rhomolar) * dtau_dT;
+}
+
 static void fill_virial_cache(double T) {
     if (T == s_virial_cache.T) return;
     check_fluid_instantiation();
-    Air->calc_all_virials(T, s_virial_cache.B_a, s_virial_cache.dBdT_a,
-                              s_virial_cache.C_a, s_virial_cache.dCdT_a);
-    Water->calc_all_virials(T, s_virial_cache.B_w, s_virial_cache.dBdT_w,
-                                s_virial_cache.C_w, s_virial_cache.dCdT_w);
+    calc_all_virials(Air.get(),   T, s_virial_cache.B_a, s_virial_cache.dBdT_a,
+                                     s_virial_cache.C_a, s_virial_cache.dCdT_a);
+    calc_all_virials(Water.get(), T, s_virial_cache.B_w, s_virial_cache.dBdT_w,
+                                     s_virial_cache.C_w, s_virial_cache.dCdT_w);
     s_virial_cache.T = T;
 }
 
@@ -180,11 +200,36 @@ static struct {
     double a0_w, da0_dtau_w;
 } s_alpha0_cache = {-1.0, 0, 0, 0, 0};
 
+/// Evaluate the ideal-gas Helmholtz energy alpha0 and its tau-derivative for a pure fluid,
+/// at delta=1 (rho = rho_reducing), without triggering a full state update.
+///
+/// delta=1 is chosen so that ln(delta)=0, making alpha0 a pure function of tau.
+/// da0_dtau is independent of delta, so this choice is always valid for that derivative.
+/// This function is intentionally located in HumidAirProp.cpp because the delta=1
+/// evaluation point is specific to the ideal-gas limit used in humid-air h/s calculations.
+///
+/// Only pure/pseudopure fluids are supported; throws ValueError for mixtures.
+static void calc_ideal_gas_alpha0(CoolProp::HelmholtzEOSMixtureBackend* fluid, double T,
+                                   double& a0, double& da0_dtau) {
+    const auto& comps = fluid->get_components();
+    if (comps.size() != 1 || comps[0].EOS().pseudo_pure) {
+        throw CoolProp::ValueError("calc_ideal_gas_alpha0 only supports pure/pseudopure fluids");
+    }
+    CoolProp::SimpleState red = fluid->get_reducing_state();
+    double tau = red.T / T;
+    CoolProp::EquationOfState& E = fluid->get_components()[0].EOS();
+    // set_Tred is required so that GERG-2004-style sinh/cosh terms use the correct Tr.
+    E.alpha0.set_Tred(red.T);
+    CoolProp::HelmholtzDerivatives derivs = E.alpha0.all(tau, 1.0, false);
+    a0       = derivs.alphar;
+    da0_dtau = derivs.dalphar_dtau;
+}
+
 static void fill_alpha0_cache(double T) {
     if (T == s_alpha0_cache.T) return;
     check_fluid_instantiation();
-    Air->calc_alpha0_and_dTau(T, s_alpha0_cache.a0_a, s_alpha0_cache.da0_dtau_a);
-    Water->calc_alpha0_and_dTau(T, s_alpha0_cache.a0_w, s_alpha0_cache.da0_dtau_w);
+    calc_ideal_gas_alpha0(Air.get(),   T, s_alpha0_cache.a0_a, s_alpha0_cache.da0_dtau_a);
+    calc_ideal_gas_alpha0(Water.get(), T, s_alpha0_cache.a0_w, s_alpha0_cache.da0_dtau_w);
     s_alpha0_cache.T = T;
 }
 
