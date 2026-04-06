@@ -352,6 +352,13 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     std::vector<double> n, d, t, c, l_double, omega, m_double, eta1, epsilon1, eta2, epsilon2, beta1, gamma1, beta2, gamma2;
     // If l_i or m_i are integers, we will store them as integers in order to call pow(double, int) rather than pow(double, double)
     std::vector<int> l_int, m_int;
+    // Per-element precomputed flags (set in finish(), eliminates runtime ValidNumber calls in all())
+    std::vector<bool> l_is_integer;  ///< true when l_double[i] is an exact integer (mirrors elements[i].l_is_int)
+    std::vector<bool> l_active;      ///< ValidNumber(l_double) && l_double>0 && |c|>DBL_EPSILON
+    std::vector<bool> eta1_active;   ///< ValidNumber(eta1[i])
+    std::vector<bool> eta2_active;   ///< ValidNumber(eta2[i])
+    std::vector<bool> beta1_active;  ///< ValidNumber(beta1[i])
+    std::vector<bool> beta2_active;  ///< ValidNumber(beta2[i])
 
     //Eigen::ArrayXd uE, du_ddeltaE, du_dtauE, d2u_ddelta2E, d2u_dtau2E, d3u_ddelta3E, d3u_dtau3E;
 
@@ -492,37 +499,51 @@ class ResidualHelmholtzGeneralizedExponential : public BaseHelmholtzTerm
     };
 
     void finish() {
-        n.resize(elements.size());
-        d.resize(elements.size());
-        t.resize(elements.size());
-        c.resize(elements.size());
-        omega.resize(elements.size());
-        l_double.resize(elements.size());
-        l_int.resize(elements.size());
-        m_double.resize(elements.size());
-        m_int.resize(elements.size());
-        epsilon2.resize(elements.size());
-        eta2.resize(elements.size());
-        gamma2.resize(elements.size());
-        beta2.resize(elements.size());
+        const std::size_t sz = elements.size();
+        n.resize(sz);         d.resize(sz);        t.resize(sz);
+        c.resize(sz);         omega.resize(sz);    l_double.resize(sz);
+        l_int.resize(sz);     m_double.resize(sz); m_int.resize(sz);
+        eta1.resize(sz);      epsilon1.resize(sz);
+        eta2.resize(sz);      epsilon2.resize(sz);
+        beta1.resize(sz);     gamma1.resize(sz);
+        beta2.resize(sz);     gamma2.resize(sz);
+        l_is_integer.resize(sz);
+        l_active.resize(sz);
+        eta1_active.resize(sz);
+        eta2_active.resize(sz);
+        beta1_active.resize(sz);
+        beta2_active.resize(sz);
 
-        for (std::size_t i = 0; i < elements.size(); ++i) {
-            n[i] = elements[i].n;
-            d[i] = elements[i].d;
-            t[i] = elements[i].t;
-            c[i] = elements[i].c;
-            omega[i] = elements[i].omega;
+        for (std::size_t i = 0; i < sz; ++i) {
+            n[i]        = elements[i].n;
+            d[i]        = elements[i].d;
+            t[i]        = elements[i].t;
+            c[i]        = elements[i].c;
+            omega[i]    = elements[i].omega;
             l_double[i] = elements[i].l_double;
-            l_int[i] = elements[i].l_int;
+            l_int[i]    = elements[i].l_int;
             m_double[i] = elements[i].m_double;
-            m_int[i] = elements[i].m_int;
+            m_int[i]    = elements[i].m_int;
+            eta1[i]     = elements[i].eta1;
+            epsilon1[i] = elements[i].epsilon1;
+            eta2[i]     = elements[i].eta2;
             epsilon2[i] = elements[i].epsilon2;
-            eta2[i] = elements[i].eta2;
-            gamma2[i] = elements[i].gamma2;
-            beta2[i] = elements[i].beta2;
+            beta1[i]    = elements[i].beta1;
+            gamma1[i]   = elements[i].gamma1;
+            beta2[i]    = elements[i].beta2;
+            gamma2[i]   = elements[i].gamma2;
 
-            // See if l is an integer, and store a flag if it is
-            elements[i].l_is_int = (std::abs(static_cast<long>(elements[i].l_double) - elements[i].l_double) < 1e-14);
+            // Compute l_is_int and mirror to elements[] for mcx path
+            const bool l_int_flag = (std::abs(static_cast<long>(l_double[i]) - l_double[i]) < 1e-14);
+            elements[i].l_is_int = l_int_flag;
+            l_is_integer[i]      = l_int_flag;
+
+            // Precompute per-element validity flags (replaces runtime ValidNumber() calls in all())
+            l_active[i]    = ValidNumber(l_double[i]) && l_double[i] > 0 && std::abs(c[i]) > DBL_EPSILON;
+            eta1_active[i] = ValidNumber(eta1[i]);
+            eta2_active[i] = ValidNumber(eta2[i]);
+            beta1_active[i] = ValidNumber(beta1[i]);
+            beta2_active[i] = ValidNumber(beta2[i]);
         }
         //        uE.resize(elements.size());
         //        du_ddeltaE.resize(elements.size());

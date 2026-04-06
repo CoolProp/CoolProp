@@ -138,12 +138,10 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
     CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu, one_over_delta = 1 / delta,
                 one_over_tau = 1 / tau;  // division is much slower than multiplication, so do one division here
 
-    // Maybe split the construction of u and other parts into two separate loops?
-    // If both loops can get vectorized, could be worth it.
     const std::size_t N = elements.size();
     for (std::size_t i = 0; i < N; ++i) {
-        ResidualHelmholtzGeneralizedExponentialElement& el = elements[i];
-        CoolPropDbl ni = el.n, di = el.d, ti = el.t;
+        // Read from SoA arrays for cache-friendly sequential access
+        const CoolPropDbl ni = n[i], di = d[i], ti = t[i];
 
         // Set the u part of exp(u) to zero
         CoolPropDbl u = 0;
@@ -157,13 +155,13 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
         CoolPropDbl d4u_dtau4 = 0;
 
         if (delta_li_in_u) {
-            CoolPropDbl ci = el.c, l_double = el.l_double;
-            if (ValidNumber(l_double) && l_double > 0 && std::abs(ci) > DBL_EPSILON) {
-                const CoolPropDbl u_increment = (el.l_is_int) ? -ci * powInt(delta, el.l_int) : -ci * pow(delta, l_double);
-                const CoolPropDbl du_ddelta_increment = l_double * u_increment * one_over_delta;
-                const CoolPropDbl d2u_ddelta2_increment = (l_double - 1) * du_ddelta_increment * one_over_delta;
-                const CoolPropDbl d3u_ddelta3_increment = (l_double - 2) * d2u_ddelta2_increment * one_over_delta;
-                const CoolPropDbl d4u_ddelta4_increment = (l_double - 3) * d3u_ddelta3_increment * one_over_delta;
+            if (l_active[i]) {
+                const CoolPropDbl ci = c[i], l_d = l_double[i];
+                const CoolPropDbl u_increment = l_is_integer[i] ? -ci * powInt(delta, l_int[i]) : -ci * pow(delta, l_d);
+                const CoolPropDbl du_ddelta_increment = l_d * u_increment * one_over_delta;
+                const CoolPropDbl d2u_ddelta2_increment = (l_d - 1) * du_ddelta_increment * one_over_delta;
+                const CoolPropDbl d3u_ddelta3_increment = (l_d - 2) * d2u_ddelta2_increment * one_over_delta;
+                const CoolPropDbl d4u_ddelta4_increment = (l_d - 3) * d3u_ddelta3_increment * one_over_delta;
                 u += u_increment;
                 du_ddelta += du_ddelta_increment;
                 d2u_ddelta2 += d2u_ddelta2_increment;
@@ -172,13 +170,13 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
             }
         }
         if (tau_mi_in_u) {
-            CoolPropDbl omegai = el.omega, m_double = el.m_double;
-            if (std::abs(m_double) > 0) {
-                const CoolPropDbl u_increment = -omegai * pow(tau, m_double);
-                const CoolPropDbl du_dtau_increment = m_double * u_increment * one_over_tau;
-                const CoolPropDbl d2u_dtau2_increment = (m_double - 1) * du_dtau_increment * one_over_tau;
-                const CoolPropDbl d3u_dtau3_increment = (m_double - 2) * d2u_dtau2_increment * one_over_tau;
-                const CoolPropDbl d4u_dtau4_increment = (m_double - 3) * d3u_dtau3_increment * one_over_tau;
+            const CoolPropDbl omegai = omega[i], m_d = m_double[i];
+            if (std::abs(m_d) > 0) {
+                const CoolPropDbl u_increment = -omegai * pow(tau, m_d);
+                const CoolPropDbl du_dtau_increment = m_d * u_increment * one_over_tau;
+                const CoolPropDbl d2u_dtau2_increment = (m_d - 1) * du_dtau_increment * one_over_tau;
+                const CoolPropDbl d3u_dtau3_increment = (m_d - 2) * d2u_dtau2_increment * one_over_tau;
+                const CoolPropDbl d4u_dtau4_increment = (m_d - 3) * d3u_dtau3_increment * one_over_tau;
                 u += u_increment;
                 du_dtau += du_dtau_increment;
                 d2u_dtau2 += d2u_dtau2_increment;
@@ -187,33 +185,33 @@ void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const 
             }
         }
         if (eta1_in_u) {
-            CoolPropDbl eta1 = el.eta1, epsilon1 = el.epsilon1;
-            if (ValidNumber(eta1)) {
-                u += -eta1 * (delta - epsilon1);
-                du_ddelta += -eta1;
+            if (eta1_active[i]) {
+                const CoolPropDbl eta1_i = eta1[i];
+                u += -eta1_i * (delta - epsilon1[i]);
+                du_ddelta += -eta1_i;
             }
         }
         if (eta2_in_u) {
-            CoolPropDbl eta2 = el.eta2, epsilon2 = el.epsilon2;
-            if (ValidNumber(eta2)) {
-                u += -eta2 * POW2(delta - epsilon2);
-                du_ddelta += -2 * eta2 * (delta - epsilon2);
-                d2u_ddelta2 += -2 * eta2;
+            if (eta2_active[i]) {
+                const CoolPropDbl eta2_i = eta2[i], eps2 = epsilon2[i];
+                u += -eta2_i * POW2(delta - eps2);
+                du_ddelta += -2 * eta2_i * (delta - eps2);
+                d2u_ddelta2 += -2 * eta2_i;
             }
         }
         if (beta1_in_u) {
-            CoolPropDbl beta1 = el.beta1, gamma1 = el.gamma1;
-            if (ValidNumber(beta1)) {
-                u += -beta1 * (tau - gamma1);
-                du_dtau += -beta1;
+            if (beta1_active[i]) {
+                const CoolPropDbl beta1_i = beta1[i];
+                u += -beta1_i * (tau - gamma1[i]);
+                du_dtau += -beta1_i;
             }
         }
         if (beta2_in_u) {
-            CoolPropDbl beta2 = el.beta2, gamma2 = el.gamma2;
-            if (ValidNumber(beta2)) {
-                u += -beta2 * POW2(tau - gamma2);
-                du_dtau += -2 * beta2 * (tau - gamma2);
-                d2u_dtau2 += -2 * beta2;
+            if (beta2_active[i]) {
+                const CoolPropDbl beta2_i = beta2[i], gam2 = gamma2[i];
+                u += -beta2_i * POW2(tau - gam2);
+                du_dtau += -2 * beta2_i * (tau - gam2);
+                d2u_dtau2 += -2 * beta2_i;
             }
         }
 
