@@ -98,8 +98,6 @@ class FlashRoutines
     /// Flash for given pressure and temperature for mixtures
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS);
-    /// Wilson K-factor initial guesses + Rachford-Rice + PTflash_twophase solver
-    static void PT_twophase_Wilson(HelmholtzEOSMixtureBackend& HEOS);
 
     /// Use Peng-Robinson to get guess for temperature for given density and pressure
     static double T_DP_PengRobinson(HelmholtzEOSMixtureBackend& HEOS, double rhomolar, double p);
