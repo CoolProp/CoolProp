@@ -166,7 +166,10 @@ void PhaseEnvelopeRoutines::build(HelmholtzEOSMixtureBackend& HEOS, const std::s
 
             if (failure_count > 5) {
                 // Stop since we are stuck at a bad point
-                //throw SolutionError("stuck");
+                if (env.T.size() > 4) {
+                    env.built = true;
+                    refine(HEOS, level);
+                }
                 return;
             }
 
