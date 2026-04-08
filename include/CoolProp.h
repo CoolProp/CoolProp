@@ -191,5 +191,8 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
 /// @param Phase The enumerated phase index to be looked up
 std::string phase_lookup_string(phases Phase);
 
+/// A function to skip tests that require REFPROPMixtureBackend in environments where it is not supported (e.g., CI builds on GitHub)
+void Skip_if_No_REFPROP();
+
 } /* namespace CoolProp */
 #endif

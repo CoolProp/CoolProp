@@ -675,7 +675,17 @@ bool add_fluids_as_JSON(const std::string& backend, const std::string& fluidstri
     }
 }
 
+// Simple function to check if REFPROPMixtureBackend is supported in this environment, so that we can skip
+// tests that require it in environments where it is not supported (e.g., CI builds on GitHub)
+void Skip_if_No_REFPROP() {
 #if defined(ENABLE_CATCH)
+    if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) SKIP("Skipping: REFPROP not supported in this environment.");
+#endif
+    // Otherwise, in non-testing environments, this is a no-op.
+}
+
+#if defined(ENABLE_CATCH)
+
 TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
     SECTION("Single state, single output") {
         CHECK(ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "Water")));
@@ -705,15 +715,11 @@ TEST_CASE("Check inputs to PropsSI", "[PropsSI]") {
         CHECK(ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "R410A.mix")));
     };
     SECTION("Single state, single output, predefined mixture from REFPROP") {
-        if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
-            SKIP("REFPROPMixtureBackend is supported in this environment, so skipping REFPROP PropsSI test.");
-        }
+        Skip_if_No_REFPROP();
         CHECK(ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "REFPROP::R410A.MIX")));
     };
     SECTION("Single state, single output, bad predefined mixture from REFPROP") {
-        if (!CoolProp::REFPROPMixtureBackend::REFPROP_supported()) {
-            SKIP("REFPROPMixtureBackend is supported in this environment, so skipping REFPROP PropsSI test.");
-        }
+        Skip_if_No_REFPROP();
         CHECK(!ValidNumber(CoolProp::PropsSI("T", "P", 101325, "Q", 0, "REFPROP::RRRRRR.mix")));
     };
     SECTION("Predefined mixture") {
