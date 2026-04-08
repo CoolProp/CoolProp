@@ -1878,66 +1878,104 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
             Brent(resid, T_lo, T_hi, DBL_EPSILON, 1e-10, 100);
             HEOS.unspecify_phase();
         } else {
-            // Two-phase: use the general residual that preserves
-            // the two-phase state produced by PT_flash_mixtures.
+            // Two-phase: bracket between the bubble-point and dew-point
+            // temperatures read from the phase envelope, and impose
+            // iphase_twophase so the inner PT flash calls
+            // PT_twophase_Wilson directly instead of re-evaluating
+            // is_inside (which can misclassify points near the dew curve).
+            std::vector<std::pair<std::size_t, std::size_t>> intersections =
+                PhaseEnvelopeRoutines::find_intersections(HEOS.PhaseEnvelope, iP, HEOS._p);
+            if (intersections.size() < 2) {
+                throw ValueError(format("HSU_P_flash (mixture, PE two-phase): fewer than 2 intersections at P=%Lg", HEOS._p));
+            }
+            std::size_t iV = intersections[0].first;
+            std::size_t iL = intersections[1].first;
+            CoolPropDbl T_dew    = PhaseEnvelopeRoutines::evaluate(HEOS.PhaseEnvelope, iT, iP, HEOS._p, iV);
+            CoolPropDbl T_bubble = PhaseEnvelopeRoutines::evaluate(HEOS.PhaseEnvelope, iT, iP, HEOS._p, iL);
+            CoolPropDbl T_lo = std::min(T_bubble, T_dew);
+            CoolPropDbl T_hi = std::max(T_bubble, T_dew);
+
+            HEOS.specify_phase(iphase_twophase);
             PY_flash_resid resid(HEOS, HEOS._p, other, value);
             double r_lo, r_hi;
-            if (!try_eval(resid, Tmin, r_lo) || !try_eval(resid, Tmax, r_hi) || r_lo * r_hi > 0) {
-                throw ValueError(
-                  format("HSU_P_flash (mixture, two-phase): could not bracket solution between Tmin=%Lg and Tmax=%Lg", Tmin, Tmax));
+            bool ok_lo = try_eval(resid, T_lo, r_lo);
+            bool ok_hi = try_eval(resid, T_hi, r_hi);
+            // Near the bubble/dew curves PT_twophase_Wilson may fail;
+            // binary-search inward to find the nearest valid T.
+            if (!ok_lo && ok_hi) {
+                bracket_validity(resid, T_lo, T_hi, r_lo, /*fail_is_lo=*/true);
+                ok_lo = true;
+            } else if (ok_lo && !ok_hi) {
+                bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
+                ok_hi = true;
             }
-            Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+            if (!ok_lo || !ok_hi || r_lo * r_hi > 0) {
+                HEOS.unspecify_phase();
+                throw ValueError(
+                  format("HSU_P_flash (mixture, PE two-phase): could not bracket solution between T_bubble=%Lg and T_dew=%Lg", T_lo, T_hi));
+            }
+            Brent(resid, T_lo, T_hi, DBL_EPSILON, 1e-10, 100);
+            HEOS.unspecify_phase();
         }
 
     } else if (HEOS.imposed_phase_index != iphase_not_imposed) {
         // Phase is imposed by the caller – honour it so that
         // the inner PT flash skips stability analysis.
+        //
+        // Narrow the bracket using Wilson K-factor estimates of the
+        // bubble-point and dew-point temperatures at the given P.
+        // This keeps solver_rho_Tp from being called at temperatures
+        // where the imposed phase doesn't exist.
+        //   K_i = (Pc_i/P) * exp(5.373*(1+w_i)*(1-Tc_i/T))
+        //   Bubble: sum(z_i * K_i) = 1   Dew: sum(z_i / K_i) = 1
+        std::size_t N = z.size();
+        std::vector<CoolPropDbl> Tc(N), Pc(N), omega(N);
+        for (std::size_t i = 0; i < N; ++i) {
+            Tc[i]    = HEOS.get_fluid_constant(i, iT_critical);
+            Pc[i]    = HEOS.get_fluid_constant(i, iP_critical);
+            omega[i] = HEOS.get_fluid_constant(i, iacentric_factor);
+        }
+        CoolPropDbl P = HEOS._p;
+        auto f_bub = [&](double T) {
+            double s = 0;
+            for (std::size_t i = 0; i < N; ++i)
+                s += z[i] * (Pc[i] / P) * exp(5.373 * (1 + omega[i]) * (1 - Tc[i] / T));
+            return s - 1;
+        };
+        auto f_dew = [&](double T) {
+            double s = 0;
+            for (std::size_t i = 0; i < N; ++i)
+                s += z[i] / ((Pc[i] / P) * exp(5.373 * (1 + omega[i]) * (1 - Tc[i] / T)));
+            return 1 - s;
+        };
+        // Bisect for bubble-point T
+        CoolPropDbl a = Tmin, b = Tmax;
+        for (int iter = 0; iter < 100; ++iter) {
+            CoolPropDbl mid = 0.5 * (a + b);
+            (f_bub(mid) < 0) ? a = mid : b = mid;
+            if (b - a < 0.01) break;
+        }
+        CoolPropDbl T_bubble = 0.5 * (a + b);
+        // Bisect for dew-point T
+        a = Tmin; b = Tmax;
+        for (int iter = 0; iter < 100; ++iter) {
+            CoolPropDbl mid = 0.5 * (a + b);
+            (f_dew(mid) < 0) ? a = mid : b = mid;
+            if (b - a < 0.01) break;
+        }
+        CoolPropDbl T_dew = 0.5 * (a + b);
 
         CoolPropDbl T_lo = Tmin, T_hi = Tmax;
-
         if (HEOS.imposed_phase_index == iphase_twophase) {
-            // For two-phase, the bracket must stay inside the VLE region,
-            // otherwise the Wilson-based PT flash diverges.  Estimate
-            // bubble-point and dew-point T at the given P using Wilson
-            // K-factors: K_i = (Pc_i/P) * exp(5.373*(1+w_i)*(1-Tc_i/T)).
-            std::size_t N = z.size();
-            std::vector<CoolPropDbl> Tc(N), Pc(N), omega(N);
-            for (std::size_t i = 0; i < N; ++i) {
-                Tc[i]    = HEOS.get_fluid_constant(i, iT_critical);
-                Pc[i]    = HEOS.get_fluid_constant(i, iP_critical);
-                omega[i] = HEOS.get_fluid_constant(i, iacentric_factor);
-            }
-            CoolPropDbl P = HEOS._p;
-            // Bubble: sum(z_i * K_i(T)) - 1 = 0   (negative at low T, positive at high T)
-            auto f_bub = [&](double T) {
-                double s = 0;
-                for (std::size_t i = 0; i < N; ++i)
-                    s += z[i] * (Pc[i] / P) * exp(5.373 * (1 + omega[i]) * (1 - Tc[i] / T));
-                return s - 1;
-            };
-            // Dew: 1 - sum(z_i / K_i(T)) = 0      (negative at low T, positive at high T)
-            auto f_dew = [&](double T) {
-                double s = 0;
-                for (std::size_t i = 0; i < N; ++i)
-                    s += z[i] / ((Pc[i] / P) * exp(5.373 * (1 + omega[i]) * (1 - Tc[i] / T)));
-                return 1 - s;
-            };
-            // Bisect for bubble-point T
-            CoolPropDbl a = Tmin, b = Tmax;
-            for (int iter = 0; iter < 100; ++iter) {
-                CoolPropDbl mid = 0.5 * (a + b);
-                (f_bub(mid) < 0) ? a = mid : b = mid;
-                if (b - a < 0.01) break;
-            }
-            T_lo = 0.5 * (a + b);
-            // Bisect for dew-point T
-            a = Tmin; b = Tmax;
-            for (int iter = 0; iter < 100; ++iter) {
-                CoolPropDbl mid = 0.5 * (a + b);
-                (f_dew(mid) < 0) ? a = mid : b = mid;
-                if (b - a < 0.01) break;
-            }
-            T_hi = 0.5 * (a + b);
+            // Two-phase: bracket between bubble and dew
+            T_lo = T_bubble;
+            T_hi = T_dew;
+        } else if (HEOS.imposed_phase_index == iphase_liquid) {
+            // Liquid exists below the bubble point
+            T_hi = T_bubble;
+        } else if (HEOS.imposed_phase_index == iphase_gas) {
+            // Gas exists above the dew point
+            T_lo = T_dew;
         }
 
         PY_flash_resid resid(HEOS, HEOS._p, other, value);
