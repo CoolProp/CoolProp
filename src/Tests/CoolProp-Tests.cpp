@@ -1329,6 +1329,8 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
 
 TEST_CASE("Test consistency between Gernert models in CoolProp and Gernert models in REFPROP", "[Gernert]") {
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
+    Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
+
     std::string mixes[] = {"CO2[0.7]&Argon[0.3]", "CO2[0.7]&Water[0.3]", "CO2[0.7]&Nitrogen[0.3]"};
     for (int i = 0; i < 3; ++i) {
         const char* ykey = mixes[i].c_str();
@@ -1805,6 +1807,8 @@ TEST_CASE("Test second partial derivatives", "[derivatives]") {
 }
 
 TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
+    Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
+
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
     for (std::size_t i = 0; i < fluids.size(); ++i) {
         std::ostringstream ss1;
@@ -1822,6 +1826,8 @@ TEST_CASE("REFPROP names for coolprop fluids", "[REFPROPName]") {
     }
 }
 TEST_CASE("Backwards compatibility for REFPROP v4 fluid name convention", "[REFPROP_backwards_compatibility]") {
+    Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
+
     SECTION("REFPROP-", "") {
         double val = Props1SI("REFPROP-Water", "Tcrit");
         std::string err = get_global_param_string("errstring");
@@ -3080,6 +3086,8 @@ TEST_CASE("CoolProp.jl tests", "[2598]") {
 }
 
 TEST_CASE("Check methanol EOS matches REFPROP 10", "[2538]") {
+    Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
+
     auto TNBP_RP = PropsSI("T", "P", 101325, "Q", 0, "REFPROP::METHANOL");
     auto TNBP_CP = PropsSI("T", "P", 101325, "Q", 0, "HEOS::METHANOL");
     CHECK(TNBP_RP == Catch::Approx(TNBP_CP).epsilon(1e-6));
@@ -3294,6 +3302,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for R410A", "[superanc]"
 }
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check throws for REFPROP", "[superanc]") {
+    Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("REFPROP", "WATER"));
     CHECK_THROWS(AS->update_QT_pure_superanc(1.0, 300.0));
 }
@@ -3445,6 +3454,8 @@ std::vector<std::tuple<double, double, double, double>> MSA22values = {
 };
 
 TEST_CASE("Ideal gas thermodynamic properties", "[2589]") {
+    Skip_if_No_REFPROP();  // Skip this test if REFPROPMixture backend is not available
+
     shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Air"));
     shared_ptr<CoolProp::AbstractState> RP(CoolProp::AbstractState::factory("REFPROP", "Air"));
 
