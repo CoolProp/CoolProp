@@ -34,6 +34,7 @@ enum EC
     INSUFFICIENT_MEMORY,
     INTERRUPTED,
     ONLY_ONE_COLUMN,
+    UNEQUAL_LENGTH,
     //---------------------------------------------------
     BAD_FLUID,  // CoolProp Error Codes from here   v
     BAD_MIXTURE,
@@ -70,6 +71,7 @@ char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Insufficient Memory",
                                                "Interrupted",
                                                "Only one column allowed in input array",
+                                               "Input arrays must be the same length",
                                                "Invalid Fluid String",
                                                "Invalid predefined mixture",
                                                "IF97 Backend supports pure \"Water\" only",
@@ -463,12 +465,17 @@ static LRESULT CP_PropsSImulti(LPCOMPLEXARRAY Prop,         // pointer to the re
     const std::string OutStr(OutputName->str);
     const std::string FluidString(FluidName->str);
 
-    // check that the first and second scalar arguments are real
+    // check that the first and second array arguments are real and are single-column vectors
     LRESULT r = CheckRealArrayOrError(InputProp1, 3);
     if (r) return r;
 
-    r = CheckRealArrayOrError(InputProp2, 4);
+    r = CheckRealArrayOrError(InputProp2, 5);
     if (r) return r;
+
+    // make sure input arrays are the same length (PropsSImulti expects the same number of values for each input property)
+    if (InputProp1->rows != InputProp2->rows) {
+        return MAKELRESULT(UNEQUAL_LENGTH, 5);  // Return error for InputProp2 if the lengths do not match
+    }
 
     // Convert the input arrays to vectors for passing to PropsSImulti.
     // The PropsSImulti function expects std::vector<double> for the input properties,
