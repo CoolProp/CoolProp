@@ -13,7 +13,7 @@
 enum
 {
     MC_STRING = STRING
-};             // substitute enumeration variable MC_STRING for STRING, use MC_STRING below
+};  // substitute enumeration variable MC_STRING for STRING, use MC_STRING below
 #undef STRING  // undefine STRING as it conflicts with STRING enum in fmtlib/format.h
 
 #include "CoolProp.h"
@@ -35,7 +35,7 @@ enum EC
     INTERRUPTED,
     ONLY_ONE_COLUMN,
     //---------------------------------------------------
-    BAD_FLUID,        // CoolProp Error Codes from here v
+    BAD_FLUID,  // CoolProp Error Codes from here   v
     BAD_MIXTURE,
     BAD_IF97_FLUID,
     BAD_PARAMETER,
@@ -99,8 +99,7 @@ char* CPErrorMessageTable[NUMBER_OF_ERRORS] = {"Argument must be real",
                                                "Error Count - Not Used"};
 
 // Helper: allocate Mathcad string and copy contents
-static char* AllocMathcadString(const std::string& s)
-{
+static char* AllocMathcadString(const std::string& s) {
     // Must use MathcadAllocate(size) so Mathcad can track and release the memory properly.
     char* c = MathcadAllocate(static_cast<int>(s.size()) + 1);
     if (c != nullptr) {
@@ -121,7 +120,7 @@ static LRESULT AllocateToMathcadArray(LPCOMPLEXARRAY dest, const std::vector<std
 
     // Make sure dest is an actual pointer before trying to allocate memory for it
     if (dest == nullptr) {
-        return MAKELRESULT(INSUFFICIENT_MEMORY, 0);    // Return error if dest is not a valid pointer
+        return MAKELRESULT(INSUFFICIENT_MEMORY, 0);  // Return error if dest is not a valid pointer
     }
 
     // Allocate Mathcad array memory (real part only)
@@ -152,10 +151,8 @@ static double get_nan() {
     return *(double*)&nan_pattern;
 }
 
-
 // Helper: check that a complex scalar input is Real and return proper Mathcad error
-static inline LRESULT CheckRealOrError(LPCCOMPLEXSCALAR val, int position)
-{
+static inline LRESULT CheckRealOrError(LPCCOMPLEXSCALAR val, int position) {
     if (val->imag != 0.0) return MAKELRESULT(MUST_BE_REAL, position);
     return 0;
 }
@@ -169,23 +166,21 @@ static inline LRESULT CheckRealArrayOrError(LPCCOMPLEXARRAY val, int position) {
 
 // Helper: Determine which of the valid delimiters were passed in a String.
 static inline char FindDelimiter(std::string instr) {
-    unsigned int nDelims = 0;  // Delimiter count
-    static char dType =
-      '\0';  // Initialize to 'null' character, which will be returned if no delimiters are found.
+    unsigned int nDelims = 0;                              // Delimiter count
+    static char dType = '\0';                              // Initialize to 'null' character, which will be returned if no delimiters are found.
     static const char dels[] = {' ', ',', '&', ';', '|'};  // Valid delimiters list
 
-    for (char d : dels) {                            // Loop through valid delimiters
-        if (instr.find(d) != std::string::npos) {    //   If found
-            nDelims++;                               //      increment 
-            dType = d;                               //      and save the delimiter type
+    for (char d : dels) {                          // Loop through valid delimiters
+        if (instr.find(d) != std::string::npos) {  //   If found
+            nDelims++;                             //      increment
+            dType = d;                             //      and save the delimiter type
         }
     }
 
     if (nDelims > 1) dType = 'E';  // Multiple delimiters found, return 'null'E' character to trigger error
 
     return dType;  // Return the delimiter type found, or '\0' if none, or 'E' if multiple
-   }
-
+}
 
 // This code executes the user function CP_get_global_param_string, which is a wrapper for
 // the CoolProp.get_global_param_string() function, used to get a global string parameter from CoolProp
@@ -217,8 +212,8 @@ static LRESULT CP_get_global_param_string(LPMCSTRING ParamValue,  // output (val
 // This code executes the user function CP_get_fluid_param_string, which is a wrapper for
 // the CoolProp.get_fluid_param_string() function, used to get a fluid string parameter from CoolProp
 static LRESULT CP_get_fluid_param_string(LPMCSTRING ParamValue,  // output (value of parameter)
-                                  LPCMCSTRING FluidName,  // name of fluid (string) to retrieve
-                                  LPCMCSTRING ParamName)  // name of parameter (string) to retrieve
+                                         LPCMCSTRING FluidName,  // name of fluid (string) to retrieve
+                                         LPCMCSTRING ParamName)  // name of parameter (string) to retrieve
 {
     std::string s;
     // Invoke the std::string form of get_fluid_param_string() function, save result to a new string s
@@ -249,8 +244,8 @@ static LRESULT CP_get_fluid_param_string(LPMCSTRING ParamValue,  // output (valu
 // the CoolProp.set_reference_stateS() function, used to set the H/S reference states
 // based on a standard state string of "IIR", "ASHRAE", "NBP", or "DEF".
 static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy value)
-                               LPCMCSTRING FluidName,  // name of fluid (string) to retrieve
-                               LPCMCSTRING StateStr)   // name of standard state (string) to set
+                                      LPCMCSTRING FluidName,  // name of fluid (string) to retrieve
+                                      LPCMCSTRING StateStr)   // name of standard state (string) to set
 {
     // Invoke the set_reference_stateS() function, no result from this void function.
     try {
@@ -281,12 +276,11 @@ static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy v
     return 0;
 }
 
-  // Helper: centralize text-matching logic for Props1SI error handling
-  static LRESULT HandleProps1SIError(const std::string& emsg, const std::string& FluidString, const std::string& PropName)
-  {
+// Helper: centralize text-matching logic for Props1SI error handling
+static LRESULT HandleProps1SIError(const std::string& emsg, const std::string& FluidString, const std::string& PropName) {
     auto contains = [&](const char* s) { return emsg.find(s) != std::string::npos; };
     std::string mixName = "";  // Temp variable to hold the name of the mixture string argument for error checking, if needed
-    unsigned int errPos = 0;  // Temp variable to hold the position of the error argument for returning to Mathcad, if needed
+    unsigned int errPos = 0;   // Temp variable to hold the position of the error argument for returning to Mathcad, if needed
 
     // Check for "valid fluid" error first, since it is the most common error and can have multiple causes
     // that require parsing the error message to determine the specific error type and position.
@@ -312,7 +306,7 @@ static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy v
                 if (!CoolProp::is_predefined_mixture(mixName, dict))  // Mixture string was used, but not found in CoolProp's predefined mixtures
                     return MAKELRESULT(BAD_MIXTURE, errPos);
                 else
-                    return MAKELRESULT(MISSING_BINARY_PAIR, errPos); // Likely missing a binary interaction pair.
+                    return MAKELRESULT(MISSING_BINARY_PAIR, errPos);  // Likely missing a binary interaction pair.
             }
             return MAKELRESULT(BAD_FLUID, 1);
         } else {  // "Both inputs"
@@ -332,7 +326,6 @@ static LRESULT CP_set_reference_state(LPCOMPLEXSCALAR Conf,   // output (dummy v
     // Otherwise, un-trapped error. Return generic error code and have user check get_global_param_string("errstring") for details
     return MAKELRESULT(UNKNOWN, 1);
 }
-
 
 // This code executes the user function CP_Props1SI, which is a wrapper for
 // the CoolProp.PropsSI() function, used to simply extract a
@@ -361,8 +354,7 @@ static LRESULT CP_Props1SI(LPCOMPLEXSCALAR Prop,  // pointer to the result
 }
 
 // Helper: centralize text-matching logic for PropsSI and PhaseSI error handling
-static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Prop1Name, const unsigned int o )
-{
+static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Prop1Name, const unsigned int o) {
     // Parameter "o" is passed as a parameter # offset between PropsSI (6 parameters) and PhaseSI (5 parameters and no output string)
     // PropsSI calls this routine with o = 0u (zero), while PhaseSI calls this routine with o = 1u.
     auto contains = [&](const char* s) { return emsg.find(s) != std::string::npos; };
@@ -374,24 +366,24 @@ static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Pr
         errPos = !is_valid_parameter(Prop1Name, key1) ? 2u - o : 4u - o;
         return MAKELRESULT(BAD_PARAMETER, errPos);
     }
-    if (contains("Input Name1")) return MAKELRESULT(BAD_PARAMETER, 2-o);
-    if (contains("Input Name2")) return MAKELRESULT(BAD_PARAMETER, 4-o);
-    if (contains("Phase can only be specified on one")) return MAKELRESULT(ONLY_ONE_PHASE_SPEC, 4-o);
+    if (contains("Input Name1")) return MAKELRESULT(BAD_PARAMETER, 2 - o);
+    if (contains("Input Name2")) return MAKELRESULT(BAD_PARAMETER, 4 - o);
+    if (contains("Phase can only be specified on one")) return MAKELRESULT(ONLY_ONE_PHASE_SPEC, 4 - o);
     if (contains("valid phase")) {
-        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u-o : 4u-o;
+        errPos = !is_valid_parameter(Prop1Name, key1) ? 2u - o : 4u - o;
         return MAKELRESULT(BAD_PHASE, errPos);
     }
-    if (contains("This pair of inputs")) return MAKELRESULT(BAD_INPUT_PAIR, 2-o);
-    if (contains("Input vapor quality")) return (Prop1Name == "Q") ? MAKELRESULT(BAD_QUAL, 3-o) : MAKELRESULT(BAD_QUAL, 5-o);
+    if (contains("This pair of inputs")) return MAKELRESULT(BAD_INPUT_PAIR, 2 - o);
+    if (contains("Input vapor quality")) return (Prop1Name == "Q") ? MAKELRESULT(BAD_QUAL, 3 - o) : MAKELRESULT(BAD_QUAL, 5 - o);
     if (contains("Output string is invalid")) return MAKELRESULT(BAD_PARAMETER, 1);
     if (contains("not valid in two phase region")) return MAKELRESULT(TWO_PHASE, 1);
     if (contains("only defined within the two-phase")) return MAKELRESULT(NON_TWO_PHASE, 1);
     if (contains("not implemented")) return MAKELRESULT(NOT_AVAIL, 1);
 
     // Check for invalid fluid errors next.
-    if (contains("Predefined mixture") && contains("not found")) return MAKELRESULT(BAD_MIXTURE, 6u-o);
+    if (contains("Predefined mixture") && contains("not found")) return MAKELRESULT(BAD_MIXTURE, 6u - o);
     if (contains("Initialize failed")) {
-        errPos = 6u -o;
+        errPos = 6u - o;
         if (contains("Could not match the binary pair")) return MAKELRESULT(MISSING_BINARY_PAIR, errPos);
         if (contains("REFPROP")) {
             if (contains("cannot use")) return MAKELRESULT(NO_REFPROP, errPos);
@@ -402,16 +394,16 @@ static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Pr
     }
 
     // Check for out of range errors next.
-    if (contains("Temperature") || contains("below Tmelt(p)"))        // Cases where temperature is out of range.
+    if (contains("Temperature") || contains("below Tmelt(p)"))  // Cases where temperature is out of range.
         return (Prop1Name == "T") ? MAKELRESULT(T_OUT_OF_RANGE, 3u - o) : MAKELRESULT(T_OUT_OF_RANGE, 5u - o);
-    if (contains("Saturation pressure"))                              // Cases at saturation for T-P
+    if (contains("Saturation pressure"))  // Cases at saturation for T-P
         return (Prop1Name == "P") ? MAKELRESULT(TP_SATURATION, 3u - o) : MAKELRESULT(TP_SATURATION, 5u - o);
-    if (contains("Pressure") || contains("melting line T(p)"))        // Cases where pressure is out of range
-        return (Prop1Name == "P") ? MAKELRESULT(P_OUT_OF_RANGE, 3u-o) : MAKELRESULT(P_OUT_OF_RANGE, 5u-o);
+    if (contains("Pressure") || contains("melting line T(p)"))  // Cases where pressure is out of range
+        return (Prop1Name == "P") ? MAKELRESULT(P_OUT_OF_RANGE, 3u - o) : MAKELRESULT(P_OUT_OF_RANGE, 5u - o);
     if (contains("Enthalpy") || contains("solution because Hmolar"))  // Cases where enthalpy is out of range
-        return ((Prop1Name == "H") || (Prop1Name == "Hmolar")) ? MAKELRESULT(H_OUT_OF_RANGE, 3u-o) : MAKELRESULT(H_OUT_OF_RANGE, 5u-o);
-    if (contains("Entropy") || contains("solution because Smolar"))   // Cases where entropy is out of range
-        return ((Prop1Name == "S") || (Prop1Name == "Smolar")) ? MAKELRESULT(S_OUT_OF_RANGE, 3u-o) : MAKELRESULT(S_OUT_OF_RANGE, 5u-o);
+        return ((Prop1Name == "H") || (Prop1Name == "Hmolar")) ? MAKELRESULT(H_OUT_OF_RANGE, 3u - o) : MAKELRESULT(H_OUT_OF_RANGE, 5u - o);
+    if (contains("Entropy") || contains("solution because Smolar"))  // Cases where entropy is out of range
+        return ((Prop1Name == "S") || (Prop1Name == "Smolar")) ? MAKELRESULT(S_OUT_OF_RANGE, 3u - o) : MAKELRESULT(S_OUT_OF_RANGE, 5u - o);
 
     // Un-trapped error, return generic error code and have user check get_global_param_string("errstring") for details
     return MAKELRESULT(UNKNOWN, 1);
@@ -420,12 +412,12 @@ static LRESULT HandlePropsSIError(const std::string& emsg, const std::string& Pr
 // This code executes the user function CP_PropsSI, which is a wrapper for
 // the CoolProp.PropsSI() function, used to extract a fluid-specific parameter that is dependent on the state
 static LRESULT CP_PropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
-                   LPCMCSTRING OutputName,       // string with a valid CoolProp OutputName
-                   LPCMCSTRING InputName1,       // CoolProp InputName1
-                   LPCCOMPLEXSCALAR InputProp1,  // CoolProp InputProp1
-                   LPCMCSTRING InputName2,       // CoolProp InputName2
-                   LPCCOMPLEXSCALAR InputProp2,  // CoolProp InputProp2
-                   LPCMCSTRING FluidName)        // CoolProp Fluid
+                          LPCMCSTRING OutputName,       // string with a valid CoolProp OutputName
+                          LPCMCSTRING InputName1,       // CoolProp InputName1
+                          LPCCOMPLEXSCALAR InputProp1,  // CoolProp InputProp1
+                          LPCMCSTRING InputName2,       // CoolProp InputName2
+                          LPCCOMPLEXSCALAR InputProp2,  // CoolProp InputProp2
+                          LPCMCSTRING FluidName)        // CoolProp Fluid
 {
     // unsigned int errPos = 0;
     std::string Prop1Name(InputName1->str);
@@ -455,16 +447,15 @@ static LRESULT CP_PropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
     return 0;
 }
 
-
 // This code executes the user function CP_PropsSImulti, which is a wrapper for
 // the CoolProp.PropsSImulti() function, used to extract a range of fluid-specific parameter dependent on the state ranges
-static LRESULT CP_PropsSImulti(LPCOMPLEXARRAY Prop,          // pointer to the result matrix
-                        LPCMCSTRING OutputName,       // string with delimited, valid CoolProp OutputName substrings for each output column
-                        LPCMCSTRING InputName1,       // CoolProp InputName1
-                        LPCCOMPLEXARRAY InputProp1,   // CoolProp InputProp1 (Array)
-                        LPCMCSTRING InputName2,       // CoolProp InputName2
-                        LPCCOMPLEXARRAY InputProp2,   // CoolProp InputProp2 (Array
-                        LPCMCSTRING FluidName)        // CoolProp Fluid
+static LRESULT CP_PropsSImulti(LPCOMPLEXARRAY Prop,         // pointer to the result matrix
+                               LPCMCSTRING OutputName,      // string with delimited, valid CoolProp OutputName substrings for each output column
+                               LPCMCSTRING InputName1,      // CoolProp InputName1
+                               LPCCOMPLEXARRAY InputProp1,  // CoolProp InputProp1 (Array)
+                               LPCMCSTRING InputName2,      // CoolProp InputName2
+                               LPCCOMPLEXARRAY InputProp2,  // CoolProp InputProp2 (Array
+                               LPCMCSTRING FluidName)       // CoolProp Fluid
 {
     // unsigned int errPos = 0;
     std::string Prop1Name(InputName1->str);
@@ -487,7 +478,8 @@ static LRESULT CP_PropsSImulti(LPCOMPLEXARRAY Prop,          // pointer to the r
     //Parse the OutputName string into a vector of output names, splitting on the delimiter character
     const char del = FindDelimiter(OutStr);
     if (del == 'E') {  // Multiple delimiters found, return error
-        CoolProp::set_error_string("Multiple delimiters found in OutputName string. Please use only one of the following delimiter types: space, comma, semicolon, ampersand, or pipe.");
+        CoolProp::set_error_string("Multiple delimiters found in OutputName string. Please use only one of the following delimiter types: space, "
+                                   "comma, semicolon, ampersand, or pipe.");
         return MAKELRESULT(BAD_PARAMETER, 1);
     }
     const std::vector<std::string> OutNames = strsplit(OutStr, del);
@@ -508,8 +500,8 @@ static LRESULT CP_PropsSImulti(LPCOMPLEXARRAY Prop,          // pointer to the r
     // If there is only one input point and one output the return matrix with be empty and
     // we can handle the error with the same logic as PropsSI.
     if (IO.empty() || IO[0].empty()) {
-        std::string emsg = CoolProp::get_global_param_string("errstring"); // Also clears the error string
-        CoolProp::set_error_string(emsg);  // Reset error string so Mathcad can retrieve it
+        std::string emsg = CoolProp::get_global_param_string("errstring");  // Also clears the error string
+        CoolProp::set_error_string(emsg);                                   // Reset error string so Mathcad can retrieve it
         // MessageBoxA(hwndDlg, emsg.c_str(), "CoolProp PropsSImulti Error", MB_OK | MB_ICONERROR);  // Pop up the error for debugging
         return HandlePropsSIError(emsg, Prop1Name, 0u);  // Show error without a parameter offset (0u).
     }
@@ -531,20 +523,19 @@ static LRESULT CP_PropsSImulti(LPCOMPLEXARRAY Prop,          // pointer to the r
     // Must use MathcadArrayAllocate() so Mathcad can track and release the memory properly, using Helper routine above
     LRESULT rc = AllocateToMathcadArray(Prop, IO);
     if (rc) return rc;
-    
+
     // normal return
     return 0;
 }
 
-
 // This code executes the user function CP_PhaseSI, which is a wrapper for
 // the CoolProp.PhaseSI() function, used to the fluid phase dependent on the state
 static LRESULT CP_PhaseSI(LPMCSTRING PhaseStr,          // output (CoolProp phase string)
-                   LPCMCSTRING InputName1,       // CoolProp InputName1
-                   LPCCOMPLEXSCALAR InputProp1,  // CoolProp InputProp1
-                   LPCMCSTRING InputName2,       // CoolProp InputName2
-                   LPCCOMPLEXSCALAR InputProp2,  // CoolProp InputProp2
-                   LPCMCSTRING FluidName)        // CoolProp Fluid
+                          LPCMCSTRING InputName1,       // CoolProp InputName1
+                          LPCCOMPLEXSCALAR InputProp1,  // CoolProp InputProp1
+                          LPCMCSTRING InputName2,       // CoolProp InputName2
+                          LPCCOMPLEXSCALAR InputProp2,  // CoolProp InputProp2
+                          LPCMCSTRING FluidName)        // CoolProp Fluid
 {
     std::string ph;
     std::string Prop1Name(InputName1->str);
@@ -567,7 +558,7 @@ static LRESULT CP_PhaseSI(LPMCSTRING PhaseStr,          // output (CoolProp phas
     //
     // Use string search to see if PhaseSI failed with an error message (appended ": <error>")...
     if (ph.find("unknown:") != std::string::npos) {
-        std::string emsg = ph.substr(ph.find(":")+2,ph.length()-ph.find(":")+2);
+        std::string emsg = ph.substr(ph.find(":") + 2, ph.length() - ph.find(":") + 2);
         CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
         // Use PropsSI error handling logic to determine the specific error message but with adjusted argument
         // positions for PhaseSI (which has no OutputName argument and thus shifts the positions of the InputName
@@ -584,17 +575,16 @@ static LRESULT CP_PhaseSI(LPMCSTRING PhaseStr,          // output (CoolProp phas
     return 0;
 }
 
-
 // This code executes the user function CP_HAPropsSI, which is a wrapper for
 // the CoolProp.HAPropsSI() function, used to extract humid air properties in base-SI units
 static LRESULT CP_HAPropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
-                     LPCMCSTRING OutputName,       // string with a valid CoolProp Output Name
-                     LPCMCSTRING InputName1,       // CoolProp InputName1
-                     LPCCOMPLEXSCALAR InputProp1,  // CoolProp InputProp1
-                     LPCMCSTRING InputName2,       // CoolProp InputName2
-                     LPCCOMPLEXSCALAR InputProp2,  // CoolProp InputProp2
-                     LPCMCSTRING InputName3,       // CoolProp InputName3
-                     LPCCOMPLEXSCALAR InputProp3)  // CoolProp InputProp3
+                            LPCMCSTRING OutputName,       // string with a valid CoolProp Output Name
+                            LPCMCSTRING InputName1,       // CoolProp InputName1
+                            LPCCOMPLEXSCALAR InputProp1,  // CoolProp InputProp1
+                            LPCMCSTRING InputName2,       // CoolProp InputName2
+                            LPCCOMPLEXSCALAR InputProp2,  // CoolProp InputProp2
+                            LPCMCSTRING InputName3,       // CoolProp InputName3
+                            LPCCOMPLEXSCALAR InputProp3)  // CoolProp InputProp3
 {
     unsigned int errPos = 0;
     std::string OutName(OutputName->str);
@@ -658,9 +648,9 @@ static LRESULT CP_HAPropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the resu
 // the CoolProp.get_mixture_binary_pair_data() function, used to get the requested binary pair
 // interaction parameter (always returned as a string).
 static LRESULT CP_get_mixture_binary_pair_data(LPMCSTRING Value,  // output string (string contains value of parameter)
-                                        LPCMCSTRING CAS1,  // First component
-                                        LPCMCSTRING CAS2,  // Second component
-                                        LPCMCSTRING Key)   // name of the binary pair parameter (string) to retrieve
+                                               LPCMCSTRING CAS1,  // First component
+                                               LPCMCSTRING CAS2,  // Second component
+                                               LPCMCSTRING Key)   // name of the binary pair parameter (string) to retrieve
 {
     std::string s;
     // Invoke the std::string form of get_global_param_string() function, save result to a new string s
@@ -770,7 +760,6 @@ static LRESULT CP_get_predefined_mixture_mole_fractions(LPCOMPLEXARRAY Dest,    
     return 0;
 }
 
-
 // This code executes the user function CP_apply_simple_mixing_rule, which is a wrapper for
 // the CoolProp.apply_simple_mixing_rule() function, used to set the mixing rule for a
 // specific binary pair.
@@ -815,10 +804,10 @@ static LRESULT CP_apply_simple_mixing_rule(LPMCSTRING Msg,    // output string (
 // the CoolProp.set_mixture_binary_pair_data() function, used to set the mixing rule for a
 // specific binary pair.
 static LRESULT CP_set_mixture_binary_pair_data(LPMCSTRING Msg,          // output string (verification message)
-                                        LPCMCSTRING CAS1,        // First component
-                                        LPCMCSTRING CAS2,        // Second component
-                                        LPCMCSTRING Param,       // Parameter Name String to set
-                                        LPCCOMPLEXSCALAR Value)  // Parameter Value
+                                               LPCMCSTRING CAS1,        // First component
+                                               LPCMCSTRING CAS2,        // Second component
+                                               LPCMCSTRING Param,       // Parameter Name String to set
+                                               LPCCOMPLEXSCALAR Value)  // Parameter Value
 {
     std::string s = Param->str;
     s.append(" parameter set.");
@@ -908,23 +897,23 @@ FUNCTIONINFO PropsSI = {
 };
 
 FUNCTIONINFO PropsSImulti = {
-  "PropsSImulti",                                                                                  // Name by which Mathcad will recognize the function
+  "PropsSImulti",  //                                                         // Name by which Mathcad will recognize the function
   "Output Name, Input Name 1, Input Property 1 (Array), Input Name 2, Input Property 2 (Array), Fluid Name",  // Description of input parameters
   "Returns a range of fluid-specific parameters, where the parameters are dependent on the state ranges defined by the input property arrays",  // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_PropsSImulti,                                                                    // Pointer to the function code.
-  COMPLEX_ARRAY,                                                                                   // Returns a Mathcad complex array
-  6,                                                                                               // Number of arguments
-  {MC_STRING, MC_STRING, COMPLEX_ARRAY, MC_STRING, COMPLEX_ARRAY, MC_STRING}                       // Argument types
+  (LPCFUNCTION)CP_PropsSImulti,                                               // Pointer to the function code.
+  COMPLEX_ARRAY,                                                              // Returns a Mathcad complex array
+  6,                                                                          // Number of arguments
+  {MC_STRING, MC_STRING, COMPLEX_ARRAY, MC_STRING, COMPLEX_ARRAY, MC_STRING}  // Argument types
 };
 
 FUNCTIONINFO PhaseSI = {
-  "PhaseSI",                                                                                  // Name by which Mathcad will recognize the function
-  "Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name",               // Description of input parameters
-  "Returns the fluid phase, dependent on the fluid state",                                    // Description of the function for the Insert Function dialog box
-  (LPCFUNCTION)CP_PhaseSI,                                                                    // Pointer to the function code.
-  MC_STRING,                                                                                  // Returns a Mathcad String
-  5,                                                                                          // Number of arguments
-  {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}                           // Argument types
+  "PhaseSI",                                                                     // Name by which Mathcad will recognize the function
+  "Input Name 1, Input Property 1, Input Name 2, Input Property 2, Fluid Name",  // Description of input parameters
+  "Returns the fluid phase, dependent on the fluid state",                       // Description of the function for the Insert Function dialog box
+  (LPCFUNCTION)CP_PhaseSI,                                                       // Pointer to the function code.
+  MC_STRING,                                                                     // Returns a Mathcad String
+  5,                                                                             // Number of arguments
+  {MC_STRING, COMPLEX_SCALAR, MC_STRING, COMPLEX_SCALAR, MC_STRING}              // Argument types
 };
 
 FUNCTIONINFO HAPropsSI = {
@@ -986,7 +975,6 @@ FUNCTIONINFO GetPredefMoleFracs = {
   1,                                                                       // Number of arguments
   {MC_STRING}                                                              // Argument types
 };
-
 
 // ************************************************************************************
 // DLL entry point code.
