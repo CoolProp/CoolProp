@@ -20,6 +20,10 @@ find_package(Cython REQUIRED)
 # Set root directory
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 
+# Use CPM.cmake for dependency management (consistent with the main build)
+include("${ROOT_DIR}/cmake/CPM.cmake")
+include("${ROOT_DIR}/cmake/dependencies.cmake")
+
 # ============================================================================
 # Generate headers and constants (only when dependencies change)
 # ============================================================================
@@ -106,13 +110,16 @@ set(COOLPROP_INCLUDE_DIRS
     ${ROOT_DIR}/include
     ${ROOT_DIR}/src
     ${ROOT_DIR}/dev
-    ${ROOT_DIR}/externals/Eigen
-    ${ROOT_DIR}/externals/fmtlib/include
+    ${Eigen_SOURCE_DIR}
+    ${fmt_SOURCE_DIR}/include
     ${ROOT_DIR}/boost_CoolProp
     ${ROOT_DIR}/externals/incbin
     ${ROOT_DIR}/externals/nlohmann-json
     ${ROOT_DIR}/externals/miniz-3.1.1
-    ${ROOT_DIR}/externals/msgpack-c/include
+    ${msgpack-c_SOURCE_DIR}/include
+    ${rapidjson_SOURCE_DIR}/include
+    ${IF97_SOURCE_DIR}
+    ${REFPROP_headers_SOURCE_DIR}
 )
 
 # Expand boost if needed
