@@ -170,7 +170,7 @@ Build
 The instructions here are for a 64-bit windows system that will compile both 64-bit and 32-bit versions of the DLL::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder for the 32-bit DLL

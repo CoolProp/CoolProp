@@ -70,7 +70,7 @@ Build
 Once the dependencies are installed, you can run the builder and tests using::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
@@ -89,7 +89,7 @@ On windows, you need to just slightly modify the building procedure::
     set OCTAVE_ROOT=c:\octave-x.y.z
     set PATH=c:\MinGW;c:\octave-x.y.z\bin;c:\swigwin-x.y.z;%PATH%
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder

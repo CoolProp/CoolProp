@@ -26,7 +26,7 @@ Native Wrapper
 
 0. Check out coolprop::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     
 1. Create a build directory ``build``::
 

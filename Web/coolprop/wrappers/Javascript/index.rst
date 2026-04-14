@@ -74,7 +74,7 @@ We are following the instructions from `emscripten.org <http://kripken.github.io
 
 8. Check out coolprop::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
 
 9. Folder creating::
 

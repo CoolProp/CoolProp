@@ -1,6 +1,6 @@
 set -o verbose
 rm -rf coolprop
-git clone --recursive https://github.com/coolprop/coolprop
+git clone https://github.com/coolprop/coolprop
 rm -rf coolprop/.git
 cd coolprop/dev
 python generate_headers.py

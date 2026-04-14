@@ -86,7 +86,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: ${{ needs.set_vars.outputs.branch }}
-        submodules: 'recursive'
         path: source
         
     - name: Update the headers

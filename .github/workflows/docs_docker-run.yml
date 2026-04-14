@@ -30,7 +30,6 @@ jobs:
     steps: 
     - uses: actions/checkout@v4.2.2
       with:
-        submodules: recursive
         fetch-depth: 0  # Fetch all history for git revision info
     
     - name: Set up Git

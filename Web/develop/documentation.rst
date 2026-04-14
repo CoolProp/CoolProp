@@ -22,7 +22,7 @@ Build Sphinx documentation
 
 1. Check out the sources in the CoolProp/Web folder::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     cd CoolProp/Web
 
 2. Make a virtualenv::
