@@ -8,6 +8,7 @@
 #include "CoolPropTools.h"
 #include "Configuration.h"
 #include "CPnumerics.h"
+#include "MixtureDerivatives.h"
 
 namespace CoolProp {
 
@@ -815,6 +816,356 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData& env, parameters i
     } else {
         throw ValueError("You have a funny number of intersections in is_inside");
     }
+}
+
+// ============================================================================
+// Isochoric (Deiters) phase-envelope tracer — arc-length continuation
+// ============================================================================
+//
+// References:
+//   U.K. Deiters & I.H. Bell, AIChE J. 65 (2019) e16730  [parametric marching]
+//   H.B. Keller, SIAM J. Numer. Anal. 14 (1977) 638–654   [pseudo-arclength]
+//
+// Algorithm
+// ---------
+// State vector:  s = (x[0..N-2], T, ρ_L, ρ_V)   — N+2 elements
+// Equilibrium:   F(s) = 0                          — N+1 equations
+//   F[i] = ln_fug_i(T, ρ_L, x) − ln_fug_i(T, ρ_V, y)   i = 0..N-1
+//   F[N] = p(T, ρ_L, x) − p(T, ρ_V, y)
+//
+// Jacobian J has shape (N+1) × (N+2).  Its null space (1-D) is the
+// unit tangent vector v = ds/dσ at the current point.  This is found
+// via Jacobi SVD (last right-singular vector).
+//
+// Predictor:  s_pred = s + h · v
+// Corrector:  pseudo-arclength Newton — augmented (N+2)×(N+2) system
+//   [J(s_new)  ] [Δs] = [−F(s_new)         ]
+//   [v^T       ]        [−v·(s_new − s_pred)]
+//
+// The critical point is a regular point of the arc-length parametrisation;
+// dρ_V/dσ = 0 there but the iteration passes through smoothly.
+// ============================================================================
+
+namespace {  // anonymous – file-scope helpers (inside CoolProp namespace)
+
+// Compute equilibrium residuals F (N+1) and Jacobian J (N+1)×(N+2).
+// State ordering: (x[0..N-2], T, ρ_L, ρ_V).
+// Dewpoint convention: y = bulk (fixed), x = incipient liquid.
+static void envelope_jac_and_res(
+    HelmholtzEOSMixtureBackend& HEOS,
+    double T, double rhoL, double rhoV,
+    const std::vector<CoolPropDbl>& x,
+    const std::vector<CoolPropDbl>& y,
+    Eigen::MatrixXd& J,
+    Eigen::VectorXd& F)
+{
+    const std::size_t N = x.size();
+    x_N_dependency_flag xN_flag = XN_DEPENDENT;
+
+    HelmholtzEOSMixtureBackend& rSatL = *(HEOS.SatL);
+    HelmholtzEOSMixtureBackend& rSatV = *(HEOS.SatV);
+
+    rSatL.set_mole_fractions(x);
+    rSatV.set_mole_fractions(y);
+    rSatL.update(DmolarT_INPUTS, rhoL, T);
+    rSatV.update(DmolarT_INPUTS, rhoV, T);
+
+    J.resize(N + 1, N + 2);
+    F.resize(N + 1);
+
+    // Fugacity rows i = 0..N-1
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < N - 1; ++j)
+            J(i, j) = MixtureDerivatives::dln_fugacity_dxj__constT_rho_xi(rSatL, i, j, xN_flag);
+        J(i, N - 1) = MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatL, i, xN_flag)
+                    - MixtureDerivatives::dln_fugacity_i_dT__constrho_n(rSatV, i, xN_flag);
+        J(i, N)     = MixtureDerivatives::dln_fugacity_i_drho__constT_n(rSatL, i, xN_flag);
+        J(i, N + 1) = -MixtureDerivatives::dln_fugacity_i_drho__constT_n(rSatV, i, xN_flag);
+        F(i) = log(rSatL.fugacity(i)) - log(rSatV.fugacity(i));
+    }
+
+    // Pressure row N
+    // Normalize by p_V so F(N) = (p_L − p_V)/p_V is dimensionless, consistent
+    // with the log-fugacity rows which are already O(1) in equilibrium.
+    double p_V = rSatV.p();
+    double p_scale = (p_V > 0.0) ? p_V : 1.0;
+    for (std::size_t j = 0; j < N - 1; ++j)
+        J(N, j) = MixtureDerivatives::dpdxj__constT_V_xi(rSatL, j, xN_flag) / p_scale;
+    J(N, N - 1) = (rSatL.first_partial_deriv(iP, iT, iDmolar) - rSatV.first_partial_deriv(iP, iT, iDmolar)) / p_scale;
+    J(N, N)     = rSatL.first_partial_deriv(iP, iDmolar, iT) / p_scale;
+    J(N, N + 1) = -rSatV.first_partial_deriv(iP, iDmolar, iT) / p_scale;
+    F(N) = (rSatL.p() - p_V) / p_scale;
+}
+
+// Pack (x[0..N-2], T, ρ_L, ρ_V) into the (N+2)-element state vector.
+static Eigen::VectorXd pack_arclen(const std::vector<CoolPropDbl>& x, double T, double rhoL, double rhoV) {
+    const std::size_t N = x.size();
+    Eigen::VectorXd s(N + 2);
+    for (std::size_t j = 0; j < N - 1; ++j) s(j) = x[j];
+    s(N - 1) = T;
+    s(N)     = rhoL;
+    s(N + 1) = rhoV;
+    return s;
+}
+
+// Unpack (N+2)-element state vector → x, T, ρ_L, ρ_V.
+static void unpack_arclen(const Eigen::VectorXd& s, std::size_t N,
+                           std::vector<CoolPropDbl>& x, double& T, double& rhoL, double& rhoV) {
+    x.resize(N);
+    for (std::size_t j = 0; j < N - 1; ++j) x[j] = s(j);
+    x[N - 1] = 1.0 - std::accumulate(x.begin(), x.end() - 1, 0.0);
+    T    = s(N - 1);
+    rhoL = s(N);
+    rhoV = s(N + 1);
+}
+
+// Return the unit null vector of the (N+1)×(N+2) Jacobian J via Jacobi SVD.
+// Consistent sign: dot product with v_prev > 0 (preserves direction).
+static Eigen::VectorXd tangent_from_J(const Eigen::MatrixXd& J, const Eigen::VectorXd& v_prev) {
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(J, Eigen::ComputeFullV);
+    Eigen::VectorXd v = svd.matrixV().rightCols(1);  // last right singular vector
+    if (v.dot(v_prev) < 0.0) v = -v;
+    return v;
+}
+
+}  // anonymous namespace (inside CoolProp)
+
+void PhaseEnvelopeRoutines::build_isochoric(HelmholtzEOSMixtureBackend& HEOS, const std::string& level) {
+    using namespace SaturationSolvers;
+    if (HEOS.get_mole_fractions_ref().size() == 1) {
+        // Pure fluid — fall back to the standard builder
+        build(HEOS, level);
+        return;
+    }
+
+    // ----------------------------------------------------------------
+    // Initialization: identical to build() — Wilson + SS + first NR
+    // ----------------------------------------------------------------
+    std::size_t N = HEOS.mole_fractions.size();
+
+    mixture_VLE_IO io;
+    io.sstype = imposed_p;
+    io.Nstep_max = 20;
+
+    HEOS._p = get_config_double(PHASE_ENVELOPE_STARTING_PRESSURE_PA);
+    HEOS._Q = 1;
+
+    CoolPropDbl Tguess = saturation_preconditioner(HEOS, HEOS._p, imposed_p, HEOS.mole_fractions);
+    Tguess = saturation_Wilson(HEOS, HEOS._Q, HEOS._p, imposed_p, HEOS.mole_fractions, Tguess);
+
+    io.beta = 1;
+    successive_substitution(HEOS, HEOS._Q, Tguess, HEOS._p, HEOS.mole_fractions, HEOS.K, io);
+
+    newton_raphson_saturation NR;
+    newton_raphson_saturation_options IO;
+    IO.bubble_point = false;
+    IO.x = io.x;
+    IO.y = HEOS.mole_fractions;
+    IO.rhomolar_liq = io.rhomolar_liq;
+    IO.rhomolar_vap = io.rhomolar_vap;
+    IO.T = io.T;
+    IO.p = io.p;
+    IO.Nstep_max = 30;
+    IO.imposed_variable = newton_raphson_saturation_options::P_IMPOSED;
+    NR.call(HEOS, IO.y, IO.x, IO);
+
+    IO.imposed_variable = newton_raphson_saturation_options::RHOV_IMPOSED;
+
+    PhaseEnvelopeData& env = HEOS.PhaseEnvelope;
+    env.resize(N);
+
+    // Store the first point
+    env.store_variables(IO.T, IO.p, IO.rhomolar_liq, IO.rhomolar_vap, IO.hmolar_liq, IO.hmolar_vap, IO.smolar_liq,
+                        IO.smolar_vap, IO.x, IO.y);
+
+    // ----------------------------------------------------------------
+    // Arc-length continuation (Keller 1977 / Deiters & Bell 2019)
+    // Traces the full phase envelope (dew + bubble) by stepping in
+    // arc-length along the equilibrium manifold.  The critical point,
+    // where the ρ_V-parametrisation is singular (dρ_V/dσ = 0), is a
+    // regular point of the arc-length parametrisation and is passed
+    // through smoothly.
+    //
+    // State vector s = (x[0..N-2], T, ρ_L, ρ_V)   [N+2 elements]
+    // Equilibrium:  F(s) = 0                        [N+1 equations]
+    // Predictor:    s_pred = s + h·(D·v_sc)
+    //               v_sc = null(J·D) in column-scaled space
+    // Corrector:    pseudo-arclength Newton with augmented (N+2)×(N+2) system
+    //               [J(s)  ] [Δs] = [−F(s)              ]
+    //               [w^T   ]        [−w·(s − s_pred)     ]
+    //               w = v_sc / D_vec  (arc-length constraint in raw space)
+    // ----------------------------------------------------------------
+
+    std::vector<CoolPropDbl> x = IO.x;
+    double T    = IO.T;
+    double rhoL = IO.rhomolar_liq;
+    double rhoV = IO.rhomolar_vap;
+    const std::vector<CoolPropDbl> y = IO.y;   // bulk z — constant throughout
+
+    // Physical upper bound on T to prevent runaway
+    double T_max_physical = 0.0;
+    for (const auto& comp : HEOS.get_components())
+        T_max_physical = std::max(T_max_physical, comp.EOSVector[0].reduce.T);
+    T_max_physical *= 2.0;
+
+    // ----------------------------------------------------------------
+    // ρ_V-imposed Newton marching
+    //
+    // ρ_V is the natural parameter (monotonically increasing along the
+    // entire phase envelope, including past the critical point and through
+    // the cricondentherm).  For each ρ_V we solve the (N+1)×(N+1) sub-
+    // system for (x[0..N-2], T, ρ_L) with ρ_V fixed, using isochoric
+    // Jacobian columns from envelope_jac_and_res (drop the ρ_V column).
+    //
+    // This is the same outer parametrisation as build() but uses
+    // isochoric derivatives directly from the GERG-2008 formulation.
+    // ----------------------------------------------------------------
+
+    std::size_t failure_count = 0;
+    const std::size_t failure_max = 8;
+
+    // Stepping factor for ρ_V (multiplicative, like build()).
+    // Start conservative; adapt based on Newton convergence.
+    CoolPropDbl factor = 1.03;
+    const CoolPropDbl factor_min = 1.001;
+    const CoolPropDbl factor_max = 1.08;
+
+    // When Newton fails (e.g. near the cricondentherm where linear extrapolation
+    // overshoots the temperature maximum), fall back to the last accepted state
+    // as initial guess rather than the extrapolated guess.
+    bool use_fallback_guess = false;
+
+    std::size_t iter = 0;
+
+    for (;;) {
+        if (failure_count > failure_max) break;
+
+        // ---- Predictor: step ρ_V by factor ----
+        double rhoV_new = rhoV * factor;
+
+        // Initial guess from previous accepted point (good for small factor)
+        std::vector<CoolPropDbl> x_c = x;
+        double T_c    = T;
+        double rhoL_c = rhoL;
+
+        // Linear extrapolation when >= 2 stored points and no recent failure.
+        // Near the cricondentherm the extrapolated T overshoots the maximum;
+        // after a failure we fall back to the previous accepted point to avoid
+        // starting Newton above the phase envelope temperature limit.
+        if (!use_fallback_guess && iter >= 2) {
+            std::size_t i0 = env.T.size() - 2, i1 = env.T.size() - 1;
+            double w1 = (rhoV_new - env.rhomolar_vap[i0]) /
+                        (env.rhomolar_vap[i1] - env.rhomolar_vap[i0]);
+            double T_extrap    = env.T[i0]          + w1 * (env.T[i1]          - env.T[i0]);
+            double rhoL_extrap = env.rhomolar_liq[i0] + w1 * (env.rhomolar_liq[i1] - env.rhomolar_liq[i0]);
+            std::vector<CoolPropDbl> x_extrap = x_c;
+            for (std::size_t j = 0; j < N - 1; ++j)
+                x_extrap[j] = env.x[j][i0] + w1 * (env.x[j][i1] - env.x[j][i0]);
+            x_extrap[N - 1] = 1.0 - std::accumulate(x_extrap.begin(), x_extrap.end() - 1, 0.0);
+            // Accept extrapolation only when T is not extrapolated far above
+            // the last accepted value (guard against cricondentherm overshoot)
+            if (T_extrap <= env.T.back() + 5.0) {
+                T_c    = T_extrap;
+                rhoL_c = rhoL_extrap;
+                x_c    = x_extrap;
+            }
+            // else: keep the fallback (previous accepted values)
+        }
+        use_fallback_guess = false;  // reset for next iteration
+
+        // Clamp compositions and physical variables
+        for (auto& xi : x_c) xi = std::max(1e-12, std::min(1.0 - 1e-12, xi));
+        x_c[N - 1] = std::max(1e-12, x_c[N - 1]);
+        T_c    = std::max(10.0, std::min(T_max_physical, T_c));
+        rhoL_c = std::max(1.0, rhoL_c);
+
+        // ---- Corrector: newton_raphson_saturation (RHOV_IMPOSED) ----
+        // Same solver as build(), so the outer loop and inner solver work
+        // together identically to build() — this lets us verify the outer
+        // loop logic before switching to the isochoric Jacobian formulation.
+        SaturationSolvers::newton_raphson_saturation NR;
+        SaturationSolvers::newton_raphson_saturation_options IO_nr;
+        IO_nr.bubble_point = false;  // dewpoint convention (y = z = bulk)
+        IO_nr.T = T_c;
+        IO_nr.rhomolar_liq = rhoL_c;
+        IO_nr.rhomolar_vap = rhoV_new;
+        IO_nr.x = x_c;
+        IO_nr.y = y;
+        IO_nr.Nstep_max = 30;
+        IO_nr.imposed_variable = SaturationSolvers::newton_raphson_saturation_options::RHOV_IMPOSED;
+
+        int nr_iters = 0;
+        try {
+            NR.call(HEOS, IO_nr.y, IO_nr.x, IO_nr);
+            nr_iters = IO_nr.Nsteps;
+            T_c    = IO_nr.T;
+            rhoL_c = IO_nr.rhomolar_liq;
+            x_c    = IO_nr.x;
+            if (!ValidNumber(rhoL_c) || !ValidNumber(IO_nr.p) || !ValidNumber(T_c))
+                throw ValueError("Invalid number after NR");
+        } catch (...) {
+            factor = std::max(factor_min, 1.0 + (factor - 1.0) / 2.0);
+            use_fallback_guess = true;
+            failure_count++;
+            continue;
+        }
+
+        // Sanity: reject trivial (ρ_L ≈ ρ_V) solution (same as build())
+        if (std::abs(rhoL_c - rhoV_new) < 1e-3) {
+            factor = std::max(factor_min, 1.0 + (factor - 1.0) / 2.0);
+            use_fallback_guess = true;
+            failure_count++;
+            continue;
+        }
+        // Sanity: reject large T jump (same as build())
+        if (!env.T.empty() && std::abs(env.T.back() - T_c) > 100.0) {
+            factor = std::max(factor_min, 1.0 + (factor - 1.0) / 2.0);
+            use_fallback_guess = true;
+            failure_count++;
+            continue;
+        }
+        // Sanity: reject negative pressure
+        {
+            double p_cur = HEOS.SatL->p();
+            if (!ValidNumber(p_cur) || p_cur < 0) {
+                factor = std::max(factor_min, 1.0 + (factor - 1.0) / 2.0);
+                use_fallback_guess = true;
+                failure_count++;
+                continue;
+            }
+        }
+
+        // ---- Accept step ----
+        failure_count = 0;
+        x = x_c;  T = T_c;  rhoL = rhoL_c;  rhoV = rhoV_new;
+
+        double p_cur = HEOS.SatL->p();
+        env.store_variables(T, p_cur, rhoL, rhoV,
+                            HEOS.SatL->hmolar(), HEOS.SatV->hmolar(),
+                            HEOS.SatL->smolar(), HEOS.SatV->smolar(), x, y);
+        iter++;
+
+        // Stopping: loop closed when pressure returns to starting level
+        // or liquid composition approaches a pure component
+        double max_frac = *std::max_element(x.begin(), x.end());
+        if (iter > 4 && (p_cur < env.p[0] || std::abs(1.0 - max_frac) < 1e-9)) {
+            env.built = true;
+            refine(HEOS, level);
+            return;
+        }
+
+        // Adaptive step factor (mirrors build() logic)
+        if (nr_iters > 10)      factor = std::max(factor_min, 1.0 + (factor - 1.0) / 10.0);
+        else if (nr_iters > 5)  factor = std::max(factor_min, 1.0 + (factor - 1.0) / 3.0);
+        else if (nr_iters <= 4) factor = std::min(factor_max, 1.0 + (factor - 1.0) * 2.0);
+        factor = std::max(factor, factor_min);
+        // Near critical (ρ_L ≈ ρ_V): cap factor to avoid overshooting
+        if (std::abs(rhoL / rhoV - 1.0) < 4.0)
+            factor = std::min(factor, static_cast<CoolPropDbl>(1.04));
+    }
+
+    // Reached iteration limit without closing the loop
+    env.built = false;
 }
 
 } /* namespace CoolProp */

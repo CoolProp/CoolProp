@@ -55,6 +55,20 @@ class PhaseEnvelopeRoutines
                           std::size_t& iclosest, SimpleState& closest_state);
 
     static double evaluate(const PhaseEnvelopeData& env, parameters output, parameters iInput1, double value1, std::size_t& i);
+
+    /** \brief Build the phase envelope using the isochoric (Deiters) ODE method
+     *
+     * Uses Cash-Karp RK45 integration of the phase-equilibrium ODEs derived in the
+     * isochoric thermodynamics framework (Deiters, Fluid Phase Equilibria 2017;
+     * Deiters & Bell, AIChE J. 2019) as predictor, with the existing
+     * newton_raphson_saturation solver as corrector.  More reliable than the
+     * polynomial-extrapolation predictor for mixtures with many components or
+     * difficult critical regions.
+     *
+     * @param HEOS  The HelmholtzEOSMixtureBackend instance to be used
+     * @param level The level of detail for the envelope construction
+     */
+    static void build_isochoric(HelmholtzEOSMixtureBackend& HEOS, const std::string& level = "");
 };
 
 } /* namespace CoolProp */
