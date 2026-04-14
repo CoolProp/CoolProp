@@ -24,7 +24,7 @@ using std::shared_ptr;
 #include <string.h>
 #include <iostream>
 #include <list>
-#include "externals/IF97/IF97.h"
+#include <IF97.h>
 
 /// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
 std::size_t strcmp(const std::string& s, const std::string& e) {
