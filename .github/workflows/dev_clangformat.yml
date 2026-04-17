@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0   # Fetch all history (especially branches)
 
@@ -21,13 +21,26 @@ jobs:
       shell: bash
       run: |
           echo "GITHUB_REF=$GITHUB_REF GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
-          git fetch --all
           clang-format --version
-          ./dev/ci/clang-format.sh remotes/origin/$GITHUB_HEAD_REF remotes/origin/$GITHUB_BASE_REF
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # Use SHAs directly so this works for both fork PRs and local-branch PRs.
+            # remotes/origin/<branch> is unreliable for fork PRs because the fork's
+            # branch is not fetched into origin.
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.sha }}"
+            echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
+            ./dev/ci/clang-format.sh "$HEAD_SHA" "$BASE_SHA"
+          else
+            # Push event: GITHUB_HEAD_REF/BASE_REF are empty, so use before/after SHAs.
+            BEFORE_SHA="${{ github.event.before }}"
+            AFTER_SHA="${{ github.sha }}"
+            echo "Comparing push $AFTER_SHA against before $BEFORE_SHA"
+            ./dev/ci/clang-format.sh "$AFTER_SHA" "$BEFORE_SHA"
+          fi
 
     - name: Upload clang-format patch as artifact
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           name: CoolProp-${{ github.sha }}-clang_format.patch
           path: clang_format.patch
