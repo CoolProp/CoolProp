@@ -18,7 +18,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-      with:
 
     - name: Install Python dependencies
       run: |
