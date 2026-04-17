@@ -3,8 +3,9 @@ CP = CoolProp.CoolProp
 import os
 import codecs
 import re
-import urllib.request
-import urllib.error
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 web_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 root_dir = os.path.abspath(os.path.join(web_dir, '..'))
@@ -136,9 +137,18 @@ def fetch_pubchem_sdf(inchikey, cache_dir):
             continue
         url = (f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey/'
                f'{inchikey}/SDF?record_type={record_type}')
+        session = requests.Session()
+        retry = Retry(total=3, backoff_factor=1,
+                      status_forcelist=[429, 500, 502, 503, 504],
+                      allowed_methods=['GET'])
+        session.mount('https://', HTTPAdapter(max_retries=retry))
         try:
-            with urllib.request.urlopen(url, timeout=15) as resp:
-                content = resp.read().decode('utf-8')
+            resp = session.get(url, timeout=15)
+            if resp.status_code == 404:
+                open(fail_flag, 'w').close()
+                continue
+            resp.raise_for_status()
+            content = resp.text
             with open(cache_path, 'w', encoding='utf-8') as fh:
                 fh.write(content)
             print(f'  fetched {record_type.upper()} SDF for {inchikey}')
