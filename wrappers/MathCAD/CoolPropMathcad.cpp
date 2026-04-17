@@ -330,7 +330,7 @@ static LRESULT HandleProps1SIError(const std::string& emsg, const std::string& F
 }
 
 // This code executes the user function CP_Props1SI, which is a wrapper for
-// the CoolProp.PropsSI() function, used to simply extract a
+// the CoolProp.Props1SI() function, used to simply extract a
 // fluid-specific parameter that is not dependent on the state
 static LRESULT CP_Props1SI(LPCOMPLEXSCALAR Prop,  // pointer to the result
                            LPCMCSTRING Fluid,     // string with a valid CoolProp fluid name
@@ -582,6 +582,26 @@ static LRESULT CP_PhaseSI(LPMCSTRING PhaseStr,          // output (CoolProp phas
     return 0;
 }
 
+// Helper: centralize text-matching logic for HAPropsSI error handling
+static LRESULT HandleHAPropsSIError(const std::string& emsg, const std::string& OutName, const std::string& Prop1Name, const std::string& Prop2Name,
+                                    const std::string& Prop3Name) {
+    // Check for explicit parameter mentions first
+    if (emsg.find(OutName) != std::string::npos)
+        return MAKELRESULT(BAD_PARAMETER, 1);
+    else if (emsg.find(Prop1Name) != std::string::npos)
+        return MAKELRESULT(BAD_PARAMETER, 2);
+    else if (emsg.find(Prop2Name) != std::string::npos)
+        return MAKELRESULT(BAD_PARAMETER, 4);
+    else if (emsg.find(Prop3Name) != std::string::npos)
+        return MAKELRESULT(BAD_PARAMETER, 6);
+
+    // Specific HAPropsSI input-message case
+    if (emsg.find("at least one of the variables") != std::string::npos) return MAKELRESULT(HA_INPUTS, 2);
+
+    // Fallback: unknown error, let user inspect errstring
+    return MAKELRESULT(UNKNOWN, 1);
+}
+
 // This code executes the user function CP_HAPropsSI, which is a wrapper for
 // the CoolProp.HAPropsSI() function, used to extract humid air properties in base-SI units
 static LRESULT CP_HAPropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the result
@@ -623,24 +643,7 @@ static LRESULT CP_HAPropsSI(LPCOMPLEXSCALAR Prop,         // pointer to the resu
     if (!ValidNumber(Prop->real)) {
         std::string emsg = CoolProp::get_global_param_string("errstring");
         CoolProp::set_error_string(emsg);  // reset error string so Mathcad can retrieve it
-
-        unsigned int errPos = 0;
-        if (emsg.find(OutName) != std::string::npos)
-            errPos = 1;
-        else if (emsg.find(Prop1Name) != std::string::npos)
-            errPos = 2;
-        else if (emsg.find(Prop2Name) != std::string::npos)
-            errPos = 4;
-        else if (emsg.find(Prop3Name) != std::string::npos)
-            errPos = 6;
-
-        if (errPos != 0)
-            return MAKELRESULT(BAD_PARAMETER, errPos);
-        else if (emsg.find("at least one of the variables") != std::string::npos)
-            return MAKELRESULT(HA_INPUTS, 2);
-        else
-            // Only the Generic Error message supported at this time for HAPropsSI for any other errors
-            return MAKELRESULT(UNKNOWN, 1);
+        return HandleHAPropsSIError(emsg, OutName, Prop1Name, Prop2Name, Prop3Name);
     }
 
     // normal return
