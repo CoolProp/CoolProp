@@ -3704,13 +3704,14 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf fixed-point constants", "[R1234yf],[Lemmon-IJ
 // ============================================================================
 
 TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],[Bell-JPCRD-2022]") {
-    // Table XI used a pre-publication R1234yf EOS; the R1234yf+R1234zeE check value below
-    // is computed with the final Lemmon-IJT-2022 EOS (differs from Table XI by ~0.4%).
-    // The other two pairs do not use R1234yf so they agree with Table XI to ~1e-10.
+    // Table XI was computed with a pre-publication R1234yf EOS. Pairs containing R1234yf
+    // use check values recomputed with the final Lemmon-IJT-2022 R1234yf EOS (the R1234yf
+    // EOS change shifts alphar by ~0.4%). The R134a+R1234zeE pair contains no R1234yf and
+    // agrees with Table XI to ~1e-10.
     const double tol = 1e-10;
 
     // R1234yf + R1234zeE: z1=0.4, T=469 K, rho=3399 mol/m3
-    // Table XI (pre-pub EOS): -0.46059464176252; final EOS: -0.46467899824257763
+    // Table XI (pre-pub R1234yf EOS): -0.46059464176252; Lemmon-IJT-2022 R1234yf EOS: -0.46467899824257763
     SECTION("R1234yf + R1234ze(E): Table XI") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234yf&R1234zeE"));
         AS->set_mole_fractions({0.4, 0.6});
@@ -3719,7 +3720,7 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
         CHECK(AS->alphar() == Catch::Approx(-0.46467899824257763).epsilon(tol));
     }
     // R1234yf + R134a: z1=0.4, T=462 K, rho=3698 mol/m3
-    // Table XI (pre-pub EOS): -0.46550859128831; final EOS: -0.46550859405816197
+    // Table XI (pre-pub R1234yf EOS): -0.46550859128831; Lemmon-IJT-2022 R1234yf EOS: -0.46550859405816197
     SECTION("R1234yf + R134a: Table XI") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234yf&R134a"));
         AS->set_mole_fractions({0.4, 0.6});
