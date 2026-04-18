@@ -3715,6 +3715,7 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
     SECTION("R1234yf + R1234ze(E): Table XI") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234yf&R1234zeE"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3399.0, 469.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46467899824257763).epsilon(tol));
@@ -3724,6 +3725,7 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
     SECTION("R1234yf + R134a: Table XI") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234yf&R134a"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3698.0, 462.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46550859405816197).epsilon(tol));
@@ -3732,6 +3734,7 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
     SECTION("R134a + R1234ze(E): Table XI") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134a&R1234zeE"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3639.0, 472.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46245130334193).epsilon(tol));
@@ -3742,6 +3745,7 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
     SECTION("R1234yf + R1234ze(E): inverted component order") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234zeE&R1234yf"));
         AS->set_mole_fractions({0.6, 0.4});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3399.0, 469.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46467899824257763).epsilon(tol));
@@ -3749,6 +3753,7 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
     SECTION("R134a + R1234ze(E): inverted component order") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234zeE&R134a"));
         AS->set_mole_fractions({0.6, 0.4});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3639.0, 472.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46245130334193).epsilon(tol));
@@ -3756,6 +3761,7 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
     SECTION("R1234yf + R134a: inverted component order") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134a&R1234yf"));
         AS->set_mole_fractions({0.6, 0.4});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3698.0, 462.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46550859405816197).epsilon(tol));
@@ -3770,6 +3776,7 @@ TEST_CASE("Bell-JPCRD-2023 mixture alphar check values (Table XIII)", "[mixtures
     SECTION("R32 + R1234yf: Table XIII") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R32&R1234yf"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 4149.0, 445.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.47311064743911).epsilon(tol));
@@ -3778,6 +3785,7 @@ TEST_CASE("Bell-JPCRD-2023 mixture alphar check values (Table XIII)", "[mixtures
     SECTION("R32 + R1234ze(E): Table XIII") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R32&R1234zeE"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 4242.0, 451.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.48576186760231).epsilon(tol));
@@ -3786,6 +3794,7 @@ TEST_CASE("Bell-JPCRD-2023 mixture alphar check values (Table XIII)", "[mixtures
     SECTION("R125 + R1234yf: Table XIII") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R125&R1234yf"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3513.0, 445.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46576307479447).epsilon(tol));
@@ -3794,6 +3803,7 @@ TEST_CASE("Bell-JPCRD-2023 mixture alphar check values (Table XIII)", "[mixtures
     SECTION("R1234yf + R152a: Table XIII") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234yf&R152a"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3930.0, 469.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.48967548916638).epsilon(tol));
@@ -3802,6 +3812,7 @@ TEST_CASE("Bell-JPCRD-2023 mixture alphar check values (Table XIII)", "[mixtures
     SECTION("R1234ze(E) + R227ea: Table XIII") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234zeE&R227ea"));
         AS->set_mole_fractions({0.4, 0.6});
+        AS->specify_phase(CoolProp::iphase_gas);
         AS->update(DmolarT_INPUTS, 3023.0, 470.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.45378834770736).epsilon(tol));

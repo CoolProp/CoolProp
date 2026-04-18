@@ -2024,15 +2024,8 @@ void FlashRoutines::DHSU_T_flash(HelmholtzEOSMixtureBackend& HEOS, parameters ot
                     throw ValueError(format("Input is invalid"));
             }
         } else {
-            if (other == iDmolar) {
-                // DmolarT_INPUTS: T and rho are directly imposed; no phase determination
-                // needed for EOS evaluations (alphar, p, etc.).  calc_pressure() below
-                // fills _p; the phase placeholder is overwritten by the caller if needed.
-                HEOS._phase = iphase_gas;
-            } else {
-                HEOS._phase = iphase_gas;
-                throw NotImplementedError("DHSU_T_flash does not support mixtures (yet)");
-            }
+            HEOS._phase = iphase_gas;
+            throw NotImplementedError("DHSU_T_flash does not support mixtures (yet)");
         }
     }
 
