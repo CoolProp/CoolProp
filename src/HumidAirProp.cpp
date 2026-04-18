@@ -151,62 +151,176 @@ static double MM_Water(void) {
     check_fluid_instantiation();
     return Water->keyed_output(CoolProp::imolar_mass);
 }
-static double B_Air(double T) {
-    check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::iBvirial);
+// Two separate per-temperature caches, both keyed by T and filled via direct EOS calls
+// (no update()), so they never disturb the backends' cached state.
+// Keeping them separate means the virial cache is skipped when FlagUseVirialCorrelations=1.
+// Not thread-safe — consistent with the Air/Water singleton model throughout this file.
+
+// Residual virial coefficients and T-derivatives
+static struct {
+    double T;
+    double B_a, dBdT_a, C_a, dCdT_a;
+    double B_w, dBdT_w, C_w, dCdT_w;
+} s_virial_cache = {-1.0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+/// Compute all four virial quantities B, dB/dT, C, dC/dT in a single residual EOS evaluation,
+/// evaluated in the delta→0 limit (delta=1e-12), without triggering a full state update.
+///
+/// The delta→0 limit is specific to the virial expansion: B = lim(αr/δ, δ→0)/ρr and
+/// C = lim(αr/δ², δ→0)/ρr².  Evaluating at delta=1e-12 approximates this limit to machine
+/// precision for fluids with analytic αr.  This function is located in HumidAirProp.cpp
+/// because the delta→0 specialisation is only needed for the humid-air virial calculations.
+static void calc_all_virials(CoolProp::HelmholtzEOSMixtureBackend* fluid, double T,
+                              double& B, double& dBdT, double& C, double& dCdT) {
+    CoolProp::SimpleState red = fluid->get_reducing_state();
+    double tau = red.T / T;
+    double dtau_dT = -red.T / (T * T);
+    CoolProp::HelmholtzDerivatives derivs =
+        fluid->residual_helmholtz->all(*fluid, fluid->get_mole_fractions(), tau, 1e-12, false);
+    B    = derivs.get(0, 1) / red.rhomolar;
+    dBdT = derivs.get(1, 1) / red.rhomolar * dtau_dT;
+    C    = derivs.get(0, 2) / (red.rhomolar * red.rhomolar);
+    dCdT = derivs.get(1, 2) / (red.rhomolar * red.rhomolar) * dtau_dT;
 }
-static double dBdT_Air(double T) {
+
+static void fill_virial_cache(double T) {
+    if (T == s_virial_cache.T) return;
     check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::idBvirial_dT);
+    calc_all_virials(Air.get(),   T, s_virial_cache.B_a, s_virial_cache.dBdT_a,
+                                     s_virial_cache.C_a, s_virial_cache.dCdT_a);
+    calc_all_virials(Water.get(), T, s_virial_cache.B_w, s_virial_cache.dBdT_w,
+                                     s_virial_cache.C_w, s_virial_cache.dCdT_w);
+    s_virial_cache.T = T;
 }
-static double B_Water(double T) {
+
+// Ideal-gas alpha0 at delta=1 (f(tau)) and dalpha0/dtau — used by enthalpy/entropy functions
+static struct {
+    double T;
+    double a0_a, da0_dtau_a;
+    double a0_w, da0_dtau_w;
+} s_alpha0_cache = {-1.0, 0, 0, 0, 0};
+
+/// Evaluate the ideal-gas Helmholtz energy alpha0 and its tau-derivative for a pure fluid,
+/// at delta=1 (rho = rho_reducing), without triggering a full state update.
+///
+/// delta=1 is chosen so that ln(delta)=0, making alpha0 a pure function of tau.
+/// da0_dtau is independent of delta, so this choice is always valid for that derivative.
+/// This function is intentionally located in HumidAirProp.cpp because the delta=1
+/// evaluation point is specific to the ideal-gas limit used in humid-air h/s calculations.
+///
+/// Only pure/pseudopure fluids are supported; throws ValueError for mixtures.
+static void calc_ideal_gas_alpha0(CoolProp::HelmholtzEOSMixtureBackend* fluid, double T,
+                                   double& a0, double& da0_dtau) {
+    const auto& comps = fluid->get_components();
+    if (comps.size() != 1) {
+        throw CoolProp::ValueError("calc_ideal_gas_alpha0 only supports single-component fluids");
+    }
+    CoolProp::SimpleState red = fluid->get_reducing_state();
+    double tau = red.T / T;
+    CoolProp::EquationOfState& E = fluid->get_components()[0].EOS();
+    // set_Tred is required so that GERG-2004-style sinh/cosh terms use the correct Tr.
+    E.alpha0.set_Tred(red.T);
+    CoolProp::HelmholtzDerivatives derivs = E.alpha0.all(tau, 1.0, false);
+    a0       = derivs.alphar;
+    da0_dtau = derivs.dalphar_dtau;
+}
+
+static void fill_alpha0_cache(double T) {
+    if (T == s_alpha0_cache.T) return;
     check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::iBvirial);
+    calc_ideal_gas_alpha0(Air.get(),   T, s_alpha0_cache.a0_a, s_alpha0_cache.da0_dtau_a);
+    calc_ideal_gas_alpha0(Water.get(), T, s_alpha0_cache.a0_w, s_alpha0_cache.da0_dtau_w);
+    s_alpha0_cache.T = T;
 }
-static double dBdT_Water(double T) {
+
+// Reference-state constant offsets: these are determined by a single update() at
+// Tref=473.15 K for each function and never change thereafter.  Computed lazily
+// on first use so that the Air/Water singletons are already initialised.
+static struct {
+    bool   ready;
+    double T_red_w, rho_red_w;    // Water reducing temperature [K] and molar density [mol/m³]
+    double rho_red_a;             // Air   reducing molar density [mol/m³]
+    double hoffset_w;             // Water enthalpy reference offset [J/mol]
+    double hoffset_a;             // Air   enthalpy reference offset [J/mol]
+    double soffset_w;             // Water entropy reference offset [J/(mol·K)]
+    double soffset_a;             // Air   entropy reference offset [J/(mol·K)]
+    double ln_delta_air_s;        // ln((1/vmolar_a0) / rho_red_a) — constant ln(delta) in Air entropy
+} s_ref = {false, 0, 0, 0, 0, 0, 0, 0, 0};
+
+static void ensure_ref_offsets() {
+    if (s_ref.ready) return;
     check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::idBvirial_dT);
+    const double R_bar_global = 8.314472;   // used in Water enthalpy (matches global R_bar)
+    const double R_bar_ws     = 8.314371;   // used in Water entropy (local R_bar in original)
+    const double R_bar_air    = 8.314510;   // R_bar_Lemmon used in Air functions
+
+    // Fluid reducing constants (independent of update() state)
+    s_ref.T_red_w  = Water->keyed_output(CoolProp::iT_reducing);
+    s_ref.rho_red_w = Water->keyed_output(CoolProp::irhomolar_reducing);
+    s_ref.rho_red_a = Air->keyed_output(CoolProp::irhomolar_reducing);
+
+    // Water enthalpy offset (R_bar_global = 8.314472, ASHRAE RP-1485 §3)
+    {
+        const double Tref = 473.15, vmolarref = 0.038837428192186184, href = 51885.582451893446;
+        Water->specify_phase(CoolProp::iphase_gas);
+        Water->update(CoolProp::DmolarT_INPUTS, 1.0 / vmolarref, Tref);
+        Water->unspecify_phase();
+        double tauref    = s_ref.T_red_w / Tref;
+        double href_EOS  = R_bar_global * Tref * (1.0 + tauref * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
+        s_ref.hoffset_w  = href - href_EOS;
+    }
+
+    // Water entropy offset (R_bar_ws = 8.314371, IAPWS-95)
+    {
+        const double Tref = 473.15, pref = 101325, sref = 141.18297895840303;
+        Water->specify_phase(CoolProp::iphase_gas);
+        Water->update(CoolProp::DmolarT_INPUTS, pref / (R_bar_ws * Tref), Tref);
+        Water->unspecify_phase();
+        double tauref    = s_ref.T_red_w / Tref;
+        double sref_EOS  = R_bar_ws * (tauref * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta)
+                                       - Water->keyed_output(CoolProp::ialpha0));
+        s_ref.soffset_w  = sref - sref_EOS;
+    }
+
+    // Air enthalpy offset (R_bar_air = 8.314510, Lemmon 2000)
+    {
+        const double Tref = 473.15, vmolarref = 0.038837428192186184, href = 13782.240592933371;
+        Air->specify_phase(CoolProp::iphase_gas);
+        Air->update(CoolProp::DmolarT_INPUTS, 1.0 / vmolarref, Tref);
+        Air->unspecify_phase();
+        double tauref    = 132.6312 / Tref;
+        double href_EOS  = R_bar_air * Tref * (1.0 + tauref * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta));
+        s_ref.hoffset_a  = href - href_EOS;
+    }
+
+    // Air entropy offset and constant ln(delta) at the fixed reference density (1/vmolar_a0)
+    {
+        const double T0 = 273.15, p0 = 101325;
+        const double Tref = 473.15, vmolarref = 0.038837605637863169, sref = 212.22365283759311;
+        double vmolar_a_0 = R_bar_air * T0 / p0;
+        Air->specify_phase(CoolProp::iphase_gas);
+        Air->update(CoolProp::DmolarT_INPUTS, 1.0 / vmolar_a_0, Tref);
+        Air->unspecify_phase();
+        double tauref    = 132.6312 / Tref;
+        double sref_EOS  = R_bar_air * (tauref * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta)
+                                        - Air->keyed_output(CoolProp::ialpha0))
+                           + R_bar_air * log(vmolarref / vmolar_a_0);
+        s_ref.soffset_a  = sref - sref_EOS;
+        // ln(delta) at the actual-state density (1/vmolar_a0) used in IdealGasMolarEntropy_Air
+        s_ref.ln_delta_air_s = log(1.0 / (vmolar_a_0 * s_ref.rho_red_a));
+    }
+
+    s_ref.ready = true;
 }
-static double C_Air(double T) {
-    check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::iCvirial);
-}
-static double dCdT_Air(double T) {
-    check_fluid_instantiation();
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1e-12, T);
-    Air->unspecify_phase();
-    return Air->keyed_output(CoolProp::idCvirial_dT);
-}
-static double C_Water(double T) {
-    check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::iCvirial);
-}
-static double dCdT_Water(double T) {
-    check_fluid_instantiation();
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(1e-12, T);
-    Water->unspecify_phase();
-    return Water->keyed_output(CoolProp::idCvirial_dT);
-}
+
+static double B_Air(double T)     { fill_virial_cache(T); return s_virial_cache.B_a;    }
+static double dBdT_Air(double T)  { fill_virial_cache(T); return s_virial_cache.dBdT_a; }
+static double B_Water(double T)   { fill_virial_cache(T); return s_virial_cache.B_w;    }
+static double dBdT_Water(double T){ fill_virial_cache(T); return s_virial_cache.dBdT_w; }
+static double C_Air(double T)     { fill_virial_cache(T); return s_virial_cache.C_a;    }
+static double dCdT_Air(double T)  { fill_virial_cache(T); return s_virial_cache.dCdT_a; }
+static double C_Water(double T)   { fill_virial_cache(T); return s_virial_cache.C_w;    }
+static double dCdT_Water(double T){ fill_virial_cache(T); return s_virial_cache.dCdT_w; }
 void UseVirialCorrelations(int flag) {
     if (flag == 0 || flag == 1) {
         FlagUseVirialCorrelations = flag;
@@ -883,97 +997,42 @@ double Pressure(double T, double v_bar, double psi_w) {
     return (R_bar)*T / v_bar * (1 + Bm / v_bar + Cm / (v_bar * v_bar));
 }
 double IdealGasMolarEnthalpy_Water(double T, double p) {
-    double hbar_w_0, tau, hbar_w;
-    // Ideal-Gas contribution to enthalpy of water
-    hbar_w_0 = -0.01102303806;  //[J/mol]
-
-    // Calculate the offset in the water enthalpy from a given state with a known (desired) enthalpy
-    double Tref = 473.15, vmolarref = 0.038837428192186184, href = 51885.582451893446;
-    Water->update(CoolProp::DmolarT_INPUTS, 1 / vmolarref, Tref);
-    double tauref = Water->keyed_output(CoolProp::iT_reducing) / Tref;  //[no units]
-    double href_EOS = R_bar * Tref * (1 + tauref * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
-    double hoffset = href - href_EOS;
-
-    tau = Water->keyed_output(CoolProp::iT_reducing) / T;
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update_DmolarT_direct(p / (R_bar * T), T);
-    Water->unspecify_phase();
-    hbar_w = hbar_w_0 + hoffset + R_bar * T * (1 + tau * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta));
-    return hbar_w;
+    // All quantities from the T-keyed alpha0 cache (fill_alpha0_cache) and the
+    // once-only reference-state offset cache (ensure_ref_offsets).  No update() calls.
+    fill_alpha0_cache(T);
+    ensure_ref_offsets();
+    double tau = s_ref.T_red_w / T;
+    return -0.01102303806 + s_ref.hoffset_w + R_bar * T * (1.0 + tau * s_alpha0_cache.da0_dtau_w);
 }
 double IdealGasMolarEntropy_Water(double T, double p) {
-
     // Serious typo in RP-1485 - should use total pressure rather than
     // reference pressure in density calculation for water vapor molar entropy
-
-    double sbar_w, tau, R_bar;
-    R_bar = 8.314371;  //[J/mol/K]
-
-    // Calculate the offset in the water entropy from a given state with a known (desired) entropy
-    double Tref = 473.15, pref = 101325, sref = 141.18297895840303;
-    Water->update(CoolProp::DmolarT_INPUTS, pref / (R_bar * Tref), Tref);
-    double tauref = Water->keyed_output(CoolProp::iT_reducing) / Tref;  //[no units]
-    double sref_EOS = R_bar * (tauref * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta) - Water->keyed_output(CoolProp::ialpha0));
-    double soffset = sref - sref_EOS;
-
-    // Now calculate it based on the given inputs
-    tau = Water->keyed_output(CoolProp::iT_reducing) / T;
-    Water->specify_phase(CoolProp::iphase_gas);
-    Water->update(CoolProp::DmolarT_INPUTS, p / (R_bar * T), T);
-    Water->unspecify_phase();
-    sbar_w =
-      soffset + R_bar * (tau * Water->keyed_output(CoolProp::idalpha0_dtau_constdelta) - Water->keyed_output(CoolProp::ialpha0));  //[kJ/kmol/K]
-    return sbar_w;
+    const double R_bar_ws = 8.314371;  //[J/mol/K] — matches original local R_bar
+    fill_alpha0_cache(T);
+    ensure_ref_offsets();
+    double tau      = s_ref.T_red_w / T;
+    // alpha0(T,p) = f(tau) + ln(delta) = a0_w + ln(rho/rho_red)  where rho = p/(R_bar_ws*T)
+    double ln_delta = log(p / (R_bar_ws * T * s_ref.rho_red_w));
+    return s_ref.soffset_w
+           + R_bar_ws * (tau * s_alpha0_cache.da0_dtau_w - s_alpha0_cache.a0_w - ln_delta);
 }
 double IdealGasMolarEnthalpy_Air(double T, double p) {
-    double hbar_a_0, tau, hbar_a, R_bar_Lemmon;
-    // Ideal-Gas contribution to enthalpy of air
-    hbar_a_0 = -7914.149298;  //[J/mol]
-
-    R_bar_Lemmon = 8.314510;  //[J/mol/K]
-    // Calculate the offset in the air enthalpy from a given state with a known (desired) enthalpy
-    double Tref = 473.15, vmolarref = 0.038837428192186184, href = 13782.240592933371;
-    Air->update(CoolProp::DmolarT_INPUTS, 1 / vmolarref, Tref);
-    double tauref = 132.6312 / Tref;  //[no units]
-    double href_EOS = R_bar_Lemmon * Tref * (1 + tauref * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta));
-    double hoffset = href - href_EOS;
-
-    // Tj is given by 132.6312 K
-    tau = 132.6312 / T;
-    // Now calculate it based on the given inputs
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(p / (R_bar * T), T);
-    Air->unspecify_phase();
-    hbar_a = hbar_a_0 + hoffset + R_bar_Lemmon * T * (1 + tau * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta));  //[J/mol]
-    return hbar_a;
+    const double R_bar_Lemmon = 8.314510;  //[J/mol/K]
+    fill_alpha0_cache(T);
+    ensure_ref_offsets();
+    double tau = 132.6312 / T;  // Tj is given by 132.6312 K
+    return -7914.149298 + s_ref.hoffset_a + R_bar_Lemmon * T * (1.0 + tau * s_alpha0_cache.da0_dtau_a);
 }
 double IdealGasMolarEntropy_Air(double T, double vmolar_a) {
-    double sbar_0_Lem, tau, sbar_a, R_bar_Lemmon = 8.314510, T0 = 273.15, p0 = 101325, vmolar_a_0;
-
-    // Ideal-Gas contribution to entropy of air
-    sbar_0_Lem = -196.1375815;  //[J/mol/K]
-
-    vmolar_a_0 = R_bar_Lemmon * T0 / p0;  //[m^3/mol]
-
-    // Calculate the offset in the air entropy from a given state with a known (desired) entropy
-    double Tref = 473.15, vmolarref = 0.038837605637863169, sref = 212.22365283759311;
-    Air->update(CoolProp::DmolarT_INPUTS, 1 / vmolar_a_0, Tref);
-    double tauref = 132.6312 / Tref;  //[no units]
-    double sref_EOS = R_bar_Lemmon * (tauref * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta) - Air->keyed_output(CoolProp::ialpha0))
-                      + R_bar_Lemmon * log(vmolarref / vmolar_a_0);
-    double soffset = sref - sref_EOS;
-
-    // Tj and rhoj are given by 132.6312 and 302.5507652 respectively
-    tau = 132.6312 / T;  //[no units]
-
-    Air->specify_phase(CoolProp::iphase_gas);
-    Air->update_DmolarT_direct(1 / vmolar_a_0, T);
-    Air->unspecify_phase();
-    sbar_a = sbar_0_Lem + soffset
-             + R_bar_Lemmon * (tau * Air->keyed_output(CoolProp::idalpha0_dtau_constdelta) - Air->keyed_output(CoolProp::ialpha0))
-             + R_bar_Lemmon * log(vmolar_a / vmolar_a_0);  //[J/mol/K]
-
-    return sbar_a;  //[J/mol[air]/K]
+    const double R_bar_Lemmon = 8.314510, T0 = 273.15, p0 = 101325;  //[J/mol/K]
+    const double vmolar_a_0   = R_bar_Lemmon * T0 / p0;  //[m^3/mol]
+    fill_alpha0_cache(T);
+    ensure_ref_offsets();
+    double tau = 132.6312 / T;  // Tj and rhoj are given by 132.6312 and 302.5507652 respectively
+    // alpha0 at fixed density (1/vmolar_a_0): a0_a + ln_delta_air_s  where ln_delta_air_s = ln(delta_const)
+    return -196.1375815 + s_ref.soffset_a
+           + R_bar_Lemmon * (tau * s_alpha0_cache.da0_dtau_a - s_alpha0_cache.a0_a - s_ref.ln_delta_air_s)
+           + R_bar_Lemmon * log(vmolar_a / vmolar_a_0);
 }
 
 /**

@@ -2030,8 +2030,9 @@ endif()
 
 # Use like cmake ..\CoolProp.git -DCOOLPROP_MY_MAIN=dev/coverity/main.cxx
 if(COOLPROP_MY_MAIN)
-  list(APPEND APP_SOURCES "${COOLPROP_MY_MAIN}")
-  add_executable(Main ${APP_SOURCES})
+  set(_MY_MAIN_SOURCES ${APP_SOURCES})
+  list(APPEND _MY_MAIN_SOURCES "${COOLPROP_MY_MAIN}")
+  add_executable(Main ${_MY_MAIN_SOURCES})
   add_dependencies(Main generate_headers)
   if(UNIX)
     target_link_libraries(Main ${CMAKE_DL_LIBS})
