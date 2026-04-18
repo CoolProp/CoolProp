@@ -1,6 +1,11 @@
 # Dependencies for CoolProp managed via CPM.cmake
-# Set CPM_SOURCE_CACHE in your environment (e.g. ~/.cache/CPM) to share the
-# download cache across git worktrees and build directories.
+# CPM_SOURCE_CACHE can be overridden via environment variable (e.g. ~/.cache/CPM)
+# to share the download cache across git worktrees and build directories.
+# Without a stable cache location, FetchContent re-runs on every cmake configure,
+# touching header timestamps and forcing a complete C++ rebuild each time.
+if(NOT DEFINED CPM_SOURCE_CACHE AND "$ENV{CPM_SOURCE_CACHE}" STREQUAL "")
+  set(CPM_SOURCE_CACHE "${CMAKE_CURRENT_LIST_DIR}/../.cpm_cache" CACHE PATH "CPM source cache")
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
 
