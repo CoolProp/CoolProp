@@ -24,7 +24,7 @@ using std::shared_ptr;
 #include <string.h>
 #include <iostream>
 #include <list>
-#include "externals/IF97/IF97.h"
+#include <IF97.h>
 
 /// This is a stub overload to help with all the strcmp calls below and avoid needing to rewrite all of them
 std::size_t strcmp(const std::string& s, const std::string& e) {
@@ -378,7 +378,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
         BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) {
             pp_water = psi_w * p;
         };
-        ~BrentSolverResids() {};
+        ~BrentSolverResids(){};
 
         double call(double T) {
             double p_ws;

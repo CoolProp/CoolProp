@@ -50,7 +50,7 @@ Build
 Once the dependencies are installed, you can run the installer with::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Make a build folder
     mkdir CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake

@@ -30,8 +30,6 @@ jobs:
         echo $EVENT_CONTEXT
 
     - uses: actions/checkout@v4.2.2
-      with:
-        submodules: recursive
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -51,22 +49,31 @@ jobs:
         else
           python dev/extract_version.py --replace-version --version "${{ inputs.TESTPYPI_VERSION }}"
         fi;
-        
+
+    - name: Cache CPM packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/CPM
+        key: cpm-${{ runner.os }}-${{ inputs.arch }}-${{ hashFiles('cmake/dependencies.cmake') }}
+        restore-keys: |
+          cpm-${{ runner.os }}-${{ inputs.arch }}-
+          cpm-${{ runner.os }}-
+
     - name: Set up QEMU
       if: ${{ runner.os == 'Linux' }}
       uses: docker/setup-qemu-action@v3.2.0
       with:
         platforms: all
-        
+
     - name: Build and test wheels
       uses: pypa/cibuildwheel@v3.2.0
       env:
         MACOSX_DEPLOYMENT_TARGET: 11.0
-        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk CPM_SOURCE_CACHE=$HOME/.cache/CPM
         CIBW_BEFORE_BUILD_LINUX: >
           pip install ninja &&
           git config --global --add safe.directory "*"
-        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE
+        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
         CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c

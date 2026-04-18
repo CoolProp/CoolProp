@@ -9,7 +9,7 @@ This tutorial is based on a tutorial put together by `Babak Samareh <mailto:baba
 
 1. Pull the latest version of CoolProp from github::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     
 2. Make a build folder and generate the headers::
 

@@ -58,7 +58,7 @@ You can select the compiler in the call to cmake below.
 1. Check out sources and go into the build directory::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
@@ -112,7 +112,7 @@ On linux and OSX there is no calling convention to worry about, only options are
 For 32-bit compilation::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder
@@ -125,7 +125,7 @@ For 32-bit compilation::
 For 64-bit compilation::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder

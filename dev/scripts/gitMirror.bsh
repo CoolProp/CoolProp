@@ -37,7 +37,7 @@ git push  --force --mirror $MIRROR
 popd
 #
 CURFOLDER="/home/$USER/src/CoolPropFull.git"
-createRepo "--recursive" "$ORIGIN" "$CURFOLDER"
+createRepo "" "$ORIGIN" "$CURFOLDER"
 pushd $CURFOLDER
 git checkout -B master origin/master
 git pull

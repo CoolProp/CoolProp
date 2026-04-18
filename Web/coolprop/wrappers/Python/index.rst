@@ -99,7 +99,7 @@ To use CoolProp with uv::
 For development from source::
 
     # Clone the repository
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     cd CoolProp
 
     # Create a virtual environment (recommended)
@@ -134,7 +134,7 @@ CoolProp uses a modern build system based on CMake via scikit-build-core. The bu
 To build and install from source::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Install (pip will automatically handle the build)
@@ -189,7 +189,7 @@ Local installation
 If you prefer not to install system-wide, you can install locally using the ``--user`` flag::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Install locally

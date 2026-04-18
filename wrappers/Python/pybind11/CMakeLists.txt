@@ -1,20 +1,23 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.14)
 
 project(CoolProp)
 
-# Set the standard for C++ to c++11
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
-set (ROOT_DIR "../../..")
+set(ROOT_DIR "../../..")
 
-# Add core CoolProp dependency to get the list of files
+# Add core CoolProp dependency to get the list of files (also brings in CPM)
 add_subdirectory("${ROOT_DIR}" "_CoolProp")
 
 # ----------------------------
 # Build pybind11 python module
 # ----------------------------
 
-add_subdirectory("${ROOT_DIR}/externals/pybind11" "pybind11")
+CPMAddPackage(
+  NAME pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11.git
+  GIT_TAG        v2.11.0
+)
 add_definitions(-DPYBIND11)
 add_definitions(-DCOOLPROP_PYBIND11_MODULE)
 include_directories(${COOLPROP_INCLUDE_DIRECTORIES})

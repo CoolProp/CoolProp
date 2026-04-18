@@ -46,7 +46,7 @@ Build on 64-bit windows
 The build procedure:
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder

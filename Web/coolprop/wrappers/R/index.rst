@@ -53,7 +53,7 @@ Linux and OSX
 Once the dependencies are installed, you can run the builder and tests using::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     mkdir -p  CoolProp/build && cd CoolProp/build
     # Build the makefile using CMake
@@ -67,7 +67,7 @@ Windows (32-bit and 64-bit)
 You need to just slightly modify the building procedure::
 
     # Check out the sources for CoolProp
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
     # Move into the folder you just created
     cd CoolProp
     # Make a build folder

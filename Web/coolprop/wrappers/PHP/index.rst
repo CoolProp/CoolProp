@@ -110,7 +110,7 @@ Linux
 
 1. Check out CoolProp::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
 
 2. Folder creating::
 

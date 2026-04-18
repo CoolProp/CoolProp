@@ -1,6 +1,11 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 
 include(CheckIncludeFileCXX)
+
+# Dependency management via CPM.cmake (replaces git submodules).
+# Set CPM_SOURCE_CACHE (e.g. ~/.cache/CPM) to share downloads across worktrees.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependencies.cmake")
 
 if(DEFINED COOLPROP_INSTALL_PREFIX)
   #set(COOLPROP_INSTALL_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/install_root)
@@ -301,23 +306,17 @@ list(REMOVE_ITEM APP_SOURCES
 list(REMOVE_ITEM APP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/CoolPropLib.cpp")
 
 set(APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}")
-list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/Eigen")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/msgpack-c/include")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1")
-     list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann-json")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/dev")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp")
-list(APPEND APP_INCLUDE_DIRS
-     "${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib/include")
-list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/fmtlib"
-)# should be deprecated
+list(APPEND APP_INCLUDE_DIRS "${Eigen_SOURCE_DIR}")
+list(APPEND APP_INCLUDE_DIRS "${msgpack-c_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann-json")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dev")
+list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp")
+list(APPEND APP_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${rapidjson_SOURCE_DIR}/include")
+list(APPEND APP_INCLUDE_DIRS "${IF97_SOURCE_DIR}")
+list(APPEND APP_INCLUDE_DIRS "${REFPROP_headers_SOURCE_DIR}")
 
 if (MSVC)
   # fmtlib requires that the utf-8 support be compiled in
@@ -993,8 +992,7 @@ if(COOLPROP_WINDOWS_PACKAGE)
   # Pointers to the sources
   set(COOLPROP_WINDOWS_PACKAGE_EXCEL_DIR
       "${CMAKE_CURRENT_SOURCE_DIR}/wrappers/Excel")
-  set(COOLPROP_WINDOWS_PACKAGE_ISS_DIR
-      "${CMAKE_CURRENT_SOURCE_DIR}/externals/ExcelAddinInstaller")
+  set(COOLPROP_WINDOWS_PACKAGE_ISS_DIR "${ExcelAddinInstaller_SOURCE_DIR}")
   # Generator for DLLs
   set(COOLPROP_WINDOWS_PACKAGE_DLL_GEN "${CMAKE_GENERATOR}"
   )# Use the currently selected generator, architecture is hard-coded below
@@ -1935,7 +1933,7 @@ if(COOLPROP_MATHEMATICA_MODULE)
 
   set(CMAKE_MODULE_PATH
       ${CMAKE_MODULE_PATH}
-      "${CMAKE_CURRENT_SOURCE_DIR}/externals/FindMathematica/CMake/Mathematica/"
+      "${FindMathematica_SOURCE_DIR}/CMake/Mathematica/"
   )
   find_package(Mathematica COMPONENTS WolframLibrary)
   message(
@@ -2071,7 +2069,6 @@ endif()
 ###      COOLPROP TESTING APP       ###
 if(COOLPROP_CATCH_MODULE)
 
-  add_subdirectory("externals/Catch2")
   enable_testing()
 
   list(APPEND APP_SOURCES
@@ -2087,10 +2084,10 @@ if(COOLPROP_CATCH_MODULE)
   if(UNIX)
     target_link_libraries(CatchTestRunner PRIVATE ${CMAKE_DL_LIBS})
   endif()
-  target_include_directories(CatchTestRunner PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/externals/multicomplex/multicomplex/include")
+  target_include_directories(CatchTestRunner PRIVATE "${multicomplex_SOURCE_DIR}/multicomplex/include")
 
   include(CTest)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/externals/Catch2/extras/Catch.cmake)
+  include(${Catch2_SOURCE_DIR}/extras/Catch.cmake)
   
   if (NOT CMAKE_GENERATOR STREQUAL Xcode)
     # Test discovery doesn't work in Xcode, due to a signing bug in Xcode which causes disovery to fail: https://github.com/catchorg/Catch2/issues/2411

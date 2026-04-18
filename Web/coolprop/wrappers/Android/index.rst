@@ -37,7 +37,7 @@ Linux & OSX
 * To Build
     - Check out the sources for CoolProp::
 
-        git clone https://github.com/CoolProp/CoolProp --recursive
+        git clone https://github.com/CoolProp/CoolProp
 
     - Open the CMakeLists.txt file in the CoolProp directory for editing
     - Within the COOLPROP_ANDROID_MODULE modify the command:  ``set(ANDROID_PACKAGE_NAME "CoolProp")`` to reflect your package name

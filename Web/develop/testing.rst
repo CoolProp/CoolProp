@@ -45,7 +45,7 @@ The easiest solution is to use OSX and download the binaries for LLVM+clang from
 
 1. Check out CoolProp using git::
 
-    git clone https://github.com/CoolProp/CoolProp --recursive
+    git clone https://github.com/CoolProp/CoolProp
 
 2. Move into folder::
 
