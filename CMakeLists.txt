@@ -345,10 +345,10 @@ set(SWIG_DEPENDENCIES
 
 set(COOLPROP_APP_SOURCES
     ${APP_SOURCES}
-    CACHE LIST "List of CPP sources needed for CoolProp")
+    CACHE STRING "List of CPP sources needed for CoolProp")
 set(COOLPROP_INCLUDE_DIRECTORIES
     ${APP_INCLUDE_DIRS}
-    CACHE LIST "List of include directories needed for CoolProp")
+    CACHE STRING "List of include directories needed for CoolProp")
 
 #######################################
 #         REQUIRED MODULES            #
