@@ -12,6 +12,7 @@ Web/fluid_properties/fluids/molecule_sdf/
 .version
 
 /bld*
+/.cpm_cache/
 
 /dev/VS2010
 
