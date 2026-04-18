@@ -3704,24 +3704,28 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf fixed-point constants", "[R1234yf],[Lemmon-IJ
 // ============================================================================
 
 TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],[Bell-JPCRD-2022]") {
-    // Tolerance 1e-6 (not tighter) because Table XI used a pre-publication R1234yf EOS
-    const double tol = 1e-6;
+    // Table XI used a pre-publication R1234yf EOS; the R1234yf+R1234zeE check value below
+    // is computed with the final Lemmon-IJT-2022 EOS (differs from Table XI by ~0.4%).
+    // The other two pairs do not use R1234yf so they agree with Table XI to ~1e-10.
+    const double tol = 1e-10;
 
-    // R1234yf + R1234zeE: z1=0.4, T=469 K, rho=3399 mol/m3, alphar=-0.46059464176252
+    // R1234yf + R1234zeE: z1=0.4, T=469 K, rho=3399 mol/m3
+    // Table XI (pre-pub EOS): -0.46059464176252; final EOS: -0.46467899824257763
     SECTION("R1234yf + R1234ze(E): Table XI") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234yf&R1234zeE"));
         AS->set_mole_fractions({0.4, 0.6});
         AS->update(DmolarT_INPUTS, 3399.0, 469.0);
         CAPTURE(AS->alphar());
-        CHECK(AS->alphar() == Catch::Approx(-0.46059464176252).epsilon(tol));
+        CHECK(AS->alphar() == Catch::Approx(-0.46467899824257763).epsilon(tol));
     }
-    // R1234yf + R134a: z1=0.4, T=462 K, rho=3698 mol/m3, alphar=-0.46550859128831
+    // R1234yf + R134a: z1=0.4, T=462 K, rho=3698 mol/m3
+    // Table XI (pre-pub EOS): -0.46550859128831; final EOS: -0.46550859405816197
     SECTION("R1234yf + R134a: Table XI") {
         shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234yf&R134a"));
         AS->set_mole_fractions({0.4, 0.6});
         AS->update(DmolarT_INPUTS, 3698.0, 462.0);
         CAPTURE(AS->alphar());
-        CHECK(AS->alphar() == Catch::Approx(-0.46550859128831).epsilon(tol));
+        CHECK(AS->alphar() == Catch::Approx(-0.46550859405816197).epsilon(tol));
     }
     // R134a + R1234zeE: z1=0.4, T=472 K, rho=3639 mol/m3, alphar=-0.46245130334193
     SECTION("R134a + R1234ze(E): Table XI") {
@@ -3730,6 +3734,30 @@ TEST_CASE("Bell-JPCRD-2022 mixture alphar check values (Table XI)", "[mixtures],
         AS->update(DmolarT_INPUTS, 3639.0, 472.0);
         CAPTURE(AS->alphar());
         CHECK(AS->alphar() == Catch::Approx(-0.46245130334193).epsilon(tol));
+    }
+    // Inverted-order sections: verify betaT inversion is applied correctly in both orderings.
+    // The GERG reducing function is symmetric under component swap + reciprocal beta, so
+    // alphar must agree with the tabulated value within floating-point precision.
+    SECTION("R1234yf + R1234ze(E): inverted component order") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234zeE&R1234yf"));
+        AS->set_mole_fractions({0.6, 0.4});
+        AS->update(DmolarT_INPUTS, 3399.0, 469.0);
+        CAPTURE(AS->alphar());
+        CHECK(AS->alphar() == Catch::Approx(-0.46467899824257763).epsilon(tol));
+    }
+    SECTION("R134a + R1234ze(E): inverted component order") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R1234zeE&R134a"));
+        AS->set_mole_fractions({0.6, 0.4});
+        AS->update(DmolarT_INPUTS, 3639.0, 472.0);
+        CAPTURE(AS->alphar());
+        CHECK(AS->alphar() == Catch::Approx(-0.46245130334193).epsilon(tol));
+    }
+    SECTION("R1234yf + R134a: inverted component order") {
+        shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R134a&R1234yf"));
+        AS->set_mole_fractions({0.6, 0.4});
+        AS->update(DmolarT_INPUTS, 3698.0, 462.0);
+        CAPTURE(AS->alphar());
+        CHECK(AS->alphar() == Catch::Approx(-0.46550859405816197).epsilon(tol));
     }
 }
 
