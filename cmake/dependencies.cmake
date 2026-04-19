@@ -94,7 +94,7 @@ if(COOLPROP_MATHEMATICA_MODULE)
   CPMAddPackage(
     NAME FindMathematica
     GIT_REPOSITORY https://github.com/sakra/FindMathematica
-    GIT_TAG        99d8c95eed1a517f4a06511ea40b2cee6477a8c1
+    GIT_TAG        4.2.0
     DOWNLOAD_ONLY  YES
   )
 endif()
