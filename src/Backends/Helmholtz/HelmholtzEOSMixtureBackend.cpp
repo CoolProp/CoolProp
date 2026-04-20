@@ -2650,7 +2650,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::SRK_covolume() {
         // Get the parameters for the cubic EOS
         CoolPropDbl Tc = get_fluid_constant(i, iT_critical), pc = get_fluid_constant(i, iP_critical);
         CoolPropDbl R = 8.3144598;
-        b += mole_fractions[i] * 0.08664 * R * Tc / pc;
+        b += mole_fractions[i] * 0.08664034999649577215890158147700 * R * Tc / pc;
     }
     return b;
 }
@@ -2843,16 +2843,16 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
     for (std::size_t i = 0; i < components.size(); ++i) {
         CoolPropDbl Tci = components[i].EOS().reduce.T, pci = components[i].EOS().reduce.p, acentric_i = components[i].EOS().acentric;
         CoolPropDbl m_i = 0.480 + 1.574 * acentric_i - 0.176 * pow(acentric_i, 2);
-        CoolPropDbl b_i = 0.08664 * R_u * Tci / pci;
+        CoolPropDbl b_i = 0.08664034999649577215890158147700 * R_u * Tci / pci;
         b += mole_fractions[i] * b_i;
 
-        CoolPropDbl a_i = 0.42747 * pow(R_u * Tci, 2) / pci * pow(1 + m_i * (1 - sqrt(T / Tci)), 2);
+        CoolPropDbl a_i = 0.42748023335403414043900347952220 * pow(R_u * Tci, 2) / pci * pow(1 + m_i * (1 - sqrt(T / Tci)), 2);
 
         for (std::size_t j = 0; j < components.size(); ++j) {
             CoolPropDbl Tcj = components[j].EOS().reduce.T, pcj = components[j].EOS().reduce.p, acentric_j = components[j].EOS().acentric;
             CoolPropDbl m_j = 0.480 + 1.574 * acentric_j - 0.176 * pow(acentric_j, 2);
 
-            CoolPropDbl a_j = 0.42747 * pow(R_u * Tcj, 2) / pcj * pow(1 + m_j * (1 - sqrt(T / Tcj)), 2);
+            CoolPropDbl a_j = 0.42748023335403414043900347952220 * pow(R_u * Tcj, 2) / pcj * pow(1 + m_j * (1 - sqrt(T / Tcj)), 2);
 
             k_ij = 0;
             //if (i == j){
