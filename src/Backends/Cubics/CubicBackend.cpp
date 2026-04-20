@@ -2,6 +2,7 @@
 #include "Solvers.h"
 #include "Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
+#include "Backends/Helmholtz/Fluids/FluidLibrary.h"
 
 void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     N = cubic->get_Tc().size();
@@ -80,6 +81,13 @@ void CoolProp::AbstractCubicBackend::set_alpha0_from_components() {
         CoolPropFluid fld;
         fld.EOSVector.push_back(EquationOfState());
         fld.EOS().alpha0 = components[i].alpha0;
+        // Copy triple-point data from the HEOS fluid library so that
+        // get_fluid_constant(iT_triple) returns a valid value.
+        try {
+            CoolPropFluid heos_fld = get_fluid(components[i].name);
+            fld.EOS().sat_min_liquid = heos_fld.EOS().sat_min_liquid;
+            fld.EOS().sat_min_vapor = heos_fld.EOS().sat_min_vapor;
+        } catch (...) {}
         _components.push_back(fld);
     }
 }
@@ -294,6 +302,13 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
 
     switch (input_pair) {
         case PT_INPUTS:
+            if (!is_pure_or_pseudopure) {
+                // For mixtures, delegate to the parent class which calls
+                // FlashRoutines::PT_flash -> PT_flash_mixtures, handling
+                // phase determination, stability analysis, and two-phase splitting.
+                HelmholtzEOSMixtureBackend::update(input_pair, value1, value2);
+                return;  // parent calls post_update() already
+            }
             _p = value1;
             _T = value2;
             _rhomolar = solver_rho_Tp(value2 /*T*/, value1 /*p*/);
@@ -508,7 +523,28 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
     _phase = iphase_twophase;
 }
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp_global(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rhomolar_max) {
-    _rhomolar = solver_rho_Tp(T, p, 40000);
+    int Nsoln = 0;
+    double rho0 = 0, rho1 = 0, rho2 = 0;
+    rho_Tp_cubic(T, p, Nsoln, rho0, rho1, rho2);
+    if (Nsoln == 1) {
+        _rhomolar = rho0;
+    } else if (Nsoln == 3) {
+        // Two candidate roots: lowest density (vapor-like) and highest (liquid-like)
+        // Pick the one with lower molar Gibbs energy (thermodynamically stable root)
+        double rho_vap = (rho0 > 0) ? rho0 : rho1;
+        double rho_liq = rho2;
+        if (rho_vap > 0 && rho_liq > 0) {
+            double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
+            double g_liq = calc_gibbsmolar_nocache(T, rho_liq);
+            _rhomolar = (g_liq < g_vap) ? rho_liq : rho_vap;
+        } else if (rho_liq > 0) {
+            _rhomolar = rho_liq;
+        } else {
+            _rhomolar = rho_vap;
+        }
+    } else {
+        throw ValueError("Obtained neither 1 nor three roots");
+    }
     return static_cast<double>(_rhomolar);
 }
 CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, CoolPropDbl rho_guess) {
@@ -532,10 +568,45 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
                 }
             } else if (imposed_phase_index == iphase_liquid || imposed_phase_index == iphase_supercritical_liquid) {
                 rho = rho2;
+            } else if (imposed_phase_index == iphase_supercritical) {
+                // Supercritical: pick the root with lower Gibbs energy
+                double rho_vap = (rho0 > 0) ? rho0 : rho1;
+                double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
+                double g_liq = calc_gibbsmolar_nocache(T, rho2);
+                rho = (g_liq < g_vap) ? rho2 : rho_vap;
             } else {
                 throw ValueError("Specified phase is invalid");
             }
+        } else if (rho_guess > 0) {
+            // A density guess was provided (e.g. from update_TP_guessrho);
+            // pick the positive root closest to the guess
+            double best_dist = 1e300;
+            double candidates[] = {rho0, rho1, rho2};
+            for (int i = 0; i < 3; ++i) {
+                if (candidates[i] > 0) {
+                    double dist = std::abs(candidates[i] - rho_guess);
+                    if (dist < best_dist) {
+                        best_dist = dist;
+                        rho = candidates[i];
+                    }
+                }
+            }
+        } else if (!is_pure_or_pseudopure) {
+            // Mixture without imposed phase and without guess density:
+            // pick the root with the lowest molar Gibbs energy (stable phase)
+            double rho_vap = (rho0 > 0) ? rho0 : rho1;
+            double rho_liq = rho2;
+            if (rho_vap > 0 && rho_liq > 0) {
+                double g_vap = calc_gibbsmolar_nocache(T, rho_vap);
+                double g_liq = calc_gibbsmolar_nocache(T, rho_liq);
+                rho = (g_liq < g_vap) ? rho_liq : rho_vap;
+            } else if (rho_liq > 0) {
+                rho = rho_liq;
+            } else {
+                rho = rho_vap;
+            }
         } else {
+            // Pure fluid: use saturation pressure to decide phase
             if (p < p_critical()) {
                 add_transient_pure_state();
                 transient_pure_state->set_mole_fractions(this->mole_fractions);
