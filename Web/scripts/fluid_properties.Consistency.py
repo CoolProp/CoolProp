@@ -25,7 +25,13 @@ del ff
 if not os.path.exists(plots_path):
     os.makedirs(plots_path)
 
+force = os.environ.get('COOLPROP_FORCE_CONSISTENCY', '').lower() in ('1', 'true', 'yes')
+
 for fluid in CoolProp.__fluids__:
+    png_path = os.path.join(plots_path, fluid + '.png')
+    if os.path.exists(png_path) and not force:
+        print('fluid:', fluid, '- plot already exists, skipping (set COOLPROP_FORCE_CONSISTENCY=1 to regenerate)')
+        continue
     print('fluid:', fluid)
     file_string = template.format(fluid=fluid)
     file_path = os.path.join(plots_path, fluid + '.py')

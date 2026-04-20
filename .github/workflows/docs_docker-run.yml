@@ -51,10 +51,13 @@ jobs:
           ./Web/fluid_properties/Incompressibles_volume-based-fluids.csv
           ./Web/fluid_properties/Incompressibles_pure-fluids.csv
           ./Web/scripts/incompressibles_consistency
-        key: cached-props
-        #key: cached-props-${{ github.sha }}
-        #restore-keys: |
-        #  cached-props-
+        # Key depends on the fluid list so adding/removing a fluid invalidates
+        # the cache and triggers a consistency-plot refresh for the new fluid.
+        # The restore-keys fallback still seeds the directory with prior plots
+        # so the incremental Consistency.py only has to regenerate what changed.
+        key: cached-props-${{ hashFiles('dev/fluids/*.json', 'dev/incompressible_liquids/json/*.json') }}
+        restore-keys: |
+          cached-props-
         
     - name: Schedule calculations
       id: schedule_calculation
