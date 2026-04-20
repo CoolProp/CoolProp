@@ -22,6 +22,7 @@ by Ian H. Bell and Andreas Jaeger, J. Res. NIST, 2016
 #include "AbstractState.h"
 #include "Backends/Helmholtz/HelmholtzEOSMixtureBackend.h"
 #include "Exceptions.h"
+#include "superancillary/cubicsuperancillary.h"
 #include <vector>
 
 namespace CoolProp {
@@ -249,6 +250,20 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
 
     // Get fluid parameter (currently the volume translation parameter)
     double get_fluid_parameter_double(const size_t i, const std::string& parameter);
+
+    /// Return the integer code for the EOS type used in the cubic superancillary lookup.
+    /// Derived classes (SRKBackend, PengRobinsonBackend) override this.
+    virtual int get_superanc_eos_code() const {
+        return CubicSuperAncillary::UNKNOWN_CODE;
+    }
+
+    CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
+
+    void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T);
+
+    /// Return the maximum temperature [K] supported by the cubic superancillary.
+    /// Inverts Ttilde_max = R*T*b/a(T) analytically using am evaluated at T=Tc.
+    double calc_superanc_Tmax();
 };
 
 class SRKBackend : public AbstractCubicBackend
@@ -285,6 +300,9 @@ class SRKBackend : public AbstractCubicBackend
     }
     std::string backend_name(void) {
         return get_backend_string(SRK_BACKEND);
+    }
+    int get_superanc_eos_code() const override {
+        return CubicSuperAncillary::SRK_CODE;
     }
 };
 
@@ -324,6 +342,9 @@ class PengRobinsonBackend : public AbstractCubicBackend
     }
     std::string backend_name(void) {
         return get_backend_string(PR_BACKEND);
+    }
+    int get_superanc_eos_code() const override {
+        return CubicSuperAncillary::PR_CODE;
     }
 };
 
