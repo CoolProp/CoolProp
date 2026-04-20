@@ -41,6 +41,7 @@ def _download(url, dest):
 
 import CoolProp
 ver = CoolProp.__version__
+num_pure_fluids = len(CoolProp.__fluids__)
 # The short X.Y version.
 version = ver.rsplit('.', 1)[0]
 # The full version, including alpha/beta/rc tags.
@@ -155,6 +156,11 @@ templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = {'.rst': 'restructuredtext'}
+
+# Substitutions available in every .rst file (auto-generated from CoolProp)
+rst_prolog = """
+.. |num_pure_fluids| replace:: {num_pure_fluids}
+""".format(num_pure_fluids=num_pure_fluids)
 
 # The encoding of source files.
 source_encoding = 'utf-8'
