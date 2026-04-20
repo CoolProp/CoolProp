@@ -7,8 +7,8 @@ Mathematica Wrapper
 Pre-compiled Binaries
 =====================
 Pre-compiled binaries are no longer uploaded to the  :sfdownloads:`latest Release` on SourceForge or :sfnightly:`the nightly snapshots <Mathematica>`.  This is because:
-- Usage is one of the lowest of all the wrappers supported by CoolProp with few active developers
-- The wrapper should really be built by the user for their specific version of Wolfram Mathematica on their system.  Major and minor updates to Mathematica are just too frequent to keep up with. 
+* Usage is one of the lowest of all the wrappers supported by CoolProp with few active developers
+* The wrapper should really be built by the user for their specific version of Wolfram Mathematica on their system.  Major and minor updates to Mathematica are just too frequent to keep up with. 
 
 User-Compiled Binaries
 ======================
@@ -54,7 +54,8 @@ You need to just slightly modify the building procedure
         # Build the makefile using CMake
         cmake .. -DCOOLPROP_MATHEMATICA_MODULE=ON -DCMAKE_VERBOSE_MAKEFILE=ON -G "Visual Studio 17 2022" -A x64"
         
-    If you have a different version of Visual Studio installed, replace the generator name in the ``-G`` argument.  Note that the DLL must be 64-bit by using the ``-A x64`` option at the end.  Prior to VS 2017, this "bitness" was embedded in the ``-G`` argument.
+.. note::   
+    If you have a different version of Visual Studio installed, replace the generator name in the ``-G`` argument.  Note that the DLL must be 64-bit by using the ``-A x64`` option at the end.  Prior to VS 2017, this "bitness" was embedded in the ``-G`` argument using the format **-G "Visual Studio 14 2015 Win64"** and will not use the ``-A`` option.
         
     B: Building using MinGW::
 

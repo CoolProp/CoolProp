@@ -55,7 +55,7 @@ To Build
              -DCMAKE_VERBOSE_MAKEFILE=ON  
   
 .. note::   
-   Mathcad Varsion: Use your version of Mathcad Prime in place of **"10.0.0.0"** (with `7.0.0.0` or later)
+   Mathcad Version: Use your version of Mathcad Prime in place of **"10.0.0.0"** (with `7.0.0.0` or later)
 
 .. note::
    Compiler Bitness: Mathcad Prime is 64-bit, so the `-A x64` option is necessary in the Visual Studio string for VS2017 or later.  
