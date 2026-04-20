@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Run clang-format on changed C/C++ files. Used as a git pre-commit hook and in CI.
+
+Modes:
+  (no args)            : check staged files (--dry-run --Werror). Pre-commit hook default.
+  --range BASE HEAD    : format in place over files changed between two refs,
+                         write clang_format.patch on diff, exit 1 if any.
+
+The clang-format version is read from pyproject.toml's dev dependency group
+and invoked via `uvx clang-format@<version>` so CI and local runs match.
+"""
+from __future__ import annotations
+
+import argparse
+import re
+import subprocess
+import sys
+from pathlib import Path
+from shutil import which
+
+CPP_SUFFIXES = {".c", ".cc", ".cpp", ".h", ".hpp"}
+
+
+def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, check=True, capture_output=True, text=True, **kw)
+
+
+def repo_root() -> Path:
+    return Path(run(["git", "rev-parse", "--show-toplevel"]).stdout.strip())
+
+
+def read_clang_format_version(pyproject: Path) -> str:
+    m = re.search(r'"clang-format==([0-9][0-9.]*)"', pyproject.read_text(encoding="utf-8"))
+    if not m:
+        sys.exit(f"error: could not find clang-format==X.Y.Z pin in {pyproject}")
+    return m.group(1)
+
+
+def cpp_only(files: list[str]) -> list[str]:
+    return [f for f in files if Path(f).suffix in CPP_SUFFIXES]
+
+
+def changed_files(args: argparse.Namespace) -> list[str]:
+    if args.range:
+        base, head = args.range
+        out = run(["git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...{head}"])
+    else:
+        out = run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"])
+    return cpp_only(out.stdout.splitlines())
+
+
+def main() -> int:
+    p = argparse.ArgumentParser()
+    p.add_argument("--range", nargs=2, metavar=("BASE", "HEAD"),
+                   help="CI mode: format files changed between BASE and HEAD and emit a patch")
+    args = p.parse_args()
+
+    if which("uv") is None:
+        sys.exit("error: uv is not installed; install from https://astral.sh/uv")
+
+    root = repo_root()
+    version = read_clang_format_version(root / "pyproject.toml")
+    files = changed_files(args)
+
+    if not files:
+        print("No C/C++ files changed; skipping clang-format")
+        return 0
+
+    base_cmd = ["uvx", f"clang-format@{version}", "-style=file", "-fallback-style=none"]
+
+    if args.range:
+        subprocess.run(base_cmd + ["-i", *files], cwd=root, check=True)
+        patch = subprocess.run(
+            ["git", "diff"], cwd=root, check=True, capture_output=True, text=True,
+        ).stdout
+        patch_path = root / "clang_format.patch"
+        if patch:
+            patch_path.write_text(patch, encoding="utf-8")
+            print("clang-format auto-corrected files:")
+            subprocess.run(["git", "diff", "--name-only"], cwd=root, check=True)
+            print("\nApply the patch locally with: git apply clang_format.patch")
+            return 1
+        if patch_path.exists():
+            patch_path.unlink()
+        return 0
+
+    result = subprocess.run(base_cmd + ["--dry-run", "--Werror", *files], cwd=root)
+    if result.returncode != 0:
+        print(
+            f"\nFix in place with:\n  uvx clang-format@{version} -style=file -fallback-style=none -i \\\n    "
+            + " \\\n    ".join(files),
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

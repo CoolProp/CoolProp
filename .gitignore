@@ -85,3 +85,8 @@ bld/
 compile_commands.json
 cppcheck.txt
 **.pyd
+
+# uv-managed virtualenv / lockfile for dev tooling
+/.venv/
+/uv.lock
+/clang_format.patch

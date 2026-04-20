@@ -17,26 +17,26 @@ jobs:
       with:
         fetch-depth: 0   # Fetch all history (especially branches)
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+
     - name: Run clang-format against C++ files touched by the PR
       shell: bash
       run: |
           echo "GITHUB_REF=$GITHUB_REF GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
-          clang-format --version
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             # Use SHAs directly so this works for both fork PRs and local-branch PRs.
             # remotes/origin/<branch> is unreliable for fork PRs because the fork's
             # branch is not fetched into origin.
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.sha }}"
-            echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
-            ./dev/ci/clang-format.sh "$HEAD_SHA" "$BASE_SHA"
           else
             # Push event: GITHUB_HEAD_REF/BASE_REF are empty, so use before/after SHAs.
-            BEFORE_SHA="${{ github.event.before }}"
-            AFTER_SHA="${{ github.sha }}"
-            echo "Comparing push $AFTER_SHA against before $BEFORE_SHA"
-            ./dev/ci/clang-format.sh "$AFTER_SHA" "$BEFORE_SHA"
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
           fi
+          echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
+          python dev/hooks/pre-commit --range "$BASE_SHA" "$HEAD_SHA"
 
     - name: Upload clang-format patch as artifact
       if: ${{ failure() }}

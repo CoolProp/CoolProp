@@ -119,6 +119,24 @@ CoolProp can be developed locally on your machine.  Once code changes are comple
 
 ## Styleguides
 
+### C++ formatting (clang-format)
+
+C/C++ files are auto-formatted with `clang-format` (config in `.clang-format`). The version is pinned in `pyproject.toml`'s `dev` dependency group and run through [`uv`](https://astral.sh/uv) (specifically `uvx clang-format@<version>`), so CI and every contributor's machine execute the exact same binary on every platform.
+
+One-time setup per clone (works on macOS, Linux, Windows):
+
+```
+python dev/install-hooks.py
+```
+
+This sets `core.hooksPath` to `dev/hooks/`, enabling a pre-commit hook that blocks commits with formatting violations on staged C/C++ files. To format a range in place (same logic CI uses):
+
+```
+python dev/hooks/pre-commit --range <base-ref> HEAD
+```
+
+`uv` must be on `PATH`; see https://astral.sh/uv for installation. The `dev_clangformat.yml` workflow runs the same script and fails the build on any diff.
+
 ### Git Commit Messages
 
 * Use the present tense ("Add feature" not "Added feature")
