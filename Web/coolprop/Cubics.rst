@@ -107,6 +107,35 @@ And here, we run the PT flash
 
 As you can see, the speed difference is quite significant
 
+Superancillaries for SRK and PR
+-------------------------------
+
+For an additional speedup on saturation calculations, piecewise Chebyshev *superancillary* expansions (Bell and Deiters :cite:`Bell-IECR-2021`, ported from teqp) are available for pure fluids with the SRK and PR backends.  They return :math:`p^{\mathrm{sat}}(T)`, :math:`\rho'(T)`, and :math:`\rho''(T)` directly from closed-form polynomials — no iterative flash — at an accuracy better than 10\ :sup:`-3` relative to the cubic EOS result over the full saturation dome up to :math:`T_c`.
+
+Two entry points are provided on the :cpapi:`AbstractState <CoolProp::AbstractState>` (low-level interface only):
+
+* :cpapi:`update_QT_pure_superanc(Q, T) <CoolProp::AbstractState::update_QT_pure_superanc>` — populates the full two-phase state (same fields as ``update(QT_INPUTS, Q, T)``) using the superancillary instead of a full VLE flash.
+* :cpapi:`saturation_ancillary(param, Q, iT, T) <CoolProp::AbstractState::saturation_ancillary>` — returns a single saturation property (``iP`` or ``iDmolar``) without updating state.
+
+.. warning:: Superancillaries are only available for **pure** fluids with the **SRK** and **PR** backends, and only with **T** as the independent variable (``T`` must satisfy :math:`T \le T_c`).  They are *not* used transparently by ``PropsSI`` — you must use the low-level interface explicitly.
+
+.. ipython::
+
+    In [0]: import CoolProp.CoolProp as CP
+
+    In [0]: AS = CP.AbstractState("PR", "Propane")
+
+    # Full VLE flash through the cubic EOS
+    In [0]: %timeit AS.update(CP.QT_INPUTS, 1, 300)
+
+    # Same state populated from the superancillary
+    In [0]: %timeit AS.update_QT_pure_superanc(1, 300)
+
+    # Single saturation property (no state update)
+    In [0]: %timeit AS.saturation_ancillary(CP.iP, 0, CP.iT, 300)
+
+On a typical modern laptop this corresponds to roughly a 5--6x speedup for ``update_QT_pure_superanc`` relative to the full cubic flash, and roughly 9--10x for ``saturation_ancillary`` on a single property; exact numbers are hardware-dependent.
+
 Mixtures
 ========
 

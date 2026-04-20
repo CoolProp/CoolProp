@@ -708,3 +708,96 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
         throw ValueError(format("I don't know what to do with parameter [%s]", parameter.c_str()));
     }
 }
+
+double CoolProp::AbstractCubicBackend::calc_superanc_Tmax() {
+    if (!is_pure_or_pseudopure) {
+        throw ValueError("calc_superanc_Tmax: fluid must be pure");
+    }
+    int eos_code = get_superanc_eos_code();
+    if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        throw NotImplementedError("calc_superanc_Tmax: no superancillary available for this cubic EOS");
+    }
+    double Ttilde_max = CubicSuperAncillary::get_Ttilde_max(eos_code);
+    std::vector<double> x = {1.0};
+    // tau = T_r/Tc gives alpha=1 regardless of whether T_r is 1.0 or Tc
+    double tau_at_Tc = cubic->get_Tr() / cubic->get_Tc()[0];
+    double a0 = cubic->am_term(tau_at_Tc, x, 0);
+    double bm = cubic->bm_term(x);
+    return Ttilde_max * a0 / (cubic->get_R_u() * bm);
+}
+
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters param, int Q, parameters given, double value) {
+    if (!is_pure_or_pseudopure) {
+        throw NotImplementedError("calc_saturation_ancillary is not implemented for mixtures in the cubic backend");
+    }
+    int eos_code = get_superanc_eos_code();
+    if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        throw NotImplementedError("calc_saturation_ancillary: no superancillary available for this cubic EOS");
+    }
+    if (given != iT) {
+        throw NotImplementedError(format("calc_saturation_ancillary: only T-given is supported for cubic EOS; got given=%s",
+                                         get_parameter_information(given, "short").c_str()));
+    }
+    double T = value;
+    double Tmax = calc_superanc_Tmax();
+    if (T > Tmax) {
+        throw ValueError(format("calc_saturation_ancillary: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
+    }
+    std::vector<double> x = {1.0};
+    double tau = cubic->get_Tr() / T;
+    double am = cubic->am_term(tau, x, 0);
+    double bm = cubic->bm_term(x);
+    double Ttilde = cubic->get_R_u() * T * bm / am;
+
+    using namespace CubicSuperAncillary;
+    if (param == iP) {
+        double p_tilde = supercubic(eos_code, P_CODE, Ttilde);
+        return p_tilde * am / (bm * bm);
+    } else if (param == iDmolar) {
+        if (Q == 0) {
+            return supercubic(eos_code, RHOL_CODE, Ttilde) / bm;
+        } else {
+            return supercubic(eos_code, RHOV_CODE, Ttilde) / bm;
+        }
+    } else {
+        throw NotImplementedError(format("calc_saturation_ancillary: unsupported param=%s for cubic EOS",
+                                         get_parameter_information(param, "short").c_str()));
+    }
+}
+
+void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T) {
+    if (!is_pure_or_pseudopure) {
+        throw ValueError("update_QT_pure_superanc: fluid must be pure");
+    }
+    int eos_code = get_superanc_eos_code();
+    if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
+        throw NotImplementedError("update_QT_pure_superanc: no superancillary available for this cubic EOS");
+    }
+    double Tmax = calc_superanc_Tmax();
+    if (T > Tmax) {
+        throw ValueError(format("update_QT_pure_superanc: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
+    }
+
+    std::vector<double> x = {1.0};
+    double tau = cubic->get_Tr() / T;
+    double am = cubic->am_term(tau, x, 0);
+    double bm = cubic->bm_term(x);
+    double Ttilde = cubic->get_R_u() * T * bm / am;
+
+    using namespace CubicSuperAncillary;
+    CoolPropDbl rhoL = supercubic(eos_code, RHOL_CODE, Ttilde) / bm;
+    CoolPropDbl rhoV = supercubic(eos_code, RHOV_CODE, Ttilde) / bm;
+    CoolPropDbl p = supercubic(eos_code, P_CODE, Ttilde) * am / (bm * bm);
+
+    clear();
+    _Q = Q;
+    _T = T;
+    _p = p;
+    _rhomolar = 1.0 / (Q / rhoV + (1.0 - Q) / rhoL);
+    _phase = iphase_twophase;
+
+    SatL->update_TDmolarP_unchecked(T, rhoL, p);
+    SatV->update_TDmolarP_unchecked(T, rhoV, p);
+
+    post_update(false);
+}
