@@ -3646,9 +3646,11 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
 
         // Very close to the superancillary critical point the EOS flash becomes unreliable,
         // but the superancillary is still valid.  Check that the returned values are physically
-        // reasonable: rhoL > rhoV, p > 0, and p is close to p_critical.
+        // reasonable: rhoL > rhoV, p > 0, and p converges toward the superancillary's own pc.
         SECTION(backend + " physically reasonable very close to superanc Tc") {
-            double pc = AS->p_critical();
+            // Use the superancillary's pc (p at T just below Tmax) as the reference,
+            // not AS->p_critical() which reflects the real fluid, not the cubic model.
+            double pc_sa = ACB.calc_saturation_ancillary(iP, 0, iT, Tc_sa * (1.0 - 1e-7));
             for (double frac : {0.9999, 0.99999, 0.999999, 1.0 - 1e-7}) {
                 double T = frac * Tc_sa;
                 CAPTURE(T);
@@ -3658,7 +3660,7 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
                 CAPTURE(p_anc); CAPTURE(rhoL_anc); CAPTURE(rhoV_anc);
                 CHECK(p_anc > 0);
                 CHECK(rhoL_anc > rhoV_anc);
-                CHECK(std::abs(p_anc - pc) / pc < 0.01);  // within 1 % of pc
+                CHECK(std::abs(p_anc - pc_sa) / pc_sa < 0.01);  // within 1 % of superanc pc
             }
         }
     }

@@ -262,8 +262,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     void update_QT_pure_superanc(CoolPropDbl Q, CoolPropDbl T);
 
     /// Return the maximum temperature [K] supported by the cubic superancillary.
-    /// Uses Ttilde_max from the superancillary data and inverts Ttilde = R*T*b/a(T)
-    /// via a few Newton steps to account for the alpha function.
+    /// Inverts Ttilde_max = R*T*b/a(T) analytically using am evaluated at T=Tc.
     double calc_superanc_Tmax();
 };
 
