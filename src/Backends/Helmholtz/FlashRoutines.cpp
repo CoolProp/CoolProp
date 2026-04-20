@@ -89,6 +89,20 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
 }
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.is_pure_or_pseudopure) {
+        // At the critical point dP/drho -> 0, so solver_rho_Tp is ill-conditioned: a tight
+        // pressure residual does not imply a tight density. Short-circuit when (T, p)
+        // matches the critical point within 1e-10 relative on both axes. See issue #2738.
+        CoolPropDbl Tc = HEOS.T_critical();
+        CoolPropDbl pc = HEOS.p_critical();
+        if (is_in_closed_range(Tc * (1 - 1e-10), Tc * (1 + 1e-10), static_cast<CoolPropDbl>(HEOS._T))
+            && is_in_closed_range(pc * (1 - 1e-10), pc * (1 + 1e-10), static_cast<CoolPropDbl>(HEOS._p))) {
+            HEOS._phase = iphase_critical_point;
+            HEOS._T = Tc;
+            HEOS._p = pc;
+            HEOS._rhomolar = HEOS.rhomolar_critical();
+            HEOS._Q = -1;
+            return;
+        }
         if (HEOS.imposed_phase_index == iphase_not_imposed)  // If no phase index is imposed (see set_components function)
         {
             // At very low temperature (near the triple point temp), the isotherms are VERY steep
