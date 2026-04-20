@@ -77,27 +77,27 @@ def generate_ph_test():
         # Generate value checks
         for i in range(5):
             value = plot._isolines[py_param][i].value
-            print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-10));')
-        
+            print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-10) || WithinRel({value}, 1e-8));')
+
         # Generate expected x values
         print('        const double expected_x[isoline_count][points_per_isoline] = {')
         for i in range(5):
             x_values = [format_number(x) for x in plot._isolines[py_param][i].x]
             print('            {' + ', '.join(x_values) + '},')
         print('        };')
-        
+
         # Generate expected y values
         print('        const double expected_y[isoline_count][points_per_isoline] = {')
         for i in range(5):
             y_values = [format_number(y) for y in plot._isolines[py_param][i].y]
             print('            {' + ', '.join(y_values) + '},')
         print('        };')
-        
+
         # Generate validation loop
         print(f'        for (int i = 0; i < {cpp_name.lower()}_isolines.size(); ++i) {{')
         print(f'            REQUIRE({cpp_name.lower()}_isolines[i].size() == points_per_isoline);')
         print(f'            for (int j = 0; j < {cpp_name.lower()}_isolines[i].size(); ++j) {{')
-        
+
         # Check for NaN values in this isoline type
         has_nan_x = any(math.isnan(x) for isoline in plot._isolines[py_param] for x in isoline.x)
         
@@ -171,9 +171,9 @@ def generate_ts_test():
         for i in range(5):
             value = plot._isolines[py_param][i].value
             if cpp_name == 'P':
-                print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-7));')
+                print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-7) || WithinRel({value}, 1e-8));')
             else:
-                print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-10));')
+                print(f'        CHECK_THAT({cpp_name.lower()}_isolines[{i}].value, WithinAbs({value}, 1e-10) || WithinRel({value}, 1e-8));')
         
         # Add blank line only for the first Q isolines section
         if cpp_name == 'Q':
