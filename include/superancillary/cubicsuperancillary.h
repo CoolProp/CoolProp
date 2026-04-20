@@ -2568,39 +2568,31 @@ const auto PR_rhoV = SuperAncillary{
 }
 };
 
+const int SRK_CODE = 1, PR_CODE = 2, UNKNOWN_CODE = -1;
+const int P_CODE = 100, RHOL_CODE = 101, RHOV_CODE = 102;
+
 static inline double supercubic(int EOS, int prop, double Ttilde){
     switch(EOS){
-        case 1:{
+        case SRK_CODE:{
             switch(prop){
-                case 100:
-                    return SRK_p.y(Ttilde);
-                case 101:
-                    return SRK_rhoL.y(Ttilde);
-                case 102:
-                    return SRK_rhoV.y(Ttilde);
-                default:
-                    return -2;
+                case P_CODE:    return SRK_p.y(Ttilde);
+                case RHOL_CODE: return SRK_rhoL.y(Ttilde);
+                case RHOV_CODE: return SRK_rhoV.y(Ttilde);
+                default:        return -2;
             }
         }
-        case 2:{
+        case PR_CODE:{
             switch(prop){
-                case 100:
-                    return PR_p.y(Ttilde);
-                case 101:
-                    return PR_rhoL.y(Ttilde);
-                case 102:
-                    return PR_rhoV.y(Ttilde);
-                default:
-                    return -2;
+                case P_CODE:    return PR_p.y(Ttilde);
+                case RHOL_CODE: return PR_rhoL.y(Ttilde);
+                case RHOV_CODE: return PR_rhoV.y(Ttilde);
+                default:        return -2;
             }
         }
         default:
             return -1;
     }
 }
-
-const int SRK_CODE = 1, PR_CODE = 2, UNKNOWN_CODE = -1;
-const int P_CODE = 100, RHOL_CODE = 101, RHOV_CODE = 102;
 
 /// Return the maximum reduced temperature Ttilde = R*T*b/a supported by the superancillary for the given EOS.
 static inline double get_Ttilde_max(int EOS) {

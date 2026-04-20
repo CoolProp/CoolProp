@@ -710,6 +710,9 @@ double CoolProp::AbstractCubicBackend::get_fluid_parameter_double(const size_t i
 }
 
 double CoolProp::AbstractCubicBackend::calc_superanc_Tmax() {
+    if (!is_pure_or_pseudopure) {
+        throw ValueError("calc_superanc_Tmax: fluid must be pure");
+    }
     int eos_code = get_superanc_eos_code();
     if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
         throw NotImplementedError("calc_superanc_Tmax: no superancillary available for this cubic EOS");
@@ -736,6 +739,10 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters
                                          get_parameter_information(given, "short").c_str()));
     }
     double T = value;
+    double Tmax = calc_superanc_Tmax();
+    if (T > Tmax) {
+        throw ValueError(format("calc_saturation_ancillary: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
+    }
     std::vector<double> x = {1.0};
     double tau = cubic->get_Tr() / T;
     double am = cubic->am_term(tau, x, 0);
@@ -765,6 +772,10 @@ void CoolProp::AbstractCubicBackend::update_QT_pure_superanc(CoolPropDbl Q, Cool
     int eos_code = get_superanc_eos_code();
     if (eos_code == CubicSuperAncillary::UNKNOWN_CODE) {
         throw NotImplementedError("update_QT_pure_superanc: no superancillary available for this cubic EOS");
+    }
+    double Tmax = calc_superanc_Tmax();
+    if (T > Tmax) {
+        throw ValueError(format("update_QT_pure_superanc: T (%g K) exceeds superancillary Tmax (%g K)", T, Tmax));
     }
 
     std::vector<double> x = {1.0};
