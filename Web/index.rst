@@ -12,7 +12,7 @@ What is CoolProp?
 
 CoolProp is a C++ library that implements:
 
-* :ref:`Pure and pseudo-pure fluid equations of state and transport properties for 122 components <list_of_fluids>`
+* :ref:`Pure and pseudo-pure fluid equations of state and transport properties <list_of_fluids>` for |num_pure_fluids| components
 * :ref:`Mixture properties using high-accuracy Helmholtz energy formulations <mixtures>`
 * :ref:`Correlations of properties of incompressible fluids and brines <Pure>`
 * :ref:`Computationally efficient tabular interpolation <tabular_interpolation>`
