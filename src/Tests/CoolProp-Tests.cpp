@@ -1500,6 +1500,33 @@ TEST_CASE("Tests for solvers in P,T flash using Water", "[flash],[PT]") {
     }
 }
 
+TEST_CASE("P,T flash at the critical point returns rhomolar_critical", "[flash],[PT],[critical_point],[2738]") {
+    // At the critical point, dP/drho -> 0 so the generic density solver is ill-conditioned.
+    // PT_flash should detect exact-critical inputs and return the tabulated critical density.
+    for (const std::string fluid : {"CarbonDioxide", "Water", "R134a"}) {
+        CAPTURE(fluid);
+        std::shared_ptr<AbstractState> AS(AbstractState::factory("HEOS", fluid));
+        double Tc = AS->T_critical();
+        double pc = AS->p_critical();
+        double rho_c = AS->rhomolar_critical();
+        AS->update(PT_INPUTS, pc, Tc);
+        CHECK(std::abs(AS->rhomolar() - rho_c) / rho_c < 1e-10);
+        CHECK(AS->phase() == iphase_critical_point);
+    }
+    SECTION("Issue #2738 reproducer (high-level API for CO2)") {
+        double Tc = Props1SI("CO2", "Tcrit");
+        double pc = Props1SI("CO2", "Pcrit");
+        double rho_crit = Props1SI("CO2", "rhomass_critical");
+        double rho_pt = PropsSI("Dmass", "T", Tc, "P", pc, "CO2");
+        CAPTURE(Tc);
+        CAPTURE(pc);
+        CAPTURE(rho_crit);
+        CAPTURE(rho_pt);
+        CHECK(ValidNumber(rho_pt));
+        CHECK(std::abs(rho_pt - rho_crit) / rho_crit < 1e-10);
+    }
+}
+
 TEST_CASE("Tests for solvers in P,Y flash using Water", "[flash],[PH],[PS],[PU]") {
     double Ts, y, T2;
     // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
