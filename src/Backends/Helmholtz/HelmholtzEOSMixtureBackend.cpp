@@ -1952,7 +1952,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void) {
     {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
-        Residual(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
+        Residual(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS){};
         double call(double T) {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
@@ -1987,7 +1987,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max(void) {
     {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
-        Residualhmax(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
+        Residualhmax(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS){};
         double call(double T) {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
@@ -3831,7 +3831,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         HelmholtzEOSMixtureBackend& HEOS;
         double L1, M1;
         Eigen::MatrixXd Lstar, Mstar;
-        Resid(HelmholtzEOSMixtureBackend& HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
+        Resid(HelmholtzEOSMixtureBackend& HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE){};
         std::vector<double> call(const std::vector<double>& tau_delta) {
             double rhomolar = tau_delta[1] * HEOS.rhomolar_reducing();
             double T = HEOS.T_reducing() / tau_delta[0];
@@ -3918,8 +3918,7 @@ class OneDimObjective : public FuncWrapper1DWithTwoDerivs
     CoolProp::HelmholtzEOSMixtureBackend& HEOS;
     const double delta;
     double _call, _deriv, _second_deriv;
-    OneDimObjective(HelmholtzEOSMixtureBackend& HEOS, double delta0)
-      : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE) {};
+    OneDimObjective(HelmholtzEOSMixtureBackend& HEOS, double delta0) : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE){};
     double call(double tau) {
         double rhomolar = HEOS.rhomolar_reducing() * delta, T = HEOS.T_reducing() / tau;
         HEOS.update_DmolarT_direct(rhomolar, T);

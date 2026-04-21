@@ -261,7 +261,7 @@ class PY_flash_resid : public FuncWrapper1D
     parameters other;
     CoolPropDbl value;
     PY_flash_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, parameters other, CoolPropDbl value)
-      : HEOS(&HEOS), p(p), other(other), value(value) {};
+      : HEOS(&HEOS), p(p), other(other), value(value){};
     double call(double T) {
         // Run the solver with T,P as inputs; this delegates to PT_flash_mixtures
         // which handles phase determination (stability analysis or phase envelope)
