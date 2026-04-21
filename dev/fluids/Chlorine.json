@@ -157,8 +157,8 @@
           "type": "IdealGasHelmholtzPlanckEinstein"
         },
         {
-          "a1": -3.95390162183112,
-          "a2": 3.83990498815427,
+          "a1": -3.9539013640553815,
+          "a2": 3.8399048397930695,
           "reference": "NBP",
           "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
@@ -268,7 +268,7 @@
           "type": "ResidualHelmholtzGaussian"
         }
       ],
-      "gas_constant": 8.314462618,
+      "gas_constant": 8.3144598,
       "gas_constant_units": "J/mol/K",
       "molar_mass": 0.070906,
       "molar_mass_units": "kg/mol",
