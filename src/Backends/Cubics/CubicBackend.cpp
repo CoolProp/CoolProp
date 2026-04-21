@@ -87,7 +87,8 @@ void CoolProp::AbstractCubicBackend::set_alpha0_from_components() {
             CoolPropFluid heos_fld = get_fluid(components[i].name);
             fld.EOS().sat_min_liquid = heos_fld.EOS().sat_min_liquid;
             fld.EOS().sat_min_vapor = heos_fld.EOS().sat_min_vapor;
-        } catch (...) {}
+        } catch (...) {
+        }
         _components.push_back(fld);
     }
 }

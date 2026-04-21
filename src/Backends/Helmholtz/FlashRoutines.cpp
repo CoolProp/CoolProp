@@ -1848,18 +1848,25 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
 
     // Helper lambda: binary-search for the edge of the valid evaluation
     // region between a failing and a working bound.
-    auto bracket_validity = [&try_eval](PY_flash_resid& resid,
-                                        CoolPropDbl& T_fail, CoolPropDbl& T_ok,
-                                        double& r_ok, bool fail_is_lo) {
+    auto bracket_validity = [&try_eval](PY_flash_resid& resid, CoolPropDbl& T_fail, CoolPropDbl& T_ok, double& r_ok, bool fail_is_lo) {
         CoolPropDbl a = std::min(T_fail, T_ok), b = std::max(T_fail, T_ok);
         for (int iter = 0; iter < 50; ++iter) {
             CoolPropDbl mid = 0.5 * (a + b);
             double r_mid;
             if (try_eval(resid, mid, r_mid)) {
-                if (fail_is_lo) { b = mid; } else { a = mid; }
-                T_fail = mid; r_ok = r_mid;
+                if (fail_is_lo) {
+                    b = mid;
+                } else {
+                    a = mid;
+                }
+                T_fail = mid;
+                r_ok = r_mid;
             } else {
-                if (fail_is_lo) { a = mid; } else { b = mid; }
+                if (fail_is_lo) {
+                    a = mid;
+                } else {
+                    b = mid;
+                }
             }
             if (b - a < 0.01) break;
         }
@@ -1889,13 +1896,13 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
             // iphase_twophase so the inner PT flash uses TPD-based
             // two-phase solving instead of re-evaluating is_inside.
             std::vector<std::pair<std::size_t, std::size_t>> intersections =
-                PhaseEnvelopeRoutines::find_intersections(HEOS.PhaseEnvelope, iP, HEOS._p);
+              PhaseEnvelopeRoutines::find_intersections(HEOS.PhaseEnvelope, iP, HEOS._p);
             if (intersections.size() < 2) {
                 throw ValueError(format("HSU_P_flash (mixture, PE two-phase): fewer than 2 intersections at P=%Lg", HEOS._p));
             }
             std::size_t iV = intersections[0].first;
             std::size_t iL = intersections[1].first;
-            CoolPropDbl T_dew    = PhaseEnvelopeRoutines::evaluate(HEOS.PhaseEnvelope, iT, iP, HEOS._p, iV);
+            CoolPropDbl T_dew = PhaseEnvelopeRoutines::evaluate(HEOS.PhaseEnvelope, iT, iP, HEOS._p, iV);
             CoolPropDbl T_bubble = PhaseEnvelopeRoutines::evaluate(HEOS.PhaseEnvelope, iT, iP, HEOS._p, iL);
             CoolPropDbl T_lo = std::min(T_bubble, T_dew);
             CoolPropDbl T_hi = std::max(T_bubble, T_dew);
@@ -1936,8 +1943,8 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
         std::size_t N = z.size();
         std::vector<CoolPropDbl> Tc(N), Pc(N), omega(N);
         for (std::size_t i = 0; i < N; ++i) {
-            Tc[i]    = HEOS.get_fluid_constant(i, iT_critical);
-            Pc[i]    = HEOS.get_fluid_constant(i, iP_critical);
+            Tc[i] = HEOS.get_fluid_constant(i, iT_critical);
+            Pc[i] = HEOS.get_fluid_constant(i, iP_critical);
             omega[i] = HEOS.get_fluid_constant(i, iacentric_factor);
         }
         CoolPropDbl P = HEOS._p;
@@ -1962,7 +1969,8 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
         }
         CoolPropDbl T_bubble = 0.5 * (a + b);
         // Bisect for dew-point T
-        a = Tmin; b = Tmax;
+        a = Tmin;
+        b = Tmax;
         for (int iter = 0; iter < 100; ++iter) {
             CoolPropDbl mid = 0.5 * (a + b);
             (f_dew(mid) < 0) ? a = mid : b = mid;
@@ -1997,8 +2005,7 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
             ok_hi = true;
         }
         if (!ok_lo || !ok_hi || r_lo * r_hi > 0) {
-            throw ValueError(
-              format("HSU_P_flash (mixture, imposed phase): could not bracket solution between Tmin=%Lg and Tmax=%Lg", T_lo, T_hi));
+            throw ValueError(format("HSU_P_flash (mixture, imposed phase): could not bracket solution between Tmin=%Lg and Tmax=%Lg", T_lo, T_hi));
         }
         Brent(resid, T_lo, T_hi, DBL_EPSILON, 1e-10, 100);
         HEOS.unspecify_phase();
@@ -2026,26 +2033,38 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
             // pseudo-critical temperature which should be evaluable.
             double r_mid;
             if (!try_eval(resid, T_pseudo_crit, r_mid)) {
-                throw ValueError(
-                  format("HSU_P_flash (mixture, blind): evaluation failed at T_pseudo_crit=%Lg", T_pseudo_crit));
+                throw ValueError(format("HSU_P_flash (mixture, blind): evaluation failed at T_pseudo_crit=%Lg", T_pseudo_crit));
             }
             // Scan downward from T_pseudo_crit in coarse geometric steps.
-            T_lo = T_pseudo_crit; r_lo = r_mid;
-            T_hi = T_pseudo_crit; r_hi = r_mid;
+            T_lo = T_pseudo_crit;
+            r_lo = r_mid;
+            T_hi = T_pseudo_crit;
+            r_hi = r_mid;
             double T_lo_fail = Tmin;
             bool lo_hit_wall = false;
             for (double T_try = T_pseudo_crit * 0.9; T_try >= Tmin; T_try *= 0.9) {
                 double r_try;
-                if (try_eval(resid, T_try, r_try)) { T_lo = T_try; r_lo = r_try; }
-                else { T_lo_fail = T_try; lo_hit_wall = true; break; }
+                if (try_eval(resid, T_try, r_try)) {
+                    T_lo = T_try;
+                    r_lo = r_try;
+                } else {
+                    T_lo_fail = T_try;
+                    lo_hit_wall = true;
+                    break;
+                }
             }
             // Refine the lower edge only if we don't already bracket.
             if (lo_hit_wall && r_lo * r_hi > 0) {
                 double a = T_lo_fail, b = T_lo;
                 for (int it = 0; it < 50 && b - a > 0.01; ++it) {
                     double mid = 0.5 * (a + b), r_try;
-                    if (try_eval(resid, mid, r_try)) { b = mid; T_lo = mid; r_lo = r_try; }
-                    else { a = mid; }
+                    if (try_eval(resid, mid, r_try)) {
+                        b = mid;
+                        T_lo = mid;
+                        r_lo = r_try;
+                    } else {
+                        a = mid;
+                    }
                 }
             }
             // Scan upward only if still no sign change.
@@ -2054,24 +2073,35 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
                 bool hi_hit_wall = false;
                 for (double T_try = T_pseudo_crit * 1.1; T_try <= Tmax; T_try *= 1.1) {
                     double r_try;
-                    if (try_eval(resid, T_try, r_try)) { T_hi = T_try; r_hi = r_try; }
-                    else { T_hi_fail = T_try; hi_hit_wall = true; break; }
+                    if (try_eval(resid, T_try, r_try)) {
+                        T_hi = T_try;
+                        r_hi = r_try;
+                    } else {
+                        T_hi_fail = T_try;
+                        hi_hit_wall = true;
+                        break;
+                    }
                 }
                 // Refine the upper edge only if still no sign change.
                 if (hi_hit_wall && r_lo * r_hi > 0) {
                     double a = T_hi, b = T_hi_fail;
                     for (int it = 0; it < 50 && b - a > 0.01; ++it) {
                         double mid = 0.5 * (a + b), r_try;
-                        if (try_eval(resid, mid, r_try)) { a = mid; T_hi = mid; r_hi = r_try; }
-                        else { b = mid; }
+                        if (try_eval(resid, mid, r_try)) {
+                            a = mid;
+                            T_hi = mid;
+                            r_hi = r_try;
+                        } else {
+                            b = mid;
+                        }
                     }
                 }
             }
-            ok_lo = true; ok_hi = true;
+            ok_lo = true;
+            ok_hi = true;
         }
         if (!ok_lo || !ok_hi || r_lo * r_hi > 0) {
-            throw ValueError(
-              format("HSU_P_flash (mixture, blind): could not bracket solution between Tmin=%Lg and Tmax=%Lg", T_lo, T_hi));
+            throw ValueError(format("HSU_P_flash (mixture, blind): could not bracket solution between Tmin=%Lg and Tmax=%Lg", T_lo, T_hi));
         }
         Brent(resid, T_lo, T_hi, DBL_EPSILON, 1e-10, 100);
     }
