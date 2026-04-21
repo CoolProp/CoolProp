@@ -2020,6 +2020,54 @@ void FlashRoutines::HSU_P_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS, param
         } else if (ok_lo && !ok_hi) {
             bracket_validity(resid, T_hi, T_lo, r_hi, /*fail_is_lo=*/false);
             ok_hi = true;
+        } else if (!ok_lo && !ok_hi) {
+            // Both endpoints fail (e.g. Tmin below valid EOS range,
+            // Tmax causes solver failures).  Scan outward from the
+            // pseudo-critical temperature which should be evaluable.
+            double r_mid;
+            if (!try_eval(resid, T_pseudo_crit, r_mid)) {
+                throw ValueError(
+                  format("HSU_P_flash (mixture, blind): evaluation failed at T_pseudo_crit=%Lg", T_pseudo_crit));
+            }
+            // Scan downward from T_pseudo_crit in coarse geometric steps.
+            T_lo = T_pseudo_crit; r_lo = r_mid;
+            T_hi = T_pseudo_crit; r_hi = r_mid;
+            double T_lo_fail = Tmin;
+            bool lo_hit_wall = false;
+            for (double T_try = T_pseudo_crit * 0.9; T_try >= Tmin; T_try *= 0.9) {
+                double r_try;
+                if (try_eval(resid, T_try, r_try)) { T_lo = T_try; r_lo = r_try; }
+                else { T_lo_fail = T_try; lo_hit_wall = true; break; }
+            }
+            // Refine the lower edge only if we don't already bracket.
+            if (lo_hit_wall && r_lo * r_hi > 0) {
+                double a = T_lo_fail, b = T_lo;
+                for (int it = 0; it < 50 && b - a > 0.01; ++it) {
+                    double mid = 0.5 * (a + b), r_try;
+                    if (try_eval(resid, mid, r_try)) { b = mid; T_lo = mid; r_lo = r_try; }
+                    else { a = mid; }
+                }
+            }
+            // Scan upward only if still no sign change.
+            if (r_lo * r_hi > 0) {
+                double T_hi_fail = Tmax;
+                bool hi_hit_wall = false;
+                for (double T_try = T_pseudo_crit * 1.1; T_try <= Tmax; T_try *= 1.1) {
+                    double r_try;
+                    if (try_eval(resid, T_try, r_try)) { T_hi = T_try; r_hi = r_try; }
+                    else { T_hi_fail = T_try; hi_hit_wall = true; break; }
+                }
+                // Refine the upper edge only if still no sign change.
+                if (hi_hit_wall && r_lo * r_hi > 0) {
+                    double a = T_hi, b = T_hi_fail;
+                    for (int it = 0; it < 50 && b - a > 0.01; ++it) {
+                        double mid = 0.5 * (a + b), r_try;
+                        if (try_eval(resid, mid, r_try)) { a = mid; T_hi = mid; r_hi = r_try; }
+                        else { b = mid; }
+                    }
+                }
+            }
+            ok_lo = true; ok_hi = true;
         }
         if (!ok_lo || !ok_hi || r_lo * r_hi > 0) {
             throw ValueError(
