@@ -81,49 +81,49 @@
         "hs_anchor": {
           "T": 458.55194,
           "T_units": "K",
-          "hmolar": 19614.483089,
+          "hmolar": 19614.475927,
           "hmolar_units": "J/mol",
           "p": 12007161.183611,
           "p_units": "Pa",
           "rhomolar": 7254.0,
           "rhomolar_units": "mol/m^3",
-          "smolar": 53.404512121,
+          "smolar": 53.404491877,
           "smolar_units": "J/mol/K"
         },
         "reducing": {
           "T": 416.8654,
           "T_units": "K",
-          "hmolar": 16487.883025,
+          "hmolar": 16487.876922,
           "hmolar_units": "J/mol",
           "p": 7642387.504,
           "p_units": "Pa",
           "rhomolar": 8060.0,
           "rhomolar_units": "mol/m^3",
-          "smolar": 47.555714483,
+          "smolar": 47.555696222,
           "smolar_units": "J/mol/K"
         },
         "sat_min_liquid": {
           "T": 172.1712,
           "T_units": "K",
-          "hmolar": -4472.5575,
+          "hmolar": -4472.556502,
           "hmolar_units": "J/mol",
           "p": 1381.0021,
           "p_units": "Pa",
           "rhomolar": 24601.6682,
           "rhomolar_units": "mol/m^3",
-          "smolar": -21.925128,
+          "smolar": -21.925123171,
           "smolar_units": "J/mol/K"
         },
         "sat_min_vapor": {
           "T": 172.1712,
           "T_units": "K",
-          "hmolar": 18381.7205,
+          "hmolar": 18381.713731,
           "hmolar_units": "J/mol",
           "p": 1381.0021,
           "p_units": "Pa",
           "rhomolar": 0.965642,
           "rhomolar_units": "mol/m^3",
-          "smolar": 110.8165,
+          "smolar": 110.816418420,
           "smolar_units": "J/mol/K"
         }
       },
@@ -157,8 +157,8 @@
           "type": "IdealGasHelmholtzPlanckEinstein"
         },
         {
-          "a1": -3.95390162183112,
-          "a2": 3.83990498815427,
+          "a1": -3.9539013640553815,
+          "a2": 3.8399048397930695,
           "reference": "NBP",
           "type": "IdealGasHelmholtzEnthalpyEntropyOffset"
         }
@@ -268,7 +268,7 @@
           "type": "ResidualHelmholtzGaussian"
         }
       ],
-      "gas_constant": 8.314462618,
+      "gas_constant": 8.3144598,
       "gas_constant_units": "J/mol/K",
       "molar_mass": 0.070906,
       "molar_mass_units": "kg/mol",
