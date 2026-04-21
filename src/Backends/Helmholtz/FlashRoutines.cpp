@@ -14,6 +14,60 @@
 
 namespace CoolProp {
 
+/// Wilson K-factor initial guesses + Rachford-Rice + PTflash_twophase solver.
+/// Used by both the phase-envelope and imposed-twophase branches.
+void FlashRoutines::PT_twophase_Wilson(HelmholtzEOSMixtureBackend& HEOS) {
+    std::size_t N = HEOS.get_mole_fractions().size();
+    std::vector<CoolPropDbl> z = HEOS.get_mole_fractions();
+    std::vector<CoolPropDbl> lnK(N), K(N), x(N), y(N);
+    double g0 = 0, g1 = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS.T(), HEOS.p(), i);
+        K[i] = exp(lnK[i]);
+        g0 += z[i] * (K[i] - 1);
+        g1 += z[i] * (1 - 1 / K[i]);
+    }
+    CoolPropDbl beta;
+    if (g0 < 0) {
+        beta = 0;
+    } else if (g1 > 0) {
+        beta = 1;
+    } else {
+        beta = FlashRoutines::g_RachfordRice(z, lnK, 0.5) < 0 ? 0.25 : 0.75;
+        for (int step = 0; step < 30; ++step) {
+            CoolPropDbl g = FlashRoutines::g_RachfordRice(z, lnK, beta);
+            CoolPropDbl dg = FlashRoutines::dgdbeta_RachfordRice(z, lnK, beta);
+            CoolPropDbl dbeta = -g / dg;
+            beta += dbeta;
+            if (beta < 0) beta = 0;
+            if (beta > 1) beta = 1;
+            if (std::abs(dbeta) < 1e-12) break;
+        }
+    }
+    SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
+
+    HEOS.SatL->set_mole_fractions(std::vector<double>(x.begin(), x.end()));
+    HEOS.SatL->calc_reducing_state();
+    HEOS.SatV->set_mole_fractions(std::vector<double>(y.begin(), y.end()));
+    HEOS.SatV->calc_reducing_state();
+
+    CoolProp::SaturationSolvers::PTflash_twophase_options o;
+    o.x = std::vector<double>(x.begin(), x.end());
+    o.y = std::vector<double>(y.begin(), y.end());
+    o.z = std::vector<double>(z.begin(), z.end());
+    o.T = HEOS.T();
+    o.p = HEOS.p();
+    o.omega = 1.0;
+    o.rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(HEOS.T(), HEOS.p(), 0.9 / HEOS.SatL->SRK_covolume());
+    o.rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(HEOS.T(), HEOS.p(), 0.9 / HEOS.SatV->SRK_covolume());
+
+    CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
+    solver.solve();
+    HEOS._phase = iphase_twophase;
+    HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
+    HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+}
+
 void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
     if (HEOS.PhaseEnvelope.built) {
         // Use the phase envelope if already constructed to determine phase boundary
@@ -21,36 +75,22 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
         SimpleState closest_state;
         std::size_t i;
         bool twophase = PhaseEnvelopeRoutines::is_inside(HEOS.PhaseEnvelope, iP, HEOS._p, iT, HEOS._T, i, closest_state);
-        if (!twophase && HEOS._T > closest_state.T) {
-            // Gas solution - bounded between phase envelope temperature and very high temperature
-            //
-            // Start with a guess value from SRK
-            CoolPropDbl rhomolar_guess = HEOS.solver_rho_Tp_SRK(HEOS._T, HEOS._p, iphase_gas);
 
-            solver_TP_resid resid(HEOS, HEOS._T, HEOS._p);
-            std::string errstr;
-            HEOS.specify_phase(iphase_gas);
-            try {
-                // Try using Newton's method
-                CoolPropDbl rhomolar = Newton(resid, rhomolar_guess, 1e-10, 100);
-                // Make sure the solution is within the bounds
-                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), static_cast<CoolPropDbl>(0.0), rhomolar)) {
-                    throw ValueError("out of range");
-                }
-                HEOS.update_DmolarT_direct(rhomolar, HEOS._T);
-            } catch (...) {
-                // If that fails, try a bounded solver
-                CoolPropDbl rhomolar = Brent(resid, closest_state.rhomolar, 1e-10, DBL_EPSILON, 1e-10, 100);
-                // Make sure the solution is within the bounds
-                if (!is_in_closed_range(static_cast<CoolPropDbl>(closest_state.rhomolar), static_cast<CoolPropDbl>(0.0), rhomolar)) {
-                    throw ValueError("out of range");
-                }
-            }
+        if (!twophase) {
+            // Single-phase: determine whether gas or liquid from the
+            // position relative to the closest state on the envelope.
+            phases phase_to_use = (HEOS._T > closest_state.T) ? iphase_gas : iphase_liquid;
+
+            // Use solver_rho_Tp with the phase imposed. For cubic backends
+            // this solves the cubic analytically; for HEOS it does Newton
+            // iteration internally (using SRK as the initial guess).
+            HEOS.specify_phase(phase_to_use);
+            CoolPropDbl rhomolar = HEOS.solver_rho_Tp(HEOS._T, HEOS._p);
+            HEOS.update_DmolarT_direct(rhomolar, HEOS._T);
             HEOS.unspecify_phase();
             HEOS._Q = -1;
         } else {
-            // Liquid solution
-            throw ValueError();
+            PT_twophase_Wilson(HEOS);
         }
     } else {
         if (HEOS.imposed_phase_index == iphase_not_imposed) {
@@ -79,59 +119,7 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
                 HEOS._phase = iphase_liquid;
             }
         } else if (HEOS.imposed_phase_index == iphase_twophase) {
-            // Two-phase imposed: use Wilson K-factors for initial guesses,
-            // then run the Newton-based PT two-phase flash solver.
-            std::size_t N = HEOS.get_mole_fractions().size();
-            std::vector<CoolPropDbl> z = HEOS.get_mole_fractions();
-            std::vector<CoolPropDbl> lnK(N), K(N), x(N), y(N);
-            double g0 = 0, g1 = 0;
-            for (std::size_t i = 0; i < N; ++i) {
-                lnK[i] = SaturationSolvers::Wilson_lnK_factor(HEOS, HEOS.T(), HEOS.p(), i);
-                K[i] = exp(lnK[i]);
-                g0 += z[i] * (K[i] - 1);
-                g1 += z[i] * (1 - 1 / K[i]);
-            }
-            CoolPropDbl beta;
-            if (g0 < 0) {
-                beta = 0;
-            } else if (g1 > 0) {
-                beta = 1;
-            } else {
-                beta = FlashRoutines::g_RachfordRice(z, lnK, 0.5) < 0 ? 0.25 : 0.75;
-                // A few Newton steps on the Rachford-Rice equation
-                for (int step = 0; step < 30; ++step) {
-                    CoolPropDbl g = FlashRoutines::g_RachfordRice(z, lnK, beta);
-                    CoolPropDbl dg = FlashRoutines::dgdbeta_RachfordRice(z, lnK, beta);
-                    CoolPropDbl dbeta = -g / dg;
-                    beta += dbeta;
-                    if (beta < 0) beta = 0;
-                    if (beta > 1) beta = 1;
-                    if (std::abs(dbeta) < 1e-12) break;
-                }
-            }
-            SaturationSolvers::x_and_y_from_K(beta, K, z, x, y);
-
-            // Set compositions and get density guesses
-            HEOS.SatL->set_mole_fractions(std::vector<double>(x.begin(), x.end()));
-            HEOS.SatL->calc_reducing_state();
-            HEOS.SatV->set_mole_fractions(std::vector<double>(y.begin(), y.end()));
-            HEOS.SatV->calc_reducing_state();
-
-            CoolProp::SaturationSolvers::PTflash_twophase_options o;
-            o.x = std::vector<double>(x.begin(), x.end());
-            o.y = std::vector<double>(y.begin(), y.end());
-            o.z = std::vector<double>(z.begin(), z.end());
-            o.T = HEOS.T();
-            o.p = HEOS.p();
-            o.omega = 1.0;
-            o.rhomolar_liq = HEOS.SatL->solver_rho_Tp_global(HEOS.T(), HEOS.p(), 0.9 / HEOS.SatL->SRK_covolume());
-            o.rhomolar_vap = HEOS.SatV->solver_rho_Tp_global(HEOS.T(), HEOS.p(), 0.9 / HEOS.SatV->SRK_covolume());
-
-            CoolProp::SaturationSolvers::PTflash_twophase solver(HEOS, o);
-            solver.solve();
-            HEOS._phase = iphase_twophase;
-            HEOS._Q = (o.z[0] - o.x[0]) / (o.y[0] - o.x[0]);
-            HEOS._rhomolar = 1 / (HEOS._Q / HEOS.SatV->rhomolar() + (1 - HEOS._Q) / HEOS.SatL->rhomolar());
+            PT_twophase_Wilson(HEOS);
         } else {
             // It's single-phase, and phase is imposed
             double rho = HEOS.solver_rho_Tp(HEOS.T(), HEOS.p());
