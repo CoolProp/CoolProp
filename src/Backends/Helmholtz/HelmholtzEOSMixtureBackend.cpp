@@ -2771,6 +2771,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             } else {
                 // Try with 4th order Householder method starting at a very high density
                 rhomolar = Householder4(&resid, 3 * rhomolar_reducing(), 1e-8, 100);
+                // Validate: liquid root must have dP/drho > 0 (mechanically stable)
+                if (first_partial_deriv(iP, iDmolar, iT) < 0) {
+                    // Converged to a mechanically unstable root; retry with bounded solver
+                    rhomolar = solver_rho_Tp_global(T, p, 0.9 / SRK_covolume());
+                }
             }
             return rhomolar;
         } else if (phase == iphase_supercritical_liquid) {

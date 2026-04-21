@@ -99,10 +99,26 @@ void FlashRoutines::PT_flash_mixtures(HelmholtzEOSMixtureBackend& HEOS) {
     } else {
         // TPD says stable — single-phase (even if caller imposed two-phase,
         // e.g. near the phase boundary during an HP flash Brent sweep).
-        double rho = HEOS.solver_rho_Tp_global(HEOS.T(), HEOS.p(), 20000);
-        HEOS.update_DmolarT_direct(rho, HEOS.T());
+        //
+        // Determine the phase from Wilson K-factor bubble-pressure estimate
+        // before solving for density.
+        double T = HEOS.T(), p = HEOS.p();
+        const std::vector<CoolPropDbl>& z = HEOS.get_mole_fractions();
+        double sum_zK = 0;
+        for (std::size_t i = 0; i < z.size(); ++i) {
+            double Tci = HEOS.get_fluid_constant(i, iT_critical);
+            double Pci = HEOS.get_fluid_constant(i, iP_critical);
+            double omega_i = HEOS.get_fluid_constant(i, iacentric_factor);
+            double Ki = (Pci / p) * exp(5.373 * (1 + omega_i) * (1 - Tci / T));
+            sum_zK += z[i] * Ki;
+        }
+        // sum(z_i*K_i) < 1 means P > Pbub_Wilson, i.e. liquid
+        phases phase_to_use = (sum_zK < 1) ? iphase_liquid : iphase_gas;
+        HEOS.specify_phase(phase_to_use);
+        double rho = HEOS.solver_rho_Tp(T, p);
+        HEOS.update_DmolarT_direct(rho, T);
+        HEOS.unspecify_phase();
         HEOS._Q = -1;
-        HEOS._phase = iphase_liquid;
     }
 }
 void FlashRoutines::PT_flash(HelmholtzEOSMixtureBackend& HEOS) {
