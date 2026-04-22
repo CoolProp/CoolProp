@@ -112,7 +112,7 @@ set(COOLPROP_INCLUDE_DIRS
     ${ROOT_DIR}/dev
     ${Eigen_SOURCE_DIR}
     ${fmt_SOURCE_DIR}/include
-    ${ROOT_DIR}/boost_CoolProp
+    ${boost_headers_SOURCE_DIR}
     ${ROOT_DIR}/externals/incbin
     ${ROOT_DIR}/externals/nlohmann-json
     ${ROOT_DIR}/externals/miniz-3.1.1
@@ -121,15 +121,6 @@ set(COOLPROP_INCLUDE_DIRS
     ${IF97_SOURCE_DIR}
     ${REFPROP_headers_SOURCE_DIR}
 )
-
-# Expand boost if needed
-if(NOT EXISTS "${ROOT_DIR}/boost_CoolProp/boost/version.hpp")
-    message(STATUS "Expanding boost sources...")
-    execute_process(
-        COMMAND ${CMAKE_COMMAND} -E tar xzf "${ROOT_DIR}/dev/docker/boost_bcp_docker/boost_CoolProp.tar.xz"
-        WORKING_DIRECTORY ${ROOT_DIR}
-    )
-endif()
 
 # Build miniz as a static library
 add_library(miniz STATIC "${ROOT_DIR}/externals/miniz-3.1.1/miniz.c")

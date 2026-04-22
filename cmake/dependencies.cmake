@@ -47,6 +47,13 @@ CPMAddPackage(
 )
 
 CPMAddPackage(
+  NAME boost_headers
+  GIT_REPOSITORY https://github.com/CoolProp/boost-headers.git
+  GIT_TAG        c68104660ca4bd80d0d5cb34c4eba0cf5bab3f73
+  DOWNLOAD_ONLY  YES
+)
+
+CPMAddPackage(
   NAME multicomplex
   GIT_REPOSITORY https://github.com/usnistgov/multicomplex
   GIT_TAG        39bf9ca52c7882ff0788bb9087c7548ebd8fba4c

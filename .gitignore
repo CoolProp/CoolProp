@@ -21,7 +21,6 @@ Web/fluid_properties/fluids/molecule_sdf/
 
 /dev/figs
 /dev/builder
-/boost_CoolProp
 
 /wrappers/Python/build
 /wrappers/Python/cmake_build
