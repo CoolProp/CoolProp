@@ -57,8 +57,20 @@ else:
 superanc = CP.SuperAncillary(json.dumps(jSuper))
 RPname = AS.fluid_param_string("REFPROP_name")
 
-# Load extended precision calcs from the release on github
-chk = json.load(open('{outputcheck}/{fluid}_check.json'))
+# Load extended precision calcs from the release on github. If the current
+# release pin doesn't include this fluid yet (e.g. a fluid freshly added or
+# updated in a PR before the corresponding fastchebpure tag is cut), emit a
+# placeholder plot instead of failing the docs build.
+import os as _os
+_check_path = '{outputcheck}/{fluid}_check.json'
+if not _os.path.exists(_check_path):
+    fig = plt.figure()
+    fig.text(0.5, 0.5, 'Check file not in pinned fastchebpure release\\nyet (fluid added/updated in this PR)')
+    plt.savefig('{fluid:s}.png', dpi = 300)
+    plt.savefig('{fluid:s}.pdf')
+    plt.close()
+    quit()
+chk = json.load(open(_check_path))
 df = pd.DataFrame(chk['data'])
 # df.info() # uncomment to see what fields are available
 
