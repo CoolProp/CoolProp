@@ -22,6 +22,7 @@
 #if !defined(NO_TABULAR_BACKENDS)
 #include "Backends/Tabular/TTSEBackend.h"
 #include "Backends/Tabular/BicubicBackend.h"
+#include "Backends/Tabular/SBTLBackend.h"
 #endif
 
 namespace CoolProp {
@@ -152,6 +153,10 @@ AbstractState* AbstractState::factory(const std::string& backend, const std::vec
         // Will throw if there is a problem with this backend
         const shared_ptr<AbstractState> AS(factory(f2, fluid_names));
         return new BicubicBackend(AS);
+    } else if (f1 == SBTL_BACKEND_FAMILY) {
+        // Will throw if there is a problem with this backend
+        const shared_ptr<AbstractState> AS(factory(f2, fluid_names));
+        return new SBTLBackend(AS);
     }
 #endif
     else if (backend == "?" || backend.empty()) {
