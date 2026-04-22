@@ -249,18 +249,7 @@ endif()
 set(COOLPROP_MSVC_ALL "/MTd" "/MT" "/MDd" "/MD"
 )# order matters "/MXd" before "/MX"
 
-set(ZIPFN "${CMAKE_CURRENT_SOURCE_DIR}/dev/docker/boost_bcp_docker/boost_CoolProp.tar.xz")
-set(OUTFN "${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp/boost/version.hpp")
-if (EXISTS ${ZIPFN})
-    if(NOT EXISTS ${OUTFN})
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xJf ${ZIPFN}
-                      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-        message(STATUS "Untarred boost headers")
-    endif()
-else()
-    message(FATAL_ERROR "tar.xz of boost sources needed for teqp cannot be found")
-endif()
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp")
+include_directories("${boost_headers_SOURCE_DIR}")
 
 
 #######################################
@@ -312,7 +301,7 @@ list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/miniz-3.1.1"
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/nlohmann-json")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/externals/incbin")
 list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/dev")
-list(APPEND APP_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/boost_CoolProp")
+list(APPEND APP_INCLUDE_DIRS "${boost_headers_SOURCE_DIR}")
 list(APPEND APP_INCLUDE_DIRS "${fmt_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${rapidjson_SOURCE_DIR}/include")
 list(APPEND APP_INCLUDE_DIRS "${IF97_SOURCE_DIR}")
