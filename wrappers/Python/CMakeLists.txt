@@ -212,6 +212,41 @@ else()
     target_compile_options(_constants_module PRIVATE -std=c++17)
 endif()
 
+# ============================================================================
+# pybind11 extension module (_CoolProp_pybind11) — ships alongside Cython
+# ============================================================================
+option(COOLPROP_BUILD_PYBIND11 "Build pybind11 Python extension alongside Cython" ON)
+
+if(COOLPROP_BUILD_PYBIND11)
+    pybind11_add_module(_CoolProp_pybind11_module MODULE
+        ${COOLPROP_SOURCES}
+        "${ROOT_DIR}/src/pybind11_interface.cxx"
+    )
+
+    add_dependencies(_CoolProp_pybind11_module generate_headers_target generate_constants_target)
+
+    target_compile_definitions(_CoolProp_pybind11_module PRIVATE
+        PYBIND11
+        COOLPROP_PYBIND11_INTERNAL_MODULE
+    )
+
+    target_include_directories(_CoolProp_pybind11_module PRIVATE
+        ${COOLPROP_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(_CoolProp_pybind11_module PRIVATE miniz)
+
+    set_target_properties(_CoolProp_pybind11_module PROPERTIES
+        OUTPUT_NAME "_CoolProp_pybind11"
+        PREFIX ""
+    )
+
+    install(TARGETS _CoolProp_pybind11_module
+        LIBRARY DESTINATION CoolProp
+        RUNTIME DESTINATION CoolProp
+    )
+endif()
+
 # Install the modules to the CoolProp package
 install(TARGETS CoolProp_module _constants_module
     LIBRARY DESTINATION CoolProp

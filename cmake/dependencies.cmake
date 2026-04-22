@@ -60,6 +60,12 @@ CPMAddPackage(
   DOWNLOAD_ONLY  YES
 )
 
+CPMAddPackage(
+  NAME pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11.git
+  GIT_TAG        v2.11.0
+)
+
 # ── fmt (header-only use; disable fmt's own tests/docs) ───────────────────
 
 CPMAddPackage(

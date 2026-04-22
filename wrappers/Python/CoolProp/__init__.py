@@ -13,24 +13,30 @@ if constants.__file__.rsplit('.', 1)[1] not in ['pyc', 'pyo', 'py']:
         print("Unable to remove" + constants.__file__ + ". Please manually remove it")
     quit()
 
-from .CoolProp import AbstractState
-from . import CoolProp
+try:
+    from . import _CoolProp_pybind11 as _impl
+    from ._CoolProp_pybind11 import AbstractState
+except ImportError:
+    from . import CoolProp as _impl
+    from .CoolProp import AbstractState
+
+from . import CoolProp  # retained for PDSim backward compat (.pxd cimport users)
 from . import HumidAirProp
 from . import State
 from .constants import *
 
-__fluids__ = CoolProp.get_global_param_string('fluids_list').split(',')
-__incompressibles_pure__ = CoolProp.get_global_param_string('incompressible_list_pure').split(',')
-__incompressibles_solution__ = CoolProp.get_global_param_string('incompressible_list_solution').split(',')
-__version__ = CoolProp.get_global_param_string('version')
-__gitrevision__ = CoolProp.get_global_param_string('gitrevision')
+__fluids__                   = _impl.get_global_param_string('fluids_list').split(',')
+__incompressibles_pure__     = _impl.get_global_param_string('incompressible_list_pure').split(',')
+__incompressibles_solution__ = _impl.get_global_param_string('incompressible_list_solution').split(',')
+__version__                  = _impl.get_global_param_string('version')
+__gitrevision__              = _impl.get_global_param_string('gitrevision')
 
 def get(s):
     """
     This is just a shorthand function for getting a parameter from
     ``CoolProp.get_global_param_string``
     """
-    return CoolProp.get_global_param_string(s)
+    return _impl.get_global_param_string(s)
 
 
 def test():

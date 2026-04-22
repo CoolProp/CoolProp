@@ -6,6 +6,8 @@
 #    include "HumidAirProp.h"
 #    include "DataStructures.h"
 #    include "Backends/Helmholtz/MixtureParameters.h"
+#    include "Backends/PCSAFT/PCSAFTLibrary.h"
+#    include "CPstrings.h"
 
 #    include <pybind11/pybind11.h>
 #    include <pybind11/stl.h>
@@ -370,7 +372,20 @@ void init_CoolProp(py::module& m) {
       .def("d4alphar_dDelta3_dTau", &AbstractState::d4alphar_dDelta3_dTau)
       .def("d4alphar_dDelta2_dTau2", &AbstractState::d4alphar_dDelta2_dTau2)
       .def("d4alphar_dDelta_dTau3", &AbstractState::d4alphar_dDelta_dTau3)
-      .def("d4alphar_dTau4", &AbstractState::d4alphar_dTau4);
+      .def("d4alphar_dTau4", &AbstractState::d4alphar_dTau4)
+      .def("update_QT_pure_superanc", &AbstractState::update_QT_pure_superanc)
+      .def("set_cubic_alpha_C",       &AbstractState::set_cubic_alpha_C)
+      .def("get_fluid_constant",      &AbstractState::get_fluid_constant)
+      .def("neff",                    &AbstractState::neff)
+      .def("gibbsmolar_residual",     &AbstractState::gibbsmolar_residual)
+      .def("hmolar_residual",         &AbstractState::hmolar_residual)
+      .def("smolar_residual",         &AbstractState::smolar_residual)
+      .def("umolar_idealgas",         &AbstractState::umolar_idealgas)
+      .def("umass_idealgas",          &AbstractState::umass_idealgas)
+      .def("hmolar_idealgas",         &AbstractState::hmolar_idealgas)
+      .def("hmass_idealgas",          &AbstractState::hmass_idealgas)
+      .def("smolar_idealgas",         &AbstractState::smolar_idealgas)
+      .def("smass_idealgas",          &AbstractState::smass_idealgas);
 
     m.def("AbstractState", &factory);
 
@@ -389,7 +404,11 @@ void init_CoolProp(py::module& m) {
     m.def("get_parameter_index", &get_parameter_index);
     m.def("get_phase_index", &get_phase_index);
     m.def("is_trivial_parameter", &is_trivial_parameter);
-    m.def("generate_update_pair", &generate_update_pair<double>);
+    m.def("generate_update_pair", [](parameters key1, double val1, parameters key2, double val2) {
+        double out1 = 0, out2 = 0;
+        auto pair = generate_update_pair(key1, val1, key2, val2, out1, out2);
+        return py::make_tuple(pair, out1, out2);
+    });
     m.def("Props1SI", &Props1SI);
     m.def("PropsSI", &PropsSI);
     m.def("PhaseSI", &PhaseSI);
@@ -415,14 +434,25 @@ void init_CoolProp(py::module& m) {
     m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);
     m.def("set_mixture_binary_pair_data", &set_mixture_binary_pair_data);
     m.def("apply_simple_mixing_rule", &apply_simple_mixing_rule);
+    m.def("set_config_int",                 &set_config_int);
+    m.def("get_config_int",                 &get_config_int);
+    m.def("set_interaction_parameters",     &set_interaction_parameters);
+    m.def("set_predefined_mixtures",        &set_predefined_mixtures);
+    m.def("get_mixture_binary_pair_pcsaft", &get_mixture_binary_pair_pcsaft);
+    m.def("set_mixture_binary_pair_pcsaft", &set_mixture_binary_pair_pcsaft);
+    m.def("FluidsList", []() {
+        return strsplit(get_global_param_string("FluidsList"), ',');
+    });
 }
 
-#    if defined(COOLPROP_PYBIND11_MODULE)
+#    if defined(COOLPROP_PYBIND11_INTERNAL_MODULE)
+PYBIND11_MODULE(_CoolProp_pybind11, m) {
+    init_CoolProp(m);
+}
+#    elif defined(COOLPROP_PYBIND11_MODULE)
 PYBIND11_PLUGIN(CoolProp) {
     py::module m("CoolProp", "CoolProp module");
-
     init_CoolProp(m);
-
     return m.ptr();
 }
 #    endif
