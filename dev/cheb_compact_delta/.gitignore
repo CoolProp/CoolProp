@@ -1,0 +1,4 @@
+__pycache__/
+*.so
+*.pyc
+torture_*.png
