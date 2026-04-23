@@ -1952,7 +1952,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void) {
     {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
-        Residual(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
+        Residual(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS){};
         double call(double T) {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
@@ -1987,7 +1987,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max(void) {
     {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
-        Residualhmax(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
+        Residualhmax(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS){};
         double call(double T) {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
@@ -2017,9 +2017,9 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     auto smolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_smolar_nocache(T_crit_, rhomolar_crit_); };
     auto hmolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_hmolar_nocache(T_crit_, rhomolar_crit_); };
     auto umolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_umolar_nocache(T_crit_, rhomolar_crit_); };
-    
+
     // Check for the presence of the melting line
-    if (other == iP && has_melting_line()){
+    if (other == iP && has_melting_line()) {
         double Tm = melting_line(iT, iP, value);
         if (_T < Tm - 0.001) {
             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
@@ -2771,6 +2771,11 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
             } else {
                 // Try with 4th order Householder method starting at a very high density
                 rhomolar = Householder4(&resid, 3 * rhomolar_reducing(), 1e-8, 100);
+                // Validate: liquid root must have dP/drho > 0 (mechanically stable)
+                if (first_partial_deriv(iP, iDmolar, iT) < 0) {
+                    // Converged to a mechanically unstable root; retry with bounded solver
+                    rhomolar = solver_rho_Tp_global(T, p, 0.9 / SRK_covolume());
+                }
             }
             return rhomolar;
         } else if (phase == iphase_supercritical_liquid) {
@@ -3826,7 +3831,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         HelmholtzEOSMixtureBackend& HEOS;
         double L1, M1;
         Eigen::MatrixXd Lstar, Mstar;
-        Resid(HelmholtzEOSMixtureBackend& HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
+        Resid(HelmholtzEOSMixtureBackend& HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE){};
         std::vector<double> call(const std::vector<double>& tau_delta) {
             double rhomolar = tau_delta[1] * HEOS.rhomolar_reducing();
             double T = HEOS.T_reducing() / tau_delta[0];
@@ -3913,8 +3918,7 @@ class OneDimObjective : public FuncWrapper1DWithTwoDerivs
     CoolProp::HelmholtzEOSMixtureBackend& HEOS;
     const double delta;
     double _call, _deriv, _second_deriv;
-    OneDimObjective(HelmholtzEOSMixtureBackend& HEOS, double delta0)
-      : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE) {};
+    OneDimObjective(HelmholtzEOSMixtureBackend& HEOS, double delta0) : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE){};
     double call(double tau) {
         double rhomolar = HEOS.rhomolar_reducing() * delta, T = HEOS.T_reducing() / tau;
         HEOS.update_DmolarT_direct(rhomolar, T);
