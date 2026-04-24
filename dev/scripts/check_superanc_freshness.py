@@ -40,7 +40,11 @@ def main():
             continue
         eos = d['EOS'][0]
         sa = eos.get('SUPERANCILLARY') or {}
-        stored = sa.get('eos_hash')
+        # `source_eos_hash` is what fastchebpure writes (fitcheb inject);
+        # `eos_hash` is the legacy name stamped by
+        # inject_superanc_check_points.py. Prefer source_eos_hash when both
+        # are present so the fit-side stamp stays authoritative.
+        stored = sa.get('source_eos_hash') or sa.get('eos_hash')
         if stored is None:
             skipped += 1
             continue

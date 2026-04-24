@@ -3654,10 +3654,18 @@ TEST_CASE("Superancillary eos_hash matches current EOS at bit level", "[ancillar
         CAPTURE(name);
         const auto& jsuper = eos.at("SUPERANCILLARY");
         // Every SA-bearing fluid must carry the freshness stamp. Fail loudly
-        // rather than silently skip — a new fluid added without re-running
-        // inject_superanc_check_points.py should not slip past this test.
-        REQUIRE(jsuper.contains("eos_hash"));
-        auto stored = jsuper.at("eos_hash").get<std::string>();
+        // rather than silently skip — a new fluid added without an inject
+        // step should not slip past this test.
+        //
+        // `source_eos_hash` is what fastchebpure writes (via `fitcheb inject`
+        // as of CoolProp/fastchebpure#2); `eos_hash` is the legacy field name
+        // used by `dev/scripts/inject_superanc_check_points.py`. Accept
+        // either; prefer the fastchebpure name when both are present so the
+        // fit-side stamp remains authoritative.
+        REQUIRE((jsuper.contains("source_eos_hash") || jsuper.contains("eos_hash")));
+        auto stored = jsuper.contains("source_eos_hash")
+                        ? jsuper.at("source_eos_hash").get<std::string>()
+                        : jsuper.at("eos_hash").get<std::string>();
         auto stripped = eos;
         stripped.erase("SUPERANCILLARY");
         TreeHasher th;
