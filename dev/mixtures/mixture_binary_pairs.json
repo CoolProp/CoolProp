@@ -2658,6 +2658,43 @@
     "gammaV": 1.029821
   },
   {
+    "BibTeX": "McLinden-NISTIR-8570",
+    "CAS1": "1630-78-0",
+    "CAS2": "75-10-5",
+    "F": 0.0,
+    "Name1": "R1132E",
+    "Name2": "R32",
+    "betaT": 0.9509,
+    "betaV": 1.0336,
+    "gammaT": 1.0281,
+    "gammaV": 1.0040
+  },
+  {
+    "BibTeX": "McLinden-NISTIR-8570",
+    "CAS1": "1630-78-0",
+    "CAS2": "754-12-1",
+    "F": 0.0,
+    "Name1": "R1132E",
+    "Name2": "R1234yf",
+    "betaT": 0.9835,
+    "betaV": 0.9972,
+    "gammaT": 0.9999,
+    "gammaV": 1.0197
+  },
+  {
+    "BibTeX": "McLinden-NISTIR-8570",
+    "CAS1": "692-49-9",
+    "CAS2": "156-60-5",
+    "F": 1.0,
+    "Name1": "R1336mzz(Z)",
+    "Name2": "R1130(E)",
+    "betaT": 0.9740,
+    "betaV": 1.1480,
+    "function": "R1336mzz(Z)-R1130(E)",
+    "gammaT": 0.9195,
+    "gammaV": 0.9251
+  },
+  {
     "BibTeX": "Bell-JCED-2016",
     "CAS1": "106-98-9",
     "CAS2": "67-64-1",
