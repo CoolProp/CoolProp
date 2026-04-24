@@ -1,13 +1,15 @@
 """
 Stamp SUPERANCILLARY freshness metadata into each dev/fluids/*.json from a
-fastchebpure release: extended-precision `check_points` and an `eos_hash`.
+fastchebpure release: extended-precision `check_points` and a
+`source_eos_hash` stamp.
 
-Source of truth is fastchebpure's output/{fluid}_exps.json (for the eos_hash,
-verbatim from `source_eos_hash`) and outputcheck/{fluid}_check.json (for a
-dense T grid with (T, p_mp, rho'_mp, rho''_mp) columns computed at extended
-precision, plus the (SA)/(mp) ratio columns that report how closely
-fastchebpure's double-precision Chebyshev evaluation reproduces the
-multi-precision reference at that T).
+Source of truth is fastchebpure's output/{fluid}_exps.json (for the hash,
+verbatim from its own `source_eos_hash` field) and
+outputcheck/{fluid}_check.json (for a dense T grid with
+(T, p_mp, rho'_mp, rho''_mp) columns computed at extended precision, plus
+the (SA)/(mp) ratio columns that report how closely fastchebpure's
+double-precision Chebyshev evaluation reproduces the multi-precision
+reference at that T).
 
 What gets injected per fluid:
 
@@ -20,13 +22,18 @@ What gets injected per fluid:
         "T / K", "p(mp) / Pa", "p(SA)/p(mp)", "rho'(mp) / mol/m^3",
         "rho'(SA)/rho'(mp)", "rho''(mp) / mol/m^3", "rho''(SA)/rho''(mp)".
 
-    eos_hash: copied verbatim from fastchebpure's `source_eos_hash` field.
-        fastchebpure computes this at fit time — FNV-1a structural hash of
-        EOS[0] minus SUPERANCILLARY, using the byte-stream contract
+    source_eos_hash: copied verbatim from fastchebpure's field of the same
+        name. fastchebpure computes this at fit time — FNV-1a structural
+        hash of EOS[0] minus SUPERANCILLARY, using the byte-stream contract
         documented in eos_fnv1a_hex below — so it is the definitive stamp
         of the EOS fastchebpure actually fit the SA against. The C++ hash
         test and check_superanc_freshness.py recompute the same hash from
         the current master EOS and flag any later edit as SA drift.
+
+        This Python injector and fastchebpure's `fitcheb inject` now write
+        exactly the same field (see CoolProp#2779 / fastchebpure#3); in
+        earlier revisions this script wrote `eos_hash` while fastchebpure
+        wrote `source_eos_hash`, which forced consumers to accept either.
 
 Safety guard: before stamping, we compare the fluid JSON's current
 jexpansions_p[0].coef[0] bit-exactly against the same entry in this
@@ -44,7 +51,7 @@ The fluid JSON is edited in place via text-splice (no json.dumps round-trip
 for the surrounding file content), so numbers with preserved trailing zeros
 or other stylistic choices elsewhere in the file are not perturbed.
 Injection is idempotent — re-running overwrites any previous check_points
-and eos_hash.
+and source_eos_hash.
 
 Usage:
     python inject_superanc_check_points.py --outputcheck /path/to/fastchebpure/outputcheck
@@ -113,7 +120,7 @@ def eos_fnv1a_hex(eos_obj):
     --------------------------------------------------------------------------
     Why a structural hash instead of hashing a canonical JSON dump?
 
-    We want the C++ test (CoolProp-Tests.cpp, "Superancillary eos_hash matches
+    We want the C++ test (CoolProp-Tests.cpp, "Superancillary source_eos_hash matches
     current EOS at bit level") to produce the same hash for the same EOS, so
     edits to a fluid file are caught cross-language. Hashing a JSON *string*
     fails that goal: Python's `repr(float)` and nlohmann::json::dump() use
@@ -248,10 +255,10 @@ def _find_superanc_close(text):
     return None
 
 
-def inject_fluid(fluid_path, points, eos_hash):
-    """Splice a check_points array (and an eos_hash stamp) into the SUPERANCILLARY
-    block as a text edit, so the rest of the file (formatting, number
-    representations, comments, etc.) is preserved byte-for-byte."""
+def inject_fluid(fluid_path, points, source_eos_hash):
+    """Splice a check_points array (and a source_eos_hash stamp) into the
+    SUPERANCILLARY block as a text edit, so the rest of the file (formatting,
+    number representations, comments, etc.) is preserved byte-for-byte."""
     text = fluid_path.read_text()
     span = _find_superanc_close(text)
     if span is None:
@@ -263,9 +270,13 @@ def inject_fluid(fluid_path, points, eos_hash):
     entry_indent = close_indent + '  '
     item_indent = entry_indent + '  '
 
-    # Drop any previous check_points / eos_hash so re-runs are idempotent.
+    # Drop any previous check_points / source_eos_hash so re-runs are
+    # idempotent. Also strip the legacy `eos_hash` name the early revisions
+    # of this script wrote, so re-running against a pre-harmonization tree
+    # doesn't leave a shadowed duplicate key behind.
     prefix = text[:close_idx]
     prefix = re.sub(r',\s*"check_points"\s*:\s*\[.*?\]\s*(?=[,}\s]*\Z)', '', prefix, count=1, flags=re.DOTALL)
+    prefix = re.sub(r',\s*"source_eos_hash"\s*:\s*"[0-9a-f]+"\s*(?=[,}\s]*\Z)', '', prefix, count=1)
     prefix = re.sub(r',\s*"eos_hash"\s*:\s*"[0-9a-f]+"\s*(?=[,}\s]*\Z)', '', prefix, count=1)
     # The existing last entry in SUPERANCILLARY has no trailing comma (it is the last
     # child of the object); snap off the whitespace that preceded the close brace so
@@ -273,8 +284,8 @@ def inject_fluid(fluid_path, points, eos_hash):
     prefix = prefix.rstrip(' \t\n\r')
 
     lines = [',']
-    if eos_hash is not None:
-        lines.append(f'{entry_indent}"eos_hash": {json.dumps(eos_hash)},')
+    if source_eos_hash is not None:
+        lines.append(f'{entry_indent}"source_eos_hash": {json.dumps(source_eos_hash)},')
     lines.append(f'{entry_indent}"check_points": [')
     for i, pt in enumerate(points):
         lines.append(f'{item_indent}{{')

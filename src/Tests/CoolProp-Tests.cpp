@@ -3444,9 +3444,9 @@ extern unsigned char gall_fluids_JSON_zData[];
 extern unsigned int gall_fluids_JSON_zSize;
 }
 
-TEST_CASE("Superancillary eos_hash matches current EOS at bit level", "[ancillary]") {
-    // Byte-level freshness check: the stored eos_hash was stamped from the EOS
-    // fastchebpure saw when it fit the superancillary; if anyone has edited
+TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[ancillary]") {
+    // Byte-level freshness check: the stored source_eos_hash was stamped from
+    // the EOS fastchebpure saw when it fit the superancillary; if anyone has edited
     // the EOS since (gas constant, alpha0/alphar, reducing state, ...), the
     // current hash of EOS[0] (with the SUPERANCILLARY subtree removed) will
     // disagree and this test fails. Mirror of
@@ -3655,17 +3655,12 @@ TEST_CASE("Superancillary eos_hash matches current EOS at bit level", "[ancillar
         const auto& jsuper = eos.at("SUPERANCILLARY");
         // Every SA-bearing fluid must carry the freshness stamp. Fail loudly
         // rather than silently skip — a new fluid added without an inject
-        // step should not slip past this test.
-        //
-        // `source_eos_hash` is what fastchebpure writes (via `fitcheb inject`
-        // as of CoolProp/fastchebpure#2); `eos_hash` is the legacy field name
-        // used by `dev/scripts/inject_superanc_check_points.py`. Accept
-        // either; prefer the fastchebpure name when both are present so the
-        // fit-side stamp remains authoritative.
-        REQUIRE((jsuper.contains("source_eos_hash") || jsuper.contains("eos_hash")));
-        auto stored = jsuper.contains("source_eos_hash")
-                        ? jsuper.at("source_eos_hash").get<std::string>()
-                        : jsuper.at("eos_hash").get<std::string>();
+        // step should not slip past this test. The field name is the one
+        // fastchebpure emits (`fitcheb inject`'s `source_eos_hash`);
+        // `dev/scripts/inject_superanc_check_points.py` now writes the same
+        // key so that there is a single canonical field across producers.
+        REQUIRE(jsuper.contains("source_eos_hash"));
+        auto stored = jsuper.at("source_eos_hash").get<std::string>();
         auto stripped = eos;
         stripped.erase("SUPERANCILLARY");
         TreeHasher th;
