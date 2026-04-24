@@ -3359,7 +3359,7 @@
           "gas_constant / J/mol/K": 8.314462618,
           "rhocrittrue / mol/m^3": 6147.059664073046
         },
-        "eos_hash": "26b94f6e38703412",
+        "source_eos_hash": "26b94f6e38703412",
         "check_points": [
           {
             "T / K": 195.15,

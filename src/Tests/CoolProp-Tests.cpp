@@ -3444,9 +3444,9 @@ extern unsigned char gall_fluids_JSON_zData[];
 extern unsigned int gall_fluids_JSON_zSize;
 }
 
-TEST_CASE("Superancillary eos_hash matches current EOS at bit level", "[ancillary]") {
-    // Byte-level freshness check: the stored eos_hash was stamped from the EOS
-    // fastchebpure saw when it fit the superancillary; if anyone has edited
+TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[ancillary]") {
+    // Byte-level freshness check: the stored source_eos_hash was stamped from
+    // the EOS fastchebpure saw when it fit the superancillary; if anyone has edited
     // the EOS since (gas constant, alpha0/alphar, reducing state, ...), the
     // current hash of EOS[0] (with the SUPERANCILLARY subtree removed) will
     // disagree and this test fails. Mirror of
@@ -3654,10 +3654,13 @@ TEST_CASE("Superancillary eos_hash matches current EOS at bit level", "[ancillar
         CAPTURE(name);
         const auto& jsuper = eos.at("SUPERANCILLARY");
         // Every SA-bearing fluid must carry the freshness stamp. Fail loudly
-        // rather than silently skip — a new fluid added without re-running
-        // inject_superanc_check_points.py should not slip past this test.
-        REQUIRE(jsuper.contains("eos_hash"));
-        auto stored = jsuper.at("eos_hash").get<std::string>();
+        // rather than silently skip — a new fluid added without an inject
+        // step should not slip past this test. The field name is the one
+        // fastchebpure emits (`fitcheb inject`'s `source_eos_hash`);
+        // `dev/scripts/inject_superanc_check_points.py` now writes the same
+        // key so that there is a single canonical field across producers.
+        REQUIRE(jsuper.contains("source_eos_hash"));
+        auto stored = jsuper.at("source_eos_hash").get<std::string>();
         auto stripped = eos;
         stripped.erase("SUPERANCILLARY");
         TreeHasher th;
@@ -4091,6 +4094,10 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables",
             "Gao et al., IECR 2022, Table 14 C6F14 row 3"},
         {"R1233zd(E)",         400.0,  8000.0, 10.79073e6,  122.693,  176.124, 441.123, 1e-5,
             "Akasaka & Lemmon, JPCRD 2022, Table IX row 4 (supersedes Mondejar-JCED-2015)"},
+        {"R1130(E)",           320.0, 12500.0,  3.39671e6,   76.665,  115.586, 946.434, 1e-5,
+            "Huber, Kazakov & Lemmon, IJT 2025, Table 4 row 3 (g_i != 1 in exponential terms)"},
+        {"R1243zf",            280.0, 11000.0,  7.393335e6,   90.7467, 130.734, 648.467, 1e-5,
+            "Akasaka & Lemmon, IJT 2025, Table 6 row 2 (3rd EOS, g_i != 1; supersedes Akasaka-JCED-2019)"},
     };
 
     for (const auto& r : rows) {
@@ -4116,4 +4123,5 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables",
         }
     }
 }
+
 #endif
