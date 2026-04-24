@@ -4091,6 +4091,10 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables",
             "Gao et al., IECR 2022, Table 14 C6F14 row 3"},
         {"R1233zd(E)",         400.0,  8000.0, 10.79073e6,  122.693,  176.124, 441.123, 1e-5,
             "Akasaka & Lemmon, JPCRD 2022, Table IX row 4 (supersedes Mondejar-JCED-2015)"},
+        {"R1130(E)",           320.0, 12500.0,  3.39671e6,   76.665,  115.586, 946.434, 1e-5,
+            "Huber, Kazakov & Lemmon, IJT 2025, Table 4 row 3 (g_i != 1 in exponential terms)"},
+        {"R1243zf",            280.0, 11000.0,  7.393335e6,   90.7467, 130.734, 648.467, 1e-5,
+            "Akasaka & Lemmon, IJT 2025, Table 6 row 2 (3rd EOS, g_i != 1; supersedes Akasaka-JCED-2019)"},
     };
 
     for (const auto& r : rows) {
@@ -4116,4 +4120,5 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables",
         }
     }
 }
+
 #endif
