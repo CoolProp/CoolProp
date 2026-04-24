@@ -790,6 +790,23 @@ A superancillary object is formed of a number of one dimensional Chebyshev appro
 template <typename ArrayType = Eigen::ArrayXd>
 class SuperAncillary
 {
+   public:
+    /// Extended-precision reference point used to verify that superancillary evaluation
+    /// has not regressed. Populated from fastchebpure's outputcheck data at generation time.
+    /// Each `*_SA_ratio` is fastchebpure's reported (SA)/(mp) ratio at this T: the
+    /// double-precision Chebyshev eval of the same expansion divided by the multi-precision
+    /// reference value. |ratio - 1| is the tolerance budget the C++ evaluator should meet.
+    struct CheckPoint
+    {
+        double T;             ///< Temperature in K
+        double p;             ///< Saturation pressure in Pa (multi-precision reference)
+        double rhoL;          ///< Saturated liquid molar density in mol/m^3 (multi-precision reference)
+        double rhoV;          ///< Saturated vapor molar density in mol/m^3 (multi-precision reference)
+        double p_SA_ratio;    ///< p(SA) / p(mp) as reported by fastchebpure
+        double rhoL_SA_ratio; ///< rho'(SA) / rho'(mp) as reported by fastchebpure
+        double rhoV_SA_ratio; ///< rho''(SA) / rho''(mp) as reported by fastchebpure
+    };
+
    private:
     /// These ones must always be present
     ChebyshevApproximation1D<ArrayType> m_rhoL,  ///< Approximation of \f$\rho'(T)\f$
@@ -810,6 +827,7 @@ class SuperAncillary
     double m_rhocrit_num;  ///< The numerical critical density, in mol/m^3
     double m_pmin;         ///< The minimum pressure, in Pa
     double m_pmax;         ///< The maximum pressure, in Pa
+    std::vector<CheckPoint> m_check_points;  ///< Optional extended-precision verification states
 
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
      \param j The JSON data
@@ -878,7 +896,19 @@ class SuperAncillary
         m_Tcrit_num(j.at("meta").at("Tcrittrue / K")),
         m_rhocrit_num(j.at("meta").at("rhocrittrue / mol/m^3")),
         m_pmin(m_p.eval(m_p.xmin())),
-        m_pmax(m_p.eval(m_p.xmax())) {};
+        m_pmax(m_p.eval(m_p.xmax())) {
+        if (j.contains("check_points")) {
+            for (const auto& pt : j.at("check_points")) {
+                m_check_points.push_back({pt.at("T / K").get<double>(),
+                                          pt.at("p(mp) / Pa").get<double>(),
+                                          pt.at("rho'(mp) / mol/m^3").get<double>(),
+                                          pt.at("rho''(mp) / mol/m^3").get<double>(),
+                                          pt.at("p(SA)/p(mp)").get<double>(),
+                                          pt.at("rho'(SA)/rho'(mp)").get<double>(),
+                                          pt.at("rho''(SA)/rho''(mp)").get<double>()});
+            }
+        }
+    };
 
     /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
      * \param s The string-encoded JSON data for the superancillaries
@@ -942,6 +972,10 @@ class SuperAncillary
     /// Get the numerical critical density in mol/m^3
     const double get_rhocrit_num() const {
         return m_rhocrit_num;
+    }
+    /// Get the extended-precision verification states (empty if none are present in the JSON)
+    const std::vector<CheckPoint>& get_check_points() const {
+        return m_check_points;
     }
 
     /**

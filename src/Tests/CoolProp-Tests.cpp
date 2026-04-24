@@ -7,7 +7,9 @@
 #include "../Backends/REFPROP/REFPROPMixtureBackend.h"
 #include "../Backends/Cubics/CubicBackend.h"
 #include "superancillary/superancillary.h"
+#include "miniz.h"
 #include <map>
+#include <set>
 
 // ############################################
 //                      TESTS
@@ -3435,6 +3437,281 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary functions are av
             }
         }
     }
+};
+
+extern "C" {
+extern unsigned char gall_fluids_JSON_zData[];
+extern unsigned int gall_fluids_JSON_zSize;
+}
+
+TEST_CASE("Superancillary eos_hash matches current EOS at bit level", "[ancillary]") {
+    // Byte-level freshness check: the stored eos_hash was stamped from the EOS
+    // fastchebpure saw when it fit the superancillary; if anyone has edited
+    // the EOS since (gas constant, alpha0/alphar, reducing state, ...), the
+    // current hash of EOS[0] (with the SUPERANCILLARY subtree removed) will
+    // disagree and this test fails. Mirror of
+    // dev/scripts/check_superanc_freshness.py on the Python side.
+    //
+    // Two subtleties motivate the implementation below:
+    //
+    //   1. We must bypass CoolProp's runtime rapidjson parse: it doesn't
+    //      enable kParseFullPrecisionFlag and so rounds some doubles 1 ULP
+    //      away from the JSON text value. Decompressing the raw compiled-in
+    //      blob and parsing with nlohmann::json (correctly-rounded by
+    //      default) yields the same doubles Python saw at inject time.
+    //
+    //   2. We cannot hash via a canonical JSON dump: nlohmann's and Python's
+    //      shortest-round-trip float formatters occasionally disagree (e.g.,
+    //      nlohmann emits "19673.920781104862" where Python emits
+    //      "19673.92078110486" for the same double). So we hash the parsed
+    //      TREE (type tags + raw IEEE-754 bits for doubles, two's complement
+    //      for ints, UTF-8 for strings, sorted keys for objects). Since the
+    //      parsed values are bit-identical across languages, the byte stream
+    //      fed to FNV-1a is too, and the hashes match exactly.
+    //
+    // Known-stale fluids: EOS edited in master since the last fastchebpure
+    // release, with no yet-released SA to match. Adding a fluid here makes
+    // the test assert on the *mismatch* (so an accidental regen also forces
+    // an update here). Currently empty — fastchebpure 2026.04.23 covers
+    // every master fluid that has an SA.
+    static const std::set<std::string> known_stale_SA = {};
+
+    // ---------------------------------------------------------------------
+    // TreeHasher: FNV-1a 64 over a deterministic byte serialization of a
+    // parsed JSON tree.
+    //
+    // We need a hash that (a) agrees byte-for-byte with the Python inject
+    // script, (b) is cross-platform / cross-compiler deterministic, and
+    // (c) is robust to insignificant representation differences (trailing
+    // digits, key ordering, etc.). Hashing a JSON *string* doesn't satisfy
+    // (c): Python's repr and nlohmann::dump disagree on "shortest round
+    // trip" for a handful of doubles. So instead we feed FNV-1a a byte
+    // stream derived from the parsed VALUES — two implementations that
+    // parse the same JSON into the same doubles produce identical bytes.
+    //
+    // Byte-stream contract (this C++ walk must stay in lockstep with
+    // `eos_fnv1a_hex` in dev/scripts/inject_superanc_check_points.py):
+    //
+    //   null      -> 'n'
+    //   false     -> 'f'
+    //   true      -> 't'
+    //   integer   -> 'i' then int64 two's-complement bits as LE u64
+    //   float     -> 'd' then IEEE-754 bits as LE u64
+    //   string    -> 's' then LE u64 UTF-8 byte count then UTF-8 bytes
+    //   array     -> 'a' then LE u64 length then each element walked
+    //   object    -> 'o' then LE u64 size then, for each key in sorted
+    //                order: LE u64 UTF-8 byte count, UTF-8 bytes, walked
+    //                value
+    //
+    // Notes / invariants future readers should preserve:
+    //   * Type tags let us distinguish 0, 0.0, false, and "" (they would
+    //     otherwise all hash the same with integer-only or string-only
+    //     encodings).
+    //   * nlohmann::json is backed by std::map, so iterating `items()`
+    //     already yields keys in sorted order. Do not switch to
+    //     ordered_json (insertion order) or unordered_json — the Python
+    //     side explicitly sorts, and we must match.
+    //   * All CoolProp-supported platforms are little-endian, so we
+    //     encode u64s little-endian without an explicit swap. If that
+    //     ever changes, replace mix_u64 with an endianness-normalized
+    //     variant in both languages simultaneously.
+    //   * is_number_unsigned is lumped with is_number_integer and cast
+    //     through int64_t. For any JSON integer that fits in int64 the
+    //     two's-complement bit pattern matches Python's `x & 0xFF...F`
+    //     encoding; fluid JSONs never exceed that range.
+    //   * FNV-1a is NOT cryptographic; we only need determinism and
+    //     reasonable distribution for change detection. Never rely on
+    //     this for security.
+    //
+    // The seed 0xcbf29ce484222325 and prime 0x100000001b3 are the
+    // standard FNV-1a 64-bit parameters.
+    // ---------------------------------------------------------------------
+    struct TreeHasher
+    {
+        uint64_t h = 0xcbf29ce484222325ULL;
+        /// Fold one byte into the running hash (FNV-1a step).
+        void mix_u8(uint8_t b) {
+            h ^= b;
+            h *= 0x100000001b3ULL;
+        }
+        /// Fold a buffer of raw bytes into the running hash, one byte at a time.
+        void mix_bytes(const void* data, std::size_t n) {
+            const auto* p = static_cast<const uint8_t*>(data);
+            for (std::size_t i = 0; i < n; ++i) mix_u8(p[i]);
+        }
+        /// Fold a 64-bit integer in little-endian byte order. Used for lengths,
+        /// IEEE-754 bit patterns of doubles, and two's-complement ints.
+        void mix_u64(uint64_t v) {
+            for (int i = 0; i < 8; ++i) mix_u8(static_cast<uint8_t>((v >> (i * 8)) & 0xff));
+        }
+        /// Recursively fold a JSON subtree into the running hash. See the
+        /// byte-stream contract in the block comment above.
+        void walk(const nlohmann::json& j) {
+            if (j.is_null()) {
+                mix_u8('n');
+            } else if (j.is_boolean()) {
+                // Distinct tags for true and false; we never fold a payload
+                // byte here, so 'true' alone is what distinguishes booleans
+                // from strings like "t" (which emit 's' + length + 't').
+                mix_u8(j.get<bool>() ? 't' : 'f');
+            } else if (j.is_number_integer() || j.is_number_unsigned()) {
+                // All JSON ints — whether nlohmann classified them signed or
+                // unsigned — get the same 'i' tag and int64 bit pattern. This
+                // matches Python, where json.loads always yields a single int
+                // type regardless of sign.
+                mix_u8('i');
+                mix_u64(static_cast<uint64_t>(j.get<int64_t>()));
+            } else if (j.is_number_float()) {
+                // Feed raw IEEE-754 bits, not the textual representation.
+                // std::memcpy is the well-defined way to type-pun double -> u64;
+                // both Python's struct.pack('<d', x) and this produce the same
+                // 8 bytes on a little-endian host.
+                mix_u8('d');
+                uint64_t bits;
+                double v = j.get<double>();
+                std::memcpy(&bits, &v, 8);
+                mix_u64(bits);
+            } else if (j.is_string()) {
+                // Length-prefixed UTF-8. The length prefix prevents collisions
+                // between, e.g., ["ab","c"] and ["a","bc"] when array elements
+                // are walked back to back.
+                const auto& s = j.get_ref<const std::string&>();
+                mix_u8('s');
+                mix_u64(s.size());
+                mix_bytes(s.data(), s.size());
+            } else if (j.is_array()) {
+                // Length prefix disambiguates nested arrays — without it, [[1],[]]
+                // and [[1,[]]] would serialize to the same byte stream.
+                mix_u8('a');
+                mix_u64(j.size());
+                for (const auto& el : j) walk(el);
+            } else if (j.is_object()) {
+                // Size prefix + keys in sorted (lexicographic by UTF-8 bytes)
+                // order. nlohmann's underlying std::map already iterates in
+                // that order; if a future maintainer swaps in an ordered_json
+                // or unordered_json type, this loop will silently change
+                // behavior and stop agreeing with Python — add an explicit
+                // sort there.
+                mix_u8('o');
+                mix_u64(j.size());
+                for (auto it = j.begin(); it != j.end(); ++it) {
+                    const auto& k = it.key();
+                    mix_u64(k.size());
+                    mix_bytes(k.data(), k.size());
+                    walk(it.value());
+                }
+            }
+        }
+        /// Return the final hash as 16 lowercase hex chars (zero-padded).
+        std::string hex() const {
+            char buf[17];
+            std::snprintf(buf, sizeof(buf), "%016llx", static_cast<unsigned long long>(h));
+            return std::string(buf);
+        }
+    };
+
+    // Self-test the TreeHasher against a fixed input/hash pair so that the
+    // byte-stream contract can't silently drift even if every fluid JSON
+    // happens to stay internally consistent. The expected value is computed
+    // by dev/scripts/inject_superanc_check_points.py::eos_fnv1a_hex on the
+    // same literal fixture; a regression on either side flips one digit.
+    // This fixture exercises every type in the contract (null, bool, int,
+    // float, string, array, object, nested objects, empty containers).
+    {
+        nlohmann::json fixture = {
+            {"alphar", {{{"d", {1, 2, 3}}, {"n", {-0.5, 1.25e-10, 3.14159265358979}}}}},
+            {"empty_array", nlohmann::json::array()},
+            {"empty_string", ""},
+            {"flag_false", false},
+            {"flag_true", true},
+            {"gas_constant", 8.3144598},
+            {"nested", {{"deep", {{"deeper", nullptr}}}}},
+            {"zero_float", 0.0},
+            {"zero_int", 0},
+        };
+        TreeHasher fixture_hasher;
+        fixture_hasher.walk(fixture);
+        CHECK(fixture_hasher.hex() == "8e75626511d00b5c");
+    }
+
+    // Decompress the raw all_fluids JSON bytes — the same blob FluidLibrary
+    // loads, but without the subsequent rapidjson round-trip.
+    std::vector<unsigned char> buf(gall_fluids_JSON_zSize * 7);
+    mz_ulong out_len = static_cast<mz_ulong>(buf.size());
+    REQUIRE(mz_uncompress(buf.data(), &out_len, gall_fluids_JSON_zData, gall_fluids_JSON_zSize) == MZ_OK);
+    auto all_fluids = nlohmann::json::parse(buf.begin(), buf.begin() + out_len);
+
+    int fluids_checked = 0;
+    for (const auto& jfluid : all_fluids) {
+        if (!jfluid.contains("EOS") || jfluid.at("EOS").empty()) {
+            continue;
+        }
+        const auto& eos = jfluid.at("EOS")[0];
+        if (!eos.contains("SUPERANCILLARY")) {
+            continue;
+        }
+        std::string name = jfluid.value("INFO", nlohmann::json::object()).value("NAME", std::string("?"));
+        CAPTURE(name);
+        const auto& jsuper = eos.at("SUPERANCILLARY");
+        // Every SA-bearing fluid must carry the freshness stamp. Fail loudly
+        // rather than silently skip — a new fluid added without re-running
+        // inject_superanc_check_points.py should not slip past this test.
+        REQUIRE(jsuper.contains("eos_hash"));
+        auto stored = jsuper.at("eos_hash").get<std::string>();
+        auto stripped = eos;
+        stripped.erase("SUPERANCILLARY");
+        TreeHasher th;
+        th.walk(stripped);
+        auto computed = th.hex();
+        CAPTURE(stored);
+        CAPTURE(computed);
+        if (known_stale_SA.count(name)) {
+            // Expected mismatch — assert it so that an accidentally-regenerated
+            // SA also forces an update of this skip list.
+            CHECK(computed != stored);
+        } else {
+            CHECK(computed == stored);
+        }
+        ++fluids_checked;
+    }
+    CHECK(fluids_checked > 0);
+};
+
+
+TEST_CASE_METHOD(SuperAncillaryOnFixture, "Superancillary eval matches extended-precision check points for all fluids", "[ancillary]") {
+    // Per-point tolerance comes from fastchebpure's own reported (SA)/(mp) ratio:
+    // we demand that the C++ Chebyshev eval reproduce the multi-precision reference
+    // to within the same accuracy fastchebpure itself achieved at that T, plus a
+    // safety factor to absorb cross-platform floating-point jitter. The 1e-14 floor
+    // handles points where fastchebpure's ratio rounded exactly to 1.0.
+    const double safety_factor = 4.0;
+    const double floor_tol = 1e-14;
+    int fluids_checked = 0;
+    for (auto& fluid : strsplit(CoolProp::get_global_param_string("fluids_list"), ',')) {
+        auto jfluid = nlohmann::json::parse(get_fluid_param_string(fluid, "JSON"))[0];
+        if (!jfluid.at("EOS")[0].contains("SUPERANCILLARY")) {
+            continue;
+        }
+        CAPTURE(fluid);
+        auto jsuper = jfluid.at("EOS")[0].at("SUPERANCILLARY");
+        // Every SA-bearing fluid must carry check_points. Fail loudly rather
+        // than silently skip — a new fluid added without re-running
+        // inject_superanc_check_points.py should not slip past this test.
+        REQUIRE(jsuper.contains("check_points"));
+        superancillary::SuperAncillary<std::vector<double>> anc{jsuper};
+        for (const auto& pt : anc.get_check_points()) {
+            CAPTURE(pt.T);
+            const double tol_p = std::max(std::abs(pt.p_SA_ratio - 1.0), floor_tol) * safety_factor;
+            const double tol_rhoL = std::max(std::abs(pt.rhoL_SA_ratio - 1.0), floor_tol) * safety_factor;
+            const double tol_rhoV = std::max(std::abs(pt.rhoV_SA_ratio - 1.0), floor_tol) * safety_factor;
+            CHECK(std::abs(anc.eval_sat(pt.T, 'D', 0) / pt.rhoL - 1) < tol_rhoL);
+            CHECK(std::abs(anc.eval_sat(pt.T, 'D', 1) / pt.rhoV - 1) < tol_rhoV);
+            CHECK(std::abs(anc.eval_sat(pt.T, 'P', 1) / pt.p - 1) < tol_p);
+        }
+        ++fluids_checked;
+    }
+    // Guard against a silent schema drift that would make every fluid skip.
+    CHECK(fluids_checked > 0);
 };
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check out of bound for superancillary", "[superanc]") {
