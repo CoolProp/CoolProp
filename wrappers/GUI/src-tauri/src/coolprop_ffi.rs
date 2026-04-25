@@ -176,3 +176,75 @@ pub fn cp_get_global_param(param: &str) -> Result<String, String> {
         .to_string_lossy()
         .into_owned())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fluids_list_is_non_empty() {
+        let s = cp_get_global_param("FluidsList").expect("FluidsList lookup failed");
+        assert!(s.contains("Water"), "FluidsList missing Water: {s:?}");
+        assert!(s.split(',').count() > 50, "FluidsList suspiciously short");
+    }
+
+    #[test]
+    fn props1si_water_critical_point() {
+        let tcrit = cp_props1si("Water", "Tcrit").expect("Tcrit lookup failed");
+        // IAPWS-95: 647.096 K
+        assert!((tcrit - 647.096).abs() < 0.01, "Tcrit = {tcrit}, expected ~647.096");
+    }
+
+    #[test]
+    fn props1si_invalid_fluid_returns_error() {
+        let r = cp_props1si("ThisFluidDoesNotExist", "Tcrit");
+        assert!(r.is_err(), "Expected error for unknown fluid");
+    }
+
+    #[test]
+    fn create_state_invalid_backend_errors() {
+        let r = cp_create_state("NOT_A_BACKEND", "Water");
+        assert!(r.is_err(), "Expected error for invalid backend, got {r:?}");
+    }
+
+    #[test]
+    fn create_state_invalid_fluid_errors() {
+        let r = cp_create_state("HEOS", "ThisFluidDoesNotExist");
+        assert!(r.is_err(), "Expected error for unknown fluid, got {r:?}");
+    }
+
+    #[test]
+    fn full_state_lifecycle_water_pt() {
+        let h = cp_create_state("HEOS", "Water").expect("create_state");
+        cp_update_state(h, "PT_INPUTS", 101325.0, 300.0).expect("update_state");
+        let rho = cp_keyed_output(h, "Dmass").expect("keyed_output Dmass");
+        // Density of liquid water at 1 atm, 300 K — 996 kg/m³.
+        assert!((rho - 996.0).abs() < 2.0, "Dmass = {rho}, expected ~996");
+        cp_free_state(h).expect("free_state");
+    }
+
+    #[test]
+    fn unknown_input_pair_errors() {
+        let h = cp_create_state("HEOS", "Water").expect("create_state");
+        let r = cp_update_state(h, "NOT_A_PAIR", 1.0, 1.0);
+        cp_free_state(h).ok();
+        assert!(r.is_err(), "Expected error for unknown input pair");
+    }
+
+    #[test]
+    fn unknown_output_param_errors() {
+        let h = cp_create_state("HEOS", "Water").expect("create_state");
+        cp_update_state(h, "PT_INPUTS", 101325.0, 300.0).expect("update_state");
+        let r = cp_keyed_output(h, "NOT_A_PARAM");
+        cp_free_state(h).ok();
+        assert!(r.is_err(), "Expected error for unknown parameter");
+    }
+
+    #[test]
+    fn happrops_known_values() {
+        // Dry-bulb 20°C, RH 50%, P=101325 Pa → W ≈ 0.0073 kg/kg.
+        let w = cp_ha_props("W", "T", 293.15, "R", 0.5, "P", 101325.0)
+            .expect("HAPropsSI W");
+        assert!((w - 0.00729).abs() < 1e-3, "W = {w}, expected ~0.0073");
+    }
+}

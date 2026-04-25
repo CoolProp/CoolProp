@@ -74,6 +74,15 @@ jobs:
         working-directory: wrappers/GUI
         run: npm ci
 
+      # Rust unit tests (Linux only — platform-agnostic FFI / state-table
+      # logic; per-OS coverage comes from the build + smoke-test steps).
+      # Runs in release mode so the resulting CoolProp static lib + cargo
+      # build artifacts are reused by `tauri build` below.
+      - name: Run Rust unit tests
+        if: matrix.os == 'ubuntu-22.04'
+        working-directory: wrappers/GUI/src-tauri
+        run: cargo test --release --no-fail-fast
+
       # Forward macOS signing/notarization secrets into $GITHUB_ENV only when
       # APPLE_CERTIFICATE is actually set. Tauri 2's bundler attempts to codesign
       # whenever APPLE_CERTIFICATE is defined — even an empty value — and fails

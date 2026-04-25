@@ -205,3 +205,103 @@ pub fn compute_saturation_table(
 
     Ok(points)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fluids_list_command_returns_water() {
+        let list = get_fluids_list().expect("FluidsList");
+        assert!(list.iter().any(|f| f == "Water"), "FluidsList missing Water");
+        assert!(list.windows(2).all(|w| w[0] <= w[1]), "FluidsList not sorted");
+    }
+
+    #[test]
+    fn fluid_limits_water() {
+        let lim = get_fluid_limits("Water".to_string()).expect("Water limits");
+        // IAPWS-95 references: T_triple=273.16, T_crit=647.096, P_crit=22.064 MPa.
+        assert!((lim.t_min - 273.16).abs() < 0.05, "t_min = {}", lim.t_min);
+        assert!((lim.t_max - 647.096).abs() < 0.05, "t_max = {}", lim.t_max);
+        assert!(lim.p_min > 0.0 && lim.p_min < 1000.0, "p_min = {}", lim.p_min);
+        assert!(lim.p_max > 1e6 && lim.p_max < 1e9, "p_max = {}", lim.p_max);
+    }
+
+    #[test]
+    fn create_update_get_free_lifecycle() {
+        let id = create_state("HEOS".into(), "Water".into()).expect("create_state");
+        update_state(id, "PT_INPUTS".into(), 101325.0, 300.0).expect("update_state");
+        let rho = get_property(id, "Dmass".into()).expect("get_property");
+        assert!((rho - 996.0).abs() < 2.0, "rho = {rho}");
+        free_state(id).expect("free_state");
+        // After free, the id should be invalid.
+        let r = get_property(id, "Dmass".into());
+        assert!(r.is_err(), "Expected error after free, got {r:?}");
+    }
+
+    #[test]
+    fn invalid_state_id_errors() {
+        let r = get_property(99_999_999, "Dmass".into());
+        assert!(r.is_err(), "Expected error for invalid id");
+    }
+
+    #[test]
+    fn saturation_table_too_few_points_errors() {
+        let id = create_state("HEOS".into(), "Water".into()).unwrap();
+        let r = compute_saturation_table(id, true, 280.0, 600.0, 1, vec![]);
+        free_state(id).ok();
+        assert!(r.is_err(), "Expected error for n_points < 2");
+    }
+
+    #[test]
+    fn saturation_table_water_t_sweep() {
+        let id = create_state("HEOS".into(), "Water".into()).unwrap();
+        let pts = compute_saturation_table(
+            id,
+            true, // by temperature
+            300.0,
+            500.0,
+            10,
+            vec!["Dmass".into(), "Hmass".into()],
+        )
+        .expect("sat table");
+        free_state(id).ok();
+        assert!(!pts.is_empty(), "no points returned");
+        // Each point should have liquid + vapor with T, P, Dmass, Hmass.
+        for p in &pts {
+            for side in [&p.liquid, &p.vapor] {
+                assert!(side.contains_key("T"));
+                assert!(side.contains_key("P"));
+                assert!(side.contains_key("Dmass"));
+                assert!(side.contains_key("Hmass"));
+            }
+            // Liquid density >> vapor density on the saturation curve.
+            assert!(p.liquid["Dmass"] > p.vapor["Dmass"]);
+        }
+    }
+
+    #[test]
+    fn humid_air_command_basic_outputs() {
+        let res = compute_humid_air(
+            "P".into(), 101325.0,
+            "T".into(), 293.15,
+            "R".into(), 0.5,
+            vec!["W".into(), "H".into(), "B".into()],
+        ).expect("compute_humid_air");
+        let w = res["W"];
+        assert!((w - 0.00729).abs() < 1e-3, "W = {w}");
+        assert!(res.contains_key("H"));
+        assert!(res.contains_key("B"));
+    }
+
+    #[test]
+    fn humid_air_command_invalid_input_errors() {
+        let r = compute_humid_air(
+            "P".into(), 101325.0,
+            "T".into(), 293.15,
+            "NOT_AN_INPUT".into(), 0.5,
+            vec!["W".into()],
+        );
+        assert!(r.is_err(), "Expected error for invalid input name");
+    }
+}
