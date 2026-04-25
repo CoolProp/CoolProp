@@ -1,0 +1,47 @@
+# Mirror of the GUI's ubuntu-22.04 CI environment, for local reproduction.
+#
+# Build:
+#   docker build -f wrappers/GUI/docker/Dockerfile.ubuntu-builder -t coolprop-gui-builder .
+#
+# Run a build (mounts the repo, runs from wrappers/GUI/):
+#   docker run --rm -v "$PWD":/work -w /work/wrappers/GUI \
+#     coolprop-gui-builder bash -lc "npm ci && npm run tauri build"
+#
+# The bundle ends up under wrappers/GUI/src-tauri/target/release/bundle/.
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH=/usr/local/cargo/bin:/usr/local/nvm/versions/node/v20/bin:$PATH
+
+# System packages: build toolchain, CMake, Tauri 2 WebKit deps (matches the
+# Install Linux WebKit dependencies step in .github/workflows/gui_builder.yml).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        file \
+        git \
+        libayatana-appindicator3-dev \
+        librsvg2-dev \
+        libssl-dev \
+        libwebkit2gtk-4.1-dev \
+        libxdo-dev \
+        pkg-config \
+        wget \
+        xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Rust stable
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal \
+    && rustc --version
+
+# Node 20 via NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && node --version && npm --version
+
+WORKDIR /work

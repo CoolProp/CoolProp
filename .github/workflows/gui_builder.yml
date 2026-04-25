@@ -122,6 +122,75 @@ jobs:
           projectPath: wrappers/GUI
           tauriScript: npm run tauri
 
+      # Smoke-test the .deb in a clean ubuntu:26.04 container (newer than the
+      # build host) — verifies forward compatibility of the declared library
+      # dependencies and that all the binary's shared libs resolve on a fresh
+      # system after `apt-get -f install`.
+      - name: Smoke-test Ubuntu .deb (ubuntu:26.04 container)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -e
+          BUNDLE_DIR="$PWD/wrappers/GUI/src-tauri/target/release/bundle"
+          docker run --rm \
+            -v "$BUNDLE_DIR":/art:ro \
+            ubuntu:26.04 bash -c '
+              set -eu
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y --no-install-recommends ca-certificates file >/dev/null
+              dpkg -i /art/deb/*.deb >/dev/null 2>&1 || true
+              apt-get install -y -f >/dev/null
+              echo "=== package ==="; dpkg -l cool-prop | tail -1
+              BIN=$(dpkg -L cool-prop | xargs -I{} sh -c "[ -f {} ] && [ -x {} ] && echo {}" | grep -v "/share/" | head -1)
+              echo "=== binary: $BIN ==="; file "$BIN"
+              if ldd "$BIN" | grep -q "not found"; then
+                echo "FAIL: unresolved shared libraries:"
+                ldd "$BIN" | grep "not found"
+                exit 1
+              fi
+              echo "OK: all shared libraries resolve on ubuntu:26.04"
+            '
+
+      # Smoke-test the .msi by silently installing into the runner and
+      # verifying the resulting executable + its shared imports.
+      - name: Smoke-test Windows MSI
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $bundle = "$PWD\wrappers\GUI\src-tauri\target\release\bundle"
+          $msi = Get-ChildItem -Path "$bundle\msi\*.msi" | Select-Object -First 1
+          if (-not $msi) { throw "No .msi found under $bundle\msi" }
+          Write-Host "Installing $($msi.FullName) ..."
+          $log = "$env:TEMP\coolprop-msi-install.log"
+          $p = Start-Process msiexec.exe `
+            -ArgumentList "/i", "`"$($msi.FullName)`"", "/quiet", "/norestart", "/l*v", "`"$log`"" `
+            -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            Write-Host "msiexec exit $($p.ExitCode); tail of log:"
+            Get-Content $log -Tail 60
+            throw "MSI install failed"
+          }
+          # Tauri default install path is "C:\Program Files\<productName>\<exe>.exe"
+          $candidates = @(
+            "C:\Program Files\CoolProp\coolprop-gui.exe",
+            "C:\Program Files\CoolProp\CoolProp.exe"
+          )
+          $bin = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $bin) { throw "Installed binary not found in any expected location: $($candidates -join '; ')" }
+          Write-Host "OK: binary installed at $bin"
+          Get-Item $bin | Format-List Name, Length, VersionInfo
+          # Confirm imports load (no missing DLLs the OS image won't provide)
+          # by launching the binary briefly. Tauri 2 will open a window and
+          # exit when killed; --help isn't supported, so we just verify it
+          # doesn't crash on startup within a small timeout.
+          $proc = Start-Process -FilePath $bin -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 3
+          if ($proc.HasExited) {
+            throw "Binary exited immediately (exit code $($proc.ExitCode)) — likely a missing DLL or initialization failure"
+          }
+          Stop-Process -Id $proc.Id -Force
+          Write-Host "OK: binary launched and stayed alive for 3s"
+
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v4
         with:
