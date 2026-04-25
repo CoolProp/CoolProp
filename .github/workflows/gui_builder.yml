@@ -77,10 +77,12 @@ jobs:
       # Forward macOS signing/notarization secrets into $GITHUB_ENV only when
       # APPLE_CERTIFICATE is actually set. Tauri 2's bundler attempts to codesign
       # whenever APPLE_CERTIFICATE is defined — even an empty value — and fails
-      # at `security import`, so plumbing always-defined `${{ secrets.X }}` env
-      # vars into the build step would break unconfigured branches.
+      # at `security import`, so we must NOT plumb empty `${{ secrets.X }}` env
+      # vars into the build step. The shell guard handles the empty case.
+      # (GitHub Actions disallows `secrets.X` in step-level `if:` conditions, so
+      # the gating happens inside the run script rather than in the if.)
       - name: Configure macOS signing
-        if: matrix.os == 'macos-latest' && secrets.APPLE_CERTIFICATE != ''
+        if: matrix.os == 'macos-latest'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -94,6 +96,10 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
         run: |
+          if [ -z "${APPLE_CERTIFICATE:-}" ]; then
+            echo "macOS signing: APPLE_CERTIFICATE not set — building unsigned."
+            exit 0
+          fi
           for var in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
                      APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID \
                      APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_PATH; do
@@ -102,7 +108,7 @@ jobs:
               printf '%s<<__SIGN_EOF__\n%s\n__SIGN_EOF__\n' "$var" "$val" >> "$GITHUB_ENV"
             fi
           done
-          echo "macOS signing configured: APPLE_SIGNING_IDENTITY present"
+          echo "macOS signing: APPLE_* env forwarded to subsequent steps."
 
       # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
       # links the Rust crate, and produces native bundles under
