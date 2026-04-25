@@ -122,11 +122,11 @@ jobs:
           projectPath: wrappers/GUI
           tauriScript: npm run tauri
 
-      # Smoke-test the .deb in a clean ubuntu:26.04 container (newer than the
-      # build host) — verifies forward compatibility of the declared library
-      # dependencies and that all the binary's shared libs resolve on a fresh
-      # system after `apt-get -f install`.
-      - name: Smoke-test Ubuntu .deb (ubuntu:26.04 container)
+      # ─── Linux smoke tests ────────────────────────────────────────────────
+      # 1) Forward-compat: install .deb in a clean ubuntu:26.04 container,
+      #    let apt-get -f install resolve declared deps from 26.04 repos,
+      #    confirm all the binary's shared libs resolve.
+      - name: Smoke-test Ubuntu .deb (ubuntu:26.04 container, deps + ldd)
         if: matrix.os == 'ubuntu-22.04'
         run: |
           set -e
@@ -151,9 +151,43 @@ jobs:
               echo "OK: all shared libraries resolve on ubuntu:26.04"
             '
 
-      # Smoke-test the .msi by silently installing into the runner and
-      # verifying the resulting executable + its shared imports.
-      - name: Smoke-test Windows MSI
+      # 2) Launch the GUI on the runner under Xvfb, wait for the window,
+      #    capture a screenshot, and confirm the process is still alive.
+      #    Catches "binary starts but crashes initializing the WebView" and
+      #    "WebKit2GTK loads but the page never paints" types of bugs that
+      #    a static dep check can't see.
+      - name: Smoke-test Ubuntu launch + screenshot (Xvfb)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -e
+          sudo apt-get install -y --no-install-recommends xvfb imagemagick dbus-x11
+          DEB=$(ls "$PWD/wrappers/GUI/src-tauri/target/release/bundle/deb/"*.deb)
+          sudo dpkg -i "$DEB" || sudo apt-get install -y -f
+          mkdir -p artifacts/screenshots
+          Xvfb :99 -screen 0 1280x900x24 -ac >/tmp/xvfb.log 2>&1 &
+          XVFB_PID=$!
+          sleep 2
+          export DISPLAY=:99
+          export NO_AT_BRIDGE=1
+          /usr/bin/coolprop-gui >/tmp/coolprop-gui.log 2>&1 &
+          APP_PID=$!
+          sleep 8
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "FAIL: GUI exited within 8s; log:"
+            cat /tmp/coolprop-gui.log
+            exit 1
+          fi
+          echo "GUI alive (PID $APP_PID), capturing screenshot…"
+          import -display :99 -window root artifacts/screenshots/linux-startup.png \
+            || xwd -display :99 -root | convert xwd:- artifacts/screenshots/linux-startup.png
+          ls -la artifacts/screenshots/linux-startup.png
+          kill "$APP_PID" "$XVFB_PID" 2>/dev/null || true
+          echo "OK: GUI started and screenshot captured"
+
+      # ─── Windows smoke test ────────────────────────────────────────────────
+      # Silent-install the .msi, launch the binary visibly so a screenshot
+      # captures the actual window, then verify it stayed alive.
+      - name: Smoke-test Windows MSI launch + screenshot
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
@@ -170,26 +204,44 @@ jobs:
             Get-Content $log -Tail 60
             throw "MSI install failed"
           }
-          # Tauri default install path is "C:\Program Files\<productName>\<exe>.exe"
           $candidates = @(
             "C:\Program Files\CoolProp\coolprop-gui.exe",
             "C:\Program Files\CoolProp\CoolProp.exe"
           )
           $bin = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $bin) { throw "Installed binary not found in any expected location: $($candidates -join '; ')" }
-          Write-Host "OK: binary installed at $bin"
-          Get-Item $bin | Format-List Name, Length, VersionInfo
-          # Confirm imports load (no missing DLLs the OS image won't provide)
-          # by launching the binary briefly. Tauri 2 will open a window and
-          # exit when killed; --help isn't supported, so we just verify it
-          # doesn't crash on startup within a small timeout.
-          $proc = Start-Process -FilePath $bin -PassThru -WindowStyle Hidden
-          Start-Sleep -Seconds 3
+          if (-not $bin) { throw "Installed binary not found in: $($candidates -join '; ')" }
+          Write-Host "Installed at: $bin"
+
+          New-Item -ItemType Directory -Force -Path artifacts\screenshots | Out-Null
+          $proc = Start-Process -FilePath $bin -PassThru
+          Start-Sleep -Seconds 8
           if ($proc.HasExited) {
-            throw "Binary exited immediately (exit code $($proc.ExitCode)) — likely a missing DLL or initialization failure"
+            throw "Binary exited within 8s (exit $($proc.ExitCode)) — likely missing DLL / WebView2 init failure"
           }
+
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $shot = "artifacts\screenshots\windows-startup.png"
+          $bmp.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+          $g.Dispose(); $bmp.Dispose()
+          Write-Host "Screenshot saved to $shot"
+          Get-Item $shot | Format-List Name, Length
+
           Stop-Process -Id $proc.Id -Force
-          Write-Host "OK: binary launched and stayed alive for 3s"
+          Write-Host "OK: GUI started, stayed alive 8s, screenshot captured"
+
+      - name: Upload startup screenshot
+        if: matrix.os == 'ubuntu-22.04' || matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coolprop-gui-${{ matrix.os }}-screenshot
+          path: artifacts/screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v4
