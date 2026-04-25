@@ -84,3 +84,8 @@ bld/
 compile_commands.json
 cppcheck.txt
 **.pyd
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "CoolProp",
+  "project_id": "5273b3c1-13d6-41e4-bd50-686c5b6aadd5"
+}
