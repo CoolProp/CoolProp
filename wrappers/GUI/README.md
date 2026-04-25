@@ -72,16 +72,62 @@ are picked up by Vite HMR without a Rust rebuild.
 npm run tauri build
 ```
 
-Produces a signed-ready bundle for the host platform under
+Produces a bundle for the host platform under
 `src-tauri/target/release/bundle/`:
 
 - macOS: `.app` and `.dmg`
 - Windows: `.msi` and `.exe`
 - Linux: `.deb`, `.rpm`, and `.AppImage`
 
-Code signing and notarization are not configured here — see the Tauri docs
-for `tauri.conf.json > bundle > macOS` (entitlements, signing identity) and
-the Windows code-signing options.
+CI (`.github/workflows/gui_builder.yml`) builds these bundles on every push
+to GUI-affecting paths and uploads them as artifacts.
+
+### Running an unsigned macOS bundle (CI artifact)
+
+CI artifacts are not currently signed or notarized. macOS Gatekeeper will
+block them on first launch ("App is damaged" or "from an unidentified
+developer"). To launch:
+
+```sh
+xattr -dr com.apple.quarantine /path/to/CoolProp.app
+open /path/to/CoolProp.app
+```
+
+The same applies if you run a `.app` extracted from a CI-built `.dmg` —
+strip quarantine on the installed copy after dragging it to Applications.
+
+### Code signing (production)
+
+Signing is wired into the workflow but inactive by default. It activates
+when the GitHub repo defines the relevant secrets.
+
+**macOS — Developer ID + notarization.** Add these repo secrets:
+
+| Secret                       | Source                                                       |
+|------------------------------|--------------------------------------------------------------|
+| `APPLE_CERTIFICATE`          | base64 of the exported `.p12` Developer ID Application cert  |
+| `APPLE_CERTIFICATE_PASSWORD` | password used during the `.p12` export                       |
+| `APPLE_SIGNING_IDENTITY`     | e.g. `Developer ID Application: Your Name (TEAMID)`          |
+
+Plus one of the two notarization flows:
+
+- App-password: `APPLE_ID`, `APPLE_PASSWORD` (an app-specific password
+  generated at appleid.apple.com), `APPLE_TEAM_ID`.
+- API key (preferred for CI): `APPLE_API_ISSUER`, `APPLE_API_KEY`,
+  `APPLE_API_KEY_PATH` (path to the `.p8` written by the workflow).
+
+With those set, `tauri-action` will codesign the `.app`, staple the
+notarization ticket, and produce a `.dmg` that opens cleanly without the
+`xattr` workaround.
+
+**Windows — code signing.** Not yet wired in. The intended path for OSS
+projects is either [SignPath.io](https://signpath.io/) (free for qualifying
+OSS) or [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/)
+(pay-per-signature, no HSM). Both can be invoked as a post-build step
+against the `.msi` and `.exe` produced by `tauri build`.
+
+**Linux** — sign the release artifacts with GPG out-of-band; Flathub builds
+sign their own.
 
 ## Regenerating the app icon
 

@@ -77,10 +77,29 @@ jobs:
       # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
       # links the Rust crate, and produces native bundles under
       # wrappers/GUI/src-tauri/target/release/bundle/.
+      #
+      # macOS signing+notarization activates only when the repo defines all of
+      # APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD / APPLE_SIGNING_IDENTITY
+      # plus either (APPLE_ID + APPLE_PASSWORD + APPLE_TEAM_ID) for app-password
+      # auth, or (APPLE_API_ISSUER + APPLE_API_KEY + APPLE_API_KEY_PATH) for the
+      # notarytool API key flow. Without these secrets the build is unsigned —
+      # functional but flagged by Gatekeeper on first launch.
       - name: Build Tauri bundle
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing (Developer ID Application)
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # macOS notarization (app-password flow)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # macOS notarization (API key flow — alternative to app-password)
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
         with:
           projectPath: wrappers/GUI
           tauriScript: npm run tauri

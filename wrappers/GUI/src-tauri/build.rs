@@ -24,7 +24,11 @@ fn main() {
         .build();
 
     // CoolProp doesn't use cmake's install step; the lib stays in the build dir.
+    // Single-config generators (Make/Ninja, used on Linux & macOS) put the lib
+    // directly in build/. MSVC's multi-config generator nests it under Release/
+    // (or Debug/), so add both search paths.
     println!("cargo:rustc-link-search=native={}/build", dst.display());
+    println!("cargo:rustc-link-search=native={}/build/Release", dst.display());
     println!("cargo:rustc-link-lib=static=CoolProp");
 
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
