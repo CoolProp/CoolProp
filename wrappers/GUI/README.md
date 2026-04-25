@@ -98,36 +98,107 @@ strip quarantine on the installed copy after dragging it to Applications.
 
 ### Code signing (production)
 
-Signing is wired into the workflow but inactive by default. It activates
-when the GitHub repo defines the relevant secrets.
+Both macOS and Windows signing are wired into the workflow but stay inactive
+until the relevant repo secrets are defined. With nothing configured, the
+build still produces functional unsigned bundles.
 
-**macOS — Developer ID + notarization.** Add these repo secrets:
+#### macOS — Developer ID + notarization
 
-| Secret                       | Source                                                       |
-|------------------------------|--------------------------------------------------------------|
-| `APPLE_CERTIFICATE`          | base64 of the exported `.p12` Developer ID Application cert  |
-| `APPLE_CERTIFICATE_PASSWORD` | password used during the `.p12` export                       |
-| `APPLE_SIGNING_IDENTITY`     | e.g. `Developer ID Application: Your Name (TEAMID)`          |
+One-time setup:
 
-Plus one of the two notarization flows:
+1. **Get an Apple Developer ID.** Sign up at
+   [developer.apple.com](https://developer.apple.com/) ($99/yr at the time
+   of writing). The membership doesn't have to be in the project's name —
+   any maintainer's account works.
+2. **Create a Developer ID Application certificate.** In Xcode → Settings →
+   Accounts → "Manage Certificates…" → `+` → *Developer ID Application*. (Or
+   use the developer portal directly: Certificates, Identifiers & Profiles
+   → Certificates → `+` → *Developer ID Application*.)
+3. **Export the cert as `.p12`.** In Keychain Access, right-click the cert
+   → *Export*, choose Personal Information Exchange (.p12), set a password.
+4. **Base64-encode it for GitHub.**
+   `base64 -i Cert.p12 | pbcopy` — paste into the GitHub secret value.
+5. **Generate a notarytool API key (recommended over app-passwords).**
+   App Store Connect → Users and Access → Integrations → App Store Connect
+   API → `+` → grant "Developer" role. Download the `.p8` once (you can't
+   get it back) and note the Issuer ID and Key ID. Base64 the `.p8`:
+   `base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy`.
+6. **Add the GitHub secrets** (Repo Settings → Secrets and variables →
+   Actions → New repository secret):
 
-- App-password: `APPLE_ID`, `APPLE_PASSWORD` (an app-specific password
-  generated at appleid.apple.com), `APPLE_TEAM_ID`.
-- API key (preferred for CI): `APPLE_API_ISSUER`, `APPLE_API_KEY`,
-  `APPLE_API_KEY_PATH` (path to the `.p8` written by the workflow).
+| Secret                       | Value                                                              |
+|------------------------------|--------------------------------------------------------------------|
+| `APPLE_CERTIFICATE`          | base64 of the exported `.p12`                                      |
+| `APPLE_CERTIFICATE_PASSWORD` | password used during `.p12` export                                 |
+| `APPLE_SIGNING_IDENTITY`     | full identity string, e.g. `Developer ID Application: J. Doe (ABCDE12345)` |
+| `APPLE_TEAM_ID`              | Team ID, e.g. `ABCDE12345`                                         |
 
-With those set, `tauri-action` will codesign the `.app`, staple the
-notarization ticket, and produce a `.dmg` that opens cleanly without the
-`xattr` workaround.
+Then **one** of the two notarization flows:
 
-**Windows — code signing.** Not yet wired in. The intended path for OSS
-projects is either [SignPath.io](https://signpath.io/) (free for qualifying
-OSS) or [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/)
-(pay-per-signature, no HSM). Both can be invoked as a post-build step
-against the `.msi` and `.exe` produced by `tauri build`.
+- **API key flow (recommended):** `APPLE_API_KEY` (base64 of the `.p8`),
+  `APPLE_API_ISSUER` (Issuer ID UUID), `APPLE_API_KEY_PATH` (path the
+  workflow should write the decoded `.p8` to, e.g. `~/AuthKey.p8`).
+- **App-password flow:** `APPLE_ID` (Apple-ID email), `APPLE_PASSWORD`
+  (app-specific password from appleid.apple.com → Sign-In and Security).
 
-**Linux** — sign the release artifacts with GPG out-of-band; Flathub builds
-sign their own.
+Once those exist, the workflow's *Configure macOS signing* step forwards
+them to `tauri-action`, which signs the `.app`, staples the notarization
+ticket, and produces a `.dmg` that opens cleanly without the `xattr`
+workaround.
+
+#### Windows — Authenticode signing
+
+Two paths supported:
+
+- **Direct certificate (any Authenticode cert).** Set:
+
+| Secret                          | Value                                       |
+|---------------------------------|---------------------------------------------|
+| `WINDOWS_CERTIFICATE`           | base64 of a `.pfx` containing the cert + key |
+| `WINDOWS_CERTIFICATE_PASSWORD`  | password used during the `.pfx` export       |
+
+  Encode with PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes('cert.pfx')) | Set-Clipboard`.
+  The workflow's *Sign Windows .exe and .msi* step decodes the cert into a
+  temp `.pfx`, locates `signtool.exe` from the bundled Windows Kits, and
+  signs the `target/release/*.exe`, `bundle/msi/*.msi`, and any
+  `bundle/nsis/*.exe` produced by `tauri build`. Timestamp server is
+  DigiCert's free endpoint.
+
+- **SignPath OSS (recommended for OSS projects without a paid cert).**
+  Free for qualifying OSS via [signpath.io](https://signpath.io/products/foundation).
+  Replace the *Sign Windows .exe and .msi* step with the
+  `signpath/github-action-submit-signing-request` action — see SignPath's
+  [GitHub action docs](https://about.signpath.io/documentation/build-system-integration#github-actions)
+  for the exact YAML; you'll set `SIGNPATH_*` secrets instead of
+  `WINDOWS_CERTIFICATE`.
+
+- **Azure Trusted Signing** is also a fit (pay-per-signature, no HSM
+  hardware) — analogous post-build step.
+
+#### Linux
+
+GPG-sign release artifacts out-of-band; Flathub builds sign their own.
+
+### Releases
+
+Tag the GUI separately from the CoolProp library. The CI workflow watches
+for tags matching `gui-v*` and creates a draft GitHub Release with all
+platform bundles attached:
+
+```sh
+# Bump versions in three places (must match):
+#   wrappers/GUI/package.json                 .version
+#   wrappers/GUI/src-tauri/Cargo.toml         [package].version
+#   wrappers/GUI/src-tauri/tauri.conf.json    .version
+
+git tag gui-v0.1.0
+git push origin gui-v0.1.0
+```
+
+After the workflow finishes, find the draft release on GitHub, edit the
+release notes, and publish. macOS bundles in the release are signed and
+notarized only if the macOS signing secrets are configured (see above);
+Windows bundles only if the Windows signing secrets are.
 
 ## Regenerating the app icon
 
