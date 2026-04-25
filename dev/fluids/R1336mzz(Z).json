@@ -128,8 +128,8 @@
       "acentric_units": "-",
       "alpha0": [
         {
-          "a1": 0.0,
-          "a2": 0.0,
+          "a1": -22.6138365893630073,
+          "a2": 14.6859157463353789,
           "type": "IdealGasHelmholtzLead"
         },
         {
