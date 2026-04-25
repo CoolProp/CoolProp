@@ -74,6 +74,12 @@ jobs:
         working-directory: wrappers/GUI
         run: npm ci
 
+      # Frontend unit tests (Vitest + RTL) — Linux only; platform-agnostic.
+      - name: Run frontend unit tests
+        if: matrix.os == 'ubuntu-22.04'
+        working-directory: wrappers/GUI
+        run: npm test
+
       # Rust unit tests (Linux only — platform-agnostic FFI / state-table
       # logic; per-OS coverage comes from the build + smoke-test steps).
       # Runs in release mode so the resulting CoolProp static lib + cargo
