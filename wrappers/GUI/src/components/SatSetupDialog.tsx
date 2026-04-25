@@ -18,8 +18,6 @@ interface FluidLimits {
   p_max: number;
 }
 
-const BACKENDS = ["HEOS", "INCOMP", "REFPROP"];
-
 interface Props {
   fluids: string[];
   basis: Basis;
@@ -30,7 +28,6 @@ interface Props {
 
 export default function SatSetupDialog({ fluids, basis, initial, onConfirm, onCancel }: Props) {
   const [fluid,   setFluid]   = useState(initial?.fluid   ?? "Water");
-  const [backend, setBackend] = useState(initial?.backend ?? "HEOS");
   const [byTemp,  setByTemp]  = useState(initial?.byTemp  ?? true);
   const [minVal,  setMinVal]  = useState(String(initial?.minVal ?? ""));
   const [maxVal,  setMaxVal]  = useState(String(initial?.maxVal ?? ""));
@@ -59,7 +56,7 @@ export default function SatSetupDialog({ fluids, basis, initial, onConfirm, onCa
     const max = parseFloat(maxVal);
     const n   = parseInt(nPoints, 10);
     if (isNaN(min) || isNaN(max) || isNaN(n) || n < 2) return;
-    onConfirm({ fluid, backend, byTemp, minVal: min, maxVal: max, nPoints: n });
+    onConfirm({ fluid, backend: "HEOS", byTemp, minVal: min, maxVal: max, nPoints: n });
   };
 
   const label = byTemp ? "T (K)" : "P (Pa)";
@@ -70,13 +67,6 @@ export default function SatSetupDialog({ fluids, basis, initial, onConfirm, onCa
         <div className="modal-title">Saturation Table Setup</div>
 
         <div className="modal-body">
-          <div className="field-group">
-            <label>Backend</label>
-            <select value={backend} onChange={(e) => setBackend(e.target.value)}>
-              {BACKENDS.map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-
           <div className="field-group">
             <label>Fluid</label>
             <select value={fluid} onChange={(e) => setFluid(e.target.value)}>

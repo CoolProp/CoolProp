@@ -46,12 +46,19 @@ export default function App() {
         )}
       </header>
       <main className="app-main">
-        {tab === "calculator" && <PropertyCalculator fluids={fluids} basis={basis} />}
-        {tab === "saturation" && <SaturationView fluids={fluids} basis={basis} />}
-        {tab === "humidair" && <HumidAirCalculator />}
-        {tab === "diagram" && (
+        {/* All tabs stay mounted so state (results, isolines, sat-table panels) persists. */}
+        <div className="tab-pane" hidden={tab !== "calculator"}>
+          <PropertyCalculator fluids={fluids} basis={basis} />
+        </div>
+        <div className="tab-pane" hidden={tab !== "saturation"}>
+          <SaturationView fluids={fluids} basis={basis} />
+        </div>
+        <div className="tab-pane" hidden={tab !== "humidair"}>
+          <HumidAirCalculator />
+        </div>
+        <div className="tab-pane" hidden={tab !== "diagram"}>
           <div className="placeholder">Diagram — coming soon</div>
-        )}
+        </div>
       </main>
     </div>
   );

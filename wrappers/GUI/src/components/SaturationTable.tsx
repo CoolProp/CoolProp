@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Basis } from "../App";
 import type { SatConfig } from "./SatSetupDialog";
@@ -10,7 +11,9 @@ interface SatPoint {
 }
 
 interface ColDef {
-  header: string;
+  key: string;
+  headerNode: ReactNode;
+  headerText: string; // plain-text fallback for clipboard
   get: (row: SatPoint) => number | undefined;
   fmt: (v: number) => string;
 }
@@ -19,38 +22,64 @@ const f6 = (v: number) => v.toPrecision(6);
 const f5 = (v: number) => v.toPrecision(5);
 const f4 = (v: number) => v.toPrecision(4);
 
+/** Render `sym<sub>sub</sub> (units)` and return both the JSX and a plain-text twin. */
+function H(sym: string, sub: string | null, units: string): { node: ReactNode; text: string } {
+  const node = (
+    <>
+      {sym}
+      {sub !== null && <sub>{sub}</sub>}
+      {" "}({units})
+    </>
+  );
+  const text = sub !== null ? `${sym}_${sub} (${units})` : `${sym} (${units})`;
+  return { node, text };
+}
+
 function getColumns(basis: Basis): ColDef[] {
   const mass = basis === "mass";
+  const Trow  = H("T", null, "K");
+  const Prow  = H("P", null, "kPa");
+  const rhoL  = H("ρ", "L", mass ? "kg/m³" : "mol/m³");
+  const rhoV  = H("ρ", "V", mass ? "kg/m³" : "mol/m³");
+  const hL    = H("h", "L", mass ? "kJ/kg" : "J/mol");
+  const hV    = H("h", "V", mass ? "kJ/kg" : "J/mol");
+  const sL    = H("s", "L", mass ? "kJ/kg·K" : "J/mol·K");
+  const sV    = H("s", "V", mass ? "kJ/kg·K" : "J/mol·K");
+  const cpL   = H("cp", "L", mass ? "kJ/kg·K" : "J/mol·K");
+  const cpV   = H("cp", "V", mass ? "kJ/kg·K" : "J/mol·K");
+  const muL   = H("μ", "L", "μPa·s");
+  const muV   = H("μ", "V", "μPa·s");
+  const lamL  = H("λ", "L", "mW/m·K");
+  const lamV  = H("λ", "V", "mW/m·K");
+
   return [
-    { header: "T (K)",
-      get: (r) => r.liquid.T,
-      fmt: f6 },
-    { header: "P (kPa)",
-      get: (r) => r.liquid.P !== undefined ? r.liquid.P / 1000 : undefined,
-      fmt: f6 },
-    { header: mass ? "ρ_L (kg/m³)"    : "ρ_L (mol/m³)",
-      get: (r) => mass ? r.liquid.Dmass  : r.liquid.Dmolar,    fmt: f6 },
-    { header: mass ? "ρ_V (kg/m³)"    : "ρ_V (mol/m³)",
-      get: (r) => mass ? r.vapor.Dmass   : r.vapor.Dmolar,     fmt: f6 },
-    { header: mass ? "h_L (kJ/kg)"    : "h_L (J/mol)",
+    { key: "T",   headerNode: Trow.node, headerText: Trow.text,
+      get: (r) => r.liquid.T, fmt: f6 },
+    { key: "P",   headerNode: Prow.node, headerText: Prow.text,
+      get: (r) => r.liquid.P !== undefined ? r.liquid.P / 1000 : undefined, fmt: f6 },
+    { key: "rL",  headerNode: rhoL.node, headerText: rhoL.text,
+      get: (r) => mass ? r.liquid.Dmass : r.liquid.Dmolar, fmt: f6 },
+    { key: "rV",  headerNode: rhoV.node, headerText: rhoV.text,
+      get: (r) => mass ? r.vapor.Dmass  : r.vapor.Dmolar, fmt: f6 },
+    { key: "hL",  headerNode: hL.node, headerText: hL.text,
       get: (r) => { const v = mass ? r.liquid.Hmass : r.liquid.Hmolar; return v !== undefined ? (mass ? v/1000 : v) : undefined; }, fmt: f6 },
-    { header: mass ? "h_V (kJ/kg)"    : "h_V (J/mol)",
+    { key: "hV",  headerNode: hV.node, headerText: hV.text,
       get: (r) => { const v = mass ? r.vapor.Hmass  : r.vapor.Hmolar;  return v !== undefined ? (mass ? v/1000 : v) : undefined; }, fmt: f6 },
-    { header: mass ? "s_L (kJ/kg·K)"  : "s_L (J/mol·K)",
+    { key: "sL",  headerNode: sL.node, headerText: sL.text,
       get: (r) => { const v = mass ? r.liquid.Smass : r.liquid.Smolar; return v !== undefined ? (mass ? v/1000 : v) : undefined; }, fmt: f5 },
-    { header: mass ? "s_V (kJ/kg·K)"  : "s_V (J/mol·K)",
+    { key: "sV",  headerNode: sV.node, headerText: sV.text,
       get: (r) => { const v = mass ? r.vapor.Smass  : r.vapor.Smolar;  return v !== undefined ? (mass ? v/1000 : v) : undefined; }, fmt: f5 },
-    { header: mass ? "cp_L (kJ/kg·K)" : "cp_L (J/mol·K)",
+    { key: "cpL", headerNode: cpL.node, headerText: cpL.text,
       get: (r) => { const v = mass ? r.liquid.Cpmass : r.liquid.Cpmolar; return v !== undefined ? (mass ? v/1000 : v) : undefined; }, fmt: f5 },
-    { header: mass ? "cp_V (kJ/kg·K)" : "cp_V (J/mol·K)",
+    { key: "cpV", headerNode: cpV.node, headerText: cpV.text,
       get: (r) => { const v = mass ? r.vapor.Cpmass  : r.vapor.Cpmolar;  return v !== undefined ? (mass ? v/1000 : v) : undefined; }, fmt: f5 },
-    { header: "μ_L (μPa·s)",
+    { key: "muL", headerNode: muL.node, headerText: muL.text,
       get: (r) => r.liquid.viscosity !== undefined ? r.liquid.viscosity * 1e6 : undefined, fmt: f4 },
-    { header: "μ_V (μPa·s)",
+    { key: "muV", headerNode: muV.node, headerText: muV.text,
       get: (r) => r.vapor.viscosity  !== undefined ? r.vapor.viscosity  * 1e6 : undefined, fmt: f4 },
-    { header: "λ_L (mW/m·K)",
+    { key: "lL",  headerNode: lamL.node, headerText: lamL.text,
       get: (r) => r.liquid.conductivity !== undefined ? r.liquid.conductivity * 1000 : undefined, fmt: f4 },
-    { header: "λ_V (mW/m·K)",
+    { key: "lV",  headerNode: lamV.node, headerText: lamV.text,
       get: (r) => r.vapor.conductivity  !== undefined ? r.vapor.conductivity  * 1000 : undefined, fmt: f4 },
   ];
 }
@@ -71,10 +100,9 @@ interface Props {
   stateId: number;
   config: SatConfig;
   basis: Basis;
-  onNewTable: () => void;
 }
 
-export default function SaturationTable({ stateId, config, basis, onNewTable }: Props) {
+export default function SaturationTable({ stateId, config, basis }: Props) {
   const [rows, setRows] = useState<SatPoint[]>([]);
   const [computing, setComputing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +129,7 @@ export default function SaturationTable({ stateId, config, basis, onNewTable }: 
 
   const copyToClipboard = () => {
     const cols = getColumns(basis);
-    const header = cols.map((c) => c.header).join("\t");
+    const header = cols.map((c) => c.headerText).join("\t");
     const body = rows
       .map((row) => cols.map((c) => { const v = c.get(row); return v !== undefined && isFinite(v) ? c.fmt(v) : ""; }).join("\t"))
       .join("\n");
@@ -128,8 +156,6 @@ export default function SaturationTable({ stateId, config, basis, onNewTable }: 
           </span>
         </div>
 
-        <button className="primary" onClick={onNewTable}>New Table…</button>
-
         {rows.length > 0 && (
           <button className="primary" onClick={copyToClipboard}>
             {copied ? "Copied!" : "Copy TSV"}
@@ -144,14 +170,14 @@ export default function SaturationTable({ stateId, config, basis, onNewTable }: 
         <div className="sat-table-wrap">
           <table className="sat-table">
             <thead>
-              <tr>{columns.map((c) => <th key={c.header}>{c.header}</th>)}</tr>
+              <tr>{columns.map((c) => <th key={c.key}>{c.headerNode}</th>)}</tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i}>
                   {columns.map((c) => {
                     const v = c.get(row);
-                    return <td key={c.header}>{v !== undefined && isFinite(v) ? c.fmt(v) : "—"}</td>;
+                    return <td key={c.key}>{v !== undefined && isFinite(v) ? c.fmt(v) : "—"}</td>;
                   })}
                 </tr>
               ))}

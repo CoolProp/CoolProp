@@ -1,8 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useAbstractState } from "../hooks/useAbstractState";
+import { useDraggableSplit } from "../hooks/useDraggableSplit";
 import type { Basis } from "../App";
-
-const BACKENDS = ["HEOS", "INCOMP", "REFPROP"];
 
 interface InputPairDef {
   label: string;
@@ -39,6 +38,42 @@ function getInputPairs(basis: Basis): InputPairDef[] {
       pair: mass ? "DmassT_INPUTS" : "DmolarT_INPUTS",
       v1Label: mass ? "ρ (kg/m³)" : "ρ (mol/m³)", v2Label: "T (K)",
       v1Default: mass ? "1000" : "55000", v2Default: "300",
+    },
+    {
+      label: "ρ, P",
+      pair: mass ? "DmassP_INPUTS" : "DmolarP_INPUTS",
+      v1Label: mass ? "ρ (kg/m³)" : "ρ (mol/m³)", v2Label: "P (Pa)",
+      v1Default: mass ? "1000" : "55000", v2Default: "101325",
+    },
+    {
+      label: "ρ, h",
+      pair: mass ? "DmassHmass_INPUTS" : "DmolarHmolar_INPUTS",
+      v1Label: mass ? "ρ (kg/m³)" : "ρ (mol/m³)", v2Label: mass ? "h (J/kg)" : "h (J/mol)",
+      v1Default: mass ? "1000" : "55000", v2Default: mass ? "100000" : "8000",
+    },
+    {
+      label: "ρ, s",
+      pair: mass ? "DmassSmass_INPUTS" : "DmolarSmolar_INPUTS",
+      v1Label: mass ? "ρ (kg/m³)" : "ρ (mol/m³)", v2Label: mass ? "s (J/kg·K)" : "s (J/mol·K)",
+      v1Default: mass ? "1000" : "55000", v2Default: mass ? "1000" : "100",
+    },
+    {
+      label: "h, s",
+      pair: mass ? "HmassSmass_INPUTS" : "HmolarSmolar_INPUTS",
+      v1Label: mass ? "h (J/kg)" : "h (J/mol)", v2Label: mass ? "s (J/kg·K)" : "s (J/mol·K)",
+      v1Default: mass ? "100000" : "8000", v2Default: mass ? "1000" : "100",
+    },
+    {
+      label: "T, h",
+      pair: mass ? "HmassT_INPUTS" : "HmolarT_INPUTS",
+      v1Label: mass ? "h (J/kg)" : "h (J/mol)", v2Label: "T (K)",
+      v1Default: mass ? "100000" : "8000", v2Default: "300",
+    },
+    {
+      label: "T, s",
+      pair: mass ? "SmassT_INPUTS" : "SmolarT_INPUTS",
+      v1Label: mass ? "s (J/kg·K)" : "s (J/mol·K)", v2Label: "T (K)",
+      v1Default: mass ? "1000" : "100", v2Default: "300",
     },
     {
       label: "P, Q",
@@ -92,7 +127,6 @@ interface Props {
 }
 
 export default function PropertyCalculator({ fluids, basis }: Props) {
-  const [backend, setBackend] = useState("HEOS");
   const [fluid, setFluid] = useState("Water");
   const [pairIdx, setPairIdx] = useState(0);
   const [v1, setV1] = useState(getInputPairs(basis)[0].v1Default);
@@ -100,8 +134,9 @@ export default function PropertyCalculator({ fluids, basis }: Props) {
   const [results, setResults] = useState<Record<string, number>>({});
   const [calcError, setCalcError] = useState<string | null>(null);
   const [computing, setComputing] = useState(false);
+  const { width: leftWidth, startDrag } = useDraggableSplit(240, 180, 600);
 
-  const state = useAbstractState(backend, fluid);
+  const state = useAbstractState("HEOS", fluid);
 
   // Reset input values and clear results when basis changes
   useEffect(() => {
@@ -143,15 +178,11 @@ export default function PropertyCalculator({ fluids, basis }: Props) {
   const ip = inputPairs[pairIdx];
 
   return (
-    <div className="calc-layout">
+    <div
+      className="calc-layout"
+      style={{ gridTemplateColumns: `${leftWidth}px 6px 1fr` }}
+    >
       <div className="calc-controls">
-        <div className="field-group">
-          <label>Backend</label>
-          <select value={backend} onChange={(e) => setBackend(e.target.value)}>
-            {BACKENDS.map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
-
         <div className="field-group">
           <label>Fluid</label>
           <select value={fluid} onChange={(e) => setFluid(e.target.value)}>
@@ -195,6 +226,13 @@ export default function PropertyCalculator({ fluids, basis }: Props) {
 
         {calcError && <div className="error-msg">{calcError}</div>}
       </div>
+
+      <div
+        className="calc-divider"
+        onMouseDown={startDrag}
+        role="separator"
+        aria-orientation="vertical"
+      />
 
       <div className="calc-results">
         <table className="results-table">

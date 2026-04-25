@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Plot from "react-plotly.js";
+import { useDraggableSplit } from "../hooks/useDraggableSplit";
 
 // ── Input parameter definitions ───────────────────────────────────────────────
 
@@ -79,6 +80,12 @@ export default function HumidAirCalculator() {
   const [isoTraces, setIsoTraces] = useState<Plotly.Data[]>([]);
   const [chartError, setChartError] = useState<string | null>(null);
   const chartReady = useRef(false);
+
+  // Iso-property lines through the most recently computed state point
+  const [pointIsolines, setPointIsolines] = useState<Plotly.Data[]>([]);
+  const [showIsolines, setShowIsolines] = useState(true);
+
+  const { width: leftWidth, startDrag } = useDraggableSplit(260, 200, 600);
 
   // Build chart background once
   useEffect(() => {
@@ -183,6 +190,87 @@ export default function HumidAirCalculator() {
     }
   }, [pressure, input2Idx, input3Idx, v2, v3]);
 
+  // Recompute isolines whenever the state point, pressure, or toggle changes.
+  // Lines are clipped at the saturation curve by filtering points where R > 1.
+  useEffect(() => {
+    if (!showIsolines || !results) {
+      setPointIsolines([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const P = parseFloat(pressure);
+      const Bp = results["B"], Dp = results["D"], Vp = results["V"], Wp = results["W"];
+
+      const Ts: number[] = [];
+      for (let i = 0; i < T_RANGE.n; i++) {
+        Ts.push(T_RANGE.min + (i / (T_RANGE.n - 1)) * (T_RANGE.max - T_RANGE.min));
+      }
+
+      const isoFor = async (held: "B" | "V", heldVal: number) => {
+        const xs: number[] = [];
+        const ys: number[] = [];
+        for (const T of Ts) {
+          if (cancelled) return { xs: [], ys: [] };
+          try {
+            const r = await invoke<Record<string, number>>("compute_humid_air", {
+              n1: "P", v1: P,
+              n2: "T", v2: T,
+              n3: held, v3: heldVal,
+              outputs: ["W", "R"],
+            });
+            const W = r["W"], R = r["R"];
+            // Drop points outside the saturation envelope (R > 1).
+            if (W !== undefined && R !== undefined && W >= 0 && R <= 1.0 && isFinite(W)) {
+              xs.push(T);
+              ys.push(W);
+            }
+          } catch { /* skip */ }
+        }
+        return { xs, ys };
+      };
+
+      const traces: Plotly.Data[] = [];
+      const addLine = (xs: number[], ys: number[], color: string, label: string) => {
+        if (xs.length < 2) return;
+        traces.push({
+          x: xs, y: ys,
+          type: "scatter", mode: "lines",
+          line: { color, width: 1.5, dash: "dash" },
+          showlegend: false, hoverinfo: "skip",
+        } as Plotly.Data);
+        traces.push({
+          x: [xs[0]], y: [ys[0]],
+          type: "scatter", mode: "text",
+          text: [label], textposition: "middle left",
+          textfont: { size: 10, color },
+          showlegend: false, hoverinfo: "skip",
+        } as Plotly.Data);
+      };
+
+      if (Bp !== undefined && isFinite(Bp)) {
+        const { xs, ys } = await isoFor("B", Bp);
+        if (!cancelled) addLine(xs, ys, "#2980b9", `B=${Bp.toFixed(2)} K`);
+      }
+      if (Vp !== undefined && isFinite(Vp)) {
+        const { xs, ys } = await isoFor("V", Vp);
+        if (!cancelled) addLine(xs, ys, "#27ae60", `v=${Vp.toFixed(3)} m³/kg`);
+      }
+      // Iso-dewpoint == iso-W (at fixed P): horizontal segment from T=Dp rightward.
+      if (Dp !== undefined && Wp !== undefined && isFinite(Wp)) {
+        addLine(
+          [Dp, T_RANGE.max],
+          [Wp, Wp],
+          "#c0392b",
+          `D=${Dp.toFixed(2)} K`,
+        );
+      }
+
+      if (!cancelled) setPointIsolines(traces);
+    })();
+    return () => { cancelled = true; };
+  }, [results, pressure, showIsolines]);
+
   // State point trace (shown when results exist)
   const stateTrace: Plotly.Data | null =
     results && results["T"] !== undefined && results["W"] !== undefined
@@ -198,14 +286,17 @@ export default function HumidAirCalculator() {
       : null;
 
   const plotData: Plotly.Data[] = stateTrace
-    ? [...isoTraces, stateTrace]
+    ? [...isoTraces, ...pointIsolines, stateTrace]
     : isoTraces;
 
   const in2 = HA_INPUTS[input2Idx];
   const in3 = HA_INPUTS[input3Idx];
 
   return (
-    <div className="ha-layout">
+    <div
+      className="ha-layout"
+      style={{ gridTemplateColumns: `${leftWidth}px 6px 1fr` }}
+    >
       {/* ── Left panel: inputs + results ── */}
       <div className="ha-left">
         <div className="calc-controls">
@@ -276,6 +367,15 @@ export default function HumidAirCalculator() {
             {computing ? "Computing…" : "Calculate"}
           </button>
 
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={showIsolines}
+              onChange={(e) => setShowIsolines(e.target.checked)}
+            />
+            Show isolines
+          </label>
+
           {calcError && <div className="error-msg">{calcError}</div>}
         </div>
 
@@ -307,6 +407,13 @@ export default function HumidAirCalculator() {
           </div>
         )}
       </div>
+
+      <div
+        className="calc-divider"
+        onMouseDown={startDrag}
+        role="separator"
+        aria-orientation="vertical"
+      />
 
       {/* ── Right panel: psychrometric chart ── */}
       <div className="ha-chart">
