@@ -1,0 +1,94 @@
+name: GUI builder
+
+# Builds the Tauri desktop GUI (wrappers/GUI) on macOS, Windows, and Linux.
+# CoolProp is compiled as a static library inside the GUI's build.rs, so this
+# workflow also exercises that build path on each platform.
+
+on:
+  push:
+    branches: [master, main, develop, ib/GUI]
+    paths:
+      - 'wrappers/GUI/**'
+      - 'include/**'
+      - 'src/**'
+      - 'externals/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/gui_builder.yml'
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'wrappers/GUI/**'
+      - 'include/**'
+      - 'src/**'
+      - 'externals/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/gui_builder.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: wrappers/GUI/package-lock.json
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo + Tauri build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wrappers/GUI/src-tauri -> target
+
+      # Tauri 2 on Linux needs WebKit 4.1, GTK, and a few extras.
+      - name: Install Linux WebKit dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install GUI npm dependencies
+        working-directory: wrappers/GUI
+        run: npm ci
+
+      # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
+      # links the Rust crate, and produces native bundles under
+      # wrappers/GUI/src-tauri/target/release/bundle/.
+      - name: Build Tauri bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: wrappers/GUI
+          tauriScript: npm run tauri
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coolprop-gui-${{ matrix.os }}
+          path: wrappers/GUI/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 7
