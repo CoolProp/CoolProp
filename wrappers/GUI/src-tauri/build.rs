@@ -15,6 +15,10 @@ fn main() {
         // COOLPROP_LIB makes CoolPropLib.h wrap all exported functions with
         // extern "C", giving C linkage symbols that the Rust FFI can call.
         .define("CMAKE_CXX_FLAGS", "-DCOOLPROP_LIB")
+        // The Rust crate-type includes "cdylib" (for mobile targets), so every
+        // object linked into it must be position-independent. Without -fPIC
+        // here, Linux rust-lld rejects refs to std::bad_alloc, stderr, etc.
+        .define("CMAKE_POSITION_INDEPENDENT_CODE", "ON")
         // std::filesystem (used in CPfilepaths.cpp) requires macOS 10.15+
         .define("CMAKE_OSX_DEPLOYMENT_TARGET", "10.15")
         .build();
