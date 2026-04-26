@@ -12,3 +12,7 @@
 # Safe clang-tidy --fix passes: modernize-use-nullptr, modernize-use-emplace,
 # modernize-deprecated-headers (CoolProp-2uw.13 part 1, PR #2805)
 ee879788a10365c13f812993c4db6e69cb2d51a7
+
+# clang-tidy --fix for cppcoreguidelines-init-variables across src/
+# (CoolProp-2uw.13 part 2, PR #2808)
+7adb0aa1a216a0495b075fb84ad402b331bf9655
