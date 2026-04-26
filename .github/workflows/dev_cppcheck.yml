@@ -1,0 +1,57 @@
+name: Development cppcheck
+
+on:
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+  workflow_dispatch:
+  schedule:
+    - cron: '15 8 * * 0'  # weekly Sunday fallback
+
+# Warning-only — cppcheck output drives an artifact + summary, never fails
+# the PR. cppcheck is high-noise on a 937KLOC mature codebase, so we keep
+# it advisory while we work down the queue.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install cppcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck
+        cppcheck --version
+
+    - name: Run cppcheck
+      shell: bash
+      continue-on-error: true
+      run: |
+        cppcheck \
+          --std=c++17 \
+          --enable=warning,style,information \
+          --suppress=noExplicitConstructor \
+          --suppress=useStlAlgorithm \
+          --suppress=unmatchedSuppression \
+          --suppress=unusedPrivateFunction \
+          --suppress=functionStatic:src/Backends/Helmholtz/Fluids/FluidLibrary.h \
+          --inline-suppr \
+          --inconclusive \
+          --template='[{file}:{line}]:({severity}),[{id}],{message}' \
+          -j $(nproc) \
+          --force \
+          ./src \
+          3>&1 1>&2 2>&3 | tee cppcheck.txt || true
+
+    - name: Parse and colorize cppcheck
+      if: ${{ always() }}
+      continue-on-error: true
+      shell: bash
+      run: python ./dev/ci/colorize_cppcheck_results.py
+
+    - name: Upload cppcheck results as artifact
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: CoolProp-${{ github.sha }}-cppcheck_results.txt
+        path: cppcheck.txt
