@@ -1,0 +1,30 @@
+# Pre-commit hooks for CoolProp.
+#
+# Install:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run manually against staged files:
+#   pre-commit run
+# Or against the whole repo (slow):
+#   pre-commit run --all-files
+#
+# Skip the hooks for a single commit (e.g. WIP):
+#   git commit --no-verify
+#
+# Uninstall (fully revert pre-commit from this clone):
+#   pre-commit uninstall      # removes .git/hooks/pre-commit
+#   pre-commit clean          # optional: clears cached hook environments
+#   pip uninstall pre-commit  # optional: remove the package itself
+#
+# The clang-format hook mirrors .github/workflows/dev_clangformat.yml — same
+# clang-format version (18.1.3, matches the Ubuntu image in CI). Pinning
+# matters: different clang-format versions produce different output and
+# unpinned hooks break reproducibility across contributors.
+repos:
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.3
+    hooks:
+      - id: clang-format
+        types_or: [c, c++]
+        exclude: ^externals/
