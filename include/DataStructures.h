@@ -10,7 +10,6 @@
 
 #include "CPnumerics.h"
 #include "Exceptions.h"
-#include <map>
 #include <string_view>
 namespace CoolProp {
 

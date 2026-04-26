@@ -6,7 +6,6 @@
 #include "Exceptions.h"
 
 #include <vector>
-#include <string>
 #include "Solvers.h"
 #include "MatrixMath.h"
 #include "unsupported/Eigen/Polynomials"

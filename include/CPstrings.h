@@ -2,9 +2,7 @@
 #ifndef COOLPROP_STRINGS_H
 #define COOLPROP_STRINGS_H
 
-#include <iterator>
 #include <algorithm>
-#include <functional>
 #include <cctype>
 #include <vector>
 

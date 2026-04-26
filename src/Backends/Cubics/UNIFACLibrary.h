@@ -2,7 +2,6 @@
 #define UNIFAC_LIBRARY_H
 
 #include <vector>
-#include <exception>
 
 #include "rapidjson_include.h"
 #include "CoolPropFluid.h"

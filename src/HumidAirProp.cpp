@@ -19,8 +19,6 @@ using std::shared_ptr;
 #include "Configuration.h"
 
 #include <algorithm>  // std::next_permutation
-#include <cstdlib>
-#include <ctime>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
@@ -515,7 +513,7 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
         BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) {
             pp_water = psi_w * p;
         };
-        ~BrentSolverResids(){};
+        ~BrentSolverResids() {};
 
         double call(double T) {
             double p_ws = NAN;

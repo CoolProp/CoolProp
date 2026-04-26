@@ -9,7 +9,6 @@
 #include "rapidjson_include.h"
 
 #include <map>
-#include <algorithm>
 
 namespace CoolProp {
 

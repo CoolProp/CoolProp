@@ -1,6 +1,5 @@
 #include <string>
 #include <vector>
-#include <map>
 #include <cmath>
 
 #include "PCSAFTFluid.h"

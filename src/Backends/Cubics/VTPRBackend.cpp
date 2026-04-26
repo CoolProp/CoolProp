@@ -1,8 +1,5 @@
 
 #include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
 #include <cmath>
 
 #include "VTPRBackend.h"
