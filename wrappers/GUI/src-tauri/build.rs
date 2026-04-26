@@ -29,13 +29,7 @@ fn main() {
     // (or Debug/), so add both search paths.
     println!("cargo:rustc-link-search=native={}/build", dst.display());
     println!("cargo:rustc-link-search=native={}/build/Release", dst.display());
-    // `+whole-archive` forces the linker to pull in every object file from
-    // libCoolProp.a, including all_fluids_JSON.cpp.o whose static-init
-    // populates the fluid library. Without this, the test binary (which
-    // doesn't reference any symbol from that .cpp) ends up with a partially
-    // populated FluidsList. The cdylib link path was already pulling
-    // everything in, so the GUI bundle worked even without this flag.
-    println!("cargo:rustc-link-lib=static:+whole-archive=CoolProp");
+    println!("cargo:rustc-link-lib=static=CoolProp");
 
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
     match target_os.as_str() {
