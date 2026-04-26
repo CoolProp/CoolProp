@@ -1,7 +1,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <math.h>
+#include <cmath>
 
 #include "PCSAFTFluid.h"
 #include "rapidjson_include.h"

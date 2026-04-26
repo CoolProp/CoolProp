@@ -1,6 +1,6 @@
 #include <vector>
 #include "Solvers.h"
-#include "math.h"
+#include <cmath>
 #include "MatrixMath.h"
 #include <iostream>
 #include "CoolPropTools.h"

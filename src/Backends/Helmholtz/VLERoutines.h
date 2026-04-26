@@ -366,7 +366,7 @@ class newton_raphson_twophase
     std::vector<SuccessiveSubstitutionStep> step_logger;
 
     newton_raphson_twophase()
-      : HEOS(NULL),
+      : HEOS(nullptr),
         imposed_variable(newton_raphson_twophase_options::NO_VARIABLE_IMPOSED),
         error_rms(_HUGE),
         rhomolar_liq(_HUGE),

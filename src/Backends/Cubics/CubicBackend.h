@@ -360,7 +360,7 @@ class CubicResidualHelmholtz : public ResidualHelmholtz
 
    public:
     CubicResidualHelmholtz() {
-        ACB = NULL;
+        ACB = nullptr;
     };
     CubicResidualHelmholtz(AbstractCubicBackend* ACB) : ACB(ACB) {};
 

@@ -35,7 +35,7 @@
 #include "MixtureParameters.h"
 #include "IdealCurves.h"
 #include "MixtureParameters.h"
-#include <stdlib.h>
+#include <cstdlib>
 
 static int deriv_counter = 0;
 

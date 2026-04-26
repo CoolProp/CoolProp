@@ -678,7 +678,7 @@ std::vector<std::pair<std::size_t, std::size_t>> PhaseEnvelopeRoutines::find_int
         }
 
         if (matched) {
-            intersections.push_back(std::pair<std::size_t, std::size_t>(i, i + 1));
+            intersections.emplace_back(i, i + 1);
         }
     }
     return intersections;

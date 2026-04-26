@@ -1,6 +1,6 @@
 
 #ifndef __powerpc__
-#    include <math.h>
+#    include <cmath>
 #    include <complex>
 #    include <iostream>
 static std::complex<double> t1(0.368017112855051e-1, 0.510878114959572e-1);

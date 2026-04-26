@@ -78,7 +78,7 @@ void CoolProp::AbstractCubicBackend::set_alpha0_from_components() {
 
     for (std::size_t i = 0; i < N; ++i) {
         CoolPropFluid fld;
-        fld.EOSVector.push_back(EquationOfState());
+        fld.EOSVector.emplace_back();
         fld.EOS().alpha0 = components[i].alpha0;
         _components.push_back(fld);
     }

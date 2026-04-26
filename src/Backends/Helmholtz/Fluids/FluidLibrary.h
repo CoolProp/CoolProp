@@ -1244,8 +1244,8 @@ class JSONFluidLibrary
         } else {
             // Here we check for the use of a cubic Helmholtz energy transformation for a multi-fluid model
             std::vector<std::string> endings;
-            endings.push_back("-SRK");
-            endings.push_back("-PengRobinson");
+            endings.emplace_back("-SRK");
+            endings.emplace_back("-PengRobinson");
             for (std::vector<std::string>::const_iterator end = endings.begin(); end != endings.end(); ++end) {
                 if (endswith(key, *end)) {
                     std::string used_name = key.substr(0, key.size() - (*end).size());

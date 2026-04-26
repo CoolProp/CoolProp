@@ -157,7 +157,7 @@ std::string get_separator(void) {
 std::string get_home_dir(void) {
 // See http://stackoverflow.com/questions/2552416/how-can-i-find-the-users-home-dir-in-a-cross-platform-manner-using-c
 #if defined(__ISLINUX__) || defined(__ISAPPLE__)
-    char* home = NULL;
+    char* home = nullptr;
     home = getenv("HOME");
 #    if defined(__ISAPPLE__)
     if (home == NULL) {
@@ -167,7 +167,7 @@ std::string get_home_dir(void) {
         }
     }
 #    endif
-    if (home == NULL) {
+    if (home == nullptr) {
         throw CoolProp::NotImplementedError("Could not detect home directory.");
     }
     return std::string(home);

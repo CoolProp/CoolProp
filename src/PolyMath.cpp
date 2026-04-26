@@ -8,7 +8,7 @@
 #include <string>
 //#include <sstream>
 //#include <numeric>
-#include <math.h>
+#include <cmath>
 #include <iostream>
 
 #include "Solvers.h"
