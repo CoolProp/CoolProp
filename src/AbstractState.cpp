@@ -1052,8 +1052,7 @@ TEST_CASE("Check AbstractState", "[AbstractState]") {
         try {
             auto s = shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
             CHECK(s);  // assert we got a non-null pointer when REFPROP is present
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             WARN(std::string("REFPROP backend unavailable. All tests requiring REFPROP will be skipped."));
         }
     }

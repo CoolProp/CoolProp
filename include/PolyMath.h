@@ -154,7 +154,8 @@ class Polynomial2D
      *  based on the length of the coefficient vector.
      *  Starts with only the first coefficient at x^0. */
     double simplePolynomial(const std::vector<double>& coefficients, double x);
-    [[deprecated("Poor performance; use Horner-scheme instead")]] double simplePolynomial(const std::vector<std::vector<double>>& coefficients, double x, double y);
+    [[deprecated("Poor performance; use Horner-scheme instead")]] double simplePolynomial(const std::vector<std::vector<double>>& coefficients,
+                                                                                          double x, double y);
     /// Horner function generator implementations
     /** Represent polynomials according to Horner's scheme.
      *  This avoids unnecessary multiplication and thus
@@ -162,7 +163,8 @@ class Polynomial2D
      *  Deprecated since we moved everything to the Eigen framework.
      */
     double baseHorner(const std::vector<double>& coefficients, double x);
-    [[deprecated("Deprecated since move to Eigen framework; use Eigen-based routines instead")]] double baseHorner(const std::vector<std::vector<double>>& coefficients, double x, double y);
+    [[deprecated("Deprecated since move to Eigen framework; use Eigen-based routines instead")]] double
+      baseHorner(const std::vector<std::vector<double>>& coefficients, double x, double y);
 
     bool do_debug(void) {
         return get_debug_level() >= 500;

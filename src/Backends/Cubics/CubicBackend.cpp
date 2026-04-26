@@ -760,8 +760,8 @@ CoolPropDbl CoolProp::AbstractCubicBackend::calc_saturation_ancillary(parameters
             return supercubic(eos_code, RHOV_CODE, Ttilde) / bm;
         }
     } else {
-        throw NotImplementedError(format("calc_saturation_ancillary: unsupported param=%s for cubic EOS",
-                                         get_parameter_information(param, "short").c_str()));
+        throw NotImplementedError(
+          format("calc_saturation_ancillary: unsupported param=%s for cubic EOS", get_parameter_information(param, "short").c_str()));
     }
 }
 

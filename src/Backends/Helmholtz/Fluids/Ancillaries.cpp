@@ -6,7 +6,7 @@
 #if defined(ENABLE_CATCH)
 
 #    include <memory>
-    using std::shared_ptr;
+using std::shared_ptr;
 #    include <catch2/catch_all.hpp>
 
 #endif

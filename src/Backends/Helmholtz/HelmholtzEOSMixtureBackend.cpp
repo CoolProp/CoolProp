@@ -2017,9 +2017,9 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
     auto smolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_smolar_nocache(T_crit_, rhomolar_crit_); };
     auto hmolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_hmolar_nocache(T_crit_, rhomolar_crit_); };
     auto umolar_critical = [this, &T_crit_, &rhomolar_crit_]() { return this->calc_umolar_nocache(T_crit_, rhomolar_crit_); };
-    
+
     // Check for the presence of the melting line
-    if (other == iP && has_melting_line()){
+    if (other == iP && has_melting_line()) {
         double Tm = melting_line(iT, iP, value);
         if (_T < Tm - 0.001) {
             throw ValueError(format("For now, we don't support T [%g K] below Tmelt(p) [%g K]", _T, Tm));
