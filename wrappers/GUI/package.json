@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "npm run build:licenses",
     "build": "tsc && vite build",
+    "prebuild": "npm run build:licenses",
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "pretest": "npm run build:licenses",
+    "test:watch": "vitest",
+    "build:licenses": "node scripts/generate-licenses.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -28,6 +32,7 @@
     "@types/react-plotly.js": "^2",
     "@vitejs/plugin-react": "^4",
     "jsdom": "^25",
+    "license-checker": "^25",
     "typescript": "^5",
     "vite": "^5",
     "vitest": "^2"

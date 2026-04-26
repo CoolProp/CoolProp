@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import PropertyCalculator from "./components/PropertyCalculator";
 import SaturationView from "./components/SaturationView";
 import HumidAirCalculator from "./components/HumidAirCalculator";
+import AboutModal from "./components/AboutModal";
 
 type Tab = "calculator" | "saturation" | "humidair" | "diagram";
 export type Basis = "mass" | "molar";
@@ -11,6 +12,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("calculator");
   const [fluids, setFluids] = useState<string[]>([]);
   const [basis, setBasis] = useState<Basis>("mass");
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     invoke<string[]>("get_fluids_list").then(setFluids).catch(console.error);
@@ -31,19 +33,28 @@ export default function App() {
             </button>
           ))}
         </nav>
-        {tab !== "humidair" && (
-          <div className="seg-ctrl">
-            {(["mass", "molar"] as Basis[]).map((b) => (
-              <button
-                key={b}
-                className={"seg-btn" + (basis === b ? " active" : "")}
-                onClick={() => setBasis(b)}
-              >
-                {b.charAt(0).toUpperCase() + b.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="header-right">
+          {tab !== "humidair" && (
+            <div className="seg-ctrl">
+              {(["mass", "molar"] as Basis[]).map((b) => (
+                <button
+                  key={b}
+                  className={"seg-btn" + (basis === b ? " active" : "")}
+                  onClick={() => setBasis(b)}
+                >
+                  {b.charAt(0).toUpperCase() + b.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            className="tab-btn about-btn"
+            onClick={() => setAboutOpen(true)}
+            title="About / third-party notices"
+          >
+            About
+          </button>
+        </div>
       </header>
       <main className="app-main">
         {/* All tabs stay mounted so state (results, isolines, sat-table panels) persists. */}
@@ -60,6 +71,7 @@ export default function App() {
           <div className="placeholder">Diagram — coming soon</div>
         </div>
       </main>
+      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
     </div>
   );
 }
