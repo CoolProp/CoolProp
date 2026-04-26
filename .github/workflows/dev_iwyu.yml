@@ -1,0 +1,58 @@
+name: Development include-what-you-use
+
+# Warning-only — IWYU is high-noise and its suggestions need per-file
+# judgment, so this workflow uploads the full report as an artifact and
+# never fails a PR. The intent is to surface signal contributors can
+# triage incrementally, not to gate.
+#
+# How: IWYU is wired into CMakeLists.txt via the COOLPROP_IWYU option
+# (see src/Backends and the find_program(iwyu_path ...) blocks). When
+# enabled, CMake sets CXX_INCLUDE_WHAT_YOU_USE on the Main target and
+# the build output IS the IWYU report.
+
+on:
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+  push:
+    branches: [ 'master' ]
+  schedule:
+    - cron: '15 8 * * 0'  # weekly Sunday fallback
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install include-what-you-use
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iwyu ninja-build
+          include-what-you-use --version || true
+
+      - name: Configure with COOLPROP_IWYU
+        run: |
+          cmake -G Ninja \
+            -DCOOLPROP_IWYU=ON \
+            -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
+            -B ${{ github.workspace }}/build \
+            -S .
+
+      - name: Build (produces IWYU report)
+        continue-on-error: true
+        shell: bash
+        run: |
+          cmake --build ${{ github.workspace }}/build --config Release \
+            2>&1 | tee iwyu.log
+          # IWYU's exit codes don't follow build conventions; protect against
+          # tee swallowing a non-zero pipefail.
+          echo "iwyu.log size: $(wc -l < iwyu.log) lines"
+
+      - name: Upload IWYU report as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-iwyu
+          path: iwyu.log
+          if-no-files-found: warn
