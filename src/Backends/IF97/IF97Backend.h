@@ -7,7 +7,6 @@
 #include "AbstractState.h"
 #include "Exceptions.h"
 #include <vector>
-#include <cmath>
 
 namespace CoolProp {
 

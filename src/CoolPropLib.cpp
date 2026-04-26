@@ -11,7 +11,6 @@
 #include "HumidAirProp.h"
 #include "DataStructures.h"
 #include "Exceptions.h"
-#include <cfloat>
 #include <memory>
 using std::shared_ptr;
 #include "AbstractState.h"

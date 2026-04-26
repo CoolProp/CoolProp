@@ -9,7 +9,6 @@
 #include "Exceptions.h"
 #include <string>
 #include <vector>
-#include <cctype>
 #include <map>
 
 #include "CPstrings.h"

@@ -4,12 +4,6 @@
 #include "CoolPropTools.h"
 #include "Exceptions.h"
 
-#include <string>
-#include <sstream>
-#include <vector>
-#include <numeric>
-#include <cmath>
-
 namespace CoolProp {}; /* namespace CoolProp */
 
 #ifdef ENABLE_CATCH

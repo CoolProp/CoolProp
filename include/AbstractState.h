@@ -15,8 +15,6 @@
 #include <memory>
 using std::shared_ptr;
 
-#include <numeric>
-
 namespace CoolProp {
 
 /// This structure holds values obtained while tracing the spinodal curve

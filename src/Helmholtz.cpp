@@ -1,5 +1,4 @@
 #include <cmath>
-#include <numeric>
 #include "Helmholtz.h"
 
 #ifdef __ANDROID__
