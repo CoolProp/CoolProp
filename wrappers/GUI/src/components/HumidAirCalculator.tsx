@@ -87,6 +87,12 @@ export default function HumidAirCalculator() {
 
   const { width: leftWidth, startDrag } = useDraggableSplit(260, 200, 600);
 
+  // Live hover readout: properties at the mouse position over the chart.
+  const [hoverProps, setHoverProps] = useState<
+    { T: number; W: number; B: number; D: number; R: number; H: number; V: number } | null
+  >(null);
+  const graphDivRef = useRef<HTMLDivElement | null>(null);
+
   // Build chart background once
   useEffect(() => {
     let cancelled = false;
@@ -271,6 +277,84 @@ export default function HumidAirCalculator() {
     return () => { cancelled = true; };
   }, [results, pressure, showIsolines]);
 
+  // Live hover: converts cursor position to (T, W) using Plotly's axis
+  // calibrators, calls HAPropsSI for the surrounding properties, and only
+  // displays them when the point is below the saturation curve. Throttled to
+  // ~80 ms so we don't flood the FFI on rapid mousemoves.
+  useEffect(() => {
+    const gd = graphDivRef.current;
+    if (!gd) return;
+    let lastT = 0;
+    let inflight = false;
+    let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const tryCompute = (T: number, W: number) => {
+      if (inflight) return;
+      inflight = true;
+      invoke<Record<string, number>>("compute_humid_air", {
+        n1: "P", v1: parseFloat(pressure),
+        n2: "T", v2: T,
+        n3: "W", v3: W,
+        outputs: ["B", "D", "R", "H", "V"],
+      })
+        .then((res) => {
+          // Only show if we're at or below saturation (R ≤ 1).
+          if (
+            res["R"] !== undefined && res["R"] <= 1.0 && isFinite(res["R"]) &&
+            isFinite(res["B"] ?? NaN) && isFinite(res["D"] ?? NaN)
+          ) {
+            setHoverProps({
+              T, W,
+              B: res["B"], D: res["D"], R: res["R"], H: res["H"], V: res["V"],
+            });
+          } else {
+            setHoverProps(null);
+          }
+        })
+        .catch(() => setHoverProps(null))
+        .finally(() => { inflight = false; });
+    };
+
+    const handleMove = (ev: MouseEvent) => {
+      const layout = (gd as unknown as { _fullLayout?: any })._fullLayout;
+      if (!layout || !layout.xaxis || !layout.yaxis) return;
+      const rect = gd.getBoundingClientRect();
+      const margin = layout._size;
+      const xPx = ev.clientX - rect.left - margin.l;
+      const yPx = ev.clientY - rect.top - margin.t;
+      // Outside the plotting area
+      if (xPx < 0 || yPx < 0 || xPx > margin.w || yPx > margin.h) {
+        setHoverProps(null);
+        return;
+      }
+      const T = layout.xaxis.p2c(xPx);
+      const W = layout.yaxis.p2c(yPx);
+      if (T < T_RANGE.min || T > T_RANGE.max + 8 || W < 0 || W > 0.06) {
+        setHoverProps(null);
+        return;
+      }
+      const now = Date.now();
+      if (now - lastT < 80) {
+        if (pendingTimer) clearTimeout(pendingTimer);
+        pendingTimer = setTimeout(() => tryCompute(T, W), 80);
+        return;
+      }
+      lastT = now;
+      tryCompute(T, W);
+    };
+    const handleLeave = () => setHoverProps(null);
+
+    gd.addEventListener("mousemove", handleMove);
+    gd.addEventListener("mouseleave", handleLeave);
+    return () => {
+      gd.removeEventListener("mousemove", handleMove);
+      gd.removeEventListener("mouseleave", handleLeave);
+      if (pendingTimer) clearTimeout(pendingTimer);
+    };
+  // graphDivRef is set after first paint; we re-run on pressure change so the
+  // closure picks up the new P. Re-attaching listeners is cheap.
+  }, [pressure, isoTraces.length]);
+
   // State point trace (shown when results exist)
   const stateTrace: Plotly.Data | null =
     results && results["T"] !== undefined && results["W"] !== undefined
@@ -439,7 +523,20 @@ export default function HumidAirCalculator() {
           config={{ responsive: true, displayModeBar: false }}
           style={{ width: "100%", height: "100%" }}
           useResizeHandler
+          onInitialized={(_, gd) => { graphDivRef.current = gd as HTMLDivElement; }}
+          onUpdate={(_, gd) => { graphDivRef.current = gd as HTMLDivElement; }}
         />
+        {hoverProps && (
+          <div className="ha-hover-readout">
+            <div><span>T</span><span>{hoverProps.T.toFixed(2)} K</span></div>
+            <div><span>W</span><span>{hoverProps.W.toFixed(5)} kg/kg</span></div>
+            <div><span>RH</span><span>{(hoverProps.R * 100).toFixed(1)} %</span></div>
+            <div><span>B</span><span>{hoverProps.B.toFixed(2)} K</span></div>
+            <div><span>D</span><span>{hoverProps.D.toFixed(2)} K</span></div>
+            <div><span>h</span><span>{(hoverProps.H / 1000).toFixed(2)} kJ/kg</span></div>
+            <div><span>v</span><span>{hoverProps.V.toFixed(4)} m³/kg</span></div>
+          </div>
+        )}
       </div>
     </div>
   );

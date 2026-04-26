@@ -458,6 +458,38 @@ button.primary:disabled {
   border-radius: 6px;
   overflow: hidden;
   min-height: 400px;
+  position: relative;
+}
+
+.ha-hover-readout {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(28, 43, 58, 0.92);
+  color: #fff;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-family: "Menlo", "Consolas", monospace;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 10px;
+  min-width: 150px;
+  z-index: 5;
+}
+
+.ha-hover-readout > div {
+  display: contents;
+}
+
+.ha-hover-readout > div > span:first-child {
+  color: rgba(255, 255, 255, 0.6);
+  text-align: right;
+}
+
+.ha-hover-readout > div > span:last-child {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── SaturationView (multi-panel sub-tabs) ──────────── */
