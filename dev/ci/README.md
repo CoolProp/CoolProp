@@ -97,6 +97,30 @@ headers use.
 
 CI runs on Ubuntu where this issue doesn't apply.
 
+### Running clang-tidy locally
+
+Once `build/compile_commands.json` exists, the manual-stage pre-commit
+hook runs clang-tidy with the strict repo `.clang-tidy` config:
+
+```bash
+pre-commit run --hook-stage manual --all-files clang-tidy
+# or per file:
+pre-commit run --hook-stage manual --files src/CPstrings.cpp clang-tidy
+```
+
+It's manual-stage because clang-tidy on the CoolProp codebase is too slow
+to run on every commit (single-file runs can be tens of seconds with the
+full check set). Invoke it before pushing instead.
+
+The hook auto-skips with a warning when clang-tidy isn't installed or no
+`build/` directory exists. Override the build dir via
+`COOLPROP_BUILD_DIR=<path>` if you have multiple build trees.
+
+The CI counterpart (`.github/workflows/dev_clangtidy.yml`) runs
+`clang-tidy-diff.py` on PR-touched lines only; the local hook runs
+clang-tidy on whole files, so local output is a strict superset of what
+CI surfaces.
+
 ---
 
 ## Other CI tooling (warning-only)
@@ -123,6 +147,4 @@ they exist to surface signal, not to gate.
 These will land as the `CoolProp-2uw` epic progresses; cross-references
 will be added here as each lands:
 
-- clang-tidy diff-only PR check (Tier 2.1, `CoolProp-2uw.5`)
-- IWYU report artifact (Tier 3.4, `CoolProp-2uw.11`)
 - `.git-blame-ignore-revs` for the one-shot reformat (Tier 4.1, `CoolProp-2uw.12`)
