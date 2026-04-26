@@ -2047,14 +2047,6 @@ if(COOLPROP_MAIN_MODULE)
                                           "${COMPILE_FLAGS} -DENABLE_CATCH")
   endif()
 
-  if(COOLPROP_IWYU)
-    find_program(iwyu_path NAMES include-what-you-use iwyu)
-    if(NOT iwyu_path)
-      message(FATAL_ERROR "Could not find the program include-what-you-use")
-    endif()
-    set_property(TARGET Main PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
-  endif()
-
   if(UNIX)
     target_link_libraries(Main ${CMAKE_DL_LIBS})
   endif()
@@ -2088,15 +2080,6 @@ if(COOLPROP_CATCH_MODULE)
     catch_discover_tests(CatchTestRunner DISCOVERY_MODE PRE_TEST)
   endif()
 
-  if(COOLPROP_IWYU)
-    find_program(iwyu_path NAMES include-what-you-use iwyu)
-    if(NOT iwyu_path)
-      message(FATAL_ERROR "Could not find the program include-what-you-use")
-    endif()
-    set_property(TARGET CatchTestRunner PROPERTY CXX_INCLUDE_WHAT_YOU_USE
-                                                 ${iwyu_path})
-  endif()
-  
   if(COOLPROP_LAZY_LOAD_SUPERANCILLARIES)
     target_compile_definitions(CatchTestRunner PRIVATE LAZY_LOAD_SUPERANCILLARIES)
   else()
@@ -2223,6 +2206,25 @@ endif()
 #include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CoolProp")
 #FILE(GLOB coolprop_files "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/*.cpp")
 #add_library(coolprop STATIC ${coolprop_files})
+
+# include-what-you-use wiring (CoolProp-2uw.11). Placed at the bottom so it
+# fires after every target-creation path: Main is created either inside
+# `if(COOLPROP_MY_MAIN)` (used by CodeQL/Coverity/IWYU CI) or inside
+# `if(COOLPROP_MAIN_MODULE)`; CatchTestRunner inside `if(COOLPROP_CATCH_MODULE)`.
+# An earlier version of this wiring lived inside one of those conditionals
+# and silently no-op'd for the IWYU CI path.
+if(COOLPROP_IWYU)
+  find_program(iwyu_path NAMES include-what-you-use iwyu)
+  if(NOT iwyu_path)
+    message(FATAL_ERROR "Could not find the program include-what-you-use")
+  endif()
+  foreach(_iwyu_target Main CatchTestRunner)
+    if(TARGET ${_iwyu_target})
+      set_property(TARGET ${_iwyu_target} PROPERTY CXX_INCLUDE_WHAT_YOU_USE
+                                                   ${iwyu_path})
+    endif()
+  endforeach()
+endif()
 
 # clang-format developer targets (CoolProp-2uw.2)
 # Whole-tree mode over src/ + include/, mirroring dev/ci/clang-format.sh's
