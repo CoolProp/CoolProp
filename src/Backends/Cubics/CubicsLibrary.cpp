@@ -21,44 +21,11 @@ class CubicsLibraryClass
     std::map<std::string, std::string> JSONstring_map;
     bool empty;  // Is empty
 
-    /// Schema-validate then parse a JSON blob and merge into this instance.
-    /// Used by the constructor (avoids recursing through the global singleton)
-    /// and by the free `add_fluids_as_JSON()` (operates on get_library()).
-    void _add_fluids_from_JSON_string(const std::string_view& JSON) {
-        std::string errstr;
-        cpjson::schema_validation_code val_code = cpjson::validate_schema(cubic_fluids_schema_JSON, JSON, errstr);
-        if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
-            rapidjson::Document dd;
-            dd.Parse<0>(JSON.data(), JSON.size());
-            if (dd.HasParseError()) {
-                throw ValueError("Cubics JSON is not valid JSON");
-            } else {
-                try {
-                    this->add_many(dd);
-                } catch (std::exception& /* e */) {
-                    throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str()));
-                }
-            }
-        } else {
-            throw ValueError(format("Unable to validate cubics library against schema with error: %s", errstr.c_str()));
-        }
-    }
-
    public:
-    CubicsLibraryClass() : empty(true) {
-        // Populate via the private member to avoid recursing through
-        // get_library() while the singleton is still being built.
-        _add_fluids_from_JSON_string(all_cubics_JSON);
-    };
+    CubicsLibraryClass();
     bool is_empty() {
         return empty;
     };
-
-    /// Public wrapper used by the free `add_fluids_as_JSON()` after construction.
-    void add_fluids_from_JSON_string(const std::string_view& JSON) {
-        _add_fluids_from_JSON_string(JSON);
-    }
-
     int add_many(rapidjson::Value& listing) {
         int counter = 0;
         for (rapidjson::Value::ValueIterator itr = listing.Begin(); itr != listing.End(); ++itr) {
@@ -169,6 +136,37 @@ class CubicsLibraryClass
         return strjoin(out, ",");
     }
 };
+namespace {
+/// Schema-validate a JSON blob and merge it into the given library instance.
+/// File-private so the constructor can populate `*this` without going through
+/// the get_library() singleton (which would recurse into its own constructor).
+void add_fluids_from_JSON_string(CubicsLibraryClass& dest, const std::string_view& JSON) {
+    std::string errstr;
+    cpjson::schema_validation_code val_code = cpjson::validate_schema(cubic_fluids_schema_JSON, JSON, errstr);
+    if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
+        rapidjson::Document dd;
+        dd.Parse<0>(JSON.data(), JSON.size());
+        if (dd.HasParseError()) {
+            throw ValueError("Cubics JSON is not valid JSON");
+        } else {
+            try {
+                dest.add_many(dd);
+            } catch (std::exception& /* e */) {
+                throw ValueError(format("Unable to load cubics library with error: %s", errstr.c_str()));
+            }
+        }
+    } else {
+        throw ValueError(format("Unable to validate cubics library against schema with error: %s", errstr.c_str()));
+    }
+}
+}  // anonymous namespace
+
+CubicsLibraryClass::CubicsLibraryClass() : empty(true) {
+    // Populate via the file-private helper so the constructor does NOT recurse
+    // through get_library() while the singleton is still being built.
+    add_fluids_from_JSON_string(*this, all_cubics_JSON);
+}
+
 /// Function-local static (Meyers singleton). C++11 guarantees the
 /// constructor runs exactly once even under concurrent first calls. The
 /// previous namespace-scope `static CubicsLibraryClass library;` relied on
@@ -180,7 +178,7 @@ static CubicsLibraryClass& get_library() {
 }
 
 void add_fluids_as_JSON(const std::string_view& JSON) {
-    get_library().add_fluids_from_JSON_string(JSON);
+    add_fluids_from_JSON_string(get_library(), JSON);
 }
 std::string get_fluid_as_JSONstring(const std::string& identifier) {
     return get_library().get_JSONstring(identifier);

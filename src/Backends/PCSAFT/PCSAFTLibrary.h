@@ -28,18 +28,8 @@ class PCSAFTLibraryClass
     void load_from_JSON(rapidjson::Document& doc);
     void load_from_string(const std::string_view& str);
 
-    /// Schema-validate then parse a JSON blob and merge into this instance.
-    /// Called from the constructor to avoid recursing through the global
-    /// singleton during its own construction.
-    void _add_fluids_from_JSON_string(const std::string_view& JSON);
-
    public:
     PCSAFTLibraryClass();
-
-    /// Public wrapper used by the free `add_fluids_as_JSON()` after construction.
-    void add_fluids_from_JSON_string(const std::string_view& JSON) {
-        _add_fluids_from_JSON_string(JSON);
-    }
 
     bool is_empty() {
         return empty;
