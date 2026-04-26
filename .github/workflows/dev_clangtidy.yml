@@ -1,15 +1,17 @@
-name: Development clang-tidy (diff-only)
+name: Development clang-tidy (diff-only, informational)
 
-# Runs clang-tidy on lines changed in the PR via clang-tidy-diff.py.
-# This avoids drowning PR authors in the legacy 937KLOC warning backlog
-# while enforcing the strict .clang-tidy config (WarningsAsErrors: '*')
-# on new code.
+# Runs clang-tidy on lines changed in the PR via clang-tidy-diff.py and
+# uploads the report as an artifact. Informational by design: never gates
+# a PR. Empirical noise survey on representative src/ files (Solvers.cpp,
+# CPstrings.cpp, HelmholtzEOSMixtureBackend.cpp) showed the strict
+# .clang-tidy config (WarningsAsErrors: '*') would surface a high-volume
+# cascade — mostly misc-include-cleaner / misc-const-correctness /
+# readability-isolate-declaration noise — on virtually every PR touching
+# src/, before any meaningful bug-finding signal could be acted on.
 #
-# ROLLOUT NOTE (CoolProp-2uw.5): currently warning-only via
-# `continue-on-error: true` so we can observe what surfaces on real PRs
-# before flipping it to a gate. Once the noise level is validated, drop
-# the continue-on-error and the workflow will block PRs with violations
-# on touched lines (which is the eventual design intent).
+# Both the `continue-on-error` on the run step and `if: always()` on the
+# upload are load-bearing: they keep this workflow informational across
+# every code path.
 
 on:
   pull_request:
@@ -59,7 +61,7 @@ jobs:
           echo "Using: $path"
 
       - name: Run clang-tidy-diff on PR-touched lines
-        continue-on-error: true   # ROLLOUT: flip after validation
+        continue-on-error: true   # informational by design — see top-of-file
         shell: bash
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
