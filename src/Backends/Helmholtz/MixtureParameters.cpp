@@ -732,7 +732,7 @@ void parse_HMX_BNC(const std::string& s, std::vector<REFPROP_binary_element>& BI
     //      Parse the departure functions
     // ****************************************
     for (std::size_t i = i_ended + 1; i < lines.size(); ++i) {
-        std::size_t j_end;
+        std::size_t j_end = 0;
         // Find the end of this block
         for (j_end = i + 1; j_end < lines.size(); ++j_end) {
             if (strstrip(lines[j_end]).empty()) {

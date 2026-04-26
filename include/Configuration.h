@@ -285,7 +285,7 @@ class Configuration
     Configuration() {
         set_defaults();
     };
-    ~Configuration() {};
+    ~Configuration(){};
 
     /// Get an item from the configuration
     ConfigurationItem& get_item(configuration_keys key) {
@@ -329,7 +329,7 @@ class Configuration
                     items.erase(key);
                     items.emplace(key, ConfigurationItem(key, std::string(envval)));
                     break;
-                case ConfigurationDataTypes::CONFIGURATION_INTEGER_TYPE:
+                case ConfigurationDataTypes::CONFIGURATION_INTEGER_TYPE: {
                     int i;
                     try {
                         i = std::stoi(envval);
@@ -342,7 +342,8 @@ class Configuration
                     items.erase(key);
                     items.emplace(key, ConfigurationItem(key, i));
                     break;
-                case ConfigurationDataTypes::CONFIGURATION_DOUBLE_TYPE:
+                }
+                case ConfigurationDataTypes::CONFIGURATION_DOUBLE_TYPE: {
                     double d;
                     try {
                         d = std::stod(envval);
@@ -355,7 +356,8 @@ class Configuration
                     items.erase(key);
                     items.emplace(key, ConfigurationItem(key, d));
                     break;
-                case ConfigurationDataTypes::CONFIGURATION_BOOL_TYPE:
+                }
+                case ConfigurationDataTypes::CONFIGURATION_BOOL_TYPE: {
                     bool b;
                     try {
                         b = tobool(envval);
@@ -368,9 +370,11 @@ class Configuration
                     items.erase(key);
                     items.emplace(key, ConfigurationItem(key, b));
                     break;
-                default:
+                }
+                default: {
                     auto skey = config_key_to_string(key);
                     throw ValueError("This key [" + skey + "] has the wrong type; value was " + std::string(envval) + " ");
+                }
             }
             return true;
         }

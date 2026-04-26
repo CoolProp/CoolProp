@@ -1,4 +1,6 @@
 #include "Ancillaries.h"
+
+#include <cmath>
 #include "DataStructures.h"
 #include "AbstractState.h"
 #include "Configuration.h"
@@ -61,7 +63,7 @@ double SaturationAncillaryFunction::evaluate(double T) {
         if (type == TYPE_NOT_EXPONENTIAL) {
             return reducing_value * (1 + summer);
         } else {
-            double tau_r_value;
+            double tau_r_value = NAN;
             if (using_tau_r)
                 tau_r_value = T_r / T;
             else
@@ -206,7 +208,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInTrSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
+                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);
@@ -234,7 +236,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInThetaSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
+                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p){};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);

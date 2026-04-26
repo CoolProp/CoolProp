@@ -4,11 +4,11 @@
 #include "Exceptions.h"
 #include "MatrixMath.h"
 
+#include <cmath>
 #include <vector>
 #include <string>
 //#include <sstream>
 //#include <numeric>
-#include <cmath>
 #include <iostream>
 
 #include "Solvers.h"
@@ -69,7 +69,7 @@ Eigen::MatrixXd Polynomial2D::integrateCoeffs(const Eigen::MatrixXd& coefficient
             break;
     }
 
-    std::size_t r, c;
+    std::size_t r = 0, c = 0;
     for (int k = 0; k < times; k++) {
         oldCoefficients = Eigen::MatrixXd(newCoefficients);
         r = oldCoefficients.rows(), c = oldCoefficients.cols();
@@ -123,7 +123,7 @@ Eigen::MatrixXd Polynomial2D::deriveCoeffs(const Eigen::MatrixXd& coefficients, 
             break;
     }
 
-    std::size_t r, c, i, j;
+    std::size_t r = 0, c = 0, i = 0, j = 0;
     for (int k = 0; k < times; k++) {
         r = newCoefficients.rows(), c = newCoefficients.cols();
         for (i = 1; i < r; ++i) {
@@ -384,7 +384,7 @@ Eigen::MatrixXd Polynomial2DFrac::deriveCoeffs(const Eigen::MatrixXd& coefficien
     }
 
     std::size_t r = newCoefficients.rows(), c = newCoefficients.cols();
-    std::size_t i, j;
+    std::size_t i = 0, j = 0;
     for (int k = 0; k < times; k++) {
         for (i = 0; i < r; ++i) {
             for (j = 0; j < c; ++j) {
@@ -489,7 +489,7 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
 
     Eigen::MatrixXd tmpCoeffs(coefficients);
     Eigen::MatrixXd newCoeffs;
-    size_t r;
+    size_t r = 0;
     size_t c = tmpCoeffs.cols();
     double negExp = 0;  // First we treat the negative exponents
     double posExp = 0;  // then the positive exponents
@@ -528,9 +528,9 @@ double Polynomial2DFrac::evaluate(const Eigen::MatrixXd& coefficients, const dou
 double Polynomial2DFrac::derivative(const Eigen::MatrixXd& coefficients, const double& x_in, const double& y_in, const int& axis, const int& x_exp,
                                     const int& y_exp, const double& x_base, const double& y_base) {
     Eigen::MatrixXd newCoefficients;
-    int der_exp, other_exp;
-    double der_val, other_val;
-    double int_base, other_base;
+    int der_exp = 0, other_exp = 0;
+    double der_val = NAN, other_val = NAN;
+    double int_base = NAN, other_base = NAN;
 
     switch (axis) {
         case 0:
@@ -568,9 +568,9 @@ double Polynomial2DFrac::integral(const Eigen::MatrixXd& coefficients, const dou
                                   const int& y_exp, const double& x_base, const double& y_base, const double& ax_val) {
 
     Eigen::MatrixXd newCoefficients;
-    int int_exp, other_exp;
-    double int_val, other_val;
-    double int_base, other_base;
+    int int_exp = 0, other_exp = 0;
+    double int_val = NAN, other_val = NAN;
+    double int_base = NAN, other_base = NAN;
 
     switch (axis) {
         case 0:
@@ -642,8 +642,8 @@ Eigen::VectorXd Polynomial2DFrac::solve(const Eigen::MatrixXd& coefficients, con
 
     Eigen::MatrixXd newCoefficients;
     Eigen::VectorXd tmpCoefficients;
-    int solve_exp, other_exp;
-    double input;
+    int solve_exp = 0, other_exp = 0;
+    double input = NAN;
 
     switch (axis) {
         case 0:
@@ -759,7 +759,7 @@ Eigen::MatrixXd Polynomial2DFrac::fracIntCentralDvector(const int& m, const doub
     if (m < 1) throw ValueError(format("%s (%d): You have to provide coefficients, a vector length of %d is not a valid. ", __FILE__, __LINE__, m));
 
     Eigen::MatrixXd D = Eigen::MatrixXd::Zero(1, m);
-    double tmp;
+    double tmp = NAN;
     // TODO: This can be optimized using the Horner scheme!
     for (int j = 0; j < m; j++) {  // loop through row
         tmp = pow(-1.0, j) * log(x_in) * pow(x_base, j);

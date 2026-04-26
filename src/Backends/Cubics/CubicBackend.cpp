@@ -1,4 +1,6 @@
 #include "CubicBackend.h"
+
+#include <cmath>
 #include "Solvers.h"
 #include "Configuration.h"
 #include "Backends/Helmholtz/VLERoutines.h"
@@ -152,7 +154,7 @@ void CoolProp::AbstractCubicBackend::get_critical_point_search_radii(double& R_d
     CoolProp::HelmholtzEOSMixtureBackend::get_critical_point_search_radii(R_delta, R_tau);
 
     // Now we scale them to get the appropriate search radii
-    double Tr_GERGlike, rhor_GERGlike;
+    double Tr_GERGlike = NAN, rhor_GERGlike = NAN;
     get_linear_reducing_parameters(rhor_GERGlike, Tr_GERGlike);
     R_delta *= rhor_GERGlike / rhomolar_reducing() * 5;
     R_tau *= T_reducing() / Tr_GERGlike * 5;
@@ -184,7 +186,7 @@ void CoolProp::AbstractCubicBackend::get_critical_point_starting_values(double& 
     // delta0 = rho/rhor_GERG*(rhor_GERGlike/rhor_cubic)
     // tau0 = Tr_GERG/T*(Tr_cubic/Tr_GERGlike)
     //
-    double Tr_GERGlike, rhor_GERGlike;
+    double Tr_GERGlike = NAN, rhor_GERGlike = NAN;
     get_linear_reducing_parameters(rhor_GERGlike, Tr_GERGlike);
     delta0 *= rhor_GERGlike / rhomolar_reducing();
     tau0 *= T_reducing() / Tr_GERGlike;
@@ -366,13 +368,13 @@ class SaturationResidual : public CoolProp::FuncWrapper1D
     double imposed_variable;
     double deltaL, deltaV;
 
-    SaturationResidual() {};
+    SaturationResidual(){};
     SaturationResidual(CoolProp::AbstractCubicBackend* ACB, CoolProp::input_pairs inputs, double imposed_variable)
-      : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable) {};
+      : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable){};
 
     double call(double value) {
         int Nsolns = 0;
-        double rho0 = -1, rho1 = -1, rho2 = -1, T, p;
+        double rho0 = -1, rho1 = -1, rho2 = -1, T = NAN, p = NAN;
 
         if (inputs == CoolProp::PQ_INPUTS) {
             T = value;
@@ -425,8 +427,8 @@ std::vector<double> CoolProp::AbstractCubicBackend::spinodal_densities() {
     double crho2 = ((-Delta_1 * Delta_1 - Delta_2 * Delta_2 - 4 * Delta_1 * Delta_2) * R * _T * powInt(b, 2) + a * b * (Delta_1 + Delta_2 - 4));
     double crho1 = -2 * (Delta_1 + Delta_2) * R * _T * b + 2 * a;
     double crho0 = -R * _T;
-    double rho0, rho1, rho2, rho3;
-    int Nsoln;
+    double rho0 = NAN, rho1 = NAN, rho2 = NAN, rho3 = NAN;
+    int Nsoln = 0;
     solve_quartic(crho4, crho3, crho2, crho1, crho0, Nsoln, rho0, rho1, rho2, rho3);
     std::vector<double> roots;
     if (rho0 > 0 && 1 / rho0 > b) {
@@ -477,7 +479,7 @@ void CoolProp::AbstractCubicBackend::saturation(CoolProp::input_pairs inputs) {
             double neg_log10_pr = (acentric + 1) / (1 / 0.7 - 1) * (Tc / _T - 1);
             double ps_est = pc * pow(10.0, -neg_log10_pr);
 
-            double ps;
+            double ps = NAN;
             if (roots.size() == 2) {
                 double p0 = calc_pressure_nocache(_T, roots[0]);
                 double p1 = calc_pressure_nocache(_T, roots[1]);

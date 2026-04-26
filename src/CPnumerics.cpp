@@ -1,5 +1,6 @@
 #include "CPnumerics.h"
 #include "MatrixMath.h"
+#include <cmath>
 #include <unsupported/Eigen/Polynomials>
 
 double root_sum_square(const std::vector<double>& x) {
@@ -10,7 +11,7 @@ double root_sum_square(const std::vector<double>& x) {
     return sqrt(sum);
 }
 double interp1d(const std::vector<double>* x, const std::vector<double>* y, double x0) {
-    std::size_t i, L, R, M;
+    std::size_t i = 0, L = 0, R = 0, M = 0;
     L = 0;
     R = (*x).size() - 1;
     M = (L + R) / 2;
@@ -39,10 +40,10 @@ double interp1d(const std::vector<double>* x, const std::vector<double>* y, doub
 double powInt(double x, int y) {
     // Raise a double to an integer power
     // Overload not provided in math.h
-    int i;
+    int i = 0;
     double product = 1.0;
-    double x_in;
-    int y_in;
+    double x_in = NAN;
+    int y_in = 0;
 
     if (y == 0) {
         return 1.0;
@@ -68,7 +69,7 @@ double powInt(double x, int y) {
 }
 
 void MatInv_2(double A[2][2], double B[2][2]) {
-    double Det;
+    double Det = NAN;
     //Using Cramer's Rule to solve
 
     Det = A[0][0] * A[1][1] - A[1][0] * A[0][1];
@@ -107,7 +108,7 @@ void solve_cubic(double a, double b, double c, double d, int& N, double& x0, dou
 
     if (DELTA < 0) {
         // One real root
-        double t0;
+        double t0 = NAN;
         if (4 * p * p * p + 27 * q * q > 0 && p < 0) {
             t0 = -2.0 * std::abs(q) / q * sqrt(-p / 3.0) * cosh(1.0 / 3.0 * acosh(-3.0 * std::abs(q) / (2.0 * p) * sqrt(-3.0 / p)));
         } else {

@@ -37,6 +37,7 @@ surface tension                 N/m
 #include "DataStructures.h"
 #include "AbstractState.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <optional>
 #include <string>
@@ -553,7 +554,7 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::string& C
 /// Get binary mixture string value
 std::string REFPROPMixtureBackend::get_binary_interaction_string(const std::string& CAS1, const std::string& CAS2, const std::string& parameter) {
 
-    int icomp, jcomp;
+    int icomp = 0, jcomp = 0;
     char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
 
@@ -680,7 +681,7 @@ double REFPROPMixtureBackend::get_binary_interaction_double(const std::size_t i,
     std::string shmodij(hmodij);
     //if (shmodij.find("KW") == 0 || shmodij.find("GE") == 0)  // Starts with KW or GE
     //{
-    double val;
+    double val = NAN;
     if (parameter == "betaT") {
         val = fij[0];
     } else if (parameter == "gammaT") {
@@ -721,7 +722,7 @@ void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl>& m
     }
     std::vector<double> moles(this->Ncomp);
     double sum_moles = 0.0;
-    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    double wmm = NAN, ttrp = NAN, tnbpt = NAN, tc = NAN, pc = NAN, Dc = NAN, Zc = NAN, acf = NAN, dip = NAN, Rgas = NAN;
     for (int i = 1L; i <= static_cast<int>(this->Ncomp); ++i) {
         INFOdll(&i, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
         moles[i - 1] = static_cast<double>(mass_fractions[i - 1]) / (wmm / 1000.0);
@@ -763,24 +764,24 @@ void REFPROPMixtureBackend::limits(double& Tmin, double& Tmax, double& rhomolarm
      *
      */
     this->check_loaded_fluid();
-    double Dmax_mol_L, pmax_kPa;
+    double Dmax_mol_L = NAN, pmax_kPa = NAN;
     char htyp[] = "EOS";
     LIMITSdll(htyp, &(mole_fractions[0]), &Tmin, &Tmax, &Dmax_mol_L, &pmax_kPa, 3);
     pmax = pmax_kPa * 1000;
     rhomolarmax = Dmax_mol_L * 1000;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_pmax(void) {
-    double Tmin, Tmax, rhomolarmax, pmax;
+    double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(pmax);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Tmax(void) {
-    double Tmin, Tmax, rhomolarmax, pmax;
+    double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(Tmax);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Tmin(void) {
-    double Tmin, Tmax, rhomolarmax, pmax;
+    double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(Tmin);
 };
@@ -788,7 +789,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_T_critical() {
     this->check_loaded_fluid();
     int ierr = 0;
     char herr[255];
-    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    double Tcrit = NAN, pcrit_kPa = NAN, dcrit_mol_L = NAN;
     CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr, 255);
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
         throw ValueError(format("%s", herr).c_str());
@@ -799,7 +800,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_critical() {
     this->check_loaded_fluid();
     int ierr = 0;
     char herr[255];
-    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    double Tcrit = NAN, pcrit_kPa = NAN, dcrit_mol_L = NAN;
     CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr, 255);
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
         throw ValueError(format("%s", herr).c_str());
@@ -809,7 +810,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_critical() {
 CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_critical() {
     int ierr = 0;
     char herr[255];
-    double Tcrit, pcrit_kPa, dcrit_mol_L;
+    double Tcrit = NAN, pcrit_kPa = NAN, dcrit_mol_L = NAN;
     CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr, 255);
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
         throw ValueError(format("%s", herr).c_str());
@@ -838,7 +839,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_reducing() {
 CoolPropDbl REFPROPMixtureBackend::calc_acentric_factor() {
     //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas) (see calc_Ttriple())
     this->check_loaded_fluid();
-    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    double wmm = NAN, ttrp = NAN, tnbpt = NAN, tc = NAN, pc = NAN, Dc = NAN, Zc = NAN, acf = NAN, dip = NAN, Rgas = NAN;
     int icomp = 1L;
     // Check if more than one
     if (Ncomp == 1) {
@@ -868,7 +869,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple() {
     //     c      dip--dipole moment [debye]
     //     c     Rgas--gas constant [J/mol-K]
     this->check_loaded_fluid();
-    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    double wmm = NAN, ttrp = NAN, tnbpt = NAN, tc = NAN, pc = NAN, Dc = NAN, Zc = NAN, acf = NAN, dip = NAN, Rgas = NAN;
     int icomp = 1L;
     // Check if more than one
     if (Ncomp == 1) {
@@ -876,7 +877,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_Ttriple() {
         INFOdll(&icomp, &wmm, &ttrp, &tnbpt, &tc, &pc, &Dc, &Zc, &acf, &dip, &Rgas);
         return static_cast<CoolPropDbl>(ttrp);
     } else {
-        double Tmin, Tmax, rhomolarmax, pmax;
+        double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
         limits(Tmin, Tmax, rhomolarmax, pmax);
         return static_cast<CoolPropDbl>(Tmin);
     }
@@ -917,7 +918,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment() {
     //     c      dip--dipole moment [debye]
     //     c     Rgas--gas constant [J/mol-K]
     this->check_loaded_fluid();
-    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    double wmm = NAN, ttrp = NAN, tnbpt = NAN, tc = NAN, pc = NAN, Dc = NAN, Zc = NAN, acf = NAN, dip = NAN, Rgas = NAN;
     int icomp = 1L;
     // Check if more than one
     if (Ncomp == 1) {
@@ -936,23 +937,23 @@ CoolPropDbl REFPROPMixtureBackend::calc_gas_constant() {
 };
 CoolPropDbl REFPROPMixtureBackend::calc_molar_mass(void) {
     this->check_loaded_fluid();
-    double wmm_kg_kmol;
+    double wmm_kg_kmol = NAN;
     WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol);  // returns mole mass in kg/kmol
     _molar_mass = wmm_kg_kmol / 1000;             // kg/mol
     return static_cast<CoolPropDbl>(_molar_mass.pt());
 };
 CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void) {
-    double b;
+    double b = NAN;
     VIRBdll(&_T, &(mole_fractions[0]), &b);
     return b * 0.001;  // 0.001 to convert from l/mol to m^3/mol
 }
 CoolPropDbl REFPROPMixtureBackend::calc_dBvirial_dT(void) {
-    double b;
+    double b = NAN;
     DBDTdll(&_T, &(mole_fractions[0]), &b);
     return b * 0.001;  // 0.001 to convert from l/mol to m^3/mol
 }
 CoolPropDbl REFPROPMixtureBackend::calc_Cvirial(void) {
-    double c;
+    double c = NAN;
     VIRCdll(&_T, &(mole_fractions[0]), &c);
     return c * 1e-6;  // 1e-6 to convert from (l/mol)^2 to (m^3/mol)^2
 }
@@ -960,7 +961,7 @@ double REFPROPMixtureBackend::calc_melt_Tmax() {
     this->check_loaded_fluid();
     int ierr = 0;
     char herr[255];
-    double tmin, tmax, Dmax_mol_L, pmax_kPa, Tmax_melt;
+    double tmin = NAN, tmax = NAN, Dmax_mol_L = NAN, pmax_kPa = NAN, Tmax_melt = NAN;
     char htyp[] = "EOS";
     LIMITSdll(htyp, &(mole_fractions[0]), &tmin, &tmax, &Dmax_mol_L, &pmax_kPa, 3);
     // Get the maximum temperature for the melting curve by using the maximum pressure
@@ -977,14 +978,14 @@ CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolP
     char herr[255];
 
     if (param == iP && given == iT) {
-        double _T = static_cast<double>(value), p_kPa;
+        double _T = static_cast<double>(value), p_kPa = NAN;
         MELTTdll(&_T, &(mole_fractions[0]), &p_kPa, &ierr, herr, errormessagelength);  // Error message
         if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
             throw ValueError(format("%s", herr).c_str());
         }  //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
         return p_kPa * 1000;
     } else if (param == iT && given == iP) {
-        double p_kPa = static_cast<double>(value) / 1000.0, _T;
+        double p_kPa = static_cast<double>(value) / 1000.0, _T = NAN;
         MELTPdll(&p_kPa, &(mole_fractions[0]), &_T, &ierr, herr, errormessagelength);  // Error message
         if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
             throw ValueError(format("%s", herr).c_str());
@@ -1000,7 +1001,7 @@ bool REFPROPMixtureBackend::has_melting_line() {
 
     int ierr = 0;
     char herr[255];
-    double _T = 300, p_kPa;
+    double _T = 300, p_kPa = NAN;
     MELTTdll(&_T, &(mole_fractions[0]), &p_kPa, &ierr, herr, errormessagelength);  // Error message
     if (static_cast<int>(ierr) == 1) {
         return false;
@@ -1014,7 +1015,7 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions() {
     // REFPROP yields mm in kg/kmol, CP uses base SI units of kg/mol;
     CoolPropDbl mm = molar_mass();
     std::vector<CoolPropDbl> mass_fractions(mole_fractions_long_double.size());
-    double wmm, ttrp, tnbpt, tc, pc, Dc, Zc, acf, dip, Rgas;
+    double wmm = NAN, ttrp = NAN, tnbpt = NAN, tc = NAN, pc = NAN, Dc = NAN, Zc = NAN, acf = NAN, dip = NAN, Rgas = NAN;
     // FORTRAN is 1-based indexing!
     for (int i = 1L; i <= static_cast<int>(mole_fractions_long_double.size()); ++i) {
         // Get value for first component
@@ -1041,7 +1042,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_PIP(void) {
 
 CoolPropDbl REFPROPMixtureBackend::calc_viscosity(void) {
     this->check_loaded_fluid();
-    double eta, tcx, rhomol_L = 0.001 * _rhomolar;
+    double eta = NAN, tcx = NAN, rhomol_L = 0.001 * _rhomolar;
     int ierr = 0;
     char herr[255];
     TRNPRPdll(&_T, &rhomol_L, &(mole_fractions[0]),  // Inputs
@@ -1062,7 +1063,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_conductivity(void) {
 }
 CoolPropDbl REFPROPMixtureBackend::calc_surface_tension(void) {
     this->check_loaded_fluid();
-    double sigma, rho_mol_L = 0.001 * _rhomolar;
+    double sigma = NAN, rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
     char herr[255];
     SURFTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
@@ -1124,7 +1125,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_chemical_potential(std::size_t i) {
 
 void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     this->check_loaded_fluid();
-    double rhoymin, rhoymax, c = 0;
+    double rhoymin = NAN, rhoymax = NAN, c = 0;
     int ierr = 0;
     char herr[255];
     SATSPLNdll(&(mole_fractions[0]),              // Inputs
@@ -1166,7 +1167,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     int nc = static_cast<int>(this->Ncomp);
     double ratio = pow(rhoymax / rhoymin, 1 / double(N));
     for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio) {
-        double y;
+        double y = NAN;
         iderv = 0;
 
         PhaseEnvelope.x.resize(nc);
@@ -1203,7 +1204,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
         // Other outputs that could be useful
         int ierr = 0;
         char herr[255];
-        double p_kPa, emol, hmol, smol, cvmol, cpmol, w, hjt, eta, tcx;
+        double p_kPa = NAN, emol = NAN, hmol = NAN, smol = NAN, cvmol = NAN, cpmol = NAN, w = NAN, hjt = NAN, eta = NAN, tcx = NAN;
         // "Vapor"
         THERMdll(&T, &rho_molL, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
         PhaseEnvelope.cpmolar_vap.push_back(cpmol);
@@ -1219,7 +1220,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
 CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void) {
     this->check_loaded_fluid();
     double rho_mol_L = 0.001 * _rhomolar;
-    double p0, e0, h0, s0, cv0, cp0, w0, A0, G0;
+    double p0 = NAN, e0 = NAN, h0 = NAN, s0 = NAN, cv0 = NAN, cp0 = NAN, w0 = NAN, A0 = NAN, G0 = NAN;
     THERM0dll(&_T, &rho_mol_L, &(mole_fractions[0]), &p0, &e0, &h0, &s0, &cv0, &cp0, &w0, &A0, &G0);
     return static_cast<CoolPropDbl>(cp0);
 }
@@ -2072,7 +2073,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     {
        public:
         const std::vector<double> z;
-        wrapper(const std::vector<double>& z) : z(z) {};
+        wrapper(const std::vector<double>& z) : z(z){};
         std::vector<double> call(const std::vector<double>& x) {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;

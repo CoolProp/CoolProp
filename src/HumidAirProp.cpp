@@ -4,6 +4,7 @@
 #    endif
 #endif
 
+#include <cmath>
 #include <memory>
 #include <mutex>
 using std::shared_ptr;
@@ -19,7 +20,6 @@ using std::shared_ptr;
 
 #include <algorithm>  // std::next_permutation
 #include <cstdlib>
-#include <cmath>
 #include <ctime>
 #include <cstdio>
 #include <cstring>
@@ -367,7 +367,7 @@ void UseIdealGasEnthalpyCorrelations(int flag) {
 }
 static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double W_min, double W_max) {
     // Iterating for W,
-    double W;
+    double W = NAN;
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
        private:
@@ -437,7 +437,7 @@ static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double
     return W;
 }
 static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double T_min, double T_max) {
-    double T;
+    double T = NAN;
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
        private:
@@ -459,7 +459,7 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
         };
 
         double call(double T_drybulb) {
-            double psi_w;
+            double psi_w = NAN;
             psi_w = MoleFractionWater(T_drybulb, p, input_keys[0], input_vals[0]);
             double val = _HAPropsSI_outputs(OutputKey, p, T_drybulb, psi_w);
             return val - TargetVal;
@@ -505,7 +505,7 @@ static double Brent_HAProps_T(givens OutputKey, double p, givens In1Name, double
     return T;
 }
 static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) {
-    double T;
+    double T = NAN;
     class BrentSolverResids : public CoolProp::FuncWrapper1D
     {
        private:
@@ -515,10 +515,10 @@ static double Secant_Tdb_at_saturated_W(double psi_w, double p, double T_guess) 
         BrentSolverResids(double psi_w, double p) : psi_w(psi_w), p(p) {
             pp_water = psi_w * p;
         };
-        ~BrentSolverResids() {};
+        ~BrentSolverResids(){};
 
         double call(double T) {
-            double p_ws;
+            double p_ws = NAN;
             if (T >= 273.16) {
                 // Saturation pressure [Pa] using IF97 formulation
                 p_ws = IF97::psat97(T);
@@ -637,7 +637,7 @@ static double _C_aaw(double T) {
     // Function return has units of m^6/mol^2
     double c[] = {0, 0.482737e3, 0.105678e6, -0.656394e8, 0.294442e11, -0.319317e13};
     double rhobarstar = 1000, Tstar = 1, summer = 0;
-    int i;
+    int i = 0;
     for (i = 1; i <= 5; i++) {
         summer += c[i] * pow(T / Tstar, 1 - i);
     }
@@ -649,7 +649,7 @@ static double _dC_aaw_dT(double T) {
     // Function return in units of m^6/mol^2/K
     double c[] = {0, 0.482737e3, 0.105678e6, -0.656394e8, 0.294442e11, -0.319317e13};
     double rhobarstar = 1000, Tstar = 1, summer = 0;
-    int i;
+    int i = 0;
     for (i = 2; i <= 5; i++) {
         summer += c[i] * (1 - i) * pow(T / Tstar, -i);
     }
@@ -661,7 +661,7 @@ static double _C_aww(double T) {
     // Function return has units of m^6/mol^2
     double d[] = {0, -0.1072887e2, 0.347804e4, -0.383383e6, 0.334060e8};
     double rhobarstar = 1, Tstar = 1, summer = 0;
-    int i;
+    int i = 0;
     for (i = 1; i <= 4; i++) {
         summer += d[i] * pow(T / Tstar, 1 - i);
     }
@@ -673,7 +673,7 @@ static double _dC_aww_dT(double T) {
     // Function return in units of m^6/mol^2/K
     double d[] = {0, -0.1072887e2, 0.347804e4, -0.383383e6, 0.334060e8};
     double rhobarstar = 1, Tstar = 1, summer1 = 0, summer2 = 0;
-    int i;
+    int i = 0;
     for (i = 1; i <= 4; i++) {
         summer1 += d[i] * pow(T / Tstar, 1 - i);
     }
@@ -686,7 +686,7 @@ static double _dC_aww_dT(double T) {
 
 static double B_m(double T, double psi_w) {
     // Bm has units of m^3/mol
-    double B_aa, B_ww, B_aw;
+    double B_aa = NAN, B_ww = NAN, B_aw = NAN;
     if (FlagUseVirialCorrelations == 1) {
         B_aa = -0.000721183853646 + 1.142682674467e-05 * T - 8.838228412173e-08 * pow(T, 2) + 4.104150642775e-10 * pow(T, 3)
                - 1.192780880645e-12 * pow(T, 4) + 2.134201312070e-15 * pow(T, 5) - 2.157430412913e-18 * pow(T, 6) + 9.453830907795e-22 * pow(T, 7);
@@ -703,7 +703,7 @@ static double B_m(double T, double psi_w) {
 
 static double dB_m_dT(double T, double psi_w) {
     //dBm_dT has units of m^3/mol/K
-    double dB_dT_aa, dB_dT_ww, dB_dT_aw;
+    double dB_dT_aa = NAN, dB_dT_ww = NAN, dB_dT_aw = NAN;
     if (FlagUseVirialCorrelations) {
         dB_dT_aa = 1.65159324353e-05 - 3.026130954749e-07 * T + 2.558323847166e-09 * pow(T, 2) - 1.250695660784e-11 * pow(T, 3)
                    + 3.759401946106e-14 * pow(T, 4) - 6.889086380822e-17 * pow(T, 5) + 7.089457032972e-20 * pow(T, 6)
@@ -721,7 +721,7 @@ static double dB_m_dT(double T, double psi_w) {
 
 static double C_m(double T, double psi_w) {
     // Cm has units of m^6/mol^2
-    double C_aaa, C_www, C_aww, C_aaw;
+    double C_aaa = NAN, C_www = NAN, C_aww = NAN, C_aaw = NAN;
     if (FlagUseVirialCorrelations) {
         C_aaa = 1.29192158975e-08 - 1.776054020409e-10 * T + 1.359641176409e-12 * pow(T, 2) - 6.234878717893e-15 * pow(T, 3)
                 + 1.791668730770e-17 * pow(T, 4) - 3.175283581294e-20 * pow(T, 5) + 3.184306136120e-23 * pow(T, 6) - 1.386043640106e-26 * pow(T, 7);
@@ -739,7 +739,7 @@ static double C_m(double T, double psi_w) {
 static double dC_m_dT(double T, double psi_w) {
     // dCm_dT has units of m^6/mol^2/K
 
-    double dC_dT_aaa, dC_dT_www, dC_dT_aww, dC_dT_aaw;
+    double dC_dT_aaa = NAN, dC_dT_www = NAN, dC_dT_aww = NAN, dC_dT_aaw = NAN;
     // NDG for fluid EOS for virial terms
     if (FlagUseVirialCorrelations) {
         dC_dT_aaa = -2.46582342273e-10 + 4.425401935447e-12 * T - 3.669987371644e-14 * pow(T, 2) + 1.765891183964e-16 * pow(T, 3)
@@ -763,7 +763,7 @@ double HumidityRatio(double psi_w) {
 
 static double HenryConstant(double T) {
     // Result has units of 1/Pa
-    double p_ws, beta_N2, beta_O2, beta_Ar, beta_a, tau, Tr, Tc = 647.096;
+    double p_ws = NAN, beta_N2 = NAN, beta_O2 = NAN, beta_Ar = NAN, beta_a = NAN, tau = NAN, Tr = NAN, Tc = 647.096;
     Tr = T / Tc;
     tau = 1 - Tr;
     p_ws = IF97::psat97(T);  //[Pa]
@@ -774,7 +774,7 @@ static double HenryConstant(double T) {
     return 1 / (1.01325 * beta_a);
 }
 double isothermal_compressibility(double T, double p) {
-    double k_T;
+    double k_T = NAN;
 
     if (T > 273.16) {
         if (FlagUseIsothermCompressCorrelation) {
@@ -793,10 +793,11 @@ double isothermal_compressibility(double T, double p) {
 }
 double f_factor(double T, double p) {
     double f = 0, Rbar = 8.314371, eps = 1e-8;
-    double x1 = 0, x2 = 0, x3, y1 = 0, y2, change = _HUGE;
+    double x1 = 0, x2 = 0, x3 = NAN, y1 = 0, y2 = NAN, change = _HUGE;
     int iter = 1;
-    double p_ws, B_aa, B_aw, B_ww, C_aaa, C_aaw, C_aww, C_www, line1, line2, line3, line4, line5, line6, line7, line8, k_T, beta_H, LHS, RHS, psi_ws,
-      vbar_ws;
+    double p_ws = NAN, B_aa = NAN, B_aw = NAN, B_ww = NAN, C_aaa = NAN, C_aaw = NAN, C_aww = NAN, C_www = NAN, line1 = NAN, line2 = NAN, line3 = NAN,
+           line4 = NAN, line5 = NAN, line6 = NAN, line7 = NAN, line8 = NAN, k_T = NAN, beta_H = NAN, LHS = NAN, RHS = NAN, psi_ws = NAN,
+           vbar_ws = NAN;
 
     // Saturation pressure [Pa]
     if (T > 273.16) {
@@ -921,7 +922,7 @@ double Viscosity(double T, double p, double psi_w) {
 
     but using the detailed measurements for pure fluid from IAPWS formulations
     */
-    double mu_a, mu_w, Phi_av, Phi_va, Ma, Mw;
+    double mu_a = NAN, mu_w = NAN, Phi_av = NAN, Phi_va = NAN, Ma = NAN, Mw = NAN;
     Mw = MM_Water();
     Ma = MM_Air();
     // Viscosity of dry air at dry-bulb temp and total pressure
@@ -942,7 +943,7 @@ double Conductivity(double T, double p, double psi_w) {
 
     but using the detailed measurements for pure fluid from IAPWS formulations
     */
-    double mu_a, mu_w, k_a, k_w, Phi_av, Phi_va, Ma, Mw;
+    double mu_a = NAN, mu_w = NAN, k_a = NAN, k_w = NAN, Phi_av = NAN, Phi_va = NAN, Ma = NAN, Mw = NAN;
     Mw = MM_Water();
     Ma = MM_Air();
 
@@ -966,8 +967,8 @@ double Conductivity(double T, double p, double psi_w) {
  */
 double MolarVolume(double T, double p, double psi_w) {
     // Output in m^3/mol_ha
-    int iter;
-    double v_bar0, v_bar = 0, R_bar = 8.314472, x1 = 0, x2 = 0, x3, y1 = 0, y2, resid, eps, Bm, Cm;
+    int iter = 0;
+    double v_bar0 = NAN, v_bar = 0, R_bar = 8.314472, x1 = 0, x2 = 0, x3 = NAN, y1 = 0, y2 = NAN, resid = NAN, eps = NAN, Bm = NAN, Cm = NAN;
 
     // -----------------------------
     // Iteratively find molar volume
@@ -1068,7 +1069,7 @@ double MolarEnthalpy(double T, double p, double psi_w, double vmolar) {
 
     // vbar (molar volume) in m^3/kg
 
-    double hbar_0, hbar_a, hbar_w, hbar, R_bar = 8.314472;
+    double hbar_0 = NAN, hbar_a = NAN, hbar_w = NAN, hbar = NAN, R_bar = 8.314472;
     // ----------------------------------------
     //      Enthalpy
     // ----------------------------------------
@@ -1134,8 +1135,8 @@ double MolarEntropy(double T, double p, double psi_w, double v_bar) {
     // vbar (molar volume) in m^3/mol
     double x1 = 0, x2 = 0, x3 = 0, y1 = 0, y2 = 0, eps = 1e-8, f = 999, R_bar_Lem = 8.314510;
     int iter = 1;
-    double sbar_0, sbar_a = 0, sbar_w = 0, sbar, R_bar = 8.314472, vbar_a_guess, Baa, Caaa, vbar_a = 0;
-    double B, dBdT, C, dCdT;
+    double sbar_0 = NAN, sbar_a = 0, sbar_w = 0, sbar = NAN, R_bar = 8.314472, vbar_a_guess = NAN, Baa = NAN, Caaa = NAN, vbar_a = 0;
+    double B = NAN, dBdT = NAN, C = NAN, dCdT = NAN;
     // Constant for entropy
     sbar_0 = 0.02366427495;  //[J/mol/K]
 
@@ -1206,9 +1207,9 @@ double MassEntropy_per_kgda(double T, double p, double psi_w) {
 }
 
 double DewpointTemperature(double T, double p, double psi_w) {
-    int iter;
-    double p_w, eps, resid, Tdp = 0, x1 = 0, x2 = 0, x3, y1 = 0, y2, T0;
-    double p_ws_dp, f_dp;
+    int iter = 0;
+    double p_w = NAN, eps = NAN, resid = NAN, Tdp = 0, x1 = 0, x2 = 0, x3 = NAN, y1 = 0, y2 = NAN, T0 = NAN;
+    double p_ws_dp = NAN, f_dp = NAN;
 
     // Make sure it isn't dry air, return an impossible temperature otherwise
     if ((1 - psi_w) < 1e-16) {
@@ -1288,7 +1289,7 @@ class WetBulbSolver : public CoolProp::FuncWrapper1D
     }
     double call(double Twb) {
         double epsilon = 0.621945;
-        double f_wb, p_ws_wb, p_s_wb, W_s_wb, h_w, M_ha_wb, psi_wb, v_bar_wb;
+        double f_wb = NAN, p_ws_wb = NAN, p_s_wb = NAN, W_s_wb = NAN, h_w = NAN, M_ha_wb = NAN, psi_wb = NAN, v_bar_wb = NAN;
 
         // Enhancement Factor at wetbulb temperature [-]
         f_wb = f_factor(Twb, _p);
@@ -1336,7 +1337,7 @@ class WetBulbTminSolver : public CoolProp::FuncWrapper1D
     double call(double Ts) {
         //double RHS = HAPropsSI("H","T",Ts,"P",p,"R",1);
 
-        double psi_w, T = Ts;
+        double psi_w = NAN, T = Ts;
         //std::vector<givens> inp = { HumidAir::GIVEN_T, HumidAir::GIVEN_RH }; // C++11
         std::vector<givens> inp(2);
         inp[0] = HumidAir::GIVEN_T;
@@ -1375,7 +1376,7 @@ double WetbulbTemperature(double T, double p, double psi_w) {
     // Instantiate the solver container class
     WetBulbSolver WBS(T, p, psi_w);
 
-    double return_val;
+    double return_val = NAN;
     try {
         return_val = Brent(WBS, Tmax + 1, 100, DBL_EPSILON, 1e-12, 50);
 
@@ -1466,7 +1467,7 @@ int TypeMatch(int TypeCode, const std::string& Input1Name, const std::string& In
         return -1;
 }
 double MoleFractionWater(double T, double p, int HumInput, double InVal) {
-    double p_ws, f, W, epsilon = 0.621945, Tdp, p_ws_dp, f_dp, p_w_dp, p_s, RH;
+    double p_ws = NAN, f = NAN, W = NAN, epsilon = 0.621945, Tdp = NAN, p_ws_dp = NAN, f_dp = NAN, p_w_dp = NAN, p_s = NAN, RH = NAN;
 
     if (HumInput == GIVEN_HUMRAT)  //(2)
     {
@@ -1511,7 +1512,7 @@ double MoleFractionWater(double T, double p, int HumInput, double InVal) {
 }
 
 double RelativeHumidity(double T, double p, double psi_w) {
-    double p_ws, f, p_s;
+    double p_ws = NAN, f = NAN, p_s = NAN;
     if (T >= 273.16) {
         // Saturation pressure [Pa]
         p_ws = IF97::psat97(T);
@@ -1926,7 +1927,7 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w) {
             return _HAPropsSI_outputs(GIVEN_CPHA, p, T, psi_w) * (1 + HumidityRatio(psi_w));
         }
         case GIVEN_CPHA: {
-            double v_bar1, v_bar2, h_bar1, h_bar2, cp_ha, dT = 1e-3;
+            double v_bar1 = NAN, v_bar2 = NAN, h_bar1 = NAN, h_bar2 = NAN, cp_ha = NAN, dT = 1e-3;
             v_bar1 = MolarVolume(T - dT, p, psi_w);            //[m^3/mol_ha]
             h_bar1 = MolarEnthalpy(T - dT, p, psi_w, v_bar1);  //[J/mol_ha]
             v_bar2 = MolarVolume(T + dT, p, psi_w);            //[m^3/mol_ha]
@@ -1939,7 +1940,7 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w) {
             return _HAPropsSI_outputs(GIVEN_CVHA, p, T, psi_w) * (1 + HumidityRatio(psi_w));
         }
         case GIVEN_CVHA: {
-            double v_bar, p_1, p_2, u_bar1, u_bar2, cv_bar, dT = 1e-3;
+            double v_bar = NAN, p_1 = NAN, p_2 = NAN, u_bar1 = NAN, u_bar2 = NAN, cv_bar = NAN, dT = 1e-3;
             v_bar = MolarVolume(T, p, psi_w);  //[m^3/mol_ha]
             p_1 = Pressure(T - dT, v_bar, psi_w);
             u_bar1 = MolarInternalEnergy(T - dT, p_1, psi_w, v_bar);  //[J/mol_ha]
@@ -1949,7 +1950,7 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w) {
             return cv_bar / M_ha;                                     //[J/kg_ha/K]
         }
         case GIVEN_ISENTROPIC_EXPONENT: {
-            CoolPropDbl v_bar, dv = 1e-8, p_1, p_2;
+            CoolPropDbl v_bar = NAN, dv = 1e-8, p_1 = NAN, p_2 = NAN;
             CoolPropDbl cp = _HAPropsSI_outputs(GIVEN_CPHA, p, T, psi_w);  //[J/kg_da/K]
             CoolPropDbl cv = _HAPropsSI_outputs(GIVEN_CVHA, p, T, psi_w);  //[J/kg_da/K]
             v_bar = MolarVolume(T, p, psi_w);                              //[m^3/mol_ha]
@@ -1959,7 +1960,7 @@ double _HAPropsSI_outputs(givens OutputType, double p, double T, double psi_w) {
             return -cp / cv * dpdv__constT * v_bar / p;
         }
         case GIVEN_SPEED_OF_SOUND: {
-            CoolPropDbl v_bar, dv = 1e-8, p_1, p_2;
+            CoolPropDbl v_bar = NAN, dv = 1e-8, p_1 = NAN, p_2 = NAN;
             CoolPropDbl cp = _HAPropsSI_outputs(GIVEN_CPHA, p, T, psi_w);  //[J/kg_da/K]
             CoolPropDbl cv = _HAPropsSI_outputs(GIVEN_CVHA, p, T, psi_w);  //[J/kg_da/K]
             v_bar = MolarVolume(T, p, psi_w);                              //[m^3/mol_ha]
@@ -1995,7 +1996,7 @@ double HAPropsSI(const std::string& OutputName, const std::string& Input1Name, d
         std::vector<double> input_vals(2);
 
         givens In1Type, In2Type, In3Type, OutputType;
-        double p, T = _HUGE, psi_w = _HUGE;
+        double p = NAN, T = _HUGE, psi_w = _HUGE;
 
         // First figure out what kind of inputs you have, convert names to enum values
         In1Type = Name2Type(Input1Name.c_str());
@@ -2120,7 +2121,7 @@ double HAProps_Aux(const char* Name, double T, double p, double W, char* units) 
     // Requires W since it is nice and fast and always defined.  Put a dummy value if you want something that doesn't use humidity
 
     // Takes temperature, pressure, and humidity ratio W as inputs;
-    double psi_w, B_aa, C_aaa, B_ww, C_www, B_aw, C_aaw, C_aww, v_bar;
+    double psi_w = NAN, B_aa = NAN, C_aaa = NAN, B_ww = NAN, C_www = NAN, B_aw = NAN, C_aaw = NAN, C_aww = NAN, v_bar = NAN;
 
     try {
         if (!strcmp(Name, "Baa")) {

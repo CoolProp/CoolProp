@@ -37,7 +37,7 @@ double psub_Ice(double T) {
 #ifndef __powerpc__
     double a[] = {0, -0.212144006e2, 0.273203819e2, -0.610598130e1};
     double b[] = {0, 0.333333333e-2, 0.120666667e1, 0.170333333e1};
-    double summer = 0, theta;
+    double summer = 0, theta = NAN;
     theta = T / T_t;
     for (int i = 1; i <= 3; i++) {
         summer += a[i] * pow(theta, b[i]);
@@ -51,7 +51,7 @@ double psub_Ice(double T) {
 double g_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2, term1, term2;
-    double g0, theta, pi, pi_0;
+    double g0 = NAN, theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;
@@ -69,7 +69,7 @@ double g_Ice(double T, double p) {
 double dg_dp_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2_p;
-    double g0_p, theta, pi, pi_0;
+    double g0_p = NAN, theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;
@@ -85,7 +85,7 @@ double dg_dp_Ice(double T, double p) {
 double dg2_dp2_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2_pp;
-    double g0_pp, theta, pi, pi_0;
+    double g0_pp = NAN, theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;
@@ -101,7 +101,7 @@ double dg2_dp2_Ice(double T, double p) {
 double dg_dT_Ice(double T, double p) {
 #ifndef __powerpc__
     std::complex<double> r2, term1, term2;
-    double theta, pi, pi_0;
+    double theta = NAN, pi = NAN, pi_0 = NAN;
     theta = T / T_t;
     pi = p / p_t;
     pi_0 = p_0 / p_t;
