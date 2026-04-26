@@ -217,8 +217,10 @@ Activating updates requires a one-time signing-keypair setup:
 
 2. **Replace the placeholder pubkey** in
    `wrappers/GUI/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`)
-   with the printed public key. Commit that change — the public key is
-   safe to publish.
+   with the printed public key, **and** add `"createUpdaterArtifacts":
+   true` to the `bundle` block in the same file. Commit that change —
+   the public key is safe to publish. The flag is left off by default so
+   builds don't fail when the signing secrets aren't configured yet.
 
 3. **Add the GitHub secrets** so CI can sign release artifacts:
 
