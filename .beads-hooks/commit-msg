@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+# Auto-append [skip ci] to commit messages whose entire change set lives
+# under .beads/ (issue-tracker syncs). GitHub Actions skips workflows when
+# the commit message contains [skip ci], so beads-only commits don't burn
+# CI minutes across the ~11 workflows in this repo that fire on every push.
+#
+# Triggers on:
+#   - any commit whose staged paths are all under `.beads/`
+# Skips itself if the message already contains a skip-ci token.
+#
+# This hook is intentionally outside any bd-managed section so `bd hooks
+# install` won't touch it.
+
+msg_file=$1
+[ -z "$msg_file" ] && exit 0
+[ -f "$msg_file" ] || exit 0
+
+# Already has a skip-ci marker — leave it alone.
+if grep -qE '\[(skip ci|ci skip|no ci|skip actions|actions skip)\]' "$msg_file"; then
+  exit 0
+fi
+
+# What's staged? If git diff returns nothing, fall back to the working tree
+# (handles `git commit -a` flows where files aren't pre-staged).
+staged=$(git diff --cached --name-only --diff-filter=ACMRTD 2>/dev/null)
+if [ -z "$staged" ]; then
+  staged=$(git diff --name-only --diff-filter=ACMRTD HEAD 2>/dev/null)
+fi
+[ -z "$staged" ] && exit 0
+
+# Bail out the moment we see anything outside .beads/.
+if printf '%s\n' "$staged" | grep -qv '^\.beads/'; then
+  exit 0
+fi
+
+# Append the marker on a fresh line, separated from the existing message.
+printf '\n[skip ci]\n' >> "$msg_file"
