@@ -151,9 +151,16 @@ they exist to surface signal, not to gate.
   suite under ASan on every PR. This one *does* fail builds, since memory
   bugs are real bugs.
 
-## Future tooling
+## `git blame` and the one-shot reformat
 
-These will land as the `CoolProp-2uw` epic progresses; cross-references
-will be added here as each lands:
+The repo's `.git-blame-ignore-revs` lists SHAs of pure-formatting / mechanical
+commits (the whole-repo clang-format pass in PR #2803, plus future
+`clang-tidy --fix` passes). To make local `git blame` skip them, opt in
+once per clone:
 
-- `.git-blame-ignore-revs` for the one-shot reformat (Tier 4.1, `CoolProp-2uw.12`)
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+GitHub's blame view honours this file automatically — no setup needed in the
+web UI.

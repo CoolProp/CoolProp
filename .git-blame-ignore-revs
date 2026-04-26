@@ -1,0 +1,10 @@
+# SHAs of pure-formatting / mechanical commits that `git blame` should
+# look through. Per-clone opt-in:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub's blame view honours this file automatically — no setup needed
+# in the web UI.
+
+# Whole-repo clang-format pass over src/ + include/ (CoolProp-2uw.12, PR #2803)
+6d2eb695ee8c15de5ef0daee58869db772e42fd7
