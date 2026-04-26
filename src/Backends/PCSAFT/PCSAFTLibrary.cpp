@@ -23,15 +23,47 @@ void set_mixture_binary_pair_pcsaft(const std::string& CAS1, const std::string& 
 
 namespace PCSAFTLibrary {
 
-static PCSAFTLibraryClass library;
+namespace {
+/// Schema-validate a JSON blob and merge it into the given library instance.
+/// File-private so the constructor can populate `*this` without going through
+/// the get_library() singleton (which would recurse into its own constructor).
+void add_fluids_from_JSON_string(PCSAFTLibraryClass& dest, const std::string_view& JSON) {
+    std::string errstr;
+    cpjson::schema_validation_code val_code = cpjson::validate_schema(pcsaft_fluids_schema_JSON, JSON, errstr);
+    if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
+        rapidjson::Document dd;
+        dd.Parse<0>(JSON.data(), JSON.size());
+        if (dd.HasParseError()) {
+            throw ValueError("Unable to load all_pcsaft_JSON.json");
+        } else {
+            try {
+                dest.add_many(dd);
+            } catch (std::exception& e) {
+                std::cout << e.what() << std::endl;
+            }
+        }
+    } else {
+        if (get_debug_level() > 0) {
+            throw ValueError(format("Unable to load PC-SAFT library with error: %s", errstr.c_str()));
+        }
+    }
+}
+}  // anonymous namespace
 
 PCSAFTLibraryClass& get_library(void) {
+    // Function-local static (Meyers singleton): C++11 guarantees the
+    // constructor runs exactly once even under concurrent first calls. The
+    // previous namespace-scope `static PCSAFTLibraryClass library;` relied on
+    // single-threaded static init, which is fragile across translation-unit
+    // init order and dynamic-library load contexts (gh-2787).
+    static PCSAFTLibraryClass library;
     return library;
 }
 
 PCSAFTLibraryClass::PCSAFTLibraryClass() : empty(true) {
-    // This JSON formatted string comes from the all_pcsaft_JSON.h header which is a C++-escaped version of the JSON file
-    add_fluids_as_JSON(all_pcsaft_JSON);
+    // Populate via the file-private helper so the constructor does NOT recurse
+    // through get_library() while the singleton is still being built.
+    add_fluids_from_JSON_string(*this, all_pcsaft_JSON);
 
     // Then we add the library of binary interaction parameters
     if (m_binary_pair_map.size() == 0) {
@@ -67,29 +99,7 @@ PCSAFTFluid& PCSAFTLibraryClass::get(std::size_t key) {
 };
 
 void add_fluids_as_JSON(const std::string_view& JSON) {
-    // First we validate the json string against the schema;
-    std::string errstr;
-    cpjson::schema_validation_code val_code = cpjson::validate_schema(pcsaft_fluids_schema_JSON, JSON, errstr);
-    // Then we check the validation code
-
-    if (val_code == cpjson::SCHEMA_VALIDATION_OK) {
-        rapidjson::Document dd;
-
-        dd.Parse<0>(JSON.data(), JSON.size());
-        if (dd.HasParseError()) {
-            throw ValueError("Unable to load all_pcsaft_JSON.json");
-        } else {
-            try {
-                library.add_many(dd);
-            } catch (std::exception& e) {
-                std::cout << e.what() << std::endl;
-            }
-        }
-    } else {
-        if (get_debug_level() > 0) {
-            throw ValueError(format("Unable to load PC-SAFT library with error: %s", errstr.c_str()));
-        }
-    }
+    add_fluids_from_JSON_string(get_library(), JSON);
 }
 
 int PCSAFTLibraryClass::add_many(rapidjson::Value& listing) {

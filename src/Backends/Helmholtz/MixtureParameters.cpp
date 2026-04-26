@@ -4,6 +4,8 @@
 #include "mixture_binary_pairs_JSON.h"         // Creates the variable mixture_binary_pairs_JSON
 #include "predefined_mixtures_JSON.h"          // Makes a std::string variable called predefined_mixtures_JSON
 
+#include <mutex>
+
 namespace CoolProp {
 
 /** \brief A library of predefined mixtures
@@ -84,6 +86,10 @@ class MixtureBinaryPairLibrary
    private:
     /// Map from sorted pair of CAS numbers to reducing parameter map.  The reducing parameter map is a map from key (string) to value (double)
     std::map<std::vector<std::string>, std::vector<Dictionary>> m_binary_pair_map;
+    /// Guards single-threaded population of m_binary_pair_map. Without it,
+    /// concurrent first calls to binary_pair_map() race in load_defaults()
+    /// (gh-2787).
+    std::once_flag m_load_flag;
 
    public:
     std::map<std::vector<std::string>, std::vector<Dictionary>>& binary_pair_map() {
@@ -102,9 +108,7 @@ class MixtureBinaryPairLibrary
     }
 
     void load_defaults_if_needed() {
-        if (m_binary_pair_map.size() == 0) {
-            load_defaults();
-        }
+        std::call_once(m_load_flag, [this] { load_defaults(); });
     }
 
     // Load the defaults that come from the JSON-encoded string compiled into library
@@ -407,6 +411,8 @@ class MixtureDepartureFunctionsLibrary
    private:
     /// Map from sorted pair of CAS numbers to departure term dictionary.
     std::map<std::string, Dictionary> m_departure_function_map;
+    /// Guards single-threaded population of m_departure_function_map.
+    std::once_flag m_load_flag;
 
    public:
     std::map<std::string, Dictionary>& departure_function_map() {
@@ -504,9 +510,7 @@ class MixtureDepartureFunctionsLibrary
         }
     }
     void load_defaults_if_needed() {
-        if (m_departure_function_map.size() == 0) {
-            load_defaults();
-        }
+        std::call_once(m_load_flag, [this] { load_defaults(); });
     }
     // Load the defaults that come from the JSON-encoded string compiled into library
     // as the variable mixture_departure_functions_JSON

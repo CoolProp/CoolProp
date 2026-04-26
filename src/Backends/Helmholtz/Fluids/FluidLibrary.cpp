@@ -1,6 +1,8 @@
 
 #include "FluidLibrary.h"
 
+#include <mutex>
+
 #include "Backends/Helmholtz/HelmholtzEOSBackend.h"
 #include "miniz.h"
 
@@ -24,6 +26,22 @@ INCBIN(all_fluids_JSON_z, "all_fluids.json.z");
 namespace CoolProp {
 
 static JSONFluidLibrary library;
+
+void load();
+
+// Thread-safe lazy initialization of the global fluid library. The
+// previous `if (library.is_empty()) load();` pattern races when multiple
+// threads hit a cold cache simultaneously — multiple threads see the
+// library empty, all call load() concurrently, and the resulting
+// concurrent inserts into string_to_index_map / fluid_map leave the
+// library partially populated (gh-2787). std::call_once ensures load()
+// runs exactly once even under concurrent first calls; if load() throws,
+// the flag is left unset and the next call will retry.
+static std::once_flag library_load_flag;
+
+static void ensure_library_loaded() {
+    std::call_once(library_load_flag, &load);
+}
 
 void load() {
     std::vector<unsigned char> outbuffer(gall_fluids_JSON_zSize * 7);
@@ -115,9 +133,7 @@ void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string& flui
 void JSONFluidLibrary::add_many(const std::string& JSON_string) {
 
     // First load all the baseline fluids
-    if (library.is_empty()) {
-        load();
-    }
+    ensure_library_loaded();
 
     // Then, load the fluids we would like to add
     rapidjson::Document doc;
@@ -357,37 +373,27 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
 };
 
 JSONFluidLibrary& get_library(void) {
-    if (library.is_empty()) {
-        load();
-    }
+    ensure_library_loaded();
     return library;
 }
 
 CoolPropFluid get_fluid(const std::string& fluid_string) {
-    if (library.is_empty()) {
-        load();
-    }
+    ensure_library_loaded();
     return library.get(fluid_string);
 }
 
 std::string get_fluid_as_JSONstring(const std::string& identifier) {
-    if (library.is_empty()) {
-        load();
-    }
+    ensure_library_loaded();
     return library.get_JSONstring(identifier);
 }
 
 std::string get_fluid_list(void) {
-    if (library.is_empty()) {
-        load();
-    }
+    ensure_library_loaded();
     return library.get_fluid_list();
 };
 
 void set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1, double delta_a2, const std::string& ref) {
-    if (library.is_empty()) {
-        load();
-    }
+    ensure_library_loaded();
     library.set_fluid_enthalpy_entropy_offset(fluid, delta_a1, delta_a2, ref);
 }
 
