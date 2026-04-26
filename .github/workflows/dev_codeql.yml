@@ -2,13 +2,11 @@ name: Development CodeQL
 
 on:
   push:
-    branches: [ 'dev_checks' ]
-  #  branches: [ 'master', 'main', 'develop', 'dev_checks' ]
-  #  tags: [ 'v*' ]
-  #pull_request:
-  #  branches: [ 'master', 'main', 'develop' ]
+    branches: [ 'master' ]
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
   schedule:
-    - cron: '15 8 * * 0,4' # Run twice a week
+    - cron: '15 8 * * 0,4' # Run twice a week as a fallback
 
 jobs:
   analyze:
@@ -26,24 +24,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
           
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-          
-          
+
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           queries: +security-and-quality
 
-
       - name: Autobuild Python
         if: ${{ matrix.language == 'python' }}
-        uses: github/codeql-action/autobuild@v2
+        uses: github/codeql-action/autobuild@v3
 
       
       - name: Configure CPP
@@ -61,6 +57,6 @@ jobs:
 
       
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
