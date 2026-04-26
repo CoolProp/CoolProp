@@ -9,6 +9,9 @@
 # Or against the whole repo (slow):
 #   pre-commit run --all-files
 #
+# Run the clang-tidy hook (manual-only; see notes below):
+#   pre-commit run --hook-stage manual --all-files clang-tidy
+#
 # Skip the hooks for a single commit (e.g. WIP):
 #   git commit --no-verify
 #
@@ -17,11 +20,12 @@
 #   pre-commit clean          # optional: clears cached hook environments
 #   pip uninstall pre-commit  # optional: remove the package itself
 #
-# Pinned to the latest clang-format 18.x patch (18.1.8). The Ubuntu image in
-# CI ships 18.1.3, but 18.x patches are bug-fix-only with no formatting-rule
-# changes, so hook output is identical to what CI emits. Pinning matters:
-# different MAJOR versions produce different output and unpinned hooks break
+# clang-format pin: latest 18.x patch (18.1.8). The Ubuntu image in CI ships
+# 18.1.3, but 18.x patches are bug-fix-only with no formatting-rule changes,
+# so hook output is identical to what CI emits. Pinning matters: different
+# MAJOR versions produce different output and unpinned hooks break
 # reproducibility across contributors.
+
 repos:
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.8
@@ -29,3 +33,32 @@ repos:
       - id: clang-format
         types_or: [c, c++]
         exclude: ^externals/
+
+  # clang-tidy hook (CoolProp-2uw.6).
+  #
+  # Manual stage: clang-tidy on the CoolProp codebase is too slow to run on
+  # every commit (single-file runs can be tens of seconds with the strict
+  # .clang-tidy config). Invoke before pushing instead:
+  #
+  #   pre-commit run --hook-stage manual --all-files clang-tidy
+  #
+  # Or per a list of files:
+  #
+  #   pre-commit run --hook-stage manual --files src/CPstrings.cpp clang-tidy
+  #
+  # The wrapper at dev/ci/run-clang-tidy-staged.sh skips gracefully if
+  # clang-tidy is not installed or compile_commands.json doesn't exist (no
+  # build dir yet). Configure cmake once before invoking:
+  #
+  #   cmake -G Ninja -B build -S .
+  #
+  # Override the build dir via COOLPROP_BUILD_DIR=<path>.
+  - repo: local
+    hooks:
+      - id: clang-tidy
+        name: clang-tidy (manual; needs build/compile_commands.json)
+        entry: dev/ci/run-clang-tidy-staged.sh
+        language: script
+        types_or: [c, c++]
+        exclude: ^(externals/|include/(.*_JSON.*|gitrevision|miniz)\.h$)
+        stages: [manual]
