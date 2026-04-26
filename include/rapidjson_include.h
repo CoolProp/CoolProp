@@ -220,7 +220,7 @@ inline std::vector<std::string> get_string_array(const rapidjson::Value& v) {
         throw CoolProp::ValueError("input is not an array");
     }
     for (rapidjson::Value::ConstValueIterator itr = v.Begin(); itr != v.End(); ++itr) {
-        out.push_back(itr->GetString());
+        out.emplace_back(itr->GetString());
     }
     return out;
 };

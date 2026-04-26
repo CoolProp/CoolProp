@@ -8,7 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <numeric>
-#include <math.h>
+#include <cmath>
 
 namespace CoolProp {}; /* namespace CoolProp */
 

@@ -2,7 +2,7 @@
 #include "DataStructures.h"
 #include "IncompressibleFluid.h"
 #include "IncompressibleLibrary.h"
-#include "math.h"
+#include <cmath>
 #include "MatrixMath.h"
 #include "PolyMath.h"
 #include <Eigen/Core>

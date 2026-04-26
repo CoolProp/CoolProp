@@ -37,15 +37,15 @@ surface tension                 N/m
 #include "DataStructures.h"
 #include "AbstractState.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <optional>
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
 #include <cassert>
 #include <memory>
 using std::shared_ptr;
-#include <stdlib.h>
+#include <cstdlib>
 
 #if defined(_MSC_VER)
 #    define _CRTDBG_MAP_ALLOC
@@ -226,7 +226,7 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
      */
 
     // Abort check if Refprop has been loaded.
-    if (RefpropdllInstance != NULL) return true;
+    if (RefpropdllInstance != nullptr) return true;
 
     // Store result of previous check.
     if (_REFPROP_supported) {
@@ -1155,7 +1155,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     */
     int N = 500;
     int isp = 0, iderv = -1;
-    if (SPLNVALdll == NULL) {
+    if (SPLNVALdll == nullptr) {
         std::string rpv = get_global_param_string("REFPROP_version");
         throw ValueError(
           format("Your version of REFFPROP(%s) does not have the SPLNVALdll function; cannot extract phase envelope values", rpv.c_str()));
@@ -2008,7 +2008,7 @@ void REFPROPMixtureBackend::update_with_guesses(CoolProp::input_pairs input_pair
 CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel) {
     this->check_loaded_fluid();
     double val = 0, tau = _tau, delta = _delta;
-    if (PHIXdll == NULL) {
+    if (PHIXdll == nullptr) {
         throw ValueError("PHIXdll function is not available in your version of REFPROP. Please upgrade");
     }
     PHIXdll(&itau, &idel, &tau, &delta, &(mole_fractions[0]), &val);
@@ -2017,7 +2017,7 @@ CoolPropDbl REFPROPMixtureBackend::call_phixdll(int itau, int idel) {
 CoolPropDbl REFPROPMixtureBackend::call_phi0dll(int itau, int idel) {
     this->check_loaded_fluid();
     double val = 0, tau = _tau, __T = T(), __rho = rhomolar() / 1000;
-    if (PHI0dll == NULL) {
+    if (PHI0dll == nullptr) {
         throw ValueError("PHI0dll function is not available in your version of REFPROP. Please upgrade");
     }
     PHI0dll(&itau, &idel, &__T, &__rho, &(mole_fractions[0]), &val);

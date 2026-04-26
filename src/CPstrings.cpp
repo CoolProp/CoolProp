@@ -23,7 +23,7 @@ std::vector<std::string> strsplit(const std::string& s, char del) {
     std::string::const_iterator i1 = s.begin(), i2;
     while (true) {
         i2 = std::find(i1, s.end(), del);
-        v.push_back(std::string(i1, i2));
+        v.emplace_back(i1, i2);
         if (i2 == s.end()) break;
         i1 = i2 + 1;
     }

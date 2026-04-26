@@ -29,10 +29,10 @@
 #include <memory>
 
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <vector>
 #include <exception>
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <locale>
 #include "CoolPropTools.h"

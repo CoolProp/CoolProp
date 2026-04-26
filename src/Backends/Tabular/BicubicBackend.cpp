@@ -54,7 +54,7 @@ void CoolProp::BicubicBackend::find_nearest_neighbor(SinglePhaseGriddedTableData
 double CoolProp::BicubicBackend::evaluate_single_phase_transport(SinglePhaseGriddedTableData& table, parameters output, double x, double y,
                                                                  std::size_t i, std::size_t j) {
     // By definition i,i+1,j,j+1 are all in range and valid
-    std::vector<std::vector<double>>* f = NULL;
+    std::vector<std::vector<double>>* f = nullptr;
     switch (output) {
         case iconductivity:
             f = &table.cond;

@@ -4,7 +4,7 @@ using std::shared_ptr;
 #include "AbstractState.h"
 #include "DataStructures.h"
 
-#include <time.h>
+#include <ctime>
 
 // A hack to make powerpc happy since sysClkRateGet not found
 #if defined(__powerpc__)

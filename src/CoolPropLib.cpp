@@ -3,7 +3,7 @@
 #    define _CRT_SECURE_NO_WARNINGS
 #    include <crtdbg.h>
 #else
-#    include <fenv.h>
+#    include <cfenv>
 #endif
 
 #include "CoolPropLib.h"
@@ -11,7 +11,7 @@
 #include "HumidAirProp.h"
 #include "DataStructures.h"
 #include "Exceptions.h"
-#include "float.h"
+#include <cfloat>
 #include <memory>
 using std::shared_ptr;
 #include "AbstractState.h"
@@ -19,7 +19,7 @@ using std::shared_ptr;
 #include "Configuration.h"
 #include "Backends/Helmholtz/MixtureParameters.h"
 
-#include <string.h>
+#include <cstring>
 #include <mutex>
 
 void str2buf(const std::string& str, char* buf, int n) {

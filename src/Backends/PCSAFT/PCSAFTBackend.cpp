@@ -1,9 +1,9 @@
 #include <vector>
 #include <string>
 #include <cmath>
-#include "math.h"
+#include <cmath>
 #include <Eigen/Dense>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "PCSAFTBackend.h"
 #include "Backends/Helmholtz/VLERoutines.h"

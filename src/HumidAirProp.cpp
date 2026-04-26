@@ -18,11 +18,11 @@ using std::shared_ptr;
 #include "Configuration.h"
 
 #include <algorithm>  // std::next_permutation
-#include <stdlib.h>
-#include "math.h"
-#include "time.h"
-#include "stdio.h"
-#include <string.h>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <list>
 #include <IF97.h>
