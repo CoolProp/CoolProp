@@ -200,6 +200,42 @@ release notes, and publish. macOS bundles in the release are signed and
 notarized only if the macOS signing secrets are configured (see above);
 Windows bundles only if the Windows signing secrets are.
 
+### Auto-updater
+
+The app uses `@tauri-apps/plugin-updater` to check for new releases on
+launch (5-second delay after window appears) and prompt the user to
+install. Manifest URL: the GitHub Release latest.json asset.
+
+Activating updates requires a one-time signing-keypair setup:
+
+1. **Generate the keypair** on a workstation (NOT in CI):
+   ```sh
+   cd wrappers/GUI
+   npx @tauri-apps/cli signer generate -w /path/to/coolprop-update.key
+   ```
+   This emits a private key file and prints the matching public key.
+
+2. **Replace the placeholder pubkey** in
+   `wrappers/GUI/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`)
+   with the printed public key. Commit that change — the public key is
+   safe to publish.
+
+3. **Add the GitHub secrets** so CI can sign release artifacts:
+
+| Secret                                | Value                                           |
+|---------------------------------------|-------------------------------------------------|
+| `TAURI_SIGNING_PRIVATE_KEY`           | full contents of the private key file           |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`  | password used during keypair generation         |
+
+4. **Back up the private key** offline. Losing it means future releases
+   can't be auto-installed by users running existing builds; they'd
+   have to manually download the new version.
+
+With those in place, every `gui-v*` tag pushes both the bundles and a
+signed `latest.json` to the GitHub Release. Older builds will detect the
+release, verify the signature against the embedded public key, download,
+and self-update.
+
 ## Regenerating the app icon
 
 The app icon is the canonical CoolProp water phase-diagram logo. To

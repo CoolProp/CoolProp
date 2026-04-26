@@ -4,6 +4,7 @@ import PropertyCalculator from "./components/PropertyCalculator";
 import SaturationView from "./components/SaturationView";
 import HumidAirCalculator from "./components/HumidAirCalculator";
 import AboutModal from "./components/AboutModal";
+import UpdateChecker from "./components/UpdateChecker";
 
 type Tab = "calculator" | "saturation" | "humidair" | "diagram";
 export type Basis = "mass" | "molar";
@@ -72,6 +73,7 @@ export default function App() {
         </div>
       </main>
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+      <UpdateChecker />
     </div>
   );
 }

@@ -326,6 +326,38 @@ button.primary:disabled {
   font-size: 12px;
 }
 
+/* ── UpdateChecker ──────────────────────────────────── */
+
+.update-banner {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: #1c2b3a;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  z-index: 250;
+  font-size: 13px;
+}
+
+.update-banner-text {
+  flex: 1 1 auto;
+}
+
+.update-banner-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.update-error {
+  color: #f08585;
+  margin-left: 4px;
+}
+
 .modal-title {
   font-size: 15px;
   font-weight: 600;

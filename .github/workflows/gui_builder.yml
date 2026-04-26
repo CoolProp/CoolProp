@@ -137,6 +137,13 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri auto-updater signing — when present, tauri-action signs the
+          # update artifacts and emits latest.json next to each platform
+          # bundle. Without these the build still succeeds; the updater
+          # plugin just won't accept the signatures, so updates won't work
+          # for that release. Activate by adding both repo secrets.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: wrappers/GUI
           tauriScript: npm run tauri
@@ -144,6 +151,7 @@ jobs:
           releaseName: ${{ startsWith(github.ref, 'refs/tags/gui-v') && format('CoolProp GUI {0}', github.ref_name) || '' }}
           releaseDraft: true
           prerelease: false
+          includeUpdaterJson: true
 
       # ─── Linux smoke tests ────────────────────────────────────────────────
       # 1) Forward-compat: install .deb in a clean ubuntu:26.04 container,
