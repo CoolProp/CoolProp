@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
 
+# Always export compile_commands.json for clang-tidy, IWYU, and editor LSPs
+# (CoolProp-2uw.7). Honored by Makefile and Ninja generators; harmless on others.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 include(CheckIncludeFileCXX)
 
 # Dependency management via CPM.cmake (replaces git submodules).
