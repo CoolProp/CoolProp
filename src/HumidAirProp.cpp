@@ -5,6 +5,7 @@
 #endif
 
 #include <memory>
+#include <mutex>
 using std::shared_ptr;
 
 #include "HumidAirProp.h"
@@ -87,15 +88,17 @@ double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
 double MoleFractionWater(double, double, int, double);
 
 void check_fluid_instantiation() {
-    if (!Water.get()) {
+    // Lazy init of the Water/Air backends needs to be thread-safe — without
+    // std::call_once, two threads concurrently entering HAPropsSI on a cold
+    // cache both observed null and both reset the shared_ptr, with the late
+    // assignment destroying the in-flight backend the other thread was using
+    // (gh-2787).
+    static std::once_flag flag;
+    std::call_once(flag, [] {
         Water.reset(new CoolProp::HelmholtzEOSBackend("Water"));
-    }
-    if (!WaterIF97.get()) {
         WaterIF97.reset(CoolProp::AbstractState::factory("IF97", "Water"));
-    }
-    if (!Air.get()) {
         Air.reset(new CoolProp::HelmholtzEOSBackend("Air"));
-    }
+    });
 };
 
 static double epsilon = 0.621945, R_bar = 8.314472;

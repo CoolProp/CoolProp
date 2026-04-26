@@ -5,6 +5,8 @@
 #include "rapidjson_include.h"
 #include "all_incompressibles_JSON.h"  // Makes a std::string variable called all_incompressibles_JSON
 
+#include <mutex>
+
 namespace CoolProp {
 
 ///// Class to access Lithium-Bromide solutions
@@ -539,6 +541,16 @@ IncompressibleFluid& JSONIncompressibleLibrary::get(std::size_t key) {
 
 static JSONIncompressibleLibrary library;
 
+void load_incompressible_library();
+
+// Thread-safe lazy initialization — see FluidLibrary.cpp for the same pattern
+// and rationale (gh-2787).
+static std::once_flag library_load_flag;
+
+static void ensure_library_loaded() {
+    std::call_once(library_load_flag, &load_incompressible_library);
+}
+
 void load_incompressible_library() {
     rapidjson::Document dd;
     // This json formatted string comes from the all_incompressibles_JSON.h header which is a C++-escaped version of the JSON file
@@ -557,29 +569,21 @@ void load_incompressible_library() {
 }
 
 JSONIncompressibleLibrary& get_incompressible_library(void) {
-    if (library.is_empty()) {
-        load_incompressible_library();
-    }
+    ensure_library_loaded();
     return library;
 }
 
 IncompressibleFluid& get_incompressible_fluid(const std::string& fluid_string) {
-    if (library.is_empty()) {
-        load_incompressible_library();
-    }
+    ensure_library_loaded();
     return library.get(fluid_string);
 }
 
 std::string get_incompressible_list_pure(void) {
-    if (library.is_empty()) {
-        load_incompressible_library();
-    }
+    ensure_library_loaded();
     return library.get_incompressible_list_pure();
 };
 std::string get_incompressible_list_solution(void) {
-    if (library.is_empty()) {
-        load_incompressible_library();
-    }
+    ensure_library_loaded();
     return library.get_incompressible_list_solution();
 };
 
