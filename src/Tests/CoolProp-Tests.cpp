@@ -897,8 +897,7 @@ TEST_CASE("HAPropsSI two-water-content inputs that uniquely determine dry-bulb t
 // keyed_output calls assembled with the same mixing rule as the humid-air code.
 // ============================================================
 
-TEST_CASE("Humid-air virial-dependent properties are consistent with EOS virials",
-          "[humid_air][virial_cache]") {
+TEST_CASE("Humid-air virial-dependent properties are consistent with EOS virials", "[humid_air][virial_cache]") {
     // Verify that the HAPropsSI fugacity coefficient ('f') and compressibility ('Z')
     // are consistent with the individual B/C virial values from the EOS backends.
     // These quantities go through fill_virial_cache → calc_all_virials.
@@ -918,7 +917,7 @@ TEST_CASE("Humid-air virial-dependent properties are consistent with EOS virials
     SECTION("HAPropsSI virial-path results reproduce across cache invalidation") {
         // Call at T1, T2, T1 again — the third must be bit-identical to the first.
         double Z_T1_a = HumidAir::HAPropsSI("Z", "T", 293.15, "W", W, "P", P);
-        double Z_T2   = HumidAir::HAPropsSI("Z", "T", 333.15, "W", W, "P", P);
+        double Z_T2 = HumidAir::HAPropsSI("Z", "T", 333.15, "W", W, "P", P);
         double Z_T1_b = HumidAir::HAPropsSI("Z", "T", 293.15, "W", W, "P", P);
         (void)Z_T2;
         CHECK(Z_T1_a == Z_T1_b);
@@ -926,7 +925,7 @@ TEST_CASE("Humid-air virial-dependent properties are consistent with EOS virials
 
     SECTION("HAPropsSI enthalpy cache-invalidation reproduces") {
         double H_T1_a = HumidAir::HAPropsSI("H", "T", 293.15, "W", W, "P", P);
-        double H_T2   = HumidAir::HAPropsSI("H", "T", 333.15, "W", W, "P", P);
+        double H_T2 = HumidAir::HAPropsSI("H", "T", 333.15, "W", W, "P", P);
         double H_T1_b = HumidAir::HAPropsSI("H", "T", 293.15, "W", W, "P", P);
         (void)H_T2;
         CHECK(H_T1_a == H_T1_b);
@@ -946,8 +945,7 @@ TEST_CASE("Humid-air virial-dependent properties are consistent with EOS virials
 // in alpha0 or da0_dtau propagates into h and s.
 // ============================================================
 
-TEST_CASE("Humid-air h and s are consistent with individual EOS alpha0",
-          "[humid_air][alpha0_cache]") {
+TEST_CASE("Humid-air h and s are consistent with individual EOS alpha0", "[humid_air][alpha0_cache]") {
     // Spot-check specific-enthalpy and specific-entropy of dry air (W=0) and
     // pure water vapour (W→1, W=0.99) via HAPropsSI against direct backend calls.
     // These quantities depend directly on the alpha0 cache (fill_alpha0_cache →
@@ -1022,8 +1020,7 @@ static double hap(const char* out, const char* k1, double v1, const char* k2, do
 // -------------------------------------------------------
 // A.6.1  Saturated air at 101.325 kPa, T = -60 .. 0 °C
 // -------------------------------------------------------
-TEST_CASE("ASHRAE RP-1485 A.6.1: Saturated air properties, T=-60..0 C, P=101.325 kPa",
-          "[humid_air_validation][ashrae_a61]") {
+TEST_CASE("ASHRAE RP-1485 A.6.1: Saturated air properties, T=-60..0 C, P=101.325 kPa", "[humid_air_validation][ashrae_a61]") {
     // At R=1 every output must be a valid number; specific constraints below.
     // Known issue on unpatched master: T_wb returns inf at some temperatures –
     // recorded here as CHECK (not REQUIRE) so the suite continues to run.
@@ -1034,12 +1031,12 @@ TEST_CASE("ASHRAE RP-1485 A.6.1: Saturated air properties, T=-60..0 C, P=101.325
     for (int i = 0; i <= 12; ++i) {
         const double T = (273.15 - 60.0) + i * 5.0;
         SECTION(std::string("T = ") + std::to_string(static_cast<int>(T - 273.15)) + " C") {
-            const double W   = hap("W",   "T", T, "R", 1.0, P);
-            const double h   = hap("H",   "T", T, "R", 1.0, P);
-            const double v   = hap("V",   "T", T, "R", 1.0, P);
-            const double s   = hap("S",   "T", T, "R", 1.0, P);
+            const double W = hap("W", "T", T, "R", 1.0, P);
+            const double h = hap("H", "T", T, "R", 1.0, P);
+            const double v = hap("V", "T", T, "R", 1.0, P);
+            const double s = hap("S", "T", T, "R", 1.0, P);
             const double Twb = hap("Twb", "T", T, "R", 1.0, P);
-            const double Tdp = hap("D",   "T", T, "R", 1.0, P);
+            const double Tdp = hap("D", "T", T, "R", 1.0, P);
 
             // All outputs must be finite
             REQUIRE(ValidNumber(W));
@@ -1048,14 +1045,14 @@ TEST_CASE("ASHRAE RP-1485 A.6.1: Saturated air properties, T=-60..0 C, P=101.325
             REQUIRE(ValidNumber(s));
 
             // Physical bounds
-            CHECK(W >= 0.0);                          // non-negative humidity ratio
-            CHECK(v > 0.0);                           // positive specific volume
+            CHECK(W >= 0.0);  // non-negative humidity ratio
+            CHECK(v > 0.0);   // positive specific volume
 
             // At R=1: dew point and wet-bulb both equal dry-bulb temperature
             CHECK(ValidNumber(Tdp));
-            CHECK(std::abs(Tdp - T) < 1e-3);          // T_dp == T_db at saturation
+            CHECK(std::abs(Tdp - T) < 1e-3);  // T_dp == T_db at saturation
             CHECK(ValidNumber(Twb));
-            CHECK(std::abs(Twb - T) < 1e-3);          // T_wb == T_db at saturation
+            CHECK(std::abs(Twb - T) < 1e-3);  // T_wb == T_db at saturation
         }
     }
 }
@@ -1063,8 +1060,7 @@ TEST_CASE("ASHRAE RP-1485 A.6.1: Saturated air properties, T=-60..0 C, P=101.325
 // -------------------------------------------------------
 // A.6.2  Saturated air at 101.325 kPa, T = 0 .. 90 °C
 // -------------------------------------------------------
-TEST_CASE("ASHRAE RP-1485 A.6.2: Saturated air properties, T=0..90 C, P=101.325 kPa",
-          "[humid_air_validation][ashrae_a62]") {
+TEST_CASE("ASHRAE RP-1485 A.6.2: Saturated air properties, T=0..90 C, P=101.325 kPa", "[humid_air_validation][ashrae_a62]") {
     using namespace HumidAirTests;
     const double P = 101325.0;
 
@@ -1072,26 +1068,26 @@ TEST_CASE("ASHRAE RP-1485 A.6.2: Saturated air properties, T=0..90 C, P=101.325 
     for (int i = 0; i <= 18; ++i) {
         const double T = 273.15 + i * 5.0;
         SECTION(std::string("T = ") + std::to_string(static_cast<int>(T - 273.15)) + " C") {
-            const double W   = hap("W",   "T", T, "R", 1.0, P);
-            const double h   = hap("H",   "T", T, "R", 1.0, P);
-            const double v   = hap("V",   "T", T, "R", 1.0, P);
-            const double s   = hap("S",   "T", T, "R", 1.0, P);
+            const double W = hap("W", "T", T, "R", 1.0, P);
+            const double h = hap("H", "T", T, "R", 1.0, P);
+            const double v = hap("V", "T", T, "R", 1.0, P);
+            const double s = hap("S", "T", T, "R", 1.0, P);
             const double Twb = hap("Twb", "T", T, "R", 1.0, P);
-            const double Tdp = hap("D",   "T", T, "R", 1.0, P);
+            const double Tdp = hap("D", "T", T, "R", 1.0, P);
 
             REQUIRE(ValidNumber(W));
             REQUIRE(ValidNumber(h));
             REQUIRE(ValidNumber(v));
             REQUIRE(ValidNumber(s));
 
-            CHECK(W > 0.0);                           // above 0 °C there is always some saturation humidity
+            CHECK(W > 0.0);  // above 0 °C there is always some saturation humidity
             CHECK(v > 0.0);
             // Note: W can exceed 1 kg/kg at high T (e.g. ~1.42 at 90 °C, R=1) — no upper cap here
 
             CHECK(ValidNumber(Tdp));
             CHECK(std::abs(Tdp - T) < 1e-3);
             CHECK(ValidNumber(Twb));
-            CHECK(std::abs(Twb - T) < 1e-3);         // T_wb == T_db at R=1
+            CHECK(std::abs(Twb - T) < 1e-3);  // T_wb == T_db at R=1
         }
     }
 }
@@ -1099,31 +1095,31 @@ TEST_CASE("ASHRAE RP-1485 A.6.2: Saturated air properties, T=0..90 C, P=101.325 
 // -------------------------------------------------------
 // A.8   T = 200 °C (473.15 K), W = 0..1, multiple P
 // -------------------------------------------------------
-TEST_CASE("ASHRAE RP-1485 A.8: T=200 C, W=0..1 kg/kg, P=101 kPa..10 MPa",
-          "[humid_air_validation][ashrae_a8]") {
+TEST_CASE("ASHRAE RP-1485 A.8: T=200 C, W=0..1 kg/kg, P=101 kPa..10 MPa", "[humid_air_validation][ashrae_a8]") {
     using namespace HumidAirTests;
     const double T = 200.0 + 273.15;  // 473.15 K
 
     // Pressure table and corresponding W ranges (limited at high P where T < T_sat)
-    struct PressureCase {
+    struct PressureCase
+    {
         double p;
         std::vector<double> Wvals;
     };
     const PressureCase cases[] = {
-        {101325.0,  {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
-        {1000e3,    {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
-        {2000e3,    {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
-        {5000e3,    {0.0, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30}},               // T < T_sat(5 MPa), W limited
-        {10000e3,   {0.0, 0.05, 0.1}},                                         // T < T_sat(10 MPa), W limited
+      {101325.0, {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {1000e3, {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {2000e3, {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {5000e3, {0.0, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30}},  // T < T_sat(5 MPa), W limited
+      {10000e3, {0.0, 0.05, 0.1}},                         // T < T_sat(10 MPa), W limited
     };
 
     for (const auto& pc : cases) {
         for (double W : pc.Wvals) {
             SECTION("P=" + std::to_string(static_cast<int>(pc.p / 1000)) + " kPa W=" + std::to_string(W)) {
-                const double h   = hap("H",   "T", T, "W", W, pc.p);
-                const double v   = hap("V",   "T", T, "W", W, pc.p);
-                const double s   = hap("S",   "T", T, "W", W, pc.p);
-                const double R   = hap("R",   "T", T, "W", W, pc.p);
+                const double h = hap("H", "T", T, "W", W, pc.p);
+                const double v = hap("V", "T", T, "W", W, pc.p);
+                const double s = hap("S", "T", T, "W", W, pc.p);
+                const double R = hap("R", "T", T, "W", W, pc.p);
                 const double Twb = hap("Twb", "T", T, "W", W, pc.p);
 
                 // All must be finite
@@ -1135,7 +1131,7 @@ TEST_CASE("ASHRAE RP-1485 A.8: T=200 C, W=0..1 kg/kg, P=101 kPa..10 MPa",
                 // Physical bounds
                 CHECK(v > 0.0);
                 CHECK(R >= 0.0);
-                CHECK(R <= 1.0 + 1e-9);             // R ≤ 1 (allow tiny FP overshoot)
+                CHECK(R <= 1.0 + 1e-9);  // R ≤ 1 (allow tiny FP overshoot)
 
                 // Wet-bulb must be ≤ dry-bulb
                 CHECK(ValidNumber(Twb));
@@ -1159,30 +1155,30 @@ TEST_CASE("ASHRAE RP-1485 A.8: T=200 C, W=0..1 kg/kg, P=101 kPa..10 MPa",
 // -------------------------------------------------------
 // A.9   T = 320 °C (593.15 K), W = 0..1, multiple P
 // -------------------------------------------------------
-TEST_CASE("ASHRAE RP-1485 A.9: T=320 C, W=0..1 kg/kg, P=101 kPa..10 MPa",
-          "[humid_air_validation][ashrae_a9]") {
+TEST_CASE("ASHRAE RP-1485 A.9: T=320 C, W=0..1 kg/kg, P=101 kPa..10 MPa", "[humid_air_validation][ashrae_a9]") {
     using namespace HumidAirTests;
     const double T = 320.0 + 273.15;  // 593.15 K
 
-    struct PressureCase {
+    struct PressureCase
+    {
         double p;
         std::vector<double> Wvals;
     };
     const PressureCase cases[] = {
-        {101325.0,  {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
-        {1000e3,    {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
-        {2000e3,    {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
-        {5000e3,    {0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
-        {10000e3,   {0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {101325.0, {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {1000e3, {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {2000e3, {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {5000e3, {0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
+      {10000e3, {0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}},
     };
 
     for (const auto& pc : cases) {
         for (double W : pc.Wvals) {
             SECTION("P=" + std::to_string(static_cast<int>(pc.p / 1000)) + " kPa W=" + std::to_string(W)) {
-                const double h   = hap("H",   "T", T, "W", W, pc.p);
-                const double v   = hap("V",   "T", T, "W", W, pc.p);
-                const double s   = hap("S",   "T", T, "W", W, pc.p);
-                const double R   = hap("R",   "T", T, "W", W, pc.p);
+                const double h = hap("H", "T", T, "W", W, pc.p);
+                const double v = hap("V", "T", T, "W", W, pc.p);
+                const double s = hap("S", "T", T, "W", W, pc.p);
+                const double R = hap("R", "T", T, "W", W, pc.p);
                 const double Twb = hap("Twb", "T", T, "W", W, pc.p);
 
                 REQUIRE(ValidNumber(h));
@@ -1214,25 +1210,23 @@ TEST_CASE("ASHRAE RP-1485 A.9: T=320 C, W=0..1 kg/kg, P=101 kPa..10 MPa",
 // -------------------------------------------------------
 // Physical constraints over a (T, R, P) grid
 // -------------------------------------------------------
-TEST_CASE("Humid air physical constraints: T_dp <= T_wb <= T_db, W >= 0, 0 <= R <= 1",
-          "[humid_air_validation][humid_air_physics]") {
+TEST_CASE("Humid air physical constraints: T_dp <= T_wb <= T_db, W >= 0, 0 <= R <= 1", "[humid_air_validation][humid_air_physics]") {
     using namespace HumidAirTests;
 
     // A representative grid spanning sub-freezing, normal, and near-boiling conditions
-    const double Tvals[]  = {243.15, 263.15, 283.15, 293.15, 313.15, 333.15, 353.15};
-    const double Rvals[]  = {0.1, 0.3, 0.5, 0.7, 0.9};
-    const double Pvals[]  = {50000.0, 101325.0, 300000.0};
+    const double Tvals[] = {243.15, 263.15, 283.15, 293.15, 313.15, 333.15, 353.15};
+    const double Rvals[] = {0.1, 0.3, 0.5, 0.7, 0.9};
+    const double Pvals[] = {50000.0, 101325.0, 300000.0};
 
     for (double T : Tvals) {
         for (double R : Rvals) {
             for (double p : Pvals) {
-                SECTION("T=" + std::to_string(static_cast<int>(T - 273.15)) +
-                        " R=" + std::to_string(static_cast<int>(R * 100)) +
-                        "% P=" + std::to_string(static_cast<int>(p))) {
-                    const double W   = hap("W",   "T", T, "R", R, p);
-                    const double Tdp = hap("D",   "T", T, "R", R, p);
+                SECTION("T=" + std::to_string(static_cast<int>(T - 273.15)) + " R=" + std::to_string(static_cast<int>(R * 100))
+                        + "% P=" + std::to_string(static_cast<int>(p))) {
+                    const double W = hap("W", "T", T, "R", R, p);
+                    const double Tdp = hap("D", "T", T, "R", R, p);
                     const double Twb = hap("Twb", "T", T, "R", R, p);
-                    const double R2  = hap("R",   "T", T, "W", W, p);
+                    const double R2 = hap("R", "T", T, "W", W, p);
 
                     // Basic validity
                     REQUIRE(ValidNumber(W));
@@ -1249,9 +1243,9 @@ TEST_CASE("Humid air physical constraints: T_dp <= T_wb <= T_db, W >= 0, 0 <= R 
                     }
                     if (ValidNumber(Twb)) {
                         CHECK(Twb <= T + 1e-6);
-                        CHECK(Twb >= 100.0);          // wet-bulb never below ~100 K
+                        CHECK(Twb >= 100.0);  // wet-bulb never below ~100 K
                         if (ValidNumber(Tdp)) {
-                            CHECK(Tdp <= Twb + 1e-4); // dew point <= wet-bulb
+                            CHECK(Tdp <= Twb + 1e-4);  // dew point <= wet-bulb
                         }
                     }
                 }
@@ -1263,26 +1257,27 @@ TEST_CASE("Humid air physical constraints: T_dp <= T_wb <= T_db, W >= 0, 0 <= R 
 // -------------------------------------------------------
 // Round-trip consistency: T+R → various outputs → back
 // -------------------------------------------------------
-TEST_CASE("Humid air round-trip consistency: outputs used as inputs recover the original state",
-          "[humid_air_validation][humid_air_roundtrip]") {
+TEST_CASE("Humid air round-trip consistency: outputs used as inputs recover the original state", "[humid_air_validation][humid_air_roundtrip]") {
     using namespace HumidAirTests;
 
     // Representative conditions: (T [K], R [0-1], P [Pa])
-    struct Cond { double T, R, p; };
+    struct Cond
+    {
+        double T, R, p;
+    };
     const Cond conds[] = {
-        {253.15, 0.5, 101325.0},   // -20 °C, 50% RH
-        {273.15, 0.8, 101325.0},   //   0 °C, 80% RH (ice/liquid boundary)
-        {293.15, 0.3, 101325.0},   //  20 °C, 30% RH (typical indoor)
-        {293.15, 0.9, 101325.0},   //  20 °C, 90% RH
-        {313.15, 0.6, 101325.0},   //  40 °C, 60% RH
-        {293.15, 0.5, 200000.0},   //  20 °C, 50% RH at 2 bar
-        {293.15, 0.5,  50000.0},   //  20 °C, 50% RH at 0.5 bar
+      {253.15, 0.5, 101325.0},  // -20 °C, 50% RH
+      {273.15, 0.8, 101325.0},  //   0 °C, 80% RH (ice/liquid boundary)
+      {293.15, 0.3, 101325.0},  //  20 °C, 30% RH (typical indoor)
+      {293.15, 0.9, 101325.0},  //  20 °C, 90% RH
+      {313.15, 0.6, 101325.0},  //  40 °C, 60% RH
+      {293.15, 0.5, 200000.0},  //  20 °C, 50% RH at 2 bar
+      {293.15, 0.5, 50000.0},   //  20 °C, 50% RH at 0.5 bar
     };
 
     for (const auto& c : conds) {
-        SECTION("T=" + std::to_string(static_cast<int>(c.T - 273.15)) +
-                " R=" + std::to_string(static_cast<int>(c.R * 100)) +
-                "% P=" + std::to_string(static_cast<int>(c.p))) {
+        SECTION("T=" + std::to_string(static_cast<int>(c.T - 273.15)) + " R=" + std::to_string(static_cast<int>(c.R * 100))
+                + "% P=" + std::to_string(static_cast<int>(c.p))) {
             // Derive W from (T, R)
             const double W = hap("W", "T", c.T, "R", c.R, c.p);
             REQUIRE(ValidNumber(W));
@@ -1333,8 +1328,7 @@ TEST_CASE("Humid air round-trip consistency: outputs used as inputs recover the 
 // -------------------------------------------------------
 // Auxiliary functions: f_factor, p_ws, beta_H, kT, vbar_ws
 // -------------------------------------------------------
-TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
-          "[humid_air_validation][humid_air_aux]") {
+TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity", "[humid_air_validation][humid_air_aux]") {
     // HAProps_Aux(name, T[K], p[Pa], W[kg/kg], units_buf)
     char units[64];
 
@@ -1346,9 +1340,10 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
         for (double T : Tvals) {
             for (double p : Pvals) {
                 double f = HumidAir::HAProps_Aux("f", T, p, 0.0, units);
-                CAPTURE(T); CAPTURE(p);
+                CAPTURE(T);
+                CAPTURE(p);
                 CHECK(ValidNumber(f));
-                CHECK(f >= 1.0 - 1e-9);   // should be ≥ 1.0
+                CHECK(f >= 1.0 - 1e-9);  // should be ≥ 1.0
             }
         }
     }
@@ -1360,7 +1355,8 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
         double f_prev = 0.0;
         for (double p : Pvals) {
             double f = HumidAir::HAProps_Aux("f", T, p, 0.0, units);
-            CAPTURE(p); CAPTURE(f);
+            CAPTURE(p);
+            CAPTURE(f);
             CHECK(f >= f_prev - 1e-9);
             f_prev = f;
         }
@@ -1371,10 +1367,11 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
         double p_ws_prev = 0.0;
         for (double T : Tvals) {
             double p_ws = HumidAir::HAProps_Aux("p_ws", T, 101325.0, 0.0, units);
-            CAPTURE(T); CAPTURE(p_ws);
+            CAPTURE(T);
+            CAPTURE(p_ws);
             CHECK(ValidNumber(p_ws));
             CHECK(p_ws > 0.0);
-            CHECK(p_ws > p_ws_prev);   // monotonically increasing with T
+            CHECK(p_ws > p_ws_prev);  // monotonically increasing with T
             p_ws_prev = p_ws;
         }
     }
@@ -1382,10 +1379,10 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
     SECTION("Henry constant is positive for liquid water; not finite below ice point") {
         // beta_H represents the dissolution of air in liquid water.
         // Only defined for liquid water (T >= 273.16 K); returns inf below ice point.
-        const double T_ice  = 263.15;
+        const double T_ice = 263.15;
         const double T_liq1 = 283.15;
         const double T_liq2 = 313.15;
-        double bH_ice  = HumidAir::HAProps_Aux("beta_H", T_ice,  101325.0, 0.0, units);
+        double bH_ice = HumidAir::HAProps_Aux("beta_H", T_ice, 101325.0, 0.0, units);
         double bH_liq1 = HumidAir::HAProps_Aux("beta_H", T_liq1, 101325.0, 0.0, units);
         double bH_liq2 = HumidAir::HAProps_Aux("beta_H", T_liq2, 101325.0, 0.0, units);
         CHECK(!ValidNumber(bH_ice));  // undefined below ice point — returns inf
@@ -1399,9 +1396,10 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
         for (double T : Tvals) {
             for (double p : Pvals) {
                 double kT = HumidAir::HAProps_Aux("kT", T, p, 0.0, units);
-                CAPTURE(T); CAPTURE(p);
+                CAPTURE(T);
+                CAPTURE(p);
                 CHECK(ValidNumber(kT));
-                CHECK(kT > 0.0);   // compressibility is positive for stable liquid
+                CHECK(kT > 0.0);  // compressibility is positive for stable liquid
             }
         }
     }
@@ -1412,7 +1410,8 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
         for (double T : Tvals) {
             for (double p : Pvals) {
                 double v = HumidAir::HAProps_Aux("vbar_ws", T, p, 0.0, units);
-                CAPTURE(T); CAPTURE(p);
+                CAPTURE(T);
+                CAPTURE(p);
                 CHECK(ValidNumber(v));
                 CHECK(v > 0.0);
             }
@@ -1426,15 +1425,15 @@ TEST_CASE("Humid air auxiliary functions: physical validity and monotonicity",
         double Bww = HumidAir::HAProps_Aux("Bww", T, 101325.0, 0.0, units);
         CHECK(ValidNumber(Baa));
         CHECK(ValidNumber(Bww));
-        CHECK(Baa < 0.0);   // Baa < 0 for air at ambient conditions
-        CHECK(Bww < 0.0);   // Bww < 0 for water vapour at ambient conditions
+        CHECK(Baa < 0.0);  // Baa < 0 for air at ambient conditions
+        CHECK(Bww < 0.0);  // Bww < 0 for water vapour at ambient conditions
     }
 
     SECTION("Cross virial coefficient Baw") {
         const double T = 293.15;
         double Baw = HumidAir::HAProps_Aux("Baw", T, 101325.0, 0.0, units);
         CHECK(ValidNumber(Baw));
-        CHECK(Baw < 0.0);   // Baw is negative at typical atmospheric temperatures
+        CHECK(Baw < 0.0);  // Baw is negative at typical atmospheric temperatures
     }
 }
 
@@ -3439,9 +3438,10 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Check superancillary functions are av
     }
 };
 
-extern "C" {
-extern unsigned char gall_fluids_JSON_zData[];
-extern unsigned int gall_fluids_JSON_zSize;
+extern "C"
+{
+    extern unsigned char gall_fluids_JSON_zData[];
+    extern unsigned int gall_fluids_JSON_zSize;
 }
 
 TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[ancillary]") {
@@ -3537,12 +3537,14 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
         /// Fold a buffer of raw bytes into the running hash, one byte at a time.
         void mix_bytes(const void* data, std::size_t n) {
             const auto* p = static_cast<const uint8_t*>(data);
-            for (std::size_t i = 0; i < n; ++i) mix_u8(p[i]);
+            for (std::size_t i = 0; i < n; ++i)
+                mix_u8(p[i]);
         }
         /// Fold a 64-bit integer in little-endian byte order. Used for lengths,
         /// IEEE-754 bit patterns of doubles, and two's-complement ints.
         void mix_u64(uint64_t v) {
-            for (int i = 0; i < 8; ++i) mix_u8(static_cast<uint8_t>((v >> (i * 8)) & 0xff));
+            for (int i = 0; i < 8; ++i)
+                mix_u8(static_cast<uint8_t>((v >> (i * 8)) & 0xff));
         }
         /// Recursively fold a JSON subtree into the running hash. See the
         /// byte-stream contract in the block comment above.
@@ -3584,7 +3586,8 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
                 // and [[1,[]]] would serialize to the same byte stream.
                 mix_u8('a');
                 mix_u64(j.size());
-                for (const auto& el : j) walk(el);
+                for (const auto& el : j)
+                    walk(el);
             } else if (j.is_object()) {
                 // Size prefix + keys in sorted (lexicographic by UTF-8 bytes)
                 // order. nlohmann's underlying std::map already iterates in
@@ -3619,15 +3622,15 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
     // float, string, array, object, nested objects, empty containers).
     {
         nlohmann::json fixture = {
-            {"alphar", {{{"d", {1, 2, 3}}, {"n", {-0.5, 1.25e-10, 3.14159265358979}}}}},
-            {"empty_array", nlohmann::json::array()},
-            {"empty_string", ""},
-            {"flag_false", false},
-            {"flag_true", true},
-            {"gas_constant", 8.3144598},
-            {"nested", {{"deep", {{"deeper", nullptr}}}}},
-            {"zero_float", 0.0},
-            {"zero_int", 0},
+          {"alphar", {{{"d", {1, 2, 3}}, {"n", {-0.5, 1.25e-10, 3.14159265358979}}}}},
+          {"empty_array", nlohmann::json::array()},
+          {"empty_string", ""},
+          {"flag_false", false},
+          {"flag_true", true},
+          {"gas_constant", 8.3144598},
+          {"nested", {{"deep", {{"deeper", nullptr}}}}},
+          {"zero_float", 0.0},
+          {"zero_int", 0},
         };
         TreeHasher fixture_hasher;
         fixture_hasher.walk(fixture);
@@ -3679,7 +3682,6 @@ TEST_CASE("Superancillary source_eos_hash matches current EOS at bit level", "[a
     }
     CHECK(fluids_checked > 0);
 };
-
 
 TEST_CASE_METHOD(SuperAncillaryOnFixture, "Superancillary eval matches extended-precision check points for all fluids", "[ancillary]") {
     // Per-point tolerance comes from fastchebpure's own reported (SA)/(mp) ratio:
@@ -3927,7 +3929,7 @@ TEST_CASE_METHOD(SuperAncillaryOnFixture, "Phase for solid water should throw", 
         CAPTURE(p_Pa);
         auto Tm = AS->melting_line(iT, iP, p_Pa);
         CAPTURE(Tm);
-        CHECK_THROWS(AS->update(PT_INPUTS, p_Pa, -5+Tm));
+        CHECK_THROWS(AS->update(PT_INPUTS, p_Pa, -5 + Tm));
     }
 }
 
@@ -3945,19 +3947,22 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
                 double T = frac * Tc_sa;
                 CAPTURE(T);
                 AS->update(QT_INPUTS, 0, T);
-                double p_eos    = AS->p();
+                double p_eos = AS->p();
                 double rhoL_eos = AS->saturated_liquid_keyed_output(iDmolar);
                 double rhoV_eos = AS->saturated_vapor_keyed_output(iDmolar);
 
-                double p_anc    = ACB.calc_saturation_ancillary(iP,      0, iT, T);
+                double p_anc = ACB.calc_saturation_ancillary(iP, 0, iT, T);
                 double rhoL_anc = ACB.calc_saturation_ancillary(iDmolar, 0, iT, T);
                 double rhoV_anc = ACB.calc_saturation_ancillary(iDmolar, 1, iT, T);
 
-                CAPTURE(p_eos); CAPTURE(p_anc);
-                CAPTURE(rhoL_eos); CAPTURE(rhoL_anc);
-                CAPTURE(rhoV_eos); CAPTURE(rhoV_anc);
+                CAPTURE(p_eos);
+                CAPTURE(p_anc);
+                CAPTURE(rhoL_eos);
+                CAPTURE(rhoL_anc);
+                CAPTURE(rhoV_eos);
+                CAPTURE(rhoV_anc);
                 // Superancillaries achieve < 1e-3 relative error everywhere
-                CHECK(std::abs(p_anc    - p_eos)   / p_eos   < 1e-3);
+                CHECK(std::abs(p_anc - p_eos) / p_eos < 1e-3);
                 CHECK(std::abs(rhoL_anc - rhoL_eos) / rhoL_eos < 1e-3);
                 CHECK(std::abs(rhoV_anc - rhoV_eos) / rhoV_eos < 1e-3);
             }
@@ -3973,10 +3978,12 @@ TEST_CASE("Cubic superancillary saturation_ancillary accuracy vs EOS flash", "[c
             for (double frac : {0.9999, 0.99999, 0.999999, 1.0 - 1e-7}) {
                 double T = frac * Tc_sa;
                 CAPTURE(T);
-                double p_anc    = ACB.calc_saturation_ancillary(iP,      0, iT, T);
+                double p_anc = ACB.calc_saturation_ancillary(iP, 0, iT, T);
                 double rhoL_anc = ACB.calc_saturation_ancillary(iDmolar, 0, iT, T);
                 double rhoV_anc = ACB.calc_saturation_ancillary(iDmolar, 1, iT, T);
-                CAPTURE(p_anc); CAPTURE(rhoL_anc); CAPTURE(rhoV_anc);
+                CAPTURE(p_anc);
+                CAPTURE(rhoL_anc);
+                CAPTURE(rhoV_anc);
                 CHECK(p_anc > 0);
                 CHECK(rhoL_anc > rhoV_anc);
                 CHECK(std::abs(p_anc - pc_sa) / pc_sa < 0.01);  // within 1 % of superanc pc
@@ -4010,7 +4017,9 @@ TEST_CASE("Cubic superancillary update_QT_pure_superanc", "[cubic_superanc][2739
             double rhoV = AS->rhomolar();
             AS->update_QT_pure_superanc(0.5, T);
             double rhoM = AS->rhomolar();
-            CAPTURE(rhoL); CAPTURE(rhoV); CAPTURE(rhoM);
+            CAPTURE(rhoL);
+            CAPTURE(rhoV);
+            CAPTURE(rhoM);
             CHECK(rhoL > rhoM);
             CHECK(rhoM > rhoV);
         }
@@ -4030,7 +4039,9 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf pure fluid check values", "[R1234yf],[Lemmon-
     // T=280 K, rho=0 mol/dm3 (ideal-gas limit): cv=89.2037, cp=97.5182, w=149.388
     SECTION("T=280 K, rho->0 (ideal-gas limit)") {
         AS->update(DmolarT_INPUTS, 0.001, 280.0);
-        CAPTURE(AS->cvmolar()); CAPTURE(AS->cpmolar()); CAPTURE(AS->speed_sound());
+        CAPTURE(AS->cvmolar());
+        CAPTURE(AS->cpmolar());
+        CAPTURE(AS->speed_sound());
         CHECK(AS->cvmolar() == Catch::Approx(89.2037).epsilon(tol));
         CHECK(AS->cpmolar() == Catch::Approx(97.5182).epsilon(tol));
         CHECK(AS->speed_sound() == Catch::Approx(149.388).epsilon(tol));
@@ -4038,7 +4049,10 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf pure fluid check values", "[R1234yf],[Lemmon-
     // T=280 K, rho=11 mol/dm3=11000 mol/m3: p=28.95760 MPa, cv=101.930, cp=139.307, w=738.905
     SECTION("T=280 K, rho=11000 mol/m3 (compressed liquid)") {
         AS->update(DmolarT_INPUTS, 11000.0, 280.0);
-        CAPTURE(AS->p()); CAPTURE(AS->cvmolar()); CAPTURE(AS->cpmolar()); CAPTURE(AS->speed_sound());
+        CAPTURE(AS->p());
+        CAPTURE(AS->cvmolar());
+        CAPTURE(AS->cpmolar());
+        CAPTURE(AS->speed_sound());
         CHECK(AS->p() == Catch::Approx(28.95760e6).epsilon(tol));
         CHECK(AS->cvmolar() == Catch::Approx(101.930).epsilon(tol));
         CHECK(AS->cpmolar() == Catch::Approx(139.307).epsilon(tol));
@@ -4047,7 +4061,10 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf pure fluid check values", "[R1234yf],[Lemmon-
     // T=280 K, rho=0.1 mol/dm3=100 mol/m3: p=0.2185345 MPa, cv=91.3497, cp=102.623, w=141.882
     SECTION("T=280 K, rho=100 mol/m3 (gas)") {
         AS->update(DmolarT_INPUTS, 100.0, 280.0);
-        CAPTURE(AS->p()); CAPTURE(AS->cvmolar()); CAPTURE(AS->cpmolar()); CAPTURE(AS->speed_sound());
+        CAPTURE(AS->p());
+        CAPTURE(AS->cvmolar());
+        CAPTURE(AS->cpmolar());
+        CAPTURE(AS->speed_sound());
         CHECK(AS->p() == Catch::Approx(0.2185345e6).epsilon(tol));
         CHECK(AS->cvmolar() == Catch::Approx(91.3497).epsilon(tol));
         CHECK(AS->cpmolar() == Catch::Approx(102.623).epsilon(tol));
@@ -4056,7 +4073,10 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf pure fluid check values", "[R1234yf],[Lemmon-
     // T=340 K, rho=8 mol/dm3=8000 mol/m3: p=2.309798 MPa, cv=113.805, cp=195.748, w=265.888
     SECTION("T=340 K, rho=8000 mol/m3 (liquid)") {
         AS->update(DmolarT_INPUTS, 8000.0, 340.0);
-        CAPTURE(AS->p()); CAPTURE(AS->cvmolar()); CAPTURE(AS->cpmolar()); CAPTURE(AS->speed_sound());
+        CAPTURE(AS->p());
+        CAPTURE(AS->cvmolar());
+        CAPTURE(AS->cpmolar());
+        CAPTURE(AS->speed_sound());
         CHECK(AS->p() == Catch::Approx(2.309798e6).epsilon(tol));
         CHECK(AS->cvmolar() == Catch::Approx(113.805).epsilon(tol));
         CHECK(AS->cpmolar() == Catch::Approx(195.748).epsilon(tol));
@@ -4065,7 +4085,10 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf pure fluid check values", "[R1234yf],[Lemmon-
     // T=340 K, rho=1 mol/dm3=1000 mol/m3: p=1.855076 MPa, cv=113.479, cp=168.646, w=114.354
     SECTION("T=340 K, rho=1000 mol/m3 (superheated vapor)") {
         AS->update(DmolarT_INPUTS, 1000.0, 340.0);
-        CAPTURE(AS->p()); CAPTURE(AS->cvmolar()); CAPTURE(AS->cpmolar()); CAPTURE(AS->speed_sound());
+        CAPTURE(AS->p());
+        CAPTURE(AS->cvmolar());
+        CAPTURE(AS->cpmolar());
+        CAPTURE(AS->speed_sound());
         CHECK(AS->p() == Catch::Approx(1.855076e6).epsilon(tol));
         CHECK(AS->cvmolar() == Catch::Approx(113.479).epsilon(tol));
         CHECK(AS->cpmolar() == Catch::Approx(168.646).epsilon(tol));
@@ -4074,7 +4097,10 @@ TEST_CASE("Lemmon-IJT-2022 R1234yf pure fluid check values", "[R1234yf],[Lemmon-
     // T=368 K, rho=4.2 mol/dm3=4200 mol/m3: p=3.394716 MPa, cv=149.703, cp=48981.3, w=76.3597
     SECTION("T=368 K, rho=4200 mol/m3 (near-critical)") {
         AS->update(DmolarT_INPUTS, 4200.0, 368.0);
-        CAPTURE(AS->p()); CAPTURE(AS->cvmolar()); CAPTURE(AS->cpmolar()); CAPTURE(AS->speed_sound());
+        CAPTURE(AS->p());
+        CAPTURE(AS->cvmolar());
+        CAPTURE(AS->cpmolar());
+        CAPTURE(AS->speed_sound());
         CHECK(AS->p() == Catch::Approx(3.394716e6).epsilon(tol));
         CHECK(AS->cvmolar() == Catch::Approx(149.703).epsilon(tol));
         // Cp diverges near the critical point; use a looser tolerance
@@ -4394,10 +4420,9 @@ TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
 // corresponding paper; tolerances are generous enough to absorb the last
 // printed digit of each published value but tight enough to catch a real
 // regression in the EOS or its loader.
-TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables",
-          "[fluids][batch_2020_2024]")
-{
-    struct row {
+TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables", "[fluids][batch_2020_2024]") {
+    struct row
+    {
         const char* fluid;
         double T_K, rho_molm3;
         double p_Pa, cv_JmolK, cp_JmolK, w_ms;
@@ -4405,31 +4430,25 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables",
         const char* note;
     };
     const std::vector<row> rows = {
-        // Paper / Table / Row
-        {"R1224YDZ",           400.0,  8000.0, 21.17909e6,   139.592, 185.184, 489.479, 1e-5,
-            "Akasaka & Lemmon, IJT 2023, Table 7 row 4"},
-        {"R1132E",             330.0, 12000.0,  3.845082e6,   70.9361, 165.548, 314.193, 1e-5,
-            "Akasaka & Lemmon, IJT 2024, Table 6 row 4"},
-        {"Tetrahydrofuran",    450.0, 10000.0, 12.357974600e6, 0.0,    167.23826646, 739.195761440, 1e-6,
-            "Fiedler et al., IJT 2023, Table 11 row 3 (cv not published)"},
-        {"PropyleneGlycol",    400.0, 13000.0, 61.287909e6,  0.0,     227.48403, 1467.8267, 1e-5,
-            "Eisenbach et al., JPCRD 2021, Table 8 row 2 (cv not published)"},
-        {"VinylChloride",      300.0, 15000.0, 23.0374719e6, 0.0,      91.4066946, 1008.04450, 1e-6,
-            "Thol, Fenkl & Lemmon, IJT 2022, Table 5 row 4 (cv not published)"},
-        {"R1123",              320.0, 11000.0,  5.456590e6,   74.3579, 158.839, 296.996, 1e-5,
-            "Akasaka et al., IJR 2020, Table 8 row 4"},
-        {"n-Perfluorobutane",  360.0,  5200.0,  3.128110e6,  223.0894, 303.2828, 226.8389, 1e-5,
-            "Gao et al., IECR 2022, Table 14 C4F10 row 3"},
-        {"n-Perfluoropentane", 390.0,  4200.0,  1.496384e6,  273.9917, 375.3160, 182.6921, 1e-5,
-            "Gao et al., IECR 2022, Table 14 C5F12 row 3"},
-        {"n-Perfluorohexane",  410.0,  3700.0,  0.9573522e6, 336.7461, 435.6546, 181.2565, 1e-5,
-            "Gao et al., IECR 2022, Table 14 C6F14 row 3"},
-        {"R1233zd(E)",         400.0,  8000.0, 10.79073e6,  122.693,  176.124, 441.123, 1e-5,
-            "Akasaka & Lemmon, JPCRD 2022, Table IX row 4 (supersedes Mondejar-JCED-2015)"},
-        {"R1130(E)",           320.0, 12500.0,  3.39671e6,   76.665,  115.586, 946.434, 1e-5,
-            "Huber, Kazakov & Lemmon, IJT 2025, Table 4 row 3 (g_i != 1 in exponential terms)"},
-        {"R1243zf",            280.0, 11000.0,  7.393335e6,   90.7467, 130.734, 648.467, 1e-5,
-            "Akasaka & Lemmon, IJT 2025, Table 6 row 2 (3rd EOS, g_i != 1; supersedes Akasaka-JCED-2019)"},
+      // Paper / Table / Row
+      {"R1224YDZ", 400.0, 8000.0, 21.17909e6, 139.592, 185.184, 489.479, 1e-5, "Akasaka & Lemmon, IJT 2023, Table 7 row 4"},
+      {"R1132E", 330.0, 12000.0, 3.845082e6, 70.9361, 165.548, 314.193, 1e-5, "Akasaka & Lemmon, IJT 2024, Table 6 row 4"},
+      {"Tetrahydrofuran", 450.0, 10000.0, 12.357974600e6, 0.0, 167.23826646, 739.195761440, 1e-6,
+       "Fiedler et al., IJT 2023, Table 11 row 3 (cv not published)"},
+      {"PropyleneGlycol", 400.0, 13000.0, 61.287909e6, 0.0, 227.48403, 1467.8267, 1e-5,
+       "Eisenbach et al., JPCRD 2021, Table 8 row 2 (cv not published)"},
+      {"VinylChloride", 300.0, 15000.0, 23.0374719e6, 0.0, 91.4066946, 1008.04450, 1e-6,
+       "Thol, Fenkl & Lemmon, IJT 2022, Table 5 row 4 (cv not published)"},
+      {"R1123", 320.0, 11000.0, 5.456590e6, 74.3579, 158.839, 296.996, 1e-5, "Akasaka et al., IJR 2020, Table 8 row 4"},
+      {"n-Perfluorobutane", 360.0, 5200.0, 3.128110e6, 223.0894, 303.2828, 226.8389, 1e-5, "Gao et al., IECR 2022, Table 14 C4F10 row 3"},
+      {"n-Perfluoropentane", 390.0, 4200.0, 1.496384e6, 273.9917, 375.3160, 182.6921, 1e-5, "Gao et al., IECR 2022, Table 14 C5F12 row 3"},
+      {"n-Perfluorohexane", 410.0, 3700.0, 0.9573522e6, 336.7461, 435.6546, 181.2565, 1e-5, "Gao et al., IECR 2022, Table 14 C6F14 row 3"},
+      {"R1233zd(E)", 400.0, 8000.0, 10.79073e6, 122.693, 176.124, 441.123, 1e-5,
+       "Akasaka & Lemmon, JPCRD 2022, Table IX row 4 (supersedes Mondejar-JCED-2015)"},
+      {"R1130(E)", 320.0, 12500.0, 3.39671e6, 76.665, 115.586, 946.434, 1e-5,
+       "Huber, Kazakov & Lemmon, IJT 2025, Table 4 row 3 (g_i != 1 in exponential terms)"},
+      {"R1243zf", 280.0, 11000.0, 7.393335e6, 90.7467, 130.734, 648.467, 1e-5,
+       "Akasaka & Lemmon, IJT 2025, Table 6 row 2 (3rd EOS, g_i != 1; supersedes Akasaka-JCED-2019)"},
     };
 
     for (const auto& r : rows) {
@@ -4438,13 +4457,13 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables",
             CAPTURE(r.T_K);
             CAPTURE(r.rho_molm3);
 
-            const double p_calc  = PropsSI("P",       "T", r.T_K, "Dmolar", r.rho_molm3, r.fluid);
+            const double p_calc = PropsSI("P", "T", r.T_K, "Dmolar", r.rho_molm3, r.fluid);
             const double cp_calc = PropsSI("Cpmolar", "T", r.T_K, "Dmolar", r.rho_molm3, r.fluid);
-            const double w_calc  = PropsSI("A",       "T", r.T_K, "Dmolar", r.rho_molm3, r.fluid);
+            const double w_calc = PropsSI("A", "T", r.T_K, "Dmolar", r.rho_molm3, r.fluid);
 
-            CHECK(p_calc  == Catch::Approx(r.p_Pa    ).epsilon(r.rtol));
+            CHECK(p_calc == Catch::Approx(r.p_Pa).epsilon(r.rtol));
             CHECK(cp_calc == Catch::Approx(r.cp_JmolK).epsilon(r.rtol));
-            CHECK(w_calc  == Catch::Approx(r.w_ms   ).epsilon(r.rtol));
+            CHECK(w_calc == Catch::Approx(r.w_ms).epsilon(r.rtol));
 
             // cv was not published in every paper's verification table; skip
             // the check when the reference entry is exactly 0.0.

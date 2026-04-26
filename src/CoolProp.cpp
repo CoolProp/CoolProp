@@ -217,7 +217,7 @@ void _PropsSI_initialize(const std::string& backend, const std::vector<std::stri
         throw ValueError("fluid_names cannot be empty");
     }
 
-    std::vector<double> fractions(1, 1.0);            // Default to one component, unity fraction
+    std::vector<double> fractions(1, 1.0);               // Default to one component, unity fraction
     const std::vector<double>* fractions_ptr = nullptr;  // Pointer to the array to be used;
 
     if (fluid_names.size() > 1) {

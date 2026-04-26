@@ -188,8 +188,7 @@ class MixtureBinaryPairLibrary
                     // Already there, see http://www.cplusplus.com/reference/map/map/insert/, so we are going to pop it and overwrite it
                     m_binary_pair_map.erase(it);
                     std::pair<std::map<std::vector<std::string>, std::vector<Dictionary>>::iterator, bool> ret;
-                    ret =
-                      m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
+                    ret = m_binary_pair_map.emplace(CAS, std::vector<Dictionary>(1, dict));
                     assert(ret.second == true);
                 } else {
                     // Error if already in map!

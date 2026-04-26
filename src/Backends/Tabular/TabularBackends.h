@@ -261,16 +261,23 @@ class PureFluidSaturationTableData
          \note If PQ or QT are inputs, yL and yV will correspond to the other main variable: p->T or T->p
          */
     [[nodiscard]] bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t& iL, std::size_t& iV, CoolPropDbl& yL,
-                   CoolPropDbl& yV) {
+                                 CoolPropDbl& yV) {
         auto [yvecL, yvecV] = [&]() -> std::pair<std::vector<double>*, std::vector<double>*> {
             switch (other) {
-                case iT:     return {&TL, &TV};
-                case iHmolar: return {&hmolarL, &hmolarV};
-                case iQ:     return {&TL, &TV};
-                case iSmolar: return {&smolarL, &smolarV};
-                case iUmolar: return {&umolarL, &umolarV};
-                case iDmolar: return {&rhomolarL, &rhomolarV};
-                default:     throw ValueError("invalid input for other in is_inside");
+                case iT:
+                    return {&TL, &TV};
+                case iHmolar:
+                    return {&hmolarL, &hmolarV};
+                case iQ:
+                    return {&TL, &TV};
+                case iSmolar:
+                    return {&smolarL, &smolarV};
+                case iUmolar:
+                    return {&umolarL, &umolarV};
+                case iDmolar:
+                    return {&rhomolarL, &rhomolarV};
+                default:
+                    throw ValueError("invalid input for other in is_inside");
             }
         }();
 
