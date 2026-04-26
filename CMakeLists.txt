@@ -2219,3 +2219,40 @@ endif()
 #include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CoolProp")
 #FILE(GLOB coolprop_files "${CMAKE_CURRENT_SOURCE_DIR}/CoolProp/*.cpp")
 #add_library(coolprop STATIC ${coolprop_files})
+
+# clang-format developer targets (CoolProp-2uw.2)
+# Whole-tree mode over src/ + include/, mirroring dev/ci/clang-format.sh's
+# fallback path. Re-run cmake after adding new files for them to be picked up.
+# Excludes:
+#   - include/*_JSON.h, include/cubic_fluids_schema_JSON.h — auto-generated from
+#     dev/fluids/ JSON, contain raw-string literals up to 60 MB; reformatting
+#     them is wasteful and will be overwritten on the next regeneration.
+#   - include/gitrevision.h — auto-generated.
+#   - include/miniz.h — vendored copy of upstream miniz; format upstream, not us.
+find_program(CLANG_FORMAT_EXE NAMES clang-format-18 clang-format)
+if(CLANG_FORMAT_EXE)
+  file(GLOB_RECURSE COOLPROP_FORMAT_FILES
+       LIST_DIRECTORIES false
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.c"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.cpp"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h"
+       "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
+  list(FILTER COOLPROP_FORMAT_FILES EXCLUDE REGEX
+       "/include/(.*_JSON.*|gitrevision|miniz)\\.h$")
+  add_custom_target(format
+                    COMMAND ${CLANG_FORMAT_EXE} -style=file -fallback-style=none
+                            -i ${COOLPROP_FORMAT_FILES}
+                    COMMENT "clang-format -i over src/ and include/ (${CLANG_FORMAT_EXE})"
+                    VERBATIM)
+  add_custom_target(format-check
+                    COMMAND ${CLANG_FORMAT_EXE} -style=file -fallback-style=none
+                            --dry-run --Werror ${COOLPROP_FORMAT_FILES}
+                    COMMENT "clang-format dry-run check over src/ and include/ (${CLANG_FORMAT_EXE})"
+                    VERBATIM)
+else()
+  message(STATUS "clang-format not found; 'format' and 'format-check' targets disabled")
+endif()
