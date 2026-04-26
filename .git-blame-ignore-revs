@@ -8,3 +8,7 @@
 
 # Whole-repo clang-format pass over src/ + include/ (CoolProp-2uw.12, PR #2803)
 6d2eb695ee8c15de5ef0daee58869db772e42fd7
+
+# Safe clang-tidy --fix passes: modernize-use-nullptr, modernize-use-emplace,
+# modernize-deprecated-headers (CoolProp-2uw.13 part 1, PR #2805)
+ee879788a10365c13f812993c4db6e69cb2d51a7

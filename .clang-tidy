@@ -68,3 +68,8 @@ CheckOptions:
     value:           'true'
   - key:             readability-implicit-bool-conversion.AllowPointerConditions
     value:           'true'
+  # Use <cmath> rather than <math.h> when init-variables --fix injects NAN.
+  # Without this option clang-tidy adds <math.h>, which then conflicts with
+  # the modernize-deprecated-headers cleanup already merged in PR #2805.
+  - key:             cppcoreguidelines-init-variables.MathHeader
+    value:           '<cmath>'
