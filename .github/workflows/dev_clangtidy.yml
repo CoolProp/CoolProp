@@ -1,0 +1,90 @@
+name: Development clang-tidy (diff-only)
+
+# Runs clang-tidy on lines changed in the PR via clang-tidy-diff.py.
+# This avoids drowning PR authors in the legacy 937KLOC warning backlog
+# while enforcing the strict .clang-tidy config (WarningsAsErrors: '*')
+# on new code.
+#
+# ROLLOUT NOTE (CoolProp-2uw.5): currently warning-only via
+# `continue-on-error: true` so we can observe what surfaces on real PRs
+# before flipping it to a gate. Once the noise level is validated, drop
+# the continue-on-error and the workflow will block PRs with violations
+# on touched lines (which is the eventual design intent).
+
+on:
+  pull_request:
+    branches: [ 'master', 'main', 'develop' ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for git diff against base
+
+      - name: Install clang-tidy-18 + ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-18 ninja-build
+          sudo update-alternatives --install \
+            /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-18 100
+          clang-tidy --version
+
+      - name: Configure
+        run: |
+          cmake -G Ninja \
+            -DCOOLPROP_MY_MAIN=dev/ci/main.cpp \
+            -DCOOLPROP_STATIC_LIBRARY=ON \
+            -B ${{ github.workspace }}/build \
+            -S .
+
+      - name: Generate auto-generated headers
+        # The all_*_JSON.h headers are generated at build time from
+        # dev/fluids/. clang-tidy needs them on disk to parse src/ files.
+        run: cmake --build ${{ github.workspace }}/build --target generate_headers
+
+      - name: Locate clang-tidy-diff.py
+        id: diff_script
+        run: |
+          path=$(find /usr -name 'clang-tidy-diff*.py' 2>/dev/null | head -1)
+          if [ -z "$path" ]; then
+            echo "clang-tidy-diff.py not found via apt; falling back to upstream raw"
+            curl -sSL -o /tmp/clang-tidy-diff.py \
+              https://raw.githubusercontent.com/llvm/llvm-project/release/18.x/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
+            path=/tmp/clang-tidy-diff.py
+          fi
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "Using: $path"
+
+      - name: Run clang-tidy-diff on PR-touched lines
+        continue-on-error: true   # ROLLOUT: flip after validation
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          echo "Comparing $HEAD_SHA against $BASE_SHA"
+          # Negative pathspecs skip vendored / auto-generated files. Anything
+          # that lives outside src/ + include/ won't have a compile_commands
+          # entry anyway and would just produce errors.
+          git diff -U0 "$BASE_SHA" "$HEAD_SHA" -- \
+            ':!externals/' \
+            ':!include/*_JSON*.h' \
+            ':!include/gitrevision.h' \
+            ':!include/miniz.h' \
+            | python3 ${{ steps.diff_script.outputs.path }} \
+                -p1 \
+                -path ${{ github.workspace }}/build \
+                -regex '.*\.(c|cpp|h|hpp)$' \
+                -j$(nproc) \
+                2>&1 | tee clang-tidy-diff.log
+          echo "clang-tidy-diff.log size: $(wc -l < clang-tidy-diff.log) lines"
+
+      - name: Upload clang-tidy report as artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-clang-tidy-diff
+          path: clang-tidy-diff.log
+          if-no-files-found: warn
