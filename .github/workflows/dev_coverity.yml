@@ -1,21 +1,28 @@
 name: Development Coverity scan
 
+# Schedule-only by design (CoolProp-2uw.10).
+#
+# Coverity Scan's free tier has weekly run-rate limits tied to project size.
+# CoolProp (~937 KLOC) is in Coverity's "large project" bucket — roughly
+# 7-14 submissions per week. Triggering on every PR would blow the quota
+# and lock us out. workflow_dispatch is the manual escape hatch.
+#
+# If per-PR coverage becomes important, switch to a label-gated trigger
+# (e.g. only run when a `run-coverity` label is added) so contributors
+# opt-in selectively rather than spending quota on every push.
+
 on:
-  push:
-    branches: [ 'dev_checks' ]
-  #  branches: [ 'master', 'main', 'develop', 'dev_checks' ]
-  #  tags: [ 'v*' ]
-  #pull_request:
-  #  branches: [ 'master', 'main', 'develop' ]
   schedule:
     - cron: '15 8 * * 0,4' # Run twice a week
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
+
       - name: Configure build
         run: cmake
                  -DCOOLPROP_MY_MAIN=dev/ci/main.cpp
@@ -27,3 +34,34 @@ jobs:
           email: ${{ secrets.COVERITY_SCAN_EMAIL }}
           token: ${{ secrets.COVERITY_SCAN_TOKEN }}
           command: cmake --build ${{github.workspace}}/build --config Release
+
+      # Run cov-analyze locally on the same cov-int/ tree that was uploaded.
+      # The vapier action downloads the full Coverity Build Tool tarball
+      # (cov-analysis/), which ships cov-analyze + cov-format-errors alongside
+      # cov-build. The web UI is hard for humans (and AI agents) to scrape; a
+      # JSON artifact gives us a stable machine-readable defect list. Closes
+      # #2717.
+      - name: Analyze cov-int and dump JSON defects
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          export PATH="${PWD}/cov-analysis/bin:${PATH}"
+          cov-analyze --dir cov-int --all 2>&1 | tee cov-analyze.log
+          cov-format-errors --dir cov-int \
+            --json-output-v9 coverity-defects.json
+          cov-format-errors --dir cov-int --emacs-style 2>&1 \
+            | tee coverity-defects.txt | head -200 || true
+
+      - name: Upload Coverity artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: CoolProp-${{ github.sha }}-coverity
+          path: |
+            coverity-defects.json
+            coverity-defects.txt
+            cov-analyze.log
+            cov-int.tgz
+          if-no-files-found: warn
