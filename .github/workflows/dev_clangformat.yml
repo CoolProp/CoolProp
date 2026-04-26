@@ -1,13 +1,11 @@
 name: Development Clang Format
 
 on:
-  push:
-    branches: [ 'master', 'main', 'develop', 'dev_checks' ]
-  #  tags: [ 'v*' ]
+  # PR-only — push triggers were retired (CoolProp-2uw.1) because master kept
+  # going red retroactively after every merge that introduced a violation.
+  # If you need to test the workflow on a branch, open a draft PR.
   pull_request:
     branches: [ 'master', 'main', 'develop' ]
-  #schedule:
-  #  - cron: '15 8 * * 3' # Run weekly
 
 jobs:
   build:
@@ -22,21 +20,13 @@ jobs:
       run: |
           echo "GITHUB_REF=$GITHUB_REF GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
           clang-format --version
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            # Use SHAs directly so this works for both fork PRs and local-branch PRs.
-            # remotes/origin/<branch> is unreliable for fork PRs because the fork's
-            # branch is not fetched into origin.
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.sha }}"
-            echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
-            ./dev/ci/clang-format.sh "$HEAD_SHA" "$BASE_SHA"
-          else
-            # Push event: GITHUB_HEAD_REF/BASE_REF are empty, so use before/after SHAs.
-            BEFORE_SHA="${{ github.event.before }}"
-            AFTER_SHA="${{ github.sha }}"
-            echo "Comparing push $AFTER_SHA against before $BEFORE_SHA"
-            ./dev/ci/clang-format.sh "$AFTER_SHA" "$BEFORE_SHA"
-          fi
+          # Use SHAs directly so this works for both fork PRs and local-branch PRs.
+          # remotes/origin/<branch> is unreliable for fork PRs because the fork's
+          # branch is not fetched into origin.
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
+          ./dev/ci/clang-format.sh "$HEAD_SHA" "$BASE_SHA"
 
     - name: Upload clang-format patch as artifact
       if: ${{ failure() }}
