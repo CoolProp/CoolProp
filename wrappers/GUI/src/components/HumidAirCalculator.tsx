@@ -329,7 +329,11 @@ export default function HumidAirCalculator() {
       }
       const T = layout.xaxis.p2c(xPx);
       const W = layout.yaxis.p2c(yPx);
-      if (T < T_RANGE.min || T > T_RANGE.max + 8 || W < 0 || W > 0.06) {
+      // The saturation envelope reaches W ≈ 0.3 at the top of the T range,
+      // and the chart's y-axis can scroll well above that. Only filter the
+      // physically impossible (W < 0); supersaturation is filtered by the
+      // R ≤ 1 check on the result.
+      if (T < T_RANGE.min || T > T_RANGE.max + 8 || W < 0) {
         setHoverProps(null);
         return;
       }

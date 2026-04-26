@@ -69,7 +69,7 @@ export default function SatSetupDialog({ fluids, basis, initial, onConfirm, onCa
       const step = parseFloat(stepSize);
       if (isNaN(step) || step <= 0) return;
       // n cells of width `step` → n+1 points; bias toward "include endpoints"
-      n = Math.max(2, Math.min(500, Math.round((max - min) / step) + 1));
+      n = Math.max(2, Math.min(50000, Math.round((max - min) / step) + 1));
     }
     if (isNaN(n) || n < 2) return;
 
@@ -83,7 +83,7 @@ export default function SatSetupDialog({ fluids, basis, initial, onConfirm, onCa
     if (stepMode === "n_points") return null;
     const min = parseFloat(minVal), max = parseFloat(maxVal), step = parseFloat(stepSize);
     if (!isFinite(min) || !isFinite(max) || !isFinite(step) || step <= 0 || max <= min) return null;
-    return Math.max(2, Math.min(500, Math.round((max - min) / step) + 1));
+    return Math.max(2, Math.min(50000, Math.round((max - min) / step) + 1));
   })();
 
   return (
@@ -138,7 +138,7 @@ export default function SatSetupDialog({ fluids, basis, initial, onConfirm, onCa
             {stepMode === "n_points" ? (
               <div className="field-group" style={{ width: 100 }}>
                 <label>Points</label>
-                <input type="number" value={nPoints} min={2} max={500}
+                <input type="number" value={nPoints} min={2} max={50000}
                   onChange={(e) => setNPoints(e.target.value)} />
               </div>
             ) : (
@@ -152,7 +152,7 @@ export default function SatSetupDialog({ fluids, basis, initial, onConfirm, onCa
 
           {stepMode === "step" && previewN !== null && (
             <div style={{ fontSize: 11, color: "#666", marginTop: -4 }}>
-              → {previewN} points (capped at 500)
+              → {previewN} points (capped at 50,000)
             </div>
           )}
         </div>
