@@ -1,14 +1,78 @@
 # CoolProp CI scripts and contributor tooling
 
-This directory holds CI helper scripts and contributor-facing tooling docs.
-The full code-quality workflow doc lives elsewhere (CoolProp-2uw.4); this file
-covers the pieces that CI directly depends on.
+This directory holds CI helper scripts and the central code-quality workflow
+doc for contributors. Each section below maps to a CI workflow under
+`.github/workflows/`.
+
+If you're new, the **fast path** is:
+
+```bash
+cmake -G Ninja -B build -S .                    # one-time configure
+pip install pre-commit && pre-commit install    # one-time hook setup
+cmake --build build --target format-check       # check formatting any time
+```
+
+Then commit normally — the pre-commit hook will block formatting violations
+on staged C/C++ files.
+
+---
+
+## clang-format
+
+`.clang-format` at repo root is the source of truth for formatting rules.
+Three runnable paths, all pinned to clang-format 18.1.x:
+
+| Path | Scope | Modifies files? | Use when |
+|---|---|---|---|
+| `cmake --build build --target format-check` | whole tree (src/, include/) | no (dry-run) | spot-check before committing |
+| `cmake --build build --target format` | whole tree | yes (`-i`) | apply repo-wide formatting |
+| `pre-commit run` | staged files only | no (dry-run) | before each commit (auto via hook) |
+| `./dev/ci/clang-format.sh HEAD <base>` | files changed vs `<base>` | yes (`-i`) | format a PR-sized diff against a ref |
+
+CI uses `dev/ci/clang-format.sh` against the PR base SHA, so any of the
+above will mirror what CI does for you.
+
+### pre-commit framework
+
+The `.pre-commit-config.yaml` at repo root pins clang-format via the
+`pre-commit/mirrors-clang-format` upstream. One-time setup:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+After that, every `git commit` runs clang-format on staged C/C++ files.
+Manual runs:
+
+```bash
+pre-commit run                  # staged files
+pre-commit run --all-files      # whole repo (slow)
+```
+
+To skip the hook for a single commit (e.g. WIP):
+
+```bash
+git commit --no-verify
+```
+
+To uninstall fully, see the header comment in `.pre-commit-config.yaml`.
+
+### Excluded paths
+
+`.pre-commit-config.yaml` and the CMake `format`/`format-check` targets
+both skip `externals/` (vendored third-party). The CMake targets also
+skip auto-generated `include/*_JSON*.h`, `include/gitrevision.h`, and
+`include/miniz.h` (vendored). If you regenerate the JSON-as-string-
+literal headers, format the *generator template*, not the output.
+
+---
 
 ## compile_commands.json
 
 `clang-tidy`, `include-what-you-use`, and most editor LSP integrations need a
 JSON compilation database. CoolProp configures `CMAKE_EXPORT_COMPILE_COMMANDS`
-ON unconditionally (CMakeLists.txt), so any cmake configure produces it:
+ON unconditionally in `CMakeLists.txt`, so any cmake configure produces it:
 
 ```bash
 cmake -G Ninja -B build -S .            # Ninja or Makefile generator
@@ -33,14 +97,32 @@ headers use.
 
 CI runs on Ubuntu where this issue doesn't apply.
 
-## clang-format
+---
 
-`clang-format.sh` runs `clang-format -i` over C/C++ files changed between two
-git refs. Used by `.github/workflows/dev_clangformat.yml` and runnable
-locally:
+## Other CI tooling (warning-only)
 
-```bash
-./dev/ci/clang-format.sh HEAD master   # format files staged + committed vs master
-```
+These workflows produce artifacts on every PR but never fail the build —
+they exist to surface signal, not to gate.
 
-Pinned version: clang-format 18.1.x (matches the Ubuntu image in CI).
+- **cppcheck** (`.github/workflows/dev_cppcheck.yml`) — uploads a colorized
+  cppcheck report. Run locally with `cppcheck --std=c++17 ./src` after
+  `apt install cppcheck`.
+- **CodeQL** (`.github/workflows/dev_codeql.yml`) — runs the
+  `security-and-quality` query suite on every PR. Findings appear in the
+  repo's Security tab.
+- **Coverity** (`.github/workflows/dev_coverity.yml`) — schedule-only
+  (twice weekly) due to free-tier quota. The workflow uploads
+  `coverity-defects.json` (machine-readable) for AI-agent consumption;
+  see also the Coverity Scan web UI for the curated view.
+- **AddressSanitizer** (`.github/workflows/dev_asan.yml`) — full Catch test
+  suite under ASan on every PR. This one *does* fail builds, since memory
+  bugs are real bugs.
+
+## Future tooling
+
+These will land as the `CoolProp-2uw` epic progresses; cross-references
+will be added here as each lands:
+
+- clang-tidy diff-only PR check (Tier 2.1, `CoolProp-2uw.5`)
+- IWYU report artifact (Tier 3.4, `CoolProp-2uw.11`)
+- `.git-blame-ignore-revs` for the one-shot reformat (Tier 4.1, `CoolProp-2uw.12`)
