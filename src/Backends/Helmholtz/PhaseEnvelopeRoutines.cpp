@@ -430,7 +430,7 @@ void PhaseEnvelopeRoutines::refine(HelmholtzEOSMixtureBackend& HEOS, const std::
 }
 double PhaseEnvelopeRoutines::evaluate(const PhaseEnvelopeData& env, parameters output, parameters iInput1, double value1, std::size_t& i) {
     int _i = static_cast<int>(i);
-    std::vector<double> const *x, *y;
+    std::vector<double> const *x = nullptr, *y = nullptr;
 
     switch (output) {
         case iT:
@@ -513,7 +513,7 @@ void PhaseEnvelopeRoutines::finalize(HelmholtzEOSMixtureBackend& HEOS) {
         PMAX_SAT = 0,
         TMAX_SAT = 1
     };
-    std::size_t imax;  // Index of the maximal temperature or pressure
+    std::size_t imax = 0;  // Index of the maximal temperature or pressure
 
     PhaseEnvelopeData& env = HEOS.PhaseEnvelope;
 
@@ -718,7 +718,7 @@ bool PhaseEnvelopeRoutines::is_inside(const PhaseEnvelopeData& env, parameters i
             throw ValueError("for now only even value accepted is 2");
         }
         std::vector<std::size_t> other_indices(4, 0);
-        std::vector<double> const* y;
+        std::vector<double> const* y = nullptr;
         std::vector<double> other_values(4, 0);
         other_indices[0] = intersections[0].first;
         other_indices[1] = intersections[0].second;

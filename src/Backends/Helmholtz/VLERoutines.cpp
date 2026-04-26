@@ -1,6 +1,8 @@
 
 #include "HelmholtzEOSMixtureBackend.h"
 #include "VLERoutines.h"
+
+#include <cmath>
 #include "MatrixMath.h"
 #include "MixtureDerivatives.h"
 #include "Configuration.h"
@@ -16,7 +18,7 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         HelmholtzEOSMixtureBackend* HEOS;
         CoolPropDbl T, desired_p;
 
-        inner_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl desired_p) : HEOS(HEOS), T(T), desired_p(desired_p) {};
+        inner_resid(HelmholtzEOSMixtureBackend* HEOS, CoolPropDbl T, CoolPropDbl desired_p) : HEOS(HEOS), T(T), desired_p(desired_p){};
         double call(double rhomolar_liq) {
             HEOS->SatL->update(DmolarT_INPUTS, rhomolar_liq, T);
             CoolPropDbl calc_p = HEOS->SatL->p();
@@ -36,10 +38,10 @@ void SaturationSolvers::saturation_critical(HelmholtzEOSMixtureBackend& HEOS, pa
         CoolPropDbl rhomolar_crit;
 
         outer_resid(HelmholtzEOSMixtureBackend& HEOS, CoolProp::parameters ykey, CoolPropDbl y)
-          : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()) {};
+          : HEOS(&HEOS), ykey(ykey), y(y), rhomolar_crit(HEOS.rhomolar_critical()){};
         double call(double rhomolar_vap) {
             // Calculate the other variable (T->p or p->T) for given vapor density
-            CoolPropDbl T, p, rhomolar_liq;
+            CoolPropDbl T = NAN, p = NAN, rhomolar_liq = NAN;
             switch (ykey) {
                 case iT: {
                     T = y;
@@ -83,7 +85,7 @@ void SaturationSolvers::saturation_T_pure_1D_P(HelmholtzEOSMixtureBackend& HEOS,
         CoolPropDbl T, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl T, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
-          : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
+          : HEOS(&HEOS), T(T), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double p) {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
@@ -128,7 +130,7 @@ void SaturationSolvers::saturation_P_pure_1D_T(HelmholtzEOSMixtureBackend& HEOS,
         CoolPropDbl p, rhomolar_liq, rhomolar_vap;
 
         solver_resid(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl p, CoolPropDbl rhomolar_liq_guess, CoolPropDbl rhomolar_vap_guess)
-          : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess) {};
+          : HEOS(&HEOS), p(p), rhomolar_liq(rhomolar_liq_guess), rhomolar_vap(rhomolar_vap_guess){};
         double call(double T) {
             // Recalculate the densities using the current guess values
             HEOS->SatL->update_TP_guessrho(T, p, rhomolar_liq);
@@ -177,9 +179,9 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
     CoolProp::SimpleState crit = HEOS.get_state("reducing");
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL, SatV = HEOS.SatV;
 
-    CoolPropDbl T, rhoL, rhoV, pL, pV, hL, sL, hV, sV;
-    CoolPropDbl deltaL = 0, deltaV = 0, tau = 0, error;
-    int iter = 0, specified_parameter;
+    CoolPropDbl T = NAN, rhoL = NAN, rhoV = NAN, pL = NAN, pV = NAN, hL = NAN, sL = NAN, hV = NAN, sV = NAN;
+    CoolPropDbl deltaL = 0, deltaV = 0, tau = 0, error = NAN;
+    int iter = 0, specified_parameter = 0;
 
     // Use the density ancillary function as the starting point for the solver
     try {
@@ -218,7 +220,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
             Residual resid(HEOS.get_components()[0], HEOS.hmolar());
 
             // Ancillary is deltah = h - hs_anchor.h
-            CoolPropDbl Tmin_satL, Tmin_satV;
+            CoolPropDbl Tmin_satL = NAN, Tmin_satV = NAN;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
@@ -240,7 +242,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
             if (std::abs(HEOS.smolar() - crit.smolar) < std::abs(component.ancillaries.sL.get_max_abs_error())) {
                 T = std::max(0.99 * crit.T, crit.T - 0.1);
             } else {
-                CoolPropDbl Tmin, Tmax, Tmin_satV;
+                CoolPropDbl Tmin = NAN, Tmax = NAN, Tmin_satV = NAN;
                 HEOS.calc_Tmin_sat(Tmin, Tmin_satV);
                 Tmax = HEOS.calc_Tmax_sat();
                 // Ancillary is deltas = s - hs_anchor.s
@@ -284,7 +286,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
             Residual resid(component, HEOS.smolar());
 
             // Ancillary is deltas = s - hs_anchor.s
-            CoolPropDbl Tmin_satL, Tmin_satV;
+            CoolPropDbl Tmin_satL = NAN, Tmin_satV = NAN;
             HEOS.calc_Tmin_sat(Tmin_satL, Tmin_satV);
             double Tmin = Tmin_satL;
             double Tmax = HEOS.calc_Tmax_sat();
@@ -618,8 +620,8 @@ void SaturationSolvers::saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, Cool
     const SimpleState& reduce = HEOS.get_reducing_state();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL, SatV = HEOS.SatV;
 
-    CoolPropDbl T, rhoL, rhoV;
-    CoolPropDbl deltaL = 0, deltaV = 0, tau = 0, error, p_error;
+    CoolPropDbl T = NAN, rhoL = NAN, rhoV = NAN;
+    CoolPropDbl deltaL = 0, deltaV = 0, tau = 0, error = NAN, p_error = NAN;
     int iter = 0;
 
     // Use the density ancillary function as the starting point for the solver
@@ -794,8 +796,8 @@ void SaturationSolvers::saturation_T_pure_Akasaka(HelmholtzEOSMixtureBackend& HE
     CoolPropDbl R_u = HEOS.gas_constant();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL, SatV = HEOS.SatV;
 
-    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, JL, JV, KL, KV, dJL, dJV, dKL, dKV;
-    CoolPropDbl DELTA, deltaL = 0, deltaV = 0, error, PL, PV, stepL, stepV;
+    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, JL = NAN, JV = NAN, KL = NAN, KV = NAN, dJL = NAN, dJV = NAN, dKL = NAN, dKV = NAN;
+    CoolPropDbl DELTA = NAN, deltaL = 0, deltaV = 0, error = NAN, PL = NAN, PV = NAN, stepL = NAN, stepV = NAN;
     int iter = 0;
 
     try {
@@ -935,7 +937,7 @@ void SaturationSolvers::saturation_T_pure_Maxwell(HelmholtzEOSMixtureBackend& HE
     HEOS.calc_reducing_state();
     shared_ptr<HelmholtzEOSMixtureBackend> SatL = HEOS.SatL, SatV = HEOS.SatV;
     CoolProp::SimpleState& crit = HEOS.get_components()[0].crit;
-    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL, DeltavV, pL, pV, p, last_error;
+    CoolPropDbl rhoL = _HUGE, rhoV = _HUGE, error = 999, DeltavL = NAN, DeltavV = NAN, pL = NAN, pV = NAN, p = NAN, last_error = NAN;
     int iter = 0, small_step_count = 0,
         backwards_step_count = 0;  // Counter for the number of times you have taken a step that increases error
 
@@ -1129,7 +1131,7 @@ void SaturationSolvers::x_and_y_from_K(CoolPropDbl beta, const std::vector<CoolP
 void SaturationSolvers::successive_substitution(HelmholtzEOSMixtureBackend& HEOS, const CoolPropDbl beta, CoolPropDbl T, CoolPropDbl p,
                                                 const std::vector<CoolPropDbl>& z, std::vector<CoolPropDbl>& K, mixture_VLE_IO& options) {
     int iter = 1;
-    CoolPropDbl change, f, df, deriv_liq, deriv_vap;
+    CoolPropDbl change = NAN, f = NAN, df = NAN, deriv_liq = NAN, deriv_vap = NAN;
     std::size_t N = z.size();
     std::vector<CoolPropDbl> ln_phi_liq, ln_phi_vap;
     ln_phi_liq.resize(N);
@@ -1728,7 +1730,7 @@ class RachfordRiceResidual : public FuncWrapper1DWithDeriv
     const std::vector<double>&z, &lnK;
 
    public:
-    RachfordRiceResidual(const std::vector<double>& z, const std::vector<double>& lnK) : z(z), lnK(lnK) {};
+    RachfordRiceResidual(const std::vector<double>& z, const std::vector<double>& lnK) : z(z), lnK(lnK){};
     double call(double beta) {
         return FlashRoutines::g_RachfordRice(z, lnK, beta);
     }
@@ -2016,7 +2018,7 @@ void StabilityRoutines::StabilityEvaluationClass::rho_TP_SRK_translated() {
 void SaturationSolvers::PTflash_twophase::solve() {
     const std::size_t N = IO.x.size();
     int iter = 0;
-    double min_rel_change;
+    double min_rel_change = NAN;
     do {
         // Build the Jacobian and residual vectors
         build_arrays();

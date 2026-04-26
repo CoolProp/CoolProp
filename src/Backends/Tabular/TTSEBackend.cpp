@@ -1,6 +1,8 @@
 #if !defined(NO_TABULAR_BACKENDS)
 
 #    include "TTSEBackend.h"
+
+#    include <cmath>
 #    include "CoolProp.h"
 
 /** Use the single_phase table to evaluate an output for a transport property
@@ -58,7 +60,7 @@ void CoolProp::TTSEBackend::invert_single_phase_x(const SinglePhaseGriddedTableD
     double deltax2 = (-b - sqrt(b * b - 4 * a * c)) / (2 * a);
 
     // If only one is less than a multiple of x spacing, that's your solution
-    double xspacing, xratio, val;
+    double xspacing = NAN, xratio = NAN, val = NAN;
     if (!table.logx) {
         xspacing = table.xvec[1] - table.xvec[0];
         if (std::abs(deltax1) < xspacing && !(std::abs(deltax2) < xspacing)) {
@@ -116,7 +118,7 @@ void CoolProp::TTSEBackend::invert_single_phase_y(const SinglePhaseGriddedTableD
     double deltay2 = (-b - sqrt(b * b - 4 * a * c)) / (2 * a);
 
     // If only one is less than a multiple of x spacing, that's your solution
-    double yspacing, yratio, val;
+    double yspacing = NAN, yratio = NAN, val = NAN;
     if (!table.logy) {
         yspacing = table.yvec[1] - table.yvec[0];
         if (std::abs(deltay1) < yspacing && !(std::abs(deltay2) < yspacing)) {
@@ -221,7 +223,7 @@ double CoolProp::TTSEBackend::evaluate_single_phase_derivative(SinglePhaseGridde
     // Distances from the node
     double deltax = x - table.xvec[i];
     double deltay = y - table.yvec[j];
-    double val;
+    double val = NAN;
     // Calculate the output value desired
     if (Nx == 1 && Ny == 0) {
         if (output == table.xkey) {

@@ -9,8 +9,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include <cstdlib>
 #include <cmath>
+#include <cstdlib>
 #include "AbstractState.h"
 #include "DataStructures.h"
 #include "Backends/IF97/IF97Backend.h"
@@ -965,7 +965,7 @@ void get_dT_drho_second_derivatives(AbstractState& AS, int index, CoolPropDbl& d
     }
 }
 CoolPropDbl AbstractState::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant) {
-    CoolPropDbl dOf_dT, dOf_drho, dWrt_dT, dWrt_drho, dConstant_dT, dConstant_drho;
+    CoolPropDbl dOf_dT = NAN, dOf_drho = NAN, dWrt_dT = NAN, dWrt_drho = NAN, dConstant_dT = NAN, dConstant_drho = NAN;
 
     get_dT_drho(*this, Of, dOf_dT, dOf_drho);
     get_dT_drho(*this, Wrt, dWrt_dT, dWrt_drho);
@@ -974,9 +974,11 @@ CoolPropDbl AbstractState::calc_first_partial_deriv(parameters Of, parameters Wr
     return (dOf_dT * dConstant_drho - dOf_drho * dConstant_dT) / (dWrt_dT * dConstant_drho - dWrt_drho * dConstant_dT);
 }
 CoolPropDbl AbstractState::calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2) {
-    CoolPropDbl dOf1_dT, dOf1_drho, dWrt1_dT, dWrt1_drho, dConstant1_dT, dConstant1_drho, d2Of1_dT2, d2Of1_drhodT, d2Of1_drho2, d2Wrt1_dT2,
-      d2Wrt1_drhodT, d2Wrt1_drho2, d2Constant1_dT2, d2Constant1_drhodT, d2Constant1_drho2, dWrt2_dT, dWrt2_drho, dConstant2_dT, dConstant2_drho, N, D,
-      dNdrho__T, dDdrho__T, dNdT__rho, dDdT__rho, dderiv1_drho, dderiv1_dT, second;
+    CoolPropDbl dOf1_dT = NAN, dOf1_drho = NAN, dWrt1_dT = NAN, dWrt1_drho = NAN, dConstant1_dT = NAN, dConstant1_drho = NAN, d2Of1_dT2 = NAN,
+                d2Of1_drhodT = NAN, d2Of1_drho2 = NAN, d2Wrt1_dT2 = NAN, d2Wrt1_drhodT = NAN, d2Wrt1_drho2 = NAN, d2Constant1_dT2 = NAN,
+                d2Constant1_drhodT = NAN, d2Constant1_drho2 = NAN, dWrt2_dT = NAN, dWrt2_drho = NAN, dConstant2_dT = NAN, dConstant2_drho = NAN,
+                N = NAN, D = NAN, dNdrho__T = NAN, dDdrho__T = NAN, dNdT__rho = NAN, dDdT__rho = NAN, dderiv1_drho = NAN, dderiv1_dT = NAN,
+                second = NAN;
 
     // First and second partials needed for terms involved in first derivative
     get_dT_drho(*this, Of1, dOf1_dT, dOf1_drho);

@@ -1,3 +1,4 @@
+#include <cmath>
 #include <numeric>
 #include "Helmholtz.h"
 
@@ -11,7 +12,7 @@
 namespace CoolProp {
 
 CoolPropDbl kahanSum(const std::vector<CoolPropDbl>& x) {
-    CoolPropDbl sum = x[0], y, t;
+    CoolPropDbl sum = x[0], y = NAN, t = NAN;
     CoolPropDbl c = 0.0;  //A running compensation for lost low-order bits.
     for (std::size_t i = 1; i < x.size(); ++i) {
         y = x[i] - c;       //So far, so good: c is zero.
@@ -135,7 +136,7 @@ void ResidualHelmholtzGeneralizedExponential::allEigen(const CoolPropDbl &tau, c
 };
 */
 void ResidualHelmholtzGeneralizedExponential::all(const CoolPropDbl& tau, const CoolPropDbl& delta, HelmholtzDerivatives& derivs) {
-    CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu, one_over_delta = 1 / delta,
+    CoolPropDbl log_tau = log(tau), log_delta = log(delta), ndteu = NAN, one_over_delta = 1 / delta,
                 one_over_tau = 1 / tau;  // division is much slower than multiplication, so do one division here
 
     // Maybe split the construction of u and other parts into two separate loops?

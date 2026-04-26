@@ -5,6 +5,7 @@
  *      Author: jowr
  */
 
+#include <cmath>
 #include <memory>
 
 #if defined(_MSC_VER)
@@ -602,7 +603,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_surface_tension(void) {
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity_dilute(void) {
     if (is_pure_or_pseudopure) {
-        CoolPropDbl eta_dilute;
+        CoolPropDbl eta_dilute = NAN;
         switch (components[0].transport.viscosity_dilute.type) {
             case ViscosityDiluteVariables::VISCOSITY_DILUTE_KINETIC_THEORY:
                 eta_dilute = TransportRoutines::viscosity_dilute_kinetic_theory(*this);
@@ -1654,7 +1655,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
                 }
                 SatL->update_TDmolarP_unchecked(Tsat, rhoL, psat);
                 SatV->update_TDmolarP_unchecked(Tsat, rhoV, psat);
-                double Q;
+                double Q = NAN;
                 switch (other) {
                     case iDmolar:
                         Q = (1 / value - 1 / SatL->rhomolar()) / (1 / SatV->rhomolar() - 1 / SatL->rhomolar());
@@ -1870,7 +1871,7 @@ void HelmholtzEOSMixtureBackend::p_phase_determination_pure_or_pseudopure(int ot
             // the other solvers
             saturation_called = true;
 
-            CoolPropDbl Q;
+            CoolPropDbl Q = NAN;
 
             if (other == iT) {
                 if (value < HEOS.SatL->T() - 100 * DBL_EPSILON) {
@@ -1952,7 +1953,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void) {
     {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
-        Residual(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
+        Residual(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS){};
         double call(double T) {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
@@ -1987,7 +1988,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max(void) {
     {
        public:
         HelmholtzEOSMixtureBackend* HEOS;
-        Residualhmax(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS) {};
+        Residualhmax(HelmholtzEOSMixtureBackend& HEOS) : HEOS(&HEOS){};
         double call(double T) {
             HEOS->update(QT_INPUTS, 1, T);
             // dTdp_along_sat
@@ -2281,7 +2282,7 @@ void HelmholtzEOSMixtureBackend::T_phase_determination_pure_or_pseudopure(int ot
         SaturationSolvers::saturation_T_pure_options options;
         SaturationSolvers::saturation_T_pure(HEOS, _T, options);
 
-        CoolPropDbl Q;
+        CoolPropDbl Q = NAN;
 
         if (other == iP) {
             if (value > HEOS.SatL->p() * (1e-6 + 1)) {
@@ -2750,7 +2751,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
                 rhomolar_guess = p / (gas_constant() * T);
             }
         } else if (phase == iphase_liquid) {
-            double rhomolar;
+            double rhomolar = NAN;
             if (is_pure_or_pseudopure) {
                 // It's liquid at subcritical pressure, we can use ancillaries as guess value
                 CoolPropDbl _rhoLancval = static_cast<CoolPropDbl>(components[0].ancillaries.rhoL.evaluate(T));
@@ -2838,7 +2839,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl
     }
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPropDbl p, phases phase) {
-    CoolPropDbl rhomolar, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
+    CoolPropDbl rhomolar = NAN, R_u = gas_constant(), a = 0, b = 0, k_ij = 0;
 
     for (std::size_t i = 0; i < components.size(); ++i) {
         CoolPropDbl Tci = components[i].EOS().reduce.T, pci = components[i].EOS().reduce.p, acentric_i = components[i].EOS().acentric;
@@ -2870,8 +2871,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::solver_rho_Tp_SRK(CoolPropDbl T, CoolPro
     CoolPropDbl B = b * p / (R_u * T);
 
     //Solve the cubic for solutions for Z = p/(rho*R*T)
-    double Z0, Z1, Z2;
-    int Nsolns;
+    double Z0 = NAN, Z1 = NAN, Z2 = NAN;
+    int Nsolns = 0;
     solve_cubic(1, -1, A - B - B * B, -A * B, Nsolns, Z0, Z1, Z2);
 
     // Determine the guess value
@@ -3302,7 +3303,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alphar_deriv_nocache(const int nTau
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
                                                                   const CoolPropDbl& tau, const CoolPropDbl& delta, const CoolPropDbl& Tr,
                                                                   const CoolPropDbl& rhor) {
-    CoolPropDbl val;
+    CoolPropDbl val = NAN;
     if (components.size() == 0) {
         throw ValueError("No alpha0 derivatives are available");
     }
@@ -3352,7 +3353,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_alpha0_deriv_nocache(const int nTau
         // See Table B5, GERG 2008 from Kunz Wagner, JCED, 2012
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer = 0;
-        CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
+        CoolPropDbl tau_i = NAN, delta_i = NAN, rho_ci = NAN, T_ci = NAN;
         CoolPropDbl Rmix = gas_constant();
         for (unsigned int i = 0; i < N; ++i) {
 
@@ -3410,7 +3411,7 @@ HelmholtzDerivatives HelmholtzEOSMixtureBackend::calc_all_alpha0_derivs_nocache(
         // See Table B5, GERG 2008 from Kunz Wagner, JCED, 2012
         std::size_t N = mole_fractions.size();
         CoolPropDbl summer_00 = 0, summer_01 = 0, summer_10 = 0, summer_02 = 0, summer_11 = 0, summer_20 = 0;
-        CoolPropDbl tau_i, delta_i, rho_ci, T_ci;
+        CoolPropDbl tau_i = NAN, delta_i = NAN, rho_ci = NAN, T_ci = NAN;
         CoolPropDbl Rmix = gas_constant();
         for (unsigned int i = 0; i < N; ++i) {
 
@@ -3826,7 +3827,7 @@ CoolProp::CriticalState HelmholtzEOSMixtureBackend::calc_critical_point(double r
         HelmholtzEOSMixtureBackend& HEOS;
         double L1, M1;
         Eigen::MatrixXd Lstar, Mstar;
-        Resid(HelmholtzEOSMixtureBackend& HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE) {};
+        Resid(HelmholtzEOSMixtureBackend& HEOS) : HEOS(HEOS), L1(_HUGE), M1(_HUGE){};
         std::vector<double> call(const std::vector<double>& tau_delta) {
             double rhomolar = tau_delta[1] * HEOS.rhomolar_reducing();
             double T = HEOS.T_reducing() / tau_delta[0];
@@ -3913,8 +3914,7 @@ class OneDimObjective : public FuncWrapper1DWithTwoDerivs
     CoolProp::HelmholtzEOSMixtureBackend& HEOS;
     const double delta;
     double _call, _deriv, _second_deriv;
-    OneDimObjective(HelmholtzEOSMixtureBackend& HEOS, double delta0)
-      : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE) {};
+    OneDimObjective(HelmholtzEOSMixtureBackend& HEOS, double delta0) : HEOS(HEOS), delta(delta0), _call(_HUGE), _deriv(_HUGE), _second_deriv(_HUGE){};
     double call(double tau) {
         double rhomolar = HEOS.rhomolar_reducing() * delta, T = HEOS.T_reducing() / tau;
         HEOS.update_DmolarT_direct(rhomolar, T);
@@ -3980,7 +3980,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
      @param theta The angle
      */
     double call(double theta) {
-        double tau_new, delta_new;
+        double tau_new = NAN, delta_new = NAN;
         this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
         double rhomolar = HEOS.rhomolar_reducing() * delta_new, T = HEOS.T_reducing() / tau_new;
         HEOS.update_DmolarT_direct(rhomolar, T);
@@ -4002,7 +4002,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
 
     void trace() {
         bool debug = (get_debug_level() > 0) | false;
-        double theta;
+        double theta = NAN;
         for (int i = 0; i < 300; ++i) {
             if (i == 0) {
                 // In the first iteration, search all angles in the positive delta direction using a
@@ -4048,7 +4048,7 @@ class L0CurveTracer : public FuncWrapper1DWithDeriv
             double p_MPa = HEOS.p() / 1e6;
 
             // Calculate the new tau and delta at the new point
-            double tau_new, delta_new;
+            double tau_new = NAN, delta_new = NAN;
             this->get_tau_delta(theta, tau, delta, tau_new, delta_new);
 
             // Stop if bounds are exceeded

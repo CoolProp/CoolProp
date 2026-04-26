@@ -26,6 +26,7 @@
 #    endif
 #endif
 
+#include <cmath>
 #include <memory>
 
 #include <iostream>
@@ -83,7 +84,7 @@ bool has_backend_in_string(const std::string& fluid_string, std::size_t& i) {
 }
 
 void extract_backend(std::string fluid_string, std::string& backend, std::string& fluid) {
-    std::size_t i;
+    std::size_t i = 0;
     // For backwards compatibility reasons, if "REFPROP-" or "REFPROP-MIX:" start
     // the fluid_string, replace them with "REFPROP::"
     if (fluid_string.find("REFPROP-MIX:") == 0) {
@@ -117,7 +118,7 @@ bool has_solution_concentration(const std::string& fluid_string) {
 struct delim : std::numpunct<char>
 {
     char m_c;
-    delim(char c) : m_c(c) {};
+    delim(char c) : m_c(c){};
     char do_decimal_point() const {
         return m_c;
     }
@@ -155,7 +156,7 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
             std::stringstream ssfraction(fraction);
             const char c = get_config_string(FLOAT_PUNCTUATION)[0];
             ssfraction.imbue(std::locale(ssfraction.getloc(), new delim(c)));
-            double f;
+            double f = NAN;
             ssfraction >> f;
             if (ssfraction.rdbuf()->in_avail() != 0) {
                 throw ValueError(format("fraction [%s] was not converted fully", fraction.c_str()));
@@ -183,7 +184,7 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
         return strjoin(names, "&");
     } else if (has_solution_concentration(fluid_string)) {
         fractions.clear();
-        double x;
+        double x = NAN;
 
         std::vector<std::string> fluid_parts = strsplit(fluid_string, '-');
         // Check it worked
@@ -193,7 +194,7 @@ std::string extract_fractions(const std::string& fluid_string, std::vector<doubl
         }
 
         // Convert the concentration into a string
-        char* pEnd;
+        char* pEnd = nullptr;
         x = strtod(fluid_parts[1].c_str(), &pEnd);
 
         // Check if per cent or fraction syntax is used

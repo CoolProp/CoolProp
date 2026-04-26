@@ -1,7 +1,6 @@
+#include <cmath>
 #include <vector>
 #include <string>
-#include <cmath>
-#include <cmath>
 #include <Eigen/Dense>
 #include <cstdlib>
 
@@ -261,7 +260,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     double den = _rhomolar * N_AV / 1.0e30;
 
     vector<double> zeta(4, 0);
-    double summ;
+    double summ = NAN;
     for (int i = 0; i < 4; i++) {
         summ = 0;
         for (size_t j = 0; j < ncomp; j++) {
@@ -373,9 +372,9 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
         vector<double> adip(5, 0);
         vector<double> bdip(5, 0);
         vector<double> cdip(5, 0);
-        double J2, J3;
-        double m_ij;
-        double m_ijk;
+        double J2 = NAN, J3 = NAN;
+        double m_ij = NAN;
+        double m_ijk = NAN;
         for (size_t i = 0; i < ncomp; i++) {
             for (size_t j = 0; j < ncomp; j++) {
                 m_ij = sqrt(components[i].getM() * components[j].getM());
@@ -533,7 +532,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     double den = _rhomolar * N_AV / 1.0e30;
 
     vector<double> zeta(4, 0);
-    double summ;
+    double summ = NAN;
     for (int i = 0; i < 4; i++) {
         summ = 0;
         for (size_t j = 0; j < ncomp; j++) {
@@ -563,7 +562,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     vector<double> s_ij(ncomp * ncomp, 0);
     double m2es3 = 0.;
     double m2e2s3 = 0.;
-    double ddij_dt;
+    double ddij_dt = NAN;
     int idx = -1;
     for (size_t i = 0; i < ncomp; i++) {
         for (size_t j = 0; j < ncomp; j++) {
@@ -675,9 +674,9 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         vector<double> adip(5, 0);
         vector<double> bdip(5, 0);
         vector<double> cdip(5, 0);
-        double J2, J3, dJ2_dt, dJ3_dt;
-        double m_ij;
-        double m_ijk;
+        double J2 = NAN, J3 = NAN, dJ2_dt = NAN, dJ3_dt = NAN;
+        double m_ij = NAN;
+        double m_ijk = NAN;
         for (size_t i = 0; i < ncomp; i++) {
             for (size_t j = 0; j < ncomp; j++) {
                 m_ij = sqrt(components[i].getM() * components[j].getM());
@@ -819,7 +818,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
         double kappa =
           sqrt(den * E_CHRG * E_CHRG / kb / _T / (dielc * perm_vac) * summ);  // the inverse Debye screening length. Equation 4 in Held et al. 2008.
 
-        double dkappa_dt;
+        double dkappa_dt = NAN;
         if (kappa != 0) {
             vector<double> chi(ncomp);
             vector<double> dchikap_dk(ncomp);
@@ -877,7 +876,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     double den = _rhomolar * N_AV / 1.0e30;
 
     vector<double> zeta(4, 0);
-    double summ;
+    double summ = NAN;
     for (int i = 0; i < 4; i++) {
         summ = 0;
         for (size_t j = 0; j < ncomp; j++) {
@@ -1016,7 +1015,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
 
     vector<double> dadisp_dx(ncomp, 0);
     vector<double> dahc_dx(ncomp, 0);
-    double dzeta3_dx, daa_dx, db_dx, dI1_dx, dI2_dx, dm2es3_dx, dm2e2s3_dx, dC1_dx;
+    double dzeta3_dx = NAN, daa_dx = NAN, db_dx = NAN, dI1_dx = NAN, dI2_dx = NAN, dm2es3_dx = NAN, dm2e2s3_dx = NAN, dC1_dx = NAN;
     for (size_t i = 0; i < ncomp; i++) {
         dzeta3_dx = PI / 6. * den * components[i].getM() * pow(d[i], 3);
         dI1_dx = 0.0;
@@ -1088,9 +1087,9 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
         vector<double> adip(5, 0);
         vector<double> bdip(5, 0);
         vector<double> cdip(5, 0);
-        double J2, dJ2_det, detJ2_det, J3, dJ3_det, detJ3_det;
-        double m_ij;
-        double m_ijk;
+        double J2 = NAN, dJ2_det = NAN, detJ2_det = NAN, J3 = NAN, dJ3_det = NAN, detJ3_det = NAN;
+        double m_ij = NAN;
+        double m_ijk = NAN;
         for (size_t i = 0; i < ncomp; i++) {
             for (size_t j = 0; j < ncomp; j++) {
                 m_ij = sqrt(components[i].getM() * components[j].getM());
@@ -1375,7 +1374,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
     double den = _rhomolar * N_AV / 1.0e30;
 
     vector<double> zeta(4, 0);
-    double summ;
+    double summ = NAN;
     for (int i = 0; i < 4; i++) {
         summ = 0;
         for (size_t j = 0; j < ncomp; j++) {
@@ -1483,7 +1482,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
         vector<double> bdip(5, 0);
         vector<double> cdip(5, 0);
         vector<double> dipmSQ(ncomp, 0);
-        double J2, detJ2_det, J3, detJ3_det;
+        double J2 = NAN, detJ2_det = NAN, J3 = NAN, detJ3_det = NAN;
 
         static double a0dip[5] = {0.3043504, -0.1358588, 1.4493329, 0.3556977, -2.0653308};
         static double a1dip[5] = {0.9534641, -1.8396383, 2.0131180, -7.3724958, 8.2374135};
@@ -1501,7 +1500,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
             dipmSQ[i] = pow(components[i].getDipm(), 2.) / (components[i].getM() * components[i].getU() * pow(components[i].getSigma(), 3.)) * conv;
         }
 
-        double m_ij;
+        double m_ij = NAN;
         for (size_t i = 0; i < ncomp; i++) {
             for (size_t j = 0; j < ncomp; j++) {
                 m_ij = sqrt(components[i].getM() * components[j].getM());
@@ -1526,7 +1525,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
             }
         }
 
-        double m_ijk;
+        double m_ijk = NAN;
         for (size_t i = 0; i < ncomp; i++) {
             for (size_t j = 0; j < ncomp; j++) {
                 for (size_t k = 0; k < ncomp; k++) {
@@ -1680,7 +1679,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
           sqrt(den * E_CHRG * E_CHRG / kb / _T / (dielc * perm_vac) * summ);  // the inverse Debye screening length. Equation 4 in Held et al. 2008.
 
         if (kappa != 0) {
-            double chi, sigma_k;
+            double chi = NAN, sigma_k = NAN;
             summ = 0.;
             for (size_t i = 0; i < ncomp; i++) {
                 chi = 3 / pow(kappa * d[i], 3) * (1.5 + log(1 + kappa * d[i]) - 2 * (1 + kappa * d[i]) + 0.5 * pow(1 + kappa * d[i], 2));
@@ -1871,8 +1870,8 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
 phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
     phases phase = iphase_unknown;
 
-    double p_input, rho_input;
-    double p_bub, p_dew, p_equil;
+    double p_input = NAN, rho_input = NAN;
+    double p_bub = NAN, p_dew = NAN, p_equil = NAN;
     switch (input_pair) {
         case PT_INPUTS:
             p_input = _p;
@@ -1926,8 +1925,8 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
                 }
             }
             break;
-        case DmolarT_INPUTS:
-            double rho_bub, rho_dew;
+        case DmolarT_INPUTS: {
+            double rho_bub = NAN, rho_dew = NAN;
             p_input = _p;
             rho_input = _rhomolar;
 
@@ -1969,6 +1968,7 @@ phases PCSAFTBackend::calc_phase_internal(CoolProp::input_pairs input_pair) {
                 }
             }
             break;
+        }
         default:
             throw ValueError(
               format("Phase determination for this pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
@@ -2820,7 +2820,7 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
     } else {
         int num_pts = 25;
         double err_min = 1e40;
-        double rho_min;
+        double rho_min = NAN;
         for (int i = 0; i < num_pts; i++) {
             double rho_guess = (0.7405 - 1e-8) / (double)num_pts * i + 1e-8;
             double err = (update_DmolarT(reduced_to_molar(rho_guess, T)) - p) / p;
@@ -2877,7 +2877,7 @@ vector<double> PCSAFTBackend::dXAdt_find(vector<double> delta_ij, double den, ve
     Eigen::MatrixXd B = Eigen::MatrixXd::Zero(num_sites, 1);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_sites, num_sites);
 
-    double summ;
+    double summ = NAN;
     int ij = 0;
     for (auto i = 0U; i < num_sites; i++) {
         summ = 0;
@@ -2907,7 +2907,7 @@ vector<double> PCSAFTBackend::dXAdx_find(vector<int> assoc_num, vector<double> d
     Eigen::MatrixXd B(num_sites * ncomp, 1);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_sites * ncomp, num_sites * ncomp);
 
-    double sum1, sum2;
+    double sum1 = NAN, sum2 = NAN;
     int idx1 = 0;
     int ij = 0;
     for (auto i = 0U; i < ncomp; i++) {
@@ -3034,7 +3034,7 @@ double PCSAFTBackend::dielc_water(double t) {
     Limiting Law Slopes,” J. Phys. Chem. Ref. Data, vol. 19, no. 2, pp. 371–411,
     Mar. 1990.
     */
-    double dielc;
+    double dielc = NAN;
     if (t < 263.15) {
         throw ValueError("The current function for the dielectric constant for water is only valid for temperatures above 263.15 K.");
     } else if (t <= 368.15) {

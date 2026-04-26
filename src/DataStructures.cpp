@@ -177,7 +177,7 @@ bool is_trivial_parameter(int key) {
 }
 
 std::string get_parameter_information(int key, std::string_view info) {
-    const std::map<int, std::string>* M;
+    const std::map<int, std::string>* M = nullptr;
     auto& parameter_information = get_parameter_information();
     // Hook up the right map (since they are all of the same type)
     if (info == "IO") {

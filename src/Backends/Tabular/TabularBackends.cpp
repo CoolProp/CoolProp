@@ -3,6 +3,7 @@
 
 #    include "TabularBackends.h"
 #    include "CoolProp.h"
+#    include <cmath>
 #    include <sstream>
 #    include <ctime>
 #    include "miniz.h"
@@ -51,7 +52,7 @@ void load_table(T& table, const std::string& path_to_tables, const std::string& 
     std::vector<unsigned char> newBuffer(raw.size() * 5);
     uLong newBufferSize = static_cast<uLong>(newBuffer.size());
     mz_ulong rawBufferSize = static_cast<mz_ulong>(raw.size());
-    int code;
+    int code = 0;
     do {
         code = uncompress((unsigned char*)(&(newBuffer[0])), &newBufferSize, (unsigned char*)(&(raw[0])), rawBufferSize);
         if (code == Z_BUF_ERROR) {
@@ -122,7 +123,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
     CoolPropDbl Tmin = std::max(AS->Ttriple(), AS->Tmin());
     AS->update(QT_INPUTS, 0, Tmin);
     CoolPropDbl p_triple = AS->p();
-    CoolPropDbl p, pmin = p_triple, pmax = 0.9999 * AS->p_critical();
+    CoolPropDbl p = NAN, pmin = p_triple, pmax = 0.9999 * AS->p_critical();
     for (std::size_t i = 0; i < N - 1; ++i) {
         if (i == 0) {
             CoolProp::set_config_bool(DONT_CHECK_PROPERTY_LIMITS, true);
@@ -222,7 +223,7 @@ void CoolProp::PureFluidSaturationTableData::build(shared_ptr<CoolProp::Abstract
 }
 
 void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractState>& AS) {
-    CoolPropDbl x, y;
+    CoolPropDbl x = NAN, y = NAN;
     const bool debug = get_debug_level() > 5 || false;
 
     resize(Nx, Ny);
@@ -261,7 +262,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
             }
 
             // Generate the input pair
-            CoolPropDbl v1, v2;
+            CoolPropDbl v1 = NAN, v2 = NAN;
             input_pairs input_pair = generate_update_pair(xkey, x, ykey, y, v1, v2);
 
             // --------------------
@@ -618,7 +619,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_speed_sound(void) {
 }
 CoolPropDbl CoolProp::TabularBackend::calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant) {
     if (using_single_phase_table) {
-        CoolPropDbl dOf_dx, dOf_dy, dWrt_dx, dWrt_dy, dConstant_dx, dConstant_dy;
+        CoolPropDbl dOf_dx = NAN, dOf_dy = NAN, dWrt_dx = NAN, dWrt_dy = NAN, dConstant_dx = NAN, dConstant_dy = NAN;
 
         // If a mass-based parameter is provided, get a conversion factor and change the key to the molar-based key
         double Of_conversion_factor = 1.0, Wrt_conversion_factor = 1.0, Constant_conversion_factor = 1.0, MM = AS->molar_mass();
@@ -1020,7 +1021,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         case PUmolar_INPUTS:
         case PSmolar_INPUTS:
         case DmolarP_INPUTS: {
-            CoolPropDbl otherval;
+            CoolPropDbl otherval = NAN;
             parameters otherkey;
             switch (input_pair) {
                 case PUmolar_INPUTS:
@@ -1103,7 +1104,7 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
         }
         case SmolarT_INPUTS:
         case DmolarT_INPUTS: {
-            CoolPropDbl otherval;
+            CoolPropDbl otherval = NAN;
             parameters otherkey;
             switch (input_pair) {
                 case SmolarT_INPUTS:

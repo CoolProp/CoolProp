@@ -1,6 +1,7 @@
 #include "CoolPropPlot.h"
 #include "CoolProp.h"
 #include "CPnumerics.h"
+#include <cmath>
 #include <map>
 
 namespace CoolProp {
@@ -151,7 +152,7 @@ Range Isoline::get_sat_bounds(CoolProp::parameters key) const {
     double p_small = critical_state_->keyed_output(CoolProp::iP) * s;
 
     double t_triple = state_->trivial_keyed_output(CoolProp::iT_triple);
-    double t_min;
+    double t_min = NAN;
     try {
         t_min = state_->trivial_keyed_output(CoolProp::iT_min);
     } catch (...) {
@@ -200,7 +201,7 @@ void Isoline::calc_sat_range(int count) {
 
 void Isoline::update_pair(int& ipos, int& xpos, int& ypos, int& pair) {
     Detail::IsolineSupported should_switch = Detail::xy_switch.at(key_).at(ykey_ * 10 + xkey_);
-    double out1, out2;
+    double out1 = NAN, out2 = NAN;
     if (should_switch == Detail::IsolineSupported::No)
         throw CoolProp::ValueError("This isoline cannot be calculated!");
     else if (should_switch == Detail::IsolineSupported::Yes)
@@ -235,7 +236,7 @@ void Isoline::calc_range(std::vector<double>& xvals, std::vector<double>& yvals)
     if (key_ == CoolProp::iQ) {
         calc_sat_range(static_cast<int>(xvals.size()));
     } else {
-        int ipos, xpos, ypos, pair;
+        int ipos = 0, xpos = 0, ypos = 0, pair = 0;
         update_pair(ipos, xpos, ypos, pair);
 
         std::vector<double> ivals(xvals.size(), value);
@@ -276,7 +277,7 @@ PropertyPlot::PropertyPlot(const std::string& fluid_name, CoolProp::parameters y
     // We are just assuming that all inputs and outputs are in SI units. We
     // take care of any conversions before calling the library and after
     // getting the results.
-    int out1, out2;
+    int out1 = 0, out2 = 0;
     axis_pair_ = CoolProp::generate_update_pair(xkey, 0, ykey, 1, out1, out2);
     swap_axis_inputs_for_update_ = (out1 == 1);
 
@@ -370,7 +371,7 @@ Range PropertyPlot::get_sat_bounds(CoolProp::parameters key) const {
     double p_small = critical_state_->keyed_output(CoolProp::iP) * s;
 
     double t_triple = state_->trivial_keyed_output(CoolProp::iT_triple);
-    double t_min;
+    double t_min = NAN;
     try {
         t_min = state_->trivial_keyed_output(CoolProp::iT_min);
     } catch (...) {

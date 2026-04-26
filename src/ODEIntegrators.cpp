@@ -4,6 +4,7 @@
 #include "CPstrings.h"
 #include "Exceptions.h"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, double tmax, double hmin, double hmax, double eps_allowed,
@@ -24,7 +25,7 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, doubl
         h *= -1;
     }
 
-    double max_error;
+    double max_error = NAN;
 
     std::vector<double> xnew1(N), xnew2(N), xnew3(N), xnew4(N), xnew5(N), f1(N), f2(N), f3(N), f4(N), f5(N), f6(N), error(N), xnew(N);
 

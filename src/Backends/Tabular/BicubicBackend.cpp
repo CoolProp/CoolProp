@@ -1,6 +1,8 @@
 #if !defined(NO_TABULAR_BACKENDS)
 
 #    include "BicubicBackend.h"
+
+#    include <cmath>
 #    include "MatrixMath.h"
 #    include "DataStructures.h"
 #    include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
@@ -202,7 +204,7 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     double c = alpha[1 + 0 * 4] * y_0 + alpha[1 + 1 * 4] * y_1 + alpha[1 + 2 * 4] * y_2 + alpha[1 + 3 * 4] * y_3;          // factors of xhat
     double d = alpha[0 + 0 * 4] * y_0 + alpha[0 + 1 * 4] * y_1 + alpha[0 + 2 * 4] * y_2 + alpha[0 + 3 * 4] * y_3 - other;  // constant factors
     int N = 0;
-    double xhat0, xhat1, xhat2, val, xhat = _HUGE;
+    double xhat0 = NAN, xhat1 = NAN, xhat2 = NAN, val = NAN, xhat = _HUGE;
     solve_cubic(a, b, c, d, N, xhat0, xhat1, xhat2);
     if (N == 1) {
         xhat = xhat0;
@@ -258,7 +260,7 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     double c = alpha[0 + 1 * 4] * x_0 + alpha[1 + 1 * 4] * x_1 + alpha[2 + 1 * 4] * x_2 + alpha[3 + 1 * 4] * x_3;          // factors of yhat
     double d = alpha[0 + 0 * 4] * x_0 + alpha[1 + 0 * 4] * x_1 + alpha[2 + 0 * 4] * x_2 + alpha[3 + 0 * 4] * x_3 - other;  // constant factors
     int N = 0;
-    double yhat0, yhat1, yhat2, val, yhat = _HUGE;
+    double yhat0 = NAN, yhat1 = NAN, yhat2 = NAN, val = NAN, yhat = _HUGE;
     solve_cubic(a, b, c, d, N, yhat0, yhat1, yhat2);
     if (N == 1) {
         yhat = yhat0;
