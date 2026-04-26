@@ -107,6 +107,13 @@ they exist to surface signal, not to gate.
 - **cppcheck** (`.github/workflows/dev_cppcheck.yml`) — uploads a colorized
   cppcheck report. Run locally with `cppcheck --std=c++17 ./src` after
   `apt install cppcheck`.
+- **clang-tidy diff** (`.github/workflows/dev_clangtidy.yml`) — runs
+  `clang-tidy-diff.py` on PR-touched lines and uploads
+  `clang-tidy-diff.log`. Empirical noise survey on representative `src/`
+  files showed the strict `.clang-tidy` config produces a high cascade
+  of `misc-include-cleaner` / `misc-const-correctness` /
+  `readability-isolate-declaration` warnings before any meaningful
+  bug-finding signal — informational by design, no plans to gate.
 - **CodeQL** (`.github/workflows/dev_codeql.yml`) — runs the
   `security-and-quality` query suite on every PR. Findings appear in the
   repo's Security tab.
@@ -114,6 +121,8 @@ they exist to surface signal, not to gate.
   (twice weekly) due to free-tier quota. The workflow uploads
   `coverity-defects.json` (machine-readable) for AI-agent consumption;
   see also the Coverity Scan web UI for the curated view.
+- **IWYU** (`.github/workflows/dev_iwyu.yml`) — runs include-what-you-use
+  via the `COOLPROP_IWYU` CMake opt-in and uploads `iwyu.log`.
 - **AddressSanitizer** (`.github/workflows/dev_asan.yml`) — full Catch test
   suite under ASan on every PR. This one *does* fail builds, since memory
   bugs are real bugs.
@@ -123,6 +132,4 @@ they exist to surface signal, not to gate.
 These will land as the `CoolProp-2uw` epic progresses; cross-references
 will be added here as each lands:
 
-- clang-tidy diff-only PR check (Tier 2.1, `CoolProp-2uw.5`)
-- IWYU report artifact (Tier 3.4, `CoolProp-2uw.11`)
 - `.git-blame-ignore-revs` for the one-shot reformat (Tier 4.1, `CoolProp-2uw.12`)
