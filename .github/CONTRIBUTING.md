@@ -119,6 +119,26 @@ CoolProp can be developed locally on your machine.  Once code changes are comple
 
 ## Styleguides
 
+### C++ formatting (clang-format)
+
+C/C++ files are auto-formatted with `clang-format` (config in `.clang-format`). The version is pinned in `.pre-commit-config.yaml` (`clang-format 18.1.x`) so CI and every contributor's machine produce identical output.
+
+One-time setup per clone:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+That installs a git pre-commit hook that blocks commits with formatting violations on staged C/C++ files. Two CMake targets are also available once you've configured a build:
+
+```bash
+cmake --build build --target format-check   # dry-run, fail on violations
+cmake --build build --target format         # apply clang-format -i in place
+```
+
+CI's `dev_clangformat.yml` workflow runs the same `clang-format` against PR-touched files and fails the build on any diff. Full contributor doc: [`dev/ci/README.md`](../dev/ci/README.md).
+
 ### Git Commit Messages
 
 * Use the present tense ("Add feature" not "Added feature")
