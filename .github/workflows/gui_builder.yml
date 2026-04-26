@@ -84,15 +84,10 @@ jobs:
       # logic; per-OS coverage comes from the build + smoke-test steps).
       # Runs in release mode so the resulting CoolProp static lib + cargo
       # build artifacts are reused by `tauri build` below.
-      #
-      # --test-threads=1: CoolProp's fluid-library static init isn't
-      # thread-safe; running tests in parallel results in fluid entries
-      # racing into the same slot (FluidsList comes back as e.g.
-      # "D4,D4,D4,D4,R125" and Water lookups fail).
       - name: Run Rust unit tests
         if: matrix.os == 'ubuntu-22.04'
         working-directory: wrappers/GUI/src-tauri
-        run: cargo test --release --no-fail-fast -- --test-threads=1
+        run: cargo test --release --no-fail-fast
 
       # Forward macOS signing/notarization secrets into $GITHUB_ENV only when
       # APPLE_CERTIFICATE is actually set. Tauri 2's bundler attempts to codesign
