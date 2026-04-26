@@ -1,6 +1,6 @@
 [package]
 name = "coolprop-gui"
-version = "0.1.0"
+version = "7.2.1"
 edition = "2021"
 
 [lib]

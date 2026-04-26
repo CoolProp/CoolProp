@@ -1,4 +1,4 @@
-import { APP_VERSION, NOTICES } from "../generated/notices";
+import { COOLPROP_VERSION, COOLPROP_GIT_HASH, NOTICES } from "../generated/notices";
 
 interface Props {
   onClose: () => void;
@@ -14,7 +14,11 @@ export default function AboutModal({ onClose }: Props) {
         <div className="modal-title">About CoolProp Desktop</div>
 
         <div className="modal-body">
-          <p><strong>Version:</strong> {APP_VERSION}</p>
+          <p>
+            <strong>CoolProp:</strong>{" "}
+            <span className="about-version">{COOLPROP_VERSION}</span>{" "}
+            <span className="about-hash">(build {COOLPROP_GIT_HASH})</span>
+          </p>
           <p>
             Built with Tauri, React, and{" "}
             <a

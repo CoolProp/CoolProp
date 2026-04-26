@@ -301,6 +301,17 @@ button.primary:disabled {
   user-select: none;
 }
 
+.about-version {
+  font-family: "Menlo", "Consolas", monospace;
+  font-weight: 600;
+}
+
+.about-hash {
+  font-family: "Menlo", "Consolas", monospace;
+  color: #888;
+  font-size: 12px;
+}
+
 .about-notices-pre {
   margin-top: 8px;
   padding: 10px;
