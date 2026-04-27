@@ -7,9 +7,9 @@ Humid Air Properties
 
 If you are feeling impatient, jump to :ref:`HAProps_Sample`, or to go to the code documentation :mod:`CoolProp.HumidAirProp`, otherwise, hang in there.
 
-The equations implemented in CoolProp are based on a publication by Hermann et al. :cite:`Herrmann2009`, which describes the outcome of the ASHRAE research project ASHREA-RP1485. 
-The same source has been used in the ASHRAE Handbook 2009 to generate reference saturation property tables. The code implemented here passes all tests and reproduces the original 
-data with a very high accuracy. It is applicable for pressure from 0.01 kPa up to 10 MPa, in a temperature range from -143.15 °C up to 350 °C with a humidity ratio from 0 kg of water 
+The equations implemented in CoolProp are based on a publication by Hermann et al. :cite:`Herrmann2009`, which describes the outcome of the ASHRAE research project ASHREA-RP1485.
+The same source has been used in the ASHRAE Handbook 2009 to generate reference saturation property tables. The code implemented here passes all tests and reproduces the original
+data with a very high accuracy. It is applicable for pressure from 0.01 kPa up to 10 MPa, in a temperature range from -143.15 °C up to 350 °C with a humidity ratio from 0 kg of water
 up to 10 kg of water per kg of dry air.
 
 Humid air can be modeled as a mixture of air and water vapor.  In the simplest analysis, water and air are treated as ideal gases but in principle there is interaction between the air and water molecules that must be included through the use of interaction parameters.
@@ -27,7 +27,7 @@ The humidity ratio :math:`W` is the ratio of the mass of water vapor to the mass
 .. math::
 
     \psi_w=\frac{n_w}{n}=\frac{n_w}{n_a+n_w}=\frac{m_w/M_w}{m_a/M_a+m_w/M_w}=\frac{m_w}{(M_w/M_a)m_a+m_w}=\frac{1}{(M_w/M_a)/W+1}=\frac{W}{(M_w/M_a)+W}
-    
+
 or
 
 .. math::
@@ -46,18 +46,18 @@ Mathematically, the result is
 
     \varphi=\frac{\psi_w}{\psi_{w,s}}
 
-where 
+where
 
 .. math::
 
     \psi_{w,s}=\frac{fp_{w,s}}{p}
-    
+
 The product :math:`p_s` is defined by :math:`p_s=fp_{w,s}`, and :math:`p_{w,s}` is the saturation pressure of pure water (or ice) at temperature :math:`T`. This yields the result for :math:`\psi_w` of
 
 .. math::
 
     \varphi=\frac{\psi_w}{p_s/p}
-    
+
 .. math::
 
     \psi_w=\frac{\varphi p_s}{p}
@@ -75,28 +75,28 @@ and the mole fraction of water vapor is obtained from
 .. math::
 
     \psi_w=\frac{p_w}{p}
-    
+
 Once the state has been fixed by a set of :math:`T,p,\psi_w`, any parameter of interest can be calculated
 
 Molar Volume
 ------------
 .. math::
     :label: eq1
-    
+
     p=\frac{\bar R T}{\bar v}\left( 1+\frac{B_m}{\bar v}+\frac{C_m}{\bar v^2}\right)
-    
+
 The bracketed term on the right hand side is the compressibility Z factor, equal to 1 for ideal gas, and is a measure of non-ideality of the air.  The virial terms are given by
-    
+
 .. math::
-    
+
     B_m=(1-\psi_w)^2B_{aa}+2(1-\psi_w)\psi_wB_{aw}+\psi_w^2B_{ww}
-    
+
     C_m=(1-\psi_w)^3C_{aaa}+3(1-\psi_w)^2\psi_wC_{aaw}+3(1-\psi_w)\psi_w^2C_{aww}+\psi_w^3C_{www}
-    
-where the virial coefficients are described in ASRAE RP-1485 and their values are provided in :ref:`HA-Validation`.  All virial terms are functions only of temperature.
+
+where the virial coefficients are described in ASHRAE RP-1485 and their values are provided in :ref:`HA-Validation`.  All virial terms are functions only of temperature.
 
 Usually the temperature is known, the water mole fraction is calculated, and :math:`\bar v` is found using iterative methods, in HAProps, using a secant solver and the first guess that the compressibility factor is 1.0.
-    
+
 Molar Enthalpy
 --------------
 
@@ -115,11 +115,11 @@ with :math:`\bar h` in kJ/kmol.  For both air and water, the full EOS is used to
 which is in kJ/kmol, using the mixture :math:`\bar v` to define the parameter :math:`\delta=1/(\bar v \bar \rho_c)` for each fluid, and using the critical molar density for the fluid obtained from :math:`\bar \rho_c=1000\rho_c/M` to give units of mol/m\ :sup:`3`\ .  The offset enthalpies for air and water are given by
 
 .. math::
-    
+
     \bar h_{0,a}=-7,914.149298\mbox{ kJ/kmol}
-    
+
     \bar h_{0,w}=-0.01102303806\mbox{ kJ/kmol}
-    
+
 respectively.  The enthalpy per kg of dry air is given by
 
 .. math::
@@ -131,7 +131,7 @@ Enhancement factor
 
 The enhancement factor is a parameter that includes the impact of the air on the saturation pressure of water vapor.  It is only a function of temperature and pressure, but it must be iteratively obtained due to the nature of the expression for the enhancement factor.
 
-:math:`\psi_{w,s}` is given by :math:`\psi_{w,s}=fp_{w,s}/p`, where :math:`f` can be obtained from 
+:math:`\psi_{w,s}` is given by :math:`\psi_{w,s}=fp_{w,s}/p`, where :math:`f` can be obtained from
 
 .. math::
 
@@ -154,13 +154,13 @@ For water, the isothermal compressibility [in 1/Pa] is evaluated from
 .. math::
 
     k_T=\frac{1}{\rho\frac{\partial p}{\partial \rho}}\frac{1\mbox{ kPa}}{1000\mbox{ Pa}}
-    
+
 with
 
 .. math::
 
     \frac{\partial p}{\partial \rho}=RT\left[1+2\delta\left(\frac{\partial \alpha^r}{\partial \delta}\right)_{\tau}+\delta^2\left(\frac{\partial^2 \alpha^r}{\partial \delta^2}\right)_{\tau}\right]
-    
+
 in kPa/(kg/m\ :sup:`3`\ ). And for ice,
 
 .. math::
@@ -175,19 +175,21 @@ To use the HAPropsSI function, import it and do some calls, do something like th
 
 .. ipython::
 
-    #import the things you need 
+    #import the things you need
     In [1]: from CoolProp.HumidAirProp import HAPropsSI
-    
-    #Enthalpy (J per kg dry air) as a function of temperature, pressure, 
-    #    and relative humidity at dry bulb temperature T of 25C, pressure 
+
+    #Enthalpy (J per kg dry air) as a function of temperature, pressure,
+    #    and relative humidity at dry bulb temperature T of 25C, pressure
     #    P of one atmosphere, relative humidity R of 50%
     In [2]: h = HAPropsSI('H','T',298.15,'P',101325,'R',0.5); print(h)
-    
+
     #Temperature of saturated air at the previous enthalpy
     In [2]: T = HAPropsSI('T','P',101325,'H',h,'R',1.0); print(T)
-    
+
     #Temperature of saturated air - order of inputs doesn't matter
     In [2]: T = HAPropsSI('T','H',h,'R',1.0,'P',101325); print(T)
+
+.. _HAparameter_table:
 
 Table of Inputs/Outputs to HAPropsSI
 ------------------------------------
@@ -196,7 +198,7 @@ Table of Inputs/Outputs to HAPropsSI
     :header: "Parameter"; "Units"; "Input/Output"; "Description"
     :widths: 25, 25, 25, 25
     :delim: ;
-   
+
     ``B``, ``Twb``, ``T_wb``, ``WetBulb``; K; Input/Output; Wet-Bulb Temperature
     ``C``, ``cp``; J/kg dry air/K; Output; Mixture specific heat per unit dry air
     ``Cha``, ``cp_ha``; J/kg humid air/K; Output; Mixture specific heat per unit humid air
@@ -204,7 +206,7 @@ Table of Inputs/Outputs to HAPropsSI
     ``CVha``, ``cv_ha``; J/kg humid air/K; Output; Mixture specific heat at constant volume per unit humid air
     ``D``, ``Tdp``, ``DewPoint``, ``T_dp``; K; Input/Output;	Dew-Point Temperature
     ``H``, ``Hda``, ``Enthalpy``;	J/kg dry air; Input/Output; Mixture enthalpy per dry air
-    ``Hha``; J/kg humid air; Input/Output; Mixture enthalpy per humid air 
+    ``Hha``; J/kg humid air; Input/Output; Mixture enthalpy per humid air
     ``K``, ``k``, ``Conductivity``; W/m/K; Output; Mixture thermal conductivity
     ``M``, ``Visc``, ``mu``;Pa-s;Output;Mixture viscosity
     ``psi_w``, ``Y``; mol water/mol humid air; Input/Output; Water mole fraction
@@ -212,13 +214,13 @@ Table of Inputs/Outputs to HAPropsSI
     ``P_w``;Pa;Input;Partial pressure of water vapor
     ``R``, ``RH``, ``RelHum``; ; Input/Output; Relative humidity in [0, 1]
     ``S``, ``Sda``, ``Entropy``; J/kg dry air/K; Input/Output; Mixture entropy per unit dry air
-    ``Sha``; J/kg humid air/K; Input/Output; Mixture entropy per unit humid air 
+    ``Sha``; J/kg humid air/K; Input/Output; Mixture entropy per unit humid air
     ``T``, ``Tdb``, ``T_db``; K; Input/Output; Dry-Bulb Temperature
     ``V``, ``Vda``; m :math:`^3` /kg dry air; Input/Output;  Mixture volume per unit dry air
     ``Vha``; m :math:`^3` /kg humid air; Input/Output;  Mixture volume per unit humid air
     ``W``, ``Omega``, ``HumRat``; kg water/kg dry air; Input/Output; Humidity Ratio
     ``Z``; ; Output; Compressibility factor (:math:`Z = pv/(RT)`)
-    
+
 Psychrometric Chart
 -------------------
 
@@ -268,11 +270,11 @@ Psychrometric Chart
 Humid Air Validation
 --------------------
 Values here are obtained at documentation build-time using the Humid Air Properties module
- 
+
 .. ipython::
 
     In [1]: %run 'fluid_properties/Validation/HAValidation.py'
-    
+
 
 Verification Script
 -------------------
@@ -340,7 +342,7 @@ This script, written in Python, should yield no failures::
             errors = pool.map(calculate, input_values)
             for err in itertools.chain.from_iterable(errors):
                 print(err)
-    
+
 ..  Appendices
 
 
