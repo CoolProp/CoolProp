@@ -114,10 +114,10 @@ jobs:
     steps:  
     
     - name: Download binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         # Get all unique artifacts starting with "binaries-" per the pattern
-        # per requirements of actions/download-artifact@v4
+        # per requirements of actions/download-artifact@v8
         pattern: binaries-*
         # Allow multiple artifacts matching the patter to be merged
         # into the same binaries directory.
