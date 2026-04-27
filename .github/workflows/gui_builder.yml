@@ -1,0 +1,351 @@
+name: GUI builder
+
+# Builds the Tauri desktop GUI (wrappers/GUI) on macOS, Windows, and Linux.
+# CoolProp is compiled as a static library inside the GUI's build.rs, so this
+# workflow also exercises that build path on each platform.
+
+on:
+  push:
+    branches: [master, main, develop, ib/GUI]
+    paths:
+      - 'wrappers/GUI/**'
+      - 'include/**'
+      - 'src/**'
+      - 'externals/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/gui_builder.yml'
+    tags: ['gui-v*']
+  pull_request:
+    paths:
+      - 'wrappers/GUI/**'
+      - 'include/**'
+      - 'src/**'
+      - 'externals/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/workflows/gui_builder.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: wrappers/GUI/package-lock.json
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo + Tauri build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: wrappers/GUI/src-tauri -> target
+
+      # Tauri 2 on Linux needs WebKit 4.1, GTK, and a few extras.
+      - name: Install Linux WebKit dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install GUI npm dependencies
+        working-directory: wrappers/GUI
+        run: npm ci
+
+      # Frontend unit tests (Vitest + RTL) — Linux only; platform-agnostic.
+      - name: Run frontend unit tests
+        if: matrix.os == 'ubuntu-22.04'
+        working-directory: wrappers/GUI
+        run: npm test
+
+      # Rust unit tests (Linux only — platform-agnostic FFI / state-table
+      # logic; per-OS coverage comes from the build + smoke-test steps).
+      # Runs in release mode so the resulting CoolProp static lib + cargo
+      # build artifacts are reused by `tauri build` below.
+      - name: Run Rust unit tests
+        if: matrix.os == 'ubuntu-22.04'
+        working-directory: wrappers/GUI/src-tauri
+        run: cargo test --release --no-fail-fast
+
+      # Forward macOS signing/notarization secrets into $GITHUB_ENV only when
+      # APPLE_CERTIFICATE is actually set. Tauri 2's bundler attempts to codesign
+      # whenever APPLE_CERTIFICATE is defined — even an empty value — and fails
+      # at `security import`, so we must NOT plumb empty `${{ secrets.X }}` env
+      # vars into the build step. The shell guard handles the empty case.
+      # (GitHub Actions disallows `secrets.X` in step-level `if:` conditions, so
+      # the gating happens inside the run script rather than in the if.)
+      - name: Configure macOS signing
+        if: matrix.os == 'macos-latest'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Notarization, app-password flow:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Notarization, API-key flow (alternative):
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
+        run: |
+          if [ -z "${APPLE_CERTIFICATE:-}" ]; then
+            echo "macOS signing: APPLE_CERTIFICATE not set — building unsigned."
+            exit 0
+          fi
+          for var in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+                     APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID \
+                     APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_PATH; do
+            val=$(printenv "$var" 2>/dev/null || true)
+            if [ -n "$val" ]; then
+              printf '%s<<__SIGN_EOF__\n%s\n__SIGN_EOF__\n' "$var" "$val" >> "$GITHUB_ENV"
+            fi
+          done
+          echo "macOS signing: APPLE_* env forwarded to subsequent steps."
+
+      # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
+      # links the Rust crate, and produces native bundles under
+      # wrappers/GUI/src-tauri/target/release/bundle/. tauri-action picks up
+      # any APPLE_* / TAURI_WINDOWS_CERTIFICATE_THUMBPRINT env vars set by
+      # the previous steps.
+      #
+      # On `gui-v*` tags, also create a draft GitHub Release and attach all
+      # the bundles produced by this matrix.
+      - name: Build Tauri bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri auto-updater signing — when present, tauri-action signs the
+          # update artifacts and emits latest.json next to each platform
+          # bundle. Without these the build still succeeds; the updater
+          # plugin just won't accept the signatures, so updates won't work
+          # for that release. Activate by adding both repo secrets.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: wrappers/GUI
+          tauriScript: npm run tauri
+          tagName: ${{ startsWith(github.ref, 'refs/tags/gui-v') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/gui-v') && format('CoolProp GUI {0}', github.ref_name) || '' }}
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+
+      # ─── Linux smoke tests ────────────────────────────────────────────────
+      # 1) Forward-compat: install .deb in a clean ubuntu:26.04 container,
+      #    let apt-get -f install resolve declared deps from 26.04 repos,
+      #    confirm all the binary's shared libs resolve.
+      - name: Smoke-test Ubuntu .deb (ubuntu:26.04 container, deps + ldd)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -e
+          BUNDLE_DIR="$PWD/wrappers/GUI/src-tauri/target/release/bundle"
+          docker run --rm \
+            -v "$BUNDLE_DIR":/art:ro \
+            ubuntu:26.04 bash -c '
+              set -eu
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y --no-install-recommends ca-certificates file >/dev/null
+              dpkg -i /art/deb/*.deb >/dev/null 2>&1 || true
+              apt-get install -y -f >/dev/null
+              echo "=== package ==="; dpkg -l cool-prop | tail -1
+              BIN=$(dpkg -L cool-prop | xargs -I{} sh -c "[ -f {} ] && [ -x {} ] && echo {}" | grep -v "/share/" | head -1)
+              echo "=== binary: $BIN ==="; file "$BIN"
+              if ldd "$BIN" | grep -q "not found"; then
+                echo "FAIL: unresolved shared libraries:"
+                ldd "$BIN" | grep "not found"
+                exit 1
+              fi
+              echo "OK: all shared libraries resolve on ubuntu:26.04"
+            '
+
+      # 2) Launch the GUI on the runner under Xvfb, wait for the window,
+      #    capture a screenshot, and confirm the process is still alive.
+      #    Catches "binary starts but crashes initializing the WebView" and
+      #    "WebKit2GTK loads but the page never paints" types of bugs that
+      #    a static dep check can't see.
+      - name: Smoke-test Ubuntu launch + screenshot (Xvfb)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -e
+          sudo apt-get install -y --no-install-recommends xvfb imagemagick dbus-x11
+          DEB=$(ls "$PWD/wrappers/GUI/src-tauri/target/release/bundle/deb/"*.deb)
+          sudo dpkg -i "$DEB" || sudo apt-get install -y -f
+          mkdir -p artifacts/screenshots
+          Xvfb :99 -screen 0 1280x900x24 -ac >/tmp/xvfb.log 2>&1 &
+          XVFB_PID=$!
+          sleep 2
+          export DISPLAY=:99
+          export NO_AT_BRIDGE=1
+          /usr/bin/coolprop-gui >/tmp/coolprop-gui.log 2>&1 &
+          APP_PID=$!
+          sleep 8
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "FAIL: GUI exited within 8s; log:"
+            cat /tmp/coolprop-gui.log
+            exit 1
+          fi
+          echo "GUI alive (PID $APP_PID), capturing screenshot…"
+          import -display :99 -window root artifacts/screenshots/linux-startup.png \
+            || xwd -display :99 -root | convert xwd:- artifacts/screenshots/linux-startup.png
+          ls -la artifacts/screenshots/linux-startup.png
+          kill "$APP_PID" "$XVFB_PID" 2>/dev/null || true
+          echo "OK: GUI started and screenshot captured"
+
+      # ─── Windows post-build signing ────────────────────────────────────────
+      # Sign the .exe and .msi with the runner's signtool when a code-signing
+      # cert is provided via secrets. Without WINDOWS_CERTIFICATE the step is
+      # a no-op and we ship unsigned binaries (SmartScreen will flag them).
+      #
+      # Required secrets to activate:
+      #   WINDOWS_CERTIFICATE          base64 of a .pfx with the signing cert
+      #   WINDOWS_CERTIFICATE_PASSWORD password used during the .pfx export
+      #
+      # SignPath OSS users: replace this step with the SignPath action — see
+      # wrappers/GUI/README.md.
+      - name: Sign Windows .exe and .msi
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CERTIFICATE) {
+            Write-Host "Windows signing: WINDOWS_CERTIFICATE not set — leaving unsigned."
+            exit 0
+          }
+          $pfx = "$env:RUNNER_TEMP\coolprop-cert.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $signtool = (Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
+            Where-Object { $_.DirectoryName -match '\\x64\\?$' } | Select-Object -First 1).FullName
+          if (-not $signtool) { throw "signtool.exe not found" }
+          $bundle = "$PWD\wrappers\GUI\src-tauri\target\release\bundle"
+          $targets = @()
+          $targets += Get-ChildItem -Path "$PWD\wrappers\GUI\src-tauri\target\release\*.exe" -File -ErrorAction SilentlyContinue
+          $targets += Get-ChildItem -Path "$bundle\msi\*.msi" -File -ErrorAction SilentlyContinue
+          $targets += Get-ChildItem -Path "$bundle\nsis\*.exe" -File -ErrorAction SilentlyContinue
+          if ($targets.Count -eq 0) { throw "No artifacts to sign" }
+          foreach ($f in $targets) {
+            Write-Host "Signing $($f.FullName)"
+            & $signtool sign /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD `
+              /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $f.FullName
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($f.FullName)" }
+          }
+          Remove-Item $pfx -Force
+          Write-Host "Windows signing: signed $($targets.Count) artifact(s)."
+
+      # ─── macOS smoke test ──────────────────────────────────────────────────
+      # Open the bundled .app, wait for the window, capture the desktop with
+      # `screencapture -x`, confirm the process is still alive. Catches
+      # missing dylibs / Info.plist issues that exit before window creation.
+      - name: Smoke-test macOS .app launch + screenshot
+        if: matrix.os == 'macos-latest'
+        run: |
+          set -e
+          APP="$PWD/wrappers/GUI/src-tauri/target/release/bundle/macos/CoolProp.app"
+          if [ ! -d "$APP" ]; then
+            echo "FAIL: $APP not found"
+            ls -la "$PWD/wrappers/GUI/src-tauri/target/release/bundle/" || true
+            exit 1
+          fi
+          mkdir -p artifacts/screenshots
+          open "$APP"
+          sleep 8
+          if ! pgrep -x coolprop-gui >/dev/null; then
+            echo "FAIL: GUI exited within 8s"
+            ls -la "$HOME/Library/Logs/DiagnosticReports/" 2>/dev/null || true
+            exit 1
+          fi
+          screencapture -x artifacts/screenshots/macos-startup.png
+          ls -la artifacts/screenshots/macos-startup.png
+          pkill -x coolprop-gui || true
+          echo "OK: GUI started and screenshot captured"
+
+      # ─── Windows smoke test ────────────────────────────────────────────────
+      # Silent-install the .msi, launch the binary visibly so a screenshot
+      # captures the actual window, then verify it stayed alive.
+      - name: Smoke-test Windows MSI launch + screenshot
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $bundle = "$PWD\wrappers\GUI\src-tauri\target\release\bundle"
+          $msi = Get-ChildItem -Path "$bundle\msi\*.msi" | Select-Object -First 1
+          if (-not $msi) { throw "No .msi found under $bundle\msi" }
+          Write-Host "Installing $($msi.FullName) ..."
+          $log = "$env:TEMP\coolprop-msi-install.log"
+          $p = Start-Process msiexec.exe `
+            -ArgumentList "/i", "`"$($msi.FullName)`"", "/quiet", "/norestart", "/l*v", "`"$log`"" `
+            -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            Write-Host "msiexec exit $($p.ExitCode); tail of log:"
+            Get-Content $log -Tail 60
+            throw "MSI install failed"
+          }
+          $candidates = @(
+            "C:\Program Files\CoolProp\coolprop-gui.exe",
+            "C:\Program Files\CoolProp\CoolProp.exe"
+          )
+          $bin = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $bin) { throw "Installed binary not found in: $($candidates -join '; ')" }
+          Write-Host "Installed at: $bin"
+
+          New-Item -ItemType Directory -Force -Path artifacts\screenshots | Out-Null
+          $proc = Start-Process -FilePath $bin -PassThru
+          Start-Sleep -Seconds 8
+          if ($proc.HasExited) {
+            throw "Binary exited within 8s (exit $($proc.ExitCode)) — likely missing DLL / WebView2 init failure"
+          }
+
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $shot = "artifacts\screenshots\windows-startup.png"
+          $bmp.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+          $g.Dispose(); $bmp.Dispose()
+          Write-Host "Screenshot saved to $shot"
+          Get-Item $shot | Format-List Name, Length
+
+          Stop-Process -Id $proc.Id -Force
+          Write-Host "OK: GUI started, stayed alive 8s, screenshot captured"
+
+      - name: Upload startup screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: coolprop-gui-${{ matrix.os }}-screenshot
+          path: artifacts/screenshots/*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coolprop-gui-${{ matrix.os }}
+          path: wrappers/GUI/src-tauri/target/release/bundle
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,42 @@
+{
+  "name": "coolprop-gui",
+  "private": true,
+  "version": "7.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "predev": "npm run build:licenses",
+    "build": "tsc && vite build",
+    "prebuild": "npm run build:licenses",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "test": "vitest run",
+    "pretest": "npm run build:licenses",
+    "test:watch": "vitest",
+    "build:licenses": "node scripts/generate-licenses.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-process": "^2",
+    "@tauri-apps/plugin-updater": "^2",
+    "plotly.js-dist-min": "^2",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-plotly.js": "^2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@testing-library/jest-dom": "^6",
+    "@testing-library/react": "^16",
+    "@testing-library/user-event": "^14",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/react-plotly.js": "^2",
+    "@vitejs/plugin-react": "^4",
+    "jsdom": "^25",
+    "license-checker": "^25",
+    "typescript": "^5",
+    "vite": "^5",
+    "vitest": "^2"
+  }
+}
