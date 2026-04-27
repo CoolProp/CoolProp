@@ -362,6 +362,9 @@ jobs:
           }
 
       - name: Upload startup screenshot
+        # Run on failure too so a blank-render regression leaves the
+        # offending screenshot behind for triage.
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: coolprop-gui-${{ matrix.os }}-screenshot
