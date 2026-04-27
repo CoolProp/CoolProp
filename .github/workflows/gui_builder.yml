@@ -290,6 +290,10 @@ jobs:
           screencapture -x artifacts/screenshots/macos-startup.png
           ls -la artifacts/screenshots/macos-startup.png
           pkill -x coolprop-gui || true
+          # Pillow is the only non-stdlib dep of the render check; install it
+          # quietly so the check works regardless of which Python the runner
+          # toolcache happens to ship.
+          python3 -m pip install --quiet --disable-pip-version-check Pillow
           python3 wrappers/GUI/scripts/check-screenshot-rendered.py \
             artifacts/screenshots/macos-startup.png 20
           echo "OK: GUI started, rendered, and screenshot captured"
@@ -346,11 +350,16 @@ jobs:
           # Render check — fails the job if the WebView never painted (the
           # gh-2825 case where Vite's absolute asset paths 404'd under
           # https://tauri.localhost left a blank pale-grey window that the
-          # 8s liveness check happily passed).
+          # 8s liveness check happily passed). Pillow isn't preinstalled on
+          # windows-latest's Python toolcache, so install it inline.
+          python -m pip install --quiet --disable-pip-version-check Pillow
           python wrappers\GUI\scripts\check-screenshot-rendered.py `
             $shot 20
-          if ($LASTEXITCODE -ne 0) { throw "screenshot looks blank — render didn't paint" }
-          Write-Host "OK: GUI started, rendered, and screenshot captured"
+          switch ($LASTEXITCODE) {
+            0 { Write-Host "OK: GUI started, rendered, and screenshot captured" }
+            1 { throw "screenshot looks blank — render didn't paint (gh-2825 regression?)" }
+            default { throw "render check failed to run (exit $LASTEXITCODE)" }
+          }
 
       - name: Upload startup screenshot
         uses: actions/upload-artifact@v7

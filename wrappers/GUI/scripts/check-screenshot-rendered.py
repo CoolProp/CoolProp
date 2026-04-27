@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 try:
-    from PIL import Image  # Pillow ships with Python on GitHub-hosted runners
+    from PIL import Image  # workflow installs Pillow before invoking us
 except ImportError as exc:
     print(f"check-screenshot-rendered: Pillow not available ({exc})", file=sys.stderr)
     sys.exit(2)
