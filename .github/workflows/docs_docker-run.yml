@@ -126,7 +126,7 @@ jobs:
         
     - name: Upload GitHub Pages artifact
       if: ${{ !env.ACT }} # skip during local actions testing
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v5
       with:
         path: ./Web/_build/html/
     
