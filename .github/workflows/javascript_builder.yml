@@ -49,7 +49,7 @@ jobs:
 
     - name: Archive artifacts
       if: ${{ !env.ACT }} # skip during local actions testing
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           name: Javascript
           path: install_root/Javascript

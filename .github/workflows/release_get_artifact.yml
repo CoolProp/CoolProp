@@ -82,7 +82,7 @@ jobs:
           du -sh
           
       - name: Store artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           # Create individual artifacts for each workflow
           # These will be combined later in release_all_files

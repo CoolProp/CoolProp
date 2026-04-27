@@ -335,7 +335,7 @@ jobs:
           Write-Host "OK: GUI started, stayed alive 8s, screenshot captured"
 
       - name: Upload startup screenshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coolprop-gui-${{ matrix.os }}-screenshot
           path: artifacts/screenshots/*.png
@@ -343,7 +343,7 @@ jobs:
           retention-days: 7
 
       - name: Upload bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coolprop-gui-${{ matrix.os }}
           path: wrappers/GUI/src-tauri/target/release/bundle
