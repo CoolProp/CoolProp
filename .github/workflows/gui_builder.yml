@@ -187,6 +187,13 @@ jobs:
       #    Catches "binary starts but crashes initializing the WebView" and
       #    "WebKit2GTK loads but the page never paints" types of bugs that
       #    a static dep check can't see.
+      #
+      # TODO(CoolProp-dzq.16): Linux is currently capturing the bare Xvfb
+      # root (1-bit black) because we don't run a window manager — the
+      # GUI process opens but its window doesn't get composited onto the
+      # virtual display. Adding a tiny WM (openbox, metacity) before the
+      # launch would fix the capture and let us run the same blank-render
+      # check that macOS + Windows now use.
       - name: Smoke-test Ubuntu launch + screenshot (Xvfb)
         if: matrix.os == 'ubuntu-22.04'
         run: |
@@ -259,8 +266,9 @@ jobs:
 
       # ─── macOS smoke test ──────────────────────────────────────────────────
       # Open the bundled .app, wait for the window, capture the desktop with
-      # `screencapture -x`, confirm the process is still alive. Catches
-      # missing dylibs / Info.plist issues that exit before window creation.
+      # `screencapture -x`, confirm the process is still alive AND that the
+      # screenshot has enough pixel variance to suggest a real render (catches
+      # the blank-WebView regression from gh-2825).
       - name: Smoke-test macOS .app launch + screenshot
         if: matrix.os == 'macos-latest'
         run: |
@@ -282,7 +290,9 @@ jobs:
           screencapture -x artifacts/screenshots/macos-startup.png
           ls -la artifacts/screenshots/macos-startup.png
           pkill -x coolprop-gui || true
-          echo "OK: GUI started and screenshot captured"
+          python3 wrappers/GUI/scripts/check-screenshot-rendered.py \
+            artifacts/screenshots/macos-startup.png 20
+          echo "OK: GUI started, rendered, and screenshot captured"
 
       # ─── Windows smoke test ────────────────────────────────────────────────
       # Silent-install the .msi, launch the binary visibly so a screenshot
@@ -332,7 +342,15 @@ jobs:
           Get-Item $shot | Format-List Name, Length
 
           Stop-Process -Id $proc.Id -Force
-          Write-Host "OK: GUI started, stayed alive 8s, screenshot captured"
+
+          # Render check — fails the job if the WebView never painted (the
+          # gh-2825 case where Vite's absolute asset paths 404'd under
+          # https://tauri.localhost left a blank pale-grey window that the
+          # 8s liveness check happily passed).
+          python wrappers\GUI\scripts\check-screenshot-rendered.py `
+            $shot 20
+          if ($LASTEXITCODE -ne 0) { throw "screenshot looks blank — render didn't paint" }
+          Write-Host "OK: GUI started, rendered, and screenshot captured"
 
       - name: Upload startup screenshot
         uses: actions/upload-artifact@v7
