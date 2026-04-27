@@ -128,11 +128,14 @@ jobs:
       # Builds the frontend (Vite), compiles CoolProp via build.rs (CMake),
       # links the Rust crate, and produces native bundles under
       # wrappers/GUI/src-tauri/target/release/bundle/. tauri-action picks up
-      # any APPLE_* / TAURI_WINDOWS_CERTIFICATE_THUMBPRINT env vars set by
-      # the previous steps.
+      # any APPLE_* env vars set by the previous step.
       #
-      # On `gui-v*` tags, also create a draft GitHub Release and attach all
-      # the bundles produced by this matrix.
+      # NOTE: tagName/releaseName intentionally NOT passed here. With three
+      # matrix jobs racing, each tauri-action invocation creates its own
+      # draft release for the same tag, leaving 3 separate drafts that have
+      # to be hand-merged. The dedicated `release` job below downloads each
+      # OS's uploaded bundle artifact and creates a single consolidated
+      # release in one shot.
       - name: Build Tauri bundle
         uses: tauri-apps/tauri-action@v0
         env:
@@ -147,11 +150,6 @@ jobs:
         with:
           projectPath: wrappers/GUI
           tauriScript: npm run tauri
-          tagName: ${{ startsWith(github.ref, 'refs/tags/gui-v') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/gui-v') && format('CoolProp GUI {0}', github.ref_name) || '' }}
-          releaseDraft: true
-          prerelease: false
-          includeUpdaterJson: true
 
       # ─── Linux smoke tests ────────────────────────────────────────────────
       # 1) Forward-compat: install .deb in a clean ubuntu:26.04 container,
@@ -349,3 +347,56 @@ jobs:
           path: wrappers/GUI/src-tauri/target/release/bundle
           if-no-files-found: error
           retention-days: 7
+
+  # ─── Consolidated release ────────────────────────────────────────────────
+  # Runs only on gui-v* tag pushes after every platform build succeeds.
+  # Pulls the three platform bundle artifacts produced by the matrix above,
+  # picks out the user-facing installer files, and creates a single draft
+  # GitHub Release with all of them attached. Replaces the per-matrix-job
+  # auto-release path that left three duplicate drafts behind on every tag.
+  release:
+    if: startsWith(github.ref, 'refs/tags/gui-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all bundle artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+          pattern: coolprop-gui-*
+          merge-multiple: false
+
+      - name: Stage installer files
+        id: stage
+        run: |
+          set -e
+          mkdir -p release-files
+          # tauri's bundle/ layout emits the user-facing installers under
+          # per-format subdirs. Pull only what testers actually download.
+          find artifacts -type f \( \
+            -name "*.dmg" -o \
+            -name "*.app.tar.gz" -o \
+            -name "*.deb" -o \
+            -name "*.rpm" -o \
+            -name "*.AppImage" -o \
+            -name "*.msi" -o \
+            -name "*-setup.exe" \
+          \) -exec cp -v {} release-files/ \;
+          ls -la release-files/
+          [ "$(ls release-files | wc -l)" -ge 5 ] || { echo "expected at least 5 installer files"; exit 1; }
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: CoolProp GUI ${{ github.ref_name }}
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          files: release-files/*
+          fail_on_unmatched_files: true
+          body: |
+            CoolProp Desktop GUI release. Bundles are unsigned (Gatekeeper / SmartScreen workarounds documented in `wrappers/GUI/README.md`).
+
+            <!-- Edit this body before publishing — testers only see what's here. -->
