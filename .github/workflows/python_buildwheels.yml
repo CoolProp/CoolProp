@@ -48,7 +48,7 @@ jobs:
         python -m build --sdist --outdir ${GITHUB_WORKSPACE}/Python
 
     - name: Store artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Python-sdist
         path: |
@@ -136,7 +136,7 @@ jobs:
    needs: [python_source, python_ubuntu, python_ubuntu_arm, python_windows, python_macos]
    steps:
      - name: Merge Artifacts
-       uses: actions/upload-artifact/merge@v4
+       uses: actions/upload-artifact/merge@v7
        with:
          name: Python
          pattern: Python-*

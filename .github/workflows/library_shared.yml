@@ -80,7 +80,7 @@ jobs:
     #     tar -cvzf CoolProp-${{ env.COOLPROP_VERSION }}-shared-${{ matrix.os }}.tar.gz ./*
 
     - name: Archive artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
           # Upload to unique artifact names tagged with suffix of matrix.os
           # This is now requried by upload-artifact@v4, but will be merged later
@@ -102,7 +102,7 @@ jobs:
     needs: build
     steps:
     - name: Merge Artifacts
-      uses: actions/upload-artifact/merge@v4
+      uses: actions/upload-artifact/merge@v7
       with:
         # Merge all existing artifacts built above that start with pattern "shared_library-*"
         pattern: shared_library-*
