@@ -36,7 +36,7 @@
     "jsdom": "^25",
     "license-checker": "^25",
     "typescript": "^5",
-    "vite": "^5",
-    "vitest": "^2"
+    "vite": "^8",
+    "vitest": "^4"
   }
 }
