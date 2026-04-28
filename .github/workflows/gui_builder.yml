@@ -330,10 +330,29 @@ jobs:
           Write-Host "Installed at: $bin"
 
           New-Item -ItemType Directory -Force -Path artifacts\screenshots | Out-Null
+
+          # gh-2825 debug: dump what the WebView will actually load.
+          # The Vite-built dist/ is embedded into the .exe by Tauri's resources
+          # table, so the index.html we want to verify is *not* on disk next to
+          # the binary on Windows (unlike macOS, which keeps it in Resources/).
+          # Print the dist/index.html the build produced — that's the same bytes
+          # the WebView is being handed.
+          $distIndex = "$PWD\wrappers\GUI\dist\index.html"
+          if (Test-Path $distIndex) {
+            Write-Host "── dist/index.html shipped to WebView ──"
+            Get-Content $distIndex
+            Write-Host "── end ──"
+          } else {
+            Write-Host "WARN: $distIndex not found"
+          }
+
           $proc = Start-Process -FilePath $bin -PassThru
-          Start-Sleep -Seconds 8
+          # Cold-start of WebView2 in CI is slower than on a real desktop —
+          # 8s was occasionally catching the window before JS finished. 15s
+          # is the conservative ceiling we use for the render check below.
+          Start-Sleep -Seconds 15
           if ($proc.HasExited) {
-            throw "Binary exited within 8s (exit $($proc.ExitCode)) — likely missing DLL / WebView2 init failure"
+            throw "Binary exited within 15s (exit $($proc.ExitCode)) — likely missing DLL / WebView2 init failure"
           }
 
           Add-Type -AssemblyName System.Windows.Forms
