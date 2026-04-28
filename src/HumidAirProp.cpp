@@ -46,9 +46,11 @@ void strcpy(std::string& s, const std::string& e) {
 // shared instance can't safely back concurrent callers. C++11 thread_local
 // gives each thread its own backend; first-call construction goes through the
 // FluidLibrary singleton, which is itself protected by std::call_once.
-thread_local shared_ptr<CoolProp::HelmholtzEOSBackend> Water;
-thread_local shared_ptr<CoolProp::HelmholtzEOSBackend> Air;
-thread_local shared_ptr<CoolProp::AbstractState> WaterIF97;
+// `static` makes the linkage internal — these are file-private despite living
+// at namespace scope above the HumidAir namespace block.
+static thread_local shared_ptr<CoolProp::HelmholtzEOSBackend> Water;
+static thread_local shared_ptr<CoolProp::HelmholtzEOSBackend> Air;
+static thread_local shared_ptr<CoolProp::AbstractState> WaterIF97;
 
 namespace HumidAir {
 enum givens
@@ -2504,15 +2506,16 @@ TEST_CASE("HAPropsSI is thread-safe under concurrent callers", "[HAPropsSI][thre
     const double p = 101325;
 
     // Reference values computed serially before spawning workers.
-    struct Case {
+    struct Case
+    {
         double T_dry, RH;
         double W_ref, h_ref;
     };
     std::vector<Case> cases;
     for (int i = 0; i < 8; ++i) {
         Case c;
-        c.T_dry = 280.0 + 5.0 * i;       // 280..315 K
-        c.RH = 0.10 + 0.10 * (i % 9);    // 0.10..0.90
+        c.T_dry = 280.0 + 5.0 * i;     // 280..315 K
+        c.RH = 0.10 + 0.10 * (i % 9);  // 0.10..0.90
         c.W_ref = HumidAir::HAPropsSI("W", "T", c.T_dry, "R", c.RH, "P", p);
         c.h_ref = HumidAir::HAPropsSI("H", "T", c.T_dry, "R", c.RH, "P", p);
         cases.push_back(c);
@@ -2538,7 +2541,8 @@ TEST_CASE("HAPropsSI is thread-safe under concurrent callers", "[HAPropsSI][thre
             }
         });
     }
-    for (auto& th : threads) th.join();
+    for (auto& th : threads)
+        th.join();
     CHECK(bad_numbers.load() == 0);
     CHECK(mismatches.load() == 0);
 }
