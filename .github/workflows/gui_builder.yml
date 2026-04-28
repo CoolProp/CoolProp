@@ -292,8 +292,11 @@ jobs:
           pkill -x coolprop-gui || true
           # Pillow is the only non-stdlib dep of the render check; install it
           # quietly so the check works regardless of which Python the runner
-          # toolcache happens to ship.
-          python3 -m pip install --quiet --disable-pip-version-check Pillow
+          # toolcache happens to ship. macos-latest's Homebrew Python is
+          # PEP 668-marked, so --break-system-packages is required (this is
+          # an ephemeral runner — no host environment to corrupt).
+          python3 -m pip install --quiet --disable-pip-version-check \
+            --break-system-packages Pillow
           python3 wrappers/GUI/scripts/check-screenshot-rendered.py \
             artifacts/screenshots/macos-startup.png 20
           echo "OK: GUI started, rendered, and screenshot captured"
