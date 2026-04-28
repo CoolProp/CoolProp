@@ -14,7 +14,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/CPM.cmake")
 CPMAddPackage(
   NAME Eigen
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG        3.4.0
+  GIT_TAG        5.0.1
   DOWNLOAD_ONLY  YES   # header-only; skip Eigen's own CMake targets
 )
 
