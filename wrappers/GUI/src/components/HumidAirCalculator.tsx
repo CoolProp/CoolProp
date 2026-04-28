@@ -1,7 +1,17 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import Plot from "react-plotly.js";
+import PlotImport from "react-plotly.js";
 import { useDraggableSplit } from "../hooks/useDraggableSplit";
+
+// react-plotly.js publishes as CommonJS (`module.exports.default = Plot` with
+// `__esModule: true`). Vite 8 swapped its production bundler to rolldown, which
+// stops auto-unwrapping that pattern, so the default import lands as the
+// `{ __esModule: true, default: PlotComponent }` wrapper itself rather than the
+// component. React then throws #130 ("got: object") the first time `<Plot/>`
+// renders, the entire tree fails to mount, and the WebView shows blank
+// (gh-2825). Fall back to `.default` defensively so this works regardless of
+// which Vite/bundler version is in use.
+const Plot = ((PlotImport as unknown) as { default?: typeof PlotImport }).default ?? PlotImport;
 
 // ── Input parameter definitions ───────────────────────────────────────────────
 
