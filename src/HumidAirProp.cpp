@@ -2542,6 +2542,33 @@ TEST_CASE("HAPropsSI is thread-safe under concurrent callers", "[HAPropsSI][thre
     CHECK(bad_numbers.load() == 0);
     CHECK(mismatches.load() == 0);
 }
+
+// Hidden by Catch's [!benchmark] convention; run with
+//   ./CatchTestRunner '[!benchmark][HAPropsSI]'
+// to get per-call timings for the thread_local conversion (gh-2787 follow-up).
+TEST_CASE("HAPropsSI thread_local cost", "[!benchmark][HAPropsSI][threadsafe]") {
+    const double p = 101325;
+
+    // Warm this thread's Water/Air/WaterIF97 backends and the per-T caches so
+    // the first-call construction cost doesn't pollute the hot-path number.
+    HumidAir::HAPropsSI("H", "T", 300.0, "R", 0.5, "P", p);
+
+    BENCHMARK("HAPropsSI H,T=300,R=0.5,P [hot, single-thread]") {
+        return HumidAir::HAPropsSI("H", "T", 300.0, "R", 0.5, "P", p);
+    };
+
+    // Fresh-thread cost: each Catch sample spawns a thread that pays its own
+    // backend construction (Water + Air + IF97) on first HAPropsSI entry, then
+    // exits. Captures the per-thread one-shot init overhead introduced by the
+    // thread_local conversion.
+    BENCHMARK("HAPropsSI H,T=300,R=0.5,P [first call in fresh thread]") {
+        double result = 0.0;
+        std::thread th([&] { result = HumidAir::HAPropsSI("H", "T", 300.0, "R", 0.5, "P", p); });
+        th.join();
+        return result;
+    };
+}
+
 // a predicate implemented as a function:
 bool is_not_a_pair(const std::set<std::size_t>& item) {
     return item.size() != 2;
