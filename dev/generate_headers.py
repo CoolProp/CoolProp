@@ -13,7 +13,8 @@ import hashlib
 import struct
 import glob
 from pathlib import Path
-import pickle 
+import pickle
+import tempfile
 import zlib
 
 json_options = {'indent': 2, 'sort_keys': True}
@@ -433,11 +434,26 @@ def generate():
 
     TO_CPP(root_dir=repo_root_path, hashes=hashes)
 
-    # Write the hashes to a hashes JSON file
+    # Write the hashes JSON file atomically. The Windows installer build runs
+    # generate_headers.py concurrently from several sub-CMake configurations
+    # (32-bit cdecl/stdcall, 64-bit, arm64) that all share this same
+    # dev/hashes.json; a plain open(..., 'w') would let a shorter write only
+    # partially overwrite a longer one and leave stale tail bytes that break
+    # the next JSON parse.
     if hashes:
-        fp = open(hashes_fname, 'w')
-        fp.write(json.dumps(hashes))
-        fp.close()
+        dirname = os.path.dirname(hashes_fname) or '.'
+        fd, tmp_fname = tempfile.mkstemp(prefix='hashes.', suffix='.json.tmp', dir=dirname)
+        try:
+            with os.fdopen(fd, 'w') as fp:
+                fp.write(json.dumps(hashes))
+            os.replace(tmp_fname, hashes_fname)
+        except BaseException:
+            if os.path.exists(tmp_fname):
+                try:
+                    os.remove(tmp_fname)
+                except OSError:
+                    pass
+            raise
 
 
 if __name__ == '__main__':
