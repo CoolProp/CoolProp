@@ -4877,6 +4877,40 @@ TEST_CASE("HmolarQ branch selection via guess.T (water saturated vapor)", "[2773
     }
 }
 
+TEST_CASE("Default update() throws MultipleSolutionsError on ambiguous saturation flash", "[2773][strict_mode]") {
+    // GitHub #2773 / #2834: when an HQ / SQ / DQ saturation flash input lies
+    // in a multi-root region, the no-guess default update() now raises
+    // MultipleSolutionsError instead of silently picking one. Users in this
+    // case should call update_with_guesses with a guess.T.
+
+    SECTION("Water DmolarQ in the rho_L-non-monotonic region near 4 °C") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 0.0, 277.0);
+        const double rho_near_peak = AS->rhomolar();
+        AS->update(CoolProp::QT_INPUTS, 0.0, 273.5);
+        const double rho_near_triple = AS->rhomolar();
+        const double rho_target = 0.5 * (rho_near_peak + rho_near_triple);
+        // Default flash should now refuse the ambiguous input cleanly.
+        CHECK_THROWS_AS(AS->update(CoolProp::DmolarQ_INPUTS, rho_target, 0.0), CoolProp::MultipleSolutionsError);
+    }
+
+    SECTION("Water HmolarQ in the h_g-non-monotonic region around 540 K peak") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+        const double h_target = AS->hmolar();  // also reached on the high-T side
+        CHECK_THROWS_AS(AS->update(CoolProp::HmolarQ_INPUTS, h_target, 1.0), CoolProp::MultipleSolutionsError);
+    }
+
+    SECTION("Single-root DQ still succeeds via the default path") {
+        // Far from the density max, rho_L(T) is monotone — single root, no error.
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 0.0, 400.0);
+        const double rho_400 = AS->rhomolar();
+        REQUIRE_NOTHROW(AS->update(CoolProp::DmolarQ_INPUTS, rho_400, 0.0));
+        CHECK(AS->T() == Catch::Approx(400.0).epsilon(1e-6));
+    }
+}
+
 TEST_CASE("QSmolar branch selection via guess.T (water saturated vapor)", "[2773][branch_selection]") {
     // s_g(T) on water saturated vapor descends monotonically from triple to
     // critical, so it does not by itself exhibit two roots — but exercising

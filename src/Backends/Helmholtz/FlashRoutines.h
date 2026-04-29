@@ -122,6 +122,20 @@ class FlashRoutines
     static double pick_branch_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess, char k, double target_value,
                                                    const char* fn_name);
 
+    /// Internal helper for the no-guess default flashes (DQ_flash, HQ_flash, QS_flash)
+    /// when the fluid has a superancillary. Enumerates all T-roots on the saturation
+    /// curve at Q ∈ {0, 1} for the input target_value of property `k` ('D', 'H', 'S').
+    /// Returns the T if exactly one root exists; throws MultipleSolutionsError if
+    /// more than one (with a recommendation to use update_with_guesses); throws
+    /// OutOfRangeError if zero. See #2773.
+    static double pick_unique_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, char k, double target_value, const char* fn_name);
+
+    /// Returns true if the strict-mode superancillary path applies for the
+    /// current state: pure-fluid, superancillary present, Q exactly 0 or 1.
+    /// Used by DQ_flash and QS_flash to decide whether to route through the
+    /// branch-detecting superancillary path or fall back to the legacy solver.
+    static bool sat_superanc_path_applies(HelmholtzEOSMixtureBackend& HEOS);
+
     /// Flash for mixture given temperature or pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The parameter that is imposed, either iT or iP

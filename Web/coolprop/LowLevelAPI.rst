@@ -266,13 +266,17 @@ A few notes:
   candidate-root enumeration is a piecewise-Chebyshev TOMS748 rootfind
   inside each monotonic sub-interval.
 
-If you do *not* supply a hint and the input lies in a multi-root region,
-``update`` continues to return whichever root the underlying bracketed solver
-reaches first. To probe whether a particular ``(value, Q)`` is multi-rooted,
-call ``update_with_guesses`` twice with two well-separated ``guess.T`` values
-that bracket the suspected extremum and compare the returned ``T``. If they
-differ substantially you have multiple roots; if they agree to many digits
-the solution is unique.
+If you call plain ``update`` (without guesses) and the input lies in a
+multi-root region, CoolProp now raises ``CoolProp::MultipleSolutionsError``
+instead of silently picking one. The error message lists the candidate
+temperatures and points you at ``update_with_guesses``. Single-root inputs
+continue to work via ``update`` as before.
+
+To probe whether a particular ``(value, Q)`` is multi-rooted without
+provoking the exception, call ``update_with_guesses`` twice with two
+well-separated ``guess.T`` values that bracket the suspected extremum and
+compare the returned ``T``: if they differ substantially you have multiple
+roots; if they agree to many digits the solution is unique.
 
 .. _partial_derivatives_low_level:
 

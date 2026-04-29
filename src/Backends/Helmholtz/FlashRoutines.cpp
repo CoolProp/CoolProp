@@ -274,95 +274,129 @@ class DQ_flash_residual : public FuncWrapper1DWithTwoDerivs
     }
 };
 
+// Has the fluid got a superancillary AND is the requested Q exactly 0 or 1?
+// Used by the no-guess default flashes to decide whether to route through the
+// strict-mode superancillary path.
+bool FlashRoutines::sat_superanc_path_applies(HelmholtzEOSMixtureBackend& HEOS) {
+    if (!HEOS.is_pure_or_pseudopure) return false;
+    auto p = HEOS.get_superanc();
+    if (!p) return false;
+    const double Q = HEOS._Q;
+    return std::abs(Q) < 1e-10 || std::abs(Q - 1) < 1e-10;
+}
+
 void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
-    SaturationSolvers::saturation_PHSU_pure_options options;
-    options.use_logdelta = false;
+    if (!HEOS.is_pure_or_pseudopure) {
+        throw NotImplementedError("DQ_flash not ready for mixtures");
+    }
     HEOS.specify_phase(iphase_twophase);
-    if (HEOS.is_pure_or_pseudopure) {
-        // Bump the temperatures to hopefully yield more reliable results
-        double Tmax = HEOS.T_critical() - 0.1;
-        double Tmin = HEOS.Tmin() + 0.1;
-        double rhomolar = HEOS._rhomolar;
-        double Q = HEOS._Q;
-        const double eps = 1e-12;  // small tolerance to allow for slop in iterative calculations
-        if (rhomolar >= (HEOS.rhomolar_critical() + eps) && Q > (0 + eps)) {
-            throw CoolProp::OutOfRangeError(
-              format("DQ inputs are not defined for density (%g) above critical density (%g) and Q>0", rhomolar, HEOS.rhomolar_critical()).c_str());
-        }
-        DQ_flash_residual resid(HEOS, rhomolar, Q);
-        Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
-        HEOS._p = HEOS.SatV->p();
-        HEOS._T = HEOS.SatV->T();
+    const double rhomolar = HEOS._rhomolar;
+    const double Q = HEOS._Q;
+    // Strict-mode superancillary path for Q ∈ {0, 1} on pure fluids: enumerate
+    // every T-root and refuse to silently pick when there is more than one.
+    // See GitHub #2773 / #2834.
+    if (sat_superanc_path_applies(HEOS)) {
+        const double T_super = pick_unique_T_via_superancillary(HEOS, 'D', rhomolar, "DQ_flash");
+        HEOS._T = T_super;
+        QT_flash(HEOS);
         HEOS._rhomolar = rhomolar;
         HEOS._Q = Q;
         HEOS._phase = iphase_twophase;
-    } else {
-        throw NotImplementedError("DQ_flash not ready for mixtures");
+        return;
     }
-}
-void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl Tguess) {
+    // Fallback: Brent over [Tmin, Tmax] for fractional Q or fluids without
+    // a superancillary. This was the original DQ_flash.
     SaturationSolvers::saturation_PHSU_pure_options options;
     options.use_logdelta = false;
-    HEOS.specify_phase(iphase_twophase);
-    if (Tguess < 0) {
-        options.use_guesses = true;
-        options.T = Tguess;
-        CoolProp::SaturationAncillaryFunction& rhoL = HEOS.get_components()[0].ancillaries.rhoL;
-        CoolProp::SaturationAncillaryFunction& rhoV = HEOS.get_components()[0].ancillaries.rhoV;
-        options.rhoL = rhoL.evaluate(Tguess);
-        options.rhoV = rhoV.evaluate(Tguess);
+    double Tmax = HEOS.T_critical() - 0.1;
+    double Tmin = HEOS.Tmin() + 0.1;
+    const double eps = 1e-12;
+    if (rhomolar >= (HEOS.rhomolar_critical() + eps) && Q > (0 + eps)) {
+        throw CoolProp::OutOfRangeError(
+          format("DQ inputs are not defined for density (%g) above critical density (%g) and Q>0", rhomolar, HEOS.rhomolar_critical()).c_str());
     }
-    if (HEOS.is_pure_or_pseudopure) {
-        if (std::abs(HEOS.Q() - 1) > 1e-10) {
-            throw ValueError(format("non-unity quality not currently allowed for HQ_flash"));
-        }
-        // Do a saturation call for given h for vapor, first with ancillaries, then with full saturation call
-        options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_HV;
-        SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS.hmolar(), options);
+    DQ_flash_residual resid(HEOS, rhomolar, Q);
+    Brent(resid, Tmin, Tmax, DBL_EPSILON, 1e-10, 100);
+    HEOS._p = HEOS.SatV->p();
+    HEOS._T = HEOS.SatV->T();
+    HEOS._rhomolar = rhomolar;
+    HEOS._Q = Q;
+    HEOS._phase = iphase_twophase;
+}
+void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl Tguess) {
+    if (!HEOS.is_pure_or_pseudopure) {
+        throw NotImplementedError("HQ_flash not ready for mixtures");
+    }
+    if (std::abs(HEOS.Q() - 1) > 1e-10) {
+        throw ValueError(format("non-unity quality not currently allowed for HQ_flash"));
+    }
+    HEOS.specify_phase(iphase_twophase);
+    const double hmolar = HEOS._hmolar;
+    // Strict-mode superancillary path. See GitHub #2773 / #2834.
+    if (HEOS.get_superanc()) {
+        const double T_super = pick_unique_T_via_superancillary(HEOS, 'H', hmolar, "HQ_flash");
+        HEOS._T = T_super;
+        QT_flash(HEOS);
+        HEOS._hmolar = hmolar;
+        HEOS._phase = iphase_twophase;
+        return;
+    }
+    // Fallback: ancillary-seeded saturation_PHSU_pure for fluids without a
+    // superancillary. (Note: ignores Tguess for branch selection — that
+    // capability is exposed via update_with_guesses + HQ_flash_with_guesses.)
+    (void)Tguess;
+    SaturationSolvers::saturation_PHSU_pure_options options;
+    options.use_logdelta = false;
+    options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_HV;
+    SaturationSolvers::saturation_PHSU_pure(HEOS, hmolar, options);
+    HEOS._p = HEOS.SatV->p();
+    HEOS._T = HEOS.SatV->T();
+    HEOS._rhomolar = HEOS.SatV->rhomolar();
+    HEOS._phase = iphase_twophase;
+}
+void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
+    if (!HEOS.is_pure_or_pseudopure) {
+        throw NotImplementedError("QS_flash not ready for mixtures");
+    }
+    if (std::abs(HEOS.smolar() - HEOS.get_state("reducing").smolar) < 0.001) {
+        HEOS._p = HEOS.p_critical();
+        HEOS._T = HEOS.T_critical();
+        HEOS._rhomolar = HEOS.rhomolar_critical();
+        HEOS._phase = iphase_critical_point;
+        return;
+    }
+    HEOS.specify_phase(iphase_twophase);
+    const double smolar = HEOS._smolar;
+    // Strict-mode superancillary path. See GitHub #2773 / #2834.
+    if (sat_superanc_path_applies(HEOS)) {
+        const double T_super = pick_unique_T_via_superancillary(HEOS, 'S', smolar, "QS_flash");
+        HEOS._T = T_super;
+        QT_flash(HEOS);
+        HEOS._smolar = smolar;
+        HEOS._phase = iphase_twophase;
+        return;
+    }
+    // Fallback: ancillary-seeded saturation_PHSU_pure path.
+    if (std::abs(HEOS.Q()) < 1e-10) {
+        SaturationSolvers::saturation_PHSU_pure_options options;
+        options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_SL;
+        options.use_logdelta = false;
+        SaturationSolvers::saturation_PHSU_pure(HEOS, smolar, options);
+        HEOS._p = HEOS.SatL->p();
+        HEOS._T = HEOS.SatL->T();
+        HEOS._rhomolar = HEOS.SatL->rhomolar();
+    } else if (std::abs(HEOS.Q() - 1) < 1e-10) {
+        SaturationSolvers::saturation_PHSU_pure_options options;
+        options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_SV;
+        options.use_logdelta = false;
+        SaturationSolvers::saturation_PHSU_pure(HEOS, smolar, options);
         HEOS._p = HEOS.SatV->p();
         HEOS._T = HEOS.SatV->T();
         HEOS._rhomolar = HEOS.SatV->rhomolar();
-        HEOS._phase = iphase_twophase;
     } else {
-        throw NotImplementedError("HQ_flash not ready for mixtures");
+        throw ValueError(format("non-zero or 1 quality not currently allowed for QS_flash"));
     }
-}
-void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
-    if (HEOS.is_pure_or_pseudopure) {
-
-        if (std::abs(HEOS.smolar() - HEOS.get_state("reducing").smolar) < 0.001) {
-            HEOS._p = HEOS.p_critical();
-            HEOS._T = HEOS.T_critical();
-            HEOS._rhomolar = HEOS.rhomolar_critical();
-            HEOS._phase = iphase_critical_point;
-        } else if (std::abs(HEOS.Q()) < 1e-10) {
-            // Do a saturation call for given s for liquid, first with ancillaries, then with full saturation call
-            SaturationSolvers::saturation_PHSU_pure_options options;
-            options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_SL;
-            options.use_logdelta = false;
-            HEOS.specify_phase(iphase_twophase);
-            SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS.smolar(), options);
-            HEOS._p = HEOS.SatL->p();
-            HEOS._T = HEOS.SatL->T();
-            HEOS._rhomolar = HEOS.SatL->rhomolar();
-            HEOS._phase = iphase_twophase;
-        } else if (std::abs(HEOS.Q() - 1) < 1e-10) {
-            // Do a saturation call for given s for vapor, first with ancillaries, then with full saturation call
-            SaturationSolvers::saturation_PHSU_pure_options options;
-            options.specified_variable = SaturationSolvers::saturation_PHSU_pure_options::IMPOSED_SV;
-            options.use_logdelta = false;
-            HEOS.specify_phase(iphase_twophase);
-            SaturationSolvers::saturation_PHSU_pure(HEOS, HEOS.smolar(), options);
-            HEOS._p = HEOS.SatV->p();
-            HEOS._T = HEOS.SatV->T();
-            HEOS._rhomolar = HEOS.SatV->rhomolar();
-            HEOS._phase = iphase_twophase;
-        } else {
-            throw ValueError(format("non-zero or 1 quality not currently allowed for QS_flash"));
-        }
-    } else {
-        throw NotImplementedError("QS_flash not ready for mixtures");
-    }
+    HEOS._phase = iphase_twophase;
 }
 
 // Helper for the *_flash_with_guesses functions below. Validates inputs, looks
@@ -415,6 +449,49 @@ double FlashRoutines::pick_branch_T_via_superancillary(HelmholtzEOSMixtureBacken
                                    fn_name, (Q_key == 0 ? "liquid" : "vapor"), guess.T, k, target_value, approx.xmin(), approx.xmax()));
     }
     return soln->first;
+}
+
+// Companion to pick_branch_T_via_superancillary used by the no-guess default
+// flashes. Enumerates every T-root on the saturation curve (TOMS748 inside each
+// monotonic Chebyshev sub-interval); throws MultipleSolutionsError if there is
+// more than one. See GitHub #2773 / #2834.
+double FlashRoutines::pick_unique_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, char k, double target_value, const char* fn_name) {
+    auto superanc_ptr = HEOS.get_superanc();
+    if (!superanc_ptr) {
+        throw NotImplementedError(format("%s: requires a superancillary; this fluid has none", fn_name));
+    }
+    const double Q = HEOS._Q;
+    short Q_key = -1;
+    if (std::abs(Q) < 1e-10) {
+        Q_key = 0;
+    } else if (std::abs(Q - 1) < 1e-10) {
+        Q_key = 1;
+    } else {
+        throw ValueError(format("%s: superancillary path requires Q=0 or Q=1; got Q=%g", fn_name, Q));
+    }
+    if (k == 'H' || k == 'S') {
+        HEOS.ensure_caloric_superancillaries();
+    }
+    auto& superanc = *superanc_ptr;
+    if (!superanc.has_variable(k)) {
+        throw NotImplementedError(format("%s: %c-superancillary unavailable", fn_name, k));
+    }
+    const auto& approx = superanc.get_approx1d(k, Q_key);
+    const auto solns = approx.get_x_for_y(target_value, 64, 100U, 1e-10);
+    if (solns.empty()) {
+        throw OutOfRangeError(format("%s: no T-root on saturated %s for %c=%g; superancillary range [%g, %g] K", fn_name,
+                                     (Q_key == 0 ? "liquid" : "vapor"), k, target_value, approx.xmin(), approx.xmax()));
+    }
+    if (solns.size() > 1) {
+        std::string Ts;
+        for (std::size_t i = 0; i < solns.size(); ++i) {
+            Ts += format("%g K", solns[i].first);
+            if (i + 1 < solns.size()) Ts += ", ";
+        }
+        throw MultipleSolutionsError(format("%s: %c=%g on saturated %s has %zu T-roots (%s); use update_with_guesses with guess.T to pick a branch (see GitHub #2773)",
+                                            fn_name, k, target_value, (Q_key == 0 ? "liquid" : "vapor"), solns.size(), Ts.c_str()));
+    }
+    return solns[0].first;
 }
 
 // Branch-disambiguating variant of DQ_flash (see GitHub #2773).
