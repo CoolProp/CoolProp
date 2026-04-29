@@ -1,5 +1,6 @@
 /report/
-/fluids/
+/fluids/*
+!/fluids/molecule_sdf/
 *.pdf
 *.png
 *.csv

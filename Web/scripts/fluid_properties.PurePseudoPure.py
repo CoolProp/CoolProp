@@ -1,5 +1,5 @@
 from CPWeb.BibtexTools import getCitationOrAlternative, getBibtexParser
-from CPWeb.SphinxTools import FluidGenerator
+from CPWeb.SphinxTools import FluidGenerator, write_geometry_status_report
 import os.path
 import CoolProp
 CP = CoolProp.CoolProp
@@ -58,6 +58,11 @@ for fluid in CoolProp.__fluids__:
                 d.add(key, s)
         except ValueError as E:
             d.add(key, '')
+
+write_geometry_status_report(
+    os.path.join(fluids_path, 'molecule_geometry_status.md'),
+    cache_dir=os.path.join(fluids_path, 'molecule_sdf'),
+)
 
 import pandas
 df = pandas.DataFrame(d.data)
