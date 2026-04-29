@@ -274,6 +274,37 @@ std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::g
     return components[0].EOS().get_superanc();
 }
 
+void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
+    if (!is_pure()) {
+        return;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return;
+    }
+    auto& superanc = *superanc_ptr;
+    if (superanc.has_variable('H') && superanc.has_variable('S')) {
+        return;
+    }
+    // Callbacks evaluate h(T, rho) and s(T, rho) using the EOS in its current
+    // configuration (including the active reference state). The rho values
+    // come from the existing rho_sat superancillary at the Chebyshev nodes —
+    // see SuperAncillary::add_variable. Building H and S together so we
+    // amortize the EOS calls; both derive from the same alpha0/alphar evaluation.
+    auto h_callable = [this](double T, double rhomolar) -> double {
+        return this->calc_hmolar_nocache(T, rhomolar);
+    };
+    auto s_callable = [this](double T, double rhomolar) -> double {
+        return this->calc_smolar_nocache(T, rhomolar);
+    };
+    if (!superanc.has_variable('H')) {
+        superanc.add_variable('H', h_callable);
+    }
+    if (!superanc.has_variable('S')) {
+        superanc.add_variable('S', s_callable);
+    }
+}
+
 double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
@@ -1508,6 +1539,24 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
             _p = value1;
             _T = value2;
             FlashRoutines::PT_flash_with_guesses(*this, guesses);
+            break;
+        case DmolarQ_INPUTS:
+            _rhomolar = value1;
+            _Q = value2;
+            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::DQ_flash_with_guesses(*this, guesses);
+            break;
+        case HmolarQ_INPUTS:
+            _hmolar = value1;
+            _Q = value2;
+            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::HQ_flash_with_guesses(*this, guesses);
+            break;
+        case QSmolar_INPUTS:
+            _Q = value1;
+            _smolar = value2;
+            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::QS_flash_with_guesses(*this, guesses);
             break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));

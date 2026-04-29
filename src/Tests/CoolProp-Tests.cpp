@@ -4811,4 +4811,85 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
     }
 }
 
+// GitHub #2773: saturation flashes can have multiple T solutions for the same
+// (h | s | rho, Q) input. update_with_guesses now uses guess.T to pick the
+// branch via TOMS748 rootfinding inside each provably-monotonic Chebyshev
+// sub-interval of the saturation superancillary. h_sat and s_sat
+// superancillaries are built lazily on first use against the EOS in its
+// current configuration.
+TEST_CASE("DmolarQ branch selection via guess.T", "[2773][branch_selection]") {
+
+    // Anchor target density between rho(near triple) and rho(near peak) on
+    // the rising branch — this guarantees two T-roots exist (one on the
+    // rising branch below the density max, one on the falling branch above).
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS->update(CoolProp::QT_INPUTS, 0.0, 277.0);  // close to peak
+    const double rho_near_peak = AS->rhomolar();
+    AS->update(CoolProp::QT_INPUTS, 0.0, 273.5);  // close to triple
+    const double rho_near_triple = AS->rhomolar();
+    REQUIRE(rho_near_peak > rho_near_triple);  // confirms density max is real
+    const double rho_target = 0.5 * (rho_near_peak + rho_near_triple);
+    AS->update(CoolProp::QT_INPUTS, 0.0, 290.0);
+    REQUIRE(AS->rhomolar() < rho_target);  // confirms falling branch reaches target
+
+    const double T_density_max = 277.13;  // approximate peak T
+
+    SECTION("Guess near low-T (rising) branch → root below density max") {
+        CoolProp::GuessesStructure g;
+        g.T = 274.0;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rho_target, 0.0, g));
+        CHECK(AS->T() < T_density_max);
+        CHECK(AS->rhomolar() == Catch::Approx(rho_target).epsilon(1e-6));
+    }
+    SECTION("Guess near high-T (falling) branch → root above density max") {
+        CoolProp::GuessesStructure g;
+        g.T = 282.0;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rho_target, 0.0, g));
+        CHECK(AS->T() > T_density_max);
+        CHECK(AS->rhomolar() == Catch::Approx(rho_target).epsilon(1e-6));
+    }
+}
+
+TEST_CASE("HmolarQ branch selection via guess.T (water saturated vapor)", "[2773][branch_selection]") {
+    // h_g(T) on water saturated vapor has a maximum near T ≈ 540 K. Anchor
+    // h_target = h_g(T_low) where T_low is on the rising side; by smoothness
+    // of h_g there is necessarily a second T_high > T_peak on the falling
+    // side that also satisfies h_g(T_high) = h_target.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double T_low_anchor = 470.0;
+    AS->update(CoolProp::QT_INPUTS, 1.0, T_low_anchor);
+    const double h_target = AS->hmolar();
+    const double T_h_max_approx = 540.0;  // approximate h_g peak T
+
+    SECTION("Guess near T_low_anchor → low-T root") {
+        CoolProp::GuessesStructure g;
+        g.T = T_low_anchor;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g));
+        CHECK(AS->T() < T_h_max_approx);
+        CHECK(AS->T() == Catch::Approx(T_low_anchor).epsilon(0.01));
+    }
+    SECTION("Guess far above the h-peak → high-T root") {
+        CoolProp::GuessesStructure g;
+        g.T = 620.0;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g));
+        CHECK(AS->T() > T_h_max_approx);  // a different root past the peak
+        CHECK(AS->T() != Catch::Approx(T_low_anchor).epsilon(0.05));  // not the same root
+    }
+}
+
+TEST_CASE("QSmolar branch selection via guess.T (water saturated vapor)", "[2773][branch_selection]") {
+    // s_g(T) on water saturated vapor descends monotonically from triple to
+    // critical, so it does not by itself exhibit two roots — but exercising
+    // the QSmolar_INPUTS dispatch validates that the new code path runs end-
+    // to-end and returns a sensible T.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double T_anchor = 500.0;
+    AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+    const double s_target = AS->smolar();
+    CoolProp::GuessesStructure g;
+    g.T = T_anchor;
+    REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, s_target, g));
+    CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
+}
+
 #endif

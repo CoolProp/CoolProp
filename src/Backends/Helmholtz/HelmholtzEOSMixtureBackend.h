@@ -111,6 +111,16 @@ class HelmholtzEOSMixtureBackend : public AbstractState
 
     std::shared_ptr<EquationOfState::SuperAncillary_t> get_superanc();
 
+    /// Lazily build saturation superancillaries for caloric properties (h_sat, s_sat,
+    /// both liquid and vapor branches) using the existing rho_sat superancillary's
+    /// piece structure. Each entry in the new ChebyshevApproximation1D is constructed
+    /// by sampling (T, rho_sat(T)) -> EOS at the rho-superancillary's Chebyshev nodes.
+    /// At construction time the ChebyshevApproximation1D's companion-matrix extrema
+    /// finder identifies non-monotonic regions, so subsequent inversion via
+    /// get_x_for_y enumerates all roots. Reference state is captured at first build —
+    /// see GitHub #2773. This is a no-op for fluids without a superancillary.
+    void ensure_caloric_superancillaries();
+
    public:
     HelmholtzEOSMixtureBackend();
     HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV = true);

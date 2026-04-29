@@ -170,6 +170,110 @@ Phase specification in the low-level interface should be performed right before 
 
    When specifying an imposed phase, it is absolutely **critical** that the input pair actually lie within the imposed phase region.  If an incorrect phase is imposed for the given input pair, ``update()`` may throw unexpected errors or incorrect results may possibly be returned from the property functions.  If the state point phase is not absolutely known, it is best to let CoolProp determine the phase at the cost of some computational efficiency.
 
+.. _disambiguating_saturation_roots:
+
+Disambiguating Multiple Saturation Roots
+----------------------------------------
+
+A handful of saturation-flash inputs admit *more than one* temperature solution
+for the same input value. The default flash silently returns one of them, but
+which one is implementation-defined and depends on the bracketing solver's
+state. The cases that arise in practice (see GitHub
+`#2773 <https://github.com/CoolProp/CoolProp/issues/2773>`_):
+
+* ``HmolarQ_INPUTS`` / ``HmassQ_INPUTS`` on the **vapor side** (``Q = 1``).
+  :math:`h_{g}(T)` peaks well below the critical temperature for many fluids
+  (≈ 540 K for water), so a wide band of enthalpy values is reached at *two*
+  saturation temperatures.
+* ``QSmolar_INPUTS`` / ``QSmass_INPUTS`` on the vapor side. Same shape as
+  enthalpy for some fluids.
+* ``DmolarQ_INPUTS`` / ``DmassQ_INPUTS`` on the **liquid side** (``Q = 0``)
+  for water and heavy water (D2O). :math:`\rho_L(T)` has a maximum near 4 °C
+  (water) and 11 °C (D2O), so densities slightly below the peak occur at two
+  saturation temperatures.
+
+To select between the roots, use ``update_with_guesses`` and supply a
+temperature hint via :cpapi:`CoolProp::GuessesStructure`. Internally the flash
+uses the Chebyshev *superancillary* representation of the saturation curve to
+enumerate every root via TOMS748 inside each provably-monotonic sub-interval,
+then picks the candidate closest to ``guess.T``:
+
+.. ipython::
+
+    In [1]: import CoolProp.CoolProp as CP
+
+    In [2]: HEOS = CP.AbstractState("HEOS", "Water")
+
+    # h_g(T) on water saturated vapor has a maximum near 540 K. h_target =
+    # h_g(470 K) is also reached at some T > 540 K on the falling side.
+    In [3]: HEOS.update(CP.QT_INPUTS, 1.0, 470.0)
+
+    In [4]: h_target = HEOS.hmolar()
+
+    # Guess near the low-T root → returns ~470 K
+    In [5]: g = CP.PyGuessesStructure(); g.T = 470.0
+
+    In [6]: HEOS.update_with_guesses(CP.HmolarQ_INPUTS, h_target, 1.0, g)
+
+    In [7]: HEOS.T()
+
+    # Guess past the peak → returns the *other* root
+    In [8]: g.T = 620.0
+
+    In [9]: HEOS.update_with_guesses(CP.HmolarQ_INPUTS, h_target, 1.0, g)
+
+    In [10]: HEOS.T()
+
+The same pattern works for ``DmolarQ_INPUTS`` to disambiguate water's
+saturated-liquid density maximum near 4 °C, and for ``QSmolar_INPUTS``:
+
+.. ipython::
+
+    # Water saturated-liquid density max around T ≈ 277.13 K (4 °C).
+    # Pick a target ρ between ρ(near triple) and ρ(near peak) so two roots exist.
+    In [11]: HEOS.update(CP.QT_INPUTS, 0.0, 277.0)
+
+    In [12]: rho_near_peak = HEOS.rhomolar()
+
+    In [13]: HEOS.update(CP.QT_INPUTS, 0.0, 273.5)
+
+    In [14]: rho_near_triple = HEOS.rhomolar()
+
+    In [15]: rho_target = 0.5*(rho_near_peak + rho_near_triple)
+
+    # Guess on the rising branch → root below the peak
+    In [16]: g.T = 274.0; HEOS.update_with_guesses(CP.DmolarQ_INPUTS, rho_target, 0.0, g)
+
+    In [17]: HEOS.T()
+
+    # Guess on the falling branch → root above the peak
+    In [18]: g.T = 282.0; HEOS.update_with_guesses(CP.DmolarQ_INPUTS, rho_target, 0.0, g)
+
+    In [19]: HEOS.T()
+
+A few notes:
+
+* This requires a fluid with a Chebyshev superancillary present (true for
+  every pure fluid in the standard CoolProp build). The :math:`h_{sat}(T)`
+  and :math:`s_{sat}(T)` Chebyshev expansions are constructed lazily on
+  first use by sampling the EOS at the rho-superancillary's nodes and
+  capture the active reference state at construction.
+* Only ``guess.T`` is consulted by the branch-selection logic; other fields
+  in :cpapi:`CoolProp::GuessesStructure` are ignored for these input pairs.
+* Mixtures are not supported on this code path — only pure (and not
+  pseudo-pure) fluids. The default ``update`` behavior is unchanged.
+* Per-call cost after the first lazy build is sub-microsecond:
+  candidate-root enumeration is a piecewise-Chebyshev TOMS748 rootfind
+  inside each monotonic sub-interval.
+
+If you do *not* supply a hint and the input lies in a multi-root region,
+``update`` continues to return whichever root the underlying bracketed solver
+reaches first. To probe whether a particular ``(value, Q)`` is multi-rooted,
+call ``update_with_guesses`` twice with two well-separated ``guess.T`` values
+that bracket the suspected extremum and compare the returned ``T``. If they
+differ substantially you have multiple roots; if they agree to many digits
+the solution is unique.
+
 .. _partial_derivatives_low_level:
 
 Partial Derivatives

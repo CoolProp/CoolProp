@@ -939,6 +939,25 @@ class SuperAncillary
                 throw std::invalid_argument("Bad key of '" + std::string(1, k) + "'");
         }
     }
+    /// Whether a property's saturation Chebyshev approximation has been populated.
+    /// P and D are always present; H/S/U are only present after add_variable()
+    /// has been called (or, in some JSON layouts, loaded from disk).
+    /// \param k Property key in {D,P,H,S,U}
+    bool has_variable(char k) const {
+        switch (k) {
+            case 'P':
+            case 'D':
+                return true;
+            case 'H':
+                return m_hL.has_value() && m_hV.has_value();
+            case 'S':
+                return m_sL.has_value() && m_sV.has_value();
+            case 'U':
+                return m_uL.has_value() && m_uV.has_value();
+            default:
+                return false;
+        }
+    }
     /// Get a const reference to the inverse approximation for T(ln(p))
     const auto& get_invlnp() {
         // Lazily construct on the first access
@@ -983,6 +1002,24 @@ class SuperAncillary
         Eigen::MatrixXd Lmat, Umat;
         std::tie(Lmat, Umat) = detail::get_LU_matrices(12);
 
+        // Helpers to bridge ArrayType (which may be Eigen::ArrayXd or
+        // std::vector<double>, depending on the SuperAncillary template
+        // instantiation) and the Eigen ops used in the inner loop.
+        auto coeff_to_eigen = [](const ArrayType& a) -> Eigen::ArrayXd {
+            if constexpr (std::is_same_v<ArrayType, std::vector<double>>) {
+                return Eigen::Map<const Eigen::ArrayXd>(a.data(), static_cast<Eigen::Index>(a.size()));
+            } else {
+                return a;
+            }
+        };
+        auto eigen_to_arraytype = [](const Eigen::ArrayXd& e) -> ArrayType {
+            if constexpr (std::is_same_v<ArrayType, std::vector<double>>) {
+                return std::vector<double>(e.data(), e.data() + e.size());
+            } else {
+                return e;
+            }
+        };
+
         auto builder = [&](char var, auto& variantL, auto& variantV) {
             std::vector<ChebyshevExpansion<ArrayType>> newexpL, newexpV;
             const auto& expsL = get_approx1d('D', 0);
@@ -995,8 +1032,8 @@ class SuperAncillary
                 const auto& expV = expsV.get_expansions()[i];
                 const auto& T = expL.get_nodes_realworld();
                 // Get the functional values at the Chebyshev nodes
-                Eigen::ArrayXd funcL = Umat * expL.coeff().matrix();
-                Eigen::ArrayXd funcV = Umat * expV.coeff().matrix();
+                Eigen::ArrayXd funcL = Umat * coeff_to_eigen(expL.coeff()).matrix();
+                Eigen::ArrayXd funcV = Umat * coeff_to_eigen(expV.coeff()).matrix();
                 // Apply the function inplace to do the transformation
                 // of the functional values at the nodes
                 for (auto j = 0; j < funcL.size(); ++j) {
@@ -1004,8 +1041,10 @@ class SuperAncillary
                     funcV(j) = caller(T(j), funcV(j));
                 }
                 // And now rebuild the expansions by left-multiplying by the L matrix
-                newexpL.emplace_back(expL.xmin(), expL.xmax(), (Lmat * funcL.matrix()).eval());
-                newexpV.emplace_back(expV.xmin(), expV.xmax(), (Lmat * funcV.matrix()).eval());
+                Eigen::ArrayXd newcoeffL = (Lmat * funcL.matrix()).array();
+                Eigen::ArrayXd newcoeffV = (Lmat * funcV.matrix()).array();
+                newexpL.emplace_back(expL.xmin(), expL.xmax(), eigen_to_arraytype(newcoeffL));
+                newexpV.emplace_back(expV.xmin(), expV.xmax(), eigen_to_arraytype(newcoeffV));
             }
 
             variantL.emplace(std::move(newexpL));
