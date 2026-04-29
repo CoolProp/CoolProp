@@ -4892,4 +4892,53 @@ TEST_CASE("QSmolar branch selection via guess.T (water saturated vapor)", "[2773
     CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
 }
 
+// Benchmark the new superancillary-based with_guesses path against the
+// existing default flash for the input pairs covered by #2773. Tagged
+// [!benchmark] so it doesn't run with the default test selection — invoke
+// with e.g. `CatchTestRunner "[2773][bench]"`.
+//
+// Only DQ has a working baseline: default HQ_flash and QS_flash are unreliable
+// for water (and propane) at many sensible operating points (the symptom that
+// motivates #2773). Where the baseline can be benchmarked, it is; otherwise the
+// with_guesses path's absolute timing stands on its own.
+TEST_CASE("DQ/HQ/QS flash benchmarks (#2773)", "[2773][bench][!benchmark]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    // DQ: pick a T well away from the 4 °C density max so the existing
+    // single-root Brent path doesn't bracket-hop. T = 400 K is on the
+    // monotonic-decreasing side of rho_L(T).
+    AS->update(CoolProp::QT_INPUTS, 0.0, 400.0);
+    const double rho_DQ = AS->rhomolar();
+    CoolProp::GuessesStructure g_DQ;
+    g_DQ.T = 400.0;
+
+    // HQ: anchor on a rising-branch h_g for water saturated vapor.
+    AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+    const double h_HQ = AS->hmolar();
+    CoolProp::GuessesStructure g_HQ;
+    g_HQ.T = 470.0;
+
+    // QS: saturated liquid n-propane at 300 K.
+    std::shared_ptr<CoolProp::AbstractState> AS_prop(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+    AS_prop->update(CoolProp::QT_INPUTS, 0.0, 300.0);
+    const double s_QS = AS_prop->smolar();
+    CoolProp::GuessesStructure g_QS;
+    g_QS.T = 300.0;
+
+    BENCHMARK("DQ default      update(DmolarQ,rho,Q=0)") {
+        return AS->update(CoolProp::DmolarQ_INPUTS, rho_DQ, 0.0);
+    };
+    BENCHMARK("DQ with guesses update_with_guesses(DmolarQ,rho,Q=0,T)") {
+        return AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rho_DQ, 0.0, g_DQ);
+    };
+    // Default HQ_flash and QS_flash are skipped — both throw or crash for the
+    // chosen anchor points (pre-existing #2773 symptom).
+    BENCHMARK("HQ with guesses update_with_guesses(HmolarQ,h,Q=1,T)") {
+        return AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_HQ, 1.0, g_HQ);
+    };
+    BENCHMARK("QS with guesses update_with_guesses(QSmolar,Q=0,s,T) [propane]") {
+        return AS_prop->update_with_guesses(CoolProp::QSmolar_INPUTS, 0.0, s_QS, g_QS);
+    };
+}
+
 #endif

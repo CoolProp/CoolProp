@@ -426,6 +426,9 @@ void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
     const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'D', rhomolar, "DQ_flash_with_guesses");
     HEOS._T = T_super;
     HEOS.specify_phase(iphase_twophase);
+    // Despite the name, for a pure fluid with superancillaries this is a fast
+    // path: QT_flash dispatches to the rho_sat / p_sat superancillary at T —
+    // no iterative VLE solve. Sub-microsecond per call.
     QT_flash(HEOS);
     HEOS._rhomolar = rhomolar;
     HEOS._phase = iphase_twophase;
@@ -441,6 +444,7 @@ void FlashRoutines::HQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
     const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'H', hmolar, "HQ_flash_with_guesses");
     HEOS._T = T_super;
     HEOS.specify_phase(iphase_twophase);
+    // Fast path: superancillary eval at T, not an iterative VLE solve. See DQ_flash_with_guesses for details.
     QT_flash(HEOS);
     HEOS._hmolar = hmolar;
     HEOS._phase = iphase_twophase;
@@ -452,6 +456,7 @@ void FlashRoutines::QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
     const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'S', smolar, "QS_flash_with_guesses");
     HEOS._T = T_super;
     HEOS.specify_phase(iphase_twophase);
+    // Fast path: superancillary eval at T, not an iterative VLE solve. See DQ_flash_with_guesses for details.
     QT_flash(HEOS);
     HEOS._smolar = smolar;
     HEOS._phase = iphase_twophase;
