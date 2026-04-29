@@ -111,6 +111,17 @@ class FlashRoutines
     /// @param guess The GuessesStructure; only guess.T is consulted
     static void QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess);
 
+    /// Internal helper for the *_flash_with_guesses pure-fluid paths above (#2773).
+    /// Validates inputs, looks up the saturation superancillary for property `k`,
+    /// and returns the single T-root in the monotonic sub-interval whose x-range
+    /// is nearest guess.T. Branching is on the single character `k` ('D', 'H', or
+    /// 'S'). Member of FlashRoutines so that it inherits friend access to
+    /// HelmholtzEOSMixtureBackend's protected state. The hot path takes one
+    /// branch on `k` to decide whether to build caloric superancillaries; error
+    /// messages use `fn_name` and are only constructed on the throw paths.
+    static double pick_branch_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess, char k, double target_value,
+                                                   const char* fn_name);
+
     /// Flash for mixture given temperature or pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The parameter that is imposed, either iT or iP

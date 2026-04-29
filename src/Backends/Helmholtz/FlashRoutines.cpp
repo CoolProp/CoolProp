@@ -365,190 +365,92 @@ void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
     }
 }
 
-// Branch-disambiguating variant of DQ_flash (see GitHub #2773).
-// rho_L(T) on water and D2O is non-monotonic near 4 °C / 11 °C, so the DQ flash
-// can have two T-solutions for the same density. Use the rho_sat superancillary
-// to enumerate roots (TOMS748 inside each provably-monotonic Chebyshev interval),
-// pick the one closest to guess.T, then refine against the full EOS saturation
-// residual via Brent in a narrow bracket so the returned state is EOS-precise.
-void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
+// Helper for the *_flash_with_guesses functions below. Validates inputs, looks
+// up the right saturation superancillary, and returns the single T-root in the
+// monotonic sub-interval whose x-range is nearest guess.T. The TOMS748 result
+// is accepted as-is — superancillaries are accurate to ~1e-12 relative to the
+// multi-precision EOS reference, well below the precision of any downstream
+// EOS evaluation, so an additional EOS-side refinement is not needed.
+//
+// `k` is a single-character property key on SuperAncillary ('D', 'H', or 'S').
+// The hot path branches once on `k` to decide whether to lazily build caloric
+// superancillaries; everything else flows through SuperAncillary's existing
+// switch-on-char accessors. `fn_name` is used only in error messages.
+double FlashRoutines::pick_branch_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess, char k, double target_value,
+                                                       const char* fn_name) {
     if (!ValidNumber(guess.T) || guess.T <= 0) {
-        throw ValueError("DQ_flash_with_guesses requires a positive guess.T");
+        throw ValueError(format("%s requires a positive guess.T", fn_name));
     }
     if (!HEOS.is_pure_or_pseudopure) {
-        throw NotImplementedError("DQ_flash_with_guesses not ready for mixtures");
+        throw NotImplementedError(format("%s not ready for mixtures", fn_name));
     }
     auto superanc_ptr = HEOS.get_superanc();
     if (!superanc_ptr) {
-        throw NotImplementedError("DQ_flash_with_guesses requires a superancillary; this fluid has none");
+        throw NotImplementedError(format("%s requires a superancillary; this fluid has none", fn_name));
     }
-    auto& superanc = *superanc_ptr;
 
-    const double rhomolar = HEOS._rhomolar;
     const double Q = HEOS._Q;
-
     short Q_key = -1;
     if (std::abs(Q) < 1e-10) {
         Q_key = 0;
     } else if (std::abs(Q - 1) < 1e-10) {
         Q_key = 1;
     } else {
-        throw ValueError(format("DQ_flash_with_guesses currently requires Q=0 or Q=1; got Q=%g", Q));
-    }
-    HEOS.specify_phase(iphase_twophase);
-    const double eps = 1e-12;
-    if (rhomolar >= (HEOS.rhomolar_critical() + eps) && Q > (0 + eps)) {
-        throw CoolProp::OutOfRangeError(
-          format("DQ inputs are not defined for density (%g) above critical density (%g) and Q>0", rhomolar, HEOS.rhomolar_critical()).c_str());
+        throw ValueError(format("%s currently requires Q=0 or Q=1; got Q=%g", fn_name, Q));
     }
 
-    // Pick the monotonic sub-interval of the rho_sat superancillary nearest
-    // guess.T (and which can reach rho_target in its y-range), then TOMS748
-    // there. This is faster than enumerating all roots and choosing among them.
-    const auto& approx = superanc.get_approx1d('D', Q_key);
-    const auto soln = approx.get_x_for_y_near(rhomolar, guess.T, 64, 100U, 1e-10);
+    if (k == 'H' || k == 'S') {
+        HEOS.ensure_caloric_superancillaries();
+    }
+    auto& superanc = *superanc_ptr;
+    if (!superanc.has_variable(k)) {
+        throw NotImplementedError(format("%s: %c-superancillary unavailable", fn_name, k));
+    }
+
+    const auto& approx = superanc.get_approx1d(k, Q_key);
+    const auto soln = approx.get_x_for_y_near(target_value, guess.T, 64, 100U, 1e-10);
     if (!soln) {
-        throw SolutionError(format("DQ_flash_with_guesses: no T-root on saturated %s near guess.T=%g K for rho=%g; "
+        throw SolutionError(format("%s: no T-root on saturated %s near guess.T=%g K for %c=%g; "
                                    "superancillary range [%g, %g] K",
-                                   (Q_key == 0 ? "liquid" : "vapor"), guess.T, rhomolar, approx.xmin(), approx.xmax()));
+                                   fn_name, (Q_key == 0 ? "liquid" : "vapor"), guess.T, k, target_value, approx.xmin(), approx.xmax()));
     }
-    const double T_super = soln->first;
+    return soln->first;
+}
 
-    // Refine to EOS precision against the full saturation residual using Brent in
-    // a narrow bracket around T_super. The bracket is chosen to stay strictly
-    // inside the same monotonic sub-interval — half the distance to the nearer
-    // extremum (or to the saturation-range endpoint) — so we won't be lured into
-    // the other branch.
-    const double Tmax_sat = HEOS.T_critical() - 0.1;
-    const double Tmin_sat = HEOS.Tmin() + 0.1;
-    double left_edge = Tmin_sat, right_edge = Tmax_sat;
-    for (const double T_extr : approx.get_x_at_extrema()) {
-        if (T_extr < T_super && T_extr > left_edge) left_edge = T_extr;
-        if (T_extr > T_super && T_extr < right_edge) right_edge = T_extr;
-    }
-    const double half_left = std::max(0.5 * (T_super - left_edge), 1e-3);
-    const double half_right = std::max(0.5 * (right_edge - T_super), 1e-3);
-    const double Ta = std::max(Tmin_sat, T_super - half_left);
-    const double Tb = std::min(Tmax_sat, T_super + half_right);
-
-    DQ_flash_residual resid(HEOS, rhomolar, Q);
-    const double fa = resid.call(Ta);
-    const double fb = resid.call(Tb);
-    if (fa * fb > 0) {
-        // Should not happen when the superancillary is consistent with the EOS,
-        // but if Brent can't bracket, leave the EOS state at T_super (the last
-        // resid.call below populates SatL/SatV at that T). The superancillary
-        // value is itself ~1e-12 accurate.
-        resid.call(T_super);
-    } else {
-        Brent(resid, Ta, Tb, DBL_EPSILON, 1e-10, 100);
-    }
-    HEOS._p = HEOS.SatV->p();
-    HEOS._T = HEOS.SatV->T();
+// Branch-disambiguating variant of DQ_flash (see GitHub #2773).
+// rho_L(T) on water and D2O is non-monotonic near 4 °C / 11 °C, so the DQ flash
+// can have two T-solutions for the same density. Use the rho_sat superancillary
+// to pick the monotonic sub-interval nearest guess.T and TOMS748-solve there.
+void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
+    const double rhomolar = HEOS._rhomolar;
+    const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'D', rhomolar, "DQ_flash_with_guesses");
+    HEOS._T = T_super;
+    HEOS.specify_phase(iphase_twophase);
+    QT_flash(HEOS);
     HEOS._rhomolar = rhomolar;
-    HEOS._Q = Q;
     HEOS._phase = iphase_twophase;
 }
 
 // Branch-disambiguating variant of HQ_flash (see GitHub #2773).
-// The default HQ_flash routes through saturation_PHSU_pure with IMPOSED_HV, which
-// silently picks one of the (possibly two) T-roots when h_g(T) is non-monotonic
-// — water saturated vapor enthalpy peaks near 540 K, so a wide band of h_target
-// values has two T solutions. This variant builds the h_sat superancillary on
-// first use, enumerates roots via TOMS748 over each provably-monotonic Chebyshev
-// sub-interval, picks the one closest to guess.T, and runs a QT flash at that T.
+// The default HQ_flash routes through saturation_PHSU_pure with IMPOSED_HV,
+// which silently picks one of the two T-roots when h_g(T) is non-monotonic
+// (water saturated-vapor enthalpy peaks near 540 K). This variant uses the
+// h_sat superancillary (built lazily on first use) to disambiguate.
 void FlashRoutines::HQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
-    if (!ValidNumber(guess.T) || guess.T <= 0) {
-        throw ValueError("HQ_flash_with_guesses requires a positive guess.T");
-    }
-    if (!HEOS.is_pure_or_pseudopure) {
-        throw NotImplementedError("HQ_flash_with_guesses not ready for mixtures");
-    }
-    auto superanc_ptr = HEOS.get_superanc();
-    if (!superanc_ptr) {
-        throw NotImplementedError("HQ_flash_with_guesses requires a superancillary; this fluid has none");
-    }
-
     const double hmolar = HEOS._hmolar;
-    const double Q = HEOS._Q;
-
-    short Q_key = -1;
-    if (std::abs(Q) < 1e-10) {
-        Q_key = 0;
-    } else if (std::abs(Q - 1) < 1e-10) {
-        Q_key = 1;
-    } else {
-        throw ValueError(format("HQ_flash_with_guesses currently requires Q=0 or Q=1; got Q=%g", Q));
-    }
-
-    HEOS.ensure_caloric_superancillaries();
-    auto& superanc = *superanc_ptr;
-    if (!superanc.has_variable('H')) {
-        throw NotImplementedError("HQ_flash_with_guesses: caloric superancillary build failed");
-    }
-
-    const auto& approx = superanc.get_approx1d('H', Q_key);
-    const auto soln = approx.get_x_for_y_near(hmolar, guess.T, 64, 100U, 1e-10);
-    if (!soln) {
-        throw SolutionError(format("HQ_flash_with_guesses: no T-root on saturated %s near guess.T=%g K for h=%g; "
-                                   "superancillary range [%g, %g] K",
-                                   (Q_key == 0 ? "liquid" : "vapor"), guess.T, hmolar, approx.xmin(), approx.xmax()));
-    }
-    const double T_super = soln->first;
-
-    // Populate the rest of the state (p, rhomolar, SatL/SatV) by running a
-    // standard QT flash at the disambiguated T. The user-supplied h is implicit
-    // in the EOS state at (T_super, rho_sat(T_super)).
+    const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'H', hmolar, "HQ_flash_with_guesses");
     HEOS._T = T_super;
-    HEOS._Q = Q;
     HEOS.specify_phase(iphase_twophase);
     QT_flash(HEOS);
     HEOS._hmolar = hmolar;
     HEOS._phase = iphase_twophase;
 }
 
-// Branch-disambiguating variant of QS_flash (see GitHub #2773). Mirrors HQ_flash_with_guesses.
+// Branch-disambiguating variant of QS_flash. Mirrors HQ_flash_with_guesses.
 void FlashRoutines::QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
-    if (!ValidNumber(guess.T) || guess.T <= 0) {
-        throw ValueError("QS_flash_with_guesses requires a positive guess.T");
-    }
-    if (!HEOS.is_pure_or_pseudopure) {
-        throw NotImplementedError("QS_flash_with_guesses not ready for mixtures");
-    }
-    auto superanc_ptr = HEOS.get_superanc();
-    if (!superanc_ptr) {
-        throw NotImplementedError("QS_flash_with_guesses requires a superancillary; this fluid has none");
-    }
-
     const double smolar = HEOS._smolar;
-    const double Q = HEOS._Q;
-
-    short Q_key = -1;
-    if (std::abs(Q) < 1e-10) {
-        Q_key = 0;
-    } else if (std::abs(Q - 1) < 1e-10) {
-        Q_key = 1;
-    } else {
-        throw ValueError(format("QS_flash_with_guesses currently requires Q=0 or Q=1; got Q=%g", Q));
-    }
-
-    HEOS.ensure_caloric_superancillaries();
-    auto& superanc = *superanc_ptr;
-    if (!superanc.has_variable('S')) {
-        throw NotImplementedError("QS_flash_with_guesses: caloric superancillary build failed");
-    }
-
-    const auto& approx = superanc.get_approx1d('S', Q_key);
-    const auto soln = approx.get_x_for_y_near(smolar, guess.T, 64, 100U, 1e-10);
-    if (!soln) {
-        throw SolutionError(format("QS_flash_with_guesses: no T-root on saturated %s near guess.T=%g K for s=%g; "
-                                   "superancillary range [%g, %g] K",
-                                   (Q_key == 0 ? "liquid" : "vapor"), guess.T, smolar, approx.xmin(), approx.xmax()));
-    }
-    const double T_super = soln->first;
-
+    const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'S', smolar, "QS_flash_with_guesses");
     HEOS._T = T_super;
-    HEOS._Q = Q;
     HEOS.specify_phase(iphase_twophase);
     QT_flash(HEOS);
     HEOS._smolar = smolar;
