@@ -402,24 +402,17 @@ void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
           format("DQ inputs are not defined for density (%g) above critical density (%g) and Q>0", rhomolar, HEOS.rhomolar_critical()).c_str());
     }
 
-    // Enumerate candidate T-roots via the rho_sat superancillary's monotonic-
-    // interval rootfinder. Each entry is (T, num_TOMS748_steps).
+    // Pick the monotonic sub-interval of the rho_sat superancillary nearest
+    // guess.T (and which can reach rho_target in its y-range), then TOMS748
+    // there. This is faster than enumerating all roots and choosing among them.
     const auto& approx = superanc.get_approx1d('D', Q_key);
-    const auto solns = approx.get_x_for_y(rhomolar, 64, 100U, 1e-10);
-    if (solns.empty()) {
-        throw SolutionError(format("DQ_flash_with_guesses: no T-root on saturated %s for rho=%g; superancillary range [%g, %g] K",
-                                   (Q_key == 0 ? "liquid" : "vapor"), rhomolar, approx.xmin(), approx.xmax()));
+    const auto soln = approx.get_x_for_y_near(rhomolar, guess.T, 64, 100U, 1e-10);
+    if (!soln) {
+        throw SolutionError(format("DQ_flash_with_guesses: no T-root on saturated %s near guess.T=%g K for rho=%g; "
+                                   "superancillary range [%g, %g] K",
+                                   (Q_key == 0 ? "liquid" : "vapor"), guess.T, rhomolar, approx.xmin(), approx.xmax()));
     }
-    // Pick the candidate closest to guess.T.
-    double T_super = solns.front().first;
-    double best_dist = std::abs(T_super - guess.T);
-    for (const auto& soln : solns) {
-        const double d = std::abs(soln.first - guess.T);
-        if (d < best_dist) {
-            best_dist = d;
-            T_super = soln.first;
-        }
-    }
+    const double T_super = soln->first;
 
     // Refine to EOS precision against the full saturation residual using Brent in
     // a narrow bracket around T_super. The bracket is chosen to stay strictly
@@ -455,21 +448,6 @@ void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
     HEOS._rhomolar = rhomolar;
     HEOS._Q = Q;
     HEOS._phase = iphase_twophase;
-}
-
-// Helper: pick the saturation T-root closest to guess.T from a list of candidates.
-// Used by HQ_flash_with_guesses and QS_flash_with_guesses below.
-static double pick_closest_T(const std::vector<std::pair<double, int>>& solns, double T_guess) {
-    double T_best = solns.front().first;
-    double best_dist = std::abs(T_best - T_guess);
-    for (const auto& soln : solns) {
-        const double d = std::abs(soln.first - T_guess);
-        if (d < best_dist) {
-            best_dist = d;
-            T_best = soln.first;
-        }
-    }
-    return T_best;
 }
 
 // Branch-disambiguating variant of HQ_flash (see GitHub #2773).
@@ -510,12 +488,13 @@ void FlashRoutines::HQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
     }
 
     const auto& approx = superanc.get_approx1d('H', Q_key);
-    const auto solns = approx.get_x_for_y(hmolar, 64, 100U, 1e-10);
-    if (solns.empty()) {
-        throw SolutionError(format("HQ_flash_with_guesses: no T-root on saturated %s for h=%g; superancillary range [%g, %g] K",
-                                   (Q_key == 0 ? "liquid" : "vapor"), hmolar, approx.xmin(), approx.xmax()));
+    const auto soln = approx.get_x_for_y_near(hmolar, guess.T, 64, 100U, 1e-10);
+    if (!soln) {
+        throw SolutionError(format("HQ_flash_with_guesses: no T-root on saturated %s near guess.T=%g K for h=%g; "
+                                   "superancillary range [%g, %g] K",
+                                   (Q_key == 0 ? "liquid" : "vapor"), guess.T, hmolar, approx.xmin(), approx.xmax()));
     }
-    const double T_super = pick_closest_T(solns, guess.T);
+    const double T_super = soln->first;
 
     // Populate the rest of the state (p, rhomolar, SatL/SatV) by running a
     // standard QT flash at the disambiguated T. The user-supplied h is implicit
@@ -560,12 +539,13 @@ void FlashRoutines::QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
     }
 
     const auto& approx = superanc.get_approx1d('S', Q_key);
-    const auto solns = approx.get_x_for_y(smolar, 64, 100U, 1e-10);
-    if (solns.empty()) {
-        throw SolutionError(format("QS_flash_with_guesses: no T-root on saturated %s for s=%g; superancillary range [%g, %g] K",
-                                   (Q_key == 0 ? "liquid" : "vapor"), smolar, approx.xmin(), approx.xmax()));
+    const auto soln = approx.get_x_for_y_near(smolar, guess.T, 64, 100U, 1e-10);
+    if (!soln) {
+        throw SolutionError(format("QS_flash_with_guesses: no T-root on saturated %s near guess.T=%g K for s=%g; "
+                                   "superancillary range [%g, %g] K",
+                                   (Q_key == 0 ? "liquid" : "vapor"), guess.T, smolar, approx.xmin(), approx.xmax()));
     }
-    const double T_super = pick_closest_T(solns, guess.T);
+    const double T_super = soln->first;
 
     HEOS._T = T_super;
     HEOS._Q = Q;
