@@ -4,9 +4,9 @@
 #    endif
 #endif
 
+#include <atomic>
 #include <cmath>
 #include <memory>
-#include <mutex>
 using std::shared_ptr;
 
 #include "HumidAirProp.h"
@@ -41,8 +41,16 @@ void strcpy(std::string& s, const std::string& e) {
     s = e;
 }
 
-shared_ptr<CoolProp::HelmholtzEOSBackend> Water, Air;
-shared_ptr<CoolProp::AbstractState> WaterIF97;
+// Per-thread Water/Air backends. The HelmholtzEOSBackend instances are mutated
+// on every HAPropsSI call (update(), specify_phase(), clear()), so a single
+// shared instance can't safely back concurrent callers. C++11 thread_local
+// gives each thread its own backend; first-call construction goes through the
+// FluidLibrary singleton, which is itself protected by std::call_once.
+// `static` makes the linkage internal — these are file-private despite living
+// at namespace scope above the HumidAir namespace block.
+static thread_local shared_ptr<CoolProp::HelmholtzEOSBackend> Water;
+static thread_local shared_ptr<CoolProp::HelmholtzEOSBackend> Air;
+static thread_local shared_ptr<CoolProp::AbstractState> WaterIF97;
 
 namespace HumidAir {
 enum givens
@@ -86,21 +94,26 @@ double _HAPropsSI_outputs(givens OuputType, double p, double T, double psi_w);
 double MoleFractionWater(double, double, int, double);
 
 void check_fluid_instantiation() {
-    // Lazy init of the Water/Air backends needs to be thread-safe — without
-    // std::call_once, two threads concurrently entering HAPropsSI on a cold
-    // cache both observed null and both reset the shared_ptr, with the late
-    // assignment destroying the in-flight backend the other thread was using
-    // (gh-2787).
-    static std::once_flag flag;
-    std::call_once(flag, [] {
+    // Each thread lazily constructs its own Water/Air/WaterIF97 backends on
+    // first use. No synchronization required: Water/Air/WaterIF97 are
+    // thread_local, so the null check and reset() touch only this thread's
+    // shared_ptrs. The construction calls below funnel into the global
+    // FluidLibrary singleton, which is itself made thread-safe by call_once
+    // (gh-2787, gh-2800).
+    if (!Water) {
         Water.reset(new CoolProp::HelmholtzEOSBackend("Water"));
         WaterIF97.reset(CoolProp::AbstractState::factory("IF97", "Water"));
         Air.reset(new CoolProp::HelmholtzEOSBackend("Air"));
-    });
+    }
 };
 
 static double epsilon = 0.621945, R_bar = 8.314472;
-static int FlagUseVirialCorrelations = 0, FlagUseIsothermCompressCorrelation = 0, FlagUseIdealGasEnthalpyCorrelations = 0;
+// Correlation toggles are global flags settable from any thread; std::atomic<int>
+// gives torn-write-free reads in the hot path. The reads use implicit
+// conversion (seq_cst), the writes use plain assignment.
+static std::atomic<int> FlagUseVirialCorrelations{0};
+static std::atomic<int> FlagUseIsothermCompressCorrelation{0};
+static std::atomic<int> FlagUseIdealGasEnthalpyCorrelations{0};
 double f_factor(double T, double p);
 
 // A central place to check bounds, should be used much more frequently
@@ -155,10 +168,11 @@ static double MM_Water(void) {
 // Two separate per-temperature caches, both keyed by T and filled via direct EOS calls
 // (no update()), so they never disturb the backends' cached state.
 // Keeping them separate means the virial cache is skipped when FlagUseVirialCorrelations=1.
-// Not thread-safe — consistent with the Air/Water singleton model throughout this file.
+// thread_local: each thread has its own cache, mirroring the per-thread Water/Air
+// backends. The check-then-fill pattern (T == cache.T) is therefore race-free.
 
 // Residual virial coefficients and T-derivatives
-static struct
+static thread_local struct
 {
     double T;
     double B_a, dBdT_a, C_a, dCdT_a;
@@ -192,7 +206,8 @@ static void fill_virial_cache(double T) {
 }
 
 // Ideal-gas alpha0 at delta=1 (f(tau)) and dalpha0/dtau — used by enthalpy/entropy functions
-static struct
+// thread_local: see s_virial_cache.
+static thread_local struct
 {
     double T;
     double a0_a, da0_dtau_a;
@@ -234,7 +249,10 @@ static void fill_alpha0_cache(double T) {
 // Reference-state constant offsets: these are determined by a single update() at
 // Tref=473.15 K for each function and never change thereafter.  Computed lazily
 // on first use so that the Air/Water singletons are already initialised.
-static struct
+// thread_local: ensure_ref_offsets() calls Water->update()/Air->update(), and the
+// Water/Air backends are themselves thread_local — so each thread fills its own
+// s_ref against its own backend, with no cross-thread races.
+static thread_local struct
 {
     bool ready;
     double T_red_w, rho_red_w;  // Water reducing temperature [K] and molar density [mol/m³]
@@ -2285,6 +2303,7 @@ double IceProps(const char* Name, double T, double p) {
 
 #ifdef ENABLE_CATCH
 #    include <math.h>
+#    include <thread>
 #    include <catch2/catch_all.hpp>
 
 TEST_CASE("Check HA Virials from Table A.2.1", "[RP1485]") {
@@ -2474,6 +2493,86 @@ TEST_CASE("Assorted tests", "[HAPropsSI]") {
     CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 252.84, "W", 5.097e-4, "P", 101325)));
     CHECK(ValidNumber(HumidAir::HAPropsSI("T", "B", 290, "R", 1, "P", 101325)));
 }
+
+// Concurrent HAPropsSI calls must each return the per-thread expected result.
+// The Water/Air/WaterIF97 backends used internally are mutated on every call
+// (update(), specify_phase(), clear()), so a non-thread_local implementation
+// races on shared backend state and produces NaN, _HUGE or wildly wrong
+// numbers under the cargo parallel test runner that hits HAPropsSI from many
+// threads (gh-2787 follow-up).
+TEST_CASE("HAPropsSI is thread-safe under concurrent callers", "[HAPropsSI][threadsafe]") {
+    constexpr int n_threads = 16;
+    constexpr int iters_per_thread = 50;
+    const double p = 101325;
+
+    // Reference values computed serially before spawning workers.
+    struct Case
+    {
+        double T_dry, RH;
+        double W_ref, h_ref;
+    };
+    std::vector<Case> cases;
+    for (int i = 0; i < 8; ++i) {
+        Case c;
+        c.T_dry = 280.0 + 5.0 * i;     // 280..315 K
+        c.RH = 0.10 + 0.10 * (i % 9);  // 0.10..0.90
+        c.W_ref = HumidAir::HAPropsSI("W", "T", c.T_dry, "R", c.RH, "P", p);
+        c.h_ref = HumidAir::HAPropsSI("H", "T", c.T_dry, "R", c.RH, "P", p);
+        cases.push_back(c);
+    }
+
+    std::atomic<int> mismatches{0};
+    std::atomic<int> bad_numbers{0};
+    std::vector<std::thread> threads;
+    threads.reserve(n_threads);
+    for (int t = 0; t < n_threads; ++t) {
+        threads.emplace_back([&, t]() {
+            for (int it = 0; it < iters_per_thread; ++it) {
+                const Case& c = cases[(t + it) % cases.size()];
+                double W = HumidAir::HAPropsSI("W", "T", c.T_dry, "R", c.RH, "P", p);
+                double h = HumidAir::HAPropsSI("H", "T", c.T_dry, "R", c.RH, "P", p);
+                if (!ValidNumber(W) || !ValidNumber(h)) {
+                    bad_numbers.fetch_add(1, std::memory_order_relaxed);
+                    continue;
+                }
+                if (std::abs(W / c.W_ref - 1) > 1e-9 || std::abs(h / c.h_ref - 1) > 1e-9) {
+                    mismatches.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+    for (auto& th : threads)
+        th.join();
+    CHECK(bad_numbers.load() == 0);
+    CHECK(mismatches.load() == 0);
+}
+
+// Hidden by Catch's [!benchmark] convention; run with
+//   ./CatchTestRunner '[!benchmark][HAPropsSI]'
+// to get per-call timings for the thread_local conversion (gh-2787 follow-up).
+TEST_CASE("HAPropsSI thread_local cost", "[!benchmark][HAPropsSI][threadsafe]") {
+    const double p = 101325;
+
+    // Warm this thread's Water/Air/WaterIF97 backends and the per-T caches so
+    // the first-call construction cost doesn't pollute the hot-path number.
+    HumidAir::HAPropsSI("H", "T", 300.0, "R", 0.5, "P", p);
+
+    BENCHMARK("HAPropsSI H,T=300,R=0.5,P [hot, single-thread]") {
+        return HumidAir::HAPropsSI("H", "T", 300.0, "R", 0.5, "P", p);
+    };
+
+    // Fresh-thread cost: each Catch sample spawns a thread that pays its own
+    // backend construction (Water + Air + IF97) on first HAPropsSI entry, then
+    // exits. Captures the per-thread one-shot init overhead introduced by the
+    // thread_local conversion.
+    BENCHMARK("HAPropsSI H,T=300,R=0.5,P [first call in fresh thread]") {
+        double result = 0.0;
+        std::thread th([&] { result = HumidAir::HAPropsSI("H", "T", 300.0, "R", 0.5, "P", p); });
+        th.join();
+        return result;
+    };
+}
+
 // a predicate implemented as a function:
 bool is_not_a_pair(const std::set<std::size_t>& item) {
     return item.size() != 2;
