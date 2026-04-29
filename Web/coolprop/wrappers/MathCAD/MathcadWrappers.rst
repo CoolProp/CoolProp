@@ -74,15 +74,15 @@ Where,
     Triple Points:         :math:`T_t := 273.15`     &     :math:`P_t := 611.655`
 
 
-    Critical Points:       :math:`T_c := 273.15`     &     :math:`P_c := 2.206\cdot10^7`
+    Critical Points:       :math:`T_c := 647.096`     &     :math:`P_c := 2.206\cdot10^7`
 
     Liquid points:       :math:`T_L := mean(T_t,T_c)`     &     :math:`P_L := mean(P_t,P_c)`
-.. math::
-   Tvec := \begin{bmatrix} T_t\\ T_L \\ T_L \end{bmatrix}       Pvec := \begin{bmatrix} P_L\\ P_L \\ P_c \end{bmatrix}
-.. math::
-   M := PropsSImulti("D\ H",\ "T",\ Tvec,\ "P",\ Pvec,\ fl) = \begin{bmatrix} 1005.334 & 1.115\cdot10^4\\ 886.137 & 7.987\cdot10^5 \\ 893.241 & 8.044\cdot10^5 \end{bmatrix}
 
-Extract individual variables from columns:         :math:`\rho = M^{<0>}`     &     :math:`h = M^{<1>}`
+    Set Vectors:       :math:`Tvec := \begin{bmatrix} T_t\\ T_L \\ T_L \end{bmatrix}`       :math:`Pvec := \begin{bmatrix} P_L\\ P_L \\ P_c \end{bmatrix}`
+
+    Calc:   :math:`M := PropsSImulti("D\ H",\ "T",\ Tvec,\ "P",\ Pvec,\ fl) = \begin{bmatrix} 1005.334 & 1.115\cdot10^4\\ 886.137 & 7.987\cdot10^5 \\ 893.241 & 8.044\cdot10^5 \end{bmatrix}`
+
+    Extract individual variables from columns:         :math:`\rho = M^{<0>}`     &     :math:`h = M^{<1>}`
 
 |
 
@@ -124,9 +124,27 @@ The function   is used to find the fluid phase at a specified state point.  The 
 
     PhaseSI("Input1", Val1, "Input2", Val2, "Fluid")
 
-The input parameters are the same as for `PropsSI`.
+The input parameters are the same as for `PropsSI`, except there is no "Output" parameter as it is assumed to be "Phase".
+
 .. note::
-    The `PropsSI` function can be used with the output parameter "Phase", but this returns an enumerated integer value for the phase.  PhaseSI returns a string that represents the phase name for that enumerated value.
+   The `PropsSI` function can be used directly with the output parameter "Phase", but this returns an enumerated integer value for the phase.  PhaseSI returns a string that represents the phase name for that enumerated value.
+
+**EXAMPLE:**
+
+    Define a fluid:         :math:`fl` := "Water"
+
+    Triple Point Temperature:         :math:`T_t := Props1SI("Ttriple",\ fl) = 273.15`
+
+    Triple Point Pressure:               :math:`P_t := Props1SI("ptriple",\ fl) = 611.655`
+
+
+    Critical Temperature:                :math:`T_c := Props1SI("Tcrit",\ fl) = 647.096`
+
+    Critical Pressure:                       :math:`P_c := Props1SI("pcrit",\ fl) = 2.206\cdot10^7`
+
+    Liquid points:       :math:`T_L := mean(T_t,T_c)\ -\ 10.0`     &     :math:`P_L := mean(P_t,P_c)`
+
+    Calc:                :math:`PhaseSI("T",\ T_L,\ "P",\ P_L,\ fl)` = "Liquid"
 
 |
 
@@ -254,9 +272,9 @@ Where "mixture" is a predefined mixture name ending in .mix or .MIX. Mixture nam
 
 **EXAMPLES**
 
-    For air:        **get_predefined_mixture_fluis**("Air.mix") = "NITROGEN;ARGON;OXYGEN"
+    For air:        :math:`get_predefined_mixture_fluids`("Air.mix") = "NITROGEN;ARGON;OXYGEN"
 
-    For R401A:  **get_predefined_mixture_fluis**("R401A.mix") = "R22;R152A;R124"
+    For R401A:  :math:`get_predefined_mixture_fluids`("R401A.mix") = "R22;R152A;R124"
 
 .. note::
    A few predefined mixtures are missing binary interaction parameters for at least one component pair.  These mixtures are defined, but cannot be used, for now, for property calculations.
@@ -274,9 +292,9 @@ Where "mixture" is a predefined mixture name ending in .mix or .MIX. Mixture nam
 
 **EXAMPLES**
 
-    For air:        :math:`mf_{Air}` :=**get_predefined_mixture_fraction**("Air.mix") = :math:`\begin{bmatrix} 0.7812\\ 0.0092 \\ 0.2096 \end{bmatrix}`
+    For air:        :math:`mf_{Air}` := :math:`get_predefined_mixture_fractions`("Air.mix") = :math:`\begin{bmatrix} 0.7812\\ 0.0092 \\ 0.2096 \end{bmatrix}`
 
-    For R401A:  **get_predefined_mixture_fluis**("R401A.mix") = :math:`\begin{bmatrix} 0.578854\\ 0.0.185871 \\ 0.0.235274 \end{bmatrix}`
+    For R401A:  :math:`mf_{R401A}` := :math:`get_predefined_mixture_fractions'("R401A.mix") = :math:`\begin{bmatrix} 0.578854\\ 0.0.185871 \\ 0.0.235274 \end{bmatrix}`
 
 .. note::
    A few predefined mixtures are missing binary interaction parameters for at least one component pair.  These mixtures are defined, but cannot be used, for now, for property calculations.
@@ -293,18 +311,19 @@ Get binary pair interaction parameters and other info for a pair of components::
     get_mixture_binary_pair_data("CAS1", "CAS2", "mix_param")
 
 Where,
+
 * "CAS1", "CAS2" are the CAS identifiers for the two pure fluid components.  These must be CAS numbers of the format "7782-44-7" and cannot be the fluid name (in this case "Oxygen".
 * "mix_param" can be any of the following parameters:
-    * name1 - first component name (corresponding to CAS1)
-    * name2 - second component name (corresponding to CAS2)
-    * BibTeX - Reference for interaction parameters
-    * function - function for calculating parameters (if not constants)
-    * type - parameter model used
-    * F - :math:`F` parameter (if used)
-    * xi - :math:`\xi` parameter (if used)
-    * betaT, betaV - :math:`\beta_{T,ij}` and :math:`\beta_{v,ij}`
-    * gammaT, gammaV - :math:`\gamma_{T,ij}` and :math:`\gamma_{v,ij}`
-    * zeta - :math:`\zeta` parameter
+    * "name1" - first component name (corresponding to CAS1)
+    * "name2" - second component name (corresponding to CAS2)
+    * "BibTeX" - Reference for interaction parameters
+    * "function" - function for calculating parameters (if not constants)
+    * "type" - parameter model used
+    * "F" - :math:`F` parameter (if used)
+    * "xi" - :math:`\xi` parameter (if used)
+    * "betaT", "betaV" - :math:`\beta_{T,ij}` and :math:`\beta_{v,ij}`
+    * "gammaT", "gammaV" - :math:`\gamma_{T,ij}` and :math:`\gamma_{v,ij}`
+    * "zeta" - :math:`\zeta` parameter
 
 .. note::
    Error message string from CoolProp may indicate that the input CAS numbers need to be reversed to retrieve values.
