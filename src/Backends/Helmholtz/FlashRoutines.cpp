@@ -442,13 +442,26 @@ double FlashRoutines::pick_branch_T_via_superancillary(HelmholtzEOSMixtureBacken
     }
 
     const auto& approx = superanc.get_approx1d(k, Q_key);
-    const auto soln = approx.get_x_for_y_near(target_value, guess.T, 64, 100U, 1e-10);
-    if (!soln) {
-        throw SolutionError(format("%s: no T-root on saturated %s near guess.T=%g K for %c=%g; "
-                                   "superancillary range [%g, %g] K",
-                                   fn_name, (Q_key == 0 ? "liquid" : "vapor"), guess.T, k, target_value, approx.xmin(), approx.xmax()));
+    // Pick the monotonic sub-interval whose temperature range contains
+    // guess.T (and which can reach target_value in its y-range), then TOMS748
+    // the unique root inside it.
+    const auto& intervals = approx.get_monotonic_intervals();
+    const auto& expansions = approx.get_expansions();
+    for (const auto& iv : intervals) {
+        if (!iv.contains_y(target_value)) continue;
+        if (guess.T < iv.xmin || guess.T > iv.xmax) continue;
+        for (const auto& ei : iv.expansioninfo) {
+            if (ei.contains_y(target_value)) {
+                const auto& e = expansions[ei.idx];
+                auto [xvalue, num_steps] = e.solve_for_x_count(target_value, ei.xmin, ei.xmax, 64, 100U, 1e-10);
+                (void)num_steps;
+                return xvalue;
+            }
+        }
     }
-    return soln->first;
+    throw SolutionError(format("%s: no T-root on saturated %s in the monotonic sub-interval containing guess.T=%g K for %c=%g; "
+                               "superancillary range [%g, %g] K",
+                               fn_name, (Q_key == 0 ? "liquid" : "vapor"), guess.T, k, target_value, approx.xmin(), approx.xmax()));
 }
 
 // Companion to pick_branch_T_via_superancillary used by the no-guess default

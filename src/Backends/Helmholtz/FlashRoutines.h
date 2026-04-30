@@ -82,10 +82,9 @@ class FlashRoutines
 
     /// Flash for given molar density and (molar) quality with a temperature guess used to
     /// disambiguate multiple roots on the saturation curve (see GitHub #2773).
-    /// Uses the existing rho_sat superancillary's monotonic-interval rootfinding
-    /// (TOMS748 inside each interval where it is provably monotonic) to enumerate
-    /// candidate T-roots, picks the one closest to guess.T, then refines against the
-    /// full EOS saturation residual via Brent in a narrow bracket around it.
+    /// Uses the rho_sat superancillary's monotonic-interval partition: guess.T
+    /// selects the sub-interval whose temperature range contains it, and TOMS748
+    /// finds the unique root inside that sub-interval.
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param guess The GuessesStructure; only guess.T is consulted
     static void DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess);

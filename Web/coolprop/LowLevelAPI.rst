@@ -194,9 +194,10 @@ state. The cases that arise in practice (see GitHub
 
 To select between the roots, use ``update_with_guesses`` and supply a
 temperature hint via :cpapi:`CoolProp::GuessesStructure`. Internally the flash
-uses the Chebyshev *superancillary* representation of the saturation curve to
-enumerate every root via TOMS748 inside each provably-monotonic sub-interval,
-then picks the candidate closest to ``guess.T``:
+uses the Chebyshev *superancillary* representation of the saturation curve,
+which is partitioned at construction into provably-monotonic temperature
+sub-intervals. ``guess.T`` selects the sub-interval whose temperature range
+contains it, and TOMS748 finds the unique root inside that sub-interval:
 
 .. ipython::
 

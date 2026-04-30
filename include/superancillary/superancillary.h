@@ -748,50 +748,6 @@ struct ChebyshevApproximation1D
         return solns;
     }
 
-    /** Solve for the value of x giving y(x)=y, restricted to the monotonic
-     sub-interval containing (or otherwise nearest to) x_hint. When the function
-     has multiple roots, this is faster than `get_x_for_y` because only one
-     TOMS748 solve is performed instead of one per monotonic sub-interval —
-     useful when the caller has prior knowledge of roughly where the root is.
-     The chosen interval must contain `y` in its dependent-variable range; if
-     no interval that satisfies this exists, returns `std::nullopt`.
-
-     \param y The target value of the dependent variable
-     \param x_hint The caller's prior estimate of x; the interval whose
-                   x-range is closest to x_hint (and that contains y) is selected
-     \sa get_x_for_y
-     */
-    std::optional<std::pair<double, int>> get_x_for_y_near(double y, double x_hint, unsigned int bits, std::size_t max_iter, double boundsftol) const {
-        const IntervalMatch* best_iv = nullptr;
-        double best_dist = std::numeric_limits<double>::infinity();
-        for (const auto& interval : m_monotonic_intervals) {
-            if (!interval.contains_y(y)) {
-                continue;
-            }
-            double d = 0.0;
-            if (x_hint < interval.xmin) {
-                d = interval.xmin - x_hint;
-            } else if (x_hint > interval.xmax) {
-                d = x_hint - interval.xmax;
-            }
-            if (d < best_dist) {
-                best_dist = d;
-                best_iv = &interval;
-            }
-        }
-        if (best_iv == nullptr) {
-            return std::nullopt;
-        }
-        for (const auto& ei : best_iv->expansioninfo) {
-            if (ei.contains_y(y)) {
-                const ChebyshevExpansion<ArrayType>& e = m_expansions[ei.idx];
-                auto [xvalue, num_steps] = e.solve_for_x_count(y, ei.xmin, ei.xmax, bits, max_iter, boundsftol);
-                return std::make_pair(xvalue, static_cast<int>(num_steps));
-            }
-        }
-        return std::nullopt;
-    }
-
     /// A vectorized and templated getter (for calling from python)
     template <typename YContainer, typename CountContainer>
     const auto count_x_for_y_many(const YContainer& y, unsigned int bits, std::size_t max_iter, double boundsftol, CountContainer& x) const {
