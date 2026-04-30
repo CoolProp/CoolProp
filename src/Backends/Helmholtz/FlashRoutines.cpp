@@ -274,15 +274,24 @@ class DQ_flash_residual : public FuncWrapper1DWithTwoDerivs
     }
 };
 
+// Tolerance on Q to be treated as exactly 0 or exactly 1 for the superancillary
+// strict-mode path. Centralized so the various callers stay in lockstep (#2773).
+static constexpr double Q_BOUNDARY_TOL = 1e-10;
+
+// Tolerance for deduplicating near-identical T-roots returned by get_x_for_y in
+// adjacent monotonic intervals at an extremum (#2773 review I1).
+static constexpr double T_ROOT_DEDUP_TOL = 1e-6;
+
 // Has the fluid got a superancillary AND is the requested Q exactly 0 or 1?
 // Used by the no-guess default flashes to decide whether to route through the
-// strict-mode superancillary path.
+// strict-mode superancillary path. Pseudo-pure fluids are rejected here too,
+// because their caloric superancillaries are not built (see #2773 review I3).
 bool FlashRoutines::sat_superanc_path_applies(HelmholtzEOSMixtureBackend& HEOS) {
-    if (!HEOS.is_pure_or_pseudopure) return false;
+    if (!HEOS.is_pure()) return false;
     auto p = HEOS.get_superanc();
     if (!p) return false;
     const double Q = HEOS._Q;
-    return std::abs(Q) < 1e-10 || std::abs(Q - 1) < 1e-10;
+    return std::abs(Q) < Q_BOUNDARY_TOL || std::abs(Q - 1) < Q_BOUNDARY_TOL;
 }
 
 void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
@@ -296,7 +305,7 @@ void FlashRoutines::DQ_flash(HelmholtzEOSMixtureBackend& HEOS) {
     // every T-root and refuse to silently pick when there is more than one.
     // See GitHub #2773 / #2834.
     if (sat_superanc_path_applies(HEOS)) {
-        const double T_super = pick_unique_T_via_superancillary(HEOS, 'D', rhomolar, "DQ_flash");
+        const double T_super = resolve_T_via_superancillary(HEOS, iDmolar, rhomolar, std::nullopt, "DQ_flash");
         HEOS._T = T_super;
         QT_flash(HEOS);
         HEOS._rhomolar = rhomolar;
@@ -334,7 +343,7 @@ void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl Tgues
     const double hmolar = HEOS._hmolar;
     // Strict-mode superancillary path. See GitHub #2773 / #2834.
     if (HEOS.get_superanc()) {
-        const double T_super = pick_unique_T_via_superancillary(HEOS, 'H', hmolar, "HQ_flash");
+        const double T_super = resolve_T_via_superancillary(HEOS, iHmolar, hmolar, std::nullopt, "HQ_flash");
         HEOS._T = T_super;
         QT_flash(HEOS);
         HEOS._hmolar = hmolar;
@@ -369,7 +378,7 @@ void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
     const double smolar = HEOS._smolar;
     // Strict-mode superancillary path. See GitHub #2773 / #2834.
     if (sat_superanc_path_applies(HEOS)) {
-        const double T_super = pick_unique_T_via_superancillary(HEOS, 'S', smolar, "QS_flash");
+        const double T_super = resolve_T_via_superancillary(HEOS, iSmolar, smolar, std::nullopt, "QS_flash");
         HEOS._T = T_super;
         QT_flash(HEOS);
         HEOS._smolar = smolar;
@@ -399,40 +408,59 @@ void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
     HEOS._phase = iphase_twophase;
 }
 
-// Helper for the *_flash_with_guesses functions below. Validates inputs, looks
-// up the right saturation superancillary, and returns the single T-root in the
-// monotonic sub-interval whose x-range contains guess.T. The TOMS748 result
-// is accepted as-is — superancillaries are accurate to ~1e-12 relative to the
-// multi-precision EOS reference, well below the precision of any downstream
-// EOS evaluation, so an additional EOS-side refinement is not needed.
+// Translate a CoolProp parameters enum to the SuperAncillary's char key.
+// Supports the three caloric saturation properties used by the #2773 paths.
+static char param_to_superanc_key(parameters key) {
+    switch (key) {
+        case iDmolar:
+            return 'D';
+        case iHmolar:
+            return 'H';
+        case iSmolar:
+            return 'S';
+        default:
+            throw ValueError(format("Unsupported parameters key for saturation superancillary: %d", static_cast<int>(key)));
+    }
+}
+
+// Unified helper for both the no-guess default flashes and the
+// *_flash_with_guesses paths (#2773). Looks up the saturation superancillary
+// for property `key`, handles caloric lazy-build, and returns the
+// disambiguated T-root.
 //
-// `k` is a single-character property key on SuperAncillary ('D', 'H', or 'S').
-// The hot path branches once on `k` to decide whether to lazily build caloric
-// superancillaries; everything else flows through SuperAncillary's existing
-// switch-on-char accessors. `fn_name` is used only in error messages.
-double FlashRoutines::pick_branch_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess, char k, double target_value,
-                                                       const char* fn_name) {
-    if (!ValidNumber(guess.T) || guess.T <= 0) {
+// If guess_T is set, picks the monotonic sub-interval whose temperature range
+// contains guess_T (with tie-break by midpoint distance for boundary cases)
+// and TOMS748-solves there. If guess_T is std::nullopt, enumerates every root,
+// dedups near-identical roots produced at extrema by adjacent intervals, and
+// either returns the single root, throws MultipleSolutionsError, or throws
+// OutOfRangeError. The TOMS748 result is accepted as-is — superancillaries are
+// accurate to ~1e-12 relative to the multi-precision EOS reference, well below
+// the precision of any downstream EOS evaluation.
+double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, parameters key, double target_value,
+                                                   std::optional<double> guess_T, const char* fn_name) {
+    if (guess_T.has_value() && (!ValidNumber(*guess_T) || *guess_T <= 0)) {
         throw ValueError(format("%s requires a positive guess.T", fn_name));
     }
     if (!HEOS.is_pure_or_pseudopure) {
         throw NotImplementedError(format("%s not ready for mixtures", fn_name));
     }
+    if (!HEOS.is_pure()) {
+        throw NotImplementedError(format("%s: superancillary path is not supported for pseudo-pure fluids", fn_name));
+    }
     auto superanc_ptr = HEOS.get_superanc();
     if (!superanc_ptr) {
         throw NotImplementedError(format("%s requires a superancillary; this fluid has none", fn_name));
     }
-
     const double Q = HEOS._Q;
     short Q_key = -1;
-    if (std::abs(Q) < 1e-10) {
+    if (std::abs(Q) < Q_BOUNDARY_TOL) {
         Q_key = 0;
-    } else if (std::abs(Q - 1) < 1e-10) {
+    } else if (std::abs(Q - 1) < Q_BOUNDARY_TOL) {
         Q_key = 1;
     } else {
         throw ValueError(format("%s currently requires Q=0 or Q=1; got Q=%g", fn_name, Q));
     }
-
+    const char k = param_to_superanc_key(key);
     if (k == 'H' || k == 'S') {
         HEOS.ensure_caloric_superancillaries();
     }
@@ -440,71 +468,75 @@ double FlashRoutines::pick_branch_T_via_superancillary(HelmholtzEOSMixtureBacken
     if (!superanc.has_variable(k)) {
         throw NotImplementedError(format("%s: %c-superancillary unavailable", fn_name, k));
     }
-
     const auto& approx = superanc.get_approx1d(k, Q_key);
-    // Pick the monotonic sub-interval whose temperature range contains
-    // guess.T (and which can reach target_value in its y-range), then TOMS748
-    // the unique root inside it.
-    const auto& intervals = approx.get_monotonic_intervals();
-    const auto& expansions = approx.get_expansions();
-    for (const auto& iv : intervals) {
-        if (!iv.contains_y(target_value)) continue;
-        if (guess.T < iv.xmin || guess.T > iv.xmax) continue;
-        for (const auto& ei : iv.expansioninfo) {
-            if (ei.contains_y(target_value)) {
-                const auto& e = expansions[ei.idx];
-                auto [xvalue, num_steps] = e.solve_for_x_count(target_value, ei.xmin, ei.xmax, 64, 100U, 1e-10);
-                (void)num_steps;
-                return xvalue;
+    const char* phase_name = (Q_key == 0) ? "liquid" : "vapor";
+
+    if (guess_T.has_value()) {
+        // Pick the monotonic sub-interval whose temperature range contains
+        // guess_T (and which can reach target_value in its y-range), then
+        // TOMS748 the unique root inside it. If guess_T sits exactly on an
+        // interval boundary (an extremum), tie-break by midpoint distance
+        // toward the interval the user is more plausibly aiming at.
+        const double gT = *guess_T;
+        const auto& intervals = approx.get_monotonic_intervals();
+        const auto& expansions = approx.get_expansions();
+        const decltype(&intervals[0]) chosen = [&]() {
+            const decltype(&intervals[0])* fallback_ptr = nullptr;
+            decltype(&intervals[0]) best_match = nullptr;
+            double best_midpoint_dist = std::numeric_limits<double>::infinity();
+            for (const auto& iv : intervals) {
+                if (!iv.contains_y(target_value)) continue;
+                if (gT >= iv.xmin && gT <= iv.xmax) {
+                    const double mid_dist = std::abs(0.5 * (iv.xmin + iv.xmax) - gT);
+                    if (mid_dist < best_midpoint_dist) {
+                        best_midpoint_dist = mid_dist;
+                        best_match = &iv;
+                    }
+                }
+            }
+            (void)fallback_ptr;  // silence unused-warning if compiler likes it
+            return best_match;
+        }();
+        if (chosen != nullptr) {
+            for (const auto& ei : chosen->expansioninfo) {
+                if (ei.contains_y(target_value)) {
+                    const auto& e = expansions[ei.idx];
+                    auto [xvalue, num_steps] = e.solve_for_x_count(target_value, ei.xmin, ei.xmax, 64, 100U, 1e-10);
+                    (void)num_steps;
+                    return xvalue;
+                }
             }
         }
+        throw SolutionError(format("%s: no T-root on saturated %s in the monotonic sub-interval containing guess.T=%g K for %c=%g; "
+                                   "superancillary range [%g, %g] K",
+                                   fn_name, phase_name, gT, k, target_value, approx.xmin(), approx.xmax()));
     }
-    throw SolutionError(format("%s: no T-root on saturated %s in the monotonic sub-interval containing guess.T=%g K for %c=%g; "
-                               "superancillary range [%g, %g] K",
-                               fn_name, (Q_key == 0 ? "liquid" : "vapor"), guess.T, k, target_value, approx.xmin(), approx.xmax()));
-}
 
-// Companion to pick_branch_T_via_superancillary used by the no-guess default
-// flashes. Enumerates every T-root on the saturation curve (TOMS748 inside each
-// monotonic Chebyshev sub-interval); throws MultipleSolutionsError if there is
-// more than one. See GitHub #2773 / #2834.
-double FlashRoutines::pick_unique_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, char k, double target_value, const char* fn_name) {
-    auto superanc_ptr = HEOS.get_superanc();
-    if (!superanc_ptr) {
-        throw NotImplementedError(format("%s: requires a superancillary; this fluid has none", fn_name));
-    }
-    const double Q = HEOS._Q;
-    short Q_key = -1;
-    if (std::abs(Q) < 1e-10) {
-        Q_key = 0;
-    } else if (std::abs(Q - 1) < 1e-10) {
-        Q_key = 1;
-    } else {
-        throw ValueError(format("%s: superancillary path requires Q=0 or Q=1; got Q=%g", fn_name, Q));
-    }
-    if (k == 'H' || k == 'S') {
-        HEOS.ensure_caloric_superancillaries();
-    }
-    auto& superanc = *superanc_ptr;
-    if (!superanc.has_variable(k)) {
-        throw NotImplementedError(format("%s: %c-superancillary unavailable", fn_name, k));
-    }
-    const auto& approx = superanc.get_approx1d(k, Q_key);
-    const auto solns = approx.get_x_for_y(target_value, 64, 100U, 1e-10);
+    // No guess: enumerate every root, dedup near-identical roots from adjacent
+    // intervals at an extremum, then strict-mode-or-throw.
+    auto solns = approx.get_x_for_y(target_value, 64, 100U, 1e-10);
     if (solns.empty()) {
-        throw OutOfRangeError(format("%s: no T-root on saturated %s for %c=%g; superancillary range [%g, %g] K", fn_name,
-                                     (Q_key == 0 ? "liquid" : "vapor"), k, target_value, approx.xmin(), approx.xmax()));
+        throw OutOfRangeError(format("%s: no T-root on saturated %s for %c=%g; superancillary range [%g, %g] K", fn_name, phase_name, k, target_value,
+                                     approx.xmin(), approx.xmax()));
     }
-    if (solns.size() > 1) {
-        std::string Ts;
-        for (std::size_t i = 0; i < solns.size(); ++i) {
-            Ts += format("%g K", solns[i].first);
-            if (i + 1 < solns.size()) Ts += ", ";
+    std::sort(solns.begin(), solns.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::vector<double> Ts;
+    Ts.reserve(solns.size());
+    for (const auto& s : solns) {
+        if (Ts.empty() || std::abs(s.first - Ts.back()) > T_ROOT_DEDUP_TOL) {
+            Ts.push_back(s.first);
+        }
+    }
+    if (Ts.size() > 1) {
+        std::string Ts_str;
+        for (std::size_t i = 0; i < Ts.size(); ++i) {
+            Ts_str += format("%g K", Ts[i]);
+            if (i + 1 < Ts.size()) Ts_str += ", ";
         }
         throw MultipleSolutionsError(format("%s: %c=%g on saturated %s has %zu T-roots (%s); use update_with_guesses with guess.T to pick a branch (see GitHub #2773)",
-                                            fn_name, k, target_value, (Q_key == 0 ? "liquid" : "vapor"), solns.size(), Ts.c_str()));
+                                            fn_name, k, target_value, phase_name, Ts.size(), Ts_str.c_str()));
     }
-    return solns[0].first;
+    return Ts[0];
 }
 
 // Branch-disambiguating variant of DQ_flash (see GitHub #2773).
@@ -513,7 +545,7 @@ double FlashRoutines::pick_unique_T_via_superancillary(HelmholtzEOSMixtureBacken
 // to pick the monotonic sub-interval whose x-range contains guess.T and TOMS748-solve there.
 void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
     const double rhomolar = HEOS._rhomolar;
-    const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'D', rhomolar, "DQ_flash_with_guesses");
+    const double T_super = resolve_T_via_superancillary(HEOS, iDmolar, rhomolar, guess.T, "DQ_flash_with_guesses");
     HEOS._T = T_super;
     HEOS.specify_phase(iphase_twophase);
     // Despite the name, for a pure fluid with superancillaries this is a fast
@@ -531,7 +563,7 @@ void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
 // h_sat superancillary (built lazily on first use) to disambiguate.
 void FlashRoutines::HQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
     const double hmolar = HEOS._hmolar;
-    const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'H', hmolar, "HQ_flash_with_guesses");
+    const double T_super = resolve_T_via_superancillary(HEOS, iHmolar, hmolar, guess.T, "HQ_flash_with_guesses");
     HEOS._T = T_super;
     HEOS.specify_phase(iphase_twophase);
     // Fast path: superancillary eval at T, not an iterative VLE solve. See DQ_flash_with_guesses for details.
@@ -543,7 +575,7 @@ void FlashRoutines::HQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, cons
 // Branch-disambiguating variant of QS_flash. Mirrors HQ_flash_with_guesses.
 void FlashRoutines::QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
     const double smolar = HEOS._smolar;
-    const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'S', smolar, "QS_flash_with_guesses");
+    const double T_super = resolve_T_via_superancillary(HEOS, iSmolar, smolar, guess.T, "QS_flash_with_guesses");
     HEOS._T = T_super;
     HEOS.specify_phase(iphase_twophase);
     // Fast path: superancillary eval at T, not an iterative VLE solve. See DQ_flash_with_guesses for details.
