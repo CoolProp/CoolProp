@@ -356,8 +356,12 @@ template <class T>
 
     if (match_pair(key1, key2, iQ, iT, swap)) {
         pair = QT_INPUTS;  ///< Molar quality, Temperature in K
+    } else if (match_pair(key1, key2, iQmass, iT, swap)) {
+        pair = QmassT_INPUTS;  ///< Mass-basis quality, Temperature in K
     } else if (match_pair(key1, key2, iP, iQ, swap)) {
         pair = PQ_INPUTS;  ///< Pressure in Pa, Molar quality
+    } else if (match_pair(key1, key2, iP, iQmass, swap)) {
+        pair = PQmass_INPUTS;  ///< Pressure in Pa, Mass-basis quality
     } else if (match_pair(key1, key2, iP, iT, swap)) {
         pair = PT_INPUTS;  ///< Pressure in Pa, Temperature in K
     } else if (match_pair(key1, key2, iDmolar, iT, swap)) {
@@ -394,8 +398,12 @@ template <class T>
         pair = DmolarP_INPUTS;  // Molar density in mol/m^3, Pressure in Pa
     } else if (match_pair(key1, key2, iDmass, iQ, swap)) {
         pair = DmassQ_INPUTS;  // Mass density in kg/m^3, molar vapor quality
+    } else if (match_pair(key1, key2, iDmass, iQmass, swap)) {
+        pair = DmassQmass_INPUTS;  // Mass density in kg/m^3, mass-basis vapor quality
     } else if (match_pair(key1, key2, iDmolar, iQ, swap)) {
         pair = DmolarQ_INPUTS;  // Molar density in mol/m^3, molar vapor quality
+    } else if (match_pair(key1, key2, iDmolar, iQmass, swap)) {
+        pair = DmolarQmass_INPUTS;  // Molar density in mol/m^3, mass-basis vapor quality
     } else if (match_pair(key1, key2, iHmass, iP, swap)) {
         pair = HmassP_INPUTS;  // Enthalpy in J/kg, Pressure in Pa
     } else if (match_pair(key1, key2, iHmolar, iP, swap)) {
