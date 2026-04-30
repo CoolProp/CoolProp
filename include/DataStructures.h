@@ -86,11 +86,12 @@ enum parameters : int
     idipole_moment,      ///< Dipole moment
 
     // Bulk properties
-    iT,      ///< Temperature
-    iP,      ///< Pressure
-    iQ,      ///< Vapor quality
-    iTau,    ///< Reciprocal reduced temperature
-    iDelta,  ///< Reduced density
+    iT,       ///< Temperature
+    iP,       ///< Pressure
+    iQ,       ///< Vapor quality (molar; alias for iQmolar in this codebase)
+    iQmass,   ///< Mass-basis vapor quality
+    iTau,     ///< Reciprocal reduced temperature
+    iDelta,   ///< Reduced density
 
     // Molar specific thermodynamic properties
     iDmolar,           ///< Mole-based density
@@ -280,14 +281,22 @@ enum fluid_types
 enum input_pairs : int
 {
     INPUT_PAIR_INVALID = 0,  // Default (invalid) value
-    QT_INPUTS,               ///< Molar quality, Temperature in K
-    PQ_INPUTS,               ///< Pressure in Pa, Molar quality
-    QSmolar_INPUTS,          ///< Molar quality, Entropy in J/mol/K
-    QSmass_INPUTS,           ///< Molar quality, Entropy in J/kg/K
-    HmolarQ_INPUTS,          ///< Enthalpy in J/mol, Molar quality
-    HmassQ_INPUTS,           ///< Enthalpy in J/kg, Molar quality
-    DmolarQ_INPUTS,          ///< Density in mol/m^3, Molar quality
-    DmassQ_INPUTS,           ///< Density in kg/m^3, Molar quality
+    QT_INPUTS,                 ///< Molar quality, Temperature in K
+    QmassT_INPUTS,             ///< Mass-basis quality, Temperature in K
+    PQ_INPUTS,                 ///< Pressure in Pa, Molar quality
+    PQmass_INPUTS,             ///< Pressure in Pa, Mass-basis quality
+    QSmolar_INPUTS,            ///< Molar quality, Entropy in J/mol/K
+    QmassSmolar_INPUTS,        ///< Mass-basis quality, Entropy in J/mol/K
+    QSmass_INPUTS,             ///< Molar quality, Entropy in J/kg/K
+    QmassSmass_INPUTS,         ///< Mass-basis quality, Entropy in J/kg/K
+    HmolarQ_INPUTS,            ///< Enthalpy in J/mol, Molar quality
+    HmolarQmass_INPUTS,        ///< Enthalpy in J/mol, Mass-basis quality
+    HmassQ_INPUTS,             ///< Enthalpy in J/kg, Molar quality
+    HmassQmass_INPUTS,         ///< Enthalpy in J/kg, Mass-basis quality
+    DmolarQ_INPUTS,            ///< Density in mol/m^3, Molar quality
+    DmolarQmass_INPUTS,        ///< Density in mol/m^3, Mass-basis quality
+    DmassQ_INPUTS,             ///< Density in kg/m^3, Molar quality
+    DmassQmass_INPUTS,         ///< Density in kg/m^3, Mass-basis quality
 
     PT_INPUTS,  ///< Pressure in Pa, Temperature in K
 
