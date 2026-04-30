@@ -4475,4 +4475,12 @@ TEST_CASE("Fluid batch 2020-2024: verify EOS against paper validation tables", "
     }
 }
 
+TEST_CASE("Qmass output: pure fluid equals Qmolar", "[Qmass]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    for (double Q : {0.0, 0.1, 0.5, 0.9, 1.0}) {
+        AS->update(CoolProp::QT_INPUTS, Q, 350.0);
+        CHECK(AS->Qmass() == Catch::Approx(Q).epsilon(1e-12));
+    }
+}
+
 #endif

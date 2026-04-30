@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include "AbstractState.h"
 #include "DataStructures.h"
+#include "qmass_conversions.h"
 #include "Backends/IF97/IF97Backend.h"
 #include "Backends/Cubics/CubicBackend.h"
 #include "Backends/Cubics/VTPRBackend.h"
@@ -359,6 +360,8 @@ double AbstractState::keyed_output(parameters key) {
     switch (key) {
         case iQ:
             return Q();
+        case iQmass:
+            return Qmass();
         case iT:
             return T();
         case iP:
@@ -651,6 +654,32 @@ double AbstractState::surface_tension() {
 double AbstractState::molar_mass() {
     if (!_molar_mass) _molar_mass = calc_molar_mass();
     return _molar_mass;
+}
+double AbstractState::Qmass(void) {
+    if (!_Qmass) _Qmass = calc_Qmass();
+    return _Qmass;
+}
+CoolPropDbl AbstractState::calc_Qmass(void) {
+    if (!ValidNumber(_Q) || _Q < 0 || _Q > 1) {
+        throw ValueError("Qmass requires a two-phase state (0 <= Q <= 1)");
+    }
+    double MM_l = 0, MM_v = 0;
+    calc_phase_molar_masses(MM_l, MM_v);
+    return static_cast<CoolPropDbl>(detail::Qmolar_to_Qmass(_Q, MM_l, MM_v));
+}
+void AbstractState::calc_phase_molar_masses(double& MM_l, double& MM_v) {
+    // For a pure or pseudo-pure fluid the liquid and vapor phases share the same
+    // molar mass as the bulk fluid.  A mixture backend must override this method.
+    if (get_mole_fractions().size() == 1) {
+        const double mm = molar_mass();
+        MM_l = mm;
+        MM_v = mm;
+        return;
+    }
+    throw NotImplementedError("calc_phase_molar_masses must be overridden by mixture backends");
+}
+void AbstractState::update_Qmass_pair(input_pairs pair, double v1, double v2) {
+    throw NotImplementedError("update_Qmass_pair is not implemented for this backend");
 }
 double AbstractState::gas_constant() {
     if (!_gas_constant) _gas_constant = calc_gas_constant();
