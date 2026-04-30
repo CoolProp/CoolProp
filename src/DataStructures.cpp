@@ -32,6 +32,7 @@ const std::vector<parameter_info> parameter_info_list = {
   {iGmass, "Gmass", "O", "J/kg", "Mass specific Gibbs energy", false},
   {iHelmholtzmass, "Helmholtzmass", "O", "J/kg", "Mass specific Helmholtz energy", false},
   {iQ, "Q", "IO", "mol/mol", "Molar vapor quality", false},
+  {iQmass, "Qmass", "IO", "kg/kg", "Mass-basis vapor quality", false},
   {iDelta, "Delta", "IO", "-", "Reduced density (rho/rhoc)", false},
   {iTau, "Tau", "IO", "-", "Reciprocal reduced temperature (Tc/T)", false},
   /// Output only
@@ -507,14 +508,22 @@ struct input_pair_info
 
 const input_pair_info input_pair_list[] = {
   {QT_INPUTS, "QT_INPUTS", "Molar quality, Temperature in K"},
+  {QmassT_INPUTS, "QmassT_INPUTS", "Mass-basis quality, Temperature in K"},
   {QSmolar_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/mol/K"},
+  {QmassSmolar_INPUTS, "QmassS_INPUTS", "Mass-basis quality, Entropy in J/mol/K"},
   {QSmass_INPUTS, "QS_INPUTS", "Molar quality, Entropy in J/kg/K"},
+  {QmassSmass_INPUTS, "QmassS_INPUTS", "Mass-basis quality, Entropy in J/kg/K"},
   {HmolarQ_INPUTS, "HQ_INPUTS", "Enthalpy in J/mol, Molar quality"},
+  {HmolarQmass_INPUTS, "HQmass_INPUTS", "Enthalpy in J/mol, Mass-basis quality"},
   {HmassQ_INPUTS, "HQ_INPUTS", "Enthalpy in J/kg, Molar quality"},
+  {HmassQmass_INPUTS, "HQmass_INPUTS", "Enthalpy in J/kg, Mass-basis quality"},
   {DmassQ_INPUTS, "DmassQ_INPUTS", "Molar density kg/m^3, Molar quality"},
+  {DmassQmass_INPUTS, "DmassQmass_INPUTS", "Mass density kg/m^3, Mass-basis quality"},
   {DmolarQ_INPUTS, "DmolarQ_INPUTS", "Molar density in mol/m^3, Molar quality"},
+  {DmolarQmass_INPUTS, "DmolarQmass_INPUTS", "Molar density in mol/m^3, Mass-basis quality"},
 
   {PQ_INPUTS, "PQ_INPUTS", "Pressure in Pa, Molar quality"},
+  {PQmass_INPUTS, "PQmass_INPUTS", "Pressure in Pa, Mass-basis quality"},
 
   {PT_INPUTS, "PT_INPUTS", "Pressure in Pa, Temperature in K"},
 
