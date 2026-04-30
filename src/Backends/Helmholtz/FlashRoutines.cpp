@@ -401,7 +401,7 @@ void FlashRoutines::QS_flash(HelmholtzEOSMixtureBackend& HEOS) {
 
 // Helper for the *_flash_with_guesses functions below. Validates inputs, looks
 // up the right saturation superancillary, and returns the single T-root in the
-// monotonic sub-interval whose x-range is nearest guess.T. The TOMS748 result
+// monotonic sub-interval whose x-range contains guess.T. The TOMS748 result
 // is accepted as-is — superancillaries are accurate to ~1e-12 relative to the
 // multi-precision EOS reference, well below the precision of any downstream
 // EOS evaluation, so an additional EOS-side refinement is not needed.
@@ -510,7 +510,7 @@ double FlashRoutines::pick_unique_T_via_superancillary(HelmholtzEOSMixtureBacken
 // Branch-disambiguating variant of DQ_flash (see GitHub #2773).
 // rho_L(T) on water and D2O is non-monotonic near 4 °C / 11 °C, so the DQ flash
 // can have two T-solutions for the same density. Use the rho_sat superancillary
-// to pick the monotonic sub-interval nearest guess.T and TOMS748-solve there.
+// to pick the monotonic sub-interval whose x-range contains guess.T and TOMS748-solve there.
 void FlashRoutines::DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess) {
     const double rhomolar = HEOS._rhomolar;
     const double T_super = FlashRoutines::pick_branch_T_via_superancillary(HEOS, guess, 'D', rhomolar, "DQ_flash_with_guesses");

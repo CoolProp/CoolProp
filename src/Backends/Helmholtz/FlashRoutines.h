@@ -113,7 +113,7 @@ class FlashRoutines
     /// Internal helper for the *_flash_with_guesses pure-fluid paths above (#2773).
     /// Validates inputs, looks up the saturation superancillary for property `k`,
     /// and returns the single T-root in the monotonic sub-interval whose x-range
-    /// is nearest guess.T. Branching is on the single character `k` ('D', 'H', or
+    /// contains guess.T. Branching is on the single character `k` ('D', 'H', or
     /// 'S'). Member of FlashRoutines so that it inherits friend access to
     /// HelmholtzEOSMixtureBackend's protected state. The hot path takes one
     /// branch on `k` to decide whether to build caloric superancillaries; error
