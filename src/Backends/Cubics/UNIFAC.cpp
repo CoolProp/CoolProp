@@ -163,6 +163,10 @@ void UNIFAC::UNIFACMixture::set_temperature(const double T) {
                 int sgim = c.groups[m].group.sgi;
                 sum1 += theta_pure(i, sgim) * Psi_.find(std::pair<std::size_t, std::size_t>(sgim, sgik))->second;
             }
+            // sum1 > 0: c.groups is the set of groups present in component i, theta_pure
+            // returns the (positive) surface-area fraction of each, and Psi = exp(-a/T) > 0.
+            // cppcheck cannot prove this symbolically.
+            // cppcheck-suppress invalidFunctionArg
             double s = 1 - log(sum1);
             for (std::size_t m = 0; m < c.groups.size(); ++m) {
                 int sgim = c.groups[m].group.sgi;

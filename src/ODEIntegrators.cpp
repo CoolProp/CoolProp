@@ -59,7 +59,8 @@ bool ODEIntegrators::AdaptiveRK54(AbstractODEIntegrator& ode, double tmin, doubl
             ode.pre_step_callback();
 
             // We check stepAccepted again because if the derived class
-            // sets the variable stepAccepted, we should not actually do the evaluation
+            // sets the variable stepAccepted, we should not actually do the evaluation.
+            // cppcheck-suppress identicalInnerCondition
             if (!stepAccepted) {
 
                 Eigen::Map<Eigen::VectorXd> xold_w(&(xold[0]), N);
