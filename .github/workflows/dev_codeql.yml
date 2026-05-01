@@ -36,6 +36,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: +security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Autobuild Python
         if: ${{ matrix.language == 'python' }}
