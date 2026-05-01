@@ -120,7 +120,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     // Copy over the reducing and departure terms to all linked states (recursively)
     void sync_linked_states(const HelmholtzEOSMixtureBackend* const);
 
-    virtual ~HelmholtzEOSMixtureBackend() {};
+    virtual ~HelmholtzEOSMixtureBackend(){};
     std::string backend_name(void) {
         return get_backend_string(HEOS_BACKEND_MIX);
     }
@@ -403,6 +403,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p);
 
     CoolPropDbl calc_molar_mass(void);
+    PhaseMolarMasses calc_phase_molar_masses() override;
     CoolPropDbl calc_gas_constant(void);
     CoolPropDbl calc_acentric_factor(void);
 
@@ -806,8 +807,8 @@ class ResidualHelmholtz
     ExcessTerm Excess;
     CorrespondingStatesTerm CS;
 
-    ResidualHelmholtz() {};
-    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C) {};
+    ResidualHelmholtz(){};
+    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C){};
     virtual ~ResidualHelmholtz() = default;
 
     ResidualHelmholtz copy() {

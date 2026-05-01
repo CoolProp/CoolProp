@@ -729,7 +729,7 @@ cdef toSI(constants_header.parameters key, double val):
     """
     Convert a value in kSI system to SI system (supports a limited subset of variables)
     """
-    if key in [iT, iDmass, iQ]:
+    if key in [iT, iDmass, iQ, iQmass]:
         return val
     elif key in [iP, iHmass, iSmass, iUmass]:
         return val*1000
@@ -739,6 +739,7 @@ cdef toSI(constants_header.parameters key, double val):
 #A dictionary mapping parameter index to string for use with non-CoolProp fluids
 cdef dict paras = {iDmass : 'D',
                    iQ : 'Q',
+                   iQmass : 'Qmass',
                    imolar_mass : 'M',
                    iT : 'T',
                    iHmass : 'H',

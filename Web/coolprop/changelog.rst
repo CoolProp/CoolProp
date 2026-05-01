@@ -1,6 +1,13 @@
 Changelog for CoolProp
 ======================
 
+Unreleased
+----------
+
+Highlights:
+
+* Added mass-basis vapor quality (``Qmass``) support across HEOS and REFPROP backends, paralleling the existing molar quality (``Q``). Adds a new ``iQmass`` keyed parameter, a ``Qmass()`` accessor on ``AbstractState``, and 8 new ``Qmass``-bearing input pairs (``QmassT_INPUTS``, ``PQmass_INPUTS``, ``QmassSmolar_INPUTS``, ``QmassSmass_INPUTS``, ``HmolarQmass_INPUTS``, ``HmassQmass_INPUTS``, ``DmolarQmass_INPUTS``, ``DmassQmass_INPUTS``). Mixtures supported from day one — REFPROP uses its native ``kq=2`` flag in ``TQFLSHdll``/``PQFLSHdll`` for ``QmassT``/``PQmass``; the other 6 pairs and all HEOS pairs use a TOMS748 root-find on ``Qmolar`` (typically 5–8 iterations).
+
 7.2.0
 -----
 

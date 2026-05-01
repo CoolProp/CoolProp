@@ -162,6 +162,7 @@ class PCSAFTBackend : public AbstractState
     // ************************************************************************* //
     //
     double calc_molar_mass(void);
+    PhaseMolarMasses calc_phase_molar_masses() override;
     //
 };
 } /* namespace CoolProp */

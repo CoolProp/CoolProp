@@ -289,6 +289,15 @@ void CoolProp::AbstractCubicBackend::update(CoolProp::input_pairs input_pair, do
                   << std::endl;
     }
 
+    // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
+    // before delegating to the molar-pair flash. The inherited HEOS override of
+    // calc_phase_molar_masses (using SatL/SatV->mole_fractions and components[i].molar_mass())
+    // works for cubic backends since they share the same SatL/SatV machinery.
+    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
+    }
+
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
     pre_update(input_pair, ld_value1, ld_value2);
     value1 = ld_value1;

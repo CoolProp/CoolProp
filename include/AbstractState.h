@@ -94,7 +94,7 @@ class AbstractState
         return (this->_phase == iphase_twophase);
     }
 
-    CacheArray<70> cache;
+    CacheArray<80> cache;
     using CAE = CacheArrayElement<double>;
 
     /// Two important points
@@ -147,6 +147,7 @@ class AbstractState
 
     /// Two-Phase variables
     CAE _rhoLmolar = cache.next(), _rhoVmolar = cache.next();
+    CAE _Qmass = cache.next();
 
     // ----------------------------------------
     // Property accessors to be optionally implemented by the backend
@@ -264,6 +265,26 @@ class AbstractState
     virtual CoolPropDbl calc_PIP(void) {
         throw NotImplementedError("calc_PIP is not implemented for this backend");
     };
+
+    /// Mass-basis vapor quality. Default implementation uses _Q (molar) and
+    /// calc_phase_molar_masses(); override only if a backend has a faster route.
+    virtual CoolPropDbl calc_Qmass(void);
+
+    /// Phase molar masses (kg/mol) at the current saturated state.
+    struct PhaseMolarMasses
+    {
+        double liquid;
+        double vapor;
+    };
+
+    /// Phase molar masses (kg/mol) at the current saturated state.
+    /// Default base impl handles pure/pseudopure (both = molar_mass()).
+    /// Mixture backends must override.
+    virtual PhaseMolarMasses calc_phase_molar_masses();
+
+    /// Default iterative Qmass-pair solver (secant on Qmolar). Backends may
+    /// override to use a native fast path (e.g. REFPROP TQFLSHdll kq=2).
+    virtual void update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2);
 
     // Excess properties
     /// Using this backend, calculate and cache the excess properties
@@ -703,7 +724,7 @@ class AbstractState
     AbstractState() : _fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown) {
         clear();
     }
-    virtual ~AbstractState() {};
+    virtual ~AbstractState(){};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
@@ -1081,6 +1102,8 @@ class AbstractState
     double Q(void) {
         return _Q;
     };
+    /// Mass-basis vapor quality (kg vapor / kg total). Throws if not two-phase.
+    double Qmass(void);
     /// Return the reciprocal of the reduced temperature (\f$\tau = T_c/T\f$)
     double tau(void);
     /// Return the reduced density (\f$\delta = \rho/\rho_c\f$)
@@ -1621,7 +1644,7 @@ class AbstractStateGenerator
 {
    public:
     virtual AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) = 0;
-    virtual ~AbstractStateGenerator() {};
+    virtual ~AbstractStateGenerator(){};
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not

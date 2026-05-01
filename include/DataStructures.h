@@ -88,7 +88,8 @@ enum parameters : int
     // Bulk properties
     iT,      ///< Temperature
     iP,      ///< Pressure
-    iQ,      ///< Vapor quality
+    iQ,      ///< Vapor quality (molar; alias for iQmolar in this codebase)
+    iQmass,  ///< Mass-basis vapor quality
     iTau,    ///< Reciprocal reduced temperature
     iDelta,  ///< Reduced density
 
@@ -281,13 +282,21 @@ enum input_pairs : int
 {
     INPUT_PAIR_INVALID = 0,  // Default (invalid) value
     QT_INPUTS,               ///< Molar quality, Temperature in K
+    QmassT_INPUTS,           ///< Mass-basis quality, Temperature in K
     PQ_INPUTS,               ///< Pressure in Pa, Molar quality
+    PQmass_INPUTS,           ///< Pressure in Pa, Mass-basis quality
     QSmolar_INPUTS,          ///< Molar quality, Entropy in J/mol/K
+    QmassSmolar_INPUTS,      ///< Mass-basis quality, Entropy in J/mol/K
     QSmass_INPUTS,           ///< Molar quality, Entropy in J/kg/K
+    QmassSmass_INPUTS,       ///< Mass-basis quality, Entropy in J/kg/K
     HmolarQ_INPUTS,          ///< Enthalpy in J/mol, Molar quality
+    HmolarQmass_INPUTS,      ///< Enthalpy in J/mol, Mass-basis quality
     HmassQ_INPUTS,           ///< Enthalpy in J/kg, Molar quality
+    HmassQmass_INPUTS,       ///< Enthalpy in J/kg, Mass-basis quality
     DmolarQ_INPUTS,          ///< Density in mol/m^3, Molar quality
+    DmolarQmass_INPUTS,      ///< Density in mol/m^3, Mass-basis quality
     DmassQ_INPUTS,           ///< Density in kg/m^3, Molar quality
+    DmassQmass_INPUTS,       ///< Density in kg/m^3, Mass-basis quality
 
     PT_INPUTS,  ///< Pressure in Pa, Temperature in K
 
@@ -327,6 +336,23 @@ inline bool match_pair(parameters key1, parameters key2, parameters x1, paramete
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
+
+/// Return true if the input pair involves a mass-based quality (Qmass).
+inline bool is_Qmass_pair(input_pairs p) {
+    switch (p) {
+        case QmassT_INPUTS:
+        case PQmass_INPUTS:
+        case QmassSmolar_INPUTS:
+        case QmassSmass_INPUTS:
+        case HmolarQmass_INPUTS:
+        case HmassQmass_INPUTS:
+        case DmolarQmass_INPUTS:
+        case DmassQmass_INPUTS:
+            return true;
+        default:
+            return false;
+    }
+}
 /**
  * @brief Generate an update pair from key, value pairs
  *
@@ -347,8 +373,12 @@ template <class T>
 
     if (match_pair(key1, key2, iQ, iT, swap)) {
         pair = QT_INPUTS;  ///< Molar quality, Temperature in K
+    } else if (match_pair(key1, key2, iQmass, iT, swap)) {
+        pair = QmassT_INPUTS;  ///< Mass-basis quality, Temperature in K
     } else if (match_pair(key1, key2, iP, iQ, swap)) {
         pair = PQ_INPUTS;  ///< Pressure in Pa, Molar quality
+    } else if (match_pair(key1, key2, iP, iQmass, swap)) {
+        pair = PQmass_INPUTS;  ///< Pressure in Pa, Mass-basis quality
     } else if (match_pair(key1, key2, iP, iT, swap)) {
         pair = PT_INPUTS;  ///< Pressure in Pa, Temperature in K
     } else if (match_pair(key1, key2, iDmolar, iT, swap)) {
@@ -385,8 +415,12 @@ template <class T>
         pair = DmolarP_INPUTS;  // Molar density in mol/m^3, Pressure in Pa
     } else if (match_pair(key1, key2, iDmass, iQ, swap)) {
         pair = DmassQ_INPUTS;  // Mass density in kg/m^3, molar vapor quality
+    } else if (match_pair(key1, key2, iDmass, iQmass, swap)) {
+        pair = DmassQmass_INPUTS;  // Mass density in kg/m^3, mass-basis vapor quality
     } else if (match_pair(key1, key2, iDmolar, iQ, swap)) {
         pair = DmolarQ_INPUTS;  // Molar density in mol/m^3, molar vapor quality
+    } else if (match_pair(key1, key2, iDmolar, iQmass, swap)) {
+        pair = DmolarQmass_INPUTS;  // Molar density in mol/m^3, mass-basis vapor quality
     } else if (match_pair(key1, key2, iHmass, iP, swap)) {
         pair = HmassP_INPUTS;  // Enthalpy in J/kg, Pressure in Pa
     } else if (match_pair(key1, key2, iHmolar, iP, swap)) {

@@ -536,6 +536,25 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_molar_mass(void) {
     }
     return summer;
 }
+AbstractState::PhaseMolarMasses HelmholtzEOSMixtureBackend::calc_phase_molar_masses() {
+    if (is_pure()) {
+        const double mm = molar_mass();
+        return {mm, mm};
+    }
+    const std::vector<CoolPropDbl> x = mole_fractions_liquid();
+    const std::vector<CoolPropDbl> y = mole_fractions_vapor();
+    if (x.size() != components.size() || y.size() != components.size()) {
+        throw ValueError("phase composition vectors do not match component count");
+    }
+    double MM_l = 0;
+    double MM_v = 0;
+    for (std::size_t i = 0; i < components.size(); ++i) {
+        const double mm_i = components[i].molar_mass();
+        MM_l += static_cast<double>(x[i]) * mm_i;
+        MM_v += static_cast<double>(y[i]) * mm_i;
+    }
+    return {MM_l, MM_v};
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters param, int Q, parameters given, double value) {
     if (is_pure_or_pseudopure) {
         if (param == iP && given == iT) {
@@ -1331,6 +1350,14 @@ void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs& input_pair, C
 }
 
 void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
+    // before delegating to the molar-pair flash. Pure / pseudo-pure go through
+    // mass_to_molar_inputs in the existing flow (handled below).
+    if (CoolProp::is_Qmass_pair(input_pair) && !is_pure()) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
+    }
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)

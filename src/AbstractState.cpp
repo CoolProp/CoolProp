@@ -11,8 +11,10 @@
 
 #include <cmath>
 #include <cstdlib>
+#include "boost/math/tools/toms748_solve.hpp"
 #include "AbstractState.h"
 #include "DataStructures.h"
+#include "qmass_conversions.h"
 #include "Backends/IF97/IF97Backend.h"
 #include "Backends/Cubics/CubicBackend.h"
 #include "Backends/Cubics/VTPRBackend.h"
@@ -200,6 +202,40 @@ bool AbstractState::clear() {
 void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, CoolPropDbl& value1, CoolPropDbl& value2) {
     // Check if a mass based input, convert it to molar units
 
+    // Pure / pseudo-pure: Qmass == Qmolar exactly. Rewrite the Qmass pair to
+    // its molar sibling without touching values. Mixture cases (size > 1) are
+    // handled by the iterative update_Qmass_pair path; leave them unchanged here.
+    if (get_mole_fractions().size() == 1) {
+        switch (input_pair) {
+            case QmassT_INPUTS:
+                input_pair = QT_INPUTS;
+                break;
+            case PQmass_INPUTS:
+                input_pair = PQ_INPUTS;
+                break;
+            case QmassSmolar_INPUTS:
+                input_pair = QSmolar_INPUTS;
+                break;
+            case QmassSmass_INPUTS:
+                input_pair = QSmass_INPUTS;
+                break;
+            case HmolarQmass_INPUTS:
+                input_pair = HmolarQ_INPUTS;
+                break;
+            case HmassQmass_INPUTS:
+                input_pair = HmassQ_INPUTS;
+                break;
+            case DmolarQmass_INPUTS:
+                input_pair = DmolarQ_INPUTS;
+                break;
+            case DmassQmass_INPUTS:
+                input_pair = DmassQ_INPUTS;
+                break;
+            default:
+                break;
+        }
+    }
+
     switch (input_pair) {
         case DmassT_INPUTS:      ///< Mass density in kg/m^3, Temperature in K
                                  //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
@@ -359,6 +395,8 @@ double AbstractState::keyed_output(parameters key) {
     switch (key) {
         case iQ:
             return Q();
+        case iQmass:
+            return Qmass();
         case iT:
             return T();
         case iP:
@@ -651,6 +689,117 @@ double AbstractState::surface_tension() {
 double AbstractState::molar_mass() {
     if (!_molar_mass) _molar_mass = calc_molar_mass();
     return _molar_mass;
+}
+double AbstractState::Qmass(void) {
+    if (!_Qmass) _Qmass = calc_Qmass();
+    return _Qmass;
+}
+CoolPropDbl AbstractState::calc_Qmass(void) {
+    if (!ValidNumber(_Q) || _Q < 0 || _Q > 1) {
+        throw ValueError("Qmass requires a two-phase state (0 <= Q <= 1)");
+    }
+    // Endpoints: Qmass equals Qmolar by definition (no phase composition needed).
+    // This avoids NaN propagation when one phase is unpopulated by the backend
+    // at a saturation-curve endpoint (e.g. Q=0 on the bubble line).
+    if (_Q == 0.0 || _Q == 1.0) return static_cast<CoolPropDbl>(_Q);
+    const auto MM = calc_phase_molar_masses();
+    return static_cast<CoolPropDbl>(detail::Qmolar_to_Qmass(_Q, MM.liquid, MM.vapor));
+}
+AbstractState::PhaseMolarMasses AbstractState::calc_phase_molar_masses() {
+    // For a pure or pseudo-pure fluid the liquid and vapor phases share the same
+    // molar mass as the bulk fluid.  A mixture backend must override this method.
+    if (get_mole_fractions().size() == 1) {
+        const double mm = molar_mass();
+        return {mm, mm};
+    }
+    throw NotImplementedError("calc_phase_molar_masses must be overridden by mixture backends");
+}
+void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
+    // Map Qmass-pair to its molar sibling and identify which slot (1=value1, 2=value2)
+    // holds the Qmass value.
+    struct Mapping
+    {
+        CoolProp::input_pairs molar;
+        int qmass_slot;
+    };
+    Mapping m;
+    switch (pair) {
+        case QmassT_INPUTS:
+            m = {QT_INPUTS, 1};
+            break;
+        case PQmass_INPUTS:
+            m = {PQ_INPUTS, 2};
+            break;
+        case QmassSmolar_INPUTS:
+            m = {QSmolar_INPUTS, 1};
+            break;
+        case QmassSmass_INPUTS:
+            m = {QSmass_INPUTS, 1};
+            break;
+        case HmolarQmass_INPUTS:
+            m = {HmolarQ_INPUTS, 2};
+            break;
+        case HmassQmass_INPUTS:
+            m = {HmassQ_INPUTS, 2};
+            break;
+        case DmolarQmass_INPUTS:
+            m = {DmolarQ_INPUTS, 2};
+            break;
+        case DmassQmass_INPUTS:
+            m = {DmassQ_INPUTS, 2};
+            break;
+        default:
+            throw ValueError("update_Qmass_pair called with non-Qmass pair");
+    }
+    const double Qmass_target = (m.qmass_slot == 1) ? v1 : v2;
+    const double partner = (m.qmass_slot == 1) ? v2 : v1;
+
+    if (Qmass_target < 0 || Qmass_target > 1) {
+        throw ValueError(format("Qmass out of range [0,1]: %g", Qmass_target));
+    }
+
+    auto run_molar = [&](double Qmolar) {
+        if (m.qmass_slot == 1)
+            update(m.molar, Qmolar, partner);
+        else
+            update(m.molar, partner, Qmolar);
+    };
+
+    // Endpoints: bypass iteration entirely.
+    if (Qmass_target == 0.0 || Qmass_target == 1.0) {
+        run_molar(Qmass_target);
+        _Qmass = Qmass_target;
+        return;
+    }
+
+    auto residual = [&](double Qmolar) -> double {
+        run_molar(Qmolar);
+        const auto MM = calc_phase_molar_masses();
+        return detail::Qmolar_to_Qmass(Qmolar, MM.liquid, MM.vapor) - Qmass_target;
+    };
+
+    // TOMS748 needs a strict bracket on (0, 1). Qmass(Qmolar) is monotonically
+    // increasing on this interval and goes 0 -> 1, so [eps, 1-eps] always brackets.
+    constexpr double eps = 1e-12;
+    constexpr int bits = 48;  // ~14 significant digits
+    boost::math::uintmax_t max_iter = 50;
+    const double a = eps;
+    const double b = 1.0 - eps;
+    const double fa = residual(a);
+    const double fb = residual(b);
+    if (fa * fb > 0) {
+        throw SolutionError(
+          format("update_Qmass_pair: cannot bracket Qmolar for Qmass=%g (fa=%g, fb=%g)", Qmass_target, fa, fb));
+    }
+    const auto [lo, hi] =
+      boost::math::tools::toms748_solve(residual, a, b, fa, fb, boost::math::tools::eps_tolerance<double>(bits), max_iter);
+    const double Qmolar_solution = 0.5 * (lo + hi);
+    if (!ValidNumber(Qmolar_solution)) {
+        throw SolutionError(format("update_Qmass_pair: did not converge for Qmass=%g", Qmass_target));
+    }
+    // Final flash at converged Qmolar (makes the public state unambiguous).
+    run_molar(Qmolar_solution);
+    _Qmass = Qmass_target;
 }
 double AbstractState::gas_constant() {
     if (!_gas_constant) _gas_constant = calc_gas_constant();

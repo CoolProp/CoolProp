@@ -1729,6 +1729,14 @@ void PCSAFTBackend::update(CoolProp::input_pairs input_pair, double value1, doub
                   << std::endl;
     }
 
+    // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
+    // before delegating to the molar-pair flash. Pure / pseudo-pure (size==1)
+    // goes through mass_to_molar_inputs in the existing flow.
+    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
+    }
+
     // Converting input to CoolPropDbl
     CoolPropDbl ld_value1 = value1, ld_value2 = value2;
     value1 = ld_value1;
@@ -2851,6 +2859,21 @@ CoolPropDbl PCSAFTBackend::calc_molar_mass(void) {
         summer += mole_fractions[i] * components[i].molar_mass();
     }
     return summer;
+}
+
+AbstractState::PhaseMolarMasses PCSAFTBackend::calc_phase_molar_masses() {
+    if (mole_fractions.size() == 1) {
+        const double mm = molar_mass();
+        return {mm, mm};
+    }
+    double MM_l = 0;
+    double MM_v = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        const double mm_i = components[i].molar_mass();
+        MM_l += static_cast<double>(SatL->mole_fractions[i]) * mm_i;
+        MM_v += static_cast<double>(SatV->mole_fractions[i]) * mm_i;
+    }
+    return {MM_l, MM_v};
 }
 
 vector<double> PCSAFTBackend::XA_find(vector<double> XA_guess, vector<double> delta_ij, double den, vector<double> x) {
