@@ -282,27 +282,21 @@ void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     if (!superanc_ptr) {
         return;
     }
-    auto& superanc = *superanc_ptr;
-    if (superanc.has_variable('H') && superanc.has_variable('S')) {
-        return;
-    }
     // Callbacks evaluate h(T, rho) and s(T, rho) using the EOS in its current
     // configuration (including the active reference state). The rho values
     // come from the existing rho_sat superancillary at the Chebyshev nodes —
     // see SuperAncillary::add_variable. Building H and S together so we
     // amortize the EOS calls; both derive from the same alpha0/alphar evaluation.
+    // The mutex inside ensure_HS_under_lock serializes concurrent first-call
+    // builds across HEOS instances that share this fluid's SuperAncillary
+    // (#2773 review C2).
     auto h_callable = [this](double T, double rhomolar) -> double {
         return this->calc_hmolar_nocache(T, rhomolar);
     };
     auto s_callable = [this](double T, double rhomolar) -> double {
         return this->calc_smolar_nocache(T, rhomolar);
     };
-    if (!superanc.has_variable('H')) {
-        superanc.add_variable('H', h_callable);
-    }
-    if (!superanc.has_variable('S')) {
-        superanc.add_variable('S', s_callable);
-    }
+    superanc_ptr->ensure_HS_under_lock(h_callable, s_callable);
 }
 
 double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
@@ -4338,6 +4332,14 @@ void HelmholtzEOSMixtureBackend::set_reference_stateD(double T, double rhomolar,
 void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2,
                                                                    const std::string& ref) {
     component.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
+
+    // Caloric saturation superancillaries (h_sat_L/V, s_sat_L/V) are built
+    // lazily under whatever reference state was in effect at build time.
+    // The change above invalidates those coefficients; drop them so the next
+    // caloric flash rebuilds against the new reference state. See #2773.
+    if (auto sa = component.EOS().get_superanc()) {
+        sa->clear_caloric_variables();
+    }
 
     shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(component));
     HEOS->specify_phase(iphase_gas);  // Something homogeneous;

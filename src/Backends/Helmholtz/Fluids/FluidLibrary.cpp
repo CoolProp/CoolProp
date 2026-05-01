@@ -84,6 +84,15 @@ void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string& flui
             }
             it2->second.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
 
+            // Caloric saturation superancillaries (h_sat_L/V, s_sat_L/V) are
+            // built lazily under whatever reference state was in effect at
+            // build time. The change above invalidates those coefficients;
+            // drop them so the next caloric flash rebuilds against the new
+            // reference state. See GitHub #2773.
+            if (auto sa = it2->second.EOS().get_superanc()) {
+                sa->clear_caloric_variables();
+            }
+
             shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(it2->second));
             HEOS->specify_phase(iphase_gas);  // Something homogeneous;
             // Calculate the new enthalpy and entropy values

@@ -34,6 +34,7 @@ Subsequent edits by Ian Bell
 #pragma once
 
 #include <cstdio>
+#include <mutex>
 #include <utility>
 #include <optional>
 #include <Eigen/Dense>
@@ -829,6 +830,12 @@ class SuperAncillary
     double m_pmax;                           ///< The maximum pressure, in Pa
     std::vector<CheckPoint> m_check_points;  ///< Optional extended-precision verification states
 
+    /// Guards mutation of the lazily-built optional approximations
+    /// (m_hL/m_hV/m_sL/m_sV/m_uL/m_uV/m_invlnp). The fixed approximations
+    /// (m_rhoL/m_rhoV/m_p) and the const data are read-only after construction
+    /// and need no synchronization. See #2773 review C2.
+    mutable std::mutex m_lazy_build_mutex;
+
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
      \param j The JSON data
      \param key The key to be loaded from the superancillary block, probably one of "jexpansions_rhoL", "jexpansions_rhoV", or "jexpansions_p"
@@ -939,6 +946,41 @@ class SuperAncillary
                 throw std::invalid_argument("Bad key of '" + std::string(1, k) + "'");
         }
     }
+    /// Discard the cached caloric saturation Chebyshev approximations
+    /// (m_hL/m_hV/m_sL/m_sV/m_uL/m_uV). Call this whenever the underlying
+    /// EOS reference state changes — the cached coefficients freeze the
+    /// reference state in effect at build time. The next
+    /// HEOS::ensure_caloric_superancillaries() will rebuild them. See #2773.
+    void clear_caloric_variables() {
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        m_hL.reset();
+        m_hV.reset();
+        m_sL.reset();
+        m_sV.reset();
+        m_uL.reset();
+        m_uV.reset();
+    }
+
+    /// Thread-safe lazy build of H and S caloric superancillaries.
+    /// If both are already built, returns without taking the lock.
+    /// Otherwise locks, double-checks under the lock, and calls add_variable
+    /// as needed using the supplied EOS callbacks. See #2773 review C2.
+    void ensure_HS_under_lock(const std::function<double(double, double)>& h_callable, const std::function<double(double, double)>& s_callable) {
+        // Fast path: avoid the lock when both are already built. Reads are racy
+        // against an in-progress add_variable, but a torn read just sends us
+        // into the locked region where we double-check.
+        if (m_hL.has_value() && m_hV.has_value() && m_sL.has_value() && m_sV.has_value()) {
+            return;
+        }
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        if (!m_hL.has_value() || !m_hV.has_value()) {
+            add_variable_locked('H', h_callable);
+        }
+        if (!m_sL.has_value() || !m_sV.has_value()) {
+            add_variable_locked('S', s_callable);
+        }
+    }
+
     /// Whether a property's saturation Chebyshev approximation has been populated.
     /// P and D are always present; H/S/U are only present after add_variable()
     /// has been called (or, in some JSON layouts, loaded from disk).
@@ -997,8 +1039,18 @@ class SuperAncillary
      Using the provided function that gives y(T, rho), build the ancillaries for this variable based on the ancillaries for rhoL and rhoV
      \param var The key for the property (H,S,U)
      \param caller A function that takes temperature and molar density and returns the property of interest, molar enthalpy in the case of H, etc.
+
+     This entry point acquires the lazy-build mutex. Callers that already
+     hold the mutex (e.g. ensure_HS_under_lock) must use add_variable_locked.
      */
     void add_variable(char var, const std::function<double(double, double)>& caller) {
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        add_variable_locked(var, caller);
+    }
+
+   private:
+    /// Body of add_variable; assumes m_lazy_build_mutex is already held.
+    void add_variable_locked(char var, const std::function<double(double, double)>& caller) {
         Eigen::MatrixXd Lmat, Umat;
         std::tie(Lmat, Umat) = detail::get_LU_matrices(12);
 
@@ -1066,6 +1118,7 @@ class SuperAncillary
         }
     }
 
+   public:
     /** Given the value of Q in {0,1}, evaluate one of the the ChebyshevApproximation1D
      \param T Temperature, in K
      \param k Property key, in {D,P,H,S,U}
@@ -1521,8 +1574,11 @@ class SuperAncillary
     //     }
 };
 
-static_assert(std::is_copy_constructible_v<SuperAncillary<std::vector<double>>>);
-static_assert(std::is_copy_assignable_v<SuperAncillary<std::vector<double>>>);
+// SuperAncillary holds a std::mutex for lazy-build serialization (#2773 review C2),
+// so it is intentionally non-copyable. In production it is held via std::shared_ptr
+// from EquationOfState; ownership is shared, never duplicated.
+static_assert(!std::is_copy_constructible_v<SuperAncillary<std::vector<double>>>);
+static_assert(!std::is_copy_assignable_v<SuperAncillary<std::vector<double>>>);
 
 }  // namespace superancillary
 }  // namespace CoolProp

@@ -261,11 +261,17 @@ A few notes:
   capture the active reference state at construction.
 * Only ``guess.T`` is consulted by the branch-selection logic; other fields
   in :cpapi:`CoolProp::GuessesStructure` are ignored for these input pairs.
-* Mixtures are not supported on this code path — only pure (and not
-  pseudo-pure) fluids. The default ``update`` behavior is unchanged.
-* Per-call cost after the first lazy build is sub-microsecond:
+* Only pure (and not pseudo-pure) fluids are supported on this code path.
+  Mixtures and pseudo-pure fluids raise :cpapi:`CoolProp::NotImplementedError`.
+* Per-call cost after the first lazy build is on the order of a microsecond:
   candidate-root enumeration is a piecewise-Chebyshev TOMS748 rootfind
   inside each monotonic sub-interval.
+* The first call on a fluid lazily builds the caloric superancillary, which
+  costs ~10–50 ms. This is amortized across all subsequent calls. To
+  pre-build, you can call ``HEOS.update_with_guesses(...)`` once at startup,
+  or rely on the lazy path. The build is repeated when
+  :cpapi:`CoolProp::set_reference_state` is called for the fluid, so the
+  cached coefficients always match the active reference state.
 
 If you call plain ``update`` (without guesses) and the input lies in a
 multi-root region, CoolProp now raises ``CoolProp::MultipleSolutionsError``
