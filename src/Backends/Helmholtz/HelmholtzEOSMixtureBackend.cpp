@@ -292,7 +292,13 @@ void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     // (#2773 review C2).
     auto h_callable = [this](double T, double rhomolar) -> double { return this->calc_hmolar_nocache(T, rhomolar); };
     auto s_callable = [this](double T, double rhomolar) -> double { return this->calc_smolar_nocache(T, rhomolar); };
-    superanc_ptr->ensure_HS_under_lock(h_callable, s_callable);
+    // The IdealHelmholtzEnthalpyEntropyOffset's a1/a2 are sentinel HUGE_VAL
+    // when disabled; canonicalize to (0, 0) so an enabled cache stamp at (0, 0)
+    // matches a disabled caller (both contribute zero to h and s).
+    const auto& off = components[0].EOS().alpha0.EnthalpyEntropyOffset;
+    const double caller_a1 = off.is_enabled() ? static_cast<double>(off.get_a1()) : 0.0;
+    const double caller_a2 = off.is_enabled() ? static_cast<double>(off.get_a2()) : 0.0;
+    superanc_ptr->ensure_HS_under_lock(caller_a1, caller_a2, h_callable, s_callable);
 }
 
 double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
@@ -312,6 +318,11 @@ double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, co
                 return superanc.get_Tmin();
             } else if (key == "Tcrit_num") {
                 return superanc.get_Tcrit_num();
+            } else if (key == "caloric_build_count") {
+                // Number of times the caloric superancillary has been built.
+                // Used by tests to verify that multi-instance / multi-ref-state
+                // usage doesn't trigger thrashing rebuilds. See #2773.
+                return static_cast<double>(superanc.get_caloric_build_count());
             } else {
                 throw ValueError(format("Superancillary parameter [%s] is invalid", key.c_str()));
             }
@@ -4329,13 +4340,12 @@ void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid
                                                                    const std::string& ref) {
     component.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
 
-    // Caloric saturation superancillaries (h_sat_L/V, s_sat_L/V) are built
-    // lazily under whatever reference state was in effect at build time.
-    // The change above invalidates those coefficients; drop them so the next
-    // caloric flash rebuilds against the new reference state. See #2773.
-    if (auto sa = component.EOS().get_superanc()) {
-        sa->clear_caloric_variables();
-    }
+    // Note: cached caloric superancillaries are not invalidated here. They
+    // are reference-state-agnostic via the shift trick — the offset's effect
+    // on h(T) and s(T) along the saturation curve is exactly a constant
+    // (Δh = R·T_red·Δa2, Δs = −R·Δa1), and the (a1, a2) stamp recorded at
+    // first build lets resolve_T_via_superancillary translate the user's
+    // target into the cache's frame at query time. See #2773.
 
     shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(component));
     HEOS->specify_phase(iphase_gas);  // Something homogeneous;

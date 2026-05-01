@@ -473,6 +473,34 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
     const auto& approx = superanc.get_approx1d(k, Q_key);
     const char* phase_name = (Q_key == 0) ? "liquid" : "vapor";
 
+    // Shift the user's target value into the cache's reference frame for H
+    // and S. The IdealHelmholtzEnthalpyEntropyOffset's effect on h(T) and
+    // s(T) along the saturation curve is exactly a constant — Δh = R·T_red·Δa2
+    // and Δs = −R·Δa1 — so we only need to translate the target, never
+    // rebuild. See ensure_HS_under_lock comment and #2773. For D the cache
+    // is reference-state-independent intrinsically (no shift needed).
+    double target_in_cache_frame = target_value;
+    if (k == 'H' || k == 'S') {
+        const auto stamp = superanc.get_caloric_alpha0_stamp();
+        const auto& off = HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffset;
+        const double caller_a1 = off.is_enabled() ? static_cast<double>(off.get_a1()) : 0.0;
+        const double caller_a2 = off.is_enabled() ? static_cast<double>(off.get_a2()) : 0.0;
+        if (stamp.has_value()) {
+            const double cache_a1 = stamp->first;
+            const double cache_a2 = stamp->second;
+            if (k == 'H') {
+                // h_cache(T) = h_caller(T) + R·T_red·(a2_cache − a2_caller)
+                const double R = HEOS.gas_constant();
+                const double T_red = HEOS.get_reducing_state().T;
+                target_in_cache_frame = target_value + R * T_red * (cache_a2 - caller_a2);
+            } else {  // 'S'
+                // s_cache(T) = s_caller(T) + (−R)·(a1_cache − a1_caller)
+                const double R = HEOS.gas_constant();
+                target_in_cache_frame = target_value - R * (cache_a1 - caller_a1);
+            }
+        }
+    }
+
     if (guess_T.has_value()) {
         // Pick the monotonic sub-interval whose temperature range contains
         // guess_T (and which can reach target_value in its y-range), then
@@ -486,7 +514,7 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
             const auto* best_match = static_cast<decltype(intervals.data())>(nullptr);
             double best_midpoint_dist = std::numeric_limits<double>::infinity();
             for (const auto& iv : intervals) {
-                if (!iv.contains_y(target_value)) continue;
+                if (!iv.contains_y(target_in_cache_frame)) continue;
                 if (gT >= iv.xmin && gT <= iv.xmax) {
                     const double mid_dist = std::abs(0.5 * (iv.xmin + iv.xmax) - gT);
                     if (mid_dist < best_midpoint_dist) {
@@ -499,9 +527,9 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
         }();
         if (chosen != nullptr) {
             for (const auto& ei : chosen->expansioninfo) {
-                if (ei.contains_y(target_value)) {
+                if (ei.contains_y(target_in_cache_frame)) {
                     const auto& e = expansions[ei.idx];
-                    auto [xvalue, num_steps] = e.solve_for_x_count(target_value, ei.xmin, ei.xmax, 64, 100U, 1e-10);
+                    auto [xvalue, num_steps] = e.solve_for_x_count(target_in_cache_frame, ei.xmin, ei.xmax, 64, 100U, 1e-10);
                     (void)num_steps;
                     return xvalue;
                 }
@@ -514,7 +542,7 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
 
     // No guess: enumerate every root, dedup near-identical roots from adjacent
     // intervals at an extremum, then strict-mode-or-throw.
-    auto solns = approx.get_x_for_y(target_value, 64, 100U, 1e-10);
+    auto solns = approx.get_x_for_y(target_in_cache_frame, 64, 100U, 1e-10);
     if (solns.empty()) {
         throw OutOfRangeError(format("%s: no T-root on saturated %s for %c=%g; superancillary range [%g, %g] K", fn_name, phase_name, k, target_value,
                                      approx.xmin(), approx.xmax()));

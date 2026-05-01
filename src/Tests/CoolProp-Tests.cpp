@@ -8,8 +8,10 @@
 #include "../Backends/Cubics/CubicBackend.h"
 #include "superancillary/superancillary.h"
 #include "miniz.h"
+#include <atomic>
 #include <map>
 #include <set>
+#include <thread>
 
 // ############################################
 //                      TESTS
@@ -5025,6 +5027,129 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
         const double h_low_mass = AS->hmass();
         CHECK_THROWS_AS(AS->update(CoolProp::HmassQ_INPUTS, h_low_mass, 1.0), CoolProp::MultipleSolutionsError);
     }
+}
+
+// Verify the option-D shift-c0 trick: the caloric superancillary cache is
+// reference-state-agnostic. Two coexisting HEOS instances at different
+// reference states should both get correct answers without forcing the cache
+// to rebuild on every alternation. See #2773.
+TEST_CASE("Caloric superancillary is reference-state-agnostic (no thrashing)", "[2773][ref_state_shared]") {
+    // Reset water to DEF in case a previous test left it in another state.
+    CoolProp::set_reference_stateS("Water", "DEF");
+
+    // (1) Build the cache via the first HEOS instance under DEF.
+    std::shared_ptr<CoolProp::AbstractState> AS_def(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double T_anchor = 470.0;
+    AS_def->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+    const double h_def_anchor = AS_def->hmolar();
+    CoolProp::GuessesStructure g;
+    g.T = T_anchor;
+    REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def_anchor, 1.0, g));
+    CHECK(AS_def->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+
+    const auto build_count_after_first = static_cast<unsigned int>(AS_def->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    REQUIRE(build_count_after_first >= 1u);
+
+    // (2) Switch the global reference state to NBP. AS_def keeps its own DEF
+    // alpha0 (each HEOS holds its own copy); a fresh HEOS gets NBP.
+    CoolProp::set_reference_stateS("Water", "NBP");
+    std::shared_ptr<CoolProp::AbstractState> AS_nbp(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS_nbp->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+    const double h_nbp_anchor = AS_nbp->hmolar();
+    REQUIRE(std::abs(h_nbp_anchor - h_def_anchor) > 100.0);  // confirm offset is real
+
+    // (3) Both instances must resolve their own h-target back to T_anchor.
+    REQUIRE_NOTHROW(AS_nbp->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_nbp_anchor, 1.0, g));
+    CHECK(AS_nbp->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+    REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def_anchor, 1.0, g));
+    CHECK(AS_def->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+
+    // (4) Alternate queries. With option-D the cache stays built once; the
+    // shift trick translates each user's target into the cache's frame.
+    for (int i = 0; i < 5; ++i) {
+        REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def_anchor, 1.0, g));
+        CHECK(AS_def->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+        REQUIRE_NOTHROW(AS_nbp->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_nbp_anchor, 1.0, g));
+        CHECK(AS_nbp->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+    }
+
+    // (5) The build count must equal what it was after step (1) — no
+    // thrashing rebuilds despite alternating reference states.
+    const auto build_count_final = static_cast<unsigned int>(AS_def->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    CHECK(build_count_final == build_count_after_first);
+
+    // Same for QSmolar with mixed reference states.
+    AS_def->update(CoolProp::QT_INPUTS, 1.0, 500.0);
+    const double s_def_anchor = AS_def->smolar();
+    AS_nbp->update(CoolProp::QT_INPUTS, 1.0, 500.0);
+    const double s_nbp_anchor = AS_nbp->smolar();
+    REQUIRE(std::abs(s_nbp_anchor - s_def_anchor) > 1.0);  // confirm offset is real
+    g.T = 500.0;
+    REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, s_def_anchor, g));
+    CHECK(AS_def->T() == Catch::Approx(500.0).epsilon(1e-3));
+    REQUIRE_NOTHROW(AS_nbp->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, s_nbp_anchor, g));
+    CHECK(AS_nbp->T() == Catch::Approx(500.0).epsilon(1e-3));
+
+    // Reset reference state for downstream tests.
+    CoolProp::set_reference_stateS("Water", "DEF");
+}
+
+// Verify thread safety of the lazy build path. Spawn N threads, each creating
+// its own HEOS for water and running multiple HmolarQ flashes concurrently.
+// Without the mutex inside ensure_HS_under_lock this would race on
+// optional<...>::emplace and could corrupt the shared SuperAncillary.
+// With the mutex, exactly one thread builds the cache and the others wait.
+TEST_CASE("Caloric superancillary thread-safe lazy build (#2773)", "[2773][thread_safety]") {
+    // Capture the build count before this test runs so the assertion below is
+    // insensitive to any prior test having already triggered a build.
+    std::shared_ptr<CoolProp::AbstractState> probe(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const auto build_count_before = static_cast<unsigned int>(probe->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    probe.reset();
+
+    constexpr int N_THREADS = 8;
+    constexpr int N_ITERS_PER_THREAD = 50;
+    std::atomic<int> error_count{0};
+    std::atomic<int> success_count{0};
+
+    auto worker = [&]() {
+        try {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+            const double T_anchor = 470.0;
+            AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+            const double h_target = AS->hmolar();
+            CoolProp::GuessesStructure g;
+            g.T = T_anchor;
+            for (int i = 0; i < N_ITERS_PER_THREAD; ++i) {
+                AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g);
+                if (std::abs(AS->T() - T_anchor) > 1e-3) {
+                    error_count.fetch_add(1, std::memory_order_relaxed);
+                    return;
+                }
+            }
+            success_count.fetch_add(1, std::memory_order_relaxed);
+        } catch (...) {
+            error_count.fetch_add(1, std::memory_order_relaxed);
+        }
+    };
+
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back(worker);
+    }
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    CHECK(error_count.load() == 0);
+    CHECK(success_count.load() == N_THREADS);
+
+    // Build counter delta should be at most 1: with the mutex, exactly one
+    // thread wins the race to build; the others observe the cache and skip.
+    // Allow 0 if a prior test already built the cache.
+    std::shared_ptr<CoolProp::AbstractState> probe2(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const auto build_count_after = static_cast<unsigned int>(probe2->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    CHECK(build_count_after - build_count_before <= 1u);
 }
 
 // Benchmark the new superancillary-based with_guesses path against the

@@ -33,6 +33,7 @@ Subsequent edits by Ian Bell
 
 #pragma once
 
+#include <atomic>
 #include <cstdio>
 #include <mutex>
 #include <utility>
@@ -836,6 +837,31 @@ class SuperAncillary
     /// and need no synchronization. See #2773 review C2.
     mutable std::mutex m_lazy_build_mutex;
 
+    /// Stamp recording the IdealHelmholtzEnthalpyEntropyOffset (a1, a2) that
+    /// the cached caloric superancillaries (m_hL/m_hV/m_sL/m_sV) were built
+    /// against. The HEOS holds its alpha0 offset per-instance, but the
+    /// SuperAncillary is shared via shared_ptr across all instances of the
+    /// same fluid; instances with different reference states would otherwise
+    /// disagree about what h_sat(T) means.
+    ///
+    /// The trick is that an enthalpy/entropy reference-state change shifts
+    /// h(T) and s(T) by a *constant* over the saturation curve:
+    ///   Δh = R · T_red · Δa2,   Δs = −R · Δa1
+    /// (see IdealHelmholtzEnthalpyEntropyOffset::all). So the *shape* of
+    /// h_sat(T) and s_sat(T) is reference-state-invariant; only c0 of the
+    /// Chebyshev expansion moves. This means we never need to rebuild on a
+    /// reference-state change — we just translate the user's target value
+    /// into the cache's frame at query time. The stamp records the cache's
+    /// frame; the caller computes the shift from (cache.{a1,a2} − caller.{a1,a2}).
+    /// nullopt before first build. See #2773.
+    std::optional<std::pair<double, double>> m_caloric_alpha0_stamp;
+
+    /// Counter incremented every time the caloric superancillaries are
+    /// (re)built. Used by tests to verify that with the option-D shift trick
+    /// in place, multi-instance / multi-ref-state usage does NOT cause
+    /// repeated rebuilds. mutable + atomic so const observers can read it.
+    mutable std::atomic<unsigned int> m_caloric_build_count{0};
+
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
      \param j The JSON data
      \param key The key to be loaded from the superancillary block, probably one of "jexpansions_rhoL", "jexpansions_rhoV", or "jexpansions_p"
@@ -946,11 +972,10 @@ class SuperAncillary
                 throw std::invalid_argument("Bad key of '" + std::string(1, k) + "'");
         }
     }
-    /// Discard the cached caloric saturation Chebyshev approximations
-    /// (m_hL/m_hV/m_sL/m_sV/m_uL/m_uV). Call this whenever the underlying
-    /// EOS reference state changes — the cached coefficients freeze the
-    /// reference state in effect at build time. The next
-    /// HEOS::ensure_caloric_superancillaries() will rebuild them. See #2773.
+    /// Discard the cached caloric saturation Chebyshev approximations.
+    /// Not normally called: the cache is reference-state-agnostic via the
+    /// shift trick (see m_caloric_alpha0_stamp doc). Retained for tests and
+    /// for explicit forced-rebuild scenarios.
     void clear_caloric_variables() {
         std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
         m_hL.reset();
@@ -959,25 +984,47 @@ class SuperAncillary
         m_sV.reset();
         m_uL.reset();
         m_uV.reset();
+        m_caloric_alpha0_stamp.reset();
     }
 
-    /// Thread-safe lazy build of H and S caloric superancillaries.
-    /// If both are already built, returns without taking the lock.
-    /// Otherwise locks, double-checks under the lock, and calls add_variable
-    /// as needed using the supplied EOS callbacks. See #2773 review C2.
-    void ensure_HS_under_lock(const std::function<double(double, double)>& h_callable, const std::function<double(double, double)>& s_callable) {
-        // Always lock. The "fast path" double-checked-locking pattern that
-        // peeks at optional::has_value() outside the lock is technically a
-        // data race per the C++ standard (TSan flags it), and unconditionally
-        // taking an uncontended mutex costs ~20 ns — much less than a single
-        // EOS-side h/s evaluation. So just lock unconditionally and check.
+    /// Thread-safe lazy build of H and S caloric superancillaries. Records
+    /// the caller's IdealHelmholtzEnthalpyEntropyOffset (a1, a2) as the
+    /// "stamp" — the reference state the cached coefficients are expressed
+    /// in. Subsequent callers with different offsets do NOT rebuild; instead,
+    /// the FlashRoutines code shifts the user's target h or s by the stamp-
+    /// caller offset difference at query time (the shift is a constant in T
+    /// per IdealHelmholtzEnthalpyEntropyOffset::all). This keeps the cache
+    /// shared and rebuild-free across all HEOS instances of the same fluid,
+    /// regardless of how many distinct reference states are in play.
+    /// See #2773.
+    void ensure_HS_under_lock(double caller_a1, double caller_a2, const std::function<double(double, double)>& h_callable,
+                              const std::function<double(double, double)>& s_callable) {
+        // Always lock. Skipping the lock for a fast-path peek at
+        // optional::has_value() is technically a data race per the C++
+        // standard. An uncontended mutex acquire is ~20 ns — much less than a
+        // single EOS-side h/s evaluation.
         std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
-        if (!m_hL.has_value() || !m_hV.has_value()) {
-            add_variable_locked('H', h_callable);
+        if (m_hL.has_value() && m_hV.has_value() && m_sL.has_value() && m_sV.has_value()) {
+            return;  // already built; stamp captured at first build, never invalidated
         }
-        if (!m_sL.has_value() || !m_sV.has_value()) {
-            add_variable_locked('S', s_callable);
-        }
+        add_variable_locked('H', h_callable);
+        add_variable_locked('S', s_callable);
+        m_caloric_alpha0_stamp = std::make_pair(caller_a1, caller_a2);
+        ++m_caloric_build_count;  // for test instrumentation
+    }
+
+    /// Get the (a1, a2) stamp recorded when the caloric superancillaries were
+    /// first built. Returns nullopt if not yet built.
+    std::optional<std::pair<double, double>> get_caloric_alpha0_stamp() const {
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        return m_caloric_alpha0_stamp;
+    }
+
+    /// Number of times the caloric superancillaries were (re)built. Used by
+    /// tests to verify the multi-instance / multi-ref-state code path does
+    /// not cause thrashing rebuilds.
+    unsigned int get_caloric_build_count() const {
+        return m_caloric_build_count.load();
     }
 
     /// Whether a property's saturation Chebyshev approximation has been populated.

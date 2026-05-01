@@ -961,6 +961,16 @@ class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm
         return enabled;
     };
 
+    /// Read access to the offset coefficients. Used as a stamp for the caloric
+    /// superancillary cache so the cache rebuilds when the offset changes
+    /// (#2773 — multi-instance ref-state correctness).
+    CoolPropDbl get_a1() const {
+        return a1;
+    }
+    CoolPropDbl get_a2() const {
+        return a2;
+    }
+
     void to_json(rapidjson::Value& el, rapidjson::Document& doc) {
         el.AddMember("type", "IdealHelmholtzEnthalpyEntropyOffset", doc.GetAllocator());
         el.AddMember("a1", static_cast<double>(a1), doc.GetAllocator());
