@@ -4627,4 +4627,33 @@ TEST_CASE("Qmass output: REFPROP R32+R125 matches HEOS to leading digits", "[Qma
     CHECK(std::abs(Qmass_refprop - 0.4) > 1e-3);
 }
 
+TEST_CASE("Qmass input: REFPROP R32+R125 native kq=2 fast path", "[Qmass][REFPROP]") {
+    std::shared_ptr<CoolProp::AbstractState> AS;
+    try {
+        AS.reset(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    } catch (...) {
+        WARN("REFPROP not available; skipping");
+        return;
+    }
+    AS->set_mole_fractions({0.5, 0.5});
+    AS->update(CoolProp::QT_INPUTS, 0.4, 280.0);
+    const double Qmass = AS->Qmass();
+    const double P_ref = AS->p();
+    const double Q_ref = AS->Q();
+
+    auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    AS2->set_mole_fractions({0.5, 0.5});
+    AS2->update(CoolProp::QmassT_INPUTS, Qmass, 280.0);
+    CHECK(AS2->p()     == Catch::Approx(P_ref).epsilon(1e-5));
+    CHECK(AS2->Q()     == Catch::Approx(Q_ref).epsilon(1e-5));
+    CHECK(AS2->Qmass() == Catch::Approx(Qmass).epsilon(1e-12));
+
+    // PQmass round-trip
+    auto AS3 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    AS3->set_mole_fractions({0.5, 0.5});
+    AS3->update(CoolProp::PQmass_INPUTS, P_ref, Qmass);
+    CHECK(AS3->T()     == Catch::Approx(280.0).epsilon(1e-5));
+    CHECK(AS3->Q()     == Catch::Approx(Q_ref).epsilon(1e-5));
+}
+
 #endif

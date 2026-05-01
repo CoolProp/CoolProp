@@ -148,6 +148,8 @@ class REFPROPMixtureBackend : public AbstractState
     */
     void update(CoolProp::input_pairs, double value1, double value2);
 
+    void update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) override;
+
     /**
      * @brief Update the state, while providing guess values
      */

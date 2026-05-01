@@ -36,6 +36,7 @@ surface tension                 N/m
 #include "IdealCurves.h"
 #include "DataStructures.h"
 #include "AbstractState.h"
+#include "qmass_conversions.h"
 
 #include <cmath>
 #include <optional>
@@ -954,6 +955,65 @@ void REFPROPMixtureBackend::calc_phase_molar_masses(double& MM_l, double& MM_v) 
     MM_l = mm_l_kg_per_kmol / 1000.0;
     MM_v = mm_v_kg_per_kmol / 1000.0;
 }
+
+void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
+    this->check_loaded_fluid();
+    if (pair == CoolProp::QmassT_INPUTS || pair == CoolProp::PQmass_INPUTS) {
+        int kq = 2;  // mass-basis quality
+        int ierr = 0;
+        char herr[errormessagelength + 1] = {0};
+        double T_K = 0, p_kPa = 0, q = 0;
+        double rho_mol_L = 0, rhoLmol_L = 0, rhoVmol_L = 0;
+        double emol = 0, hmol = 0, smol = 0, cvmol = 0, cpmol = 0, w = 0;
+
+        if (pair == CoolProp::QmassT_INPUTS) {
+            // QmassT: v1 is Qmass, v2 is T
+            T_K = v2;
+            q   = v1;
+            TQFLSHdll(&T_K, &q, &(mole_fractions[0]), &kq, &p_kPa,
+                      &rho_mol_L, &rhoLmol_L, &rhoVmol_L,
+                      &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),  // Saturation terms
+                      &emol, &hmol, &smol, &cvmol, &cpmol, &w,             // Other thermodynamic terms
+                      &ierr, herr, errormessagelength);                    // Error terms
+        } else {  // PQmass_INPUTS: v1 is P (Pa), v2 is Qmass
+            p_kPa = v1 * 0.001;  // Pa -> kPa
+            q     = v2;
+            PQFLSHdll(&p_kPa, &q, &(mole_fractions[0]), &kq, &T_K,
+                      &rho_mol_L, &rhoLmol_L, &rhoVmol_L,
+                      &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),  // Saturation terms
+                      &emol, &hmol, &smol, &cvmol, &cpmol, &w,             // Other thermodynamic terms
+                      &ierr, herr, errormessagelength);                    // Error terms
+        }
+        if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+            throw ValueError(format("Qmass-flash: %s", herr));
+        }
+
+        // Populate state from REFPROP outputs.
+        _T = T_K;
+        _p = p_kPa * 1000.0;              // kPa -> Pa
+        _rhomolar = rho_mol_L * 1000.0;   // mol/L -> mol/m^3
+        _rhoLmolar = rhoLmol_L * 1000.0;  // mol/L -> mol/m^3
+        _rhoVmolar = rhoVmol_L * 1000.0;  // mol/L -> mol/m^3
+        _hmolar = hmol;
+        _smolar = smol;
+        _umolar = emol;
+        _cvmolar = cvmol;
+        _cpmolar = cpmol;
+        _speed_sound = w;
+
+        // Compute molar quality from mass quality using returned phase compositions.
+        double MM_l = 0, MM_v = 0;
+        calc_phase_molar_masses(MM_l, MM_v);
+        _Q = detail::Qmass_to_Qmolar(q, MM_l, MM_v);
+        _Qmass = q;
+        _phase = iphase_twophase;
+        return;
+    }
+    // The 6 remaining Qmass pairs: REFPROP has no native kq flag for them.
+    // Fall through to the base-class secant iteration.
+    AbstractState::update_Qmass_pair(pair, v1, v2);
+}
+
 CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void) {
     double b = NAN;
     VIRBdll(&_T, &(mole_fractions[0]), &b);
@@ -1270,6 +1330,13 @@ phases REFPROPMixtureBackend::GetRPphase() {
 }
 
 void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Mass-quality input pair on a true mixture: handle via update_Qmass_pair.
+    // Pure / pseudo-pure (mole_fractions.size() == 1) goes through the existing
+    // mass_to_molar_inputs path.
+    if (CoolProp::is_Qmass_pair(input_pair) && mole_fractions.size() > 1) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
+    }
     this->check_loaded_fluid();
     double rho_mol_L = _HUGE, rhoLmol_L = _HUGE, rhoVmol_L = _HUGE, hmol = _HUGE, emol = _HUGE, smol = _HUGE, cvmol = _HUGE, cpmol = _HUGE, w = _HUGE,
            q = _HUGE, mm = _HUGE, p_kPa = _HUGE, hjt = _HUGE;
