@@ -940,6 +940,20 @@ CoolPropDbl REFPROPMixtureBackend::calc_molar_mass(void) {
     _molar_mass = wmm_kg_kmol / 1000;             // kg/mol
     return static_cast<CoolPropDbl>(_molar_mass.pt());
 };
+void REFPROPMixtureBackend::calc_phase_molar_masses(double& MM_l, double& MM_v) {
+    if (mole_fractions.size() == 1) {
+        const double mm = molar_mass();
+        MM_l = mm;
+        MM_v = mm;
+        return;
+    }
+    this->check_loaded_fluid();
+    double mm_l_kg_per_kmol = NAN, mm_v_kg_per_kmol = NAN;
+    WMOLdll(&(mole_fractions_liq[0]), &mm_l_kg_per_kmol);
+    WMOLdll(&(mole_fractions_vap[0]), &mm_v_kg_per_kmol);
+    MM_l = mm_l_kg_per_kmol / 1000.0;
+    MM_v = mm_v_kg_per_kmol / 1000.0;
+}
 CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void) {
     double b = NAN;
     VIRBdll(&_T, &(mole_fractions[0]), &b);

@@ -4601,4 +4601,30 @@ TEST_CASE("Qmass input: HEOS mixture round-trip via PQmass / HmolarQmass / Dmola
     // }
 }
 
+TEST_CASE("Qmass output: REFPROP R32+R125 matches HEOS to leading digits", "[Qmass][REFPROP]") {
+    std::shared_ptr<CoolProp::AbstractState> AS;
+    try {
+        AS.reset(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
+    } catch (...) {
+        WARN("REFPROP not available; skipping");
+        return;
+    }
+    AS->set_mole_fractions({0.5, 0.5});
+    AS->update(CoolProp::QT_INPUTS, 0.4, 280.0);
+    const double Qmass_refprop = AS->Qmass();
+
+    auto AS_heos = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+    AS_heos->set_mole_fractions({0.5, 0.5});
+    AS_heos->update(CoolProp::QT_INPUTS, 0.4, 280.0);
+    const double Qmass_heos = AS_heos->Qmass();
+
+    // Different EOS but same physical mixture; agreement to ~3 digits is plenty
+    // to confirm the REFPROP override is computing something sensible.
+    CHECK(Qmass_refprop == Catch::Approx(Qmass_heos).epsilon(1e-2));
+    // Sanity: result is in (0, 1) and not equal to Qmolar=0.4 (mixture should differ)
+    CHECK(Qmass_refprop > 0.0);
+    CHECK(Qmass_refprop < 1.0);
+    CHECK(std::abs(Qmass_refprop - 0.4) > 1e-3);
+}
+
 #endif
