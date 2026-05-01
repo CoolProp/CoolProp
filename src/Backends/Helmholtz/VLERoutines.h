@@ -64,7 +64,7 @@ static CoolPropDbl Wilson_lnK_factor(const HelmholtzEOSMixtureBackend& HEOS, Coo
     const double pci = HEOS.get_fluid_constant(i, iP_critical);
     const double Tci = HEOS.get_fluid_constant(i, iT_critical);
     const double omegai = HEOS.get_fluid_constant(i, iacentric_factor);
-    return log(pci / p) + 5.373 * (1 + omegai) * (1 - Tci / T);
+    return log(pci / p) + 5.3726985503194395 * (1 + omegai) * (1 - Tci / T);
 };
 
 void saturation_D_pure(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl rhomolar, saturation_D_pure_options& options);
@@ -257,9 +257,9 @@ inline double saturation_Wilson(HelmholtzEOSMixtureBackend& HEOS, double beta, d
             double Tci = HEOS.get_fluid_constant(i, iT_critical);
             double omegai = HEOS.get_fluid_constant(i, iacentric_factor);
             if (beta0) {
-                out += z[i] * pci * exp(5.373 * (1 + omegai) * (1 - Tci / input_value));
+                out += z[i] * pci * exp(5.3726985503194395 * (1 + omegai) * (1 - Tci / input_value));
             } else {
-                out += z[i] / (pci * exp(5.373 * (1 + omegai) * (1 - Tci / input_value)));
+                out += z[i] / (pci * exp(5.3726985503194395 * (1 + omegai) * (1 - Tci / input_value)));
             }
         }
         if (!beta0) {       // beta = 1
