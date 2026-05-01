@@ -290,12 +290,8 @@ void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     // The mutex inside ensure_HS_under_lock serializes concurrent first-call
     // builds across HEOS instances that share this fluid's SuperAncillary
     // (#2773 review C2).
-    auto h_callable = [this](double T, double rhomolar) -> double {
-        return this->calc_hmolar_nocache(T, rhomolar);
-    };
-    auto s_callable = [this](double T, double rhomolar) -> double {
-        return this->calc_smolar_nocache(T, rhomolar);
-    };
+    auto h_callable = [this](double T, double rhomolar) -> double { return this->calc_hmolar_nocache(T, rhomolar); };
+    auto s_callable = [this](double T, double rhomolar) -> double { return this->calc_smolar_nocache(T, rhomolar); };
     superanc_ptr->ensure_HS_under_lock(h_callable, s_callable);
 }
 

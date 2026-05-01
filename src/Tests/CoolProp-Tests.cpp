@@ -4872,7 +4872,7 @@ TEST_CASE("HmolarQ branch selection via guess.T (water saturated vapor)", "[2773
         CoolProp::GuessesStructure g;
         g.T = 620.0;
         REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g));
-        CHECK(AS->T() > T_h_max_approx);  // a different root past the peak
+        CHECK(AS->T() > T_h_max_approx);                              // a different root past the peak
         CHECK(AS->T() != Catch::Approx(T_low_anchor).epsilon(0.05));  // not the same root
     }
 }

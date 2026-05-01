@@ -533,8 +533,9 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
             Ts_str += format("%g K", Ts[i]);
             if (i + 1 < Ts.size()) Ts_str += ", ";
         }
-        throw MultipleSolutionsError(format("%s: %c=%g on saturated %s has %zu T-roots (%s); use update_with_guesses with guess.T to pick a branch (see GitHub #2773)",
-                                            fn_name, k, target_value, phase_name, Ts.size(), Ts_str.c_str()));
+        throw MultipleSolutionsError(
+          format("%s: %c=%g on saturated %s has %zu T-roots (%s); use update_with_guesses with guess.T to pick a branch (see GitHub #2773)", fn_name,
+                 k, target_value, phase_name, Ts.size(), Ts_str.c_str()));
     }
     return Ts[0];
 }

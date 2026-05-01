@@ -247,10 +247,10 @@ class ChebyshevExpansion
       m_xmax;           ///< The maximum value of the independent variable
     ArrayType m_coeff;  ///< The coefficients of the expansion
    public:
-    ChebyshevExpansion() {};
+    ChebyshevExpansion(){};
 
     /// Constructor with bounds and coefficients
-    ChebyshevExpansion(double xmin, double xmax, const ArrayType& coeff) : m_xmin(xmin), m_xmax(xmax), m_coeff(coeff) {};
+    ChebyshevExpansion(double xmin, double xmax, const ArrayType& coeff) : m_xmin(xmin), m_xmax(xmax), m_coeff(coeff){};
 
     /// Copy constructor
     ChebyshevExpansion(const ChebyshevExpansion& ex) = default;
@@ -916,7 +916,7 @@ class SuperAncillary
     /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
      * \param s The string-encoded JSON data for the superancillaries
      */
-    SuperAncillary(const std::string& s) : SuperAncillary(nlohmann::json::parse(s)) {};
+    SuperAncillary(const std::string& s) : SuperAncillary(nlohmann::json::parse(s)){};
 
     /** Get a const reference to a ChebyshevApproximation1D
      
