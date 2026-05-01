@@ -40,7 +40,11 @@ then
   exit 0
 fi
 
-git diff $TARGET_BRANCH_NAME $PR_BRANCH_NAME --name-only | grep '.*\.\(cpp\|c\|hpp\|h\)$' | xargs clang-format -style=file -i -fallback-style=none
+# CLANG_FORMAT lets callers pin a specific version (e.g. "uvx clang-format@18.1.8")
+# so CI and local runs use the same binary. Defaults to whatever `clang-format` is on PATH.
+: "${CLANG_FORMAT:=clang-format}"
+
+git diff $TARGET_BRANCH_NAME $PR_BRANCH_NAME --name-only | grep '.*\.\(cpp\|c\|hpp\|h\)$' | xargs $CLANG_FORMAT -style=file -i -fallback-style=none
 
 # clang-format will auto correct files so prepare the diff and use this as artifact
 git diff > clang_format.patch

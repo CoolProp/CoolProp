@@ -15,11 +15,18 @@ jobs:
       with:
         fetch-depth: 0   # Fetch all history (especially branches)
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+
     - name: Run clang-format against C++ files touched by the PR
       shell: bash
       run: |
           echo "GITHUB_REF=$GITHUB_REF GITHUB_BASE_REF=$GITHUB_BASE_REF GITHUB_HEAD_REF=$GITHUB_HEAD_REF"
-          clang-format --version
+          # Pin clang-format to the version declared in .pre-commit-config.yaml
+          # so CI and the local pre-commit hook always run the same binary.
+          VER=$(awk '/mirrors-clang-format/{f=1} f && /^[[:space:]]*rev:/{print $2; exit}' .pre-commit-config.yaml | tr -d 'v"')
+          export CLANG_FORMAT="uvx clang-format@$VER"
+          $CLANG_FORMAT --version
           # Use SHAs directly so this works for both fork PRs and local-branch PRs.
           # remotes/origin/<branch> is unreliable for fork PRs because the fork's
           # branch is not fetched into origin.
