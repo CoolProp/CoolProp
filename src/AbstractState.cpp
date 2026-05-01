@@ -201,6 +201,23 @@ bool AbstractState::clear() {
 void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, CoolPropDbl& value1, CoolPropDbl& value2) {
     // Check if a mass based input, convert it to molar units
 
+    // Pure / pseudo-pure: Qmass == Qmolar exactly. Rewrite the Qmass pair to
+    // its molar sibling without touching values. Mixture cases (size > 1) are
+    // handled by the iterative update_Qmass_pair path; leave them unchanged here.
+    if (get_mole_fractions().size() == 1) {
+        switch (input_pair) {
+            case QmassT_INPUTS:      input_pair = QT_INPUTS;      break;
+            case PQmass_INPUTS:      input_pair = PQ_INPUTS;      break;
+            case QmassSmolar_INPUTS: input_pair = QSmolar_INPUTS; break;
+            case QmassSmass_INPUTS:  input_pair = QSmass_INPUTS;  break;
+            case HmolarQmass_INPUTS: input_pair = HmolarQ_INPUTS; break;
+            case HmassQmass_INPUTS:  input_pair = HmassQ_INPUTS;  break;
+            case DmolarQmass_INPUTS: input_pair = DmolarQ_INPUTS; break;
+            case DmassQmass_INPUTS:  input_pair = DmassQ_INPUTS;  break;
+            default:                 break;
+        }
+    }
+
     switch (input_pair) {
         case DmassT_INPUTS:      ///< Mass density in kg/m^3, Temperature in K
                                  //case HmassT_INPUTS: ///< Enthalpy in J/kg, Temperature in K (NOT CURRENTLY IMPLEMENTED)
