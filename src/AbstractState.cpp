@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include "boost/math/tools/toms748_solve.hpp"
 #include "AbstractState.h"
 #include "DataStructures.h"
 #include "qmass_conversions.h"
@@ -697,18 +698,19 @@ CoolPropDbl AbstractState::calc_Qmass(void) {
     if (!ValidNumber(_Q) || _Q < 0 || _Q > 1) {
         throw ValueError("Qmass requires a two-phase state (0 <= Q <= 1)");
     }
-    double MM_l = 0, MM_v = 0;
-    calc_phase_molar_masses(MM_l, MM_v);
-    return static_cast<CoolPropDbl>(detail::Qmolar_to_Qmass(_Q, MM_l, MM_v));
+    // Endpoints: Qmass equals Qmolar by definition (no phase composition needed).
+    // This avoids NaN propagation when one phase is unpopulated by the backend
+    // at a saturation-curve endpoint (e.g. Q=0 on the bubble line).
+    if (_Q == 0.0 || _Q == 1.0) return static_cast<CoolPropDbl>(_Q);
+    const auto MM = calc_phase_molar_masses();
+    return static_cast<CoolPropDbl>(detail::Qmolar_to_Qmass(_Q, MM.liquid, MM.vapor));
 }
-void AbstractState::calc_phase_molar_masses(double& MM_l, double& MM_v) {
+AbstractState::PhaseMolarMasses AbstractState::calc_phase_molar_masses() {
     // For a pure or pseudo-pure fluid the liquid and vapor phases share the same
     // molar mass as the bulk fluid.  A mixture backend must override this method.
     if (get_mole_fractions().size() == 1) {
         const double mm = molar_mass();
-        MM_l = mm;
-        MM_v = mm;
-        return;
+        return {mm, mm};
     }
     throw NotImplementedError("calc_phase_molar_masses must be overridden by mixture backends");
 }
@@ -772,44 +774,26 @@ void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, dou
 
     auto residual = [&](double Qmolar) -> double {
         run_molar(Qmolar);
-        double MM_l = 0, MM_v = 0;
-        calc_phase_molar_masses(MM_l, MM_v);
-        return detail::Qmolar_to_Qmass(Qmolar, MM_l, MM_v) - Qmass_target;
+        const auto MM = calc_phase_molar_masses();
+        return detail::Qmolar_to_Qmass(Qmolar, MM.liquid, MM.vapor) - Qmass_target;
     };
 
-    // Bracket: small box around target; widen to full domain if it doesn't bracket.
-    double a = std::max(1e-12, Qmass_target - 1e-3);
-    double b = std::min(1.0 - 1e-12, Qmass_target + 1e-3);
-    double fa = residual(a);
-    double fb = residual(b);
+    // TOMS748 needs a strict bracket on (0, 1). Qmass(Qmolar) is monotonically
+    // increasing on this interval and goes 0 -> 1, so [eps, 1-eps] always brackets.
+    constexpr double eps = 1e-12;
+    constexpr int bits = 48;  // ~14 significant digits
+    boost::math::uintmax_t max_iter = 50;
+    const double a = eps;
+    const double b = 1.0 - eps;
+    const double fa = residual(a);
+    const double fb = residual(b);
     if (fa * fb > 0) {
-        a = 1e-12;
-        b = 1.0 - 1e-12;
-        fa = residual(a);
-        fb = residual(b);
-        if (fa * fb > 0) {
-            throw SolutionError(format("update_Qmass_pair: cannot bracket Qmolar for Qmass=%g", Qmass_target));
-        }
+        throw SolutionError(
+          format("update_Qmass_pair: cannot bracket Qmolar for Qmass=%g (fa=%g, fb=%g)", Qmass_target, fa, fb));
     }
-
-    double Qmolar_solution = std::numeric_limits<double>::quiet_NaN();
-    for (int iter = 0; iter < 50; ++iter) {
-        const double denom = fb - fa;
-        const double c_secant = (std::abs(denom) < 1e-30) ? 0.5 * (a + b) : b - fb * (b - a) / denom;
-        const double c = std::max(1e-12, std::min(1.0 - 1e-12, c_secant));
-        const double fc = residual(c);
-        if (std::abs(fc) < 1e-10) {
-            Qmolar_solution = c;
-            break;
-        }
-        if (fa * fc < 0) {
-            b = c;
-            fb = fc;
-        } else {
-            a = c;
-            fa = fc;
-        }
-    }
+    const auto [lo, hi] =
+      boost::math::tools::toms748_solve(residual, a, b, fa, fb, boost::math::tools::eps_tolerance<double>(bits), max_iter);
+    const double Qmolar_solution = 0.5 * (lo + hi);
     if (!ValidNumber(Qmolar_solution)) {
         throw SolutionError(format("update_Qmass_pair: did not converge for Qmass=%g", Qmass_target));
     }

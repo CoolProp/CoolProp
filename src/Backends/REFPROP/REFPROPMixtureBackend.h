@@ -157,7 +157,7 @@ class REFPROPMixtureBackend : public AbstractState
 
     CoolPropDbl calc_molar_mass(void);
 
-    void calc_phase_molar_masses(double& MM_liquid, double& MM_vapor) override;
+    PhaseMolarMasses calc_phase_molar_masses() override;
 
     void check_loaded_fluid(void);
 

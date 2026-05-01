@@ -403,7 +403,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     void calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p);
 
     CoolPropDbl calc_molar_mass(void);
-    void calc_phase_molar_masses(double& MM_liquid, double& MM_vapor) override;
+    PhaseMolarMasses calc_phase_molar_masses() override;
     CoolPropDbl calc_gas_constant(void);
     CoolPropDbl calc_acentric_factor(void);
 

@@ -941,19 +941,16 @@ CoolPropDbl REFPROPMixtureBackend::calc_molar_mass(void) {
     _molar_mass = wmm_kg_kmol / 1000;             // kg/mol
     return static_cast<CoolPropDbl>(_molar_mass.pt());
 };
-void REFPROPMixtureBackend::calc_phase_molar_masses(double& MM_l, double& MM_v) {
+AbstractState::PhaseMolarMasses REFPROPMixtureBackend::calc_phase_molar_masses() {
     if (mole_fractions.size() == 1) {
         const double mm = molar_mass();
-        MM_l = mm;
-        MM_v = mm;
-        return;
+        return {mm, mm};
     }
     this->check_loaded_fluid();
     double mm_l_kg_per_kmol = NAN, mm_v_kg_per_kmol = NAN;
     WMOLdll(&(mole_fractions_liq[0]), &mm_l_kg_per_kmol);
     WMOLdll(&(mole_fractions_vap[0]), &mm_v_kg_per_kmol);
-    MM_l = mm_l_kg_per_kmol / 1000.0;
-    MM_v = mm_v_kg_per_kmol / 1000.0;
+    return {mm_l_kg_per_kmol / 1000.0, mm_v_kg_per_kmol / 1000.0};
 }
 
 void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
@@ -1000,9 +997,8 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         _speed_sound = w;
 
         // Compute molar quality from mass quality using returned phase compositions.
-        double MM_l = 0, MM_v = 0;
-        calc_phase_molar_masses(MM_l, MM_v);
-        _Q = detail::Qmass_to_Qmolar(q, MM_l, MM_v);
+        const auto MM = calc_phase_molar_masses();
+        _Q = detail::Qmass_to_Qmolar(q, MM.liquid, MM.vapor);
         _Qmass = q;
         _phase = iphase_twophase;
         return;

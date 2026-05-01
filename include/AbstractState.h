@@ -270,10 +270,17 @@ class AbstractState
     /// calc_phase_molar_masses(); override only if a backend has a faster route.
     virtual CoolPropDbl calc_Qmass(void);
 
-    /// Populate phase molar masses (kg/mol) for the current saturated state.
+    /// Phase molar masses (kg/mol) at the current saturated state.
+    struct PhaseMolarMasses
+    {
+        double liquid;
+        double vapor;
+    };
+
+    /// Phase molar masses (kg/mol) at the current saturated state.
     /// Default base impl handles pure/pseudopure (both = molar_mass()).
     /// Mixture backends must override.
-    virtual void calc_phase_molar_masses(double& MM_liquid, double& MM_vapor);
+    virtual PhaseMolarMasses calc_phase_molar_masses();
 
     /// Default iterative Qmass-pair solver (secant on Qmolar). Backends may
     /// override to use a native fast path (e.g. REFPROP TQFLSHdll kq=2).

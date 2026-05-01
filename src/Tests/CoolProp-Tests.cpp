@@ -4717,4 +4717,41 @@ TEST_CASE("Qmass: PropsSI integration (output + input)", "[Qmass][PropsSI]") {
     }
 }
 
+TEST_CASE("Qmass: PCSAFT mixture output works after Q-pair flash", "[Qmass][PCSAFT][mixture]") {
+    // Verifies PCSAFT calc_phase_molar_masses override and the early-exit hook.
+    // METHANE[0.0252]+BENZENE[0.9748] at Q=0, T=421.05 K is in the PCSAFT
+    // VLE regression suite (existing test in this file, ~line 2942).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE&BENZENE"));
+    AS->set_mole_fractions({0.0252, 0.9748});
+    AS->update(CoolProp::QT_INPUTS, 0.0, 421.05);
+    // At Q=0 (saturated liquid) the endpoint short-circuit in calc_Qmass returns 0
+    // without computing MM_l/MM_v — important because PCSAFT may not populate
+    // SatV->mole_fractions at saturation endpoints.
+    CHECK(AS->Q() == Catch::Approx(0.0).epsilon(1e-10));
+    CHECK(AS->Qmass() == Catch::Approx(0.0).epsilon(1e-10));
+    // QmassT_INPUTS at Qmass=0 must reach the same state via the endpoint
+    // bypass in update_Qmass_pair (no iteration, no flash convergence concerns).
+    auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE&BENZENE"));
+    AS2->set_mole_fractions({0.0252, 0.9748});
+    AS2->update(CoolProp::QmassT_INPUTS, 0.0, 421.05);
+    CHECK(AS2->p() == Catch::Approx(AS->p()).epsilon(1e-10));
+    CHECK(AS2->Q() == Catch::Approx(0.0).epsilon(1e-10));
+}
+
+TEST_CASE("Qmass: SRK cubic mixture output works after Q-pair flash", "[Qmass][cubic][mixture]") {
+    // Verifies the cubic backend's early-exit hook + inherited HEOS
+    // calc_phase_molar_masses override (cubic shares HEOS's SatL/SatV machinery).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SRK", "Propane&n-Butane"));
+    AS->set_mole_fractions({0.5, 0.5});
+    AS->update(CoolProp::PQ_INPUTS, 5e5, 0.0);
+    CHECK(AS->Q() == Catch::Approx(0.0).epsilon(1e-10));
+    CHECK(AS->Qmass() == Catch::Approx(0.0).epsilon(1e-10));
+    // Endpoint round-trip via Qmass-input pair (early-exit hook + endpoint shortcut).
+    auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("SRK", "Propane&n-Butane"));
+    AS2->set_mole_fractions({0.5, 0.5});
+    AS2->update(CoolProp::PQmass_INPUTS, 5e5, 0.0);
+    CHECK(AS2->T() == Catch::Approx(AS->T()).epsilon(1e-10));
+    CHECK(AS2->Q() == Catch::Approx(0.0).epsilon(1e-10));
+}
+
 #endif
