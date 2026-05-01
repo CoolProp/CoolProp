@@ -4953,18 +4953,23 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
         CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
     }
 
-    SECTION("Reference-state change invalidates caloric superancillary") {
-        // Build the h-superancillary against the default reference state, then
-        // change to NBP and verify a fresh HEOS instance returns the NBP-frame
-        // T-root (not stale DEF-frame coefficients). NBP works for water
+    SECTION("Reference-state change works correctly across instances") {
+        // Build the h-superancillary against the default reference state,
+        // then switch to NBP and verify a fresh HEOS instance returns the
+        // NBP-frame T-root. The cache is shared (single shared_ptr) but the
+        // shift-c0 trick translates the new caller's target into the cache's
+        // frame at query time — no rebuild needed. NBP works for water
         // (IIR is rejected because Ttriple > 273.15 K).
         //
-        // Note: set_reference_stateS modifies the global library, not pre-
-        // existing HEOS instances. Each HEOS holds its own copy of
-        // CoolPropFluid (and its own alpha0 offset). So the relevant
-        // assertion is that *new* instances created after the ref-state
-        // change see the right behavior; pre-existing instances continue to
-        // operate under their original (now-stale) reference.
+        // RAII guard ensures the global ref state is reset to DEF even if
+        // an assertion below fails — otherwise downstream water tests would
+        // operate under NBP and behave unpredictably.
+        struct WaterRefStateGuard {
+            ~WaterRefStateGuard() {
+                CoolProp::set_reference_stateS("Water", "DEF");
+            }
+        } guard;
+
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
         const double T_anchor = 470.0;
         AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
@@ -4973,22 +4978,18 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
         g.T = T_anchor;
         // Force the caloric superancillary build under the DEF reference.
         REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def, 1.0, g));
-        // Switch reference state. clear_caloric_variables() drops the cached
-        // h-superancillary so the next caloric flash on a new instance rebuilds
-        // against the new reference.
+        // Switch reference state. The cache stays as-is; only the offset
+        // stamp records what frame it's in.
         CoolProp::set_reference_stateS("Water", "NBP");
         std::shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", "Water"));
         AS2->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
         const double h_nbp = AS2->hmolar();
         REQUIRE(std::abs(h_nbp - h_def) > 100.0);  // confirms the offset is real
-        // The HmolarQ flash on AS2 must resolve to T_anchor in the NBP frame.
-        // If the C1 invalidation hadn't fired, the shared superancillary would
-        // still hold DEF coefficients and resolve_T_via_superancillary would
-        // throw "no T-root in monotonic sub-interval" instead.
+        // resolve_T_via_superancillary translates h_nbp into the cache's DEF
+        // frame via R·T_red·(a2_cache − a2_caller), so TOMS748 finds the same
+        // saturation T_anchor that satisfies both frames.
         REQUIRE_NOTHROW(AS2->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_nbp, 1.0, g));
         CHECK(AS2->T() == Catch::Approx(T_anchor).epsilon(0.01));
-        // Reset reference state for downstream tests.
-        CoolProp::set_reference_stateS("Water", "DEF");
     }
 
     SECTION("Mixture: NotImplementedError preserved") {
@@ -5034,8 +5035,16 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
 // reference states should both get correct answers without forcing the cache
 // to rebuild on every alternation. See #2773.
 TEST_CASE("Caloric superancillary is reference-state-agnostic (no thrashing)", "[2773][ref_state_shared]") {
-    // Reset water to DEF in case a previous test left it in another state.
-    CoolProp::set_reference_stateS("Water", "DEF");
+    // RAII guard: ensure water is reset to DEF on exit, regardless of
+    // assertion failures, so downstream tests aren't contaminated.
+    struct WaterRefStateGuard {
+        WaterRefStateGuard() {
+            CoolProp::set_reference_stateS("Water", "DEF");
+        }
+        ~WaterRefStateGuard() {
+            CoolProp::set_reference_stateS("Water", "DEF");
+        }
+    } guard;
 
     // (1) Build the cache via the first HEOS instance under DEF.
     std::shared_ptr<CoolProp::AbstractState> AS_def(CoolProp::AbstractState::factory("HEOS", "Water"));
@@ -5090,8 +5099,7 @@ TEST_CASE("Caloric superancillary is reference-state-agnostic (no thrashing)", "
     REQUIRE_NOTHROW(AS_nbp->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, s_nbp_anchor, g));
     CHECK(AS_nbp->T() == Catch::Approx(500.0).epsilon(1e-3));
 
-    // Reset reference state for downstream tests.
-    CoolProp::set_reference_stateS("Water", "DEF");
+    // RAII guard at the top of the test resets the reference state on exit.
 }
 
 // Verify thread safety of the lazy build path. Spawn N threads, each creating

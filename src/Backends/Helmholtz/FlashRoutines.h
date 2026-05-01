@@ -139,6 +139,16 @@ class FlashRoutines
     /// fall back to the legacy solver.
     static bool sat_superanc_path_applies(HelmholtzEOSMixtureBackend& HEOS);
 
+    /// Compute the total (a1, a2) IdealHelmholtzEnthalpyEntropyOffset
+    /// contribution for a HEOS, summing both the parse-time-immutable
+    /// EnthalpyEntropyOffsetCore and the user-mutable EnthalpyEntropyOffset
+    /// and applying the alpha0 prefactor. This is the value that goes into
+    /// the SuperAncillary stamp and into the shift formula
+    /// (Δh = R·T_red·Δa2, Δs = −R·Δa1) used to translate user-frame target
+    /// values into the cache's frame at query time. See #2773.
+    /// Returns (a1_total, a2_total) as a pair.
+    static std::pair<double, double> alpha0_offset_total(HelmholtzEOSMixtureBackend& HEOS);
+
     /// Flash for mixture given temperature or pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param other The parameter that is imposed, either iT or iP

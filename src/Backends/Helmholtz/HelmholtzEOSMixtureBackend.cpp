@@ -292,12 +292,13 @@ void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
     // (#2773 review C2).
     auto h_callable = [this](double T, double rhomolar) -> double { return this->calc_hmolar_nocache(T, rhomolar); };
     auto s_callable = [this](double T, double rhomolar) -> double { return this->calc_smolar_nocache(T, rhomolar); };
-    // The IdealHelmholtzEnthalpyEntropyOffset's a1/a2 are sentinel HUGE_VAL
-    // when disabled; canonicalize to (0, 0) so an enabled cache stamp at (0, 0)
-    // matches a disabled caller (both contribute zero to h and s).
-    const auto& off = components[0].EOS().alpha0.EnthalpyEntropyOffset;
-    const double caller_a1 = off.is_enabled() ? static_cast<double>(off.get_a1()) : 0.0;
-    const double caller_a2 = off.is_enabled() ? static_cast<double>(off.get_a2()) : 0.0;
+    // Stamp the cache with the *total* alpha0 offset — sum of Core (parse-
+    // time-immutable) and user-mutable offsets, scaled by the alpha0
+    // prefactor. This way the shift formula in resolve_T_via_superancillary
+    // remains correct even if Core were ever mutated post-parse, and even
+    // for fluids with a non-unity prefactor (currently none in the bundled
+    // library, but the JSON path is live). See #2773.
+    const auto [caller_a1, caller_a2] = FlashRoutines::alpha0_offset_total(*this);
     superanc_ptr->ensure_HS_under_lock(caller_a1, caller_a2, h_callable, s_callable);
 }
 

@@ -856,10 +856,12 @@ class SuperAncillary
     /// nullopt before first build. See #2773.
     std::optional<std::pair<double, double>> m_caloric_alpha0_stamp;
 
-    /// Counter incremented every time the caloric superancillaries are
-    /// (re)built. Used by tests to verify that with the option-D shift trick
-    /// in place, multi-instance / multi-ref-state usage does NOT cause
-    /// repeated rebuilds. mutable + atomic so const observers can read it.
+    /// Counter incremented once per call to ensure_HS_under_lock that
+    /// actually builds (H and S are built together as a pair, so a single
+    /// increment covers both). Used by tests to verify that with the
+    /// option-D shift trick in place, multi-instance / multi-ref-state
+    /// usage does NOT cause repeated rebuilds. mutable + atomic so const
+    /// observers can read it.
     mutable std::atomic<unsigned int> m_caloric_build_count{0};
 
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
@@ -973,9 +975,11 @@ class SuperAncillary
         }
     }
     /// Discard the cached caloric saturation Chebyshev approximations.
-    /// Not normally called: the cache is reference-state-agnostic via the
-    /// shift trick (see m_caloric_alpha0_stamp doc). Retained for tests and
-    /// for explicit forced-rebuild scenarios.
+    /// Not invoked by any normal control path — the cache is reference-state-
+    /// agnostic via the shift trick recorded by m_caloric_alpha0_stamp. This
+    /// method is kept as a diagnostic / forced-rebuild hatch for future use
+    /// (e.g. if the prefactor or Core offset ever becomes runtime-mutable),
+    /// but no current code calls it. See #2773.
     void clear_caloric_variables() {
         std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
         m_hL.reset();

@@ -961,9 +961,12 @@ class IdealHelmholtzEnthalpyEntropyOffset : public BaseHelmholtzTerm
         return enabled;
     };
 
-    /// Read access to the offset coefficients. Used as a stamp for the caloric
-    /// superancillary cache so the cache rebuilds when the offset changes
-    /// (#2773 — multi-instance ref-state correctness).
+    /// Read access to the offset coefficients. Used by the caloric-
+    /// superancillary shift trick (#2773): the cache is reference-state-
+    /// agnostic via a closed-form translation Δh = R·T_red·Δa2,
+    /// Δs = −R·Δa1 applied at query time. The stamp records (a1, a2) at
+    /// first build; subsequent callers compute the shift relative to the
+    /// stamp. The cache itself is never rebuilt.
     CoolPropDbl get_a1() const {
         return a1;
     }
@@ -1419,6 +1422,13 @@ class IdealHelmholtzContainer : public BaseHelmholtzContainer
 
     void set_prefactor(double prefactor) {
         _prefactor = prefactor;
+    }
+
+    /// Read access to the global prefactor on alpha0 (and its derivatives).
+    /// Used by the caloric-superancillary shift trick (#2773) so the offset
+    /// translation accounts for the prefactor when it is not unity.
+    double get_prefactor() const {
+        return _prefactor;
     }
 
     void set_Tred(double T_red) {

@@ -282,6 +282,22 @@ static constexpr double Q_BOUNDARY_TOL = 1e-10;
 // adjacent monotonic intervals at an extremum (#2773 review I1).
 static constexpr double T_ROOT_DEDUP_TOL = 1e-6;
 
+// Sum the two IdealHelmholtzEnthalpyEntropyOffset contributions
+// (EnthalpyEntropyOffsetCore from JSON parse and the user-mutable
+// EnthalpyEntropyOffset) and apply the alpha0 prefactor. Disabled offsets
+// canonicalize to (0, 0). The returned (a1, a2) is what goes into the
+// SuperAncillary stamp and into the shift formula (Δh = R·T_red·Δa2,
+// Δs = −R·Δa1). See #2773.
+std::pair<double, double> FlashRoutines::alpha0_offset_total(HelmholtzEOSMixtureBackend& HEOS) {
+    const auto& alpha0 = HEOS.get_components()[0].EOS().alpha0;
+    const auto& core = alpha0.EnthalpyEntropyOffsetCore;
+    const auto& user = alpha0.EnthalpyEntropyOffset;
+    const double prefactor = alpha0.get_prefactor();
+    const double a1_sum = (core.is_enabled() ? static_cast<double>(core.get_a1()) : 0.0) + (user.is_enabled() ? static_cast<double>(user.get_a1()) : 0.0);
+    const double a2_sum = (core.is_enabled() ? static_cast<double>(core.get_a2()) : 0.0) + (user.is_enabled() ? static_cast<double>(user.get_a2()) : 0.0);
+    return {prefactor * a1_sum, prefactor * a2_sum};
+}
+
 // Has the fluid got a superancillary AND is the requested Q exactly 0 or 1?
 // Used by the no-guess default flashes to decide whether to route through the
 // strict-mode superancillary path. Pseudo-pure fluids are rejected here too,
@@ -476,16 +492,16 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
     // Shift the user's target value into the cache's reference frame for H
     // and S. The IdealHelmholtzEnthalpyEntropyOffset's effect on h(T) and
     // s(T) along the saturation curve is exactly a constant — Δh = R·T_red·Δa2
-    // and Δs = −R·Δa1 — so we only need to translate the target, never
-    // rebuild. See ensure_HS_under_lock comment and #2773. For D the cache
-    // is reference-state-independent intrinsically (no shift needed).
+    // and Δs = −R·Δa1, with (a1, a2) summed across both EnthalpyEntropyOffset
+    // and EnthalpyEntropyOffsetCore and scaled by the alpha0 prefactor. So
+    // we only need to translate the target, never rebuild. See
+    // ensure_HS_under_lock comment and #2773. For D the cache is
+    // reference-state-independent intrinsically (no shift needed).
     double target_in_cache_frame = target_value;
     if (k == 'H' || k == 'S') {
         const auto stamp = superanc.get_caloric_alpha0_stamp();
-        const auto& off = HEOS.get_components()[0].EOS().alpha0.EnthalpyEntropyOffset;
-        const double caller_a1 = off.is_enabled() ? static_cast<double>(off.get_a1()) : 0.0;
-        const double caller_a2 = off.is_enabled() ? static_cast<double>(off.get_a2()) : 0.0;
         if (stamp.has_value()) {
+            const auto [caller_a1, caller_a2] = alpha0_offset_total(HEOS);
             const double cache_a1 = stamp->first;
             const double cache_a2 = stamp->second;
             if (k == 'H') {
