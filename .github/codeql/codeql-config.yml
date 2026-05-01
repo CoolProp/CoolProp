@@ -1,0 +1,17 @@
+name: "CoolProp CodeQL config"
+
+# Keep the default security-and-quality query suite (added by the workflow
+# via `queries: +security-and-quality`).
+
+# Exclude vendored / fetched third-party sources we cannot patch.
+# - build/_deps/**     : CPM/FetchContent downloads (Eigen, fmt, msgpack, …)
+# - externals/miniz-*  : vendored miniz copy
+# - externals/fmt*     : any in-tree fmt copy (defensive; fetched copy lives under build/_deps)
+# - .claude/worktrees  : local Claude Code worktrees, never analysed
+paths-ignore:
+  - build/**
+  - build_*/**
+  - "**/_deps/**"
+  - externals/miniz-*/**
+  - externals/fmt*/**
+  - .claude/**
