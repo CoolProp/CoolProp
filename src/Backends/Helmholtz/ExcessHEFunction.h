@@ -204,17 +204,11 @@ class ExcessTerm
 
     ExcessTerm() : N(0) {};
 
-    // copy assignment
-    ExcessTerm& operator=(ExcessTerm& other) {
-        for (std::size_t i = 0; i < N; ++i) {
-            for (std::size_t j = 0; j < N; ++j) {
-                if (i != j) {
-                    *(other.DepartureFunctionMatrix[i][j].get()) = *(other.DepartureFunctionMatrix[i][j].get());
-                }
-            }
-        }
-        return *this;
-    }
+    // operator= and copy-ctor: rely on the compiler-generated defaults, which
+    // shallow-copy N, F, and DepartureFunctionMatrix (vector of shared_ptr).
+    // The hand-written operator= that lived here did not actually copy any
+    // member of *this and self-assigned other's matrix — see ::copy() below
+    // for an explicit deep-copy variant.
 
     ExcessTerm copy() {
         ExcessTerm _term;

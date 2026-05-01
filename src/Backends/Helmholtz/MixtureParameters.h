@@ -74,7 +74,7 @@ struct REFPROP_binary_element
 /// A data structure for holding departure functions coming from REFPROP
 struct REFPROP_departure_function
 {
-    short Npower, Nspecial, Nterms_power, Nterms_special;
+    short Npower = 0, Nspecial = 0, Nterms_power = 0, Nterms_special = 0;
     std::string model;
     std::vector<double> a, t, d, e, eta, epsilon, beta, gamma;
     std::vector<std::string> comments;
