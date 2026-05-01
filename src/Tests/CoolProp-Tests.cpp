@@ -4694,18 +4694,26 @@ TEST_CASE("Qmass: PropsSI integration (output + input)", "[Qmass][PropsSI]") {
         CHECK(Qmolar == Catch::Approx(0.3).epsilon(1e-12));
         CHECK(Qmass  == Catch::Approx(0.3).epsilon(1e-12));
     }
-    SECTION("Qmass as input via low-level API for pure Water") {
-        // Verify that the low-level AbstractState API can handle Qmass as input
-        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    SECTION("Qmass as input for pure Water round-trip via PropsSI") {
         const double T = 350.0;
-        AS->update(CoolProp::QmassT_INPUTS, 0.3, T);
-        const double P_low = AS->p();
-        CHECK(P_low > 0.0);
-
-        // Compare with Q input to ensure Qmass == Q for pure fluids
-        AS->update(CoolProp::QT_INPUTS, 0.3, T);
+        const double P_ref = CoolProp::PropsSI("P", "T", T, "Q",     0.3, "Water");
+        const double P_via = CoolProp::PropsSI("P", "T", T, "Qmass", 0.3, "Water");
+        CHECK(P_via == Catch::Approx(P_ref).epsilon(1e-12));
+    }
+    SECTION("Qmass as input for HEOS R32+R125 mixture via PropsSI") {
+        // Note: PropsSI doesn't support setting mole fractions for mixtures
+        // through a "&"-syntax fluid name without a separate concentration vector,
+        // so we use the AbstractState API for the mixture round-trip test below.
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+        AS->set_mole_fractions({0.5, 0.5});
+        AS->update(CoolProp::QT_INPUTS, 0.4, 280.0);
+        const double Qmass_obs = AS->Qmass();
         const double P_ref = AS->p();
-        CHECK(P_low == Catch::Approx(P_ref).epsilon(1e-12));
+
+        auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+        AS2->set_mole_fractions({0.5, 0.5});
+        AS2->update(CoolProp::QmassT_INPUTS, Qmass_obs, 280.0);
+        CHECK(AS2->p() == Catch::Approx(P_ref).epsilon(1e-8));
     }
 }
 

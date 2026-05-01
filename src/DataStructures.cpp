@@ -612,25 +612,49 @@ void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
             p1 = iQ;
             p2 = iT;
             break;
+        case QmassT_INPUTS:
+            p1 = iQmass;
+            p2 = iT;
+            break;
         case QSmolar_INPUTS:
             p1 = iQ;
+            p2 = iSmolar;
+            break;
+        case QmassSmolar_INPUTS:
+            p1 = iQmass;
             p2 = iSmolar;
             break;
         case QSmass_INPUTS:
             p1 = iQ;
             p2 = iSmass;
             break;
+        case QmassSmass_INPUTS:
+            p1 = iQmass;
+            p2 = iSmass;
+            break;
         case HmolarQ_INPUTS:
             p1 = iHmolar;
             p2 = iQ;
+            break;
+        case HmolarQmass_INPUTS:
+            p1 = iHmolar;
+            p2 = iQmass;
             break;
         case HmassQ_INPUTS:
             p1 = iHmass;
             p2 = iQ;
             break;
+        case HmassQmass_INPUTS:
+            p1 = iHmass;
+            p2 = iQmass;
+            break;
         case PQ_INPUTS:
             p1 = iP;
             p2 = iQ;
+            break;
+        case PQmass_INPUTS:
+            p1 = iP;
+            p2 = iQmass;
             break;
         case PT_INPUTS:
             p1 = iP;
@@ -680,9 +704,17 @@ void split_input_pair(input_pairs pair, parameters& p1, parameters& p2) {
             p1 = iDmass;
             p2 = iQ;
             break;
+        case DmassQmass_INPUTS:
+            p1 = iDmass;
+            p2 = iQmass;
+            break;
         case DmolarQ_INPUTS:
             p1 = iDmolar;
             p2 = iQ;
+            break;
+        case DmolarQmass_INPUTS:
+            p1 = iDmolar;
+            p2 = iQmass;
             break;
         case HmassP_INPUTS:
             p1 = iHmass;
