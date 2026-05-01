@@ -336,6 +336,23 @@ inline bool match_pair(parameters key1, parameters key2, parameters x1, paramete
     swap = !(key1 == x1);
     return ((key1 == x1 && key2 == x2) || (key2 == x1 && key1 == x2));
 };
+
+/// Return true if the input pair involves a mass-based quality (Qmass).
+inline bool is_Qmass_pair(input_pairs p) {
+    switch (p) {
+        case QmassT_INPUTS:
+        case PQmass_INPUTS:
+        case QmassSmolar_INPUTS:
+        case QmassSmass_INPUTS:
+        case HmolarQmass_INPUTS:
+        case HmassQmass_INPUTS:
+        case DmolarQmass_INPUTS:
+        case DmassQmass_INPUTS:
+            return true;
+        default:
+            return false;
+    }
+}
 /**
  * @brief Generate an update pair from key, value pairs
  *

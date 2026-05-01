@@ -4510,6 +4510,22 @@ TEST_CASE("Qmass output: HEOS mixture differs from Qmolar and is internally cons
     }
 }
 
+TEST_CASE("Qmass input: HEOS R32+R125 round-trip via QmassT_INPUTS", "[Qmass][mixture]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+    AS->set_mole_fractions({0.5, 0.5});
+    AS->update(CoolProp::QT_INPUTS, 0.4, 280.0);
+    const double Qmass_observed = AS->Qmass();
+    const double p_ref          = AS->p();
+    const double Q_ref          = AS->Q();
+
+    auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+    AS2->set_mole_fractions({0.5, 0.5});
+    AS2->update(CoolProp::QmassT_INPUTS, Qmass_observed, 280.0);
+    CHECK(AS2->p()     == Catch::Approx(p_ref).epsilon(1e-8));
+    CHECK(AS2->Q()     == Catch::Approx(Q_ref).epsilon(1e-8));
+    CHECK(AS2->Qmass() == Catch::Approx(Qmass_observed).epsilon(1e-10));
+}
+
 TEST_CASE("Qmass input: pure Water round-trips for QmassT and PQmass", "[Qmass][pure]") {
     auto ref = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
     auto sut = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));

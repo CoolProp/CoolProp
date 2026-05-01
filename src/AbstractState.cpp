@@ -695,8 +695,90 @@ void AbstractState::calc_phase_molar_masses(double& MM_l, double& MM_v) {
     }
     throw NotImplementedError("calc_phase_molar_masses must be overridden by mixture backends");
 }
-void AbstractState::update_Qmass_pair(input_pairs pair, double v1, double v2) {
-    throw NotImplementedError("update_Qmass_pair is not implemented for this backend");
+void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
+    // Map Qmass-pair to its molar sibling and identify which slot (1=value1, 2=value2)
+    // holds the Qmass value.
+    struct Mapping {
+        CoolProp::input_pairs molar;
+        int qmass_slot;
+    };
+    Mapping m;
+    switch (pair) {
+        case QmassT_INPUTS:      m = {QT_INPUTS,      1}; break;
+        case PQmass_INPUTS:      m = {PQ_INPUTS,      2}; break;
+        case QmassSmolar_INPUTS: m = {QSmolar_INPUTS, 1}; break;
+        case QmassSmass_INPUTS:  m = {QSmass_INPUTS,  1}; break;
+        case HmolarQmass_INPUTS: m = {HmolarQ_INPUTS, 2}; break;
+        case HmassQmass_INPUTS:  m = {HmassQ_INPUTS,  2}; break;
+        case DmolarQmass_INPUTS: m = {DmolarQ_INPUTS, 2}; break;
+        case DmassQmass_INPUTS:  m = {DmassQ_INPUTS,  2}; break;
+        default:
+            throw ValueError("update_Qmass_pair called with non-Qmass pair");
+    }
+    const double Qmass_target = (m.qmass_slot == 1) ? v1 : v2;
+    const double partner      = (m.qmass_slot == 1) ? v2 : v1;
+
+    if (Qmass_target < 0 || Qmass_target > 1) {
+        throw ValueError(format("Qmass out of range [0,1]: %g", Qmass_target));
+    }
+
+    auto run_molar = [&](double Qmolar) {
+        if (m.qmass_slot == 1) update(m.molar, Qmolar, partner);
+        else                   update(m.molar, partner, Qmolar);
+    };
+
+    // Endpoints: bypass iteration entirely.
+    if (Qmass_target == 0.0 || Qmass_target == 1.0) {
+        run_molar(Qmass_target);
+        _Qmass = Qmass_target;
+        return;
+    }
+
+    auto residual = [&](double Qmolar) -> double {
+        run_molar(Qmolar);
+        double MM_l = 0, MM_v = 0;
+        calc_phase_molar_masses(MM_l, MM_v);
+        return detail::Qmolar_to_Qmass(Qmolar, MM_l, MM_v) - Qmass_target;
+    };
+
+    // Bracket: small box around target; widen to full domain if it doesn't bracket.
+    double a  = std::max(1e-12, Qmass_target - 1e-3);
+    double b  = std::min(1.0 - 1e-12, Qmass_target + 1e-3);
+    double fa = residual(a);
+    double fb = residual(b);
+    if (fa * fb > 0) {
+        a = 1e-12; b = 1.0 - 1e-12;
+        fa = residual(a);
+        fb = residual(b);
+        if (fa * fb > 0) {
+            throw SolutionError(format("update_Qmass_pair: cannot bracket Qmolar for Qmass=%g", Qmass_target));
+        }
+    }
+
+    double Qmolar_solution = std::numeric_limits<double>::quiet_NaN();
+    for (int iter = 0; iter < 50; ++iter) {
+        const double denom    = fb - fa;
+        const double c_secant = (std::abs(denom) < 1e-30) ? 0.5 * (a + b) : b - fb * (b - a) / denom;
+        const double c        = std::max(1e-12, std::min(1.0 - 1e-12, c_secant));
+        const double fc       = residual(c);
+        if (std::abs(fc) < 1e-10) {
+            Qmolar_solution = c;
+            break;
+        }
+        if (fa * fc < 0) {
+            b = c;
+            fb = fc;
+        } else {
+            a = c;
+            fa = fc;
+        }
+    }
+    if (!ValidNumber(Qmolar_solution)) {
+        throw SolutionError(format("update_Qmass_pair: did not converge for Qmass=%g", Qmass_target));
+    }
+    // Final flash at converged Qmolar (makes the public state unambiguous).
+    run_molar(Qmolar_solution);
+    _Qmass = Qmass_target;
 }
 double AbstractState::gas_constant() {
     if (!_gas_constant) _gas_constant = calc_gas_constant();

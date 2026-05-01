@@ -1351,6 +1351,14 @@ void HelmholtzEOSMixtureBackend::pre_update(CoolProp::input_pairs& input_pair, C
 }
 
 void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double value1, double value2) {
+    // Mass-quality input pair on a true mixture: solve iteratively for Qmolar
+    // before delegating to the molar-pair flash. Pure / pseudo-pure go through
+    // mass_to_molar_inputs in the existing flow (handled below).
+    if (CoolProp::is_Qmass_pair(input_pair) && !is_pure()) {
+        update_Qmass_pair(input_pair, value1, value2);
+        return;
+    }
+
     if (get_debug_level() > 10) {
         std::cout << format("%s (%d): update called with (%d: (%s), %g, %g)", __FILE__, __LINE__, input_pair,
                             get_input_pair_short_desc(input_pair).c_str(), value1, value2)
