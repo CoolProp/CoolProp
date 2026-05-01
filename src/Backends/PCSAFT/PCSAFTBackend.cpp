@@ -437,7 +437,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
 
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA(num_sites, 0);
-        vector<double> delta_ij(num_sites * num_sites, 0);
+        vector<double> delta_ij(static_cast<std::size_t>(num_sites) * num_sites, 0);
         auto idxa = 0ULL;
         auto idxi = 0ULL;  // index for the ii-th compound
         auto idxj = 0ULL;  // index for the jj-th compound
@@ -754,8 +754,8 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
 
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA(num_sites, 0);
-        vector<double> delta_ij(num_sites * num_sites, 0);
-        vector<double> ddelta_dt(num_sites * num_sites, 0);
+        vector<double> delta_ij(static_cast<std::size_t>(num_sites) * num_sites, 0);
+        vector<double> ddelta_dt(static_cast<std::size_t>(num_sites) * num_sites, 0);
         std::size_t idxa = 0UL;
         std::size_t idxi = 0UL;  // index for the ii-th compound
         std::size_t idxj = 0UL;  // index for the jj-th compound
@@ -1221,7 +1221,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
 
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA(num_sites, 0);
-        vector<double> delta_ij(num_sites * num_sites, 0);
+        vector<double> delta_ij(static_cast<std::size_t>(num_sites) * num_sites, 0);
         std::size_t idxa = 0UL;
         std::size_t idxi = 0UL;  // index for the ii-th compound
         std::size_t idxj = 0UL;  // index for the jj-th compound
@@ -1243,7 +1243,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
             }
         }
 
-        vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
+        vector<double> ddelta_dx(static_cast<std::size_t>(num_sites) * num_sites * ncomp, 0);
         int idx_ddelta = 0;
         for (size_t k = 0; k < ncomp; k++) {
             std::size_t idxi = 0UL;  // index for the ii-th compound
@@ -1581,7 +1581,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
 
         // these indices are necessary because we are only using 1D vectors
         vector<double> XA(num_sites, 0);
-        vector<double> delta_ij(num_sites * num_sites, 0);
+        vector<double> delta_ij(static_cast<std::size_t>(num_sites) * num_sites, 0);
         std::size_t idxa = 0UL;
         std::size_t idxi = 0UL;  // index for the ii-th compound
         std::size_t idxj = 0UL;  // index for the jj-th compound
@@ -1603,7 +1603,7 @@ CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
             }
         }
 
-        vector<double> ddelta_dx(num_sites * num_sites * ncomp, 0);
+        vector<double> ddelta_dx(static_cast<std::size_t>(num_sites) * num_sites * ncomp, 0);
         int idx_ddelta = 0;
         for (size_t k = 0; k < ncomp; k++) {
             std::size_t idxi = 0UL;  // index for the ii-th compound
