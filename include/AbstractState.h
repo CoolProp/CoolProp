@@ -717,7 +717,7 @@ class AbstractState
     AbstractState() : _fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown) {
         clear();
     }
-    virtual ~AbstractState() {};
+    virtual ~AbstractState(){};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
@@ -1637,7 +1637,7 @@ class AbstractStateGenerator
 {
    public:
     virtual AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) = 0;
-    virtual ~AbstractStateGenerator() {};
+    virtual ~AbstractStateGenerator(){};
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not

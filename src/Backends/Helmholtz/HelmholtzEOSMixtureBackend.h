@@ -120,7 +120,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     // Copy over the reducing and departure terms to all linked states (recursively)
     void sync_linked_states(const HelmholtzEOSMixtureBackend* const);
 
-    virtual ~HelmholtzEOSMixtureBackend() {};
+    virtual ~HelmholtzEOSMixtureBackend(){};
     std::string backend_name(void) {
         return get_backend_string(HEOS_BACKEND_MIX);
     }
@@ -807,8 +807,8 @@ class ResidualHelmholtz
     ExcessTerm Excess;
     CorrespondingStatesTerm CS;
 
-    ResidualHelmholtz() {};
-    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C) {};
+    ResidualHelmholtz(){};
+    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C){};
     virtual ~ResidualHelmholtz() = default;
 
     ResidualHelmholtz copy() {

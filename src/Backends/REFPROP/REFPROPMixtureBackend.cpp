@@ -969,20 +969,18 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         if (pair == CoolProp::QmassT_INPUTS) {
             // QmassT: v1 is Qmass, v2 is T
             T_K = v2;
-            q   = v1;
-            TQFLSHdll(&T_K, &q, &(mole_fractions[0]), &kq, &p_kPa,
-                      &rho_mol_L, &rhoLmol_L, &rhoVmol_L,
-                      &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),  // Saturation terms
-                      &emol, &hmol, &smol, &cvmol, &cpmol, &w,             // Other thermodynamic terms
-                      &ierr, herr, errormessagelength);                    // Error terms
-        } else {  // PQmass_INPUTS: v1 is P (Pa), v2 is Qmass
-            p_kPa = v1 * 0.001;  // Pa -> kPa
-            q     = v2;
-            PQFLSHdll(&p_kPa, &q, &(mole_fractions[0]), &kq, &T_K,
-                      &rho_mol_L, &rhoLmol_L, &rhoVmol_L,
-                      &(mole_fractions_liq[0]), &(mole_fractions_vap[0]),  // Saturation terms
-                      &emol, &hmol, &smol, &cvmol, &cpmol, &w,             // Other thermodynamic terms
-                      &ierr, herr, errormessagelength);                    // Error terms
+            q = v1;
+            TQFLSHdll(&T_K, &q, &(mole_fractions[0]), &kq, &p_kPa, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                      &(mole_fractions_vap[0]),                 // Saturation terms
+                      &emol, &hmol, &smol, &cvmol, &cpmol, &w,  // Other thermodynamic terms
+                      &ierr, herr, errormessagelength);         // Error terms
+        } else {                                                // PQmass_INPUTS: v1 is P (Pa), v2 is Qmass
+            p_kPa = v1 * 0.001;                                 // Pa -> kPa
+            q = v2;
+            PQFLSHdll(&p_kPa, &q, &(mole_fractions[0]), &kq, &T_K, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                      &(mole_fractions_vap[0]),                 // Saturation terms
+                      &emol, &hmol, &smol, &cvmol, &cpmol, &w,  // Other thermodynamic terms
+                      &ierr, herr, errormessagelength);         // Error terms
         }
         if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
             throw ValueError(format("Qmass-flash: %s", herr));
@@ -2152,7 +2150,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     {
        public:
         const std::vector<double> z;
-        wrapper(const std::vector<double>& z) : z(z) {};
+        wrapper(const std::vector<double>& z) : z(z){};
         std::vector<double> call(const std::vector<double>& x) {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;

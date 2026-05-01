@@ -4515,14 +4515,14 @@ TEST_CASE("Qmass input: HEOS R32+R125 round-trip via QmassT_INPUTS", "[Qmass][mi
     AS->set_mole_fractions({0.5, 0.5});
     AS->update(CoolProp::QT_INPUTS, 0.4, 280.0);
     const double Qmass_observed = AS->Qmass();
-    const double p_ref          = AS->p();
-    const double Q_ref          = AS->Q();
+    const double p_ref = AS->p();
+    const double Q_ref = AS->Q();
 
     auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
     AS2->set_mole_fractions({0.5, 0.5});
     AS2->update(CoolProp::QmassT_INPUTS, Qmass_observed, 280.0);
-    CHECK(AS2->p()     == Catch::Approx(p_ref).epsilon(1e-8));
-    CHECK(AS2->Q()     == Catch::Approx(Q_ref).epsilon(1e-8));
+    CHECK(AS2->p() == Catch::Approx(p_ref).epsilon(1e-8));
+    CHECK(AS2->Q() == Catch::Approx(Q_ref).epsilon(1e-8));
     CHECK(AS2->Qmass() == Catch::Approx(Qmass_observed).epsilon(1e-10));
 }
 
@@ -4560,8 +4560,8 @@ TEST_CASE("Qmass input: HEOS mixture round-trip via PQmass / HmolarQmass / Dmola
     SECTION("PQmass") {
         auto ref = setup();
         ref->update(CoolProp::PQ_INPUTS, 1.5e6, 0.4);
-        const double Qmass  = ref->Qmass();
-        const double T_ref  = ref->T();
+        const double Qmass = ref->Qmass();
+        const double T_ref = ref->T();
 
         auto sut = setup();
         sut->update(CoolProp::PQmass_INPUTS, 1.5e6, Qmass);
@@ -4644,16 +4644,16 @@ TEST_CASE("Qmass input: REFPROP R32+R125 native kq=2 fast path", "[Qmass][REFPRO
     auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
     AS2->set_mole_fractions({0.5, 0.5});
     AS2->update(CoolProp::QmassT_INPUTS, Qmass, 280.0);
-    CHECK(AS2->p()     == Catch::Approx(P_ref).epsilon(1e-5));
-    CHECK(AS2->Q()     == Catch::Approx(Q_ref).epsilon(1e-5));
+    CHECK(AS2->p() == Catch::Approx(P_ref).epsilon(1e-5));
+    CHECK(AS2->Q() == Catch::Approx(Q_ref).epsilon(1e-5));
     CHECK(AS2->Qmass() == Catch::Approx(Qmass).epsilon(1e-12));
 
     // PQmass round-trip
     auto AS3 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R32&R125"));
     AS3->set_mole_fractions({0.5, 0.5});
     AS3->update(CoolProp::PQmass_INPUTS, P_ref, Qmass);
-    CHECK(AS3->T()     == Catch::Approx(280.0).epsilon(1e-5));
-    CHECK(AS3->Q()     == Catch::Approx(Q_ref).epsilon(1e-5));
+    CHECK(AS3->T() == Catch::Approx(280.0).epsilon(1e-5));
+    CHECK(AS3->Q() == Catch::Approx(Q_ref).epsilon(1e-5));
 }
 
 TEST_CASE("Qmass edge cases: bubble/dew, out-of-range, single-phase", "[Qmass][edge]") {
@@ -4689,14 +4689,14 @@ TEST_CASE("Qmass edge cases: bubble/dew, out-of-range, single-phase", "[Qmass][e
 TEST_CASE("Qmass: PropsSI integration (output + input)", "[Qmass][PropsSI]") {
     SECTION("Qmass as output for pure Water == Q") {
         const double Q = 0.3, T = 350.0;
-        const double Qmolar = CoolProp::PropsSI("Q",     "T", T, "Q", Q, "Water");
-        const double Qmass  = CoolProp::PropsSI("Qmass", "T", T, "Q", Q, "Water");
+        const double Qmolar = CoolProp::PropsSI("Q", "T", T, "Q", Q, "Water");
+        const double Qmass = CoolProp::PropsSI("Qmass", "T", T, "Q", Q, "Water");
         CHECK(Qmolar == Catch::Approx(0.3).epsilon(1e-12));
-        CHECK(Qmass  == Catch::Approx(0.3).epsilon(1e-12));
+        CHECK(Qmass == Catch::Approx(0.3).epsilon(1e-12));
     }
     SECTION("Qmass as input for pure Water round-trip via PropsSI") {
         const double T = 350.0;
-        const double P_ref = CoolProp::PropsSI("P", "T", T, "Q",     0.3, "Water");
+        const double P_ref = CoolProp::PropsSI("P", "T", T, "Q", 0.3, "Water");
         const double P_via = CoolProp::PropsSI("P", "T", T, "Qmass", 0.3, "Water");
         CHECK(P_via == Catch::Approx(P_ref).epsilon(1e-12));
     }

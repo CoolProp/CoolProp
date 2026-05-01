@@ -206,15 +206,32 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, Cool
     // handled by the iterative update_Qmass_pair path; leave them unchanged here.
     if (get_mole_fractions().size() == 1) {
         switch (input_pair) {
-            case QmassT_INPUTS:      input_pair = QT_INPUTS;      break;
-            case PQmass_INPUTS:      input_pair = PQ_INPUTS;      break;
-            case QmassSmolar_INPUTS: input_pair = QSmolar_INPUTS; break;
-            case QmassSmass_INPUTS:  input_pair = QSmass_INPUTS;  break;
-            case HmolarQmass_INPUTS: input_pair = HmolarQ_INPUTS; break;
-            case HmassQmass_INPUTS:  input_pair = HmassQ_INPUTS;  break;
-            case DmolarQmass_INPUTS: input_pair = DmolarQ_INPUTS; break;
-            case DmassQmass_INPUTS:  input_pair = DmassQ_INPUTS;  break;
-            default:                 break;
+            case QmassT_INPUTS:
+                input_pair = QT_INPUTS;
+                break;
+            case PQmass_INPUTS:
+                input_pair = PQ_INPUTS;
+                break;
+            case QmassSmolar_INPUTS:
+                input_pair = QSmolar_INPUTS;
+                break;
+            case QmassSmass_INPUTS:
+                input_pair = QSmass_INPUTS;
+                break;
+            case HmolarQmass_INPUTS:
+                input_pair = HmolarQ_INPUTS;
+                break;
+            case HmassQmass_INPUTS:
+                input_pair = HmassQ_INPUTS;
+                break;
+            case DmolarQmass_INPUTS:
+                input_pair = DmolarQ_INPUTS;
+                break;
+            case DmassQmass_INPUTS:
+                input_pair = DmassQ_INPUTS;
+                break;
+            default:
+                break;
         }
     }
 
@@ -698,33 +715,52 @@ void AbstractState::calc_phase_molar_masses(double& MM_l, double& MM_v) {
 void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, double v2) {
     // Map Qmass-pair to its molar sibling and identify which slot (1=value1, 2=value2)
     // holds the Qmass value.
-    struct Mapping {
+    struct Mapping
+    {
         CoolProp::input_pairs molar;
         int qmass_slot;
     };
     Mapping m;
     switch (pair) {
-        case QmassT_INPUTS:      m = {QT_INPUTS,      1}; break;
-        case PQmass_INPUTS:      m = {PQ_INPUTS,      2}; break;
-        case QmassSmolar_INPUTS: m = {QSmolar_INPUTS, 1}; break;
-        case QmassSmass_INPUTS:  m = {QSmass_INPUTS,  1}; break;
-        case HmolarQmass_INPUTS: m = {HmolarQ_INPUTS, 2}; break;
-        case HmassQmass_INPUTS:  m = {HmassQ_INPUTS,  2}; break;
-        case DmolarQmass_INPUTS: m = {DmolarQ_INPUTS, 2}; break;
-        case DmassQmass_INPUTS:  m = {DmassQ_INPUTS,  2}; break;
+        case QmassT_INPUTS:
+            m = {QT_INPUTS, 1};
+            break;
+        case PQmass_INPUTS:
+            m = {PQ_INPUTS, 2};
+            break;
+        case QmassSmolar_INPUTS:
+            m = {QSmolar_INPUTS, 1};
+            break;
+        case QmassSmass_INPUTS:
+            m = {QSmass_INPUTS, 1};
+            break;
+        case HmolarQmass_INPUTS:
+            m = {HmolarQ_INPUTS, 2};
+            break;
+        case HmassQmass_INPUTS:
+            m = {HmassQ_INPUTS, 2};
+            break;
+        case DmolarQmass_INPUTS:
+            m = {DmolarQ_INPUTS, 2};
+            break;
+        case DmassQmass_INPUTS:
+            m = {DmassQ_INPUTS, 2};
+            break;
         default:
             throw ValueError("update_Qmass_pair called with non-Qmass pair");
     }
     const double Qmass_target = (m.qmass_slot == 1) ? v1 : v2;
-    const double partner      = (m.qmass_slot == 1) ? v2 : v1;
+    const double partner = (m.qmass_slot == 1) ? v2 : v1;
 
     if (Qmass_target < 0 || Qmass_target > 1) {
         throw ValueError(format("Qmass out of range [0,1]: %g", Qmass_target));
     }
 
     auto run_molar = [&](double Qmolar) {
-        if (m.qmass_slot == 1) update(m.molar, Qmolar, partner);
-        else                   update(m.molar, partner, Qmolar);
+        if (m.qmass_slot == 1)
+            update(m.molar, Qmolar, partner);
+        else
+            update(m.molar, partner, Qmolar);
     };
 
     // Endpoints: bypass iteration entirely.
@@ -742,12 +778,13 @@ void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, dou
     };
 
     // Bracket: small box around target; widen to full domain if it doesn't bracket.
-    double a  = std::max(1e-12, Qmass_target - 1e-3);
-    double b  = std::min(1.0 - 1e-12, Qmass_target + 1e-3);
+    double a = std::max(1e-12, Qmass_target - 1e-3);
+    double b = std::min(1.0 - 1e-12, Qmass_target + 1e-3);
     double fa = residual(a);
     double fb = residual(b);
     if (fa * fb > 0) {
-        a = 1e-12; b = 1.0 - 1e-12;
+        a = 1e-12;
+        b = 1.0 - 1e-12;
         fa = residual(a);
         fb = residual(b);
         if (fa * fb > 0) {
@@ -757,10 +794,10 @@ void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, dou
 
     double Qmolar_solution = std::numeric_limits<double>::quiet_NaN();
     for (int iter = 0; iter < 50; ++iter) {
-        const double denom    = fb - fa;
+        const double denom = fb - fa;
         const double c_secant = (std::abs(denom) < 1e-30) ? 0.5 * (a + b) : b - fb * (b - a) / denom;
-        const double c        = std::max(1e-12, std::min(1.0 - 1e-12, c_secant));
-        const double fc       = residual(c);
+        const double c = std::max(1e-12, std::min(1.0 - 1e-12, c_secant));
+        const double fc = residual(c);
         if (std::abs(fc) < 1e-10) {
             Qmolar_solution = c;
             break;
