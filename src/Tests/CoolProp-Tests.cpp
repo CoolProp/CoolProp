@@ -4953,8 +4953,16 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
 
     SECTION("Reference-state change invalidates caloric superancillary") {
         // Build the h-superancillary against the default reference state, then
-        // change to NBP and re-query: the answer must reflect the new offset.
-        // NBP works for water (IIR is rejected because Ttriple > 273.15 K).
+        // change to NBP and verify a fresh HEOS instance returns the NBP-frame
+        // T-root (not stale DEF-frame coefficients). NBP works for water
+        // (IIR is rejected because Ttriple > 273.15 K).
+        //
+        // Note: set_reference_stateS modifies the global library, not pre-
+        // existing HEOS instances. Each HEOS holds its own copy of
+        // CoolPropFluid (and its own alpha0 offset). So the relevant
+        // assertion is that *new* instances created after the ref-state
+        // change see the right behavior; pre-existing instances continue to
+        // operate under their original (now-stale) reference.
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
         const double T_anchor = 470.0;
         AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
@@ -4963,13 +4971,18 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
         g.T = T_anchor;
         // Force the caloric superancillary build under the DEF reference.
         REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def, 1.0, g));
-        // Switch to NBP. h shifts for water sat-vap at 470 K.
+        // Switch reference state. clear_caloric_variables() drops the cached
+        // h-superancillary so the next caloric flash on a new instance rebuilds
+        // against the new reference.
         CoolProp::set_reference_stateS("Water", "NBP");
         std::shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", "Water"));
         AS2->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
         const double h_nbp = AS2->hmolar();
         REQUIRE(std::abs(h_nbp - h_def) > 100.0);  // confirms the offset is real
-        // Now query the with-guesses path under NBP — must return T_anchor.
+        // The HmolarQ flash on AS2 must resolve to T_anchor in the NBP frame.
+        // If the C1 invalidation hadn't fired, the shared superancillary would
+        // still hold DEF coefficients and resolve_T_via_superancillary would
+        // throw "no T-root in monotonic sub-interval" instead.
         REQUIRE_NOTHROW(AS2->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_nbp, 1.0, g));
         CHECK(AS2->T() == Catch::Approx(T_anchor).epsilon(0.01));
         // Reset reference state for downstream tests.
@@ -4994,23 +5007,23 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
         CHECK_THROWS_AS(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g), CoolProp::SolutionError);
     }
 
-    SECTION("Target near extremum: dedup avoids phantom MultipleSolutionsError") {
-        // h_g(T) on water saturated vapor has a maximum near T ≈ 540 K.
-        // get_x_for_y enumerates roots in every monotonic interval; near the
-        // extremum, two adjacent intervals each return a near-identical T.
-        // The dedup logic in resolve_T_via_superancillary should collapse those
-        // to one root and either return it or, when the dedup leaves multiple
-        // distinct roots, raise MultipleSolutionsError. Here we sweep h_target
-        // toward the peak and verify the call resolves cleanly throughout.
+    SECTION("Multi-root region throws MultipleSolutionsError on default update()") {
+        // h_g(T) on water saturated vapor is non-monotonic with peak near 540 K.
+        // h_target = h_g(470 K) is also reached near 605 K — two distinct
+        // roots that the dedup must NOT merge.
         std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
-        // Build the h-superancillary first so subsequent access doesn't hit the lazy build inside the timing loop.
         AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
         const double h_low = AS->hmolar();
-        // h_target above the peak should give zero roots → OutOfRangeError.
-        // h_target below the peak should give two roots → MultipleSolutionsError.
-        // h_target exactly at peak (modulo dedup) should give one root.
-        // The point is that dedup keeps these regimes separate.
         CHECK_THROWS_AS(AS->update(CoolProp::HmolarQ_INPUTS, h_low, 1.0), CoolProp::MultipleSolutionsError);
+    }
+
+    SECTION("Mass-input multi-root region also throws MultipleSolutionsError") {
+        // Same as above but exercises the HmassQ_INPUTS → HmolarQ_INPUTS
+        // conversion path in mass_to_molar_inputs (review I4 follow-up).
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+        const double h_low_mass = AS->hmass();
+        CHECK_THROWS_AS(AS->update(CoolProp::HmassQ_INPUTS, h_low_mass, 1.0), CoolProp::MultipleSolutionsError);
     }
 }
 

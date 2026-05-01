@@ -341,8 +341,10 @@ void FlashRoutines::HQ_flash(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl Tgues
     }
     HEOS.specify_phase(iphase_twophase);
     const double hmolar = HEOS._hmolar;
-    // Strict-mode superancillary path. See GitHub #2773 / #2834.
-    if (HEOS.get_superanc()) {
+    // Strict-mode superancillary path. See GitHub #2773 / #2834. Use the same
+    // gate as DQ_flash and QS_flash so all three default flashes route
+    // consistently (review I3 follow-up).
+    if (sat_superanc_path_applies(HEOS)) {
         const double T_super = resolve_T_via_superancillary(HEOS, iHmolar, hmolar, std::nullopt, "HQ_flash");
         HEOS._T = T_super;
         QT_flash(HEOS);
@@ -480,9 +482,8 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
         const double gT = *guess_T;
         const auto& intervals = approx.get_monotonic_intervals();
         const auto& expansions = approx.get_expansions();
-        const decltype(&intervals[0]) chosen = [&]() {
-            const decltype(&intervals[0])* fallback_ptr = nullptr;
-            decltype(&intervals[0]) best_match = nullptr;
+        const auto* chosen = [&]() -> const auto* {
+            const auto* best_match = static_cast<decltype(intervals.data())>(nullptr);
             double best_midpoint_dist = std::numeric_limits<double>::infinity();
             for (const auto& iv : intervals) {
                 if (!iv.contains_y(target_value)) continue;
@@ -494,7 +495,6 @@ double FlashRoutines::resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& H
                     }
                 }
             }
-            (void)fallback_ptr;  // silence unused-warning if compiler likes it
             return best_match;
         }();
         if (chosen != nullptr) {

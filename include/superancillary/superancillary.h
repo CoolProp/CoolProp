@@ -966,12 +966,11 @@ class SuperAncillary
     /// Otherwise locks, double-checks under the lock, and calls add_variable
     /// as needed using the supplied EOS callbacks. See #2773 review C2.
     void ensure_HS_under_lock(const std::function<double(double, double)>& h_callable, const std::function<double(double, double)>& s_callable) {
-        // Fast path: avoid the lock when both are already built. Reads are racy
-        // against an in-progress add_variable, but a torn read just sends us
-        // into the locked region where we double-check.
-        if (m_hL.has_value() && m_hV.has_value() && m_sL.has_value() && m_sV.has_value()) {
-            return;
-        }
+        // Always lock. The "fast path" double-checked-locking pattern that
+        // peeks at optional::has_value() outside the lock is technically a
+        // data race per the C++ standard (TSan flags it), and unconditionally
+        // taking an uncontended mutex costs ~20 ns — much less than a single
+        // EOS-side h/s evaluation. So just lock unconditionally and check.
         std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
         if (!m_hL.has_value() || !m_hV.has_value()) {
             add_variable_locked('H', h_callable);
@@ -1000,9 +999,12 @@ class SuperAncillary
                 return false;
         }
     }
-    /// Get a const reference to the inverse approximation for T(ln(p))
+    /// Get a const reference to the inverse approximation for T(ln(p)).
+    /// Lazily constructed on first access; serialized by the same mutex
+    /// that guards H/S/U construction so concurrent first-call accesses
+    /// from threads on different HEOS instances of the same fluid don't race.
     const auto& get_invlnp() {
-        // Lazily construct on the first access
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
         if (!m_invlnp) {
             // Degree of expansion is the same as
             auto Ndegree = m_p.get_expansions()[0].coeff().size() - 1;
