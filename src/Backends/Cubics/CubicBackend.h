@@ -293,12 +293,12 @@ class SRKBackend : public AbstractCubicBackend
         cubic.reset(new SRK(Tc, pc, acentric, R_u));
         setup(generate_SatL_and_SatV);
     }
-    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) {
+    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override {
         AbstractCubicBackend* ACB = new SRKBackend(cubic->get_Tc(), cubic->get_pc(), cubic->get_acentric(), cubic->get_R_u(), generate_SatL_and_SatV);
         ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend*>(ACB);
     }
-    std::string backend_name(void) {
+    std::string backend_name(void) override {
         return get_backend_string(SRK_BACKEND);
     }
     int get_superanc_eos_code() const override {
@@ -334,13 +334,13 @@ class PengRobinsonBackend : public AbstractCubicBackend
         cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
         setup(generate_SatL_and_SatV);
     };
-    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) {
+    HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override {
         AbstractCubicBackend* ACB =
           new PengRobinsonBackend(cubic->get_Tc(), cubic->get_pc(), cubic->get_acentric(), cubic->get_R_u(), generate_SatL_and_SatV);
         ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend*>(ACB);
     }
-    std::string backend_name(void) {
+    std::string backend_name(void) override {
         return get_backend_string(PR_BACKEND);
     }
     int get_superanc_eos_code() const override {
