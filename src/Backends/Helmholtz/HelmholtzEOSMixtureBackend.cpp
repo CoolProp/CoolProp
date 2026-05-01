@@ -536,6 +536,26 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_molar_mass(void) {
     }
     return summer;
 }
+void HelmholtzEOSMixtureBackend::calc_phase_molar_masses(double& MM_l, double& MM_v) {
+    if (is_pure()) {
+        const double mm = molar_mass();
+        MM_l = mm;
+        MM_v = mm;
+        return;
+    }
+    const std::vector<CoolPropDbl> x = mole_fractions_liquid();
+    const std::vector<CoolPropDbl> y = mole_fractions_vapor();
+    if (x.size() != components.size() || y.size() != components.size()) {
+        throw ValueError("phase composition vectors do not match component count");
+    }
+    MM_l = 0;
+    MM_v = 0;
+    for (std::size_t i = 0; i < components.size(); ++i) {
+        const double mm_i = components[i].molar_mass();
+        MM_l += static_cast<double>(x[i]) * mm_i;
+        MM_v += static_cast<double>(y[i]) * mm_i;
+    }
+}
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_saturation_ancillary(parameters param, int Q, parameters given, double value) {
     if (is_pure_or_pseudopure) {
         if (param == iP && given == iT) {

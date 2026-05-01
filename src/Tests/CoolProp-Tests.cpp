@@ -4483,4 +4483,31 @@ TEST_CASE("Qmass output: pure fluid equals Qmolar", "[Qmass]") {
     }
 }
 
+TEST_CASE("Qmass output: HEOS mixture differs from Qmolar and is internally consistent", "[Qmass][mixture]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+    AS->set_mole_fractions({0.5, 0.5});
+
+    // Retrieve component molar masses from CoolProp itself to avoid hardcoded constant mismatch
+    auto AS_R32 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32"));
+    auto AS_R125 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R125"));
+    const double MM_R32 = AS_R32->molar_mass();
+    const double MM_R125 = AS_R125->molar_mass();
+
+    for (double Q : {0.1, 0.3, 0.5, 0.7, 0.9}) {
+        AS->update(CoolProp::QT_INPUTS, Q, 280.0);
+
+        const auto x = AS->mole_fractions_liquid();
+        const auto y = AS->mole_fractions_vapor();
+        const double MM_l = static_cast<double>(x[0]) * MM_R32 + static_cast<double>(x[1]) * MM_R125;
+        const double MM_v = static_cast<double>(y[0]) * MM_R32 + static_cast<double>(y[1]) * MM_R125;
+        const double Qmass_expected = (Q * MM_v) / (Q * MM_v + (1.0 - Q) * MM_l);
+
+        CHECK(AS->Qmass() == Catch::Approx(Qmass_expected).epsilon(1e-6));
+        // For an asymmetric mixture, Qmass should differ from Qmolar at intermediate Q
+        if (Q > 0.05 && Q < 0.95) {
+            CHECK(std::abs(AS->Qmass() - Q) > 1e-3);
+        }
+    }
+}
+
 #endif
