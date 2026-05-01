@@ -94,7 +94,7 @@ class AbstractState
         return (this->_phase == iphase_twophase);
     }
 
-    CacheArray<70> cache;
+    CacheArray<80> cache;
     using CAE = CacheArrayElement<double>;
 
     /// Two important points

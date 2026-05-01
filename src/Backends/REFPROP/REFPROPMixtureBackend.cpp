@@ -1004,7 +1004,7 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
         return;
     }
     // The 6 remaining Qmass pairs: REFPROP has no native kq flag for them.
-    // Fall through to the base-class secant iteration.
+    // Fall through to the base-class TOMS748 root-find on Qmolar.
     AbstractState::update_Qmass_pair(pair, v1, v2);
 }
 
