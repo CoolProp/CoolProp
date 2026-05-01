@@ -4656,4 +4656,57 @@ TEST_CASE("Qmass input: REFPROP R32+R125 native kq=2 fast path", "[Qmass][REFPRO
     CHECK(AS3->Q()     == Catch::Approx(Q_ref).epsilon(1e-5));
 }
 
+TEST_CASE("Qmass edge cases: bubble/dew, out-of-range, single-phase", "[Qmass][edge]") {
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+    AS->set_mole_fractions({0.5, 0.5});
+
+    SECTION("Qmass = 0 (bubble) bypasses iteration") {
+        AS->update(CoolProp::QmassT_INPUTS, 0.0, 280.0);
+        CHECK(AS->Q() == Catch::Approx(0.0).epsilon(1e-12));
+        CHECK(AS->Qmass() == Catch::Approx(0.0).epsilon(1e-12));
+    }
+
+    SECTION("Qmass = 1 (dew) bypasses iteration") {
+        AS->update(CoolProp::QmassT_INPUTS, 1.0, 280.0);
+        CHECK(AS->Q() == Catch::Approx(1.0).epsilon(1e-12));
+        CHECK(AS->Qmass() == Catch::Approx(1.0).epsilon(1e-12));
+    }
+
+    SECTION("Qmass < 0 throws") {
+        CHECK_THROWS_AS(AS->update(CoolProp::QmassT_INPUTS, -0.1, 280.0), CoolProp::ValueError);
+    }
+
+    SECTION("Qmass > 1 throws") {
+        CHECK_THROWS_AS(AS->update(CoolProp::QmassT_INPUTS, 1.5, 280.0), CoolProp::ValueError);
+    }
+
+    SECTION("Qmass() in single-phase state throws") {
+        AS->update(CoolProp::PT_INPUTS, 5e6, 400.0);  // single phase (well above critical for R32+R125)
+        CHECK_THROWS_AS(AS->Qmass(), CoolProp::ValueError);
+    }
+}
+
+TEST_CASE("Qmass: PropsSI integration (output + input)", "[Qmass][PropsSI]") {
+    SECTION("Qmass as output for pure Water == Q") {
+        const double Q = 0.3, T = 350.0;
+        const double Qmolar = CoolProp::PropsSI("Q",     "T", T, "Q", Q, "Water");
+        const double Qmass  = CoolProp::PropsSI("Qmass", "T", T, "Q", Q, "Water");
+        CHECK(Qmolar == Catch::Approx(0.3).epsilon(1e-12));
+        CHECK(Qmass  == Catch::Approx(0.3).epsilon(1e-12));
+    }
+    SECTION("Qmass as input via low-level API for pure Water") {
+        // Verify that the low-level AbstractState API can handle Qmass as input
+        auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+        const double T = 350.0;
+        AS->update(CoolProp::QmassT_INPUTS, 0.3, T);
+        const double P_low = AS->p();
+        CHECK(P_low > 0.0);
+
+        // Compare with Q input to ensure Qmass == Q for pure fluids
+        AS->update(CoolProp::QT_INPUTS, 0.3, T);
+        const double P_ref = AS->p();
+        CHECK(P_low == Catch::Approx(P_ref).epsilon(1e-12));
+    }
+}
+
 #endif
