@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
     // 'Ammonia') used to throw while neighbouring P values worked.
