@@ -4815,21 +4815,28 @@ TEST_CASE("Saturation ancillary throws cleanly above T_r instead of returning Na
     // Issue #1611: pow(THETA, t) with THETA = 1 - T/T_r < 0 produced
     // NaN (and sometimes a SIGFPE that escaped the C++ try/catch chain).
     // The defensive guard now throws a CoolProp ValueError when T > T_r.
+TEST_CASE("Saturation ancillary returns NaN above T_r instead of UB / SIGFPE (#1611)", "[ancillary][1611]") {
+    // Issue #1611: pow(THETA, t) with THETA = 1 - T/T_r < 0 was
+    // pow(negative, fractional) which produced NaN and (depending on
+    // FP trap settings) sometimes a SIGFPE that escaped C++ try/catch.
+    // Internal callers (mixture critical-point search, VLE init) probe
+    // ancillaries above the pure-component T_r and rely on getting a
+    // well-behaved value back, so the guard returns NaN explicitly
+    // (no UB, no SIGFPE) instead of throwing.
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R134a"));
     auto& heos = *dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
     auto& fluid = heos.get_components()[0];
     double Tcrit = AS->T_critical();
 
-    // Direct ancillary evaluation a few K above the reducing T must
-    // throw (was: returned NaN), and must not return NaN. Use Tcrit + 5 K
-    // since the ancillary's T_r may be slightly below the EOS Tcrit.
-    CHECK_THROWS(fluid.ancillaries.pL.evaluate(Tcrit + 5.0));
-    CHECK_THROWS(fluid.ancillaries.pV.evaluate(Tcrit + 5.0));
-    CHECK_THROWS(fluid.ancillaries.rhoL.evaluate(Tcrit + 5.0));
-    CHECK_THROWS(fluid.ancillaries.rhoV.evaluate(Tcrit + 5.0));
-    // Comfortably below T_r still works
-    CHECK_NOTHROW(fluid.ancillaries.pL.evaluate(0.95 * Tcrit));
-    CHECK_NOTHROW(fluid.ancillaries.pL.evaluate(0.5 * Tcrit));
+    // Direct ancillary evaluation a few K above the reducing T returns
+    // NaN cleanly (no SIGFPE, no UB).
+    CHECK(std::isnan(fluid.ancillaries.pL.evaluate(Tcrit + 5.0)));
+    CHECK(std::isnan(fluid.ancillaries.pV.evaluate(Tcrit + 5.0)));
+    CHECK(std::isnan(fluid.ancillaries.rhoL.evaluate(Tcrit + 5.0)));
+    CHECK(std::isnan(fluid.ancillaries.rhoV.evaluate(Tcrit + 5.0)));
+    // Comfortably below T_r still produces finite values
+    CHECK(std::isfinite(fluid.ancillaries.pL.evaluate(0.95 * Tcrit)));
+    CHECK(std::isfinite(fluid.ancillaries.pL.evaluate(0.5 * Tcrit)));
 
     // The original user-facing reproducer no longer crashes
     // (PropsSI returns NaN with errstring set rather than SIGFPE).
