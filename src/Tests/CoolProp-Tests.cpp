@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("REFPROP DmolarSmolar honours imposed phase (#2042)", "[REFPROP][2042]") {
     CoolProp::Skip_if_No_REFPROP();
     // Issue #2042: a multi-component natural-gas mixture with phase
