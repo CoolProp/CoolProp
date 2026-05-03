@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("change_EOS rejects unknown EOS name", "[change_EOS][1703]") {
     // Issue #1703: change_EOS used to silently no-op for unrecognized
     // EOS names; it now throws. Valid names (SRK, Peng-Robinson,
