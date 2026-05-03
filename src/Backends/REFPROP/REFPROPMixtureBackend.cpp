@@ -19,6 +19,9 @@ dipole moment                   debye
 surface tension                 N/m
 */
 
+#include <array>
+#include <cstring>
+
 #define REFPROP_IMPLEMENTATION
 #define REFPROP_CSTYLE_REFERENCES
 #include <REFPROP_lib.h>
@@ -341,19 +344,19 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
         int N = static_cast<int>(fluid_names.size());
 
         // Get path to HMX.BNC file
-        char hmx_bnc[255];
+        std::array<char, 255> hmx_bnc{};
         const std::string HMX_path = get_REFPROP_HMX_BNC_path();
         const char* _HMX_path = HMX_path.c_str();
         if (strlen(_HMX_path) > refpropcharlength) {
             throw ValueError(format("Full HMX path (%s) is too long; max length is 255 characters", _HMX_path));
         }
-        strcpy(hmx_bnc, _HMX_path);
+        strcpy(hmx_bnc.data(), _HMX_path);
 
         if (get_config_bool(REFPROP_USE_GERG)) {
             int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
               ierr = 0;
-            char herr[255];
-            GERG04dll(&N, &iflag, &ierr, herr, 255);
+            std::array<char, 255> herr{};
+            GERG04dll(&N, &iflag, &ierr, herr.data(), 255);
         }
 
         // Check platform support
@@ -374,7 +377,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
             }
             strcpy(mix, _components_joined_raw);
 
-            SETMIXdll(mix, hmx_bnc, reference_state, &N, component_string, &(x[0]), &ierr, herr, 255, 255, 3, 10000, 255);
+            SETMIXdll(mix, hmx_bnc.data(), reference_state, &N, component_string, &(x[0]), &ierr, herr, 255, 255, 3, 10000, 255);
             if (static_cast<int>(ierr) <= 0) {
                 this->Ncomp = N;
                 mole_fractions.resize(ncmax);
@@ -437,7 +440,7 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
 
             ierr = 0;
             //...Call SETUP to initialize the program
-            SETUPdll(&N, component_string, hmx_bnc, default_reference_state, &ierr, herr,
+            SETUPdll(&N, component_string, hmx_bnc.data(), default_reference_state, &ierr, herr,
                      10000,              // Length of component_string (see PASS_FTN.for from REFPROP)
                      refpropcharlength,  // Length of path_HMX_BNC
                      lengthofreference,  // Length of reference
@@ -593,7 +596,7 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
     char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
-    char herr[255];
+    std::array<char, 255> herr{};
 
     // Get the current state
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
@@ -607,9 +610,9 @@ void REFPROPMixtureBackend::set_binary_interaction_string(const std::size_t i, c
     } else {
         throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
     }
-    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr.data(), 3, 255, 255);
     if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("Unable to set parameter[%s] to value[%s]: %s", parameter.c_str(), value.c_str(), herr));
+        throw ValueError(format("Unable to set parameter[%s] to value[%s]: %s", parameter.c_str(), value.c_str(), herr.data()));
     }
 }
 /// Set binary mixture string parameter (EXPERT USE ONLY!!!)
@@ -628,7 +631,7 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     int icomp = static_cast<int>(i) + 1, jcomp = static_cast<int>(j) + 1, ierr = 0L;
     char hmodij[3], hfmix[255], hbinp[255], hfij[255], hmxrul[255];
     double fij[6];
-    char herr[255];
+    std::array<char, 255> herr{};
 
     // Get the prior state
     GETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, hfij, hbinp, hmxrul, 3, 255, 255, 255, 255);
@@ -649,9 +652,9 @@ void REFPROPMixtureBackend::set_binary_interaction_double(const std::size_t i, c
     } else {
         throw ValueError(format("I don't know what to do with your parameter [%s]", parameter.c_str()));
     }
-    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr, 3, 255, 255);
+    SETKTVdll(&icomp, &jcomp, hmodij, fij, hfmix, &ierr, herr.data(), 3, 255, 255);
     if (ierr > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr));
+        throw ValueError(format("Unable to set parameter[%s] to value[%g]: %s", parameter.c_str(), value, herr.data()));
     }
     //} else {
     //    throw ValueError(format("For now, model [%s] must start with KW or GE", hmodij));
@@ -787,33 +790,33 @@ CoolPropDbl REFPROPMixtureBackend::calc_Tmin(void) {
 CoolPropDbl REFPROPMixtureBackend::calc_T_critical() {
     this->check_loaded_fluid();
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     double Tcrit = NAN, pcrit_kPa = NAN, dcrit_mol_L = NAN;
-    CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr, 255);
+    CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr.data(), 255);
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
-    }  //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        throw ValueError(format("%s", herr.data()).c_str());
+    }  //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     return static_cast<CoolPropDbl>(Tcrit);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_p_critical() {
     this->check_loaded_fluid();
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     double Tcrit = NAN, pcrit_kPa = NAN, dcrit_mol_L = NAN;
-    CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr, 255);
+    CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr.data(), 255);
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
-    }  //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        throw ValueError(format("%s", herr.data()).c_str());
+    }  //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     return static_cast<CoolPropDbl>(pcrit_kPa * 1000);
 };
 CoolPropDbl REFPROPMixtureBackend::calc_rhomolar_critical() {
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     double Tcrit = NAN, pcrit_kPa = NAN, dcrit_mol_L = NAN;
-    CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr, 255);
+    CRITPdll(&(mole_fractions[0]), &Tcrit, &pcrit_kPa, &dcrit_mol_L, &ierr, herr.data(), 255);
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
-    }  //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        throw ValueError(format("%s", herr.data()).c_str());
+    }  //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     return static_cast<CoolPropDbl>(dcrit_mol_L * 1000);
 };
 void REFPROPMixtureBackend::calc_reducing_state() {
@@ -1026,36 +1029,36 @@ CoolPropDbl REFPROPMixtureBackend::calc_Cvirial(void) {
 double REFPROPMixtureBackend::calc_melt_Tmax() {
     this->check_loaded_fluid();
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     double tmin = NAN, tmax = NAN, Dmax_mol_L = NAN, pmax_kPa = NAN, Tmax_melt = NAN;
     char htyp[] = "EOS";
     LIMITSdll(htyp, &(mole_fractions[0]), &tmin, &tmax, &Dmax_mol_L, &pmax_kPa, 3);
     // Get the maximum temperature for the melting curve by using the maximum pressure
-    MELTPdll(&pmax_kPa, &(mole_fractions[0]), &Tmax_melt, &ierr, herr, errormessagelength);  // Error message
+    MELTPdll(&pmax_kPa, &(mole_fractions[0]), &Tmax_melt, &ierr, herr.data(), errormessagelength);  // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+        throw ValueError(format("%s", herr.data()).c_str());
     }
-    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     return Tmax_melt;
 }
 CoolPropDbl REFPROPMixtureBackend::calc_melting_line(int param, int given, CoolPropDbl value) {
     this->check_loaded_fluid();
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
 
     if (param == iP && given == iT) {
         double _T = static_cast<double>(value), p_kPa = NAN;
-        MELTTdll(&_T, &(mole_fractions[0]), &p_kPa, &ierr, herr, errormessagelength);  // Error message
+        MELTTdll(&_T, &(mole_fractions[0]), &p_kPa, &ierr, herr.data(), errormessagelength);  // Error message
         if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-            throw ValueError(format("%s", herr).c_str());
-        }  //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            throw ValueError(format("%s", herr.data()).c_str());
+        }  //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
         return p_kPa * 1000;
     } else if (param == iT && given == iP) {
         double p_kPa = static_cast<double>(value) / 1000.0, _T = NAN;
-        MELTPdll(&p_kPa, &(mole_fractions[0]), &_T, &ierr, herr, errormessagelength);  // Error message
+        MELTPdll(&p_kPa, &(mole_fractions[0]), &_T, &ierr, herr.data(), errormessagelength);  // Error message
         if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-            throw ValueError(format("%s", herr).c_str());
-        }  //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            throw ValueError(format("%s", herr.data()).c_str());
+        }  //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
         return _T;
     } else {
         throw ValueError(format("calc_melting_line(%s,%s,%Lg) is an invalid set of inputs ", get_parameter_information(param, "short").c_str(),
@@ -1066,9 +1069,9 @@ bool REFPROPMixtureBackend::has_melting_line() {
     this->check_loaded_fluid();
 
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     double _T = 300, p_kPa = NAN;
-    MELTTdll(&_T, &(mole_fractions[0]), &p_kPa, &ierr, herr, errormessagelength);  // Error message
+    MELTTdll(&_T, &(mole_fractions[0]), &p_kPa, &ierr, herr.data(), errormessagelength);  // Error message
     if (static_cast<int>(ierr) == 1) {
         return false;
     } else {
@@ -1110,14 +1113,14 @@ CoolPropDbl REFPROPMixtureBackend::calc_viscosity(void) {
     this->check_loaded_fluid();
     double eta = NAN, tcx = NAN, rhomol_L = 0.001 * _rhomolar;
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     TRNPRPdll(&_T, &rhomol_L, &(mole_fractions[0]),  // Inputs
               &eta, &tcx,                            // Outputs
-              &ierr, herr, errormessagelength);      // Error message
+              &ierr, herr.data(), errormessagelength);      // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+        throw ValueError(format("%s", herr.data()).c_str());
     }
-    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     _viscosity = 1e-6 * eta;
     _conductivity = tcx;
     return static_cast<double>(_viscosity);
@@ -1131,14 +1134,14 @@ CoolPropDbl REFPROPMixtureBackend::calc_surface_tension(void) {
     this->check_loaded_fluid();
     double sigma = NAN, rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     SURFTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
              &sigma,                                 // Outputs
-             &ierr, herr, errormessagelength);       // Error message
+             &ierr, herr.data(), errormessagelength);       // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+        throw ValueError(format("%s", herr.data()).c_str());
     }
-    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     _surface_tension = sigma;
     return static_cast<double>(_surface_tension);
 }
@@ -1148,14 +1151,14 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity_coefficient(std::size_t i) {
     int ierr = 0;
     std::vector<double> fug_cof;
     fug_cof.resize(mole_fractions.size());
-    char herr[255];
+    std::array<char, 255> herr{};
     FUGCOFdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
               &(fug_cof[0]),                          // Outputs
-              &ierr, herr, errormessagelength);       // Error message
+              &ierr, herr.data(), errormessagelength);       // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+        throw ValueError(format("%s", herr.data()).c_str());
     }
-    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     return static_cast<CoolPropDbl>(fug_cof[i]);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_fugacity(std::size_t i) {
@@ -1163,14 +1166,14 @@ CoolPropDbl REFPROPMixtureBackend::calc_fugacity(std::size_t i) {
     double rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
     std::vector<double> f(mole_fractions.size());
-    char herr[255];
+    std::array<char, 255> herr{};
     FGCTY2dll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
               &(f[0]),                                // Outputs
-              &ierr, herr, errormessagelength);       // Error message
+              &ierr, herr.data(), errormessagelength);       // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+        throw ValueError(format("%s", herr.data()).c_str());
     }
-    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     return static_cast<CoolPropDbl>(f[i] * 1000);
 }
 CoolPropDbl REFPROPMixtureBackend::calc_chemical_potential(std::size_t i) {
@@ -1178,14 +1181,14 @@ CoolPropDbl REFPROPMixtureBackend::calc_chemical_potential(std::size_t i) {
     double rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
     std::vector<double> chem_pot(mole_fractions.size());
-    char herr[255];
+    std::array<char, 255> herr{};
     CHEMPOTdll(&_T, &rho_mol_L, &(mole_fractions[0]),  // Inputs
                &(chem_pot[0]),                         // Outputs
-               &ierr, herr, errormessagelength);       // Error message
+               &ierr, herr.data(), errormessagelength);       // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+        throw ValueError(format("%s", herr.data()).c_str());
     }
-    //else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+    //else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     return static_cast<CoolPropDbl>(chem_pot[i]);
 }
 
@@ -1193,17 +1196,17 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
     this->check_loaded_fluid();
     double rhoymin = NAN, rhoymax = NAN, c = 0;
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     SATSPLNdll(&(mole_fractions[0]),              // Inputs
-               &ierr, herr, errormessagelength);  // Error message
+               &ierr, herr.data(), errormessagelength);  // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+        throw ValueError(format("%s", herr.data()).c_str());
     }
 
     // Clear the phase envelope data
     PhaseEnvelope = PhaseEnvelopeData();
     /*
-    subroutine SPLNVAL (isp,iderv,a,f,ierr,herr)
+    subroutine SPLNVAL (isp,iderv,a,f,ierr,herr.data())
     c
     c  calculates the function value of a spline
     c
@@ -1227,9 +1230,9 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
         throw ValueError(
           format("Your version of REFFPROP(%s) does not have the SPLNVALdll function; cannot extract phase envelope values", rpv.c_str()));
     };
-    SPLNVALdll(&isp, &iderv, &c, &rhoymin, &ierr, herr, errormessagelength);
+    SPLNVALdll(&isp, &iderv, &c, &rhoymin, &ierr, herr.data(), errormessagelength);
     iderv = -2;
-    SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr, errormessagelength);
+    SPLNVALdll(&isp, &iderv, &c, &rhoymax, &ierr, herr.data(), errormessagelength);
     int nc = static_cast<int>(this->Ncomp);
     double ratio = pow(rhoymax / rhoymin, 1 / double(N));
     for (double rho_molL = rhoymin; rho_molL < rhoymax; rho_molL *= ratio) {
@@ -1239,7 +1242,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
         PhaseEnvelope.x.resize(nc);
         PhaseEnvelope.y.resize(nc);
         for (isp = 1; isp <= nc; ++isp) {
-            SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+            SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr.data(), errormessagelength);
             PhaseEnvelope.x[isp - 1].push_back(y);
             PhaseEnvelope.y[isp - 1].push_back(get_mole_fractions()[isp - 1]);
         }
@@ -1247,29 +1250,29 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
         PhaseEnvelope.rhomolar_vap.push_back(rho_molL * 1000);
         PhaseEnvelope.lnrhomolar_vap.push_back(log(rho_molL * 1000));
         isp = nc + 1;
-        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr.data(), errormessagelength);
         double T = y;
         PhaseEnvelope.T.push_back(y);
         PhaseEnvelope.lnT.push_back(log(y));
         isp = nc + 2;
-        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr.data(), errormessagelength);
         PhaseEnvelope.p.push_back(y * 1000);
         PhaseEnvelope.lnp.push_back(log(y * 1000));
         isp = nc + 3;
-        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr.data(), errormessagelength);
         PhaseEnvelope.rhomolar_liq.push_back(y * 1000);
         PhaseEnvelope.lnrhomolar_liq.push_back(log(y * 1000));
         PhaseEnvelope.Q.push_back(static_cast<double>(y > rho_molL));
         isp = nc + 4;
-        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr.data(), errormessagelength);
         PhaseEnvelope.hmolar_vap.push_back(y);
         isp = nc + 5;
-        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr, errormessagelength);
+        SPLNVALdll(&isp, &iderv, &rho_molL, &y, &ierr, herr.data(), errormessagelength);
         PhaseEnvelope.smolar_vap.push_back(y);
 
         // Other outputs that could be useful
         int ierr = 0;
-        char herr[255];
+        std::array<char, 255> herr{};
         double p_kPa = NAN, emol = NAN, hmol = NAN, smol = NAN, cvmol = NAN, cpmol = NAN, w = NAN, hjt = NAN, eta = NAN, tcx = NAN;
         // "Vapor"
         THERMdll(&T, &rho_molL, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
@@ -1278,7 +1281,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
         PhaseEnvelope.speed_sound_vap.push_back(w);
         TRNPRPdll(&T, &rho_molL, &(mole_fractions[0]),  // Inputs
                   &eta, &tcx,                           // Outputs
-                  &ierr, herr, errormessagelength);     // Error message
+                  &ierr, herr.data(), errormessagelength);     // Error message
         PhaseEnvelope.viscosity_vap.push_back(eta / 1e6);
         PhaseEnvelope.conductivity_vap.push_back(tcx);
     }
@@ -2101,11 +2104,11 @@ CoolPropDbl REFPROPMixtureBackend::call_phi0dll(int itau, int idel) {
 void REFPROPMixtureBackend::calc_excess_properties() {
     this->check_loaded_fluid();
     int ierr = 0;
-    char herr[255];
+    std::array<char, 255> herr{};
     double T_K = _T, p_kPa = _p / 1000.0, rho = 1, vE = -1, eE = -1, hE = -1, sE = -1, aE = -1, gE = -1;
     int kph = 1;
 
-    //    subroutine EXCESS(t, p, x, kph, rho, vE, eE, hE, sE, aE, gE, ierr, herr)
+    //    subroutine EXCESS(t, p, x, kph, rho, vE, eE, hE, sE, aE, gE, ierr, herr.data())
     //    c
     //    c  compute excess properties as a function of temperature, pressure,
     //    c  and composition.
@@ -2128,10 +2131,10 @@ void REFPROPMixtureBackend::calc_excess_properties() {
     //    c      ierr--error flag : 0 = successful
     //    c                        55 = T, p inputs in different phase for the pure fluids
     //    c      herr--error string(character * 255 variable if ierr<>0)
-    EXCESSdll(&T_K, &p_kPa, &(mole_fractions[0]), &kph, &rho, &vE, &eE, &hE, &sE, &aE, &gE, &ierr, herr, errormessagelength);  // Error message
+    EXCESSdll(&T_K, &p_kPa, &(mole_fractions[0]), &kph, &rho, &vE, &eE, &hE, &sE, &aE, &gE, &ierr, herr.data(), errormessagelength);  // Error message
     if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("EXCESSdll: %s", herr).c_str());
-    }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+        throw ValueError(format("EXCESSdll: %s", herr.data()).c_str());
+    }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr.data()).c_str());}
     _volumemolar_excess = vE;
     _umolar_excess = eE;
     _hmolar_excess = hE;
