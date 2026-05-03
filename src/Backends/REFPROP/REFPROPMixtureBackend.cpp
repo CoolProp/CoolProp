@@ -1499,14 +1499,26 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             rho_mol_L = 0.001 * value1;
             smol = value2;  // Want rho in [mol/L] in REFPROP
 
-            // Use flash routine to find properties
-            // from REFPROP: subroutine DSFLSH (D,s,z,t,p,Dl,Dv,x,y,q,e,h,cv,cp,w,ierr,herr)
-            DSFLSHdll(&rho_mol_L, &smol, &(mole_fractions[0]), &_T, &p_kPa, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
-                      &(mole_fractions_vap[0]),  // Saturation terms
-                      &q, &emol, &hmol, &cvmol, &cpmol, &w, &ierr, herr, errormessagelength);
-            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-                throw ValueError(format("DmolarSmolar: %s", herr).c_str());
-            }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            if (imposed_phase_index == iphase_not_imposed || imposed_phase_index == iphase_twophase) {
+                // Use the full 2-phase flash routine
+                // from REFPROP: subroutine DSFLSH (D,s,z,t,p,Dl,Dv,x,y,q,e,h,cv,cp,w,ierr,herr)
+                DSFLSHdll(&rho_mol_L, &smol, &(mole_fractions[0]), &_T, &p_kPa, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                          &(mole_fractions_vap[0]),  // Saturation terms
+                          &q, &emol, &hmol, &cvmol, &cpmol, &w, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("DmolarSmolar: %s", herr).c_str());
+                }  // TODO: else if (ierr < 0) {set_warning(format("%s",herr).c_str());}
+            } else {
+                // Phase is imposed -> use the single-phase D,S iterator (DSFL1)
+                // followed by THERMdll for the remaining properties. Avoids the
+                // 2-phase iteration that DSFL2 reaches inside DSFLSH and
+                // sometimes fails to converge for mixtures (#2042).
+                DSFL1dll(&rho_mol_L, &smol, &(mole_fractions[0]), &_T, &ierr, herr, errormessagelength);
+                if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                    throw ValueError(format("DmolarSmolar (imposed phase): %s", herr).c_str());
+                }
+                THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+            }
 
             // Set all cache values that can be set with unit conversion to SI
             _p = p_kPa * 1000;
