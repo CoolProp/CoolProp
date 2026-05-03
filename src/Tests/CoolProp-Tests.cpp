@@ -4810,6 +4810,9 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p > 0);
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
+    }
+}
+
 TEST_CASE("HAPropsSI Twb at high T (T > Tsat) returns the physical root (#2255)", "[HAPropsSI][2255]") {
     // Issue #2255: HAPropsSI('Twb','T',200+273.15,'W',0.2,'P',1000E3)
     // returned 180.7241 C (essentially Tsat at 1 MPa) instead of the
