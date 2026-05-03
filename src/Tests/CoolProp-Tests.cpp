@@ -4811,6 +4811,41 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+TEST_CASE("first_saturation_deriv mixture: dT/dP via Gernert vs finite-difference along bubble curve", "[first_saturation_deriv][2091]") {
+    // Issue #2091: the mixture path used the pure-fluid Clapeyron
+    // expression (T*Δv / Δh) and silently returned wrong values.
+    // The fix uses Gernert thesis 3.96/3.97 weighted by the OTHER
+    // phase's compositions.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+    AS->set_mole_fractions({0.7, 0.3});
+
+    double T = 180.0;
+    AS->update(CoolProp::QT_INPUTS, 0.0, T);
+    double dTdP = AS->first_saturation_deriv(CoolProp::iT, CoolProp::iP);
+
+    // Finite difference along Q=0 (bubble) curve
+    auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+    AS2->set_mole_fractions({0.7, 0.3});
+    double dT = 0.05;
+    AS2->update(CoolProp::QT_INPUTS, 0.0, T + dT);
+    double pP = AS2->p();
+    AS2->update(CoolProp::QT_INPUTS, 0.0, T - dT);
+    double pM = AS2->p();
+    double dTdP_fd = (2 * dT) / (pP - pM);
+
+    CAPTURE(dTdP);
+    CAPTURE(dTdP_fd);
+    CHECK(dTdP > 0);
+    CHECK(std::abs(dTdP - dTdP_fd) / std::abs(dTdP_fd) < 5e-3);
+}
+
+TEST_CASE("first_saturation_deriv mixture: throws at intermediate Q", "[first_saturation_deriv][2091]") {
+    // Two-phase intermediate quality is not on a single saturation curve
+    // for mixtures; the new code throws (was previously silently wrong).
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Methane&Ethane"));
+    AS->set_mole_fractions({0.7, 0.3});
+    AS->update(CoolProp::QT_INPUTS, 0.5, 180.0);
+    CHECK_THROWS(AS->first_saturation_deriv(CoolProp::iT, CoolProp::iP));
 }
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
