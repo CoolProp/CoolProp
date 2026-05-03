@@ -4811,6 +4811,30 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+TEST_CASE("Saturation ancillary throws cleanly above T_r instead of returning NaN", "[ancillary][1611]") {
+    // Issue #1611: pow(THETA, t) with THETA = 1 - T/T_r < 0 produced
+    // NaN (and sometimes a SIGFPE that escaped the C++ try/catch chain).
+    // The defensive guard now throws a CoolProp ValueError when T > T_r.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "R134a"));
+    auto& heos = *dynamic_cast<CoolProp::HelmholtzEOSMixtureBackend*>(AS.get());
+    auto& fluid = heos.get_components()[0];
+    double Tcrit = AS->T_critical();
+
+    // Direct ancillary evaluation a few K above the reducing T must
+    // throw (was: returned NaN), and must not return NaN. Use Tcrit + 5 K
+    // since the ancillary's T_r may be slightly below the EOS Tcrit.
+    CHECK_THROWS(fluid.ancillaries.pL.evaluate(Tcrit + 5.0));
+    CHECK_THROWS(fluid.ancillaries.pV.evaluate(Tcrit + 5.0));
+    CHECK_THROWS(fluid.ancillaries.rhoL.evaluate(Tcrit + 5.0));
+    CHECK_THROWS(fluid.ancillaries.rhoV.evaluate(Tcrit + 5.0));
+    // Comfortably below T_r still works
+    CHECK_NOTHROW(fluid.ancillaries.pL.evaluate(0.95 * Tcrit));
+    CHECK_NOTHROW(fluid.ancillaries.pL.evaluate(0.5 * Tcrit));
+
+    // The original user-facing reproducer no longer crashes
+    // (PropsSI returns NaN with errstring set rather than SIGFPE).
+    CHECK_NOTHROW(CoolProp::PropsSI("T", "P", 4863285.0, "Q", 0.0, "HEOS::R407C"));
+    CHECK_NOTHROW(CoolProp::PropsSI("T", "P", 1.0e6, "Q", 0.0, "HEOS::R407C"));
 }
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
