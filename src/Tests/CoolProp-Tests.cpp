@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("Water below 0 C at atmospheric pressure is not silently labelled liquid (#1098)", "[water_phase][1098]") {
     // Issue #1098 (2017): PhaseSI returned "liquid" for water at T=-5 C,
     // P=1 atm. The HEOS solid path is not implemented but the response
