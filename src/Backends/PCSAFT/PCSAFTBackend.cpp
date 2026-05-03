@@ -1352,7 +1352,13 @@ CoolPropDbl PCSAFTBackend::calc_gibbsmolar_residual(void) {
     CoolPropDbl ares = calc_alphar();
     CoolPropDbl Z = calc_compressibility_factor();
 
-    CoolPropDbl gres = (ares + (Z - 1) - log(Z)) * kb * N_AV * _T;  // Equation A.50 from Gross and Sadowski 2001
+    // Residual Gibbs energy on the (T, V) basis CoolProp uses everywhere
+    // else (matches HEOS::calc_gibbsmolar_residual = R*T*(alphar + delta*
+    // dalphar_ddelta) and satisfies g_res = h_res - T*s_res). Gross &
+    // Sadowski's A.50 includes an additional -ln(Z)*RT term that converts
+    // to (T, P) basis (the residual chemical potential at fixed P);
+    // dropping it removes the inconsistency reported in #1943.
+    CoolPropDbl gres = (ares + (Z - 1)) * kb * N_AV * _T;
     return gres;
 }
 
@@ -2818,7 +2824,14 @@ CoolPropDbl PCSAFTBackend::solver_rho_Tp(CoolPropDbl T, CoolPropDbl p, phases ph
             double rho_i = Brent(resid, x_lo_molar, x_hi_molar, DBL_EPSILON, 1e-8, 200);
             double rho_original = this->_rhomolar;
             this->_rhomolar = rho_i;
-            double g_i = calc_gibbsmolar_residual();
+            // Phase selection between roots at the SAME (T, P) requires the
+            // residual Gibbs energy on the (T, P) basis — i.e. with the
+            // -ln(Z)*RT correction. calc_gibbsmolar_residual itself is on
+            // the (T, ρ) basis to match HEOS / satisfy g_res = h_res - T*s_res
+            // (#1943); add the conversion term locally so phase selection
+            // still picks the correct (lowest-g(T, P)) root.
+            double Z_i = calc_compressibility_factor();
+            double g_i = calc_gibbsmolar_residual() - log(Z_i) * kb * N_AV * _T;
             this->_rhomolar = rho_original;
             if (g_i < g_min) {
                 g_min = g_i;

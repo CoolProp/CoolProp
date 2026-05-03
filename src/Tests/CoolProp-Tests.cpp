@@ -2873,29 +2873,52 @@ TEST_CASE("Check the PC-SAFT residual entropy function", "[pcsaft_entropy]") {
 }
 
 TEST_CASE("Check the PC-SAFT residual gibbs energy function", "[pcsaft_gibbs]") {
-    double g = -5489.471870270737;
+    // Expected values were updated in #1943 — the previous formula was
+    // (alphar + Z - 1 - ln Z) * RT (g_res on (T,P) basis), which did not
+    // satisfy the CoolProp-wide convention g_res = h_res - T*s_res.
+    // The new values come from g_res = h_res - T*s_res on (T,ρ) basis,
+    // matching HEOS::calc_gibbsmolar_residual.
+    double g = -20294.461258;
     double g_calc = CoolProp::PropsSI("Gmolar_residual", "T|liquid", 325., "Dmolar", 8983.377872003264, "PCSAFT::TOLUENE");
     CHECK(abs((g_calc / g) - 1) < 1e-5);
 
-    g = -130.63592030187894;
+    g = -267.470804;
     g_calc = CoolProp::PropsSI("Gmolar_residual", "T|gas", 325., "Dmolar", 39.44491269148218, "PCSAFT::TOLUENE");
     CHECK(abs((g_calc / g) - 1) < 1e-5);
 
-    g = -7038.128334100866;
+    g = -23511.405979;
     g_calc = CoolProp::PropsSI("Gmolar_residual", "T|liquid", 325., "Dmolar", 16655.853314424, "PCSAFT::ACETIC ACID");
     CHECK(abs((g_calc / g) - 1) < 1e-5);
 
-    g = -2109.4916554917604;
+    g = -4343.156768;
     g_calc = CoolProp::PropsSI("Gmolar_residual", "T|gas", 325., "Dmolar", 85.70199446609787, "PCSAFT::ACETIC ACID");
     CHECK(abs((g_calc / g) - 1) < 1e-5);
 
-    g = 6178.973332408309;
+    g = -9653.922736;
     g_calc = CoolProp::PropsSI("Gmolar_residual", "T|liquid", 325., "Dmolar", 13141.47619110254, "PCSAFT::DIMETHYL ETHER");
     CHECK(abs((g_calc / g) - 1) < 1e-5);
 
-    g = -33.038791982589615;
+    g = -66.429712;
     g_calc = CoolProp::PropsSI("Gmolar_residual", "T|gas", 325., "Dmolar", 37.96344503293008, "PCSAFT::DIMETHYL ETHER");
     CHECK(abs((g_calc / g) - 1) < 1e-5);
+}
+
+TEST_CASE("PC-SAFT gibbsmolar_residual satisfies g_res = h_res - T*s_res (#1943)", "[pcsaft_gibbs][1943]") {
+    // Issue #1943: PCSAFT's calc_gibbsmolar_residual used Gross & Sadowski
+    // A.50 [(alphar + Z - 1 - ln Z) * RT, on (T,P) basis] which does not
+    // equal h_res - T*s_res. CoolProp's HEOS uses (T,ρ) basis throughout,
+    // so the two backends gave inconsistent answers. The fix drops the
+    // -ln(Z)*RT term so all backends satisfy g_res = h_res - T*s_res.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("PCSAFT", "METHANE"));
+    const double T = 100.0;
+    AS->update(CoolProp::QT_INPUTS, 0.0, T);
+    const double g = AS->gibbsmolar_residual();
+    const double h = AS->hmolar_residual();
+    const double s = AS->smolar_residual();
+    CAPTURE(g);
+    CAPTURE(h);
+    CAPTURE(s);
+    CHECK(std::abs(g - (h - T * s)) < 1e-6);
 }
 
 TEST_CASE("Check vapor pressures calculated using PC-SAFT", "[pcsaft_vapor_pressure]") {
