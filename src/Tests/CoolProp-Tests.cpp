@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("PropsSImulti with empty input vectors returns empty result instead of segfaulting", "[PropsSImulti][2417]") {
     // Issue #2417: PropsSI('T','P',[],'Q',[],'Ammonia') segfaulted because
     // _PropsSI_outputs forced N1 = max(1, in1.size()) and then dereferenced
