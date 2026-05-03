@@ -258,7 +258,7 @@ class DQ_flash_residual : public FuncWrapper1DWithTwoDerivs
    public:
     HelmholtzEOSMixtureBackend& HEOS;
     double rhomolar, Q_target;
-    DQ_flash_residual(HelmholtzEOSMixtureBackend& HEOS, double rhomolar, double Q_target) : HEOS(HEOS), rhomolar(rhomolar), Q_target(Q_target){};
+    DQ_flash_residual(HelmholtzEOSMixtureBackend& HEOS, double rhomolar, double Q_target) : HEOS(HEOS), rhomolar(rhomolar), Q_target(Q_target) {};
     double call(double T) {
         HEOS.update(QT_INPUTS, 0, T);  // Doesn't matter whether liquid or vapor, we are just doing a full VLE call for given T
         double rhoL = HEOS.saturated_liquid_keyed_output(iDmolar);
@@ -293,8 +293,10 @@ std::pair<double, double> FlashRoutines::alpha0_offset_total(HelmholtzEOSMixture
     const auto& core = alpha0.EnthalpyEntropyOffsetCore;
     const auto& user = alpha0.EnthalpyEntropyOffset;
     const double prefactor = alpha0.get_prefactor();
-    const double a1_sum = (core.is_enabled() ? static_cast<double>(core.get_a1()) : 0.0) + (user.is_enabled() ? static_cast<double>(user.get_a1()) : 0.0);
-    const double a2_sum = (core.is_enabled() ? static_cast<double>(core.get_a2()) : 0.0) + (user.is_enabled() ? static_cast<double>(user.get_a2()) : 0.0);
+    const double a1_sum =
+      (core.is_enabled() ? static_cast<double>(core.get_a1()) : 0.0) + (user.is_enabled() ? static_cast<double>(user.get_a1()) : 0.0);
+    const double a2_sum =
+      (core.is_enabled() ? static_cast<double>(core.get_a2()) : 0.0) + (user.is_enabled() ? static_cast<double>(user.get_a2()) : 0.0);
     return {prefactor * a1_sum, prefactor * a2_sum};
 }
 
@@ -2345,7 +2347,7 @@ void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolProp
         HelmholtzEOSMixtureBackend& HEOS;
         CoolPropDbl hmolar, smolar, Qs;
         Residual(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec)
-          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec), Qs(_HUGE){};
+          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec), Qs(_HUGE) {};
         double call(double T) {
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(), &SatV = HEOS.get_SatV();
@@ -2436,7 +2438,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
         HelmholtzEOSMixtureBackend& HEOS;
         CoolPropDbl hmolar, smolar;
         Residual(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec)
-          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
+          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec) {};
         double call(double T) {
             HEOS.update(SmolarT_INPUTS, smolar, T);
             double r = HEOS.hmolar() - hmolar;
@@ -2491,7 +2493,8 @@ TEST_CASE("PD with T very large should yield error", "[PDflash]") {
 }
 
 TEST_CASE("Stability testing", "[stability]") {
-    shared_ptr<HelmholtzEOSMixtureBackend> HEOS = std::make_shared<HelmholtzEOSMixtureBackend>(strsplit("n-Propane&n-Butane&n-Pentane&n-Hexane", '&'));
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS =
+      std::make_shared<HelmholtzEOSMixtureBackend>(strsplit("n-Propane&n-Butane&n-Pentane&n-Hexane", '&'));
     std::vector<double> z(4);
     z[0] = 0.1;
     z[1] = 0.2;
