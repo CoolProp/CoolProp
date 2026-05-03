@@ -4810,6 +4810,9 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p > 0);
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
+    }
+}
+
 TEST_CASE("DmassSmass round-trip on the dew curve preserves enthalpy (#1907)", "[water_flash][1907]") {
     // Issue #1907: looping along the saturated-vapor curve and
     // re-flashing each (D, S) pair produced wildly inconsistent
@@ -4822,7 +4825,10 @@ TEST_CASE("DmassSmass round-trip on the dew curve preserves enthalpy (#1907)", "
     // re-flash via DmassSmass and verify hmass agrees.
     auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "water"));
     auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "water"));
-    for (double d : {280.0, 250.0, 200.0, 175.0, 130.0, 70.0, 30.0, 15.126, 11.141, 5.0}) {
+    // Avoid densities near rho_crit where DmassQ has multiple T-roots — the
+    // post-#2835 strict path raises MultipleSolutionsError there. The low-d
+    // / falling-branch densities below are unique-root.
+    for (double d : {200.0, 175.0, 130.0, 70.0, 30.0, 15.126, 11.141, 5.0}) {
         CAPTURE(d);
         AS->update(CoolProp::DmassQ_INPUTS, d, 1.0);
         const double T_dew = AS->T();
@@ -4843,6 +4849,7 @@ TEST_CASE("DmassSmass round-trip on the dew curve preserves enthalpy (#1907)", "
         CHECK(std::abs(AS2->p() - p_dew) / p_dew < 1e-3);
     }
 }
+
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
     // 'Ammonia') used to throw while neighbouring P values worked.
