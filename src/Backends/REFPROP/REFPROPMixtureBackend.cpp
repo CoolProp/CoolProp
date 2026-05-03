@@ -2310,8 +2310,7 @@ bool force_unload_REFPROP() {
     }
 }
 
-void REFPROP_SETREF(char hrf[3], int ixflag, double x0[1], double& h0, double& s0, double& T0, double& p0, int& ierr, char herr[255], int l1,
-                    int l2) {
+void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, double& T0, double& p0, int& ierr, char* herr, int l1, int l2) {
     std::string err;
     bool loaded_REFPROP = ::load_REFPROP(err);
     if (!loaded_REFPROP) {
