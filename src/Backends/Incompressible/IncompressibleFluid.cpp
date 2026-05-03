@@ -184,7 +184,15 @@ double IncompressibleFluid::cond(double T, double p, double x) {
 }
 /// Saturation pressure as a function of temperature and composition.
 double IncompressibleFluid::psat(double T, double x) {
-    if (T <= this->TminPsat) return 0.0;
+    // Below TminPsat the polynomial fit is not valid. Returning 0.0
+    // silently here surfaced as "Psat = 0 for the entire valid T range"
+    // for fluids whose TminPsat is at or above Tmax (e.g. MEG, where
+    // TminPsat = Tmax = 373.15 K leaves no valid range): #2209. Throw a
+    // controlled exception instead so callers see the limitation rather
+    // than a misleading zero.
+    if (T <= this->TminPsat) {
+        throw ValueError(format("Saturation pressure is not available below TminPsat=%g K (T=%g K)", this->TminPsat, T));
+    }
     switch (p_sat.type) {
         case IncompressibleData::INCOMPRESSIBLE_POLYNOMIAL:
             return poly.evaluate(p_sat.coeffs, T, x, 0, 0, Tbase, xbase);

@@ -4811,6 +4811,22 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+TEST_CASE("INCOMP psat throws below TminPsat instead of returning 0 silently (#2209)", "[INCOMP][2209]") {
+    // Issue #2209: PropsSI('P','Q',0,'T',373,'INCOMP::MEG[0.1]') returned
+    // 0.0 because MEG.json has TminPsat=373.15 (which equals Tmax for
+    // this fluid, leaving no usable Psat range below the upper bound)
+    // and psat() silently returned 0.0 below TminPsat. Now throw a
+    // ValueError so PropsSI surfaces a non-finite return AND populates
+    // errstring rather than returning a misleading 0.
+    const double v = CoolProp::PropsSI("P", "Q", 0, "T", 373.0, "INCOMP::MEG[0.1]");
+    CHECK(!ValidNumber(v));
+    const std::string err = CoolProp::get_global_param_string("errstring");
+    CAPTURE(err);
+    CHECK(err.find("TminPsat") != std::string::npos);
+    // LiBr has TminPsat = 273.15 so T=373 is above it and still works
+    const double v2 = CoolProp::PropsSI("P", "Q", 0, "T", 373.0, "INCOMP::LiBr[0.1]");
+    CHECK(ValidNumber(v2));
+    CHECK(v2 > 0);
 }
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
