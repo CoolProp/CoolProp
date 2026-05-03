@@ -45,7 +45,7 @@ class DTGasTable : public SinglePhaseGriddedTableData
     DTGasTable() {
         xkey = iDmolar;
         ykey = iT;
-        logx = true;   // D ratio gas: large range, log spacing essential
+        logx = true;  // D ratio gas: large range, log spacing essential
         logy = false;
     }
     void set_limits() override;
@@ -83,7 +83,7 @@ class DUGasTable : public SinglePhaseGriddedTableData
     DUGasTable() {
         xkey = iDmolar;
         ykey = iUmolar;
-        logx = true;   // D ratio gas: ~66000× for water, log spacing essential
+        logx = true;  // D ratio gas: ~66000× for water, log spacing essential
         logy = false;
     }
     void set_limits() override;
@@ -112,9 +112,13 @@ class SBTLBackend : public TabularBackend
    public:
     /// Constructor: loads or builds tables, then computes bi-quadratic coefficients
     SBTLBackend(shared_ptr<CoolProp::AbstractState> AS)
-      : TabularBackend(AS), du_tables_built(false), sat_cache_built(false),
-        dt_tables_built(false), _dt_flash_active(false),
-        _dt_tbl_ptr(nullptr), _dt_coeff_ptr(nullptr) {
+      : TabularBackend(AS),
+        du_tables_built(false),
+        sat_cache_built(false),
+        dt_tables_built(false),
+        _dt_flash_active(false),
+        _dt_tbl_ptr(nullptr),
+        _dt_coeff_ptr(nullptr) {
         imposed_phase_index = iphase_not_imposed;
         if (!this->AS->get_mole_fractions().empty()) {
             check_tables();
@@ -200,22 +204,21 @@ class SBTLBackend : public TabularBackend
     // Cell finding
     // -----------------------------------------------------------------------
 
-    void find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
-                                          double x, double y, std::size_t& i, std::size_t& j);
+    void find_native_nearest_good_indices(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, double x, double y,
+                                          std::size_t& i, std::size_t& j);
 
-    void find_nearest_neighbor(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
-                               const parameters variable1, const double value1, const parameters otherkey, const double otherval,
-                               std::size_t& i, std::size_t& j);
+    void find_nearest_neighbor(SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, const parameters variable1,
+                               const double value1, const parameters otherkey, const double otherval, std::size_t& i, std::size_t& j);
 
     // -----------------------------------------------------------------------
     // Inversion (analytical quadratic formula)
     // -----------------------------------------------------------------------
 
-    void invert_single_phase_x(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
-                               parameters other_key, double other, double y, std::size_t i, std::size_t j);
+    void invert_single_phase_x(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, parameters other_key,
+                               double other, double y, std::size_t i, std::size_t j);
 
-    void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
-                               parameters other_key, double other, double x, std::size_t i, std::size_t j);
+    void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs, parameters other_key,
+                               double other, double x, std::size_t i, std::size_t j);
 
     // -----------------------------------------------------------------------
     // D,U flash: direct DU-table lookup (no iteration)
@@ -259,9 +262,8 @@ class SBTLBackend : public TabularBackend
 
     // Helper: return the appropriate SBTL coefficient array for the given table,
     // falling back to `default_coeffs` for non-pT/pH tables (e.g. DU tables).
-    const std::vector<std::vector<CellCoeffs>>& sbtl_coeffs_for(
-        const SinglePhaseGriddedTableData& table,
-        const std::vector<std::vector<CellCoeffs>>& default_coeffs) const {
+    const std::vector<std::vector<CellCoeffs>>& sbtl_coeffs_for(const SinglePhaseGriddedTableData& table,
+                                                                const std::vector<std::vector<CellCoeffs>>& default_coeffs) const {
         if (&table == &dataset->single_phase_logph) return _sbtl_coeffs_ph;
         if (&table == &dataset->single_phase_logpT) return _sbtl_coeffs_pT;
         return default_coeffs;
@@ -271,7 +273,7 @@ class SBTLBackend : public TabularBackend
     // Separate tables for liquid (D > D_crit) and gas (D < D_crit) avoid the need
     // for phase-aware switching inside evaluate_single_phase.
     DULiquidTable du_liquid;
-    DUGasTable    du_gas;
+    DUGasTable du_gas;
     std::vector<std::vector<CellCoeffs>> coeffs_du_liquid;
     std::vector<std::vector<CellCoeffs>> coeffs_du_gas;
     bool du_tables_built;
@@ -306,21 +308,21 @@ class SBTLBackend : public TabularBackend
     // Dedicated (D, T)-space tables for direct P(D,T), H(D,T), S(D,T), U(D,T) evaluation.
     // Avoids the ill-conditioned inversion D(T,P)→P near the saturation boundary.
     DTLiquidTable dt_liquid;
-    DTGasTable    dt_gas;
+    DTGasTable dt_gas;
     std::vector<std::vector<CellCoeffs>> coeffs_dt_liquid;
     std::vector<std::vector<CellCoeffs>> coeffs_dt_gas;
     bool dt_tables_built;
 
     // State cache for flash_DmolarT: set true after a DT flash, cleared on next update().
     // When active, calc_hmolar/smolar/umolar/rhomolar return cached DT values directly.
-    bool   _dt_flash_active;
-    double _dt_hmolar;  // cached H from DT table [J/mol]
-    double _dt_smolar;  // cached S from DT table [J/mol/K]
-    double _dt_umolar;  // cached U from DT table [J/mol]
-    std::size_t _dt_i;  // DT table cell row index
-    std::size_t _dt_j;  // DT table cell column index
-    SinglePhaseGriddedTableData*              _dt_tbl_ptr;    // pointer to active DT table
-    std::vector<std::vector<CellCoeffs>>*     _dt_coeff_ptr;  // pointer to active DT coeffs
+    bool _dt_flash_active;
+    double _dt_hmolar;                                    // cached H from DT table [J/mol]
+    double _dt_smolar;                                    // cached S from DT table [J/mol/K]
+    double _dt_umolar;                                    // cached U from DT table [J/mol]
+    std::size_t _dt_i;                                    // DT table cell row index
+    std::size_t _dt_j;                                    // DT table cell column index
+    SinglePhaseGriddedTableData* _dt_tbl_ptr;             // pointer to active DT table
+    std::vector<std::vector<CellCoeffs>>* _dt_coeff_ptr;  // pointer to active DT coeffs
 
     /// Build the liquid and gas DT tables and compute their SBTL coefficients.
     void build_dt_tables();

@@ -1,7 +1,7 @@
 #if !defined(NO_TABULAR_BACKENDS)
 
-#include "SBTLBackend.h"
-#include "DataStructures.h"
+#    include "SBTLBackend.h"
+#    include "DataStructures.h"
 
 namespace CoolProp {
 
@@ -10,13 +10,20 @@ namespace CoolProp {
 // ---------------------------------------------------------------------------
 static std::vector<std::vector<double>>* sbtl_get_field(SinglePhaseGriddedTableData& table, parameters param) {
     switch (param) {
-        case iT:      return &table.T;
-        case iP:      return &table.p;
-        case iDmolar: return &table.rhomolar;
-        case iSmolar: return &table.smolar;
-        case iHmolar: return &table.hmolar;
-        case iUmolar: return &table.umolar;
-        default:      throw ValueError("Invalid param in sbtl_get_field");
+        case iT:
+            return &table.T;
+        case iP:
+            return &table.p;
+        case iDmolar:
+            return &table.rhomolar;
+        case iSmolar:
+            return &table.smolar;
+        case iHmolar:
+            return &table.hmolar;
+        case iUmolar:
+            return &table.umolar;
+        default:
+            throw ValueError("Invalid param in sbtl_get_field");
     }
 }
 
@@ -159,7 +166,8 @@ static void lagrange_cubic_basis(const double px[4], double cx[4][4]) {
                 poly[d] = poly[d - 1] - px[m] * poly[d];
             poly[0] *= -px[m];
         }
-        for (int d = 0; d < 4; ++d) cx[k][d] = poly[d] / denom;
+        for (int d = 0; d < 4; ++d)
+            cx[k][d] = poly[d] / denom;
     }
 }
 
@@ -254,8 +262,10 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
                     for (int di = -1; di <= hi_off; ++di) {
                         for (int dj = -1; dj <= hi_off; ++dj) {
                             const double v = table.rhomolar[i + di][j + dj];
-                            if (v > rho_crit) has_liquid = true;
-                            else has_vapor = true;
+                            if (v > rho_crit)
+                                has_liquid = true;
+                            else
+                                has_vapor = true;
                         }
                     }
                     if (has_liquid && has_vapor) return false;
@@ -349,9 +359,9 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
                 if (nstencil == 4 && use_cubic[i][j]) {
                     // ---- Degree-3 (bi-cubic): 4×4 stencil, 16 coefficients ----
                     // Normalized positions of the 4 stencil nodes in x: {-rx, 0, 1, 1+sx}
-                    double rx = (table.xvec[i]     - table.xvec[i - 1]) / (table.xvec[i + 1] - table.xvec[i]);
+                    double rx = (table.xvec[i] - table.xvec[i - 1]) / (table.xvec[i + 1] - table.xvec[i]);
                     double sx = (table.xvec[i + 2] - table.xvec[i + 1]) / (table.xvec[i + 1] - table.xvec[i]);
-                    double ry = (table.yvec[j]     - table.yvec[j - 1]) / (table.yvec[j + 1] - table.yvec[j]);
+                    double ry = (table.yvec[j] - table.yvec[j - 1]) / (table.yvec[j + 1] - table.yvec[j]);
                     double sy = (table.yvec[j + 2] - table.yvec[j + 1]) / (table.yvec[j + 1] - table.yvec[j]);
 
                     double px[4] = {-rx, 0.0, 1.0, 1.0 + sx};
@@ -398,13 +408,25 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
 
                     // Lagrange basis coefficients: cx[k][m] = coeff of ξ^m in L_k(ξ)
                     double cx[3][3], cy[3][3];
-                    cx[0][0] = 0.0;  cx[0][1] = -1.0 / (rx * (rx + 1.0));  cx[0][2] = 1.0 / (rx * (rx + 1.0));
-                    cx[1][0] = 1.0;  cx[1][1] = (1.0 - rx) / rx;           cx[1][2] = -1.0 / rx;
-                    cx[2][0] = 0.0;  cx[2][1] = rx / (1.0 + rx);           cx[2][2] = 1.0 / (1.0 + rx);
+                    cx[0][0] = 0.0;
+                    cx[0][1] = -1.0 / (rx * (rx + 1.0));
+                    cx[0][2] = 1.0 / (rx * (rx + 1.0));
+                    cx[1][0] = 1.0;
+                    cx[1][1] = (1.0 - rx) / rx;
+                    cx[1][2] = -1.0 / rx;
+                    cx[2][0] = 0.0;
+                    cx[2][1] = rx / (1.0 + rx);
+                    cx[2][2] = 1.0 / (1.0 + rx);
 
-                    cy[0][0] = 0.0;  cy[0][1] = -1.0 / (ry * (ry + 1.0));  cy[0][2] = 1.0 / (ry * (ry + 1.0));
-                    cy[1][0] = 1.0;  cy[1][1] = (1.0 - ry) / ry;           cy[1][2] = -1.0 / ry;
-                    cy[2][0] = 0.0;  cy[2][1] = ry / (1.0 + ry);           cy[2][2] = 1.0 / (1.0 + ry);
+                    cy[0][0] = 0.0;
+                    cy[0][1] = -1.0 / (ry * (ry + 1.0));
+                    cy[0][2] = 1.0 / (ry * (ry + 1.0));
+                    cy[1][0] = 1.0;
+                    cy[1][1] = (1.0 - ry) / ry;
+                    cy[1][2] = -1.0 / ry;
+                    cy[2][0] = 0.0;
+                    cy[2][1] = ry / (1.0 + ry);
+                    cy[2][2] = 1.0 / (1.0 + ry);
 
                     // a_{mn} = Σ_{k,l} z[k][l] · cx[k][m] · cy[l][n]
                     std::vector<double> alpha(9, 0.0);
@@ -441,22 +463,18 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
     const double rho_crit_val = table.AS ? static_cast<double>(table.AS->rhomolar_critical()) : 1e20;
 
     auto is_liquid_valid = [&](std::size_t ci, std::size_t cj) -> bool {
-        return coeffs[ci][cj].valid()
-               && ValidNumber(table.rhomolar[ci][cj])
-               && table.rhomolar[ci][cj] > rho_crit_val;
+        return coeffs[ci][cj].valid() && ValidNumber(table.rhomolar[ci][cj]) && table.rhomolar[ci][cj] > rho_crit_val;
     };
     auto is_vapor_valid = [&](std::size_t ci, std::size_t cj) -> bool {
-        return coeffs[ci][cj].valid()
-               && ValidNumber(table.rhomolar[ci][cj])
-               && table.rhomolar[ci][cj] < rho_crit_val;
+        return coeffs[ci][cj].valid() && ValidNumber(table.rhomolar[ci][cj]) && table.rhomolar[ci][cj] < rho_crit_val;
     };
 
     // Expanded search patterns: 8 directions, each represented as (di, dj).
     // For liquid (lower-T): search -x first; for vapor (higher-T): search +x first.
-    static const int liq_di[8] = {-1,  1,  0,  0, -1,  1, -1,  1};
-    static const int liq_dj[8] = { 0,  0, -1,  1, -1, -1,  1,  1};
-    static const int vap_di[8] = { 1, -1,  0,  0,  1, -1,  1, -1};
-    static const int vap_dj[8] = { 0,  0, -1,  1, -1, -1,  1,  1};
+    static const int liq_di[8] = {-1, 1, 0, 0, -1, 1, -1, 1};
+    static const int liq_dj[8] = {0, 0, -1, 1, -1, -1, 1, 1};
+    static const int vap_di[8] = {1, -1, 0, 0, 1, -1, 1, -1};
+    static const int vap_dj[8] = {0, 0, -1, 1, -1, -1, 1, 1};
 
     for (std::size_t i = 0; i < table.Nx - 1; ++i) {
         for (std::size_t j = 0; j < table.Ny - 1; ++j) {
@@ -472,8 +490,7 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
                 for (int d = 0; d < 8; ++d) {
                     int il = static_cast<int>(i) + liq_di[d] * r;
                     int jl = static_cast<int>(j) + liq_dj[d] * r;
-                    if (!found_liq && il >= 0 && il < static_cast<int>(table.Nx) - 1
-                        && jl >= 0 && jl < static_cast<int>(table.Ny) - 1
+                    if (!found_liq && il >= 0 && il < static_cast<int>(table.Nx) - 1 && jl >= 0 && jl < static_cast<int>(table.Ny) - 1
                         && is_liquid_valid(static_cast<std::size_t>(il), static_cast<std::size_t>(jl))) {
                         coeffs[i][j].set_alternate(static_cast<std::size_t>(il), static_cast<std::size_t>(jl));
                         found_liq = true;
@@ -481,8 +498,7 @@ void SBTLBackend::build_sbtl_coeffs(SinglePhaseGriddedTableData& table, std::vec
 
                     int iv = static_cast<int>(i) + vap_di[d] * r;
                     int jv = static_cast<int>(j) + vap_dj[d] * r;
-                    if (!found_vap && iv >= 0 && iv < static_cast<int>(table.Nx) - 1
-                        && jv >= 0 && jv < static_cast<int>(table.Ny) - 1
+                    if (!found_vap && iv >= 0 && iv < static_cast<int>(table.Nx) - 1 && jv >= 0 && jv < static_cast<int>(table.Ny) - 1
                         && is_vapor_valid(static_cast<std::size_t>(iv), static_cast<std::size_t>(jv))) {
                         coeffs[i][j].set_alternate2(static_cast<std::size_t>(iv), static_cast<std::size_t>(jv));
                         found_vap = true;
@@ -552,8 +568,7 @@ void SBTLBackend::build_du_tables() {
  * Fix: use the accurate tabular saturation curve (PureFluidSaturationTableData) to
  * identify and invalidate two-phase nodes independently of the EOS Q() value.
  */
-static void invalidate_twophase_dt_nodes(SinglePhaseGriddedTableData& tbl,
-                                          PureFluidSaturationTableData& sat) {
+static void invalidate_twophase_dt_nodes(SinglePhaseGriddedTableData& tbl, PureFluidSaturationTableData& sat) {
     for (std::size_t i = 0; i < tbl.Nx; ++i) {
         const double D = tbl.xvec[i];
         for (std::size_t j = 0; j < tbl.Ny; ++j) {
@@ -566,7 +581,7 @@ static void invalidate_twophase_dt_nodes(SinglePhaseGriddedTableData& tbl,
             if (two_phase) {
                 tbl.hmolar[i][j] = _HUGE;
                 tbl.smolar[i][j] = _HUGE;
-                tbl.p[i][j]      = _HUGE;
+                tbl.p[i][j] = _HUGE;
                 tbl.umolar[i][j] = _HUGE;
             }
         }
@@ -617,7 +632,7 @@ void SBTLBackend::build_sat_cache() {
     const int N_SAT = 1000;
     // Use the inner range of the saturation pressure array to avoid edge effects
     const double p_lo = sat.pL.front() * 1.0001;
-    const double p_hi = sat.pL.back()  * (1.0 - 1e-5);
+    const double p_hi = sat.pL.back() * (1.0 - 1e-5);
 
     _sat_log_p_min = std::log(p_lo);
     const double log_p_max = std::log(p_hi);
@@ -647,11 +662,11 @@ void SBTLBackend::build_sat_cache() {
         iV = std::max(std::size_t(2), std::min(Nsat - 2, iV));
 
         // Same cubic interpolation as PureFluidSaturationTableData::evaluate
-        _sat_DL[k] = std::exp(CubicInterp(sat.logpL, sat.logrhomolarL, iL-2, iL-1, iL, iL+1, log_p));
-        _sat_DV[k] = std::exp(CubicInterp(sat.logpV, sat.logrhomolarV, iV-2, iV-1, iV, iV+1, log_p));
-        _sat_UL[k] = CubicInterp(sat.logpL, sat.umolarL, iL-2, iL-1, iL, iL+1, log_p);
-        _sat_UV[k] = CubicInterp(sat.logpV, sat.umolarV, iV-2, iV-1, iV, iV+1, log_p);
-        _sat_T[k]  = CubicInterp(sat.logpL, sat.TL,      iL-2, iL-1, iL, iL+1, log_p);
+        _sat_DL[k] = std::exp(CubicInterp(sat.logpL, sat.logrhomolarL, iL - 2, iL - 1, iL, iL + 1, log_p));
+        _sat_DV[k] = std::exp(CubicInterp(sat.logpV, sat.logrhomolarV, iV - 2, iV - 1, iV, iV + 1, log_p));
+        _sat_UL[k] = CubicInterp(sat.logpL, sat.umolarL, iL - 2, iL - 1, iL, iL + 1, log_p);
+        _sat_UV[k] = CubicInterp(sat.logpV, sat.umolarV, iV - 2, iV - 1, iV, iV + 1, log_p);
+        _sat_T[k] = CubicInterp(sat.logpL, sat.TL, iL - 2, iL - 1, iL, iL + 1, log_p);
     }
 
     // Cache triple-point saturation densities for the always-executed phase bounds check
@@ -675,10 +690,14 @@ double SBTLBackend::fast_sat_lookup(parameters param, double p) const {
     const double t = idx_f - static_cast<double>(idx);
 
     switch (param) {
-        case iDmolar: return (1.0 - t) * _sat_DL[idx] + t * _sat_DL[idx + 1];
-        case iUmolar: return (1.0 - t) * _sat_UL[idx] + t * _sat_UL[idx + 1];
-        case iT:      return (1.0 - t) * _sat_T[idx]  + t * _sat_T[idx + 1];
-        default:      throw ValueError("fast_sat_lookup: unsupported param");
+        case iDmolar:
+            return (1.0 - t) * _sat_DL[idx] + t * _sat_DL[idx + 1];
+        case iUmolar:
+            return (1.0 - t) * _sat_UL[idx] + t * _sat_UL[idx + 1];
+        case iT:
+            return (1.0 - t) * _sat_T[idx] + t * _sat_T[idx + 1];
+        default:
+            throw ValueError("fast_sat_lookup: unsupported param");
     }
 }
 
@@ -691,10 +710,14 @@ double SBTLBackend::fast_sat_lookup_vapor(parameters param, double p) const {
     const double t = idx_f - static_cast<double>(idx);
 
     switch (param) {
-        case iDmolar: return (1.0 - t) * _sat_DV[idx] + t * _sat_DV[idx + 1];
-        case iUmolar: return (1.0 - t) * _sat_UV[idx] + t * _sat_UV[idx + 1];
-        case iT:      return (1.0 - t) * _sat_T[idx]  + t * _sat_T[idx + 1];
-        default:      throw ValueError("fast_sat_lookup_vapor: unsupported param");
+        case iDmolar:
+            return (1.0 - t) * _sat_DV[idx] + t * _sat_DV[idx + 1];
+        case iUmolar:
+            return (1.0 - t) * _sat_UV[idx] + t * _sat_UV[idx + 1];
+        case iT:
+            return (1.0 - t) * _sat_T[idx] + t * _sat_T[idx + 1];
+        default:
+            throw ValueError("fast_sat_lookup_vapor: unsupported param");
     }
 }
 
@@ -780,7 +803,8 @@ void SBTLBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& 
                 if (coeffs[i][j].has_valid_neighbor()) {
                     std::size_t ia = i, ja = j;
                     coeffs[ia][ja].get_alternate(ia, ja);
-                    i = ia; j = ja;
+                    i = ia;
+                    j = ja;
                     return;
                 }
             } else {
@@ -788,7 +812,8 @@ void SBTLBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& 
                 if (coeffs[i][j].has_valid_neighbor2()) {
                     std::size_t ia = i, ja = j;
                     coeffs[ia][ja].get_alternate2(ia, ja);
-                    i = ia; j = ja;
+                    i = ia;
+                    j = ja;
                     return;
                 }
                 // If no vapor alternate, fall through to primary
@@ -869,7 +894,7 @@ double SBTLBackend::evaluate_single_phase(const SinglePhaseGriddedTableData& tab
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(output);
 
-    double xi  = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
+    double xi = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
     double eta = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
 
     double val;
@@ -884,20 +909,32 @@ double SBTLBackend::evaluate_single_phase(const SinglePhaseGriddedTableData& tab
         // Degree-3 (bi-cubic): z = Σ_{m,n=0}^{3} alpha[m*4+n] xi^m eta^n
         double xi2 = xi * xi, xi3 = xi2 * xi;
         double eta2 = eta * eta, eta3 = eta2 * eta;
-        double B0 = alpha[ 0] + alpha[ 1] * eta + alpha[ 2] * eta2 + alpha[ 3] * eta3;
-        double B1 = alpha[ 4] + alpha[ 5] * eta + alpha[ 6] * eta2 + alpha[ 7] * eta3;
-        double B2 = alpha[ 8] + alpha[ 9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+        double B0 = alpha[0] + alpha[1] * eta + alpha[2] * eta2 + alpha[3] * eta3;
+        double B1 = alpha[4] + alpha[5] * eta + alpha[6] * eta2 + alpha[7] * eta3;
+        double B2 = alpha[8] + alpha[9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
         double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
         val = B0 + B1 * xi + B2 * xi2 + B3 * xi3;
     }
 
     switch (output) {
-        case iT:      _T = val;        break;
-        case iP:      _p = val;        break;
-        case iDmolar: _rhomolar = val; break;
-        case iSmolar: _smolar = val;   break;
-        case iHmolar: _hmolar = val;   break;
-        case iUmolar: _umolar = val;   break;
+        case iT:
+            _T = val;
+            break;
+        case iP:
+            _p = val;
+            break;
+        case iDmolar:
+            _rhomolar = val;
+            break;
+        case iSmolar:
+            _smolar = val;
+            break;
+        case iHmolar:
+            _hmolar = val;
+            break;
+        case iUmolar:
+            _umolar = val;
+            break;
         default:
             throw ValueError("Invalid output variable in SBTLBackend::evaluate_single_phase");
     }
@@ -915,7 +952,7 @@ double SBTLBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(output);
 
-    double xi  = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
+    double xi = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
     double eta = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
 
     if (Nx == 1 && Ny == 0) {
@@ -930,8 +967,8 @@ double SBTLBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData
         } else {
             double xi2 = xi * xi;
             double eta2 = eta * eta, eta3 = eta2 * eta;
-            double B1 = alpha[ 4] + alpha[ 5] * eta + alpha[ 6] * eta2 + alpha[ 7] * eta3;
-            double B2 = alpha[ 8] + alpha[ 9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+            double B1 = alpha[4] + alpha[5] * eta + alpha[6] * eta2 + alpha[7] * eta3;
+            double B2 = alpha[8] + alpha[9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
             double B3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
             dzdxi = B1 + 2.0 * B2 * xi + 3.0 * B3 * xi2;
         }
@@ -942,15 +979,13 @@ double SBTLBackend::evaluate_single_phase_derivative(SinglePhaseGriddedTableData
         double dzdeta;
         if (alpha.size() == 9) {
             double eta2 = eta * eta;
-            dzdeta = (alpha[1] + 2.0 * alpha[2] * eta) + (alpha[4] + 2.0 * alpha[5] * eta) * xi
-                     + (alpha[7] + 2.0 * alpha[8] * eta) * xi * xi;
+            dzdeta = (alpha[1] + 2.0 * alpha[2] * eta) + (alpha[4] + 2.0 * alpha[5] * eta) * xi + (alpha[7] + 2.0 * alpha[8] * eta) * xi * xi;
         } else {
             double xi2 = xi * xi, xi3 = xi2 * xi;
             double eta2 = eta * eta;
-            dzdeta = (alpha[ 1] + 2.0 * alpha[ 2] * eta + 3.0 * alpha[ 3] * eta2)
-                   + (alpha[ 5] + 2.0 * alpha[ 6] * eta + 3.0 * alpha[ 7] * eta2) * xi
-                   + (alpha[ 9] + 2.0 * alpha[10] * eta + 3.0 * alpha[11] * eta2) * xi2
-                   + (alpha[13] + 2.0 * alpha[14] * eta + 3.0 * alpha[15] * eta2) * xi3;
+            dzdeta = (alpha[1] + 2.0 * alpha[2] * eta + 3.0 * alpha[3] * eta2) + (alpha[5] + 2.0 * alpha[6] * eta + 3.0 * alpha[7] * eta2) * xi
+                     + (alpha[9] + 2.0 * alpha[10] * eta + 3.0 * alpha[11] * eta2) * xi2
+                     + (alpha[13] + 2.0 * alpha[14] * eta + 3.0 * alpha[15] * eta2) * xi3;
         }
         return dzdeta / (table.yvec[j + 1] - table.yvec[j]);
     } else {
@@ -968,7 +1003,7 @@ void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(other_key);
 
-    double eta  = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
+    double eta = (y - table.yvec[j]) / (table.yvec[j + 1] - table.yvec[j]);
     double eta2 = eta * eta;
 
     double xi;
@@ -994,9 +1029,9 @@ void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table
         // Degree-3: solve D3*xi^3 + A*xi^2 + B*xi + C = 0 via Newton from quadratic seed
         double eta3 = eta2 * eta;
         double D3 = alpha[12] + alpha[13] * eta + alpha[14] * eta2 + alpha[15] * eta3;
-        double A  = alpha[ 8] + alpha[ 9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
-        double B  = alpha[ 4] + alpha[ 5] * eta + alpha[ 6] * eta2 + alpha[ 7] * eta3;
-        double C  = alpha[ 0] + alpha[ 1] * eta + alpha[ 2] * eta2 + alpha[ 3] * eta3 - other;
+        double A = alpha[8] + alpha[9] * eta + alpha[10] * eta2 + alpha[11] * eta3;
+        double B = alpha[4] + alpha[5] * eta + alpha[6] * eta2 + alpha[7] * eta3;
+        double C = alpha[0] + alpha[1] * eta + alpha[2] * eta2 + alpha[3] * eta3 - other;
 
         // Quadratic seed (ignore D3 term)
         double xi_seed;
@@ -1014,7 +1049,7 @@ void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table
         // Newton refinement (converges in 2–3 iterations for smooth thermodynamic data)
         xi = xi_seed;
         for (int iter = 0; iter < 6; ++iter) {
-            double fval  = ((D3 * xi + A) * xi + B) * xi + C;
+            double fval = ((D3 * xi + A) * xi + B) * xi + C;
             double dfval = (3.0 * D3 * xi + 2.0 * A) * xi + B;
             if (std::abs(dfval) < 1e-30) break;
             double dxi = fval / dfval;
@@ -1026,8 +1061,12 @@ void SBTLBackend::invert_single_phase_x(const SinglePhaseGriddedTableData& table
     double val = xi * (table.xvec[i + 1] - table.xvec[i]) + table.xvec[i];
 
     switch (table.xkey) {
-        case iHmolar: _hmolar = val; break;
-        case iT:      _T = val;      break;
+        case iHmolar:
+            _hmolar = val;
+            break;
+        case iT:
+            _T = val;
+            break;
         default:
             throw ValueError("Invalid x-key in SBTLBackend::invert_single_phase_x");
     }
@@ -1041,7 +1080,7 @@ void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table
     const CellCoeffs& cell = coeffs[i][j];
     const std::vector<double>& alpha = cell.get(other_key);
 
-    double xi  = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
+    double xi = (x - table.xvec[i]) / (table.xvec[i + 1] - table.xvec[i]);
     double xi2 = xi * xi;
 
     double eta;
@@ -1066,10 +1105,10 @@ void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table
     } else {
         // Degree-3: solve D3*eta^3 + A*eta^2 + B*eta + C = 0 via Newton from quadratic seed
         double xi3 = xi2 * xi;
-        double D3 = alpha[ 3] + alpha[ 7] * xi + alpha[11] * xi2 + alpha[15] * xi3;
-        double A  = alpha[ 2] + alpha[ 6] * xi + alpha[10] * xi2 + alpha[14] * xi3;
-        double B  = alpha[ 1] + alpha[ 5] * xi + alpha[ 9] * xi2 + alpha[13] * xi3;
-        double C  = alpha[ 0] + alpha[ 4] * xi + alpha[ 8] * xi2 + alpha[12] * xi3 - other;
+        double D3 = alpha[3] + alpha[7] * xi + alpha[11] * xi2 + alpha[15] * xi3;
+        double A = alpha[2] + alpha[6] * xi + alpha[10] * xi2 + alpha[14] * xi3;
+        double B = alpha[1] + alpha[5] * xi + alpha[9] * xi2 + alpha[13] * xi3;
+        double C = alpha[0] + alpha[4] * xi + alpha[8] * xi2 + alpha[12] * xi3 - other;
 
         // Quadratic seed (ignore D3 term)
         double eta_seed;
@@ -1087,7 +1126,7 @@ void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table
         // Newton refinement
         eta = eta_seed;
         for (int iter = 0; iter < 6; ++iter) {
-            double fval  = ((D3 * eta + A) * eta + B) * eta + C;
+            double fval = ((D3 * eta + A) * eta + B) * eta + C;
             double dfval = (3.0 * D3 * eta + 2.0 * A) * eta + B;
             if (std::abs(dfval) < 1e-30) break;
             double deta = fval / dfval;
@@ -1099,7 +1138,9 @@ void SBTLBackend::invert_single_phase_y(const SinglePhaseGriddedTableData& table
     double val = eta * (table.yvec[j + 1] - table.yvec[j]) + table.yvec[j];
 
     switch (table.ykey) {
-        case iP: _p = val; break;
+        case iP:
+            _p = val;
+            break;
         default:
             throw ValueError("Invalid y-key in SBTLBackend::invert_single_phase_y");
     }
@@ -1134,7 +1175,7 @@ void SBTLBackend::flash_DmolarUmolar(CoolPropDbl D_in, CoolPropDbl U_in) {
     _rhomolar = D_target;
     _umolar = U_target;
 
-    const double D_crit   = static_cast<double>(this->AS->rhomolar_critical());
+    const double D_crit = static_cast<double>(this->AS->rhomolar_critical());
 
     // ----- Step 1: Cheap phase detection from cached triple-point densities -----
     // _sat_DL_triple and _sat_DV_triple bound the entire two-phase dome.
@@ -1149,7 +1190,7 @@ void SBTLBackend::flash_DmolarUmolar(CoolPropDbl D_in, CoolPropDbl U_in) {
         // Each function evaluation costs ~30 ns instead of ~300 ns with sat_eval.
         const double v_target = 1.0 / D_target;
         const double p_lo_sat = std::exp(_sat_log_p_min);  // triple point pressure
-        const double p_hi_sat = std::exp(_sat_log_p_min + (_sat_logp.size()-1) / _sat_inv_dlogp);
+        const double p_hi_sat = std::exp(_sat_log_p_min + (_sat_logp.size() - 1) / _sat_inv_dlogp);
 
         // Inline fast f(p): avoids repeated function-call overhead
         auto fast_f = [&](double p_test) -> double {
@@ -1181,8 +1222,11 @@ void SBTLBackend::flash_DmolarUmolar(CoolPropDbl D_in, CoolPropDbl U_in) {
                 double dfdp = (fp - f0) / dp;
                 double p_new = (std::abs(dfdp) > 1e-30) ? p_sat - f0 / dfdp : _HUGE;
                 if (p_new < p_bracket_lo || p_new > p_bracket_hi || p_new != p_new) {
-                    if ((f0 > 0) == (f_bracket_lo > 0)) { p_bracket_lo = p_sat; f_bracket_lo = f0; }
-                    else p_bracket_hi = p_sat;
+                    if ((f0 > 0) == (f_bracket_lo > 0)) {
+                        p_bracket_lo = p_sat;
+                        f_bracket_lo = f0;
+                    } else
+                        p_bracket_hi = p_sat;
                     p_sat = 0.5 * (p_bracket_lo + p_bracket_hi);
                 } else {
                     p_sat = p_new;
@@ -1236,13 +1280,13 @@ void SBTLBackend::flash_DmolarUmolar(CoolPropDbl D_in, CoolPropDbl U_in) {
     SinglePhaseGriddedTableData* du_tbl_ptr;
     std::vector<std::vector<CellCoeffs>>* du_coeff_ptr;
     if (use_liquid_table) {
-        du_tbl_ptr   = &du_liquid;
+        du_tbl_ptr = &du_liquid;
         du_coeff_ptr = &coeffs_du_liquid;
     } else {
-        du_tbl_ptr   = &du_gas;
+        du_tbl_ptr = &du_gas;
         du_coeff_ptr = &coeffs_du_gas;
     }
-    SinglePhaseGriddedTableData& du_tbl  = *du_tbl_ptr;
+    SinglePhaseGriddedTableData& du_tbl = *du_tbl_ptr;
     std::vector<std::vector<CellCoeffs>>& du_coeff = *du_coeff_ptr;
 
     std::size_t du_i = 0, du_j = 0;
@@ -1262,7 +1306,7 @@ void SBTLBackend::flash_DmolarUmolar(CoolPropDbl D_in, CoolPropDbl U_in) {
     _p = P_found;
 
     // Map (T, P) to the pT table for subsequent property lookups (h, s, cp, etc.)
-    auto& pT_tbl   = dataset->single_phase_logpT;
+    auto& pT_tbl = dataset->single_phase_logpT;
     auto& pT_coeff = dataset->coeffs_pT;
     std::size_t pT_i = 0, pT_j = 0;
     find_native_nearest_good_indices(pT_tbl, pT_coeff, _T, _p, pT_i, pT_j);
@@ -1332,13 +1376,13 @@ void SBTLBackend::flash_DmolarT(CoolPropDbl D_in, CoolPropDbl T_in) {
     SinglePhaseGriddedTableData* dt_tbl_ptr;
     std::vector<std::vector<CellCoeffs>>* dt_coeff_ptr;
     if (use_liquid) {
-        dt_tbl_ptr   = &dt_liquid;
+        dt_tbl_ptr = &dt_liquid;
         dt_coeff_ptr = &coeffs_dt_liquid;
     } else {
-        dt_tbl_ptr   = &dt_gas;
+        dt_tbl_ptr = &dt_gas;
         dt_coeff_ptr = &coeffs_dt_gas;
     }
-    SinglePhaseGriddedTableData& dt_tbl   = *dt_tbl_ptr;
+    SinglePhaseGriddedTableData& dt_tbl = *dt_tbl_ptr;
     std::vector<std::vector<CellCoeffs>>& dt_coeff = *dt_coeff_ptr;
 
     // Bounds check: the DT table stencil requires j>=1 (i.e. T > ymin = T_triple)
@@ -1352,21 +1396,20 @@ void SBTLBackend::flash_DmolarT(CoolPropDbl D_in, CoolPropDbl T_in) {
         // Direct EOS call — caches h, s, u so calc_* return accurate values
         // even when the pT stencil would extrapolate at the table boundary.
         AS->update(DmolarT_INPUTS, D_in, T_in);
-        _p          = static_cast<double>(AS->p());
-        _dt_hmolar  = static_cast<double>(AS->hmolar());
-        _dt_smolar  = static_cast<double>(AS->smolar());
-        _dt_umolar  = static_cast<double>(AS->umolar());
-        _dt_tbl_ptr   = nullptr;   // signals calc_cvmolar/calc_cpmolar to use AS
+        _p = static_cast<double>(AS->p());
+        _dt_hmolar = static_cast<double>(AS->hmolar());
+        _dt_smolar = static_cast<double>(AS->smolar());
+        _dt_umolar = static_cast<double>(AS->umolar());
+        _dt_tbl_ptr = nullptr;  // signals calc_cvmolar/calc_cpmolar to use AS
         _dt_coeff_ptr = nullptr;
         _dt_flash_active = true;
 
-        _Q     = static_cast<double>(AS->Q());
+        _Q = static_cast<double>(AS->Q());
         _phase = AS->phase();
         if (_phase != iphase_twophase) {
             using_single_phase_table = true;
             selected_table = SELECTED_PT_TABLE;
-            find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT,
-                                             _T, _p, cached_single_phase_i, cached_single_phase_j);
+            find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
             recalculate_singlephase_phase();
         } else {
             using_single_phase_table = false;
@@ -1391,19 +1434,18 @@ void SBTLBackend::flash_DmolarT(CoolPropDbl D_in, CoolPropDbl T_in) {
         dt_tbl.find_native_nearest_good_cell(D, T, i_nat, j_nat);
         if (!dt_coeff[i_nat][j_nat].valid()) {
             AS->update(DmolarT_INPUTS, D_in, T_in);
-            _p          = static_cast<double>(AS->p());
-            _dt_hmolar  = static_cast<double>(AS->hmolar());
-            _dt_smolar  = static_cast<double>(AS->smolar());
-            _dt_umolar  = static_cast<double>(AS->umolar());
-            _dt_tbl_ptr   = nullptr;
+            _p = static_cast<double>(AS->p());
+            _dt_hmolar = static_cast<double>(AS->hmolar());
+            _dt_smolar = static_cast<double>(AS->smolar());
+            _dt_umolar = static_cast<double>(AS->umolar());
+            _dt_tbl_ptr = nullptr;
             _dt_coeff_ptr = nullptr;
             _dt_flash_active = true;
-            _Q     = static_cast<double>(AS->Q());
+            _Q = static_cast<double>(AS->Q());
             _phase = AS->phase();
             using_single_phase_table = true;
             selected_table = SELECTED_PT_TABLE;
-            find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT,
-                                             _T, _p, cached_single_phase_i, cached_single_phase_j);
+            find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
             recalculate_singlephase_phase();
             return;
         }
@@ -1412,13 +1454,13 @@ void SBTLBackend::flash_DmolarT(CoolPropDbl D_in, CoolPropDbl T_in) {
     std::size_t i = 0, j = 0;
     find_native_nearest_good_indices(dt_tbl, dt_coeff, D, T, i, j);
 
-    _p          = evaluate_single_phase(dt_tbl, dt_coeff, iP,      D, T, i, j);
-    _dt_hmolar  = evaluate_single_phase(dt_tbl, dt_coeff, iHmolar, D, T, i, j);
-    _dt_smolar  = evaluate_single_phase(dt_tbl, dt_coeff, iSmolar, D, T, i, j);
-    _dt_umolar  = evaluate_single_phase(dt_tbl, dt_coeff, iUmolar, D, T, i, j);
-    _dt_i       = i;
-    _dt_j       = j;
-    _dt_tbl_ptr   = dt_tbl_ptr;
+    _p = evaluate_single_phase(dt_tbl, dt_coeff, iP, D, T, i, j);
+    _dt_hmolar = evaluate_single_phase(dt_tbl, dt_coeff, iHmolar, D, T, i, j);
+    _dt_smolar = evaluate_single_phase(dt_tbl, dt_coeff, iSmolar, D, T, i, j);
+    _dt_umolar = evaluate_single_phase(dt_tbl, dt_coeff, iUmolar, D, T, i, j);
+    _dt_i = i;
+    _dt_j = j;
+    _dt_tbl_ptr = dt_tbl_ptr;
     _dt_coeff_ptr = dt_coeff_ptr;
     _dt_flash_active = true;
 
@@ -1426,8 +1468,7 @@ void SBTLBackend::flash_DmolarT(CoolPropDbl D_in, CoolPropDbl T_in) {
     // These are looked up via the pT table path so we still need a valid pT cell.
     using_single_phase_table = true;
     selected_table = SELECTED_PT_TABLE;
-    find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT,
-                                     _T, _p, cached_single_phase_i, cached_single_phase_j);
+    find_native_nearest_good_indices(dataset->single_phase_logpT, _sbtl_coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
     recalculate_singlephase_phase();
 }
 
@@ -1463,10 +1504,8 @@ CoolPropDbl SBTLBackend::calc_rhomolar(void) {
 CoolPropDbl SBTLBackend::calc_cvmolar(void) {
     if (_dt_flash_active) {
         if (_dt_tbl_ptr == nullptr) return TabularBackend::calc_cvmolar();
-        double dsdT = evaluate_single_phase_derivative(
-            *_dt_tbl_ptr, *_dt_coeff_ptr,
-            iSmolar, static_cast<double>(_rhomolar), static_cast<double>(_T),
-            _dt_i, _dt_j, 0, 1);
+        double dsdT = evaluate_single_phase_derivative(*_dt_tbl_ptr, *_dt_coeff_ptr, iSmolar, static_cast<double>(_rhomolar), static_cast<double>(_T),
+                                                       _dt_i, _dt_j, 0, 1);
         return static_cast<CoolPropDbl>(static_cast<double>(_T) * dsdT);
     }
     return TabularBackend::calc_cvmolar();
@@ -1478,16 +1517,10 @@ CoolPropDbl SBTLBackend::calc_cpmolar(void) {
         if (_dt_tbl_ptr == nullptr) return TabularBackend::calc_cpmolar();
         const double Td = static_cast<double>(_T);
         const double Dd = static_cast<double>(_rhomolar);
-        double dsdT = evaluate_single_phase_derivative(
-            *_dt_tbl_ptr, *_dt_coeff_ptr,
-            iSmolar, Dd, Td, _dt_i, _dt_j, 0, 1);
+        double dsdT = evaluate_single_phase_derivative(*_dt_tbl_ptr, *_dt_coeff_ptr, iSmolar, Dd, Td, _dt_i, _dt_j, 0, 1);
         double cv = Td * dsdT;
-        double dPdT = evaluate_single_phase_derivative(
-            *_dt_tbl_ptr, *_dt_coeff_ptr,
-            iP, Dd, Td, _dt_i, _dt_j, 0, 1);
-        double dPdD = evaluate_single_phase_derivative(
-            *_dt_tbl_ptr, *_dt_coeff_ptr,
-            iP, Dd, Td, _dt_i, _dt_j, 1, 0);
+        double dPdT = evaluate_single_phase_derivative(*_dt_tbl_ptr, *_dt_coeff_ptr, iP, Dd, Td, _dt_i, _dt_j, 0, 1);
+        double dPdD = evaluate_single_phase_derivative(*_dt_tbl_ptr, *_dt_coeff_ptr, iP, Dd, Td, _dt_i, _dt_j, 1, 0);
         if (std::abs(dPdD) < 1e-30) return static_cast<CoolPropDbl>(cv);
         double D2 = Dd * Dd;
         return static_cast<CoolPropDbl>(cv + Td * dPdT * dPdT / (D2 * (-dPdD)));

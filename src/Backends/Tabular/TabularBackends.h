@@ -261,16 +261,23 @@ class PureFluidSaturationTableData
          \note If PQ or QT are inputs, yL and yV will correspond to the other main variable: p->T or T->p
          */
     [[nodiscard]] bool is_inside(parameters main, double mainval, parameters other, double val, std::size_t& iL, std::size_t& iV, CoolPropDbl& yL,
-                   CoolPropDbl& yV) {
+                                 CoolPropDbl& yV) {
         auto [yvecL, yvecV] = [&]() -> std::pair<std::vector<double>*, std::vector<double>*> {
             switch (other) {
-                case iT:     return {&TL, &TV};
-                case iHmolar: return {&hmolarL, &hmolarV};
-                case iQ:     return {&TL, &TV};
-                case iSmolar: return {&smolarL, &smolarV};
-                case iUmolar: return {&umolarL, &umolarV};
-                case iDmolar: return {&rhomolarL, &rhomolarV};
-                default:     throw ValueError("invalid input for other in is_inside");
+                case iT:
+                    return {&TL, &TV};
+                case iHmolar:
+                    return {&hmolarL, &hmolarV};
+                case iQ:
+                    return {&TL, &TV};
+                case iSmolar:
+                    return {&smolarL, &smolarV};
+                case iUmolar:
+                    return {&umolarL, &umolarV};
+                case iDmolar:
+                    return {&rhomolarL, &rhomolarV};
+                default:
+                    throw ValueError("invalid input for other in is_inside");
             }
         }();
 
@@ -1235,8 +1242,7 @@ class TabularBackend : public AbstractState
         if (_phase != iphase_twophase) {
             using_single_phase_table = true;
             selected_table = SELECTED_PT_TABLE;
-            find_native_nearest_good_indices(dataset->single_phase_logpT, dataset->coeffs_pT,
-                                             _T, _p, cached_single_phase_i, cached_single_phase_j);
+            find_native_nearest_good_indices(dataset->single_phase_logpT, dataset->coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
             recalculate_singlephase_phase();
         } else {
             using_single_phase_table = false;
@@ -1244,8 +1250,7 @@ class TabularBackend : public AbstractState
                 std::size_t iL = std::numeric_limits<std::size_t>::max();
                 std::size_t iV = std::numeric_limits<std::size_t>::max();
                 CoolPropDbl zL = 0, zV = 0;
-                dataset->pure_saturation.is_inside(iP, static_cast<double>(_p), iDmolar,
-                                                   static_cast<double>(D), iL, iV, zL, zV);
+                dataset->pure_saturation.is_inside(iP, static_cast<double>(_p), iDmolar, static_cast<double>(D), iL, iV, zL, zV);
                 cached_saturation_iL = iL;
                 cached_saturation_iV = iV;
             }
@@ -1263,8 +1268,7 @@ class TabularBackend : public AbstractState
         if (_phase != iphase_twophase) {
             using_single_phase_table = true;
             selected_table = SELECTED_PT_TABLE;
-            find_native_nearest_good_indices(dataset->single_phase_logpT, dataset->coeffs_pT, _T, _p,
-                                             cached_single_phase_i, cached_single_phase_j);
+            find_native_nearest_good_indices(dataset->single_phase_logpT, dataset->coeffs_pT, _T, _p, cached_single_phase_i, cached_single_phase_j);
             recalculate_singlephase_phase();
         } else {
             using_single_phase_table = false;
@@ -1272,8 +1276,7 @@ class TabularBackend : public AbstractState
                 std::size_t iL = std::numeric_limits<std::size_t>::max();
                 std::size_t iV = std::numeric_limits<std::size_t>::max();
                 CoolPropDbl zL = 0, zV = 0;
-                dataset->pure_saturation.is_inside(iP, static_cast<double>(_p), iDmolar,
-                                                   static_cast<double>(D), iL, iV, zL, zV);
+                dataset->pure_saturation.is_inside(iP, static_cast<double>(_p), iDmolar, static_cast<double>(D), iL, iV, zL, zV);
                 cached_saturation_iL = iL;
                 cached_saturation_iV = iV;
             }

@@ -760,8 +760,7 @@ struct backend_info
 const std::vector<backend_family_info> backend_family_list = {
   {HEOS_BACKEND_FAMILY, "HEOS"},   {REFPROP_BACKEND_FAMILY, "REFPROP"}, {INCOMP_BACKEND_FAMILY, "INCOMP"},   {IF97_BACKEND_FAMILY, "IF97"},
   {TREND_BACKEND_FAMILY, "TREND"}, {TTSE_BACKEND_FAMILY, "TTSE"},       {BICUBIC_BACKEND_FAMILY, "BICUBIC"}, {SBTL_BACKEND_FAMILY, "SBTL"},
-  {SRK_BACKEND_FAMILY, "SRK"},
-  {PR_BACKEND_FAMILY, "PR"},       {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"}};
+  {SRK_BACKEND_FAMILY, "SRK"},     {PR_BACKEND_FAMILY, "PR"},           {VTPR_BACKEND_FAMILY, "VTPR"},       {PCSAFT_BACKEND_FAMILY, "PCSAFT"}};
 
 const std::vector<backend_info> backend_list = {{HEOS_BACKEND_PURE, "HelmholtzEOSBackend", HEOS_BACKEND_FAMILY},
                                                 {HEOS_BACKEND_MIX, "HelmholtzEOSMixtureBackend", HEOS_BACKEND_FAMILY},
