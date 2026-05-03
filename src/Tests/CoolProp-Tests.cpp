@@ -4754,4 +4754,38 @@ TEST_CASE("Qmass: SRK cubic mixture output works after Q-pair flash", "[Qmass][c
     CHECK(AS2->Q() == Catch::Approx(0.0).epsilon(1e-10));
 }
 
+TEST_CASE("Water TS_INPUTS flash near 631-634 K is smooth (no spike to 6e13 Pa)", "[water_flash][2079]") {
+    // Issue #2079: previously CP.PropsSI('P','T',T,'S',6763.617,'Water')
+    // for T in {631, 632, 633, 634} returned ~6e13 Pa (vs ~3.1 MPa
+    // expected). The HEOS PT-style flash now converges smoothly across
+    // this region; this guard makes sure it stays that way.
+    const double s = 6763.617210539725;
+    const double p_expected = 3.1e6;  // expected magnitude across the band
+    for (double T : {631.0, 632.0, 633.0, 634.0}) {
+        CAPTURE(T);
+        const double p = CoolProp::PropsSI("P", "T", T, "S", s, "Water");
+        CAPTURE(p);
+        CHECK(std::isfinite(p));
+        CHECK(p > 0);
+        CHECK(p < 1e8);  // reject the old 6e13 spike with massive margin
+        CHECK(std::abs(p - p_expected) / p_expected < 0.05);
+    }
+}
+
+TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5.9e13 Pa)", "[water_flash][1730]") {
+    // Issue #1730: PropsSI('P','H',3133800,'S',6777,'Water') previously
+    // returned ~5.9e13 Pa while the neighbouring points returned ~2.97 MPa.
+    // The HS flash now converges smoothly. Lock down the original three
+    // reproducer points plus a handful around them.
+    for (double H : {3132000.0, 3133000.0, 3133500.0, 3133800.0, 3134000.0, 3135000.0}) {
+        CAPTURE(H);
+        const double p = CoolProp::PropsSI("P", "H", H, "S", 6777.0, "Water");
+        CAPTURE(p);
+        CHECK(std::isfinite(p));
+        CHECK(p > 0);
+        CHECK(p < 1e8);
+        CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
+    }
+}
+
 #endif
