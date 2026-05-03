@@ -925,7 +925,22 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             strncpy(hrf, refstate, sizeof(hrf) - 1);
             hrf[sizeof(hrf) - 1] = '\0';
         }
-        REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
+        // Persist the override BEFORE attempting the immediate apply.
+        // SETUPdll always resets REFPROP's reference state to the fluid
+        // file's default, so a one-off SETREF here is undone the moment
+        // the user actually creates an AbstractState — the persistence
+        // is what makes the override survive (re)load (#2408).
+        REFPROPMixtureBackend::set_refprop_ref_state_override(fluid, std::string(hrf));
+        // Best-effort immediate apply if REFPROP is already loaded with
+        // the requested fluid. If REFPROP isn't loaded yet (the typical
+        // sequence: set_reference_state before constructing any state),
+        // this would throw — silently swallow and rely on the override
+        // being re-applied during the next SETUPdll.
+        try {
+            REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
+        } catch (...) {
+            // ignored — see comment above
+        }
     } else if (backend == "HEOS" || backend == "?") {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
         if (reference_state == "IIR") {
