@@ -60,8 +60,7 @@ double SaturationAncillaryFunction::evaluate(double T) {
         // an FPE that escapes C++ try/catch (#1611). Throw a controlled
         // exception so callers like the Brent inversion can react cleanly.
         if (THETA < 0) {
-            throw ValueError(format(
-              "Temperature %g K exceeds the saturation-ancillary reducing temperature %g K", T, T_r));
+            throw ValueError(format("Temperature %g K exceeds the saturation-ancillary reducing temperature %g K", T, T_r));
         }
 
         for (std::size_t i = 0; i < N; ++i) {
@@ -217,7 +216,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInTrSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p){};
+                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);
@@ -245,7 +244,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInThetaSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p){};
+                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);
