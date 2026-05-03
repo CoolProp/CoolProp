@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("first_saturation_deriv mixture: dT/dP via Gernert vs finite-difference along bubble curve", "[first_saturation_deriv][2091]") {
     // Issue #2091: the mixture path used the pure-fluid Clapeyron
     // expression (T*Δv / Δh) and silently returned wrong values.
