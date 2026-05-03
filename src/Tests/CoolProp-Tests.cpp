@@ -4964,7 +4964,8 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
         // RAII guard ensures the global ref state is reset to DEF even if
         // an assertion below fails — otherwise downstream water tests would
         // operate under NBP and behave unpredictably.
-        struct WaterRefStateGuard {
+        struct WaterRefStateGuard
+        {
             ~WaterRefStateGuard() {
                 CoolProp::set_reference_stateS("Water", "DEF");
             }
@@ -5037,7 +5038,8 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
 TEST_CASE("Caloric superancillary is reference-state-agnostic (no thrashing)", "[2773][ref_state_shared]") {
     // RAII guard: ensure water is reset to DEF on exit, regardless of
     // assertion failures, so downstream tests aren't contaminated.
-    struct WaterRefStateGuard {
+    struct WaterRefStateGuard
+    {
         WaterRefStateGuard() {
             CoolProp::set_reference_stateS("Water", "DEF");
         }
