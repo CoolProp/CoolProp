@@ -1,6 +1,7 @@
 #include "Ancillaries.h"
 
 #include <cmath>
+#include <limits>
 #include "DataStructures.h"
 #include "AbstractState.h"
 #include "Configuration.h"
@@ -55,12 +56,17 @@ double SaturationAncillaryFunction::evaluate(double T) {
     } else {
         double THETA = 1 - T / T_r;
         // Saturation ancillaries are only defined at or below the reducing
-        // temperature. A negative THETA combined with a non-integer exponent
-        // gives pow(negative, fractional) -> NaN and (depending on FE flags)
-        // an FPE that escapes C++ try/catch (#1611). Throw a controlled
-        // exception so callers like the Brent inversion can react cleanly.
+        // temperature. For T > T_r, pow(THETA, t) with non-integer t was
+        // pow(negative, fractional), producing NaN and (depending on FP
+        // trap settings) sometimes a SIGFPE that escaped C++ try/catch
+        // (#1611). Many internal callers (mixture critical-point search,
+        // VLE initialisers, etc.) legitimately probe ancillaries at T
+        // ranges where the pure component is supercritical and rely on
+        // the result being well-behaved-but-invalid (NaN) rather than an
+        // exception. Return NaN explicitly so the caller's existing
+        // sanity check / fallback runs without a SIGFPE.
         if (THETA < 0) {
-            throw ValueError(format("Temperature %g K exceeds the saturation-ancillary reducing temperature %g K", T, T_r));
+            return std::numeric_limits<double>::quiet_NaN();
         }
 
         for (std::size_t i = 0; i < N; ++i) {
