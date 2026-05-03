@@ -2184,7 +2184,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     {
        public:
         const std::vector<double> z;
-        wrapper(const std::vector<double>& z) : z(z){};
+        wrapper(const std::vector<double>& z) : z(z) {};
         std::vector<double> call(const std::vector<double>& x) {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;

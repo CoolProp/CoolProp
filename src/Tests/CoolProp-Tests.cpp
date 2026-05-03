@@ -5269,7 +5269,7 @@ TEST_CASE("REFPROP set_reference_state honoured across (re)load (#2408)", "[REFP
     // fluid (or against a previously-loaded fluid that then got reloaded);
     // SETUPdll resets the reference state to the fluid file default. The
     // override is now persisted and re-applied after every SETUPdll.
-    auto reset = [&](){ CoolProp::set_reference_stateS("REFPROP::PROPANE", "DEF"); };
+    auto reset = [&]() { CoolProp::set_reference_stateS("REFPROP::PROPANE", "DEF"); };
 
     SECTION("ASHRAE: h=0, s=0 at -40 C saturated liquid") {
         CoolProp::set_reference_stateS("REFPROP::PROPANE", "ASHRAE");
