@@ -262,16 +262,16 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
             if (loaded_REFPROP) {
                 return true;
             } else {
-                printf("Good news: It is possible to use REFPROP on your system! However, the library \n");
-                printf("could not be loaded. Please make sure that REFPROP is available on your system.\n\n");
-                printf("Neither found in current location nor found in system PATH.\n");
-                printf("If you already obtained a copy of REFPROP from http://www.nist.gov/srd/, \n");
-                printf("add location of REFPROP to the PATH environment variable or your library path.\n\n");
-                printf("In case you do not use Windows, have a look at https://github.com/jowr/librefprop.so \n");
-                printf("to find instructions on how to compile your own version of the REFPROP library.\n\n");
-                printf("COOLPROP_REFPROP_ROOT: %s\n", (root) ? root.value().c_str() : "?");
-                printf("ALTERNATIVE_REFPROP_PATH: %s\n", alt_rp_path.c_str());
-                printf("ERROR: %s\n", err.c_str());
+                std::cout << "Good news: It is possible to use REFPROP on your system! However, the library \n"
+                          << "could not be loaded. Please make sure that REFPROP is available on your system.\n\n"
+                          << "Neither found in current location nor found in system PATH.\n"
+                          << "If you already obtained a copy of REFPROP from http://www.nist.gov/srd/, \n"
+                          << "add location of REFPROP to the PATH environment variable or your library path.\n\n"
+                          << "In case you do not use Windows, have a look at https://github.com/jowr/librefprop.so \n"
+                          << "to find instructions on how to compile your own version of the REFPROP library.\n\n"
+                          << format("COOLPROP_REFPROP_ROOT: %s\n", (root) ? root.value().c_str() : "?")
+                          << format("ALTERNATIVE_REFPROP_PATH: %s\n", alt_rp_path.c_str())
+                          << format("ERROR: %s\n", err.c_str());
                 _REFPROP_supported = false;
                 return false;
             }
