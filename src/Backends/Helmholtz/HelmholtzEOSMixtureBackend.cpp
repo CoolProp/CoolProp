@@ -1465,34 +1465,39 @@ void HelmholtzEOSMixtureBackend::update(CoolProp::input_pairs input_pair, double
             _smolar = value2;
             FlashRoutines::HS_flash(*this);
             break;
+        // Validate quality BEFORE assigning to _Q so a thrown exception
+        // does not leave the cached state half-mutated. Without this, a
+        // subsequent hmass() / smass() / etc. would use the stale SatL/
+        // SatV pointers from a prior valid update plus the new bad _Q
+        // and return a meaningless extrapolated value (#2195).
         case QT_INPUTS:
+            if ((value1 < 0) || (value1 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _T = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::QT_flash(*this);
             break;
         case PQ_INPUTS:
+            if ((value2 < 0) || (value2 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _p = value1;
             _Q = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::PQ_flash(*this);
             break;
         case QSmolar_INPUTS:
+            if ((value1 < 0) || (value1 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _Q = value1;
             _smolar = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::QS_flash(*this);
             break;
         case HmolarQ_INPUTS:
+            if ((value2 < 0) || (value2 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _hmolar = value1;
             _Q = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::HQ_flash(*this);
             break;
         case DmolarQ_INPUTS:
+            if ((value2 < 0) || (value2 > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             _rhomolar = value1;
             _Q = value2;
-            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
             FlashRoutines::DQ_flash(*this);
             break;
         default:
