@@ -36,9 +36,12 @@
 #include "MixtureParameters.h"
 #include "IdealCurves.h"
 #include "MixtureParameters.h"
+#include <atomic>
 #include <cstdlib>
 
-static int deriv_counter = 0;
+// Instrumentation only: counts the number of EOS derivative-cache evaluations
+// across all HEOS instances. Atomic so concurrent calls do not race (#2844).
+static std::atomic<int> deriv_counter{0};
 
 namespace CoolProp {
 
@@ -3301,7 +3304,7 @@ void HelmholtzEOSMixtureBackend::calc_reducing_state(void) {
 }
 void HelmholtzEOSMixtureBackend::calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
                                                              const CoolPropDbl& delta) {
-    deriv_counter++;
+    deriv_counter.fetch_add(1, std::memory_order_relaxed);
     bool cache_values = true;
     HelmholtzDerivatives derivs = residual_helmholtz->all(*this, get_mole_fractions_ref(), tau, delta, cache_values);
     _alphar = derivs.alphar;
