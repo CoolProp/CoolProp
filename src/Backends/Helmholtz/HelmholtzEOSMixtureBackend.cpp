@@ -475,6 +475,8 @@ void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std:
             EOS.alphar.empty_the_EOS();
             // Set the Xiang & Deiters contribution
             EOS.alphar.XiangDeiters = ResidualHelmholtzXiangDeiters(Tc, pc, rhomolarc, acentric, R);
+        } else {
+            throw ValueError(format("EOS name [%s] is invalid; valid options are SRK, Peng-Robinson, XiangDeiters", EOS_name.c_str()));
         }
     } else {
         throw ValueError(format("Index [%d] is invalid", i));

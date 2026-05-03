@@ -4811,6 +4811,17 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+TEST_CASE("change_EOS rejects unknown EOS name", "[change_EOS][1703]") {
+    // Issue #1703: change_EOS used to silently no-op for unrecognized
+    // EOS names; it now throws. Valid names (SRK, Peng-Robinson,
+    // XiangDeiters) must still work; an out-of-range index must still throw.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    CHECK_THROWS(AS->change_EOS(0, "kdsfakhds"));
+    CHECK_THROWS(AS->change_EOS(0, ""));
+    CHECK_THROWS(AS->change_EOS(99, "SRK"));
+    CHECK_NOTHROW(AS->change_EOS(0, "SRK"));
+    CHECK_NOTHROW(AS->change_EOS(0, "Peng-Robinson"));
+    CHECK_NOTHROW(AS->change_EOS(0, "XiangDeiters"));
 }
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
