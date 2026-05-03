@@ -3649,17 +3649,21 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters O
         x_N_dependency_flag xN_flag = XN_DEPENDENT;
         if (_Q == 0) {
             for (std::size_t i = 0; i < N; ++i) {
-                dQ_dPsat += y[i] * (MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatL, i, xN_flag)
-                                    - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatV, i, xN_flag));
-                dQ_dTsat += y[i] * (MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatL, i, xN_flag)
-                                    - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatV, i, xN_flag));
+                dQ_dPsat += y[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatV, i, xN_flag));
+                dQ_dTsat += y[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatV, i, xN_flag));
             }
         } else if (_Q == 1) {
             for (std::size_t i = 0; i < N; ++i) {
-                dQ_dPsat += x[i] * (MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatL, i, xN_flag)
-                                    - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatV, i, xN_flag));
-                dQ_dTsat += x[i] * (MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatL, i, xN_flag)
-                                    - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatV, i, xN_flag));
+                dQ_dPsat += x[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatV, i, xN_flag));
+                dQ_dTsat += x[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatV, i, xN_flag));
             }
         } else {
             throw ValueError(format("calc_first_saturation_deriv requires Q==0 (bubble) or Q==1 (dew) for mixtures; got Q=%g", _Q));
