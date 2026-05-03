@@ -243,6 +243,8 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, Cool
                                  //case TUmass_INPUTS: ///< Temperature in K, Internal energy in J/kg (NOT CURRENTLY IMPLEMENTED)
         case DmassP_INPUTS:      ///< Mass density in kg/m^3, Pressure in Pa
         case DmassQ_INPUTS:      ///< Mass density in kg/m^3, molar quality
+        case HmassQ_INPUTS:      ///< Enthalpy in J/kg, molar quality
+        case QSmass_INPUTS:      ///< Molar quality, Entropy in J/kg/K
         case HmassP_INPUTS:      ///< Enthalpy in J/kg, Pressure in Pa
         case PSmass_INPUTS:      ///< Pressure in Pa, Entropy in J/kg/K
         case PUmass_INPUTS:      ///< Pressure in Pa, Internal energy in J/kg
@@ -276,6 +278,14 @@ void AbstractState::mass_to_molar_inputs(CoolProp::input_pairs& input_pair, Cool
                 case DmassQ_INPUTS:
                     input_pair = DmolarQ_INPUTS;
                     value1 /= mm;
+                    break;
+                case HmassQ_INPUTS:
+                    input_pair = HmolarQ_INPUTS;
+                    value1 *= mm;
+                    break;
+                case QSmass_INPUTS:
+                    input_pair = QSmolar_INPUTS;
+                    value2 *= mm;
                     break;
                 case HmassP_INPUTS:
                     input_pair = HmolarP_INPUTS;

@@ -274,6 +274,34 @@ std::shared_ptr<EquationOfState::SuperAncillary_t> HelmholtzEOSMixtureBackend::g
     return components[0].EOS().get_superanc();
 }
 
+void HelmholtzEOSMixtureBackend::ensure_caloric_superancillaries() {
+    if (!is_pure()) {
+        return;
+    }
+    auto superanc_ptr = get_superanc();
+    if (!superanc_ptr) {
+        return;
+    }
+    // Callbacks evaluate h(T, rho) and s(T, rho) using the EOS in its current
+    // configuration (including the active reference state). The rho values
+    // come from the existing rho_sat superancillary at the Chebyshev nodes —
+    // see SuperAncillary::add_variable. Building H and S together so we
+    // amortize the EOS calls; both derive from the same alpha0/alphar evaluation.
+    // The mutex inside ensure_HS_under_lock serializes concurrent first-call
+    // builds across HEOS instances that share this fluid's SuperAncillary
+    // (#2773 review C2).
+    auto h_callable = [this](double T, double rhomolar) -> double { return this->calc_hmolar_nocache(T, rhomolar); };
+    auto s_callable = [this](double T, double rhomolar) -> double { return this->calc_smolar_nocache(T, rhomolar); };
+    // Stamp the cache with the *total* alpha0 offset — sum of Core (parse-
+    // time-immutable) and user-mutable offsets, scaled by the alpha0
+    // prefactor. This way the shift formula in resolve_T_via_superancillary
+    // remains correct even if Core were ever mutated post-parse, and even
+    // for fluids with a non-unity prefactor (currently none in the bundled
+    // library, but the JSON path is live). See #2773.
+    const auto [caller_a1, caller_a2] = FlashRoutines::alpha0_offset_total(*this);
+    superanc_ptr->ensure_HS_under_lock(caller_a1, caller_a2, h_callable, s_callable);
+}
+
 double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, const std::string& parameter) {
     if (i >= N) {
         throw ValueError(format("Index i [%d] is out of bounds. Must be between 0 and %d.", i, N - 1));
@@ -291,6 +319,11 @@ double HelmholtzEOSMixtureBackend::get_fluid_parameter_double(const size_t i, co
                 return superanc.get_Tmin();
             } else if (key == "Tcrit_num") {
                 return superanc.get_Tcrit_num();
+            } else if (key == "caloric_build_count") {
+                // Number of times the caloric superancillary has been built.
+                // Used by tests to verify that multi-instance / multi-ref-state
+                // usage doesn't trigger thrashing rebuilds. See #2773.
+                return static_cast<double>(superanc.get_caloric_build_count());
             } else {
                 throw ValueError(format("Superancillary parameter [%s] is invalid", key.c_str()));
             }
@@ -1508,6 +1541,24 @@ void HelmholtzEOSMixtureBackend::update_with_guesses(CoolProp::input_pairs input
             _p = value1;
             _T = value2;
             FlashRoutines::PT_flash_with_guesses(*this, guesses);
+            break;
+        case DmolarQ_INPUTS:
+            _rhomolar = value1;
+            _Q = value2;
+            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::DQ_flash_with_guesses(*this, guesses);
+            break;
+        case HmolarQ_INPUTS:
+            _hmolar = value1;
+            _Q = value2;
+            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::HQ_flash_with_guesses(*this, guesses);
+            break;
+        case QSmolar_INPUTS:
+            _Q = value1;
+            _smolar = value2;
+            if ((_Q < 0) || (_Q > 1)) throw CoolProp::OutOfRangeError("Input vapor quality [Q] must be between 0 and 1");
+            FlashRoutines::QS_flash_with_guesses(*this, guesses);
             break;
         default:
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
@@ -4289,6 +4340,13 @@ void HelmholtzEOSMixtureBackend::set_reference_stateD(double T, double rhomolar,
 void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid& component, double delta_a1, double delta_a2,
                                                                    const std::string& ref) {
     component.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
+
+    // Note: cached caloric superancillaries are not invalidated here. They
+    // are reference-state-agnostic via the shift trick — the offset's effect
+    // on h(T) and s(T) along the saturation curve is exactly a constant
+    // (Δh = R·T_red·Δa2, Δs = −R·Δa1), and the (a1, a2) stamp recorded at
+    // first build lets resolve_T_via_superancillary translate the user's
+    // target into the cache's frame at query time. See #2773.
 
     shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(component));
     HEOS->specify_phase(iphase_gas);  // Something homogeneous;

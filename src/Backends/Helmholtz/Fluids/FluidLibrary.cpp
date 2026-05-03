@@ -84,6 +84,14 @@ void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string& flui
             }
             it2->second.EOS().alpha0.EnthalpyEntropyOffset.set(delta_a1, delta_a2, ref);
 
+            // Note: cached caloric superancillaries are not invalidated here.
+            // They are reference-state-agnostic: the offset's effect on h(T)
+            // and s(T) along the saturation curve is exactly a constant
+            // (Δh = R·T_red·Δa2, Δs = −R·Δa1), so shapes are invariant and
+            // c0 is shifted at query time. The (a1, a2) stamp recorded at
+            // first build lets resolve_T_via_superancillary translate the
+            // user's target into the cache's frame. See #2773.
+
             shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(it2->second));
             HEOS->specify_phase(iphase_gas);  // Something homogeneous;
             // Calculate the new enthalpy and entropy values

@@ -8,8 +8,10 @@
 #include "../Backends/Cubics/CubicBackend.h"
 #include "superancillary/superancillary.h"
 #include "miniz.h"
+#include <atomic>
 #include <map>
 #include <set>
+#include <thread>
 
 // ############################################
 //                      TESTS
@@ -4809,6 +4811,402 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
+
+// GitHub #2773: saturation flashes can have multiple T solutions for the same
+// (h | s | rho, Q) input. update_with_guesses now uses guess.T to pick the
+// branch via TOMS748 rootfinding inside each provably-monotonic Chebyshev
+// sub-interval of the saturation superancillary. h_sat and s_sat
+// superancillaries are built lazily on first use against the EOS in its
+// current configuration.
+TEST_CASE("DmolarQ branch selection via guess.T", "[2773][branch_selection]") {
+
+    // Anchor target density between rho(near triple) and rho(near peak) on
+    // the rising branch — this guarantees two T-roots exist (one on the
+    // rising branch below the density max, one on the falling branch above).
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS->update(CoolProp::QT_INPUTS, 0.0, 277.0);  // close to peak
+    const double rho_near_peak = AS->rhomolar();
+    AS->update(CoolProp::QT_INPUTS, 0.0, 273.5);  // close to triple
+    const double rho_near_triple = AS->rhomolar();
+    REQUIRE(rho_near_peak > rho_near_triple);  // confirms density max is real
+    const double rho_target = 0.5 * (rho_near_peak + rho_near_triple);
+    AS->update(CoolProp::QT_INPUTS, 0.0, 290.0);
+    REQUIRE(AS->rhomolar() < rho_target);  // confirms falling branch reaches target
+
+    const double T_density_max = 277.13;  // approximate peak T
+
+    SECTION("Guess near low-T (rising) branch → root below density max") {
+        CoolProp::GuessesStructure g;
+        g.T = 274.0;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rho_target, 0.0, g));
+        CHECK(AS->T() < T_density_max);
+        CHECK(AS->rhomolar() == Catch::Approx(rho_target).epsilon(1e-6));
+    }
+    SECTION("Guess near high-T (falling) branch → root above density max") {
+        CoolProp::GuessesStructure g;
+        g.T = 282.0;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rho_target, 0.0, g));
+        CHECK(AS->T() > T_density_max);
+        CHECK(AS->rhomolar() == Catch::Approx(rho_target).epsilon(1e-6));
+    }
+}
+
+TEST_CASE("HmolarQ branch selection via guess.T (water saturated vapor)", "[2773][branch_selection]") {
+    // h_g(T) on water saturated vapor has a maximum near T ≈ 540 K. Anchor
+    // h_target = h_g(T_low) where T_low is on the rising side; by smoothness
+    // of h_g there is necessarily a second T_high > T_peak on the falling
+    // side that also satisfies h_g(T_high) = h_target.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double T_low_anchor = 470.0;
+    AS->update(CoolProp::QT_INPUTS, 1.0, T_low_anchor);
+    const double h_target = AS->hmolar();
+    const double T_h_max_approx = 540.0;  // approximate h_g peak T
+
+    SECTION("Guess near T_low_anchor → low-T root") {
+        CoolProp::GuessesStructure g;
+        g.T = T_low_anchor;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g));
+        CHECK(AS->T() < T_h_max_approx);
+        CHECK(AS->T() == Catch::Approx(T_low_anchor).epsilon(0.01));
+    }
+    SECTION("Guess far above the h-peak → high-T root") {
+        CoolProp::GuessesStructure g;
+        g.T = 620.0;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g));
+        CHECK(AS->T() > T_h_max_approx);                              // a different root past the peak
+        CHECK(AS->T() != Catch::Approx(T_low_anchor).epsilon(0.05));  // not the same root
+    }
+}
+
+TEST_CASE("Default update() throws MultipleSolutionsError on ambiguous saturation flash", "[2773][strict_mode]") {
+    // GitHub #2773 / #2834: when an HQ / SQ / DQ saturation flash input lies
+    // in a multi-root region, the no-guess default update() now raises
+    // MultipleSolutionsError instead of silently picking one. Users in this
+    // case should call update_with_guesses with a guess.T.
+
+    SECTION("Water DmolarQ in the rho_L-non-monotonic region near 4 °C") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 0.0, 277.0);
+        const double rho_near_peak = AS->rhomolar();
+        AS->update(CoolProp::QT_INPUTS, 0.0, 273.5);
+        const double rho_near_triple = AS->rhomolar();
+        const double rho_target = 0.5 * (rho_near_peak + rho_near_triple);
+        // Default flash should now refuse the ambiguous input cleanly.
+        CHECK_THROWS_AS(AS->update(CoolProp::DmolarQ_INPUTS, rho_target, 0.0), CoolProp::MultipleSolutionsError);
+    }
+
+    SECTION("Water HmolarQ in the h_g-non-monotonic region around 540 K peak") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+        const double h_target = AS->hmolar();  // also reached on the high-T side
+        CHECK_THROWS_AS(AS->update(CoolProp::HmolarQ_INPUTS, h_target, 1.0), CoolProp::MultipleSolutionsError);
+    }
+
+    SECTION("Single-root DQ still succeeds via the default path") {
+        // Far from the density max, rho_L(T) is monotone — single root, no error.
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 0.0, 400.0);
+        const double rho_400 = AS->rhomolar();
+        REQUIRE_NOTHROW(AS->update(CoolProp::DmolarQ_INPUTS, rho_400, 0.0));
+        CHECK(AS->T() == Catch::Approx(400.0).epsilon(1e-6));
+    }
+}
+
+TEST_CASE("QSmolar branch selection via guess.T (water saturated vapor)", "[2773][branch_selection]") {
+    // s_g(T) on water saturated vapor descends monotonically from triple to
+    // critical, so it does not by itself exhibit two roots — but exercising
+    // the QSmolar_INPUTS dispatch validates that the new code path runs end-
+    // to-end and returns a sensible T.
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double T_anchor = 500.0;
+    AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+    const double s_target = AS->smolar();
+    CoolProp::GuessesStructure g;
+    g.T = T_anchor;
+    REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, s_target, g));
+    CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
+}
+
+// Edge-case coverage gaps surfaced in PR #2835 review (S4):
+TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
+
+    SECTION("Mass-input dispatch: HmassQ_INPUTS converts and resolves") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        const double T_anchor = 470.0;
+        AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+        const double h_mass = AS->hmass();  // J/kg
+        CoolProp::GuessesStructure g;
+        g.T = T_anchor;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmassQ_INPUTS, h_mass, 1.0, g));
+        CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
+    }
+
+    SECTION("Mass-input dispatch: QSmass_INPUTS converts and resolves") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        const double T_anchor = 500.0;
+        AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+        const double s_mass = AS->smass();  // J/kg/K
+        CoolProp::GuessesStructure g;
+        g.T = T_anchor;
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::QSmass_INPUTS, 1.0, s_mass, g));
+        CHECK(AS->T() == Catch::Approx(T_anchor).epsilon(0.01));
+    }
+
+    SECTION("Reference-state change works correctly across instances") {
+        // Build the h-superancillary against the default reference state,
+        // then switch to NBP and verify a fresh HEOS instance returns the
+        // NBP-frame T-root. The cache is shared (single shared_ptr) but the
+        // shift-c0 trick translates the new caller's target into the cache's
+        // frame at query time — no rebuild needed. NBP works for water
+        // (IIR is rejected because Ttriple > 273.15 K).
+        //
+        // RAII guard ensures the global ref state is reset to DEF even if
+        // an assertion below fails — otherwise downstream water tests would
+        // operate under NBP and behave unpredictably.
+        struct WaterRefStateGuard {
+            ~WaterRefStateGuard() {
+                CoolProp::set_reference_stateS("Water", "DEF");
+            }
+        } guard;
+
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        const double T_anchor = 470.0;
+        AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+        const double h_def = AS->hmolar();
+        CoolProp::GuessesStructure g;
+        g.T = T_anchor;
+        // Force the caloric superancillary build under the DEF reference.
+        REQUIRE_NOTHROW(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def, 1.0, g));
+        // Switch reference state. The cache stays as-is; only the offset
+        // stamp records what frame it's in.
+        CoolProp::set_reference_stateS("Water", "NBP");
+        std::shared_ptr<CoolProp::AbstractState> AS2(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS2->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+        const double h_nbp = AS2->hmolar();
+        REQUIRE(std::abs(h_nbp - h_def) > 100.0);  // confirms the offset is real
+        // resolve_T_via_superancillary translates h_nbp into the cache's DEF
+        // frame via R·T_red·(a2_cache − a2_caller), so TOMS748 finds the same
+        // saturation T_anchor that satisfies both frames.
+        REQUIRE_NOTHROW(AS2->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_nbp, 1.0, g));
+        CHECK(AS2->T() == Catch::Approx(T_anchor).epsilon(0.01));
+    }
+
+    SECTION("Mixture: NotImplementedError preserved") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "R32&R125"));
+        std::vector<double> z = {0.5, 0.5};
+        AS->set_mole_fractions(z);
+        CoolProp::GuessesStructure g;
+        g.T = 300.0;
+        CHECK_THROWS_AS(AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, 10000.0, 0.0, g), CoolProp::NotImplementedError);
+    }
+
+    SECTION("guess.T outside saturation range: clear SolutionError") {
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+        const double h_target = AS->hmolar();
+        CoolProp::GuessesStructure g;
+        g.T = 700.0;  // above water's critical (647 K) — outside range
+        CHECK_THROWS_AS(AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g), CoolProp::SolutionError);
+    }
+
+    SECTION("Multi-root region throws MultipleSolutionsError on default update()") {
+        // h_g(T) on water saturated vapor is non-monotonic with peak near 540 K.
+        // h_target = h_g(470 K) is also reached near 605 K — two distinct
+        // roots that the dedup must NOT merge.
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+        const double h_low = AS->hmolar();
+        CHECK_THROWS_AS(AS->update(CoolProp::HmolarQ_INPUTS, h_low, 1.0), CoolProp::MultipleSolutionsError);
+    }
+
+    SECTION("Mass-input multi-root region also throws MultipleSolutionsError") {
+        // Same as above but exercises the HmassQ_INPUTS → HmolarQ_INPUTS
+        // conversion path in mass_to_molar_inputs (review I4 follow-up).
+        std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+        AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+        const double h_low_mass = AS->hmass();
+        CHECK_THROWS_AS(AS->update(CoolProp::HmassQ_INPUTS, h_low_mass, 1.0), CoolProp::MultipleSolutionsError);
+    }
+}
+
+// Verify the option-D shift-c0 trick: the caloric superancillary cache is
+// reference-state-agnostic. Two coexisting HEOS instances at different
+// reference states should both get correct answers without forcing the cache
+// to rebuild on every alternation. See #2773.
+TEST_CASE("Caloric superancillary is reference-state-agnostic (no thrashing)", "[2773][ref_state_shared]") {
+    // RAII guard: ensure water is reset to DEF on exit, regardless of
+    // assertion failures, so downstream tests aren't contaminated.
+    struct WaterRefStateGuard {
+        WaterRefStateGuard() {
+            CoolProp::set_reference_stateS("Water", "DEF");
+        }
+        ~WaterRefStateGuard() {
+            CoolProp::set_reference_stateS("Water", "DEF");
+        }
+    } guard;
+
+    // (1) Build the cache via the first HEOS instance under DEF.
+    std::shared_ptr<CoolProp::AbstractState> AS_def(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const double T_anchor = 470.0;
+    AS_def->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+    const double h_def_anchor = AS_def->hmolar();
+    CoolProp::GuessesStructure g;
+    g.T = T_anchor;
+    REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def_anchor, 1.0, g));
+    CHECK(AS_def->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+
+    const auto build_count_after_first = static_cast<unsigned int>(AS_def->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    REQUIRE(build_count_after_first >= 1u);
+
+    // (2) Switch the global reference state to NBP. AS_def keeps its own DEF
+    // alpha0 (each HEOS holds its own copy); a fresh HEOS gets NBP.
+    CoolProp::set_reference_stateS("Water", "NBP");
+    std::shared_ptr<CoolProp::AbstractState> AS_nbp(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS_nbp->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+    const double h_nbp_anchor = AS_nbp->hmolar();
+    REQUIRE(std::abs(h_nbp_anchor - h_def_anchor) > 100.0);  // confirm offset is real
+
+    // (3) Both instances must resolve their own h-target back to T_anchor.
+    REQUIRE_NOTHROW(AS_nbp->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_nbp_anchor, 1.0, g));
+    CHECK(AS_nbp->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+    REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def_anchor, 1.0, g));
+    CHECK(AS_def->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+
+    // (4) Alternate queries. With option-D the cache stays built once; the
+    // shift trick translates each user's target into the cache's frame.
+    for (int i = 0; i < 5; ++i) {
+        REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_def_anchor, 1.0, g));
+        CHECK(AS_def->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+        REQUIRE_NOTHROW(AS_nbp->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_nbp_anchor, 1.0, g));
+        CHECK(AS_nbp->T() == Catch::Approx(T_anchor).epsilon(1e-6));
+    }
+
+    // (5) The build count must equal what it was after step (1) — no
+    // thrashing rebuilds despite alternating reference states.
+    const auto build_count_final = static_cast<unsigned int>(AS_def->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    CHECK(build_count_final == build_count_after_first);
+
+    // Same for QSmolar with mixed reference states.
+    AS_def->update(CoolProp::QT_INPUTS, 1.0, 500.0);
+    const double s_def_anchor = AS_def->smolar();
+    AS_nbp->update(CoolProp::QT_INPUTS, 1.0, 500.0);
+    const double s_nbp_anchor = AS_nbp->smolar();
+    REQUIRE(std::abs(s_nbp_anchor - s_def_anchor) > 1.0);  // confirm offset is real
+    g.T = 500.0;
+    REQUIRE_NOTHROW(AS_def->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, s_def_anchor, g));
+    CHECK(AS_def->T() == Catch::Approx(500.0).epsilon(1e-3));
+    REQUIRE_NOTHROW(AS_nbp->update_with_guesses(CoolProp::QSmolar_INPUTS, 1.0, s_nbp_anchor, g));
+    CHECK(AS_nbp->T() == Catch::Approx(500.0).epsilon(1e-3));
+
+    // RAII guard at the top of the test resets the reference state on exit.
+}
+
+// Verify thread safety of the lazy build path. Spawn N threads, each creating
+// its own HEOS for water and running multiple HmolarQ flashes concurrently.
+// Without the mutex inside ensure_HS_under_lock this would race on
+// optional<...>::emplace and could corrupt the shared SuperAncillary.
+// With the mutex, exactly one thread builds the cache and the others wait.
+TEST_CASE("Caloric superancillary thread-safe lazy build (#2773)", "[2773][thread_safety]") {
+    // Capture the build count before this test runs so the assertion below is
+    // insensitive to any prior test having already triggered a build.
+    std::shared_ptr<CoolProp::AbstractState> probe(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const auto build_count_before = static_cast<unsigned int>(probe->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    probe.reset();
+
+    constexpr int N_THREADS = 8;
+    constexpr int N_ITERS_PER_THREAD = 50;
+    std::atomic<int> error_count{0};
+    std::atomic<int> success_count{0};
+
+    auto worker = [&]() {
+        try {
+            std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+            const double T_anchor = 470.0;
+            AS->update(CoolProp::QT_INPUTS, 1.0, T_anchor);
+            const double h_target = AS->hmolar();
+            CoolProp::GuessesStructure g;
+            g.T = T_anchor;
+            for (int i = 0; i < N_ITERS_PER_THREAD; ++i) {
+                AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_target, 1.0, g);
+                if (std::abs(AS->T() - T_anchor) > 1e-3) {
+                    error_count.fetch_add(1, std::memory_order_relaxed);
+                    return;
+                }
+            }
+            success_count.fetch_add(1, std::memory_order_relaxed);
+        } catch (...) {
+            error_count.fetch_add(1, std::memory_order_relaxed);
+        }
+    };
+
+    std::vector<std::thread> threads;
+    threads.reserve(N_THREADS);
+    for (int t = 0; t < N_THREADS; ++t) {
+        threads.emplace_back(worker);
+    }
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    CHECK(error_count.load() == 0);
+    CHECK(success_count.load() == N_THREADS);
+
+    // Build counter delta should be at most 1: with the mutex, exactly one
+    // thread wins the race to build; the others observe the cache and skip.
+    // Allow 0 if a prior test already built the cache.
+    std::shared_ptr<CoolProp::AbstractState> probe2(CoolProp::AbstractState::factory("HEOS", "Water"));
+    const auto build_count_after = static_cast<unsigned int>(probe2->get_fluid_parameter_double(0, "SUPERANC::caloric_build_count"));
+    CHECK(build_count_after - build_count_before <= 1u);
+}
+
+// Benchmark the new superancillary-based with_guesses path against the
+// existing default flash for the input pairs covered by #2773. Tagged
+// [!benchmark] so it doesn't run with the default test selection — invoke
+// with e.g. `CatchTestRunner "[2773][bench]"`.
+//
+// Only DQ has a working baseline: default HQ_flash and QS_flash are unreliable
+// for water (and propane) at many sensible operating points (the symptom that
+// motivates #2773). Where the baseline can be benchmarked, it is; otherwise the
+// with_guesses path's absolute timing stands on its own.
+TEST_CASE("DQ/HQ/QS flash benchmarks (#2773)", "[2773][bench][!benchmark]") {
+    std::shared_ptr<CoolProp::AbstractState> AS(CoolProp::AbstractState::factory("HEOS", "Water"));
+
+    // DQ: pick a T well away from the 4 °C density max so the existing
+    // single-root Brent path doesn't bracket-hop. T = 400 K is on the
+    // monotonic-decreasing side of rho_L(T).
+    AS->update(CoolProp::QT_INPUTS, 0.0, 400.0);
+    const double rho_DQ = AS->rhomolar();
+    CoolProp::GuessesStructure g_DQ;
+    g_DQ.T = 400.0;
+
+    // HQ: anchor on a rising-branch h_g for water saturated vapor.
+    AS->update(CoolProp::QT_INPUTS, 1.0, 470.0);
+    const double h_HQ = AS->hmolar();
+    CoolProp::GuessesStructure g_HQ;
+    g_HQ.T = 470.0;
+
+    // QS: saturated liquid n-propane at 300 K.
+    std::shared_ptr<CoolProp::AbstractState> AS_prop(CoolProp::AbstractState::factory("HEOS", "n-Propane"));
+    AS_prop->update(CoolProp::QT_INPUTS, 0.0, 300.0);
+    const double s_QS = AS_prop->smolar();
+    CoolProp::GuessesStructure g_QS;
+    g_QS.T = 300.0;
+
+    BENCHMARK("DQ default      update(DmolarQ,rho,Q=0)") {
+        return AS->update(CoolProp::DmolarQ_INPUTS, rho_DQ, 0.0);
+    };
+    BENCHMARK("DQ with guesses update_with_guesses(DmolarQ,rho,Q=0,T)") {
+        return AS->update_with_guesses(CoolProp::DmolarQ_INPUTS, rho_DQ, 0.0, g_DQ);
+    };
+    // Default HQ_flash and QS_flash are skipped — both throw or crash for the
+    // chosen anchor points (pre-existing #2773 symptom).
+    BENCHMARK("HQ with guesses update_with_guesses(HmolarQ,h,Q=1,T)") {
+        return AS->update_with_guesses(CoolProp::HmolarQ_INPUTS, h_HQ, 1.0, g_HQ);
+    };
+    BENCHMARK("QS with guesses update_with_guesses(QSmolar,Q=0,s,T) [propane]") {
+        return AS_prop->update_with_guesses(CoolProp::QSmolar_INPUTS, 0.0, s_QS, g_QS);
+    };
 }
 
 #endif

@@ -14,6 +14,7 @@ state is based.
 
 #include "HelmholtzEOSMixtureBackend.h"
 #include "Solvers.h"
+#include <optional>
 
 namespace CoolProp {
 
@@ -80,10 +81,73 @@ class FlashRoutines
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     static void DQ_flash(HelmholtzEOSMixtureBackend& HEOS);
 
+    /// Flash for given molar density and (molar) quality with a temperature guess used to
+    /// disambiguate multiple roots on the saturation curve (see GitHub #2773).
+    /// Uses the rho_sat superancillary's monotonic-interval partition: guess.T
+    /// selects the sub-interval whose temperature range contains it, and TOMS748
+    /// finds the unique root inside that sub-interval.
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param guess The GuessesStructure; only guess.T is consulted
+    static void DQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess);
+
     /// Flash for given molar enthalpy and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used
     /// @param Tguess (optional) The guess temperature in K to start from, ignored if < 0
     static void HQ_flash(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl Tguess = -1);
+
+    /// Flash for given molar enthalpy and (molar) quality with a temperature guess used to
+    /// disambiguate multiple roots (see GitHub #2773). Lazily builds the h_sat
+    /// superancillary on first use, enumerates candidate T-roots via TOMS748 inside
+    /// each provably-monotonic Chebyshev sub-interval, picks the one closest to
+    /// guess.T, then refreshes the state with a QT flash at that T.
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param guess The GuessesStructure; only guess.T is consulted
+    static void HQ_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess);
+
+    /// Flash for given molar entropy and (molar) quality with a temperature guess used to
+    /// disambiguate multiple roots (see GitHub #2773). Lazily builds the s_sat
+    /// superancillary on first use; otherwise mirrors HQ_flash_with_guesses.
+    /// @param HEOS The HelmholtzEOSMixtureBackend to be used
+    /// @param guess The GuessesStructure; only guess.T is consulted
+    static void QS_flash_with_guesses(HelmholtzEOSMixtureBackend& HEOS, const GuessesStructure& guess);
+
+    /// Unified internal helper for both the no-guess default flashes
+    /// (DQ_flash, HQ_flash, QS_flash) and the *_flash_with_guesses paths
+    /// when the fluid has a superancillary (#2773). Validates inputs, looks up
+    /// the saturation superancillary for property `key` (one of iDmolar, iHmolar,
+    /// iSmolar), and returns the disambiguated T-root.
+    ///
+    /// If guess_T is set, picks the monotonic sub-interval whose temperature
+    /// range contains guess_T (with tie-break by midpoint distance for boundary
+    /// cases) and TOMS748-solves there. If guess_T is `std::nullopt`, enumerates
+    /// every root, deduplicates by |T_i - T_j| < 1e-6 K (extrema produce
+    /// near-duplicate roots in adjacent intervals), and either returns the
+    /// single root, throws MultipleSolutionsError if more remain, or throws
+    /// OutOfRangeError if none.
+    ///
+    /// Refuses pseudo-pure fluids (caloric superancillaries are not built for
+    /// them; see #2773 review). Member of FlashRoutines for friend access to
+    /// HelmholtzEOSMixtureBackend's protected state. `fn_name` is used only
+    /// in error messages.
+    static double resolve_T_via_superancillary(HelmholtzEOSMixtureBackend& HEOS, parameters key, double target_value, std::optional<double> guess_T,
+                                               const char* fn_name);
+
+    /// Returns true if the strict-mode superancillary path applies for the
+    /// current state: pure-fluid (not pseudo-pure), superancillary present,
+    /// Q exactly 0 or 1. Used by DQ_flash, HQ_flash, QS_flash to decide
+    /// whether to route through the branch-detecting superancillary path or
+    /// fall back to the legacy solver.
+    static bool sat_superanc_path_applies(HelmholtzEOSMixtureBackend& HEOS);
+
+    /// Compute the total (a1, a2) IdealHelmholtzEnthalpyEntropyOffset
+    /// contribution for a HEOS, summing both the parse-time-immutable
+    /// EnthalpyEntropyOffsetCore and the user-mutable EnthalpyEntropyOffset
+    /// and applying the alpha0 prefactor. This is the value that goes into
+    /// the SuperAncillary stamp and into the shift formula
+    /// (Δh = R·T_red·Δa2, Δs = −R·Δa1) used to translate user-frame target
+    /// values into the cache's frame at query time. See #2773.
+    /// Returns (a1_total, a2_total) as a pair.
+    static std::pair<double, double> alpha0_offset_total(HelmholtzEOSMixtureBackend& HEOS);
 
     /// Flash for mixture given temperature or pressure and (molar) quality
     /// @param HEOS The HelmholtzEOSMixtureBackend to be used

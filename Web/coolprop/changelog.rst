@@ -8,6 +8,28 @@ Highlights:
 
 * Added mass-basis vapor quality (``Qmass``) support across HEOS and REFPROP backends, paralleling the existing molar quality (``Q``). Adds a new ``iQmass`` keyed parameter, a ``Qmass()`` accessor on ``AbstractState``, and 8 new ``Qmass``-bearing input pairs (``QmassT_INPUTS``, ``PQmass_INPUTS``, ``QmassSmolar_INPUTS``, ``QmassSmass_INPUTS``, ``HmolarQmass_INPUTS``, ``HmassQmass_INPUTS``, ``DmolarQmass_INPUTS``, ``DmassQmass_INPUTS``). Mixtures supported from day one — REFPROP uses its native ``kq=2`` flag in ``TQFLSHdll``/``PQFLSHdll`` for ``QmassT``/``PQmass``; the other 6 pairs and all HEOS pairs use a TOMS748 root-find on ``Qmolar`` (typically 5–8 iterations).
 
+**Behavior changes (potentially breaking):**
+
+* Default ``update`` for ``HmolarQ_INPUTS``, ``QSmolar_INPUTS``,
+  ``DmolarQ_INPUTS`` (and their mass-input equivalents) on pure fluids
+  now raises :cpapi:`CoolProp::MultipleSolutionsError` when the input
+  value admits more than one temperature on the saturation curve. This
+  affects water saturated-vapor enthalpy near the 540 K peak, water /
+  D2O saturated-liquid density near the 4 °C / 11 °C maximum, and any
+  similar non-monotonic input. Single-root inputs continue to work as
+  before. To select a branch, use ``update_with_guesses`` with a
+  ``guess.T`` set to the target temperature region. See GitHub
+  `#2773 <https://github.com/CoolProp/CoolProp/issues/2773>`_.
+
+* New input-pair dispatches in ``update_with_guesses``:
+  ``HmolarQ_INPUTS``, ``HmassQ_INPUTS``, ``QSmolar_INPUTS``,
+  ``QSmass_INPUTS``, ``DmolarQ_INPUTS``, ``DmassQ_INPUTS`` —
+  use ``GuessesStructure.T`` to pick a branch. See
+  ``LowLevelAPI.rst`` § *Disambiguating Multiple Saturation Roots*.
+
+* New exception type :cpapi:`CoolProp::MultipleSolutionsError`
+  (subclass of :cpapi:`CoolProp::ValueError`).
+
 7.2.0
 -----
 

@@ -33,7 +33,9 @@ Subsequent edits by Ian Bell
 
 #pragma once
 
+#include <atomic>
 #include <cstdio>
+#include <mutex>
 #include <utility>
 #include <optional>
 #include <Eigen/Dense>
@@ -246,10 +248,10 @@ class ChebyshevExpansion
       m_xmax;           ///< The maximum value of the independent variable
     ArrayType m_coeff;  ///< The coefficients of the expansion
    public:
-    ChebyshevExpansion() {};
+    ChebyshevExpansion(){};
 
     /// Constructor with bounds and coefficients
-    ChebyshevExpansion(double xmin, double xmax, const ArrayType& coeff) : m_xmin(xmin), m_xmax(xmax), m_coeff(coeff) {};
+    ChebyshevExpansion(double xmin, double xmax, const ArrayType& coeff) : m_xmin(xmin), m_xmax(xmax), m_coeff(coeff){};
 
     /// Copy constructor
     ChebyshevExpansion(const ChebyshevExpansion& ex) = default;
@@ -829,6 +831,39 @@ class SuperAncillary
     double m_pmax;                           ///< The maximum pressure, in Pa
     std::vector<CheckPoint> m_check_points;  ///< Optional extended-precision verification states
 
+    /// Guards mutation of the lazily-built optional approximations
+    /// (m_hL/m_hV/m_sL/m_sV/m_uL/m_uV/m_invlnp). The fixed approximations
+    /// (m_rhoL/m_rhoV/m_p) and the const data are read-only after construction
+    /// and need no synchronization. See #2773 review C2.
+    mutable std::mutex m_lazy_build_mutex;
+
+    /// Stamp recording the IdealHelmholtzEnthalpyEntropyOffset (a1, a2) that
+    /// the cached caloric superancillaries (m_hL/m_hV/m_sL/m_sV) were built
+    /// against. The HEOS holds its alpha0 offset per-instance, but the
+    /// SuperAncillary is shared via shared_ptr across all instances of the
+    /// same fluid; instances with different reference states would otherwise
+    /// disagree about what h_sat(T) means.
+    ///
+    /// The trick is that an enthalpy/entropy reference-state change shifts
+    /// h(T) and s(T) by a *constant* over the saturation curve:
+    ///   Δh = R · T_red · Δa2,   Δs = −R · Δa1
+    /// (see IdealHelmholtzEnthalpyEntropyOffset::all). So the *shape* of
+    /// h_sat(T) and s_sat(T) is reference-state-invariant; only c0 of the
+    /// Chebyshev expansion moves. This means we never need to rebuild on a
+    /// reference-state change — we just translate the user's target value
+    /// into the cache's frame at query time. The stamp records the cache's
+    /// frame; the caller computes the shift from (cache.{a1,a2} − caller.{a1,a2}).
+    /// nullopt before first build. See #2773.
+    std::optional<std::pair<double, double>> m_caloric_alpha0_stamp;
+
+    /// Counter incremented once per call to ensure_HS_under_lock that
+    /// actually builds (H and S are built together as a pair, so a single
+    /// increment covers both). Used by tests to verify that with the
+    /// option-D shift trick in place, multi-instance / multi-ref-state
+    /// usage does NOT cause repeated rebuilds. mutable + atomic so const
+    /// observers can read it.
+    mutable std::atomic<unsigned int> m_caloric_build_count{0};
+
     /** A convenience function to load a ChebyshevExpansion from a JSON data structure
      \param j The JSON data
      \param key The key to be loaded from the superancillary block, probably one of "jexpansions_rhoL", "jexpansions_rhoV", or "jexpansions_p"
@@ -909,7 +944,7 @@ class SuperAncillary
     /** Load the superancillary with the data passed in as a string blob. This constructor delegates directly to the the one that consumes JSON
      * \param s The string-encoded JSON data for the superancillaries
      */
-    SuperAncillary(const std::string& s) : SuperAncillary(nlohmann::json::parse(s)) {};
+    SuperAncillary(const std::string& s) : SuperAncillary(nlohmann::json::parse(s)){};
 
     /** Get a const reference to a ChebyshevApproximation1D
      
@@ -939,9 +974,88 @@ class SuperAncillary
                 throw std::invalid_argument("Bad key of '" + std::string(1, k) + "'");
         }
     }
-    /// Get a const reference to the inverse approximation for T(ln(p))
+    /// Discard the cached caloric saturation Chebyshev approximations.
+    /// Not invoked by any normal control path — the cache is reference-state-
+    /// agnostic via the shift trick recorded by m_caloric_alpha0_stamp. This
+    /// method is kept as a diagnostic / forced-rebuild hatch for future use
+    /// (e.g. if the prefactor or Core offset ever becomes runtime-mutable),
+    /// but no current code calls it. See #2773.
+    void clear_caloric_variables() {
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        m_hL.reset();
+        m_hV.reset();
+        m_sL.reset();
+        m_sV.reset();
+        m_uL.reset();
+        m_uV.reset();
+        m_caloric_alpha0_stamp.reset();
+    }
+
+    /// Thread-safe lazy build of H and S caloric superancillaries. Records
+    /// the caller's IdealHelmholtzEnthalpyEntropyOffset (a1, a2) as the
+    /// "stamp" — the reference state the cached coefficients are expressed
+    /// in. Subsequent callers with different offsets do NOT rebuild; instead,
+    /// the FlashRoutines code shifts the user's target h or s by the stamp-
+    /// caller offset difference at query time (the shift is a constant in T
+    /// per IdealHelmholtzEnthalpyEntropyOffset::all). This keeps the cache
+    /// shared and rebuild-free across all HEOS instances of the same fluid,
+    /// regardless of how many distinct reference states are in play.
+    /// See #2773.
+    void ensure_HS_under_lock(double caller_a1, double caller_a2, const std::function<double(double, double)>& h_callable,
+                              const std::function<double(double, double)>& s_callable) {
+        // Always lock. Skipping the lock for a fast-path peek at
+        // optional::has_value() is technically a data race per the C++
+        // standard. An uncontended mutex acquire is ~20 ns — much less than a
+        // single EOS-side h/s evaluation.
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        if (m_hL.has_value() && m_hV.has_value() && m_sL.has_value() && m_sV.has_value()) {
+            return;  // already built; stamp captured at first build, never invalidated
+        }
+        add_variable_locked('H', h_callable);
+        add_variable_locked('S', s_callable);
+        m_caloric_alpha0_stamp = std::make_pair(caller_a1, caller_a2);
+        ++m_caloric_build_count;  // for test instrumentation
+    }
+
+    /// Get the (a1, a2) stamp recorded when the caloric superancillaries were
+    /// first built. Returns nullopt if not yet built.
+    std::optional<std::pair<double, double>> get_caloric_alpha0_stamp() const {
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        return m_caloric_alpha0_stamp;
+    }
+
+    /// Number of times the caloric superancillaries were (re)built. Used by
+    /// tests to verify the multi-instance / multi-ref-state code path does
+    /// not cause thrashing rebuilds.
+    unsigned int get_caloric_build_count() const {
+        return m_caloric_build_count.load();
+    }
+
+    /// Whether a property's saturation Chebyshev approximation has been populated.
+    /// P and D are always present; H/S/U are only present after add_variable()
+    /// has been called (or, in some JSON layouts, loaded from disk).
+    /// \param k Property key in {D,P,H,S,U}
+    bool has_variable(char k) const {
+        switch (k) {
+            case 'P':
+            case 'D':
+                return true;
+            case 'H':
+                return m_hL.has_value() && m_hV.has_value();
+            case 'S':
+                return m_sL.has_value() && m_sV.has_value();
+            case 'U':
+                return m_uL.has_value() && m_uV.has_value();
+            default:
+                return false;
+        }
+    }
+    /// Get a const reference to the inverse approximation for T(ln(p)).
+    /// Lazily constructed on first access; serialized by the same mutex
+    /// that guards H/S/U construction so concurrent first-call accesses
+    /// from threads on different HEOS instances of the same fluid don't race.
     const auto& get_invlnp() {
-        // Lazily construct on the first access
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
         if (!m_invlnp) {
             // Degree of expansion is the same as
             auto Ndegree = m_p.get_expansions()[0].coeff().size() - 1;
@@ -978,10 +1092,38 @@ class SuperAncillary
      Using the provided function that gives y(T, rho), build the ancillaries for this variable based on the ancillaries for rhoL and rhoV
      \param var The key for the property (H,S,U)
      \param caller A function that takes temperature and molar density and returns the property of interest, molar enthalpy in the case of H, etc.
+
+     This entry point acquires the lazy-build mutex. Callers that already
+     hold the mutex (e.g. ensure_HS_under_lock) must use add_variable_locked.
      */
     void add_variable(char var, const std::function<double(double, double)>& caller) {
+        std::lock_guard<std::mutex> lk(m_lazy_build_mutex);
+        add_variable_locked(var, caller);
+    }
+
+   private:
+    /// Body of add_variable; assumes m_lazy_build_mutex is already held.
+    void add_variable_locked(char var, const std::function<double(double, double)>& caller) {
         Eigen::MatrixXd Lmat, Umat;
         std::tie(Lmat, Umat) = detail::get_LU_matrices(12);
+
+        // Helpers to bridge ArrayType (which may be Eigen::ArrayXd or
+        // std::vector<double>, depending on the SuperAncillary template
+        // instantiation) and the Eigen ops used in the inner loop.
+        auto coeff_to_eigen = [](const ArrayType& a) -> Eigen::ArrayXd {
+            if constexpr (std::is_same_v<ArrayType, std::vector<double>>) {
+                return Eigen::Map<const Eigen::ArrayXd>(a.data(), static_cast<Eigen::Index>(a.size()));
+            } else {
+                return a;
+            }
+        };
+        auto eigen_to_arraytype = [](const Eigen::ArrayXd& e) -> ArrayType {
+            if constexpr (std::is_same_v<ArrayType, std::vector<double>>) {
+                return std::vector<double>(e.data(), e.data() + e.size());
+            } else {
+                return e;
+            }
+        };
 
         auto builder = [&](char var, auto& variantL, auto& variantV) {
             std::vector<ChebyshevExpansion<ArrayType>> newexpL, newexpV;
@@ -995,8 +1137,8 @@ class SuperAncillary
                 const auto& expV = expsV.get_expansions()[i];
                 const auto& T = expL.get_nodes_realworld();
                 // Get the functional values at the Chebyshev nodes
-                Eigen::ArrayXd funcL = Umat * expL.coeff().matrix();
-                Eigen::ArrayXd funcV = Umat * expV.coeff().matrix();
+                Eigen::ArrayXd funcL = Umat * coeff_to_eigen(expL.coeff()).matrix();
+                Eigen::ArrayXd funcV = Umat * coeff_to_eigen(expV.coeff()).matrix();
                 // Apply the function inplace to do the transformation
                 // of the functional values at the nodes
                 for (auto j = 0; j < funcL.size(); ++j) {
@@ -1004,8 +1146,10 @@ class SuperAncillary
                     funcV(j) = caller(T(j), funcV(j));
                 }
                 // And now rebuild the expansions by left-multiplying by the L matrix
-                newexpL.emplace_back(expL.xmin(), expL.xmax(), (Lmat * funcL.matrix()).eval());
-                newexpV.emplace_back(expV.xmin(), expV.xmax(), (Lmat * funcV.matrix()).eval());
+                Eigen::ArrayXd newcoeffL = (Lmat * funcL.matrix()).array();
+                Eigen::ArrayXd newcoeffV = (Lmat * funcV.matrix()).array();
+                newexpL.emplace_back(expL.xmin(), expL.xmax(), eigen_to_arraytype(newcoeffL));
+                newexpV.emplace_back(expV.xmin(), expV.xmax(), eigen_to_arraytype(newcoeffV));
             }
 
             variantL.emplace(std::move(newexpL));
@@ -1027,6 +1171,7 @@ class SuperAncillary
         }
     }
 
+   public:
     /** Given the value of Q in {0,1}, evaluate one of the the ChebyshevApproximation1D
      \param T Temperature, in K
      \param k Property key, in {D,P,H,S,U}
@@ -1482,8 +1627,11 @@ class SuperAncillary
     //     }
 };
 
-static_assert(std::is_copy_constructible_v<SuperAncillary<std::vector<double>>>);
-static_assert(std::is_copy_assignable_v<SuperAncillary<std::vector<double>>>);
+// SuperAncillary holds a std::mutex for lazy-build serialization (#2773 review C2),
+// so it is intentionally non-copyable. In production it is held via std::shared_ptr
+// from EquationOfState; ownership is shared, never duplicated.
+static_assert(!std::is_copy_constructible_v<SuperAncillary<std::vector<double>>>);
+static_assert(!std::is_copy_assignable_v<SuperAncillary<std::vector<double>>>);
 
 }  // namespace superancillary
 }  // namespace CoolProp
