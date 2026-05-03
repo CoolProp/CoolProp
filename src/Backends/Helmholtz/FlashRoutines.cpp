@@ -2484,14 +2484,14 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
 #if defined(ENABLE_CATCH)
 
 TEST_CASE("PD with T very large should yield error", "[PDflash]") {
-    shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend("R134a"));
+    shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>("R134a");
     double Tc = HEOS->T_critical();
     HEOS->update(DmassT_INPUTS, 1.1, 1.5 * Tc);
     CHECK_THROWS(HEOS->update(DmassP_INPUTS, 2, 5 * HEOS->p()));
 }
 
 TEST_CASE("Stability testing", "[stability]") {
-    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("n-Propane&n-Butane&n-Pentane&n-Hexane", '&')));
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS = std::make_shared<HelmholtzEOSMixtureBackend>(strsplit("n-Propane&n-Butane&n-Pentane&n-Hexane", '&'));
     std::vector<double> z(4);
     z[0] = 0.1;
     z[1] = 0.2;
@@ -2529,7 +2529,7 @@ TEST_CASE("Stability testing", "[stability]") {
 }
 
 TEST_CASE("Test critical points for methane + H2S", "[critical_points]") {
-    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("Methane&H2S", '&')));
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS = std::make_shared<HelmholtzEOSMixtureBackend>(strsplit("Methane&H2S", '&'));
 
     double zz[] = {0.998, 0.97, 0.9475, 0.94, 0.93, 0.86, 0.85, 0.84, 0.75, 0.53, 0.52, 0.51, 0.49, 0.36, 0.24, 0.229, 0.09};
     int Npts[] = {2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 2, 2, 2, 1, 1, 1, 1};  // Number of critical points that should be found
@@ -2548,7 +2548,7 @@ TEST_CASE("Test critical points for methane + H2S", "[critical_points]") {
 }
 
 TEST_CASE("Test critical points for nitrogen + ethane with HEOS", "[critical_points]") {
-    shared_ptr<HelmholtzEOSMixtureBackend> HEOS(new HelmholtzEOSMixtureBackend(strsplit("Nitrogen&Ethane", '&')));
+    shared_ptr<HelmholtzEOSMixtureBackend> HEOS = std::make_shared<HelmholtzEOSMixtureBackend>(strsplit("Nitrogen&Ethane", '&'));
     std::vector<double> zz = linspace(0.001, 0.999, 21);
     int failure_count = 0;
     for (int i = 0; i < static_cast<std::size_t>(zz.size()); ++i) {
@@ -2571,7 +2571,7 @@ TEST_CASE("Test critical points for nitrogen + ethane with HEOS", "[critical_poi
 }
 
 TEST_CASE("Test critical points for nitrogen + ethane with PR", "[critical_points]") {
-    shared_ptr<PengRobinsonBackend> HEOS(new PengRobinsonBackend(strsplit("Nitrogen&Ethane", '&')));
+    shared_ptr<PengRobinsonBackend> HEOS = std::make_shared<PengRobinsonBackend>(strsplit("Nitrogen&Ethane", '&'));
     HEOS->set_binary_interaction_double(0, 1, "kij", 0.0407);  // Ramırez-Jimenez et al.
     std::vector<double> zz = linspace(0.001, 0.999, 21);
     for (int i = 0; i < static_cast<std::size_t>(zz.size()); ++i) {

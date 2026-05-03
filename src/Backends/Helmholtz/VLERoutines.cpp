@@ -227,7 +227,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
             try {
                 T = Brent(resid, Tmin - 3, Tmax + 1, DBL_EPSILON, 1e-10, 50);
             } catch (...) {
-                shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
+                shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<HelmholtzEOSMixtureBackend>(HEOS.get_components());
                 HEOS_copy->update(QT_INPUTS, 1, Tmin);
                 double hTmin = HEOS_copy->hmolar();
                 HEOS_copy->update(QT_INPUTS, 1, Tmax);
@@ -298,7 +298,7 @@ void SaturationSolvers::saturation_PHSU_pure(HelmholtzEOSMixtureBackend& HEOS, C
                 if (std::abs(specified_value - hs_anchor.smolar) < std::abs(vmax)) {
                     T = std::max(0.99 * crit.T, crit.T - 0.1);
                 } else {
-                    shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy(new HelmholtzEOSMixtureBackend(HEOS.get_components()));
+                    shared_ptr<HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<HelmholtzEOSMixtureBackend>(HEOS.get_components());
                     HEOS_copy->update(QT_INPUTS, 1, Tmin);
                     double sTmin = HEOS_copy->smolar();
                     HEOS_copy->update(QT_INPUTS, 1, Tmax);

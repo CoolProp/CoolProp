@@ -92,7 +92,7 @@ void JSONFluidLibrary::set_fluid_enthalpy_entropy_offset(const std::string& flui
             // first build lets resolve_T_via_superancillary translate the
             // user's target into the cache's frame. See #2773.
 
-            shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(it2->second));
+            shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS = std::make_shared<CoolProp::HelmholtzEOSBackend>(it2->second);
             HEOS->specify_phase(iphase_gas);  // Something homogeneous;
             // Calculate the new enthalpy and entropy values
             HEOS->update(DmolarT_INPUTS, it2->second.EOS().hs_anchor.rhomolar, it2->second.EOS().hs_anchor.T);

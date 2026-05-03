@@ -65,7 +65,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend() {
     N = 0;
     _phase = iphase_unknown;
     // Reset the residual Helmholtz energy class
-    residual_helmholtz.reset(new ResidualHelmholtz());
+    residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 }
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::string>& component_names, bool generate_SatL_and_SatV) {
     std::vector<CoolPropFluid> components(component_names.size());
@@ -74,7 +74,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
     }
 
     // Reset the residual Helmholtz energy class
-    residual_helmholtz.reset(new ResidualHelmholtz());
+    residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 
     // Set the components and associated flags
     set_components(components, generate_SatL_and_SatV);
@@ -85,7 +85,7 @@ HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<std::st
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend(const std::vector<CoolPropFluid>& components, bool generate_SatL_and_SatV) {
 
     // Reset the residual Helmholtz energy class
-    residual_helmholtz.reset(new ResidualHelmholtz());
+    residual_helmholtz = std::make_shared<ResidualHelmholtz>();
 
     // Set the components and associated flags
     set_components(components, generate_SatL_and_SatV);
@@ -761,7 +761,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_viscosity(void) {
         set_warning_string("Mixture model for viscosity is highly approximate");
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
-            shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
+            shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
             summer += mole_fractions[i] * log(HEOS->viscosity());
         }
@@ -790,7 +790,7 @@ void HelmholtzEOSMixtureBackend::calc_viscosity_contributions(CoolPropDbl& dilut
             std::string fluid_name = component.transport.viscosity_ecs.reference_fluid;
             std::vector<std::string> names(1, fluid_name);
             // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(names));
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid = std::make_shared<HelmholtzEOSMixtureBackend>(names);
             // Get the viscosity using ECS and stick in the critical value
             critical = TransportRoutines::viscosity_ECS(*this, *ref_fluid);
             return;
@@ -882,7 +882,7 @@ void HelmholtzEOSMixtureBackend::calc_conductivity_contributions(CoolPropDbl& di
             std::string fluid_name = component.transport.conductivity_ecs.reference_fluid;
             std::vector<std::string> name(1, fluid_name);
             // Get a managed pointer to the reference fluid for ECS
-            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid(new HelmholtzEOSMixtureBackend(name));
+            shared_ptr<HelmholtzEOSMixtureBackend> ref_fluid = std::make_shared<HelmholtzEOSMixtureBackend>(name);
             // Get the viscosity using ECS and store in initial_density (not normally used);
             initial_density = TransportRoutines::conductivity_ECS(*this, *ref_fluid);  // Warning: not actually initial_density
             return;
@@ -997,7 +997,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void) {
         set_warning_string("Mixture model for conductivity is highly approximate");
         CoolPropDbl summer = 0;
         for (std::size_t i = 0; i < mole_fractions.size(); ++i) {
-            shared_ptr<HelmholtzEOSBackend> HEOS(new HelmholtzEOSBackend(components[i]));
+            shared_ptr<HelmholtzEOSBackend> HEOS = std::make_shared<HelmholtzEOSBackend>(components[i]);
             HEOS->update(DmolarT_INPUTS, _rhomolar, _T);
             summer += mole_fractions[i] * HEOS->conductivity();
         }
@@ -2045,7 +2045,7 @@ void HelmholtzEOSMixtureBackend::calc_ssat_max(void) {
         }
     };
     if (!ssat_max.is_valid() && ssat_max.exists != SsatSimpleState::SSAT_MAX_DOESNT_EXIST) {
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(get_components()));
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(get_components());
         Residual resid(*HEOS_copy);
         const CoolProp::SimpleState& tripleV = HEOS_copy->get_components()[0].triple_vapor;
         double v1 = resid.call(hsat_max.T);
@@ -2080,7 +2080,7 @@ void HelmholtzEOSMixtureBackend::calc_hsat_max(void) {
         }
     };
     if (!hsat_max.is_valid()) {
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy(new CoolProp::HelmholtzEOSMixtureBackend(get_components()));
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS_copy = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(get_components());
         Residualhmax residhmax(*HEOS_copy);
         Brent(residhmax, T_critical() - 0.1, HEOS_copy->Ttriple() + 1, DBL_EPSILON, 1e-8, 30);
         hsat_max.T = residhmax.HEOS->T();
@@ -3824,8 +3824,8 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_two_phase_deriv_splined(param
         throw ValueError(format("state is not two-phase"));
     }
 
-    shared_ptr<HelmholtzEOSMixtureBackend> Liq(new HelmholtzEOSMixtureBackend(this->get_components())),
-      End(new HelmholtzEOSMixtureBackend(this->get_components()));
+    shared_ptr<HelmholtzEOSMixtureBackend> Liq = std::make_shared<HelmholtzEOSMixtureBackend>(this->get_components());
+    shared_ptr<HelmholtzEOSMixtureBackend> End = std::make_shared<HelmholtzEOSMixtureBackend>(this->get_components());
 
     Liq->specify_phase(iphase_liquid);
     Liq->_Q = -1;
@@ -4348,7 +4348,7 @@ void HelmholtzEOSMixtureBackend::set_fluid_enthalpy_entropy_offset(CoolPropFluid
     // first build lets resolve_T_via_superancillary translate the user's
     // target into the cache's frame at query time. See #2773.
 
-    shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS(new CoolProp::HelmholtzEOSBackend(component));
+    shared_ptr<CoolProp::HelmholtzEOSBackend> HEOS = std::make_shared<CoolProp::HelmholtzEOSBackend>(component);
     HEOS->specify_phase(iphase_gas);  // Something homogeneous;
                                       // Calculate the new enthalpy and entropy values
     HEOS->update(DmolarT_INPUTS, component.EOS().hs_anchor.rhomolar, component.EOS().hs_anchor.T);
