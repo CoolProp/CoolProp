@@ -118,7 +118,7 @@ bool has_solution_concentration(const std::string& fluid_string) {
 struct delim : std::numpunct<char>
 {
     char m_c;
-    delim(char c) : m_c(c){};
+    delim(char c) : m_c(c) {};
     char do_decimal_point() const {
         return m_c;
     }
@@ -912,7 +912,11 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
         int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
         char herr[255], hrf[4];
-        double x0[1] = {1};
+        // REFPROP's SETREFdll expects an x0[ncmax] (20-element) composition
+        // array; passing a 1-element array let setref_'s internal memcpy
+        // read past the end and tripped ASan in CI (#2408 ASan failure).
+        // Size to ncmax with first slot = 1 (pure fluid), rest zero.
+        double x0[20] = {1};
         const char* refstate = reference_state.c_str();
         if (strlen(refstate) > 3) {
             if (reference_state == "ASHRAE") {
