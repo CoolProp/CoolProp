@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("Out-of-range Q in update() does not corrupt cached state (#2195)", "[update][2195]") {
     // Issue #2195: PQ_INPUTS / QT_INPUTS / etc. assigned _Q = value
     // BEFORE validating the range, so a thrown OutOfRangeError left _Q at
