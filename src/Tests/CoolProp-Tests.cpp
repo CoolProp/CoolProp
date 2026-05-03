@@ -5207,6 +5207,8 @@ TEST_CASE("DQ/HQ/QS flash benchmarks (#2773)", "[2773][bench][!benchmark]") {
     BENCHMARK("QS with guesses update_with_guesses(QSmolar,Q=0,s,T) [propane]") {
         return AS_prop->update_with_guesses(CoolProp::QSmolar_INPUTS, 0.0, s_QS, g_QS);
     };
+}
+
 TEST_CASE("INCOMP backend rejects molar property requests with a clean error", "[INCOMP][1908]") {
     // Issue #1908: PropsSI('Dmolar','T',298.15,'P',101325,'INCOMP::AEG[0.1]')
     // returned -infinity (the AbstractState default for _rhomolar) and the
