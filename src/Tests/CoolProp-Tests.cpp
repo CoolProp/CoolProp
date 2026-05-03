@@ -4810,6 +4810,37 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p > 0);
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
+TEST_CASE("DmassSmass round-trip on the dew curve preserves enthalpy (#1907)", "[water_flash][1907]") {
+    // Issue #1907: looping along the saturated-vapor curve and
+    // re-flashing each (D, S) pair produced wildly inconsistent
+    // enthalpies. Root cause was that HSU_D_flash assigned _T to the
+    // converged temperature without re-evaluating alphar at that T,
+    // leaving the alphar-derivative cache from the LAST solver
+    // iteration. Subsequent h/s/p queries used stale derivatives.
+    //
+    // Walk densities along the dew curve, capture (h_dew, s_dew),
+    // re-flash via DmassSmass and verify hmass agrees.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "water"));
+    auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "water"));
+    for (double d : {280.0, 250.0, 200.0, 175.0, 130.0, 70.0, 30.0, 15.126, 11.141, 5.0}) {
+        CAPTURE(d);
+        AS->update(CoolProp::DmassQ_INPUTS, d, 1.0);
+        const double T_dew = AS->T();
+        const double h_dew = AS->hmass();
+        const double s_dew = AS->smass();
+        const double p_dew = AS->p();
+
+        AS2->update(CoolProp::DmassSmass_INPUTS, d, s_dew);
+        CAPTURE(T_dew);
+        CAPTURE(h_dew);
+        CAPTURE(s_dew);
+        CAPTURE(AS2->T());
+        CAPTURE(AS2->hmass());
+        CAPTURE(AS2->smass());
+        CHECK(std::abs(AS2->T() - T_dew) / T_dew < 1e-6);
+        CHECK(std::abs(AS2->hmass() - h_dew) / h_dew < 1e-3);
+        CHECK(std::abs(AS2->smass() - s_dew) / s_dew < 1e-6);
+        CHECK(std::abs(AS2->p() - p_dew) / p_dew < 1e-3);
     }
 }
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
