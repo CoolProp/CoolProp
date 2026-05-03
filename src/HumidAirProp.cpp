@@ -364,21 +364,21 @@ void UseVirialCorrelations(int flag) {
     if (flag == 0 || flag == 1) {
         FlagUseVirialCorrelations = flag;
     } else {
-        printf("UseVirialCorrelations takes an integer, either 0 (no) or 1 (yes)\n");
+        std::cout << "UseVirialCorrelations takes an integer, either 0 (no) or 1 (yes)\n";
     }
 }
 void UseIsothermCompressCorrelation(int flag) {
     if (flag == 0 || flag == 1) {
         FlagUseIsothermCompressCorrelation = flag;
     } else {
-        printf("UseIsothermCompressCorrelation takes an integer, either 0 (no) or 1 (yes)\n");
+        std::cout << "UseIsothermCompressCorrelation takes an integer, either 0 (no) or 1 (yes)\n";
     }
 }
 void UseIdealGasEnthalpyCorrelations(int flag) {
     if (flag == 0 || flag == 1) {
         FlagUseIdealGasEnthalpyCorrelations = flag;
     } else {
-        printf("UseIdealGasEnthalpyCorrelations takes an integer, either 0 (no) or 1 (yes)\n");
+        std::cout << "UseIdealGasEnthalpyCorrelations takes an integer, either 0 (no) or 1 (yes)\n";
     }
 }
 static double Brent_HAProps_W(givens OutputKey, double p, givens In1Name, double Input1, double TargetVal, double W_min, double W_max) {
@@ -912,7 +912,7 @@ double f_factor(double T, double p) {
         return 1.0;
 }
 void HAHelp(void) {
-    printf("Sorry, Need to update!");
+    std::cout << "Sorry, Need to update!";
 }
 int returnHumAirCode(const char* Code) {
     if (!strcmp(Code, "GIVEN_TDP"))
@@ -926,7 +926,7 @@ int returnHumAirCode(const char* Code) {
     else if (!strcmp(Code, "GIVEN_ENTHALPY"))
         return GIVEN_ENTHALPY;
     else {
-        fprintf(stderr, "Code to returnHumAirCode in HumAir.c [%s] not understood", Code);
+        std::cerr << format("Code to returnHumAirCode in HumAir.c [%s] not understood", Code);
         return -1;
     }
 }
@@ -2271,7 +2271,7 @@ double HAProps_Aux(const char* Name, double T, double p, double W, char* units) 
             strcpy(units, "kg/m^3");
             return rho_Ice(T, p);
         } else {
-            printf("Sorry I didn't understand your input [%s] to HAProps_Aux\n", Name);
+            std::cout << format("Sorry I didn't understand your input [%s] to HAProps_Aux\n", Name);
             return -1;
         }
     } catch (...) {
