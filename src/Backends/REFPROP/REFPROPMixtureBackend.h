@@ -11,6 +11,8 @@
 #include "AbstractState.h"
 #include "DataStructures.h"
 
+#include <map>
+#include <string>
 #include <vector>
 
 namespace CoolProp {
@@ -165,6 +167,12 @@ class REFPROPMixtureBackend : public AbstractState
 
     /// Returns true if REFPROP is supported on this platform
     static bool REFPROP_supported(void);
+
+    /// Persisted reference-state overrides applied after every SETUPdll
+    /// (#2408). Keyed by joined-component fluid string, value is a 3-char
+    /// REFPROP hrf code ("DEF", "NBP", "ASH", "IIR", "OTH").
+    static const std::map<std::string, std::string>& get_refprop_ref_state_overrides();
+    static void set_refprop_ref_state_override(const std::string& fluid_string, const std::string& hrf);
 
     std::string fluid_param_string(const std::string& ParamName);
 
