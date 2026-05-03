@@ -4811,6 +4811,7 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+}
 TEST_CASE("INCOMP psat throws below TminPsat instead of returning 0 silently (#2209)", "[INCOMP][2209]") {
     // Issue #2209: PropsSI('P','Q',0,'T',373,'INCOMP::MEG[0.1]') returned
     // 0.0 because MEG.json has TminPsat=373.15 (which equals Tmax for
