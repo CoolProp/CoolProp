@@ -54,6 +54,15 @@ double SaturationAncillaryFunction::evaluate(double T) {
         return poly.evaluate(num_coeffs, T) / poly.evaluate(den_coeffs, T);
     } else {
         double THETA = 1 - T / T_r;
+        // Saturation ancillaries are only defined at or below the reducing
+        // temperature. A negative THETA combined with a non-integer exponent
+        // gives pow(negative, fractional) -> NaN and (depending on FE flags)
+        // an FPE that escapes C++ try/catch (#1611). Throw a controlled
+        // exception so callers like the Brent inversion can react cleanly.
+        if (THETA < 0) {
+            throw ValueError(format(
+              "Temperature %g K exceeds the saturation-ancillary reducing temperature %g K", T, T_r));
+        }
 
         for (std::size_t i = 0; i < N; ++i) {
             s[i] = n[i] * pow(THETA, t[i]);
