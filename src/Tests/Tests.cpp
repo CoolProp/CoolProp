@@ -5,7 +5,8 @@ the build to avoid double declaration of the main function and
 Catch clashing
 */
 #include "Tests.h"
-#include "time.h"
+#include <ctime>
+#include <iostream>
 
 #if defined ENABLE_CATCH
 #    include <catch2/catch_all.hpp>
@@ -37,7 +38,7 @@ int run_not_slow_tests() {
     t1 = clock();
     session.run();
     t2 = clock();
-    printf("Elapsed time for not slow tests: %g s", (double)(t2 - t1) / CLOCKS_PER_SEC);
+    std::cout << "Elapsed time for not slow tests: " << ((double)(t2 - t1) / CLOCKS_PER_SEC) << " s";
 
     return 1;
 #else
@@ -58,7 +59,7 @@ int run_user_defined_tests(const std::vector<std::string>& tests_or_tags) {
     t1 = clock();
     session.run();
     t2 = clock();
-    printf("Elapsed time for user defined tests: %g s", (double)(t2 - t1) / CLOCKS_PER_SEC);
+    std::cout << "Elapsed time for user defined tests: " << ((double)(t2 - t1) / CLOCKS_PER_SEC) << " s";
 
     return 1;
 #else
