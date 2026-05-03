@@ -455,9 +455,9 @@ void HelmholtzEOSMixtureBackend::calc_change_EOS(const std::size_t i, const std:
             // Set the contribution
             shared_ptr<AbstractCubic> ac;
             if (EOS_name == "SRK") {
-                ac.reset(new SRK(Tc, pc, acentric, R));
+                ac = std::make_shared<SRK>(Tc, pc, acentric, R);
             } else {
-                ac.reset(new PengRobinson(Tc, pc, acentric, R));
+                ac = std::make_shared<PengRobinson>(Tc, pc, acentric, R);
             }
             ac->set_Tr(Tc);
             ac->set_rhor(rhomolarc);
@@ -1005,7 +1005,10 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_conductivity(void) {
     }
 }
 void HelmholtzEOSMixtureBackend::calc_conformal_state(const std::string& reference_fluid, CoolPropDbl& T, CoolPropDbl& rhomolar) {
-    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> REF(new CoolProp::HelmholtzEOSBackend(reference_fluid));
+    // Construct as the derived HelmholtzEOSBackend, then implicit upcast
+    // to the shared_ptr<HelmholtzEOSMixtureBackend> base. Single allocation;
+    // virtual destructor on the base ensures correct cleanup.
+    shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> REF = std::make_shared<CoolProp::HelmholtzEOSBackend>(reference_fluid);
 
     if (T < 0 && rhomolar < 0) {
         // Collect some parameters
@@ -3275,7 +3278,7 @@ void HelmholtzEOSMixtureBackend::calc_excess_properties(void) {
     _umolar_excess = this->umolar();
     _volumemolar_excess = 1 / this->rhomolar();
     for (std::size_t i = 0; i < components.size(); ++i) {
-        transient_pure_state.reset(new HelmholtzEOSBackend(components[i].name));
+        transient_pure_state = std::make_shared<HelmholtzEOSBackend>(components[i].name);
         transient_pure_state->update(PT_INPUTS, p(), T());
         double x_i = mole_fractions[i];
         double R = gas_constant();

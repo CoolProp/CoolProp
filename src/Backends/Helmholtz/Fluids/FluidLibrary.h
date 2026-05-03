@@ -1267,9 +1267,9 @@ class JSONFluidLibrary
                         // Set the cubic contribution to the residual Helmholtz energy
                         shared_ptr<AbstractCubic> ac;
                         if (*end == "-SRK") {
-                            ac.reset(new SRK(Tc, pc, acentric, R));
+                            ac = std::make_shared<SRK>(Tc, pc, acentric, R);
                         } else if (*end == "-PengRobinson") {
-                            ac.reset(new PengRobinson(Tc, pc, acentric, R));
+                            ac = std::make_shared<PengRobinson>(Tc, pc, acentric, R);
                         } else {
                             throw CoolProp::ValueError(format("Unable to match this ending [%s]", (*end).c_str()));
                         }
@@ -1283,9 +1283,9 @@ class JSONFluidLibrary
                         // Set the cubic contribution to the residual Helmholtz energy
                         shared_ptr<AbstractCubic> ac;
                         if (*end == "-SRK") {
-                            ac.reset(new SRK(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA)));
+                            ac = std::make_shared<SRK>(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA));
                         } else if (*end == "-PengRobinson") {
-                            ac.reset(new PengRobinson(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA)));
+                            ac = std::make_shared<PengRobinson>(vals.Tc, vals.pc, vals.acentric, get_config_double(R_U_CODATA));
                         } else {
                             throw CoolProp::ValueError(format("Unable to match this ending [%s]", (*end).c_str()));
                         }

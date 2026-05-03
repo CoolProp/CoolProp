@@ -213,7 +213,7 @@ class MixtureBinaryPairLibrary
             CAS1 = identifier1;
         } else {
             std::vector<std::string> names1(1, identifier1);
-            HEOS1.reset(new CoolProp::HelmholtzEOSMixtureBackend(names1));
+            HEOS1 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names1);
             CAS1 = HEOS1->fluid_param_string("CAS");
         }
 
@@ -222,7 +222,7 @@ class MixtureBinaryPairLibrary
             CAS2 = identifier2;
         } else {
             std::vector<std::string> names2(1, identifier2);
-            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(names2));
+            HEOS2 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names2);
             CAS2 = HEOS2->fluid_param_string("CAS");
         }
 
@@ -248,8 +248,8 @@ class MixtureBinaryPairLibrary
 
         if (rule == "linear") {
             // Terms for linear mixing
-            HEOS1.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, name1)));
-            HEOS2.reset(new CoolProp::HelmholtzEOSMixtureBackend(std::vector<std::string>(1, name2)));
+            HEOS1 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(std::vector<std::string>(1, name1));
+            HEOS2 = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(std::vector<std::string>(1, name2));
 
             dict.add_number("gammaT", 0.5 * (HEOS1->T_critical() + HEOS2->T_critical()) / sqrt(HEOS1->T_critical() * HEOS2->T_critical()));
             double rhoc1 = HEOS1->rhomolar_critical(), rhoc2 = HEOS2->rhomolar_critical();
@@ -638,7 +638,7 @@ void MixtureParameters::set_mixture_parameters(HelmholtzEOSMixtureBackend& HEOS)
             if (std::abs(HEOS.residual_helmholtz->Excess.F[i][j]) < DBL_EPSILON) {
                 // Empty departure function that will just return 0
                 std::vector<double> n(1, 0), d(1, 1), t(1, 1), l(1, 0);
-                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j].reset(new ExponentialDepartureFunction(n, d, t, l));
+                HEOS.residual_helmholtz->Excess.DepartureFunctionMatrix[i][j] = std::make_shared<ExponentialDepartureFunction>(n, d, t, l);
                 continue;
             }
 

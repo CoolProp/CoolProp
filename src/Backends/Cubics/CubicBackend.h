@@ -272,11 +272,11 @@ class SRKBackend : public AbstractCubicBackend
    public:
     SRKBackend(const std::vector<double>& Tc, const std::vector<double>& pc, const std::vector<double>& acentric, double R_u,
                bool generate_SatL_and_SatV = true) {
-        cubic.reset(new SRK(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<SRK>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
     SRKBackend(double Tc, double pc, double acentric, double R_u, bool generate_SatL_and_SatV = true) {
-        cubic.reset(new SRK(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<SRK>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     }
     SRKBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
@@ -290,7 +290,7 @@ class SRKBackend : public AbstractCubicBackend
             pc.push_back(components[i].pc);
             acentric.push_back(components[i].acentric);
         }
-        cubic.reset(new SRK(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<SRK>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     }
     HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override {
@@ -313,11 +313,11 @@ class PengRobinsonBackend : public AbstractCubicBackend
     PengRobinsonBackend() {};  // Default constructor (make sure you know what you are doing)
     PengRobinsonBackend(const std::vector<double>& Tc, const std::vector<double>& pc, const std::vector<double>& acentric, double R_u,
                         bool generate_SatL_and_SatV = true) {
-        cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
     PengRobinsonBackend(double Tc, double pc, double acentric, double R_u, bool generate_SatL_and_SatV = true) {
-        cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
     PengRobinsonBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
@@ -331,7 +331,7 @@ class PengRobinsonBackend : public AbstractCubicBackend
             pc.push_back(components[i].pc);
             acentric.push_back(components[i].acentric);
         }
-        cubic.reset(new PengRobinson(Tc, pc, acentric, R_u));
+        cubic = std::make_shared<PengRobinson>(Tc, pc, acentric, R_u);
         setup(generate_SatL_and_SatV);
     };
     HelmholtzEOSMixtureBackend* get_copy(bool generate_SatL_and_SatV = true) override {
