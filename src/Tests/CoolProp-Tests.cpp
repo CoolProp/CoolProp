@@ -4811,6 +4811,22 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(p < 1e8);
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
+TEST_CASE("Water below 0 C at atmospheric pressure is not silently labelled liquid (#1098)", "[water_phase][1098]") {
+    // Issue #1098 (2017): PhaseSI returned "liquid" for water at T=-5 C,
+    // P=1 atm. The HEOS solid path is not implemented but the response
+    // should at least not be a misleading "liquid". On current master
+    // PhaseSI returns "unknown: ..." with a helpful "T below Tmelt(p)"
+    // message and PropsSI("Phase",...) throws. Pin both behaviours so
+    // the original silent-"liquid" failure mode cannot return.
+    const std::string phase = CoolProp::PhaseSI("T", 273.15 - 5, "P", 101325.0, "Water");
+    CAPTURE(phase);
+    CHECK(phase != "liquid");
+    CHECK(phase != "twophase");
+    CHECK(phase != "gas");
+    // PropsSI("Phase", ...) catches the underlying ValueError and surfaces
+    // it as a non-finite return + populated errstring (Cython then raises).
+    const double v = CoolProp::PropsSI("Phase", "T", 273.15 - 5, "P", 101325.0, "Water");
+    CHECK(!ValidNumber(v));
 }
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
