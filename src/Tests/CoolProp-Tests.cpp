@@ -5262,4 +5262,26 @@ TEST_CASE("INCOMP backend rejects molar property requests with a clean error", "
     CHECK(rhomass < 2000);
 }
 
+TEST_CASE("REFPROP mixture p_triple does not crash on EOS Dmax limit (#2378)", "[REFPROP][2378]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // Issue #2378: trivial_keyed_output(iP_triple) for an R513a (R1234yf+
+    // R134a) mixture threw "[TQFLSH error 2] Density above upper limit"
+    // because Ttriple() returned the mixture Tmin from REFPROP's limits()
+    // (~134 K), at which the saturated-liquid density exceeds an EOS
+    // limit. The fix walks T upward in 0.5 K steps until the bubble-point
+    // flash converges and returns the lowest-T saturation pressure REFPROP
+    // can compute.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "R1234yf&R134a"));
+    AS->set_mole_fractions({0.56, 0.44});
+    REQUIRE_NOTHROW(AS->trivial_keyed_output(CoolProp::iP_triple));
+    const double p = AS->trivial_keyed_output(CoolProp::iP_triple);
+    CHECK(p > 0);
+    CHECK(p < 1e6);
+
+    // Pure fluids still resolve to their standard triple-point pressures
+    auto W = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "Water"));
+    const double p_water = W->trivial_keyed_output(CoolProp::iP_triple);
+    CHECK(p_water == Catch::Approx(611.657).epsilon(1e-3));
+}
+
 #endif
