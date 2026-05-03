@@ -1,0 +1,36 @@
+// Windows version-info resource for the CoolProp shared library (#2391).
+// Configured by CMake from COOLPROP_VERSION_{MAJOR,MINOR,PATCH}.
+// The numeric VERSION fields require integer literals (commas, not dots),
+// so the trailing -dev/-rc revision suffix is dropped — it lives only in
+// the StringFileInfo "ProductVersion" string for human readers.
+
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    @COOLPROP_VERSION_MAJOR@,@COOLPROP_VERSION_MINOR@,@COOLPROP_VERSION_PATCH@,0
+ PRODUCTVERSION @COOLPROP_VERSION_MAJOR@,@COOLPROP_VERSION_MINOR@,@COOLPROP_VERSION_PATCH@,0
+ FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+ FILEFLAGS      0x0L
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       VFT_DLL
+ FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName",      "CoolProp project"
+            VALUE "FileDescription",  "CoolProp thermodynamic properties library"
+            VALUE "FileVersion",      "@COOLPROP_VERSION@"
+            VALUE "InternalName",     "CoolProp"
+            VALUE "LegalCopyright",   "MIT License"
+            VALUE "OriginalFilename", "CoolProp.dll"
+            VALUE "ProductName",      "CoolProp"
+            VALUE "ProductVersion",   "@COOLPROP_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END

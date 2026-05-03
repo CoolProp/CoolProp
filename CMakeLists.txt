@@ -596,6 +596,17 @@ if(COOLPROP_OBJECT_LIBRARY
   elseif(COOLPROP_SHARED_LIBRARY)
     list(APPEND APP_SOURCES
          "${CMAKE_CURRENT_SOURCE_DIR}/${COOLPROP_LIBRARY_SOURCE}")
+    # Embed Windows VERSIONINFO so CoolProp.dll's Properties dialog shows
+    # FileVersion/ProductVersion fields (#2391). The .rc is configured from
+    # COOLPROP_VERSION_{MAJOR,MINOR,PATCH} above and added to the source
+    # list only on MSVC, where rc.exe is available.
+    if(MSVC)
+      configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/dev/CoolProp.rc.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc"
+        @ONLY)
+      list(APPEND APP_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/CoolProp.rc")
+    endif()
     add_library(${LIB_NAME} SHARED ${APP_SOURCES} ${COOLPROP_LIBRARY_EXPORTS})
 	
 	## For arm64 builds, put the shared library in the Windows/64bit__arm64 folder
