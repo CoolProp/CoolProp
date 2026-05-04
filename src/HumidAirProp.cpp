@@ -101,9 +101,9 @@ void check_fluid_instantiation() {
     // FluidLibrary singleton, which is itself made thread-safe by call_once
     // (gh-2787, gh-2800).
     if (!Water) {
-        Water.reset(new CoolProp::HelmholtzEOSBackend("Water"));
+        Water = std::make_shared<CoolProp::HelmholtzEOSBackend>("Water");
         WaterIF97.reset(CoolProp::AbstractState::factory("IF97", "Water"));
-        Air.reset(new CoolProp::HelmholtzEOSBackend("Air"));
+        Air = std::make_shared<CoolProp::HelmholtzEOSBackend>("Air");
     }
 };
 

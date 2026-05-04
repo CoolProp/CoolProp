@@ -16,7 +16,7 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
     is_pure_or_pseudopure = (N == 1);
 
     // Reset the residual Helmholtz energy class
-    residual_helmholtz.reset(new CubicResidualHelmholtz(this));
+    residual_helmholtz = std::make_shared<CubicResidualHelmholtz>(this);
 
     // If pure, set the mole fractions to be unity
     if (is_pure_or_pseudopure) {
@@ -24,7 +24,7 @@ void CoolProp::VTPRBackend::setup(const std::vector<std::string>& names, bool ge
     }
 
     // Now set the reducing function for the mixture
-    Reducing.reset(new ConstantReducingFunction(cubic->get_Tr(), cubic->get_rhor()));
+    Reducing = std::make_shared<ConstantReducingFunction>(cubic->get_Tr(), cubic->get_rhor());
 
     VTPRCubic* _cubic = static_cast<VTPRCubic*>(cubic.get());
     _cubic->get_unifaq().set_components("name", names);
@@ -78,7 +78,7 @@ void CoolProp::VTPRBackend::set_alpha_from_components() {
             const std::vector<double>& c = components[i].alpha_coeffs;
             shared_ptr<AbstractCubicAlphaFunction> acaf;
             if (alpha_type == "Twu") {
-                acaf.reset(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
+                acaf = std::make_shared<TwuAlphaFunction>(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]);
             } else if (alpha_type == "MathiasCopeman" || alpha_type == "Mathias-Copeman") {
                 acaf.reset(
                   new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));

@@ -15,7 +15,7 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
     resize(N);
 
     // Reset the residual Helmholtz energy class
-    residual_helmholtz.reset(new CubicResidualHelmholtz(this));
+    residual_helmholtz = std::make_shared<CubicResidualHelmholtz>(this);
     // If pure, set the mole fractions to be unity
     if (is_pure_or_pseudopure) {
         mole_fractions = std::vector<CoolPropDbl>(1, 1.0);
@@ -23,7 +23,7 @@ void CoolProp::AbstractCubicBackend::setup(bool generate_SatL_and_SatV) {
         mole_fractions.clear();
     }
     // Now set the reducing function for the mixture
-    Reducing.reset(new ConstantReducingFunction(cubic->get_Tr(), cubic->get_rhor()));
+    Reducing = std::make_shared<ConstantReducingFunction>(cubic->get_Tr(), cubic->get_rhor());
 
     // Set the alpha function based on the components in use
     set_alpha_from_components();
@@ -56,7 +56,7 @@ void CoolProp::AbstractCubicBackend::set_alpha_from_components() {
             const std::vector<double>& c = components[i].alpha_coeffs;
             shared_ptr<AbstractCubicAlphaFunction> acaf;
             if (alpha_type == "Twu") {
-                acaf.reset(new TwuAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
+                acaf = std::make_shared<TwuAlphaFunction>(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]);
             } else if (alpha_type == "MathiasCopeman" || alpha_type == "Mathias-Copeman") {
                 acaf.reset(
                   new MathiasCopemanAlphaFunction(get_cubic()->a0_ii(i), c[0], c[1], c[2], get_cubic()->get_Tr() / get_cubic()->get_Tc()[i]));
@@ -377,9 +377,9 @@ class SaturationResidual : public CoolProp::FuncWrapper1D
     double imposed_variable;
     double deltaL, deltaV;
 
-    SaturationResidual(){};
+    SaturationResidual() {};
     SaturationResidual(CoolProp::AbstractCubicBackend* ACB, CoolProp::input_pairs inputs, double imposed_variable)
-      : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable){};
+      : ACB(ACB), inputs(inputs), imposed_variable(imposed_variable) {};
 
     double call(double value) {
         int Nsolns = 0;

@@ -1485,27 +1485,33 @@ class HelmholtzConsistencyFixture
     shared_ptr<CoolProp::ResidualHelmholtzGeneralizedExponential> Gaussian, Lemmon2005, Exponential, GERG2008, Power;
 
     HelmholtzConsistencyFixture() {
-        shared_ptr<AbstractCubic> _SRK(new SRK(300, 4e6, 0.3, 8.314461));
-        _SRK->set_Tr(300);
-        _SRK->set_rhor(4000);
-        Soave.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_SRK));
+        // Construct as the derived type, then implicit upcast to the base
+        // shared_ptr<AbstractCubic>. Single allocation; the control block
+        // tracks the derived type so ~SRK() / ~PengRobinson() are called
+        // correctly via the virtual destructor on AbstractCubic.
+        auto _SRK_derived = std::make_shared<SRK>(300, 4e6, 0.3, 8.314461);
+        _SRK_derived->set_Tr(300);
+        _SRK_derived->set_rhor(4000);
+        shared_ptr<AbstractCubic> _SRK = _SRK_derived;
+        Soave = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedCubic>(_SRK);
 
-        shared_ptr<AbstractCubic> _PR(new PengRobinson(300, 4e6, 0.3, 8.314461));
-        _PR->set_Tr(300);
-        _PR->set_rhor(4000);
-        PR.reset(new CoolProp::ResidualHelmholtzGeneralizedCubic(_PR));
+        auto _PR_derived = std::make_shared<PengRobinson>(300, 4e6, 0.3, 8.314461);
+        _PR_derived->set_Tr(300);
+        _PR_derived->set_rhor(4000);
+        shared_ptr<AbstractCubic> _PR = _PR_derived;
+        PR = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedCubic>(_PR);
 
         {
             // Signs of eta are flipped relative to paper from Gao et al., implemented with opposite sign in CoolProp
             std::vector<CoolPropDbl> beta = {0.3696, 0.2962}, epsilon = {0.4478, 0.44689}, eta = {-2.8452, -2.8342}, gamma = {1.108, 1.313},
                                      n = {-1.6909858, 0.93739074}, t = {4.3315, 4.015}, d = {1, 1}, b = {1.244, 0.6826};
-            GaoB.reset(new CoolProp::ResidualHelmholtzGaoB(n, t, d, eta, beta, gamma, epsilon, b));
+            GaoB = std::make_shared<CoolProp::ResidualHelmholtzGaoB>(n, t, d, eta, beta, gamma, epsilon, b);
         }
 
-        XiangDeiters.reset(new CoolProp::ResidualHelmholtzXiangDeiters(300, 4e6, 4000, 0.3, 8.3144621));
+        XiangDeiters = std::make_shared<CoolProp::ResidualHelmholtzXiangDeiters>(300, 4e6, 4000, 0.3, 8.3144621);
 
-        Lead.reset(new CoolProp::IdealHelmholtzLead(1, 3));
-        LogTau.reset(new CoolProp::IdealHelmholtzLogTau(1.5));
+        Lead = std::make_shared<CoolProp::IdealHelmholtzLead>(1, 3);
+        LogTau = std::make_shared<CoolProp::IdealHelmholtzLogTau>(1.5);
         {
             std::vector<CoolPropDbl> n(4, 0), t(4, 1);
             n[0] = -0.1;
@@ -1513,7 +1519,7 @@ class HelmholtzConsistencyFixture
             t[1] = -1;
             t[2] = -2;
             t[3] = 2;
-            IGPower.reset(new CoolProp::IdealHelmholtzPower(n, t));
+            IGPower = std::make_shared<CoolProp::IdealHelmholtzPower>(n, t);
         }
         {
             std::vector<CoolPropDbl> n(4, 0), t(4, 1), c(4, 1), d(4, -1);
@@ -1523,7 +1529,7 @@ class HelmholtzConsistencyFixture
             t[1] = -1;
             t[2] = -2;
             t[3] = -2;
-            PlanckEinstein.reset(new CoolProp::IdealHelmholtzPlanckEinsteinGeneralized(n, t, c, d));
+            PlanckEinstein = std::make_shared<CoolProp::IdealHelmholtzPlanckEinsteinGeneralized>(n, t, c, d);
         }
         {
             std::vector<CoolPropDbl> c(3, 1), t(3, 0);
@@ -1532,9 +1538,9 @@ class HelmholtzConsistencyFixture
             c[1] = 2;
             c[2] = 3;
             CoolPropDbl T0 = 273.15, Tc = 345.857;
-            CP0PolyT.reset(new CoolProp::IdealHelmholtzCP0PolyT(c, t, Tc, T0));
+            CP0PolyT = std::make_shared<CoolProp::IdealHelmholtzCP0PolyT>(c, t, Tc, T0);
         }
-        CP0Constant.reset(new CoolProp::IdealHelmholtzCP0Constant(4 / 8.314472, 300, 250));
+        CP0Constant = std::make_shared<CoolProp::IdealHelmholtzCP0Constant>(4 / 8.314472, 300, 250);
         {
             // Nitrogen
             std::vector<CoolPropDbl> n(2, 0.0);
@@ -1544,7 +1550,7 @@ class HelmholtzConsistencyFixture
             theta[0] = 5.251822620;
             theta[1] = 13.788988208;
             CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
-            GERG2004Cosh.reset(new CoolProp::IdealHelmholtzGERG2004Cosh(n, theta, T_crit));
+            GERG2004Cosh = std::make_shared<CoolProp::IdealHelmholtzGERG2004Cosh>(n, theta, T_crit);
             static_cast<CoolProp::IdealHelmholtzGERG2004Cosh*>(GERG2004Cosh.get())->set_Tred(T_crit * 1.3);
         }
         {
@@ -1554,7 +1560,7 @@ class HelmholtzConsistencyFixture
             std::vector<CoolPropDbl> theta(1, 0.0);
             theta[0] = -5.393067706;
             CoolPropDbl rhomolar_crit = 11183.900000, T_crit = 126.192000000;
-            GERG2004Sinh.reset(new CoolProp::IdealHelmholtzGERG2004Sinh(n, theta, T_crit));
+            GERG2004Sinh = std::make_shared<CoolProp::IdealHelmholtzGERG2004Sinh>(n, theta, T_crit);
             static_cast<CoolProp::IdealHelmholtzGERG2004Sinh*>(GERG2004Sinh.get())->set_Tred(T_crit * 1.3);
         }
 
@@ -1563,7 +1569,7 @@ class HelmholtzConsistencyFixture
                         epsilon[] = {0.6734, 0.9239, 0.8636, 1.0507, 0.8482, 0.7522}, eta[] = {0.9667, 1.5154, 1.0591, 1.6642, 12.4856, 0.9662},
                         gamma[] = {1.2827, 0.4317, 1.1217, 1.1871, 1.1243, 0.4203},
                         n[] = {1.2198, -0.4883, -0.0033293, -0.0035387, -0.51172, -0.16882}, t[] = {1, 2.124, 0.4, 3.5, 0.5, 2.7};
-            Gaussian.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Gaussian = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Gaussian->add_Gaussian(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(d[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(t[0])), std::vector<CoolPropDbl>(eta, eta + sizeof(eta) / sizeof(eta[0])),
@@ -1577,7 +1583,7 @@ class HelmholtzConsistencyFixture
                         n[] = {5.28076,   -8.67658,   0.7501127,   0.7590023,   0.01451899, 4.777189,    -3.330988, 3.775673,    -2.290919,
                                0.8888268, -0.6234864, -0.04127263, -0.08455389, -0.1308752, 0.008344962, -1.532005, -0.05883649, 0.02296658},
                         t[] = {0.669, 1.05, 2.75, 0.956, 1, 2, 2.75, 2.38, 3.37, 3.47, 2.63, 3.45, 0.72, 4.23, 0.2, 4.5, 29, 24};
-            Lemmon2005.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Lemmon2005 = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Lemmon2005->add_Lemmon2005(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(d[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(t[0])), std::vector<CoolPropDbl>(l, l + sizeof(l) / sizeof(l[0])),
@@ -1587,30 +1593,30 @@ class HelmholtzConsistencyFixture
             CoolPropDbl d[] = {1, 1, 1, 3, 7, 1, 2, 5, 1, 1, 4, 2}, l[] = {0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3},
                         n[] = {1.0038, -2.7662, 0.42921, 0.081363, 0.00024174, 0.48246, 0.75542, -0.00743, -0.4146, -0.016558, -0.10644, -0.021704},
                         t[] = {0.25, 1.25, 1.5, 0.25, 0.875, 2.375, 2, 2.125, 3.5, 6.5, 4.75, 12.5};
-            Power.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Power = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Power->add_Power(std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(d[0])),
                              std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(t[0])), std::vector<CoolPropDbl>(l, l + sizeof(l) / sizeof(l[0])));
         }
         {
 
             CoolPropDbl a = 1, epsilonbar = 12.2735737, kappabar = 1.09117041e-05, m = 1.01871348, vbarn = 0.0444215309;
-            SAFT.reset(new CoolProp::ResidualHelmholtzSAFTAssociating(a, m, epsilonbar, vbarn, kappabar));
+            SAFT = std::make_shared<CoolProp::ResidualHelmholtzSAFTAssociating>(a, m, epsilonbar, vbarn, kappabar);
         }
         {
             CoolPropDbl n[] = {-0.666422765408, 0.726086323499, 0.0550686686128}, A[] = {0.7, 0.7, 0.7}, B[] = {0.3, 0.3, 1}, C[] = {10, 10, 12.5},
                         D[] = {275, 275, 275}, a[] = {3.5, 3.5, 3}, b[] = {0.875, 0.925, 0.875}, beta[] = {0.3, 0.3, 0.3};
-            NonAnalytic.reset(new CoolProp::ResidualHelmholtzNonAnalytic(
+            NonAnalytic = std::make_shared<CoolProp::ResidualHelmholtzNonAnalytic>(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(a, a + sizeof(a) / sizeof(a[0])),
               std::vector<CoolPropDbl>(b, b + sizeof(b) / sizeof(b[0])), std::vector<CoolPropDbl>(beta, beta + sizeof(beta) / sizeof(beta[0])),
               std::vector<CoolPropDbl>(A, A + sizeof(A) / sizeof(A[0])), std::vector<CoolPropDbl>(B, B + sizeof(B) / sizeof(B[0])),
-              std::vector<CoolPropDbl>(C, C + sizeof(C) / sizeof(C[0])), std::vector<CoolPropDbl>(D, D + sizeof(D) / sizeof(D[0]))));
+              std::vector<CoolPropDbl>(C, C + sizeof(C) / sizeof(C[0])), std::vector<CoolPropDbl>(D, D + sizeof(D) / sizeof(D[0])));
         }
         {
             CoolPropDbl d[] = {2, 2, 2, 0, 0, 0}, g[] = {1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788, 1.65533788},
                         l[] = {2, 2, 2, 2, 2, 2},
                         n[] = {-3.821884669859, 8.30345065618981, -4.4832307260286, -1.02590136933231, 2.20786016506394, -1.07889905203761},
                         t[] = {3, 4, 5, 3, 4, 5};
-            Exponential.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            Exponential = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             Exponential->add_Exponential(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(n[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(d[0])), std::vector<CoolPropDbl>(g, g + sizeof(g) / sizeof(t[0])),
@@ -1622,7 +1628,7 @@ class HelmholtzConsistencyFixture
                                0.069243379775168,   -0.31022508148249,   0.24495491753226,   0.22369816716981},
                         eta[] = {0.0, 0.0, 1.0, 1.0, 0.25, 0.0, 0.0, 0.0, 0.0}, epsilon[] = {0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
                         beta[] = {0.0, 0.0, 1.0, 1.0, 2.5, 3.0, 3.0, 3.0, 3.0}, gamma[] = {0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
-            GERG2008.reset(new CoolProp::ResidualHelmholtzGeneralizedExponential());
+            GERG2008 = std::make_shared<CoolProp::ResidualHelmholtzGeneralizedExponential>();
             GERG2008->add_GERG2008Gaussian(
               std::vector<CoolPropDbl>(n, n + sizeof(n) / sizeof(n[0])), std::vector<CoolPropDbl>(d, d + sizeof(d) / sizeof(n[0])),
               std::vector<CoolPropDbl>(t, t + sizeof(t) / sizeof(d[0])), std::vector<CoolPropDbl>(eta, eta + sizeof(eta) / sizeof(eta[0])),
