@@ -4812,6 +4812,39 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
 }
+TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
+    // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
+    // 'Ammonia') used to throw while neighbouring P values worked.
+    // The exact reproducer plus a small bracket are now all smooth on
+    // current master; pin them so the boundary condition stays fixed.
+    const double P = 60110.7723310773;
+    for (double dP : {-0.001, 0.0, 0.001}) {
+        CAPTURE(dP);
+        const double v = CoolProp::PropsSI("d(U)/d(P)|sigma", "P", P + dP, "Q", 0, "Ammonia");
+        CAPTURE(v);
+        CHECK(std::isfinite(v));
+        CHECK(v > 1.0);
+        CHECK(v < 2.0);  // expected ~1.33
+    }
+}
+
+TEST_CASE("Ammonia (R717) PT_INPUTS in superheated vapor returns valid enthalpy (#2461)", "[ammonia][R717][2461]") {
+    // Issue #2461: a chained PropsSI workflow on R717 (ammonia) at
+    // P=130000 Pa, T=Tsat+2K threw "options.T is not valid in
+    // saturation_P_pure_1D_T". On current master the same calls
+    // succeed; pin the PT path that the user's original code exercises.
+    const double P_low = 1.3e5;
+    const double T_sat = CoolProp::PropsSI("T", "P", P_low, "Q", 1, "R717");
+    const double T_evap = T_sat + 2.0;  // 2 K superheat
+    const double h = CoolProp::PropsSI("H", "P", P_low, "T", T_evap, "R717");
+    CAPTURE(T_sat);
+    CAPTURE(T_evap);
+    CAPTURE(h);
+    CHECK(std::isfinite(h));
+    // Superheated ammonia at near-atmospheric P has h around 1.5e6 J/kg
+    CHECK(h > 1.4e6);
+    CHECK(h < 1.7e6);
+}
 
 // GitHub #2773: saturation flashes can have multiple T solutions for the same
 // (h | s | rho, Q) input. update_with_guesses now uses guess.T to pick the
@@ -4964,7 +4997,8 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
         // RAII guard ensures the global ref state is reset to DEF even if
         // an assertion below fails — otherwise downstream water tests would
         // operate under NBP and behave unpredictably.
-        struct WaterRefStateGuard {
+        struct WaterRefStateGuard
+        {
             ~WaterRefStateGuard() {
                 CoolProp::set_reference_stateS("Water", "DEF");
             }
@@ -5037,7 +5071,8 @@ TEST_CASE("Saturation branch flash: edge cases (#2773)", "[2773][edge_cases]") {
 TEST_CASE("Caloric superancillary is reference-state-agnostic (no thrashing)", "[2773][ref_state_shared]") {
     // RAII guard: ensure water is reset to DEF on exit, regardless of
     // assertion failures, so downstream tests aren't contaminated.
-    struct WaterRefStateGuard {
+    struct WaterRefStateGuard
+    {
         WaterRefStateGuard() {
             CoolProp::set_reference_stateS("Water", "DEF");
         }
