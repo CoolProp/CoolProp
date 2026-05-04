@@ -4812,6 +4812,24 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
 }
+TEST_CASE("REFPROP DmolarSmolar honours imposed phase (#2042)", "[REFPROP][2042]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // Issue #2042: a multi-component natural-gas mixture with phase
+    // imposed to gas via specify_phase still routed through DSFLSH ->
+    // DSFL2, which threw "2-phase iteration did not converge". Imposed
+    // single-phase now uses DSFL1 + THERMdll directly.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(
+      CoolProp::AbstractState::factory("REFPROP", "METHANE&ETHANE&PROPANE&BUTANE&ISOBUTAN&PENTANE&IPENTANE&HEXANE&NITROGEN&H2S&CO2"));
+    AS->set_mole_fractions({0.30241, 0.03639, 0.02119, 0.007, 0.0031, 0.0039, 0.0015, 0.0008, 0.0025, 0.0002, 0.62101});
+    AS->update(CoolProp::PT_INPUTS, 14500000.0, 315.35);
+    const double rho_in = 405.4197781472575;
+    const double s_in = 2004.9031527899563;
+    AS->specify_phase(CoolProp::iphase_gas);
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmassSmass_INPUTS, rho_in, s_in));
+    CHECK(std::abs(AS->rhomass() - rho_in) / rho_in < 1e-6);
+    CHECK(AS->T() > 0);
+    CHECK(AS->p() > 0);
+}
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
     // 'Ammonia') used to throw while neighbouring P values worked.
