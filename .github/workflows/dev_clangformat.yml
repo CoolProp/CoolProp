@@ -30,8 +30,14 @@ jobs:
           # Use SHAs directly so this works for both fork PRs and local-branch PRs.
           # remotes/origin/<branch> is unreliable for fork PRs because the fork's
           # branch is not fetched into origin.
+          #
+          # HEAD must be pull_request.head.sha (the actual PR tip), NOT github.sha
+          # (the synthetic refs/pull/N/merge commit). Using the merge SHA causes
+          # `git diff base..merge` to include every change master made after the
+          # PR was opened — so any file master modified gets flagged on every
+          # downstream PR even when the PR did not touch it.
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           echo "Comparing HEAD $HEAD_SHA against base $BASE_SHA"
           ./dev/ci/clang-format.sh "$HEAD_SHA" "$BASE_SHA"
 
