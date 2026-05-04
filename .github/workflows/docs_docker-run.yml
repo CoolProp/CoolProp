@@ -39,7 +39,7 @@ jobs:
         git rev-parse HEAD > dev/gitrevision.txt
         echo "Git revision: $(cat dev/gitrevision.txt)"
     
-    - uses: actions/cache@v4
+    - uses: actions/cache@v5
       if: ${{ !env.ACT }} # skip during local actions testing
       id: cached-props # steps.cached-props.outputs.cache-hit != 'true'
       with:
