@@ -1392,12 +1392,25 @@ double WetbulbTemperature(double T, double p, double psi_w) {
     // Instantiate the solver container class
     WetBulbSolver WBS(T, p, psi_w);
 
+    // Upper bracket for Brent. Historically this was Tmax + 1, which when
+    // T >= Tsat lands ABOVE Tsat where W_s_wb in the residual goes
+    // negative (p_ws_wb > p) and the function becomes meaningless.
+    // Brent then converges to a spurious "root" near Tsat (#2255).
+    // Clamp the upper bracket to stay strictly below Tsat in that case.
+    double Tupper = (T >= Tsat) ? (Tsat - 1e-3) : (Tmax + 1);
+
     double return_val = NAN;
     try {
-        return_val = Brent(WBS, Tmax + 1, 100, DBL_EPSILON, 1e-12, 50);
+        return_val = Brent(WBS, Tupper, 100, DBL_EPSILON, 1e-12, 50);
 
-        // Solution obtained is out of range (T>Tmax)
+        // Solution obtained is out of range (T > Tmax)
         if (return_val > Tmax + 1) {
+            throw CoolProp::ValueError();
+        }
+        // Reject solutions that are essentially the upper bracket — that
+        // is Brent giving up rather than finding a true root in the
+        // physical region (#2255).
+        if (T >= Tsat && return_val > Tsat - 1e-2) {
             throw CoolProp::ValueError();
         }
     } catch (...) {

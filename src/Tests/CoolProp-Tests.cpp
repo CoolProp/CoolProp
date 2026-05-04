@@ -4812,6 +4812,37 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
 }
+
+TEST_CASE("HAPropsSI Twb at high T (T > Tsat) returns the physical root (#2255)", "[HAPropsSI][2255]") {
+    // Issue #2255: HAPropsSI('Twb','T',200+273.15,'W',0.2,'P',1000E3)
+    // returned 180.7241 C (essentially Tsat at 1 MPa) instead of the
+    // correct ~131 C. The wet-bulb residual function is meaningless
+    // for Twb > Tsat(p) (W_s_wb goes negative), and the Brent solver
+    // converged to a spurious "root" at the upper bracket.
+    const double Twb_K = HumidAir::HAPropsSI("Twb", "T", 200 + 273.15, "W", 0.2, "P", 1.0e6);
+    const double Twb_C = Twb_K - 273.15;
+    CAPTURE(Twb_C);
+    // Expected physical root is ~130-131 C; the buggy value was 180.72 C
+    CHECK(Twb_C > 125.0);
+    CHECK(Twb_C < 135.0);
+
+    // Smoothness across the discontinuity reported by the second commenter:
+    // Sweep T at fixed W=0.05, P=1 atm and verify Twb is monotonic and finite.
+    double prev = -1.0;
+    for (double T_C : {100.0, 105.0, 110.0, 115.0, 120.0, 130.0, 150.0, 200.0, 250.0, 300.0}) {
+        const double Twb = HumidAir::HAPropsSI("Twb", "T", T_C + 273.15, "W", 0.05, "P", 101325.0) - 273.15;
+        CAPTURE(T_C);
+        CAPTURE(Twb);
+        CHECK(std::isfinite(Twb));
+        CHECK(Twb > 0);
+        CHECK(Twb < T_C);  // wet bulb must be below dry bulb
+        if (prev > 0) {
+            // monotone increasing across the sweep (within fp tolerance)
+            CHECK(Twb >= prev - 1e-6);
+        }
+        prev = Twb;
+    }
+}
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
     // 'Ammonia') used to throw while neighbouring P values worked.
