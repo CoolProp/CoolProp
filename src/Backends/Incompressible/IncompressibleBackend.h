@@ -179,6 +179,34 @@ class IncompressibleBackend : public AbstractState
 
     // CoolPropDbl PUmass_flash(CoolPropDbl p, CoolPropDbl umass);  // not implemented
 
+    // Molar quantities are not meaningful for incompressible solutions,
+    // which are formulated entirely on a mass basis with no fixed
+    // composition / molecular weight (#1908). Throw a controlled
+    // exception with a helpful pointer at the mass-basis equivalents
+    // instead of silently returning the AbstractState default
+    // (-_HUGE) which surfaced as "PropsSI failed ungracefully".
+    CoolPropDbl calc_molar_mass(void) override {
+        throw NotImplementedError("Molar mass is not defined for the INCOMP (incompressible) backend; INCOMP fluids are mass-based.");
+    }
+    CoolPropDbl calc_rhomolar(void) override {
+        throw NotImplementedError("Dmolar / rhomolar is not defined for the INCOMP backend; use Dmass / rhomass instead.");
+    }
+    CoolPropDbl calc_hmolar(void) override {
+        throw NotImplementedError("Hmolar / hmolar is not defined for the INCOMP backend; use Hmass / hmass instead.");
+    }
+    CoolPropDbl calc_smolar(void) override {
+        throw NotImplementedError("Smolar / smolar is not defined for the INCOMP backend; use Smass / smass instead.");
+    }
+    CoolPropDbl calc_umolar(void) override {
+        throw NotImplementedError("Umolar / umolar is not defined for the INCOMP backend; use Umass / umass instead.");
+    }
+    CoolPropDbl calc_cpmolar(void) override {
+        throw NotImplementedError("Cpmolar / cpmolar is not defined for the INCOMP backend; use Cpmass / cpmass instead.");
+    }
+    CoolPropDbl calc_cvmolar(void) override {
+        throw NotImplementedError("Cvmolar / cvmolar is not defined for the INCOMP backend; use Cvmass / cvmass instead.");
+    }
+
     /// We start with the functions that do not need a reference state
     CoolPropDbl calc_rhomass(void) {
         return fluid->rho(_T, _p, _fractions[0]);
