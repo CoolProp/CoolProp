@@ -888,15 +888,33 @@ CoolPropDbl REFPROPMixtureBackend::calc_p_triple() {
     int ierr = 0;
     char herr[errormessagelength + 1];
     int kq = 1;
-    double __T = Ttriple(), __Q = 0;
-    TQFLSHdll(&__T, &__Q, &(mole_fractions[0]), &kq, &p_kPa, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
-              &(mole_fractions_vap[0]),                 // Saturation terms
-              &emol, &hmol, &smol, &cvmol, &cpmol, &w,  // Other thermodynamic terms
-              &ierr, herr, errormessagelength);         // Error terms
-    if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
-        throw ValueError(format("%s", herr).c_str());
+    double __Q = 0;
+    const double T_lo = Ttriple();
+
+    // Mixtures don't have a single triple point; Ttriple() returns Tmin
+    // from REFPROP's limits(), but the saturated-liquid density at that
+    // exact T can exceed the EOS Dmax for one of the components,
+    // crashing TQFLSH (#2378 — R513a). Walk T upward in small steps
+    // until the bubble-point flash converges, returning the lowest-T
+    // saturation pressure REFPROP can compute. Bounded so we don't
+    // search forever.
+    double dT = 0.0;
+    const double dT_step = 0.5;  // K per probe
+    const double dT_max = 50.0;  // K above Ttriple() to give up
+    while (dT <= dT_max) {
+        double __T = T_lo + dT;
+        ierr = 0;
+        TQFLSHdll(&__T, &__Q, &(mole_fractions[0]), &kq, &p_kPa, &rho_mol_L, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                  &(mole_fractions_vap[0]), &emol, &hmol, &smol, &cvmol, &cpmol, &w, &ierr, herr, errormessagelength);
+        if (static_cast<int>(ierr) <= get_config_int(REFPROP_ERROR_THRESHOLD)) {
+            return p_kPa * 1000;
+        }
+        dT += dT_step;
     }
-    return p_kPa * 1000;
+    throw ValueError(format("calc_p_triple: REFPROP could not compute a saturation pressure within %g K of Ttriple()=%g K. "
+                            "For mixtures this can happen when the saturated-liquid density at Tmin exceeds an EOS limit; "
+                            "the mixture has no single well-defined triple point. Last REFPROP error: %s",
+                            dT_max, T_lo, herr));
 };
 CoolPropDbl REFPROPMixtureBackend::calc_dipole_moment() {
     //     subroutine INFO (icomp,wmm,ttrp,tnbpt,tc,pc,Dc,Zc,acf,dip,Rgas)
@@ -2146,7 +2164,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     {
        public:
         const std::vector<double> z;
-        wrapper(const std::vector<double>& z) : z(z){};
+        wrapper(const std::vector<double>& z) : z(z) {};
         std::vector<double> call(const std::vector<double>& x) {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;
