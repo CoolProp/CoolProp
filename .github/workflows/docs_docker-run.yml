@@ -28,7 +28,7 @@ jobs:
          password: ${{ secrets.GITHUB_TOKEN }}
          
     steps: 
-    - uses: actions/checkout@v4.2.2
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0  # Fetch all history for git revision info
     
