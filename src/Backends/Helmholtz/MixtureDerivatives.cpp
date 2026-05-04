@@ -1173,7 +1173,7 @@ class DerivativeFixture
         mole_fractions.push_back(0.12);
         mole_fractions.push_back(0.18);
         mole_fractions.push_back(0.6);
-        HEOS.reset(new backend(names));
+        HEOS = std::make_shared<backend>(names);
         HEOS->set_mole_fractions(mole_fractions);
         HEOS->specify_phase(CoolProp::iphase_gas);
         HEOS->update_DmolarT_direct(300, 300);

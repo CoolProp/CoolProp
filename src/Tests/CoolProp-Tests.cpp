@@ -2069,7 +2069,7 @@ TEST_CASE("Triple point checks", "[triple_point]") {
     std::vector<std::string> fluids = strsplit(CoolProp::get_global_param_string("fluids_list"), ',');
     for (std::size_t i = 0; i < fluids.size(); ++i) {
         std::vector<std::string> names(1, fluids[i]);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(names));
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(names);
         // Skip pseudo-pure
         if (!HEOS->is_pure()) {
             continue;
@@ -2361,7 +2361,7 @@ class FixedStateFixture
         CAPTURE(name.str());
 
         std::vector<std::string> fl(1, fluid);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(fl);
 
         // Skip the saturation maxima states for pure fluids
         if (HEOS->is_pure() && (state == "max_sat_T" || state == "max_sat_p")) {
@@ -2492,7 +2492,7 @@ TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]") {
         parameters p1, p2, p3;
     };
     pair pairs[number_of_pairs] = {{iDmass, iP, iHmass}, {iDmolar, iP, iHmolar}, {iDmolar, iHmolar, iP}, {iDmass, iHmass, iP}};
-    shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+    shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("n-Propane");
     for (std::size_t i = 0; i < number_of_pairs; ++i) {
         // See https://groups.google.com/forum/?fromgroups#!topic/catch-forum/mRBKqtTrITU
         std::ostringstream ss1;
@@ -2526,7 +2526,7 @@ TEST_CASE("Check the first two-phase derivative", "[first_two_phase_deriv]") {
 
 TEST_CASE("Check the second two-phase derivative", "[second_two_phase_deriv]") {
     SECTION("d2rhodhdp", "") {
-        shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+        shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("n-Propane");
         AS->update(QT_INPUTS, 0.3, 300);
         CoolPropDbl analytical = AS->second_two_phase_deriv(iDmolar, iHmolar, iP, iP, iHmolar);
         CAPTURE(analytical);
@@ -2540,7 +2540,7 @@ TEST_CASE("Check the second two-phase derivative", "[second_two_phase_deriv]") {
         CHECK(std::abs(numerical / analytical - 1) < 1e-6);
     }
     SECTION("d2rhodhdp using mass", "") {
-        shared_ptr<CoolProp::HelmholtzEOSBackend> AS(new CoolProp::HelmholtzEOSBackend("n-Propane"));
+        shared_ptr<CoolProp::HelmholtzEOSBackend> AS = std::make_shared<CoolProp::HelmholtzEOSBackend>("n-Propane");
         AS->update(QT_INPUTS, 0.3, 300);
         CoolPropDbl analytical = AS->second_two_phase_deriv(iDmass, iHmass, iP, iP, iHmass);
         CAPTURE(analytical);
@@ -4407,7 +4407,7 @@ TEST_CASE("Test that HS solver works for a few fluids", "[HS_solver]")
     for (std::size_t i = 0; i < fluids.size(); ++i)
     {
         std::vector<std::string> fl(1,fluids[i]);
-        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS(new CoolProp::HelmholtzEOSMixtureBackend(fl));
+        shared_ptr<CoolProp::HelmholtzEOSMixtureBackend> HEOS = std::make_shared<CoolProp::HelmholtzEOSMixtureBackend>(fl);
         for (double p = HEOS->p_triple()*10; p < HEOS->pmax(); p *= 10)
         {
             double Tmin = HEOS->Ttriple();

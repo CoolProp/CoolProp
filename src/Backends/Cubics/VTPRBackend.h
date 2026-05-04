@@ -36,7 +36,7 @@ class VTPRBackend : public PengRobinsonBackend
     VTPRBackend(const std::vector<std::string> fluid_identifiers, const std::vector<double>& Tc, const std::vector<double>& pc,
                 const std::vector<double>& acentric, double R_u, bool generate_SatL_and_SatV = true) {
         const UNIFACLibrary::UNIFACParameterLibrary& lib = LoadLibrary();
-        cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
+        cubic = std::make_shared<VTPRCubic>(Tc, pc, acentric, R_u, lib);
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
     VTPRBackend(const std::vector<std::string> fluid_identifiers, const double R_u = get_config_double(R_U_CODATA),
@@ -53,7 +53,7 @@ class VTPRBackend : public PengRobinsonBackend
             acentric.push_back(comp.acentric);  // [-]
             molemass.push_back(comp.molemass);  // [kg/mol]
         }
-        cubic.reset(new VTPRCubic(Tc, pc, acentric, R_u, lib));
+        cubic = std::make_shared<VTPRCubic>(Tc, pc, acentric, R_u, lib);
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
 
