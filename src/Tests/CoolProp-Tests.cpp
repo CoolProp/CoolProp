@@ -4812,6 +4812,32 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
 }
+TEST_CASE("Out-of-range Q in update() does not corrupt cached state (#2195)", "[update][2195]") {
+    // Issue #2195: PQ_INPUTS / QT_INPUTS / etc. assigned _Q = value
+    // BEFORE validating the range, so a thrown OutOfRangeError left _Q at
+    // the bad value (e.g. 1.1). A subsequent hmass() call then computed
+    //   _hmolar = _Q * SatV->hmolar() + (1 - _Q) * SatL->hmolar()
+    // with _Q = 1.1, returning a meaningless extrapolated number that
+    // looked plausible. The fix validates first; on throw the state is
+    // either left clean or surfaces NaN, never a misleading finite value.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Water"));
+    AS->update(CoolProp::PQ_INPUTS, 10e6, 0.5);
+    const double h_legal = AS->hmass();
+    CHECK(std::isfinite(h_legal));
+    CHECK(h_legal > 1e6);
+
+    CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 10e6, 1.1));
+    // After the failed update, hmass must NOT silently return a finite
+    // value computed from the bad Q. NaN is acceptable (cleared cache);
+    // the legal cached value is also acceptable.
+    const double h_after = AS->hmass();
+    CAPTURE(h_after);
+    CHECK((!std::isfinite(h_after) || h_after == h_legal));
+
+    CHECK_THROWS(AS->update(CoolProp::PQ_INPUTS, 10e6, -0.1));
+    CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, 1.5, 400.0));
+    CHECK_THROWS(AS->update(CoolProp::QT_INPUTS, -0.5, 400.0));
+}
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
     // 'Ammonia') used to throw while neighbouring P values worked.
