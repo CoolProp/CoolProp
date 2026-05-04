@@ -3636,7 +3636,40 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_d3alpha0_dTau3(void) {
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1, HelmholtzEOSMixtureBackend& SatL,
                                                                     HelmholtzEOSMixtureBackend& SatV) {
     // Derivative of temperature w.r.t. pressure ALONG the saturation curve
-    CoolPropDbl dTdP_sat = T() * (1 / SatV.rhomolar() - 1 / SatL.rhomolar()) / (SatV.hmolar() - SatL.hmolar());
+    CoolPropDbl dTdP_sat;
+    if (is_pure_or_pseudopure) {
+        dTdP_sat = T() * (1 / SatV.rhomolar() - 1 / SatL.rhomolar()) / (SatV.hmolar() - SatL.hmolar());
+    } else {
+        // Mixture: dT/dP along the bubble (Q=0) or dew (Q=1) curve
+        // (Gernert thesis 3.96 and 3.97). The compositions used as
+        // weights are those of the OTHER phase.
+        std::vector<CoolPropDbl> x = SatL.get_mole_fractions();
+        std::vector<CoolPropDbl> y = SatV.get_mole_fractions();
+        CoolPropDbl dQ_dPsat = 0, dQ_dTsat = 0;
+        x_N_dependency_flag xN_flag = XN_DEPENDENT;
+        if (_Q == 0) {
+            for (std::size_t i = 0; i < N; ++i) {
+                dQ_dPsat += y[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatV, i, xN_flag));
+                dQ_dTsat += y[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatV, i, xN_flag));
+            }
+        } else if (_Q == 1) {
+            for (std::size_t i = 0; i < N; ++i) {
+                dQ_dPsat += x[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dp__constT_n(SatV, i, xN_flag));
+                dQ_dTsat += x[i]
+                            * (MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatL, i, xN_flag)
+                               - MixtureDerivatives::dln_fugacity_coefficient_dT__constp_n(SatV, i, xN_flag));
+            }
+        } else {
+            throw ValueError(format("calc_first_saturation_deriv requires Q==0 (bubble) or Q==1 (dew) for mixtures; got Q=%g", _Q));
+        }
+        dTdP_sat = -dQ_dPsat / dQ_dTsat;
+    }
 
     // "Trivial" inputs
     if (Of1 == iT && Wrt1 == iP) {
@@ -3658,27 +3691,7 @@ CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters O
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_first_saturation_deriv(parameters Of1, parameters Wrt1) {
     if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_first_saturation_deriv"));
-
-    // Derivative of temperature w.r.t. pressure ALONG the saturation curve
-    CoolPropDbl dTdP_sat = T() * (1 / SatV->rhomolar() - 1 / SatL->rhomolar()) / (SatV->hmolar() - SatL->hmolar());
-
-    // "Trivial" inputs
-    if (Of1 == iT && Wrt1 == iP) {
-        return dTdP_sat;
-    } else if (Of1 == iP && Wrt1 == iT) {
-        return 1 / dTdP_sat;
-    }
-    // Derivative taken with respect to T
-    else if (Wrt1 == iT) {
-        return first_partial_deriv(Of1, iT, iP) + first_partial_deriv(Of1, iP, iT) / dTdP_sat;
-    }
-    // Derivative taken with respect to p
-    else if (Wrt1 == iP) {
-        return first_partial_deriv(Of1, iP, iT) + first_partial_deriv(Of1, iT, iP) * dTdP_sat;
-    } else {
-        throw ValueError(
-          format("Not possible to take first saturation derivative with respect to %s", get_parameter_information(Wrt1, "short").c_str()));
-    }
+    return calc_first_saturation_deriv(Of1, Wrt1, this->get_SatL(), this->get_SatV());
 }
 CoolPropDbl HelmholtzEOSMixtureBackend::calc_second_saturation_deriv(parameters Of1, parameters Wrt1, parameters Wrt2) {
     if (!this->SatL || !this->SatV) throw ValueError(format("The saturation properties are needed for calc_second_saturation_deriv"));
