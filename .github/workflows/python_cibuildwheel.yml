@@ -29,7 +29,7 @@ jobs:
       run: |
         echo $EVENT_CONTEXT
 
-    - uses: actions/checkout@v4.2.2
+    - uses: actions/checkout@v6
 
     - name: Set up Python
       uses: actions/setup-python@v5
