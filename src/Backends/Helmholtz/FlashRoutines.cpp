@@ -258,7 +258,7 @@ class DQ_flash_residual : public FuncWrapper1DWithTwoDerivs
    public:
     HelmholtzEOSMixtureBackend& HEOS;
     double rhomolar, Q_target;
-    DQ_flash_residual(HelmholtzEOSMixtureBackend& HEOS, double rhomolar, double Q_target) : HEOS(HEOS), rhomolar(rhomolar), Q_target(Q_target){};
+    DQ_flash_residual(HelmholtzEOSMixtureBackend& HEOS, double rhomolar, double Q_target) : HEOS(HEOS), rhomolar(rhomolar), Q_target(Q_target) {};
     double call(double T) {
         HEOS.update(QT_INPUTS, 0, T);  // Doesn't matter whether liquid or vapor, we are just doing a full VLE call for given T
         double rhoL = HEOS.saturated_liquid_keyed_output(iDmolar);
@@ -1505,14 +1505,19 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             // If it is above, it is not two-phase and either liquid, vapor or supercritical
             if (value > Sat->keyed_output(other)) {
                 solver_resid resid(&HEOS, HEOS._rhomolar, value, other, Sat->keyed_output(iT), HEOS.Tmax() * 1.5);
+                CoolPropDbl T_converged;
                 try {
-                    HEOS._T = Halley(resid, 0.5 * (Sat->keyed_output(iT) + HEOS.Tmax() * 1.5), 1e-10, 100);
+                    T_converged = Halley(resid, 0.5 * (Sat->keyed_output(iT) + HEOS.Tmax() * 1.5), 1e-10, 100);
                 } catch (...) {
-                    HEOS._T = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
+                    T_converged = Brent(resid, Sat->keyed_output(iT), HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
                 }
-                HEOS._Q = 10000;
-                HEOS._p = HEOS.calc_pressure_nocache(HEOS.T(), HEOS.rhomolar());
                 HEOS.unspecify_phase();
+                // Re-evaluate state at the converged (rho, T) so the alphar
+                // cache matches the final temperature, not the last solver
+                // iterate. Without this the next h/s/p query returns values
+                // computed from stale alphar derivatives (#1907).
+                HEOS.update_DmolarT_direct(HEOS._rhomolar, T_converged);
+                HEOS._Q = 10000;
                 // Update the phase flag
                 HEOS.recalculate_singlephase_phase();
             } else {
@@ -1571,13 +1576,18 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             if (value > y) {
                 solver_resid resid(&HEOS, HEOS._rhomolar, value, other, TVtriple, HEOS.Tmax() * 1.5);
                 HEOS._phase = iphase_gas;
+                CoolPropDbl T_converged;
                 try {
-                    HEOS._T = Halley(resid, 0.5 * (TVtriple + HEOS.Tmax() * 1.5), DBL_EPSILON, 100);
+                    T_converged = Halley(resid, 0.5 * (TVtriple + HEOS.Tmax() * 1.5), DBL_EPSILON, 100);
                 } catch (...) {
-                    HEOS._T = Brent(resid, TVtriple, HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
+                    T_converged = Brent(resid, TVtriple, HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
                 }
+                // Re-evaluate at converged (rho, T) so alphar cache is
+                // consistent with the final state (#1907).
+                HEOS.unspecify_phase();
+                HEOS.update_DmolarT_direct(HEOS._rhomolar, T_converged);
+                HEOS._phase = iphase_gas;
                 HEOS._Q = 10000;
-                HEOS.calc_pressure();
             } else {
                 throw ValueError(format("D < DLtriple %g %g", value, y));
             }
@@ -1612,13 +1622,18 @@ void FlashRoutines::HSU_D_flash(HelmholtzEOSMixtureBackend& HEOS, parameters oth
             if (value > y) {
                 solver_resid resid(&HEOS, HEOS._rhomolar, value, other, TLtriple, HEOS.Tmax() * 1.5);
                 HEOS._phase = iphase_liquid;
+                CoolPropDbl T_converged;
                 try {
-                    HEOS._T = Halley(resid, 0.5 * (TLtriple + HEOS.Tmax() * 1.5), DBL_EPSILON, 100);
+                    T_converged = Halley(resid, 0.5 * (TLtriple + HEOS.Tmax() * 1.5), DBL_EPSILON, 100);
                 } catch (...) {
-                    HEOS._T = Brent(resid, TLtriple, HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
+                    T_converged = Brent(resid, TLtriple, HEOS.Tmax() * 1.5, DBL_EPSILON, 1e-12, 100);
                 }
+                // Re-evaluate at converged (rho, T) so alphar cache is
+                // consistent with the final state (#1907).
+                HEOS.unspecify_phase();
+                HEOS.update_DmolarT_direct(HEOS._rhomolar, T_converged);
+                HEOS._phase = iphase_liquid;
                 HEOS._Q = 10000;
-                HEOS.calc_pressure();
             } else {
                 throw ValueError(format("D < DLtriple %g %g", value, y));
             }
@@ -2345,7 +2360,7 @@ void FlashRoutines::HS_flash_twophase(HelmholtzEOSMixtureBackend& HEOS, CoolProp
         HelmholtzEOSMixtureBackend& HEOS;
         CoolPropDbl hmolar, smolar, Qs;
         Residual(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec)
-          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec), Qs(_HUGE){};
+          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec), Qs(_HUGE) {};
         double call(double T) {
             HEOS.update(QT_INPUTS, 0, T);
             HelmholtzEOSMixtureBackend &SatL = HEOS.get_SatL(), &SatV = HEOS.get_SatV();
@@ -2436,7 +2451,7 @@ void FlashRoutines::HS_flash(HelmholtzEOSMixtureBackend& HEOS) {
         HelmholtzEOSMixtureBackend& HEOS;
         CoolPropDbl hmolar, smolar;
         Residual(HelmholtzEOSMixtureBackend& HEOS, CoolPropDbl hmolar_spec, CoolPropDbl smolar_spec)
-          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec){};
+          : HEOS(HEOS), hmolar(hmolar_spec), smolar(smolar_spec) {};
         double call(double T) {
             HEOS.update(SmolarT_INPUTS, smolar, T);
             double r = HEOS.hmolar() - hmolar;
