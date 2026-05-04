@@ -217,6 +217,21 @@ void REFPROPMixtureBackend::check_loaded_fluid() {
 
 std::size_t REFPROPMixtureBackend::instance_counter = 0;  // initialise with 0
 bool REFPROPMixtureBackend::_REFPROP_supported = true;    // initialise with true
+
+// Per-fluid reference-state overrides applied after every SETUPdll (#2408).
+// Keyed by the joined component string used as REFPROP's fluid identifier.
+// Set by set_reference_stateS('REFPROP::FLUID', state) and consumed inside
+// set_REFPROP_fluids after a successful SETUPdll. SETREF in REFPROP only
+// takes effect for the currently-loaded fluid, but the loaded fluid is
+// reset whenever a different one is requested — so we must remember the
+// override and re-apply it on each (re)load.
+static std::map<std::string, std::string> g_refprop_ref_state_overrides;
+const std::map<std::string, std::string>& REFPROPMixtureBackend::get_refprop_ref_state_overrides() {
+    return g_refprop_ref_state_overrides;
+}
+void REFPROPMixtureBackend::set_refprop_ref_state_override(const std::string& fluid_string, const std::string& hrf) {
+    g_refprop_ref_state_overrides[fluid_string] = hrf;
+}
 bool REFPROPMixtureBackend::REFPROP_supported() {
     /*
      * Here we build the bridge from macro definitions
@@ -468,6 +483,29 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
                 } else {
                     int iflag = 0;  // Tell REFPROP to use normal Helmholtz models
                     PREOSdll(&iflag);
+                }
+
+                // Re-apply any persisted reference-state override for this
+                // fluid. SETUPdll resets the reference state to the fluid
+                // file's default; the user's earlier set_reference_stateS
+                // call is honoured here so the override survives the
+                // (re)load (#2408).
+                {
+                    auto it = g_refprop_ref_state_overrides.find(std::string(_components_joined));
+                    if (it != g_refprop_ref_state_overrides.end()) {
+                        char hrf[4] = {0, 0, 0, 0};
+                        std::strncpy(hrf, it->second.c_str(), 3);
+                        int ixflag = 1, iref_ierr = 0;
+                        double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
+                        std::vector<double> x0(mole_fractions.begin(), mole_fractions.end());
+                        if (x0.empty()) x0.push_back(1.0);
+                        char href_err[255] = {0};
+                        SETREFdll(hrf, &ixflag, &(x0[0]), &h0, &s0, &t0, &p0, &iref_ierr, href_err, 3, 255);
+                        if (CoolProp::get_debug_level() > 5) {
+                            std::cout << format("%s:%d: re-applied SETREF(%s) for %s, ierr=%d\n", __FILE__, __LINE__, hrf, _components_joined,
+                                                iref_ierr);
+                        }
+                    }
                 }
                 return;
             } else if (k < number_of_endings - 1) {  // Keep going
@@ -2146,7 +2184,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     {
        public:
         const std::vector<double> z;
-        wrapper(const std::vector<double>& z) : z(z){};
+        wrapper(const std::vector<double>& z) : z(z) {};
         std::vector<double> call(const std::vector<double>& x) {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;

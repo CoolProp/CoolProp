@@ -118,7 +118,7 @@ bool has_solution_concentration(const std::string& fluid_string) {
 struct delim : std::numpunct<char>
 {
     char m_c;
-    delim(char c) : m_c(c){};
+    delim(char c) : m_c(c) {};
     char do_decimal_point() const {
         return m_c;
     }
@@ -912,7 +912,11 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
         int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
         char herr[255], hrf[4];
-        double x0[1] = {1};
+        // REFPROP's SETREFdll expects an x0[ncmax] (20-element) composition
+        // array; passing a 1-element array let setref_'s internal memcpy
+        // read past the end and tripped ASan in CI (#2408 ASan failure).
+        // Size to ncmax with first slot = 1 (pure fluid), rest zero.
+        double x0[20] = {1};
         const char* refstate = reference_state.c_str();
         if (strlen(refstate) > 3) {
             if (reference_state == "ASHRAE") {
@@ -925,7 +929,22 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
             strncpy(hrf, refstate, sizeof(hrf) - 1);
             hrf[sizeof(hrf) - 1] = '\0';
         }
-        REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
+        // Persist the override BEFORE attempting the immediate apply.
+        // SETUPdll always resets REFPROP's reference state to the fluid
+        // file's default, so a one-off SETREF here is undone the moment
+        // the user actually creates an AbstractState — the persistence
+        // is what makes the override survive (re)load (#2408).
+        REFPROPMixtureBackend::set_refprop_ref_state_override(fluid, std::string(hrf));
+        // Best-effort immediate apply if REFPROP is already loaded with
+        // the requested fluid. If REFPROP isn't loaded yet (the typical
+        // sequence: set_reference_state before constructing any state),
+        // this would throw — silently swallow and rely on the override
+        // being re-applied during the next SETUPdll.
+        try {
+            REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
+        } catch (...) {
+            // ignored — see comment above
+        }
     } else if (backend == "HEOS" || backend == "?") {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
         if (reference_state == "IIR") {

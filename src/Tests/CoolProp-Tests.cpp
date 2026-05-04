@@ -5262,4 +5262,47 @@ TEST_CASE("INCOMP backend rejects molar property requests with a clean error", "
     CHECK(rhomass < 2000);
 }
 
+TEST_CASE("REFPROP set_reference_state honoured across (re)load (#2408)", "[REFPROP][2408]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // Issue #2408: set_reference_state('REFPROP::PROPANE', 'ASHRAE') had
+    // no effect because the SETREFdll call ran before SETUPdll loaded the
+    // fluid (or against a previously-loaded fluid that then got reloaded);
+    // SETUPdll resets the reference state to the fluid file default. The
+    // override is now persisted and re-applied after every SETUPdll.
+    auto reset = [&]() { CoolProp::set_reference_stateS("REFPROP::PROPANE", "DEF"); };
+
+    SECTION("ASHRAE: h=0, s=0 at -40 C saturated liquid") {
+        CoolProp::set_reference_stateS("REFPROP::PROPANE", "ASHRAE");
+        const double h = CoolProp::PropsSI("H", "T", 233.15, "Q", 0, "REFPROP::PROPANE");
+        const double s = CoolProp::PropsSI("S", "T", 233.15, "Q", 0, "REFPROP::PROPANE");
+        CHECK(std::abs(h) < 1.0);
+        CHECK(std::abs(s) < 1e-3);
+        reset();
+    }
+
+    SECTION("IIR: h=200 kJ/kg, s=1 kJ/kg/K at 0 C saturated liquid") {
+        CoolProp::set_reference_stateS("REFPROP::PROPANE", "IIR");
+        const double h = CoolProp::PropsSI("H", "T", 273.15, "Q", 0, "REFPROP::PROPANE");
+        const double s = CoolProp::PropsSI("S", "T", 273.15, "Q", 0, "REFPROP::PROPANE");
+        CHECK(h == Catch::Approx(200000.0).epsilon(1e-6));
+        CHECK(s == Catch::Approx(1000.0).epsilon(1e-6));
+        reset();
+    }
+
+    SECTION("NBP: h=0 at NBP saturated liquid") {
+        CoolProp::set_reference_stateS("REFPROP::PROPANE", "NBP");
+        const double h = CoolProp::PropsSI("H", "P", 101325.0, "Q", 0, "REFPROP::PROPANE");
+        CHECK(std::abs(h) < 1.0);
+        reset();
+    }
+
+    SECTION("Round-trip back to DEF restores original h") {
+        const double h_def = CoolProp::PropsSI("H", "T", 233.15, "Q", 0, "REFPROP::PROPANE");
+        CoolProp::set_reference_stateS("REFPROP::PROPANE", "ASHRAE");
+        CoolProp::set_reference_stateS("REFPROP::PROPANE", "DEF");
+        const double h_back = CoolProp::PropsSI("H", "T", 233.15, "Q", 0, "REFPROP::PROPANE");
+        CHECK(h_back == Catch::Approx(h_def).epsilon(1e-9));
+    }
+}
+
 #endif
