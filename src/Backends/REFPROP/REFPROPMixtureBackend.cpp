@@ -270,8 +270,7 @@ bool REFPROPMixtureBackend::REFPROP_supported() {
                           << "In case you do not use Windows, have a look at https://github.com/jowr/librefprop.so \n"
                           << "to find instructions on how to compile your own version of the REFPROP library.\n\n"
                           << format("COOLPROP_REFPROP_ROOT: %s\n", (root) ? root.value().c_str() : "?")
-                          << format("ALTERNATIVE_REFPROP_PATH: %s\n", alt_rp_path.c_str())
-                          << format("ERROR: %s\n", err.c_str());
+                          << format("ALTERNATIVE_REFPROP_PATH: %s\n", alt_rp_path.c_str()) << format("ERROR: %s\n", err.c_str());
                 _REFPROP_supported = false;
                 return false;
             }
