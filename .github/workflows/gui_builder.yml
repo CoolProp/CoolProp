@@ -440,7 +440,7 @@ jobs:
           [ "$(ls release-files | wc -l)" -ge 5 ] || { echo "expected at least 5 installer files"; exit 1; }
 
       - name: Create draft release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: CoolProp GUI ${{ github.ref_name }}
