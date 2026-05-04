@@ -217,7 +217,14 @@ cdef bint iterable(object a):
 
 cdef ndarray_or_iterable(object input):
     if _numpy_supported:
-        return np.squeeze(np.array(input))
+        result = np.squeeze(np.array(input))
+        # np.squeeze of a (1,1) input collapses to a 0-d array, which
+        # has no len() and confuses callers (#2417). Restore at least
+        # one dimension so list-shaped inputs always yield array-shaped
+        # outputs.
+        if result.ndim == 0:
+            result = result.reshape(-1)
+        return result
     else:
         return input
 
@@ -517,6 +524,16 @@ cpdef PropsSI(in1, in2, in3 = None, in4 = None, in5 = None, in6 = None, in7 = No
             raise ValueError("Input 5 is not one-dimensional")
 
         if is_iterable1 or is_iterable3 or is_iterable5:
+            # Empty state inputs -> empty result (no work to do).
+            # Without this short-circuit, _PropsSImulti returns an empty
+            # IO vector, which the post-call check below would raise on
+            # as if it were an error (#2417).
+            if (is_iterable3 and len(in3) == 0) or (is_iterable5 and len(in5) == 0):
+                if _numpy_supported:
+                    return np.array([])
+                else:
+                    return []
+
             # Prepare the output datatype
             if not is_iterable1:
                 vin1.push_back(in1)

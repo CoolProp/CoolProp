@@ -4812,6 +4812,25 @@ TEST_CASE("Water HS_INPUTS flash near H=3133800, S=6777 is smooth (no spike to 5
         CHECK(std::abs(p - 2.97e6) / 2.97e6 < 0.02);
     }
 }
+TEST_CASE("PropsSImulti with empty input vectors returns empty result instead of segfaulting", "[PropsSImulti][2417]") {
+    // Issue #2417: PropsSI('T','P',[],'Q',[],'Ammonia') segfaulted because
+    // _PropsSI_outputs forced N1 = max(1, in1.size()) and then dereferenced
+    // in1[0] / in2[0]. Empty inputs must now return an empty IO matrix.
+    std::vector<std::string> outputs{"T"};
+    std::vector<std::string> fluids{"Ammonia"};
+    std::vector<double> fractions{1.0};
+    std::vector<double> p_empty;
+    std::vector<double> q_empty;
+    auto IO = CoolProp::PropsSImulti(outputs, "P", p_empty, "Q", q_empty, "HEOS", fluids, fractions);
+    CHECK(IO.empty());
+    // And the non-empty path still works
+    std::vector<double> p_one{101325.0};
+    std::vector<double> q_one{0.0};
+    auto IO2 = CoolProp::PropsSImulti(outputs, "P", p_one, "Q", q_one, "HEOS", fluids, fractions);
+    REQUIRE(IO2.size() == 1);
+    REQUIRE(IO2[0].size() == 1);
+    CHECK(IO2[0][0] > 0);
+}
 TEST_CASE("Ammonia d(U)/d(P)|sigma at P=60110.77... is finite (#2244)", "[ammonia][2244]") {
     // Issue #2244: PropsSI('d(U)/d(P)|sigma','P',60110.7723310773,'Q',0,
     // 'Ammonia') used to throw while neighbouring P values worked.
