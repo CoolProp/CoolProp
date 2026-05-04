@@ -5262,4 +5262,20 @@ TEST_CASE("INCOMP backend rejects molar property requests with a clean error", "
     CHECK(rhomass < 2000);
 }
 
+TEST_CASE("REFPROP supports DmolarQ / DmassQ inputs (#1845)", "[REFPROP][1845]") {
+    CoolProp::Skip_if_No_REFPROP();
+    // Issue #1845: DmassQ_INPUTS / DmolarQ_INPUTS were missing from the
+    // REFPROP backend dispatch. REFPROP itself supports them via DQFL2dll.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("REFPROP", "CO2"));
+    REQUIRE_NOTHROW(AS->update(CoolProp::DmassQ_INPUTS, 15.0, 1.0));
+    const double T_refprop = AS->T();
+    CHECK(AS->rhomass() == Catch::Approx(15.0).epsilon(1e-9));
+    CHECK(T_refprop > 200.0);
+    CHECK(T_refprop < 250.0);
+    // Cross-check with HEOS
+    auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    AS2->update(CoolProp::DmassQ_INPUTS, 15.0, 1.0);
+    CHECK(AS->T() == Catch::Approx(AS2->T()).epsilon(1e-6));
+}
+
 #endif

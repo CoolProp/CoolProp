@@ -1946,6 +1946,33 @@ void REFPROPMixtureBackend::update(CoolProp::input_pairs input_pair, double valu
             _rhoVmolar = rhoVmol_L * 1000;  // 1000 for conversion from mol/L to mol/m3
             break;
         }
+        case DmassQ_INPUTS: {
+            // Convert to molar and dispatch to DmolarQ_INPUTS
+            update(DmolarQ_INPUTS, value1 / static_cast<double>(_molar_mass), value2);
+            return;
+        }
+        case DmolarQ_INPUTS: {
+            // GitHub #1845: REFPROP supports D,Q via DQFL2 — wire it through.
+            // REFPROP's DQFL2(d,q,z,kq,t,p,Dl,Dv,xliq,xvap,ierr,herr) iterates
+            // for T given (rho, q) on the saturation envelope. Then THERMdll
+            // populates the remaining caloric and transport-prep outputs.
+            _rhomolar = value1;
+            _Q = value2;
+            rho_mol_L = 0.001 * value1;
+            q = value2;
+            int kq = 1;  // Q on a molar basis
+            DQFL2dll(&rho_mol_L, &q, &(mole_fractions[0]), &kq, &_T, &p_kPa, &rhoLmol_L, &rhoVmol_L, &(mole_fractions_liq[0]),
+                     &(mole_fractions_vap[0]), &ierr, herr, errormessagelength);
+            if (static_cast<int>(ierr) > get_config_int(REFPROP_ERROR_THRESHOLD)) {
+                throw ValueError(format("DmolarQ(%s): %s", LoadedREFPROPRef.c_str(), herr).c_str());
+            }
+            THERMdll(&_T, &rho_mol_L, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
+
+            _p = p_kPa * 1000;
+            _rhoLmolar = rhoLmol_L * 1000;
+            _rhoVmolar = rhoVmol_L * 1000;
+            break;
+        }
         default: {
             throw ValueError(format("This pair of inputs [%s] is not yet supported", get_input_pair_short_desc(input_pair).c_str()));
         }
@@ -2146,7 +2173,7 @@ void REFPROPMixtureBackend::calc_true_critical_point(double& T, double& rho) {
     {
        public:
         const std::vector<double> z;
-        wrapper(const std::vector<double>& z) : z(z){};
+        wrapper(const std::vector<double>& z) : z(z) {};
         std::vector<double> call(const std::vector<double>& x) {
             std::vector<double> r(2);
             double dpdrho__constT = _HUGE, d2pdrho2__constT = _HUGE;
