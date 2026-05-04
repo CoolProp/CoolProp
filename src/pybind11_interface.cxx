@@ -9,6 +9,7 @@
 
 #    include <pybind11/pybind11.h>
 #    include <pybind11/stl.h>
+#    include <array>
 namespace py = pybind11;
 
 CoolProp::AbstractState* factory(const std::string& backend, const std::string& fluid_names) {
@@ -407,9 +408,9 @@ void init_CoolProp(py::module& m) {
     m.def("HAPropsSI", &HumidAir::HAPropsSI);
     m.def("HAProps", &HumidAir::HAProps);
     m.def("HAProps_Aux", [](std::string out_string, double T, double p, double psi_w) {
-        char units[1000];
-        double out = HumidAir::HAProps_Aux(out_string.c_str(), T, p, psi_w, units);
-        return py::make_tuple(out, std::string(units));
+        std::array<char, 1000> units{};
+        double out = HumidAir::HAProps_Aux(out_string.c_str(), T, p, psi_w, units.data());
+        return py::make_tuple(out, std::string(units.data()));
     });
     m.def("cair_sat", &HumidAir::cair_sat);
     m.def("get_mixture_binary_pair_data", &get_mixture_binary_pair_data);

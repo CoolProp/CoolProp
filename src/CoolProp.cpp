@@ -26,6 +26,7 @@
 #    endif
 #endif
 
+#include <array>
 #include <cmath>
 #include <memory>
 
@@ -118,7 +119,7 @@ bool has_solution_concentration(const std::string& fluid_string) {
 struct delim : std::numpunct<char>
 {
     char m_c;
-    delim(char c) : m_c(c){};
+    delim(char c) : m_c(c) {};
     char do_decimal_point() const {
         return m_c;
     }
@@ -911,21 +912,22 @@ void set_reference_stateS(const std::string& FluidName, const std::string& refer
 
         int ierr = 0, ixflag = 1;
         double h0 = 0, s0 = 0, t0 = 0, p0 = 0;
-        char herr[255], hrf[4];
+        std::array<char, 255> herr{};
+        std::array<char, 4> hrf{};
         double x0[1] = {1};
         const char* refstate = reference_state.c_str();
         if (strlen(refstate) > 3) {
             if (reference_state == "ASHRAE") {
-                strncpy(hrf, "ASH", sizeof(hrf) - 1);
-                hrf[sizeof(hrf) - 1] = '\0';
+                strncpy(hrf.data(), "ASH", hrf.size() - 1);
+                hrf[hrf.size() - 1] = '\0';
             } else {
                 throw ValueError(format("Reference state string [%s] is more than 3 characters long", reference_state.c_str()));
             }
         } else {
-            strncpy(hrf, refstate, sizeof(hrf) - 1);
-            hrf[sizeof(hrf) - 1] = '\0';
+            strncpy(hrf.data(), refstate, hrf.size() - 1);
+            hrf[hrf.size() - 1] = '\0';
         }
-        REFPROP_SETREF(hrf, ixflag, x0, h0, s0, t0, p0, ierr, herr, 3, 255);
+        REFPROP_SETREF(hrf.data(), ixflag, x0, h0, s0, t0, p0, ierr, herr.data(), 3, 255);
     } else if (backend == "HEOS" || backend == "?") {
         CoolProp::HelmholtzEOSMixtureBackend HEOS(std::vector<std::string>(1, fluid));
         if (reference_state == "IIR") {
