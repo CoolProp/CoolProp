@@ -332,9 +332,20 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     };
 
     std::vector<CoolPropDbl> calc_mole_fractions_liquid(void) {
+        // SatL/SatV retain composition vectors from the most recent VLE flash
+        // (or phase-envelope build) — those are not meaningful when the
+        // current state is single-phase, and returning them silently surfaced
+        // as bug #2308. Require the current state to be two-phase before
+        // returning anything.
+        if (_phase != iphase_twophase) {
+            throw ValueError("mole_fractions_liquid is only defined in the two-phase region (current state is single-phase)");
+        }
         return SatL->get_mole_fractions();
     };
     std::vector<CoolPropDbl> calc_mole_fractions_vapor(void) {
+        if (_phase != iphase_twophase) {
+            throw ValueError("mole_fractions_vapor is only defined in the two-phase region (current state is single-phase)");
+        }
         return SatV->get_mole_fractions();
     };
 
