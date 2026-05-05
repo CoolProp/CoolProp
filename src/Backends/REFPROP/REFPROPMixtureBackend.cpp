@@ -354,9 +354,9 @@ void REFPROPMixtureBackend::set_REFPROP_fluids(const std::vector<std::string>& f
 
         if (get_config_bool(REFPROP_USE_GERG)) {
             int iflag = 1,  // Tell REFPROP to use GERG04; 0 unsets GERG usage
-              ierr = 0;
-            std::array<char, 255> herr{};
-            GERG04dll(&N, &iflag, &ierr, herr.data(), 255);
+              ierr_gerg = 0;
+            std::array<char, 255> herr_gerg{};
+            GERG04dll(&N, &iflag, &ierr_gerg, herr_gerg.data(), 255);
         }
 
         // Check platform support
@@ -1295,17 +1295,17 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
         PhaseEnvelope.smolar_vap.push_back(y);
 
         // Other outputs that could be useful
-        int ierr = 0;
-        std::array<char, 255> herr{};
+        int ierr_trn = 0;
+        std::array<char, 255> herr_trn{};
         double p_kPa = NAN, emol = NAN, hmol = NAN, smol = NAN, cvmol = NAN, cpmol = NAN, w = NAN, hjt = NAN, eta = NAN, tcx = NAN;
         // "Vapor"
         THERMdll(&T, &rho_molL, &(mole_fractions[0]), &p_kPa, &emol, &hmol, &smol, &cvmol, &cpmol, &w, &hjt);
         PhaseEnvelope.cpmolar_vap.push_back(cpmol);
         PhaseEnvelope.cvmolar_vap.push_back(cvmol);
         PhaseEnvelope.speed_sound_vap.push_back(w);
-        TRNPRPdll(&T, &rho_molL, &(mole_fractions[0]),      // Inputs
-                  &eta, &tcx,                               // Outputs
-                  &ierr, herr.data(), errormessagelength);  // Error message
+        TRNPRPdll(&T, &rho_molL, &(mole_fractions[0]),              // Inputs
+                  &eta, &tcx,                                       // Outputs
+                  &ierr_trn, herr_trn.data(), errormessagelength);  // Error message
         PhaseEnvelope.viscosity_vap.push_back(eta / 1e6);
         PhaseEnvelope.conductivity_vap.push_back(tcx);
     }
