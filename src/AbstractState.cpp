@@ -75,7 +75,14 @@ class IF97BackendGenerator : public AbstractStateGenerator
         };
     };
 };
-// This static initialization will cause the generator to register
+// This static initialization will cause the generator to register.
+// GeneratorInitializer's constructor only inserts a single entry into a
+// std::map keyed by backend_family; in practice this cannot throw under
+// normal startup, and if std::bad_alloc fires here the process is
+// unrecoverable anyway. NOLINT rather than convert to call_once + lazy
+// registration (option 1 from #2874) which would be the cleaner refactor
+// but is out of this PR's scope.
+// NOLINTNEXTLINE(cert-err58-cpp)
 static GeneratorInitializer<IF97BackendGenerator> if97_gen(IF97_BACKEND_FAMILY);
 class SRKGenerator : public AbstractStateGenerator
 {
@@ -84,6 +91,7 @@ class SRKGenerator : public AbstractStateGenerator
         return new SRKBackend(fluid_names, get_config_double(R_U_CODATA));
     };
 };
+// NOLINTNEXTLINE(cert-err58-cpp)
 static GeneratorInitializer<SRKGenerator> srk_gen(CoolProp::SRK_BACKEND_FAMILY);
 class PRGenerator : public AbstractStateGenerator
 {
@@ -92,6 +100,7 @@ class PRGenerator : public AbstractStateGenerator
         return new PengRobinsonBackend(fluid_names, get_config_double(R_U_CODATA));
     };
 };
+// NOLINTNEXTLINE(cert-err58-cpp)
 static GeneratorInitializer<PRGenerator> pr_gen(CoolProp::PR_BACKEND_FAMILY);
 class IncompressibleBackendGenerator : public AbstractStateGenerator
 {
@@ -104,6 +113,7 @@ class IncompressibleBackendGenerator : public AbstractStateGenerator
     };
 };
 // This static initialization will cause the generator to register
+// NOLINTNEXTLINE(cert-err58-cpp)
 static GeneratorInitializer<IncompressibleBackendGenerator> incomp_gen(INCOMP_BACKEND_FAMILY);
 class VTPRGenerator : public CoolProp::AbstractStateGenerator
 {
@@ -113,6 +123,7 @@ class VTPRGenerator : public CoolProp::AbstractStateGenerator
     };
 };
 // This static initialization will cause the generator to register
+// NOLINTNEXTLINE(cert-err58-cpp)
 static CoolProp::GeneratorInitializer<VTPRGenerator> vtpr_gen(CoolProp::VTPR_BACKEND_FAMILY);
 
 class PCSAFTGenerator : public CoolProp::AbstractStateGenerator
@@ -123,6 +134,7 @@ class PCSAFTGenerator : public CoolProp::AbstractStateGenerator
     };
 };
 // This static initialization will cause the generator to register
+// NOLINTNEXTLINE(cert-err58-cpp)
 static CoolProp::GeneratorInitializer<PCSAFTGenerator> pcsaft_gen(CoolProp::PCSAFT_BACKEND_FAMILY);
 
 AbstractState* AbstractState::factory(const std::string& backend, const std::vector<std::string>& fluid_names) {
@@ -798,11 +810,9 @@ void AbstractState::update_Qmass_pair(CoolProp::input_pairs pair, double v1, dou
     const double fa = residual(a);
     const double fb = residual(b);
     if (fa * fb > 0) {
-        throw SolutionError(
-          format("update_Qmass_pair: cannot bracket Qmolar for Qmass=%g (fa=%g, fb=%g)", Qmass_target, fa, fb));
+        throw SolutionError(format("update_Qmass_pair: cannot bracket Qmolar for Qmass=%g (fa=%g, fb=%g)", Qmass_target, fa, fb));
     }
-    const auto [lo, hi] =
-      boost::math::tools::toms748_solve(residual, a, b, fa, fb, boost::math::tools::eps_tolerance<double>(bits), max_iter);
+    const auto [lo, hi] = boost::math::tools::toms748_solve(residual, a, b, fa, fb, boost::math::tools::eps_tolerance<double>(bits), max_iter);
     const double Qmolar_solution = 0.5 * (lo + hi);
     if (!ValidNumber(Qmolar_solution)) {
         throw SolutionError(format("update_Qmass_pair: did not converge for Qmass=%g", Qmass_target));

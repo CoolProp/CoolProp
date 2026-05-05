@@ -61,10 +61,12 @@ using std::shared_ptr;
 #    include <sys/stat.h>
 #endif
 
+// NOLINTNEXTLINE(cert-err58-cpp): default-constructed std::string is noexcept since C++11
 std::string LoadedREFPROPRef;
 
 static bool dbg_refprop = false;
 static const unsigned int number_of_endings = 5;
+// NOLINTNEXTLINE(cert-err58-cpp): five short string literals — constructors won't throw on this input
 std::string endings[number_of_endings] = {"", ".FLD", ".fld", ".PPF", ".ppf"};
 
 static char default_reference_state[] = "DEF";
@@ -185,7 +187,15 @@ class REFPROPGenerator : public AbstractStateGenerator
         }
     };
 };
-// This static initialization will cause the generator to register
+// This static initialization will cause the generator to register.
+// GeneratorInitializer's constructor only inserts into a std::map keyed by
+// backend_family — std::map::operator[] / insert can technically throw
+// std::bad_alloc on allocation failure, but in practice this is a single
+// small entry inserted at program start; if allocation fails here the
+// process is unrecoverable anyway. Mark NOLINT rather than wrap in
+// call_once + lazy registration (option 1 from #2874) which would be the
+// cleaner refactor but is out of this PR's scope.
+// NOLINTNEXTLINE(cert-err58-cpp)
 static GeneratorInitializer<REFPROPGenerator> refprop_gen(REFPROP_BACKEND_FAMILY);
 
 void REFPROPMixtureBackend::construct(const std::vector<std::string>& fluid_names) {
