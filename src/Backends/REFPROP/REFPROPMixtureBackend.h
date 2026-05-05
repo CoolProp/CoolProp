@@ -352,7 +352,12 @@ class REFPROPMixtureBackend : public AbstractState
 
 bool force_load_REFPROP();
 bool force_unload_REFPROP();
-void REFPROP_SETREF(char hrf[3], int ixflag, double x0[1], double& h0, double& s0, double& T0, double& p0, int& ierr, char herr[255], int l1, int l2);
+// Free-function wrapper around REFPROP's SETREFdll. The char/double pointer
+// parameters were originally written as `char hrf[3]` / `double x0[1]` /
+// `char herr[255]` — those decay to plain pointers (the [N] is doc-only,
+// not enforced). Use the explicit `*` form per modernize-avoid-c-arrays
+// (#2869) to make the decay visible at the call site.
+void REFPROP_SETREF(char* hrf, int ixflag, double* x0, double& h0, double& s0, double& T0, double& p0, int& ierr, char* herr, int l1, int l2);
 
 } /* namespace CoolProp */
 #endif /* REFPROPMIXTUREBACKEND_H_ */
