@@ -1,6 +1,7 @@
 #include "Ancillaries.h"
 
 #include <cmath>
+#include <limits>
 #include "DataStructures.h"
 #include "AbstractState.h"
 #include "Configuration.h"
@@ -54,6 +55,19 @@ double SaturationAncillaryFunction::evaluate(double T) {
         return poly.evaluate(num_coeffs, T) / poly.evaluate(den_coeffs, T);
     } else {
         double THETA = 1 - T / T_r;
+        // Saturation ancillaries are only defined at or below the reducing
+        // temperature. For T > T_r, pow(THETA, t) with non-integer t was
+        // pow(negative, fractional), producing NaN and (depending on FP
+        // trap settings) sometimes a SIGFPE that escaped C++ try/catch
+        // (#1611). Many internal callers (mixture critical-point search,
+        // VLE initialisers, etc.) legitimately probe ancillaries at T
+        // ranges where the pure component is supercritical and rely on
+        // the result being well-behaved-but-invalid (NaN) rather than an
+        // exception. Return NaN explicitly so the caller's existing
+        // sanity check / fallback runs without a SIGFPE.
+        if (THETA < 0) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
 
         for (std::size_t i = 0; i < N; ++i) {
             s[i] = n[i] * pow(THETA, t[i]);
@@ -208,7 +222,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInTrSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p){};
+                solver_resid(MeltingLinePiecewisePolynomialInTrSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);
@@ -236,7 +250,7 @@ CoolPropDbl MeltingLineVariables::evaluate(int OF, int GIVEN, CoolPropDbl value)
                public:
                 MeltingLinePiecewisePolynomialInThetaSegment* part;
                 CoolPropDbl given_p;
-                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p){};
+                solver_resid(MeltingLinePiecewisePolynomialInThetaSegment* part, CoolPropDbl p) : part(part), given_p(p) {};
                 double call(double T) {
 
                     CoolPropDbl calc_p = part->evaluate(T);
