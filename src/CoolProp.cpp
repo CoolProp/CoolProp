@@ -118,7 +118,7 @@ bool has_solution_concentration(const std::string& fluid_string) {
 struct delim : std::numpunct<char>
 {
     char m_c;
-    delim(char c) : m_c(c){};
+    delim(char c) : m_c(c) {};
     char do_decimal_point() const {
         return m_c;
     }
@@ -319,6 +319,15 @@ void _PropsSI_outputs(shared_ptr<AbstractState>& State, const std::vector<output
     // Check the inputs
     if (in1.size() != in2.size()) {
         throw ValueError(format("lengths of in1 [%d] and in2 [%d] are not the same", in1.size(), in2.size()));
+    }
+    // If the input pair is valid (state inputs are required) but the
+    // input vectors are empty, return an empty IO. Without this guard
+    // the N1 = std::max(1, in1.size()) hack below sized IO to one row
+    // and the i==0 iteration dereferenced in1[0] / in2[0] on empty
+    // vectors -> segfault (#2417).
+    if (input_pair != INPUT_PAIR_INVALID && in1.empty()) {
+        IO.clear();
+        return;
     }
     const bool one_input_one_output = (in1.size() == 1 && in2.size() == 1 && output_parameters.size() == 1);
     // If all trivial outputs, never do a state update
