@@ -712,11 +712,11 @@ double AbstractState::molar_mass() {
     if (!_molar_mass) _molar_mass = calc_molar_mass();
     return _molar_mass;
 }
-double AbstractState::Qmass(void) {
+double AbstractState::Qmass() {
     if (!_Qmass) _Qmass = calc_Qmass();
     return _Qmass;
 }
-CoolPropDbl AbstractState::calc_Qmass(void) {
+CoolPropDbl AbstractState::calc_Qmass() {
     if (!ValidNumber(_Q) || _Q < 0 || _Q > 1) {
         throw ValueError("Qmass requires a two-phase state (0 <= Q <= 1)");
     }

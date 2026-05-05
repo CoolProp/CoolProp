@@ -86,7 +86,7 @@ class BicubicBackend : public TabularBackend
         dataset->build_coeffs(single_phase_logph, dataset->coeffs_ph);
         dataset->build_coeffs(single_phase_logpT, dataset->coeffs_pT);
     };
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(BICUBIC_BACKEND);
     }
 

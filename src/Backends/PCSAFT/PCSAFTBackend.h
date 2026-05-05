@@ -71,17 +71,17 @@ class PCSAFTBackend : public AbstractState
     virtual PCSAFTBackend* get_copy(bool generate_SatL_and_SatV = true);
 
     /// The name of the backend being used
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(PCSAFT_BACKEND);
     }
 
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() {
         return true;
     };
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() {
         return false;
     };
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() {
         return false;
     };
 
@@ -90,7 +90,7 @@ class PCSAFTBackend : public AbstractState
         throw NotImplementedError("Volume composition has not been implemented.");
     };
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions);
-    const std::vector<CoolPropDbl>& get_mole_fractions(void) {
+    const std::vector<CoolPropDbl>& get_mole_fractions() {
         return this->mole_fractions;
     };
 
@@ -121,26 +121,26 @@ class PCSAFTBackend : public AbstractState
     // ************************************************************************* //
     //
     /// Calculate the pressure
-    CoolPropDbl calc_pressure(void);
+    CoolPropDbl calc_pressure();
 
     /// Update the state for DT inputs if phase is imposed. Otherwise delegate to base class
     CoolPropDbl update_DmolarT(CoolPropDbl rho);
 
-    // CoolPropDbl calc_alpha0(void); // ideal gas helmholtz energy term
-    CoolPropDbl calc_alphar(void);  // residual helmholtz energy
-    CoolPropDbl calc_dadt(void);    // derivative of the residual helmholtz energy with respect to temperature
-    CoolPropDbl calc_hmolar_residual(void);
-    CoolPropDbl calc_smolar_residual(void);
-    vector<CoolPropDbl> calc_fugacity_coefficients(void);
-    CoolPropDbl calc_gibbsmolar_residual(void);
-    // CoolPropDbl calc_cpmolar(void); // TODO implement these heat capacity functions
-    // CoolPropDbl calc_cp0molar(void);
-    CoolPropDbl calc_compressibility_factor(void);
+    // CoolPropDbl calc_alpha0(); // ideal gas helmholtz energy term
+    CoolPropDbl calc_alphar();  // residual helmholtz energy
+    CoolPropDbl calc_dadt();    // derivative of the residual helmholtz energy with respect to temperature
+    CoolPropDbl calc_hmolar_residual();
+    CoolPropDbl calc_smolar_residual();
+    vector<CoolPropDbl> calc_fugacity_coefficients();
+    CoolPropDbl calc_gibbsmolar_residual();
+    // CoolPropDbl calc_cpmolar(); // TODO implement these heat capacity functions
+    // CoolPropDbl calc_cp0molar();
+    CoolPropDbl calc_compressibility_factor();
 
     void flash_QT(PCSAFTBackend& PCSAFT);
     void flash_PQ(PCSAFTBackend& PCSAFT);
 
-    phases calc_phase(void) {
+    phases calc_phase() {
         return _phase;
     };
     /** \brief Specify the phase - this phase will always be used in calculations
@@ -161,7 +161,7 @@ class PCSAFTBackend : public AbstractState
     //                         Trivial Functions                                 //
     // ************************************************************************* //
     //
-    double calc_molar_mass(void);
+    double calc_molar_mass();
     PhaseMolarMasses calc_phase_molar_masses() override;
     //
 };

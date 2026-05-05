@@ -63,7 +63,7 @@ static std::string warning_string;
 void set_debug_level(int level) {
     debug_level = level;
 }
-int get_debug_level(void) {
+int get_debug_level() {
     return debug_level;
 }
 

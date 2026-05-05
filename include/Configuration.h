@@ -187,7 +187,7 @@ class ConfigurationItem
         v_string = val;
     }
 
-    configuration_keys get_key(void) const {
+    configuration_keys get_key() const {
         return this->key;
     }
 #if !defined(SWIG)
@@ -285,7 +285,7 @@ class Configuration
     Configuration() {
         set_defaults();
     };
-    ~Configuration(){};
+    ~Configuration() {};
 
     /// Get an item from the configuration
     ConfigurationItem& get_item(configuration_keys key) {
@@ -306,7 +306,7 @@ class Configuration
     };
 
     /// Return a reference to all of the items
-    std::unordered_map<configuration_keys, ConfigurationItem>& get_items(void) {
+    std::unordered_map<configuration_keys, ConfigurationItem>& get_items() {
         return items;
     };
 
@@ -382,7 +382,7 @@ class Configuration
     }
 
     /// Set the default values in the configuration
-    void set_defaults(void) {
+    void set_defaults() {
 /* ***MAGIC WARNING**!!
              * See http://stackoverflow.com/a/148610
              * See http://stackoverflow.com/questions/147267/easy-way-to-use-variables-of-enum-types-as-string-in-c#202511

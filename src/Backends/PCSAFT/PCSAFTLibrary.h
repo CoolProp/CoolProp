@@ -56,7 +56,7 @@ void add_fluids_as_JSON(const std::string_view& JSON);
 /// Get the schema used to validate the PC-SAFT fluids
 std::string_view get_pcsaft_fluids_schema();
 
-PCSAFTLibraryClass& get_library(void);
+PCSAFTLibraryClass& get_library();
 }  // namespace PCSAFTLibrary
 } /* namespace CoolProp */
 

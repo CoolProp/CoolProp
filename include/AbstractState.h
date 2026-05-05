@@ -82,15 +82,15 @@ class AbstractState
     phases _phase;               ///< The key for the phase from CoolProp::phases enum
     phases imposed_phase_index;  ///< If the phase is imposed, the imposed phase index
 
-    bool isSupercriticalPhase(void) {
+    bool isSupercriticalPhase() {
         return (this->_phase == iphase_supercritical || this->_phase == iphase_supercritical_liquid || this->_phase == iphase_supercritical_gas);
     }
 
-    bool isHomogeneousPhase(void) {
+    bool isHomogeneousPhase() {
         return (this->_phase == iphase_liquid || this->_phase == iphase_gas || isSupercriticalPhase() || this->_phase == iphase_critical_point);
     }
 
-    bool isTwoPhase(void) {
+    bool isTwoPhase() {
         return (this->_phase == iphase_twophase);
     }
 
@@ -154,95 +154,95 @@ class AbstractState
     // for properties that are not always calculated
     // ----------------------------------------
     /// Using this backend, calculate the molar enthalpy in J/mol
-    virtual CoolPropDbl calc_hmolar(void) {
+    virtual CoolPropDbl calc_hmolar() {
         throw NotImplementedError("calc_hmolar is not implemented for this backend");
     };
     /// Using this backend, calculate the residual molar enthalpy in J/mol
-    virtual CoolPropDbl calc_hmolar_residual(void) {
+    virtual CoolPropDbl calc_hmolar_residual() {
         throw NotImplementedError("calc_hmolar_residual is not implemented for this backend");
     };
     /// Using this backend, calculate the molar entropy in J/mol/K
-    virtual CoolPropDbl calc_smolar(void) {
+    virtual CoolPropDbl calc_smolar() {
         throw NotImplementedError("calc_smolar is not implemented for this backend");
     };
     /// Using this backend, calculate the residual molar entropy in J/mol/K
-    virtual CoolPropDbl calc_smolar_residual(void) {
+    virtual CoolPropDbl calc_smolar_residual() {
         throw NotImplementedError("calc_smolar_residual is not implemented for this backend");
     };
     /// Using this backend, calculate effective hardness of interaction
-    virtual CoolPropDbl calc_neff(void) {
+    virtual CoolPropDbl calc_neff() {
         throw NotImplementedError("calc_neff is not implemented for this backend");
     };
     /// Using this backend, calculate the molar internal energy in J/mol
-    virtual CoolPropDbl calc_umolar(void) {
+    virtual CoolPropDbl calc_umolar() {
         throw NotImplementedError("calc_umolar is not implemented for this backend");
     };
     /// Using this backend, calculate the molar constant-pressure specific heat in J/mol/K
-    virtual CoolPropDbl calc_cpmolar(void) {
+    virtual CoolPropDbl calc_cpmolar() {
         throw NotImplementedError("calc_cpmolar is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal gas molar constant-pressure specific heat in J/mol/K
-    virtual CoolPropDbl calc_cpmolar_idealgas(void) {
+    virtual CoolPropDbl calc_cpmolar_idealgas() {
         throw NotImplementedError("calc_cpmolar_idealgas is not implemented for this backend");
     };
     /// Using this backend, calculate the molar constant-volume specific heat in J/mol/K
-    virtual CoolPropDbl calc_cvmolar(void) {
+    virtual CoolPropDbl calc_cvmolar() {
         throw NotImplementedError("calc_cvmolar is not implemented for this backend");
     };
     /// Using this backend, calculate the molar Gibbs function in J/mol
-    virtual CoolPropDbl calc_gibbsmolar(void) {
+    virtual CoolPropDbl calc_gibbsmolar() {
         throw NotImplementedError("calc_gibbsmolar is not implemented for this backend");
     };
     /// Using this backend, calculate the residual molar Gibbs function in J/mol
-    virtual CoolPropDbl calc_gibbsmolar_residual(void) {
+    virtual CoolPropDbl calc_gibbsmolar_residual() {
         throw NotImplementedError("calc_gibbsmolar_residual is not implemented for this backend");
     };
     /// Using this backend, calculate the molar Helmholtz energy in J/mol
-    virtual CoolPropDbl calc_helmholtzmolar(void) {
+    virtual CoolPropDbl calc_helmholtzmolar() {
         throw NotImplementedError("calc_helmholtzmolar is not implemented for this backend");
     };
     /// Using this backend, calculate the speed of sound in m/s
-    virtual CoolPropDbl calc_speed_sound(void) {
+    virtual CoolPropDbl calc_speed_sound() {
         throw NotImplementedError("calc_speed_sound is not implemented for this backend");
     };
     /// Using this backend, calculate the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
-    virtual CoolPropDbl calc_isothermal_compressibility(void) {
+    virtual CoolPropDbl calc_isothermal_compressibility() {
         throw NotImplementedError("calc_isothermal_compressibility is not implemented for this backend");
     };
     /// Using this backend, calculate the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
-    virtual CoolPropDbl calc_isobaric_expansion_coefficient(void) {
+    virtual CoolPropDbl calc_isobaric_expansion_coefficient() {
         throw NotImplementedError("calc_isobaric_expansion_coefficient is not implemented for this backend");
     };
     /// Using this backend, calculate the isentropic expansion coefficient \f$ \kappa_s = -\frac{c_p}{c_v}\frac{v}{p}\left.\frac{\partial p}{\partial v}\right|_T = \frac{\rho}{p}\left.\frac{\partial p}{\partial \rho}\right|_s\f$
-    virtual CoolPropDbl calc_isentropic_expansion_coefficient(void) {
+    virtual CoolPropDbl calc_isentropic_expansion_coefficient() {
         throw NotImplementedError("calc_isentropic_expansion_coefficient is not implemented for this backend");
     };
     /// Using this backend, calculate the viscosity in Pa-s
-    virtual CoolPropDbl calc_viscosity(void) {
+    virtual CoolPropDbl calc_viscosity() {
         throw NotImplementedError("calc_viscosity is not implemented for this backend");
     };
     /// Using this backend, calculate the thermal conductivity in W/m/K
-    virtual CoolPropDbl calc_conductivity(void) {
+    virtual CoolPropDbl calc_conductivity() {
         throw NotImplementedError("calc_conductivity is not implemented for this backend");
     };
     /// Using this backend, calculate the surface tension in N/m
-    virtual CoolPropDbl calc_surface_tension(void) {
+    virtual CoolPropDbl calc_surface_tension() {
         throw NotImplementedError("calc_surface_tension is not implemented for this backend");
     };
     /// Using this backend, calculate the molar mass in kg/mol
-    virtual CoolPropDbl calc_molar_mass(void) {
+    virtual CoolPropDbl calc_molar_mass() {
         throw NotImplementedError("calc_molar_mass is not implemented for this backend");
     };
     /// Using this backend, calculate the acentric factor
-    virtual CoolPropDbl calc_acentric_factor(void) {
+    virtual CoolPropDbl calc_acentric_factor() {
         throw NotImplementedError("calc_acentric_factor is not implemented for this backend");
     };
     /// Using this backend, calculate the pressure in Pa
-    virtual CoolPropDbl calc_pressure(void) {
+    virtual CoolPropDbl calc_pressure() {
         throw NotImplementedError("calc_pressure is not implemented for this backend");
     };
     /// Using this backend, calculate the universal gas constant \f$R_u\f$ in J/mol/K
-    virtual CoolPropDbl calc_gas_constant(void) {
+    virtual CoolPropDbl calc_gas_constant() {
         throw NotImplementedError("calc_gas_constant is not implemented for this backend");
     };
     /// Using this backend, calculate the fugacity coefficient (dimensionless)
@@ -262,13 +262,13 @@ class AbstractState
         throw NotImplementedError("calc_chemical_potential is not implemented for this backend");
     };
     /// Using this backend, calculate the phase identification parameter (PIP)
-    virtual CoolPropDbl calc_PIP(void) {
+    virtual CoolPropDbl calc_PIP() {
         throw NotImplementedError("calc_PIP is not implemented for this backend");
     };
 
     /// Mass-basis vapor quality. Default implementation uses _Q (molar) and
     /// calc_phase_molar_masses(); override only if a backend has a faster route.
-    virtual CoolPropDbl calc_Qmass(void);
+    virtual CoolPropDbl calc_Qmass();
 
     /// Phase molar masses (kg/mol) at the current saturated state.
     struct PhaseMolarMasses
@@ -288,162 +288,162 @@ class AbstractState
 
     // Excess properties
     /// Using this backend, calculate and cache the excess properties
-    virtual void calc_excess_properties(void) {
+    virtual void calc_excess_properties() {
         throw NotImplementedError("calc_excess_properties is not implemented for this backend");
     };
 
     // Derivatives of residual helmholtz energy
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
-    virtual CoolPropDbl calc_alphar(void) {
+    virtual CoolPropDbl calc_alphar() {
         throw NotImplementedError("calc_alphar is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_dalphar_dDelta(void) {
+    virtual CoolPropDbl calc_dalphar_dDelta() {
         throw NotImplementedError("calc_dalphar_dDelta is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_dalphar_dTau(void) {
+    virtual CoolPropDbl calc_dalphar_dTau() {
         throw NotImplementedError("calc_dalphar_dTau is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d2alphar_dDelta2(void) {
+    virtual CoolPropDbl calc_d2alphar_dDelta2() {
         throw NotImplementedError("calc_d2alphar_dDelta2 is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d2alphar_dDelta_dTau(void) {
+    virtual CoolPropDbl calc_d2alphar_dDelta_dTau() {
         throw NotImplementedError("calc_d2alphar_dDelta_dTau is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d2alphar_dTau2(void) {
+    virtual CoolPropDbl calc_d2alphar_dTau2() {
         throw NotImplementedError("calc_d2alphar_dTau2 is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dDelta3(void) {
+    virtual CoolPropDbl calc_d3alphar_dDelta3() {
         throw NotImplementedError("calc_d3alphar_dDelta3 is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dDelta2_dTau(void) {
+    virtual CoolPropDbl calc_d3alphar_dDelta2_dTau() {
         throw NotImplementedError("calc_d3alphar_dDelta2_dTau is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dDelta_dTau2(void) {
+    virtual CoolPropDbl calc_d3alphar_dDelta_dTau2() {
         throw NotImplementedError("calc_d3alphar_dDelta_dTau2 is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alphar_dTau3(void) {
+    virtual CoolPropDbl calc_d3alphar_dTau3() {
         throw NotImplementedError("calc_d3alphar_dTau3 is not implemented for this backend");
     };
 
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d4alphar_dDelta4(void) {
+    virtual CoolPropDbl calc_d4alphar_dDelta4() {
         throw NotImplementedError("calc_d4alphar_dDelta4 is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d4alphar_dDelta3_dTau(void) {
+    virtual CoolPropDbl calc_d4alphar_dDelta3_dTau() {
         throw NotImplementedError("calc_d4alphar_dDelta3_dTau is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d4alphar_dDelta2_dTau2(void) {
+    virtual CoolPropDbl calc_d4alphar_dDelta2_dTau2() {
         throw NotImplementedError("calc_d4alphar_dDelta2_dTau2 is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d4alphar_dDelta_dTau3(void) {
+    virtual CoolPropDbl calc_d4alphar_dDelta_dTau3() {
         throw NotImplementedError("calc_d4alphar_dDelta_dTau3 is not implemented for this backend");
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d4alphar_dTau4(void) {
+    virtual CoolPropDbl calc_d4alphar_dTau4() {
         throw NotImplementedError("calc_d4alphar_dTau4 is not implemented for this backend");
     };
 
     // Derivatives of ideal-gas helmholtz energy
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0\f$ (dimensionless)
-    virtual CoolPropDbl calc_alpha0(void) {
+    virtual CoolPropDbl calc_alpha0() {
         throw NotImplementedError("calc_alpha0 is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_dalpha0_dDelta(void) {
+    virtual CoolPropDbl calc_dalpha0_dDelta() {
         throw NotImplementedError("calc_dalpha0_dDelta is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_dalpha0_dTau(void) {
+    virtual CoolPropDbl calc_dalpha0_dTau() {
         throw NotImplementedError("calc_dalpha0_dTau is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d2alpha0_dDelta_dTau(void) {
+    virtual CoolPropDbl calc_d2alpha0_dDelta_dTau() {
         throw NotImplementedError("calc_d2alpha0_dDelta_dTau is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d2alpha0_dDelta2(void) {
+    virtual CoolPropDbl calc_d2alpha0_dDelta2() {
         throw NotImplementedError("calc_d2alpha0_dDelta2 is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d2alpha0_dTau2(void) {
+    virtual CoolPropDbl calc_d2alpha0_dTau2() {
         throw NotImplementedError("calc_d2alpha0_dTau2 is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\delta\delta}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alpha0_dDelta3(void) {
+    virtual CoolPropDbl calc_d3alpha0_dDelta3() {
         throw NotImplementedError("calc_d3alpha0_dDelta3 is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\delta\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alpha0_dDelta2_dTau(void) {
+    virtual CoolPropDbl calc_d3alpha0_dDelta2_dTau() {
         throw NotImplementedError("calc_d3alpha0_dDelta2_dTau is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\delta\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alpha0_dDelta_dTau2(void) {
+    virtual CoolPropDbl calc_d3alpha0_dDelta_dTau2() {
         throw NotImplementedError("calc_d3alpha0_dDelta_dTau2 is not implemented for this backend");
     };
     /// Using this backend, calculate the ideal-gas Helmholtz energy term \f$\alpha^0_{\tau\tau\tau}\f$ (dimensionless)
-    virtual CoolPropDbl calc_d3alpha0_dTau3(void) {
+    virtual CoolPropDbl calc_d3alpha0_dTau3() {
         throw NotImplementedError("calc_d3alpha0_dTau3 is not implemented for this backend");
     };
 
-    virtual void calc_reducing_state(void) {
+    virtual void calc_reducing_state() {
         throw NotImplementedError("calc_reducing_state is not implemented for this backend");
     };
 
     /// Using this backend, calculate the maximum temperature in K
-    virtual CoolPropDbl calc_Tmax(void) {
+    virtual CoolPropDbl calc_Tmax() {
         throw NotImplementedError("calc_Tmax is not implemented for this backend");
     };
     /// Using this backend, calculate the minimum temperature in K
-    virtual CoolPropDbl calc_Tmin(void) {
+    virtual CoolPropDbl calc_Tmin() {
         throw NotImplementedError("calc_Tmin is not implemented for this backend");
     };
     /// Using this backend, calculate the maximum pressure in Pa
-    virtual CoolPropDbl calc_pmax(void) {
+    virtual CoolPropDbl calc_pmax() {
         throw NotImplementedError("calc_pmax is not implemented for this backend");
     };
 
     /// Using this backend, calculate the 20-year global warming potential (GWP)
-    virtual CoolPropDbl calc_GWP20(void) {
+    virtual CoolPropDbl calc_GWP20() {
         throw NotImplementedError("calc_GWP20 is not implemented for this backend");
     };
     /// Using this backend, calculate the 100-year global warming potential (GWP)
-    virtual CoolPropDbl calc_GWP100(void) {
+    virtual CoolPropDbl calc_GWP100() {
         throw NotImplementedError("calc_GWP100 is not implemented for this backend");
     };
     /// Using this backend, calculate the 500-year global warming potential (GWP)
-    virtual CoolPropDbl calc_GWP500(void) {
+    virtual CoolPropDbl calc_GWP500() {
         throw NotImplementedError("calc_GWP500 is not implemented for this backend");
     };
     /// Using this backend, calculate the ozone depletion potential (ODP)
-    virtual CoolPropDbl calc_ODP(void) {
+    virtual CoolPropDbl calc_ODP() {
         throw NotImplementedError("calc_ODP is not implemented for this backend");
     };
     /// Using this backend, calculate the flame hazard
-    virtual CoolPropDbl calc_flame_hazard(void) {
+    virtual CoolPropDbl calc_flame_hazard() {
         throw NotImplementedError("calc_flame_hazard is not implemented for this backend");
     };
     /// Using this backend, calculate the health hazard
-    virtual CoolPropDbl calc_health_hazard(void) {
+    virtual CoolPropDbl calc_health_hazard() {
         throw NotImplementedError("calc_health_hazard is not implemented for this backend");
     };
     /// Using this backend, calculate the physical hazard
-    virtual CoolPropDbl calc_physical_hazard(void) {
+    virtual CoolPropDbl calc_physical_hazard() {
         throw NotImplementedError("calc_physical_hazard is not implemented for this backend");
     };
     /// Using this backend, calculate the dipole moment in C-m (1 D = 3.33564e-30 C-m)
-    virtual CoolPropDbl calc_dipole_moment(void) {
+    virtual CoolPropDbl calc_dipole_moment() {
         throw NotImplementedError("calc_dipole_moment is not implemented for this backend");
     };
 
@@ -453,79 +453,79 @@ class AbstractState
     virtual CoolPropDbl calc_second_partial_deriv(parameters Of1, parameters Wrt1, parameters Constant1, parameters Wrt2, parameters Constant2);
 
     /// Using this backend, calculate the reduced density (rho/rhoc)
-    virtual CoolPropDbl calc_reduced_density(void) {
+    virtual CoolPropDbl calc_reduced_density() {
         throw NotImplementedError("calc_reduced_density is not implemented for this backend");
     };
     /// Using this backend, calculate the reciprocal reduced temperature (Tc/T)
-    virtual CoolPropDbl calc_reciprocal_reduced_temperature(void) {
+    virtual CoolPropDbl calc_reciprocal_reduced_temperature() {
         throw NotImplementedError("calc_reciprocal_reduced_temperature is not implemented for this backend");
     };
 
     /// Using this backend, calculate the second virial coefficient
-    virtual CoolPropDbl calc_Bvirial(void) {
+    virtual CoolPropDbl calc_Bvirial() {
         throw NotImplementedError("calc_Bvirial is not implemented for this backend");
     };
     /// Using this backend, calculate the third virial coefficient
-    virtual CoolPropDbl calc_Cvirial(void) {
+    virtual CoolPropDbl calc_Cvirial() {
         throw NotImplementedError("calc_Cvirial is not implemented for this backend");
     };
     /// Using this backend, calculate the derivative dB/dT
-    virtual CoolPropDbl calc_dBvirial_dT(void) {
+    virtual CoolPropDbl calc_dBvirial_dT() {
         throw NotImplementedError("calc_dBvirial_dT is not implemented for this backend");
     };
     /// Using this backend, calculate the derivative dC/dT
-    virtual CoolPropDbl calc_dCvirial_dT(void) {
+    virtual CoolPropDbl calc_dCvirial_dT() {
         throw NotImplementedError("calc_dCvirial_dT is not implemented for this backend");
     };
     /// Using this backend, calculate the compressibility factor Z \f$ Z = p/(\rho R T) \f$
-    virtual CoolPropDbl calc_compressibility_factor(void) {
+    virtual CoolPropDbl calc_compressibility_factor() {
         throw NotImplementedError("calc_compressibility_factor is not implemented for this backend");
     };
 
     /// Using this backend, get the name of the fluid
-    virtual std::string calc_name(void) {
+    virtual std::string calc_name() {
         throw NotImplementedError("calc_name is not implemented for this backend");
     };
     /// Using this backend, get the description of the fluid
-    virtual std::string calc_description(void) {
+    virtual std::string calc_description() {
         throw NotImplementedError("calc_description is not implemented for this backend");
     };
 
     /// Using this backend, get the triple point temperature in K
-    virtual CoolPropDbl calc_Ttriple(void) {
+    virtual CoolPropDbl calc_Ttriple() {
         throw NotImplementedError("calc_Ttriple is not implemented for this backend");
     };
     /// Using this backend, get the triple point pressure in Pa
-    virtual CoolPropDbl calc_p_triple(void) {
+    virtual CoolPropDbl calc_p_triple() {
         throw NotImplementedError("calc_p_triple is not implemented for this backend");
     };
 
     /// Using this backend, get the critical point temperature in K
-    virtual CoolPropDbl calc_T_critical(void) {
+    virtual CoolPropDbl calc_T_critical() {
         throw NotImplementedError("calc_T_critical is not implemented for this backend");
     };
     /// Using this backend, get the reducing point temperature in K
-    virtual CoolPropDbl calc_T_reducing(void) {
+    virtual CoolPropDbl calc_T_reducing() {
         throw NotImplementedError("calc_T_reducing is not implemented for this backend");
     };
     /// Using this backend, get the critical point pressure in Pa
-    virtual CoolPropDbl calc_p_critical(void) {
+    virtual CoolPropDbl calc_p_critical() {
         throw NotImplementedError("calc_p_critical is not implemented for this backend");
     };
     /// Using this backend, get the reducing point pressure in Pa
-    virtual CoolPropDbl calc_p_reducing(void) {
+    virtual CoolPropDbl calc_p_reducing() {
         throw NotImplementedError("calc_p_reducing is not implemented for this backend");
     };
     /// Using this backend, get the critical point molar density in mol/m^3
-    virtual CoolPropDbl calc_rhomolar_critical(void) {
+    virtual CoolPropDbl calc_rhomolar_critical() {
         throw NotImplementedError("calc_rhomolar_critical is not implemented for this backend");
     };
     /// Using this backend, get the critical point mass density in kg/m^3 - Added for IF97Backend which is mass based
-    virtual CoolPropDbl calc_rhomass_critical(void) {
+    virtual CoolPropDbl calc_rhomass_critical() {
         throw NotImplementedError("calc_rhomass_critical is not implemented for this backend");
     };
     /// Using this backend, get the reducing point molar density in mol/m^3
-    virtual CoolPropDbl calc_rhomolar_reducing(void) {
+    virtual CoolPropDbl calc_rhomolar_reducing() {
         throw NotImplementedError("calc_rhomolar_reducing is not implemented for this backend");
     };
     /// Using this backend, construct the phase envelope, the variable type describes the type of phase envelope to be built.
@@ -533,54 +533,54 @@ class AbstractState
         throw NotImplementedError("calc_phase_envelope is not implemented for this backend");
     };
     ///
-    virtual CoolPropDbl calc_rhomass(void) {
+    virtual CoolPropDbl calc_rhomass() {
         return rhomolar() * molar_mass();
     }
-    virtual CoolPropDbl calc_hmass(void) {
+    virtual CoolPropDbl calc_hmass() {
         return hmolar() / molar_mass();
     }
-    virtual CoolPropDbl calc_hmass_excess(void) {
+    virtual CoolPropDbl calc_hmass_excess() {
         return hmolar_excess() / molar_mass();
     }
-    virtual CoolPropDbl calc_smass(void) {
+    virtual CoolPropDbl calc_smass() {
         return smolar() / molar_mass();
     }
-    virtual CoolPropDbl calc_smass_excess(void) {
+    virtual CoolPropDbl calc_smass_excess() {
         return smolar_excess() / molar_mass();
     }
-    virtual CoolPropDbl calc_cpmass(void) {
+    virtual CoolPropDbl calc_cpmass() {
         return cpmolar() / molar_mass();
     }
-    virtual CoolPropDbl calc_cp0mass(void) {
+    virtual CoolPropDbl calc_cp0mass() {
         return cp0molar() / molar_mass();
     }
-    virtual CoolPropDbl calc_cvmass(void) {
+    virtual CoolPropDbl calc_cvmass() {
         return cvmolar() / molar_mass();
     }
-    virtual CoolPropDbl calc_umass(void) {
+    virtual CoolPropDbl calc_umass() {
         return umolar() / molar_mass();
     }
-    virtual CoolPropDbl calc_umass_excess(void) {
+    virtual CoolPropDbl calc_umass_excess() {
         return umolar_excess() / molar_mass();
     }
-    virtual CoolPropDbl calc_gibbsmass(void) {
+    virtual CoolPropDbl calc_gibbsmass() {
         return gibbsmolar() / molar_mass();
     }
-    virtual CoolPropDbl calc_gibbsmass_excess(void) {
+    virtual CoolPropDbl calc_gibbsmass_excess() {
         return gibbsmolar_excess() / molar_mass();
     }
-    virtual CoolPropDbl calc_helmholtzmass(void) {
+    virtual CoolPropDbl calc_helmholtzmass() {
         return helmholtzmolar() / molar_mass();
     }
-    virtual CoolPropDbl calc_helmholtzmass_excess(void) {
+    virtual CoolPropDbl calc_helmholtzmass_excess() {
         return helmholtzmolar_excess() / molar_mass();
     }
-    virtual CoolPropDbl calc_volumemass_excess(void) {
+    virtual CoolPropDbl calc_volumemass_excess() {
         return volumemolar_excess() / molar_mass();
     }
 
     /// Update the states after having changed the reference state for enthalpy and entropy
-    virtual void update_states(void) {
+    virtual void update_states() {
         throw NotImplementedError("This backend does not implement update_states function");
     };
 
@@ -597,7 +597,7 @@ class AbstractState
     };
 
     /// Using this backend, calculate the phase
-    virtual phases calc_phase(void) {
+    virtual phases calc_phase() {
         throw NotImplementedError("This backend does not implement calc_phase function");
     };
     /// Using this backend, specify the phase to be used for all further calculations
@@ -605,11 +605,11 @@ class AbstractState
         throw NotImplementedError("This backend does not implement calc_specify_phase function");
     };
     /// Using this backend, unspecify the phase
-    virtual void calc_unspecify_phase(void) {
+    virtual void calc_unspecify_phase() {
         throw NotImplementedError("This backend does not implement calc_unspecify_phase function");
     };
     /// Using this backend, get a vector of fluid names
-    virtual std::vector<std::string> calc_fluid_names(void) {
+    virtual std::vector<std::string> calc_fluid_names() {
         throw NotImplementedError("This backend does not implement calc_fluid_names function");
     };
     /// Using this backend, calculate a phase given by the state string
@@ -618,29 +618,29 @@ class AbstractState
         throw NotImplementedError("calc_state is not implemented for this backend");
     };
 
-    virtual const CoolProp::PhaseEnvelopeData& calc_phase_envelope_data(void) {
+    virtual const CoolProp::PhaseEnvelopeData& calc_phase_envelope_data() {
         throw NotImplementedError("calc_phase_envelope_data is not implemented for this backend");
     };
 
-    virtual std::vector<CoolPropDbl> calc_mole_fractions_liquid(void) {
+    virtual std::vector<CoolPropDbl> calc_mole_fractions_liquid() {
         throw NotImplementedError("calc_mole_fractions_liquid is not implemented for this backend");
     };
-    virtual std::vector<CoolPropDbl> calc_mole_fractions_vapor(void) {
+    virtual std::vector<CoolPropDbl> calc_mole_fractions_vapor() {
         throw NotImplementedError("calc_mole_fractions_vapor is not implemented for this backend");
     };
-    virtual const std::vector<CoolPropDbl> calc_mass_fractions(void) {
+    virtual const std::vector<CoolPropDbl> calc_mass_fractions() {
         throw NotImplementedError("calc_mass_fractions is not implemented for this backend");
     };
 
     /// Get the minimum fraction (mole, mass, volume) for incompressible fluid
-    virtual CoolPropDbl calc_fraction_min(void) {
+    virtual CoolPropDbl calc_fraction_min() {
         throw NotImplementedError("calc_fraction_min is not implemented for this backend");
     };
     /// Get the maximum fraction (mole, mass, volume) for incompressible fluid
-    virtual CoolPropDbl calc_fraction_max(void) {
+    virtual CoolPropDbl calc_fraction_max() {
         throw NotImplementedError("calc_fraction_max is not implemented for this backend");
     };
-    virtual CoolPropDbl calc_T_freeze(void) {
+    virtual CoolPropDbl calc_T_freeze() {
         throw NotImplementedError("calc_T_freeze is not implemented for this backend");
     };
 
@@ -671,11 +671,11 @@ class AbstractState
     };
 
     /// Using this backend, get the temperature
-    virtual CoolPropDbl calc_T(void) {
+    virtual CoolPropDbl calc_T() {
         return _T;
     }
     /// Using this backend, get the molar density in mol/m^3
-    virtual CoolPropDbl calc_rhomolar(void) {
+    virtual CoolPropDbl calc_rhomolar() {
         return _rhomolar;
     }
 
@@ -699,7 +699,7 @@ class AbstractState
     virtual void calc_conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) {
         throw NotImplementedError("calc_conductivity_contributions is not implemented for this backend");
     };
-    virtual std::vector<CriticalState> calc_all_critical_points(void) {
+    virtual std::vector<CriticalState> calc_all_critical_points() {
         throw NotImplementedError("calc_all_critical_points is not implemented for this backend");
     };
     virtual void calc_build_spinodal() {
@@ -724,7 +724,7 @@ class AbstractState
     AbstractState() : _fluid_type(FLUID_TYPE_UNDEFINED), _phase(iphase_unknown) {
         clear();
     }
-    virtual ~AbstractState(){};
+    virtual ~AbstractState() {};
 
     /// A factory function to return a pointer to a new-allocated instance of one of the backends.
     /**
@@ -771,12 +771,12 @@ class AbstractState
     /// for the core mixture model in CoolProp
     ///
     /// Must be overloaded by the backend to provide the backend's name
-    virtual std::string backend_name(void) = 0;
+    virtual std::string backend_name() = 0;
 
     // The derived classes must implement this function to define whether they use mole fractions (true) or mass fractions (false)
-    virtual bool using_mole_fractions(void) = 0;
-    virtual bool using_mass_fractions(void) = 0;
-    virtual bool using_volu_fractions(void) = 0;
+    virtual bool using_mole_fractions() = 0;
+    virtual bool using_mass_fractions() = 0;
+    virtual bool using_volu_fractions() = 0;
 
     virtual void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) = 0;
     virtual void set_mass_fractions(const std::vector<CoolPropDbl>& mass_fractions) = 0;
@@ -837,29 +837,29 @@ class AbstractState
 #endif
 
     /// Get the mole fractions of the equilibrium liquid phase
-    std::vector<CoolPropDbl> mole_fractions_liquid(void) {
+    std::vector<CoolPropDbl> mole_fractions_liquid() {
         return calc_mole_fractions_liquid();
     };
     /// Get the mole fractions of the equilibrium liquid phase (but as a double for use in SWIG wrapper)
-    std::vector<double> mole_fractions_liquid_double(void) {
+    std::vector<double> mole_fractions_liquid_double() {
         std::vector<CoolPropDbl> x = calc_mole_fractions_liquid();
         return std::vector<double>(x.begin(), x.end());
     };
 
     /// Get the mole fractions of the equilibrium vapor phase
-    std::vector<CoolPropDbl> mole_fractions_vapor(void) {
+    std::vector<CoolPropDbl> mole_fractions_vapor() {
         return calc_mole_fractions_vapor();
     };
     /// Get the mole fractions of the equilibrium vapor phase (but as a double for use in SWIG wrapper)
-    std::vector<double> mole_fractions_vapor_double(void) {
+    std::vector<double> mole_fractions_vapor_double() {
         std::vector<CoolPropDbl> y = calc_mole_fractions_vapor();
         return std::vector<double>(y.begin(), y.end());
     };
 
     /// Get the mole fractions of the fluid
-    virtual const std::vector<CoolPropDbl>& get_mole_fractions(void) = 0;
+    virtual const std::vector<CoolPropDbl>& get_mole_fractions() = 0;
     /// Get the mass fractions of the fluid
-    virtual const std::vector<CoolPropDbl> get_mass_fractions(void) {
+    virtual const std::vector<CoolPropDbl> get_mass_fractions() {
         return this->calc_mass_fractions();
     };
 
@@ -880,7 +880,7 @@ class AbstractState
     /// A function that says whether the backend instance can be instantiated in the high-level interface
     /// In general this should be true, except for some other backends (especially the tabular backends)
     /// To disable use in high-level interface, implement this function and return false
-    virtual bool available_in_high_level(void) {
+    virtual bool available_in_high_level() {
         return true;
     }
 
@@ -890,7 +890,7 @@ class AbstractState
     }
 
     /// Return a vector of strings of the fluid names that are in use
-    std::vector<std::string> fluid_names(void);
+    std::vector<std::string> fluid_names();
 
     /** Get a constant for one of the fluids forming this mixture
      *  @param i Index (0-based) of the fluid
@@ -964,16 +964,16 @@ class AbstractState
     };
 
     /// Get the minimum temperature in K
-    double Tmin(void);
+    double Tmin();
     /// Get the maximum temperature in K
-    double Tmax(void);
+    double Tmax();
     /// Get the maximum pressure in Pa
-    double pmax(void);
+    double pmax();
     /// Get the triple point temperature in K
-    double Ttriple(void);
+    double Ttriple();
 
     /// Get the phase of the state
-    phases phase(void) {
+    phases phase() {
         return calc_phase();
     };
     /// Specify the phase for all further calculations with this state class
@@ -981,21 +981,21 @@ class AbstractState
         calc_specify_phase(phase);
     };
     /// Unspecify the phase and go back to calculating it based on the inputs
-    void unspecify_phase(void) {
+    void unspecify_phase() {
         calc_unspecify_phase();
     };
 
     /// Return the critical temperature in K
-    double T_critical(void);
+    double T_critical();
     /// Return the critical pressure in Pa
-    double p_critical(void);
+    double p_critical();
     /// Return the critical molar density in mol/m^3
-    double rhomolar_critical(void);
+    double rhomolar_critical();
     /// Return the critical mass density in kg/m^3
-    double rhomass_critical(void);
+    double rhomass_critical();
 
     /// Return the vector of critical points, including points that are unstable or correspond to negative pressure
-    std::vector<CriticalState> all_critical_points(void) {
+    std::vector<CriticalState> all_critical_points() {
         return calc_all_critical_points();
     };
 
@@ -1042,14 +1042,14 @@ class AbstractState
     };
 
     /// Return the reducing point temperature in K
-    double T_reducing(void);
+    double T_reducing();
     /// Return the molar density at the reducing point in mol/m^3
-    double rhomolar_reducing(void);
+    double rhomolar_reducing();
     /// Return the mass density at the reducing point in kg/m^3
-    double rhomass_reducing(void);
+    double rhomass_reducing();
 
     /// Return the triple point pressure in Pa
-    double p_triple(void);
+    double p_triple();
 
     /// Return the name - backend dependent
     std::string name() {
@@ -1083,159 +1083,159 @@ class AbstractState
     };
 
     /// Return the temperature in K
-    double T(void) {
+    double T() {
         return calc_T();
     };
     /// Return the molar density in mol/m^3
-    double rhomolar(void) {
+    double rhomolar() {
         return calc_rhomolar();
     };
     /// Return the mass density in kg/m^3
-    double rhomass(void) {
+    double rhomass() {
         return calc_rhomass();
     };
     /// Return the pressure in Pa
-    double p(void) {
+    double p() {
         return _p;
     };
     /// Return the vapor quality (mol/mol); Q = 0 for saturated liquid
-    double Q(void) {
+    double Q() {
         return _Q;
     };
     /// Mass-basis vapor quality (kg vapor / kg total). Throws if not two-phase.
-    double Qmass(void);
+    double Qmass();
     /// Return the reciprocal of the reduced temperature (\f$\tau = T_c/T\f$)
-    double tau(void);
+    double tau();
     /// Return the reduced density (\f$\delta = \rho/\rho_c\f$)
-    double delta(void);
+    double delta();
     /// Return the molar mass in kg/mol
-    double molar_mass(void);
+    double molar_mass();
     /// Return the acentric factor
-    double acentric_factor(void);
+    double acentric_factor();
     /// Return the mole-fraction weighted gas constant in J/mol/K
-    double gas_constant(void);
+    double gas_constant();
     /// Return the B virial coefficient
-    double Bvirial(void);
+    double Bvirial();
     /// Return the derivative of the B virial coefficient with respect to temperature
-    double dBvirial_dT(void);
+    double dBvirial_dT();
     /// Return the C virial coefficient
-    double Cvirial(void);
+    double Cvirial();
     /// Return the derivative of the C virial coefficient with respect to temperature
-    double dCvirial_dT(void);
+    double dCvirial_dT();
     /// Return the compressibility factor \f$ Z = p/(rho R T) \f$
-    double compressibility_factor(void);
+    double compressibility_factor();
     /// Return the molar enthalpy in J/mol
-    double hmolar(void);
+    double hmolar();
     /// Return the residual molar enthalpy in J/mol
-    double hmolar_residual(void);
+    double hmolar_residual();
     /// Return the ideal gas molar enthalpy in J/mol
-    double hmolar_idealgas(void);
+    double hmolar_idealgas();
     /// Return the ideal gas specific enthalpy in J/kg
-    double hmass_idealgas(void);
+    double hmass_idealgas();
     /// Return the mass enthalpy in J/kg
-    double hmass(void) {
+    double hmass() {
         return calc_hmass();
     };
     /// Return the excess molar enthalpy in J/mol
-    double hmolar_excess(void);
+    double hmolar_excess();
     /// Return the excess mass enthalpy in J/kg
-    double hmass_excess(void) {
+    double hmass_excess() {
         return calc_hmass_excess();
     };
     /// Return the molar entropy in J/mol/K
-    double smolar(void);
+    double smolar();
     /// Return the residual molar entropy (as a function of temperature and density) in J/mol/K
-    double smolar_residual(void);
+    double smolar_residual();
     /// Return the ideal gas molar entropy in J/mol/K
-    double smolar_idealgas(void);
+    double smolar_idealgas();
     /// Return the ideal gas specific entropy in J/kg/K
-    double smass_idealgas(void);
+    double smass_idealgas();
     /// Return the effective hardness of interaction
-    double neff(void);
+    double neff();
     /// Return the molar entropy in J/kg/K
-    double smass(void) {
+    double smass() {
         return calc_smass();
     };
     /// Return the molar entropy in J/mol/K
-    double smolar_excess(void);
+    double smolar_excess();
     /// Return the molar entropy in J/kg/K
-    double smass_excess(void) {
+    double smass_excess() {
         return calc_smass_excess();
     };
     /// Return the molar internal energy in J/mol
-    double umolar(void);
+    double umolar();
     /// Return the mass internal energy in J/kg
-    double umass(void) {
+    double umass() {
         return calc_umass();
     };
     /// Return the excess internal energy in J/mol
-    double umolar_excess(void);
+    double umolar_excess();
     /// Return the excess internal energy in J/kg
-    double umass_excess(void) {
+    double umass_excess() {
         return calc_umass_excess();
     };
     /// Return the ideal gas molar internal energy in J/mol
-    double umolar_idealgas(void);
+    double umolar_idealgas();
     /// Return the ideal gas specific internal energy in J/kg
-    double umass_idealgas(void);
+    double umass_idealgas();
     /// Return the molar constant pressure specific heat in J/mol/K
-    double cpmolar(void);
+    double cpmolar();
     /// Return the mass constant pressure specific heat in J/kg/K
-    double cpmass(void) {
+    double cpmass() {
         return calc_cpmass();
     };
     /// Return the molar constant pressure specific heat for ideal gas part only in J/mol/K
-    double cp0molar(void);
+    double cp0molar();
     /// Return the mass constant pressure specific heat for ideal gas part only in J/kg/K
-    double cp0mass(void) {
+    double cp0mass() {
         return calc_cp0mass();
     };
     /// Return the molar constant volume specific heat in J/mol/K
-    double cvmolar(void);
+    double cvmolar();
     /// Return the mass constant volume specific heat in J/kg/K
-    double cvmass(void) {
+    double cvmass() {
         return calc_cvmass();
     };
     /// Return the Gibbs energy in J/mol
-    double gibbsmolar(void);
+    double gibbsmolar();
     /// Return the residual Gibbs energy in J/mol
-    double gibbsmolar_residual(void);
+    double gibbsmolar_residual();
     /// Return the Gibbs energy in J/kg
-    double gibbsmass(void) {
+    double gibbsmass() {
         return calc_gibbsmass();
     };
     /// Return the excess Gibbs energy in J/mol
-    double gibbsmolar_excess(void);
+    double gibbsmolar_excess();
     /// Return the excess Gibbs energy in J/kg
-    double gibbsmass_excess(void) {
+    double gibbsmass_excess() {
         return calc_gibbsmass_excess();
     };
     /// Return the Helmholtz energy in J/mol
-    double helmholtzmolar(void);
+    double helmholtzmolar();
     /// Return the Helmholtz energy in J/kg
-    double helmholtzmass(void) {
+    double helmholtzmass() {
         return calc_helmholtzmass();
     };
     /// Return the excess Helmholtz energy in J/mol
-    double helmholtzmolar_excess(void);
+    double helmholtzmolar_excess();
     /// Return the excess Helmholtz energy in J/kg
-    double helmholtzmass_excess(void) {
+    double helmholtzmass_excess() {
         return calc_helmholtzmass_excess();
     };
     /// Return the excess volume in m^3/mol
-    double volumemolar_excess(void);
+    double volumemolar_excess();
     /// Return the excess volume in m^3/kg
-    double volumemass_excess(void) {
+    double volumemass_excess() {
         return calc_volumemass_excess();
     };
     /// Return the speed of sound in m/s
-    double speed_sound(void);
+    double speed_sound();
     /// Return the isothermal compressibility \f$ \kappa = -\frac{1}{v}\left.\frac{\partial v}{\partial p}\right|_T=\frac{1}{\rho}\left.\frac{\partial \rho}{\partial p}\right|_T\f$  in 1/Pa
-    double isothermal_compressibility(void);
+    double isothermal_compressibility();
     /// Return the isobaric expansion coefficient \f$ \beta = \frac{1}{v}\left.\frac{\partial v}{\partial T}\right|_p = -\frac{1}{\rho}\left.\frac{\partial \rho}{\partial T}\right|_p\f$  in 1/K
-    double isobaric_expansion_coefficient(void);
+    double isobaric_expansion_coefficient();
     /// Return the isentropic expansion coefficient \f$ \kappa_s = -\frac{c_p}{c_v}\frac{v}{p}\left.\frac{\partial p}{\partial v}\right|_T = \frac{\rho}{p}\left.\frac{\partial p}{\partial \rho}\right|_s\f$
-    double isentropic_expansion_coefficient(void);
+    double isentropic_expansion_coefficient();
     /// Return the fugacity coefficient of the i-th component of the mixture
     double fugacity_coefficient(std::size_t i);
     /// Return a vector of the fugacity coefficients for all components in the mixture
@@ -1252,7 +1252,7 @@ class AbstractState
      *
      * Note: densities are mass-based densities, not mole-based densities
      */
-    double fundamental_derivative_of_gas_dynamics(void);
+    double fundamental_derivative_of_gas_dynamics();
     /// Return the phase identification parameter (PIP) of G. Venkatarathnam and L.R. Oellrich, "Identification of the phase of a fluid using partial derivatives of pressure, volume, and temperature without reference to saturation properties: Applications in phase equilibria calculations"
     double PIP() {
         return calc_PIP();
@@ -1448,7 +1448,7 @@ class AbstractState
     // ----------------------------------------
 
     /// Return true if the fluid has a melting line - default is false, but can be re-implemented by derived class
-    virtual bool has_melting_line(void) {
+    virtual bool has_melting_line() {
         return false;
     };
     /// Return a value from the melting line
@@ -1467,21 +1467,21 @@ class AbstractState
     // Transport properties
     // ----------------------------------------
     /// Return the viscosity in Pa-s
-    double viscosity(void);
+    double viscosity();
     /// Return the viscosity contributions, each in Pa-s
     void viscosity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) {
         calc_viscosity_contributions(dilute, initial_density, residual, critical);
     };
     /// Return the thermal conductivity in W/m/K
-    double conductivity(void);
+    double conductivity();
     /// Return the thermal conductivity contributions, each in W/m/K
     void conductivity_contributions(CoolPropDbl& dilute, CoolPropDbl& initial_density, CoolPropDbl& residual, CoolPropDbl& critical) {
         calc_conductivity_contributions(dilute, initial_density, residual, critical);
     };
     /// Return the surface tension in N/m
-    double surface_tension(void);
+    double surface_tension();
     /// Return the Prandtl number (dimensionless)
-    double Prandtl(void) {
+    double Prandtl() {
         return cpmass() * viscosity() / conductivity();
     };
     /**
@@ -1506,128 +1506,128 @@ class AbstractState
     // Helmholtz energy and derivatives
     // ----------------------------------------
     /// Return the term \f$ \alpha^0 \f$
-    CoolPropDbl alpha0(void) {
+    CoolPropDbl alpha0() {
         if (!_alpha0) _alpha0 = calc_alpha0();
         return _alpha0;
     };
     /// Return the term \f$ \alpha^0_{\delta} \f$
-    CoolPropDbl dalpha0_dDelta(void) {
+    CoolPropDbl dalpha0_dDelta() {
         if (!_dalpha0_dDelta) _dalpha0_dDelta = calc_dalpha0_dDelta();
         return _dalpha0_dDelta;
     };
     /// Return the term \f$ \alpha^0_{\tau} \f$
-    CoolPropDbl dalpha0_dTau(void) {
+    CoolPropDbl dalpha0_dTau() {
         if (!_dalpha0_dTau) _dalpha0_dTau = calc_dalpha0_dTau();
         return _dalpha0_dTau;
     };
     /// Return the term \f$ \alpha^0_{\delta\delta} \f$
-    CoolPropDbl d2alpha0_dDelta2(void) {
+    CoolPropDbl d2alpha0_dDelta2() {
         if (!_d2alpha0_dDelta2) _d2alpha0_dDelta2 = calc_d2alpha0_dDelta2();
         return _d2alpha0_dDelta2;
     };
     /// Return the term \f$ \alpha^0_{\delta\tau} \f$
-    CoolPropDbl d2alpha0_dDelta_dTau(void) {
+    CoolPropDbl d2alpha0_dDelta_dTau() {
         if (!_d2alpha0_dDelta_dTau) _d2alpha0_dDelta_dTau = calc_d2alpha0_dDelta_dTau();
         return _d2alpha0_dDelta_dTau;
     };
     /// Return the term \f$ \alpha^0_{\tau\tau} \f$
-    CoolPropDbl d2alpha0_dTau2(void) {
+    CoolPropDbl d2alpha0_dTau2() {
         if (!_d2alpha0_dTau2) _d2alpha0_dTau2 = calc_d2alpha0_dTau2();
         return _d2alpha0_dTau2;
     };
     /// Return the term \f$ \alpha^0_{\tau\tau\tau} \f$
-    CoolPropDbl d3alpha0_dTau3(void) {
+    CoolPropDbl d3alpha0_dTau3() {
         if (!_d3alpha0_dTau3) _d3alpha0_dTau3 = calc_d3alpha0_dTau3();
         return _d3alpha0_dTau3;
     };
     /// Return the term \f$ \alpha^0_{\delta\tau\tau} \f$
-    CoolPropDbl d3alpha0_dDelta_dTau2(void) {
+    CoolPropDbl d3alpha0_dDelta_dTau2() {
         if (!_d3alpha0_dDelta_dTau2) _d3alpha0_dDelta_dTau2 = calc_d3alpha0_dDelta_dTau2();
         return _d3alpha0_dDelta_dTau2;
     };
     /// Return the term \f$ \alpha^0_{\delta\delta\tau} \f$
-    CoolPropDbl d3alpha0_dDelta2_dTau(void) {
+    CoolPropDbl d3alpha0_dDelta2_dTau() {
         if (!_d3alpha0_dDelta2_dTau) _d3alpha0_dDelta2_dTau = calc_d3alpha0_dDelta2_dTau();
         return _d3alpha0_dDelta2_dTau;
     };
     /// Return the term \f$ \alpha^0_{\delta\delta\delta} \f$
-    CoolPropDbl d3alpha0_dDelta3(void) {
+    CoolPropDbl d3alpha0_dDelta3() {
         if (!_d3alpha0_dDelta3) _d3alpha0_dDelta3 = calc_d3alpha0_dDelta3();
         return _d3alpha0_dDelta3;
     };
 
     /// Return the term \f$ \alpha^r \f$
-    CoolPropDbl alphar(void) {
+    CoolPropDbl alphar() {
         if (!_alphar) _alphar = calc_alphar();
         return _alphar;
     };
     /// Return the term \f$ \alpha^r_{\delta} \f$
-    CoolPropDbl dalphar_dDelta(void) {
+    CoolPropDbl dalphar_dDelta() {
         if (!_dalphar_dDelta) _dalphar_dDelta = calc_dalphar_dDelta();
         return _dalphar_dDelta;
     };
     /// Return the term \f$ \alpha^r_{\tau} \f$
-    CoolPropDbl dalphar_dTau(void) {
+    CoolPropDbl dalphar_dTau() {
         if (!_dalphar_dTau) _dalphar_dTau = calc_dalphar_dTau();
         return _dalphar_dTau;
     };
     /// Return the term \f$ \alpha^r_{\delta\delta} \f$
-    CoolPropDbl d2alphar_dDelta2(void) {
+    CoolPropDbl d2alphar_dDelta2() {
         if (!_d2alphar_dDelta2) _d2alphar_dDelta2 = calc_d2alphar_dDelta2();
         return _d2alphar_dDelta2;
     };
     /// Return the term \f$ \alpha^r_{\delta\tau} \f$
-    CoolPropDbl d2alphar_dDelta_dTau(void) {
+    CoolPropDbl d2alphar_dDelta_dTau() {
         if (!_d2alphar_dDelta_dTau) _d2alphar_dDelta_dTau = calc_d2alphar_dDelta_dTau();
         return _d2alphar_dDelta_dTau;
     };
     /// Return the term \f$ \alpha^r_{\tau\tau} \f$
-    CoolPropDbl d2alphar_dTau2(void) {
+    CoolPropDbl d2alphar_dTau2() {
         if (!_d2alphar_dTau2) _d2alphar_dTau2 = calc_d2alphar_dTau2();
         return _d2alphar_dTau2;
     };
     /// Return the term \f$ \alpha^r_{\delta\delta\delta} \f$
-    CoolPropDbl d3alphar_dDelta3(void) {
+    CoolPropDbl d3alphar_dDelta3() {
         if (!_d3alphar_dDelta3) _d3alphar_dDelta3 = calc_d3alphar_dDelta3();
         return _d3alphar_dDelta3;
     };
     /// Return the term \f$ \alpha^r_{\delta\delta\tau} \f$
-    CoolPropDbl d3alphar_dDelta2_dTau(void) {
+    CoolPropDbl d3alphar_dDelta2_dTau() {
         if (!_d3alphar_dDelta2_dTau) _d3alphar_dDelta2_dTau = calc_d3alphar_dDelta2_dTau();
         return _d3alphar_dDelta2_dTau;
     };
     /// Return the term \f$ \alpha^r_{\delta\tau\tau} \f$
-    CoolPropDbl d3alphar_dDelta_dTau2(void) {
+    CoolPropDbl d3alphar_dDelta_dTau2() {
         if (!_d3alphar_dDelta_dTau2) _d3alphar_dDelta_dTau2 = calc_d3alphar_dDelta_dTau2();
         return _d3alphar_dDelta_dTau2;
     };
     /// Return the term \f$ \alpha^r_{\tau\tau\tau} \f$
-    CoolPropDbl d3alphar_dTau3(void) {
+    CoolPropDbl d3alphar_dTau3() {
         if (!_d3alphar_dTau3) _d3alphar_dTau3 = calc_d3alphar_dTau3();
         return _d3alphar_dTau3;
     };
     /// Return the term \f$ \alpha^r_{\delta\delta\delta\delta} \f$
-    CoolPropDbl d4alphar_dDelta4(void) {
+    CoolPropDbl d4alphar_dDelta4() {
         if (!_d4alphar_dDelta4) _d4alphar_dDelta4 = calc_d4alphar_dDelta4();
         return _d4alphar_dDelta4;
     };
     /// Return the term \f$ \alpha^r_{\delta\delta\delta\tau} \f$
-    CoolPropDbl d4alphar_dDelta3_dTau(void) {
+    CoolPropDbl d4alphar_dDelta3_dTau() {
         if (!_d4alphar_dDelta3_dTau) _d4alphar_dDelta3_dTau = calc_d4alphar_dDelta3_dTau();
         return _d4alphar_dDelta3_dTau;
     };
     /// Return the term \f$ \alpha^r_{\delta\delta\tau\tau} \f$
-    CoolPropDbl d4alphar_dDelta2_dTau2(void) {
+    CoolPropDbl d4alphar_dDelta2_dTau2() {
         if (!_d4alphar_dDelta2_dTau2) _d4alphar_dDelta2_dTau2 = calc_d4alphar_dDelta2_dTau2();
         return _d4alphar_dDelta2_dTau2;
     };
     /// Return the term \f$ \alpha^r_{\delta\tau\tau\tau} \f$
-    CoolPropDbl d4alphar_dDelta_dTau3(void) {
+    CoolPropDbl d4alphar_dDelta_dTau3() {
         if (!_d4alphar_dDelta_dTau3) _d4alphar_dDelta_dTau3 = calc_d4alphar_dDelta_dTau3();
         return _d4alphar_dDelta_dTau3;
     };
     /// Return the term \f$ \alpha^r_{\tau\tau\tau\tau} \f$
-    CoolPropDbl d4alphar_dTau4(void) {
+    CoolPropDbl d4alphar_dTau4() {
         if (!_d4alphar_dTau4) _d4alphar_dTau4 = calc_d4alphar_dTau4();
         return _d4alphar_dTau4;
     };
@@ -1644,7 +1644,7 @@ class AbstractStateGenerator
 {
    public:
     virtual AbstractState* get_AbstractState(const std::vector<std::string>& fluid_names) = 0;
-    virtual ~AbstractStateGenerator(){};
+    virtual ~AbstractStateGenerator() {};
 };
 
 /** Register a backend in the backend library (statically defined in AbstractState.cpp and not

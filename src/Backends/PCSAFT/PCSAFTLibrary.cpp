@@ -50,7 +50,7 @@ void add_fluids_from_JSON_string(PCSAFTLibraryClass& dest, const std::string_vie
 }
 }  // anonymous namespace
 
-PCSAFTLibraryClass& get_library(void) {
+PCSAFTLibraryClass& get_library() {
     // Function-local static (Meyers singleton): C++11 guarantees the
     // constructor runs exactly once even under concurrent first calls. The
     // previous namespace-scope `static PCSAFTLibraryClass library;` relied on

@@ -769,7 +769,7 @@ void REFPROPMixtureBackend::set_mass_fractions(const std::vector<CoolPropDbl>& m
     }
     this->set_mole_fractions(moles);
 };
-void REFPROPMixtureBackend::check_status(void) {
+void REFPROPMixtureBackend::check_status() {
     if (!_mole_fractions_set) {
         throw ValueError("Mole fractions not yet set");
     }
@@ -806,17 +806,17 @@ void REFPROPMixtureBackend::limits(double& Tmin, double& Tmax, double& rhomolarm
     pmax = pmax_kPa * 1000;
     rhomolarmax = Dmax_mol_L * 1000;
 }
-CoolPropDbl REFPROPMixtureBackend::calc_pmax(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_pmax() {
     double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(pmax);
 };
-CoolPropDbl REFPROPMixtureBackend::calc_Tmax(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_Tmax() {
     double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(Tmax);
 };
-CoolPropDbl REFPROPMixtureBackend::calc_Tmin(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_Tmin() {
     double Tmin = NAN, Tmax = NAN, rhomolarmax = NAN, pmax = NAN;
     limits(Tmin, Tmax, rhomolarmax, pmax);
     return static_cast<CoolPropDbl>(Tmin);
@@ -971,7 +971,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_gas_constant() {
     RMIX2dll(&(mole_fractions[0]), &Rmix);
     return static_cast<CoolPropDbl>(Rmix);
 };
-CoolPropDbl REFPROPMixtureBackend::calc_molar_mass(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_molar_mass() {
     this->check_loaded_fluid();
     double wmm_kg_kmol = NAN;
     WMOLdll(&(mole_fractions[0]), &wmm_kg_kmol);  // returns mole mass in kg/kmol
@@ -1045,17 +1045,17 @@ void REFPROPMixtureBackend::update_Qmass_pair(CoolProp::input_pairs pair, double
     AbstractState::update_Qmass_pair(pair, v1, v2);
 }
 
-CoolPropDbl REFPROPMixtureBackend::calc_Bvirial(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_Bvirial() {
     double b = NAN;
     VIRBdll(&_T, &(mole_fractions[0]), &b);
     return b * 0.001;  // 0.001 to convert from l/mol to m^3/mol
 }
-CoolPropDbl REFPROPMixtureBackend::calc_dBvirial_dT(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_dBvirial_dT() {
     double b = NAN;
     DBDTdll(&_T, &(mole_fractions[0]), &b);
     return b * 0.001;  // 0.001 to convert from l/mol to m^3/mol
 }
-CoolPropDbl REFPROPMixtureBackend::calc_Cvirial(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_Cvirial() {
     double c = NAN;
     VIRCdll(&_T, &(mole_fractions[0]), &c);
     return c * 1e-6;  // 1e-6 to convert from (l/mol)^2 to (m^3/mol)^2
@@ -1128,7 +1128,7 @@ const std::vector<CoolPropDbl> REFPROPMixtureBackend::calc_mass_fractions() {
     return mass_fractions;
 }
 
-CoolPropDbl REFPROPMixtureBackend::calc_PIP(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_PIP() {
     // Calculate the PIP factor of Venkatharathnam and Oellrich, "Identification of the phase of a fluid using
     // partial derivatives of pressure, volume,and temperature without reference to saturation properties:
     // Applications in phase equilibria calculations"
@@ -1143,7 +1143,7 @@ CoolPropDbl REFPROPMixtureBackend::calc_PIP(void) {
     return 2 - rho * (d2PdTD / dPT - d2PdD2 / dPdrho);
 };
 
-CoolPropDbl REFPROPMixtureBackend::calc_viscosity(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_viscosity() {
     this->check_loaded_fluid();
     double eta = NAN, tcx = NAN, rhomol_L = 0.001 * _rhomolar;
     int ierr = 0;
@@ -1159,12 +1159,12 @@ CoolPropDbl REFPROPMixtureBackend::calc_viscosity(void) {
     _conductivity = tcx;
     return static_cast<double>(_viscosity);
 }
-CoolPropDbl REFPROPMixtureBackend::calc_conductivity(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_conductivity() {
     // Calling viscosity also caches conductivity, use that to save calls
     calc_viscosity();
     return static_cast<double>(_conductivity);
 }
-CoolPropDbl REFPROPMixtureBackend::calc_surface_tension(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_surface_tension() {
     this->check_loaded_fluid();
     double sigma = NAN, rho_mol_L = 0.001 * _rhomolar;
     int ierr = 0;
@@ -1320,7 +1320,7 @@ void REFPROPMixtureBackend::calc_phase_envelope(const std::string& type) {
         PhaseEnvelope.conductivity_vap.push_back(tcx);
     }
 }
-CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas(void) {
+CoolPropDbl REFPROPMixtureBackend::calc_cpmolar_idealgas() {
     this->check_loaded_fluid();
     double rho_mol_L = 0.001 * _rhomolar;
     double p0 = NAN, e0 = NAN, h0 = NAN, s0 = NAN, cv0 = NAN, cp0 = NAN, w0 = NAN, A0 = NAN, G0 = NAN;

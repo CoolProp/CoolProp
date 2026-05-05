@@ -57,7 +57,7 @@ class VTPRBackend : public PengRobinsonBackend
         setup(fluid_identifiers, generate_SatL_and_SatV);
     };
 
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(VTPR_BACKEND);
     }
 
@@ -72,7 +72,7 @@ class VTPRBackend : public PengRobinsonBackend
     void set_alpha_from_components();
 
     /// Return the fluid names
-    std::vector<std::string> calc_fluid_names(void) {
+    std::vector<std::string> calc_fluid_names() {
         return m_fluid_names;
     }
 
@@ -89,7 +89,7 @@ class VTPRBackend : public PengRobinsonBackend
     };
 
     /// Calculate the molar mass
-    CoolPropDbl calc_molar_mass(void);
+    CoolPropDbl calc_molar_mass();
 
     /// Allows to modify the interactions parameters aij, bij and cij
     void set_binary_interaction_double(const std::size_t i, const std::size_t j, const std::string& parameter, const double value);

@@ -349,7 +349,7 @@ void CoolProp::SinglePhaseGriddedTableData::build(shared_ptr<CoolProp::AbstractS
         }
     }
 }
-std::string CoolProp::TabularBackend::path_to_tables(void) {
+std::string CoolProp::TabularBackend::path_to_tables() {
     std::vector<std::string> fluids = AS->fluid_names();
     std::vector<CoolPropDbl> fractions = AS->get_mole_fractions();
     std::vector<std::string> components;
@@ -411,7 +411,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_saturated_liquid_keyed_output(paramet
     }
 };
 
-CoolPropDbl CoolProp::TabularBackend::calc_p(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_p() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     if (using_single_phase_table) {
         return _p;
@@ -423,7 +423,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_p(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_T(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_T() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -448,7 +448,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_T(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_rhomolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -469,7 +469,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_rhomolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_hmolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -490,7 +490,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_hmolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_smolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_smolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -511,7 +511,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_smolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_umolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_umolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -535,7 +535,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_umolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_cpmolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_cpmolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -548,7 +548,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_cpmolar(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_cvmolar(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_cvmolar() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -562,7 +562,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_cvmolar(void) {
     }
 }
 
-CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_viscosity() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -583,7 +583,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_viscosity(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_conductivity() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {
@@ -604,7 +604,7 @@ CoolPropDbl CoolProp::TabularBackend::calc_conductivity(void) {
         }
     }
 }
-CoolPropDbl CoolProp::TabularBackend::calc_speed_sound(void) {
+CoolPropDbl CoolProp::TabularBackend::calc_speed_sound() {
     PhaseEnvelopeData& phase_envelope = dataset->phase_envelope;
     PureFluidSaturationTableData& pure_saturation = dataset->pure_saturation;
     if (using_single_phase_table) {

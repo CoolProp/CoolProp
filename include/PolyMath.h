@@ -165,7 +165,7 @@ class Polynomial2D
     [[deprecated("Deprecated since move to Eigen framework; use Eigen-based routines instead")]] double
       baseHorner(const std::vector<std::vector<double>>& coefficients, double x, double y);
 
-    bool do_debug(void) {
+    bool do_debug() {
         return get_debug_level() >= 500;
     }
 };

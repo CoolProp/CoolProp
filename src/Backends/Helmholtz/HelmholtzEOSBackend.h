@@ -62,7 +62,7 @@ class HelmholtzEOSBackend : public HelmholtzEOSMixtureBackend
         }
     };
     virtual ~HelmholtzEOSBackend() {};
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(HEOS_BACKEND_PURE);
     }
 };

@@ -117,7 +117,7 @@ class SaturationAncillaryFunction
     SaturationAncillaryFunction(rapidjson::Value& json_code);
 
     /// Return true if the ancillary is enabled (type is not TYPE_NOT_SET)
-    bool enabled(void) {
+    bool enabled() {
         return type != TYPE_NOT_SET;
     }
 
@@ -140,12 +140,12 @@ class SaturationAncillaryFunction
     double invert(double value, double min_bound = -1, double max_bound = -1);
 
     /// Get the minimum temperature in K
-    double get_Tmin(void) {
+    double get_Tmin() {
         return Tmin;
     };
 
     /// Get the maximum temperature in K
-    double get_Tmax(void) {
+    double get_Tmax() {
         return Tmax;
     };
 };

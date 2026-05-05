@@ -63,7 +63,7 @@ class REFPROPMixtureBackend : public AbstractState
     /// A function to actually do the initialization to allow it to be called in derived classes
     void construct(const std::vector<std::string>& fluid_names);
 
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(REFPROP_BACKEND_MIX);
     }
     virtual ~REFPROPMixtureBackend();
@@ -110,7 +110,7 @@ class REFPROPMixtureBackend : public AbstractState
     }
 
     // Get _phase for pure fluids only
-    phases calc_phase(void) {
+    phases calc_phase() {
         if (this->Ncomp > 1) {
             throw NotImplementedError("The REFPROP backend does not implement calc_phase function for mixtures.");
         } else {
@@ -155,22 +155,22 @@ class REFPROPMixtureBackend : public AbstractState
      */
     void update_with_guesses(CoolProp::input_pairs, double value1, double value2, const GuessesStructure& guesses);
 
-    CoolPropDbl calc_molar_mass(void);
+    CoolPropDbl calc_molar_mass();
 
     PhaseMolarMasses calc_phase_molar_masses() override;
 
-    void check_loaded_fluid(void);
+    void check_loaded_fluid();
 
     void calc_excess_properties();
 
     /// Returns true if REFPROP is supported on this platform
-    static bool REFPROP_supported(void);
+    static bool REFPROP_supported();
 
     std::string fluid_param_string(const std::string& ParamName);
 
-    CoolPropDbl calc_PIP(void);
+    CoolPropDbl calc_PIP();
 
-    CoolPropDbl calc_cpmolar_idealgas(void);
+    CoolPropDbl calc_cpmolar_idealgas();
 
     /// Set the fluids in REFPROP DLL by calling the SETUPdll function
     /**
@@ -198,7 +198,7 @@ class REFPROPMixtureBackend : public AbstractState
 
     void calc_phase_envelope(const std::string& type);
 
-    CoolPropDbl calc_compressibility_factor(void) {
+    CoolPropDbl calc_compressibility_factor() {
         return _p / (_rhomolar * gas_constant() * _T);
     };
 
@@ -206,10 +206,10 @@ class REFPROPMixtureBackend : public AbstractState
         return PhaseEnvelope;
     };
 
-    std::vector<CoolPropDbl> calc_mole_fractions_liquid(void) {
+    std::vector<CoolPropDbl> calc_mole_fractions_liquid() {
         return std::vector<CoolPropDbl>(mole_fractions_liq.begin(), mole_fractions_liq.begin() + this->Ncomp);
     }
-    std::vector<CoolPropDbl> calc_mole_fractions_vapor(void) {
+    std::vector<CoolPropDbl> calc_mole_fractions_vapor() {
         return std::vector<CoolPropDbl>(mole_fractions_vap.begin(), mole_fractions_vap.begin() + this->Ncomp);
     }
 
@@ -217,17 +217,17 @@ class REFPROPMixtureBackend : public AbstractState
     void check_status();
 
     /// Get the viscosity [Pa-s] (based on the temperature and density in the state class)
-    CoolPropDbl calc_viscosity(void);
+    CoolPropDbl calc_viscosity();
     /// Get the thermal conductivity [W/m/K] (based on the temperature and density in the state class)
-    CoolPropDbl calc_conductivity(void);
+    CoolPropDbl calc_conductivity();
     /// Get the surface tension [N/m] (based on the temperature in the state class).  Invalid for temperatures above critical point or below triple point temperature
-    CoolPropDbl calc_surface_tension(void);
+    CoolPropDbl calc_surface_tension();
     /// Calc the B virial coefficient
-    CoolPropDbl calc_Bvirial(void);
+    CoolPropDbl calc_Bvirial();
     /// Calc the temperature derivative of the second virial coefficient
-    CoolPropDbl calc_dBvirial_dT(void);
+    CoolPropDbl calc_dBvirial_dT();
     /// Calc the C virial coefficient
-    CoolPropDbl calc_Cvirial(void);
+    CoolPropDbl calc_Cvirial();
 
     CoolPropDbl calc_fugacity_coefficient(std::size_t i);
     CoolPropDbl calc_fugacity(std::size_t i);
@@ -235,20 +235,20 @@ class REFPROPMixtureBackend : public AbstractState
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
     bool has_melting_line();
     double calc_melt_Tmax();
-    CoolPropDbl calc_T_critical(void);
-    CoolPropDbl calc_T_reducing(void);
-    void calc_reducing_state(void);
-    CoolPropDbl calc_p_critical(void);
-    CoolPropDbl calc_p_triple(void);
-    CoolPropDbl calc_p_min(void) {
+    CoolPropDbl calc_T_critical();
+    CoolPropDbl calc_T_reducing();
+    void calc_reducing_state();
+    CoolPropDbl calc_p_critical();
+    CoolPropDbl calc_p_triple();
+    CoolPropDbl calc_p_min() {
         return calc_p_triple();
     };
-    CoolPropDbl calc_rhomolar_critical(void);
-    CoolPropDbl calc_rhomolar_reducing(void);
-    CoolPropDbl calc_Ttriple(void);
-    CoolPropDbl calc_acentric_factor(void);
-    CoolPropDbl calc_gas_constant(void);
-    CoolPropDbl calc_dipole_moment(void);
+    CoolPropDbl calc_rhomolar_critical();
+    CoolPropDbl calc_rhomolar_reducing();
+    CoolPropDbl calc_Ttriple();
+    CoolPropDbl calc_acentric_factor();
+    CoolPropDbl calc_gas_constant();
+    CoolPropDbl calc_dipole_moment();
 
     /// Calculate the "true" critical point where dp/drho|T and d2p/drho2|T are zero
     void calc_true_critical_point(double& T, double& rho);
@@ -263,89 +263,89 @@ class REFPROPMixtureBackend : public AbstractState
     /// A wrapper function to calculate the limits for the EOS
     void limits(double& Tmin, double& Tmax, double& rhomolarmax, double& pmax);
     /// Calculate the maximum pressure
-    CoolPropDbl calc_pmax(void);
+    CoolPropDbl calc_pmax();
     /// Calculate the maximum temperature
-    CoolPropDbl calc_Tmax(void);
+    CoolPropDbl calc_Tmax();
     /// Calculate the minimum temperature
-    CoolPropDbl calc_Tmin(void);
+    CoolPropDbl calc_Tmin();
 
     /// Call into the THERM0dll method and return outputs as a struct. REFPROP must already be setup
     THERM0dllOutputs call_THERM0dll(double T, double rho_mol_dm3, const std::vector<double>& mole_fractions);
 
     /// Calculate the residual entropy in J/mol/K (should be a uniquely negative quantity)
-    CoolPropDbl calc_smolar_residual(void) {
+    CoolPropDbl calc_smolar_residual() {
         return (tau() * calc_dalphar_dTau() - calc_alphar()) * gas_constant();
     }
 
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
-    CoolPropDbl calc_alphar(void) {
+    CoolPropDbl calc_alphar() {
         return call_phixdll(0, 0);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dDelta(void) {
+    CoolPropDbl calc_dalphar_dDelta() {
         return call_phixdll(0, 1);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dTau(void) {
+    CoolPropDbl calc_dalphar_dTau() {
         return call_phixdll(1, 0);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta2(void) {
+    CoolPropDbl calc_d2alphar_dDelta2() {
         return call_phixdll(0, 2);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta_dTau(void) {
+    CoolPropDbl calc_d2alphar_dDelta_dTau() {
         return call_phixdll(1, 1);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dTau2(void) {
+    CoolPropDbl calc_d2alphar_dTau2() {
         return call_phixdll(2, 0);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta3(void) {
+    CoolPropDbl calc_d3alphar_dDelta3() {
         return call_phixdll(0, 3);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta2_dTau(void) {
+    CoolPropDbl calc_d3alphar_dDelta2_dTau() {
         return call_phixdll(1, 2);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta_dTau2(void) {
+    CoolPropDbl calc_d3alphar_dDelta_dTau2() {
         return call_phixdll(2, 1);
     };
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dTau3(void) {
+    CoolPropDbl calc_d3alphar_dTau3() {
         return call_phixdll(3, 0);
     };
 
-    CoolPropDbl calc_alpha0(void) {
+    CoolPropDbl calc_alpha0() {
         return call_phi0dll(0, 0);
     };
-    CoolPropDbl calc_dalpha0_dDelta(void) {
+    CoolPropDbl calc_dalpha0_dDelta() {
         return call_phi0dll(0, 1);
     };
-    CoolPropDbl calc_dalpha0_dTau(void) {
+    CoolPropDbl calc_dalpha0_dTau() {
         return call_phi0dll(1, 0);
     };
-    CoolPropDbl calc_d2alpha0_dDelta2(void) {
+    CoolPropDbl calc_d2alpha0_dDelta2() {
         return call_phi0dll(0, 2);
     };
-    CoolPropDbl calc_d2alpha0_dDelta_dTau(void) {
+    CoolPropDbl calc_d2alpha0_dDelta_dTau() {
         return call_phi0dll(1, 1);
     };
-    CoolPropDbl calc_d2alpha0_dTau2(void) {
+    CoolPropDbl calc_d2alpha0_dTau2() {
         return call_phi0dll(2, 0);
     };
-    CoolPropDbl calc_d3alpha0_dDelta3(void) {
+    CoolPropDbl calc_d3alpha0_dDelta3() {
         return call_phi0dll(0, 3);
     };
-    CoolPropDbl calc_d3alpha0_dDelta2_dTau(void) {
+    CoolPropDbl calc_d3alpha0_dDelta2_dTau() {
         return call_phi0dll(1, 2);
     };
-    CoolPropDbl calc_d3alpha0_dDelta_dTau2(void) {
+    CoolPropDbl calc_d3alpha0_dDelta_dTau2() {
         return call_phi0dll(2, 1);
     };
-    CoolPropDbl calc_d3alpha0_dTau3(void) {
+    CoolPropDbl calc_d3alpha0_dTau3() {
         return call_phi0dll(3, 0);
     };
 };
