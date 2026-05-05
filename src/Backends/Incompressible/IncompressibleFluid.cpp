@@ -456,7 +456,20 @@ bool IncompressibleFluid::checkT(double T, double p, double x) {
  *  */
 bool IncompressibleFluid::checkP(double T, double p, double x) {
     double ps = 0.0;
-    if (p_sat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET) ps = psat(T, x);
+    if (p_sat.type != IncompressibleData::INCOMPRESSIBLE_NOT_SET) {
+        // psat() now throws below TminPsat (#2209). For this validation
+        // path, T below TminPsat means the saturation curve is not
+        // available — there is nothing to compare p against, so skip
+        // the p >= psat check rather than propagating the throw to
+        // callers that didn't ask for psat in the first place
+        // (e.g. PropsSI("D","P",101325,"T",300,"INCOMP::DowQ") where
+        // DowQ has TminPsat > 300 K).
+        try {
+            ps = psat(T, x);
+        } catch (const ValueError&) {
+            ps = 0.0;
+        }
+    }
     if (p < 0.0) throw ValueError(format("You cannot use negative pressures: %f < %f. ", p, 0.0));
     if (ps > 0.0 && p < ps) throw ValueError(format("Equations are valid for liquid phase only: %f < %f (psat). ", p, ps));
     return true;
