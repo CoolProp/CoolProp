@@ -117,6 +117,7 @@ cdef extern from "AbstractState.h" namespace "CoolProp":
         double p() except +ValueError
         double compressibility_factor() except +ValueError
         double Q() except +ValueError
+        double Qmass() except +ValueError
         double hmolar() except +ValueError
         double hmass() except +ValueError
         double smolar() except +ValueError
