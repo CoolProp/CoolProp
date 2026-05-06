@@ -68,12 +68,19 @@ jobs:
     - name: Build and test wheels
       uses: pypa/cibuildwheel@v3.4.1
       env:
+        # Make pip tolerant of transient DNS / connection failures on the
+        # post-build wheel test (most often hits macOS runners pulling
+        # numpy from files.pythonhosted.org). Default pip retries=5 with a
+        # short timeout is too aggressive about giving up.
+        PIP_RETRIES: 10
+        PIP_TIMEOUT: 60
+        PIP_DEFAULT_TIMEOUT: 60
         MACOSX_DEPLOYMENT_TARGET: 11.0
-        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk CPM_SOURCE_CACHE=$HOME/.cache/CPM
+        CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0 SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk CPM_SOURCE_CACHE=$HOME/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
         CIBW_BEFORE_BUILD_LINUX: >
           pip install ninja &&
           git config --global --add safe.directory "*"
-        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM
+        CIBW_ENVIRONMENT_LINUX: COOLPROP_CMAKE=default,NATIVE CPM_SOURCE_CACHE=/root/.cache/CPM PIP_RETRIES=10 PIP_TIMEOUT=60 PIP_DEFAULT_TIMEOUT=60
         CIBW_BUILD: cp${{ inputs.python-version }}-*
         CIBW_ARCHS_MACOS: ${{ inputs.arch }} # x86_64 arm64 # universal2 is redundant
         CIBW_ARCHS_WINDOWS: ${{ inputs.arch }} # AMD64 x86 # ARM64 creates problems with msgpack-c
