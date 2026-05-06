@@ -134,13 +134,13 @@ void make_dirs(std::string file_path) {
 
 // ---- get_separator ----------------------------------------------------------
 
-std::string get_separator(void) {
+std::string get_separator() {
     return std::string(1, fs::path::preferred_separator);
 }
 
 // Legacy implementation kept for reference (powerpc / pre-NDK-r23 Android):
 //
-// std::string get_separator(void) {
+// std::string get_separator() {
 // #if defined(__ISLINUX__)
 //     return std::string("/");
 // #elif defined(__ISAPPLE__)
@@ -154,7 +154,7 @@ std::string get_separator(void) {
 
 // ---- get_home_dir -----------------------------------------------------------
 
-std::string get_home_dir(void) {
+std::string get_home_dir() {
 // See http://stackoverflow.com/questions/2552416/how-can-i-find-the-users-home-dir-in-a-cross-platform-manner-using-c
 #if defined(__ISLINUX__) || defined(__ISAPPLE__)
     char* home = nullptr;

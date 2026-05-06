@@ -28,7 +28,7 @@ class CurveTracer : public FuncWrapper1D
         this->T.push_back(Secant(this, T0, 0.001 * T0, 1e-10, 100));
     }
 
-    virtual double objective(void) = 0;
+    virtual double objective() = 0;
 
     virtual double starting_direction() {
         return M_PI / 2.0;
@@ -90,7 +90,7 @@ class IdealCurveTracer : public CurveTracer
         init();
     };
     /// Z = 1
-    double objective(void) {
+    double objective() {
         return this->AS->keyed_output(iZ) - 1;
     };
 };
@@ -102,7 +102,7 @@ class BoyleCurveTracer : public CurveTracer
         init();
     };
     /// dZ/dv|T = 0
-    double objective(void) {
+    double objective() {
         double r =
           (this->AS->p() - this->AS->rhomolar() * this->AS->first_partial_deriv(iP, iDmolar, iT)) / (this->AS->gas_constant() * this->AS->T());
         return r;
@@ -115,7 +115,7 @@ class JouleInversionCurveTracer : public CurveTracer
         init();
     };
     /// dZ/dT|v = 0
-    double objective(void) {
+    double objective() {
         double r = (this->AS->gas_constant() * this->AS->T() * 1 / this->AS->rhomolar() * this->AS->first_partial_deriv(iP, iT, iDmolar)
                     - this->AS->p() * this->AS->gas_constant() / this->AS->rhomolar())
                    / POW2(this->AS->gas_constant() * this->AS->T());
@@ -129,7 +129,7 @@ class JouleThomsonCurveTracer : public CurveTracer
         init();
     };
     /// dZ/dT|p = 0
-    double objective(void) {
+    double objective() {
         double dvdT__constp = -this->AS->first_partial_deriv(iDmolar, iT, iP) / POW2(this->AS->rhomolar());
         double r = this->AS->p() / (this->AS->gas_constant() * POW2(this->AS->T())) * (this->AS->T() * dvdT__constp - 1 / this->AS->rhomolar());
         return r;

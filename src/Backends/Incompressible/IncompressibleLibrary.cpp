@@ -568,7 +568,7 @@ void load_incompressible_library() {
     //library.add_obj(LiBrSolution());
 }
 
-JSONIncompressibleLibrary& get_incompressible_library(void) {
+JSONIncompressibleLibrary& get_incompressible_library() {
     ensure_library_loaded();
     return library;
 }
@@ -578,11 +578,11 @@ IncompressibleFluid& get_incompressible_fluid(const std::string& fluid_string) {
     return library.get(fluid_string);
 }
 
-std::string get_incompressible_list_pure(void) {
+std::string get_incompressible_list_pure() {
     ensure_library_loaded();
     return library.get_incompressible_list_pure();
 };
-std::string get_incompressible_list_solution(void) {
+std::string get_incompressible_list_solution() {
     ensure_library_loaded();
     return library.get_incompressible_list_solution();
 };

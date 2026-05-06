@@ -380,7 +380,7 @@ void JSONFluidLibrary::add_one(rapidjson::Value& fluid_json) {
     }
 };
 
-JSONFluidLibrary& get_library(void) {
+JSONFluidLibrary& get_library() {
     ensure_library_loaded();
     return library;
 }
@@ -395,7 +395,7 @@ std::string get_fluid_as_JSONstring(const std::string& identifier) {
     return library.get_JSONstring(identifier);
 }
 
-std::string get_fluid_list(void) {
+std::string get_fluid_list() {
     ensure_library_loaded();
     return library.get_fluid_list();
 };

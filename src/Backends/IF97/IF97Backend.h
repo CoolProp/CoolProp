@@ -22,18 +22,18 @@ class IF97Backend : public AbstractState
 
    public:
     /// The name of the backend being used
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(IF97_BACKEND);
     }
 
     // REQUIRED BUT NOT USED IN IF97 FUNCTIONS
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() {
         return false;
     };
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() {
         return true;
     };  // But actually it doesn't matter since it is only a pure fluid
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() {
         return false;
     };
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions) {
@@ -43,7 +43,7 @@ class IF97Backend : public AbstractState
     void set_volu_fractions(const std::vector<CoolPropDbl>& volu_fractions) {
         throw NotImplementedError("Volume composition has not been implemented.");
     };
-    const std::vector<CoolPropDbl>& get_mole_fractions(void) {
+    const std::vector<CoolPropDbl>& get_mole_fractions() {
         throw NotImplementedError("get_mole_fractions composition has not been implemented.");
     };
 
@@ -415,111 +415,111 @@ class IF97Backend : public AbstractState
         }
     }
     /// Return the mass density in kg/m³
-    double rhomass(void) {
+    double rhomass() {
         return calc_rhomass();
     };
-    double calc_rhomass(void) {
+    double calc_rhomass() {
         return calc_Flash(iDmass);
     };
     /// Return the molar density in mol/m³
-    double rhomolar(void) {
+    double rhomolar() {
         return calc_rhomolar();
     };
-    double calc_rhomolar(void) {
+    double calc_rhomolar() {
         return rhomass() / molar_mass();
     };  /// kg/m³ * mol/kg = mol/m³
 
     /// Return the mass enthalpy in J/kg
-    double hmass(void) {
+    double hmass() {
         return calc_hmass();
     };
-    double calc_hmass(void) {
+    double calc_hmass() {
         if (_reverse && _smass)
             return IF97::hmass_psmass(_p, _smass);  // Special IF97 function for handling reverse h(p,s) evaluation
         else
             return calc_Flash(iHmass);
     };
     /// Return the molar enthalpy in J/mol
-    double hmolar(void) {
+    double hmolar() {
         return calc_hmolar();
     };
-    double calc_hmolar(void) {
+    double calc_hmolar() {
         return hmass() * molar_mass();
     };  /// J/kg * kg/mol = J/mol
 
     /// Return the mass entropy in J/kg/K
-    double smass(void) {
+    double smass() {
         return calc_smass();
     };
-    double calc_smass(void) {
+    double calc_smass() {
         if (_reverse && _hmass)
             return IF97::smass_phmass(_p, _hmass);  // Special IF97 function for handling reverse s(p,h) evaluation
         else
             return calc_Flash(iSmass);
     };
     /// Return the molar entropy in J/mol/K
-    double smolar(void) {
+    double smolar() {
         return calc_smolar();
     };
-    double calc_smolar(void) {
+    double calc_smolar() {
         return smass() * molar_mass();
     };  /// J/kg-K * kg/mol = J/mol-K
 
     /// Return the mass internal energy in J/kg
-    double umass(void) {
+    double umass() {
         return calc_umass();
     };
-    double calc_umass(void) {
+    double calc_umass() {
         return calc_Flash(iUmass);
     };
     /// Return the molar internal energy in J/mol
-    double umolar(void) {
+    double umolar() {
         return calc_umolar();
     };
-    double calc_umolar(void) {
+    double calc_umolar() {
         return umass() * molar_mass();
     };  /// J/kg * kg/mol = J/mol
 
     /// Return the mass-based constant pressure specific heat in J/kg/K
-    double cpmass(void) {
+    double cpmass() {
         return calc_cpmass();
     };
-    double calc_cpmass(void) {
+    double calc_cpmass() {
         return calc_Flash(iCpmass);
     };
     /// Return the molar-based constant pressure specific heat in J/mol/K
-    double cpmolar(void) {
+    double cpmolar() {
         return calc_cpmolar();
     };
-    double calc_cpmolar(void) {
+    double calc_cpmolar() {
         return cpmass() * molar_mass();
     };  /// J/kg-K * kg/mol = J/mol-K
 
     /// Return the mass-based constant volume specific heat in J/kg/K
-    double cvmass(void) {
+    double cvmass() {
         return calc_cvmass();
     };
-    double calc_cvmass(void) {
+    double calc_cvmass() {
         return calc_Flash(iCvmass);
     };
     /// Return the molar-based constant volume specific heat in J/mol/K
-    double cvmolar(void) {
+    double cvmolar() {
         return calc_cvmolar();
     };
-    double calc_cvmolar(void) {
+    double calc_cvmolar() {
         return cvmass() * molar_mass();
     };  /// J/kg-K * kg/mol = J/mol-K
 
     /// Return the speed of sound in m/s
-    double speed_sound(void) {
+    double speed_sound() {
         return calc_speed_sound();
     };
-    double calc_speed_sound(void) {
+    double calc_speed_sound() {
         return calc_Flash(ispeed_sound);
     };
 
     // Return the phase
-    phases calc_phase(void) {
+    phases calc_phase() {
         return _phase;
     };
 
@@ -529,62 +529,62 @@ class IF97Backend : public AbstractState
     // ************************************************************************* //
     //
     /// Using this backend, get the triple point temperature in K
-    double calc_Ttriple(void) {
+    double calc_Ttriple() {
         return IF97::get_Ttrip();
     };
     /// Using this backend, get the triple point pressure in Pa
-    double calc_p_triple(void) {
+    double calc_p_triple() {
         return IF97::get_ptrip();
     };
     /// Using this backend, get the critical point temperature in K
-    double calc_T_critical(void) {
+    double calc_T_critical() {
         return IF97::get_Tcrit();
     };
     /// Using this backend, get the critical point pressure in Pa
-    double calc_p_critical(void) {
+    double calc_p_critical() {
         return IF97::get_pcrit();
     };
     /// Using this backend, get the ideal gas constant in J/mol*K
     /// ==> multiplies IF97 Rgas by molar_mass() to put on molar basis per CoolProp convention
-    double calc_gas_constant(void) {
+    double calc_gas_constant() {
         return IF97::get_Rgas() * molar_mass();
     };
     /// Using this backend, get the molar mass in kg/mol
-    double calc_molar_mass(void) {
+    double calc_molar_mass() {
         return IF97::get_MW();
     };
     /// Using this backend, get the acentric factor (unitless)
-    double calc_acentric_factor(void) {
+    double calc_acentric_factor() {
         return IF97::get_Acentric();
     };
     /// Using this backend, get the high pressure limit in Pa
     // TODO: May want to adjust this based on _T, since Region 5
     //       is limited to 50 MPa, instead of 100 MPa elsewhere.
-    double calc_pmax(void) {
+    double calc_pmax() {
         return IF97::get_Pmax();
     };
     /// Note: Pmin not implemented in Abstract State or CoolProp
     /// Using this backend, get the high temperature limit in K
-    double calc_Tmax(void) {
+    double calc_Tmax() {
         return IF97::get_Tmax();
     };
     /// Using this backend, get the high pressure limit in K
-    double calc_Tmin(void) {
+    double calc_Tmin() {
         return IF97::get_Tmin();
     };
     /// Using this backend, get the critical point density in kg/m³
     /// Replace molar-based AbstractState functions since IF97 is mass based only
-    double rhomolar_critical(void) {
+    double rhomolar_critical() {
         return calc_rhomass_critical() / molar_mass();
     }
-    double rhomass_critical(void) {
+    double rhomass_critical() {
         return calc_rhomass_critical();
     }
     // Overwrite the virtual calc_ functions for density
-    double calc_rhomolar_critical(void) {
+    double calc_rhomolar_critical() {
         return rhomass_critical() / molar_mass();
     };
-    double calc_rhomass_critical(void) {
+    double calc_rhomass_critical() {
         return IF97::get_rhocrit();
     };
     //
@@ -592,7 +592,7 @@ class IF97Backend : public AbstractState
     //                      Saturation Functions                                 //
     // ************************************************************************* //
     //
-    double calc_pressure(void) {
+    double calc_pressure() {
         return _p;
     };
     //
@@ -601,28 +601,28 @@ class IF97Backend : public AbstractState
     // ************************************************************************* //
     //
     // Return viscosity in [Pa-s]
-    double viscosity(void) {
+    double viscosity() {
         return calc_viscosity();
     };
-    double calc_viscosity(void) {
+    double calc_viscosity() {
         return calc_Flash(iviscosity);
     };
     // Return thermal conductivity in [W/m-K]
-    double conductivity(void) {
+    double conductivity() {
         return calc_conductivity();
     };
-    double calc_conductivity(void) {
+    double calc_conductivity() {
         return calc_Flash(iconductivity);
     };
     // Return surface tension in [N/m]
-    double surface_tension(void) {
+    double surface_tension() {
         return calc_surface_tension();
     };
-    double calc_surface_tension(void) {
+    double calc_surface_tension() {
         return calc_Flash(isurface_tension);
     };
     // Return Prandtl number (mu*Cp/k) [dimensionless]
-    double Prandtl(void) {
+    double Prandtl() {
         return calc_Flash(iPrandtl);
     };
 };

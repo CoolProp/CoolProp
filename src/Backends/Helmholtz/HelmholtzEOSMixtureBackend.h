@@ -130,8 +130,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     // Copy over the reducing and departure terms to all linked states (recursively)
     void sync_linked_states(const HelmholtzEOSMixtureBackend* const);
 
-    virtual ~HelmholtzEOSMixtureBackend(){};
-    std::string backend_name(void) {
+    virtual ~HelmholtzEOSMixtureBackend() {};
+    std::string backend_name() {
         return get_backend_string(HEOS_BACKEND_MIX);
     }
     shared_ptr<ReducingFunction> Reducing;
@@ -212,7 +212,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     };
     virtual double get_fluid_parameter_double(const size_t i, const std::string& parameter);
 
-    phases calc_phase(void) {
+    phases calc_phase() {
         return _phase;
     };
 
@@ -230,8 +230,8 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         imposed_phase_index = iphase_not_imposed;
     }
     CoolPropDbl calc_saturation_ancillary(parameters param, int Q, parameters given, double value);
-    void calc_ssat_max(void);
-    void calc_hsat_max(void);
+    void calc_ssat_max();
+    void calc_hsat_max();
     CoolPropDbl calc_GWP20();
     CoolPropDbl calc_GWP500();
     CoolPropDbl calc_GWP100();
@@ -331,7 +331,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         return *SatV;
     };
 
-    std::vector<CoolPropDbl> calc_mole_fractions_liquid(void) {
+    std::vector<CoolPropDbl> calc_mole_fractions_liquid() {
         // SatL/SatV retain composition vectors from the most recent VLE flash
         // (or phase-envelope build) — those are not meaningful when the
         // current state is single-phase, and returning them silently surfaced
@@ -342,14 +342,14 @@ class HelmholtzEOSMixtureBackend : public AbstractState
         }
         return SatL->get_mole_fractions();
     };
-    std::vector<CoolPropDbl> calc_mole_fractions_vapor(void) {
+    std::vector<CoolPropDbl> calc_mole_fractions_vapor() {
         if (_phase != iphase_twophase) {
             throw ValueError("mole_fractions_vapor is only defined in the two-phase region (current state is single-phase)");
         }
         return SatV->get_mole_fractions();
     };
 
-    const std::vector<CoolPropDbl> calc_mass_fractions(void);
+    const std::vector<CoolPropDbl> calc_mass_fractions();
 
     const CoolProp::PhaseEnvelopeData& calc_phase_envelope_data() {
         return PhaseEnvelope;
@@ -411,7 +411,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     std::vector<CoolPropDbl>& get_mole_fractions_ref() {
         return mole_fractions;
     };
-    std::vector<double>& get_mole_fractions_doubleref(void) {
+    std::vector<double>& get_mole_fractions_doubleref() {
         return mole_fractions;
     }
 
@@ -423,43 +423,43 @@ class HelmholtzEOSMixtureBackend : public AbstractState
 
     void calc_ideal_curve(const std::string& type, std::vector<double>& T, std::vector<double>& p);
 
-    CoolPropDbl calc_molar_mass(void);
+    CoolPropDbl calc_molar_mass();
     PhaseMolarMasses calc_phase_molar_masses() override;
-    CoolPropDbl calc_gas_constant(void);
-    CoolPropDbl calc_acentric_factor(void);
+    CoolPropDbl calc_gas_constant();
+    CoolPropDbl calc_acentric_factor();
 
-    CoolPropDbl calc_Bvirial(void);
-    CoolPropDbl calc_Cvirial(void);
-    CoolPropDbl calc_dBvirial_dT(void);
-    CoolPropDbl calc_dCvirial_dT(void);
+    CoolPropDbl calc_Bvirial();
+    CoolPropDbl calc_Cvirial();
+    CoolPropDbl calc_dBvirial_dT();
+    CoolPropDbl calc_dCvirial_dT();
 
-    CoolPropDbl calc_pressure(void);
-    CoolPropDbl calc_cvmolar(void);
-    CoolPropDbl calc_cpmolar(void);
-    CoolPropDbl calc_gibbsmolar(void);
-    CoolPropDbl calc_gibbsmolar_residual(void) {
+    CoolPropDbl calc_pressure();
+    CoolPropDbl calc_cvmolar();
+    CoolPropDbl calc_cpmolar();
+    CoolPropDbl calc_gibbsmolar();
+    CoolPropDbl calc_gibbsmolar_residual() {
         return gas_constant() * _T * (alphar() + delta() * dalphar_dDelta());
     }
     CoolPropDbl calc_gibbsmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
-    CoolPropDbl calc_helmholtzmolar(void);
-    CoolPropDbl calc_cpmolar_idealgas(void);
+    CoolPropDbl calc_helmholtzmolar();
+    CoolPropDbl calc_cpmolar_idealgas();
     CoolPropDbl calc_pressure_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
-    CoolPropDbl calc_smolar(void);
-    CoolPropDbl calc_smolar_residual(void) {
+    CoolPropDbl calc_smolar();
+    CoolPropDbl calc_smolar_residual() {
         return gas_constant() * (tau() * dalphar_dTau() - alphar());
     }
     CoolPropDbl calc_smolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
-    CoolPropDbl calc_hmolar(void);
-    CoolPropDbl calc_hmolar_residual(void) {
+    CoolPropDbl calc_hmolar();
+    CoolPropDbl calc_hmolar_residual() {
         return gas_constant() * _T * (tau() * dalphar_dTau() + delta() * dalphar_dDelta());
     }
     CoolPropDbl calc_hmolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
 
     CoolPropDbl calc_umolar_nocache(CoolPropDbl T, CoolPropDbl rhomolar);
-    CoolPropDbl calc_umolar(void);
-    CoolPropDbl calc_speed_sound(void);
+    CoolPropDbl calc_umolar();
+    CoolPropDbl calc_speed_sound();
 
     void calc_excess_properties();
 
@@ -468,73 +468,73 @@ class HelmholtzEOSMixtureBackend : public AbstractState
      *
      */
 
-    CoolPropDbl calc_phase_identification_parameter(void);
+    CoolPropDbl calc_phase_identification_parameter();
     CoolPropDbl calc_fugacity(std::size_t i);
     virtual CoolPropDbl calc_fugacity_coefficient(std::size_t i);
     CoolPropDbl calc_chemical_potential(std::size_t i);
 
     /// Using this backend, calculate the flame hazard
-    CoolPropDbl calc_flame_hazard(void) {
+    CoolPropDbl calc_flame_hazard() {
         return components[0].environment.FH;
     };
     /// Using this backend, calculate the health hazard
-    CoolPropDbl calc_health_hazard(void) {
+    CoolPropDbl calc_health_hazard() {
         return components[0].environment.HH;
     };
     /// Using this backend, calculate the physical hazard
-    CoolPropDbl calc_physical_hazard(void) {
+    CoolPropDbl calc_physical_hazard() {
         return components[0].environment.PH;
     };
 
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r\f$ (dimensionless)
-    CoolPropDbl calc_alphar(void);
+    CoolPropDbl calc_alphar();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dDelta(void);
+    CoolPropDbl calc_dalphar_dDelta();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau}\f$ (dimensionless)
-    CoolPropDbl calc_dalphar_dTau(void);
+    CoolPropDbl calc_dalphar_dTau();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta2(void);
+    CoolPropDbl calc_d2alphar_dDelta2();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dDelta_dTau(void);
+    CoolPropDbl calc_d2alphar_dDelta_dTau();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d2alphar_dTau2(void);
+    CoolPropDbl calc_d2alphar_dTau2();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta3(void);
+    CoolPropDbl calc_d3alphar_dDelta3();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta2_dTau(void);
+    CoolPropDbl calc_d3alphar_dDelta2_dTau();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dDelta_dTau2(void);
+    CoolPropDbl calc_d3alphar_dDelta_dTau2();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d3alphar_dTau3(void);
+    CoolPropDbl calc_d3alphar_dTau3();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\delta}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta4(void);
+    CoolPropDbl calc_d4alphar_dDelta4();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\delta\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta3_dTau(void);
+    CoolPropDbl calc_d4alphar_dDelta3_dTau();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\delta\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta2_dTau2(void);
+    CoolPropDbl calc_d4alphar_dDelta2_dTau2();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\delta\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dDelta_dTau3(void);
+    CoolPropDbl calc_d4alphar_dDelta_dTau3();
     /// Using this backend, calculate the residual Helmholtz energy term \f$\alpha^r_{\tau\tau\tau\tau}\f$ (dimensionless)
-    CoolPropDbl calc_d4alphar_dTau4(void);
+    CoolPropDbl calc_d4alphar_dTau4();
 
-    CoolPropDbl calc_alpha0(void);
-    CoolPropDbl calc_dalpha0_dDelta(void);
-    CoolPropDbl calc_dalpha0_dTau(void);
-    CoolPropDbl calc_d2alpha0_dDelta2(void);
-    CoolPropDbl calc_d2alpha0_dDelta_dTau(void);
-    CoolPropDbl calc_d2alpha0_dTau2(void);
-    CoolPropDbl calc_d3alpha0_dDelta3(void);
-    CoolPropDbl calc_d3alpha0_dDelta2_dTau(void);
-    CoolPropDbl calc_d3alpha0_dDelta_dTau2(void);
-    CoolPropDbl calc_d3alpha0_dTau3(void);
+    CoolPropDbl calc_alpha0();
+    CoolPropDbl calc_dalpha0_dDelta();
+    CoolPropDbl calc_dalpha0_dTau();
+    CoolPropDbl calc_d2alpha0_dDelta2();
+    CoolPropDbl calc_d2alpha0_dDelta_dTau();
+    CoolPropDbl calc_d2alpha0_dTau2();
+    CoolPropDbl calc_d3alpha0_dDelta3();
+    CoolPropDbl calc_d3alpha0_dDelta2_dTau();
+    CoolPropDbl calc_d3alpha0_dDelta_dTau2();
+    CoolPropDbl calc_d3alpha0_dTau3();
 
-    CoolPropDbl calc_surface_tension(void);
-    CoolPropDbl calc_viscosity(void);
-    CoolPropDbl calc_viscosity_dilute(void);
-    CoolPropDbl calc_viscosity_background(void);
+    CoolPropDbl calc_surface_tension();
+    CoolPropDbl calc_viscosity();
+    CoolPropDbl calc_viscosity_dilute();
+    CoolPropDbl calc_viscosity_background();
     CoolPropDbl calc_viscosity_background(CoolPropDbl eta_dilute, CoolPropDbl& initial_density, CoolPropDbl& residual);
-    CoolPropDbl calc_conductivity(void);
-    CoolPropDbl calc_conductivity_background(void);
+    CoolPropDbl calc_conductivity();
+    CoolPropDbl calc_conductivity_background();
 
     /**
      * \brief Calculate each of the contributions to the viscosity
@@ -552,40 +552,40 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     CoolPropDbl calc_saturated_liquid_keyed_output(parameters key);
     CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 
-    CoolPropDbl calc_Tmin(void);
-    CoolPropDbl calc_Tmax(void);
-    CoolPropDbl calc_pmax(void);
-    CoolPropDbl calc_Ttriple(void);
-    CoolPropDbl calc_p_triple(void);
-    CoolPropDbl calc_pmax_sat(void);
-    CoolPropDbl calc_Tmax_sat(void);
+    CoolPropDbl calc_Tmin();
+    CoolPropDbl calc_Tmax();
+    CoolPropDbl calc_pmax();
+    CoolPropDbl calc_Ttriple();
+    CoolPropDbl calc_p_triple();
+    CoolPropDbl calc_pmax_sat();
+    CoolPropDbl calc_Tmax_sat();
     void calc_Tmin_sat(CoolPropDbl& Tmin_satL, CoolPropDbl& Tmin_satV);
     void calc_pmin_sat(CoolPropDbl& pmin_satL, CoolPropDbl& pmin_satV);
 
-    virtual CoolPropDbl calc_T_critical(void);
-    virtual CoolPropDbl calc_p_critical(void);
-    virtual CoolPropDbl calc_rhomolar_critical(void);
+    virtual CoolPropDbl calc_T_critical();
+    virtual CoolPropDbl calc_p_critical();
+    virtual CoolPropDbl calc_rhomolar_critical();
 
-    CoolPropDbl calc_T_reducing(void) {
+    CoolPropDbl calc_T_reducing() {
         return get_reducing_state().T;
     };
-    CoolPropDbl calc_rhomolar_reducing(void) {
+    CoolPropDbl calc_rhomolar_reducing() {
         return get_reducing_state().rhomolar;
     };
-    CoolPropDbl calc_p_reducing(void) {
+    CoolPropDbl calc_p_reducing() {
         return get_reducing_state().p;
     };
 
     // Calculate the phase identification parameter of Venkatarathnam et al, Fluid Phase Equilibria
-    CoolPropDbl calc_PIP(void) {
+    CoolPropDbl calc_PIP() {
         return 2
                - rhomolar()
                    * (second_partial_deriv(iP, iDmolar, iT, iT, iDmolar) / first_partial_deriv(iP, iT, iDmolar)
                       - second_partial_deriv(iP, iDmolar, iT, iDmolar, iT) / first_partial_deriv(iP, iDmolar, iT));
     };
 
-    std::string calc_name(void);
-    std::vector<std::string> calc_fluid_names(void);
+    std::string calc_name();
+    std::vector<std::string> calc_fluid_names();
 
     void calc_all_alphar_deriv_cache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau, const CoolPropDbl& delta);
     virtual CoolPropDbl calc_alphar_deriv_nocache(const int nTau, const int nDelta, const std::vector<CoolPropDbl>& mole_fractions,
@@ -621,7 +621,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
     HelmholtzDerivatives calc_all_alpha0_derivs_nocache(const std::vector<CoolPropDbl>& mole_fractions, const CoolPropDbl& tau,
                                                         const CoolPropDbl& delta, const CoolPropDbl& Tr, const CoolPropDbl& rhor);
 
-    virtual void calc_reducing_state(void);
+    virtual void calc_reducing_state();
     virtual SimpleState calc_reducing_state_nocache(const std::vector<CoolPropDbl>& mole_fractions);
 
     const CoolProp::SimpleState& get_reducing_state() {
@@ -631,7 +631,7 @@ class HelmholtzEOSMixtureBackend : public AbstractState
 
     void update_states();
 
-    CoolPropDbl calc_compressibility_factor(void) {
+    CoolPropDbl calc_compressibility_factor() {
         return 1 + delta() * dalphar_dDelta();
     };
 
@@ -828,8 +828,8 @@ class ResidualHelmholtz
     ExcessTerm Excess;
     CorrespondingStatesTerm CS;
 
-    ResidualHelmholtz(){};
-    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C){};
+    ResidualHelmholtz() {};
+    ResidualHelmholtz(const ExcessTerm& E, const CorrespondingStatesTerm& C) : Excess(E), CS(C) {};
     virtual ~ResidualHelmholtz() = default;
 
     ResidualHelmholtz copy() {

@@ -38,7 +38,7 @@ class IncompressibleBackend : public AbstractState
    public:
     IncompressibleBackend();
     virtual ~IncompressibleBackend() {};
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(INCOMP_BACKEND);
     }
 
@@ -53,13 +53,13 @@ class IncompressibleBackend : public AbstractState
     IncompressibleBackend(const std::vector<std::string>& component_names);
 
     // Incompressible backend uses different compositions
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() {
         return this->fluid->getxid() == IFRAC_MOLE;
     };
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() {
         return (this->fluid->getxid() == IFRAC_MASS || this->fluid->getxid() == IFRAC_PURE);
     };
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() {
         return this->fluid->getxid() == IFRAC_VOLUME;
     };
 
@@ -93,7 +93,7 @@ class IncompressibleBackend : public AbstractState
     @param mole_fractions The vector of mole fractions of the components
     */
     void set_mole_fractions(const std::vector<CoolPropDbl>& mole_fractions);
-    const std::vector<CoolPropDbl>& get_mole_fractions(void) {
+    const std::vector<CoolPropDbl>& get_mole_fractions() {
         throw NotImplementedError("get_mole_fractions not implemented for this backend");
     };
 
@@ -118,39 +118,39 @@ class IncompressibleBackend : public AbstractState
 	 *  We also have a few new chaced variables that we need.
 	 */
     /// Return the mass density in kg/m^3
-    double rhomass(void);
+    double rhomass();
     /// Return the mass enthalpy in J/kg
-    double hmass(void);
+    double hmass();
     /// Return the molar entropy in J/mol/K
-    double smass(void);
+    double smass();
     /// Return the molar internal energy in J/mol
-    double umass(void);
+    double umass();
     /// Return the mass constant pressure specific heat in J/kg/K
-    double cmass(void);
+    double cmass();
 
-    double drhodTatPx(void);
-    double dsdTatPx(void);
-    double dhdTatPx(void);
-    double dsdTatPxdT(void);
-    double dhdTatPxdT(void);
-    double dsdpatTx(void);
-    double dhdpatTx(void);
+    double drhodTatPx();
+    double dsdTatPx();
+    double dhdTatPx();
+    double dsdTatPxdT();
+    double dhdTatPxdT();
+    double dsdpatTx();
+    double dhdpatTx();
 
     /// Return the temperature in K
-    double T_ref(void);
+    double T_ref();
     /// Return the pressure in Pa
-    double p_ref(void);
+    double p_ref();
     /// Return the composition
-    double x_ref(void);
+    double x_ref();
     /// Return the mass enthalpy in J/kg
-    double h_ref(void);
+    double h_ref();
     /// Return the molar entropy in J/mol/K
-    double s_ref(void);
+    double s_ref();
 
     /// Return the mass enthalpy in J/kg
-    double hmass_ref(void);
+    double hmass_ref();
     /// Return the molar entropy in J/mol/K
-    double smass_ref(void);
+    double smass_ref();
 
     /** These functions should be protected, but that requires new tests.
      *  I'll leave that as a TODO item for now.
@@ -185,58 +185,58 @@ class IncompressibleBackend : public AbstractState
     // exception with a helpful pointer at the mass-basis equivalents
     // instead of silently returning the AbstractState default
     // (-_HUGE) which surfaced as "PropsSI failed ungracefully".
-    CoolPropDbl calc_molar_mass(void) override {
+    CoolPropDbl calc_molar_mass() override {
         throw NotImplementedError("Molar mass is not defined for the INCOMP (incompressible) backend; INCOMP fluids are mass-based.");
     }
-    CoolPropDbl calc_rhomolar(void) override {
+    CoolPropDbl calc_rhomolar() override {
         throw NotImplementedError("Dmolar / rhomolar is not defined for the INCOMP backend; use Dmass / rhomass instead.");
     }
-    CoolPropDbl calc_hmolar(void) override {
+    CoolPropDbl calc_hmolar() override {
         throw NotImplementedError("Hmolar / hmolar is not defined for the INCOMP backend; use Hmass / hmass instead.");
     }
-    CoolPropDbl calc_smolar(void) override {
+    CoolPropDbl calc_smolar() override {
         throw NotImplementedError("Smolar / smolar is not defined for the INCOMP backend; use Smass / smass instead.");
     }
-    CoolPropDbl calc_umolar(void) override {
+    CoolPropDbl calc_umolar() override {
         throw NotImplementedError("Umolar / umolar is not defined for the INCOMP backend; use Umass / umass instead.");
     }
-    CoolPropDbl calc_cpmolar(void) override {
+    CoolPropDbl calc_cpmolar() override {
         throw NotImplementedError("Cpmolar / cpmolar is not defined for the INCOMP backend; use Cpmass / cpmass instead.");
     }
-    CoolPropDbl calc_cvmolar(void) override {
+    CoolPropDbl calc_cvmolar() override {
         throw NotImplementedError("Cvmolar / cvmolar is not defined for the INCOMP backend; use Cvmass / cvmass instead.");
     }
 
     /// We start with the functions that do not need a reference state
-    CoolPropDbl calc_rhomass(void) {
+    CoolPropDbl calc_rhomass() {
         return fluid->rho(_T, _p, _fractions[0]);
     };
-    CoolPropDbl calc_cmass(void) {
+    CoolPropDbl calc_cmass() {
         return fluid->c(_T, _p, _fractions[0]);
     };
-    CoolPropDbl calc_cpmass(void) {
+    CoolPropDbl calc_cpmass() {
         return cmass();
     };
-    CoolPropDbl calc_cvmass(void) {
+    CoolPropDbl calc_cvmass() {
         return cmass();
     };
-    CoolPropDbl calc_viscosity(void) {
+    CoolPropDbl calc_viscosity() {
         return fluid->visc(_T, _p, _fractions[0]);
     };
-    CoolPropDbl calc_conductivity(void) {
+    CoolPropDbl calc_conductivity() {
         return fluid->cond(_T, _p, _fractions[0]);
     };
-    CoolPropDbl calc_T_freeze(void) {
+    CoolPropDbl calc_T_freeze() {
         // No update is called - T_freeze is a trivial output
         fluid->checkX(_fractions[0]);
         return fluid->Tfreeze(_p, _fractions[0]);
     };
     CoolPropDbl calc_melting_line(int param, int given, CoolPropDbl value);
-    CoolPropDbl calc_umass(void);
+    CoolPropDbl calc_umass();
 
     /// ... and continue with the ones that depend on reference conditions.
-    CoolPropDbl calc_hmass(void);
-    CoolPropDbl calc_smass(void);
+    CoolPropDbl calc_hmass();
+    CoolPropDbl calc_smass();
 
    public:
     /// Functions that can be used with the solver, they miss the reference values!
@@ -287,22 +287,22 @@ class IncompressibleBackend : public AbstractState
 
    public:
     /// Constants from the fluid object
-    CoolPropDbl calc_Tmax(void) {
+    CoolPropDbl calc_Tmax() {
         return fluid->getTmax();
     };
-    CoolPropDbl calc_Tmin(void) {
+    CoolPropDbl calc_Tmin() {
         return fluid->getTmin();
     };
-    CoolPropDbl calc_fraction_min(void) {
+    CoolPropDbl calc_fraction_min() {
         return fluid->getxmin();
     };
-    CoolPropDbl calc_fraction_max(void) {
+    CoolPropDbl calc_fraction_max() {
         return fluid->getxmax();
     };
-    std::string calc_name(void) {
+    std::string calc_name() {
         return fluid->getName();
     };
-    std::string calc_description(void) {
+    std::string calc_description() {
         return fluid->getDescription();
     };
 };

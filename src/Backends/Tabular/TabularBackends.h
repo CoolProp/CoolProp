@@ -633,7 +633,7 @@ class SinglePhaseGriddedTableData
         make_axis_vectors();
     };
     /// Make vectors for the x-axis values and the y-axis values
-    void make_axis_vectors(void) {
+    void make_axis_vectors() {
         if (logx) {
             xvec = logspace(xmin, xmax, Nx);
         } else {
@@ -646,7 +646,7 @@ class SinglePhaseGriddedTableData
         }
     };
     /// Make matrices of good neighbors if the current value for i,j corresponds to a bad node
-    void make_good_neighbors(void) {
+    void make_good_neighbors() {
         nearest_neighbor_i.resize(Nx, std::vector<std::size_t>(Ny, std::numeric_limits<std::size_t>::max()));
         nearest_neighbor_j.resize(Nx, std::vector<std::size_t>(Ny, std::numeric_limits<std::size_t>::max()));
         for (std::size_t i = 0; i < xvec.size(); ++i) {
@@ -1085,14 +1085,14 @@ class TabularBackend : public AbstractState
     };
 
     // None of the tabular methods are available from the high-level interface
-    bool available_in_high_level(void) {
+    bool available_in_high_level() {
         return false;
     }
 
-    std::string calc_name(void) {
+    std::string calc_name() {
         return AS->name();
     }
-    std::vector<std::string> calc_fluid_names(void) {
+    std::vector<std::string> calc_fluid_names() {
         return AS->fluid_names();
     }
 
@@ -1206,40 +1206,40 @@ class TabularBackend : public AbstractState
     virtual void invert_single_phase_y(const SinglePhaseGriddedTableData& table, const std::vector<std::vector<CellCoeffs>>& coeffs,
                                        parameters output, double x, double y, std::size_t i, std::size_t j) = 0;
 
-    phases calc_phase(void) {
+    phases calc_phase() {
         return _phase;
     }
-    CoolPropDbl calc_T_critical(void) {
+    CoolPropDbl calc_T_critical() {
         return this->AS->T_critical();
     };
-    CoolPropDbl calc_Ttriple(void) {
+    CoolPropDbl calc_Ttriple() {
         return this->AS->Ttriple();
     };
-    CoolPropDbl calc_p_triple(void) {
+    CoolPropDbl calc_p_triple() {
         return this->AS->p_triple();
     };
-    CoolPropDbl calc_pmax(void) {
+    CoolPropDbl calc_pmax() {
         return this->AS->pmax();
     };
-    CoolPropDbl calc_Tmax(void) {
+    CoolPropDbl calc_Tmax() {
         return this->AS->Tmax();
     };
-    CoolPropDbl calc_Tmin(void) {
+    CoolPropDbl calc_Tmin() {
         return this->AS->Tmin();
     };
-    CoolPropDbl calc_p_critical(void) {
+    CoolPropDbl calc_p_critical() {
         return this->AS->p_critical();
     }
-    CoolPropDbl calc_rhomolar_critical(void) {
+    CoolPropDbl calc_rhomolar_critical() {
         return this->AS->rhomolar_critical();
     }
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() {
         return true;
     }
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() {
         return false;
     }
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() {
         return false;
     }
     void update(CoolProp::input_pairs input_pair, double Value1, double Value2);
@@ -1252,11 +1252,11 @@ class TabularBackend : public AbstractState
     const std::vector<CoolPropDbl>& get_mole_fractions() {
         return AS->get_mole_fractions();
     };
-    const std::vector<CoolPropDbl> calc_mass_fractions(void) {
+    const std::vector<CoolPropDbl> calc_mass_fractions() {
         return AS->get_mass_fractions();
     };
 
-    CoolPropDbl calc_molar_mass(void) {
+    CoolPropDbl calc_molar_mass() {
         return AS->molar_mass();
     };
 
@@ -1264,7 +1264,7 @@ class TabularBackend : public AbstractState
     [[nodiscard]] CoolPropDbl calc_saturated_vapor_keyed_output(parameters key);
 
     /// Returns the path to the tables that shall be written
-    std::string path_to_tables(void);
+    std::string path_to_tables();
     /// Load the tables from file; throws UnableToLoadException if there is a problem
     void load_tables();
     void pack_matrices() {
@@ -1286,28 +1286,28 @@ class TabularBackend : public AbstractState
         CoolPropDbl yV = PhaseEnvelopeRoutines::evaluate(phase_envelope, output, iInput1, value1, cached_saturation_iV);
         return _Q * yV + (1 - _Q) * yL;
     }
-    CoolPropDbl calc_cpmolar_idealgas(void) {
+    CoolPropDbl calc_cpmolar_idealgas() {
         this->AS->set_T(_T);
         return this->AS->cp0molar();
     }
     /// Calculate the surface tension using the wrapped class (fast enough)
-    CoolPropDbl calc_surface_tension(void) {
+    CoolPropDbl calc_surface_tension() {
         this->AS->set_T(_T);
         return this->AS->surface_tension();
         this->AS->set_T(_HUGE);
     }
-    CoolPropDbl calc_p(void);
-    CoolPropDbl calc_T(void);
-    CoolPropDbl calc_rhomolar(void);
-    CoolPropDbl calc_hmolar(void);
-    CoolPropDbl calc_smolar(void);
-    CoolPropDbl calc_umolar(void);
-    CoolPropDbl calc_cpmolar(void);
-    CoolPropDbl calc_cvmolar(void);
-    CoolPropDbl calc_viscosity(void);
-    CoolPropDbl calc_conductivity(void);
+    CoolPropDbl calc_p();
+    CoolPropDbl calc_T();
+    CoolPropDbl calc_rhomolar();
+    CoolPropDbl calc_hmolar();
+    CoolPropDbl calc_smolar();
+    CoolPropDbl calc_umolar();
+    CoolPropDbl calc_cpmolar();
+    CoolPropDbl calc_cvmolar();
+    CoolPropDbl calc_viscosity();
+    CoolPropDbl calc_conductivity();
     /// Calculate the speed of sound using a tabular backend [m/s]
-    CoolPropDbl calc_speed_sound(void);
+    CoolPropDbl calc_speed_sound();
     CoolPropDbl calc_first_partial_deriv(parameters Of, parameters Wrt, parameters Constant);
     /** /brief calculate the derivative along the saturation curve, but only if quality is 0 or 1
         */

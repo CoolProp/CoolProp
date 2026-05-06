@@ -126,7 +126,7 @@ std::string CoolProp::AbstractCubicBackend::fluid_param_string(const std::string
     }
 }
 
-std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names(void) {
+std::vector<std::string> CoolProp::AbstractCubicBackend::calc_fluid_names() {
     std::vector<std::string> out;
     for (std::size_t i = 0; i < components.size(); ++i) {
         out.push_back(components[i].name);
@@ -587,7 +587,7 @@ CoolPropDbl CoolProp::AbstractCubicBackend::solver_rho_Tp(CoolPropDbl T, CoolPro
     return rho;
 }
 
-CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass(void) {
+CoolPropDbl CoolProp::AbstractCubicBackend::calc_molar_mass() {
     double summer = 0;
     for (unsigned int i = 0; i < N; ++i) {
         summer += mole_fractions[i] * components[i].molemass;

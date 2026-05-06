@@ -234,7 +234,7 @@ CoolPropDbl PCSAFTBackend::update_DmolarT(CoolPropDbl rho) {
     return this->calc_pressure();
 }
 
-CoolPropDbl PCSAFTBackend::calc_pressure(void) {
+CoolPropDbl PCSAFTBackend::calc_pressure() {
     double den = _rhomolar * N_AV / 1.0e30;
 
     CoolPropDbl Z = this->calc_compressibility_factor();
@@ -242,7 +242,7 @@ CoolPropDbl PCSAFTBackend::calc_pressure(void) {
     return P;
 }
 
-CoolPropDbl PCSAFTBackend::calc_alphar(void) {
+CoolPropDbl PCSAFTBackend::calc_alphar() {
     auto ncomp = N;  // number of components
     vector<double> d(ncomp);
     for (auto i = 0U; i < ncomp; i++) {
@@ -512,7 +512,7 @@ CoolPropDbl PCSAFTBackend::calc_alphar(void) {
     return ares;
 }
 
-CoolPropDbl PCSAFTBackend::calc_dadt(void) {
+CoolPropDbl PCSAFTBackend::calc_dadt() {
     auto ncomp = N;  // number of components
     vector<double> d(ncomp), dd_dt(ncomp);
     for (auto i = 0U; i < ncomp; i++) {
@@ -842,7 +842,7 @@ CoolPropDbl PCSAFTBackend::calc_dadt(void) {
     return dadt;
 }
 
-CoolPropDbl PCSAFTBackend::calc_hmolar_residual(void) {
+CoolPropDbl PCSAFTBackend::calc_hmolar_residual() {
     CoolPropDbl Z = calc_compressibility_factor();
     CoolPropDbl dares_dt = calc_dadt();
 
@@ -850,7 +850,7 @@ CoolPropDbl PCSAFTBackend::calc_hmolar_residual(void) {
     return hres;
 }
 
-CoolPropDbl PCSAFTBackend::calc_smolar_residual(void) {
+CoolPropDbl PCSAFTBackend::calc_smolar_residual() {
     CoolPropDbl dares_dt = calc_dadt();
     CoolPropDbl ares = calc_alphar();
 
@@ -858,7 +858,7 @@ CoolPropDbl PCSAFTBackend::calc_smolar_residual(void) {
     return sres;
 }
 
-vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
+vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients() {
     auto ncomp = N;  // number of components
     vector<double> d(ncomp);
     for (auto i = 0U; i < ncomp; i++) {
@@ -1348,7 +1348,7 @@ vector<CoolPropDbl> PCSAFTBackend::calc_fugacity_coefficients(void) {
     return fugcoef;
 }
 
-CoolPropDbl PCSAFTBackend::calc_gibbsmolar_residual(void) {
+CoolPropDbl PCSAFTBackend::calc_gibbsmolar_residual() {
     CoolPropDbl ares = calc_alphar();
     CoolPropDbl Z = calc_compressibility_factor();
 
@@ -1362,7 +1362,7 @@ CoolPropDbl PCSAFTBackend::calc_gibbsmolar_residual(void) {
     return gres;
 }
 
-CoolPropDbl PCSAFTBackend::calc_compressibility_factor(void) {
+CoolPropDbl PCSAFTBackend::calc_compressibility_factor() {
     auto ncomp = N;  // number of components
     vector<double> d(ncomp);
     for (auto i = 0UL; i < ncomp; i++) {
@@ -2866,7 +2866,7 @@ CoolPropDbl PCSAFTBackend::reduced_to_molar(CoolPropDbl nu, CoolPropDbl T) {
     return 6 / PI * nu / summ * 1.0e30 / N_AV;
 }
 
-CoolPropDbl PCSAFTBackend::calc_molar_mass(void) {
+CoolPropDbl PCSAFTBackend::calc_molar_mass() {
     double summer = 0;
     for (unsigned int i = 0; i < N; ++i) {
         summer += mole_fractions[i] * components[i].molar_mass();

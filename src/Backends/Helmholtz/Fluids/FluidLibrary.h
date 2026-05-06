@@ -1197,7 +1197,7 @@ class JSONFluidLibrary
     JSONFluidLibrary() {
         _is_empty = true;
     };
-    bool is_empty(void) {
+    bool is_empty() {
         return _is_empty;
     };
 
@@ -1341,16 +1341,16 @@ class JSONFluidLibrary
     };
     void set_fluid_enthalpy_entropy_offset(const std::string& fluid, double delta_a1, double delta_a2, const std::string& ref);
     /// Return a comma-separated list of fluid names
-    std::string get_fluid_list(void) {
+    std::string get_fluid_list() {
         return strjoin(name_vector, get_config_string(LIST_STRING_DELIMITER));
     };
 };
 
 /// Get a reference to the library instance
-JSONFluidLibrary& get_library(void);
+JSONFluidLibrary& get_library();
 
 /// Get a comma-separated-list of fluids that are included
-std::string get_fluid_list(void);
+std::string get_fluid_list();
 
 /// Get the fluid structure
 CoolPropFluid get_fluid(const std::string& fluid_string);

@@ -295,93 +295,93 @@ void IncompressibleBackend::check_status() {
  *  We also have a few new chaced variables that we need.
  */
 /// Return the mass density in kg/m^3
-double IncompressibleBackend::rhomass(void) {
+double IncompressibleBackend::rhomass() {
     if (!_rhomass) _rhomass = calc_rhomass();
     return _rhomass;
 }
 /// Return the mass enthalpy in J/kg
-double IncompressibleBackend::hmass(void) {
+double IncompressibleBackend::hmass() {
     if (!_hmass) _hmass = calc_hmass();
     return _hmass;
 }
 /// Return the molar entropy in J/mol/K
-double IncompressibleBackend::smass(void) {
+double IncompressibleBackend::smass() {
     if (!_smass) _smass = calc_smass();
     return _smass;
 }
 /// Return the molar internal energy in J/mol
-double IncompressibleBackend::umass(void) {
+double IncompressibleBackend::umass() {
     if (!_umass) _umass = calc_umass();
     return _umass;
 }
 /// Return the mass constant pressure specific heat in J/kg/K
-double IncompressibleBackend::cmass(void) {
+double IncompressibleBackend::cmass() {
     if (!_cmass) _cmass = calc_cmass();
     return _cmass;
 }
 
-double IncompressibleBackend::drhodTatPx(void) {
+double IncompressibleBackend::drhodTatPx() {
     if (!_drhodTatPx) _drhodTatPx = calc_drhodTatPx(_T, _p, _fractions[0]);
     return _drhodTatPx;
 }
-double IncompressibleBackend::dsdTatPx(void) {
+double IncompressibleBackend::dsdTatPx() {
     if (!_dsdTatPx) _dsdTatPx = calc_dsdTatPx(_T, _p, _fractions[0]);
     return _dsdTatPx;
 }
-double IncompressibleBackend::dhdTatPx(void) {
+double IncompressibleBackend::dhdTatPx() {
     if (!_dhdTatPx) _dhdTatPx = calc_dhdTatPx(_T, _p, _fractions[0]);
     return _dhdTatPx;
 }
-double IncompressibleBackend::dsdTatPxdT(void) {
+double IncompressibleBackend::dsdTatPxdT() {
     if (!_dsdTatPxdT) _dsdTatPxdT = calc_dsdTatPxdT(_T, _p, _fractions[0]);
     return _dsdTatPxdT;
 }
-double IncompressibleBackend::dhdTatPxdT(void) {
+double IncompressibleBackend::dhdTatPxdT() {
     if (!_dhdTatPxdT) _dhdTatPxdT = calc_dhdTatPxdT(_T, _p, _fractions[0]);
     return _dhdTatPxdT;
 }
-double IncompressibleBackend::dsdpatTx(void) {
+double IncompressibleBackend::dsdpatTx() {
     if (!_dsdpatTx) _dsdpatTx = calc_dsdpatTx(rhomass(), drhodTatPx());
     return _dsdpatTx;
 }
-double IncompressibleBackend::dhdpatTx(void) {
+double IncompressibleBackend::dhdpatTx() {
     if (!_dhdpatTx) _dhdpatTx = calc_dhdpatTx(_T, rhomass(), drhodTatPx());
     return _dhdpatTx;
 }
 
 /// Return the temperature in K
-double IncompressibleBackend::T_ref(void) {
+double IncompressibleBackend::T_ref() {
     if (!_T_ref) throw ValueError("Reference temperature is not set");
     return _T_ref;
 }
 /// Return the pressure in Pa
-double IncompressibleBackend::p_ref(void) {
+double IncompressibleBackend::p_ref() {
     if (!_p_ref) throw ValueError("Reference pressure is not set");
     return _p_ref;
 }
 /// Return the composition
-double IncompressibleBackend::x_ref(void) {
+double IncompressibleBackend::x_ref() {
     if (!_x_ref) throw ValueError("Reference composition is not set");
     return _x_ref;
 }
 /// Return the mass enthalpy in J/kg
-double IncompressibleBackend::h_ref(void) {
+double IncompressibleBackend::h_ref() {
     if (!_h_ref) throw ValueError("Reference enthalpy is not set");
     return _h_ref;
 }
 /// Return the molar entropy in J/mol/K
-double IncompressibleBackend::s_ref(void) {
+double IncompressibleBackend::s_ref() {
     if (!_s_ref) throw ValueError("Reference entropy is not set");
     return _s_ref;
 }
 
 /// Return the mass enthalpy in J/kg
-double IncompressibleBackend::hmass_ref(void) {
+double IncompressibleBackend::hmass_ref() {
     if (!_hmass_ref) _hmass_ref = raw_calc_hmass(T_ref(), p_ref(), x_ref());
     return _hmass_ref;
 }
 /// Return the molar entropy in J/mol/K
-double IncompressibleBackend::smass_ref(void) {
+double IncompressibleBackend::smass_ref() {
     if (!_smass_ref) _smass_ref = raw_calc_smass(T_ref(), p_ref(), x_ref());
     return _smass_ref;
 }
@@ -499,15 +499,15 @@ CoolPropDbl IncompressibleBackend::calc_melting_line(int param, int given, CoolP
         throw ValueError("For incompressibles, the only valid inputs to calc_melting_line are T(p)");
     }
 };
-CoolPropDbl IncompressibleBackend::calc_umass(void) {
+CoolPropDbl IncompressibleBackend::calc_umass() {
     return hmass() - _p / rhomass();
 };
 
 /// ... and continue with the ones that depend on reference conditions.
-CoolPropDbl IncompressibleBackend::calc_hmass(void) {
+CoolPropDbl IncompressibleBackend::calc_hmass() {
     return h_ref() + raw_calc_hmass(_T, _p, _fractions[0]) - hmass_ref();
 };
-CoolPropDbl IncompressibleBackend::calc_smass(void) {
+CoolPropDbl IncompressibleBackend::calc_smass() {
     return s_ref() + raw_calc_smass(_T, _p, _fractions[0]) - smass_ref();
 };
 

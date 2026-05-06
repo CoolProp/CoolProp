@@ -35,7 +35,7 @@ void UseIdealGasEnthalpyCorrelations(int flag);
 // --------------
 // Help functions
 // --------------
-void HAHelp(void);
+void HAHelp();
 int returnHumAirCode(const char* Code);
 
 // ----------------------

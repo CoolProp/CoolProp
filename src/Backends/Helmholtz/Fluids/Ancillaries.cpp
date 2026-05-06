@@ -120,7 +120,7 @@ double SaturationAncillaryFunction::invert(double value, double min_bound, doubl
     }
 }
 
-void MeltingLineVariables::set_limits(void) {
+void MeltingLineVariables::set_limits() {
     if (type == MELTING_LINE_SIMON_TYPE) {
 
         // Fill in the min and max pressures for each part

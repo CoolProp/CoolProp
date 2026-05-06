@@ -9,7 +9,7 @@ namespace CoolProp {
 class TTSEBackend : public TabularBackend
 {
    public:
-    std::string backend_name(void) {
+    std::string backend_name() {
         return get_backend_string(TTSE_BACKEND);
     }
     /// Instantiator; base class loads or makes tables

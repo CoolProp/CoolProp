@@ -50,15 +50,15 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         return cubic;
     };
 
-    std::vector<std::string> calc_fluid_names(void);
+    std::vector<std::string> calc_fluid_names();
 
-    bool using_mole_fractions(void) {
+    bool using_mole_fractions() {
         return true;
     };
-    bool using_mass_fractions(void) {
+    bool using_mass_fractions() {
         return false;
     };
-    bool using_volu_fractions(void) {
+    bool using_volu_fractions() {
         return false;
     };
 
@@ -68,7 +68,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     void set_volu_fractions(const std::vector<CoolPropDbl>& volu_fractions) {
         throw NotImplementedError("Volume composition has not been implemented.");
     };
-    const std::vector<CoolPropDbl>& get_mole_fractions(void) {
+    const std::vector<CoolPropDbl>& get_mole_fractions() {
         return this->mole_fractions;
     };
 
@@ -100,7 +100,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Return a string from the backend for the mixture/fluid
     std::string fluid_param_string(const std::string&);
     /// Calculate the gas constant in J/mol/K
-    CoolPropDbl calc_gas_constant(void) {
+    CoolPropDbl calc_gas_constant() {
         return cubic->get_R_u();
     };
     /// Get the reducing state to be used
@@ -110,36 +110,36 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
         reducing.rhomolar = cubic->get_rhor();
         return reducing;
     };
-    CoolPropDbl calc_reduced_density(void) {
+    CoolPropDbl calc_reduced_density() {
         return _rhomolar / get_cubic()->get_rhor();
     };
-    CoolPropDbl calc_reciprocal_reduced_temperature(void) {
+    CoolPropDbl calc_reciprocal_reduced_temperature() {
         return get_cubic()->get_Tr() / _T;
     };
     std::vector<double> spinodal_densities();
 
-    CoolPropDbl calc_T_critical(void) {
+    CoolPropDbl calc_T_critical() {
         if (is_pure_or_pseudopure) {
             return cubic->get_Tc()[0];
         } else {
             return HelmholtzEOSMixtureBackend::calc_T_critical();
         }
     };
-    CoolPropDbl calc_p_critical(void) {
+    CoolPropDbl calc_p_critical() {
         if (is_pure_or_pseudopure) {
             return cubic->get_pc()[0];
         } else {
             return HelmholtzEOSMixtureBackend::calc_p_critical();
         }
     };
-    CoolPropDbl calc_acentric_factor(void) {
+    CoolPropDbl calc_acentric_factor() {
         if (is_pure_or_pseudopure) {
             return cubic->get_acentric()[0];
         } else {
             throw ValueError("acentric factor cannot be calculated for mixtures");
         }
     }
-    CoolPropDbl calc_rhomolar_critical(void) {
+    CoolPropDbl calc_rhomolar_critical() {
         if (is_pure_or_pseudopure) {
             // Curve fit from all the pure fluids in CoolProp (thanks to recommendation of A. Kazakov)
             double v_c_Lmol = 2.14107171795 * (cubic->get_Tc()[0] / cubic->get_pc()[0] * 1000) + 0.00773144012514;  // [L/mol]
@@ -218,7 +218,7 @@ class AbstractCubicBackend : public HelmholtzEOSMixtureBackend
     /// Cubic backend flashes for PQ, and QT
     void saturation(CoolProp::input_pairs inputs);
 
-    CoolPropDbl calc_molar_mass(void);
+    CoolPropDbl calc_molar_mass();
 
     void set_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter, const double value);
     double get_binary_interaction_double(const std::size_t i1, const std::size_t i2, const std::string& parameter);
@@ -298,7 +298,7 @@ class SRKBackend : public AbstractCubicBackend
         ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend*>(ACB);
     }
-    std::string backend_name(void) override {
+    std::string backend_name() override {
         return get_backend_string(SRK_BACKEND);
     }
     int get_superanc_eos_code() const override {
@@ -340,7 +340,7 @@ class PengRobinsonBackend : public AbstractCubicBackend
         ACB->copy_internals(*this);
         return static_cast<HelmholtzEOSMixtureBackend*>(ACB);
     }
-    std::string backend_name(void) override {
+    std::string backend_name() override {
         return get_backend_string(PR_BACKEND);
     }
     int get_superanc_eos_code() const override {

@@ -157,7 +157,7 @@ class JSONIncompressibleLibrary
     JSONIncompressibleLibrary();
     ~JSONIncompressibleLibrary();
 
-    bool is_empty(void) {
+    bool is_empty() {
         return _is_empty;
     };
 
@@ -179,23 +179,23 @@ class JSONIncompressibleLibrary
     IncompressibleFluid& get(std::size_t key);
 
     /// Return a comma-separated list of incompressible pure fluid names
-    std::string get_incompressible_list_pure(void) {
+    std::string get_incompressible_list_pure() {
         return strjoin(name_vector_pure, ",");
     };
     /// Return a comma-separated list of solution names
-    std::string get_incompressible_list_solution(void) {
+    std::string get_incompressible_list_solution() {
         return strjoin(name_vector_solution, ",");
     };
 };
 
 /// Get a reference to the library instance
-JSONIncompressibleLibrary& get_incompressible_library(void);
+JSONIncompressibleLibrary& get_incompressible_library();
 
 /// Return a comma-separated list of incompressible pure fluid names
-std::string get_incompressible_list_pure(void);
+std::string get_incompressible_list_pure();
 
 /// Return a comma-separated list of solution names
-std::string get_incompressible_list_solution(void);
+std::string get_incompressible_list_solution();
 
 /// Get the fluid structure returned as a reference
 IncompressibleFluid& get_incompressible_fluid(const std::string& fluid_string);

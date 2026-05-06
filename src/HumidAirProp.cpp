@@ -157,11 +157,11 @@ static inline bool check_bounds(const givens prop, const double& value, double& 
 }
 
 // A couple of convenience functions that are needed quite a lot
-static double MM_Air(void) {
+static double MM_Air() {
     check_fluid_instantiation();
     return Air->keyed_output(CoolProp::imolar_mass);
 }
-static double MM_Water(void) {
+static double MM_Water() {
     check_fluid_instantiation();
     return Water->keyed_output(CoolProp::imolar_mass);
 }
@@ -911,7 +911,7 @@ double f_factor(double T, double p) {
     else
         return 1.0;
 }
-void HAHelp(void) {
+void HAHelp() {
     std::cout << "Sorry, Need to update!";
 }
 int returnHumAirCode(const char* Code) {

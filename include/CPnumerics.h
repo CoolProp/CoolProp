@@ -452,7 +452,7 @@ class SplineClass
    public:
     double a, b, c, d;
     SplineClass() : Nconstraints(0), A(4, std::vector<double>(4, 0)), B(4, 0), a(_HUGE), b(_HUGE), c(_HUGE), d(_HUGE) {}
-    bool build(void);
+    bool build();
     bool add_value_constraint(double x, double y);
     void add_4value_constraints(double x1, double x2, double x3, double x4, double y1, double y2, double y3, double y4);
     bool add_derivative_constraint(double x, double dydx);

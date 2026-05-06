@@ -65,7 +65,7 @@ class Dictionary
 
    public:
     Dictionary() {};
-    bool is_empty(void) const {
+    bool is_empty() const {
         return numbers.empty() && strings.empty() && double_vectors.empty() && string_vectors.empty();
     }
     void add_string(const std::string& s1, const std::string& s2) {

@@ -90,7 +90,7 @@ void CoolProp::VTPRBackend::set_alpha_from_components() {
     }
 }
 
-CoolPropDbl CoolProp::VTPRBackend::calc_molar_mass(void) {
+CoolPropDbl CoolProp::VTPRBackend::calc_molar_mass() {
     double summer = 0;
     for (unsigned int i = 0; i < N; ++i) {
         summer += mole_fractions[i] * molemass[i];

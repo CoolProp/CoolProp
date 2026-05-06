@@ -5,10 +5,10 @@
 #include <vector>
 
 /// Get directory separator
-std::string get_separator(void);
+std::string get_separator();
 
 /// Get the user's home directory;  It is believed that is is always a place that files can be written
-std::string get_home_dir(void);
+std::string get_home_dir();
 
 /// Return true if path exists
 bool path_exists(const std::string& path);
