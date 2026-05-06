@@ -274,6 +274,7 @@ void init_CoolProp(py::module& m) {
       .def("rhomass", &AbstractState::rhomass)
       .def("p", &AbstractState::p)
       .def("Q", &AbstractState::Q)
+      .def("Qmass", &AbstractState::Qmass)
       .def("tau", &AbstractState::tau)
       .def("delta", &AbstractState::delta)
       .def("molar_mass", &AbstractState::molar_mass)
