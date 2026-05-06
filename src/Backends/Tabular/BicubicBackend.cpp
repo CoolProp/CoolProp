@@ -3,9 +3,52 @@
 #    include "BicubicBackend.h"
 
 #    include <cmath>
+#    include <limits>
 #    include "MatrixMath.h"
 #    include "DataStructures.h"
 #    include "Backends/Helmholtz/PhaseEnvelopeRoutines.h"
+
+namespace {
+// Pick the cubic root that lies in the unit interval [0, 1] (the cell's
+// normalized coordinate). solve_cubic returns up to three real roots in
+// arbitrary order; the historical code took the smallest-absolute-value
+// root, which can be a large-negative root that has nothing to do with the
+// physical solution and produces wildly wrong values once unscaled to the
+// cell width (e.g. #1301: P = -760 MPa for CO2 at T=315K, rho=1 kg/m^3).
+//
+// Strategy:
+//   1. Among the N roots, prefer those with r in [-tol, 1+tol] (in-cell
+//      or within a small slop band). Pick the one closest to the cell
+//      centre 0.5 (most numerically stable).
+//   2. If no root is in-range, fall back to the closest-to-[0,1] root —
+//      i.e. minimize max(0, -r) + max(0, r-1) — so we still emit something
+//      bounded, and the caller can detect "outside cell" by the unscaled
+//      value falling outside [vec[k], vec[k+1]].
+inline double pick_unit_interval_root(int N, double r0, double r1, double r2) {
+    constexpr double tol = 1e-6;
+    const double roots[3] = {r0, r1, r2};
+    int best_in = -1;
+    double best_in_score = std::numeric_limits<double>::infinity();
+    int best_any = 0;
+    double best_any_dist = std::numeric_limits<double>::infinity();
+    for (int k = 0; k < N; ++k) {
+        const double r = roots[k];
+        if (r >= -tol && r <= 1.0 + tol) {
+            const double score = std::abs(r - 0.5);
+            if (score < best_in_score) {
+                best_in_score = score;
+                best_in = k;
+            }
+        }
+        const double dist = std::max(0.0, -r) + std::max(0.0, r - 1.0);
+        if (dist < best_any_dist) {
+            best_any_dist = dist;
+            best_any = k;
+        }
+    }
+    return (best_in >= 0) ? roots[best_in] : roots[best_any];
+}
+}  // namespace
 
 void CoolProp::BicubicBackend::find_native_nearest_good_indices(SinglePhaseGriddedTableData& table,
                                                                 const std::vector<std::vector<CellCoeffs>>& coeffs, double x, double y,
@@ -206,23 +249,12 @@ void CoolProp::BicubicBackend::invert_single_phase_x(const SinglePhaseGriddedTab
     int N = 0;
     double xhat0 = NAN, xhat1 = NAN, xhat2 = NAN, val = NAN, xhat = _HUGE;
     solve_cubic(a, b, c, d, N, xhat0, xhat1, xhat2);
-    if (N == 1) {
-        xhat = xhat0;
-    } else if (N == 2) {
-        xhat = std::abs(xhat0) < std::abs(xhat1) ? xhat0 : xhat1;
-    } else if (N == 3) {
-        if (std::abs(xhat0) < std::abs(xhat1) && std::abs(xhat0) < std::abs(xhat2)) {
-            xhat = xhat0;
-        }
-        // Already know that xhat1 < xhat0 (xhat0 is not the minimum)
-        else if (std::abs(xhat1) < std::abs(xhat2)) {
-            xhat = xhat1;
-        } else {
-            xhat = xhat2;
-        }
-    } else if (N == 0) {
+    if (N == 0) {
         throw ValueError("Could not find a solution in invert_single_phase_x");
     }
+    // Pick the root in [0, 1] (the cell coordinate), not the abs-min root —
+    // see pick_unit_interval_root() above and #1301 for context.
+    xhat = pick_unit_interval_root(N, xhat0, xhat1, xhat2);
 
     // Unpack xhat into actual value
     // xhat = (x-x_{i})/(x_{i+1}-x_{i})
@@ -262,23 +294,12 @@ void CoolProp::BicubicBackend::invert_single_phase_y(const SinglePhaseGriddedTab
     int N = 0;
     double yhat0 = NAN, yhat1 = NAN, yhat2 = NAN, val = NAN, yhat = _HUGE;
     solve_cubic(a, b, c, d, N, yhat0, yhat1, yhat2);
-    if (N == 1) {
-        yhat = yhat0;
-    } else if (N == 2) {
-        yhat = std::abs(yhat0) < std::abs(yhat1) ? yhat0 : yhat1;
-    } else if (N == 3) {
-        if (std::abs(yhat0) < std::abs(yhat1) && std::abs(yhat0) < std::abs(yhat2)) {
-            yhat = yhat0;
-        }
-        // Already know that yhat1 < yhat0 (yhat0 is not the minimum)
-        else if (std::abs(yhat1) < std::abs(yhat2)) {
-            yhat = yhat1;
-        } else {
-            yhat = yhat2;
-        }
-    } else if (N == 0) {
-        throw ValueError("Could not find a solution in invert_single_phase_x");
+    if (N == 0) {
+        throw ValueError("Could not find a solution in invert_single_phase_y");
     }
+    // Pick the root in [0, 1] (the cell coordinate), not the abs-min root —
+    // see pick_unit_interval_root() above and #1301 for context.
+    yhat = pick_unit_interval_root(N, yhat0, yhat1, yhat2);
 
     // Unpack xhat into actual value
     // yhat = (y-y_{j})/(y_{j+1}-y_{j})

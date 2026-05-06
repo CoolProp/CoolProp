@@ -5559,4 +5559,38 @@ TEST_CASE("REFPROP supports DmolarQ / DmassQ inputs (#1845)", "[REFPROP][1845]")
     CHECK(AS->T() == Catch::Approx(AS2->T()).epsilon(1e-6));
 }
 
+TEST_CASE("BICUBIC root selection picks unit-interval root, not abs-min (#1301)", "[BICUBIC][1301]") {
+    // Issue #1301: BICUBIC P(D, T) for CO2 at supercritical T and very low
+    // density returned absurd values (e.g. P = -760 MPa for T=315 K, rho=1).
+    // Root cause was BicubicBackend::invert_single_phase_y picking the
+    // smallest-absolute-value root of the cell's cubic, which can be a
+    // far-negative root with no physical meaning. Once unscaled to the
+    // cell width that became a wildly wrong (often negative) pressure.
+    // The fix picks the root in the unit interval [0, 1] (the cell's
+    // normalized coordinate), falling back to the closest-to-[0,1] root.
+    auto BICU = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("BICUBIC&HEOS", "CO2"));
+    auto HEOS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
+    // Sample a small grid of supercritical-low-density points where the bug
+    // was most acute.
+    for (double T : {310.0, 315.0, 320.0}) {
+        for (double rho : {1.0, 5.0, 20.0}) {
+            BICU->update(CoolProp::DmassT_INPUTS, rho, T);
+            HEOS->update(CoolProp::DmassT_INPUTS, rho, T);
+            const double p_b = BICU->p();
+            const double p_h = HEOS->p();
+            CAPTURE(T);
+            CAPTURE(rho);
+            CAPTURE(p_h);
+            CAPTURE(p_b);
+            // Pressure must be positive and finite — the bug produced large
+            // negative values from the abs-min root selection.
+            CHECK(std::isfinite(p_b));
+            CHECK(p_b > 0);
+            // BICUBIC should agree with HEOS to within ~1% at these points.
+            // Without the fix, the relative error here was 1e+3 to 1e+4.
+            CHECK(std::abs(p_b - p_h) / p_h < 1e-2);
+        }
+    }
+}
+
 #endif
