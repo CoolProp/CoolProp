@@ -601,8 +601,10 @@ class SinglePhaseGriddedTableData
     virtual void set_limits() = 0;
 
     SinglePhaseGriddedTableData() {
-        Nx = 200;
-        Ny = 200;
+        const int nx_cfg = get_config_int(TABULAR_NX);
+        const int ny_cfg = get_config_int(TABULAR_NY);
+        Nx = (nx_cfg > 1) ? static_cast<std::size_t>(nx_cfg) : 200;
+        Ny = (ny_cfg > 1) ? static_cast<std::size_t>(ny_cfg) : 200;
         revision = 0;
         xkey = INVALID_PARAMETER;
         ykey = INVALID_PARAMETER;
