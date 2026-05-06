@@ -5508,6 +5508,41 @@ TEST_CASE("INCOMP backend rejects molar property requests with a clean error", "
     CHECK(rhomass < 2000);
 }
 
+TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mole_fractions][2308]") {
+    // Issue #2308: SatL/SatV retain composition vectors from the most recent
+    // VLE flash (or phase-envelope build); calc_mole_fractions_liquid/vapor
+    // were returning those stale values when the current state was actually
+    // single-phase, which is misleading. Now they throw.
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(
+      CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
+    AS->set_mole_fractions({0.10, 0.34, 0.41, 0.15});
+
+    // Build the phase envelope so SatL/SatV pick up some non-trivial state
+    AS->build_phase_envelope("");
+
+    // Single-phase point: T well above the dew curve at 1.5 bar
+    AS->update(CoolProp::PT_INPUTS, 1.5e5, 298.15);
+    REQUIRE_FALSE(AS->phase() == CoolProp::iphase_twophase);
+    CHECK_THROWS_AS(AS->mole_fractions_liquid(), CoolProp::ValueError);
+    CHECK_THROWS_AS(AS->mole_fractions_vapor(), CoolProp::ValueError);
+
+    // Two-phase point: PQ flash, Q=0.5
+    AS->update(CoolProp::PQ_INPUTS, 1.5e5, 0.5);
+    REQUIRE(AS->phase() == CoolProp::iphase_twophase);
+    REQUIRE_NOTHROW(AS->mole_fractions_liquid());
+    REQUIRE_NOTHROW(AS->mole_fractions_vapor());
+    auto x = AS->mole_fractions_liquid();
+    auto y = AS->mole_fractions_vapor();
+    REQUIRE(x.size() == 4);
+    REQUIRE(y.size() == 4);
+    // Each composition must sum to ~1.0
+    double sx = 0.0, sy = 0.0;
+    for (auto v : x) sx += v;
+    for (auto v : y) sy += v;
+    CHECK(sx == Catch::Approx(1.0).epsilon(1e-9));
+    CHECK(sy == Catch::Approx(1.0).epsilon(1e-9));
+}
+
 TEST_CASE("REFPROP supports DmolarQ / DmassQ inputs (#1845)", "[REFPROP][1845]") {
     CoolProp::Skip_if_No_REFPROP();
     // Issue #1845: DmassQ_INPUTS / DmolarQ_INPUTS were missing from the
