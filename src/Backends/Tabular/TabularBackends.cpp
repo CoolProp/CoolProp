@@ -964,10 +964,10 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                     cached_single_phase_i = ai;
                                     cached_single_phase_j = aj;
                                 } else {
-                                    throw ValueError(format(
-                                      "Imposed phase %s: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
-                                      "(p=%g Pa, T=%g K)",
-                                      context, cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T)));
+                                    throw ValueError(
+                                      format("Imposed phase %s: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                             "(p=%g Pa, T=%g K)",
+                                             context, cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T)));
                                 }
                             }
                         };
@@ -1044,10 +1044,10 @@ void CoolProp::TabularBackend::update(CoolProp::input_pairs input_pair, double v
                                         cached_single_phase_i = ai;
                                         cached_single_phase_j = aj;
                                     } else {
-                                        throw ValueError(format(
-                                          "P,T near saturation: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
-                                          "(p=%g Pa, T=%g K, Tsat=%g K)",
-                                          cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T), Ts));
+                                        throw ValueError(
+                                          format("P,T near saturation: bumped cell (%zu, %zu) has no bicubic coefficients and no good neighbour "
+                                                 "(p=%g Pa, T=%g K, Tsat=%g K)",
+                                                 cached_single_phase_i, cached_single_phase_j, _p, static_cast<double>(_T), Ts));
                                     }
                                 }
                             }
