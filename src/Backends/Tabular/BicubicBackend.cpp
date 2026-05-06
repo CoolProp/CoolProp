@@ -92,6 +92,16 @@ double CoolProp::BicubicBackend::evaluate_single_phase(const SinglePhaseGriddedT
     // Get the cell
     const CellCoeffs& cell = coeffs[i][j];
 
+    // Defense-in-depth: cells in the table's two-phase notch carry no bicubic
+    // coefficients. Caller should have routed through find_native_nearest_good_indices
+    // (or the saturation-curve cell-bump logic in TabularBackend::update) which
+    // already resolve to a good neighbour. This guard catches the residual case
+    // (e.g. #1950: PT_INPUTS at sub-saturation) so an invalid cell raises a
+    // ValueError instead of dereferencing an empty alpha[] vector and segfaulting.
+    if (!cell.valid()) {
+        throw ValueError(format("evaluate_single_phase called on cell (%zu, %zu) with no bicubic coefficients (x=%g, y=%g)", i, j, x, y));
+    }
+
     // Get the alpha coefficients
     const std::vector<double>& alpha = cell.get(output);
 
