@@ -56,7 +56,11 @@ class HEOSGenerator : public AbstractStateGenerator
         }
     };
 };
-// This static initialization will cause the generator to register
+// This static initialization will cause the generator to register.
+// See REFPROPMixtureBackend.cpp for the cert-err58-cpp rationale — the
+// constructor inserts a single entry into a std::map at program start;
+// if allocation fails here the process is unrecoverable anyway.
+// NOLINTNEXTLINE(cert-err58-cpp)
 static CoolProp::GeneratorInitializer<HEOSGenerator> heos_gen(CoolProp::HEOS_BACKEND_FAMILY);
 
 HelmholtzEOSMixtureBackend::HelmholtzEOSMixtureBackend() {
