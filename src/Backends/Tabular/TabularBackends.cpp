@@ -1299,28 +1299,42 @@ void CoolProp::TabularDataSet::build_tables(shared_ptr<CoolProp::AbstractState>&
 /// Return the set of tabular datasets and whether tables were already loaded
 std::pair<CoolProp::TabularDataSet*, bool> CoolProp::TabularDataLibrary::get_set_of_tables(shared_ptr<AbstractState>& AS) {
     const std::string path = path_to_tables(AS);
+    const int cfg_Nx = get_config_int(TABULAR_NX);
+    const int cfg_Ny = get_config_int(TABULAR_NY);
     // Try to find tabular set if it is already loaded
     std::map<std::string, TabularDataSet>::iterator it = data.find(path);
-    // It is already in the map, return it
     if (it != data.end()) {
-        return {&(it->second), it->second.tables_loaded};
-    }
-    // It is not in the map, build it
-    else {
-        TabularDataSet set;
-        data.insert(std::pair<std::string, TabularDataSet>(path, set));
-        TabularDataSet& dataset = data[path];
-        bool loaded = false;
-        try {
-            if (!dataset.tables_loaded) {
-                dataset.load_tables(path, AS);
-            }
-            loaded = true;
-        } catch (std::exception&) {
-            loaded = false;
+        // Verify the cached dataset's grid matches the current TABULAR_NX/TABULAR_NY
+        // config; if not, evict so we rebuild at the requested resolution rather than
+        // handing back a mis-sized table (would risk OOB reads downstream in BICUBIC/TTSE
+        // coefficient lookups).
+        const TabularDataSet& cached = it->second;
+        const bool grid_matches =
+          (static_cast<int>(cached.single_phase_logph.Nx) == cfg_Nx && static_cast<int>(cached.single_phase_logph.Ny) == cfg_Ny
+           && static_cast<int>(cached.single_phase_logpT.Nx) == cfg_Nx && static_cast<int>(cached.single_phase_logpT.Ny) == cfg_Ny);
+        if (grid_matches) {
+            return {&(it->second), it->second.tables_loaded};
         }
-        return {&(dataset), loaded};
+        if (get_debug_level() > 0) {
+            std::cout << format("TABULAR_NX/NY changed (cached %zux%zu, config %dx%d); evicting cached dataset for %s\n",
+                                cached.single_phase_logph.Nx, cached.single_phase_logph.Ny, cfg_Nx, cfg_Ny, path.c_str());
+        }
+        data.erase(it);
     }
+    // Not in the map (or just evicted) -- build a fresh entry
+    TabularDataSet set;
+    data.insert(std::pair<std::string, TabularDataSet>(path, set));
+    TabularDataSet& dataset = data[path];
+    bool loaded = false;
+    try {
+        if (!dataset.tables_loaded) {
+            dataset.load_tables(path, AS);
+        }
+        loaded = true;
+    } catch (std::exception&) {
+        loaded = false;
+    }
+    return {&(dataset), loaded};
 }
 
 void CoolProp::TabularDataSet::build_coeffs(SinglePhaseGriddedTableData& table, std::vector<std::vector<CellCoeffs>>& coeffs) {
