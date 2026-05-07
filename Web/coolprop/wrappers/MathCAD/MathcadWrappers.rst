@@ -14,10 +14,9 @@ For the most part, the Mathcad wrappers follow the Python implementation and mos
 1. Mathcad Strings always use "double-quotes"
 2. Units (*see below*)
 3. Functions can be evaluated on their own, assigned to a variable, or both at the same time,
+
     * PropsSI("D", "T", 295.15, "P", 101325.0, "Water") = 997.773
-
     * ρ := PropsSI("D", "T", 295.15, "P", 101325.0, "Water")
-
     * ρ := PropsSI("D", "T", 295.15, "P", 101325.0, "Water") = 997.773
 
 4. Mathcad *can* execute equations in random order as changes are made to the worksheet.  This can sometimes cause unexpected behavior if CoolProp settings are modified non-sequentially.  It is a good idea to press **<Ctrl>-<F9>** periodically to recalculate the entire worksheet from top to bottom.
@@ -64,7 +63,7 @@ PropsSImulti - Multiple State Dependent Fluid Properties
 
 Where,
 
-* "Outputs" = Requested output properties string containing a delimited list of one or more valid output property names from the :ref:`Table of Valid Parameters <parameter_table>`.  For this Mathcad wrapper, the delimiter can be any one of (*comma, <space>, colon, semi-colon, or ampersand*), but must be consistant.
+* "Outputs" = Requested output properties string containing a delimited list of one or more valid output property names from the :ref:`Table of Valid Parameters <parameter_table>`.  For this Mathcad wrapper, the delimiter can be any one of (*comma, <space>, colon, semi-colon, or ampersand*), but must be consistent.
 * Vec1, Vec2 = State point array pairs corresponding to "Input1" and "Input2".  These are single-column, :math:`m`-element vector arrays and must be the same length or an error will be thrown.
 |
 **EXAMPLE:**
@@ -131,7 +130,7 @@ The input parameters are the same as for `PropsSI`, except there is no "Output" 
 
 **EXAMPLE:**
 
-    Define a fluid:         :math:`fl` := "Water"
+    Define a fluid:                           :math:`fl` := "Water"
 
     Triple Point Temperature:         :math:`T_t := Props1SI("Ttriple",\ fl) = 273.15`
 
@@ -142,9 +141,9 @@ The input parameters are the same as for `PropsSI`, except there is no "Output" 
 
     Critical Pressure:                       :math:`P_c := Props1SI("pcrit",\ fl) = 2.206\cdot10^7`
 
-    Liquid points:       :math:`T_L := mean(T_t,T_c)\ -\ 10.0`     &     :math:`P_L := mean(P_t,P_c)`
+    Liquid points:             :math:`T_L := mean(T_t,T_c)\ -\ 10.0`     &     :math:`P_L := mean(P_t,P_c)`
 
-    Calc:                :math:`PhaseSI("T",\ T_L,\ "P",\ P_L,\ fl)` = "Liquid"
+    Calc:                           :math:`PhaseSI("T",\ T_L,\ "P",\ P_L,\ fl)` = "Liquid"
 
 |
 
@@ -155,7 +154,7 @@ HAPropsSI - Humid Air Fluid Properties
 
 `HA PropsSI`  is used to find fluid properties of humid air.  The physics behind the   function is based on the analysis in ASHRAE RP-1845, which is available online: https://www.tandfonline.com/doi/abs/10.1080/10789669.2009.10390874.  It employs real gas properties for both air and water, as well as the most accurate interaction parameters and enhancement factors.   RP-1845 is based largely on the IAPWS-95 formulation for the properties of water.  The calling structure of the function is as follows: ::
 
-    PropsSI("Output", "Input1", Val1, "Input2", Val2, "Input3", Val3)
+    HAPropsSI("Output", "Input1", Val1, "Input2", Val2, "Input3", Val3)
 
 Where,
 
@@ -165,13 +164,14 @@ Where,
 * "Input2" = Second state-point property string.
 * Val2 = Second state-point property value (scalar variable)
 * "Input3" = Third state-point property string.
-* Val2 = Third state-point property value (scalar variable)
+* Val3 = Third state-point property value (scalar variable)
 At least one of the inputs must be "T" (dry bulb temperature), "R" (Relative Humidity between 0.0 and 1.0), "W" (Humidity Ratio), or "Tdp" (dew point).
 
 **EXAMPLE:**
 
-    .. math::
-       h := PropsSI("H",\ "T",\ 298.15,\ "P",\ 101325,\ "R",\ 0.5) = 5.042\cdot10^4
+    Enthalpy @ 50% Rel. Humidity:
+
+    :math:`h := HAPropsSI("H",\ "T",\ 298.15,\ "P",\ 101325,\ "R",\ 0.5) = 5.042\cdot10^4`
 
 ----
 
@@ -206,7 +206,7 @@ Where "GlobalParameter" can be one of the following:
 * "pcsaft_fluids_schema"
 
 .. note::
-   The ``"errsting"`` option is *extremely* useful when using CoolProp functions in Mathcad.  While the wrapper functions attempt to trap common errors and display them as meaninful Mathcad error messages, highlighting the offending parameter(s), unknown errors will display as "CoolProp Issue: Use get_global_param_string("errstring") for more info". This is the only way to see the actaul CoolProp error message being thrown, even if the error is already trapped by the Mathcad wrapper.
+   The ``"errstring"`` option is *extremely* useful when using CoolProp functions in Mathcad.  While the wrapper functions attempt to trap common errors and display them as meaningful Mathcad error messages, highlighting the offending parameter(s), unknown errors will display as "CoolProp Issue: Use get_global_param_string("errstring") for more info". This is the only way to see the actaul CoolProp error message being thrown, even if the error is already trapped by the Mathcad wrapper.
 
 ----
 
@@ -272,9 +272,9 @@ Where "mixture" is a predefined mixture name ending in .mix or .MIX. Mixture nam
 
 **EXAMPLES**
 
-    For air:        :math:`get_predefined_mixture_fluids`("Air.mix") = "NITROGEN;ARGON;OXYGEN"
+    For air:         :math:`get\_predefined\_mixture\_fluids("Air.mix")` = "NITROGEN;ARGON;OXYGEN"
 
-    For R401A:  :math:`get_predefined_mixture_fluids`("R401A.mix") = "R22;R152A;R124"
+    For R401A:   :math:`get\_predefined\_mixture\_fluids("R401A.mix")` = "R22;R152A;R124"
 
 .. note::
    A few predefined mixtures are missing binary interaction parameters for at least one component pair.  These mixtures are defined, but cannot be used, for now, for property calculations.
@@ -292,9 +292,9 @@ Where "mixture" is a predefined mixture name ending in .mix or .MIX. Mixture nam
 
 **EXAMPLES**
 
-    For air:        :math:`mf_{Air}` := :math:`get_predefined_mixture_fractions`("Air.mix") = :math:`\begin{bmatrix} 0.7812\\ 0.0092 \\ 0.2096 \end{bmatrix}`
+    For air:         :math:`mf_{Air}` := :math:`get\_predefined\_mixture\_fractions("Air.mix")` = :math:`\begin{bmatrix} 0.7812\\ 0.0092 \\ 0.2096 \end{bmatrix}`
 
-    For R401A:  :math:`mf_{R401A}` := :math:`get_predefined_mixture_fractions'("R401A.mix") = :math:`\begin{bmatrix} 0.578854\\ 0.0.185871 \\ 0.0.235274 \end{bmatrix}`
+    For R401A:   :math:`mf_{R401A}` := :math:`get\_predefined\_mixture\_fractions("R401A.mix")` = :math:`\begin{bmatrix} 0.578854 \\ 0.0.185871 \\ 0.0.235274 \end{bmatrix}`
 
 .. note::
    A few predefined mixtures are missing binary interaction parameters for at least one component pair.  These mixtures are defined, but cannot be used, for now, for property calculations.
