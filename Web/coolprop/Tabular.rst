@@ -41,13 +41,11 @@ It is critical that you try to only initialize one AbstractState instance and th
 
 The default grid is :math:`200 \times 200` cells.  Cells span the full state range, so cell width near the critical point can be coarse (~14 K for CO\ :sub:`2`); interpolation across that cell can therefore be the limiting source of error in critical-region calculations.  The grid resolution can be increased via the :ref:`configuration variables <configuration>` ``TABULAR_NX`` and ``TABULAR_NY`` (default ``200``):
 
-.. ipython::
+.. code-block:: python
 
-    In [0]: import CoolProp.CoolProp as CP
-
-    In [1]: CP.set_config_int(CP.TABULAR_NX, 400)
-
-    In [2]: CP.set_config_int(CP.TABULAR_NY, 400)
+    import CoolProp.CoolProp as CP
+    CP.set_config_int(CP.TABULAR_NX, 400)
+    CP.set_config_int(CP.TABULAR_NY, 400)
 
 Memory and build time scale as :math:`\mathcal{O}(N_x N_y)`.  Tables are cached per fluid in the tables directory and auto-rebuild when the resolution changes; the cost is paid once per (fluid, resolution) pair.
 
