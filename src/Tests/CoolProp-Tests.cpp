@@ -5513,8 +5513,7 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     // VLE flash (or phase-envelope build); calc_mole_fractions_liquid/vapor
     // were returning those stale values when the current state was actually
     // single-phase, which is misleading. Now they throw.
-    auto AS = std::shared_ptr<CoolProp::AbstractState>(
-      CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
+    auto AS = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "Nitrogen&Methane&Ethane&Propane"));
     AS->set_mole_fractions({0.10, 0.34, 0.41, 0.15});
 
     // Build the phase envelope so SatL/SatV pick up some non-trivial state
@@ -5537,8 +5536,10 @@ TEST_CASE("mole_fractions_liquid/vapor reject single-phase states (#2308)", "[mo
     REQUIRE(y.size() == 4);
     // Each composition must sum to ~1.0
     double sx = 0.0, sy = 0.0;
-    for (auto v : x) sx += v;
-    for (auto v : y) sy += v;
+    for (auto v : x)
+        sx += v;
+    for (auto v : y)
+        sy += v;
     CHECK(sx == Catch::Approx(1.0).epsilon(1e-9));
     CHECK(sy == Catch::Approx(1.0).epsilon(1e-9));
 }
@@ -5557,6 +5558,13 @@ TEST_CASE("REFPROP supports DmolarQ / DmassQ inputs (#1845)", "[REFPROP][1845]")
     auto AS2 = std::shared_ptr<CoolProp::AbstractState>(CoolProp::AbstractState::factory("HEOS", "CO2"));
     AS2->update(CoolProp::DmassQ_INPUTS, 15.0, 1.0);
     CHECK(AS->T() == Catch::Approx(AS2->T()).epsilon(1e-6));
+}
+
+TEST_CASE("TABULAR_NX/NY config keys exist and default to 200", "[Configuration][TABULAR]") {
+    // The tabular backend grid resolution is configurable; confirm the keys
+    // are present and the documented default is honored.
+    CHECK(CoolProp::get_config_int(TABULAR_NX) == 200);
+    CHECK(CoolProp::get_config_int(TABULAR_NY) == 200);
 }
 
 #endif

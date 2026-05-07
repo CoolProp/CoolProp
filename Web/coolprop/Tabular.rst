@@ -39,6 +39,16 @@ Two sets of tables are generated and written to disk: pressure-enthalpy and pres
 
 It is critical that you try to only initialize one AbstractState instance and then call its methods. The overhead for generating an AbstractState instance when using TTSE or BICUBIC is not too punitive, but you should try to only do it once.  Each time an instance is generated, all the tabular data is loaded into it.
 
+The default grid is :math:`200 \times 200` cells.  Cells span the full state range, so cell width near the critical point can be coarse (~14 K for CO\ :sub:`2`); interpolation across that cell can therefore be the limiting source of error in critical-region calculations.  The grid resolution can be increased via the :ref:`configuration variables <configuration>` ``TABULAR_NX`` and ``TABULAR_NY`` (default ``200``):
+
+.. code-block:: python
+
+    import CoolProp.CoolProp as CP
+    CP.set_config_int(CP.TABULAR_NX, 400)
+    CP.set_config_int(CP.TABULAR_NY, 400)
+
+Memory and build time scale as :math:`\mathcal{O}(N_x N_y)`.  Tables are cached per fluid in the tables directory and auto-rebuild when the resolution changes; the cost is paid once per (fluid, resolution) pair.
+
 TTSE Interpolation
 ------------------
 

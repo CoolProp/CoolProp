@@ -76,7 +76,13 @@
       "If true, the library will always be reloaded, no matter what is currently loaded")                                                            \
     X(FLOAT_PUNCTUATION, "FLOAT_PUNCTUATION", ".", "The first character of this string will be used as the separator between the number fraction.")  \
     X(ENABLE_SUPERANCILLARIES, "ENABLE_SUPERANCILLARIES", true, "If true, the superancillary functions will be used for VLE of pure fluids")         \
-    X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")
+    X(LIST_STRING_DELIMITER, "LIST_STRING_DELIMITER", ",", "The delimiter to be used when converting a list of strings to a string")                 \
+    X(TABULAR_NX, "TABULAR_NX", static_cast<int>(200),                                                                                               \
+      "Number of x-axis grid points (T for PT table, h for PH table) for the BICUBIC and TTSE tabular backends. Increase for higher accuracy in "    \
+      "regions with steep gradients (e.g. near the critical point). Memory and build cost scale as O(Nx*Ny). Tables auto-rebuild when changed.")     \
+    X(TABULAR_NY, "TABULAR_NY", static_cast<int>(200),                                                                                               \
+      "Number of y-axis grid points (log P) for the BICUBIC and TTSE tabular backends. Increase for higher accuracy. Memory and build cost scale "   \
+      "as O(Nx*Ny). Tables auto-rebuild when changed.")
 
 // Use preprocessor to create the Enum
 enum configuration_keys

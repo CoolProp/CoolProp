@@ -601,8 +601,10 @@ class SinglePhaseGriddedTableData
     virtual void set_limits() = 0;
 
     SinglePhaseGriddedTableData() {
-        Nx = 200;
-        Ny = 200;
+        const int nx_cfg = get_config_int(TABULAR_NX);
+        const int ny_cfg = get_config_int(TABULAR_NY);
+        Nx = (nx_cfg > 1) ? static_cast<std::size_t>(nx_cfg) : 200;
+        Ny = (ny_cfg > 1) ? static_cast<std::size_t>(ny_cfg) : 200;
         revision = 0;
         xkey = INVALID_PARAMETER;
         ykey = INVALID_PARAMETER;
@@ -838,7 +840,9 @@ class LogPHTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree", temp.Nx, temp.Ny, Nx, Ny));
+            // Cached file was built at a different grid resolution than the current
+            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            throw UnableToLoadError(format("Cached LogPH grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
         } else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10)
@@ -883,7 +887,9 @@ class LogPTTable : public SinglePhaseGriddedTableData
         deserialized.convert(temp);
         temp.unpack();
         if (Nx != temp.Nx || Ny != temp.Ny) {
-            throw ValueError(format("old [%dx%d] and new [%dx%d] dimensions don't agree", temp.Nx, temp.Ny, Nx, Ny));
+            // Cached file was built at a different grid resolution than the current
+            // TABULAR_NX/TABULAR_NY config requests; force a rebuild via check_tables().
+            throw UnableToLoadError(format("Cached LogPT grid [%dx%d] does not match requested [%dx%d]; will rebuild", temp.Nx, temp.Ny, Nx, Ny));
         } else if (revision > temp.revision) {
             throw ValueError(format("loaded revision [%d] is older than current revision [%d]", temp.revision, revision));
         } else if ((std::abs(xmin) > 1e-10 && std::abs(xmax) > 1e-10)
